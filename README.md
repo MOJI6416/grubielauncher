@@ -1,3 +1,3 @@
-:rocket: **Grubie Launcher** - это **Nextgen Minecraft Launcher**.
+:rocket: **Grubie Launcher** - **Nextgen Minecraft Launcher**.
 
-Сайт – https://grubielauncher.com/
+https://grubielauncher.com/
