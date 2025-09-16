@@ -1,0 +1,3 @@
+provider: github
+url: https://github.com/MOJI6416/grubielauncher
+updaterCacheDirName: grubie-launcher-updater
