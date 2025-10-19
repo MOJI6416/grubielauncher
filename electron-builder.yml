@@ -12,6 +12,8 @@ files:
 asarUnpack:
   - resources/**
 win:
+  target: nsis
+  artifactName: ${name}-${version}-setup.${ext}
   executableName: Grubie Launcher
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
@@ -19,6 +21,8 @@ nsis:
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
+  target: dmg
+  identity: null
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
@@ -33,10 +37,14 @@ linux:
     - AppImage
     - snap
     - deb
-  maintainer: electronjs.org
+  maintainer: grubielauncher.com
   category: Utility
+  artifactName: ${name}-${version}.${ext}
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
   provider: github
+directories:
+  output: dist
+  buildResources: build
