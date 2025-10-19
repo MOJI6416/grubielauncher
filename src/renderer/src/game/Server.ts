@@ -48,7 +48,6 @@ export class ServerGame {
 
       const jar = `${this.serverConf.core}.jar`
 
-      let isCreateBatFile = true
       let cwd = this.serverPath
       const injectorPath = path.join(
         'libraries',
@@ -90,8 +89,10 @@ export class ServerGame {
         )
       }
 
-      const runBatPath = path.join(this.serverPath, 'run.bat')
+      const batPath = path.join(this.serverPath, 'run.bat')
+      const shPath = path.join(this.serverPath, 'run.sh')
 
+      let isCreateRunFiles = true
       if (this.serverConf.core == ServerCore.QUILT) {
         await rimraf(jar)
         await fs.rename(path.join(this.serverPath, 'quilt-server-launch.jar'), jar)
@@ -108,19 +109,21 @@ export class ServerGame {
           await rimraf(jar)
           await fs.rename(serverJar, jar)
         } catch {
-          isCreateBatFile = false
+          isCreateRunFiles = false
 
-          const shPath = path.join(this.serverPath, 'run.sh')
-
-          const batData = await fs.readFile(runBatPath, 'utf-8')
+          const batData = await fs.readFile(batPath, 'utf-8')
           await fs.writeFile(
-            runBatPath,
+            batPath,
             batData.replaceAll('java', java.javaServerPath).replaceAll('%*', 'nogui %*'),
             'utf-8'
           )
 
           const shData = await fs.readFile(shPath, 'utf-8')
-          await fs.writeFile(shPath, shData.replaceAll('"$@"', 'nogui "$@"'), 'utf-8')
+          await fs.writeFile(
+            shPath,
+            shData.replaceAll('java', java.javaServerPath).replaceAll('"$@"', 'nogui "$@"'),
+            'utf-8'
+          )
 
           const jvmArgs = path.join(this.serverPath, 'user_jvm_args.txt')
           await fs.writeFile(jvmArgs, `${javaagent}-Xmx${this.serverConf.memory}M`, 'utf-8')
@@ -147,10 +150,18 @@ export class ServerGame {
         }
       }
 
-      if (isCreateBatFile) {
-        const data = `@echo off\n${java.javaServerPath} ${javaagent}-Xmx${this.serverConf.memory}M -jar ${jar} nogui\npause`
+      if (isCreateRunFiles) {
+        const batData = `@echo off
+${java.javaServerPath} ${javaagent} -Xmx${this.serverConf.memory}M -jar ${jar} nogui
+pause`
 
-        await fs.writeFile(runBatPath, data, 'utf-8')
+        const shData = `#!/bin/sh
+${java.javaServerPath} ${javaagent} -Xmx${this.serverConf.memory}M -jar ${jar} nogui
+read -p "Press [Enter] key to continue..."`
+
+        await fs.writeFile(batPath, batData, 'utf-8')
+        await fs.writeFile(shPath, shData, 'utf-8')
+        await fs.chmod(shPath, 0o755)
       }
 
       return

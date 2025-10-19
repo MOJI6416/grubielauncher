@@ -1,10 +1,11 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 import { getSha1 } from '../main/utils/files'
 import { DownloadStatus } from '@/types/DownloadManager'
+import { electron } from './index'
 
 declare global {
   interface Window {
-    electron: ElectronAPI
+    electron: typeof electron
     api: {
       path: typeof import('path')
       os: typeof import('os')

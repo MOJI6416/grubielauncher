@@ -52,6 +52,7 @@ import { NewsFeed } from './components/NewsFeed'
 import { IConsole, IConsoleMessage } from '@/types/Console'
 import { BlockedMods, checkBlockedMods, IBlockedMod } from './components/Modals/BlockedMods'
 import { Mods } from './game/Mods'
+import { getOS } from './utilities/Other'
 
 export interface RunGameParams {
   skipUpdate?: boolean
@@ -153,6 +154,9 @@ function App() {
         const versions = await readVerions(pathsData.launcher, settings, account)
         setVersions(versions)
       } else await fs.mkdir(versionsPath, { recursive: true })
+
+      const os = getOS()
+      console.log('Operating System:', os)
     })()
   }, [])
 

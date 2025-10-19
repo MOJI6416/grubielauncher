@@ -20,9 +20,11 @@ export function replaceXmxParameter(serverPath: string, memory: string) {
   }
 
   const batPath = path.join(serverPath, 'run.bat')
+  const shPath = path.join(serverPath, 'run.sh')
   const jvmArgs = path.join(serverPath, 'user_jvm_args.txt')
 
   edit(batPath, memory)
+  edit(shPath, memory)
   edit(jvmArgs, memory)
 }
 

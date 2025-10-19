@@ -356,7 +356,9 @@ export class Version {
   private getLibraries() {
     if (!this.manifest) return { downloadItems: [], paths: [] }
 
-    const os = getOS()
+    const platform = getOS()
+    if (!platform) return { downloadItems: [], paths: [] }
+
     const librariesPath = path.join(this.minecraftPath, 'libraries')
 
     const downloadItems: DownloadItem[] = []
@@ -368,21 +370,14 @@ export class Version {
       let isAllow = true
 
       if (library.rules) {
-        // if (
-        //   os == 'windows' &&
-        //   (library.downloads.artifact.path.includes('windows-arm64') ||
-        //     library.downloads.artifact.path.includes('windows-x86'))
-        // )
-        //   isAllow = false
-
         for (const rule of library.rules) {
           if (rule.action == 'allow') {
-            if (rule.os && rule.os.name != os) {
+            if (rule.os && rule.os.name != platform?.os) {
               isAllow = false
               break
             }
           } else {
-            if (rule.os && rule.os.name == os) {
+            if (rule.os && rule.os.name == platform?.os) {
               isAllow = false
               break
             }
@@ -408,7 +403,7 @@ export class Version {
           group: 'libraries'
         })
       } else {
-        const native = natives[os]?.replace('${arch}', '64')
+        const native = natives[platform.os]?.replace('${arch}', '64')
         if (!native) continue
 
         const classifiers = library.downloads.classifiers
@@ -576,8 +571,8 @@ export class Version {
         game: []
       }
 
-    const os = getOS()
-    const separator = os == 'windows' ? ';' : ':'
+    const platform = getOS()
+    const separator = platform?.os == 'windows' ? ';' : ':'
 
     const appData = path.join(await getPath('appData'), '.grubielauncher')
     const authinjPath = path.join(
@@ -622,7 +617,7 @@ export class Version {
           let isAllow = true
 
           for (const rule of arg.rules) {
-            if (rule.action === 'allow' && rule.os?.name != os) {
+            if (rule.action === 'allow' && rule.os?.name != platform?.os) {
               isAllow = false
               break
             }

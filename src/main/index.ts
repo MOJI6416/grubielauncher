@@ -70,7 +70,7 @@ function createMainWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      devTools: false,
+      devTools: true,
       webSecurity: false,
       nodeIntegration: true,
       contextIsolation: true
