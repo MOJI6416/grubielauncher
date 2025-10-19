@@ -10,9 +10,16 @@ on:
 jobs:
   build:
     name: Build for ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            build_command: npm run build:linux
+          - os: windows-latest
+            build_command: npm run build:win
+          - os: macos-latest
+            build_command: npm run build:mac
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -23,6 +30,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -31,14 +39,7 @@ jobs:
         run: npm run typecheck
 
       - name: Build Electron + Vite app
-        run: |
-          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            npm run build:linux
-          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            npm run build:mac
-          else
-            npm run build:win
-          fi
+        run: ${{ matrix.build_command }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
