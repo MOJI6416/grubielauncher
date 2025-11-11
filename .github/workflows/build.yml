@@ -40,6 +40,8 @@ jobs:
 
       - name: Build Electron + Vite app
         run: ${{ matrix.build_command }}
+        env:
+          ELECTRON_BUILDER_PUBLISH: never
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
