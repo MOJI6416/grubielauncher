@@ -1,18 +1,42 @@
 import { ILocalAccount } from '@/types/Account'
 import { IVersionManifest } from '@/types/IVersionManifest'
+import { IArch, IOS } from '@/types/OS'
 
-export function getOS() {
-  const os = window.electron.process.platform
-  switch (os) {
+export function getOS(): {
+  os: IOS
+  arch: IArch
+} | null {
+  const platform = window.electron.process.platform
+  const arch = window.electron.process.arch
+
+  let os: IOS = 'windows'
+  switch (platform) {
     case 'win32':
-      return 'windows'
+      os = 'windows'
+      break
     case 'darwin':
-      return 'osx'
+      os = 'osx'
+      break
     case 'linux':
-      return 'linux'
+      os = 'linux'
+      break
     default:
-      return ''
+      return null
   }
+
+  let archName: IArch = 'x64'
+  switch (arch) {
+    case 'arm64':
+      archName = 'arm64'
+      break
+    case 'x64':
+      archName = 'x64'
+      break
+    default:
+      return null
+  }
+
+  return { os, arch }
 }
 
 export function formatTime(

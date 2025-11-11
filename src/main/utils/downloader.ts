@@ -5,6 +5,7 @@ import path from 'path'
 import crypto from 'crypto'
 import pLimit from 'p-limit'
 import { DownloadItem } from '@/types/Downloader'
+import tar from 'tar'
 
 export class Downloader {
   private limit = pLimit(6)
@@ -156,9 +157,27 @@ export class Downloader {
     }
   }
 
-  private extractFile = (filePath: string, targetPath: string, isDelete: boolean): void => {
-    const zip = new AdmZip(filePath)
-    zip.extractAllTo(targetPath, true)
-    if (isDelete) fs.unlinkSync(filePath)
+  private extractFile = async (
+    filePath: string,
+    targetPath: string,
+    isDelete: boolean
+  ): Promise<void> => {
+    const ext = path.extname(filePath).toLowerCase()
+
+    if (ext === '.zip') {
+      const zip = new AdmZip(filePath)
+      zip.extractAllTo(targetPath, true)
+    } else if (ext === '.gz' || ext === '.tgz') {
+      await tar.x({
+        file: filePath,
+        cwd: targetPath
+      })
+    } else {
+      throw new Error('Unsupported archive format')
+    }
+
+    if (isDelete) {
+      fs.unlinkSync(filePath)
+    }
   }
 }
