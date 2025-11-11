@@ -1036,7 +1036,7 @@ export function EditVersion({
             },
             {
               color: 'danger',
-              text: t('versions.close'),
+              text: t('common.close'),
               onClick: async () => {
                 closeModal()
               }
