@@ -36,7 +36,7 @@ export function getOS(): {
       return null
   }
 
-  return { os, arch }
+  return { os, arch: archName }
 }
 
 export function formatTime(
