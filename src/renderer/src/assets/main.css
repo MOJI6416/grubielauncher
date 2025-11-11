@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Minecraft';
+  src: url('./minecraft.ttf') format('truetype');
+}
+
+
+body {
+  min-height: 100vh;
+  min-width: 100vw;
+}
