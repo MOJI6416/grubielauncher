@@ -337,7 +337,8 @@
     "changeAvatar": "Change avatar",
     "viewAccount": "View account",
     "editingAvatar": "Editing avatar",
-    "updated": "Account updated"
+    "updated": "Account updated",
+    "updateError": "Account update error"
   },
   "arguments": {
     "title": "Launch arguments",

@@ -76,14 +76,11 @@ export class ModManager {
         data.limit = curseforge.pagination.pageSize
         data.offset = curseforge.pagination.index * curseforge.pagination.pageSize
       } else if (provider == 'modrinth') {
-        let pType = projectType
-        if (pType == ProjectType.PLUGIN) pType = ProjectType.MOD
-
         const modrinth = await Modrinth.search(
           query,
           {
             loader,
-            projectType: pType,
+            projectType,
             version: version,
             sort: sort != '' ? SortValue[sort] : undefined,
             category: filter

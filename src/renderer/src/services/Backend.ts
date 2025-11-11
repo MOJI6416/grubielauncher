@@ -111,7 +111,7 @@ export class Backend extends BaseService {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('folder', 'grubielauncher/' + folder)
+      if (folder) formData.append('folder', folder)
 
       const response = await this.api.post<string>(`${this.baseUrl}/files/upload`, formData, {
         headers: {
@@ -128,7 +128,7 @@ export class Backend extends BaseService {
   async deleteFile(key: string, isDirectory = false) {
     try {
       await this.api.delete(`${this.baseUrl}/files`, {
-        data: { key: `grubielauncher/${key}`, isDirectory }
+        data: { key, isDirectory }
       })
     } catch {}
   }

@@ -233,7 +233,7 @@ export default function AccountInfo({
                   } catch (err) {
                     addToast({
                       color: 'danger',
-                      title: t('common.error')
+                      title: t('accountInfo.updateError')
                     })
                   } finally {
                     setIsLoading(false)
