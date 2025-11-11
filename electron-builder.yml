@@ -45,6 +45,7 @@ appImage:
 npmRebuild: false
 publish:
   provider: github
+  publish: never
 directories:
   output: dist
   buildResources: build
