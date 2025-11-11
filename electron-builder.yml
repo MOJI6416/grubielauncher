@@ -1,6 +1,7 @@
 appId: com.grubielauncher.app
 productName: Grubie Launcher
 directories:
+  output: dist
   buildResources: build
 files:
   - '!**/.vscode/*'
@@ -46,6 +47,3 @@ npmRebuild: false
 publish:
   provider: github
   publish: never
-directories:
-  output: dist
-  buildResources: build
