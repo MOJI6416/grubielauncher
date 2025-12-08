@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: linux-latest
             build_command: npm run build:linux
           - os: windows-latest
             build_command: npm run build:win

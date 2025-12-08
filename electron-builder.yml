@@ -37,6 +37,3 @@ linux:
   maintainer: grubielauncher.com
   category: Utility
   artifactName: ${name}-${version}.${ext}
-
-publish:
-  provider: github
