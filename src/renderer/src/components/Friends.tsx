@@ -1050,7 +1050,7 @@ export function Friends({ runGame }: { runGame: (params: RunGameParams) => Promi
               <div className="flex flex-col gap-4">
                 <Alert
                   color="warning"
-                  title={`${t('friends.deleteAlertTitle')} ${friend.user.nickname}?`}
+                  title={`${t('friends.deleteAlert')} ${friend.user.nickname}?`}
                 />
               </div>
             </ModalBody>

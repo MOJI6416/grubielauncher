@@ -37,16 +37,17 @@ export class Server {
       const cores: IServerOption[] = []
 
       if (loader == 'vanilla') {
-        const response = await axios.get<IVanillaCores>(`${baseUrl}/server/vanilla.json`)
+        try {
+          const response = await axios.get<IVanillaCores>(`${baseUrl}/server/vanilla.json`)
+          const vanilla = this.checkVersion(version, response.data.vanilla, ServerCore.VANILLA)
+          if (vanilla) cores.push(vanilla)
 
-        const vanilla = this.checkVersion(version, response.data.vanilla, ServerCore.VANILLA)
-        if (vanilla) cores.push(vanilla)
+          const spigot = this.checkVersion(version, response.data.spigot, ServerCore.SPIGOT)
+          if (spigot) cores.push(spigot)
 
-        const spigot = this.checkVersion(version, response.data.spigot, ServerCore.SPIGOT)
-        if (spigot) cores.push(spigot)
-
-        const bukkit = this.checkVersion(version, response.data.bukkit, ServerCore.BUKKIT)
-        if (bukkit) cores.push(bukkit)
+          const bukkit = this.checkVersion(version, response.data.bukkit, ServerCore.BUKKIT)
+          if (bukkit) cores.push(bukkit)
+        } catch {}
 
         const paper = await this.getPaper(version)
         if (paper) cores.push(paper)

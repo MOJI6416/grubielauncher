@@ -250,6 +250,22 @@ export function mrProjectToProject(
     body = project.body
   }
 
+  const gallery: IProject['gallery'] = []
+
+  if ('gallery' in project && Array.isArray(project.gallery)) {
+    for (const image of project.gallery) {
+      if (typeof image === 'string') {
+        gallery.push({ url: image, description: '', title: '' })
+      } else if (image && typeof image === 'object' && 'url' in image) {
+        gallery.push({
+          url: image.raw_url || image.url,
+          description: image.description || '',
+          title: image.title || ''
+        })
+      }
+    }
+  }
+
   return {
     url: `https://modrinth.com/${project.project_type}/${project.slug}`,
     description: project.description,
@@ -260,11 +276,7 @@ export function mrProjectToProject(
     provider: Provider.MODRINTH,
     versions: [],
     body,
-    gallery: project.gallery
-      ? project.gallery.map((s) => ({
-          ...s
-        }))
-      : []
+    gallery
   }
 }
 

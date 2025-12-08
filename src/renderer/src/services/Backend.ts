@@ -69,9 +69,7 @@ export class Backend extends BaseService {
 
   async deleteModpack(shareCode: string) {
     try {
-      await this.api.delete(`${this.baseUrl}/modpacks/${shareCode}`)
-
-      await this.deleteFile(`modpacks/${shareCode}/`, true)
+      await this.api.delete(`modpacks/${shareCode}`)
     } catch {}
   }
 
@@ -221,9 +219,7 @@ export class Backend extends BaseService {
 
   async deleteServer(serverId: string) {
     try {
-      await this.api.delete(`${this.baseUrl}/servers/${serverId}`)
-
-      await this.deleteFile(`servers/${serverId}/`, true)
+      await this.api.delete(`servers/${serverId}`)
     } catch (error) {
       throw error
     }
@@ -295,6 +291,17 @@ export class Backend extends BaseService {
       return response.data
     } catch {
       return false
+    }
+  }
+
+  async aiComplete(prompt: string) {
+    try {
+      const response = await this.api.post<{ completion: string }>(`${this.baseUrl}/ai/complete`, {
+        prompt
+      })
+      return response.data.completion
+    } catch {
+      return null
     }
   }
 }

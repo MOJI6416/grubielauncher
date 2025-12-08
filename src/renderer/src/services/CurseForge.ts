@@ -53,6 +53,8 @@ export class CurseForge {
 
       if (sortField) params.append('sortField', ModsSearchSortField[sortField])
 
+      console.log(env.CURSEFORGE_API_KEY, 'CURSEFORGE_API_KEY')
+
       const response = await axios.get<ISearchModsResponse>(`${URL}/mods/search`, {
         params,
         headers: { 'x-api-key': env.CURSEFORGE_API_KEY }

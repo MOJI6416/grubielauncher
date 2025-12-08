@@ -3,15 +3,9 @@ import { ImageCropper } from '../ImageCropper'
 import { ServerSettings } from './Settings'
 import { ProjectType } from '@/types/ModManager'
 import { useTranslation } from 'react-i18next'
-import { Cpu, Folder, ImageMinus, ImagePlus, Power, Settings, Trash } from 'lucide-react'
+import { Cpu, Folder, ImageMinus, ImagePlus, Settings, Trash } from 'lucide-react'
 import { useAtom } from 'jotai'
-import {
-  accountAtom,
-  pathsAtom,
-  selectedVersionAtom,
-  serverAtom,
-  settingsAtom
-} from '@renderer/stores/Main'
+import { pathsAtom, selectedVersionAtom, serverAtom } from '@renderer/stores/Main'
 import {
   addToast,
   Alert,
@@ -22,7 +16,6 @@ import {
   ModalHeader,
   Image
 } from '@heroui/react'
-import { ServerGame } from '@renderer/game/Server'
 
 const api = window.api
 const fs = api.fs
@@ -51,8 +44,6 @@ export function ServerControl({
   const [server] = useAtom(serverAtom)
   const [version] = useAtom(selectedVersionAtom)
   const [paths] = useAtom(pathsAtom)
-  const [settings] = useAtom(settingsAtom)
-  const [account] = useAtom(accountAtom)
 
   const serverPath = path.join(paths.minecraft, 'versions', version?.version.name || '', 'server')
 
@@ -210,40 +201,6 @@ export function ServerControl({
                   }}
                 >
                   {t('common.delete')}
-                </Button>
-                <Button
-                  color="secondary"
-                  variant="flat"
-                  isDisabled={isLoading}
-                  isLoading={isLoading && loadingType == LoadingType.RUN}
-                  startContent={<Power size={22} />}
-                  onPress={async () => {
-                    if (!version) return
-
-                    setIsLoading(true)
-                    setLoadingType(LoadingType.RUN)
-
-                    const serverGame = new ServerGame(
-                      account,
-                      settings.downloadLimit,
-                      path.join(paths.minecraft, 'versions', version.version.name),
-                      serverPath,
-                      server,
-                      version.version
-                    )
-
-                    setTimeout(() => {
-                      setIsLoading(false)
-                      setLoadingType(null)
-                    }, 5000)
-
-                    await serverGame.runServer()
-
-                    setIsLoading(false)
-                    setLoadingType(null)
-                  }}
-                >
-                  {t('serverManager.run')}
                 </Button>
               </div>
             </div>

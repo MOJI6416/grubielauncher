@@ -290,8 +290,8 @@ export class Version {
         name: 'com.github.yushijinhun:authlib-injector:1.2.5',
         downloads: {
           artifact: {
-            url: 'https://github.com/yushijinhun/authlib-injector/releases/download/v1.2.5/authlib-injector-1.2.5.jar',
-            path: 'com/github/yushijinhun/authlib-injector/1.2.5/authlib-injector-1.2.5.jar',
+            url: 'https://github.com/yushijinhun/authlib-injector/releases/download/v1.2.6/authlib-injector-1.2.6.jar',
+            path: 'com/github/yushijinhun/authlib-injector/1.2.6/authlib-injector-1.2.6.jar',
             size: 341970,
             sha1: '1eca6aa7faf7ac6e3211862afa6e43fe2eedd07b'
           }

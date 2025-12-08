@@ -59,17 +59,30 @@ function ModalGallery({
     }
   }, [emblaApi, startIndex])
 
+  const scrollPrev = () => emblaApi && emblaApi.scrollPrev()
+  const scrollNext = () => emblaApi && emblaApi.scrollNext()
+
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center">
       <button onClick={onClose} className="absolute top-4 right-4 text-white text-3xl">
         &times;
       </button>
+
+      <button onClick={scrollPrev} className="absolute left-6 text-white text-4xl select-none">
+        &lt;
+      </button>
+
+      <button onClick={scrollNext} className="absolute right-6 text-white text-4xl select-none">
+        &gt;
+      </button>
+
       <div className="w-full max-w-4xl overflow-hidden" ref={emblaRef}>
         <div className="flex">
           {gallery.map((image, idx) => (
             <div key={idx} className="min-w-full flex justify-center">
               <Image
                 src={image.url}
+                alt=""
                 className="max-h-[90vh] max-w-full object-contain mx-auto"
                 loading="lazy"
               />

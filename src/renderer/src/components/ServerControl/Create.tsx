@@ -138,7 +138,7 @@ export function CreateServer({
                 )
 
                 try {
-                  await serverGame.runServer(true)
+                  await serverGame.install()
                   setServer(conf)
 
                   await fs.writeFile(path.join(serverPath, 'eula.txt'), 'eula=true', 'utf-8')

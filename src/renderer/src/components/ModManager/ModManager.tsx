@@ -34,15 +34,19 @@ import {
   PackageCheck,
   Trash,
   CircleArrowDown,
-  PanelTopOpen
+  PanelTopOpen,
+  Info,
+  Languages
 } from 'lucide-react'
 import { useAtom } from 'jotai'
 import {
+  backendServiceAtom,
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
   pathsAtom,
   selectedVersionAtom,
-  serverAtom
+  serverAtom,
+  settingsAtom
 } from '@renderer/stores/Main'
 import {
   addToast,
@@ -73,7 +77,7 @@ import { Loader } from '@/types/Loader'
 import { IVersion } from '@/types/IVersion'
 import { checkLocalMod, checkModpack, getProjectTypes } from '@renderer/utilities/ModManager'
 import { VersionsService } from '@renderer/services/Versions'
-import { ModManager as ModManagerService } from '@renderer/services/ModManager'
+import { ModManager as ModManagerService } from '@r\enderer/services/ModManager'
 import { ModToggleButton } from './ModToggleButton'
 
 enum LoadingType {
@@ -85,7 +89,8 @@ enum LoadingType {
   CHECK_AVAILABLE_UPDATE,
   CHECK_LOCAL_MOD,
   GAME_VERSIONS,
-  INSTALL
+  INSTALL,
+  TRANSLATE
 }
 
 export function ModManager({
@@ -144,6 +149,8 @@ export function ModManager({
   const [isBlockedMods, setIsBlockedMods] = useState(false)
   const [paths] = useAtom(pathsAtom)
   const [selectedVersion] = useAtom(selectedVersionAtom)
+  const backendService = useAtom(backendServiceAtom)[0]
+  const settings = useAtom(settingsAtom)[0]
 
   const { t } = useTranslation()
 
@@ -1162,11 +1169,7 @@ export function ModManager({
                                         setInfoModalOpen(true)
                                       }}
                                     >
-                                      {isInstalled ? (
-                                        <Settings size={22} />
-                                      ) : (
-                                        <Download size={22} />
-                                      )}
+                                      {isInstalled ? <Settings size={22} /> : <Info size={22} />}
                                     </Button>
                                   ) : (
                                     project.url && (
@@ -1344,8 +1347,8 @@ export function ModManager({
                               </Tooltip>
                             </div>
                           </div>
-                          {project.url && (
-                            <div>
+                          <div className="flex items-center gap-2">
+                            {project.url && (
                               <Button
                                 variant="flat"
                                 startContent={
@@ -1363,8 +1366,38 @@ export function ModManager({
                               >
                                 {t('modManager.goToWebsite')}
                               </Button>
-                            </div>
-                          )}
+                            )}
+
+                            <Button
+                              variant="flat"
+                              isIconOnly
+                              isDisabled={settings.lang == 'en'}
+                              isLoading={isLoading && loadingType == LoadingType.TRANSLATE}
+                              onPress={async () => {
+                                setLoading(true)
+                                setLoadingType(LoadingType.TRANSLATE)
+
+                                const translatedDescription = await backendService.aiComplete(
+                                  `Translate the following text to ${settings.lang}:\n\n${project.description}`
+                                )
+
+                                const translatedBody = await backendService.aiComplete(
+                                  `Translate the following text to ${settings.lang}:\n\n${project.body}`
+                                )
+
+                                setProject({
+                                  ...project,
+                                  description: translatedDescription || project.description,
+                                  body: translatedBody || project.body
+                                })
+
+                                setLoading(false)
+                                setLoadingType(null)
+                              }}
+                            >
+                              <Languages size={22} />
+                            </Button>
+                          </div>
 
                           <div className="flex flex-col gap-2">
                             {selectVersion && selectVersion.id != '' && (

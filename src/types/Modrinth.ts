@@ -111,6 +111,7 @@ interface ProjectLicense {
 
 export interface GalleryImage {
   url: string
+  raw_url: string | null
   featured: boolean
   title: string | null
   description: string | null

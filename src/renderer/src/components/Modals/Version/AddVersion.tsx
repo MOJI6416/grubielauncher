@@ -240,7 +240,6 @@ export function AddVersion({
         if (image.startsWith('file://')) {
           const file = image.replace('file://', '')
           await fs.copyFile(file, filePath)
-          newImage = `file://${filePath}?t=${new Date().getTime()}`
         } else {
           const response = await axios.get(image, {
             responseType: 'arraybuffer'
@@ -249,6 +248,8 @@ export function AddVersion({
           const buffer = fromBuffer(response.data)
           await fs.writeFile(filePath, buffer, 'binary')
         }
+
+        newImage = `file://${filePath}?t=${new Date().getTime()}`
       } catch {}
     }
 

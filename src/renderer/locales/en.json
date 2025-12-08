@@ -174,7 +174,8 @@
     "selectLocal": "Select local mod",
     "notModpack": "Failed to recognize modpack",
     "disabled": "Mods are disabled",
-    "enabled": "Mods are enabled"
+    "enabled": "Mods are enabled",
+    "translate": "Translate description"
   },
   "nav": {
     "play": "Play",

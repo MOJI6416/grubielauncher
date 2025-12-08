@@ -258,22 +258,6 @@ if (!gotTheLock) {
       }
     )
 
-    ipcMain.handle('runServer', async (_event, serverPath) => {
-      return new Promise((resolve) => {
-        const runBatPath = path.join(serverPath, 'run.bat')
-        const command = `start cmd /k "${runBatPath}"`
-
-        const server = spawn('cmd.exe', ['/c', command], {
-          cwd: serverPath,
-          shell: true
-        })
-
-        server.on('close', (code) => {
-          resolve(code)
-        })
-      })
-    })
-
     ipcMain.handle('runJar', async (_event, command, args, cwd: string) => {
       return new Promise((resolve, reject) => {
         const server = spawn(command, args, {
