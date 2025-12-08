@@ -30,6 +30,16 @@ jobs:
           node-version: 22
           cache: 'npm'
 
+      - name: Create .env file
+        run: |
+          echo "MAIN_VITE_DISCORD_CLIENT_ID=${{ secrets.MAIN_VITE_DISCORD_CLIENT_ID }}" >> .env
+          echo "MAIN_VITE_DISCORD_CLIENT_PASSWORD=${{ secrets.MAIN_VITE_DISCORD_CLIENT_PASSWORD }}" >> .env
+          echo "MAIN_VITE_MICROSOFT_CLIENT_ID=${{ secrets.MAIN_VITE_MICROSOFT_CLIENT_ID }}" >> .env
+          echo "MAIN_VITE_ELYBY_CLIENT_ID=${{ secrets.MAIN_VITE_ELYBY_CLIENT_ID }}" >> .env
+          echo "MAIN_VITE_ELYBY_CLIENT_SECRET=${{ secrets.MAIN_VITE_ELYBY_CLIENT_SECRET }}" >> .env
+          echo "MAIN_VITE_BACKEND_URL=${{ secrets.MAIN_VITE_BACKEND_URL }}" >> .env
+          echo "MAIN_VITE_CURSEFORGE_API_KEY=${{ secrets.MAIN_VITE_CURSEFORGE_API_KEY }}" >> .env
+
       - name: Install dependencies
         run: npm ci
 
