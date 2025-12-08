@@ -37,6 +37,8 @@ jobs:
         run: npm run typecheck
 
       - name: Build Electron + Vite app
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: ${{ matrix.build_command }}
 
       - name: Upload build artifacts
