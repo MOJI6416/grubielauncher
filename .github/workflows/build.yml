@@ -38,8 +38,7 @@ jobs:
           echo "MAIN_VITE_ELYBY_CLIENT_ID=${{ secrets.MAIN_VITE_ELYBY_CLIENT_ID }}" >> .env
           echo "MAIN_VITE_ELYBY_CLIENT_SECRET=${{ secrets.MAIN_VITE_ELYBY_CLIENT_SECRET }}" >> .env
           echo "MAIN_VITE_BACKEND_URL=${{ secrets.MAIN_VITE_BACKEND_URL }}" >> .env
-          echo "MAIN_VITE_CURSEFORGE_API_KEY=${{ secrets.MAIN_VITE_CURSEFORGE_API_KEY }}" >> .env
-          printf "MAIN_VITE_CURSEFORGE_API_KEY=%s\n" "${{ secrets.MAIN_VITE_CURSEFORGE_API_KEY }}" >> .env
+          echo 'MAIN_VITE_CURSEFORGE_API_KEY=${{ secrets.MAIN_VITE_CURSEFORGE_API_KEY }}' >> .env
 
       - name: Install dependencies
         run: npm ci
