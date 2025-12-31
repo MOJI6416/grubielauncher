@@ -12,12 +12,14 @@ import { Folder, File } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Loader } from '@/types/Loader'
-import { notSupportedPaths } from '@renderer/utilities/Files'
+import { notSupportedPaths } from '@renderer/utilities/file'
 
 const api = window.api
-const fs = api.fs
-const path = api.path
-const isDirectory = api.isDirectory
+
+interface DirectoryEntry {
+  path: string
+  type: 'file' | 'folder'
+}
 
 export const SelectPaths = ({
   onClose,
@@ -34,90 +36,96 @@ export const SelectPaths = ({
   passPaths: (paths: string[]) => void
   selectedPaths: string[]
 }) => {
-  const [isLoading, setIsLoading] = useState(false)
-  const [paths, setPaths] = useState<string[]>([])
-  const [allPaths, setAllPaths] = useState<{ path: string; type: 'file' | 'folder' }[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [paths, setPaths] = useState<string[]>(selectedPaths)
+  const [allEntries, setAllEntries] = useState<DirectoryEntry[]>([])
 
   const { t } = useTranslation()
 
   useEffect(() => {
-    ;(async () => {
-      setIsLoading(true)
-      const files = await fs.readdir(pathFolder)
+    const loadEntries = async () => {
+      if (!pathFolder) return
 
-      setPaths(selectedPaths.filter((p) => files.includes(p)))
-      setAllPaths(
-        files
-          .map((p) => ({
-            path: p,
-            type: isDirectory(path.join(pathFolder, p))
-              ? ('folder' as 'folder')
-              : ('file' as 'file')
-          }))
-          .sort((a, b) => {
-            if (a.type === 'folder' && b.type === 'file') return -1
-            if (a.type === 'file' && b.type === 'folder') return 1
-            return a.path.localeCompare(b.path)
-          })
-      )
-      setIsLoading(false)
-    })()
-  }, [])
+      setIsLoading(true)
+      try {
+        const entries = await api.fs.readdirWithTypes(pathFolder)
+        setAllEntries(entries)
+
+        const existingSelected = selectedPaths.filter((p: string) =>
+          entries.some((e: DirectoryEntry) => e.path === p)
+        )
+        setPaths(existingSelected)
+      } catch {
+        setAllEntries([])
+        setPaths([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadEntries()
+  }, [pathFolder, selectedPaths])
+
+  const forbiddenPaths = notSupportedPaths.map((p) =>
+    p.replace('${version}', version).replace('${loader}', loader)
+  )
+
+  const togglePath = (pathName: string) => {
+    setPaths((prev) =>
+      prev.includes(pathName) ? prev.filter((p) => p !== pathName) : [...prev, pathName]
+    )
+  }
 
   return (
     <Modal
       isOpen={true}
       onClose={() => {
         if (isLoading) return
-
         onClose()
       }}
+      isDismissable={!isLoading}
     >
       <ModalContent>
         <ModalHeader>{t('selectPaths.title')}</ModalHeader>
 
         <ModalBody>
           {isLoading ? (
-            <div className="flex items-center text-center gap-2">
+            <div className="flex items-center justify-center gap-2 py-8">
               <Spinner size="sm" />
               <p>{t('selectPaths.loadingFolders')}</p>
             </div>
+          ) : allEntries.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">{t('selectPaths.emptyFolder')}</p>
           ) : (
             <div className="flex flex-col gap-1 overflow-auto max-h-96 pr-1">
-              {allPaths.map((p) => (
-                <div key={p.path} className="flex items-center gap-2">
-                  <Checkbox
-                    isSelected={paths.includes(p.path)}
-                    isDisabled={
-                      isLoading ||
-                      p[0] === '.' ||
-                      notSupportedPaths
-                        .map((p) => p.replace('${version}', version).replace('${loader}', loader))
-                        .includes(p.path)
-                    }
-                    onChange={() => {
-                      if (paths.includes(p.path)) {
-                        setPaths(paths.filter((path) => path !== p.path))
-                      } else {
-                        setPaths([...paths, p.path])
-                      }
-                    }}
-                  >
-                    <div className="flex items-center space-x-1">
-                      {p.type == 'file' ? <File size={18} /> : <Folder size={18} />}
-                      <p>{p.path}</p>
-                    </div>
-                  </Checkbox>
-                </div>
-              ))}
+              {allEntries.map((entry) => {
+                const isHidden = entry.path.startsWith('.')
+                const isForbidden = forbiddenPaths.includes(entry.path)
+
+                return (
+                  <div key={entry.path} className="flex items-center gap-2">
+                    <Checkbox
+                      isSelected={paths.includes(entry.path)}
+                      isDisabled={isLoading || isHidden || isForbidden}
+                      onChange={() => togglePath(entry.path)}
+                    >
+                      <div className="flex items-center space-x-1">
+                        {entry.type === 'file' ? <File size={18} /> : <Folder size={18} />}
+                        <p className={isForbidden ? 'text-gray-400' : ''}>{entry.path}</p>
+                      </div>
+                    </Checkbox>
+                  </div>
+                )
+              })}
             </div>
           )}
         </ModalBody>
+
         <ModalFooter>
           <Button
             variant="flat"
-            isDisabled={isLoading}
             color="primary"
+            isDisabled={isLoading}
             onPress={() => {
               passPaths(paths)
               onClose()

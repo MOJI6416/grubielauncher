@@ -4,7 +4,7 @@ import styleToObject from 'style-to-object'
 import { marked } from 'marked'
 import { JSX } from 'react'
 
-const shell = window.api.shell
+const api = window.api
 
 const IGNORED_STYLES = ['font-size', 'font-size-adjust', 'font-family']
 
@@ -35,8 +35,8 @@ export const ModBody = ({ body }: { body: string }) => {
         return (
           <Link
             style={styleObj}
-            onPress={() => {
-              shell.openExternal(node.attribs.href)
+            onPress={async () => {
+              await api.shell.openExternal(node.attribs.href)
             }}
             href="#"
           >

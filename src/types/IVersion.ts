@@ -2,6 +2,7 @@ import { IModpack } from './ModManager'
 import { IArguments } from './IArguments'
 import { ILoader } from './Loader'
 import { IServer } from './ServersList'
+import { IVersionManifest } from './IVersionManifest'
 
 export interface IVersion {
   id: string
@@ -36,4 +37,15 @@ export interface IImportModpack {
   type: 'gl' | 'other'
   gl?: IModpackFile
   other?: IModpack
+}
+
+export interface IVersionClassData {
+  version: IVersionConf
+  manifest?: IVersionManifest
+  launcherPath: string
+  minecraftPath: string
+  versionPath: string
+  javaPath: string
+  isQuickPlayMultiplayer: boolean
+  isQuickPlaySingleplayer: boolean
 }

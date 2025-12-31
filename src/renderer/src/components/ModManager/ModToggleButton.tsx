@@ -1,13 +1,10 @@
 import { ILocalProject, ProjectType } from '@/types/ModManager'
 import { addToast, Button } from '@heroui/react'
-import { projetTypeToFolder } from '@renderer/utilities/ModManager'
 import { BookCheck, BookX } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const api = window.api
-const fs = api.fs
-const path = api.path
 
 export const ModToggleButton = ({
   mod,
@@ -20,33 +17,42 @@ export const ModToggleButton = ({
 }) => {
   const [isEnabled, setIsEnabled] = useState(true)
   const [isExists, setIsExists] = useState(false)
+  const [filePath, setFilePath] = useState('')
+  const [disabledFilePath, setDisabledFilePath] = useState('')
 
   const { t } = useTranslation()
 
   const filename = mod.version?.files[0]?.filename || ''
-  const folderName = projetTypeToFolder(mod.projectType)
-  const folderPath = path.join(versionPath, folderName)
-  const filePath = path.join(folderPath, filename)
-  const disabledFilePath = path.join(folderPath, filename + '.disabled')
 
   useEffect(() => {
-    fs.pathExists(filePath).then((exists) => {
-      setIsEnabled(exists)
-      setIsExists(exists)
+    async function init() {
+      const folderName = await api.modManager.ptToFolder(mod.projectType)
+      const folderPath = await api.path.join(versionPath, folderName)
+      const filePath = await api.path.join(folderPath, filename)
+      const disabledFilePath = await api.path.join(folderPath, filename + '.disabled')
 
-      if (!exists)
-        fs.pathExists(disabledFilePath).then((disabledExists) => {
-          setIsEnabled(!disabledExists)
-          setIsExists(disabledExists)
-        })
-    })
+      setFilePath(filePath)
+      setDisabledFilePath(disabledFilePath)
+      api.fs.pathExists(filePath).then((exists) => {
+        setIsEnabled(exists)
+        setIsExists(exists)
+
+        if (!exists)
+          api.fs.pathExists(disabledFilePath).then((disabledExists) => {
+            setIsEnabled(!disabledExists)
+            setIsExists(disabledExists)
+          })
+      })
+    }
+
+    init()
   }, [])
 
   const handleToggle = async () => {
     const filepath = !isEnabled ? disabledFilePath : filePath
     const newFilePath = isEnabled ? disabledFilePath : filePath
 
-    await fs.rename(filepath, newFilePath)
+    await api.fs.rename(filepath, newFilePath)
 
     setIsEnabled(!isEnabled)
 

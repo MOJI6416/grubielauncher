@@ -3,7 +3,6 @@ import { ILocalProject } from '@/types/ModManager'
 import {
   accountAtom,
   authDataAtom,
-  backendServiceAtom,
   consolesAtom,
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
@@ -72,20 +71,14 @@ import {
 } from '@heroui/react'
 import { BlockedMods, checkBlockedMods, IBlockedMod } from '../BlockedMods'
 import { IServer } from '@/types/ServersList'
-import { compareServers } from '@renderer/utilities/ServerList'
-import { checkDiffenceUpdateData, checkVersionName, syncShare } from '@renderer/utilities/Versions'
-import { compareMods } from '@renderer/utilities/ModManager'
-import { Mods } from '@renderer/game/Mods'
-import { writeNBT } from '@renderer/utilities/Nbt'
-import { Server as ServerService } from '@renderer/services/Server'
 import { Worlds } from '@renderer/components/Worlds/WorldsModal'
 import { RunGameParams } from '@renderer/App'
+import { compareServers } from '@renderer/utilities/server'
+import { checkDiffenceUpdateData, checkVersionName, syncShare } from '@renderer/utilities/version'
+import { compareMods } from '@renderer/utilities/mod'
+import { Mods } from '@renderer/classes/Mods'
 
 const api = window.api
-const fs = api.fs
-const path = api.path
-const rimraf = api.rimraf
-const { clipboard, shell } = api
 
 export function EditVersion({
   closeModal,
@@ -143,15 +136,14 @@ export function EditVersion({
   const [isBlockedMods, setIsBlockedMods] = useState(false)
   const [blockedCloseType, setBlockedCloseType] = useState<'save' | 'check'>()
   const [authData] = useAtom(authDataAtom)
-  const [backendService] = useAtom(backendServiceAtom)
   const setConsoles = useAtom(consolesAtom)[1]
   const [isOpenWorlds, setIsOpenWorlds] = useState(false)
 
-  const isExistSaves = useMemo(() => {
+  const isExistSaves = useMemo(async () => {
     if (!version) return false
 
-    const worldsPath = path.join(version.versionPath, 'saves')
-    return fs.pathExistsSync(worldsPath)
+    const worldsPath = await api.path.join(version.versionPath, 'saves')
+    return await api.fs.pathExists(worldsPath)
   }, [version])
 
   useEffect(() => {
@@ -180,7 +172,11 @@ export function EditVersion({
 
     return (
       (((versionName.trim() != version?.version.name &&
-        checkVersionName(versionName, versions, version?.version)) ||
+        checkVersionName(
+          versionName,
+          versions.map((v) => v.version),
+          version?.version
+        )) ||
         !compareMods(version?.version.loader.mods || [], mods) ||
         s) &&
         !isLoading) ||
@@ -194,7 +190,7 @@ export function EditVersion({
   async function sync() {
     if (!version) return
 
-    await syncShare(version, servers, settings.downloadLimit)
+    await syncShare(version, servers, settings, account?.accessToken || '')
 
     setLoadingType(undefined)
     setIsLoading(false)
@@ -216,7 +212,7 @@ export function EditVersion({
     try {
       await version.install(account)
 
-      const versionMods = new Mods(settings.downloadLimit, version, server)
+      const versionMods = new Mods(settings, version.version, server)
       await versionMods.check()
 
       addToast({
@@ -245,17 +241,16 @@ export function EditVersion({
     let isRename = false
     let oldPath = version.versionPath
     if (versionName.trim() != version.version.name) {
-      const versionsPath = path.join(paths.launcher, 'minecraft', 'versions')
+      const versionsPath = await api.path.join(paths.launcher, 'minecraft', 'versions')
 
       const oldName = version.version.name
 
       const newName = versionName.trim()
-      const newPath = path.join(versionsPath, newName)
+      const newPath = await api.path.join(versionsPath, newName)
 
       try {
-        await fs.move(version.versionPath, newPath, {
-          overwrite: true
-        })
+        await api.fs.rename(version.versionPath, newPath)
+
         isRename = true
 
         setConsoles((prev) => ({
@@ -293,7 +288,7 @@ export function EditVersion({
         mod.version.files[0].localPath = bMod.filePath
       }
 
-      const versionMods = new Mods(settings.downloadLimit, version, server)
+      const versionMods = new Mods(settings, version.version, server)
       await versionMods.check()
 
       isShare = true
@@ -302,10 +297,10 @@ export function EditVersion({
 
     if (version.version.version.serverManager) {
       try {
-        const serversPath = path.join(version.versionPath, 'servers.dat')
+        const serversPath = await api.path.join(version.versionPath, 'servers.dat')
 
         if (!compareServers(nbtServers, servers)) {
-          await writeNBT(servers, serversPath)
+          await api.servers.write(servers, serversPath)
           setNbtServers(servers)
           isShare = true
         }
@@ -324,7 +319,7 @@ export function EditVersion({
 
     if (isLogoChanged || (isRename && !isDownloadedVersion && isOwnerVersion)) {
       const filename = 'logo.png'
-      const filePath = path.join(version.versionPath, filename)
+      const filePath = await api.path.join(version.versionPath, filename)
 
       let fileUrl = ''
       if (image) {
@@ -333,13 +328,13 @@ export function EditVersion({
           img = img.replace(oldPath, version.versionPath)
 
         const newFile = await fetch(img).then((r) => r.blob())
-        await fs.writeFile(filePath, new Uint8Array(await newFile.arrayBuffer()))
+        await api.fs.writeFile(filePath, new Uint8Array(await newFile.arrayBuffer()), 'binary')
 
         fileUrl = `file://${filePath}?t=${new Date().getTime()}`
 
         setImage(fileUrl)
       } else {
-        await rimraf(filePath)
+        await api.fs.rimraf(filePath)
       }
 
       version.version.image = fileUrl
@@ -354,7 +349,7 @@ export function EditVersion({
     await version.save()
 
     try {
-      await rimraf(path.join(version.versionPath, 'temp'))
+      await api.fs.rimraf(await api.path.join(version.versionPath, 'temp'))
     } catch {}
 
     addToast({
@@ -411,7 +406,10 @@ export function EditVersion({
                     <Input
                       size="sm"
                       startContent={
-                        !checkVersionName(versionName.trim(), versions) ? (
+                        !checkVersionName(
+                          versionName.trim(),
+                          versions.map((v) => v.version)
+                        ) ? (
                           <CircleAlert className="text-warning" size={22} />
                         ) : (
                           ''
@@ -461,8 +459,7 @@ export function EditVersion({
                           size="sm"
                           isDisabled={isLoading || !isOwnerVersion}
                           onPress={async () => {
-                            const filePaths =
-                              await window.electron.ipcRenderer.invoke('openFileDialog')
+                            const filePaths = await api.other.openFileDialog()
 
                             if (!filePaths || filePaths.length == 0) return
 
@@ -515,8 +512,8 @@ export function EditVersion({
                       <Chip
                         variant="flat"
                         className="cursor-pointer m-auto"
-                        onClick={() => {
-                          clipboard.writeText(version?.version.shareCode || '')
+                        onClick={async () => {
+                          await api.clipboard.writeText(version?.version.shareCode || '')
                           addToast({
                             title: t('common.copied')
                           })
@@ -602,10 +599,12 @@ export function EditVersion({
                     <Button
                       variant="flat"
                       startContent={<Folder size={22} />}
-                      onPress={() => {
+                      onPress={async () => {
                         if (!version) return
 
-                        shell.openPath(path.join(paths.minecraft, 'versions', version.version.name))
+                        await api.shell.openPath(
+                          await api.path.join(paths.minecraft, 'versions', version.version.name)
+                        )
                       }}
                     >
                       {t('common.openFolder')}
@@ -707,10 +706,10 @@ export function EditVersion({
                           onPress={async () => {
                             if (!version || !account) return
 
-                            const command = await version.getRunCommand(account, settings, authData)
+                            const command = await version.getRunCommand(account, authData)
                             if (!command) return
 
-                            clipboard.writeText(command.join(' '))
+                            await api.clipboard.writeText(command.join(' '))
                             addToast({
                               title: t('common.copied')
                             })
@@ -727,15 +726,10 @@ export function EditVersion({
                           onPress={async () => {
                             if (!version || !account) return
 
-                            const command = await version.getRunCommand(
-                              account,
-                              settings,
-                              authData,
-                              true
-                            )
+                            const command = await version.getRunCommand(account, authData, true)
                             if (!command) return
 
-                            clipboard.writeText(command.join(' '))
+                            await api.clipboard.writeText(command.join(' '))
                             addToast({
                               title: t('common.copied')
                             })
@@ -790,22 +784,25 @@ export function EditVersion({
                                 setIsLoading(true)
                                 setLoadingType('check_diff')
 
-                                const diff = await checkDiffenceUpdateData({
-                                  mods: version.version.loader.mods,
-                                  runArguments: version.version.runArguments || {
-                                    game: '',
-                                    jvm: ''
+                                const diff = await checkDiffenceUpdateData(
+                                  {
+                                    mods: version.version.loader.mods,
+                                    runArguments: version.version.runArguments || {
+                                      game: '',
+                                      jvm: ''
+                                    },
+                                    servers,
+                                    version: version.version,
+                                    versionPath: await api.path.join(
+                                      paths.minecraft,
+                                      'versions',
+                                      version.version.name
+                                    ),
+                                    logo: image || '',
+                                    quickServer: quickConnectIp
                                   },
-                                  servers,
-                                  version: version.version,
-                                  versionPath: path.join(
-                                    paths.minecraft,
-                                    'versions',
-                                    version.version.name
-                                  ),
-                                  logo: image || '',
-                                  quickServer: quickConnectIp
-                                })
+                                  account.accessToken || ''
+                                )
 
                                 setDiffenceUpdateData(diff)
 
@@ -814,7 +811,8 @@ export function EditVersion({
                                   throw Error('not found diff')
                                 }
 
-                                const modpackData = await backendService.getModpack(
+                                const modpackData = await api.backend.getModpack(
+                                  account.accessToken!,
                                   version.version.shareCode
                                 )
 
@@ -907,7 +905,7 @@ export function EditVersion({
                           setLoadingType('server')
                           setIsLoading(true)
 
-                          const serverCores = await ServerService.get(
+                          const serverCores = await api.servers.get(
                             version.version.version.id,
                             version.version.loader.name
                           )
@@ -962,10 +960,7 @@ export function EditVersion({
         />
       )}
       {isOpenExportModal && version && (
-        <Export
-          onClose={() => setIsOpenExportModal(false)}
-          versionPath={path.join(paths.minecraft, 'versions', version.version.name)}
-        />
+        <Export onClose={() => setIsOpenExportModal(false)} versionPath={version.versionPath} />
       )}
       {isCropping && (
         <ImageCropper
@@ -1066,15 +1061,18 @@ export function EditVersion({
                   setIsLoading(true)
                   setLoadingType('check_diff')
 
-                  const diff = await checkDiffenceUpdateData({
-                    mods: version.version.loader.mods,
-                    runArguments: version.version.runArguments || { game: '', jvm: '' },
-                    servers,
-                    version: version.version,
-                    versionPath: path.join(paths.minecraft, 'versions', version.version.name),
-                    logo: image || '',
-                    quickServer: quickConnectIp
-                  })
+                  const diff = await checkDiffenceUpdateData(
+                    {
+                      mods: version.version.loader.mods,
+                      runArguments: version.version.runArguments || { game: '', jvm: '' },
+                      servers,
+                      version: version.version,
+                      versionPath: version.versionPath,
+                      logo: image || '',
+                      quickServer: quickConnectIp
+                    },
+                    account.accessToken || ''
+                  )
 
                   if (!diff) {
                     setIsOpenModalShare(false)
@@ -1082,7 +1080,10 @@ export function EditVersion({
                     throw Error('not found diff')
                   }
 
-                  const modpackData = await backendService.getModpack(version.version.shareCode)
+                  const modpackData = await api.backend.getModpack(
+                    account.accessToken!,
+                    version.version.shareCode
+                  )
                   if (!modpackData.data) {
                     throw Error('not found modpack')
                   }

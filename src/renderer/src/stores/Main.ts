@@ -1,4 +1,4 @@
-import { IFriendRequest } from '@renderer/components/Friends'
+import { IFriendRequest } from '@renderer/components/Friends/Friends'
 import { ILocalFriend } from '@/types/ILocalFriend'
 import { IServerConf } from '@/types/Server'
 import { atom } from 'jotai'
@@ -6,9 +6,8 @@ import { Socket } from 'socket.io-client'
 import { IAuth, ILocalAccount } from '@/types/Account'
 import { TSettings } from '@/types/Settings'
 import { IServer } from '@/types/ServersList'
-import { Version } from '@renderer/game/Version'
-import { Backend } from '@renderer/services/Backend'
 import { IConsoles } from '@/types/Console'
+import { Version } from '@renderer/classes/Version'
 
 export const pathsAtom = atom<{
   launcher: string
@@ -43,7 +42,6 @@ export const friendRequestsAtom = atom<IFriendRequest[]>([])
 export const selectedFriendAtom = atom<string>()
 export const isDownloadedVersionAtom = atom<boolean>(false)
 export const isOwnerVersionAtom = atom<boolean>(false)
-export const backendServiceAtom = atom<Backend>(new Backend())
 export const consolesAtom = atom<IConsoles>({ consoles: [] })
 export const onlineUsersAtom = atom<number>(-1)
 export const isFriendsConnectedAtom = atom<boolean>(false)

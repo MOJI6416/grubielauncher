@@ -104,7 +104,7 @@
     "requestSended": "Request sent",
     "noRequests": "No requests",
     "adding": "Adding to friends",
-    "friendId": "ID",
+    "friendId": "ID of friend",
     "send": "Send",
     "notFound": "User not found",
     "newRequest": "New friend request",
@@ -440,8 +440,7 @@
   },
   "share": {
     "deleted": "Build deleted from server",
-    "limitExceeded": "1 GB limit exceeded",
-    "sizes": ["B", "KB", "MB", "GB", "TB"]
+    "limitExceeded": "1 GB limit exceeded"
   },
   "manageSkins": {
     "reset": "Reset skin",
@@ -506,5 +505,14 @@
     "pt100": "Playtime 100 hours",
     "pt500": "Playtime 500 hours",
     "pt1000": "Playtime 1000 hours"
-  }
+  },
+  "downloadProgress": {
+    "title": "Downloading",
+    "preparing": "Preparing...",
+    "files": "Files",
+    "failed": "Failed",
+    "timeRemaining": "Time remaining"
+  },
+  "sizes": ["B", "KB", "MB", "GB", "TB"],
+  "timeUnits": ["s", "m", "h", "d"]
 }

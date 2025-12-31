@@ -24,9 +24,6 @@ import { Console } from './Console'
 import { RunGameParams } from '@renderer/App'
 
 const api = window.api
-const shell = api.shell
-const rimraf = api.rimraf
-const path = api.path
 
 export function Nav({
   runGame,
@@ -159,7 +156,7 @@ export function Nav({
             <Button
               variant="flat"
               isIconOnly
-              onPress={() => shell.openExternal('https://discord.gg/URrKha9hk7')}
+              onPress={async () => await api.shell.openExternal('https://discord.gg/URrKha9hk7')}
             >
               <FaDiscord size={22} />
             </Button>
@@ -174,7 +171,7 @@ export function Nav({
         <AddVersion
           closeModal={async () => {
             setVersionModal(false)
-            await rimraf(path.join(paths.launcher, 'temp'))
+            await api.fs.rimraf(await api.path.join(paths.launcher, 'temp'))
           }}
         ></AddVersion>
       )}

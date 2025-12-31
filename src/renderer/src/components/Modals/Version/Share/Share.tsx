@@ -16,11 +16,9 @@ import { ILoader } from '@/types/Loader'
 import { SelectPaths } from '@renderer/components/Modals/Version/Share/SelectPaths'
 import { IModpack, IModpackUpdate } from '@/types/Backend'
 import { modpackTags } from '@/types/Browser'
-import { Provider } from '@/types/ModManager'
 import {
   accountAtom,
   authDataAtom,
-  backendServiceAtom,
   networkAtom,
   pathsAtom,
   selectedVersionAtom,
@@ -31,15 +29,9 @@ import { useAtom } from 'jotai'
 import { ArrowUpFromLine, FolderOpen, Trash } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { formatBytes, getFile, getTotalSizes } from '@renderer/utilities/Files'
-import { projetTypeToFolder } from '@renderer/utilities/ModManager'
+import { formatBytes } from '@renderer/utilities/file'
 
 const api = window.api
-const path = api.path
-const fs = api.fs
-const rimraf = api.rimraf
-const clipboard = api.clipboard
-const archiveFiles = api.archiveFiles
 
 export function Share({
   closeModal,
@@ -70,6 +62,9 @@ export function Share({
   const [tags, setTags] = useState<string[]>([])
   const [paths, setPaths] = useState<string[]>([])
   const [isOpenSelectPaths, setIsOpenSelectPaths] = useState(false)
+
+  const [selectPathsFolder, setSelectPathsFolder] = useState<string>('')
+
   const [totalSize, setTotalSize] = useState(0)
   const [isExistsOptionsFile] = useState(false)
   const [isNetwork] = useAtom(networkAtom)
@@ -79,7 +74,6 @@ export function Share({
   const [versions, setVersions] = useAtom(versionsAtom)
   const [build] = useState(0)
   const [authData] = useAtom(authDataAtom)
-  const [backendService] = useAtom(backendServiceAtom)
 
   useEffect(() => {
     ;(async () => {
@@ -98,7 +92,11 @@ export function Share({
         setLoadingType('size')
 
         const versionPath = selectedVersion.versionPath
-        const sizes = await getTotalSizes(paths.map((p) => path.join(versionPath, p)))
+
+        const fullPathsPromises = paths.map((p) => api.path.join(versionPath, p))
+        const fullPaths = await Promise.all(fullPathsPromises)
+
+        const sizes = await api.file.getTotalSizes(fullPaths)
 
         setTotalSize(sizes)
         setIsLoading(false)
@@ -124,42 +122,55 @@ export function Share({
     try {
       let options = ''
       if (isShareOptions) {
-        const optionsPath = path.join(versionPath, 'options.txt')
+        const optionsPath = await api.path.join(versionPath, 'options.txt')
 
         try {
-          options = await fs.readFile(optionsPath, 'utf-8')
+          options = await api.fs.readFile(optionsPath, 'utf-8')
         } catch {}
       }
 
-      const result = await uploadMods(versionPath, shareCode)
-      if (result.status) mods = result.mods
-
       let isUpdateVersion = false
+
+      if (isShareMods) {
+        const result = await api.version.share.uploadMods(account.accessToken!, {
+          ...selectedVersion.version,
+          shareCode
+        })
+        if (result.success) mods = result.mods
+      }
 
       let other: ILoader['other'] | null = null
       const index = versions.findIndex((v) => v.version.name == selectedVersion?.version.name)
 
       if (isShareOtherFiles && paths) {
-        const validPaths = paths.map((p) => path.join(versionPath, p))
-        const tempPath = path.join(versionPath, 'temp')
-        const zipPath = path.join(tempPath, 'other.zip')
+        const validPathsPromises = paths.map((p) => api.path.join(versionPath, p))
+        const validPaths = await Promise.all(validPathsPromises)
 
-        const totalSize = await getTotalSizes(validPaths)
-        if (totalSize > 1_000_000_000) {
+        const tempPath = await api.path.join(versionPath, 'temp')
+        const zipPath = await api.path.join(tempPath, 'other.zip')
+
+        const computedTotalSize = await api.file.getTotalSizes(validPaths)
+        if (computedTotalSize > 1_000_000_000) {
           throw Error('not uploaded')
         }
 
-        await archiveFiles(validPaths, zipPath)
-        const url = await backendService.uploadFile(await getFile(zipPath), `modpacks/${shareCode}`)
+        await api.file.archiveFiles(validPaths, zipPath)
 
-        await rimraf(tempPath)
+        const url = await api.backend.uploadFileFromPath(
+          account.accessToken!,
+          zipPath,
+          undefined,
+          `modpacks/${shareCode}`
+        )
+
+        await api.fs.rimraf(tempPath)
 
         if (!url) throw Error('not uploaded')
 
         const data = {
           paths,
           url,
-          size: totalSize || (await getTotalSizes(validPaths))
+          size: computedTotalSize
         }
 
         other = data
@@ -172,9 +183,20 @@ export function Share({
       if ((isShareImage || silentMode) && selectedVersion.version.image) {
         const response = await fetch(selectedVersion.version.image)
         const blob = await response.blob()
-        const newFile = new File([blob], 'logo.png', { type: 'image/png' })
+        const arrayBuffer = await blob.arrayBuffer()
+        const buffer = new Uint8Array(arrayBuffer)
+        const tmpPath = await api.path.join(await api.other.getPath('temp'), 'logo.png')
 
-        const upload = await backendService.uploadFile(newFile, `modpacks/${shareCode}`)
+        await api.fs.writeFile(tmpPath, buffer)
+
+        const upload = await api.backend.uploadFileFromPath(
+          account.accessToken!,
+          tmpPath,
+          undefined,
+          `modpacks/${shareCode}`
+        )
+
+        await api.fs.rimraf(tmpPath)
 
         if (upload) {
           selectedVersion.version.image = upload
@@ -186,6 +208,7 @@ export function Share({
 
       if (isUpdateVersion) {
         await selectedVersion.save()
+        setSelectedVersion(selectedVersion)
       }
 
       const update: IModpackUpdate = {
@@ -206,7 +229,7 @@ export function Share({
         quickServer: isShareServers ? selectedVersion.version.quickServer || '' : null
       }
 
-      const isUpdated = await backendService.updateModpack(shareCode, update)
+      const isUpdated = await api.backend.updateModpack(account.accessToken!, shareCode, update)
       if (!isUpdated) throw Error('not updated')
 
       if (!silentMode) {
@@ -229,60 +252,12 @@ export function Share({
     }
   }
 
-  async function uploadMods(versionPath: string, shareCode: string) {
-    if (!selectedVersion) return { mods: [], status: false }
-
-    const newMods = [...selectedVersion.version.loader.mods]
-
-    let status = false
-    for (let index = 0; index < newMods.length; index++) {
-      try {
-        const mod = newMods[index]
-
-        if (mod.provider != Provider.LOCAL) continue
-        if (!mod.version || !mod.version.files[0]) continue
-        if (!mod.version.files[0].url.includes('file://')) continue
-
-        const modPath = path.join(
-          versionPath,
-          projetTypeToFolder(mod.projectType),
-          mod.version.files[0].filename
-        )
-
-        const file = await getFile(modPath)
-        const url = await backendService.uploadFile(
-          file,
-          `modpacks/${shareCode}/${projetTypeToFolder(mod.projectType)}`
-        )
-
-        if (url) {
-          mod.version.files[0].url = url
-          if (!status) status = true
-        }
-      } catch (err) {
-        continue
-      }
-    }
-
-    if (status) {
-      const index = versions.findIndex((v) => v.version.name == selectedVersion?.version.name)
-
-      selectedVersion.version.loader.mods = newMods
-      setVersions(versions)
-      await selectedVersion.save()
-      setSelectedVersion(versions[index])
-    }
-
-    return { mods: newMods, status }
-  }
-
   return (
     <>
       <Modal
         isOpen={true}
         onClose={() => {
           if (isLoading) return
-
           closeModal()
         }}
       >
@@ -379,8 +354,16 @@ export function Share({
                       isIconOnly
                       size="sm"
                       isDisabled={isLoading || !isShareOtherFiles}
-                      onPress={() => {
-                        setIsOpenSelectPaths(true)
+                      onPress={async () => {
+                        if (selectedVersion) {
+                          const folder = await api.path.join(
+                            globalPaths.minecraft,
+                            'versions',
+                            selectedVersion.version.name
+                          )
+                          setSelectPathsFolder(folder)
+                          setIsOpenSelectPaths(true)
+                        }
                       }}
                     >
                       <FolderOpen size={22} />
@@ -487,7 +470,7 @@ export function Share({
                     setLoadingType('share')
                     setIsLoading(true)
 
-                    const shareCode = await backendService.shareModpack({
+                    const shareCode = await api.backend.shareModpack(account.accessToken!, {
                       conf: {
                         ...selectedVersion.version,
                         loader: {
@@ -521,7 +504,7 @@ export function Share({
 
                       await selectedVersion.save()
 
-                      clipboard.writeText(shareCode)
+                      await api.clipboard.writeText(shareCode)
 
                       successUpdate()
                       addToast({
@@ -559,9 +542,13 @@ export function Share({
                     setIsLoading(true)
                     setLoadingType('delete')
 
-                    await backendService.deleteModpack(selectedVersion.version.shareCode)
+                    await api.backend.deleteModpack(
+                      account.accessToken!,
+                      selectedVersion.version.shareCode
+                    )
 
                     selectedVersion.version.shareCode = ''
+                    selectedVersion.version.image = ''
                     await selectedVersion.save()
 
                     setIsLoading(false)
@@ -592,7 +579,7 @@ export function Share({
           passPaths={(paths: string[]) => {
             setPaths(paths)
           }}
-          pathFolder={path.join(globalPaths.minecraft, 'versions', selectedVersion.version.name)}
+          pathFolder={selectPathsFolder}
           selectedPaths={paths}
         />
       )}

@@ -45,7 +45,6 @@ import { CreateServer } from './CreateServer'
 import { RunGameParams } from '@renderer/App'
 
 const api = window.api
-const clipboard = api.clipboard
 
 export function Servers({
   servers,
@@ -107,7 +106,7 @@ export function Servers({
             <div className="max-h-96 w-full">
               {servers.length == 0 ? (
                 <div className="flex w-full items-center">
-                  <Alert title={t('worlds.noWorlds')} />
+                  <Alert title={t('servers.noServers')} />
                 </div>
               ) : (
                 <ScrollShadow className="h-80">
@@ -302,8 +301,8 @@ export function Servers({
                                         key="copyAdress"
                                         variant="flat"
                                         startContent={<Copy size={20} />}
-                                        onPress={() => {
-                                          clipboard.writeText(server.ip)
+                                        onPress={async () => {
+                                          await api.clipboard.writeText(server.ip)
                                           addToast({
                                             title: t('common.copied')
                                           })

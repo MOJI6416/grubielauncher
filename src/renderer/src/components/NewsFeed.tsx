@@ -6,11 +6,10 @@ import { Button, Chip, Spinner } from '@heroui/react'
 import { Eye, EyeClosed, Newspaper, RefreshCcw } from 'lucide-react'
 import clsx from 'clsx'
 import { useAtom } from 'jotai'
-import { backendServiceAtom, networkAtom, onlineUsersAtom } from '@renderer/stores/Main'
+import { networkAtom, onlineUsersAtom } from '@renderer/stores/Main'
 import { useTranslation } from 'react-i18next'
 
 const api = window.api
-const shell = api.shell
 
 export function NewsFeed() {
   const [isNetwork] = useAtom(networkAtom)
@@ -18,7 +17,6 @@ export function NewsFeed() {
   const [isVisible, setIsVisible] = useState(false)
   const [loadingType, setLoadingType] = useState<'init' | 'refresh' | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [backendService] = useAtom(backendServiceAtom)
   const [onlineUsers] = useAtom(onlineUsersAtom)
 
   const { t } = useTranslation()
@@ -34,7 +32,7 @@ export function NewsFeed() {
   async function fetchNews() {
     setIsLoading(true)
 
-    const news = await backendService.getNews()
+    const news = await api.backend.getNews()
 
     setNews(news)
     setIsLoading(false)
@@ -110,8 +108,8 @@ export function NewsFeed() {
                     <div
                       key={index}
                       className="relative h-[100px] flex-shrink-0 rounded-lg overflow-hidden shadow-lg cursor-pointer"
-                      onClick={() => {
-                        shell.openExternal(item.url)
+                      onClick={async () => {
+                        await api.shell.openExternal(item.url)
                       }}
                     >
                       <img

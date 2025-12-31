@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react'
 
 const api = window.api
-const path = api.path
-const fs = api.fs
-const os = api.os
 
 import { useTranslation } from 'react-i18next'
 import ReactCountryFlag from 'react-country-flag'
@@ -24,41 +21,51 @@ import {
   SelectItem,
   Slider
 } from '@heroui/react'
-
-export const languages = [
-  { code: 'en', label: 'English', country: 'GB' },
-  { code: 'ru', label: 'Русский', country: 'RU' },
-  { code: 'uk', label: 'Українська', country: 'UA' }
-]
+import { LANGUAGES } from '@/types/Settings'
 
 export function Settings({ onClose }: { onClose: () => void }) {
   const [xmx, setXmx] = useState(2048)
-  const [paths] = useAtom(pathsAtom)
-  const settingsConfPath = path.join(paths.launcher, 'settings.json')
+  const [settingsPath, setSettingsPath] = useState('')
   const [lang, setLang] = useState('')
   const [devMode, setDevMode] = useState(false)
   const [settings, setSettings] = useAtom(settingsAtom)
   const { t, i18n } = useTranslation()
   const [version, setVersion] = useState('')
   const [downloadLimit, setDownloadLimit] = useState(6)
+  const [totalMem, setTotalMem] = useState(0)
+  const [paths] = useAtom(pathsAtom)
 
   useEffect(() => {
     setXmx(settings.xmx)
     setDevMode(settings.devMode)
     setDownloadLimit(settings.downloadLimit || 6)
     setLang(settings.lang || i18n.language)
-    ;(async () => {
-      setVersion(await api.getVersion())
-    })()
-  }, [])
+  }, [settings])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadSystemInfo = async () => {
+      const [v, mem] = await Promise.all([api.other.getVersion(), api.os.totalmem()])
+
+      if (!cancelled) {
+        setVersion(v)
+        setTotalMem(mem)
+        setSettingsPath(await api.path.join(paths.launcher, 'settings.json'))
+      }
+    }
+
+    loadSystemInfo()
+    return () => {
+      cancelled = true
+    }
+  }, [paths])
 
   return (
     <>
       <Modal
         isOpen={true}
         onClose={() => {
-          // if (settings) setMode(settings.theme)
-
           setLang(settings.lang)
           i18n.changeLanguage(settings.lang)
           onClose()
@@ -91,7 +98,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
                   renderValue={(value) => {
                     return `${value.children?.toString()} ${t('settings.mb')}`
                   }}
-                  maxValue={os.totalmem() / (1024 * 1024)}
+                  maxValue={totalMem / (1024 * 1024)}
                 ></Slider>
               </div>
 
@@ -106,7 +113,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
                   i18n.changeLanguage(value)
                 }}
                 renderValue={(item) => {
-                  const selected = languages.find((l) => l.code == item[0].key)
+                  const selected = LANGUAGES.find((l) => l.code == item[0].key)
                   return (
                     <div key={item[0].key} className="flex gap-2 items-center">
                       {selected?.country && (
@@ -117,7 +124,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
                   )
                 }}
               >
-                {languages.map((l) => {
+                {LANGUAGES.map((l) => {
                   return (
                     <SelectItem key={l.code}>
                       <div className="flex gap-2 items-center">
@@ -165,10 +172,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
                   downloadLimit
                 }
 
-                await fs.writeJSON(settingsConfPath, newSettings, {
-                  encoding: 'utf-8',
-                  spaces: 2
-                })
+                await api.fs.writeJSON(settingsPath, newSettings)
 
                 setSettings(newSettings)
                 addToast({

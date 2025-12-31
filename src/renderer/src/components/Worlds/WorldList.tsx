@@ -14,8 +14,6 @@ import {
 } from '@heroui/react'
 import { RunGameParams } from '@renderer/App'
 import { selectedVersionAtom } from '@renderer/stores/Main'
-import { formatTime } from '@renderer/utilities/Other'
-import { writeWorldName } from '@renderer/utilities/Worlds'
 import { useAtom } from 'jotai'
 import {
   Clock,
@@ -29,18 +27,13 @@ import {
   Trash,
   X
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Datapacks } from './Datapacks'
 import { ILocalProject, ProjectType } from '@/types/ModManager'
-import { projetTypeToFolder } from '@renderer/utilities/ModManager'
+import { formatTime } from '@renderer/utilities/date'
 
 const api = window.api
-const shell = api.shell
-const rimraf = api.rimraf
-const clipboard = api.clipboard
-const path = api.path
-const fs = api.fs
 
 export function WorldList({
   worlds,
@@ -61,28 +54,41 @@ export function WorldList({
   const [isEditMode, setIsEditMode] = useState(false)
   const [isDatapacksOpen, setIsDatapacksOpen] = useState(false)
   const [selectedWorld, setSelectedWorld] = useState<IWorld | null>(null)
+  const [datapacks, setDatapacks] = useState<
+    { mod: ILocalProject; path: string; filename: string }[]
+  >([])
 
-  const datapacks = useMemo(() => {
-    if (!version) return []
+  useEffect(() => {
+    ;(async () => {
+      if (!version) {
+        setDatapacks([])
+        return
+      }
 
-    const mods = version.version.loader.mods.filter((m) => m.projectType === ProjectType.DATAPACK)
-    const folderPath = path.join(version.versionPath, projetTypeToFolder(ProjectType.DATAPACK))
-    const datapacks: {
-      mod: ILocalProject
-      path: string
-    }[] = []
+      const mods = version.version.loader.mods.filter((m) => m.projectType === ProjectType.DATAPACK)
+      const folderPath = await api.path.join(
+        version.versionPath,
+        await api.modManager.ptToFolder(ProjectType.DATAPACK)
+      )
+      const datapacks: {
+        mod: ILocalProject
+        path: string
+        filename: string
+      }[] = []
 
-    for (const mod of mods) {
-      const modPath = path.join(folderPath, mod.version?.files[0].filename || '')
-      if (!fs.pathExistsSync(modPath)) continue
+      for (const mod of mods) {
+        const modPath = await api.path.join(folderPath, mod.version?.files[0].filename || '')
+        if (!(await api.fs.pathExists(modPath))) continue
 
-      datapacks.push({
-        mod,
-        path: modPath
-      })
-    }
+        datapacks.push({
+          mod,
+          path: modPath,
+          filename: await api.path.basename(modPath)
+        })
+      }
 
-    return datapacks
+      setDatapacks(datapacks)
+    })()
   }, [version])
 
   const { t } = useTranslation()
@@ -156,7 +162,8 @@ export function WorldList({
                           onPress={async () => {
                             setProcessingIndex(index)
 
-                            const result = await writeWorldName(world.path, editValue.trim())
+                            const result = await (world.path, editValue.trim())
+
                             if (!result) {
                               addToast({
                                 title: t('worlds.renameError'),
@@ -265,8 +272,8 @@ export function WorldList({
                             key="copySeed"
                             variant="flat"
                             startContent={<Copy size={20} />}
-                            onPress={() => {
-                              clipboard.writeText(world.seed)
+                            onPress={async () => {
+                              await api.clipboard.writeText(world.seed)
                               addToast({
                                 title: t('common.copied')
                               })
@@ -280,7 +287,7 @@ export function WorldList({
                             startContent={<ImageOff size={20} />}
                             onPress={async () => {
                               try {
-                                await rimraf(path.join(world.path, 'icon.png'))
+                                await api.fs.rimraf(await api.path.join(world.path, 'icon.png'))
 
                                 setWorlds(
                                   worlds.map((w) =>
@@ -296,7 +303,7 @@ export function WorldList({
                             key="openFolder"
                             variant="flat"
                             startContent={<Folder size={20} />}
-                            onPress={() => shell.openPath(world.path)}
+                            onPress={async () => await api.shell.openPath(world.path)}
                           >
                             {t('worlds.openFolder')}
                           </DropdownItem>
@@ -308,7 +315,7 @@ export function WorldList({
                             startContent={<Trash size={20} />}
                             onPress={async () => {
                               try {
-                                await rimraf(world.path)
+                                await api.fs.rimraf(world.path)
                                 setWorlds(worlds.filter((w) => w.path !== world.path))
 
                                 addToast({

@@ -19,10 +19,6 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const api = window.api
-const fs = api.fs
-const path = api.path
-const rimraf = api.rimraf
-const shell = api.shell
 
 export function Datapacks({
   onClose,
@@ -31,7 +27,7 @@ export function Datapacks({
 }: {
   onClose: () => void
   world: IWorld
-  datapacks: { mod: ILocalProject; path: string }[]
+  datapacks: { mod: ILocalProject; path: string; filename: string }[]
 }) {
   const [datapackName, setDatapackName] = useState<string>('')
   const [disabledKeys, setDisabledKeys] = useState<string[]>(world.datapacks)
@@ -44,7 +40,7 @@ export function Datapacks({
       title: fileName,
       isLocal: true,
       icon: '',
-      path: path.join(world.path, 'datapacks', fileName)
+      path: `${world.path}/datapacks/${fileName}`
     }
 
     const datapack = datapacks.find((dp) => dp.mod.version?.files[0].filename === fileName)
@@ -73,7 +69,7 @@ export function Datapacks({
                 isIconOnly
                 onPress={async () => {
                   try {
-                    await rimraf(datapackInfo.path)
+                    await api.fs.rimraf(datapackInfo.path)
                     world.datapacks = world.datapacks.filter((dp) => dp !== fileName)
                     setDisabledKeys(disabledKeys.filter((key) => key !== fileName))
                   } catch {}
@@ -102,7 +98,7 @@ export function Datapacks({
                 disabledKeys={disabledKeys}
               >
                 {datapacks.map((dp) => (
-                  <SelectItem key={path.basename(dp.path)}>{dp.mod.title}</SelectItem>
+                  <SelectItem key={dp.filename}>{dp.mod.title}</SelectItem>
                 ))}
               </Select>
               <div className="flex items-center gap-1">
@@ -113,13 +109,15 @@ export function Datapacks({
                   isIconOnly
                   onPress={async () => {
                     if (!datapackName) return
-                    const datapack = datapacks.find((dp) => path.basename(dp.path) === datapackName)
+                    const datapack = datapacks.find(
+                      async (dp) => (await api.path.basename(dp.path)) === datapackName
+                    )
                     if (!datapack) return
 
-                    const datapackPath = path.join(world.path, 'datapacks', datapackName)
+                    const datapackPath = await api.path.join(world.path, 'datapacks', datapackName)
 
                     try {
-                      await fs.copyFile(datapack.path, datapackPath)
+                      await api.fs.copy(datapack.path, datapackPath)
                       world.datapacks.push(datapackName)
                       setDisabledKeys([...disabledKeys, datapackName])
                     } catch {}
@@ -132,8 +130,8 @@ export function Datapacks({
                 <Button
                   variant="flat"
                   isIconOnly
-                  onPress={() => {
-                    shell.openPath(path.join(world.path, 'datapacks'))
+                  onPress={async () => {
+                    await api.shell.openPath(await api.path.join(world.path, 'datapacks'))
                   }}
                 >
                   <Folder size={22} />

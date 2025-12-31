@@ -1,7 +1,3 @@
-const api = window.api
-const fs = api.fs
-const path = api.path
-
 import { IUser } from '@/types/IUser'
 import { useTranslation } from 'react-i18next'
 import { Award, Save, Settings2, Shirt } from 'lucide-react'
@@ -9,13 +5,7 @@ import { SkinView } from '../SkinView'
 import { ImageCropper } from '../ImageCropper'
 import { useState } from 'react'
 import { useAtom } from 'jotai'
-import {
-  accountAtom,
-  accountsAtom,
-  authDataAtom,
-  backendServiceAtom,
-  pathsAtom
-} from '@renderer/stores/Main'
+import { accountAtom, accountsAtom, authDataAtom, pathsAtom } from '@renderer/stores/Main'
 import {
   addToast,
   Avatar,
@@ -28,19 +18,17 @@ import {
   Tooltip
 } from '@heroui/react'
 import { ManageSkins } from '../ManageSkins'
-import { IAccountConf, IAuth } from '@/types/Account'
+import { ILocalAccount } from '@/types/Account'
 import { ISkinData } from '@/types/Skin'
-import { SkinsManager } from '@renderer/utilities/SkinsManager'
-import { formatDate, formatTime } from '@renderer/utilities/Other'
-import { getSkin } from '@renderer/utilities/Skin'
-import { authMicrosoft } from '@renderer/services/Auth'
-import { jwtDecode } from 'jwt-decode'
 import pt100 from '@renderer/assets/achievements/pt100.png'
 import pt500 from '@renderer/assets/achievements/pt500.png'
 import pt1000 from '@renderer/assets/achievements/pt1000.png'
 import useEmblaCarousel from 'embla-carousel-react'
 import Autoplay from 'embla-carousel-autoplay'
 import { Achievements } from './Achievements'
+import { formatDate, formatTime } from '@renderer/utilities/date'
+
+const api = window.api
 
 type LoadingType = 'skin' | 'save' | 'manageSkins'
 
@@ -62,14 +50,11 @@ export default function AccountInfo({
   const [croppedImage, setCroppedImage] = useState<string>('')
   const [isCropping, setIsCropping] = useState(false)
   const [image, setImage] = useState<string | null>(user.image)
-  const [file, setFile] = useState<File | null>(null)
   const [localAccount, setLocalAccount] = useAtom(accountAtom)
   const [accounts, setAccounts] = useAtom(accountsAtom)
   const [paths] = useAtom(pathsAtom)
   const [isManageSkins, setIsManageSkins] = useState(false)
-  const [skinsManger, setSkinsManager] = useState<SkinsManager>()
   const [authData] = useAtom(authDataAtom)
-  const [backendService] = useAtom(backendServiceAtom)
   const [isAchievements, setIsAchievements] = useState(false)
 
   const [emblaRef] = useEmblaCarousel({ loop: false, dragFree: true, align: 'start' }, [
@@ -104,7 +89,7 @@ export default function AccountInfo({
                     onClick={async () => {
                       if (!isOwner) return
 
-                      const filePaths = await window.electron.ipcRenderer.invoke('openFileDialog')
+                      const filePaths = await api.other.openFileDialog()
                       if (!filePaths || filePaths.length == 0) return
 
                       setCroppedImage(filePaths[0])
@@ -194,43 +179,65 @@ export default function AccountInfo({
                 color="success"
                 onPress={async () => {
                   try {
-                    if (!image || !file || !localAccount) return
+                    if (!image || !localAccount) return
 
                     setIsLoading(true)
                     setLoadingType('save')
 
-                    const url = await backendService.uploadFile(file, 'avatars')
+                    const response = await fetch(image)
+                    const blob = await response.blob()
+                    const arrayBuffer = await blob.arrayBuffer()
+                    const buffer = new Uint8Array(arrayBuffer)
+                    const fileName = `${user._id}.png`
+                    const tmpPath = await api.path.join(await api.other.getPath('temp'), fileName)
+
+                    await api.fs.writeFile(tmpPath, buffer)
+
+                    const url = await api.backend.uploadFileFromPath(
+                      localAccount.accessToken || '',
+                      tmpPath,
+                      undefined,
+                      'avatars'
+                    )
+
+                    await api.fs.rimraf(tmpPath)
 
                     if (!url) throw new Error('Error uploading')
 
                     setImage(url)
 
                     if (localAccount.accessToken)
-                      await backendService.updateUser(user._id, { image: url })
+                      await api.backend.updateUser(localAccount.accessToken || '', user._id, {
+                        image: url
+                      })
 
                     const index = accounts.findIndex((a) => a.nickname == localAccount?.nickname)
 
                     accounts[index].image = url
                     localAccount.image = url
 
-                    const accountsConf: IAccountConf = {
-                      accounts,
-                      lastPlayed: `${localAccount.type}_${localAccount.nickname}`
-                    }
+                    const updatedLocalAccount = { ...localAccount, image: url }
+                    setLocalAccount(updatedLocalAccount)
 
-                    await fs.writeJSON(path.join(paths.launcher, 'accounts.json'), accountsConf, {
-                      encoding: 'utf-8',
-                      spaces: 2
-                    })
+                    const updatedAccounts = accounts.map((a) =>
+                      a.nickname === localAccount.nickname && a.type === localAccount.type
+                        ? { ...a, image: url }
+                        : a
+                    )
 
-                    if (setAccounts) setAccounts(accountsConf.accounts)
-                    if (setLocalAccount) setLocalAccount(localAccount)
+                    await api.accounts.save(
+                      updatedAccounts,
+                      `${localAccount.type}_${localAccount.nickname}`,
+                      paths.launcher
+                    )
+
+                    if (setAccounts) setAccounts(updatedAccounts)
 
                     addToast({
                       color: 'success',
                       title: t('accountInfo.updated')
                     })
-                  } catch (err) {
+                  } catch {
                     addToast({
                       color: 'danger',
                       title: t('accountInfo.updateError')
@@ -253,7 +260,7 @@ export default function AccountInfo({
                 setIsLoading(true)
                 setLoadingType('skin')
 
-                const skinData = await getSkin(
+                const skinData = await api.skin.get(
                   user.platform,
                   user.uuid,
                   user.nickname,
@@ -283,8 +290,7 @@ export default function AccountInfo({
                 startContent={<Settings2 className="flex-shrink-0" size={22} />}
                 onPress={async () => {
                   if (user.platform == 'elyby') {
-                    api.shell.openExternal('https://ely.by/skins')
-
+                    await api.shell.openExternal('https://ely.by/skins')
                     return
                   }
 
@@ -293,7 +299,6 @@ export default function AccountInfo({
                   setIsLoading(true)
                   setLoadingType('manageSkins')
 
-                  let accessToken = authData.auth.accessToken
                   if (
                     user.platform == 'microsoft' &&
                     authData.auth.expiresAt &&
@@ -302,50 +307,32 @@ export default function AccountInfo({
                     const { expiresAt } = authData.auth
 
                     if (Date.now() > expiresAt) {
-                      const authUser = await authMicrosoft(
+                      const authUser = await api.auth.microsoftRefresh(
                         authData.auth.refreshToken,
-                        true,
-                        authData.sub,
-                        localAccount.accessToken
+                        authData.sub
                       )
 
                       if (!authUser) return
 
                       const newData = { ...localAccount, ...authUser }
-                      const decoded = jwtDecode<IAuth>(authUser.accessToken)
-                      accessToken = decoded.auth.accessToken
-
                       setLocalAccount(newData)
-                      setAccounts((prev) => {
-                        const index = prev.findIndex(
-                          (a) => a.nickname == localAccount.nickname && a.type == localAccount.type
-                        )
-                        if (index == -1) return prev
-                        prev[index] = newData
-                        return prev
-                      })
 
-                      await fs.writeJSON(
-                        path.join(paths.launcher, 'accounts.json'),
-                        { accounts, lastPlayed: `${localAccount.type}_${authData.nickname}` },
-                        {
-                          encoding: 'utf-8',
-                          spaces: 2
-                        }
+                      const updatedAccounts = accounts.map((a: ILocalAccount) =>
+                        a.nickname === localAccount.nickname && a.type === localAccount.type
+                          ? newData
+                          : a
+                      )
+
+                      setAccounts(updatedAccounts)
+
+                      await api.accounts.save(
+                        updatedAccounts,
+                        `${newData.type}_${newData.nickname}`,
+                        paths.launcher
                       )
                     }
                   }
 
-                  const skinsManager = new SkinsManager(
-                    paths.launcher,
-                    user.platform,
-                    user.uuid,
-                    user.nickname,
-                    user.platform == 'microsoft' ? accessToken : localAccount.accessToken
-                  )
-                  await skinsManager.load()
-
-                  setSkinsManager(skinsManager)
                   setIsManageSkins(true)
 
                   setIsLoading(false)
@@ -359,9 +346,7 @@ export default function AccountInfo({
         </ModalContent>
       </Modal>
 
-      {isManageSkins && skinsManger && (
-        <ManageSkins skinsManager={skinsManger} onClose={() => setIsManageSkins(false)} />
-      )}
+      {isManageSkins && <ManageSkins onClose={() => setIsManageSkins(false)} />}
 
       {skinModal && (
         <SkinView
@@ -371,11 +356,18 @@ export default function AccountInfo({
           onClose={() => {
             setSkinModal(false)
           }}
-          setScreenshotFile={(data: string) => {
-            const base64Data = data.split(';base64,').pop()
-            if (!base64Data) return
-            const binaryData = api.fromBuffer(base64Data, 'base64')
-            const blob = new Blob([binaryData], { type: 'image/png' })
+          setScreenshotFile={(dataUrl: string) => {
+            const base64 = dataUrl.split(',')[1]
+            if (!base64) return
+
+            const binaryString = atob(base64)
+            const len = binaryString.length
+            const bytes = new Uint8Array(len)
+            for (let i = 0; i < len; i++) {
+              bytes[i] = binaryString.charCodeAt(i)
+            }
+
+            const blob = new Blob([bytes], { type: 'image/png' })
             const url = URL.createObjectURL(blob)
 
             setCroppedImage(url)
@@ -392,12 +384,7 @@ export default function AccountInfo({
           image={croppedImage}
           size={{ width: 128, height: 128 }}
           changeImage={async (url: string) => {
-            const response = await fetch(url)
-            const image = await response.blob()
-            const file = new File([image], `${user._id}.png`, { type: `image/png` })
-
             setImage(url)
-            setFile(file)
           }}
         />
       )}

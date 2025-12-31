@@ -1,8 +1,4 @@
 const api = window.api
-const getSha1 = api.getSha1
-const shell = api.shell
-const path = api.path
-const extractAll = api.extractAll
 
 import {
   IFilterGroup,
@@ -40,7 +36,7 @@ import {
 } from 'lucide-react'
 import { useAtom } from 'jotai'
 import {
-  backendServiceAtom,
+  accountAtom,
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
   pathsAtom,
@@ -75,10 +71,8 @@ import { ModBody } from './ModBody'
 import GalleryCarousel from './Gallery'
 import { Loader } from '@/types/Loader'
 import { IVersion } from '@/types/IVersion'
-import { checkLocalMod, checkModpack, getProjectTypes } from '@renderer/utilities/ModManager'
-import { VersionsService } from '@renderer/services/Versions'
-import { ModManager as ModManagerService } from '@r\enderer/services/ModManager'
 import { ModToggleButton } from './ModToggleButton'
+import { getProjectTypes } from '@renderer/utilities/mod'
 
 enum LoadingType {
   SEARCH,
@@ -149,8 +143,8 @@ export function ModManager({
   const [isBlockedMods, setIsBlockedMods] = useState(false)
   const [paths] = useAtom(pathsAtom)
   const [selectedVersion] = useAtom(selectedVersionAtom)
-  const backendService = useAtom(backendServiceAtom)[0]
   const settings = useAtom(settingsAtom)[0]
+  const [account] = useAtom(accountAtom)
 
   const { t } = useTranslation()
 
@@ -185,15 +179,17 @@ export function ModManager({
       return
     }
 
-    const sortValues = ModManagerService.getSort(provider)
-    setSortValues(sortValues)
-    setSort(sortValues[0])
+    ;(async () => {
+      const sortValues = await api.modManager.getSort(provider)
+      setSortValues(sortValues)
+      setSort(sortValues[0])
+    })()
 
     async function getVersions() {
       setLoading(true)
       setLoadingType(LoadingType.GAME_VERSIONS)
 
-      const versions = await VersionsService.getVersions('vanilla')
+      const versions = await api.versions.getList('vanilla')
       setVersions(versions)
     }
 
@@ -267,7 +263,7 @@ export function ModManager({
         projects: []
       })
     } else {
-      const data = await ModManagerService.search(
+      const data = await api.modManager.search(
         query,
         provider,
         {
@@ -322,7 +318,7 @@ export function ModManager({
     setLoading(true)
     setLoadingType(LoadingType.FILTER)
 
-    const filters = await ModManagerService.getFilter(provider, projectType)
+    const filters = await api.modManager.getFilter(provider, projectType)
     setFilters(filters)
   }
 
@@ -387,7 +383,7 @@ export function ModManager({
 
         if (mod.provider == Provider.LOCAL) continue
 
-        const versions = await ModManagerService.getVersions(mod.provider, mod.id, {
+        const versions = await api.modManager.getVersions(mod.provider, mod.id, {
           loader:
             mod.projectType == ProjectType.PLUGIN && server
               ? (server.core as unknown as Loader)
@@ -414,7 +410,7 @@ export function ModManager({
       setLoading(true)
       setLoadingType(LoadingType.CHECK_LOCAL_MOD)
 
-      const info = await checkLocalMod(versionPath, path)
+      const info = await api.modManager.checkLocalMod(versionPath, path)
       if (!info) {
         addToast({
           color: 'danger',
@@ -454,7 +450,7 @@ export function ModManager({
             isServer: true,
             size: info.size,
             url: `file://${info.path}`,
-            sha1: await getSha1(info.path)
+            sha1: await api.fs.sha1(info.path)
           }
         ]
       }
@@ -536,7 +532,7 @@ export function ModManager({
                             pts = [...projectTypes]
                           }
 
-                          const sortValues = ModManagerService.getSort(newProvider)
+                          const sortValues = await api.modManager.getSort(newProvider)
                           setSortValues(sortValues)
                           setSort(sortValues[0])
 
@@ -940,16 +936,12 @@ export function ModManager({
                         startContent={<File size={22} />}
                         isLoading={isLoading && loadingType == LoadingType.CHECK_LOCAL_MOD}
                         onPress={async () => {
-                          const filePaths = await window.electron.ipcRenderer.invoke(
-                            'openFileDialog',
-                            false,
-                            [
-                              {
-                                name: 'Mods',
-                                extensions: ['jar', 'zip']
-                              }
-                            ]
-                          )
+                          const filePaths = await api.other.openFileDialog(false, [
+                            {
+                              name: 'Mods',
+                              extensions: ['jar', 'zip']
+                            }
+                          ])
 
                           if (!filePaths || filePaths.length == 0) return
                           await readLocalMod(filePaths[0])
@@ -1067,7 +1059,7 @@ export function ModManager({
                                         let versions: ModManagerVersion[] = []
                                         if (project.provider != Provider.LOCAL) {
                                           versions.push(
-                                            ...(await ModManagerService.getVersions(
+                                            ...(await api.modManager.getVersions(
                                               project.provider,
                                               project.id,
                                               {
@@ -1115,7 +1107,7 @@ export function ModManager({
                                           currentIndex = currentIndex == -1 ? 0 : currentIndex
                                           currentVersion = versions[currentIndex]
                                         } else {
-                                          const projectInfo = await ModManagerService.getProject(
+                                          const projectInfo = await api.modManager.getProject(
                                             project.provider,
                                             project.id
                                           )
@@ -1139,12 +1131,11 @@ export function ModManager({
                                           currentVersion.dependencies.filter((d) => d.project)
                                             .length == 0
                                         ) {
-                                          const dependensies =
-                                            await ModManagerService.getDependencies(
-                                              project.provider,
-                                              project.id,
-                                              currentVersion.dependencies
-                                            )
+                                          const dependensies = await api.modManager.getDependencies(
+                                            project.provider,
+                                            project.id,
+                                            currentVersion.dependencies
+                                          )
 
                                           currentVersion.dependencies = dependensies
                                           versions[currentIndex] = currentVersion
@@ -1177,7 +1168,7 @@ export function ModManager({
                                         variant="flat"
                                         isIconOnly
                                         onPress={() => {
-                                          shell.openExternal(project.url)
+                                          api.shell.openExternal(project.url)
                                         }}
                                       >
                                         {project.provider == Provider.CURSEFORGE ? (
@@ -1360,43 +1351,46 @@ export function ModManager({
                                     <Globe size={22} />
                                   )
                                 }
-                                onPress={() => {
-                                  shell.openExternal(project.url)
+                                onPress={async () => {
+                                  await api.shell.openExternal(project.url)
                                 }}
                               >
                                 {t('modManager.goToWebsite')}
                               </Button>
                             )}
 
-                            <Button
-                              variant="flat"
-                              isIconOnly
-                              isDisabled={settings.lang == 'en'}
-                              isLoading={isLoading && loadingType == LoadingType.TRANSLATE}
-                              onPress={async () => {
-                                setLoading(true)
-                                setLoadingType(LoadingType.TRANSLATE)
+                            {settings.lang != 'en' && account?.type != 'plain' && (
+                              <Button
+                                variant="flat"
+                                isIconOnly
+                                isLoading={isLoading && loadingType == LoadingType.TRANSLATE}
+                                onPress={async () => {
+                                  setLoading(true)
+                                  setLoadingType(LoadingType.TRANSLATE)
 
-                                const translatedDescription = await backendService.aiComplete(
-                                  `Translate the following text to ${settings.lang}:\n\n${project.description}`
-                                )
+                                  const translatedDescription = await api.backend.aiComplete(
+                                    account?.accessToken || '',
+                                    `Translate the following text to ${settings.lang}:\n\n${project.description}`
+                                  )
 
-                                const translatedBody = await backendService.aiComplete(
-                                  `Translate the following text to ${settings.lang}:\n\n${project.body}`
-                                )
+                                  const translatedBody = await api.backend.aiComplete(
+                                    account?.accessToken || '',
+                                    `Translate the following text to ${settings.lang}:\n\n${project.body}`
+                                  )
 
-                                setProject({
-                                  ...project,
-                                  description: translatedDescription || project.description,
-                                  body: translatedBody || project.body
-                                })
+                                  setProject({
+                                    ...project,
+                                    description: translatedDescription || project.description,
+                                    body: translatedBody || project.body
+                                  })
 
-                                setLoading(false)
-                                setLoadingType(null)
-                              }}
-                            >
-                              <Languages size={22} />
-                            </Button>
+                                  setLoading(false)
+                                  setLoadingType(null)
+                                }}
+                              >
+                                <Languages size={22} />
+                              </Button>
+                            )}
                           </div>
 
                           <div className="flex flex-col gap-2">
@@ -1438,7 +1432,7 @@ export function ModManager({
                                     version.dependencies.length > 0 &&
                                     version.dependencies.filter((d) => d.project).length == 0
                                   ) {
-                                    const dependensies = await ModManagerService.getDependencies(
+                                    const dependensies = await api.modManager.getDependencies(
                                       project.provider,
                                       project.id,
                                       version.dependencies
@@ -1477,7 +1471,7 @@ export function ModManager({
                                     setLoadingType(LoadingType.INSTALL)
 
                                     if (isModpacks) {
-                                      const temp = path.join(paths.launcher, 'temp')
+                                      const temp = await api.path.join(paths.launcher, 'temp')
 
                                       const file = selectVersion.files[0]
                                       if (!file) {
@@ -1502,26 +1496,33 @@ export function ModManager({
                                         return
                                       }
 
-                                      const modpackPath = path.join(
+                                      const modpackPath = await api.path.join(
                                         temp,
-                                        path.basename(filename, path.extname(filename))
+                                        await api.path.basename(
+                                          filename,
+                                          await api.path.extname(filename)
+                                        )
                                       )
 
-                                      await api.startDownload([
-                                        {
-                                          destination: path.join(temp, filename),
-                                          group: 'mods',
-                                          url: file.url,
-                                          sha1: file.sha1,
-                                          options: {
-                                            extract: true,
-                                            extractDelete: true,
-                                            extractFolder: modpackPath
+                                      await api.file.download(
+                                        [
+                                          {
+                                            destination: await api.path.join(temp, filename),
+                                            group: 'mods',
+                                            url: file.url,
+                                            sha1: file.sha1,
+                                            size: file.size,
+                                            options: {
+                                              extract: true,
+                                              extractDelete: true,
+                                              extractFolder: modpackPath
+                                            }
                                           }
-                                        }
-                                      ])
+                                        ],
+                                        settings.downloadLimit
+                                      )
 
-                                      const modpack = await checkModpack(
+                                      const modpack = await api.modManager.checkModpack(
                                         modpackPath,
                                         project,
                                         selectVersion
@@ -1787,20 +1788,19 @@ export function ModManager({
                                                   }
                                                 }
 
-                                                const versions =
-                                                  await ModManagerService.getVersions(
-                                                    newProject.provider,
-                                                    newProject.id,
-                                                    {
-                                                      loader:
-                                                        projectType == ProjectType.PLUGIN && server
-                                                          ? (server.core as unknown as Loader)
-                                                          : loader || 'vanilla',
-                                                      version: version.id,
-                                                      projectType: newProject.projectType,
-                                                      modUrl: newProject.url
-                                                    }
-                                                  )
+                                                const versions = await api.modManager.getVersions(
+                                                  newProject.provider,
+                                                  newProject.id,
+                                                  {
+                                                    loader:
+                                                      projectType == ProjectType.PLUGIN && server
+                                                        ? (server.core as unknown as Loader)
+                                                        : loader || 'vanilla',
+                                                    version: version.id,
+                                                    projectType: newProject.projectType,
+                                                    modUrl: newProject.url
+                                                  }
+                                                )
 
                                                 if (!versions.length) {
                                                   setLoading(false)
@@ -1828,7 +1828,7 @@ export function ModManager({
                                                   currentVersion = versions[currentIndex]
                                                 } else {
                                                   const projectInfo =
-                                                    await ModManagerService.getProject(
+                                                    await api.modManager.getProject(
                                                       newProject.provider,
                                                       newProject.id
                                                     )
@@ -1840,7 +1840,7 @@ export function ModManager({
 
                                                 if (currentVersion.dependencies.length > 0) {
                                                   const dependensies =
-                                                    await ModManagerService.getDependencies(
+                                                    await api.modManager.getDependencies(
                                                       newProject.provider,
                                                       newProject.id,
                                                       currentVersion.dependencies
@@ -1943,16 +1943,16 @@ export function ModManager({
               return
             }
 
-            const temp = path.join(paths.launcher, 'temp')
+            const temp = await api.path.join(paths.launcher, 'temp')
 
-            const modpackPath = path.join(
+            const modpackPath = await api.path.join(
               temp,
-              path.basename(mod.fileName, path.extname(mod.fileName))
+              await api.path.basename(mod.fileName, await api.path.extname(mod.fileName))
             )
 
-            await extractAll(mod.filePath, modpackPath)
+            await api.fs.extractZip(mod.filePath, modpackPath)
 
-            const modpack = await checkModpack(modpackPath, project, selectVersion)
+            const modpack = await api.modManager.checkModpack(modpackPath, project, selectVersion)
             if (!modpack) {
               addToast({
                 color: 'danger',

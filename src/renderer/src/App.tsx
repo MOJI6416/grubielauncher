@@ -1,29 +1,19 @@
 const api = window.api
-const path = api.path
-const fs = api.fs
-const electron = window.electron
-
-const updateActivity = api.updateActivity
-const getPath = api.getPath
 
 import { Presence } from 'discord-rpc'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Versions } from './components/Versions'
-import { languages } from './components/Settings'
 import { Nav } from './components/Nav'
 import { useTranslation } from 'react-i18next'
 import { io, Socket } from 'socket.io-client'
-import { IUpdateStatus } from '../../types/IFriend'
-import { Friends, IFriendRequest } from './components/Friends'
+import { Friends, IFriendRequest } from './components/Friends/Friends'
 import { IUser } from '../../types/IUser'
 import { IVersionStatistics } from '../../types/VersionStatistics'
-import { baseUrl } from './services/Base'
 import { useAtom } from 'jotai'
 import {
   accountAtom,
   accountsAtom,
   authDataAtom,
-  backendServiceAtom,
   consolesAtom,
   friendRequestsAtom,
   friendSocketAtom,
@@ -39,20 +29,21 @@ import {
   settingsAtom,
   versionsAtom
 } from './stores/Main'
-import { readNBT } from './utilities/Nbt'
-import { checkDiffenceUpdateData, readVerions, syncShare } from './utilities/Versions'
 import { Confirmation } from './components/Modals/Confirmation'
 import { addToast } from '@heroui/toast'
-import { TSettings } from '@/types/Settings'
+import { LANGUAGES, TSettings } from '@/types/Settings'
 import { IAccountConf } from '@/types/Account'
 import { IServer } from '@/types/ServersList'
-import { Version } from '@renderer/game/Version'
-import { authElyBy, authMicrosoft } from './services/Auth'
 import { NewsFeed } from './components/NewsFeed'
-import { IConsole, IConsoleMessage } from '@/types/Console'
+import { IConsole } from '@/types/Console'
 import { BlockedMods, checkBlockedMods, IBlockedMod } from './components/Modals/BlockedMods'
-import { Mods } from './game/Mods'
-import { getOS } from './utilities/Other'
+import { Version } from './classes/Version'
+import { checkDiffenceUpdateData, readVerions, syncShare } from './utilities/version'
+import { Mods } from './classes/Mods'
+import { DownloaderInfo } from '@/types/Downloader'
+import { DownloadProgress } from './components/DownloadProgress'
+import { BACKEND_URL } from '@/shared/config'
+import { IRefreshTokenResponse } from '@/types/Auth'
 
 export interface RunGameParams {
   skipUpdate?: boolean
@@ -82,7 +73,6 @@ function App() {
   const [isUpdateModal, setIsUpdateModal] = useState(false)
   const [servers, setServers] = useState<IServer[]>([])
   const [authData] = useAtom(authDataAtom)
-  const [backendService] = useAtom(backendServiceAtom)
   const [consoles, setConsoles] = useAtom(consolesAtom)
   const [versions] = useAtom(versionsAtom)
   const setOnlineUsers = useAtom(onlineUsersAtom)[1]
@@ -92,6 +82,7 @@ function App() {
   const [isBlockedMods, setIsBlockedMods] = useState(false)
   const [isFriendsConnected, setIsFriendsConnected] = useAtom(isFriendsConnectedAtom)
   const setVersions = useAtom(versionsAtom)[1]
+  const [downloder, setDownloader] = useState<DownloaderInfo | null>(null)
 
   useEffect(() => {
     if (onlineSocket.current) {
@@ -99,7 +90,8 @@ function App() {
       setOnlineUsers(-1)
     }
 
-    const socket = io(`${baseUrl}/online`)
+    const socket = io(`${BACKEND_URL}/online`)
+
     onlineSocket.current = socket
 
     return () => {
@@ -129,146 +121,142 @@ function App() {
 
   // Initial setup
   useEffect(() => {
-    ;(async () => {
-      const appData = await getPath('appData')
-      if (!appData) return
+    let cancelled = false
 
-      const launcherPath = path.join(appData, '.grubielauncher')
-      const pathsData = {
-        launcher: launcherPath,
-        minecraft: path.join(launcherPath, 'minecraft'),
-        java: path.join(launcherPath, 'java')
+    const init = async () => {
+      try {
+        const paths = await api.other.getPaths()
+        if (cancelled) return
+
+        setPaths(paths)
+
+        const settings = await getSettings(paths.launcher)
+        if (cancelled) return
+
+        const account = await getAccounts(paths.launcher)
+        if (cancelled) return
+
+        const versionsPath = await api.path.join(paths.minecraft, 'versions')
+
+        if (await api.fs.pathExists(versionsPath)) {
+          const versions = await readVerions(paths.launcher, settings, account)
+          if (!cancelled) setVersions(versions)
+        } else {
+          await api.fs.ensure(versionsPath)
+        }
+      } catch (err) {
+        console.error('Init error:', err)
       }
+    }
 
-      setPaths(pathsData)
+    init()
 
-      // Read settings
-      await getSettings(pathsData.launcher)
-
-      // Read accounts
-      const account = await getAccounts(pathsData.launcher)
-
-      // Read versions
-      const versionsPath = path.join(pathsData.launcher, 'minecraft', 'versions')
-      if (await fs.pathExists(versionsPath)) {
-        const versions = await readVerions(pathsData.launcher, settings, account)
-        setVersions(versions)
-      } else await fs.mkdir(versionsPath, { recursive: true })
-
-      const os = getOS()
-      console.log('Operating System:', os)
-    })()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const { t, i18n } = useTranslation()
 
   useEffect(() => {
-    electron.ipcRenderer.on(
-      'consoleChangeStatus',
-      async (
-        _event,
-        versionName: string,
-        instance: number,
-        status: 'running' | 'stopped' | 'error'
-      ) => {
-        const versionConsole = consoles.consoles.find(
-          (v) => v.versionName == versionName && v.instance == instance
-        )
-        const version = versions.find((v) => v.version.name == versionName)
-        if (!versionConsole || !version) return
+    api.events.onConsoleChangeStatus(async (versionName, instance, status) => {
+      const versionConsole = consoles.consoles.find(
+        (v) => v.versionName == versionName && v.instance == instance
+      )
+      const version = versions.find((v) => v.version.name == versionName)
+      if (!versionConsole || !version) return
 
-        versionConsole.status = status
-        setConsoles({ consoles: [...consoles.consoles] })
+      versionConsole.status = status
+      setConsoles({ consoles: [...consoles.consoles] })
 
-        if (status == 'stopped') {
-          const time = Date.now() - versionConsole.startTime
-          const playTime = Math.floor(time / 1000)
+      if (status == 'stopped') {
+        const time = Date.now() - versionConsole.startTime
+        const playTime = Math.floor(time / 1000)
 
-          await updatePlayingTime(playTime)
+        await updatePlayingTime(playTime)
 
-          if (isOwnerVersion) {
-            const statPath = path.join(version.versionPath, 'statistics.json')
-            const statIsExists = fs.pathExistsSync(statPath)
+        if (isOwnerVersion) {
+          const statPath = await window.api.path.join(version.versionPath, 'statistics.json')
+          const statIsExists = await window.api.fs.pathExists(statPath)
 
-            let statData: IVersionStatistics = {
-              lastLaunched: new Date(),
-              launches: 1,
-              playTime: playTime
-            }
-
-            if (statIsExists) {
-              const statData: IVersionStatistics = await fs.readJSON(statPath, 'utf-8')
-
-              statData.lastLaunched = new Date()
-              statData.launches += 1
-              statData.playTime += playTime
-            }
-
-            await fs.writeJSON(statPath, statData, {
-              encoding: 'utf-8',
-              spaces: 2
-            })
+          let statData: IVersionStatistics = {
+            lastLaunched: new Date(),
+            launches: 1,
+            playTime: playTime
           }
+
+          if (statIsExists) {
+            const statData: IVersionStatistics = await window.api.fs.readJSON(statPath, 'utf-8')
+
+            statData.lastLaunched = new Date()
+            statData.launches += 1
+            statData.playTime += playTime
+          }
+
+          await window.api.fs.writeJSON(statPath, statData)
         }
       }
-    )
+    })
 
-    electron.ipcRenderer.on(
-      'consoleMessage',
-      async (_event, versionName: string, instance: number, message: IConsoleMessage) => {
-        const version = consoles.consoles.find(
-          (v) => v.versionName == versionName && v.instance == instance
-        )
-        if (!version) return
+    api.events.onConsoleMessage(async (versionName, instance, message) => {
+      const version = consoles.consoles.find(
+        (v) => v.versionName == versionName && v.instance == instance
+      )
+      if (!version) return
 
-        version.messages.push(message)
-        setConsoles({ consoles: [...consoles.consoles] })
-      }
-    )
+      version.messages.push(message)
+      setConsoles({ consoles: [...consoles.consoles] })
+    })
 
-    electron.ipcRenderer.on(
-      'consoleClear',
-      async (_event, versionName: string, instance: number) => {
-        const version = consoles.consoles.find(
-          (v) => v.versionName == versionName && v.instance == instance
-        )
-        if (!version) return
+    api.events.onConsoleClear(async (versionName, instance) => {
+      const version = consoles.consoles.find(
+        (v) => v.versionName == versionName && v.instance == instance
+      )
+      if (!version) return
 
-        version.messages = []
-        version.startTime = Date.now()
-        setConsoles({ consoles: [...consoles.consoles] })
-      }
-    )
+      version.messages = []
+      version.startTime = Date.now()
+      setConsoles({ consoles: [...consoles.consoles] })
+    })
 
     async function updatePlayingTime(time: number) {
       try {
         if (!authData || !selectedAccount || !selectedAccount.accessToken) return
 
-        const user = await backendService.getUser(authData.sub)
+        const user = await window.api.backend.getUser(
+          selectedAccount?.accessToken || '',
+          authData.sub
+        )
         if (!user) return
-        await backendService.updateUser(user._id, { playTime: user.playTime + time })
+        await window.api.backend.updateUser(selectedAccount?.accessToken || '', user._id, {
+          playTime: user.playTime + time
+        })
       } catch (err) {
         console.log(err)
       }
     }
 
-    electron.ipcRenderer.on('launch', () => {
+    api.events.onLaunch(() => {
       setSelectedVersion(undefined)
       setIsRunning(false)
     })
 
-    electron.ipcRenderer.on('friendUpdate', (_event, data: IUpdateStatus) => {
+    api.events.onFriendUpdate((data) => {
       console.log(data, 'data')
-
       friendSocket?.emit('friendUpdate', { ...data })
     })
 
+    api.events.onDownloaderInfo((info) => {
+      setDownloader(info)
+    })
+
     return () => {
-      electron.ipcRenderer.removeAllListeners('consoleMessage')
-      electron.ipcRenderer.removeAllListeners('consoleClear')
-      electron.ipcRenderer.removeAllListeners('launch')
-      electron.ipcRenderer.removeAllListeners('friendUpdate')
-      electron.ipcRenderer.removeAllListeners('consoleChangeStatus')
+      api.events.removeAllListeners('consoleMessage')
+      api.events.removeAllListeners('consoleClear')
+      api.events.removeAllListeners('launch')
+      api.events.removeAllListeners('friendUpdate')
+      api.events.removeAllListeners('consoleChangeStatus')
+      api.events.removeAllListeners('consolePublicAddress')
     }
   }, [friendSocket, consoles])
 
@@ -280,12 +268,12 @@ function App() {
       friendSocket?.disconnect()
       return
     }
-    if (friendSocket?.auth['id'] === authData.sub) return
+    if (friendSocket?.auth['token'] === selectedAccount?.accessToken) return
     if (isFriendsConnected) friendSocket?.disconnect()
 
-    const socketIo = io(`${baseUrl}/friends`, {
+    const socketIo = io(`${BACKEND_URL}/friends`, {
       auth: {
-        id: authData.sub
+        token: selectedAccount?.accessToken
       }
     })
 
@@ -312,7 +300,7 @@ function App() {
           icon: data.user.image || ''
         }
 
-        window.electron.ipcRenderer.invoke('notification', options)
+        await api.other.notify(options)
       }
 
       if (data.type == 'requester') {
@@ -325,7 +313,7 @@ function App() {
 
     friendSocket.on(
       'friendRequestRemove',
-      (data: { requestId: string; type: 'accept' | 'reject'; user: IUser }) => {
+      async (data: { requestId: string; type: 'accept' | 'reject'; user: IUser }) => {
         const { requestId, type, user } = data
 
         const fr = friendRequests.find((fr) => fr.requestId == requestId)
@@ -339,7 +327,7 @@ function App() {
               icon: user.image || ''
             }
 
-            window.electron.ipcRenderer.invoke('notification', options)
+            await api.other.notify(options)
           } else {
             const options: Electron.NotificationConstructorOptions = {
               title: t('friends.requestDeclined'),
@@ -347,7 +335,7 @@ function App() {
               icon: user.image || ''
             }
 
-            window.electron.ipcRenderer.invoke('notification', options)
+            await api.other.notify(options)
           }
         } else {
           if (type == 'accept') addToast({ color: 'success', title: t('friends.requestAccepted') })
@@ -357,8 +345,6 @@ function App() {
     )
 
     friendSocket.on('messageNotification', async (user: IUser) => {
-      console.log('user', user)
-
       const localFriend = localFriends.find((lf) => lf.id == user._id)
       if (localFriend?.isMuted) return
 
@@ -370,7 +356,7 @@ function App() {
         icon: user.image || ''
       }
 
-      window.electron.ipcRenderer.send('notify', options)
+      await api.other.notify(options)
       addToast({
         title: t('friends.newMessage'),
         description: `${user.nickname} ${t('friends.sentMessage')}`
@@ -398,14 +384,14 @@ function App() {
   }, [friendSocket, selectedFriend, friendRequests])
 
   async function getSettings(launcherPath: string) {
-    const systemLocate: string = await window.electron.ipcRenderer.invoke('getLocale')
-    const l = languages.find((l) => systemLocate.includes(l.code))
+    const systemLocate: string = await api.other.getLocale()
+    const l = LANGUAGES.find((l) => systemLocate.includes(l.code))
 
-    const settingsConfPath = path.join(launcherPath, 'settings.json')
+    const settingsConfPath = await api.path.join(launcherPath, 'settings.json')
 
     let data: TSettings
-    if (await fs.pathExists(settingsConfPath)) {
-      data = await fs.readJSON(settingsConfPath, 'utf-8')
+    if (await api.fs.pathExists(settingsConfPath)) {
+      data = await api.fs.readJSON(settingsConfPath, 'utf-8')
     } else {
       data = {
         xmx: 2048,
@@ -414,33 +400,29 @@ function App() {
         downloadLimit: 6
       }
 
-      await fs.writeJson(settingsConfPath, data, {
-        encoding: 'utf-8',
-        spaces: 2
-      })
+      await api.fs.writeJSON(settingsConfPath, data)
     }
 
     setSettings(data)
     i18n.changeLanguage(data.lang || l?.code || i18n.language)
+    return data
   }
 
   async function getAccounts(launcherPath: string) {
-    const accountsConfPath = path.join(launcherPath, 'accounts.json')
+    const accountsConfPath = await api.path.join(launcherPath, 'accounts.json')
 
-    if (!(await fs.pathExists(accountsConfPath))) {
+    if (!(await api.fs.pathExists(accountsConfPath))) {
       const data: IAccountConf = {
         accounts: [],
         lastPlayed: null
       }
 
       setAccounts(data.accounts)
-      await fs.writeFile(accountsConfPath, JSON.stringify(data), 'utf-8')
+      await api.fs.writeFile(accountsConfPath, JSON.stringify(data), 'utf-8')
       return null
     }
 
-    const data: IAccountConf = await fs.readJSON(accountsConfPath, {
-      encoding: 'utf-8'
-    })
+    const data: IAccountConf = await api.fs.readJSON(accountsConfPath, 'utf-8')
 
     setAccounts(data.accounts)
 
@@ -457,7 +439,7 @@ function App() {
           smallImageText: lastPlayed.nickname
         }
 
-        updateActivity(activity)
+        await api.rpc.updateActivity(activity)
       }
     }
 
@@ -519,23 +501,13 @@ function App() {
           (account.type != 'discord' && Date.now() > expiresAt) ||
           (account.type == 'discord' && Date.now() / 1000 > authData.exp)
         ) {
-          let authUser
+          let authUser: IRefreshTokenResponse | null = null
           if (account.type == 'microsoft')
-            authUser = await authMicrosoft(
-              authData.auth.refreshToken,
-              true,
-              authData.sub,
-              account.accessToken
-            )
+            authUser = await api.auth.microsoftRefresh(authData.auth.refreshToken, authData.sub)
           else if (account.type == 'elyby')
-            authUser = await authElyBy(
-              authData.auth.refreshToken,
-              true,
-              authData.sub,
-              selectedAccount.accessToken
-            )
+            authUser = await api.auth.elybyRefresh(authData.auth.refreshToken, authData.sub)
           else if (account.type == 'discord') {
-            await backendService.getUser(authData.sub)
+            await api.backend.getUser(selectedAccount?.accessToken || '', authData.sub)
           }
 
           if (authUser && account.type !== 'discord') {
@@ -551,11 +523,10 @@ function App() {
               setAccounts(newAccounts)
               setSelectedAccount(account)
 
-              await fs.writeJSON(
-                path.join(paths.launcher, 'accounts.json'),
-                { accounts: newAccounts, lastPlayed: `${account.type}_${account.nickname}` },
-                { encoding: 'utf-8', spaces: 2 }
-              )
+              await api.fs.writeJSON(await api.path.join(paths.launcher, 'accounts.json'), {
+                accounts: newAccounts,
+                lastPlayed: `${account.type}_${account.nickname}`
+              })
             }
           }
         }
@@ -567,7 +538,7 @@ function App() {
         launchVersion.version.downloadedVersion &&
         isNetwork
       ) {
-        const serversPath = path.join(
+        const serversPath = await api.path.join(
           paths.minecraft,
           'versions',
           launchVersion.version.name,
@@ -575,26 +546,32 @@ function App() {
         )
 
         let servers: IServer[] = []
-        if (await fs.pathExists(serversPath)) {
-          servers = await readNBT(serversPath)
+        if (await api.fs.pathExists(serversPath)) {
+          servers = await api.servers.read(serversPath)
           setServers(servers)
         }
 
-        const modpackData = await backendService.getModpack(launchVersion.version.shareCode)
+        const modpackData = await api.backend.getModpack(
+          selectedAccount.accessToken || '',
+          launchVersion.version.shareCode
+        )
         if (modpackData.status == 'not_found') {
           launchVersion.version.shareCode = undefined
           launchVersion.version.downloadedVersion = false
           await launchVersion.save()
         } else if (modpackData.data) {
-          const diff = await checkDiffenceUpdateData({
-            mods: launchVersion.version.loader.mods,
-            servers,
-            version: launchVersion.version,
-            runArguments: launchVersion.version.runArguments || { jvm: '', game: '' },
-            versionPath: launchVersion.versionPath,
-            logo: launchVersion.version.image || '',
-            quickServer: launchVersion.version.quickServer || ''
-          })
+          const diff = await checkDiffenceUpdateData(
+            {
+              mods: launchVersion.version.loader.mods,
+              servers,
+              version: launchVersion.version,
+              runArguments: launchVersion.version.runArguments || { jvm: '', game: '' },
+              versionPath: launchVersion.versionPath,
+              logo: launchVersion.version.image || '',
+              quickServer: launchVersion.version.quickServer || ''
+            },
+            selectedAccount.accessToken || ''
+          )
 
           if (diff) return setIsUpdateModal(true)
         }
@@ -625,17 +602,15 @@ function App() {
           messages: []
         }
 
-        console.log(newConsole, 'newConsole')
-
         setConsoles({ consoles: [...consoles.consoles, newConsole] })
       }
 
-      await launchVersion.run(account, settings, authData, _instance, quick || {})
+      await launchVersion.run(account, authData, _instance, quick)
       const activity: Presence = {
         state: `${t('rpc.playing')} ${launchVersion.version.name}`
       }
 
-      updateActivity(activity)
+      await api.rpc.updateActivity(activity)
 
       friendSocket?.emit('friendUpdate', {
         versionName: launchVersion.version.name,
@@ -645,22 +620,18 @@ function App() {
 
       await launchVersion.save()
 
-      const accountsPath = path.join(paths.launcher, 'accounts.json')
-      const accountsData: IAccountConf = await fs.readJSON(accountsPath, 'utf-8')
+      const accountsPath = await api.path.join(paths.launcher, 'accounts.json')
+      const accountsData: IAccountConf = await api.fs.readJSON(accountsPath, 'utf-8')
 
       const [lastType, lastNickname] = accountsData.lastPlayed
         ? accountsData.lastPlayed.split('_')
         : ['plain', '']
 
       if (lastType != account.type || lastNickname != account.nickname)
-        await fs.writeJSON(
-          accountsPath,
-          { ...accountsData, lastPlayed: `${account.type}_${account.nickname}` },
-          {
-            encoding: 'utf-8',
-            spaces: 2
-          }
-        )
+        await api.fs.writeJSON(accountsPath, {
+          ...accountsData,
+          lastPlayed: `${account.type}_${account.nickname}`
+        })
     } catch (err) {
       console.log(err)
 
@@ -675,101 +646,110 @@ function App() {
 
   return (
     <div className="h-screen w-full flex flex-col">
-      <Nav runGame={runGame} setIsFriends={setIsFriends} />
+      <>
+        <Nav runGame={runGame} setIsFriends={setIsFriends} />
 
-      <div className="flex-1 overflow-y-auto px-4 py-2 min-h-0">
-        <div className="flex space-x-4 h-full">
-          <Versions runGame={runGame} />
-          {isFriends && <Friends runGame={runGame} />}
+        <div className="flex-1 overflow-y-auto px-4 py-2 min-h-0">
+          <div className="flex space-x-4 h-full">
+            <Versions runGame={runGame} />
+            {isFriends && <Friends runGame={runGame} />}
+          </div>
         </div>
-      </div>
 
-      <NewsFeed />
+        <NewsFeed />
 
-      {isUpdateModal && (
-        <Confirmation
-          onClose={() => {
-            if (isLoading) return
-            setIsUpdateModal(false)
-            setIsRunning(false)
-          }}
-          title={t('versions.updateAvailable')}
-          content={[
-            {
-              color: 'warning',
-              text: t('versions.hostChanged')
-            }
-          ]}
-          buttons={[
-            {
-              text: t('common.update'),
-              color: 'success',
-              loading: isLoading && loadingType == 'update',
-              onClick: async () => {
-                if (!selectedVersion) return
+        {isUpdateModal && (
+          <Confirmation
+            onClose={() => {
+              if (isLoading) return
+              setIsUpdateModal(false)
+              setIsRunning(false)
+            }}
+            title={t('versions.updateAvailable')}
+            content={[
+              {
+                color: 'warning',
+                text: t('versions.hostChanged')
+              }
+            ]}
+            buttons={[
+              {
+                text: t('common.update'),
+                color: 'success',
+                loading: isLoading && loadingType == 'update',
+                onClick: async () => {
+                  if (!selectedVersion) return
 
-                setLoadingType('update')
-                setIsLoading(true)
+                  setLoadingType('update')
+                  setIsLoading(true)
 
-                const version = await syncShare(selectedVersion, servers, settings.downloadLimit)
-                setSelectedVersion(version)
+                  const version = await syncShare(
+                    selectedVersion,
+                    servers,
+                    settings,
+                    selectedAccount?.accessToken || ''
+                  )
+                  setSelectedVersion(version)
 
-                const blockedMods: IBlockedMod[] = await checkBlockedMods(
-                  version.version.loader.mods
-                )
+                  const blockedMods: IBlockedMod[] = await checkBlockedMods(
+                    version.version.loader.mods
+                  )
 
-                if (blockedMods.length > 0) {
-                  setBlockedMods(blockedMods)
-                  setIsBlockedMods(true)
-                  return
+                  if (blockedMods.length > 0) {
+                    setBlockedMods(blockedMods)
+                    setIsBlockedMods(true)
+                    return
+                  }
+
+                  setIsUpdateModal(false)
+                  setIsLoading(false)
+                  setLoadingType(undefined)
+
+                  await runGame({ skipUpdate: true })
                 }
-
-                setIsUpdateModal(false)
-                setIsLoading(false)
-                setLoadingType(undefined)
-
-                await runGame({ skipUpdate: true })
+              },
+              {
+                text: t('versions.runWithoutUpdating'),
+                onClick: async () => {
+                  setIsUpdateModal(false)
+                  await runGame({ skipUpdate: true })
+                }
               }
-            },
-            {
-              text: t('versions.runWithoutUpdating'),
-              onClick: async () => {
-                setIsUpdateModal(false)
-                await runGame({ skipUpdate: true })
+            ]}
+          />
+        )}
+
+        {isBlockedMods && blockedMods.length && (
+          <BlockedMods
+            mods={blockedMods}
+            onClose={async (bMods) => {
+              setIsBlockedMods(false)
+
+              if (!selectedVersion) return
+
+              for (const bMod of bMods) {
+                if (!bMod.filePath) continue
+
+                const mod = selectedVersion.version.loader.mods.find((m) => m.id == bMod.projectId)
+                if (!mod || !mod.version) continue
+
+                mod.version.files[0].localPath = bMod.filePath
               }
-            }
-          ]}
-        />
-      )}
 
-      {isBlockedMods && blockedMods.length && (
-        <BlockedMods
-          mods={blockedMods}
-          onClose={async (bMods) => {
-            setIsBlockedMods(false)
+              const versionMods = new Mods(settings, selectedVersion.version)
+              await versionMods.check()
 
-            if (!selectedVersion) return
+              setIsUpdateModal(false)
+              setIsLoading(false)
+              setLoadingType(undefined)
 
-            for (const bMod of bMods) {
-              if (!bMod.filePath) continue
+              await runGame({ skipUpdate: true })
+            }}
+          />
+        )}
 
-              const mod = selectedVersion.version.loader.mods.find((m) => m.id == bMod.projectId)
-              if (!mod || !mod.version) continue
-
-              mod.version.files[0].localPath = bMod.filePath
-            }
-
-            const versionMods = new Mods(settings.downloadLimit, selectedVersion)
-            await versionMods.check()
-
-            setIsUpdateModal(false)
-            setIsLoading(false)
-            setLoadingType(undefined)
-
-            await runGame({ skipUpdate: true })
-          }}
-        />
-      )}
+        {downloder && <DownloadProgress info={downloder} />}
+      </>
     </div>
   )
 }

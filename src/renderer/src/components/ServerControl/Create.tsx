@@ -22,13 +22,10 @@ import { useAtom } from 'jotai'
 import { HardDriveDownload } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ServerGame } from '@renderer/game/Server'
-import { Mods } from '@renderer/game/Mods'
+import { ServerGame } from '@renderer/classes/ServerGame'
+import { Mods } from '@renderer/classes/Mods'
 
 const api = window.api
-const fs = api.fs
-const path = api.path
-const startDownload = api.startDownload
 
 export function CreateServer({
   close,
@@ -99,8 +96,8 @@ export function CreateServer({
                 setLoadingType('install')
                 setIsLoading(true)
 
-                const serverPath = path.join(versionPath, 'server')
-                await fs.mkdir(serverPath, { recursive: true })
+                const serverPath = await api.path.join(versionPath, 'server')
+                await api.fs.ensure(serverPath)
 
                 const conf: IServerConf = {
                   core: selectedServerCore.core,
@@ -112,16 +109,16 @@ export function CreateServer({
                   }
                 }
 
-                await fs.writeJSON(path.join(serverPath, 'conf.json'), conf, {
-                  encoding: 'utf-8',
-                  spaces: 2
-                })
+                await api.fs.writeJSON(await api.path.join(serverPath, 'conf.json'), conf)
 
-                await startDownload(
+                await api.file.download(
                   [
                     {
                       url: selectedServerCore.url,
-                      destination: path.join(serverPath, selectedServerCore.core + '.jar'),
+                      destination: await api.path.join(
+                        serverPath,
+                        selectedServerCore.core + '.jar'
+                      ),
                       group: 'server'
                     }
                   ],
@@ -141,7 +138,11 @@ export function CreateServer({
                   await serverGame.install()
                   setServer(conf)
 
-                  await fs.writeFile(path.join(serverPath, 'eula.txt'), 'eula=true', 'utf-8')
+                  await api.fs.writeFile(
+                    await api.path.join(serverPath, 'eula.txt'),
+                    'eula=true',
+                    'utf-8'
+                  )
 
                   if (
                     selectedServerCore.additionalPackage &&
@@ -189,7 +190,7 @@ export function CreateServer({
                   }
 
                   if (selectedVersion.version.loader.mods.length > 0) {
-                    const mods = new Mods(settings.downloadLimit, selectedVersion, conf)
+                    const mods = new Mods(settings, selectedVersion.version, conf)
                     await mods.check()
                   }
 

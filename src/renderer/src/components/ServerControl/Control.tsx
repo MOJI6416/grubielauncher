@@ -17,16 +17,12 @@ import {
   Image
 } from '@heroui/react'
 
-const api = window.api
-const fs = api.fs
-const path = api.path
-const rimraf = api.rimraf
-const { shell } = api
-
 enum LoadingType {
   RUN = 'run',
   DELETE = 'delete'
 }
+
+const api = window.api
 
 export function ServerControl({
   onClose,
@@ -44,8 +40,7 @@ export function ServerControl({
   const [server] = useAtom(serverAtom)
   const [version] = useAtom(selectedVersionAtom)
   const [paths] = useAtom(pathsAtom)
-
-  const serverPath = path.join(paths.minecraft, 'versions', version?.version.name || '', 'server')
+  const [serverPath, setServerPath] = useState('')
 
   const { t } = useTranslation()
 
@@ -55,8 +50,8 @@ export function ServerControl({
     const response = await fetch(url)
     const blob = await response.blob()
 
-    await fs.writeFile(
-      path.join(serverPath, 'server-icon.png'),
+    await api.fs.writeFile(
+      await api.path.join(serverPath, 'server-icon.png'),
       new Uint8Array(await blob.arrayBuffer()),
       'utf-8'
     )
@@ -68,13 +63,19 @@ export function ServerControl({
   useEffect(() => {
     ;(async () => {
       if (server) {
-        const logoPath = path.join(serverPath, 'server-icon.png')
+        const logoPath = await api.path.join(serverPath, 'server-icon.png')
         try {
-          await fs.access(logoPath)
-          const data = await fs.readFile(logoPath)
+          await api.fs.pathExists(logoPath)
+          const data = await api.fs.readFile(logoPath, 'base64')
 
           setServerLogo(URL.createObjectURL(new Blob([data])))
         } catch {}
+      }
+
+      if (version && paths.minecraft) {
+        api.path
+          .join(paths.minecraft, 'versions', version?.version.name || '', 'server')
+          .then(setServerPath)
       }
     })()
   }, [server])
@@ -112,7 +113,7 @@ export function ServerControl({
                     variant="flat"
                     isIconOnly
                     onPress={async () => {
-                      const filePaths = await window.electron.ipcRenderer.invoke('openFileDialog')
+                      const filePaths = await api.other.openFileDialog()
                       if (!filePaths || filePaths.length === 0) return
 
                       setImage(filePaths[0])
@@ -128,7 +129,7 @@ export function ServerControl({
                       variant="flat"
                       isIconOnly
                       onPress={async () => {
-                        await rimraf(path.join(serverPath, 'server-icon.png'))
+                        await api.fs.rimraf(await api.path.join(serverPath, 'server-icon.png'))
                         setServerLogo('')
                       }}
                     >
@@ -144,17 +145,19 @@ export function ServerControl({
                   isDisabled={isLoading}
                   startContent={<Settings size={22} />}
                   onPress={async () => {
-                    const serverPropertiesPath = path.join(serverPath, 'server.properties')
-                    try {
-                      await fs.access(serverPropertiesPath)
-                    } catch {
+                    const serverPropertiesPath = await api.path.join(
+                      serverPath,
+                      'server.properties'
+                    )
+                    const isExists = await api.fs.pathExists(serverPropertiesPath)
+                    if (!isExists) {
                       addToast({
                         color: 'danger',
                         title: t('serverManager.serverPropertiesNotFound')
                       })
-
                       return
                     }
+
                     setIsSettings(true)
                   }}
                 >
@@ -163,8 +166,8 @@ export function ServerControl({
                 <Button
                   variant="flat"
                   startContent={<Folder size={22} />}
-                  onPress={() => {
-                    shell.openPath(serverPath)
+                  onPress={async () => {
+                    await api.shell.openPath(serverPath)
                   }}
                 >
                   {t('common.openFolder')}
@@ -180,7 +183,7 @@ export function ServerControl({
                     setIsLoading(true)
 
                     try {
-                      await rimraf(serverPath)
+                      await api.fs.rimraf(serverPath)
                       onClose()
                       addToast({
                         color: 'success',
@@ -213,7 +216,7 @@ export function ServerControl({
           resourcePacks={version.version.loader.mods.filter(
             (project) => project.projectType == ProjectType.RESOURCEPACK
           )}
-          server={server}
+          serverData={server}
           serverPath={serverPath}
           onClose={() => setIsSettings(false)}
           open={isSettings}

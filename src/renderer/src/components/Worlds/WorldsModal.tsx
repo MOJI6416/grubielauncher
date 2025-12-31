@@ -1,17 +1,21 @@
 import { IWorld } from '@/types/World'
-import { Alert, Modal, ModalBody, ModalContent, ModalHeader, Spinner } from '@heroui/react'
+import {
+  addToast,
+  Alert,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalHeader,
+  Spinner
+} from '@heroui/react'
 import { accountAtom, isOwnerVersionAtom, selectedVersionAtom } from '@renderer/stores/Main'
 import { useAtom } from 'jotai'
 import { useEffect, useState } from 'react'
 import { WorldList } from './WorldList'
-import { readWorld } from '@renderer/utilities/Worlds'
 import { RunGameParams } from '@renderer/App'
 import { useTranslation } from 'react-i18next'
 
 const api = window.api
-const path = api.path
-const fs = api.fs
-const isDirectory = api.isDirectory
 
 export function Worlds({
   onClose,
@@ -35,38 +39,43 @@ export function Worlds({
       return
     }
 
-    async function loadWorlds(worldsPath: string) {
-      if (!account) return
+    ;(async () => {
+      async function loadWorlds(worldsPath: string) {
+        if (!account) return
 
-      try {
-        const files = (await fs.readdir(worldsPath)).filter((file) =>
-          isDirectory(path.join(worldsPath, file))
-        )
+        try {
+          const files = (await api.fs.readdir(worldsPath)).filter(
+            async (file) => await api.fs.isDirectory(await api.path.join(worldsPath, file))
+          )
 
-        const worlds: IWorld[] = []
+          const worlds: IWorld[] = []
 
-        for (const file of files) {
-          const worldPath = path.join(worldsPath, file)
+          for (const file of files) {
+            const worldPath = await api.path.join(worldsPath, file)
 
-          const worldData = await readWorld(worldPath, account)
-          if (!worldData) continue
+            const worldData = await api.worlds.readWorld(worldPath, account)
+            if (!worldData) continue
 
-          worlds.push(worldData)
+            worlds.push(worldData)
+          }
+
+          setWorlds(worlds)
+        } catch (error) {
+          onClose()
+          addToast({
+            title: t('worlds.noWorlds')
+          })
+          return
+        } finally {
+          setIsLoading(false)
+          setLoadingType(null)
         }
-
-        setWorlds(worlds)
-      } catch (error) {
-        onClose()
-        return
-      } finally {
-        setIsLoading(false)
-        setLoadingType(null)
       }
-    }
 
-    const worldsPath = path.join(version.versionPath, 'saves')
-    loadWorlds(worldsPath)
-  }, [version])
+      const worldsPath = await api.path.join(version.versionPath, 'saves')
+      await loadWorlds(worldsPath)
+    })()
+  }, [version, account])
 
   return (
     <Modal

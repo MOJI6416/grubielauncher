@@ -22,16 +22,8 @@ import {
   SelectItem,
   Slider
 } from '@heroui/react'
-import {
-  getServerSettings,
-  replaceXmxParameter,
-  updateServerProperty
-} from '@renderer/utilities/ServerManager'
 
 const api = window.api
-const fs = api.fs
-const os = api.os
-const path = api.path
 
 const gameModes = ['survival', 'creative', 'adventure', 'spectator']
 const difficulties = ['peaceful', 'easy', 'normal', 'hard']
@@ -39,11 +31,11 @@ const difficulties = ['peaceful', 'easy', 'normal', 'hard']
 export function ServerSettings({
   open,
   onClose,
-  server,
+  serverData,
   serverPath,
   resourcePacks
 }: {
-  server: IServerConf
+  serverData: IServerConf
   open: boolean
   onClose: () => void
   serverPath: string
@@ -73,13 +65,14 @@ export function ServerSettings({
   const [serverIp, setServerIp] = useState('')
   const [serverPort, setServerPort] = useState(25565)
   const [isResourcePack, setIsResourcePack] = useState(false)
-  const [serverMemory, setServerMemory] = useState(2048)
+  const [totalMem, setTotalMem] = useState(0)
+  const [server, setServer] = useState<IServerConf | null>(null)
 
   const { t } = useTranslation()
 
   function isSaveBtnisDisabled() {
     return (
-      memory == serverMemory &&
+      memory == server?.memory &&
       !(
         settings &&
         (maxPlayers != settings.maxPlayers ||
@@ -107,38 +100,54 @@ export function ServerSettings({
   }
 
   useEffect(() => {
-    if (!server) return
+    let cancelled = false
 
-    setMemory(server.memory)
+    async function init() {
+      if (cancelled) return
 
-    const settings = getServerSettings(path.join(serverPath, 'server.properties'))
+      setServer(serverData)
 
-    setSettings(settings)
-    setServerMemory(server.memory)
-    setMaxPlayers(settings.maxPlayers)
-    setGameMode(settings.gameMode)
-    setDifficulty(settings.difficulty)
-    setWhitelist(settings.whitelist)
-    setOnlineMode(settings.onlineMode)
-    setPvp(settings.pvp)
-    setEnableCommandBlock(settings.enableCommandBlock)
-    setAllowFlight(settings.allowFlight)
-    setSpawnAnimals(settings.spawnAnimals)
-    setSpawnMonsters(settings.spawnMonsters)
-    setSpawnNpcs(settings.spawnNpcs)
-    setAllowNether(settings.allowNether)
-    setForceGamemode(settings.forceGamemode)
-    setSpawnProtection(settings.spawnProtection)
-    setRequireResourcePack(settings.requireResourcePack)
-    setResourcePack(settings.resourcePack)
-    setResourcePackPrompt(settings.resourcePackPrompt)
-    setMotd(settings.motd)
-    setServerIp(settings.serverIp)
-    setServerPort(settings.serverPort)
+      const settings = await api.server.getSettings(
+        await api.path.join(serverPath, 'server.properties')
+      )
 
-    if (resourcePacks.length > 0) {
-      const pack = resourcePacks.find((pack) => pack.version?.files[0].url == settings.resourcePack)
-      if (pack) setIsResourcePack(true)
+      setSettings(settings)
+      setServer(serverData)
+      setMaxPlayers(settings.maxPlayers)
+      setGameMode(settings.gameMode)
+      setDifficulty(settings.difficulty)
+      setWhitelist(settings.whitelist)
+      setOnlineMode(settings.onlineMode)
+      setPvp(settings.pvp)
+      setEnableCommandBlock(settings.enableCommandBlock)
+      setAllowFlight(settings.allowFlight)
+      setSpawnAnimals(settings.spawnAnimals)
+      setSpawnMonsters(settings.spawnMonsters)
+      setSpawnNpcs(settings.spawnNpcs)
+      setAllowNether(settings.allowNether)
+      setForceGamemode(settings.forceGamemode)
+      setSpawnProtection(settings.spawnProtection)
+      setRequireResourcePack(settings.requireResourcePack)
+      setResourcePack(settings.resourcePack)
+      setResourcePackPrompt(settings.resourcePackPrompt)
+      setMotd(settings.motd)
+      setServerIp(settings.serverIp)
+      setServerPort(settings.serverPort)
+      const totalMem = await api.os.totalmem()
+      setTotalMem(totalMem / (1024 * 1024))
+
+      if (resourcePacks.length > 0) {
+        const pack = resourcePacks.find(
+          (pack) => pack.version?.files[0].url == settings.resourcePack
+        )
+        if (pack) setIsResourcePack(true)
+      }
+    }
+
+    init()
+
+    return () => {
+      cancelled = true
     }
   }, [])
 
@@ -170,7 +179,7 @@ export function ServerSettings({
                   }
                 }}
                 minValue={1024}
-                maxValue={os.totalmem() / (1024 * 1024)}
+                maxValue={totalMem - 512}
                 renderValue={(value) => {
                   return `${value.children?.toString()} ${t('settings.mb')}`
                 }}
@@ -480,9 +489,9 @@ export function ServerSettings({
               isDisabled={isSaveBtnisDisabled()}
               startContent={<Save size={22} />}
               onPress={async () => {
-                if (serverMemory != memory) {
-                  setServerMemory(memory)
-                  replaceXmxParameter(serverPath, `${memory}M`)
+                if (server?.memory != memory) {
+                  setMemory(memory)
+                  await api.server.editXmx(serverPath, memory)
                 }
 
                 if (settings) {
@@ -513,14 +522,21 @@ export function ServerSettings({
                   if (serverIp != settings.serverIp) settings.serverIp = serverIp
                   if (serverPort != settings.serverPort) settings.serverPort = serverPort
 
-                  updateServerProperty(path.join(serverPath, 'server.properties'), settings)
+                  await api.server.updateProperties(
+                    await api.path.join(serverPath, 'server.properties'),
+                    settings
+                  )
                 }
 
-                await fs.writeFile(
-                  path.join(serverPath, 'conf.json'),
-                  JSON.stringify(server),
-                  'utf-8'
-                )
+                await api.fs.writeJSON(await api.path.join(serverPath, 'conf.json'), {
+                  ...server!,
+                  memory
+                })
+
+                setServer({
+                  ...server!,
+                  memory
+                })
 
                 addToast({
                   title: t('settings.saved'),

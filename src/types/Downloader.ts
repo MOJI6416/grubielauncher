@@ -10,3 +10,15 @@ export interface DownloadItem {
     extractDelete?: boolean
   }
 }
+
+export interface DownloaderInfo {
+  totalItems: number
+  completedItems: number
+  failedItems: number
+  progressPercent: number
+  currentFileName?: string
+  downloadSpeed?: number
+  estimatedTimeRemaining?: number
+  totalBytes: number
+  downloadedBytes: number
+}

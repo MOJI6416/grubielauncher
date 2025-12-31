@@ -13,13 +13,8 @@ import { ILocalProject, ProjectType, Provider } from '@/types/ModManager'
 import { ExternalLink, Eye } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { projetTypeToFolder } from '@renderer/utilities/ModManager'
 
 const api = window.api
-const shell = api.shell
-const getPath = api.getPath
-const fs = api.fs
-const path = api.path
 
 export interface IBlockedMod {
   projectId: string
@@ -42,13 +37,12 @@ export async function checkBlockedMods(mods: ILocalProject[], versionPath?: stri
     if (!file.url.startsWith('blocked::')) continue
 
     if (versionPath) {
-      let folderName = projetTypeToFolder(mod.projectType)
-      if (mod.projectType == ProjectType.WORLD) folderName = path.join('storage', 'worlds')
-      const filePath = path.join(versionPath, folderName, file.filename)
-      try {
-        await fs.access(filePath)
-        continue
-      } catch {}
+      let folderName = await api.modManager.ptToFolder(mod.projectType)
+      if (mod.projectType == ProjectType.WORLD)
+        folderName = await api.path.join('storage', 'worlds')
+      const filePath = await api.path.join(versionPath, folderName, file.filename)
+      const isExists = await api.fs.pathExists(filePath)
+      if (isExists) continue
     }
 
     blockedMods.push({
@@ -79,19 +73,19 @@ export function BlockedMods({
     let isMounted = true
 
     async function check(downloadsPath: string) {
-      const files = await fs.readdir(downloadsPath)
+      const files = await api.fs.readdir(downloadsPath)
       const blockedNames = blockedMods.map((mod) => mod.fileName)
       let found = false
 
       for (const file of files) {
         if (!blockedNames.includes(file)) continue
 
-        let filePath = path.join(downloadsPath, file)
+        let filePath = await api.path.join(downloadsPath, file)
 
         const blockedMod = blockedMods.find((mod) => mod.fileName === file)
         if (!blockedMod) continue
 
-        const hash = await api.getSha1(filePath)
+        const hash = await api.fs.sha1(filePath)
 
         if (hash !== blockedMod.hash) continue
 
@@ -102,12 +96,11 @@ export function BlockedMods({
       for (const mod of blockedMods.filter((mod) => mod.filePath)) {
         if (!mod.filePath) continue
 
-        try {
-          await fs.access(mod.filePath)
-        } catch {
-          mod.filePath = undefined
-          found = true
-        }
+        const isExists = await api.fs.pathExists(mod.filePath)
+        if (isExists) continue
+
+        mod.filePath = undefined
+        found = true
       }
 
       if (found && isMounted) {
@@ -115,7 +108,7 @@ export function BlockedMods({
       }
     }
 
-    getPath('downloads').then((path: string) => {
+    api.other.getPath('downloads').then((path: string) => {
       if (!isMounted) return
 
       setDownloadsPath(path)
@@ -197,8 +190,8 @@ export function BlockedMods({
                                   variant="flat"
                                   isIconOnly
                                   className="text-xs"
-                                  onPress={() => {
-                                    shell.openExternal(mod.url)
+                                  onPress={async () => {
+                                    await api.shell.openExternal(mod.url)
                                   }}
                                 >
                                   {<ExternalLink size={22} />}
@@ -218,11 +211,12 @@ export function BlockedMods({
           <ModalFooter>
             <Button
               variant="flat"
-              onPress={() => {
+              onPress={async () => {
                 blockedMods
                   .filter((mod) => !mod.filePath)
-                  .forEach((mod) => {
-                    shell.openPath(mod.url)
+                  .forEach(async (mod) => {
+                    await api.shell.openPath(mod.url)
+                    await new Promise((resolve) => setTimeout(resolve, 100))
                   })
               }}
             >

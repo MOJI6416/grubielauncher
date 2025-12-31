@@ -1,7 +1,7 @@
 import { Alert, Modal, ModalBody, ModalContent, ModalHeader } from '@heroui/react'
 import { IVersionStatistics } from '@/types/VersionStatistics'
 import { useTranslation } from 'react-i18next'
-import { formatDate, formatTime } from '@renderer/utilities/Other'
+import { formatDate, formatTime } from '@renderer/utilities/date'
 
 export function VersionStatistics({
   onClose,

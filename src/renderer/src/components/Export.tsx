@@ -16,9 +16,6 @@ import {
 } from '@heroui/react'
 
 const api = window.api
-const fs = api.fs
-const path = api.path
-const archiveFiles = api.archiveFiles
 
 export function Export({ versionPath, onClose }: { versionPath: string; onClose: () => void }) {
   const [isLoading, setIsLoading] = useState(false)
@@ -45,10 +42,7 @@ export function Export({ versionPath, onClose }: { versionPath: string; onClose:
               <Button
                 variant="flat"
                 onPress={async () => {
-                  const folderPath = await window.electron.ipcRenderer.invoke(
-                    'openFileDialog',
-                    true
-                  )
+                  const folderPath = await api.other.openFileDialog(true)
                   setPath(folderPath[0])
                 }}
                 startContent={<FolderSearch2 size={22} />}
@@ -81,11 +75,16 @@ export function Export({ versionPath, onClose }: { versionPath: string; onClose:
 
                 await selectedVersion.save()
 
-                await archiveFiles(
-                  (await fs.readdir(versionPath))
-                    .filter((file) => !['statistics.json'].includes(file))
-                    .map((file) => path.join(versionPath, file)),
-                  path.join(folderPath, `${selectedVersion.version.name}.zip`)
+                const files: string[] = []
+                const dir = await api.fs.readdir(versionPath)
+                for (const file of dir) {
+                  if (file === 'statistics.json') continue
+                  files.push(await api.path.join(versionPath, file))
+                }
+
+                await api.file.archiveFiles(
+                  files,
+                  await api.path.join(folderPath, `${selectedVersion.version.name}.zip`)
                 )
 
                 selectedVersion.version.owner = owner

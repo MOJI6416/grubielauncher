@@ -7,7 +7,7 @@ import { FaDiscord, FaMicrosoft } from 'react-icons/fa'
 import { TbSquareLetterE } from 'react-icons/tb'
 import { IServer, serverTags } from '@/types/Browser'
 import { useAtom } from 'jotai'
-import { accountAtom, authDataAtom, backendServiceAtom } from '@renderer/stores/Main'
+import { accountAtom, authDataAtom } from '@renderer/stores/Main'
 import {
   addToast,
   Button,
@@ -25,8 +25,8 @@ import {
   Image
 } from '@heroui/react'
 import { IVersion } from '@/types/IVersion'
-import { VersionsService } from '@renderer/services/Versions'
-import { base64ToUrl } from '@renderer/utilities/Files'
+
+const api = window.api
 
 type LoadingType = 'status' | 'init' | 'add' | 'update' | 'delete'
 
@@ -56,7 +56,6 @@ export function Server({
   const [account] = useAtom(accountAtom)
   const [versios, setVersions] = useState<string[]>([])
   const [authData] = useAtom(authDataAtom)
-  const [backendService] = useAtom(backendServiceAtom)
 
   useEffect(() => {
     const init = async () => {
@@ -65,11 +64,14 @@ export function Server({
       setIsLoading(true)
       setLoadingType('init')
 
-      const versions = await VersionsService.getVersions('vanilla')
+      const versions = await api.versions.getList('vanilla')
       setVersions(versions.map((version: IVersion) => version.id))
 
       if (authData) {
-        const modpacks = await backendService.allModpacksByUser(authData.sub)
+        const modpacks = await api.backend.allModpacksByUser(
+          account?.accessToken || '',
+          authData.sub
+        )
         setModpacks(modpacks)
       }
 
@@ -102,23 +104,21 @@ export function Server({
       setIsLoading(true)
       setLoadingType('add')
 
-      const serverId = (
-        await backendService.createServer({
-          name,
-          address,
-          description,
-          tags,
-          version,
-          auth,
-          icon,
-          modpack: modpack,
-          owner: authData.sub
-        })
-      )?.id
+      const serverId = await api.backend.createServer(account?.accessToken || '', {
+        name,
+        address,
+        description,
+        tags,
+        version,
+        auth,
+        icon,
+        modpack: modpack,
+        owner: authData.sub
+      })
 
       if (serverId && icon) {
         const url = await uploadIcon(serverId)
-        await backendService.updateServer(serverId, {
+        await api.backend.updateServer(account?.accessToken || '', serverId, {
           name,
           address,
           description,
@@ -144,9 +144,18 @@ export function Server({
   async function uploadIcon(serverId: string) {
     const response = await fetch(icon)
     const blob = await response.blob()
-    const file = new File([blob], `icon.png`, { type: blob.type })
+    const arrayBuffer = await blob.arrayBuffer()
+    const buffer = new Uint8Array(arrayBuffer)
+    const tmpPath = await api.path.join(await api.other.getPath('temp'), 'icon.png')
 
-    return await backendService.uploadFile(file, `servers/${serverId}`)
+    await api.fs.writeFile(tmpPath, buffer)
+
+    return await api.backend.uploadFileFromPath(
+      account?.accessToken || '',
+      tmpPath,
+      undefined,
+      `servers/${serverId}`
+    )
   }
 
   async function updateServer() {
@@ -159,7 +168,7 @@ export function Server({
       let url = server.icon
       if (server.icon !== icon) url = (await uploadIcon(server._id)) || server.icon
 
-      await backendService.updateServer(server._id, {
+      await api.backend.updateServer(account?.accessToken || '', server._id, {
         name,
         address,
         description,
@@ -188,7 +197,7 @@ export function Server({
       setIsLoading(true)
       setLoadingType('delete')
 
-      await backendService.deleteServer(server._id)
+      await api.backend.deleteServer(account?.accessToken || '', server._id)
       addToast({ color: 'success', title: t('browserServer.serverDeleted') })
       onClose(true)
     } catch (error) {
@@ -229,7 +238,7 @@ export function Server({
                       isIconOnly
                       isDisabled={isLoading}
                       onPress={async () => {
-                        const filePaths = await window.electron.ipcRenderer.invoke('openFileDialog')
+                        const filePaths = await api.other.openFileDialog()
                         setTempIcon(filePaths[0])
                         setIsCropping(true)
                       }}
@@ -274,7 +283,10 @@ export function Server({
                           setIsLoading(true)
                           setLoadingType('status')
 
-                          const status = await backendService.getStatus(address)
+                          const status = await api.backend.getStatus(
+                            account?.accessToken || '',
+                            address
+                          )
 
                           if (!status) {
                             setLastAdress('')
@@ -290,8 +302,7 @@ export function Server({
                           setDescription(status.motd.clean)
 
                           if (status.icon) {
-                            const url = base64ToUrl(status.icon)
-                            setIcon(url)
+                            setIcon(status.icon)
                           }
 
                           if (versios.includes(status.version.name_raw)) {

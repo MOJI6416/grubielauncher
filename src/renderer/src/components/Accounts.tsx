@@ -1,12 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 const api = window.api
-const path = api.path
-const fs = api.fs
-const updateActivity = api.updateActivity
-const startOAuthServer = api.startOAuthServer
-const shell = api.shell
-const env = api.env
 
 import { FaDiscord, FaMicrosoft } from 'react-icons/fa'
 
@@ -21,11 +15,11 @@ import {
   accountAtom,
   accountsAtom,
   authDataAtom,
-  backendServiceAtom,
   consolesAtom,
   isRunningAtom,
   networkAtom,
-  pathsAtom
+  pathsAtom,
+  selectedVersionAtom
 } from '@renderer/stores/Main'
 import {
   addToast,
@@ -42,9 +36,9 @@ import {
   Spinner
 } from '@heroui/react'
 import { IAuth, ILocalAccount } from '@/types/Account'
-import { authDiscord, authElyBy, authMicrosoft } from '@renderer/services/Auth'
 import { jwtDecode } from 'jwt-decode'
-import { Backend } from '@renderer/services/Backend'
+import { DISCORD_CLIENT_ID, ELYBY_CLIENT_ID, MICROSOFT_CLIENT_ID } from '@/shared/config'
+import { IAuthResponse } from '@/types/Auth'
 
 export function Accounts() {
   const [modalSelectIsOpen, setIsOpenModalSelect] = useState(false)
@@ -64,123 +58,115 @@ export function Accounts() {
   const [isNetwork] = useAtom(networkAtom)
   const [isRunning] = useAtom(isRunningAtom)
   const [authData, setAuthData] = useAtom(authDataAtom)
-  const [backendService, setBackendService] = useAtom(backendServiceAtom)
   const [consoles] = useAtom(consolesAtom)
+  const [_, setVersion] = useAtom(selectedVersionAtom)
 
-  async function oauth(provider: 'microsoft' | 'elyby' | 'discord', code: string) {
-    try {
-      if (!paths.launcher) return
+  const oauth = useCallback(
+    async function oauth(provider: 'microsoft' | 'elyby' | 'discord', code: string) {
+      try {
+        if (!paths.launcher) return
 
-      let authUser
+        let authUser: IAuthResponse | null = null
 
-      if (provider == 'microsoft') authUser = await authMicrosoft(code)
-      else if (provider == 'elyby') authUser = await authElyBy(code)
-      else if (provider == 'discord') authUser = await authDiscord(code)
+        if (provider == 'microsoft') authUser = await api.auth.microsoft(code)
+        else if (provider == 'elyby') authUser = await api.auth.elyby(code)
+        else if (provider == 'discord') authUser = await api.auth.discord(code)
 
-      if (!authUser) throw new Error()
+        if (!authUser) throw new Error()
 
-      if (accounts?.find((a) => a.nickname == authUser.nickname && a.type == provider)) {
+        if (accounts?.find((a) => a.nickname == authUser.nickname && a.type == provider)) {
+          setIsSigning(false)
+          setSignType(undefined)
+          addToast({
+            color: 'warning',
+            title: t('accounts.exists')
+          })
+
+          return
+        }
+
+        const account: ILocalAccount = {
+          ...authUser,
+          type: provider,
+          image: authUser.image || '',
+          friends: []
+        }
+
+        setAccounts([...accounts, account])
+
+        const accountsConfPath = await api.path.join(paths.launcher, 'accounts.json')
+
+        await api.fs.writeJSON(accountsConfPath, {
+          accounts: [...accounts, account],
+          lastPlayed: `${account.type}_${account.nickname}`
+        })
+
+        setSelectedAccount(account)
+
+        closeModalSelect()
+        closeModalAdd()
+
+        setIsSigning(false)
+        setSignType(undefined)
+
+        addToast({
+          color: 'success',
+          title: t('accounts.added')
+        })
+      } catch (err) {
         setIsSigning(false)
         setSignType(undefined)
         addToast({
-          color: 'warning',
-          title: t('accounts.exists')
+          color: 'danger',
+          title: t('accounts.failedLogIn')
         })
-
-        return
       }
-
-      const account: ILocalAccount = {
-        ...authUser,
-        type: provider
-      }
-
-      setAccounts([...accounts, account])
-
-      const accountsConfPath = path.join(paths.launcher, 'accounts.json')
-
-      await fs.writeJSON(
-        accountsConfPath,
-        {
-          accounts: [...accounts, account],
-          lastPlayed: `${account.type}_${account.nickname}`
-        },
-        {
-          encoding: 'utf-8',
-          spaces: 2
-        }
-      )
-
-      setSelectedAccount(account)
-
-      closeModalSelect()
-      closeModalAdd()
-
-      setIsSigning(false)
-      setSignType(undefined)
-
-      addToast({
-        color: 'success',
-        title: t('accounts.added')
-      })
-    } catch (err) {
-      setIsSigning(false)
-      setSignType(undefined)
-      addToast({
-        color: 'danger',
-        title: t('accounts.failedLogIn')
-      })
-    }
-  }
+    },
+    [accounts, paths.launcher, setAccounts, setSelectedAccount, t]
+  )
 
   useEffect(() => {
     if (!selectedAccount || !selectedAccount?.accessToken) {
       setAuthData(null)
-      setBackendService(new Backend())
       return
     }
 
     try {
       const decode = jwtDecode<IAuth>(selectedAccount.accessToken)
       setAuthData(decode)
-      setBackendService(new Backend(selectedAccount.accessToken))
     } catch {
       setAuthData(null)
     }
   }, [selectedAccount])
 
-  async function addPlainAccount() {
-    const accountsConfPath = path.join(paths.launcher, 'accounts.json')
+  const addPlainAccount = useCallback(
+    async function addPlainAccount() {
+      const accountsConfPath = await api.path.join(paths.launcher, 'accounts.json')
 
-    const account: ILocalAccount = {
-      nickname,
-      type: 'plain',
-      image: '',
-      friends: []
-    }
+      const account: ILocalAccount = {
+        nickname,
+        type: 'plain',
+        image: '',
+        friends: []
+      }
 
-    setAccounts([...accounts, account])
+      setAccounts([...accounts, account])
 
-    await fs.writeJSON(
-      accountsConfPath,
-      {
+      await api.fs.writeJSON(accountsConfPath, {
         accounts: [...accounts, account],
         lastPlayed: `${account.type}_${account.nickname}`
-      },
-      {
-        encoding: 'utf-8',
-        spaces: 2
-      }
-    )
+      })
 
-    setSelectedAccount(account)
-    closeModalSelect()
-    closeModalAdd()
-    addToast({
-      color: 'success',
-      title: t('accounts.added')
-    })
-  }
+      setSelectedAccount(account)
+      closeModalSelect()
+      closeModalAdd()
+      addToast({
+        color: 'success',
+        title: t('accounts.added')
+      })
+    },
+    [accounts, nickname, paths.launcher, setAccounts, setSelectedAccount, t]
+  )
 
   function closeModalSelect() {
     setIsOpenModalSelect(false)
@@ -201,80 +187,81 @@ export function Accounts() {
     setIsOpenModalAdd(true)
   }
 
-  async function selectAccount(value: string) {
-    if (!accounts) return
+  const selectAccount = useCallback(
+    async function selectAccount(value: string) {
+      if (!accounts) return
 
-    const account = accounts.find((a) => `${a.type}_${a.nickname}` == value)
-    if (!account) return
+      const account = accounts.find((a) => `${a.type}_${a.nickname}` == value)
+      if (!account) return
 
-    setSelectedAccount(account)
+      if (selectedAccount) {
+        await api.skins.clearManager(
+          authData?.uuid || selectedAccount.nickname,
+          selectedAccount.type
+        )
+      }
 
-    const activity: Presence = {
-      smallImageKey: 'steve',
-      smallImageText: account.nickname
-    }
+      setSelectedAccount(account)
+      setVersion(undefined)
 
-    updateActivity(activity)
+      const activity: Presence = {
+        smallImageKey: 'steve',
+        smallImageText: account.nickname
+      }
 
-    await fs.writeJSON(
-      path.join(paths.launcher, 'accounts.json'),
-      {
+      await api.rpc.updateActivity(activity)
+
+      await api.fs.writeJSON(await api.path.join(paths.launcher, 'accounts.json'), {
         accounts,
         lastPlayed: `${account.type}_${account.nickname}`
-      },
-      {
-        encoding: 'utf-8',
-        spaces: 2
+      })
+    },
+    [accounts, paths.launcher, selectedAccount, setSelectedAccount, authData]
+  )
+
+  const deleteAccount = useCallback(
+    async function deleteAccount() {
+      if (!accounts || !selectedAccount) return
+
+      const accountsConfPath = await api.path.join(paths.launcher, 'accounts.json')
+
+      const indexToRemove = accounts.indexOf(selectedAccount)
+      if (indexToRemove !== -1) {
+        accounts.splice(indexToRemove, 1)
       }
-    )
-  }
 
-  async function deleteAccount() {
-    if (!accounts || !selectedAccount) return
+      await api.skins.clearManager(authData?.uuid || selectedAccount.nickname, selectedAccount.type)
 
-    const accountsConfPath = path.join(paths.launcher, 'accounts.json')
-
-    const indexToRemove = accounts.indexOf(selectedAccount)
-    if (indexToRemove !== -1) {
-      accounts.splice(indexToRemove, 1)
-    }
-
-    setSelectedAccount(undefined)
-    setAccounts(accounts)
-    await fs.writeJSON(
-      accountsConfPath,
-      {
+      setSelectedAccount(undefined)
+      setAccounts(accounts)
+      await api.fs.writeJSON(accountsConfPath, {
         accounts: accounts,
         lastPlayed: null
-      },
-      {
-        encoding: 'utf-8',
-        spaces: 2
-      }
-    )
+      })
 
-    addToast({
-      color: 'success',
-      title: t('accounts.deleted')
-    })
-  }
+      addToast({
+        color: 'success',
+        title: t('accounts.deleted')
+      })
+    },
+    [accounts, selectedAccount, paths.launcher, setAccounts, setSelectedAccount, t, authData]
+  )
 
   async function Auth(type: 'microsoft' | 'elyby' | 'discord') {
     setIsPlain(false)
 
     let authUrl
     if (type == 'microsoft')
-      authUrl = `https://login.live.com/oauth20_authorize.srf?client_id=${env.MICROSOFT_CLIENT_ID}&response_type=code&redirect_uri=http://localhost:53213/callback&scope=XboxLive.signin%20offline_access&state=microsoft`
+      authUrl = `https://login.live.com/oauth20_authorize.srf?client_id=${MICROSOFT_CLIENT_ID}&response_type=code&redirect_uri=http://localhost:53213/callback&scope=XboxLive.signin%20offline_access&state=microsoft`
     else if (type == 'elyby')
-      authUrl = `https://account.ely.by/oauth2/v1?client_id=${env.ELYBY_CLIENT_ID}&redirect_uri=http://localhost:53213/callback&response_type=code&scope=offline_access,account_info,minecraft_server_session&state=elyby`
+      authUrl = `https://account.ely.by/oauth2/v1?client_id=${ELYBY_CLIENT_ID}&redirect_uri=http://localhost:53213/callback&response_type=code&scope=offline_access,account_info,minecraft_server_session&state=elyby`
     else if (type == 'discord')
-      authUrl = `https://discord.com/oauth2/authorize?client_id=${env.DISCORD_CLIENT_ID}&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A53213%2Fcallback&scope=identify+guilds.join&state=discord`
-
-    shell.openExternal(authUrl)
+      authUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A53213%2Fcallback&scope=identify+guilds.join&state=discord`
+    await api.shell.openExternal(authUrl)
     setSignType(type)
     setIsSigning(true)
 
-    const { provider, code } = await startOAuthServer()
+    const { provider, code } = await api.auth.startServer()
 
     await oauth(provider, code)
   }
@@ -300,7 +287,10 @@ export function Accounts() {
                 setLoadingType('user')
 
                 try {
-                  const user = await backendService.getUser(authData.sub)
+                  const user = await api.backend.getUser(
+                    selectedAccount?.accessToken || '',
+                    authData.sub
+                  )
 
                   if (user) {
                     setUser(user)

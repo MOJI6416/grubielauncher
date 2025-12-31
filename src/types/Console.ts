@@ -4,6 +4,7 @@ export interface IConsole {
   status: 'running' | 'stopped' | 'error'
   startTime: number
   messages: IConsoleMessage[]
+  publicAddress?: string
 }
 
 export interface IConsoleMessage {

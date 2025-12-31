@@ -1,14 +1,9 @@
 const api = window.api
-const path = api.path
-const fs = api.fs
-const shell = api.shell
-const rimraf = api.rimraf
 
 import { useState } from 'react'
 import { loaders } from './Loaders'
 
 import { IServer as IServerSM } from '@/types/ServersList'
-import { readNBT } from '../utilities/Nbt'
 import { useTranslation } from 'react-i18next'
 import { IServerConf } from '@/types/Server'
 import { ServerControl } from './ServerControl/Control'
@@ -19,7 +14,6 @@ import { useAtom } from 'jotai'
 import {
   accountAtom,
   accountsAtom,
-  backendServiceAtom,
   consolesAtom,
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
@@ -33,9 +27,8 @@ import {
 } from '@renderer/stores/Main'
 import { EditVersion } from './Modals/Version/EditVersion'
 import { addToast, Alert, Avatar, Button, Card, CardBody, Image, ScrollShadow } from '@heroui/react'
-import { checkDiffenceUpdateData } from '@renderer/utilities/Versions'
-import { isOwner } from '@renderer/utilities/Other'
 import { RunGameParams } from '@renderer/App'
+import { checkDiffenceUpdateData, isOwner } from '@renderer/utilities/version'
 
 export interface IProgress {
   value: number
@@ -85,7 +78,6 @@ export function Versions({ runGame }: { runGame: (params: RunGameParams) => Prom
   const [accounts] = useAtom(accountsAtom)
   const setIsDownloadedVersion = useAtom(isDownloadedVersionAtom)[1]
   const setIsOwnerVersion = useAtom(isOwnerVersionAtom)[1]
-  const backendService = useAtom(backendServiceAtom)[0]
   const [consoles] = useAtom(consolesAtom)
 
   return (
@@ -112,7 +104,9 @@ export function Versions({ runGame }: { runGame: (params: RunGameParams) => Prom
                   <Card
                     className={`w-full mb-2 ${selectedVersion?.version.name == vc.version.name ? 'border-primary-200 border-1' : ''}`}
                     key={index}
-                    isPressable={!isRunning && !!account}
+                    isPressable={
+                      !isRunning && !!account && selectedVersion?.version.name !== vc.version.name
+                    }
                     onPress={async () => {
                       if (!account || isLoading || isRunning) return
 
@@ -120,27 +114,27 @@ export function Versions({ runGame }: { runGame: (params: RunGameParams) => Prom
                       setIsDownloadedVersion(vc.version.downloadedVersion)
                       setIsOwnerVersion(isOwner(vc.version.owner, account))
 
-                      const serverPath = path.join(vc.versionPath, 'server')
-                      const serverConf = path.join(serverPath, 'conf.json')
+                      const serverPath = await api.path.join(vc.versionPath, 'server')
+                      const serverConf = await api.path.join(serverPath, 'conf.json')
 
-                      try {
-                        await fs.access(serverPath)
-                        const conf: IServerConf = await fs.readJSON(serverConf, {
-                          encoding: 'utf-8'
-                        })
+                      const isExists = await api.fs.pathExists(serverPath)
+                      if (isExists) {
+                        const conf: IServerConf = await api.fs.readJSON<IServerConf>(
+                          serverConf,
+                          'utf-8'
+                        )
 
                         setServer(conf)
-                      } catch {
+                      } else {
                         setServer(undefined)
                       }
 
-                      const statisticsPath = path.join(vc.versionPath, 'statistics.json')
+                      const statisticsPath = await api.path.join(vc.versionPath, 'statistics.json')
                       let isStatistics = false
-                      try {
-                        await fs.access(statisticsPath)
+                      const isStatisticsExists = await api.fs.pathExists(statisticsPath)
+                      if (isStatisticsExists) {
                         isStatistics = true
-                      } catch {}
-
+                      }
                       setIsStatistics(isStatistics)
                     }}
                   >
@@ -192,27 +186,30 @@ export function Versions({ runGame }: { runGame: (params: RunGameParams) => Prom
                                 isLoading={isLoading && loadingType == LoadingType.STATISTICS}
                                 isDisabled={!isOwner(vc.version.owner, account)}
                                 onPress={async () => {
-                                  const filePath = path.join(vc.versionPath, 'statistics.json')
+                                  const filePath = await api.path.join(
+                                    vc.versionPath,
+                                    'statistics.json'
+                                  )
 
                                   try {
-                                    try {
-                                      await fs.access(filePath)
-                                    } catch {
+                                    const exists = await api.fs.pathExists(filePath)
+                                    if (!exists) {
                                       return
                                     }
 
                                     setIsLoading(true)
                                     setLoadingType(LoadingType.STATISTICS)
 
-                                    const data: IVersionStatistics = await fs.readJSON(filePath, {
-                                      encoding: 'utf-8'
-                                    })
+                                    const data = await api.fs.readJSON<IVersionStatistics>(
+                                      filePath,
+                                      'utf-8'
+                                    )
 
                                     setStatistics(data)
                                     setStatisticsOpen(true)
                                   } catch (err) {
                                     try {
-                                      await rimraf(filePath)
+                                      await api.fs.rimraf(filePath)
                                       setIsStatistics(false)
                                     } catch {}
                                     addToast({
@@ -232,8 +229,8 @@ export function Versions({ runGame }: { runGame: (params: RunGameParams) => Prom
                             <Button
                               variant="flat"
                               isIconOnly
-                              onPress={() => {
-                                shell.openPath(vc.versionPath)
+                              onPress={async () => {
+                                await api.shell.openPath(vc.versionPath)
                               }}
                             >
                               <Folder size={22} />
@@ -261,10 +258,13 @@ export function Versions({ runGame }: { runGame: (params: RunGameParams) => Prom
 
                                 let servers: IServerSM[] = []
                                 if (selectedVersion) {
-                                  const serversPath = path.join(vc.versionPath, 'servers.dat')
+                                  const serversPath = await api.path.join(
+                                    vc.versionPath,
+                                    'servers.dat'
+                                  )
 
                                   try {
-                                    const data = await readNBT(serversPath)
+                                    const data = await api.servers.read(serversPath)
                                     setServers(data)
                                   } catch {
                                     setServers([])
@@ -278,7 +278,8 @@ export function Versions({ runGame }: { runGame: (params: RunGameParams) => Prom
                                   isNetwork
                                 ) {
                                   try {
-                                    const modpackData = await backendService.getModpack(
+                                    const modpackData = await api.backend.getModpack(
+                                      account?.accessToken || '',
                                       selectedVersion.version.shareCode
                                     )
 
@@ -303,18 +304,21 @@ export function Versions({ runGame }: { runGame: (params: RunGameParams) => Prom
                                       }
 
                                       if (status == 'sync') {
-                                        const diff = await checkDiffenceUpdateData({
-                                          mods: vc.version.loader.mods,
-                                          runArguments: vc.version.runArguments || {
-                                            game: '',
-                                            jvm: ''
+                                        const diff = await checkDiffenceUpdateData(
+                                          {
+                                            mods: vc.version.loader.mods,
+                                            runArguments: vc.version.runArguments || {
+                                              game: '',
+                                              jvm: ''
+                                            },
+                                            servers,
+                                            version: vc.version,
+                                            versionPath: vc.versionPath,
+                                            logo: vc.version.image || '',
+                                            quickServer: vc.version.quickServer || ''
                                           },
-                                          servers,
-                                          version: vc.version,
-                                          versionPath: vc.versionPath,
-                                          logo: vc.version.image || '',
-                                          quickServer: vc.version.quickServer || ''
-                                        })
+                                          account?.accessToken || ''
+                                        )
 
                                         if (diff) {
                                           status = !vc.version.downloadedVersion ? 'new' : 'old'
@@ -348,7 +352,7 @@ export function Versions({ runGame }: { runGame: (params: RunGameParams) => Prom
         <EditVersion
           closeModal={async () => {
             setEditVersion(false)
-            await rimraf(path.join(paths.launcher, 'temp'))
+            await api.fs.rimraf(await api.path.join(paths.launcher, 'temp'))
           }}
           vd={versionDiffence}
           runGame={runGame}

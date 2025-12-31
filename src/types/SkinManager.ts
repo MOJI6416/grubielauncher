@@ -1,12 +1,23 @@
 export interface ISkinsConfig {
-  skins: {
-    capeId?: string
-    model: 'slim' | 'classic'
-    name: string
-    id: string
-    url: string
-    character?: string
-  }[]
+  skins: ISkinEntry[]
+}
+
+export interface ISkinEntry {
+  capeId?: string
+  model: 'slim' | 'classic'
+  name: string
+  id: string
+  url: string
+  character?: string
+}
+
+export interface SkinsData {
+  skins: ISkinsConfig
+  capes: ICape[]
+  selectedSkin: string | null
+  activeSkin: string | undefined
+  activeCape: string | undefined
+  activeModel: string | undefined
 }
 
 export interface IGrubieSkin {

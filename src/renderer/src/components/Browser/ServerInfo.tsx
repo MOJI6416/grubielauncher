@@ -6,7 +6,7 @@ import { IServer as IServerSM } from '@/types/ServersList'
 import { FaDiscord, FaMicrosoft } from 'react-icons/fa'
 import { TbSquareLetterE } from 'react-icons/tb'
 import { useAtom } from 'jotai'
-import { accountAtom, backendServiceAtom, pathsAtom, versionsAtom } from '@renderer/stores/Main'
+import { accountAtom, versionsAtom } from '@renderer/stores/Main'
 import { AddVersion } from '../Modals/Version/AddVersion'
 import {
   addToast,
@@ -21,12 +21,9 @@ import {
   Card,
   CardBody
 } from '@heroui/react'
-import { readNBT, writeNBT } from '@renderer/utilities/Nbt'
-import { isOwner } from '@renderer/utilities/Other'
+import { isOwner } from '@renderer/utilities/version'
 
 const api = window.api
-const fs = api.fs
-const path = api.path
 
 interface IVersionServer {
   version: string
@@ -41,30 +38,18 @@ export function ServerInfo({ onClose, server }: { onClose: () => void; server: I
   const [proccessKey, setProccessKey] = useState<number | null>(null)
   const [account] = useAtom(accountAtom)
   const [versionsServers, setVersionsServers] = useState<IVersionServer[]>([])
-  const [paths] = useAtom(pathsAtom)
   const [versions] = useAtom(versionsAtom)
   const [isAddVersion, setIsAddVersion] = useState(false)
   const [tempModpack, setTempModpack] = useState<IModpack>()
-  const [backendService] = useAtom(backendServiceAtom)
 
   async function getVersionsServers() {
     setIsLoading(true)
     setLoadingType('versions')
 
-    const versionsServers = await Promise.all(
-      versions.map(async (version) => {
-        const versionPath = path.join(paths.minecraft, 'versions', version.version.name)
-        let serversPath = path.join(versionPath, 'servers.dat')
-
-        try {
-          await fs.access(serversPath)
-        } catch {
-          return { version: version.version.name, servers: [], path: serversPath }
-        }
-
-        const servers = await readNBT(serversPath)
-        return { version: version.version.name, servers, path: serversPath }
-      })
+    const versionsServers = await api.servers.versions(
+      versions
+        .filter((v) => v.version.owner && isOwner(v.version.owner, account))
+        .map((v) => v.version)
     )
 
     setVersionsServers(versionsServers)
@@ -78,7 +63,7 @@ export function ServerInfo({ onClose, server }: { onClose: () => void; server: I
       setLoadingType('add')
       setProccessKey(key)
 
-      await writeNBT(
+      await api.servers.write(
         servers.servers.concat({
           ip: server.address,
           name: server.name,
@@ -111,7 +96,7 @@ export function ServerInfo({ onClose, server }: { onClose: () => void; server: I
       setLoadingType('delete')
       setProccessKey(key)
 
-      await writeNBT(
+      await api.servers.write(
         servers.servers.filter((s) => s.ip != server.address),
         servers.path
       )
@@ -281,7 +266,10 @@ export function ServerInfo({ onClose, server }: { onClose: () => void; server: I
                     if (!account) return
 
                     if (server.modpack) {
-                      const modpackData = await backendService.getModpack(server.modpack._id)
+                      const modpackData = await api.backend.getModpack(
+                        account?.accessToken || '',
+                        server.modpack._id
+                      )
                       if (!modpackData.data) return
 
                       setTempModpack(modpackData.data)

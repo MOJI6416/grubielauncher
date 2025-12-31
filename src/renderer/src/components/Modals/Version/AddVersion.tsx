@@ -1,7 +1,6 @@
 import {
   accountAtom,
   authDataAtom,
-  backendServiceAtom,
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
   pathsAtom,
@@ -20,7 +19,6 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { IProgress } from '../../Versions'
 import { loaders, Loaders } from '../../Loaders'
 import { SiCurseforge, SiModrinth } from 'react-icons/si'
 import { IArguments } from '@/types/IArguments'
@@ -39,13 +37,13 @@ import {
   ModalBody,
   ModalContent,
   ModalHeader,
-  Progress,
   Select,
   SelectItem,
   Spinner,
   Image,
   Tabs,
-  Tab
+  Tab,
+  Progress
 } from '@heroui/react'
 import { IModpack as IImportModpack } from '@/types/ModManager'
 import { IModpackFile, IVersion, IVersionConf } from '@/types/IVersion'
@@ -55,18 +53,11 @@ import axios from 'axios'
 import { Loader } from '@/types/Loader'
 import { IServer } from '@/types/ServersList'
 import { LoaderVersion } from '@/types/VersionsService'
-import { VersionsService } from '@renderer/services/Versions'
-import { writeNBT } from '@renderer/utilities/Nbt'
-import { Version } from '@renderer/game/Version'
-import { Mods } from '@renderer/game/Mods'
-import { checkVersionName, importVersion } from '@renderer/utilities/Versions'
+import { checkVersionName } from '@renderer/utilities/version'
+import { Version } from '@renderer/classes/Version'
+import { Mods } from '@renderer/classes/Mods'
 
-const { api } = window
-const fs = api.fs
-const path = api.path
-const electron = window.electron
-const rimraf = api.rimraf
-const fromBuffer = api.fromBuffer
+const api = window.api
 
 export function AddVersion({
   closeModal,
@@ -102,7 +93,7 @@ export function AddVersion({
     jvm: ''
   })
   const [isOpenArguments, setIsOpenArguments] = useState(false)
-  const [progress, setProgress] = useState<IProgress>({ value: 0, title: '' })
+  // const [progress, setProgress] = useState<IProgress>({ value: 0, title: '' })
   const [account] = useAtom(accountAtom)
   const [mods, setMods] = useState<ILocalProject[]>([])
   const [servers, setServers] = useState<IServer[]>([])
@@ -122,35 +113,12 @@ export function AddVersion({
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>([])
   const [isBlockedMods, setIsBlockedMods] = useState(false)
   const [authData] = useAtom(authDataAtom)
-  const [backendService] = useAtom(backendServiceAtom)
 
   useEffect(() => {
     setSelectVersion(undefined)
     setIsDownloadedVersion(false)
     setIsOwnerVersion(true)
     setLoader('vanilla')
-
-    electron.ipcRenderer.on('download-progress', (_, { progress, group }) => {
-      const progressValue = Number(progress)
-
-      if (isNaN(progressValue)) return
-      if (Math.abs(progress.value - progressValue) < 1) return
-
-      setProgress({
-        value: progressValue,
-        title: `${t('game.download')} "${group}"...`
-      })
-    })
-    ;(async () => {
-      if (modpack) {
-        setSelectedTab('fromServer')
-        searchVersion(modpack)
-      }
-    })()
-
-    return () => {
-      electron.ipcRenderer.removeAllListeners('download-progress')
-    }
   }, [])
 
   useEffect(() => {
@@ -170,7 +138,7 @@ export function AddVersion({
       setIsLoading(true)
       setLoadingType('versions')
 
-      const data = await VersionsService.getVersions(loader || 'vanilla', viewSnapshots)
+      const data = await api.versions.getList(loader || 'vanilla', viewSnapshots)
       setSelectVersion(data[0])
       setSelectVersions(data)
 
@@ -202,7 +170,7 @@ export function AddVersion({
       setIsLoading(true)
       setLoadingType('loaders')
 
-      const data = await VersionsService.getLoaderVersions(loader || 'vanilla', selectVersion)
+      const data = await api.versions.getLoaderVersions(loader || 'forge', selectVersion.id)
 
       setLoaderVersion(data[0])
       setLoaderVersions(data)
@@ -218,35 +186,38 @@ export function AddVersion({
       return
     }
 
-    const result = checkVersionName(versionName, versions, undefined, isDownloadedVersion)
+    const result = checkVersionName(
+      versionName,
+      versions.map((v) => v.version),
+      undefined,
+      isDownloadedVersion
+    )
     setIsValidVersionName(result)
   }, [versionName])
 
   async function addVersion() {
     if (!account || !selectVersion || !loader || (loader != 'vanilla' && !loaderVersion)) return
 
-    const newVersionPath = path.join(paths.minecraft, 'versions', versionName.trim())
+    const newVersionPath = await api.path.join(paths.minecraft, 'versions', versionName.trim())
 
-    await fs.mkdir(newVersionPath, {
-      recursive: true
-    })
+    await api.fs.ensure(newVersionPath)
 
     let newImage: string = image || ''
     if (image && selectedTab != 'fromServer') {
       const filename = 'logo.png'
       try {
-        const filePath = path.join(newVersionPath, filename)
+        const filePath = await api.path.join(newVersionPath, filename)
 
         if (image.startsWith('file://')) {
           const file = image.replace('file://', '')
-          await fs.copyFile(file, filePath)
+          await api.fs.copy(file, filePath)
         } else {
           const response = await axios.get(image, {
             responseType: 'arraybuffer'
           })
 
-          const buffer = fromBuffer(response.data)
-          await fs.writeFile(filePath, buffer, 'binary')
+          const buffer = api.file.fromBuffer(response.data)
+          await api.fs.writeFile(filePath, buffer, 'binary')
         }
 
         newImage = `file://${filePath}?t=${new Date().getTime()}`
@@ -290,26 +261,24 @@ export function AddVersion({
 
     if (selectedTab == 'fromServer' || selectedTab == 'manually') {
       if (servers.length > 0) {
-        const serversPath = path.join(newVersionPath, 'servers.dat')
-        await writeNBT(servers, serversPath)
+        const serversPath = await api.path.join(newVersionPath, 'servers.dat')
+        await api.servers.write(servers, serversPath)
       }
 
       if (options != '') {
-        const optionsPath = path.join(newVersionPath, 'options.txt')
-        await fs.writeFile(optionsPath, options, 'utf-8')
+        const optionsPath = await api.path.join(newVersionPath, 'options.txt')
+        await api.fs.writeFile(optionsPath, options, 'utf-8')
       }
 
-      if (shareCode) await backendService.modpackDownloaded(shareCode)
+      if (shareCode) await api.backend.modpackDownloaded(account?.accessToken || '', shareCode)
     }
 
     if (importData) {
-      await fs.copy(importData.path, newVersionPath, { overwrite: true })
-      await rimraf(importData.path)
+      await api.fs.copy(importData.path, newVersionPath)
+      await api.fs.rimraf(importData.path)
     } else if (importModpack) {
-      await fs.copy(path.join(importModpack.folderPath, 'overrides'), newVersionPath, {
-        overwrite: true
-      })
-      await rimraf(importModpack.folderPath)
+      await api.fs.copy(await api.path.join(importModpack.folderPath, 'overrides'), newVersionPath)
+      await api.fs.rimraf(importModpack.folderPath)
     }
 
     const newVersion = new Version(settings, newVersionConf)
@@ -327,10 +296,10 @@ export function AddVersion({
         mod.version.files[0].localPath = bMod.filePath
       }
 
-      const versionMods = new Mods(settings.downloadLimit, newVersion)
+      const versionMods = new Mods(settings, newVersionConf)
       await versionMods.check()
 
-      if (newVersion.version.loader.other?.url) await versionMods.downloadOther()
+      if (newVersionConf.loader.other?.url) await versionMods.downloadOther()
       setBlockedMods([])
     }
 
@@ -453,8 +422,7 @@ export function AddVersion({
                             isIconOnly
                             isDisabled={isLoading}
                             onPress={async () => {
-                              const filePaths =
-                                await window.electron.ipcRenderer.invoke('openFileDialog')
+                              const filePaths = await api.other.openFileDialog()
 
                               if (!filePaths.length) return
                               setCroppedImage(filePaths[0])
@@ -619,16 +587,12 @@ export function AddVersion({
                       setIsLoading(true)
                       setLoadingType('file')
 
-                      const filePaths = await window.electron.ipcRenderer.invoke(
-                        'openFileDialog',
-                        false,
-                        [
-                          {
-                            name: 'Modpack',
-                            extensions: ['zip', 'mrpack']
-                          }
-                        ]
-                      )
+                      const filePaths = await api.other.openFileDialog(false, [
+                        {
+                          name: 'Modpack',
+                          extensions: ['zip', 'mrpack']
+                        }
+                      ])
 
                       if (!filePaths.length) {
                         setIsLoading(false)
@@ -636,9 +600,9 @@ export function AddVersion({
                         return
                       }
 
-                      const data = await importVersion(
+                      const data = await api.version.import(
                         filePaths[0],
-                        path.join(paths.launcher, 'temp')
+                        await api.path.join(paths.launcher, 'temp')
                       )
 
                       const { type, gl, other } = data
@@ -690,7 +654,10 @@ export function AddVersion({
                       setIsLoading(true)
                       setLoadingType('search')
 
-                      const modpackData = await backendService.getModpack(searchCode.trim())
+                      const modpackData = await api.backend.getModpack(
+                        account?.accessToken || '',
+                        searchCode.trim()
+                      )
                       if (modpackData.data) await searchVersion(modpackData.data)
                       else addToast({ color: 'danger', title: t('addVersion.fromServer.notFound') })
 
@@ -784,20 +751,11 @@ export function AddVersion({
                       {t('common.install')}
                     </Button>
                   )}
-
-                  {isLoading && loadingType == 'install' && (
-                    <div className="flex flex-col space-y-2">
-                      <p>{t('common.installation')}</p>
-                      <Progress
-                        size="sm"
-                        color="success"
-                        isIndeterminate={!(progress.value < 100)}
-                        value={progress.value < 100 ? progress.value : undefined}
-                      />
-                      <p className="text-xs">{progress.title || '...'}</p>
-                    </div>
-                  )}
                 </div>
+              )}
+
+              {isLoading && loadingType == 'install' && (
+                <Progress isIndeterminate label={t('common.installation')} size="sm" />
               )}
             </div>
           </ModalBody>
@@ -837,7 +795,7 @@ export function AddVersion({
           }}
           loader={loader}
           version={selectVersion}
-          versionPath={path.join(paths.minecraft, 'versions', versionName)}
+          versionPath={''}
           isModpacks={selectedTab == 'modpacks' && !importModpack}
           setLoader={(loader) => setLoader(loader)}
           setVersion={(setVersion) => setSelectVersion(setVersion)}

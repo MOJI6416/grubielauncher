@@ -5,15 +5,10 @@ import ReactDOM from 'react-dom/client'
 import { HeroUIProvider, Image, Progress, Spinner } from '@heroui/react'
 import './i18n'
 import { useTranslation } from 'react-i18next'
-import { languages } from './components/Settings'
 import icon from './assets/icon.png'
-import { TSettings } from '@/types/Settings'
+import { LANGUAGES, TSettings } from '@/types/Settings'
 
 const api = window.api
-const fs = api.fs
-const ipcRenderer = window.electron.ipcRenderer
-const path = api.path
-const getPath = api.getPath
 
 const App = () => {
   const [state, setState] = useState<'checking' | 'downloading'>('checking')
@@ -23,21 +18,19 @@ const App = () => {
 
   useEffect(() => {
     async function getLocale() {
-      const systemLocate: string = await window.electron.ipcRenderer.invoke('getLocale')
-      const l = languages.find((l) => systemLocate.includes(l.code))
+      const systemLocate: string = await api.other.getLocale()
+      const l = LANGUAGES.find((l) => systemLocate.includes(l.code))
 
       let data: Partial<TSettings> = {}
 
-      try {
-        const appData = await getPath('appData')
-        if (!appData) return
+      const appData = await api.other.getPath('appData')
+      if (!appData) return
 
-        const launcherPath = path.join(appData, '.grubielauncher')
-        const settingsConfPath = path.join(launcherPath, 'settings.json')
+      const launcherPath = await api.path.join(appData, '.grubielauncher')
+      const settingsConfPath = await api.path.join(launcherPath, 'settings.json')
 
-        await fs.access(settingsConfPath)
-        data = await fs.readJSON(settingsConfPath, 'utf-8')
-      } catch {}
+      if (await api.fs.pathExists(settingsConfPath))
+        data = await api.fs.readJSON(settingsConfPath, 'utf-8')
 
       i18n.changeLanguage(data?.lang || l?.code || i18n.language)
     }
@@ -46,8 +39,8 @@ const App = () => {
   }, [])
 
   useEffect(() => {
-    ipcRenderer.on('download-progress', (_, p) => {
-      setProgress(p.percent.toFixed(1))
+    api.events.updater.onDownloadProgress((p) => {
+      setProgress(p)
       setState('downloading')
     })
   }, [])

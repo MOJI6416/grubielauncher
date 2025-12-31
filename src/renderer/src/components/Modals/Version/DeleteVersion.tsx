@@ -13,7 +13,6 @@ import {
 import {
   accountAtom,
   authDataAtom,
-  backendServiceAtom,
   consolesAtom,
   networkAtom,
   selectedVersionAtom,
@@ -23,6 +22,8 @@ import { useAtom } from 'jotai'
 import { ArrowLeft, Trash } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
+const api = window.api
 
 export function DeleteVersion({ close }: { close: (isDeleted?: boolean) => void }) {
   const [version] = useAtom(selectedVersionAtom)
@@ -34,7 +35,6 @@ export function DeleteVersion({ close }: { close: (isDeleted?: boolean) => void 
   const [isNetwork] = useAtom(networkAtom)
   const [shareDel, setShareDel] = useState(true)
   const [authData] = useAtom(authDataAtom)
-  const [backendService] = useAtom(backendServiceAtom)
   const setConsoles = useAtom(consolesAtom)[1]
 
   return (
@@ -106,7 +106,10 @@ export function DeleteVersion({ close }: { close: (isDeleted?: boolean) => void 
                   isNetwork &&
                   authData
                 ) {
-                  await backendService.deleteModpack(version.version.shareCode)
+                  await api.backend.deleteModpack(
+                    account?.accessToken || '',
+                    version.version.shareCode
+                  )
                 }
 
                 try {

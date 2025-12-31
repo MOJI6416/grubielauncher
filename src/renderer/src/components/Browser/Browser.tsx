@@ -21,7 +21,7 @@ import { Server as ServerComponent } from './Server'
 import { IServer, modpackTags, serverTags } from '@/types/Browser'
 import { ServerInfo } from './ServerInfo'
 import { useAtom } from 'jotai'
-import { accountAtom, authDataAtom, backendServiceAtom } from '@renderer/stores/Main'
+import { accountAtom, authDataAtom } from '@renderer/stores/Main'
 import { AddVersion } from '../Modals/Version/AddVersion'
 import { addToast } from '@heroui/toast'
 import { Modal, ModalBody, ModalContent, ModalHeader } from '@heroui/modal'
@@ -37,10 +37,10 @@ import { loaders } from '../Loaders'
 import { IUser } from '@/types/IUser'
 import AccountInfo from '../Account/AccountInfo'
 
-const clipboard = window.api.clipboard
-
 type LoadingType = 'search' | 'serverInfo' | 'delete'
 type Sort = 'downloads' | 'name' | 'update' | 'newest'
+
+const api = window.api
 
 export function Browser({ onClose }: { onClose: () => void }) {
   const [isLoading, setIsLoading] = useState(true)
@@ -61,7 +61,6 @@ export function Browser({ onClose }: { onClose: () => void }) {
   const [isAddVerion, setAddVersion] = useState(false)
   const [tempModpack, setTempModpack] = useState<IModpack>()
   const [authData] = useAtom(authDataAtom)
-  const [backendService] = useAtom(backendServiceAtom)
   const [accountInfo, setAccountInfo] = useState(false)
   const [user, setUser] = useState<IUser | null>(null)
 
@@ -79,7 +78,7 @@ export function Browser({ onClose }: { onClose: () => void }) {
     setFilter([])
     setSort('downloads')
 
-    const modpacks = await backendService.modpackSearch({
+    const modpacks = await api.backend.modpackSearch(account?.accessToken || '', {
       filter: [],
       limit: 20,
       offset: 0,
@@ -102,7 +101,7 @@ export function Browser({ onClose }: { onClose: () => void }) {
     setSearch('')
     setFilter([])
 
-    const servers = await backendService.searchServers({
+    const servers = await api.backend.searchServers(account?.accessToken || '', {
       filter: [],
       limit: 20,
       offset: 0,
@@ -115,8 +114,8 @@ export function Browser({ onClose }: { onClose: () => void }) {
     setLoadingType(null)
   }
 
-  const copyAddress = useCallback((adress: string) => {
-    clipboard.writeText(adress)
+  const copyAddress = useCallback(async (adress: string) => {
+    await api.clipboard.writeText(adress)
     addToast({
       title: t('browser.copiedAddress')
     })
@@ -260,24 +259,30 @@ export function Browser({ onClose }: { onClose: () => void }) {
                       setLoadingType('search')
 
                       if (type == 'modpacks') {
-                        const modpacks = await backendService.modpackSearch({
-                          filter,
-                          limit: 20,
-                          offset: 0,
-                          search,
-                          sort
-                        })
+                        const modpacks = await api.backend.modpackSearch(
+                          account?.accessToken || '',
+                          {
+                            filter,
+                            limit: 20,
+                            offset: 0,
+                            search,
+                            sort
+                          }
+                        )
 
                         setModpacks(modpacks)
                       }
 
                       if (type == 'servers') {
-                        const servers = await backendService.searchServers({
-                          filter,
-                          limit: 20,
-                          offset: 0,
-                          search
-                        })
+                        const servers = await api.backend.searchServers(
+                          account?.accessToken || '',
+                          {
+                            filter,
+                            limit: 20,
+                            offset: 0,
+                            search
+                          }
+                        )
 
                         setServers(servers)
                       }
@@ -307,7 +312,10 @@ export function Browser({ onClose }: { onClose: () => void }) {
                         setSearch('')
                         setFilter([])
                         setSort('downloads')
-                        const modpacks = await backendService.allModpacksByUser(authData.sub)
+                        const modpacks = await api.backend.allModpacksByUser(
+                          account?.accessToken || '',
+                          authData.sub
+                        )
                         setModpacks(modpacks)
                       }
 
@@ -317,7 +325,10 @@ export function Browser({ onClose }: { onClose: () => void }) {
                         setSearch('')
                         setFilter([])
 
-                        const servers = await backendService.ownerServers(authData.sub)
+                        const servers = await api.backend.ownerServers(
+                          account?.accessToken || '',
+                          authData.sub
+                        )
                         setServers(servers)
                       }
 
@@ -480,7 +491,10 @@ export function Browser({ onClose }: { onClose: () => void }) {
                                     setLoadingType('delete')
                                     setProccessKey(index)
 
-                                    await backendService.deleteModpack(modpack._id)
+                                    await api.backend.deleteModpack(
+                                      account?.accessToken || '',
+                                      modpack._id
+                                    )
 
                                     setIsLoading(false)
                                     setLoadingType(null)
@@ -599,7 +613,10 @@ export function Browser({ onClose }: { onClose: () => void }) {
                                   setLoadingType('serverInfo')
                                   setProccessKey(index)
 
-                                  const serverInfo = await backendService.getServer(server._id)
+                                  const serverInfo = await api.backend.getServer(
+                                    account?.accessToken || '',
+                                    server._id
+                                  )
 
                                   if (!serverInfo) {
                                     addToast({
@@ -634,7 +651,10 @@ export function Browser({ onClose }: { onClose: () => void }) {
                                   setLoadingType('delete')
                                   setProccessKey(index)
 
-                                  await backendService.deleteServer(server._id)
+                                  await api.backend.deleteServer(
+                                    account?.accessToken || '',
+                                    server._id
+                                  )
 
                                   setIsLoading(false)
                                   setLoadingType(null)

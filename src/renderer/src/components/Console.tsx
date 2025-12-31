@@ -21,7 +21,7 @@ import { Play, Square, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-const electron = window.electron
+const api = window.api
 
 interface IInctance {
   versionName: string
@@ -232,10 +232,9 @@ export function Console({
                                     variant="flat"
                                     size="sm"
                                     color="danger"
-                                    onPress={() => {
+                                    onPress={async () => {
                                       setSelectedInstance(instance)
-                                      electron.ipcRenderer.invoke(
-                                        'closeGame',
+                                      await api.game.closeGame(
                                         instance.versionName,
                                         instance.instance
                                       )
@@ -313,11 +312,11 @@ export function Console({
                       {selectedConsole?.messages.map((message, index) => (
                         <Tooltip
                           size="sm"
+                          key={index}
                           isDisabled={message.tips.length === 0}
                           content={message.tips.map((tip) => t('tips.' + tip)).join(', ')}
                         >
                           <div
-                            key={index}
                             className={`p-2 text-xs font-mono break-all border-l-4 ${message.tips.length > 0 ? 'cursor-help' : ''} ${
                               message.type === 'info'
                                 ? 'bg-blue-950/50 text-blue-300 border-blue-500'
