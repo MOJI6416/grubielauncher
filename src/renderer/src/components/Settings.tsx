@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import ReactCountryFlag from 'react-country-flag'
 import { Save } from 'lucide-react'
 import { useAtom } from 'jotai'
-import { pathsAtom, settingsAtom } from '@renderer/stores/Main'
+import { pathsAtom, settingsAtom } from '@renderer/stores/atoms'
 import {
   addToast,
   Button,

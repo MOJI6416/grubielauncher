@@ -14,7 +14,7 @@ import {
   Tooltip
 } from '@heroui/react'
 import { RunGameParams } from '@renderer/App'
-import { consolesAtom, selectedVersionAtom, versionsAtom } from '@renderer/stores/Main'
+import { consolesAtom, selectedVersionAtom, versionsAtom } from '@renderer/stores/atoms'
 import clsx from 'clsx'
 import { useAtom } from 'jotai'
 import { Play, Square, X } from 'lucide-react'

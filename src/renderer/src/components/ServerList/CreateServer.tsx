@@ -12,7 +12,7 @@ import {
   Select,
   SelectItem
 } from '@heroui/react'
-import { selectedVersionAtom } from '@renderer/stores/Main'
+import { selectedVersionAtom } from '@renderer/stores/atoms'
 import { useAtom } from 'jotai'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'

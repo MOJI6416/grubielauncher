@@ -5,8 +5,24 @@ import path from 'path'
 
 export async function readJSONFromArchive<T>(zipPath: string, fileName: string) {
   const archive = new zip(zipPath)
-  const text = archive.readAsText(fileName)
+  const entry = archive.getEntry(fileName)
+  if (!entry) return null
+
+  const text = entry.getData().toString('utf-8')
   return JSON.parse(text) as T
+}
+
+export async function extractFileFromArchive(
+  zipPath: string,
+  fileName: string,
+  destinationPath: string
+) {
+  const archive = new zip(zipPath)
+  const entry = archive.getEntry(fileName)
+  if (!entry) return null
+
+  archive.extractEntryTo(entry, destinationPath, false, true)
+  return path.join(destinationPath)
 }
 
 export async function createZipArchive(files: string[], outputPath: string): Promise<void> {

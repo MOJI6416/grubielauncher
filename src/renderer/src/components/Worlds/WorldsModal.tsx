@@ -8,7 +8,7 @@ import {
   ModalHeader,
   Spinner
 } from '@heroui/react'
-import { accountAtom, isOwnerVersionAtom, selectedVersionAtom } from '@renderer/stores/Main'
+import { accountAtom, isOwnerVersionAtom, selectedVersionAtom } from '@renderer/stores/atoms'
 import { useAtom } from 'jotai'
 import { useEffect, useState } from 'react'
 import { WorldList } from './WorldList'

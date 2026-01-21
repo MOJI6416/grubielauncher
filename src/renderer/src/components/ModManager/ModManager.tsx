@@ -10,7 +10,8 @@ import {
   DependencyType,
   ILocalDependency,
   IModpack,
-  ISearchData
+  ISearchData,
+  IAddedLocalProject
 } from '@/types/ModManager'
 import { loaders } from '../Loaders'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -26,7 +27,6 @@ import {
   Search,
   Settings,
   X,
-  File,
   PackageCheck,
   Trash,
   CircleArrowDown,
@@ -43,7 +43,7 @@ import {
   selectedVersionAtom,
   serverAtom,
   settingsAtom
-} from '@renderer/stores/Main'
+} from '@renderer/stores/atoms'
 import {
   addToast,
   Alert,
@@ -64,7 +64,8 @@ import {
   Card,
   CardBody,
   ScrollShadow,
-  Pagination
+  Pagination,
+  Progress
 } from '@heroui/react'
 import { BlockedMods, IBlockedMod } from '../Modals/BlockedMods'
 import { ModBody } from './ModBody'
@@ -73,6 +74,7 @@ import { Loader } from '@/types/Loader'
 import { IVersion } from '@/types/IVersion'
 import { ModToggleButton } from './ModToggleButton'
 import { getProjectTypes } from '@renderer/utilities/mod'
+import { ALPModal } from './AddLocalProjectsModal'
 
 enum LoadingType {
   SEARCH,
@@ -93,7 +95,6 @@ export function ModManager({
   onClose,
   version,
   loader,
-  versionPath,
   isModpacks,
   setVersion,
   setLoader,
@@ -104,7 +105,6 @@ export function ModManager({
   onClose: (modpack?: IModpack) => void
   version: IVersion | undefined
   loader: Loader | undefined
-  versionPath: string
   isModpacks: boolean
   setVersion: (version: IVersion | undefined) => void
   setLoader: (loader: Loader | undefined) => void
@@ -145,6 +145,9 @@ export function ModManager({
   const [selectedVersion] = useAtom(selectedVersionAtom)
   const settings = useAtom(settingsAtom)[0]
   const [account] = useAtom(accountAtom)
+  const [addingLocalProjects, setAddingLocalProjects] = useState<IAddedLocalProject[]>([])
+  const [isOpenALPInfo, setIsOpenALPInfo] = useState(false)
+  const [readingLocalModsProgress, setReadingLocalModsProgress] = useState<number>(0)
 
   const { t } = useTranslation()
 
@@ -405,78 +408,95 @@ export function ModManager({
     return canBeUpdated
   }
 
-  const readLocalMod = useCallback(
-    async (path: string) => {
+  const readLocalMods = useCallback(
+    async (paths: string[]) => {
       setLoading(true)
       setLoadingType(LoadingType.CHECK_LOCAL_MOD)
+      setReadingLocalModsProgress(0)
 
-      const info = await api.modManager.checkLocalMod(versionPath, path)
-      if (!info) {
-        addToast({
-          color: 'danger',
-          title: t('modManager.invalidMod')
-        })
+      const localProjects: IAddedLocalProject[] = []
+      for (const path of paths) {
+        setReadingLocalModsProgress(Math.round(((localProjects.length + 1) / paths.length) * 100))
 
-        setLoading(false)
-        setLoadingType(null)
+        const info = await api.modManager.checkLocalMod(path)
+        if (!info) {
+          localProjects.push({
+            project: {
+              description: '',
+              iconUrl: null,
+              id: '-1',
+              projectType,
+              provider: Provider.LOCAL,
+              title: await api.path.basename(path),
+              url: '',
+              versions: [],
+              body: '',
+              gallery: []
+            },
+            status: 'invalid'
+          })
 
-        return
-      }
+          continue
+        }
 
-      if (
-        mods.find(
-          (m) => m.title.toLocaleLowerCase() == info.name.toLocaleLowerCase() || m.id == info.id
+        let isDuplicate = false
+        if (
+          mods.find(
+            (m) =>
+              m.title.toLocaleLowerCase() == info.name.toLocaleLowerCase() ||
+              m.id == info.id ||
+              m.version?.files.find((f) => f.sha1 == info.sha1)
+          )
         )
-      ) {
-        addToast({
-          color: 'warning',
-          title: t('modManager.alreadyInstalled')
+          isDuplicate = true
+
+        const version: ModManagerVersion = {
+          dependencies: [],
+          id: info.version || '',
+          downloads: -1,
+          name: info.version || '',
+          files: [
+            {
+              filename: info.filename,
+              isServer: true,
+              size: info.size,
+              url: `file://${info.path}`,
+              sha1: info.sha1
+            }
+          ]
+        }
+
+        localProjects.push({
+          project: {
+            description: info.description,
+            iconUrl: info.icon,
+            id: info.id,
+            projectType,
+            provider: Provider.LOCAL,
+            title: info.name,
+            url: info.url,
+            versions: [version],
+            body: '',
+            gallery: []
+          },
+          status: isDuplicate ? 'duplicate' : 'valid'
         })
-
-        setLoading(false)
-        setLoadingType(null)
-
-        return
       }
 
-      const version: ModManagerVersion = {
-        dependencies: [],
-        id: info.version || '',
-        downloads: -1,
-        name: info.version || '',
-        files: [
-          {
-            filename: info.filename,
-            isServer: true,
-            size: info.size,
-            url: `file://${info.path}`,
-            sha1: await api.fs.sha1(info.path)
-          }
-        ]
-      }
-
-      setProject({
-        description: info.description,
-        iconUrl: null,
-        id: info.id,
-        projectType,
-        provider: Provider.LOCAL,
-        title: info.name,
-        url: info.url,
-        versions: [version],
-        body: '',
-        gallery: []
-      })
-
-      setSelectVersion(version)
-      setIsAvailableUpdate(false)
+      if (localProjects.length == 0) {
+        addToast({
+          title: t('modManager.invalidMod'),
+          color: 'warning'
+        })
+      } else setAddingLocalProjects(localProjects)
 
       setLoading(false)
       setLoadingType(null)
+      setReadingLocalModsProgress(0)
 
-      setInfoModalOpen(true)
+      setIsOpenALPInfo(true)
     },
-    [projectType]
+    [projectType, mods]
   )
 
   return (
@@ -498,9 +518,12 @@ export function ModManager({
                 <div className="flex items-center gap-2 justify-between">
                   <div className="flex items-center gap-2">
                     {!isLocal && (
-                      <Button
-                        variant="flat"
-                        isIconOnly
+                      <Tooltip
+                        delay={1000}
+                        isDisabled={
+                          provider != Provider.CURSEFORGE && provider != Provider.MODRINTH
+                        }
+                        content={provider == Provider.CURSEFORGE ? 'CurseForge' : 'Modrinth'}
                         color={
                           provider == Provider.CURSEFORGE
                             ? 'warning'
@@ -508,60 +531,72 @@ export function ModManager({
                               ? 'success'
                               : 'default'
                         }
-                        isDisabled={isLoading}
-                        onPress={async () => {
-                          const newProvider =
-                            provider == Provider.CURSEFORGE
-                              ? Provider.MODRINTH
-                              : provider == Provider.MODRINTH
-                                ? !isModpacks
-                                  ? Provider.LOCAL
-                                  : Provider.CURSEFORGE
-                                : Provider.CURSEFORGE
-
-                          setProvider(newProvider)
-                          setSearchData(undefined)
-
-                          let pts: ProjectType[] = []
-                          if (!isModpacks) {
-                            pts = getProjectTypes(loader || 'vanilla', server, newProvider)
-                            setProjectTypes(pts)
-
-                            if (!pts.includes(projectType)) setProjectType(pts[0])
-                          } else {
-                            pts = [...projectTypes]
-                          }
-
-                          const sortValues = await api.modManager.getSort(newProvider)
-                          setSortValues(sortValues)
-                          setSort(sortValues[0])
-
-                          await getFilters(newProvider, projectType)
-                          setFilter([])
-
-                          setOffset(0)
-
-                          await search({
-                            version,
-                            loader,
-                            query: searchQuery,
-                            provider: newProvider,
-                            projectType: pts.includes(projectType) ? projectType : pts[0],
-                            sort: sortValues[0],
-                            filter: [],
-                            isLocal,
-                            offset: 0
-                          })
-                        }}
                       >
-                        {provider == Provider.CURSEFORGE ? (
-                          <SiCurseforge size={22} />
-                        ) : provider == Provider.MODRINTH ? (
-                          <SiModrinth size={22} />
-                        ) : (
-                          <FileBox size={22} />
-                        )}
-                      </Button>
+                        <Button
+                          variant="flat"
+                          isIconOnly
+                          color={
+                            provider == Provider.CURSEFORGE
+                              ? 'warning'
+                              : provider == Provider.MODRINTH
+                                ? 'success'
+                                : 'default'
+                          }
+                          isDisabled={isLoading}
+                          onPress={async () => {
+                            const newProvider =
+                              provider == Provider.CURSEFORGE
+                                ? Provider.MODRINTH
+                                : provider == Provider.MODRINTH
+                                  ? !isModpacks
+                                    ? Provider.LOCAL
+                                    : Provider.CURSEFORGE
+                                  : Provider.CURSEFORGE
+
+                            setProvider(newProvider)
+                            setSearchData(undefined)
+
+                            let pts: ProjectType[] = []
+                            if (!isModpacks) {
+                              pts = getProjectTypes(loader || 'vanilla', server, newProvider)
+                              setProjectTypes(pts)
+
+                              if (!pts.includes(projectType)) setProjectType(pts[0])
+                            } else {
+                              pts = [...projectTypes]
+                            }
+
+                            const sortValues = await api.modManager.getSort(newProvider)
+                            setSortValues(sortValues)
+                            setSort(sortValues[0])
+
+                            await getFilters(newProvider, projectType)
+                            setFilter([])
+
+                            setOffset(0)
+
+                            await search({
+                              version,
+                              loader,
+                              query: searchQuery,
+                              provider: newProvider,
+                              projectType: pts.includes(projectType) ? projectType : pts[0],
+                              sort: sortValues[0],
+                              filter: [],
+                              isLocal,
+                              offset: 0
+                            })
+                          }}
+                        >
+                          {provider == Provider.CURSEFORGE ? (
+                            <SiCurseforge size={22} />
+                          ) : provider == Provider.MODRINTH ? (
+                            <SiModrinth size={22} />
+                          ) : (
+                            <FileBox size={22} />
+                          )}
+                        </Button>
+                      </Tooltip>
                     )}
                     {!isModpacks && (
                       <Select
@@ -928,28 +963,36 @@ export function ModManager({
                 {!isLocal && provider == Provider.LOCAL ? (
                   <>
                     <span>
-                      <Alert title={t('modManager.selectLocal')} />
+                      <Alert variant="bordered" title={t('modManager.selectLocals')} />
                     </span>
-                    <div>
-                      <Button
-                        variant="flat"
-                        startContent={<File size={22} />}
-                        isLoading={isLoading && loadingType == LoadingType.CHECK_LOCAL_MOD}
-                        onPress={async () => {
-                          const filePaths = await api.other.openFileDialog(false, [
+
+                    {readingLocalModsProgress > 0 && (
+                      <Progress size="sm" value={readingLocalModsProgress} />
+                    )}
+
+                    <Button
+                      variant="flat"
+                      color="primary"
+                      startContent={<FileBox size={22} />}
+                      isLoading={isLoading && loadingType == LoadingType.CHECK_LOCAL_MOD}
+                      onPress={async () => {
+                        const filePaths = await api.other.openFileDialog(
+                          false,
+                          [
                             {
                               name: 'Mods',
                               extensions: ['jar', 'zip']
                             }
-                          ])
+                          ],
+                          true
+                        )
 
-                          if (!filePaths || filePaths.length == 0) return
-                          await readLocalMod(filePaths[0])
-                        }}
-                      >
-                        {t('common.choose')}
-                      </Button>
-                    </div>
+                        if (!filePaths || filePaths.length == 0) return
+                        await readLocalMods(filePaths)
+                      }}
+                    >
+                      {t('common.choose')}
+                    </Button>
                   </>
                 ) : isLoading &&
                   (loadingType == LoadingType.SEARCH ||
@@ -1208,6 +1251,10 @@ export function ModManager({
                                             newMods.splice(index, 1)
 
                                             setMods([...newMods])
+                                            if (project.provider == Provider.LOCAL) {
+                                              setBrowser(browser.filter((p) => p.id != project.id))
+                                            }
+
                                             setInstalledProject(null)
 
                                             addToast({
@@ -1368,14 +1415,21 @@ export function ModManager({
                                   setLoading(true)
                                   setLoadingType(LoadingType.TRANSLATE)
 
-                                  const translatedDescription = await api.backend.aiComplete(
-                                    account?.accessToken || '',
-                                    `Translate the following text to ${settings.lang}:\n\n${project.description}`
-                                  )
-
-                                  const translatedBody = await api.backend.aiComplete(
-                                    account?.accessToken || '',
-                                    `Translate the following text to ${settings.lang}:\n\n${project.body}`
+                                  const [translatedDescription, translatedBody] = await Promise.all(
+                                    [
+                                      project.description
+                                        ? await api.backend.aiComplete(
+                                            account?.accessToken || '',
+                                            `Translate the following text to ${settings.lang}:\n\n${project.description}`
+                                          )
+                                        : undefined,
+                                      project.body
+                                        ? await api.backend.aiComplete(
+                                            account?.accessToken || '',
+                                            `Translate the following text to ${settings.lang}:\n\n${project.body}`
+                                          )
+                                        : undefined
+                                    ]
                                   )
 
                                   setProject({
@@ -1463,7 +1517,16 @@ export function ModManager({
                                   color="success"
                                   startContent={<Download size={22} />}
                                   isLoading={isLoading && loadingType == LoadingType.INSTALL}
-                                  isDisabled={isLoading}
+                                  isDisabled={
+                                    isLoading ||
+                                    mods
+                                      .filter((m) => m.provider == Provider.LOCAL)
+                                      .some((m) =>
+                                        m.version?.files.some(
+                                          (f) => f.sha1 == selectVersion?.files[0].sha1
+                                        )
+                                      )
+                                  }
                                   onPress={async () => {
                                     if (!selectVersion) return
 
@@ -1969,6 +2032,52 @@ export function ModManager({
 
             setLoading(false)
             setLoadingType(null)
+          }}
+        />
+      )}
+      {isOpenALPInfo && addingLocalProjects.length > 0 && (
+        <ALPModal
+          projects={addingLocalProjects}
+          onClose={() => {
+            setIsOpenALPInfo(false)
+            setAddingLocalProjects([])
+          }}
+          addProjects={(projects: IProject[]) => {
+            const localProjects: ILocalProject[] = []
+
+            projects.forEach((project) => {
+              const newProject: ILocalProject = {
+                title: project.title,
+                description: project.description,
+                projectType: project.projectType,
+                iconUrl: project.iconUrl,
+                url: project.url,
+                provider: project.provider,
+                id: project.id,
+                version: {
+                  id: project.versions[0].id,
+                  files: project.versions[0].files.map((f) => ({
+                    filename: f.filename,
+                    size: f.size,
+                    isServer: f.isServer,
+                    url: f.url,
+                    sha1: f.sha1
+                  })),
+                  dependencies: project.versions[0].dependencies.map((d) => ({
+                    title: d.project?.title || '',
+                    relationType: d.relationType
+                  }))
+                }
+              }
+
+              localProjects.push(newProject)
+            })
+
+            setMods([...mods, ...localProjects])
+            addToast({
+              color: 'success',
+              title: t('modManager.addedMultiple', { count: projects.length })
+            })
           }}
         />
       )}

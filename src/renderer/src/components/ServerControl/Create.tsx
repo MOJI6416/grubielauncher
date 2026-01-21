@@ -9,15 +9,8 @@ import {
   Select,
   SelectItem
 } from '@heroui/react'
-import { ProjectType, Provider } from '@/types/ModManager'
-import { IServerConf, IServerOption, ServerCore } from '@/types/Server'
-import {
-  accountAtom,
-  selectedVersionAtom,
-  serverAtom,
-  settingsAtom,
-  versionsAtom
-} from '@renderer/stores/Main'
+import { IServerConf, IServerOption } from '@/types/Server'
+import { accountAtom, selectedVersionAtom, serverAtom, settingsAtom } from '@renderer/stores/atoms'
 import { useAtom } from 'jotai'
 import { HardDriveDownload } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -41,7 +34,6 @@ export function CreateServer({
   const [account] = useAtom(accountAtom)
   const { t } = useTranslation()
   const setServer = useAtom(serverAtom)[1]
-  const [versions] = useAtom(versionsAtom)
   const [settings] = useAtom(settingsAtom)
 
   useEffect(() => {
@@ -104,8 +96,7 @@ export function CreateServer({
                   javaMajorVersion: selectedVersion.manifest?.javaVersion.majorVersion || 21,
                   memory: selectedVersion.version.loader.name == 'vanilla' ? 2048 : 4096,
                   downloads: {
-                    server: selectedServerCore.url,
-                    additionalPackage: selectedServerCore.additionalPackage
+                    server: selectedServerCore.url
                   }
                 }
 
@@ -143,51 +134,6 @@ export function CreateServer({
                     'eula=true',
                     'utf-8'
                   )
-
-                  if (
-                    selectedServerCore.additionalPackage &&
-                    selectedServerCore.core == ServerCore.SPONGE &&
-                    selectedVersion.version.loader.name == 'forge'
-                  ) {
-                    const urlPart = selectedServerCore.additionalPackage.split('/')
-                    const fileName = urlPart[urlPart.length - 1]
-
-                    const newMods = [...selectedVersion.version.loader.mods]
-
-                    newMods.push({
-                      url: 'https://www.spongepowered.org/',
-                      description:
-                        'A community-driven open source Minecraft: Java Edition modding platform.',
-                      id: 'sponge-core',
-                      iconUrl:
-                        'https://static.wikia.nocookie.net/minecraft_gamepedia/images/7/70/Wet_Sponge_JE2_BE2.png',
-                      projectType: ProjectType.MOD,
-                      provider: Provider.OTHER,
-                      title: 'Sponge Core',
-                      version: {
-                        id: fileName.replace('.jar', ''),
-                        files: [
-                          {
-                            filename: fileName,
-                            isServer: true,
-                            size: 0,
-                            url: selectedServerCore.additionalPackage,
-                            sha1: ''
-                          }
-                        ],
-                        dependencies: []
-                      }
-                    })
-
-                    const index = versions.findIndex(
-                      (v) => v.version.name == selectedVersion.version.name
-                    )
-
-                    selectedVersion.version.loader.mods = [...newMods]
-                    versions[index].version.loader.mods = [...newMods]
-
-                    await selectedVersion.save()
-                  }
 
                   if (selectedVersion.version.loader.mods.length > 0) {
                     const mods = new Mods(settings, selectedVersion.version, conf)

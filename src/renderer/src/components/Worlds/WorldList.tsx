@@ -13,7 +13,7 @@ import {
   ScrollShadow
 } from '@heroui/react'
 import { RunGameParams } from '@renderer/App'
-import { selectedVersionAtom } from '@renderer/stores/Main'
+import { selectedVersionAtom } from '@renderer/stores/atoms'
 import { useAtom } from 'jotai'
 import {
   Clock,
@@ -162,7 +162,7 @@ export function WorldList({
                           onPress={async () => {
                             setProcessingIndex(index)
 
-                            const result = await (world.path, editValue.trim())
+                            const result = await api.worlds.writeName(world.path, editValue.trim())
 
                             if (!result) {
                               addToast({

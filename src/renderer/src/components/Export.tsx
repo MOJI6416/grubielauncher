@@ -2,7 +2,7 @@ import { FolderArchive, FolderSearch2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAtom } from 'jotai'
-import { selectedVersionAtom } from '@renderer/stores/Main'
+import { selectedVersionAtom } from '@renderer/stores/atoms'
 import {
   addToast,
   Alert,

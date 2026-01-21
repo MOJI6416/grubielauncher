@@ -5,7 +5,7 @@ import { ProjectType } from '@/types/ModManager'
 import { useTranslation } from 'react-i18next'
 import { Cpu, Folder, ImageMinus, ImagePlus, Settings, Trash } from 'lucide-react'
 import { useAtom } from 'jotai'
-import { pathsAtom, selectedVersionAtom, serverAtom } from '@renderer/stores/Main'
+import { pathsAtom, selectedVersionAtom, serverAtom } from '@renderer/stores/atoms'
 import {
   addToast,
   Alert,

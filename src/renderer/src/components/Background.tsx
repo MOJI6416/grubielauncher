@@ -1,28 +1,43 @@
-import LeftBg from '@renderer/assets/gradients/docs-left.svg'
-import RightBg from '@renderer/assets/gradients/docs-right.svg'
 import React from 'react'
-import { Image } from '@heroui/react'
 
 const Background: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="relative">
-      <main className="relative container mx-auto max-w-7xl z-10 min-h-[calc(100vh_-_64px_-_108px)] mb-12 flex-grow">
+    <div className="relative overflow-hidden">
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 hidden dark:block">
+        <div
+          className="absolute inset-0 opacity-90"
+          style={{
+            background: `
+              radial-gradient(900px 520px at 18% 82%, rgba(59,130,246,0.14), transparent 58%),
+              radial-gradient(860px 520px at 86% 18%, rgba(168,85,247,0.16), transparent 60%),
+              radial-gradient(700px 420px at 65% 78%, rgba(34,197,94,0.08), transparent 62%)
+            `
+          }}
+        />
+
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, rgba(255,255,255,0.35) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(255,255,255,0.35) 1px, transparent 1px)
+            `,
+            backgroundSize: `44px 44px`
+          }}
+        />
+
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(0,0,0,0.55)_100%)]" />
+      </div>
+
+      <main
+        className="
+          relative z-10 container mx-auto max-w-7xl flex-grow
+          min-h-[calc(100vh_-_64px_-_108px)] mb-12
+          max-md:min-h-0 max-md:mb-0
+        "
+      >
         {children}
       </main>
-
-      <div
-        aria-hidden="true"
-        className="fixed hidden dark:md:block dark:opacity-100 -bottom-[30%] -left-[30%] z-0"
-      >
-        <Image removeWrapper alt="docs left background" src={LeftBg} />
-      </div>
-
-      <div
-        aria-hidden="true"
-        className="fixed hidden dark:md:block dark:opacity-70 -top-[50%] -right-[60%] 2xl:-top-[60%] 2xl:-right-[45%] z-0 rotate-12"
-      >
-        <Image removeWrapper alt="docs right background" src={RightBg} />
-      </div>
     </div>
   )
 }

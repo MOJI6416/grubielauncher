@@ -5,7 +5,7 @@ import { SkinView } from '../SkinView'
 import { ImageCropper } from '../ImageCropper'
 import { useState } from 'react'
 import { useAtom } from 'jotai'
-import { accountAtom, accountsAtom, authDataAtom, pathsAtom } from '@renderer/stores/Main'
+import { accountAtom, accountsAtom, authDataAtom, pathsAtom } from '@renderer/stores/atoms'
 import {
   addToast,
   Avatar,

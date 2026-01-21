@@ -182,6 +182,10 @@ export class Version {
             installerPath,
             'install_profile.json'
           )
+          if (!installProfile) {
+            await rimraf(tempPath).catch(() => {})
+            throw new Error('Failed to read install_profile.json from Forge installer.')
+          }
 
           this.manifest.mainClass = installProfile.versionInfo.mainClass
           this.manifest.minecraftArguments = installProfile.versionInfo.minecraftArguments
@@ -257,7 +261,7 @@ export class Version {
         }
 
         await this.writeManifest()
-        await rimraf(tempPath)
+        await rimraf(tempPath).catch(() => {})
       }
     }
 
@@ -636,7 +640,7 @@ export class Version {
       return arg
         .replace(/\${natives_directory}/g, path.join(this.versionPath, 'natives'))
         .replace(/\${launcher_name}/g, 'GrubieLauncher')
-        .replace(/\${launcher_version}/g, '0.1')
+        .replace(/\${launcher_version}/g, app.getVersion())
         .replace(/\${classpath}/g, paths.join(separator))
         .replace(/\${library_directory}/g, path.join(this.minecraftPath, 'libraries'))
         .replace(/\${classpath_separator}/g, separator)

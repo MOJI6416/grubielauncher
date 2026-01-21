@@ -75,9 +75,7 @@ export function getProjectTypes(
       if (
         [ServerCore.BUKKIT, ServerCore.SPIGOT, ServerCore.PAPER, ServerCore.PURPUR].includes(
           server.core
-        ) ||
-        (server.core == ServerCore.SPONGE &&
-          (provider == Provider.MODRINTH || provider == Provider.LOCAL))
+        )
       ) {
         projectTypes.push(ProjectType.PLUGIN)
       }
@@ -90,15 +88,6 @@ export function getProjectTypes(
     projectTypes.push(ProjectType.SHADER)
     if (provider != Provider.MODRINTH) projectTypes.push(ProjectType.WORLD)
     projectTypes.push(ProjectType.DATAPACK)
-
-    if (
-      server &&
-      server.core == ServerCore.SPONGE &&
-      (provider == Provider.MODRINTH || provider == Provider.LOCAL) &&
-      loader == 'forge'
-    ) {
-      projectTypes.push(ProjectType.PLUGIN)
-    }
 
     return projectTypes
   }

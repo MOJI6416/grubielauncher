@@ -59,8 +59,8 @@ export function registerModManagerIpc() {
     }
   )
 
-  ipcMain.handle('modManager:checkLocalMod', (_, versionPath: string, modPath: string) => {
-    return checkLocalMod(versionPath, modPath)
+  ipcMain.handle('modManager:checkLocalMod', (_, modPath: string) => {
+    return checkLocalMod(modPath)
   })
 
   ipcMain.handle(

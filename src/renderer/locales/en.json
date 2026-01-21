@@ -21,7 +21,8 @@
     "searching": "Searching...",
     "notFound": "Nothing found",
     "cancel": "Cancel",
-    "close": "Close"
+    "close": "Close",
+    "add": "Add"
   },
   "network": {
     "connectionRestored": "Internet connection restored",
@@ -37,7 +38,6 @@
     "accountSelection": "Account selection",
     "selectAccount": "Select an account",
     "delete": "Delete",
-    "add": "Add",
     "addingAccount": "Adding account",
     "plainAccount": "Plain (no password)",
     "microsoft": "Microsoft",
@@ -104,7 +104,7 @@
     "requestSended": "Request sent",
     "noRequests": "No requests",
     "adding": "Adding to friends",
-    "friendId": "ID of friend",
+    "friendId": "Friend ID",
     "send": "Send",
     "notFound": "User not found",
     "newRequest": "New friend request",
@@ -171,11 +171,15 @@
     "invalidMod": "Invalid mod file",
     "alreadyInstalled": "Mod already installed",
     "readingMod": "Reading mod",
-    "selectLocal": "Select local mod",
+    "selectLocals": "Select local mods",
     "notModpack": "Failed to recognize modpack",
     "disabled": "Mods are disabled",
     "enabled": "Mods are enabled",
-    "translate": "Translate description"
+    "translate": "Translate description",
+    "addedMultiple": "{{count}} mods added",
+    "addingProjects": "Adding mods",
+    "modDuplicate": "Mod with the same name or ID is already installed",
+    "modInvalid": "Mod is invalid or corrupted"
   },
   "nav": {
     "play": "Play",

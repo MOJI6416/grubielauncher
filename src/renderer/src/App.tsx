@@ -28,7 +28,7 @@ import {
   selectedVersionAtom,
   settingsAtom,
   versionsAtom
-} from './stores/Main'
+} from './stores/atoms'
 import { Confirmation } from './components/Modals/Confirmation'
 import { addToast } from '@heroui/toast'
 import { LANGUAGES, TSettings } from '@/types/Settings'

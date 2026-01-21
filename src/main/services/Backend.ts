@@ -312,9 +312,15 @@ export class Backend extends BaseService {
 
   async aiComplete(prompt: string) {
     try {
-      const response = await this.api.post<{ completion: string }>(`${this.baseUrl}/ai/complete`, {
-        prompt
-      })
+      const response = await this.api.post<{ completion: string }>(
+        `${this.baseUrl}/ai/complete`,
+        {
+          prompt
+        },
+        {
+          timeout: (this.api.defaults.timeout || 30000) * 2
+        }
+      )
       return response.data.completion
     } catch {
       return null

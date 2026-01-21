@@ -7,7 +7,7 @@ import { FaDiscord, FaMicrosoft } from 'react-icons/fa'
 import { TbSquareLetterE } from 'react-icons/tb'
 import { IServer, serverTags } from '@/types/Browser'
 import { useAtom } from 'jotai'
-import { accountAtom, authDataAtom } from '@renderer/stores/Main'
+import { accountAtom, authDataAtom } from '@renderer/stores/atoms'
 import {
   addToast,
   Button,

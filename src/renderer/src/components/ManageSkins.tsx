@@ -17,7 +17,7 @@ import {
   Switch,
   Tooltip
 } from '@heroui/react'
-import { accountAtom, authDataAtom, pathsAtom } from '@renderer/stores/Main'
+import { accountAtom, authDataAtom, pathsAtom } from '@renderer/stores/atoms'
 import { useAtom } from 'jotai'
 import { FilePlus2, Link, Mars, Trash, User, Venus } from 'lucide-react'
 import { useEffect, useMemo, useState, useCallback, memo } from 'react'

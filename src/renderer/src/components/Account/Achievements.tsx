@@ -42,7 +42,7 @@ export function Achievements({ onClose, user }: { onClose: () => void; user: IUs
       <ModalContent>
         <ModalHeader>{t('achievements.title')}</ModalHeader>
         <ModalBody>
-          <ScrollShadow className="flex flex-col space-y-2 max-h-96 overflow-y-auto pr-1">
+          <ScrollShadow className="flex flex-col gap-1 max-h-96 overflow-y-auto pr-1">
             {ALL_ACHIEVEMENTS.map((achievement) => {
               const achieved = user.achievements.includes(achievement.id)
 
@@ -50,7 +50,7 @@ export function Achievements({ onClose, user }: { onClose: () => void; user: IUs
                 <div key={achievement.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
                     <img
-                      width={48}
+                      width={64}
                       draggable={false}
                       src={
                         achievement.id == 'pt100'
@@ -62,7 +62,6 @@ export function Achievements({ onClose, user }: { onClose: () => void; user: IUs
                               : ''
                       }
                       alt={t(`achievements.${achievement.id}`)}
-                      className={clsx(!achieved && 'filter grayscale')}
                     />
                     <div className="flex flex-col gap-1">
                       <span className="text-sm">{t(`achievements.${achievement.id}`)}</span>

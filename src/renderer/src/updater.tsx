@@ -7,7 +7,7 @@ import './i18n'
 import { useTranslation } from 'react-i18next'
 import icon from './assets/icon.png'
 import { LANGUAGES, TSettings } from '@/types/Settings'
-
+import Background from './components/Background'
 const api = window.api
 
 const App = () => {
@@ -62,7 +62,9 @@ const App = () => {
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <HeroUIProvider>
-      <App />
+      <Background>
+        <App />
+      </Background>
     </HeroUIProvider>
   </React.StrictMode>
 )

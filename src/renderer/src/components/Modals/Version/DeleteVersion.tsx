@@ -17,7 +17,7 @@ import {
   networkAtom,
   selectedVersionAtom,
   versionsAtom
-} from '@renderer/stores/Main'
+} from '@renderer/stores/atoms'
 import { useAtom } from 'jotai'
 import { ArrowLeft, Trash } from 'lucide-react'
 import { useState } from 'react'

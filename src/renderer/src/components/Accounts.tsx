@@ -20,7 +20,7 @@ import {
   networkAtom,
   pathsAtom,
   selectedVersionAtom
-} from '@renderer/stores/Main'
+} from '@renderer/stores/atoms'
 import {
   addToast,
   Alert,
@@ -420,7 +420,7 @@ export function Accounts() {
                   ''
                 )}
                 <Button variant="flat" startContent={<UserPlus size={22} />} onPress={openModalAdd}>
-                  {t('accounts.add')}
+                  {t('common.add')}
                 </Button>
               </div>
             </div>

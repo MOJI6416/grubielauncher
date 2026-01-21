@@ -22,7 +22,7 @@ import {
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
   selectedVersionAtom
-} from '@renderer/stores/Main'
+} from '@renderer/stores/atoms'
 import { useAtom } from 'jotai'
 import {
   ChevronDown,
@@ -106,7 +106,7 @@ export function Servers({
             <div className="max-h-96 w-full">
               {servers.length == 0 ? (
                 <div className="flex w-full items-center">
-                  <Alert title={t('servers.noServers')} />
+                  <Alert variant="flat" title={t('servers.noServers')} />
                 </div>
               ) : (
                 <ScrollShadow className="h-80">

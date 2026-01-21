@@ -256,7 +256,8 @@ export interface IElectronAPI {
     getVersion: () => Promise<string>
     openFileDialog: (
       isFolder?: boolean,
-      filters?: { name: string; extensions: string[] }[]
+      filters?: { name: string; extensions: string[] }[],
+      multi?: boolean
     ) => Promise<string[]>
     getPaths: () => Promise<{ launcher: string; minecraft: string; java: string; skins: string }>
     getPath: (
@@ -379,7 +380,7 @@ export interface IElectronAPI {
       projectId: string,
       deps: IVersionDependency[]
     ) => Promise<IVersionDependency[]>
-    checkLocalMod: (versionPath: string, modPath: string) => Promise<ILocalFileInfo | null>
+    checkLocalMod: (modPath: string) => Promise<ILocalFileInfo | null>
     checkModpack: (
       modpackPath: string,
       pack?: IProject,
@@ -628,8 +629,11 @@ export const api = {
   },
   other: {
     getVersion: () => ipcRenderer.invoke('other:getVersion'),
-    openFileDialog: (isFolder?: boolean, filters?: { name: string; extensions: string[] }[]) =>
-      ipcRenderer.invoke('other:openFileDialog', isFolder, filters),
+    openFileDialog: (
+      isFolder?: boolean,
+      filters?: { name: string; extensions: string[] }[],
+      multi?: boolean
+    ) => ipcRenderer.invoke('other:openFileDialog', isFolder, filters, multi),
     getPaths: () => ipcRenderer.invoke('other:getPaths'),
     getPath: (pathKey: string) => ipcRenderer.invoke('other:getPath', pathKey),
     notify: (options: Electron.NotificationConstructorOptions) =>
@@ -703,8 +707,7 @@ export const api = {
       ipcRenderer.invoke('modManager:getVersions', provider, projectId, options),
     getDependencies: (provider: Provider, projectId: string, deps: any[]) =>
       ipcRenderer.invoke('modManager:getDependencies', provider, projectId, deps),
-    checkLocalMod: (versionPath: string, modPath: string) =>
-      ipcRenderer.invoke('modManager:checkLocalMod', versionPath, modPath),
+    checkLocalMod: (modPath: string) => ipcRenderer.invoke('modManager:checkLocalMod', modPath),
     checkModpack: (modpackPath: string, pack?: any, selectVersion?: IVersionModManager) =>
       ipcRenderer.invoke('modManager:checkModpack', modpackPath, pack, selectVersion),
     ptToFolder: (type: ProjectType) => ipcRenderer.invoke('modManager:ptToFolder', type)

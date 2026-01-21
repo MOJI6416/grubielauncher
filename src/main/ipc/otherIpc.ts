@@ -69,15 +69,27 @@ export function registerOtherIpc() {
     async (
       _event,
       isFolder = false,
-      filters = [{ name: 'Image', extensions: ['jpg', 'jpeg', 'png', 'gif'] }]
+      filters = [{ name: 'Image', extensions: ['jpg', 'jpeg', 'png', 'gif'] }],
+      multi: boolean = false
     ) => {
       try {
         if (!mainWindow) {
           throw new Error('Main window is not defined')
         }
 
+        const properties: ('openFile' | 'openDirectory' | 'multiSelections')[] = []
+        if (isFolder) {
+          properties.push('openDirectory')
+        } else {
+          properties.push('openFile')
+        }
+
+        if (multi) {
+          properties.push('multiSelections')
+        }
+
         const result = await dialog.showOpenDialog(mainWindow, {
-          properties: isFolder ? ['openDirectory'] : [],
+          properties,
           filters: !isFolder ? filters : []
         })
 

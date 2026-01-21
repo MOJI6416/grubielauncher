@@ -136,6 +136,8 @@ export interface ILocalFileInfo {
   size: number
   path: string
   id: string
+  sha1: string
+  icon: string | null
 }
 
 export interface IFabricMod {
@@ -146,4 +148,10 @@ export interface IFabricMod {
   contact: {
     homepage: string
   }
+  icon?: string
+}
+
+export interface IAddedLocalProject {
+  project: IProject
+  status: 'valid' | 'duplicate' | 'invalid'
 }

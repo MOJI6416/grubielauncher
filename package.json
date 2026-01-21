@@ -1,6 +1,6 @@
 {
   "name": "grubie-launcher",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Nextgen Minecraft Launcher",
   "main": "./out/main/index.js",
   "author": "MOJI",

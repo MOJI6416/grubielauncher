@@ -24,7 +24,7 @@ import {
   selectedVersionAtom,
   versionsAtom,
   versionServersAtom
-} from '@renderer/stores/Main'
+} from '@renderer/stores/atoms'
 import { useAtom } from 'jotai'
 import { ArrowUpFromLine, FolderOpen, Trash } from 'lucide-react'
 import { useEffect, useState } from 'react'

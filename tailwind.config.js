@@ -12,9 +12,6 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: ['Minecraft', 'sans-serif']
-      },
-      colors: {
-        bg: '#1e1e2f'
       }
     }
   },

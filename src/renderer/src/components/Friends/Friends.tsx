@@ -21,7 +21,7 @@ import {
   selectedFriendAtom,
   selectedVersionAtom,
   versionsAtom
-} from '@renderer/stores/Main'
+} from '@renderer/stores/atoms'
 import { useAtom } from 'jotai'
 import { IModpack } from '@/types/Backend'
 import { AddVersion } from '../Modals/Version/AddVersion'

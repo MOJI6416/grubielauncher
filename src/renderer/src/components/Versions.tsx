@@ -24,7 +24,7 @@ import {
   serverAtom,
   versionsAtom,
   versionServersAtom
-} from '@renderer/stores/Main'
+} from '@renderer/stores/atoms'
 import { EditVersion } from './Modals/Version/EditVersion'
 import { addToast, Alert, Avatar, Button, Card, CardBody, Image, ScrollShadow } from '@heroui/react'
 import { RunGameParams } from '@renderer/App'

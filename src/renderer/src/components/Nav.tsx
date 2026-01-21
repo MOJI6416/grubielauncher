@@ -17,7 +17,7 @@ import {
   pathsAtom,
   selectedVersionAtom,
   serverAtom
-} from '@renderer/stores/Main'
+} from '@renderer/stores/atoms'
 import { AddVersion } from './Modals/Version/AddVersion'
 import { Button, Chip } from '@heroui/react'
 import { Console } from './Console'

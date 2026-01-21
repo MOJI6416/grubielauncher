@@ -6,7 +6,7 @@ import {
   pathsAtom,
   settingsAtom,
   versionsAtom
-} from '@renderer/stores/Main'
+} from '@renderer/stores/atoms'
 import { useAtom } from 'jotai'
 import {
   CircleAlert,
@@ -93,7 +93,6 @@ export function AddVersion({
     jvm: ''
   })
   const [isOpenArguments, setIsOpenArguments] = useState(false)
-  // const [progress, setProgress] = useState<IProgress>({ value: 0, title: '' })
   const [account] = useAtom(accountAtom)
   const [mods, setMods] = useState<ILocalProject[]>([])
   const [servers, setServers] = useState<IServer[]>([])
@@ -119,6 +118,8 @@ export function AddVersion({
     setIsDownloadedVersion(false)
     setIsOwnerVersion(true)
     setLoader('vanilla')
+
+    if (modpack) searchVersion(modpack)
   }, [])
 
   useEffect(() => {
@@ -795,7 +796,6 @@ export function AddVersion({
           }}
           loader={loader}
           version={selectVersion}
-          versionPath={''}
           isModpacks={selectedTab == 'modpacks' && !importModpack}
           setLoader={(loader) => setLoader(loader)}
           setVersion={(setVersion) => setSelectVersion(setVersion)}

@@ -7,15 +7,23 @@ import { rpc } from '../rpc'
 
 export function runJar(command: string, args: string[], cwd: string) {
   return new Promise((resolve, reject) => {
-    const server = spawn(command, args, {
+    const jar = spawn(command, args, {
       cwd
     })
 
-    server.on('close', (code) => {
+    jar.stdout.on('data', (data) => {
+      const output = data.toString()
+
+      if (output.includes('Successfully installed client into launcher.')) {
+        resolve('done')
+      }
+    })
+
+    jar.on('close', (code) => {
       resolve(code)
     })
 
-    server.stderr.on('data', (data) => {
+    jar.stderr.on('data', (data) => {
       reject(data.toString())
     })
   })

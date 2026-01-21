@@ -5,8 +5,6 @@ import {
   IPurpurVersion,
   IServerOption,
   IServerVersion,
-  ISpongeSearchResult,
-  ISpongeVersion,
   IVanillaCores,
   ServerCore
 } from '@/types/Server'
@@ -54,9 +52,6 @@ export class Server {
 
         const purpur = await this.getPurpur(version)
         if (purpur) cores.push(purpur)
-
-        const sponge = await this.getSponge(version)
-        if (sponge) cores.push(sponge)
       } else if (loader == 'fabric') {
         const fabric = await this.getFabric(version)
         if (fabric) return [fabric]
@@ -65,11 +60,7 @@ export class Server {
         if (quilt) return [quilt]
       } else if (loader == 'forge') {
         const forge = await this.getForge(version)
-        if (!forge) return []
-
-        cores.push(forge)
-        const spongeForge = await this.getSponge(version, forge.url)
-        if (spongeForge) cores.push(spongeForge)
+        if (forge) return [forge]
       } else if (loader == 'neoforge') {
         const neoForge = await this.getNeoForge(version)
         if (neoForge) return [neoForge]
@@ -181,46 +172,6 @@ export class Server {
         url: `https://api.purpurmc.org/v2/purpur/${version}/${purpurVersion.data.builds.latest}/download`,
         additionalPackage: null
       }
-    } catch {
-      return null
-    }
-  }
-
-  private static async getSponge(
-    version: string,
-    forge: string | null = null
-  ): Promise<IServerOption | null> {
-    try {
-      const projectType = forge ? 'spongeforge' : 'spongevanilla'
-      const url = `https://dl-api.spongepowered.org/v2/groups/org.spongepowered/artifacts/${projectType}/versions?tags=,minecraft:${version}&offset=0&limit=1`
-
-      let search: ISpongeSearchResult | null = null
-      try {
-        const response = await axios.get<ISpongeSearchResult>(url + '&recommended=true')
-        search = response.data
-      } catch {
-        const response = await axios.get<ISpongeSearchResult>(url)
-        search = response.data
-      }
-
-      if (!search) return null
-
-      const versionKey = Object.keys(search.artifacts)[0]
-
-      const spongeVersion = await axios.get<ISpongeVersion>(
-        `https://dl-api.spongepowered.org/v2/groups/org.spongepowered/artifacts/${projectType}/versions/` +
-          versionKey
-      )
-
-      const downloadUrl = spongeVersion.data.assets.find(
-        (asset) => asset.classifier == 'universal'
-      )?.downloadUrl
-
-      if (!downloadUrl) return null
-
-      if (!forge) return { core: ServerCore.SPONGE, url: downloadUrl, additionalPackage: null }
-
-      return { core: ServerCore.SPONGE, url: forge, additionalPackage: downloadUrl }
     } catch {
       return null
     }

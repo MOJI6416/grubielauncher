@@ -6,7 +6,7 @@ import { IServer as IServerSM } from '@/types/ServersList'
 import { FaDiscord, FaMicrosoft } from 'react-icons/fa'
 import { TbSquareLetterE } from 'react-icons/tb'
 import { useAtom } from 'jotai'
-import { accountAtom, versionsAtom } from '@renderer/stores/Main'
+import { accountAtom, versionsAtom } from '@renderer/stores/atoms'
 import { AddVersion } from '../Modals/Version/AddVersion'
 import {
   addToast,

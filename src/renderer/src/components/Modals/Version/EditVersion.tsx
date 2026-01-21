@@ -13,7 +13,7 @@ import {
   settingsAtom,
   versionsAtom,
   versionServersAtom
-} from '@renderer/stores/Main'
+} from '@renderer/stores/atoms'
 import { useAtom } from 'jotai'
 import { useEffect, useMemo, useState } from 'react'
 import { IArguments } from '@/types/IArguments'
@@ -387,7 +387,7 @@ export function EditVersion({
           <ModalHeader>{t('versions.versionSettings')}</ModalHeader>
           <ModalBody>
             <div className={`flex flex-col gap-4`}>
-              <div className="flex flex-col gap-1 min-w-0">
+              <div className="flex flex-col gap-2 min-w-0">
                 <div className="flex items-center gap-2 min-w-0">
                   {image && (
                     <Image
@@ -985,7 +985,6 @@ export function EditVersion({
           onClose={() => setIsModManager(false)}
           loader={version.version.loader.name}
           version={version.version.version}
-          versionPath={version.versionPath}
           isModpacks={false}
           setLoader={() => {}}
           setModpack={() => {}}

@@ -18,8 +18,7 @@ export enum ServerCore {
   QUILT = 'quilt',
   FORGE = 'forge',
   NEOFORGE = 'neoforge',
-  PURPUR = 'purpur',
-  SPONGE = 'sponge'
+  PURPUR = 'purpur'
 }
 
 export interface IServerOption {
@@ -34,7 +33,6 @@ export interface IServerConf {
   memory: number
   downloads: {
     server: string
-    additionalPackage: string | null
   }
 }
 

@@ -58,8 +58,7 @@ export class ServerGame {
       cwd = this.versionPath
     } else if (
       this.serverConf.core == ServerCore.FORGE ||
-      this.serverConf.core == ServerCore.NEOFORGE ||
-      (this.serverConf.core == ServerCore.SPONGE && this.version?.loader.name == 'forge')
+      this.serverConf.core == ServerCore.NEOFORGE
     ) {
       params.push('--installServer')
     }
@@ -89,8 +88,7 @@ export class ServerGame {
       await fs.rename(path.join(this.serverPath, 'quilt-server-launch.jar'), jar)
     } else if (
       this.serverConf.core == ServerCore.FORGE ||
-      this.serverConf.core == ServerCore.NEOFORGE ||
-      (this.serverConf.core == ServerCore.SPONGE && this.version?.loader.name == 'forge')
+      this.serverConf.core == ServerCore.NEOFORGE
     ) {
       const version = this.version?.version.id
       const serverJar = path.join(this.serverPath, `minecraft_server.${version}.jar`)
@@ -118,23 +116,6 @@ export class ServerGame {
       } else {
         await rimraf(jar)
         await fs.rename(serverJar, jar)
-      }
-
-      if (
-        this.serverConf.downloads.additionalPackage &&
-        this.serverConf.core == ServerCore.SPONGE &&
-        this.version?.loader.name == 'forge'
-      ) {
-        const urlParts = this.serverConf.downloads.additionalPackage.split('/')
-        const fileName = urlParts[urlParts.length - 1]
-
-        await this.downloader.downloadFiles([
-          {
-            url: this.serverConf.downloads.additionalPackage,
-            destination: path.join(this.serverPath, 'mods', fileName),
-            group: 'server'
-          }
-        ])
       }
     }
 

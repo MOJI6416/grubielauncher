@@ -187,6 +187,7 @@ export function BlockedMods({
                               </div>
                               {!mod.filePath && (
                                 <Button
+                                  size="sm"
                                   variant="flat"
                                   isIconOnly
                                   className="text-xs"
@@ -194,7 +195,7 @@ export function BlockedMods({
                                     await api.shell.openExternal(mod.url)
                                   }}
                                 >
-                                  {<ExternalLink size={22} />}
+                                  {<ExternalLink size={20} />}
                                 </Button>
                               )}
                             </div>

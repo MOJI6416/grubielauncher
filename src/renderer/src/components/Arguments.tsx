@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Save } from 'lucide-react'
 import { IArguments } from '@/types/IArguments'
 import { useAtom } from 'jotai'
-import { isDownloadedVersionAtom, isOwnerVersionAtom } from '@renderer/stores/Main'
+import { isDownloadedVersionAtom, isOwnerVersionAtom } from '@renderer/stores/atoms'
 import {
   Alert,
   Button,

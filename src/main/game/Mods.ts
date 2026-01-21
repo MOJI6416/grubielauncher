@@ -39,7 +39,7 @@ export class Mods {
     const worlds: string[] = []
 
     for (const mod of this.version.version.loader.mods) {
-      if (!mod.version || mod.id == 'sponge-core') continue
+      if (!mod.version) continue
 
       const folderName = projetTypeToFolder(mod.projectType)
       let folderPath = path.join(this.version.versionPath, folderName)
@@ -49,10 +49,6 @@ export class Mods {
 
         const serverPath = path.join(this.version.versionPath, 'server')
         folderPath = path.join(serverPath, folderName)
-
-        if (this.server.core == ServerCore.SPONGE) {
-          folderPath = path.join(serverPath, 'mods', folderName)
-        }
       }
 
       for (const file of mod.version.files) {
@@ -104,14 +100,10 @@ export class Mods {
 
         if (
           this.server &&
-          [
-            ServerCore.FABRIC,
-            ServerCore.QUILT,
-            ServerCore.FORGE,
-            ServerCore.NEOFORGE,
-            ServerCore.SPONGE
-          ].includes(this.server.core) &&
-          ProjectType.MOD == mod.projectType &&
+          [ServerCore.FABRIC, ServerCore.QUILT, ServerCore.FORGE, ServerCore.NEOFORGE].includes(
+            this.server.core
+          ) &&
+          mod.projectType == ProjectType.MOD &&
           file.isServer
         ) {
           const fileServerPath = path.join(
@@ -123,7 +115,7 @@ export class Mods {
 
           downloadFiles.push({
             destination: fileServerPath,
-            url: file.url,
+            url: (await fs.pathExists(filepath)) ? `file://${filepath}` : file.url,
             group: 'mods',
             sha1: file.sha1,
             size: file.size
@@ -150,9 +142,7 @@ export class Mods {
 
     if (
       this.server &&
-      [ServerCore.BUKKIT, ServerCore.SPIGOT, ServerCore.PAPER, ServerCore.SPONGE].includes(
-        this.server.core
-      )
+      [ServerCore.BUKKIT, ServerCore.SPIGOT, ServerCore.PAPER].includes(this.server.core)
     )
       this.comparison(ProjectType.PLUGIN)
   }
@@ -164,11 +154,7 @@ export class Mods {
     let folderPath = path.join(this.version.versionPath, folderName)
     if (this.server && projectType == ProjectType.PLUGIN) {
       const serverPath = path.join(this.version.versionPath, 'server')
-
       folderPath = path.join(serverPath, folderName)
-      if (this.server.core == ServerCore.SPONGE) {
-        folderPath = path.join(serverPath, 'mods', folderName)
-      }
     }
 
     const isExists = await fs.pathExists(folderPath)
@@ -196,6 +182,16 @@ export class Mods {
         continue
 
       deleteFiles.push(filePath)
+      if (
+        this.server &&
+        [ServerCore.FABRIC, ServerCore.QUILT, ServerCore.FORGE, ServerCore.NEOFORGE].includes(
+          this.server.core
+        )
+      ) {
+        const serverFilePath = path.join(this.version.versionPath, 'server', folderName, file)
+        const isServerFileExists = await fs.pathExists(serverFilePath)
+        if (isServerFileExists) deleteFiles.push(serverFilePath)
+      }
     }
 
     if (projectType == ProjectType.WORLD) {

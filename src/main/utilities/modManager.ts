@@ -26,7 +26,7 @@ import {
   IModpackDependencies
 } from '@/types/Modrinth'
 import { ServerCore } from '@/types/Server'
-import { getFilesRecursively } from './files'
+import { getFilesRecursively, getSha1 } from './files'
 import { Loader } from '@/types/Loader'
 import { CurseForge } from '../services/CurseForge'
 import path from 'path'
@@ -34,7 +34,8 @@ import fs from 'fs-extra'
 import toml from 'toml'
 import { ModManager } from '../services/ModManager'
 import { app } from 'electron'
-import { extractZip } from './archiver'
+import { extractFileFromArchive } from './archiver'
+import { rimraf } from 'rimraf'
 
 export function dependencyToLocalProject(dependencies: IVersionDependency[]) {
   const newMods: ILocalProject[] = []
@@ -311,108 +312,161 @@ export function versionDependencyToCfRelationType(
   return null
 }
 
-export async function checkLocalMod(
-  versionPath: string,
-  modPath: string
-): Promise<ILocalFileInfo | null> {
+async function getModIcon(
+  modPath: string,
+  iconPath: string,
+  tempPath: string
+): Promise<string | null> {
   try {
-    const fileSize = (await fs.stat(modPath)).size
-    const fileName = modPath.split('\\').pop()
-
-    if (!fileName) return null
-
-    async function fabric(tempPath: string, filePath: string): Promise<ILocalFileInfo | null> {
-      if (!fileName) return null
-
-      const fabricMod: IFabricMod = JSON.parse(
-        await fs.readFile(path.join(tempPath, filePath), 'utf-8')
-      )
-
-      return {
-        ...fabricMod,
-        url: fabricMod.contact.homepage,
-        filename: fileName,
-        size: fileSize,
-        path: path.join(tempPath, fileName)
-      }
-    }
-
-    const tempPath = path.join(versionPath, 'temp', fileName)
-    await fs.mkdir(tempPath, { recursive: true })
-
-    const filePath = path.join(tempPath, fileName)
-    await fs.copyFile(modPath, filePath)
-
-    await extractZip(filePath, tempPath)
-
-    let info: ILocalFileInfo | null = null
-
-    if (fs.pathExistsSync(path.join(tempPath, 'fabric.mod.json'))) {
-      info = await fabric(tempPath, 'fabric.mod.json')
-    } else if (fs.pathExistsSync(path.join(tempPath, 'quilt.mod.json'))) {
-      info = await fabric(tempPath, 'quilt.mod.json')
-    } else if (fs.pathExistsSync(path.join(tempPath, 'META-INF', 'mods.toml'))) {
-      const modsToml = await parseModsToml(path.join(tempPath, 'META-INF', 'mods.toml'))
-      if (!modsToml) return null
-
-      info = {
-        description: modsToml.mods[0].description,
-        filename: fileName,
-        size: fileSize,
-        id: modsToml.mods[0].modId,
-        name: modsToml.mods[0].displayName,
-        path: filePath,
-        url: modsToml.mods[0].displayURL,
-        version: null
-      }
-    } else if (fs.pathExistsSync(path.join(tempPath, 'pack.mcmeta'))) {
-      const packMcMeta: {
-        pack: {
-          description:
-            | {
-                fallback: string
-              }
-            | string
-        }
-      } = await fs.readJSON(path.join(tempPath, 'pack.mcmeta'), 'utf-8')
-
-      info = {
-        description:
-          packMcMeta.pack.description instanceof Object && 'fallback' in packMcMeta.pack.description
-            ? packMcMeta.pack.description.fallback
-            : packMcMeta.pack.description,
-        filename: fileName,
-        size: fileSize,
-        id: '',
-        name: fileName,
-        path: filePath,
-        url: '',
-        version: null
-      }
-    } else {
-      info = {
-        description: '',
-        filename: fileName,
-        size: fileSize,
-        id: '',
-        name: fileName,
-        path: filePath,
-        url: '',
-        version: null
-      }
-    }
-
-    return info
-  } catch (err) {
+    await extractFileFromArchive(modPath, iconPath, tempPath)
+    const extractPath = path.join(tempPath, path.basename(iconPath))
+    const base = await fs.readFile(extractPath)
+    const base64 = Buffer.from(base).toString('base64')
+    const ext = path.extname(iconPath).substring(1)
+    return `data:image/${ext};base64,${base64}`
+  } catch {
     return null
   }
 }
 
-async function parseModsToml(filePath: string): Promise<any> {
-  const fileContent = await fs.readFile(filePath, 'utf-8')
-  const parsedContent = toml.parse(fileContent)
+export async function checkLocalMod(modPath: string): Promise<ILocalFileInfo | null> {
+  let tempPath = ''
 
-  return parsedContent
+  try {
+    const fileSize = (await fs.stat(modPath)).size
+    const sha1 = await getSha1(modPath)
+
+    const fileName = path.basename(modPath)
+
+    if (!fileName) return null
+
+    tempPath = path.join(app.getPath('temp'), fileName)
+    await fs.mkdir(tempPath, { recursive: true })
+
+    const parsers = [
+      {
+        files: ['fabric.mod.json', 'quilt.mod.json'],
+        parse: async (extractedPath: string, foundFile: string): Promise<ILocalFileInfo> => {
+          const fabricMod: IFabricMod = await fs.readJSON(path.join(extractedPath, foundFile))
+          let icon: string | null = null
+          if (fabricMod.icon) {
+            icon = await getModIcon(modPath, fabricMod.icon, tempPath)
+          }
+
+          return {
+            ...fabricMod,
+            url: fabricMod.contact.homepage,
+            filename: fileName,
+            size: fileSize,
+            path: modPath,
+            sha1,
+            icon
+          }
+        }
+      },
+      {
+        files: ['META-INF/neoforge.mods.toml', 'META-INF/mods.toml'],
+        parse: async (extractedPath: string, foundFile: string): Promise<ILocalFileInfo> => {
+          const modsToml = await parseModsToml(path.join(extractedPath, foundFile))
+          if (!modsToml) throw new Error('Invalid mods.toml')
+
+          const mod = modsToml.mods[0]
+
+          let icon: string | null = null
+          if (mod.logoFile) {
+            icon = await getModIcon(modPath, mod.logoFile, tempPath)
+          }
+
+          return {
+            description: mod.description,
+            filename: fileName,
+            size: fileSize,
+            id: mod.modId,
+            name: mod.displayName,
+            path: modPath,
+            url: mod.displayURL,
+            version: null,
+            sha1,
+            icon
+          }
+        }
+      },
+      {
+        files: ['pack.mcmeta'],
+        parse: async (extractedPath: string, foundFile: string): Promise<ILocalFileInfo> => {
+          const packMcMeta: {
+            pack: {
+              description: { fallback: string } | string
+            }
+          } = await fs.readJSON(path.join(extractedPath, foundFile))
+
+          const description =
+            typeof packMcMeta.pack.description === 'object'
+              ? packMcMeta.pack.description.fallback
+              : packMcMeta.pack.description
+
+          let icon = await getModIcon(modPath, 'logo.png', tempPath)
+          if (!icon) icon = await getModIcon(modPath, 'pack.png', tempPath)
+
+          return {
+            description,
+            filename: fileName,
+            size: fileSize,
+            id: fileName,
+            name: fileName,
+            path: modPath,
+            url: '',
+            version: null,
+            sha1,
+            icon
+          }
+        }
+      }
+    ]
+
+    for (const parser of parsers) {
+      for (const file of parser.files) {
+        const extractedPath = await extractFileFromArchive(modPath, file, tempPath)
+        if (extractedPath) {
+          try {
+            const info = await parser.parse(extractedPath, path.basename(file))
+            return info
+          } catch {
+            continue
+          }
+        }
+      }
+    }
+
+    return {
+      description: '',
+      filename: fileName,
+      size: fileSize,
+      id: fileName,
+      name: fileName,
+      path: modPath,
+      url: '',
+      version: null,
+      sha1,
+      icon: null
+    }
+  } catch (err) {
+    return null
+  } finally {
+    if (tempPath && (await fs.pathExists(tempPath))) {
+      await rimraf(tempPath).catch(() => {})
+    }
+  }
+}
+
+async function parseModsToml(filePath: string): Promise<any> {
+  try {
+    const fileContent = await fs.readFile(filePath, 'utf-8')
+    const parsedContent = toml.parse(fileContent)
+    return parsedContent
+  } catch (error) {
+    return null
+  }
 }
 
 function extractModrinthIds(url: string): { modId: string; versionId: string } | null {
@@ -532,7 +586,7 @@ export async function checkModpack(
           dependencies: [],
           files: [
             {
-              filename: file.path.split('/').pop() || '',
+              filename: path.basename(file.path),
               size: file.fileSize,
               url: downloadUrl,
               sha1: file.hashes.sha1,
@@ -548,36 +602,38 @@ export async function checkModpack(
 
   const overridesPath = path.join(modpackPath, 'overrides')
   if (await fs.pathExists(overridesPath)) {
-    const targetFolders = ['mods', 'resourcepacks', 'shaderpacks']
+    const targetFolders = ['mods', 'resourcepacks', 'shaderpacks', 'datapacks']
     const files = await getFilesRecursively(overridesPath, null, targetFolders)
 
     for (const file of files) {
-      const folder = file.split('\\').slice(-2, -1)[0]
+      const folder = path.relative(overridesPath, path.dirname(file)).split(path.sep)[0]
       if (!targetFolders.includes(folder)) continue
 
-      const fileName = file.split('\\').pop()
+      const fileName = path.basename(file)
       if (!fileName) continue
 
       const projectType = folderToProjectType(folder)
       if (!projectType) continue
 
+      const info = await checkLocalMod(file)
+
       modpack.mods.push({
-        description: '',
-        iconUrl: null,
-        title: fileName,
+        description: info?.description || '',
+        iconUrl: info?.icon || '',
+        title: info?.name || fileName,
         projectType,
         url: '',
         provider: Provider.LOCAL,
-        id: fileName,
+        id: info?.id || fileName,
         version: {
-          id: '',
+          id: info?.version || 'local',
           dependencies: [],
           files: [
             {
               filename: fileName,
-              size: 0,
+              size: info?.size || 0,
               url: '',
-              sha1: '',
+              sha1: info?.sha1 || '',
               isServer: true
             }
           ]
@@ -628,6 +684,8 @@ export function folderToProjectType(folder: string): ProjectType | null {
       return ProjectType.SHADER
     case 'saves':
       return ProjectType.WORLD
+    case 'datapacks':
+      return ProjectType.DATAPACK
     default:
       return null
   }
