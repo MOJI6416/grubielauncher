@@ -28,9 +28,8 @@ export function createMainWindow(): void {
   })
 
   mainWindow.once('ready-to-show', () => {
-    mainWindow?.show()
-
     rpc.login()
+    mainWindow?.show()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

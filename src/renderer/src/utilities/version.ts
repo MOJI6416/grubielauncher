@@ -1,8 +1,6 @@
 import { ILocalAccount } from '@/types/Account'
 import { IVersionConf } from '@/types/IVersion'
 import { IServer } from '@/types/ServersList'
-import { compareMods } from './mod'
-import { compareServers } from './server'
 import { Mods } from '@renderer/classes/Mods'
 import { ILocalProject } from '@/types/ModManager'
 import { TSettings } from '@/types/Settings'
@@ -64,7 +62,10 @@ export async function syncShare(
     isOther = true
   }
 
-  if (!compareMods(version.version.loader.mods, modpack.conf.loader.mods) || isOther) {
+  if (
+    !(await api.modManager.compareMods(version.version.loader.mods, modpack.conf.loader.mods)) ||
+    isOther
+  ) {
     version.version.loader.mods = modpack.conf.loader.mods
 
     const versionMods = new Mods(settings, version.version)
@@ -73,7 +74,7 @@ export async function syncShare(
     if (isOther) await versionMods.downloadOther()
   }
 
-  if (!compareServers(modpack.conf.servers, servers)) {
+  if (!(await api.servers.compare(modpack.conf.servers, servers))) {
     const serversPath = await api.path.join(version.versionPath, 'servers.dat')
     await api.servers.write(modpack.conf.servers, serversPath)
   }
@@ -140,9 +141,9 @@ export async function checkDiffenceUpdateData(
 
   if (modpack.conf.image !== logo) diff += 'logo' + ', '
 
-  if (!compareMods(modpack.conf.loader.mods, mods)) diff += 'mods' + ', '
+  if (!(await api.modManager.compareMods(modpack.conf.loader.mods, mods))) diff += 'mods' + ', '
   if (
-    !compareServers(modpack.conf.servers, servers) ||
+    !(await api.servers.compare(modpack.conf.servers, servers)) ||
     modpack.conf.quickServer != (quickServer || '')
   )
     diff += 'servers' + ', '
@@ -175,8 +176,6 @@ export async function readVerions(
   settings: TSettings,
   account: ILocalAccount | null
 ) {
-  console.log(launcherPath, settings, account)
-
   const versionsPath = await api.path.join(launcherPath, 'minecraft', 'versions')
   const directories = await api.fs.getDirectories(versionsPath)
   const versions: Version[] = []

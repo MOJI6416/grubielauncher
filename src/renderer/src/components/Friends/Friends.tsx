@@ -710,7 +710,6 @@ export function Friends({ runGame }: { runGame: (params: RunGameParams) => Promi
           messagesRef={messagesRef}
           messageInputRef={messageInputRef}
           account={account}
-          authData={authData}
           onClose={() => {
             setChatModal(false)
             setSelectedFriend('')

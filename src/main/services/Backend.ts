@@ -1,7 +1,6 @@
-import { IBackendServer, IModpack, IModpackUpdate, IServerStatus } from '@/types/Backend'
+import { IModpack, IModpackUpdate } from '@/types/Backend'
 import { ICreateUser, IUpdateUser, IUser } from '@/types/IUser'
 import { BaseService } from './Base'
-import { ICreateServer, IServer } from '@/types/Browser'
 import { INews } from '@/types/News'
 import { IGrubieSkin } from '@/types/SkinManager'
 import FormData from 'form-data'
@@ -145,44 +144,10 @@ export class Backend extends BaseService {
     } catch {}
   }
 
-  async modpackSearch({
-    offset,
-    limit,
-    search,
-    sort,
-    filter
-  }: {
-    offset: number
-    limit: number
-    search: string
-    sort: string
-    filter: string[]
-  }) {
-    try {
-      const response = await this.api.get<IModpack[]>(
-        `${this.baseUrl}/modpacks/search?offset=${offset}&limit=${limit}&search=${search}&sort=${sort}&filter=${filter.join(',')}`
-      )
-
-      return response.data
-    } catch {
-      return []
-    }
-  }
-
   async modpackDownloaded(shareCode: string) {
     try {
       await this.api.patch(`${this.baseUrl}/modpacks/${shareCode}/downloaded`)
     } catch {}
-  }
-
-  async allModpacksByUser(owner: string) {
-    try {
-      const response = await this.api.get<IModpack[]>(`${this.baseUrl}/modpacks/owner/${owner}`)
-
-      return response.data
-    } catch {
-      return []
-    }
   }
 
   async getNews() {
@@ -211,82 +176,6 @@ export class Backend extends BaseService {
       return response.data.access_token
     } catch {
       return null
-    }
-  }
-
-  async getServer(serverId: string) {
-    try {
-      const response = await this.api.get<IBackendServer>(`${this.baseUrl}/servers/${serverId}`)
-      return response.data
-    } catch {
-      return null
-    }
-  }
-
-  async updateServer(serverId: string, server: ICreateServer) {
-    try {
-      await this.api.patch(`${this.baseUrl}/servers/${serverId}`, server)
-    } catch (error) {
-      throw error
-    }
-  }
-
-  async deleteServer(serverId: string) {
-    try {
-      await this.api.delete(`servers/${serverId}`)
-    } catch (error) {
-      throw error
-    }
-  }
-
-  async createServer(server: ICreateServer) {
-    try {
-      const response = await this.api.post<{ id: string }>(`${this.baseUrl}/servers`, server)
-      return response.data
-    } catch (error) {
-      throw error
-    }
-  }
-
-  async searchServers({
-    offset,
-    limit,
-    search,
-    filter
-  }: {
-    offset: number
-    limit: number
-    search: string
-    filter: string[]
-  }) {
-    try {
-      const response = await this.api.get<IServer[]>(
-        `${this.baseUrl}/servers/search?offset=${offset}&limit=${limit}&search=${search}&filter=${filter.join(',')}`
-      )
-
-      return response.data
-    } catch {
-      return []
-    }
-  }
-
-  async getStatus(address: string) {
-    try {
-      const response = await this.api.get<IServerStatus>(
-        `${this.baseUrl}/servers/status/${address}`
-      )
-      return response.data
-    } catch {
-      return null
-    }
-  }
-
-  async ownerServers(owner: string) {
-    try {
-      const response = await this.api.get<IServer[]>(`${this.baseUrl}/servers/owner/${owner}`)
-      return response.data
-    } catch {
-      return []
     }
   }
 

@@ -7,15 +7,11 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
-  Select,
-  SelectItem,
-  Textarea,
   Tooltip
 } from '@heroui/react'
 import { ILoader } from '@/types/Loader'
 import { SelectPaths } from '@renderer/components/Modals/Version/Share/SelectPaths'
 import { IModpack, IModpackUpdate } from '@/types/Backend'
-import { modpackTags } from '@/types/Browser'
 import {
   accountAtom,
   authDataAtom,
@@ -27,11 +23,13 @@ import {
 } from '@renderer/stores/atoms'
 import { useAtom } from 'jotai'
 import { ArrowUpFromLine, FolderOpen, Trash } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatBytes } from '@renderer/utilities/file'
 
 const api = window.api
+
+const MAX_OTHER_BYTES = 1_000_000_000
 
 export function Share({
   closeModal,
@@ -50,6 +48,7 @@ export function Share({
   const [isLoading, setIsLoading] = useState(false)
   const [loadingType, setLoadingType] = useState<'share' | 'delete' | 'size'>()
   const [selectedVersion, setSelectedVersion] = useAtom(selectedVersionAtom)
+
   const [isShareName, setIsShareName] = useState(false)
   const [isShareImage, setIsShareImage] = useState(false)
   const [isShareMods, setIsShareMods] = useState(false)
@@ -57,16 +56,15 @@ export function Share({
   const [isShareOptions, setIsShareOptions] = useState(false)
   const [isShareArguments, setIsShareArguments] = useState(false)
   const [isShareOtherFiles, setIsShareOtherFiles] = useState(false)
-  const [isPublic, setIsPublic] = useState(false)
-  const [description, setDescription] = useState('')
-  const [tags, setTags] = useState<string[]>([])
+
   const [paths, setPaths] = useState<string[]>([])
   const [isOpenSelectPaths, setIsOpenSelectPaths] = useState(false)
 
   const [selectPathsFolder, setSelectPathsFolder] = useState<string>('')
 
   const [totalSize, setTotalSize] = useState(0)
-  const [isExistsOptionsFile] = useState(false)
+  const [isExistsOptionsFile, setIsExistsOptionsFile] = useState(false)
+
   const [isNetwork] = useAtom(networkAtom)
   const [servers] = useAtom(versionServersAtom)
   const [account] = useAtom(accountAtom)
@@ -76,36 +74,93 @@ export function Share({
   const [authData] = useAtom(authDataAtom)
 
   useEffect(() => {
-    ;(async () => {
-      if (modpack) {
-        setIsPublic(modpack.public)
-        setDescription(modpack.description)
-        setTags(modpack.tags)
+    let cancelled = false
+
+    const checkOptionsFile = async () => {
+      if (!selectedVersion) {
+        setIsExistsOptionsFile(false)
+        return
       }
-    })()
-  }, [])
+
+      try {
+        const optionsPath = await api.path.join(selectedVersion.versionPath, 'options.txt')
+        const exists = await api.fs.pathExists(optionsPath)
+        if (!cancelled) setIsExistsOptionsFile(!!exists)
+      } catch {
+        if (!cancelled) setIsExistsOptionsFile(false)
+      }
+    }
+
+    checkOptionsFile()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedVersion])
 
   useEffect(() => {
+    let cancelled = false
+
     const fetchTotalSizes = async () => {
-      if (selectedVersion) {
-        setIsLoading(true)
-        setLoadingType('size')
+      if (!selectedVersion || !isShareOtherFiles || paths.length === 0) {
+        setTotalSize(0)
+        return
+      }
 
+      setIsLoading(true)
+      setLoadingType('size')
+
+      try {
         const versionPath = selectedVersion.versionPath
-
-        const fullPathsPromises = paths.map((p) => api.path.join(versionPath, p))
-        const fullPaths = await Promise.all(fullPathsPromises)
-
+        const fullPaths = await Promise.all(paths.map((p) => api.path.join(versionPath, p)))
         const sizes = await api.file.getTotalSizes(fullPaths)
-
-        setTotalSize(sizes)
-        setIsLoading(false)
-        setLoadingType(undefined)
+        if (!cancelled) setTotalSize(sizes)
+      } catch {
+        if (!cancelled) setTotalSize(0)
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+          setLoadingType(undefined)
+        }
       }
     }
 
     fetchTotalSizes()
-  }, [paths, isShareOtherFiles])
+    return () => {
+      cancelled = true
+    }
+  }, [paths, isShareOtherFiles, selectedVersion])
+
+  const hasAnyUpdateChanges = useMemo(() => {
+    if (shareType !== 'update' || !modpack || !selectedVersion) return true
+
+    const anyShareFlags =
+      isShareName ||
+      isShareMods ||
+      isShareOptions ||
+      isShareServers ||
+      isShareImage ||
+      isShareArguments ||
+      isShareOtherFiles
+
+    const otherSizeSame =
+      modpack.conf.loader?.other && isShareOtherFiles
+        ? totalSize === modpack.conf.loader.other.size
+        : true
+
+    return anyShareFlags || !otherSizeSame
+  }, [
+    shareType,
+    modpack,
+    selectedVersion,
+    isShareName,
+    isShareMods,
+    isShareOptions,
+    isShareServers,
+    isShareImage,
+    isShareArguments,
+    isShareOtherFiles,
+    totalSize
+  ])
 
   async function updateShare(silentMode = false, shareCode: string) {
     if (!selectedVersion || !account || !authData) return
@@ -123,13 +178,12 @@ export function Share({
       let options = ''
       if (isShareOptions) {
         const optionsPath = await api.path.join(versionPath, 'options.txt')
-
         try {
           options = await api.fs.readFile(optionsPath, 'utf-8')
         } catch {}
       }
 
-      let isUpdateVersion = false
+      let isUpdateVersionLocal = false
 
       if (isShareMods) {
         const result = await api.version.share.uploadMods(account.accessToken!, {
@@ -140,43 +194,45 @@ export function Share({
       }
 
       let other: ILoader['other'] | null = null
-      const index = versions.findIndex((v) => v.version.name == selectedVersion?.version.name)
+      const versionIndex = versions.findIndex(
+        (v) => v.version.name === selectedVersion.version.name
+      )
 
-      if (isShareOtherFiles && paths) {
-        const validPathsPromises = paths.map((p) => api.path.join(versionPath, p))
-        const validPaths = await Promise.all(validPathsPromises)
-
-        const tempPath = await api.path.join(versionPath, 'temp')
-        const zipPath = await api.path.join(tempPath, 'other.zip')
+      if (isShareOtherFiles && paths.length > 0) {
+        const validPaths = await Promise.all(paths.map((p) => api.path.join(versionPath, p)))
 
         const computedTotalSize = await api.file.getTotalSizes(validPaths)
-        if (computedTotalSize > 1_000_000_000) {
-          throw Error('not uploaded')
+        if (computedTotalSize > MAX_OTHER_BYTES) {
+          throw new Error('limit exceeded')
         }
 
-        await api.file.archiveFiles(validPaths, zipPath)
+        const tmpZipPath = await api.path.join(
+          await api.other.getPath('temp'),
+          `other_${shareCode}.zip`
+        )
+
+        await api.file.archiveFiles(validPaths, tmpZipPath)
 
         const url = await api.backend.uploadFileFromPath(
           account.accessToken!,
-          zipPath,
+          tmpZipPath,
           undefined,
           `modpacks/${shareCode}`
         )
 
-        await api.fs.rimraf(tempPath)
+        await api.fs.rimraf(tmpZipPath)
 
-        if (!url) throw Error('not uploaded')
+        if (!url) throw new Error('not uploaded')
 
-        const data = {
-          paths,
-          url,
-          size: computedTotalSize
+        other = { paths, url, size: computedTotalSize }
+
+        if (versionIndex !== -1) {
+          versions[versionIndex].version.loader.other = other
+          setVersions([...versions])
         }
 
-        other = data
-        versions[index].version.loader.other = data
-
-        isUpdateVersion = true
+        selectedVersion.version.loader.other = other
+        isUpdateVersionLocal = true
       }
 
       let updateImage = selectedVersion.version.image
@@ -185,7 +241,10 @@ export function Share({
         const blob = await response.blob()
         const arrayBuffer = await blob.arrayBuffer()
         const buffer = new Uint8Array(arrayBuffer)
-        const tmpPath = await api.path.join(await api.other.getPath('temp'), 'logo.png')
+        const tmpPath = await api.path.join(
+          await api.other.getPath('temp'),
+          `logo_${shareCode}.png`
+        )
 
         await api.fs.writeFile(tmpPath, buffer)
 
@@ -201,12 +260,11 @@ export function Share({
         if (upload) {
           selectedVersion.version.image = upload
           updateImage = upload
-
-          isUpdateVersion = true
+          isUpdateVersionLocal = true
         }
       }
 
-      if (isUpdateVersion) {
+      if (isUpdateVersionLocal) {
         await selectedVersion.save()
         setSelectedVersion(selectedVersion)
       }
@@ -218,19 +276,16 @@ export function Share({
         servers: isShareServers ? servers : null,
         options: isShareOptions ? options : null,
         runArguments:
-          isShareArguments && selectedVersion?.version.runArguments
-            ? selectedVersion?.version.runArguments
+          isShareArguments && selectedVersion.version.runArguments
+            ? selectedVersion.version.runArguments
             : null,
         other: isShareOtherFiles ? other : null,
-        public: isPublic,
         image: isShareImage || silentMode ? updateImage : null,
-        description: modpack?.description != description ? description : null,
-        tags: modpack?.tags != tags ? tags : null,
         quickServer: isShareServers ? selectedVersion.version.quickServer || '' : null
       }
 
       const isUpdated = await api.backend.updateModpack(account.accessToken!, shareCode, update)
-      if (!isUpdated) throw Error('not updated')
+      if (!isUpdated) throw new Error('not updated')
 
       if (!silentMode) {
         successUpdate()
@@ -239,7 +294,7 @@ export function Share({
           color: 'success'
         })
       }
-    } catch (err) {
+    } catch {
       if (!silentMode) {
         addToast({
           title: t('versions.publishError'),
@@ -265,168 +320,134 @@ export function Share({
           <ModalHeader>{t('versions.shareOptions')}</ModalHeader>
           <ModalBody>
             <div className="flex flex-col gap-2">
-              {shareType == 'update' && (
+              {shareType === 'update' && (
                 <>
                   <Checkbox
                     isDisabled={!diffenceUpdateData.includes('name') || isLoading}
                     isSelected={isShareName}
-                    onChange={() => setIsShareName((prev) => !prev)}
+                    onValueChange={(v) => setIsShareName(v)}
                   >
                     {t('versions.updateName')}
                   </Checkbox>
                   <Checkbox
                     isDisabled={!diffenceUpdateData.includes('logo') || isLoading}
                     isSelected={isShareImage}
-                    onChange={() => setIsShareImage((prev) => !prev)}
+                    onValueChange={(v) => setIsShareImage(v)}
                   >
                     {t('versions.updateLogo')}
                   </Checkbox>
                 </>
               )}
+
               <Checkbox
                 isDisabled={
-                  (shareType == 'new'
-                    ? selectedVersion?.version.loader.mods.length == 0
+                  (shareType === 'new'
+                    ? (selectedVersion?.version.loader.mods.length ?? 0) === 0
                     : !diffenceUpdateData.includes('mods')) || isLoading
                 }
                 isSelected={isShareMods}
-                onChange={() => setIsShareMods((prev) => !prev)}
+                onValueChange={(v) => setIsShareMods(v)}
               >
-                {shareType == 'new' ? t('versions.shareMods') : t('versions.updateMods')}
+                {shareType === 'new' ? t('versions.shareMods') : t('versions.updateMods')}
               </Checkbox>
+
               <Checkbox
                 isDisabled={
-                  (shareType == 'new'
-                    ? servers.length == 0
+                  (shareType === 'new'
+                    ? servers.length === 0
                     : !diffenceUpdateData.includes('servers')) || isLoading
                 }
                 isSelected={isShareServers}
-                onChange={() => setIsShareServers((prev) => !prev)}
+                onValueChange={(v) => setIsShareServers(v)}
               >
-                {shareType == 'new' ? t('versions.shareServers') : t('versions.updateServers')}
+                {shareType === 'new' ? t('versions.shareServers') : t('versions.updateServers')}
               </Checkbox>
+
               <Checkbox
                 isDisabled={
-                  (shareType == 'new'
+                  (shareType === 'new'
                     ? !isExistsOptionsFile
                     : !diffenceUpdateData.includes('options')) || isLoading
                 }
                 isSelected={isShareOptions}
-                onChange={() => setIsShareOptions((prev) => !prev)}
+                onValueChange={(v) => setIsShareOptions(v)}
               >
-                {shareType == 'new'
+                {shareType === 'new'
                   ? t('versions.shareGameSettings')
                   : t('versions.updateGameSettings')}
               </Checkbox>
+
               <Checkbox
                 isDisabled={
-                  (shareType == 'new'
-                    ? selectedVersion?.version.runArguments?.jvm == '' &&
-                      selectedVersion?.version.runArguments?.game == ''
+                  (shareType === 'new'
+                    ? !selectedVersion?.version.runArguments?.jvm &&
+                      !selectedVersion?.version.runArguments?.game
                     : !diffenceUpdateData.includes('arguments')) || isLoading
                 }
                 isSelected={isShareArguments}
-                onChange={() => setIsShareArguments((prev) => !prev)}
+                onValueChange={(v) => setIsShareArguments(v)}
               >
-                {shareType == 'new' ? t('versions.shareArguments') : t('versions.updateArguments')}
+                {shareType === 'new' ? t('versions.shareArguments') : t('versions.updateArguments')}
               </Checkbox>
+
               <div className="flex items-center gap-2">
                 <Checkbox
                   isDisabled={
-                    (shareType == 'update' && !diffenceUpdateData.includes('other')) || isLoading
+                    (shareType === 'update' && !diffenceUpdateData.includes('other')) || isLoading
                   }
                   isSelected={isShareOtherFiles}
-                  onChange={() => {
-                    setIsShareOtherFiles((prev) => !prev)
-                    setPaths(selectedVersion?.version.loader.other?.paths || [])
+                  onValueChange={(v) => {
+                    setIsShareOtherFiles(v)
+                    if (v) setPaths(selectedVersion?.version.loader.other?.paths || [])
                   }}
                 >
-                  {shareType == 'new'
+                  {shareType === 'new'
                     ? t('versions.shareOtherFiles')
                     : t('versions.updateOtherFiles')}
                 </Checkbox>
-                <Tooltip content={t('share.limitExceeded')} isDisabled={totalSize <= 1_000_000_000}>
+
+                <Tooltip
+                  content={t('share.limitExceeded')}
+                  isDisabled={totalSize <= MAX_OTHER_BYTES}
+                >
                   <div className="flex items-center space-x-1">
                     <Button
-                      color={totalSize > 1_000_000_000 ? 'warning' : 'default'}
-                      isLoading={isLoading && loadingType == 'size'}
+                      color={totalSize > MAX_OTHER_BYTES ? 'warning' : 'default'}
+                      isLoading={isLoading && loadingType === 'size'}
                       variant="flat"
                       isIconOnly
                       size="sm"
                       isDisabled={isLoading || !isShareOtherFiles}
                       onPress={async () => {
-                        if (selectedVersion) {
-                          const folder = await api.path.join(
-                            globalPaths.minecraft,
-                            'versions',
-                            selectedVersion.version.name
-                          )
-                          setSelectPathsFolder(folder)
-                          setIsOpenSelectPaths(true)
-                        }
+                        if (!selectedVersion) return
+                        setSelectPathsFolder(selectedVersion.versionPath)
+                        setIsOpenSelectPaths(true)
                       }}
                     >
                       <FolderOpen size={22} />
                     </Button>
+
                     {totalSize > 0 && isShareOtherFiles && (
                       <p
-                        className={`text-xs ${totalSize > 1_000_000_000 ? 'text-warning-400' : 'text-gray-400'}`}
+                        className={`text-xs ${
+                          totalSize > MAX_OTHER_BYTES ? 'text-warning-400' : 'text-gray-400'
+                        }`}
                       >
                         {formatBytes(totalSize, [
-                          t('share.sizes.0'),
-                          t('share.sizes.1'),
-                          t('share.sizes.2'),
-                          t('share.sizes.3'),
-                          t('share.sizes.4')
+                          t('sizes.0'),
+                          t('sizes.1'),
+                          t('sizes.2'),
+                          t('sizes.3'),
+                          t('sizes.4')
                         ])}
                       </p>
                     )}
                   </div>
                 </Tooltip>
               </div>
-
-              <div className="flex flex-col gap-2">
-                <Checkbox
-                  isDisabled={isLoading}
-                  isSelected={isPublic}
-                  onChange={() => setIsPublic((prev) => !prev)}
-                >
-                  {t('versions.publicModpack')}
-                </Checkbox>
-              </div>
-              {isPublic && (
-                <div className="flex flex-col gap-2">
-                  <Textarea
-                    label={t('common.description')}
-                    endContent={<p className="text-xs">{description.length}/256</p>}
-                    value={description}
-                    isDisabled={isLoading}
-                    onChange={(e) => {
-                      setDescription(e.target.value)
-                    }}
-                    maxRows={5}
-                    minRows={3}
-                  />
-
-                  <Select
-                    label={t('browser.tagsTitle')}
-                    placeholder={t('versions.selectTags')}
-                    isDisabled={isLoading}
-                    selectionMode="multiple"
-                    selectedKeys={tags}
-                    onChange={(event) => {
-                      const values = event.target.value.split(',')
-                      setTags(values.sort((a, b) => a.localeCompare(b)))
-                    }}
-                  >
-                    {modpackTags.map((tag) => {
-                      return <SelectItem key={tag}>{t('browser.modpackTags.' + tag)}</SelectItem>
-                    })}
-                  </Select>
-                </div>
-              )}
             </div>
           </ModalBody>
+
           <ModalFooter>
             <div className="flex items-center gap-2">
               <Button
@@ -434,34 +455,17 @@ export function Share({
                 variant="flat"
                 startContent={<ArrowUpFromLine size={22} />}
                 isDisabled={
-                  (shareType == 'update' &&
-                    !isShareName &&
-                    !isShareMods &&
-                    !isShareOptions &&
-                    !isShareServers &&
-                    !isShareImage &&
-                    !isShareArguments &&
-                    modpack?.description == description &&
-                    modpack.tags == tags &&
-                    (modpack ? modpack.public == isPublic : true) &&
-                    (selectedVersion &&
-                    modpack &&
-                    modpack.conf.loader.other &&
-                    isShareOtherFiles &&
-                    totalSize
-                      ? totalSize === modpack.conf.loader.other.size
-                      : true)) ||
+                  isLoading ||
                   !isNetwork ||
-                  description.length > 256 ||
-                  totalSize > 1_000_000_000
+                  totalSize > MAX_OTHER_BYTES ||
+                  (shareType === 'update' ? !hasAnyUpdateChanges : false)
                 }
-                isLoading={isLoading && loadingType == 'share'}
+                isLoading={isLoading && loadingType === 'share'}
                 onPress={async () => {
                   if (!selectedVersion || !account || !authData) return
 
-                  if (shareType == 'update' && selectedVersion.version.shareCode) {
+                  if (shareType === 'update' && selectedVersion.version.shareCode) {
                     await updateShare(false, selectedVersion.version.shareCode)
-
                     closeModal()
                     return
                   }
@@ -488,31 +492,28 @@ export function Share({
                       }
                     })
 
-                    if (!shareCode) throw Error('not share code')
+                    if (!shareCode) throw new Error('not share code')
 
                     await updateShare(true, shareCode)
 
-                    if (selectedVersion) {
-                      const index = versions.findIndex(
-                        (v) => v.version.name == selectedVersion.version.name
-                      )
-
-                      selectedVersion.version.shareCode = shareCode
+                    const index = versions.findIndex(
+                      (v) => v.version.name === selectedVersion.version.name
+                    )
+                    selectedVersion.version.shareCode = shareCode
+                    if (index !== -1) {
                       versions[index].version.shareCode = shareCode
-
-                      setVersions(versions)
-
-                      await selectedVersion.save()
-
-                      await api.clipboard.writeText(shareCode)
-
-                      successUpdate()
-                      addToast({
-                        title: t('versions.published'),
-                        color: 'success'
-                      })
+                      setVersions([...versions])
                     }
-                  } catch (error) {
+
+                    await selectedVersion.save()
+                    await api.clipboard.writeText(shareCode)
+
+                    successUpdate()
+                    addToast({
+                      title: t('versions.published'),
+                      color: 'success'
+                    })
+                  } catch {
                     addToast({
                       title: t('versions.publishError'),
                       color: 'danger'
@@ -524,13 +525,15 @@ export function Share({
                   }
                 }}
               >
-                {shareType == 'new' ? t('versions.share') : t('common.update')}
+                {shareType === 'new' ? t('versions.share') : t('common.update')}
               </Button>
-              {shareType == 'update' && (
+
+              {shareType === 'update' && (
                 <Button
                   color="danger"
                   variant="flat"
-                  isLoading={isLoading && loadingType == 'delete'}
+                  isDisabled={isLoading}
+                  isLoading={isLoading && loadingType === 'delete'}
                   onPress={async () => {
                     if (
                       !selectedVersion ||
@@ -539,6 +542,7 @@ export function Share({
                       !authData
                     )
                       return
+
                     setIsLoading(true)
                     setLoadingType('delete')
 
@@ -547,9 +551,18 @@ export function Share({
                       selectedVersion.version.shareCode
                     )
 
+                    const shareCode = selectedVersion.version.shareCode
                     selectedVersion.version.shareCode = ''
                     selectedVersion.version.image = ''
                     await selectedVersion.save()
+
+                    const index = versions.findIndex(
+                      (v) => v.version.name === selectedVersion.version.name
+                    )
+                    if (index !== -1 && versions[index].version.shareCode === shareCode) {
+                      versions[index].version.shareCode = ''
+                      setVersions([...versions])
+                    }
 
                     setIsLoading(false)
                     setLoadingType(undefined)
@@ -569,17 +582,17 @@ export function Share({
           </ModalFooter>
         </ModalContent>
       </Modal>
+
       {isOpenSelectPaths && selectedVersion && (
         <SelectPaths
           loader={selectedVersion.version.loader.name}
           version={selectedVersion.version.version.id}
-          onClose={() => {
-            setIsOpenSelectPaths(false)
-          }}
-          passPaths={(paths: string[]) => {
-            setPaths(paths)
-          }}
-          pathFolder={selectPathsFolder}
+          onClose={() => setIsOpenSelectPaths(false)}
+          passPaths={(p: string[]) => setPaths(p)}
+          pathFolder={
+            selectPathsFolder ||
+            (globalPaths?.minecraft ? globalPaths.minecraft : selectedVersion.versionPath)
+          }
           selectedPaths={paths}
         />
       )}

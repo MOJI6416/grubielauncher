@@ -329,7 +329,7 @@ export function AddVersion({
     setLoaderVersion(modpack.conf.loader.version)
     setQuickConnectIp(modpack.conf.quickServer || '')
     setIsDownloadedVersion(true)
-    setIsOwnerVersion(authData?.sub == modpack.owner)
+    setIsOwnerVersion(authData?.sub == modpack.owner._id)
 
     setShareVersion({
       ...modpack.conf,
@@ -778,7 +778,10 @@ export function AddVersion({
           title={t('common.editingLogo')}
           image={croppedImage}
           size={{ width: 256, height: 256 }}
-          changeImage={async (url: string) => setImage(url)}
+          changeImage={async (url: string) => {
+            setImage(url)
+            console.log(url)
+          }}
         />
       )}
       {isModManager && (

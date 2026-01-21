@@ -40,10 +40,13 @@ export function Export({ versionPath, onClose }: { versionPath: string; onClose:
             {!folderPath && <Alert color="warning" title={t('export.selectFolder')} />}
             <Tooltip content={folderPath} isDisabled={!folderPath} placement="right">
               <Button
+                isDisabled={isLoading}
                 variant="flat"
                 onPress={async () => {
-                  const folderPath = await api.other.openFileDialog(true)
-                  setPath(folderPath[0])
+                  const folders = await api.other.openFileDialog(true)
+                  const picked = folders?.[0] || ''
+                  if (!picked) return
+                  setPath(picked)
                 }}
                 startContent={<FolderSearch2 size={22} />}
               >
@@ -59,15 +62,16 @@ export function Export({ versionPath, onClose }: { versionPath: string; onClose:
             startContent={<FolderArchive size={22} />}
             isLoading={isLoading}
             color="primary"
-            isDisabled={!folderPath}
+            isDisabled={!folderPath || isLoading}
             onPress={async () => {
-              if (!selectedVersion) return
+              if (!selectedVersion || !folderPath) return
+
+              const owner = selectedVersion.version.owner
+              const downloadedVersion = selectedVersion.version.downloadedVersion
+              const shareCode = selectedVersion.version.shareCode
+
               try {
                 setIsLoading(true)
-
-                const owner = selectedVersion.version.owner
-                const downloadedVersion = selectedVersion.version.downloadedVersion
-                const shareCode = selectedVersion.version.shareCode
 
                 selectedVersion.version.owner = undefined
                 selectedVersion.version.downloadedVersion = false
@@ -75,35 +79,39 @@ export function Export({ versionPath, onClose }: { versionPath: string; onClose:
 
                 await selectedVersion.save()
 
-                const files: string[] = []
                 const dir = await api.fs.readdir(versionPath)
+
+                const files: string[] = []
                 for (const file of dir) {
                   if (file === 'statistics.json') continue
                   files.push(await api.path.join(versionPath, file))
                 }
 
-                await api.file.archiveFiles(
-                  files,
-                  await api.path.join(folderPath, `${selectedVersion.version.name}.zip`)
+                const zipPath = await api.path.join(
+                  folderPath,
+                  `${selectedVersion.version.name}.zip`
                 )
 
-                selectedVersion.version.owner = owner
-                selectedVersion.version.downloadedVersion = downloadedVersion
-                selectedVersion.version.shareCode = shareCode
-
-                await selectedVersion.save()
+                await api.file.archiveFiles(files, zipPath)
 
                 onClose()
                 addToast({
                   title: t('export.success'),
                   color: 'success'
                 })
-              } catch {
+              } catch (err) {
                 addToast({
                   title: t('export.error'),
                   color: 'danger'
                 })
               } finally {
+                try {
+                  selectedVersion.version.owner = owner
+                  selectedVersion.version.downloadedVersion = downloadedVersion
+                  selectedVersion.version.shareCode = shareCode
+                  await selectedVersion.save()
+                } catch {}
+
                 setIsLoading(false)
               }
             }}

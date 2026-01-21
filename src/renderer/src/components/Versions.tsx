@@ -1,6 +1,6 @@
 const api = window.api
 
-import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { loaders } from './Loaders'
 
 import { IServer as IServerSM } from '@/types/ServersList'
@@ -80,213 +80,215 @@ export function Versions({ runGame }: { runGame: (params: RunGameParams) => Prom
   const setIsOwnerVersion = useAtom(isOwnerVersionAtom)[1]
   const [consoles] = useAtom(consolesAtom)
 
+  const selectReqIdRef = useRef(0)
+
+  const sortedVersions = useMemo(() => {
+    const list = [...(versions || [])]
+    list.sort((a, b) => {
+      const aTime = new Date(a.version.lastLaunch || 0).getTime()
+      const bTime = new Date(b.version.lastLaunch || 0).getTime()
+      const at = Number.isFinite(aTime) ? aTime : 0
+      const bt = Number.isFinite(bTime) ? bTime : 0
+      return bt - at
+    })
+    return list
+  }, [versions])
+
   return (
     <>
       <div className="w-full h-full">
-        {versions.length == 0 ? (
+        {sortedVersions.length == 0 ? (
           <div className="flex items-start space-x-4 w-full">
             <Alert color="warning" title={t('versions.noVersions')} />
           </div>
         ) : (
           <ScrollShadow className="h-full">
-            {versions
-              .sort((a, b) => {
-                const aTime = new Date(a.version.lastLaunch)?.getTime() ?? 0
-                const bTime = new Date(b.version.lastLaunch)?.getTime() ?? 0
-                return bTime - aTime
-              })
-              .map((vc, index) => {
-                const isRunningInstance = consoles.consoles.some(
-                  (c) => c.versionName == vc.version.name && c.status == 'running'
-                )
+            {sortedVersions.map((vc) => {
+              const isSelected = selectedVersion?.version.name === vc.version.name
+              const isRunningInstance = consoles.consoles.some(
+                (c) => c.versionName == vc.version.name && c.status == 'running'
+              )
 
-                return (
-                  <Card
-                    className={`w-full mb-2 ${selectedVersion?.version.name == vc.version.name ? 'border-primary-200 border-1' : ''}`}
-                    key={index}
-                    isPressable={
-                      !isRunning && !!account && selectedVersion?.version.name !== vc.version.name
-                    }
-                    onPress={async () => {
-                      if (!account || isLoading || isRunning) return
+              const ownerOk = isOwner(vc.version.owner, account)
+              const ownerParts = vc.version.owner?.split('_')
+              const ownerAvatar =
+                vc.version.owner && !ownerOk && ownerParts?.length === 2
+                  ? accounts?.find((a) => a.type == ownerParts[0] && a.nickname == ownerParts[1])
+                  : undefined
 
-                      setSelectedVersion(vc)
-                      setIsDownloadedVersion(vc.version.downloadedVersion)
-                      setIsOwnerVersion(isOwner(vc.version.owner, account))
+              const loaderInfo = loaders[vc.version.loader.name] || loaders['vanilla']
 
+              return (
+                <Card
+                  className={`w-full mb-2 ${isSelected ? 'border-primary-200 border-1' : ''}`}
+                  key={vc.versionPath || vc.version.name}
+                  isPressable={!isRunning && !!account && !isSelected}
+                  onPress={async () => {
+                    if (!account || isLoading || isRunning) return
+
+                    const reqId = ++selectReqIdRef.current
+
+                    setSelectedVersion(vc)
+                    setIsDownloadedVersion(vc.version.downloadedVersion)
+                    setIsOwnerVersion(ownerOk)
+
+                    try {
                       const serverPath = await api.path.join(vc.versionPath, 'server')
                       const serverConf = await api.path.join(serverPath, 'conf.json')
 
                       const isExists = await api.fs.pathExists(serverPath)
+                      if (reqId !== selectReqIdRef.current) return
+
                       if (isExists) {
                         const conf: IServerConf = await api.fs.readJSON<IServerConf>(
                           serverConf,
                           'utf-8'
                         )
-
+                        if (reqId !== selectReqIdRef.current) return
                         setServer(conf)
                       } else {
                         setServer(undefined)
                       }
 
                       const statisticsPath = await api.path.join(vc.versionPath, 'statistics.json')
-                      let isStatistics = false
                       const isStatisticsExists = await api.fs.pathExists(statisticsPath)
-                      if (isStatisticsExists) {
-                        isStatistics = true
-                      }
-                      setIsStatistics(isStatistics)
-                    }}
-                  >
-                    <CardBody>
-                      <div className="flex items-center justify-between">
-                        <div className="flex gap-4 items-center min-w-0">
-                          {vc.version.owner && !isOwner(vc.version.owner, account) && (
-                            <Avatar
-                              src={
-                                accounts?.find(
-                                  (a) =>
-                                    a.type == vc.version.owner?.split('_')[0] &&
-                                    a.nickname == vc.version.owner?.split('_')[1]
-                                )?.image
-                              }
-                              name={
-                                accounts?.find(
-                                  (a) =>
-                                    a.type == vc.version.owner?.split('_')[0] &&
-                                    a.nickname == vc.version.owner?.split('_')[1]
-                                )?.nickname
-                              }
-                              size="sm"
-                            />
-                          )}
+                      if (reqId !== selectReqIdRef.current) return
+                      setIsStatistics(isStatisticsExists)
+                    } catch {
+                      if (reqId !== selectReqIdRef.current) return
+                      setServer(undefined)
+                      setIsStatistics(false)
+                    }
+                  }}
+                >
+                  <CardBody>
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-4 items-center min-w-0">
+                        {ownerAvatar && (
+                          <Avatar src={ownerAvatar.image} name={ownerAvatar.nickname} size="sm" />
+                        )}
+                        {vc.version.image && (
+                          <Image
+                            src={vc.version.image}
+                            width={44}
+                            height={44}
+                            className="h-11 w-11"
+                          />
+                        )}
+                        <p className="truncate flex-grow">{vc.version.name}</p>
+                        <p className={loaderInfo?.style || ''}>
+                          {loaderInfo?.name || vc.version.loader.name}
+                        </p>
+                        <p>{vc.version.version.id}</p>
+                      </div>
 
-                          {vc.version.image && (
-                            <Image
-                              src={vc.version.image}
-                              width={44}
-                              height={44}
-                              className="h-11 w-11"
-                            />
-                          )}
-
-                          <p className="truncate flex-grow">{vc.version.name}</p>
-
-                          <p className={loaders[vc.version.loader.name].style}>
-                            {loaders[vc.version.loader.name].name}
-                          </p>
-                          <p>{vc.version.version.id}</p>
-                        </div>
-                        {selectedVersion == vc && (
-                          <div className="flex gap-1 items-center">
-                            {isStatistics && vc.versionPath && (
-                              <Button
-                                variant="flat"
-                                isIconOnly
-                                isLoading={isLoading && loadingType == LoadingType.STATISTICS}
-                                isDisabled={!isOwner(vc.version.owner, account)}
-                                onPress={async () => {
-                                  const filePath = await api.path.join(
-                                    vc.versionPath,
-                                    'statistics.json'
-                                  )
-
-                                  try {
-                                    const exists = await api.fs.pathExists(filePath)
-                                    if (!exists) {
-                                      return
-                                    }
-
-                                    setIsLoading(true)
-                                    setLoadingType(LoadingType.STATISTICS)
-
-                                    const data = await api.fs.readJSON<IVersionStatistics>(
-                                      filePath,
-                                      'utf-8'
-                                    )
-
-                                    setStatistics(data)
-                                    setStatisticsOpen(true)
-                                  } catch (err) {
-                                    try {
-                                      await api.fs.rimraf(filePath)
-                                      setIsStatistics(false)
-                                    } catch {}
-                                    addToast({
-                                      title: t('versionStatistics.error'),
-                                      color: 'danger'
-                                    })
-                                  } finally {
-                                    setIsLoading(false)
-                                    setLoadingType(null)
-                                  }
-                                }}
-                              >
-                                <ChartArea size={22} />
-                              </Button>
-                            )}
-
+                      {isSelected && (
+                        <div className="flex gap-1 items-center">
+                          {isStatistics && vc.versionPath && (
                             <Button
                               variant="flat"
                               isIconOnly
+                              isLoading={isLoading && loadingType == LoadingType.STATISTICS}
+                              isDisabled={!ownerOk}
                               onPress={async () => {
-                                await api.shell.openPath(vc.versionPath)
+                                const filePath = await api.path.join(
+                                  vc.versionPath,
+                                  'statistics.json'
+                                )
+
+                                try {
+                                  const exists = await api.fs.pathExists(filePath)
+                                  if (!exists) return
+
+                                  setIsLoading(true)
+                                  setLoadingType(LoadingType.STATISTICS)
+
+                                  const data = await api.fs.readJSON<IVersionStatistics>(
+                                    filePath,
+                                    'utf-8'
+                                  )
+
+                                  setStatistics(data)
+                                  setStatisticsOpen(true)
+                                } catch {
+                                  try {
+                                    await api.fs.rimraf(filePath)
+                                    setIsStatistics(false)
+                                  } catch {}
+                                  addToast({
+                                    title: t('versionStatistics.error'),
+                                    color: 'danger'
+                                  })
+                                } finally {
+                                  setIsLoading(false)
+                                  setLoadingType(null)
+                                }
                               }}
                             >
-                              <Folder size={22} />
+                              <ChartArea size={22} />
                             </Button>
+                          )}
 
-                            {server && (
-                              <Button
-                                variant="flat"
-                                isIconOnly
-                                isDisabled={!isOwner(vc.version.owner, account)}
-                                onPress={() => setIsServerManager(true)}
-                              >
-                                <ServerCog size={22} />
-                              </Button>
-                            )}
+                          <Button
+                            variant="flat"
+                            isIconOnly
+                            onPress={async () => {
+                              try {
+                                await api.shell.openPath(vc.versionPath)
+                              } catch {}
+                            }}
+                          >
+                            <Folder size={22} />
+                          </Button>
 
+                          {server && (
                             <Button
                               variant="flat"
                               isIconOnly
-                              isLoading={isLoading && loadingType == LoadingType.LOAD}
-                              isDisabled={isRunning || isRunningInstance}
-                              onPress={async () => {
-                                setLoadingType(LoadingType.LOAD)
-                                setIsLoading(true)
+                              isDisabled={!ownerOk}
+                              onPress={() => setIsServerManager(true)}
+                            >
+                              <ServerCog size={22} />
+                            </Button>
+                          )}
 
+                          <Button
+                            variant="flat"
+                            isIconOnly
+                            isLoading={isLoading && loadingType == LoadingType.LOAD}
+                            isDisabled={isRunning || isRunningInstance}
+                            onPress={async () => {
+                              setLoadingType(LoadingType.LOAD)
+                              setIsLoading(true)
+
+                              try {
                                 let servers: IServerSM[] = []
-                                if (selectedVersion) {
-                                  const serversPath = await api.path.join(
-                                    vc.versionPath,
-                                    'servers.dat'
-                                  )
 
-                                  try {
-                                    const data = await api.servers.read(serversPath)
-                                    setServers(data)
-                                  } catch {
-                                    setServers([])
-                                  }
+                                const serversPath = await api.path.join(
+                                  vc.versionPath,
+                                  'servers.dat'
+                                )
+
+                                try {
+                                  const data = await api.servers.read(serversPath)
+                                  servers = data
+                                  setServers(data)
+                                } catch {
+                                  servers = []
+                                  setServers([])
                                 }
 
-                                if (
-                                  selectedVersion &&
-                                  selectedVersion.version.shareCode &&
-                                  isOwner(selectedVersion.version.owner, account) &&
-                                  isNetwork
-                                ) {
+                                if (vc.version.shareCode && ownerOk && isNetwork) {
                                   try {
                                     const modpackData = await api.backend.getModpack(
                                       account?.accessToken || '',
-                                      selectedVersion.version.shareCode
+                                      vc.version.shareCode
                                     )
 
                                     if (modpackData.status == 'not_found') {
-                                      selectedVersion.version.shareCode = undefined
-                                      selectedVersion.version.downloadedVersion = false
-                                      await selectedVersion.save()
+                                      vc.version.shareCode = undefined
+                                      vc.version.downloadedVersion = false
+                                      await vc.save()
                                     } else if (modpackData.data) {
                                       const modpack = modpackData.data
 
@@ -294,7 +296,7 @@ export function Versions({ runGame }: { runGame: (params: RunGameParams) => Prom
 
                                       if (modpack.build) {
                                         if (
-                                          selectedVersion.version.downloadedVersion &&
+                                          vc.version.downloadedVersion &&
                                           modpack.build < vc.version.build
                                         ) {
                                           status = 'new'
@@ -331,19 +333,21 @@ export function Versions({ runGame }: { runGame: (params: RunGameParams) => Prom
                                 }
 
                                 setEditVersion(true)
+                              } finally {
                                 setLoadingType(null)
                                 setIsLoading(false)
-                              }}
-                            >
-                              <Settings size={22} />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </CardBody>
-                  </Card>
-                )
-              })}
+                              }
+                            }}
+                          >
+                            <Settings size={22} />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardBody>
+                </Card>
+              )
+            })}
           </ScrollShadow>
         )}
       </div>
@@ -352,7 +356,11 @@ export function Versions({ runGame }: { runGame: (params: RunGameParams) => Prom
         <EditVersion
           closeModal={async () => {
             setEditVersion(false)
-            await api.fs.rimraf(await api.path.join(paths.launcher, 'temp'))
+            try {
+              if (paths.launcher) {
+                await api.fs.rimraf(await api.path.join(paths.launcher, 'temp'))
+              }
+            } catch {}
           }}
           vd={versionDiffence}
           runGame={runGame}

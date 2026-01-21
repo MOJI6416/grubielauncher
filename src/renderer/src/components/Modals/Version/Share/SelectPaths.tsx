@@ -9,7 +9,7 @@ import {
   Spinner
 } from '@heroui/react'
 import { Folder, File } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Loader } from '@/types/Loader'
 import { notSupportedPaths } from '@renderer/utilities/file'
@@ -42,43 +42,70 @@ export const SelectPaths = ({
 
   const { t } = useTranslation()
 
+  const forbiddenSet = useMemo(() => {
+    return new Set(
+      notSupportedPaths.map((p) => p.replace('${version}', version).replace('${loader}', loader))
+    )
+  }, [version, loader])
+
+  const visibleEntries = useMemo(() => {
+    const entries = allEntries.filter((e) => e.path && !e.path.startsWith('.'))
+    entries.sort((a, b) => {
+      if (a.type !== b.type) return a.type === 'folder' ? -1 : 1
+      return a.path.localeCompare(b.path)
+    })
+    return entries
+  }, [allEntries])
+
   useEffect(() => {
+    let cancelled = false
+
     const loadEntries = async () => {
-      if (!pathFolder) return
+      if (!pathFolder) {
+        setAllEntries([])
+        setPaths([])
+        setIsLoading(false)
+        return
+      }
 
       setIsLoading(true)
       try {
-        const entries = await api.fs.readdirWithTypes(pathFolder)
+        const entries: DirectoryEntry[] = await api.fs.readdirWithTypes(pathFolder)
+        if (cancelled) return
+
         setAllEntries(entries)
 
-        const existingSelected = selectedPaths.filter((p: string) =>
-          entries.some((e: DirectoryEntry) => e.path === p)
-        )
+        const available = new Set(entries.map((e) => e.path))
+        const existingSelected = selectedPaths
+          .filter((p) => available.has(p))
+          .filter((p) => !forbiddenSet.has(p) && !p.startsWith('.'))
+
         setPaths(existingSelected)
       } catch {
+        if (cancelled) return
         setAllEntries([])
         setPaths([])
       } finally {
-        setIsLoading(false)
+        if (!cancelled) setIsLoading(false)
       }
     }
 
     loadEntries()
-  }, [pathFolder, selectedPaths])
+    return () => {
+      cancelled = true
+    }
+  }, [pathFolder, selectedPaths, forbiddenSet])
 
-  const forbiddenPaths = notSupportedPaths.map((p) =>
-    p.replace('${version}', version).replace('${loader}', loader)
-  )
-
-  const togglePath = (pathName: string) => {
+  const togglePath = useCallback((pathName: string) => {
     setPaths((prev) =>
       prev.includes(pathName) ? prev.filter((p) => p !== pathName) : [...prev, pathName]
     )
-  }
+  }, [])
 
   return (
     <Modal
       isOpen={true}
+      size="lg"
       onClose={() => {
         if (isLoading) return
         onClose()
@@ -94,22 +121,21 @@ export const SelectPaths = ({
               <Spinner size="sm" />
               <p>{t('selectPaths.loadingFolders')}</p>
             </div>
-          ) : allEntries.length === 0 ? (
+          ) : visibleEntries.length === 0 ? (
             <p className="text-center text-gray-500 py-8">{t('selectPaths.emptyFolder')}</p>
           ) : (
             <div className="flex flex-col gap-1 overflow-auto max-h-96 pr-1">
-              {allEntries.map((entry) => {
-                const isHidden = entry.path.startsWith('.')
-                const isForbidden = forbiddenPaths.includes(entry.path)
+              {visibleEntries.map((entry) => {
+                const isForbidden = forbiddenSet.has(entry.path)
 
                 return (
                   <div key={entry.path} className="flex items-center gap-2">
                     <Checkbox
                       isSelected={paths.includes(entry.path)}
-                      isDisabled={isLoading || isHidden || isForbidden}
-                      onChange={() => togglePath(entry.path)}
+                      isDisabled={isLoading || isForbidden}
+                      onValueChange={() => togglePath(entry.path)}
                     >
-                      <div className="flex items-center space-x-1">
+                      <div className="flex items-center space-x-1 min-w-0">
                         {entry.type === 'file' ? <File size={18} /> : <Folder size={18} />}
                         <p className={isForbidden ? 'text-gray-400' : ''}>{entry.path}</p>
                       </div>
@@ -121,7 +147,16 @@ export const SelectPaths = ({
           )}
         </ModalBody>
 
-        <ModalFooter>
+        <ModalFooter className="flex gap-2">
+          <Button
+            variant="flat"
+            isDisabled={isLoading}
+            onPress={() => {
+              onClose()
+            }}
+          >
+            {t('common.cancel')}
+          </Button>
           <Button
             variant="flat"
             color="primary"

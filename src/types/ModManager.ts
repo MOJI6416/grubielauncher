@@ -49,11 +49,13 @@ export interface ILocalProject {
   url: string
   provider: Provider
   id: string
-  version: {
-    id: string
-    files: ILocalFile[]
-    dependencies: ILocalDependency[]
-  } | null
+  version: ILocalVersion | null
+}
+
+export interface ILocalVersion {
+  id: string
+  files: ILocalFile[]
+  dependencies: ILocalDependency[]
 }
 
 export interface ILocalDependency {
@@ -154,4 +156,9 @@ export interface IFabricMod {
 export interface IAddedLocalProject {
   project: IProject
   status: 'valid' | 'duplicate' | 'invalid'
+}
+
+export interface IUpdateProject {
+  project: ILocalProject
+  version: IVersion
 }

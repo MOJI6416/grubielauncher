@@ -2,10 +2,9 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IServer } from '@/types/ServersList'
 import { IImportModpack, IVersion, IVersionClassData, IVersionConf } from '@/types/IVersion'
 import { IAccountConf, IAuth, ILocalAccount } from '@/types/Account'
-import { IBackendServer, IModpack, IModpackUpdate, IServerStatus } from '@/types/Backend'
+import { IModpack, IModpackUpdate } from '@/types/Backend'
 import { IUpdateUser, IUser } from '@/types/IUser'
 import { INews } from '@/types/News'
-import { ICreateServer, IServer as IBrowserServer } from '@/types/Browser'
 import { IGrubieSkin, SkinsData } from '@/types/SkinManager'
 import { LoaderVersion } from '@/types/VersionsService'
 import { TSettings } from '@/types/Settings'
@@ -88,6 +87,7 @@ export interface IElectronAPI {
     >
     get: (version: string, loader: Loader) => Promise<IServerOption[]>
     read: (path: string) => Promise<IServer[]>
+    compare: (servers1: IServer[], servers2: IServer[]) => Promise<boolean>
   }
   version: {
     import: (filePath: string, tempPath: string) => Promise<IImportModpack>
@@ -165,24 +165,7 @@ export interface IElectronAPI {
       folder?: string
     ) => Promise<string | null>
     deleteFile: (at: string, key: string, isDirectory?: boolean) => Promise<void>
-    modpackSearch: (
-      at: string,
-      {
-        offset,
-        limit,
-        search,
-        sort,
-        filter
-      }: {
-        offset: number
-        limit: number
-        search: string
-        sort: string
-        filter: string[]
-      }
-    ) => Promise<IModpack[]>
     modpackDownloaded: (at: string, shareCode: string) => Promise<void>
-    allModpacksByUser: (at: string, owner: string) => Promise<IModpack[]>
     getNews: () => Promise<INews[]>
     login: (
       at: string,
@@ -193,26 +176,6 @@ export interface IElectronAPI {
         expiresAt: number
       }
     ) => Promise<string | null>
-    getServer: (at: string, serverId: string) => Promise<IBackendServer | null>
-    updateServer: (at: string, serverId: string, server: ICreateServer) => Promise<void>
-    createServer: (at: string, server: ICreateServer) => Promise<string>
-    deleteServer: (at: string, serverId: string) => Promise<void>
-    searchServers: (
-      at: string,
-      {
-        offset,
-        limit,
-        search,
-        filter
-      }: {
-        offset: number
-        limit: number
-        search: string
-        filter: string[]
-      }
-    ) => Promise<IBrowserServer[]>
-    getStatus: (at: string, address: string) => Promise<IServerStatus | null>
-    ownerServers: (at: string, owner: string) => Promise<IBrowserServer[]>
     getSkin: (at: string, uuid: string) => Promise<IGrubieSkin | null>
     discordAuthenticated: (at: string, userId: string) => Promise<boolean>
     aiComplete: (at: string, prompt: string) => Promise<string | null>
@@ -387,6 +350,7 @@ export interface IElectronAPI {
       selectVersion?: IVersionModManager
     ) => Promise<IModpackModManager | null>
     ptToFolder: (type: ProjectType) => Promise<string>
+    compareMods: (mods1: ILocalProject[], mods2: ILocalProject[]) => Promise<boolean>
   }
   worlds: {
     loadStatistics: (
@@ -483,7 +447,9 @@ export const api = {
       ipcRenderer.invoke('servers:write', servers, filePath),
     versions: (versions: IVersionConf[]) => ipcRenderer.invoke('servers:versions', versions),
     get: (version: string, loader: Loader) => ipcRenderer.invoke('servers:get', version, loader),
-    read: (path: string) => ipcRenderer.invoke('servers:read', path)
+    read: (path: string) => ipcRenderer.invoke('servers:read', path),
+    compare: (servers1: IServer[], servers2: IServer[]) =>
+      ipcRenderer.invoke('servers:compare', servers1, servers2)
   },
   version: {
     import: (filePath: string, tempPath: string) =>
@@ -562,31 +528,11 @@ export const api = {
       ipcRenderer.invoke('backend:uploadFileFromPath', at, filePath, fileName, folder),
     deleteFile: (at: string, key: string, isDirectory?: boolean) =>
       ipcRenderer.invoke('backend:deleteFile', at, key, isDirectory),
-    modpackSearch: (at: string, params: { offset: number; limit: number; search: string }) =>
-      ipcRenderer.invoke('backend:modpackSearch', at, params),
     modpackDownloaded: (at: string, shareCode: string) =>
       ipcRenderer.invoke('backend:modpackDownloaded', at, shareCode),
-    allModpacksByUser: (at: string, owner: string) =>
-      ipcRenderer.invoke('backend:allModpacksByUser', at, owner),
     getNews: () => ipcRenderer.invoke('backend:getNews'),
     login: (id: string, auth: { accessToken: string; refreshToken: string; expiresAt: number }) =>
       ipcRenderer.invoke('backend:login', id, auth),
-    getServer: (at: string, serverId: string) =>
-      ipcRenderer.invoke('backend:getServer', at, serverId),
-    updateServer: (at: string, serverId: string, server: ICreateServer) =>
-      ipcRenderer.invoke('backend:updateServer', at, serverId, server),
-    createServer: (at: string, server: ICreateServer) =>
-      ipcRenderer.invoke('backend:createServer', at, server),
-    deleteServer: (at: string, serverId: string) =>
-      ipcRenderer.invoke('backend:deleteServer', at, serverId),
-    searchServers: (
-      at: string,
-      params: { offset: number; limit: number; search: string; filter: string[] }
-    ) => ipcRenderer.invoke('backend:searchServers', at, params),
-    getStatus: (at: string, address: string) =>
-      ipcRenderer.invoke('backend:getStatus', at, address),
-    ownerServers: (at: string, owner: string) =>
-      ipcRenderer.invoke('backend:ownerServers', at, owner),
     getSkin: (at: string, uuid: string) => ipcRenderer.invoke('backend:getSkin', at, uuid),
     discordAuthenticated: (at: string, userId: string) =>
       ipcRenderer.invoke('backend:discordAuthenticated', at, userId),
@@ -710,7 +656,9 @@ export const api = {
     checkLocalMod: (modPath: string) => ipcRenderer.invoke('modManager:checkLocalMod', modPath),
     checkModpack: (modpackPath: string, pack?: any, selectVersion?: IVersionModManager) =>
       ipcRenderer.invoke('modManager:checkModpack', modpackPath, pack, selectVersion),
-    ptToFolder: (type: ProjectType) => ipcRenderer.invoke('modManager:ptToFolder', type)
+    ptToFolder: (type: ProjectType) => ipcRenderer.invoke('modManager:ptToFolder', type),
+    compareMods: (mods1: ILocalProject[], mods2: ILocalProject[]) =>
+      ipcRenderer.invoke('modManager:compareMods', mods1, mods2)
   },
   worlds: {
     loadStatistics: (worldPath: string, account: ILocalAccount) =>

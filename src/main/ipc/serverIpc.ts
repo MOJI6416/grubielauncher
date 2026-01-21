@@ -13,6 +13,7 @@ import { readNBT, writeNBT } from '../utilities/nbt'
 import { IServer } from '@/types/ServersList'
 import { Loader } from '@/types/Loader'
 import { Server } from '../services/Server'
+import { compareServers } from '../utilities/serverList'
 
 export function registerServerIpc() {
   ipcMain.handle(
@@ -69,5 +70,9 @@ export function registerServerIpc() {
 
   ipcMain.handle('servers:read', async (_, path: string) => {
     return await readNBT(path)
+  })
+
+  ipcMain.handle('servers:compare', (_, servers1: IServer[], servers2: IServer[]) => {
+    return compareServers(servers1, servers2)
   })
 }

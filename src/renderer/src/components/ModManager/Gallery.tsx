@@ -1,12 +1,15 @@
 import { Image } from '@heroui/react'
 import { IProject } from '@/types/ModManager'
 import useEmblaCarousel from 'embla-carousel-react'
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 export default function GalleryCarousel({ gallery }: { gallery: IProject['gallery'] }) {
   const [thumbEmblaRef] = useEmblaCarousel({ dragFree: true, containScroll: 'trimSnaps' })
+
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
+
+  if (!gallery?.length) return null
 
   const openModal = (index: number) => {
     setSelectedIndex(index)
@@ -15,7 +18,6 @@ export default function GalleryCarousel({ gallery }: { gallery: IProject['galler
 
   return (
     <>
-      {/* Thumbnail carousel */}
       <div className="overflow-hidden" ref={thumbEmblaRef}>
         <div className="flex gap-2 items-center">
           {gallery.map((image, idx) => (
@@ -30,7 +32,6 @@ export default function GalleryCarousel({ gallery }: { gallery: IProject['galler
         </div>
       </div>
 
-      {/* Fullscreen modal with Embla */}
       {modalOpen && (
         <ModalGallery
           gallery={gallery}
@@ -51,28 +52,84 @@ function ModalGallery({
   startIndex: number
   onClose: () => void
 }) {
-  const [emblaRef, emblaApi] = useEmblaCarousel()
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true })
+  const [current, setCurrent] = useState(startIndex)
 
   useEffect(() => {
-    if (emblaApi) {
-      emblaApi.scrollTo(startIndex)
-    }
+    if (!emblaApi) return
+    emblaApi.scrollTo(startIndex, true)
+    setCurrent(startIndex)
   }, [emblaApi, startIndex])
 
-  const scrollPrev = () => emblaApi && emblaApi.scrollPrev()
-  const scrollNext = () => emblaApi && emblaApi.scrollNext()
+  useEffect(() => {
+    if (!emblaApi) return
+
+    const onSelect = () => {
+      setCurrent(emblaApi.selectedScrollSnap())
+    }
+
+    emblaApi.on('select', onSelect)
+    onSelect()
+
+    return () => {
+      emblaApi.off('select', onSelect)
+    }
+  }, [emblaApi])
+
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowLeft') emblaApi?.scrollPrev()
+      if (e.key === 'ArrowRight') emblaApi?.scrollNext()
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      document.body.style.overflow = prevOverflow
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [emblaApi, onClose])
+
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi])
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center">
-      <button onClick={onClose} className="absolute top-4 right-4 text-white text-3xl">
+    <div
+      className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white text-3xl"
+        aria-label="Close"
+      >
         &times;
       </button>
 
-      <button onClick={scrollPrev} className="absolute left-6 text-white text-4xl select-none">
+      <div className="absolute top-4 left-4 text-white text-sm select-none">
+        {' '}
+        {current + 1}/{gallery.length}
+      </div>
+
+      <button
+        onClick={scrollPrev}
+        className="absolute left-6 text-white text-4xl select-none"
+        aria-label="Previous"
+      >
         &lt;
       </button>
 
-      <button onClick={scrollNext} className="absolute right-6 text-white text-4xl select-none">
+      <button
+        onClick={scrollNext}
+        className="absolute right-6 text-white text-4xl select-none"
+        aria-label="Next"
+      >
         &gt;
       </button>
 

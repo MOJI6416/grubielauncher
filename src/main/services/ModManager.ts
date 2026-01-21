@@ -74,7 +74,7 @@ export class ModManager {
           curseforge.pagination.totalCount <= 10000 ? curseforge.pagination.totalCount : 10000
 
         data.limit = curseforge.pagination.pageSize
-        data.offset = curseforge.pagination.index * curseforge.pagination.pageSize
+        data.offset = curseforge.pagination.index
       } else if (provider == 'modrinth') {
         const modrinth = await Modrinth.search(
           query,

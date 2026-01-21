@@ -1,5 +1,3 @@
-const api = window.api
-
 import {
   IFilterGroup,
   ILocalProject,
@@ -11,10 +9,11 @@ import {
   ILocalDependency,
   IModpack,
   ISearchData,
-  IAddedLocalProject
+  IAddedLocalProject,
+  IUpdateProject
 } from '@/types/ModManager'
 import { loaders } from '../Loaders'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SiCurseforge, SiModrinth } from 'react-icons/si'
 import SVG from 'react-inlinesvg'
 import { useTranslation } from 'react-i18next'
@@ -75,6 +74,9 @@ import { IVersion } from '@/types/IVersion'
 import { ModToggleButton } from './ModToggleButton'
 import { getProjectTypes } from '@renderer/utilities/mod'
 import { ALPModal } from './AddLocalProjectsModal'
+import { UPModal } from './UpdateProjectsModal'
+
+const api = window.api
 
 enum LoadingType {
   SEARCH,
@@ -87,6 +89,35 @@ enum LoadingType {
   GAME_VERSIONS,
   INSTALL,
   TRANSLATE
+}
+
+const PAGE_LIMIT = 20
+
+async function asyncPool<T, R>(
+  poolLimit: number,
+  array: T[],
+  iteratorFn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const ret: Promise<R>[] = []
+  const executing: Promise<void>[] = []
+
+  for (const item of array) {
+    const p = Promise.resolve().then(() => iteratorFn(item))
+    ret.push(p)
+
+    if (poolLimit <= array.length) {
+      const e: Promise<void> = p.then(
+        () => undefined,
+        () => undefined
+      )
+      executing.push(e)
+      if (executing.length >= poolLimit) {
+        await Promise.race(executing)
+      }
+    }
+  }
+
+  return Promise.all(ret)
 }
 
 export function ModManager({
@@ -125,16 +156,14 @@ export function ModManager({
   const [proccessKey, setProccessKey] = useState(-1)
   const [selectVersion, setSelectVersion] = useState<ModManagerVersion | null>(null)
   const [installedProject, setInstalledProject] = useState<ILocalProject | null>(null)
-  const [sTimeout, setSTimeout] = useState<NodeJS.Timeout>()
   const [isLocal, setLocal] = useState(false)
-  const [prevProjects, setPrevProjects] = useState<IProject[]>([])
+  const prevProjectsRef = useRef<IProject[]>([])
   const [projectTypes, setProjectTypes] = useState<ProjectType[]>([])
   const [dependency, setDependency] = useState<ILocalDependency[]>([])
   const [isAvailableUpdate, setIsAvailableUpdate] = useState(false)
-  const [isCheckedAvailableUpdate, setIsCheckedAvailableUpdate] = useState(false)
   const [isDownloadedVersion] = useAtom(isDownloadedVersionAtom)
   const [server] = useAtom(serverAtom)
-  const searchRef = useRef<HTMLInputElement | null>(null)
+  const searchRef = useRef<HTMLDivElement | null>(null)
   const [isOwnerVersion] = useAtom(isOwnerVersionAtom)
   const [versions, setVersions] = useState<IVersion[]>([])
   const [searchData, setSearchData] = useState<ISearchData>()
@@ -148,71 +177,119 @@ export function ModManager({
   const [addingLocalProjects, setAddingLocalProjects] = useState<IAddedLocalProject[]>([])
   const [isOpenALPInfo, setIsOpenALPInfo] = useState(false)
   const [readingLocalModsProgress, setReadingLocalModsProgress] = useState<number>(0)
+  const [updateMods, setUpdateMods] = useState<IUpdateProject[]>([])
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
 
   const { t } = useTranslation()
 
+  const defaultSort = useMemo(() => sortValues[0] ?? '', [sortValues])
+
+  const installedById = useMemo(() => {
+    const m = new Map<string, ILocalProject>()
+    for (const mod of mods) m.set(mod.id, mod)
+    return m
+  }, [mods])
+
+  const installedByTitle = useMemo(() => {
+    const m = new Map<string, ILocalProject>()
+    for (const mod of mods) m.set(mod.title.toLowerCase(), mod)
+    return m
+  }, [mods])
+
+  const filterLabelMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const g of filters) {
+      for (const it of g.items) {
+        const key = provider === Provider.CURSEFORGE ? (it.id ?? it.name) : it.name
+        map.set(key, it.name)
+      }
+    }
+    return map
+  }, [filters, provider])
+
+  const requestIdRef = useRef(0)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const clearDebounce = () => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current)
+      searchDebounceRef.current = null
+    }
+  }
+
   useEffect(() => {
-    let pts: ProjectType[] = []
-    if (isModpacks) {
-      pts = [ProjectType.MODPACK]
-    } else {
-      pts = getProjectTypes(loader || 'vanilla', server, provider)
-    }
-
-    setProjectTypes(pts)
-    setProjectType(pts[0])
-
-    async function localInit() {
-      setLocal(true)
-      await search({
-        version: undefined,
-        loader: undefined,
-        query: searchQuery,
-        provider,
-        projectType: pts[0],
-        sort,
-        filter,
-        isLocal: true,
-        offset: 0
-      })
-    }
-
-    if (isDownloadedVersion || !isOwnerVersion) {
-      localInit()
-      return
-    }
+    let cancelled = false
 
     ;(async () => {
-      const sortValues = await api.modManager.getSort(provider)
-      setSortValues(sortValues)
-      setSort(sortValues[0])
-    })()
+      let pts: ProjectType[] = []
+      if (isModpacks) {
+        pts = [ProjectType.MODPACK]
+      } else {
+        pts = getProjectTypes(loader || 'vanilla', server, provider)
+      }
 
-    async function getVersions() {
+      setProjectTypes(pts)
+      setProjectType(pts[0])
+
+      if (isDownloadedVersion || !isOwnerVersion) {
+        setLocal(true)
+        setOffset(0)
+
+        await search({
+          version: undefined,
+          loader: undefined,
+          query: '',
+          provider,
+          projectType: pts[0],
+          sort: '',
+          filter: [],
+          isLocal: true,
+          offset: 0
+        })
+
+        return
+      }
+
       setLoading(true)
+
+      const sorts = await api.modManager.getSort(provider)
+      if (cancelled) return
+      setSortValues(sorts)
+      const firstSort = sorts?.[0] ?? ''
+      setSort(firstSort)
+
       setLoadingType(LoadingType.GAME_VERSIONS)
+      const gameVersions = await api.versions.getList('vanilla')
+      if (cancelled) return
+      setVersions(gameVersions)
 
-      const versions = await api.versions.getList('vanilla')
-      setVersions(versions)
-    }
-
-    async function init() {
-      await getVersions()
       await getFilters(provider, pts[0])
+
+      setOffset(0)
       await search({
         version,
         loader,
-        query: searchQuery,
+        query: '',
         provider,
         projectType: pts[0],
-        sort: sortValues[0],
-        filter,
-        isLocal,
+        sort: firstSort,
+        filter: [],
+        isLocal: false,
         offset: 0
       })
-    }
+    })()
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false)
+          setLoadingType(null)
+        }
+      })
 
-    init()
+    return () => {
+      cancelled = true
+      requestIdRef.current++
+      clearDebounce()
+    }
   }, [])
 
   async function search({
@@ -236,82 +313,75 @@ export function ModManager({
     isLocal: boolean
     offset: number
   }) {
+    const reqId = ++requestIdRef.current
+
     if (!isLocal && provider == Provider.LOCAL) {
       setBrowser([])
+      setSearchData(undefined)
       return
     }
 
     setLoading(true)
     setLoadingType(LoadingType.SEARCH)
 
-    if (isLocal) {
-      let total = mods.filter((m) => m.projectType == projectType).length
-      if (query == '')
-        setBrowser(mods.filter((m) => m.projectType == projectType).slice(offset, offset + 20))
-      else {
-        const projects = mods.filter(
-          (p) =>
-            (p.title.toLowerCase().includes(query.toLowerCase()) ||
-              p.description.toLowerCase().includes(query.toLowerCase())) &&
-            p.projectType == projectType
-        )
-        total = projects.length
-        setBrowser(projects.filter((m) => m.projectType == projectType).slice(offset, offset + 20))
-      }
+    try {
+      if (isLocal) {
+        const items = mods.filter((m) => m.projectType == projectType)
 
-      setSearchData({
-        offset: 0,
-        limit: 20,
-        total,
-        projects: []
-      })
-    } else {
-      const data = await api.modManager.search(
-        query,
-        provider,
-        {
-          version: version ? version.id : undefined,
-          loader: loader
-            ? projectType == ProjectType.PLUGIN && server
-              ? (server.core as unknown as Loader)
-              : loader
-            : undefined,
-
-          projectType,
-          sort,
-          filter: filter
-            .filter((f) => f != '')
-            .map((f) =>
-              provider == Provider.CURSEFORGE
-                ? filters
-                    .map((g) => g.items)
-                    .flat()
-                    .find((i) => i.name == f)?.id || ''
-                : f
-            )
-        },
-        {
-          offset,
-          limit: 20
+        let filtered = items
+        const q = query.trim().toLowerCase()
+        if (q) {
+          filtered = items.filter(
+            (p) => p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)
+          )
         }
-      )
 
-      setSearchData(data)
-      setBrowser(data.projects)
+        const total = filtered.length
+        const page = filtered.slice(offset, offset + PAGE_LIMIT)
+
+        if (reqId !== requestIdRef.current) return
+
+        setBrowser(page)
+        setSearchData({
+          offset,
+          limit: PAGE_LIMIT,
+          total,
+          projects: []
+        })
+      } else {
+        const data = await api.modManager.search(
+          query,
+          provider,
+          {
+            version: version ? version.id : undefined,
+            loader: loader
+              ? projectType == ProjectType.PLUGIN && server
+                ? (server.core as unknown as Loader)
+                : loader
+              : undefined,
+            projectType,
+            sort,
+            filter: filter.filter((f) => f !== '')
+          },
+          { offset, limit: PAGE_LIMIT }
+        )
+
+        if (reqId !== requestIdRef.current) return
+
+        setSearchData(data)
+        setBrowser(data.projects)
+        setOffset(data.offset ?? offset)
+      }
+    } finally {
+      if (reqId === requestIdRef.current) {
+        setLoading(false)
+        setLoadingType(null)
+      }
     }
-
-    setTimeout(() => {
-      setLoading(false)
-      setLoadingType(null)
-    }, 0)
 
     if (searchRef.current) {
       const input = searchRef.current.querySelector('input')
-
-      if (input)
-        setTimeout(() => {
-          input.focus()
-        }, 50)
+      if (input) setTimeout(() => input.focus(), 100)
     }
   }
 
@@ -321,8 +391,11 @@ export function ModManager({
     setLoading(true)
     setLoadingType(LoadingType.FILTER)
 
-    const filters = await api.modManager.getFilter(provider, projectType)
-    setFilters(filters)
+    const f = await api.modManager.getFilter(provider, projectType)
+    setFilters(f)
+
+    setLoading(false)
+    setLoadingType(null)
   }
 
   function getLocalDependencies(title: string) {
@@ -330,13 +403,12 @@ export function ModManager({
 
     for (let index = 0; index < mods.length; index++) {
       const mod = mods[index]
-
-      const dependency = mod.version?.dependencies.find((d) => d.title == title)
-      if (!dependency) continue
+      const dep = mod.version?.dependencies.find((d) => d.title == title)
+      if (!dep) continue
 
       dependencies.push({
         title: mod.title,
-        relationType: dependency.relationType
+        relationType: dep.relationType
       })
     }
 
@@ -350,43 +422,28 @@ export function ModManager({
     }
 
     if (relationType == DependencyType.REQUIRED) {
-      dependencyType = {
-        title: t('modManager.dependencyTypes.1'),
-        color: 'warning'
-      }
+      dependencyType = { title: t('modManager.dependencyTypes.1'), color: 'warning' }
     } else if (relationType == DependencyType.OPTIONAL) {
-      dependencyType = {
-        title: t('modManager.dependencyTypes.2'),
-        color: 'default'
-      }
+      dependencyType = { title: t('modManager.dependencyTypes.2'), color: 'default' }
     } else if (relationType == DependencyType.EMBEDDED) {
-      dependencyType = {
-        title: t('modManager.dependencyTypes.3'),
-        color: 'success'
-      }
+      dependencyType = { title: t('modManager.dependencyTypes.3'), color: 'success' }
     } else if (relationType == DependencyType.INCOMPATIBLE) {
-      dependencyType = {
-        title: t('modManager.dependencyTypes.4'),
-        color: 'danger'
-      }
+      dependencyType = { title: t('modManager.dependencyTypes.4'), color: 'danger' }
     }
 
     return dependencyType
   }
 
-  async function getAvailableUpdate() {
+  async function getAvailableUpdate(): Promise<IUpdateProject[]> {
     if (!version) return []
 
-    const canBeUpdated: ILocalProject[] = []
     const items = mods.filter((m) => m.projectType == projectType)
 
-    for (let index = 0; index < items.length; index++) {
+    const results = await asyncPool(4, items, async (mod) => {
       try {
-        const mod = items[index]
+        if (mod.provider == Provider.LOCAL) return null
 
-        if (mod.provider == Provider.LOCAL) continue
-
-        const versions = await api.modManager.getVersions(mod.provider, mod.id, {
+        const vers = await api.modManager.getVersions(mod.provider, mod.id, {
           loader:
             mod.projectType == ProjectType.PLUGIN && server
               ? (server.core as unknown as Loader)
@@ -396,27 +453,34 @@ export function ModManager({
           modUrl: mod.url
         })
 
-        const latestVersion = versions[0]
-        if (mod.version?.id == latestVersion.id) continue
+        const latest = vers[0]
+        if (!latest) return null
+        if (mod.version?.id == latest.id) return null
 
-        canBeUpdated.push(mod)
-      } catch (error) {
-        continue
+        return {
+          project: mod,
+          version: latest
+        }
+      } catch {
+        return null
       }
-    }
+    })
 
-    return canBeUpdated
+    return results.filter(Boolean) as IUpdateProject[]
   }
 
   const readLocalMods = useCallback(
-    async (paths: string[]) => {
+    async (pathsList: string[]) => {
       setLoading(true)
       setLoadingType(LoadingType.CHECK_LOCAL_MOD)
       setReadingLocalModsProgress(0)
 
       const localProjects: IAddedLocalProject[] = []
-      for (const path of paths) {
-        setReadingLocalModsProgress(Math.round(((localProjects.length + 1) / paths.length) * 100))
+
+      for (const path of pathsList) {
+        setReadingLocalModsProgress(
+          Math.round(((localProjects.length + 1) / pathsList.length) * 100)
+        )
 
         const info = await api.modManager.checkLocalMod(path)
         if (!info) {
@@ -435,22 +499,19 @@ export function ModManager({
             },
             status: 'invalid'
           })
-
           continue
         }
 
-        let isDuplicate = false
-        if (
+        const isDuplicate = Boolean(
           mods.find(
             (m) =>
-              m.title.toLocaleLowerCase() == info.name.toLocaleLowerCase() ||
+              m.title.toLowerCase() == info.name.toLowerCase() ||
               m.id == info.id ||
               m.version?.files.find((f) => f.sha1 == info.sha1)
           )
         )
-          isDuplicate = true
 
-        const version: ModManagerVersion = {
+        const ver: ModManagerVersion = {
           dependencies: [],
           id: info.version || '',
           downloads: -1,
@@ -475,7 +536,7 @@ export function ModManager({
             provider: Provider.LOCAL,
             title: info.name,
             url: info.url,
-            versions: [version],
+            versions: [ver],
             body: '',
             gallery: []
           },
@@ -484,19 +545,17 @@ export function ModManager({
       }
 
       if (localProjects.length == 0) {
-        addToast({
-          title: t('modManager.invalidMod'),
-          color: 'warning'
-        })
-      } else setAddingLocalProjects(localProjects)
+        addToast({ title: t('modManager.invalidMod'), color: 'warning' })
+      } else {
+        setAddingLocalProjects(localProjects)
+      }
 
       setLoading(false)
       setLoadingType(null)
       setReadingLocalModsProgress(0)
-
       setIsOpenALPInfo(true)
     },
-    [projectType, mods]
+    [projectType, mods, t]
   )
 
   return (
@@ -544,6 +603,7 @@ export function ModManager({
                           }
                           isDisabled={isLoading}
                           onPress={async () => {
+                            clearDebounce()
                             const newProvider =
                               provider == Provider.CURSEFORGE
                                 ? Provider.MODRINTH
@@ -555,33 +615,34 @@ export function ModManager({
 
                             setProvider(newProvider)
                             setSearchData(undefined)
+                            setOffset(0)
+                            setFilter([])
 
                             let pts: ProjectType[] = []
                             if (!isModpacks) {
                               pts = getProjectTypes(loader || 'vanilla', server, newProvider)
-                              setProjectTypes(pts)
-
-                              if (!pts.includes(projectType)) setProjectType(pts[0])
                             } else {
                               pts = [...projectTypes]
                             }
 
-                            const sortValues = await api.modManager.getSort(newProvider)
-                            setSortValues(sortValues)
-                            setSort(sortValues[0])
+                            const nextProjectType = pts.includes(projectType) ? projectType : pts[0]
+                            setProjectTypes(pts)
+                            setProjectType(nextProjectType)
 
-                            await getFilters(newProvider, projectType)
-                            setFilter([])
+                            const sorts = await api.modManager.getSort(newProvider)
+                            setSortValues(sorts)
+                            const nextSort = sorts?.[0] ?? ''
+                            setSort(nextSort)
 
-                            setOffset(0)
+                            await getFilters(newProvider, nextProjectType)
 
                             await search({
                               version,
                               loader,
                               query: searchQuery,
                               provider: newProvider,
-                              projectType: pts.includes(projectType) ? projectType : pts[0],
-                              sort: sortValues[0],
+                              projectType: nextProjectType,
+                              sort: nextSort,
                               filter: [],
                               isLocal,
                               offset: 0
@@ -598,6 +659,7 @@ export function ModManager({
                         </Button>
                       </Tooltip>
                     )}
+
                     {!isModpacks && (
                       <Select
                         size="sm"
@@ -606,21 +668,21 @@ export function ModManager({
                         selectedKeys={[projectType]}
                         className="w-40 min-w-40"
                         onChange={async (event) => {
+                          clearDebounce()
                           const value = event.target.value as ProjectType
                           if (!value) return
 
                           setProjectType(value)
-                          setIsCheckedAvailableUpdate(false)
+                          setOffset(0)
 
-                          if (!isLocal) await getFilters(provider, value as ProjectType)
+                          if (!isLocal) await getFilters(provider, value)
 
-                          setOffset(searchData ? searchData.limit : 0)
                           await search({
                             version,
                             loader,
                             query: searchQuery,
                             provider,
-                            projectType: value as ProjectType,
+                            projectType: value,
                             sort,
                             filter,
                             isLocal,
@@ -628,13 +690,9 @@ export function ModManager({
                           })
                         }}
                       >
-                        {projectTypes.map((type) => {
-                          return (
-                            <SelectItem key={type}>
-                              {t('modManager.projectTypes.' + type)}
-                            </SelectItem>
-                          )
-                        })}
+                        {projectTypes.map((type) => (
+                          <SelectItem key={type}>{t('modManager.projectTypes.' + type)}</SelectItem>
+                        ))}
                       </Select>
                     )}
                   </div>
@@ -655,14 +713,11 @@ export function ModManager({
                         isDisabled={isLoading}
                         selectedKeys={[version?.id || '']}
                         onChange={async (event) => {
-                          let ver = versions.find((v) => v.id == event.target.value)
-                          if (!ver) {
-                            ver = undefined
-                          }
-
+                          clearDebounce()
+                          const ver = versions.find((v) => v.id == event.target.value)
                           setVersion(ver)
+                          setOffset(0)
 
-                          setOffset(searchData ? searchData.limit : 0)
                           await search({
                             loader,
                             version: ver,
@@ -676,9 +731,9 @@ export function ModManager({
                           })
                         }}
                       >
-                        {versions.map((v) => {
-                          return <SelectItem key={v.id}>{v.id}</SelectItem>
-                        })}
+                        {versions.map((v) => (
+                          <SelectItem key={v.id}>{v.id}</SelectItem>
+                        ))}
                       </Select>
 
                       <Select
@@ -688,9 +743,11 @@ export function ModManager({
                         isDisabled={isLoading}
                         selectedKeys={[loader ? loader : '']}
                         onChange={async (event) => {
+                          clearDebounce()
                           const l = event.target.value as Loader
                           setLoader(l)
-                          setOffset(searchData ? searchData.limit : 0)
+                          setOffset(0)
+
                           await search({
                             version,
                             loader: l,
@@ -711,6 +768,7 @@ export function ModManager({
                       </Select>
                     </>
                   )}
+
                   {(provider != Provider.LOCAL || isLocal) && (
                     <Input
                       isDisabled={isLoading}
@@ -718,73 +776,71 @@ export function ModManager({
                       startContent={<Search size={22} />}
                       value={searchQuery}
                       onChange={(event) => {
-                        setSearchQuery(event.target.value)
+                        const value = event.target.value
+                        setSearchQuery(value)
 
-                        if (sTimeout) clearTimeout(sTimeout)
-                        setSTimeout(
-                          setTimeout(async () => {
-                            setOffset(searchData ? searchData.limit : 0)
-                            await search({
-                              version,
-                              loader,
-                              query: event.target.value,
-                              provider,
-                              projectType,
-                              sort,
-                              filter,
-                              isLocal,
-                              offset: 0
-                            })
-                          }, 500)
-                        )
+                        clearDebounce()
+                        searchDebounceRef.current = setTimeout(async () => {
+                          setOffset(0)
+                          await search({
+                            version,
+                            loader,
+                            query: value,
+                            provider,
+                            projectType,
+                            sort,
+                            filter,
+                            isLocal,
+                            offset: 0
+                          })
+                        }, 800)
                       }}
                     />
                   )}
 
                   {isLocal && (
                     <>
-                      {isLocal &&
-                        !isCheckedAvailableUpdate &&
-                        !isDownloadedVersion &&
-                        isOwnerVersion && (
-                          <div>
-                            <Button
-                              variant="flat"
-                              isLoading={
-                                isLoading && loadingType == LoadingType.CHECK_AVAILABLE_UPDATE
-                              }
-                              onPress={async () => {
-                                try {
-                                  setLoading(true)
-                                  setLoadingType(LoadingType.CHECK_AVAILABLE_UPDATE)
-
-                                  const canBeUpdated = await getAvailableUpdate()
-                                  setBrowser(canBeUpdated)
-                                  setIsCheckedAvailableUpdate(true)
-                                } catch {
-                                } finally {
-                                  setLoading(false)
-                                  setLoadingType(null)
-                                }
-                              }}
-                            >
-                              {t('modManager.checkUpdates')}
-                            </Button>
-                          </div>
-                        )}
-                      {isCheckedAvailableUpdate && !isDownloadedVersion && isOwnerVersion && (
+                      {isLocal && !isDownloadedVersion && isOwnerVersion && (
                         <div>
                           <Button
                             variant="flat"
+                            isLoading={
+                              isLoading && loadingType == LoadingType.CHECK_AVAILABLE_UPDATE
+                            }
                             onPress={async () => {
-                              setBrowser(mods.filter((m) => m.projectType == projectType))
-                              setIsCheckedAvailableUpdate(false)
+                              try {
+                                clearDebounce()
+                                setLoading(true)
+                                setLoadingType(LoadingType.CHECK_AVAILABLE_UPDATE)
+
+                                const canBeUpdated = await getAvailableUpdate()
+                                setUpdateMods(canBeUpdated)
+                                setIsUpdateModalOpen(true)
+
+                                if (canBeUpdated.length > 0) {
+                                  addToast({
+                                    color: 'success',
+                                    title: t('modManager.availableUpdates', {
+                                      count: canBeUpdated.length
+                                    })
+                                  })
+                                } else {
+                                  addToast({
+                                    color: 'warning',
+                                    title: t('modManager.noAvailableUpdates')
+                                  })
+                                }
+                              } finally {
+                                setLoading(false)
+                                setLoadingType(null)
+                              }
                             }}
                           >
-                            {t('modManager.viewAllMods')}
+                            {t('modManager.checkUpdates')}
                           </Button>
                         </div>
                       )}
+
                       <div className="flex items-center gap-1">
                         <PanelTopOpen size={22} />
                         <p>{mods.filter((m) => m.projectType == projectType).length}</p>
@@ -801,10 +857,12 @@ export function ModManager({
                         isDisabled={isLoading}
                         selectedKeys={[sort]}
                         onChange={async (event) => {
+                          clearDebounce()
                           const value = event.target.value
                           if (!value) return
                           setSort(value)
-                          setOffset(searchData ? searchData.limit : 0)
+                          setOffset(0)
+
                           await search({
                             version,
                             loader,
@@ -818,9 +876,9 @@ export function ModManager({
                           })
                         }}
                       >
-                        {sortValues.map((s) => {
-                          return <SelectItem key={s}>{t('modManager.sorts.' + s)}</SelectItem>
-                        })}
+                        {sortValues.map((s) => (
+                          <SelectItem key={s}>{t('modManager.sorts.' + s)}</SelectItem>
+                        ))}
                       </Select>
 
                       <Select
@@ -836,10 +894,11 @@ export function ModManager({
                         }
                         selectedKeys={filter}
                         onChange={async (event) => {
-                          const values = event.target.value.split(',')
-
+                          clearDebounce()
+                          const values = event.target.value.split(',').filter(Boolean)
                           setFilter(values)
-                          setOffset(searchData ? searchData.limit : 0)
+                          setOffset(0)
+
                           await search({
                             version,
                             loader,
@@ -853,14 +912,24 @@ export function ModManager({
                           })
                         }}
                         renderValue={() => {
-                          return <p>{filter.filter((f) => f != '').join(', ')}</p>
+                          const labels = filter
+                            .filter((f) => f !== '')
+                            .map((f) => filterLabelMap.get(f) ?? f)
+                          return <p>{labels.join(', ')}</p>
                         }}
                       >
-                        {filters.map((group, index) => {
-                          return (
-                            <SelectSection key={index} title={group.title}>
-                              {group.items.map((f) => (
-                                <SelectItem key={f.name}>
+                        {filters.map((group, index) => (
+                          <SelectSection key={index} title={group.title}>
+                            {group.items.map((f) => {
+                              const key =
+                                provider === Provider.CURSEFORGE ? (f.id ?? f.name) : f.name
+                              const label =
+                                provider === Provider.CURSEFORGE
+                                  ? f.name
+                                  : f.name.charAt(0).toUpperCase() + f.name.slice(1)
+
+                              return (
+                                <SelectItem key={key}>
                                   <div className="flex items-center gap-2">
                                     {f.icon?.includes('svg') ? (
                                       <SVG
@@ -879,43 +948,41 @@ export function ModManager({
                                       />
                                     )}
 
-                                    <p className="text-xs">
-                                      {provider == Provider.CURSEFORGE
-                                        ? f.name
-                                        : f.name.charAt(0).toUpperCase() + f.name.slice(1)}
-                                    </p>
+                                    <p className="text-xs">{label}</p>
                                   </div>
                                 </SelectItem>
-                              ))}
-                            </SelectSection>
-                          )
-                        })}
+                              )
+                            })}
+                          </SelectSection>
+                        ))}
                       </Select>
                     </>
                   )}
+
                   {(provider != Provider.LOCAL || isLocal) && (
                     <Button
                       variant="flat"
                       isIconOnly
                       isDisabled={isLoading}
                       onPress={async () => {
+                        clearDebounce()
                         setSearchQuery('')
-                        setSort(sortValues[0])
+                        setSort(defaultSort)
                         setFilter([])
+                        setOffset(0)
 
                         if (isModpacks) {
                           setVersion(undefined)
                           setLoader(undefined)
                         }
 
-                        setOffset(searchData ? searchData.limit : 0)
                         await search({
                           version: isModpacks ? undefined : version,
                           loader: isModpacks ? undefined : loader,
                           query: '',
                           provider,
                           projectType,
-                          sort: sortValues[0],
+                          sort: defaultSort,
                           filter: [],
                           isLocal,
                           offset: 0
@@ -934,23 +1001,24 @@ export function ModManager({
                       isDisabled={isLoading}
                       isSelected={isLocal}
                       onChange={async (event) => {
+                        clearDebounce()
                         const checked = event.target.checked
 
                         setLocal(checked)
                         setSearchQuery('')
-                        setSort(sortValues[0])
-                        setIsCheckedAvailableUpdate(false)
-                        if (!checked) await getFilters(provider, projectType)
+                        setSort(defaultSort)
                         setFilter([])
+                        setOffset(0)
 
-                        setOffset(searchData ? searchData.limit : 0)
+                        if (!checked) await getFilters(provider, projectType)
+
                         await search({
                           version,
                           loader,
                           query: '',
                           provider,
                           projectType,
-                          sort: sortValues[0],
+                          sort: defaultSort,
                           filter: [],
                           isLocal: checked,
                           offset: 0
@@ -976,17 +1044,12 @@ export function ModManager({
                       startContent={<FileBox size={22} />}
                       isLoading={isLoading && loadingType == LoadingType.CHECK_LOCAL_MOD}
                       onPress={async () => {
+                        clearDebounce()
                         const filePaths = await api.other.openFileDialog(
                           false,
-                          [
-                            {
-                              name: 'Mods',
-                              extensions: ['jar', 'zip']
-                            }
-                          ],
+                          [{ name: 'Mods', extensions: ['jar', 'zip'] }],
                           true
                         )
-
                         if (!filePaths || filePaths.length == 0) return
                         await readLocalMods(filePaths)
                       }}
@@ -1004,22 +1067,20 @@ export function ModManager({
                 ) : browser.length > 0 ? (
                   <div className="flex-1 min-h-0">
                     <ScrollShadow className="h-full">
-                      {browser.map((project, index) => {
-                        const isInstalled = mods.find(
-                          (p) =>
-                            p.id == project.id ||
-                            p.title.toLowerCase() == project.title.toLowerCase()
-                        )
+                      {browser.map((item, index) => {
+                        const isInstalled =
+                          installedById.get(item.id) ??
+                          installedByTitle.get(item.title.toLowerCase())
 
                         return (
                           <Card key={index} className="mb-2">
                             <CardBody>
                               <div className="flex items-center justify-between space-x-2">
                                 <div className="flex items-center gap-2">
-                                  {project.iconUrl && (
+                                  {item.iconUrl && (
                                     <Image
-                                      src={project.iconUrl}
-                                      alt={project.title}
+                                      src={item.iconUrl}
+                                      alt={item.title}
                                       width={64}
                                       height={64}
                                       className="rounded-md min-w-16 min-h-16"
@@ -1027,10 +1088,11 @@ export function ModManager({
                                     />
                                   )}
                                   <div className="flex flex-col gap-1">
-                                    <p>{project.title}</p>
-                                    {project.description && (
-                                      <p className="text-xs text-gray-400">{project.description}</p>
+                                    <p>{item.title}</p>
+                                    {item.description && (
+                                      <p className="text-xs text-gray-400">{item.description}</p>
                                     )}
+
                                     {isInstalled ? (
                                       <Chip
                                         variant="flat"
@@ -1062,9 +1124,7 @@ export function ModManager({
                                               <p className="text-xs">{t('modManager.local')}</p>
                                             </>
                                           ) : (
-                                            <>
-                                              <p className="text-xs">{t('modManager.other')}</p>
-                                            </>
+                                            <p className="text-xs">{t('modManager.other')}</p>
                                           )}
                                         </div>
                                       </Chip>
@@ -1073,7 +1133,7 @@ export function ModManager({
                                 </div>
 
                                 <div className="flex items-center gap-1">
-                                  {project.provider != Provider.OTHER &&
+                                  {item.provider != Provider.OTHER &&
                                   !isDownloadedVersion &&
                                   isOwnerVersion ? (
                                     <Button
@@ -1086,86 +1146,92 @@ export function ModManager({
                                         proccessKey == index
                                       }
                                       onPress={async () => {
+                                        clearDebounce()
                                         setLoading(true)
                                         setLoadingType(LoadingType.INFO)
                                         setProccessKey(index)
 
-                                        // tab1
+                                        const base = (isInstalled
+                                          ? isInstalled
+                                          : item) as unknown as IProject
 
-                                        if (isInstalled) {
-                                          project = isInstalled
-                                        }
-
-                                        let body: string = ''
+                                        let body = ''
                                         let gallery: IProject['gallery'] = []
+                                        const vers: ModManagerVersion[] = []
 
-                                        let versions: ModManagerVersion[] = []
-                                        if (project.provider != Provider.LOCAL) {
-                                          versions.push(
-                                            ...(await api.modManager.getVersions(
-                                              project.provider,
-                                              project.id,
-                                              {
-                                                loader:
-                                                  projectType == ProjectType.PLUGIN && server
-                                                    ? (server.core as unknown as Loader)
-                                                    : loader,
-                                                version: version ? version.id : undefined,
-                                                projectType,
-                                                modUrl: project.url
-                                              }
-                                            ))
+                                        if (base.provider != Provider.LOCAL) {
+                                          const fetched = await api.modManager.getVersions(
+                                            base.provider,
+                                            base.id,
+                                            {
+                                              loader:
+                                                projectType == ProjectType.PLUGIN && server
+                                                  ? (server.core as unknown as Loader)
+                                                  : loader,
+                                              version: version ? version.id : undefined,
+                                              projectType,
+                                              modUrl: base.url
+                                            }
                                           )
+                                          vers.push(...fetched)
 
-                                          if (!versions.length && isInstalled?.version) {
-                                            versions.push({
+                                          if (!vers.length && isInstalled?.version) {
+                                            vers.push({
                                               dependencies: [],
                                               downloads: -1,
                                               id: isInstalled.version.id,
                                               files: isInstalled.version.files,
-                                              name: isInstalled.version.files[0].filename
+                                              name:
+                                                isInstalled.version.files[0]?.filename ??
+                                                isInstalled.version.id
                                             })
                                           }
                                         } else {
-                                          if ('version' in project)
-                                            versions.push({
+                                          if ('version' in (base as any)) {
+                                            vers.push({
                                               dependencies: [],
                                               downloads: -1,
                                               files: [],
-                                              id: project?.version?.id || '',
-                                              name: project?.version?.id || ''
+                                              id: (base as any)?.version?.id || '',
+                                              name: (base as any)?.version?.id || ''
                                             })
+                                          }
                                         }
 
-                                        let currentVersion = versions[0]
-                                        let currentIndex = 0
+                                        if (!vers.length) {
+                                          setLoading(false)
+                                          setLoadingType(null)
+                                          setProccessKey(-1)
+                                          addToast({
+                                            color: 'danger',
+                                            title: t('modManager.notFoundMod')
+                                          })
+                                          return
+                                        }
 
+                                        let currentIndex = 0
                                         if (isInstalled) {
                                           setInstalledProject(isInstalled)
-
-                                          currentIndex = versions.findIndex(
+                                          const idx = vers.findIndex(
                                             (v) => v.id == isInstalled.version?.id
                                           )
-
-                                          currentIndex = currentIndex == -1 ? 0 : currentIndex
-                                          currentVersion = versions[currentIndex]
+                                          currentIndex = idx == -1 ? 0 : idx
                                         } else {
+                                          setInstalledProject(null)
                                           const projectInfo = await api.modManager.getProject(
-                                            project.provider,
-                                            project.id
+                                            base.provider,
+                                            base.id
                                           )
-
                                           if (projectInfo) {
                                             body = projectInfo.body
                                             gallery = projectInfo.gallery
                                           }
                                         }
 
-                                        if (!currentVersion?.dependencies) {
-                                          currentVersion = {
-                                            ...currentVersion,
-                                            dependencies: []
-                                          }
+                                        let currentVersion = vers[currentIndex] ?? vers[0]
+                                        currentVersion = {
+                                          ...currentVersion,
+                                          dependencies: currentVersion.dependencies ?? []
                                         }
 
                                         if (
@@ -1174,49 +1240,40 @@ export function ModManager({
                                           currentVersion.dependencies.filter((d) => d.project)
                                             .length == 0
                                         ) {
-                                          const dependensies = await api.modManager.getDependencies(
-                                            project.provider,
-                                            project.id,
+                                          const deps = await api.modManager.getDependencies(
+                                            base.provider,
+                                            base.id,
                                             currentVersion.dependencies
                                           )
-
-                                          currentVersion.dependencies = dependensies
-                                          versions[currentIndex] = currentVersion
+                                          currentVersion = { ...currentVersion, dependencies: deps }
+                                          vers[currentIndex] = currentVersion
                                         }
 
-                                        setProject({
-                                          ...project,
-                                          versions: versions,
-                                          body,
-                                          gallery
-                                        })
+                                        setProject({ ...base, versions: vers, body, gallery })
                                         setSelectVersion(currentVersion)
                                         setIsAvailableUpdate(currentIndex != 0)
                                         setDependency(
-                                          isInstalled ? getLocalDependencies(project.title) : []
+                                          isInstalled ? getLocalDependencies(base.title) : []
                                         )
 
                                         setLoading(false)
                                         setLoadingType(null)
                                         setProccessKey(-1)
-
                                         setInfoModalOpen(true)
                                       }}
                                     >
                                       {isInstalled ? <Settings size={22} /> : <Info size={22} />}
                                     </Button>
                                   ) : (
-                                    project.url && (
+                                    item.url && (
                                       <Button
                                         variant="flat"
                                         isIconOnly
-                                        onPress={() => {
-                                          api.shell.openExternal(project.url)
-                                        }}
+                                        onPress={() => api.shell.openExternal(item.url)}
                                       >
-                                        {project.provider == Provider.CURSEFORGE ? (
+                                        {item.provider == Provider.CURSEFORGE ? (
                                           <SiCurseforge size={22} />
-                                        ) : project.provider == Provider.MODRINTH ? (
+                                        ) : item.provider == Provider.MODRINTH ? (
                                           <SiModrinth size={22} />
                                         ) : (
                                           <Earth size={22} />
@@ -1237,6 +1294,7 @@ export function ModManager({
                                             versionPath={selectedVersion.versionPath}
                                           />
                                         )}
+
                                         <Button
                                           color="danger"
                                           variant="flat"
@@ -1244,19 +1302,15 @@ export function ModManager({
                                           isDisabled={isLoading}
                                           onPress={async () => {
                                             let newMods = [...mods]
-
-                                            const index = newMods.findIndex(
-                                              (p) => p.id == project.id
-                                            )
-                                            newMods.splice(index, 1)
-
+                                            const idx = newMods.findIndex((p) => p.id == item.id)
+                                            if (idx !== -1) newMods.splice(idx, 1)
                                             setMods([...newMods])
-                                            if (project.provider == Provider.LOCAL) {
-                                              setBrowser(browser.filter((p) => p.id != project.id))
+
+                                            if (item.provider == Provider.LOCAL) {
+                                              setBrowser(browser.filter((p) => p.id != item.id))
                                             }
 
                                             setInstalledProject(null)
-
                                             addToast({
                                               color: 'success',
                                               title: t('modManager.deleted')
@@ -1291,10 +1345,12 @@ export function ModManager({
                         siblings={1}
                         initialPage={1}
                         isDisabled={isLoading && loadingType == LoadingType.SEARCH}
-                        page={offset / searchData.limit}
+                        page={Math.floor(offset / searchData.limit) + 1}
                         total={Math.ceil(searchData.total / searchData.limit)}
                         onChange={async (page) => {
-                          setOffset(page * searchData.limit)
+                          clearDebounce()
+                          const newOffset = (page - 1) * searchData.limit
+                          setOffset(newOffset)
 
                           await search({
                             version,
@@ -1305,13 +1361,14 @@ export function ModManager({
                             sort,
                             filter,
                             isLocal,
-                            offset: (page - 1) * searchData.limit
+                            offset: newOffset
                           })
                         }}
                       />
                     </div>
                   )}
               </div>
+
               <Modal
                 size={project?.body == '' ? 'md' : '5xl'}
                 isDismissable={false}
@@ -1320,34 +1377,33 @@ export function ModManager({
                 onClose={() => {
                   if (isLoading) return
 
-                  if (prevProjects.length == 0) {
+                  const stack = prevProjectsRef.current
+                  if (stack.length === 0) {
                     setInfoModalOpen(false)
                     setTimeout(() => {
                       setInstalledProject(null)
                       setProject(null)
-                    }, 500)
+                    }, 300)
+                    return
                   }
 
-                  // tab3
-
-                  const prevProject = prevProjects.pop()
+                  const prevProject = stack.pop()
                   if (!prevProject) return
 
-                  const isInstalled = mods.find((p) => p.id == prevProject.id)
-                  setInstalledProject(isInstalled || null)
+                  const installed = installedById.get(prevProject.id) ?? null
+                  setInstalledProject(installed)
                   setProvider(prevProject.provider)
                   setProject(prevProject)
 
-                  const index = isInstalled
-                    ? prevProject.versions.findIndex((v) => v.id == isInstalled.version?.id)
+                  const idx = installed
+                    ? prevProject.versions.findIndex((v) => v.id == installed.version?.id)
                     : 0
 
-                  setIsAvailableUpdate(index != 0)
-                  setSelectVersion(prevProject.versions[index])
+                  const safeIdx = idx == -1 ? 0 : idx
+                  setIsAvailableUpdate(safeIdx != 0)
+                  setSelectVersion(prevProject.versions[safeIdx])
 
-                  if (isInstalled) {
-                    setDependency(getLocalDependencies(prevProject.title))
-                  } else setDependency([])
+                  setDependency(installed ? getLocalDependencies(prevProject.title) : [])
                 }}
               >
                 <ModalContent>
@@ -1385,6 +1441,7 @@ export function ModManager({
                               </Tooltip>
                             </div>
                           </div>
+
                           <div className="flex items-center gap-2">
                             {project.url && (
                               <Button
@@ -1469,47 +1526,45 @@ export function ModManager({
                                   const value = event.target.value
                                   if (!value) return
 
-                                  const index = project.versions.findIndex((v) => v.id == value)
+                                  const idx = project.versions.findIndex((v) => v.id == value)
+                                  const safeIdx = idx == -1 ? 0 : idx
+                                  setIsAvailableUpdate(safeIdx != 0)
 
-                                  setIsAvailableUpdate(index != 0)
-
-                                  if (index == -1) return
-                                  const version = project.versions[index]
-
-                                  if (!version) return
+                                  const v = project.versions[safeIdx]
+                                  if (!v) return
 
                                   setLoading(true)
                                   setLoadingType(LoadingType.NEW_VERSION)
 
+                                  let next = { ...v, dependencies: v.dependencies ?? [] }
+
                                   if (
                                     !isModpacks &&
-                                    version.dependencies.length > 0 &&
-                                    version.dependencies.filter((d) => d.project).length == 0
+                                    next.dependencies.length > 0 &&
+                                    next.dependencies.filter((d) => d.project).length == 0
                                   ) {
-                                    const dependensies = await api.modManager.getDependencies(
+                                    const deps = await api.modManager.getDependencies(
                                       project.provider,
                                       project.id,
-                                      version.dependencies
+                                      next.dependencies
                                     )
-
-                                    version.dependencies = dependensies
+                                    next = { ...next, dependencies: deps }
                                   }
 
-                                  setSelectVersion(version)
+                                  setSelectVersion(next)
 
                                   setLoading(false)
                                   setLoadingType(null)
                                 }}
                               >
-                                {project.versions.map((version) => {
-                                  return (
-                                    <SelectItem textValue={version.name} key={version.id}>
-                                      <p>{version.name}</p>
-                                    </SelectItem>
-                                  )
-                                })}
+                                {project.versions.map((v) => (
+                                  <SelectItem textValue={v.name} key={v.id}>
+                                    <p>{v.name}</p>
+                                  </SelectItem>
+                                ))}
                               </Select>
                             )}
+
                             <div className="flex items-center gap-2">
                               {!installedProject ? (
                                 <Button
@@ -1523,7 +1578,7 @@ export function ModManager({
                                       .filter((m) => m.provider == Provider.LOCAL)
                                       .some((m) =>
                                         m.version?.files.some(
-                                          (f) => f.sha1 == selectVersion?.files[0].sha1
+                                          (f) => f.sha1 == selectVersion?.files[0]?.sha1
                                         )
                                       )
                                   }
@@ -1555,7 +1610,6 @@ export function ModManager({
                                           }
                                         ])
                                         setIsBlockedMods(true)
-
                                         return
                                       }
 
@@ -1595,7 +1649,6 @@ export function ModManager({
                                           color: 'danger',
                                           title: t('modManager.notModpack')
                                         })
-
                                         setLoading(false)
                                         setLoadingType(null)
                                         return
@@ -1617,7 +1670,6 @@ export function ModManager({
                                       url: project.url,
                                       provider: project.provider,
                                       id: project.id,
-
                                       version: {
                                         id: selectVersion.id,
                                         files: selectVersion.files.map((f) => ({
@@ -1636,16 +1688,12 @@ export function ModManager({
 
                                     setMods([...mods, newProject])
                                     setInstalledProject(newProject)
-
                                     setDependency(getLocalDependencies(newProject.title))
 
                                     setLoading(false)
                                     setLoadingType(null)
 
-                                    addToast({
-                                      color: 'success',
-                                      title: t('modManager.added')
-                                    })
+                                    addToast({ color: 'success', title: t('modManager.added') })
                                   }}
                                 >
                                   {t('common.install')}
@@ -1693,9 +1741,8 @@ export function ModManager({
                                         }
                                         onPress={() => {
                                           let newMods = [...mods]
-
-                                          const index = newMods.findIndex((p) => p.id == project.id)
-                                          newMods.splice(index, 1)
+                                          const idx = newMods.findIndex((p) => p.id == project.id)
+                                          if (idx !== -1) newMods.splice(idx, 1)
 
                                           setMods([...newMods])
                                           setInstalledProject(null)
@@ -1725,7 +1772,7 @@ export function ModManager({
 
                                         let newMods = [...mods]
 
-                                        const newProject: ILocalProject = {
+                                        const updated: ILocalProject = {
                                           title: project.title,
                                           description: project.description,
                                           projectType: project.projectType,
@@ -1749,11 +1796,11 @@ export function ModManager({
                                           }
                                         }
 
-                                        const index = newMods.findIndex((p) => p.id == project.id)
-                                        newMods.splice(index, 1, newProject)
+                                        const idx = newMods.findIndex((p) => p.id == project.id)
+                                        if (idx !== -1) newMods.splice(idx, 1, updated)
 
                                         setMods([...newMods])
-                                        setInstalledProject(newProject)
+                                        setInstalledProject(updated)
 
                                         addToast({
                                           color: 'success',
@@ -1771,21 +1818,26 @@ export function ModManager({
 
                           {!isModpacks && project.provider != Provider.LOCAL && (
                             <div className="flex flex-col gap-1.5">
-                              <p className="font-bold">{t('modManager.dependencies')}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold">{t('modManager.dependencies')}</p>
+                                {isLoading && loadingType == LoadingType.NEW_VERSION && (
+                                  <Spinner size="sm" />
+                                )}
+                              </div>
+
                               <ScrollShadow className="flex flex-col space-y-2 max-h-[200px] pr-1">
                                 {selectVersion?.dependencies &&
                                   selectVersion.dependencies.length > 0 &&
                                   loadingType != LoadingType.NEW_VERSION &&
                                   selectVersion.dependencies.map((d, index) => {
-                                    if (!d.project) return
+                                    if (!d.project) return null
 
-                                    const isInstalled = mods.find(
-                                      (p) =>
-                                        p.id == d.project?.id ||
-                                        p.title.toLowerCase() == d.project?.title.toLowerCase()
-                                    )
+                                    const depInstalled =
+                                      installedById.get(d.project.id) ??
+                                      installedByTitle.get(d.project.title.toLowerCase())
 
-                                    const dependencyType = dependencyDisplay(d.relationType)
+                                    const depType = dependencyDisplay(d.relationType)
+
                                     return (
                                       <div
                                         key={index}
@@ -1799,17 +1851,17 @@ export function ModManager({
                                             height={32}
                                             className="min-w-8 min-h-8 rounded-md"
                                           />
-
                                           <p className="text-sm truncate flex-grow">
                                             {d.project.title}
                                           </p>
                                         </div>
+
                                         <div className="flex items-center space-x-1">
                                           <Chip
                                             variant="flat"
                                             size="sm"
                                             color={
-                                              dependencyType.color as
+                                              depType.color as
                                                 | 'default'
                                                 | 'warning'
                                                 | 'success'
@@ -1819,8 +1871,9 @@ export function ModManager({
                                                 | undefined
                                             }
                                           >
-                                            {dependencyType.title}
+                                            {depType.title}
                                           </Chip>
+
                                           {d.relationType != DependencyType.INCOMPATIBLE &&
                                           d.relationType != DependencyType.EMBEDDED ? (
                                             <Button
@@ -1834,38 +1887,37 @@ export function ModManager({
                                                 proccessKey == index
                                               }
                                               onPress={async () => {
-                                                let newProject = d.project
-                                                // tab2
-                                                if (!newProject || !version) return
+                                                if (!d.project || !version) return
 
                                                 setLoading(true)
                                                 setLoadingType(LoadingType.DEPENDENCY)
                                                 setProccessKey(index)
 
-                                                if (isInstalled) {
-                                                  newProject = {
-                                                    ...isInstalled,
+                                                let newProj: IProject = d.project
+                                                if (depInstalled) {
+                                                  newProj = {
+                                                    ...depInstalled,
                                                     versions: [],
                                                     body: '',
                                                     gallery: []
-                                                  }
+                                                  } as unknown as IProject
                                                 }
 
-                                                const versions = await api.modManager.getVersions(
-                                                  newProject.provider,
-                                                  newProject.id,
+                                                const vers = await api.modManager.getVersions(
+                                                  newProj.provider,
+                                                  newProj.id,
                                                   {
                                                     loader:
                                                       projectType == ProjectType.PLUGIN && server
                                                         ? (server.core as unknown as Loader)
                                                         : loader || 'vanilla',
                                                     version: version.id,
-                                                    projectType: newProject.projectType,
-                                                    modUrl: newProject.url
+                                                    projectType: newProj.projectType,
+                                                    modUrl: newProj.url
                                                   }
                                                 )
 
-                                                if (!versions.length) {
+                                                if (!vers.length) {
                                                   setLoading(false)
                                                   setLoadingType(null)
                                                   setProccessKey(-1)
@@ -1873,69 +1925,64 @@ export function ModManager({
                                                     color: 'danger',
                                                     title: t('modManager.notFoundMod')
                                                   })
-
                                                   return
                                                 }
 
-                                                let currentVersion = versions[0]
                                                 let currentIndex = 0
+                                                if (depInstalled) {
+                                                  const idx = vers.findIndex(
+                                                    (v) => v.id == depInstalled.version?.id
+                                                  )
+                                                  currentIndex = idx == -1 ? 0 : idx
+                                                }
 
                                                 let body = ''
                                                 let gallery: IProject['gallery'] = []
 
-                                                if (isInstalled) {
-                                                  currentIndex = versions.findIndex(
-                                                    (v) => v.id == isInstalled.version?.id
+                                                if (!depInstalled) {
+                                                  const info = await api.modManager.getProject(
+                                                    newProj.provider,
+                                                    newProj.id
                                                   )
-
-                                                  currentVersion = versions[currentIndex]
-                                                } else {
-                                                  const projectInfo =
-                                                    await api.modManager.getProject(
-                                                      newProject.provider,
-                                                      newProject.id
-                                                    )
-                                                  if (projectInfo) {
-                                                    body = projectInfo.body
-                                                    gallery = projectInfo.gallery
+                                                  if (info) {
+                                                    body = info.body
+                                                    gallery = info.gallery
                                                   }
                                                 }
 
-                                                if (currentVersion.dependencies.length > 0) {
-                                                  const dependensies =
-                                                    await api.modManager.getDependencies(
-                                                      newProject.provider,
-                                                      newProject.id,
-                                                      currentVersion.dependencies
-                                                    )
-
-                                                  currentVersion.dependencies = dependensies
-                                                  versions[currentIndex] = currentVersion
+                                                let currentVersion = vers[currentIndex] ?? vers[0]
+                                                if (currentVersion.dependencies?.length > 0) {
+                                                  const deps = await api.modManager.getDependencies(
+                                                    newProj.provider,
+                                                    newProj.id,
+                                                    currentVersion.dependencies
+                                                  )
+                                                  currentVersion = {
+                                                    ...currentVersion,
+                                                    dependencies: deps
+                                                  }
+                                                  vers[currentIndex] = currentVersion
                                                 }
 
+                                                if (project) prevProjectsRef.current.push(project)
+
                                                 setInstalledProject(
-                                                  isInstalled ? isInstalled : null
+                                                  depInstalled ? depInstalled : null
                                                 )
                                                 setIsAvailableUpdate(currentIndex != 0)
-
-                                                setProvider(newProject.provider)
-                                                setInstalledProject(
-                                                  isInstalled ? isInstalled : null
-                                                )
-
+                                                setProvider(newProj.provider)
                                                 setSelectVersion(currentVersion)
                                                 setDependency(
-                                                  isInstalled
-                                                    ? getLocalDependencies(newProject.title)
+                                                  depInstalled
+                                                    ? getLocalDependencies(newProj.title)
                                                     : []
                                                 )
                                                 setProject({
-                                                  ...newProject,
-                                                  versions: versions,
+                                                  ...newProj,
+                                                  versions: vers,
                                                   body,
                                                   gallery
                                                 })
-                                                setPrevProjects((prev) => [...prev, project])
 
                                                 setLoading(false)
                                                 setLoadingType(null)
@@ -1944,13 +1991,13 @@ export function ModManager({
                                                 setInfoModalOpen(true)
                                               }}
                                             >
-                                              {isInstalled ? (
+                                              {depInstalled ? (
                                                 <Settings size={22} />
                                               ) : (
                                                 <Download size={22} />
                                               )}
                                             </Button>
-                                          ) : undefined}
+                                          ) : null}
                                         </div>
                                       </div>
                                     )
@@ -1963,16 +2010,11 @@ export function ModManager({
                                       <Alert title={t('modManager.noDependencies')} />
                                     </div>
                                   )}
-
-                                {isLoading && loadingType == LoadingType.NEW_VERSION && (
-                                  <div className="flex justify-center gap-2 items-center">
-                                    <Spinner size="sm" />
-                                  </div>
-                                )}
                               </ScrollShadow>
                             </div>
                           )}
                         </div>
+
                         {project.body != '' && (
                           <div className="flex flex-col w-8/12 space-y-2 h-full">
                             <ScrollShadow
@@ -1980,6 +2022,7 @@ export function ModManager({
                             >
                               <ModBody body={project.body} />
                             </ScrollShadow>
+
                             <GalleryCarousel gallery={project.gallery} />
                           </div>
                         )}
@@ -1992,7 +2035,8 @@ export function ModManager({
           </ModalBody>
         </ModalContent>
       </Modal>
-      {isBlockedMods && blockedMods.length && (
+
+      {isBlockedMods && blockedMods.length > 0 && (
         <BlockedMods
           mods={blockedMods}
           onClose={async (bMods) => {
@@ -2017,11 +2061,7 @@ export function ModManager({
 
             const modpack = await api.modManager.checkModpack(modpackPath, project, selectVersion)
             if (!modpack) {
-              addToast({
-                color: 'danger',
-                title: t('modManager.notModpack')
-              })
-
+              addToast({ color: 'danger', title: t('modManager.notModpack') })
               setLoading(false)
               setLoadingType(null)
               return
@@ -2035,6 +2075,7 @@ export function ModManager({
           }}
         />
       )}
+
       {isOpenALPInfo && addingLocalProjects.length > 0 && (
         <ALPModal
           projects={addingLocalProjects}
@@ -2045,25 +2086,21 @@ export function ModManager({
           addProjects={(projects: IProject[]) => {
             const localProjects: ILocalProject[] = []
 
-            projects.forEach((project) => {
+            projects.forEach((p) => {
               const newProject: ILocalProject = {
-                title: project.title,
-                description: project.description,
-                projectType: project.projectType,
-                iconUrl: project.iconUrl,
-                url: project.url,
-                provider: project.provider,
-                id: project.id,
+                title: p.title,
+                description: p.description,
+                projectType: p.projectType,
+                iconUrl: p.iconUrl,
+                url: p.url,
+                provider: p.provider,
+                id: p.id,
                 version: {
-                  id: project.versions[0].id,
-                  files: project.versions[0].files.map((f) => ({
-                    filename: f.filename,
-                    size: f.size,
-                    isServer: f.isServer,
-                    url: f.url,
-                    sha1: f.sha1
+                  id: p.versions[0].id,
+                  files: p.versions[0].files.map((f) => ({
+                    ...f
                   })),
-                  dependencies: project.versions[0].dependencies.map((d) => ({
+                  dependencies: p.versions[0].dependencies.map((d) => ({
                     title: d.project?.title || '',
                     relationType: d.relationType
                   }))
@@ -2077,6 +2114,39 @@ export function ModManager({
             addToast({
               color: 'success',
               title: t('modManager.addedMultiple', { count: projects.length })
+            })
+          }}
+        />
+      )}
+
+      {isUpdateModalOpen && updateMods.length > 0 && (
+        <UPModal
+          projects={updateMods}
+          onClose={() => {
+            setIsUpdateModalOpen(false)
+            setUpdateMods([])
+          }}
+          updateProjects={(projects: IUpdateProject[]) => {
+            const updateMods: ILocalProject[] = structuredClone(mods)
+
+            for (const m of updateMods) {
+              const update = projects.find((p) => p.project.id == m.id)
+              if (!update) continue
+
+              m.version = {
+                dependencies: update.version.dependencies.map((d) => ({
+                  title: d.project?.title || '',
+                  relationType: d.relationType
+                })),
+                files: update.version.files,
+                id: update.version.id
+              }
+            }
+
+            setMods([...updateMods])
+            addToast({
+              color: 'success',
+              title: t('modManager.updatedMultiple', { count: projects.length })
             })
           }}
         />

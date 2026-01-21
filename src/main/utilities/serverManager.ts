@@ -148,6 +148,7 @@ export async function getServersOfVersions(versions: IVersionConf[]) {
 
     if (!isExists) {
       servers.push({ version: version.name, servers: [], path: serversPath })
+      continue
     }
 
     const serversData = await readNBT(serversPath)

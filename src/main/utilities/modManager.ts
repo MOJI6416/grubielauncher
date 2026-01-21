@@ -690,3 +690,20 @@ export function folderToProjectType(folder: string): ProjectType | null {
       return null
   }
 }
+
+export function compareMods(a: ILocalProject[], b: ILocalProject[]): boolean {
+  if (a.length !== b.length) return false
+
+  const sig = (m: ILocalProject) => {
+    const v = m.version
+    const fileSig = v?.files?.map((f) => `${f.filename}:${f.sha1}:${f.size}`).join('|') ?? ''
+    const depSig = v?.dependencies?.map((d) => `${d.title}:${d.relationType}`).join('|') ?? ''
+    return `${m.id}#${m.provider}#${m.projectType}#${v?.id ?? 'null'}#${fileSig}#${depSig}`
+  }
+
+  const as = [...a].map(sig).sort()
+  const bs = [...b].map(sig).sort()
+
+  for (let i = 0; i < as.length; i++) if (as[i] !== bs[i]) return false
+  return true
+}

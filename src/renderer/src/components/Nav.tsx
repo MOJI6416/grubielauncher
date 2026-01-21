@@ -2,10 +2,14 @@ import { Accounts } from './Accounts'
 import { Settings } from './Settings'
 import { FaDiscord } from 'react-icons/fa'
 import { useTranslation } from 'react-i18next'
-import { BookUser, Earth, Gamepad2, ListPlus, SquareChevronRight } from 'lucide-react'
-import { Settings as LSettings } from 'lucide-react'
+import {
+  BookUser,
+  Gamepad2,
+  ListPlus,
+  SquareChevronRight,
+  Settings as LSettings
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Browser } from './Browser/Browser'
 import { useAtom } from 'jotai'
 import {
   accountAtom,
@@ -32,32 +36,31 @@ export function Nav({
   runGame: (params: RunGameParams) => Promise<void>
   setIsFriends: React.Dispatch<React.SetStateAction<boolean>>
 }) {
-  const [isOpenBrowser, setIsOpenBrowser] = useState(false)
   const [selectedVersion, setSelectedVersion] = useAtom(selectedVersionAtom)
   const setServer = useAtom(serverAtom)[1]
   const setIsOwnerVersion = useAtom(isOwnerVersionAtom)[1]
   const [selectedAccount] = useAtom(accountAtom)
-  const [isAddVerion, setVersionModal] = useState(false)
+  const [isAddVersion, setVersionModal] = useState(false)
   const [isSettingsModal, setOpenSettingsModal] = useState(false)
   const [isNetwork] = useAtom(networkAtom)
   const { t } = useTranslation()
   const [isRunning] = useAtom(isRunningAtom)
   const [paths] = useAtom(pathsAtom)
-  const [isConsele, setIsConsole] = useState(false)
+  const [isConsoleOpen, setIsConsoleOpen] = useState(false)
   const [consoles] = useAtom(consolesAtom)
   const [isFriendsConnected] = useAtom(isFriendsConnectedAtom)
 
   const consoleBtnColor = useMemo(() => {
     if (consoles.consoles.length > 0) {
-      return consoles.consoles.some((c) => c.status == 'error')
+      return consoles.consoles.some((c) => c.status === 'error')
         ? 'danger'
-        : consoles.consoles.some((c) => c.status == 'stopped')
+        : consoles.consoles.some((c) => c.status === 'stopped')
           ? 'warning'
           : 'success'
     }
 
     return 'primary'
-  }, [consoles])
+  }, [consoles.consoles])
 
   return (
     <>
@@ -78,9 +81,7 @@ export function Nav({
                 isIconOnly
                 variant="flat"
                 color={consoleBtnColor}
-                onPress={() => {
-                  setIsConsole((prev) => !prev)
-                }}
+                onPress={() => setIsConsoleOpen(true)}
               >
                 <SquareChevronRight size={22} />
               </Button>
@@ -89,16 +90,18 @@ export function Nav({
             {selectedAccount && selectedVersion && (
               <Button
                 isLoading={isRunning}
+                isDisabled={isRunning}
                 variant="flat"
                 color="secondary"
                 startContent={<Gamepad2 size={22} />}
                 onPress={async () => {
-                  await runGame({})
+                  await runGame({ version: selectedVersion })
                 }}
               >
                 {t('nav.play')}
               </Button>
             )}
+
             {selectedAccount && isNetwork && (
               <Button
                 variant="flat"
@@ -114,26 +117,12 @@ export function Nav({
                 {t('nav.addVersion')}
               </Button>
             )}
-            {isNetwork && selectedAccount && (
-              <Button
-                variant="flat"
-                isDisabled={isRunning}
-                onPress={() => {
-                  setSelectedVersion(undefined)
-                  setServer(undefined)
-                  setIsOwnerVersion(false)
-                  setIsOpenBrowser(true)
-                }}
-                startContent={<Earth size={22} />}
-              >
-                {t('browser.title')}
-              </Button>
-            )}
+
             {isNetwork && selectedAccount && (
               <Button
                 variant="flat"
                 startContent={<BookUser size={22} />}
-                isDisabled={selectedAccount.type == 'plain' || !isFriendsConnected}
+                isDisabled={selectedAccount.type === 'plain' || !isFriendsConnected}
                 onPress={() => {
                   setIsFriends((prev) => !prev)
                 }}
@@ -146,9 +135,7 @@ export function Nav({
               variant="flat"
               isDisabled={isRunning}
               startContent={<LSettings size={22} />}
-              onPress={() => {
-                setOpenSettingsModal(true)
-              }}
+              onPress={() => setOpenSettingsModal(true)}
             >
               {t('settings.title')}
             </Button>
@@ -156,27 +143,31 @@ export function Nav({
             <Button
               variant="flat"
               isIconOnly
-              onPress={async () => await api.shell.openExternal('https://discord.gg/URrKha9hk7')}
+              onPress={async () => {
+                try {
+                  await api.shell.openExternal('https://discord.gg/URrKha9hk7')
+                } catch {}
+              }}
             >
               <FaDiscord size={22} />
             </Button>
           </div>
         </div>
       </div>
-      {isSettingsModal && <Settings onClose={() => setOpenSettingsModal(false)}></Settings>}
-      {isOpenBrowser && selectedAccount && (
-        <Browser onClose={() => setIsOpenBrowser(false)}></Browser>
-      )}
-      {isAddVerion && (
+      {isSettingsModal && <Settings onClose={() => setOpenSettingsModal(false)} />}
+      {isAddVersion && (
         <AddVersion
           closeModal={async () => {
             setVersionModal(false)
-            await api.fs.rimraf(await api.path.join(paths.launcher, 'temp'))
+            try {
+              if (paths.launcher) {
+                await api.fs.rimraf(await api.path.join(paths.launcher, 'temp'))
+              }
+            } catch {}
           }}
-        ></AddVersion>
+        />
       )}
-
-      {isConsele && <Console onClose={() => setIsConsole(false)} runGame={runGame}></Console>}
+      {isConsoleOpen && <Console onClose={() => setIsConsoleOpen(false)} runGame={runGame} />}{' '}
     </>
   )
 }

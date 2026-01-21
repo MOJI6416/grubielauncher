@@ -1,9 +1,21 @@
 import { Loader } from '@/types/Loader'
-import { IProject, IVersion, IVersionDependency, ProjectType, Provider } from '@/types/ModManager'
+import {
+  ILocalProject,
+  IProject,
+  IVersion,
+  IVersionDependency,
+  ProjectType,
+  Provider
+} from '@/types/ModManager'
 import { ServerCore } from '@/types/Server'
 import { ipcMain } from 'electron'
 import { ModManager } from '../services/ModManager'
-import { checkLocalMod, checkModpack, projetTypeToFolder } from '../utilities/modManager'
+import {
+  checkLocalMod,
+  checkModpack,
+  compareMods,
+  projetTypeToFolder
+} from '../utilities/modManager'
 
 export function registerModManagerIpc() {
   ipcMain.handle(
@@ -72,5 +84,9 @@ export function registerModManagerIpc() {
 
   ipcMain.handle('modManager:ptToFolder', (_, pt: ProjectType) => {
     return projetTypeToFolder(pt)
+  })
+
+  ipcMain.handle('modManager:compareMods', (_, mods1: ILocalProject[], mods2: ILocalProject[]) => {
+    return compareMods(mods1, mods2)
   })
 }

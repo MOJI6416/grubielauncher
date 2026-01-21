@@ -179,7 +179,11 @@
     "addedMultiple": "{{count}} mods added",
     "addingProjects": "Adding mods",
     "modDuplicate": "Mod with the same name or ID is already installed",
-    "modInvalid": "Mod is invalid or corrupted"
+    "modInvalid": "Mod is invalid or corrupted",
+    "availableUpdates": "Available updates for {{count}} mods",
+    "noAvailableUpdates": "No available updates",
+    "updatingMods": "Updating mods",
+    "updatedMultiple": "{{count}} mods updated"
   },
   "nav": {
     "play": "Play",
@@ -353,7 +357,8 @@
   },
   "selectPaths": {
     "title": "Select paths",
-    "loadingFolders": "Loading folders..."
+    "loadingFolders": "Loading folders...",
+    "emptyFolder": "Folder is empty"
   },
   "export": {
     "title": "Export build",
@@ -498,7 +503,9 @@
     "copySeed": "Copy seed",
     "openFolder": "Open folder",
     "resetIcon": "Reset icon",
-    "renameError": "Error renaming world"
+    "renameError": "Error renaming world",
+    "renamed": "World renamed",
+    "iconReseted": "Icon reseted"
   },
   "tips": {
     "checkIntegrity": "Check the integrity of game files"

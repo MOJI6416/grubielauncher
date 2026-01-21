@@ -15,7 +15,7 @@ import {
   versionServersAtom
 } from '@renderer/stores/atoms'
 import { useAtom } from 'jotai'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { IArguments } from '@/types/IArguments'
 import { useTranslation } from 'react-i18next'
 import {
@@ -73,9 +73,7 @@ import { BlockedMods, checkBlockedMods, IBlockedMod } from '../BlockedMods'
 import { IServer } from '@/types/ServersList'
 import { Worlds } from '@renderer/components/Worlds/WorldsModal'
 import { RunGameParams } from '@renderer/App'
-import { compareServers } from '@renderer/utilities/server'
 import { checkDiffenceUpdateData, checkVersionName, syncShare } from '@renderer/utilities/version'
-import { compareMods } from '@renderer/utilities/mod'
 import { Mods } from '@renderer/classes/Mods'
 
 const api = window.api
@@ -91,60 +89,74 @@ export function EditVersion({
 }) {
   const [account] = useAtom(accountAtom)
   const [version, setVersion] = useAtom(selectedVersionAtom)
+  const [versions] = useAtom(versionsAtom)
+
   const [isLoading, setIsLoading] = useState(false)
   const [loadingType, setLoadingType] = useState<
     'save' | 'check_diff' | 'sync' | 'server' | 'check'
   >()
+
   const [notSavedModal, setNotSavedModal] = useState(false)
   const [servers, setServers] = useState<IServer[]>([])
   const [nbtServers, setNbtServers] = useAtom(versionServersAtom)
+
   const [versionName, setVersionName] = useState('')
-  const [versions] = useAtom(versionsAtom)
   const [mods, setMods] = useState<ILocalProject[]>([])
-  const [runArguments, setRunArguments] = useState<IArguments>({
-    game: '',
-    jvm: ''
-  })
+  const [runArguments, setRunArguments] = useState<IArguments>({ game: '', jvm: '' })
   const [image, setImage] = useState('')
   const [editName, setEditName] = useState(false)
+
   const [isCropping, setIsCropping] = useState(false)
   const [croppedImage, setCroppedImage] = useState('')
+
   const [isServers, setIsServers] = useState(false)
   const [isModManager, setIsModManager] = useState(false)
+
   const [isNetwork] = useAtom(networkAtom)
   const [isOpenArguments, setIsOpenArguments] = useState(false)
+
   const [paths] = useAtom(pathsAtom)
   const [isOpenDel, setIsOpenDel] = useState(false)
+
   const [settings] = useAtom(settingsAtom)
   const [server, setServer] = useAtom(serverAtom)
+
   const [isOpenShareModal, setIsOpenModalShare] = useState(false)
   const [shareType, setShareType] = useState<'new' | 'update'>('new')
   const [isShareModal, setShareModal] = useState(false)
+
   const [versionDiffence, setVersionDiffence] = useState<'sync' | 'new' | 'old'>('sync')
   const [diffenceUpdateData, setDiffenceUpdateData] = useState<string>('')
+
   const [tempModpack, setTempModpack] = useState<IModpack>()
   const [isOpenExportModal, setIsOpenExportModal] = useState(false)
+
   const [isServerManager, setIsServerManager] = useState(false)
   const [serverCores, setServerCores] = useState<IServerOption[]>([])
   const [isServerCreate, setIsServerCreate] = useState(false)
+
   const [isDownloadedVersion] = useAtom(isDownloadedVersionAtom)
-  const { t } = useTranslation()
-  const [isLogoChanged, setIsLogoChanged] = useState(false)
   const [isOwnerVersion] = useAtom(isOwnerVersionAtom)
+
+  const { t } = useTranslation()
+
+  const [isLogoChanged, setIsLogoChanged] = useState(false)
   const [quickConnectIp, setQuickConnectIp] = useState<string>()
+
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>([])
   const [isBlockedMods, setIsBlockedMods] = useState(false)
   const [blockedCloseType, setBlockedCloseType] = useState<'save' | 'check'>()
+
   const [authData] = useAtom(authDataAtom)
-  const setConsoles = useAtom(consolesAtom)[1]
+  const [, setConsoles] = useAtom(consolesAtom)
+
   const [isOpenWorlds, setIsOpenWorlds] = useState(false)
 
-  const isExistSaves = useMemo(async () => {
-    if (!version) return false
+  const [hasChanges, setHasChanges] = useState(false)
+  const calcSeqRef = useRef(0)
 
-    const worldsPath = await api.path.join(version.versionPath, 'saves')
-    return await api.fs.pathExists(worldsPath)
-  }, [version])
+  const [hasSaves, setHasSaves] = useState(false)
+  const [isCheckingSaves, setIsCheckingSaves] = useState(false)
 
   useEffect(() => {
     ;(async () => {
@@ -161,31 +173,114 @@ export function EditVersion({
     })()
   }, [])
 
-  function saveBtnisDisabled(): boolean {
-    let s = false
+  useEffect(() => {
+    let cancelled = false
 
-    if (version && version.version.version.serverManager) {
+    const check = async () => {
+      if (!version) {
+        setHasSaves(false)
+        return
+      }
+
+      setIsCheckingSaves(true)
       try {
-        s = !compareServers(nbtServers, servers)
-      } catch {}
+        const worldsPath = await api.path.join(version.versionPath, 'saves')
+        const exists = await api.fs.pathExists(worldsPath)
+        if (!cancelled) setHasSaves(exists)
+      } catch {
+        if (!cancelled) setHasSaves(false)
+      } finally {
+        if (!cancelled) setIsCheckingSaves(false)
+      }
     }
 
-    return (
-      (((versionName.trim() != version?.version.name &&
-        checkVersionName(
-          versionName,
-          versions.map((v) => v.version),
-          version?.version
-        )) ||
-        !compareMods(version?.version.loader.mods || [], mods) ||
-        s) &&
-        !isLoading) ||
-      runArguments.game != (version?.version.runArguments?.game || '') ||
-      runArguments.jvm != (version?.version.runArguments?.jvm || '') ||
-      isLogoChanged ||
-      version?.version.quickServer != quickConnectIp
+    check()
+
+    return () => {
+      cancelled = true
+    }
+  }, [version?.versionPath])
+
+  const isNameValid = useMemo(() => {
+    if (!version) return false
+    const next = versionName.trim()
+    const current = version.version.name
+    if (next === current) return true
+    return checkVersionName(
+      next,
+      versions.map((v) => v.version),
+      version.version
     )
-  }
+  }, [version, versionName, versions])
+
+  const canSave = useMemo(() => {
+    if (!version) return false
+    if (isLoading) return false
+    if (!hasChanges) return false
+    if (!isNameValid) return false
+    if (version.version.owner && account && !isOwnerVersion) return false
+    return true
+  }, [version, isLoading, hasChanges, isNameValid, account, isOwnerVersion])
+
+  useEffect(() => {
+    let cancelled = false
+    const seq = ++calcSeqRef.current
+
+    const calc = async () => {
+      if (!version) {
+        setHasChanges(false)
+        return
+      }
+
+      if (isLoading) return
+
+      const nameChanged = versionName.trim() !== (version.version.name ?? '')
+
+      const argsChanged =
+        runArguments.game !== (version.version.runArguments?.game ?? '') ||
+        runArguments.jvm !== (version.version.runArguments?.jvm ?? '')
+
+      const otherChanged = isLogoChanged || version.version.quickServer !== quickConnectIp
+
+      let modsChanged = false
+      let serversChanged = false
+
+      try {
+        modsChanged = !(await api.modManager.compareMods(version.version.loader.mods ?? [], mods))
+      } catch {
+        modsChanged = false
+      }
+
+      if (version.version.version.serverManager) {
+        try {
+          serversChanged = !(await api.servers.compare(nbtServers, servers))
+        } catch {
+          serversChanged = false
+        }
+      }
+
+      if (cancelled || seq !== calcSeqRef.current) return
+
+      setHasChanges(nameChanged || modsChanged || serversChanged || argsChanged || otherChanged)
+    }
+
+    calc()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    version,
+    versionName,
+    mods,
+    servers,
+    nbtServers,
+    runArguments.game,
+    runArguments.jvm,
+    isLogoChanged,
+    quickConnectIp,
+    isLoading
+  ])
 
   async function sync() {
     if (!version) return
@@ -219,7 +314,7 @@ export function EditVersion({
         color: 'success',
         title: t('versions.integrityOk')
       })
-    } catch (err) {
+    } catch {
       addToast({
         color: 'danger',
         title: t('versions.integrityError')
@@ -231,7 +326,7 @@ export function EditVersion({
   }
 
   async function saveVersion() {
-    if (!version || !versions) return
+    if (!version) return
 
     let isShare = false
 
@@ -239,10 +334,9 @@ export function EditVersion({
     setIsLoading(true)
 
     let isRename = false
-    let oldPath = version.versionPath
-    if (versionName.trim() != version.version.name) {
-      const versionsPath = await api.path.join(paths.launcher, 'minecraft', 'versions')
-
+    const oldPath = version.versionPath
+    if (versionName.trim() !== version.version.name) {
+      const versionsPath = await api.path.join(paths.minecraft, 'versions')
       const oldName = version.version.name
 
       const newName = versionName.trim()
@@ -254,14 +348,14 @@ export function EditVersion({
         isRename = true
 
         setConsoles((prev) => ({
-          consoles: prev.consoles.filter((c) => c.versionName != oldName)
+          consoles: prev.consoles.filter((c) => c.versionName !== oldName)
         }))
 
-        version.version.name = versionName.trim()
+        version.version.name = newName
         await version.init()
 
         isShare = true
-      } catch (err) {
+      } catch {
         addToast({
           color: 'danger',
           title: t('versions.renameError')
@@ -270,19 +364,21 @@ export function EditVersion({
         setIsLoading(false)
         setLoadingType(undefined)
 
+        setHasChanges(false)
         return
       } finally {
         setEditName(false)
       }
     }
 
-    if (!compareMods(version.version.loader.mods || [], mods)) {
+    if (!(await api.modManager.compareMods(version.version.loader.mods || [], mods))) {
       version.version.loader.mods = mods
 
       for (const bMod of blockedMods) {
         if (!bMod.filePath) continue
 
-        const mod = mods.find((m) => m.id == bMod.projectId)
+        const mod = mods.find((m) => m.id === bMod.projectId)
+
         if (!mod || !mod.version) continue
 
         mod.version.files[0].localPath = bMod.filePath
@@ -299,9 +395,9 @@ export function EditVersion({
       try {
         const serversPath = await api.path.join(version.versionPath, 'servers.dat')
 
-        if (!compareServers(nbtServers, servers)) {
+        if (!(await api.servers.compare(nbtServers, servers))) {
           await api.servers.write(servers, serversPath)
-          setNbtServers(servers)
+          setNbtServers([...servers])
           isShare = true
         }
       } catch {}
@@ -310,8 +406,8 @@ export function EditVersion({
     version.version.lastUpdate = new Date()
 
     if (
-      runArguments.game != (version?.version.runArguments?.game || '') ||
-      runArguments.jvm != (version?.version.runArguments?.jvm || '')
+      runArguments.game !== (version.version.runArguments?.game || '') ||
+      runArguments.jvm !== (version.version.runArguments?.jvm || '')
     ) {
       version.version.runArguments = { ...runArguments }
       isShare = true
@@ -324,8 +420,9 @@ export function EditVersion({
       let fileUrl = ''
       if (image) {
         let img = image
-        if (isRename && !isDownloadedVersion && isOwnerVersion)
+        if (isRename && !isDownloadedVersion && isOwnerVersion) {
           img = img.replace(oldPath, version.versionPath)
+        }
 
         const newFile = await fetch(img).then((r) => r.blob())
         await api.fs.writeFile(filePath, new Uint8Array(await newFile.arrayBuffer()), 'binary')
@@ -341,7 +438,7 @@ export function EditVersion({
       isShare = true
     }
 
-    if (quickConnectIp != version.version.quickServer) {
+    if (quickConnectIp !== version.version.quickServer) {
       version.version.quickServer = quickConnectIp
       isShare = true
     }
@@ -375,7 +472,7 @@ export function EditVersion({
         onClose={() => {
           if (isLoading) return
 
-          if (saveBtnisDisabled()) {
+          if (hasChanges) {
             setNotSavedModal(true)
             return
           }
@@ -406,20 +503,13 @@ export function EditVersion({
                     <Input
                       size="sm"
                       startContent={
-                        !checkVersionName(
-                          versionName.trim(),
-                          versions.map((v) => v.version)
-                        ) ? (
-                          <CircleAlert className="text-warning" size={22} />
-                        ) : (
-                          ''
-                        )
+                        !isNameValid ? <CircleAlert className="text-warning" size={22} /> : ''
                       }
                       placeholder={t('versions.namePlaceholder')}
                       value={versionName}
                       onChange={(event) => setVersionName(event.currentTarget.value)}
                       isDisabled={isLoading}
-                    ></Input>
+                    />
                   ) : (
                     <p className="truncate flex-grow text-xl font-semibold">{versionName}</p>
                   )}
@@ -433,9 +523,7 @@ export function EditVersion({
                             isIconOnly
                             size="sm"
                             isDisabled={isLoading || !isOwnerVersion}
-                            onPress={() => {
-                              setEditName(true)
-                            }}
+                            onPress={() => setEditName(true)}
                           >
                             <Pencil size={20} />
                           </Button>
@@ -460,9 +548,7 @@ export function EditVersion({
                           isDisabled={isLoading || !isOwnerVersion}
                           onPress={async () => {
                             const filePaths = await api.other.openFileDialog()
-
-                            if (!filePaths || filePaths.length == 0) return
-
+                            if (!filePaths || filePaths.length === 0) return
                             setCroppedImage(filePaths[0])
                             setIsCropping(true)
                           }}
@@ -500,28 +586,27 @@ export function EditVersion({
                     <Chip variant="flat">
                       <div className="flex items-center gap-1">
                         <Cpu size={20} />
-                        <p className={loaders[version?.version.loader.name].style}>
-                          {loaders[version?.version.loader.name].name}
+                        <p className={loaders[version.version.loader.name].style}>
+                          {loaders[version.version.loader.name].name}
                         </p>
-                        {version?.version.loader?.name != 'vanilla' && (
-                          <p>({version?.version.loader.version?.id})</p>
+                        {version.version.loader.name !== 'vanilla' && (
+                          <p>({version.version.loader.version?.id})</p>
                         )}
                       </div>
                     </Chip>
-                    {version?.version.shareCode && (
+
+                    {version.version.shareCode && (
                       <Chip
                         variant="flat"
                         className="cursor-pointer m-auto"
                         onClick={async () => {
-                          await api.clipboard.writeText(version?.version.shareCode || '')
-                          addToast({
-                            title: t('common.copied')
-                          })
+                          await api.clipboard.writeText(version.version.shareCode || '')
+                          addToast({ title: t('common.copied') })
                         }}
                       >
                         <div className="flex items-center gap-1">
                           <Share2 size={20} />
-                          {version?.version.shareCode}
+                          {version.version.shareCode}
                         </div>
                       </Chip>
                     )}
@@ -541,9 +626,7 @@ export function EditVersion({
                           <SiModrinth size={22} />
                         </div>
                       }
-                      onPress={() => {
-                        setIsModManager((prev) => !prev)
-                      }}
+                      onPress={() => setIsModManager((prev) => !prev)}
                     >
                       {t('modManager.title')}
                     </Button>
@@ -555,9 +638,7 @@ export function EditVersion({
                         variant="flat"
                         isDisabled={!version || isLoading}
                         startContent={<Server size={22} />}
-                        onPress={() => {
-                          setIsServers(true)
-                        }}
+                        onPress={() => setIsServers(true)}
                       >
                         {t('versions.servers')}
                       </Button>
@@ -567,41 +648,38 @@ export function EditVersion({
                   <span>
                     <Button
                       variant="flat"
-                      isDisabled={!version || isLoading || !isExistSaves}
+                      isDisabled={!version || isLoading || isCheckingSaves || !hasSaves}
                       startContent={<Earth size={22} />}
-                      onPress={() => {
-                        setIsOpenWorlds(true)
-                      }}
+                      onPress={() => setIsOpenWorlds(true)}
                     >
                       {t('worlds.title')}
                     </Button>
                   </span>
                 </div>
+
                 <div className="flex items-center gap-2 m-auto">
                   <span>
                     <Button
                       variant="flat"
                       isDisabled={
                         (version?.version.downloadedVersion &&
-                          runArguments.game == '' &&
-                          runArguments.jvm == '') ||
+                          runArguments.game === '' &&
+                          runArguments.jvm === '') ||
                         isLoading
                       }
                       startContent={<SquareTerminal size={22} />}
-                      onPress={() => {
-                        setIsOpenArguments(true)
-                      }}
+                      onPress={() => setIsOpenArguments(true)}
                     >
                       {t('arguments.title')}
                     </Button>
                   </span>
+
                   <span>
                     <Button
                       variant="flat"
                       startContent={<Folder size={22} />}
                       onPress={async () => {
                         if (!version) return
-
                         await api.shell.openPath(
                           await api.path.join(paths.minecraft, 'versions', version.version.name)
                         )
@@ -615,15 +693,14 @@ export function EditVersion({
                     <Button
                       variant="flat"
                       isDisabled={isLoading || !isNetwork}
-                      isLoading={isLoading && loadingType == 'check'}
+                      isLoading={isLoading && loadingType === 'check'}
                       startContent={<ScanLine size={22} />}
                       onPress={async () => {
                         if (!version) return
 
-                        const blockedMods = await checkBlockedMods(mods, version.versionPath)
-
-                        if (blockedMods.length > 0) {
-                          setBlockedMods(blockedMods)
+                        const b = await checkBlockedMods(mods, version.versionPath)
+                        if (b.length > 0) {
+                          setBlockedMods(b)
                           setIsBlockedMods(true)
                           setBlockedCloseType('check')
                           return
@@ -636,25 +713,21 @@ export function EditVersion({
                     </Button>
                   </span>
                 </div>
+
                 <div className="flex items-center gap-2 m-auto">
                   <span>
                     <Button
                       variant="flat"
                       color={'success'}
                       startContent={<Save size={22} />}
-                      isDisabled={
-                        !saveBtnisDisabled() ||
-                        (version && version.version.owner && account && !isOwnerVersion) ||
-                        false
-                      }
-                      isLoading={isLoading && loadingType == 'save'}
+                      isDisabled={!canSave}
+                      isLoading={isLoading && loadingType === 'save'}
                       onPress={async () => {
                         if (!version) return
 
-                        const blockedMods = await checkBlockedMods(mods, version.versionPath)
-
-                        if (blockedMods.length > 0) {
-                          setBlockedMods(blockedMods)
+                        const b = await checkBlockedMods(mods, version.versionPath)
+                        if (b.length > 0) {
+                          setBlockedMods(b)
                           setIsBlockedMods(true)
                           setBlockedCloseType('save')
                           return
@@ -666,35 +739,34 @@ export function EditVersion({
                       {t('common.save')}
                     </Button>
                   </span>
+
                   <span>
                     <Button
                       color="danger"
                       variant="flat"
                       isDisabled={
-                        isLoading || (version?.version.owner && account && !isOwnerVersion) || false
+                        isLoading || (!!version?.version.owner && account && !isOwnerVersion)
                       }
                       startContent={<Trash size={22} />}
-                      onPress={() => {
-                        setIsOpenDel(true)
-                      }}
+                      onPress={() => setIsOpenDel(true)}
                     >
                       {t('common.delete')}
                     </Button>
                   </span>
                 </div>
+
                 <div className="flex items-center gap-2 m-auto">
                   <span>
                     <Button
                       variant="flat"
                       isDisabled={isLoading}
                       startContent={<FolderArchive size={22} />}
-                      onPress={() => {
-                        setIsOpenExportModal(true)
-                      }}
+                      onPress={() => setIsOpenExportModal(true)}
                     >
                       {t('export.btn')}
                     </Button>
                   </span>
+
                   {settings?.devMode && (
                     <ButtonGroup>
                       <Tooltip content={t('versions.copyAbsolutePath')} delay={1000}>
@@ -705,19 +777,16 @@ export function EditVersion({
                           isDisabled={isLoading}
                           onPress={async () => {
                             if (!version || !account) return
-
                             const command = await version.getRunCommand(account, authData)
                             if (!command) return
-
                             await api.clipboard.writeText(command.join(' '))
-                            addToast({
-                              title: t('common.copied')
-                            })
+                            addToast({ title: t('common.copied') })
                           }}
                         >
                           {t('versions.copyRunComand')}
                         </Button>
                       </Tooltip>
+
                       <Tooltip content={t('versions.copyRelativePath')} delay={1000}>
                         <Button
                           variant="flat"
@@ -725,14 +794,10 @@ export function EditVersion({
                           isDisabled={isLoading}
                           onPress={async () => {
                             if (!version || !account) return
-
                             const command = await version.getRunCommand(account, authData, true)
                             if (!command) return
-
                             await api.clipboard.writeText(command.join(' '))
-                            addToast({
-                              title: t('common.copied')
-                            })
+                            addToast({ title: t('common.copied') })
                           }}
                         >
                           <CopySlash size={22} />
@@ -741,16 +806,16 @@ export function EditVersion({
                     </ButtonGroup>
                   )}
                 </div>
+
                 <div className="flex items-center gap-2 m-auto">
-                  {version && !version.version.shareCode && account?.type != 'plain' && (
+                  {version && !version.version.shareCode && account?.type !== 'plain' && (
                     <span>
                       <Button
                         variant="flat"
                         isDisabled={
-                          !!saveBtnisDisabled() ||
+                          hasChanges ||
                           isLoading ||
                           (version.version.owner && account && !isOwnerVersion) ||
-                          false ||
                           !isNetwork
                         }
                         startContent={<Share size={22} />}
@@ -763,7 +828,8 @@ export function EditVersion({
                       </Button>
                     </span>
                   )}
-                  {versionDiffence == 'new' &&
+
+                  {versionDiffence === 'new' &&
                     !version?.version.downloadedVersion &&
                     version?.version.shareCode && (
                       <span>
@@ -772,11 +838,9 @@ export function EditVersion({
                             variant="flat"
                             className="w-full"
                             color={'primary'}
-                            isDisabled={
-                              saveBtnisDisabled() || isLoading || !isNetwork || !isOwnerVersion
-                            }
+                            isDisabled={hasChanges || isLoading || !isNetwork || !isOwnerVersion}
                             startContent={<ArrowUpFromLine size={22} />}
-                            isLoading={isLoading && loadingType == 'check_diff'}
+                            isLoading={isLoading && loadingType === 'check_diff'}
                             onPress={async () => {
                               if (!account || !version.version.shareCode) return
 
@@ -808,7 +872,7 @@ export function EditVersion({
 
                                 if (!diff) {
                                   setVersionDiffence('sync')
-                                  throw Error('not found diff')
+                                  throw new Error('not found diff')
                                 }
 
                                 const modpackData = await api.backend.getModpack(
@@ -816,9 +880,7 @@ export function EditVersion({
                                   version.version.shareCode
                                 )
 
-                                if (!modpackData.data) {
-                                  throw Error('not found modpack')
-                                }
+                                if (!modpackData.data) throw new Error('not found modpack')
 
                                 setTempModpack(modpackData.data)
                                 setShareType('update')
@@ -832,22 +894,16 @@ export function EditVersion({
                           >
                             {t('versions.publish')}
                           </Button>
+
                           <Tooltip content={t('versions.synchronizeDescription')} delay={1000}>
                             <Button
                               variant="flat"
                               isIconOnly
                               color={'primary'}
-                              isDisabled={
-                                saveBtnisDisabled() ||
-                                (version?.version.owner && account && !isOwnerVersion) ||
-                                false ||
-                                isLoading ||
-                                !isNetwork
-                              }
-                              isLoading={isLoading && loadingType == 'sync'}
+                              isDisabled={hasChanges || isLoading || !isNetwork || !isOwnerVersion}
+                              isLoading={isLoading && loadingType === 'sync'}
                               onPress={async () => {
                                 if (!account) return
-
                                 setLoadingType('sync')
                                 setIsLoading(true)
                                 await sync()
@@ -860,18 +916,17 @@ export function EditVersion({
                       </span>
                     )}
 
-                  {versionDiffence == 'old' && version?.version.downloadedVersion && (
+                  {versionDiffence === 'old' && version?.version.downloadedVersion && (
                     <Tooltip content={t('versions.synchronizeDescription')}>
                       <span>
                         <Button
                           variant="flat"
                           color="primary"
                           startContent={<ArrowDownToLine size={22} />}
-                          isDisabled={saveBtnisDisabled() || isLoading || !isNetwork}
-                          isLoading={isLoading && loadingType == 'sync'}
+                          isDisabled={hasChanges || isLoading || !isNetwork}
+                          isLoading={isLoading && loadingType === 'sync'}
                           onPress={async () => {
                             if (!account) return
-
                             setLoadingType('sync')
                             setIsLoading(true)
                             await sync()
@@ -888,11 +943,9 @@ export function EditVersion({
                       <Button
                         variant="flat"
                         isDisabled={
-                          isLoading ||
-                          (version?.version.owner && account && !isOwnerVersion) ||
-                          false
+                          isLoading || (!!version?.version.owner && account && !isOwnerVersion)
                         }
-                        isLoading={isLoading && loadingType == 'server'}
+                        isLoading={isLoading && loadingType === 'server'}
                         startContent={<ServerCog size={22} />}
                         onPress={async () => {
                           if (!version) return
@@ -905,22 +958,19 @@ export function EditVersion({
                           setLoadingType('server')
                           setIsLoading(true)
 
-                          const serverCores = await api.servers.get(
+                          const cores = await api.servers.get(
                             version.version.version.id,
                             version.version.loader.name
                           )
-                          if (!serverCores.length) {
+
+                          if (!cores.length) {
                             setIsLoading(false)
                             setLoadingType(undefined)
-                            addToast({
-                              color: 'danger',
-                              title: t('versions.notFoundServerCore')
-                            })
-
+                            addToast({ color: 'danger', title: t('versions.notFoundServerCore') })
                             return
                           }
 
-                          setServerCores(serverCores)
+                          setServerCores(cores)
                           setIsServerCreate(true)
 
                           setIsLoading(false)
@@ -937,11 +987,10 @@ export function EditVersion({
           </ModalBody>
         </ModalContent>
       </Modal>
+
       {isShareModal && (
         <ShareModal
-          closeModal={() => {
-            setShareModal(false)
-          }}
+          closeModal={() => setShareModal(false)}
           successUpdate={() => {
             setShareModal(false)
             closeModal()
@@ -951,17 +1000,15 @@ export function EditVersion({
           diffenceUpdateData={diffenceUpdateData}
         />
       )}
+
       {isServerCreate && (
-        <CreateServer
-          close={() => {
-            setIsServerCreate(false)
-          }}
-          serverCores={serverCores}
-        />
+        <CreateServer close={() => setIsServerCreate(false)} serverCores={serverCores} />
       )}
+
       {isOpenExportModal && version && (
         <Export onClose={() => setIsOpenExportModal(false)} versionPath={version.versionPath} />
       )}
+
       {isCropping && (
         <ImageCropper
           onClose={() => {
@@ -981,7 +1028,7 @@ export function EditVersion({
       {isModManager && version && (
         <ModManager
           mods={mods}
-          setMods={(mods: ILocalProject[]) => setMods(mods)}
+          setMods={(m: ILocalProject[]) => setMods(m)}
           onClose={() => setIsModManager(false)}
           loader={version.version.loader.name}
           version={version.version.version}
@@ -1001,21 +1048,19 @@ export function EditVersion({
             else setIsServers(false)
           }}
           servers={servers}
-          setServers={(servers: IServer[]) => {
-            setServers(servers)
-          }}
+          setServers={setServers}
           runGame={runGame}
         />
       )}
+
       {isOpenArguments && version && (
         <Arguments
           runArguments={runArguments}
-          onClose={() => {
-            setIsOpenArguments(false)
-          }}
+          onClose={() => setIsOpenArguments(false)}
           setArguments={setRunArguments}
         />
       )}
+
       {notSavedModal && (
         <Confirmation
           content={[{ text: t('versions.notSaved'), color: 'warning' }]}
@@ -1024,16 +1069,12 @@ export function EditVersion({
           buttons={[
             {
               text: t('versions.willReturn'),
-              onClick: async () => {
-                setNotSavedModal(false)
-              }
+              onClick: async () => setNotSavedModal(false)
             },
             {
               color: 'danger',
               text: t('common.close'),
-              onClick: async () => {
-                closeModal()
-              }
+              onClick: async () => closeModal()
             }
           ]}
         />
@@ -1054,7 +1095,7 @@ export function EditVersion({
             {
               text: t('common.yes'),
               onClick: async () => {
-                if (!account || !version || !version?.version.shareCode) return
+                if (!account || !version || !version.version.shareCode) return
 
                 try {
                   setIsLoading(true)
@@ -1076,16 +1117,14 @@ export function EditVersion({
                   if (!diff) {
                     setIsOpenModalShare(false)
                     setVersionDiffence('sync')
-                    throw Error('not found diff')
+                    throw new Error('not found diff')
                   }
 
                   const modpackData = await api.backend.getModpack(
                     account.accessToken!,
                     version.version.shareCode
                   )
-                  if (!modpackData.data) {
-                    throw Error('not found modpack')
-                  }
+                  if (!modpackData.data) throw new Error('not found modpack')
 
                   setDiffenceUpdateData(diff)
                   setTempModpack(modpackData.data)
@@ -1098,22 +1137,20 @@ export function EditVersion({
                   setLoadingType(undefined)
                 }
               },
-              loading: isLoading && loadingType == 'check_diff'
+              loading: isLoading && loadingType === 'check_diff'
             },
             {
               text: t('common.no'),
-              onClick: async () => {
-                setIsOpenModalShare(false)
-              }
+              onClick: async () => setIsOpenModalShare(false)
             }
           ]}
         />
       )}
+
       {isOpenDel && (
         <DeleteVersion
           close={(isDeleted?: boolean) => {
             setIsOpenDel(false)
-
             if (isDeleted) {
               setVersion(undefined)
               closeModal()
@@ -1122,15 +1159,15 @@ export function EditVersion({
         />
       )}
 
-      {isBlockedMods && blockedMods.length && (
+      {isBlockedMods && blockedMods.length > 0 && (
         <BlockedMods
           mods={blockedMods}
           onClose={async (bMods) => {
             setBlockedMods(bMods)
             setIsBlockedMods(false)
 
-            if (blockedCloseType == 'save') await saveVersion()
-            if (blockedCloseType == 'check') await checkIntegrity()
+            if (blockedCloseType === 'save') await saveVersion()
+            if (blockedCloseType === 'check') await checkIntegrity()
 
             setBlockedCloseType(undefined)
           }}

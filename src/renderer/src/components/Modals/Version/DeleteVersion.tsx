@@ -20,7 +20,7 @@ import {
 } from '@renderer/stores/atoms'
 import { useAtom } from 'jotai'
 import { ArrowLeft, Trash } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const api = window.api
@@ -29,13 +29,38 @@ export function DeleteVersion({ close }: { close: (isDeleted?: boolean) => void 
   const [version] = useAtom(selectedVersionAtom)
   const [isLoading, setIsLoading] = useState(false)
   const { t } = useTranslation()
+
   const [fullDel, setFullDel] = useState(false)
-  const [account] = useAtom(accountAtom)
-  const [versions, setVersions] = useAtom(versionsAtom)
-  const [isNetwork] = useAtom(networkAtom)
   const [shareDel, setShareDel] = useState(true)
+
+  const [account] = useAtom(accountAtom)
+  const [, setVersions] = useAtom(versionsAtom)
+  const [isNetwork] = useAtom(networkAtom)
   const [authData] = useAtom(authDataAtom)
-  const setConsoles = useAtom(consolesAtom)[1]
+  const [, setConsoles] = useAtom(consolesAtom)
+
+  const canOfferRemoteDelete = useMemo(() => {
+    return !!version?.version.shareCode && !version.version.downloadedVersion
+  }, [version])
+
+  const canDeleteRemote = useMemo(() => {
+    return (
+      !!version?.version.shareCode &&
+      !version.version.downloadedVersion &&
+      shareDel &&
+      isNetwork &&
+      !!authData &&
+      !!account?.accessToken
+    )
+  }, [version, shareDel, isNetwork, authData, account?.accessToken])
+
+  const versionKey = useMemo(() => {
+    if (!version) return null
+    return {
+      name: version.version.name,
+      path: version.versionPath
+    }
+  }, [version])
 
   return (
     <Modal
@@ -44,6 +69,7 @@ export function DeleteVersion({ close }: { close: (isDeleted?: boolean) => void 
         if (isLoading) return
         close()
       }}
+      isDismissable={!isLoading}
     >
       <ModalContent>
         <ModalHeader>{t('common.confirmation')}</ModalHeader>
@@ -52,7 +78,7 @@ export function DeleteVersion({ close }: { close: (isDeleted?: boolean) => void 
           <div className="flex flex-col space-y-2 max-w-96">
             <Alert color="warning" title={t('versions.savesInfo')} />
 
-            {version?.version.shareCode && !version.version.downloadedVersion && shareDel && (
+            {canOfferRemoteDelete && shareDel && (
               <Alert color="warning" title={t('versions.hostInfo')} />
             )}
 
@@ -66,13 +92,12 @@ export function DeleteVersion({ close }: { close: (isDeleted?: boolean) => void 
                   {t('versions.completeRemoval')}
                 </Checkbox>
               </Tooltip>
-              {version?.version.shareCode && !version.version.downloadedVersion && (
+
+              {canOfferRemoteDelete && (
                 <Checkbox
                   isSelected={shareDel}
                   isDisabled={isLoading || !isNetwork}
-                  onChange={() => {
-                    setShareDel((prev) => !prev)
-                  }}
+                  onChange={() => setShareDel((prev) => !prev)}
                 >
                   {t('versions.versionShareDel')}
                 </Checkbox>
@@ -80,60 +105,63 @@ export function DeleteVersion({ close }: { close: (isDeleted?: boolean) => void 
             </div>
           </div>
         </ModalBody>
+
         <ModalFooter>
           <div className="flex gap-2 items-center justify-center">
-            <Button variant="flat" startContent={<ArrowLeft size={22} />} onPress={() => close()}>
+            <Button
+              variant="flat"
+              startContent={<ArrowLeft size={22} />}
+              isDisabled={isLoading}
+              onPress={() => close()}
+            >
               {t('versions.willReturn')}
             </Button>
+
             <Button
               color="danger"
               variant="flat"
               startContent={<Trash size={22} />}
               isLoading={isLoading}
+              isDisabled={!version || !account || !versionKey}
               onPress={async () => {
-                if (!version || !account || !versions) return
-
-                const index = versions.indexOf(version)
-
-                if (index == -1) return
+                if (!version || !account || !versionKey) return
 
                 setIsLoading(true)
 
-                if (
-                  version.version.shareCode &&
-                  !version.version.downloadedVersion &&
-                  shareDel &&
-                  isNetwork &&
-                  authData
-                ) {
-                  await api.backend.deleteModpack(
-                    account?.accessToken || '',
-                    version.version.shareCode
-                  )
-                }
-
                 try {
+                  if (canDeleteRemote && version.version.shareCode) {
+                    const token = account.accessToken || ''
+                    await api.backend.deleteModpack(token, version.version.shareCode)
+                  }
+
                   setConsoles((prev) => ({
-                    consoles: prev.consoles.filter((c) => c.versionName != version.version.name)
+                    consoles: prev.consoles.filter((c) => c.versionName !== version.version.name)
                   }))
 
                   await version.delete(fullDel)
 
-                  versions.splice(index, 1)
-                  setVersions(versions)
+                  setVersions((prev) =>
+                    prev.filter((v) => {
+                      const sameName = v.version.name === versionKey.name
+                      const samePath =
+                        versionKey.path && v.versionPath ? v.versionPath === versionKey.path : false
+                      return !(sameName && (!versionKey.path || samePath || true))
+                    })
+                  )
 
                   addToast({
                     color: 'success',
                     title: t('versions.deleted')
                   })
-                } catch (err) {
+
+                  close(true)
+                } catch {
                   addToast({
                     color: 'danger',
                     title: t('versions.deleteError')
                   })
                 } finally {
                   setIsLoading(false)
-                  close(true)
                 }
               }}
             >

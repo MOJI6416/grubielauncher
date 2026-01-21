@@ -19,7 +19,7 @@ export function ImageCropper({
     height: number
   }
   onClose: () => void
-  changeImage: (url: string) => Promise<void>
+  changeImage: (url: string) => void
 }) {
   const cropperRef = createRef<ReactCropperElement>()
   const { t } = useTranslation()

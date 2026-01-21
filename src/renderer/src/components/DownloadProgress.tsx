@@ -18,7 +18,7 @@ export function DownloadProgress({ info }: { info: DownloaderInfo }) {
   const timeUnits = [t('timeUnits.0'), t('timeUnits.1'), t('timeUnits.2'), t('timeUnits.3')]
 
   const formatSpeed = (bytesPerSecond: number): string => {
-    return `${formatBytes(bytesPerSecond, sizes)}/s`
+    return `${formatBytes(bytesPerSecond, sizes)}/${timeUnits[0]}`
   }
 
   const formatTime = (seconds: number): string => {

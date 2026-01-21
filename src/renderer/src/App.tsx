@@ -59,13 +59,18 @@ function App() {
   const [selectedAccount, setSelectedAccount] = useAtom(accountAtom)
   const [settings, setSettings] = useAtom(settingsAtom)
   const setIsRunning = useAtom(isRunningAtom)[1]
+
   const [isFriends, setIsFriends] = useState(false)
+
   const [friendSocket, setFriendSocket] = useAtom(friendSocketAtom)
   const [friendRequests, setFriendRequests] = useAtom(friendRequestsAtom)
   const [selectedFriend] = useAtom(selectedFriendAtom)
+  const [localFriends, setLocalFriends] = useAtom(localFriendsAtom)
+  const [, setIsFriendsConnected] = useAtom(isFriendsConnectedAtom)
+
   const [isLoading, setIsLoading] = useState(false)
   const [loadingType, setLoadingType] = useState<'update'>()
-  const [localFriends, setLocalFriends] = useAtom(localFriendsAtom)
+
   const [paths, setPaths] = useAtom(pathsAtom)
   const [isNetwork, setIsNetwork] = useAtom(networkAtom)
   const [selectedVersion, setSelectedVersion] = useAtom(selectedVersionAtom)
@@ -74,73 +79,137 @@ function App() {
   const [servers, setServers] = useState<IServer[]>([])
   const [authData] = useAtom(authDataAtom)
   const [consoles, setConsoles] = useAtom(consolesAtom)
-  const [versions] = useAtom(versionsAtom)
+  const [versions, setVersions] = useAtom(versionsAtom)
   const setOnlineUsers = useAtom(onlineUsersAtom)[1]
-  const onlineSocket = useRef<Socket | null>(null)
   const [isOwnerVersion] = useAtom(isOwnerVersionAtom)
+
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>([])
   const [isBlockedMods, setIsBlockedMods] = useState(false)
-  const [isFriendsConnected, setIsFriendsConnected] = useAtom(isFriendsConnectedAtom)
-  const setVersions = useAtom(versionsAtom)[1]
   const [downloder, setDownloader] = useState<DownloaderInfo | null>(null)
 
-  useEffect(() => {
-    if (onlineSocket.current) {
-      onlineSocket.current.disconnect()
-      setOnlineUsers(-1)
-    }
+  const onlineSocket = useRef<Socket | null>(null)
 
-    const socket = io(`${BACKEND_URL}/online`)
+  const { t, i18n } = useTranslation()
+  const tRef = useRef(t)
+  useEffect(() => {
+    tRef.current = t
+  }, [t])
+
+  const selectedAccountRef = useRef(selectedAccount)
+  const settingsRef = useRef(settings)
+  const pathsRef = useRef(paths)
+  const isNetworkRef = useRef(isNetwork)
+  const selectedVersionRef = useRef(selectedVersion)
+  const accountsRef = useRef(accounts)
+  const authDataRef = useRef(authData)
+  const consolesRef = useRef(consoles)
+  const versionsRef = useRef(versions)
+  const friendSocketRef = useRef<typeof friendSocket>(friendSocket)
+  const friendRequestsRef = useRef(friendRequests)
+  const selectedFriendRef = useRef(selectedFriend)
+  const localFriendsRef = useRef(localFriends)
+  const isOwnerVersionRef = useRef(isOwnerVersion)
+  const serversRef = useRef(servers)
+
+  useEffect(() => {
+    selectedAccountRef.current = selectedAccount
+  }, [selectedAccount])
+  useEffect(() => {
+    settingsRef.current = settings
+  }, [settings])
+  useEffect(() => {
+    pathsRef.current = paths
+  }, [paths])
+  useEffect(() => {
+    isNetworkRef.current = isNetwork
+  }, [isNetwork])
+  useEffect(() => {
+    selectedVersionRef.current = selectedVersion
+  }, [selectedVersion])
+  useEffect(() => {
+    accountsRef.current = accounts
+  }, [accounts])
+  useEffect(() => {
+    authDataRef.current = authData
+  }, [authData])
+  useEffect(() => {
+    consolesRef.current = consoles
+  }, [consoles])
+  useEffect(() => {
+    versionsRef.current = versions
+  }, [versions])
+  useEffect(() => {
+    friendSocketRef.current = friendSocket
+  }, [friendSocket])
+  useEffect(() => {
+    friendRequestsRef.current = friendRequests
+  }, [friendRequests])
+  useEffect(() => {
+    selectedFriendRef.current = selectedFriend
+  }, [selectedFriend])
+  useEffect(() => {
+    localFriendsRef.current = localFriends
+  }, [localFriends])
+  useEffect(() => {
+    isOwnerVersionRef.current = isOwnerVersion
+  }, [isOwnerVersion])
+  useEffect(() => {
+    serversRef.current = servers
+  }, [servers])
+
+  useEffect(() => {
+    onlineSocket.current?.disconnect()
+    onlineSocket.current = null
+    setOnlineUsers(0)
+
+    const socket = io(`${BACKEND_URL}/online`, {
+      transports: ['websocket'],
+      reconnection: true
+    })
 
     onlineSocket.current = socket
 
-    return () => {
-      socket.disconnect()
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!onlineSocket.current) return
-
-    onlineSocket.current.on('onlineCount', (count: number) => {
-      console.log('Online users count:', count)
-
-      setOnlineUsers(count)
-      setIsNetwork(count > 0)
-    })
-
-    onlineSocket.current.on('disconnect', () => {
-      setOnlineUsers(-1)
+    const onConnect = () => setIsNetwork(true)
+    const onOnlineCount = (count: number) => setOnlineUsers(count)
+    const onDisconnect = () => {
       setIsNetwork(false)
-    })
+      setOnlineUsers(0)
+    }
+    const onConnectError = () => setIsNetwork(false)
+
+    socket.on('connect', onConnect)
+    socket.on('onlineCount', onOnlineCount)
+    socket.on('disconnect', onDisconnect)
+    socket.on('connect_error', onConnectError)
 
     return () => {
-      onlineSocket.current?.off('onlineCount')
+      socket.off('connect', onConnect)
+      socket.off('onlineCount', onOnlineCount)
+      socket.off('disconnect', onDisconnect)
+      socket.off('connect_error', onConnectError)
+      socket.disconnect()
+      onlineSocket.current = null
     }
-  }, [onlineSocket])
+  }, [setIsNetwork, setOnlineUsers])
 
-  // Initial setup
   useEffect(() => {
     let cancelled = false
 
     const init = async () => {
       try {
-        const paths = await api.other.getPaths()
+        const p = await api.other.getPaths()
         if (cancelled) return
 
-        setPaths(paths)
+        setPaths(p)
 
-        const settings = await getSettings(paths.launcher)
+        const [s, acc] = await Promise.all([getSettings(p.launcher), getAccounts(p.launcher)])
         if (cancelled) return
 
-        const account = await getAccounts(paths.launcher)
-        if (cancelled) return
-
-        const versionsPath = await api.path.join(paths.minecraft, 'versions')
+        const versionsPath = await api.path.join(p.minecraft, 'versions')
 
         if (await api.fs.pathExists(versionsPath)) {
-          const versions = await readVerions(paths.launcher, settings, account)
-          if (!cancelled) setVersions(versions)
+          const v = await readVerions(p.launcher, s, acc)
+          if (!cancelled) setVersions(v)
         } else {
           await api.fs.ensure(versionsPath)
         }
@@ -154,81 +223,19 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [])
-
-  const { t, i18n } = useTranslation()
+  }, [setPaths, setVersions])
 
   useEffect(() => {
-    api.events.onConsoleChangeStatus(async (versionName, instance, status) => {
-      const versionConsole = consoles.consoles.find(
-        (v) => v.versionName == versionName && v.instance == instance
-      )
-      const version = versions.find((v) => v.version.name == versionName)
-      if (!versionConsole || !version) return
-
-      versionConsole.status = status
-      setConsoles({ consoles: [...consoles.consoles] })
-
-      if (status == 'stopped') {
-        const time = Date.now() - versionConsole.startTime
-        const playTime = Math.floor(time / 1000)
-
-        await updatePlayingTime(playTime)
-
-        if (isOwnerVersion) {
-          const statPath = await window.api.path.join(version.versionPath, 'statistics.json')
-          const statIsExists = await window.api.fs.pathExists(statPath)
-
-          let statData: IVersionStatistics = {
-            lastLaunched: new Date(),
-            launches: 1,
-            playTime: playTime
-          }
-
-          if (statIsExists) {
-            const statData: IVersionStatistics = await window.api.fs.readJSON(statPath, 'utf-8')
-
-            statData.lastLaunched = new Date()
-            statData.launches += 1
-            statData.playTime += playTime
-          }
-
-          await window.api.fs.writeJSON(statPath, statData)
-        }
-      }
-    })
-
-    api.events.onConsoleMessage(async (versionName, instance, message) => {
-      const version = consoles.consoles.find(
-        (v) => v.versionName == versionName && v.instance == instance
-      )
-      if (!version) return
-
-      version.messages.push(message)
-      setConsoles({ consoles: [...consoles.consoles] })
-    })
-
-    api.events.onConsoleClear(async (versionName, instance) => {
-      const version = consoles.consoles.find(
-        (v) => v.versionName == versionName && v.instance == instance
-      )
-      if (!version) return
-
-      version.messages = []
-      version.startTime = Date.now()
-      setConsoles({ consoles: [...consoles.consoles] })
-    })
-
-    async function updatePlayingTime(time: number) {
+    const updatePlayingTime = async (time: number) => {
       try {
-        if (!authData || !selectedAccount || !selectedAccount.accessToken) return
+        const a = selectedAccountRef.current
+        const ad = authDataRef.current
+        if (!ad || !a || !a.accessToken) return
 
-        const user = await window.api.backend.getUser(
-          selectedAccount?.accessToken || '',
-          authData.sub
-        )
+        const user = await api.backend.getUser(a.accessToken || '', ad.sub)
         if (!user) return
-        await window.api.backend.updateUser(selectedAccount?.accessToken || '', user._id, {
+
+        await api.backend.updateUser(a.accessToken || '', user._id, {
           playTime: user.playTime + time
         })
       } catch (err) {
@@ -236,14 +243,96 @@ function App() {
       }
     }
 
+    api.events.onConsoleChangeStatus(async (versionName, instance, status) => {
+      let startTimeForCalc = 0
+
+      setConsoles((prev) => {
+        const idx = prev.consoles.findIndex(
+          (c) => c.versionName === versionName && c.instance === instance
+        )
+        if (idx === -1) return prev
+
+        const current = prev.consoles[idx]
+        startTimeForCalc = current.startTime
+
+        const next = [...prev.consoles]
+        next[idx] = { ...current, status }
+        return { consoles: next }
+      })
+
+      if (status !== 'stopped' || !startTimeForCalc) return
+
+      const time = Date.now() - startTimeForCalc
+      const playTime = Math.floor(time / 1000)
+
+      await updatePlayingTime(playTime)
+
+      if (isOwnerVersionRef.current) {
+        const v = versionsRef.current.find((vv) => vv.version.name == versionName)
+        if (!v) return
+
+        const statPath = await api.path.join(v.versionPath, 'statistics.json')
+        const statIsExists = await api.fs.pathExists(statPath)
+
+        let statData: IVersionStatistics = {
+          lastLaunched: new Date(),
+          launches: 1,
+          playTime
+        }
+
+        if (statIsExists) {
+          const existed: IVersionStatistics = await api.fs.readJSON(statPath, 'utf-8')
+          statData = {
+            lastLaunched: new Date(),
+            launches: (existed.launches || 0) + 1,
+            playTime: (existed.playTime || 0) + playTime
+          }
+        }
+
+        await api.fs.writeJSON(statPath, statData)
+      }
+    })
+
+    api.events.onConsoleMessage(async (versionName, instance, message) => {
+      setConsoles((prev) => {
+        const idx = prev.consoles.findIndex(
+          (c) => c.versionName === versionName && c.instance === instance
+        )
+        if (idx === -1) return prev
+
+        const next = [...prev.consoles]
+        next[idx] = {
+          ...next[idx],
+          messages: [...next[idx].messages, message]
+        }
+        return { consoles: next }
+      })
+    })
+
+    api.events.onConsoleClear(async (versionName, instance) => {
+      setConsoles((prev) => {
+        const idx = prev.consoles.findIndex(
+          (c) => c.versionName === versionName && c.instance === instance
+        )
+        if (idx === -1) return prev
+
+        const next = [...prev.consoles]
+        next[idx] = {
+          ...next[idx],
+          messages: [],
+          startTime: Date.now()
+        }
+        return { consoles: next }
+      })
+    })
+
     api.events.onLaunch(() => {
       setSelectedVersion(undefined)
       setIsRunning(false)
     })
 
     api.events.onFriendUpdate((data) => {
-      console.log(data, 'data')
-      friendSocket?.emit('friendUpdate', { ...data })
+      friendSocketRef.current?.emit('friendUpdate', { ...data })
     })
 
     api.events.onDownloaderInfo((info) => {
@@ -258,130 +347,144 @@ function App() {
       api.events.removeAllListeners('consoleChangeStatus')
       api.events.removeAllListeners('consolePublicAddress')
     }
-  }, [friendSocket, consoles])
+  }, [setConsoles, setSelectedVersion, setIsRunning])
 
   useEffect(() => {
     setIsFriends(false)
-    if (!authData) {
+
+    const ad = authData
+    const acc = selectedAccount
+
+    if (!ad || !acc?.accessToken) {
+      friendSocketRef.current?.disconnect()
       setFriendSocket(undefined)
       setIsFriendsConnected(false)
-      friendSocket?.disconnect()
       return
     }
-    if (friendSocket?.auth['token'] === selectedAccount?.accessToken) return
-    if (isFriendsConnected) friendSocket?.disconnect()
+
+    friendSocketRef.current?.disconnect()
 
     const socketIo = io(`${BACKEND_URL}/friends`, {
       auth: {
-        token: selectedAccount?.accessToken
+        token: acc.accessToken
       }
     })
 
     setFriendSocket(socketIo)
-    setLocalFriends(selectedAccount?.friends || [])
+    setLocalFriends(acc.friends || [])
 
     return () => {
       socketIo.disconnect()
       setIsFriendsConnected(false)
       setFriendSocket(undefined)
     }
-  }, [authData?.sub])
+  }, [
+    authData?.sub,
+    selectedAccount?.accessToken,
+    setFriendSocket,
+    setLocalFriends,
+    setIsFriendsConnected
+  ])
 
   useEffect(() => {
     if (!friendSocket) return
 
-    friendSocket.on('friendRequest', async (data: IFriendRequest) => {
+    const onFriendRequest = async (data: IFriendRequest) => {
       setFriendRequests((prev) => [...prev, data])
 
       if (data.type == 'recipient') {
         const options: Electron.NotificationConstructorOptions = {
-          title: t('friends.newRequest'),
-          body: `${data.user.nickname} ${t('friends.sentRequest')}`,
+          title: tRef.current('friends.newRequest'),
+          body: `${data.user.nickname} ${tRef.current('friends.sentRequest')}`,
           icon: data.user.image || ''
         }
-
         await api.other.notify(options)
       }
 
       if (data.type == 'requester') {
         addToast({
-          title: t('friends.requestSent'),
+          title: tRef.current('friends.requestSent'),
           color: 'success'
         })
       }
-    })
+    }
 
-    friendSocket.on(
-      'friendRequestRemove',
-      async (data: { requestId: string; type: 'accept' | 'reject'; user: IUser }) => {
-        const { requestId, type, user } = data
+    const onFriendRequestRemove = async (data: {
+      requestId: string
+      type: 'accept' | 'reject'
+      user: IUser
+    }) => {
+      const { requestId, type, user } = data
 
-        const fr = friendRequests.find((fr) => fr.requestId == requestId)
-        if (fr) setFriendRequests((prev) => prev.filter((r) => r.requestId != requestId))
+      setFriendRequests((prev) => prev.filter((r) => r.requestId != requestId))
 
-        if (user._id != authData?.sub) {
-          if (type == 'accept') {
-            const options: Electron.NotificationConstructorOptions = {
-              title: t('friends.requestAccepted'),
-              body: `${user.nickname} ${t('friends.acceptedRequest')}`,
-              icon: user.image || ''
-            }
+      const ad = authDataRef.current
 
-            await api.other.notify(options)
-          } else {
-            const options: Electron.NotificationConstructorOptions = {
-              title: t('friends.requestDeclined'),
-              body: `${user.nickname} ${'friends.declidedRequest'}`,
-              icon: user.image || ''
-            }
-
-            await api.other.notify(options)
+      if (user._id != ad?.sub) {
+        if (type == 'accept') {
+          const options: Electron.NotificationConstructorOptions = {
+            title: tRef.current('friends.requestAccepted'),
+            body: `${user.nickname} ${tRef.current('friends.acceptedRequest')}`,
+            icon: user.image || ''
           }
+          await api.other.notify(options)
         } else {
-          if (type == 'accept') addToast({ color: 'success', title: t('friends.requestAccepted') })
-          else addToast({ color: 'success', title: t('friends.requestDeclined') })
+          const options: Electron.NotificationConstructorOptions = {
+            title: tRef.current('friends.requestDeclined'),
+            body: `${user.nickname} ${tRef.current('friends.declidedRequest')}`,
+            icon: user.image || ''
+          }
+          await api.other.notify(options)
         }
+      } else {
+        if (type == 'accept')
+          addToast({ color: 'success', title: tRef.current('friends.requestAccepted') })
+        else addToast({ color: 'success', title: tRef.current('friends.requestDeclined') })
       }
-    )
+    }
 
-    friendSocket.on('messageNotification', async (user: IUser) => {
-      const localFriend = localFriends.find((lf) => lf.id == user._id)
-      if (localFriend?.isMuted) return
+    const onMessageNotification = async (user: IUser) => {
+      const lf = localFriendsRef.current.find((x) => x.id == user._id)
+      if (lf?.isMuted) return
 
-      if (user._id == selectedFriend) return
+      if (user._id == selectedFriendRef.current) return
 
       const options: Electron.NotificationConstructorOptions = {
-        title: t('friends.newMessage'),
-        body: `${user.nickname} ${t('friends.sentMessage')}`,
+        title: tRef.current('friends.newMessage'),
+        body: `${user.nickname} ${tRef.current('friends.sentMessage')}`,
         icon: user.image || ''
       }
 
       await api.other.notify(options)
       addToast({
-        title: t('friends.newMessage'),
-        description: `${user.nickname} ${t('friends.sentMessage')}`
+        title: tRef.current('friends.newMessage'),
+        description: `${user.nickname} ${tRef.current('friends.sentMessage')}`
       })
-    })
+    }
 
-    friendSocket.on('connect', () => {
-      setFriendSocket(friendSocket)
-      setIsFriendsConnected(friendSocket.connected)
-    })
+    const onConnect = () => {
+      setIsFriendsConnected(true)
+    }
 
-    friendSocket.on('disconnect', () => {
-      setFriendSocket(undefined)
+    const onDisconnect = () => {
       setIsFriends(false)
       setIsFriendsConnected(false)
-    })
+    }
+
+    friendSocket.on('friendRequest', onFriendRequest)
+    friendSocket.on('friendRequestRemove', onFriendRequestRemove)
+    friendSocket.on('messageNotification', onMessageNotification)
+    friendSocket.on('connect', onConnect)
+    friendSocket.on('disconnect', onDisconnect)
 
     return () => {
-      friendSocket.off('friendRequest')
-      friendSocket.off('messageNotification')
-      friendSocket.off('friendRequestRemove')
-      friendSocket.off('disconnect')
-      friendSocket.off('connect')
+      friendSocket.off('friendRequest', onFriendRequest)
+      friendSocket.off('friendRequestRemove', onFriendRequestRemove)
+      friendSocket.off('messageNotification', onMessageNotification)
+      friendSocket.off('connect', onConnect)
+      friendSocket.off('disconnect', onDisconnect)
     }
-  }, [friendSocket, selectedFriend, friendRequests])
+  }, [friendSocket, setFriendRequests, setIsFriendsConnected])
 
   async function getSettings(launcherPath: string) {
     const systemLocate: string = await api.other.getLocale()
@@ -426,104 +529,87 @@ function App() {
 
     setAccounts(data.accounts)
 
-    let selectedAccount = data.accounts[0]
+    let selected = data.accounts[0]
     if (data.lastPlayed) {
       const lastPlayed = data.accounts.find((a) => `${a.type}_${a.nickname}` == data.lastPlayed)
       setSelectedAccount(lastPlayed)
 
       if (lastPlayed) {
-        selectedAccount = lastPlayed
+        selected = lastPlayed
 
         const activity: Presence = {
           smallImageKey: 'steve',
           smallImageText: lastPlayed.nickname
         }
 
-        await api.rpc.updateActivity(activity)
+        api.rpc.updateActivity(activity)
       }
     }
 
-    return selectedAccount
+    return selected
   }
 
-  const runGame = useCallback(
-    async (params: RunGameParams) => await run({ ...params }),
-    [selectedVersion, selectedAccount, settings, consoles]
-  )
-
-  async function run({
-    skipUpdate,
-    version,
-    instance,
-    quick
-  }: {
-    skipUpdate?: boolean
-    version?: Version
-    instance?: number
-    quick?: {
-      single?: string
-      multiplayer?: string
-    }
-  }) {
-    const launchVersion = version || selectedVersion
+  const runRef = useRef<(params: RunGameParams) => Promise<void>>(async () => {})
+  runRef.current = async ({ skipUpdate, version, instance, quick }: RunGameParams) => {
+    const launchVersion = version || selectedVersionRef.current
     if (!launchVersion) {
-      addToast({
-        title: t('app.startupError'),
-        color: 'danger'
-      })
+      addToast({ title: tRef.current('app.startupError'), color: 'danger' })
       return
     }
 
-    setIsRunning(true)
+    const a0 = selectedAccountRef.current
+    const s0 = settingsRef.current
+    const p0 = pathsRef.current
 
-    let _instance = instance || 0
-    if (instance === undefined) {
-      const versionConsole = consoles.consoles
-        .reverse()
-        .find((c) => c.versionName == launchVersion.version.name && c.status == 'running')
-
-      if (versionConsole) {
-        _instance = versionConsole.instance + 1
-      } else {
-        _instance = 0
-      }
+    if (!a0 || !s0 || !p0?.launcher || !p0?.minecraft) {
+      addToast({ title: tRef.current('app.startupError'), color: 'danger' })
+      return
     }
 
+    let _instance = instance ?? 0
+    if (instance === undefined) {
+      const maxInst = consolesRef.current.consoles
+        .filter((c) => c.versionName == launchVersion.version.name && c.status == 'running')
+        .reduce((m, c) => Math.max(m, c.instance), -1)
+      _instance = maxInst >= 0 ? maxInst + 1 : 0
+    }
+
+    let account = a0
+    const ad = authDataRef.current
+
     try {
-      if (!selectedAccount || !settings || !launchVersion) return
-
-      let account = selectedAccount
-
-      if (authData) {
-        const { expiresAt } = authData.auth
+      if (ad) {
+        const { expiresAt } = ad.auth
 
         if (
           (account.type != 'discord' && Date.now() > expiresAt) ||
-          (account.type == 'discord' && Date.now() / 1000 > authData.exp)
+          (account.type == 'discord' && Date.now() / 1000 > ad.exp)
         ) {
           let authUser: IRefreshTokenResponse | null = null
+
           if (account.type == 'microsoft')
-            authUser = await api.auth.microsoftRefresh(authData.auth.refreshToken, authData.sub)
+            authUser = await api.auth.microsoftRefresh(ad.auth.refreshToken, ad.sub)
           else if (account.type == 'elyby')
-            authUser = await api.auth.elybyRefresh(authData.auth.refreshToken, authData.sub)
+            authUser = await api.auth.elybyRefresh(ad.auth.refreshToken, ad.sub)
           else if (account.type == 'discord') {
-            await api.backend.getUser(selectedAccount?.accessToken || '', authData.sub)
+            await api.backend.getUser(account.accessToken || '', ad.sub)
           }
 
           if (authUser && account.type !== 'discord') {
-            const index = accounts.findIndex(
-              (a) => a.type === account.type && a.nickname === account.nickname
+            const accs = accountsRef.current
+            const idx = accs.findIndex(
+              (x) => x.type === account.type && x.nickname === account.nickname
             )
 
-            if (index !== -1) {
+            if (idx !== -1) {
               account = { ...account, ...authUser }
-              const newAccounts = [...accounts]
-              newAccounts[index] = account
+              const newAccounts = [...accs]
+              newAccounts[idx] = account
 
               setAccounts(newAccounts)
               setSelectedAccount(account)
 
-              await api.fs.writeJSON(await api.path.join(paths.launcher, 'accounts.json'), {
+              await api.fs.writeJSON(await api.path.join(p0.launcher, 'accounts.json'), {
                 accounts: newAccounts,
                 lastPlayed: `${account.type}_${account.nickname}`
               })
@@ -536,25 +622,26 @@ function App() {
         !skipUpdate &&
         launchVersion.version.shareCode &&
         launchVersion.version.downloadedVersion &&
-        isNetwork
+        isNetworkRef.current
       ) {
         const serversPath = await api.path.join(
-          paths.minecraft,
+          p0.minecraft,
           'versions',
           launchVersion.version.name,
           'servers.dat'
         )
 
-        let servers: IServer[] = []
+        let serversLocal: IServer[] = []
         if (await api.fs.pathExists(serversPath)) {
-          servers = await api.servers.read(serversPath)
-          setServers(servers)
+          serversLocal = await api.servers.read(serversPath)
+          setServers(serversLocal)
         }
 
         const modpackData = await api.backend.getModpack(
-          selectedAccount.accessToken || '',
+          account.accessToken || '',
           launchVersion.version.shareCode
         )
+
         if (modpackData.status == 'not_found') {
           launchVersion.version.shareCode = undefined
           launchVersion.version.downloadedVersion = false
@@ -563,37 +650,42 @@ function App() {
           const diff = await checkDiffenceUpdateData(
             {
               mods: launchVersion.version.loader.mods,
-              servers,
+              servers: serversLocal,
               version: launchVersion.version,
               runArguments: launchVersion.version.runArguments || { jvm: '', game: '' },
               versionPath: launchVersion.versionPath,
               logo: launchVersion.version.image || '',
               quickServer: launchVersion.version.quickServer || ''
             },
-            selectedAccount.accessToken || ''
+            account.accessToken || ''
           )
 
-          if (diff) return setIsUpdateModal(true)
+          if (diff) {
+            setSelectedVersion(launchVersion)
+            setIsUpdateModal(true)
+            setIsRunning(false)
+            return
+          }
         }
       }
 
+      setIsRunning(true)
+
       launchVersion.version.lastLaunch = new Date()
 
-      addToast({
-        title: t('app.starting')
-      })
+      addToast({ title: tRef.current('app.starting') })
 
-      const versionConsole = consoles.consoles.find(
-        (c) => c.versionName == launchVersion.version.name && c.instance == _instance
-      )
+      setConsoles((prev) => {
+        const idx = prev.consoles.findIndex(
+          (c) => c.versionName == launchVersion.version.name && c.instance == _instance
+        )
 
-      if (versionConsole) {
-        versionConsole.status = 'running'
-        versionConsole.startTime = Date.now()
-        versionConsole.messages = []
+        if (idx !== -1) {
+          const next = [...prev.consoles]
+          next[idx] = { ...next[idx], status: 'running', startTime: Date.now(), messages: [] }
+          return { consoles: next }
+        }
 
-        setConsoles({ consoles: [...consoles.consoles] })
-      } else {
         const newConsole: IConsole = {
           versionName: launchVersion.version.name || '',
           status: 'running',
@@ -602,17 +694,17 @@ function App() {
           messages: []
         }
 
-        setConsoles({ consoles: [...consoles.consoles, newConsole] })
-      }
+        return { consoles: [...prev.consoles, newConsole] }
+      })
 
-      await launchVersion.run(account, authData, _instance, quick)
+      await launchVersion.run(account, ad, _instance, quick)
+
       const activity: Presence = {
-        state: `${t('rpc.playing')} ${launchVersion.version.name}`
+        state: `${tRef.current('rpc.playing')} ${launchVersion.version.name}`
       }
-
       await api.rpc.updateActivity(activity)
 
-      friendSocket?.emit('friendUpdate', {
+      friendSocketRef.current?.emit('friendUpdate', {
         versionName: launchVersion.version.name,
         versionCode: launchVersion.version.shareCode,
         serverAddress: ''
@@ -620,29 +712,28 @@ function App() {
 
       await launchVersion.save()
 
-      const accountsPath = await api.path.join(paths.launcher, 'accounts.json')
+      const accountsPath = await api.path.join(p0.launcher, 'accounts.json')
       const accountsData: IAccountConf = await api.fs.readJSON(accountsPath, 'utf-8')
 
       const [lastType, lastNickname] = accountsData.lastPlayed
         ? accountsData.lastPlayed.split('_')
         : ['plain', '']
 
-      if (lastType != account.type || lastNickname != account.nickname)
+      if (lastType != account.type || lastNickname != account.nickname) {
         await api.fs.writeJSON(accountsPath, {
           ...accountsData,
           lastPlayed: `${account.type}_${account.nickname}`
         })
+      }
     } catch (err) {
       console.log(err)
-
-      addToast({
-        title: t('app.startupError'),
-        color: 'danger'
-      })
+      addToast({ title: tRef.current('app.startupError'), color: 'danger' })
       setSelectedVersion(undefined)
       setIsRunning(false)
     }
   }
+
+  const runGame = useCallback(async (params: RunGameParams) => runRef.current(params), [])
 
   return (
     <div className="h-screen w-full flex flex-col">
@@ -678,34 +769,43 @@ function App() {
                 color: 'success',
                 loading: isLoading && loadingType == 'update',
                 onClick: async () => {
-                  if (!selectedVersion) return
+                  const sv = selectedVersionRef.current
+                  const s0 = settingsRef.current
+                  const acc = selectedAccountRef.current
+                  if (!sv || !s0) return
 
                   setLoadingType('update')
                   setIsLoading(true)
 
-                  const version = await syncShare(
-                    selectedVersion,
-                    servers,
-                    settings,
-                    selectedAccount?.accessToken || ''
-                  )
-                  setSelectedVersion(version)
+                  try {
+                    const updated = await syncShare(
+                      sv,
+                      serversRef.current,
+                      s0,
+                      acc?.accessToken || ''
+                    )
 
-                  const blockedMods: IBlockedMod[] = await checkBlockedMods(
-                    version.version.loader.mods
-                  )
+                    setSelectedVersion(updated)
 
-                  if (blockedMods.length > 0) {
-                    setBlockedMods(blockedMods)
-                    setIsBlockedMods(true)
-                    return
+                    const bMods: IBlockedMod[] = await checkBlockedMods(updated.version.loader.mods)
+                    if (bMods.length > 0) {
+                      setBlockedMods(bMods)
+                      setIsBlockedMods(true)
+
+                      setIsLoading(false)
+                      setLoadingType(undefined)
+                      return
+                    }
+
+                    setIsUpdateModal(false)
+                    setIsLoading(false)
+                    setLoadingType(undefined)
+
+                    await runGame({ skipUpdate: true, version: updated })
+                  } catch {
+                    setIsLoading(false)
+                    setLoadingType(undefined)
                   }
-
-                  setIsUpdateModal(false)
-                  setIsLoading(false)
-                  setLoadingType(undefined)
-
-                  await runGame({ skipUpdate: true })
                 }
               },
               {
@@ -719,24 +819,26 @@ function App() {
           />
         )}
 
-        {isBlockedMods && blockedMods.length && (
+        {isBlockedMods && blockedMods.length > 0 && (
           <BlockedMods
             mods={blockedMods}
             onClose={async (bMods) => {
               setIsBlockedMods(false)
 
-              if (!selectedVersion) return
+              const sv = selectedVersionRef.current
+              const s0 = settingsRef.current
+              if (!sv || !s0) return
 
               for (const bMod of bMods) {
                 if (!bMod.filePath) continue
 
-                const mod = selectedVersion.version.loader.mods.find((m) => m.id == bMod.projectId)
+                const mod = sv.version.loader.mods.find((m) => m.id == bMod.projectId)
                 if (!mod || !mod.version) continue
 
                 mod.version.files[0].localPath = bMod.filePath
               }
 
-              const versionMods = new Mods(settings, selectedVersion.version)
+              const versionMods = new Mods(s0, sv.version)
               await versionMods.check()
 
               setIsUpdateModal(false)

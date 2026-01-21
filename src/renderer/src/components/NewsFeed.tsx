@@ -1,5 +1,5 @@
 import { INews } from '@/types/News'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import Autoplay from 'embla-carousel-autoplay'
 import { Button, Chip, Skeleton } from '@heroui/react'
@@ -15,33 +15,48 @@ export function NewsFeed() {
   const [isNetwork] = useAtom(networkAtom)
   const [news, setNews] = useState<INews[]>([])
   const [isVisible, setIsVisible] = useState(true)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [onlineUsers] = useAtom(onlineUsersAtom)
 
   const { t } = useTranslation()
 
-  const [emblaRef] = useEmblaCarousel({ loop: false, dragFree: true }, [
+  const autoplayRef = useRef(
     Autoplay({
       delay: 10000,
       stopOnInteraction: false,
       stopOnMouseEnter: true
     })
-  ])
+  )
 
-  async function fetchNews() {
+  const [emblaRef] = useEmblaCarousel({ loop: false, dragFree: true }, [autoplayRef.current])
+
+  const reqIdRef = useRef(0)
+
+  const fetchNews = useCallback(async () => {
+    const reqId = ++reqIdRef.current
     setIsLoading(true)
 
-    const news = await api.backend.getNews()
-
-    setNews(news)
-    setIsLoading(false)
-  }
+    try {
+      const result: INews[] = await api.backend.getNews()
+      if (reqIdRef.current !== reqId) return
+      setNews(Array.isArray(result) ? result : [])
+    } catch {
+      if (reqIdRef.current !== reqId) return
+      setNews([])
+    } finally {
+      if (reqIdRef.current === reqId) setIsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    if (!isNetwork) return
+    if (!isNetwork) {
+      setIsLoading(false)
+      setNews([])
+      return
+    }
 
     fetchNews()
-  }, [isNetwork])
+  }, [isNetwork, fetchNews])
 
   return (
     <>
@@ -60,25 +75,26 @@ export function NewsFeed() {
                   isIconOnly
                   variant="flat"
                   isDisabled={isLoading}
-                  onPress={() => setIsVisible(!isVisible)}
+                  onPress={() => setIsVisible((v) => !v)}
                 >
                   {!isVisible ? <Eye size={22} /> : <EyeClosed size={22} />}
                 </Button>
+
                 {isVisible && (
                   <Button
                     size="sm"
                     isIconOnly
                     variant="flat"
                     isLoading={isLoading}
-                    onPress={async () => {
-                      await fetchNews()
-                    }}
+                    isDisabled={isLoading}
+                    onPress={fetchNews}
                   >
                     <RefreshCcw size={22} />
                   </Button>
                 )}
               </div>
             </div>
+
             <div className="flex mr-4">
               <Chip variant="dot" color="success">
                 {t('app.online', { count: onlineUsers })}
@@ -90,35 +106,36 @@ export function NewsFeed() {
             <div className="max-w-screen-xl mx-auto px-4 py-2">
               <div className="overflow-hidden" ref={emblaRef}>
                 <div className="flex gap-4">
-                  {news.length > 0 &&
-                    news.map((item, index) => (
-                      <div
-                        key={index}
-                        className="relative h-[100px] flex-shrink-0 rounded-lg overflow-hidden shadow-lg cursor-pointer"
-                        onClick={async () => {
-                          await api.shell.openExternal(item.url)
-                        }}
-                      >
-                        <img
-                          src={item.image}
-                          alt={item.title}
-                          className="w-full h-full object-cover select-none"
-                          loading="lazy"
-                        />
-                        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-4">
-                          <p className="text-gray-200 text-xs font-semibold select-none">
-                            {item.title}
-                          </p>
+                  {news.length > 0
+                    ? news.map((item) => (
+                        <div
+                          key={item.url}
+                          className="relative h-[100px] flex-shrink-0 rounded-lg overflow-hidden shadow-lg cursor-pointer"
+                          onClick={async () => {
+                            try {
+                              await api.shell.openExternal(item.url)
+                            } catch {}
+                          }}
+                        >
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            className="w-full h-full object-cover select-none"
+                            loading="lazy"
+                            draggable={false}
+                          />
+                          <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-4">
+                            <p className="text-gray-200 text-xs font-semibold select-none">
+                              {item.title}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-
-                  {news.length == 0 &&
-                    [1, 2, 3, 4, 5].map((_, index) => (
-                      <Skeleton key={index} className="h-[100px] w-[300px] rounded-lg shadow-lg">
-                        <div className="w-full h-full" />
-                      </Skeleton>
-                    ))}
+                      ))
+                    : [1, 2, 3, 4, 5].map((n) => (
+                        <Skeleton key={n} className="h-[100px] w-[300px] rounded-lg shadow-lg">
+                          <div className="w-full h-full" />
+                        </Skeleton>
+                      ))}
                 </div>
               </div>
             </div>

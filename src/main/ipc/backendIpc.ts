@@ -1,6 +1,5 @@
 import { ipcMain } from 'electron'
 import { Backend } from '../services/Backend'
-import { ICreateServer } from '@/types/Browser'
 import { IUpdateUser } from '@/types/IUser'
 import { IModpack, IModpackUpdate } from '@/types/Backend'
 import { VersionsService } from '../services/Versions'
@@ -63,34 +62,9 @@ export function registerBackendIpc() {
     return response
   })
 
-  ipcMain.handle(
-    'backend:modpackSearch',
-    async (
-      _,
-      at: string,
-      data: {
-        offset: number
-        limit: number
-        search: string
-        sort: string
-        filter: string[]
-      }
-    ) => {
-      const backend = new Backend(at)
-      const response = await backend.modpackSearch(data)
-      return response
-    }
-  )
-
   ipcMain.handle('backend:modpackDownloaded', async (_, at: string, shareCode: string) => {
     const backend = new Backend(at)
     const response = await backend.modpackDownloaded(shareCode)
-    return response
-  })
-
-  ipcMain.handle('backend:allModpacksByUser', async (_, at: string, owner: string) => {
-    const backend = new Backend(at)
-    const response = await backend.allModpacksByUser(owner)
     return response
   })
 
@@ -117,63 +91,6 @@ export function registerBackendIpc() {
       return response
     }
   )
-
-  ipcMain.handle('backend:getServer', async (_, at: string, serverId: string) => {
-    const backend = new Backend(at)
-    const response = await backend.getServer(serverId)
-    return response
-  })
-
-  ipcMain.handle(
-    'backend:updateServer',
-    async (_, at: string, serverId: string, server: ICreateServer) => {
-      const backend = new Backend(at)
-      const response = await backend.updateServer(serverId, server)
-      return response
-    }
-  )
-
-  ipcMain.handle('backend:createServer', async (_, at: string, server: ICreateServer) => {
-    const backend = new Backend(at)
-    const response = await backend.createServer(server)
-    return response.id
-  })
-
-  ipcMain.handle('backend:deleteServer', async (_, at: string, serverId: string) => {
-    const backend = new Backend(at)
-    const response = await backend.deleteServer(serverId)
-    return response
-  })
-
-  ipcMain.handle(
-    'backend:searchServers',
-    async (
-      _,
-      at: string,
-      data: {
-        offset: number
-        limit: number
-        search: string
-        filter: string[]
-      }
-    ) => {
-      const backend = new Backend(at)
-      const response = await backend.searchServers(data)
-      return response
-    }
-  )
-
-  ipcMain.handle('backend:getStatus', async (_, at: string, address: string) => {
-    const backend = new Backend(at)
-    const response = await backend.getStatus(address)
-    return response
-  })
-
-  ipcMain.handle('backend:ownerServers', async (_, at: string, owner: string) => {
-    const backend = new Backend(at)
-    const response = await backend.ownerServers(owner)
-    return response
-  })
 
   ipcMain.handle('backend:getSkin', async (_, at: string, uuid: string) => {
     const backend = new Backend(at)

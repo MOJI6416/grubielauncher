@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 const api = window.api
 
 import { FaDiscord, FaMicrosoft } from 'react-icons/fa'
-
 import { useTranslation } from 'react-i18next'
 import { CircleAlert, User, UserMinus, UserPlus, X } from 'lucide-react'
 import { TbSquareLetterE } from 'react-icons/tb'
@@ -59,29 +58,71 @@ export function Accounts() {
   const [isRunning] = useAtom(isRunningAtom)
   const [authData, setAuthData] = useAtom(authDataAtom)
   const [consoles] = useAtom(consolesAtom)
-  const [_, setVersion] = useAtom(selectedVersionAtom)
+  const [, setVersion] = useAtom(selectedVersionAtom)
+
+  const accountsSafe = accounts ?? []
+
+  const authSessionRef = useRef(0)
+  const accountsRef = useRef(accountsSafe)
+  useEffect(() => {
+    accountsRef.current = accountsSafe
+  }, [accountsSafe])
+
+  const getAccountKey = useCallback((a: ILocalAccount) => `${a.type}_${a.nickname}`, [])
+
+  const writeAccountsConf = useCallback(
+    async (nextAccounts: ILocalAccount[], lastPlayed: string | null) => {
+      if (!paths.launcher) return
+      const accountsConfPath = await api.path.join(paths.launcher, 'accounts.json')
+      await api.fs.writeJSON(accountsConfPath, {
+        accounts: nextAccounts,
+        lastPlayed
+      })
+    },
+    [paths.launcher]
+  )
+
+  const closeModalSelect = useCallback(() => {
+    setIsOpenModalSelect(false)
+  }, [])
+
+  const openModalSelect = useCallback(() => {
+    setIsOpenModalSelect(true)
+  }, [])
+
+  const closeModalAdd = useCallback(() => {
+    setNickname('')
+    setIsOpenModalAdd(false)
+  }, [])
+
+  const openModalAdd = useCallback(() => {
+    authSessionRef.current++
+    setIsSigning(false)
+    setSignType(undefined)
+    setIsPlain(false)
+    setIsOpenModalAdd(true)
+  }, [])
 
   const oauth = useCallback(
-    async function oauth(provider: 'microsoft' | 'elyby' | 'discord', code: string) {
+    async (provider: 'microsoft' | 'elyby' | 'discord', code: string, sessionId: number) => {
       try {
         if (!paths.launcher) return
 
         let authUser: IAuthResponse | null = null
+        if (provider === 'microsoft') authUser = await api.auth.microsoft(code)
+        else if (provider === 'elyby') authUser = await api.auth.elyby(code)
+        else authUser = await api.auth.discord(code)
 
-        if (provider == 'microsoft') authUser = await api.auth.microsoft(code)
-        else if (provider == 'elyby') authUser = await api.auth.elyby(code)
-        else if (provider == 'discord') authUser = await api.auth.discord(code)
+        if (authSessionRef.current !== sessionId) return
 
         if (!authUser) throw new Error()
 
-        if (accounts?.find((a) => a.nickname == authUser.nickname && a.type == provider)) {
+        const current = accountsRef.current
+        const exists = current.some((a) => a.nickname === authUser!.nickname && a.type === provider)
+        if (exists) {
           setIsSigning(false)
           setSignType(undefined)
-          addToast({
-            color: 'warning',
-            title: t('accounts.exists')
-          })
-
+          addToast({ color: 'warning', title: t('accounts.exists') })
           return
         }
 
@@ -92,37 +133,36 @@ export function Accounts() {
           friends: []
         }
 
-        setAccounts([...accounts, account])
+        const nextAccounts = [...current, account]
 
-        const accountsConfPath = await api.path.join(paths.launcher, 'accounts.json')
-
-        await api.fs.writeJSON(accountsConfPath, {
-          accounts: [...accounts, account],
-          lastPlayed: `${account.type}_${account.nickname}`
-        })
+        setAccounts(nextAccounts)
+        await writeAccountsConf(nextAccounts, getAccountKey(account))
 
         setSelectedAccount(account)
-
         closeModalSelect()
         closeModalAdd()
 
         setIsSigning(false)
         setSignType(undefined)
 
-        addToast({
-          color: 'success',
-          title: t('accounts.added')
-        })
+        addToast({ color: 'success', title: t('accounts.added') })
       } catch (err) {
+        if (authSessionRef.current !== sessionId) return
         setIsSigning(false)
         setSignType(undefined)
-        addToast({
-          color: 'danger',
-          title: t('accounts.failedLogIn')
-        })
+        addToast({ color: 'danger', title: t('accounts.failedLogIn') })
       }
     },
-    [accounts, paths.launcher, setAccounts, setSelectedAccount, t]
+    [
+      paths.launcher,
+      setAccounts,
+      setSelectedAccount,
+      t,
+      closeModalSelect,
+      closeModalAdd,
+      writeAccountsConf,
+      getAccountKey
+    ]
   )
 
   useEffect(() => {
@@ -137,134 +177,135 @@ export function Accounts() {
     } catch {
       setAuthData(null)
     }
-  }, [selectedAccount])
+  }, [selectedAccount, setAuthData])
 
-  const addPlainAccount = useCallback(
-    async function addPlainAccount() {
-      const accountsConfPath = await api.path.join(paths.launcher, 'accounts.json')
+  const addPlainAccount = useCallback(async () => {
+    if (!paths.launcher) return
+    const nick = nickname.trim()
+    if (!nick) return
 
-      const account: ILocalAccount = {
-        nickname,
-        type: 'plain',
-        image: '',
-        friends: []
-      }
+    const current = accountsRef.current
+    const exists = current.some((a) => a.nickname === nick && a.type === 'plain')
+    if (exists) {
+      addToast({ color: 'warning', title: t('accounts.exists') })
+      return
+    }
 
-      setAccounts([...accounts, account])
+    const account: ILocalAccount = {
+      nickname: nick,
+      type: 'plain',
+      image: '',
+      friends: []
+    }
 
-      await api.fs.writeJSON(accountsConfPath, {
-        accounts: [...accounts, account],
-        lastPlayed: `${account.type}_${account.nickname}`
-      })
+    const nextAccounts = [...current, account]
 
-      setSelectedAccount(account)
-      closeModalSelect()
-      closeModalAdd()
-      addToast({
-        color: 'success',
-        title: t('accounts.added')
-      })
-    },
-    [accounts, nickname, paths.launcher, setAccounts, setSelectedAccount, t]
-  )
+    setAccounts(nextAccounts)
+    await writeAccountsConf(nextAccounts, getAccountKey(account))
 
-  function closeModalSelect() {
-    setIsOpenModalSelect(false)
-  }
-
-  function openModalSelect() {
-    setIsOpenModalSelect(true)
-  }
-
-  function closeModalAdd() {
-    setNickname('')
-    setIsOpenModalAdd(false)
-  }
-
-  function openModalAdd() {
-    setIsSigning(false)
-    setIsPlain(false)
-    setIsOpenModalAdd(true)
-  }
+    setSelectedAccount(account)
+    closeModalSelect()
+    closeModalAdd()
+    addToast({ color: 'success', title: t('accounts.added') })
+  }, [
+    nickname,
+    paths.launcher,
+    setAccounts,
+    setSelectedAccount,
+    t,
+    closeModalSelect,
+    closeModalAdd,
+    writeAccountsConf,
+    getAccountKey
+  ])
 
   const selectAccount = useCallback(
-    async function selectAccount(value: string) {
-      if (!accounts) return
-
-      const account = accounts.find((a) => `${a.type}_${a.nickname}` == value)
+    async (value: string) => {
+      const current = accountsRef.current
+      const account = current.find((a) => getAccountKey(a) === value)
       if (!account) return
 
       if (selectedAccount) {
-        await api.skins.clearManager(
-          authData?.uuid || selectedAccount.nickname,
-          selectedAccount.type
-        )
+        try {
+          await api.skins.clearManager(
+            authData?.uuid || selectedAccount.nickname,
+            selectedAccount.type
+          )
+        } catch {}
       }
 
       setSelectedAccount(account)
       setVersion(undefined)
 
-      const activity: Presence = {
-        smallImageKey: 'steve',
-        smallImageText: account.nickname
-      }
+      try {
+        const activity: Presence = {
+          smallImageKey: 'steve',
+          smallImageText: account.nickname
+        }
+        await api.rpc.updateActivity(activity)
+      } catch {}
 
-      await api.rpc.updateActivity(activity)
-
-      await api.fs.writeJSON(await api.path.join(paths.launcher, 'accounts.json'), {
-        accounts,
-        lastPlayed: `${account.type}_${account.nickname}`
-      })
+      await writeAccountsConf(current, getAccountKey(account))
     },
-    [accounts, paths.launcher, selectedAccount, setSelectedAccount, authData]
+    [selectedAccount, setSelectedAccount, authData, setVersion, writeAccountsConf, getAccountKey]
   )
 
-  const deleteAccount = useCallback(
-    async function deleteAccount() {
-      if (!accounts || !selectedAccount) return
+  const deleteAccount = useCallback(async () => {
+    if (!paths.launcher) return
+    if (!selectedAccount) return
 
-      const accountsConfPath = await api.path.join(paths.launcher, 'accounts.json')
+    const current = accountsRef.current
+    const keyToRemove = getAccountKey(selectedAccount)
 
-      const indexToRemove = accounts.indexOf(selectedAccount)
-      if (indexToRemove !== -1) {
-        accounts.splice(indexToRemove, 1)
-      }
+    const nextAccounts = current.filter((a) => getAccountKey(a) !== keyToRemove)
 
+    try {
       await api.skins.clearManager(authData?.uuid || selectedAccount.nickname, selectedAccount.type)
+    } catch {}
 
-      setSelectedAccount(undefined)
-      setAccounts(accounts)
-      await api.fs.writeJSON(accountsConfPath, {
-        accounts: accounts,
-        lastPlayed: null
-      })
+    const nextSelected = nextAccounts[0]
 
-      addToast({
-        color: 'success',
-        title: t('accounts.deleted')
-      })
-    },
-    [accounts, selectedAccount, paths.launcher, setAccounts, setSelectedAccount, t, authData]
-  )
+    setAccounts(nextAccounts)
+    setSelectedAccount(nextSelected)
+
+    await writeAccountsConf(nextAccounts, nextSelected ? getAccountKey(nextSelected) : null)
+
+    addToast({ color: 'success', title: t('accounts.deleted') })
+  }, [
+    paths.launcher,
+    selectedAccount,
+    setAccounts,
+    setSelectedAccount,
+    t,
+    authData,
+    writeAccountsConf,
+    getAccountKey
+  ])
 
   async function Auth(type: 'microsoft' | 'elyby' | 'discord') {
     setIsPlain(false)
 
-    let authUrl
-    if (type == 'microsoft')
+    let authUrl = ''
+    if (type === 'microsoft')
       authUrl = `https://login.live.com/oauth20_authorize.srf?client_id=${MICROSOFT_CLIENT_ID}&response_type=code&redirect_uri=http://localhost:53213/callback&scope=XboxLive.signin%20offline_access&state=microsoft`
-    else if (type == 'elyby')
+    else if (type === 'elyby')
       authUrl = `https://account.ely.by/oauth2/v1?client_id=${ELYBY_CLIENT_ID}&redirect_uri=http://localhost:53213/callback&response_type=code&scope=offline_access,account_info,minecraft_server_session&state=elyby`
-    else if (type == 'discord')
+    else
       authUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A53213%2Fcallback&scope=identify+guilds.join&state=discord`
+
+    const sessionId = ++authSessionRef.current
+
     await api.shell.openExternal(authUrl)
     setSignType(type)
     setIsSigning(true)
 
     const { provider, code } = await api.auth.startServer()
 
-    await oauth(provider, code)
+    if (authSessionRef.current !== sessionId) return
+    await oauth(provider, code, sessionId)
   }
+
+  const selectedKey = selectedAccount ? `${selectedAccount.type}_${selectedAccount.nickname}` : ''
 
   return (
     <>
@@ -272,7 +313,9 @@ export function Accounts() {
         {selectedAccount ? (
           <>
             <div
-              className={`flex items-center space-x-2 min-w-0 ${selectedAccount.type != 'plain' && isNetwork ? 'cursor-pointer' : ''}`}
+              className={`flex items-center space-x-2 min-w-0 ${
+                selectedAccount.type != 'plain' && isNetwork ? 'cursor-pointer' : ''
+              }`}
               onClick={async () => {
                 if (
                   isLoading ||
@@ -287,23 +330,15 @@ export function Accounts() {
                 setLoadingType('user')
 
                 try {
-                  const user = await api.backend.getUser(
-                    selectedAccount?.accessToken || '',
-                    authData.sub
-                  )
-
+                  const user = await api.backend.getUser(selectedAccount.accessToken, authData.sub)
                   if (user) {
                     setUser(user)
                     setAccountInfo(true)
                     return
                   }
-
                   throw new Error()
                 } catch (err) {
-                  addToast({
-                    color: 'danger',
-                    title: t('accountInfo.error')
-                  })
+                  addToast({ color: 'danger', title: t('accountInfo.error') })
                 } finally {
                   setIsLoading(false)
                   setLoadingType(undefined)
@@ -315,10 +350,10 @@ export function Accounts() {
                 src={selectedAccount.image}
                 name={selectedAccount.nickname}
               />
-
               <p className="text-xl font-semibold truncate flex-grow">{selectedAccount.nickname}</p>
               {isLoading && loadingType == 'user' && <Spinner size="sm" />}
             </div>
+
             <Button
               variant="flat"
               isDisabled={isRunning}
@@ -336,7 +371,7 @@ export function Accounts() {
                 variant="flat"
                 className="animate-pulse"
                 startContent={<User size={22} />}
-                onPress={accounts?.length != 0 ? openModalSelect : openModalAdd}
+                onPress={accountsSafe.length != 0 ? openModalSelect : openModalAdd}
               >
                 {t('accounts.select')}
               </Button>
@@ -353,17 +388,20 @@ export function Accounts() {
             <div className="flex flex-col space-y-4">
               <Select
                 placeholder={t('accounts.selectAccount')}
-                isDisabled={accounts?.length == 0}
-                selectedKeys={[`${selectedAccount?.type}_${selectedAccount?.nickname}`]}
-                renderValue={(acounts) => {
-                  return acounts.map((option) => {
-                    const account = accounts?.find((a) => `${a.type}_${a.nickname}` == option.key)
-                    if (!account) return <p>Undefined user</p>
+                isDisabled={accountsSafe.length == 0}
+                selectedKeys={selectedKey ? new Set([selectedKey]) : new Set()}
+                renderValue={(opts) => {
+                  return opts.map((option) => {
+                    const account = accountsSafe.find(
+                      (a) => `${a.type}_${a.nickname}` == option.key
+                    )
+                    if (!account) return <p key={String(option.key)}>Undefined user</p>
 
                     return (
-                      <div className="flex space-x-1 items-center">
+                      <div className="flex space-x-1 items-center" key={String(option.key)}>
+                        {' '}
+                        {/* Изменено: key */}
                         <Avatar src={account.image} size="sm" name={account.nickname} />
-
                         <p>{account.nickname}</p>
                         {account.type == 'microsoft' ? (
                           <FaMicrosoft size={22} />
@@ -384,11 +422,10 @@ export function Accounts() {
                   await selectAccount(value)
                 }}
               >
-                {accounts.map((account) => (
+                {accountsSafe.map((account) => (
                   <SelectItem key={`${account.type}_${account.nickname}`}>
                     <div className="flex space-x-1 items-center">
                       <Avatar src={account.image} size="sm" name={account.nickname} />
-
                       <p>{account.nickname}</p>
                       {account.type == 'microsoft' ? (
                         <FaMicrosoft size={22} />
@@ -403,22 +440,20 @@ export function Accounts() {
                   </SelectItem>
                 ))}
               </Select>
+
               <div className="flex gap-2">
                 {selectedAccount ? (
-                  <>
-                    <Button
-                      color="danger"
-                      variant="flat"
-                      isDisabled={consoles.consoles.some((c) => c.status == 'running')}
-                      startContent={<UserMinus size={22} />}
-                      onPress={async () => await deleteAccount()}
-                    >
-                      {t('accounts.delete')}
-                    </Button>
-                  </>
-                ) : (
-                  ''
-                )}
+                  <Button
+                    color="danger"
+                    variant="flat"
+                    isDisabled={consoles.consoles.some((c) => c.status == 'running')}
+                    startContent={<UserMinus size={22} />}
+                    onPress={async () => await deleteAccount()}
+                  >
+                    {t('accounts.delete')}
+                  </Button>
+                ) : null}
+
                 <Button variant="flat" startContent={<UserPlus size={22} />} onPress={openModalAdd}>
                   {t('common.add')}
                 </Button>
@@ -427,6 +462,7 @@ export function Accounts() {
           </ModalBody>
         </ModalContent>
       </Modal>
+
       <Modal
         size="md"
         isOpen={modalAddIsOpen}
@@ -440,6 +476,7 @@ export function Accounts() {
             <div className="flex flex-col space-y-4">
               <div className="flex flex-col space-y-1">
                 <p>{t('accounts.type')}:</p>
+
                 <div className="flex flex-col space-y-2">
                   <div className="flex space-x-2 items-center">
                     <Button
@@ -450,6 +487,7 @@ export function Accounts() {
                     >
                       {t('accounts.plainAccount')}
                     </Button>
+
                     <Button
                       variant="flat"
                       color={isSigning && signType == 'discord' ? 'danger' : undefined}
@@ -463,21 +501,19 @@ export function Accounts() {
                       }
                       onPress={async () => {
                         if (isSigning) {
+                          authSessionRef.current++
                           setIsSigning(false)
                           setSignType(undefined)
-                          addToast({
-                            color: 'success',
-                            title: t('accounts.cancelled')
-                          })
+                          addToast({ color: 'success', title: t('accounts.cancelled') })
                           return
                         }
-
                         await Auth('discord')
                       }}
                     >
                       {isSigning && signType == 'discord' ? t('common.cancel') : 'Discord'}
                     </Button>
                   </div>
+
                   <div className="flex space-x-2 items-center">
                     <Button
                       variant="flat"
@@ -492,15 +528,12 @@ export function Accounts() {
                       isDisabled={(isSigning && signType != 'microsoft') || !isNetwork}
                       onPress={async () => {
                         if (isSigning) {
+                          authSessionRef.current++
                           setIsSigning(false)
                           setSignType(undefined)
-                          addToast({
-                            color: 'success',
-                            title: t('accounts.cancelled')
-                          })
+                          addToast({ color: 'success', title: t('accounts.cancelled') })
                           return
                         }
-
                         await Auth('microsoft')
                       }}
                     >
@@ -508,6 +541,7 @@ export function Accounts() {
                         ? t('common.cancel')
                         : t('accounts.microsoft')}
                     </Button>
+
                     <Button
                       variant="flat"
                       color={isSigning && signType == 'elyby' ? 'danger' : undefined}
@@ -521,11 +555,12 @@ export function Accounts() {
                       isDisabled={(isSigning && signType != 'elyby') || !isNetwork}
                       onPress={async () => {
                         if (isSigning) {
+                          authSessionRef.current++
                           setIsSigning(false)
                           setSignType(undefined)
+                          addToast({ color: 'success', title: t('accounts.cancelled') })
                           return
                         }
-
                         await Auth('elyby')
                       }}
                     >
@@ -545,35 +580,37 @@ export function Accounts() {
                     onChange={(event) => setNickname(event.currentTarget.value)}
                     startContent={
                       nickname == '' ||
-                      !!accounts?.find((a) => a.nickname == nickname && a.type == 'plain') ||
+                      !!accountsSafe.find((a) => a.nickname == nickname && a.type == 'plain') ||
                       nickname.length < 3 ||
                       nickname.length > 16 ? (
                         <CircleAlert color="orange" size={22} />
                       ) : undefined
                     }
-                  ></Input>
+                  />
+
                   <Button
                     variant="flat"
                     isIconOnly
                     isDisabled={
-                      nickname == '' ||
-                      !!accounts?.find((a) => a.nickname == nickname && a.type == 'plain') ||
-                      nickname.length < 3 ||
-                      nickname.length > 16
+                      nickname.trim() === '' ||
+                      !!accountsSafe.find(
+                        (a) => a.nickname == nickname.trim() && a.type == 'plain'
+                      ) ||
+                      nickname.trim().length < 3 ||
+                      nickname.trim().length > 16
                     }
                     onPress={async () => await addPlainAccount()}
                   >
                     <UserPlus size={22} />
                   </Button>
                 </div>
-              ) : (
-                ''
-              )}
+              ) : null}
             </div>
           </ModalBody>
         </ModalContent>
       </Modal>
-      {accountInfo && selectedAccount && accounts && user && (
+
+      {accountInfo && selectedAccount && user && (
         <AccountInfo
           onClose={() => {
             setAccountInfo(false)

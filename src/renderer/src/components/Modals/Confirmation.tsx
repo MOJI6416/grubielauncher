@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react' // Изменено: добавили useMemo/useState
 import {
   Alert,
   Button,
@@ -30,39 +31,59 @@ export function Confirmation({
 }) {
   const { t } = useTranslation()
 
+  const [activeBtn, setActiveBtn] = useState<number | null>(null)
+
+  const isBusy = useMemo(
+    () => activeBtn !== null || buttons.some((b) => !!b.loading),
+    [activeBtn, buttons]
+  )
+
   return (
-    <>
-      <Modal isOpen={true} onClose={onClose}>
-        <ModalContent>
-          <ModalHeader>{title || t('common.confirmation')}</ModalHeader>
-          <ModalBody>
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                {content.map((c, index) => (
-                  <Alert key={index} color={c.color} title={c.text} />
-                ))}
-              </div>
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <div className="flex items-center gap-2">
-              {buttons.map((b, index) => (
-                <Button
-                  color={b.color}
-                  variant="flat"
-                  key={index}
-                  isLoading={b.loading || false}
-                  onPress={async () => {
-                    await b.onClick()
-                  }}
-                >
-                  {b.text}
-                </Button>
+    <Modal
+      isOpen={true}
+      onClose={() => {
+        if (isBusy) return
+        onClose()
+      }}
+      isDismissable={!isBusy}
+      isKeyboardDismissDisabled={isBusy}
+    >
+      <ModalContent>
+        <ModalHeader>{title || t('common.confirmation')}</ModalHeader>
+        <ModalBody>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              {content.map((c, index) => (
+                <Alert key={index} color={c.color} title={c.text} />
               ))}
             </div>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <div className="flex items-center gap-2">
+            {buttons.map((b, index) => (
+              <Button
+                color={b.color}
+                variant="flat"
+                key={index}
+                isLoading={b.loading || activeBtn === index}
+                isDisabled={isBusy && activeBtn !== index}
+                onPress={async () => {
+                  if (isBusy && activeBtn !== index) return
+                  try {
+                    setActiveBtn(index)
+                    await b.onClick()
+                  } finally {
+                    setActiveBtn(null)
+                  }
+                }}
+              >
+                {b.text}
+              </Button>
+            ))}
+          </div>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   )
 }

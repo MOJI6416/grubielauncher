@@ -99,7 +99,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
                     return `${value.children?.toString()} ${t('settings.mb')}`
                   }}
                   maxValue={totalMem / (1024 * 1024)}
-                ></Slider>
+                />
               </div>
 
               <Select

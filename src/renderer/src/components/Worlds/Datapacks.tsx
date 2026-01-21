@@ -12,10 +12,11 @@ import {
   ModalHeader,
   ScrollShadow,
   Select,
-  SelectItem
+  SelectItem,
+  addToast
 } from '@heroui/react'
 import { Folder, PackagePlus, Trash } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const api = window.api
@@ -30,36 +31,32 @@ export function Datapacks({
   datapacks: { mod: ILocalProject; path: string; filename: string }[]
 }) {
   const [datapackName, setDatapackName] = useState<string>('')
-  const [disabledKeys, setDisabledKeys] = useState<string[]>(world.datapacks)
+  const [worldDatapacks, setWorldDatapacks] = useState<string[]>(() => [...world.datapacks])
 
   const { t } = useTranslation()
 
-  function DatapackItem({ fileName }: { fileName: string }) {
-    const datapackInfo = {
-      id: fileName,
-      title: fileName,
-      isLocal: true,
-      icon: '',
-      path: `${world.path}/datapacks/${fileName}`
-    }
+  useEffect(() => {
+    setWorldDatapacks([...world.datapacks])
+  }, [world])
 
-    const datapack = datapacks.find((dp) => dp.mod.version?.files[0].filename === fileName)
-    if (datapack) {
-      datapackInfo.id = datapack.mod.id
-      datapackInfo.title = datapack.mod.title
-      datapackInfo.isLocal = false
-      if (datapack.mod.iconUrl) datapackInfo.icon = datapack.mod.iconUrl
-    }
+  const disabledKeys = useMemo(() => new Set(worldDatapacks), [worldDatapacks])
+
+  const isInstalled = useMemo(() => {
+    return datapackName ? worldDatapacks.includes(datapackName) : false
+  }, [datapackName, worldDatapacks])
+
+  function DatapackItem({ fileName }: { fileName: string }) {
+    const pack = datapacks.find((dp) => dp.filename === fileName)
 
     return (
       <Card>
         <CardBody>
           <div className="flex items-center justify-between gap-4 min-w-0">
             <div className="flex items-center gap-1 min-w-0">
-              {datapackInfo.icon && (
-                <Image src={datapackInfo.icon} width={32} height={32} className="min-h-8 min-w-8" />
+              {pack?.mod.iconUrl && (
+                <Image src={pack.mod.iconUrl} width={32} height={32} className="min-h-8 min-w-8" />
               )}
-              <p className="text-sm truncate min-w-0">{datapackInfo.title}</p>
+              <p className="text-sm truncate min-w-0">{pack ? pack.mod.title : fileName}</p>
             </div>
             <div className="flex items-center gap-1">
               <Button
@@ -69,10 +66,15 @@ export function Datapacks({
                 isIconOnly
                 onPress={async () => {
                   try {
-                    await api.fs.rimraf(datapackInfo.path)
+                    const targetPath = await api.path.join(world.path, 'datapacks', fileName)
+                    await api.fs.rimraf(targetPath)
+
+                    setWorldDatapacks((prev) => prev.filter((dp) => dp !== fileName))
                     world.datapacks = world.datapacks.filter((dp) => dp !== fileName)
-                    setDisabledKeys(disabledKeys.filter((key) => key !== fileName))
-                  } catch {}
+                  } catch (err) {
+                    console.error(err)
+                    addToast({ title: t('common.error') || 'Error', color: 'danger' })
+                  }
                 }}
               >
                 <Trash size={20} />
@@ -90,11 +92,11 @@ export function Datapacks({
         <ModalHeader>{t('worlds.datapacks')}</ModalHeader>
         <ModalBody>
           <div className="flex flex-col gap-4">
-            <div className="flex items-cente gap-2">
+            <div className="flex items-center gap-2">
               <Select
                 isDisabled={!datapacks.length}
-                selectedKeys={[datapackName]}
-                onChange={(e) => setDatapackName(e.target.value)}
+                selectedKeys={datapackName ? new Set([datapackName]) : new Set()}
+                onChange={(e) => setDatapackName(e.target.value || '')}
                 disabledKeys={disabledKeys}
               >
                 {datapacks.map((dp) => (
@@ -103,46 +105,62 @@ export function Datapacks({
               </Select>
               <div className="flex items-center gap-1">
                 <Button
-                  isDisabled={!datapackName}
+                  isDisabled={!datapackName || isInstalled}
                   variant="flat"
                   color="primary"
                   isIconOnly
                   onPress={async () => {
-                    if (!datapackName) return
-                    const datapack = datapacks.find(
-                      async (dp) => (await api.path.basename(dp.path)) === datapackName
-                    )
+                    if (!datapackName || isInstalled) return
+
+                    const datapack = datapacks.find((dp) => dp.filename === datapackName)
                     if (!datapack) return
 
-                    const datapackPath = await api.path.join(world.path, 'datapacks', datapackName)
+                    const targetPath = await api.path.join(world.path, 'datapacks', datapackName)
 
                     try {
-                      await api.fs.copy(datapack.path, datapackPath)
-                      world.datapacks.push(datapackName)
-                      setDisabledKeys([...disabledKeys, datapackName])
-                    } catch {}
+                      await api.fs.copy(datapack.path, targetPath)
+
+                      setWorldDatapacks((prev) => {
+                        if (prev.includes(datapackName)) return prev
+                        return [...prev, datapackName]
+                      })
+
+                      if (!world.datapacks.includes(datapackName)) {
+                        world.datapacks.push(datapackName)
+                      }
+                    } catch (err) {
+                      console.error(err)
+                      addToast({ title: t('common.error') || 'Error', color: 'danger' })
+                    }
 
                     setDatapackName('')
                   }}
                 >
                   <PackagePlus size={22} />
                 </Button>
+
                 <Button
                   variant="flat"
                   isIconOnly
                   onPress={async () => {
-                    await api.shell.openPath(await api.path.join(world.path, 'datapacks'))
+                    try {
+                      await api.shell.openPath(await api.path.join(world.path, 'datapacks'))
+                    } catch (err) {
+                      console.error(err)
+                      addToast({ title: t('common.error') || 'Error', color: 'danger' })
+                    }
                   }}
                 >
                   <Folder size={22} />
                 </Button>
               </div>
             </div>
-            {world.datapacks.length > 0 ? (
+
+            {worldDatapacks.length > 0 ? (
               <ScrollShadow className="max-h-64">
                 <div className="flex flex-col gap-2">
-                  {world.datapacks.map((d, i) => (
-                    <DatapackItem fileName={d} key={i} />
+                  {worldDatapacks.map((d) => (
+                    <DatapackItem fileName={d} key={d} />
                   ))}
                 </div>
               </ScrollShadow>

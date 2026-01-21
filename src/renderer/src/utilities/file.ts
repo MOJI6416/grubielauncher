@@ -22,7 +22,7 @@ export const notSupportedPaths = [
 ]
 
 export function formatBytes(bytes: number, sizes: string[], decimals = 2): string {
-  if (bytes === 0) return '0 B'
+  if (bytes === 0) return `0 ${sizes[0]}`
 
   const k = 1024
   const i = Math.floor(Math.log(bytes) / Math.log(k))

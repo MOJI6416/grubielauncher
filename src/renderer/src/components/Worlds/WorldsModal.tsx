@@ -25,9 +25,9 @@ export function Worlds({
   runGame: (params: RunGameParams) => Promise<void>
 }) {
   const [isLoading, setIsLoading] = useState(true)
-  const [loadingType, setLoadingType] = useState<'load' | null>('load')
-  const [version] = useAtom(selectedVersionAtom)
   const [worlds, setWorlds] = useState<IWorld[]>([])
+
+  const [version] = useAtom(selectedVersionAtom)
   const [account] = useAtom(accountAtom)
   const [isOwnerVersion] = useAtom(isOwnerVersionAtom)
 
@@ -39,41 +39,38 @@ export function Worlds({
       return
     }
 
+    if (!account) {
+      setWorlds([])
+      setIsLoading(false)
+      return
+    }
+
+    setIsLoading(true)
     ;(async () => {
-      async function loadWorlds(worldsPath: string) {
-        if (!account) return
+      try {
+        const worldsPath = await api.path.join(version.versionPath, 'saves')
+        const entries = await api.fs.readdir(worldsPath)
 
-        try {
-          const files = (await api.fs.readdir(worldsPath)).filter(
-            async (file) => await api.fs.isDirectory(await api.path.join(worldsPath, file))
-          )
-
-          const worlds: IWorld[] = []
-
-          for (const file of files) {
-            const worldPath = await api.path.join(worldsPath, file)
-
-            const worldData = await api.worlds.readWorld(worldPath, account)
-            if (!worldData) continue
-
-            worlds.push(worldData)
-          }
-
-          setWorlds(worlds)
-        } catch (error) {
-          onClose()
-          addToast({
-            title: t('worlds.noWorlds')
-          })
-          return
-        } finally {
-          setIsLoading(false)
-          setLoadingType(null)
+        const folders: string[] = []
+        for (const file of entries) {
+          const full = await api.path.join(worldsPath, file)
+          if (await api.fs.isDirectory(full)) folders.push(file)
         }
-      }
 
-      const worldsPath = await api.path.join(version.versionPath, 'saves')
-      await loadWorlds(worldsPath)
+        const results = await Promise.all(
+          folders.map(async (folder) => {
+            const worldPath = await api.path.join(worldsPath, folder)
+            return api.worlds.readWorld(worldPath, account)
+          })
+        )
+
+        setWorlds(results.filter(Boolean) as IWorld[])
+      } catch (error) {
+        addToast({ title: t('worlds.noWorlds') })
+        onClose()
+      } finally {
+        setIsLoading(false)
+      }
     })()
   }, [version, account])
 
@@ -90,18 +87,18 @@ export function Worlds({
 
         <ModalBody>
           <div className="max-h-96 w-full">
-            {isLoading && loadingType == 'load' ? (
+            {isLoading ? (
               <div className="flex h-full w-full items-center justify-center">
                 <Spinner size="sm" />
               </div>
-            ) : worlds.length == 0 ? (
+            ) : worlds.length === 0 ? (
               <div className="flex w-full items-center">
                 <Alert title={t('worlds.noWorlds')} />
               </div>
             ) : (
               <WorldList
                 worlds={worlds}
-                setWorlds={(worlds) => setWorlds(worlds)}
+                setWorlds={setWorlds}
                 isOwner={isOwnerVersion}
                 runGame={runGame}
                 closeModal={() => onClose(true)}

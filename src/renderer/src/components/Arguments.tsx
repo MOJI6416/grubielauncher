@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save } from 'lucide-react'
 import { IArguments } from '@/types/IArguments'
@@ -31,6 +31,14 @@ export function Arguments({
   const [isDownloadedVersion] = useAtom(isDownloadedVersionAtom)
   const [isOwnerVersion] = useAtom(isOwnerVersionAtom)
 
+  const canEdit = !isDownloadedVersion && isOwnerVersion
+
+  const isChanged = useMemo(() => {
+    const baseJvm = (runArguments?.jvm ?? '').trim()
+    const baseGame = (runArguments?.game ?? '').trim()
+    return jvmArguments.trim() !== baseJvm || gameArguments.trim() !== baseGame
+  }, [jvmArguments, gameArguments, runArguments])
+
   return (
     <Modal
       isOpen
@@ -43,48 +51,47 @@ export function Arguments({
 
         <ModalBody>
           <div className="flex flex-col gap-4">
-            {!isDownloadedVersion && isOwnerVersion && (
-              <Alert color="warning" title={t('arguments.alert')} />
-            )}
+            {canEdit && <Alert color="warning" title={t('arguments.alert')} />}
+
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 ">
+              <div className="flex items-center gap-2">
                 <Textarea
                   label={t('arguments.jvm')}
                   minRows={1}
                   maxRows={3}
-                  isDisabled={isDownloadedVersion || !isOwnerVersion}
+                  isDisabled={!canEdit}
                   value={jvmArguments}
-                  onChange={(e) => {
-                    setJvmArguments(e.target.value)
-                  }}
+                  onChange={(e) => setJvmArguments(e.target.value)}
                 />
               </div>
+
               <div className="flex items-center gap-2">
                 <Textarea
                   label={t('arguments.game')}
                   maxRows={3}
                   minRows={1}
-                  isDisabled={isDownloadedVersion || !isOwnerVersion}
+                  isDisabled={!canEdit}
                   value={gameArguments}
-                  onChange={(e) => {
-                    setGameArguments(e.target.value)
-                  }}
+                  onChange={(e) => setGameArguments(e.target.value)}
                 />
               </div>
             </div>
           </div>
         </ModalBody>
 
-        {!isDownloadedVersion && isOwnerVersion && (
+        {canEdit && (
           <ModalFooter>
             <Button
               variant="flat"
               startContent={<Save size={22} />}
               onPress={() => {
-                setArguments({ jvm: jvmArguments, game: gameArguments })
+                setArguments({
+                  jvm: jvmArguments.trim(),
+                  game: gameArguments.trim()
+                })
               }}
-              color={'success'}
-              isDisabled={jvmArguments == runArguments?.jvm && gameArguments == runArguments?.game}
+              color="success"
+              isDisabled={!isChanged}
             >
               {t('common.save')}
             </Button>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ImageCropper } from '../ImageCropper'
 import { ServerSettings } from './Settings'
 import { ProjectType } from '@/types/ModManager'
@@ -42,43 +42,79 @@ export function ServerControl({
   const [paths] = useAtom(pathsAtom)
   const [serverPath, setServerPath] = useState('')
 
+  const logoUrlRef = useRef<string | null>(null)
+
   const { t } = useTranslation()
 
   async function changeImage(url: string) {
-    if (!server) return
+    if (!server || !serverPath) return
 
     const response = await fetch(url)
     const blob = await response.blob()
+    const arrayBuffer = await blob.arrayBuffer()
 
-    await api.fs.writeFile(
-      await api.path.join(serverPath, 'server-icon.png'),
-      new Uint8Array(await blob.arrayBuffer()),
-      'utf-8'
-    )
+    const iconPath = await api.path.join(serverPath, 'server-icon.png')
+    await api.fs.writeFile(iconPath, new Uint8Array(arrayBuffer), 'binary')
 
-    setServerLogo(url)
+    if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current)
+    const objectUrl = URL.createObjectURL(new Blob([arrayBuffer], { type: 'image/png' }))
+    logoUrlRef.current = objectUrl
+
+    setServerLogo(objectUrl)
+    setIsCropping(false)
     addToast({ color: 'success', title: t('serverManager.logoEdited') })
   }
 
   useEffect(() => {
+    let cancelled = false
+
     ;(async () => {
-      if (server) {
-        const logoPath = await api.path.join(serverPath, 'server-icon.png')
-        try {
-          await api.fs.pathExists(logoPath)
-          const data = await api.fs.readFile(logoPath, 'base64')
+      if (!version || !paths.minecraft) return
 
-          setServerLogo(URL.createObjectURL(new Blob([data])))
-        } catch {}
+      const sp = await api.path.join(
+        paths.minecraft,
+        'versions',
+        version?.version.name || '',
+        'server'
+      )
+
+      if (cancelled) return
+      setServerPath(sp)
+
+      if (!server) {
+        if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current)
+        logoUrlRef.current = null
+        setServerLogo('')
+        return
       }
 
-      if (version && paths.minecraft) {
-        api.path
-          .join(paths.minecraft, 'versions', version?.version.name || '', 'server')
-          .then(setServerPath)
+      const logoPath = await api.path.join(sp, 'server-icon.png')
+      const isExists = await api.fs.pathExists(logoPath)
+
+      if (!isExists) {
+        if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current)
+        logoUrlRef.current = null
+        setServerLogo('')
+        return
       }
+
+      try {
+        const fileBuffer = await api.fs.readFile(logoPath, 'binary')
+        if (cancelled) return
+
+        if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current)
+        const objectUrl = URL.createObjectURL(new Blob([fileBuffer], { type: 'image/png' }))
+        logoUrlRef.current = objectUrl
+        setServerLogo(objectUrl)
+      } catch {}
     })()
-  }, [server])
+
+    return () => {
+      cancelled = true
+      if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current)
+      logoUrlRef.current = null
+    }
+  }, [server, version, paths.minecraft])
 
   return server ? (
     <>
@@ -112,6 +148,7 @@ export function ServerControl({
                     size="sm"
                     variant="flat"
                     isIconOnly
+                    isDisabled={isLoading}
                     onPress={async () => {
                       const filePaths = await api.other.openFileDialog()
                       if (!filePaths || filePaths.length === 0) return
@@ -128,8 +165,13 @@ export function ServerControl({
                       size="sm"
                       variant="flat"
                       isIconOnly
+                      isDisabled={isLoading}
                       onPress={async () => {
                         await api.fs.rimraf(await api.path.join(serverPath, 'server-icon.png'))
+
+                        if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current)
+                        logoUrlRef.current = null
+
                         setServerLogo('')
                       }}
                     >
@@ -184,23 +226,23 @@ export function ServerControl({
 
                     try {
                       await api.fs.rimraf(serverPath)
-                      onClose()
+
                       addToast({
                         color: 'success',
                         title: t('serverManager.deleted')
                       })
+
+                      onDelete()
+                      onClose()
                     } catch (error) {
                       addToast({
                         color: 'danger',
                         title: t('serverManager.deleteError')
                       })
+                    } finally {
+                      setLoadingType(null)
+                      setIsLoading(false)
                     }
-
-                    setLoadingType(null)
-                    setIsLoading(false)
-
-                    onDelete()
-                    onClose()
                   }}
                 >
                   {t('common.delete')}
