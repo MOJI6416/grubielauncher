@@ -5,7 +5,6 @@ import {
   Boxes,
   Calendar,
   Clock,
-  Crown,
   Save,
   Settings2,
   Shirt,
