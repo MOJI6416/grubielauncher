@@ -14,6 +14,10 @@ import { LoaderVersion } from '@/types/VersionsService'
 import { BACKEND_URL } from '@/shared/config'
 
 export class Server {
+  private static api = axios.create({
+    timeout: 30000
+  })
+
   private static checkVersion(
     version: string,
     versions: IServerVersion[],
@@ -36,7 +40,7 @@ export class Server {
 
       if (loader == 'vanilla') {
         try {
-          const response = await axios.get<IVanillaCores>(`${BACKEND_URL}/server/vanilla.json`)
+          const response = await this.api.get<IVanillaCores>(`${BACKEND_URL}/server/vanilla.json`)
           const vanilla = this.checkVersion(version, response.data.vanilla, ServerCore.VANILLA)
           if (vanilla) cores.push(vanilla)
 
@@ -45,7 +49,7 @@ export class Server {
 
           const bukkit = this.checkVersion(version, response.data.bukkit, ServerCore.BUKKIT)
           if (bukkit) cores.push(bukkit)
-        } catch {}
+        } catch { }
 
         const paper = await this.getPaper(version)
         if (paper) cores.push(paper)
@@ -74,12 +78,16 @@ export class Server {
 
   private static async getPaper(version: string): Promise<IServerOption | null> {
     try {
-      const response = await axios.get<IPaper>(
+      const response = await this.api.get<IPaper>(
         `https://api.papermc.io/v2/projects/paper/versions/${version}/builds`
       )
 
       const builds = response.data.builds
       const lastBuild = builds[builds.length - 1]
+
+      if (!lastBuild) {
+        return null
+      }
 
       return {
         core: ServerCore.PAPER,
@@ -93,18 +101,21 @@ export class Server {
 
   private static async getFabric(version: string): Promise<IServerOption | null> {
     try {
-      const loaders = await axios.get<IFablicLoader[]>(
+      const loaders = await this.api.get<IFablicLoader[]>(
         `https://meta.fabricmc.net/v2/versions/loader/` + version
       )
-      const installers = await axios.get<IFabricInstaller[]>(
+      const installers = await this.api.get<IFabricInstaller[]>(
         `https://meta.fabricmc.net/v2/versions/installer`
       )
 
-      const loader = loaders.data[0].loader.version
-      const installer = installers.data[0].version
+      const loader = loaders.data[0]?.loader?.version
+      const installer = installers.data[0]?.version
+
+      if (!loader || !installer) {
+        return null
+      }
 
       const url = `https://meta.fabricmc.net/v2/versions/loader/${version}/${loader}/${installer}/server/jar`
-      axios.get(url)
 
       return { core: ServerCore.FABRIC, url, additionalPackage: null }
     } catch {
@@ -114,20 +125,25 @@ export class Server {
 
   private static async getQuilt(version: string): Promise<IServerOption | null> {
     try {
-      const loaders = await axios.get<IFablicLoader[]>(
+      const loaders = await this.api.get<IFablicLoader[]>(
         `https://meta.quiltmc.org/v3/versions/loader/` + version
       )
 
-      const loader = loaders.data[0].loader.version
+      const loader = loaders.data[0]?.loader?.version
+      if (!loader) {
+        return null
+      }
 
-      const url = `https://meta.quiltmc.org/v3/versions/loader/${version}/${loader}/server/json`
-      axios.get(url)
-
-      const installers = await axios.get<IFabricInstaller[]>(
+      const installers = await this.api.get<IFabricInstaller[]>(
         `https://meta.quiltmc.org/v3/versions/installer`
       )
 
-      return { core: ServerCore.QUILT, url: installers.data[0].url, additionalPackage: null }
+      const installerUrl = installers.data[0]?.url
+      if (!installerUrl) {
+        return null
+      }
+
+      return { core: ServerCore.QUILT, url: installerUrl, additionalPackage: null }
     } catch {
       return null
     }
@@ -135,13 +151,20 @@ export class Server {
 
   private static async getForge(version: string): Promise<IServerOption | null> {
     try {
-      const response = await axios.get(`${BACKEND_URL}/loaders/forge.json`)
+      const response = await this.api.get(`${BACKEND_URL}/loaders/forge.json`)
 
       const versions: {
         [key: string]: LoaderVersion[]
       } = response.data
 
-      return { core: ServerCore.FORGE, url: versions[version][0].url, additionalPackage: null }
+      const v = versions[version]
+      const first = v?.[0]
+
+      if (!first?.url) {
+        return null
+      }
+
+      return { core: ServerCore.FORGE, url: first.url, additionalPackage: null }
     } catch {
       return null
     }
@@ -149,13 +172,20 @@ export class Server {
 
   private static async getNeoForge(version: string): Promise<IServerOption | null> {
     try {
-      const response = await axios.get(`${BACKEND_URL}/loaders/neoforge.json`)
+      const response = await this.api.get(`${BACKEND_URL}/loaders/neoforge.json`)
 
       const versions: {
         [key: string]: LoaderVersion[]
       } = response.data
 
-      return { core: ServerCore.NEOFORGE, url: versions[version][0].url, additionalPackage: null }
+      const v = versions[version]
+      const first = v?.[0]
+
+      if (!first?.url) {
+        return null
+      }
+
+      return { core: ServerCore.NEOFORGE, url: first.url, additionalPackage: null }
     } catch {
       return null
     }
@@ -163,13 +193,18 @@ export class Server {
 
   private static async getPurpur(version: string): Promise<IServerOption | null> {
     try {
-      const purpurVersion = await axios.get<IPurpurVersion>(
+      const purpurVersion = await this.api.get<IPurpurVersion>(
         `https://api.purpurmc.org/v2/purpur/` + version
       )
 
+      const latest = purpurVersion.data.builds?.latest
+      if (!latest) {
+        return null
+      }
+
       return {
         core: ServerCore.PURPUR,
-        url: `https://api.purpurmc.org/v2/purpur/${version}/${purpurVersion.data.builds.latest}/download`,
+        url: `https://api.purpurmc.org/v2/purpur/${version}/${latest}/download`,
         additionalPackage: null
       }
     } catch {

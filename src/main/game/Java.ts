@@ -193,37 +193,52 @@ export class Java {
   async init() {
     if (!this.version || !this.platform) return
 
-    const javaPath = path.join(
+    if (!app.isReady()) {
+      await app.whenReady()
+    }
+
+    const javaRoot = path.join(
       app.getPath('appData'),
       '.grubielauncher',
       'java',
-      this.version.id,
-      'bin'
+      this.version.id
     )
 
-    const ext = this.platform.os === 'windows' ? '.exe' : ''
+    const javaBinDir =
+      this.platform.os === 'osx'
+        ? path.join(javaRoot, 'Contents', 'Home', 'bin')
+        : path.join(javaRoot, 'bin')
 
-    this.javaPath = path.join(javaPath, 'javaw' + ext)
-    this.javaServerPath = path.join(javaPath, 'java' + ext)
+    const ext = this.platform.os === 'windows' ? '.exe' : ''
+    const clientBinary = this.platform.os === 'windows' ? 'javaw' : 'java'
+
+    this.javaPath = path.join(javaBinDir, clientBinary + ext)
+    this.javaServerPath = path.join(javaBinDir, 'java' + ext)
   }
 
   async install() {
     if (!this.version || !this.platform) return
 
-    if (await fs.pathExists(this.javaPath)) return
+    await this.init()
 
-    const javaFile = this.version[this.platform.os].find((a) => a.name === this.platform!.arch)
+    if (this.javaPath && (await fs.pathExists(this.javaPath))) return
+    if (this.javaServerPath && (await fs.pathExists(this.javaServerPath))) return
+
+    const javaFile = this.version[this.platform.os].find((a) => a.name === this.platform?.arch)
     if (!javaFile) return
 
     const fileName =
       javaFile.url.split('/').pop() || `java.${this.platform.os === 'windows' ? 'zip' : 'tar.gz'}`
+
+    const javaBaseDir = path.join(app.getPath('appData'), '.grubielauncher', 'java')
+    await fs.ensureDir(javaBaseDir)
 
     const downloader = new Downloader()
 
     await downloader.downloadFiles([
       {
         url: javaFile.url,
-        destination: path.join(app.getPath('appData'), '.grubielauncher', 'java', fileName),
+        destination: path.join(javaBaseDir, fileName),
         sha1: javaFile.sha1,
         size: javaFile.size,
         group: 'java',

@@ -1,7 +1,6 @@
 import { ILocalAccount } from '@/types/Account'
 import { IVersionConf } from '@/types/IVersion'
 import { IServerConf, IServerSettings } from '@/types/Server'
-import { ipcMain } from 'electron'
 import { ServerGame } from '../game/Server'
 import {
   getServerSettings,
@@ -14,19 +13,13 @@ import { IServer } from '@/types/ServersList'
 import { Loader } from '@/types/Loader'
 import { Server } from '../services/Server'
 import { compareServers } from '../utilities/serverList'
+import { handleSafe } from '../utilities/ipc'
 
 export function registerServerIpc() {
-  ipcMain.handle(
+  handleSafe<boolean, [ILocalAccount | undefined, number, string, string, IServerConf, IVersionConf?]>(
     'server:install',
-    async (
-      _,
-      account: ILocalAccount | undefined,
-      downloadLimit: number,
-      versionPath: string,
-      serverPath: string,
-      conf: IServerConf,
-      versionConf?: IVersionConf
-    ) => {
+    false,
+    async (_, account, downloadLimit, versionPath, serverPath, conf, versionConf) => {
       const installer = new ServerGame(
         account,
         downloadLimit,
@@ -40,39 +33,91 @@ export function registerServerIpc() {
     }
   )
 
-  ipcMain.handle('servers:versions', async (_, versions: IVersionConf[]) => {
-    return await getServersOfVersions(versions)
-  })
-
-  ipcMain.handle('servers:write', async (_, data: IServer[], path: string) => {
-    await writeNBT(data, path)
-  })
-
-  ipcMain.handle('servers:get', async (_, version: string, loader: Loader) => {
-    const servers = await Server.get(version, loader)
-    return servers
-  })
-
-  ipcMain.handle('server:getSettings', async (_, filePath: string) => {
-    return await getServerSettings(filePath)
-  })
-
-  ipcMain.handle('server:editXmx', async (_, serverPath: string, memory: number) => {
-    await replaceXmxParameter(serverPath, `${memory}M`)
-  })
-
-  ipcMain.handle(
-    'server:updateProperties',
-    async (_, filePath: string, settings: IServerSettings) => {
-      await updateServerProperty(filePath, settings)
+  handleSafe<any[], [IVersionConf[]]>(
+    'servers:versions',
+    [],
+    async (_, versions) => {
+      return await getServersOfVersions(versions)
     }
   )
 
-  ipcMain.handle('servers:read', async (_, path: string) => {
-    return await readNBT(path)
-  })
+  handleSafe<boolean, [IServer[], string]>(
+    'servers:write',
+    false,
+    async (_, data, p) => {
+      await writeNBT(data, p)
+      return true
+    }
+  )
 
-  ipcMain.handle('servers:compare', (_, servers1: IServer[], servers2: IServer[]) => {
-    return compareServers(servers1, servers2)
-  })
+  handleSafe<any[], [string, Loader]>(
+    'servers:get',
+    [],
+    async (_, version, loader) => {
+      return await Server.get(version, loader)
+    }
+  )
+
+  handleSafe<IServerSettings, [string]>(
+    'server:getSettings',
+    {
+      maxPlayers: 20,
+      gameMode: 'survival',
+      difficulty: 'normal',
+      whitelist: false,
+      onlineMode: true,
+      pvp: true,
+      enableCommandBlock: false,
+      allowFlight: false,
+      spawnAnimals: true,
+      spawnMonsters: true,
+      spawnNpcs: true,
+      allowNether: true,
+      forceGamemode: false,
+      spawnProtection: 16,
+      requireResourcePack: false,
+      resourcePack: '',
+      resourcePackPrompt: '',
+      motd: '',
+      serverIp: '',
+      serverPort: 25565
+    },
+    async (_, filePath) => {
+      return await getServerSettings(filePath)
+    }
+  )
+
+  handleSafe<boolean, [string, number]>(
+    'server:editXmx',
+    false,
+    async (_, serverPath, memory) => {
+      await replaceXmxParameter(serverPath, `${memory}M`)
+      return true
+    }
+  )
+
+  handleSafe<boolean, [string, IServerSettings]>(
+    'server:updateProperties',
+    false,
+    async (_, filePath, settings) => {
+      await updateServerProperty(filePath, settings)
+      return true
+    }
+  )
+
+  handleSafe<IServer[], [string]>(
+    'servers:read',
+    [],
+    async (_, p) => {
+      return await readNBT(p)
+    }
+  )
+
+  handleSafe<boolean, [IServer[], IServer[]]>(
+    'servers:compare',
+    false,
+    (_, servers1, servers2) => {
+      return compareServers(servers1, servers2)
+    }
+  )
 }

@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import * as ipcHandlers from './ipc'
-import { createMainWindow } from './windows/mainWindow'
+import { createMainWindow, mainWindow } from './windows/mainWindow'
 import { createUpdaterWindow, updaterWindow } from './windows/updaterWindow'
 import path from 'path'
 import fs from 'fs-extra'
@@ -12,6 +12,13 @@ const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
   app.quit()
 } else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+    }
+  })
+
   app.whenReady().then(async () => {
     electronApp.setAppUserModelId('com.grubielauncher')
 
@@ -23,13 +30,14 @@ if (!gotTheLock) {
       optimizer.watchWindowShortcuts(window)
     })
 
-    // createUpdaterWindow()
+    Object.values(ipcHandlers).forEach((register) => register())
 
-    if (is.dev) createMainWindow()
-    else {
-      createUpdaterWindow()
-      autoUpdater.checkForUpdates()
+    if (is.dev) {
+      createMainWindow()
+      return
     }
+
+    createUpdaterWindow()
 
     autoUpdater.on('download-progress', (p) => {
       updaterWindow?.webContents.send('updater:downloadProgress', p.percent.toFixed(1))
@@ -49,7 +57,13 @@ if (!gotTheLock) {
       createMainWindow()
     })
 
-    Object.values(ipcHandlers).forEach((register) => register())
+    autoUpdater.checkForUpdates()
+  })
+
+  app.on('activate', () => {
+    if (process.platform === 'darwin' && !mainWindow) {
+      createMainWindow()
+    }
   })
 
   app.on('window-all-closed', () => {

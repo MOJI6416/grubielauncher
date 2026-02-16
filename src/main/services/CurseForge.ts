@@ -11,6 +11,25 @@ import {
 import axios from 'axios'
 
 export class CurseForge {
+  private static api = axios.create({
+    baseURL: BACKEND_URL,
+    timeout: 30000
+  })
+
+  private static logAxiosError(prefix: string, error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status
+      const statusText = error.response?.statusText
+      console.error(
+        `${prefix}:`,
+        status ? `HTTP ${status}${statusText ? ` ${statusText}` : ''}` : error.message
+      )
+      return
+    }
+
+    console.error(`${prefix}:`, error)
+  }
+
   static async search(
     query: string,
     options: {
@@ -40,35 +59,33 @@ export class CurseForge {
 
       category.forEach((cat) => params.append('category', cat))
 
-      const response = await axios.get<ISearchModsResponse>(`${BACKEND_URL}/curseforge/search`, {
+      const response = await this.api.get<ISearchModsResponse>('/curseforge/search', {
         params
       })
 
       return response.data
     } catch (error) {
-      console.error('Error searching mods:', error)
+      this.logAxiosError('Error searching mods', error)
       return null
     }
   }
 
   static async get(modId: number): Promise<IMod | null> {
     try {
-      const response = await axios.get<IMod>(`${BACKEND_URL}/curseforge/mods/${modId}`)
+      const response = await this.api.get<IMod>(`/curseforge/mods/${modId}`)
       return response.data
     } catch (error) {
-      console.error('Error getting mod:', error)
+      this.logAxiosError('Error getting mod', error)
       return null
     }
   }
 
   static async getFile(modId: number, fileId: number): Promise<IFile | null> {
     try {
-      const response = await axios.get<IFile>(
-        `${BACKEND_URL}/curseforge/mods/${modId}/files/${fileId}`
-      )
+      const response = await this.api.get<IFile>(`/curseforge/mods/${modId}/files/${fileId}`)
       return response.data
     } catch (error) {
-      console.error('Error getting file:', error)
+      this.logAxiosError('Error getting file', error)
       return null
     }
   }
@@ -85,61 +102,57 @@ export class CurseForge {
       if (version) params.append('version', version)
       if (loader !== undefined) params.append('loader', loader.toString())
 
-      const response = await axios.get<IFile[]>(`${BACKEND_URL}/curseforge/mods/${modId}/files`, {
+      const response = await this.api.get<IFile[]>(`/curseforge/mods/${modId}/files`, {
         params
       })
 
       return response.data
     } catch (error) {
-      console.error('Error getting mod files:', error)
+      this.logAxiosError('Error getting mod files', error)
       return null
     }
   }
 
   static async getFilter(modType: ModTypeClassIds): Promise<ICategory[] | null> {
     try {
-      const response = await axios.get<ICategory[]>(
-        `${BACKEND_URL}/curseforge/categories/${modType}`
-      )
+      const response = await this.api.get<ICategory[]>(`/curseforge/categories/${modType}`)
       return response.data
     } catch (error) {
-      console.error('Error getting categories:', error)
+      this.logAxiosError('Error getting categories', error)
       return null
     }
   }
 
   static async getFiles(fileIds: number[]): Promise<IFile[]> {
     try {
-      const response = await axios.post<IFile[]>(`${BACKEND_URL}/curseforge/files`, {
+      const response = await this.api.post<IFile[]>(`/curseforge/files`, {
         fileIds
       })
       return response.data
     } catch (error) {
-      console.error('Error getting files:', error)
+      this.logAxiosError('Error getting files', error)
       return []
     }
   }
 
   static async getMods(modIds: number[]): Promise<IMod[]> {
     try {
-      const response = await axios.post<IMod[]>(`${BACKEND_URL}/curseforge/mods`, {
+      const response = await this.api.post<IMod[]>(`/curseforge/mods`, {
         modIds
       })
       return response.data
     } catch (error) {
-      console.error('Error getting mods:', error)
+      this.logAxiosError('Error getting mods', error)
       return []
     }
   }
 
   static async getModDescription(modId: number): Promise<string | null> {
     try {
-      const response = await axios.get<string>(
-        `${BACKEND_URL}/curseforge/mods/${modId}/description`
-      )
+      const response = await this.api.get<string>(`/curseforge/mods/${modId}/description`)
       return response.data
     } catch (error) {
-      console.error('Error getting mod description:', error)
+      this.logAxiosError('Error getting mod description', error)
       return null
     }
   }

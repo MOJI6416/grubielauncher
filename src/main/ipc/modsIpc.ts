@@ -1,22 +1,24 @@
-import { ipcMain } from 'electron'
 import { Mods } from '../game/Mods'
 import { TSettings } from '@/types/Settings'
 import { IVersionConf } from '@/types/IVersion'
 import { IServerConf } from '@/types/Server'
+import { handleSafe } from '../utilities/ipc'
 
 export function registerModsIpc() {
-  ipcMain.handle(
+  handleSafe<boolean>(
     'mods:check',
-    async (_, settings: TSettings, versionConf: IVersionConf, server?: IServerConf) => {
+    false,
+    async (_event, settings: TSettings, versionConf: IVersionConf, server?: IServerConf) => {
       const mods = new Mods(settings, versionConf, server)
       await mods.check()
       return true
     }
   )
 
-  ipcMain.handle(
+  handleSafe<boolean>(
     'mods:downloadOther',
-    async (_, settings: TSettings, versionConf: IVersionConf) => {
+    false,
+    async (_event, settings: TSettings, versionConf: IVersionConf) => {
       const mods = new Mods(settings, versionConf)
       await mods.downloadOther()
       return true

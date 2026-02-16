@@ -1,81 +1,79 @@
-import { ipcMain } from 'electron'
 import { Backend } from '../services/Backend'
 import { IUpdateUser } from '@/types/IUser'
 import { IModpack, IModpackUpdate } from '@/types/Backend'
 import { VersionsService } from '../services/Versions'
+import { handleSafe } from '../utilities/ipc'
 
 export function registerBackendIpc() {
-  ipcMain.handle('backend:getModpack', async (_, at: string, code: string) => {
-    const backend = new Backend(at)
-    const response = await backend.getModpack(code)
-    return response
-  })
-
-  ipcMain.handle(
-    'backend:shareModpack',
-    async (_, at: string, modpack: { conf: IModpack['conf'] }) => {
+  handleSafe(
+    'backend:getModpack',
+    { status: 'error', data: null as any },
+    async (_, at: string, code: string) => {
       const backend = new Backend(at)
-      const response = await backend.shareModpack(modpack)
-      return response
+      return await backend.getModpack(code)
     }
   )
 
-  ipcMain.handle(
-    'backend:updateModpack',
-    async (_, at: string, shareCode: string, update: IModpackUpdate) => {
-      const backend = new Backend(at)
-      const response = await backend.updateModpack(shareCode, update)
-      return response
-    }
-  )
-
-  ipcMain.handle('backend:deleteModpack', async (_, at: string, shareCode: string) => {
+  handleSafe('backend:getOwnModpacks', [], async (_, at: string) => {
     const backend = new Backend(at)
-    const response = await backend.deleteModpack(shareCode)
-    return response
+    return await backend.getOwnModpacks()
   })
 
-  ipcMain.handle('backend:updateUser', async (_, at: string, id: string, user: IUpdateUser) => {
+  handleSafe('backend:shareModpack', null, async (_, at: string, modpack: { conf: IModpack['conf'] }) => {
     const backend = new Backend(at)
-    const response = await backend.updateUser(id, user)
-    return response
+    return await backend.shareModpack(modpack)
   })
 
-  ipcMain.handle('backend:getUser', async (_, at: string, id: string) => {
+  handleSafe('backend:updateModpack', false, async (_, at: string, shareCode: string, update: IModpackUpdate) => {
     const backend = new Backend(at)
-    const response = await backend.getUser(id)
-    return response
+    await backend.updateModpack(shareCode, update)
+    return true
   })
 
-  ipcMain.handle(
+  handleSafe('backend:deleteModpack', false, async (_, at: string, shareCode: string) => {
+    const backend = new Backend(at)
+    return await backend.deleteModpack(shareCode)
+  })
+
+  handleSafe('backend:updateUser', null, async (_, at: string, id: string, user: IUpdateUser) => {
+    const backend = new Backend(at)
+    return await backend.updateUser(id, user)
+  })
+
+  handleSafe('backend:getUser', null, async (_, at: string, id: string) => {
+    const backend = new Backend(at)
+    return await backend.getUser(id)
+  })
+
+  handleSafe(
     'backend:uploadFileFromPath',
+    null,
     async (_, at: string, filePath: string, fileName?: string, folder?: string) => {
       const backend = new Backend(at)
-      const response = await backend.uploadFileFromPath(filePath, fileName, folder)
-      return response
+      return await backend.uploadFileFromPath(filePath, fileName, folder)
     }
   )
 
-  ipcMain.handle('backend:deleteFile', async (_, at: string, key: string, isDirectory = false) => {
+  handleSafe('backend:deleteFile', false, async (_, at: string, key: string, isDirectory = false) => {
     const backend = new Backend(at)
-    const response = await backend.deleteFile(key, isDirectory)
-    return response
+    await backend.deleteFile(key, isDirectory)
+    return true
   })
 
-  ipcMain.handle('backend:modpackDownloaded', async (_, at: string, shareCode: string) => {
+  handleSafe('backend:modpackDownloaded', false, async (_, at: string, shareCode: string) => {
     const backend = new Backend(at)
-    const response = await backend.modpackDownloaded(shareCode)
-    return response
+    await backend.modpackDownloaded(shareCode)
+    return true
   })
 
-  ipcMain.handle('backend:getNews', async () => {
+  handleSafe('backend:getNews', [], async () => {
     const backend = new Backend()
-    const response = await backend.getNews()
-    return response
+    return await backend.getNews()
   })
 
-  ipcMain.handle(
+  handleSafe(
     'backend:login',
+    null,
     async (
       _,
       at: string,
@@ -87,48 +85,34 @@ export function registerBackendIpc() {
       }
     ) => {
       const backend = new Backend(at)
-      const response = await backend.login(id, auth)
-      return response
+      return await backend.login(id, auth)
     }
   )
 
-  ipcMain.handle('backend:getSkin', async (_, at: string, uuid: string) => {
+  handleSafe('backend:getSkin', null, async (_, at: string, uuid: string) => {
     const backend = new Backend(at)
-    const response = await backend.getSkin(uuid)
-    return response
+    return await backend.getSkin(uuid)
   })
 
-  ipcMain.handle('backend:discordAuthenticated', async (_, at: string, userId: string) => {
+  handleSafe('backend:discordAuthenticated', false, async (_, at: string, userId: string) => {
     const backend = new Backend(at)
-    const response = await backend.discordAuthenticated(userId)
-    return response
+    return await backend.discordAuthenticated(userId)
   })
 
-  ipcMain.handle('backend:aiComplete', async (_, at: string, prompt: string) => {
+  handleSafe('backend:aiComplete', null, async (_, at: string, prompt: string) => {
     const backend = new Backend(at)
-    const response = await backend.aiComplete(prompt)
-    return response
+    return await backend.aiComplete(prompt)
   })
 
-  ipcMain.handle(
-    'versions:getList',
-    async (
-      _,
-      loader: 'vanilla' | 'forge' | 'neoforge' | 'fabric' | 'quilt',
-      includeSnapshots: boolean = false
-    ) => {
-      return await VersionsService.getVersions(loader, includeSnapshots)
-    }
-  )
+  handleSafe('versions:getList', [], async (_, loader: 'vanilla' | 'forge' | 'neoforge' | 'fabric' | 'quilt', includeSnapshots = false) => {
+    return await VersionsService.getVersions(loader, includeSnapshots)
+  })
 
-  ipcMain.handle(
-    'versions:getLoaderVersions',
-    async (_, loader: 'forge' | 'neoforge' | 'fabric' | 'quilt', mcVersion: string) => {
-      return await VersionsService.getLoaderVersions(loader, mcVersion)
-    }
-  )
+  handleSafe('versions:getLoaderVersions', [], async (_, loader: 'forge' | 'neoforge' | 'fabric' | 'quilt', mcVersion: string) => {
+    return await VersionsService.getLoaderVersions(loader, mcVersion)
+  })
 
-  ipcMain.handle('backend:getAuthlib', async () => {
+  handleSafe('backend:getAuthlib', null, async () => {
     const backend = new Backend()
     return await backend.getAuthlib()
   })

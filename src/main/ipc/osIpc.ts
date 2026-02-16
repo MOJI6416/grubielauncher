@@ -1,8 +1,9 @@
-import { ipcMain } from 'electron'
 import os from 'os'
+import { handleSafe } from '../utilities/ipc'
+
 
 export function registerOsIpc() {
-  ipcMain.handle('os:totalmem', () => {
+  handleSafe<number>('os:totalmem', 0, () => {
     return os.totalmem()
   })
 }

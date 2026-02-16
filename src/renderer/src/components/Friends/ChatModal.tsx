@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useMemo } from 'react'
-import { IModpack } from '@/types/Backend'
-import { IFriend } from '@/types/IFriend'
-import { IMessage } from '@/types/IMessage'
+import React, { useCallback, useEffect, useMemo } from "react";
+import { IModpack } from "@/types/Backend";
+import { IFriend } from "@/types/IFriend";
+import { IMessage } from "@/types/IMessage";
 import {
   Alert,
   Avatar,
@@ -15,38 +15,38 @@ import {
   ModalContent,
   ModalHeader,
   ScrollShadow,
-  Spinner
-} from '@heroui/react'
-import { Gamepad2, Package, SendHorizontal } from 'lucide-react'
-import { LoadingType } from './Friends'
-import { Version } from '@renderer/classes/Version'
-import { formatDate } from '@renderer/utilities/date'
-import { ILocalAccount } from '@/types/Account'
-import { authDataAtom } from '@renderer/stores/atoms'
-import { useAtom } from 'jotai'
+  Spinner,
+} from "@heroui/react";
+import { Gamepad2, Package, SendHorizontal } from "lucide-react";
+import { LoadingType } from "./Friends";
+import { Version } from "@renderer/classes/Version";
+import { formatDate } from "@renderer/utilities/date";
+import { ILocalAccount } from "@/types/Account";
+import { authDataAtom } from "@renderer/stores/atoms";
+import { useAtom } from "jotai";
 
 interface ChatModalProps {
-  friend: IFriend
-  messages: IMessage[]
-  messageText: string
-  isLoading: boolean
-  loadingType?: LoadingType
-  loadingIndex: number
-  chatModpacks: IModpack[]
-  versions: Version[]
-  shareableVersions: Version[]
-  messagesRef: React.RefObject<HTMLDivElement | null>
-  messageInputRef: React.RefObject<HTMLInputElement | null>
-  account: ILocalAccount | undefined
-  onClose: () => void
-  onMessageChange: (text: string) => void
-  onSendMessage: () => void
-  onOpenVersionSelect: () => void
-  onPlayModpack: (modpack: IModpack, version?: Version) => void
-  t: any
+  friend: IFriend;
+  messages: IMessage[];
+  messageText: string;
+  isLoading: boolean;
+  loadingType?: LoadingType;
+  loadingIndex: number;
+  chatModpacks: IModpack[];
+  versions: Version[];
+  shareableVersions: Version[];
+  messagesRef: React.RefObject<HTMLDivElement | null>;
+  messageInputRef: React.RefObject<HTMLInputElement | null>;
+  account: ILocalAccount | undefined;
+  onClose: () => void;
+  onMessageChange: (text: string) => void;
+  onSendMessage: () => void;
+  onOpenVersionSelect: () => void;
+  onPlayModpack: (modpack: IModpack, version?: Version) => void;
+  t: any;
 }
 
-type SenderView = { nickname: string; image?: string | null }
+type SenderView = { nickname: string; image?: string | null };
 
 export function ChatModal({
   friend,
@@ -66,68 +66,69 @@ export function ChatModal({
   onSendMessage,
   onOpenVersionSelect,
   onPlayModpack,
-  t
+  t,
 }: ChatModalProps) {
-  const isBusy = isLoading && (loadingType === 'messageSend' || loadingType === 'messages')
-  const canSend = messageText.trim().length > 0 && !isBusy
-  const [authData] = useAtom(authDataAtom)
+  const isBusy =
+    isLoading && (loadingType === "messageSend" || loadingType === "messages");
+  const canSend = messageText.trim().length > 0 && !isBusy;
+  const [authData] = useAtom(authDataAtom);
 
   const modpackById = useMemo(() => {
-    const map = new Map<string, IModpack>()
-    for (const mp of chatModpacks) map.set(mp._id, mp)
-    return map
-  }, [chatModpacks])
+    const map = new Map<string, IModpack>();
+    for (const mp of chatModpacks) map.set(mp._id, mp);
+    return map;
+  }, [chatModpacks]);
 
   const versionByShareCode = useMemo(() => {
-    const map = new Map<string, Version>()
+    const map = new Map<string, Version>();
     for (const v of versions) {
-      const code = v?.version?.shareCode
-      if (code) map.set(code, v)
+      const code = v?.version?.shareCode;
+      if (code) map.set(code, v);
     }
-    return map
-  }, [versions])
+    return map;
+  }, [versions]);
 
   const resolveSender = useCallback(
     (msg: IMessage): SenderView => {
       if (account && msg.sender === authData?.sub)
-        return { nickname: account.nickname, image: account.image }
-      return { nickname: friend.user.nickname, image: friend.user.image }
+        return { nickname: account.nickname, image: account.image };
+      return { nickname: friend.user.nickname, image: friend.user.image };
     },
-    [account, authData?.sub, friend.user.image, friend.user.nickname]
-  )
+    [account, authData?.sub, friend.user.image, friend.user.nickname],
+  );
 
   useEffect(() => {
-    if (!messagesRef.current) return
-    const el = messagesRef.current
+    if (!messagesRef.current) return;
+    const el = messagesRef.current;
 
     requestAnimationFrame(() => {
-      el.scrollTop = el.scrollHeight
-    })
-  }, [messages.length, messagesRef])
+      el.scrollTop = el.scrollHeight;
+    });
+  }, [messages.length, messagesRef]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key !== 'Enter') return
-      if (!messageText.trim()) return
-      if (isBusy) return
-      onSendMessage()
+      if (e.key !== "Enter") return;
+      if (!messageText.trim()) return;
+      if (isBusy) return;
+      onSendMessage();
     },
-    [isBusy, messageText, onSendMessage]
-  )
+    [isBusy, messageText, onSendMessage],
+  );
 
   return (
     <Modal isOpen={true} onClose={onClose}>
       <ModalContent>
         <ModalHeader>
-          {t('friends.chatTitle')} {friend.user.nickname}
+          {t("friends.chatTitle")} {friend.user.nickname}
         </ModalHeader>
 
         <ModalBody>
           <div className="flex flex-col gap-4 justify-between">
-            <Alert color="warning" title={t('friends.chatLimit')} />
+            <Alert color="warning" title={t("friends.chatLimit")} />
 
             <div className="flex flex-col gap-4 h-96 justify-between">
-              {isLoading && loadingType === 'messages' ? (
+              {isLoading && loadingType === "messages" ? (
                 <div className="text-center">
                   <Spinner size="sm" />
                 </div>
@@ -135,24 +136,33 @@ export function ChatModal({
                 <ScrollShadow className="h-full" ref={messagesRef}>
                   <div className="flex flex-col gap-2">
                     {messages.map((msg, index) => {
-                      const sender = resolveSender(msg)
+                      const sender = resolveSender(msg);
 
-                      const isModpackMsg = msg.message._type === 'modpack'
-                      const modpackId = isModpackMsg ? String(msg.message.value) : ''
-                      const modpack = isModpackMsg ? modpackById.get(modpackId) : undefined
-                      const version = modpack ? versionByShareCode.get(modpack._id) : undefined
+                      const isModpackMsg = msg.message._type === "modpack";
+                      const modpackId = isModpackMsg
+                        ? String(msg.message.value)
+                        : "";
+                      const modpack = isModpackMsg
+                        ? modpackById.get(modpackId)
+                        : undefined;
+                      const version = modpack
+                        ? versionByShareCode.get(modpack._id)
+                        : undefined;
 
                       return (
-                        <div key={`${msg.time}-${index}`} className="flex items-center gap-2">
+                        <div
+                          key={`${msg.time}-${index}`}
+                          className="flex items-center gap-2"
+                        >
                           <Avatar
-                            src={sender.image || ''}
+                            src={sender.image || ""}
                             size="sm"
                             className="min-w-8 min-h-8"
                             name={sender.nickname}
                           />
 
                           <div className="flex flex-col min-w-0">
-                            {msg.message._type === 'text' && (
+                            {msg.message._type === "text" && (
                               <span className="break-words">
                                 <p>{msg.message.value}</p>
                               </span>
@@ -162,10 +172,10 @@ export function ChatModal({
                               (loadingIndex === index ? (
                                 <div className="flex items-center gap-2">
                                   <Spinner size="sm" />
-                                  <p>{t('friends.chatAttachmentLoading')}</p>
+                                  <p>{t("friends.chatAttachmentLoading")}</p>
                                 </div>
                               ) : modpack ? (
-                                <Card>
+                                <Card className="border-white/20 border-1">
                                   <CardBody>
                                     <div className="flex items-center gap-2 min-w-0">
                                       {modpack.conf.image && (
@@ -177,14 +187,18 @@ export function ChatModal({
                                         />
                                       )}
 
-                                      <p className="truncate flex-grow">{modpack.conf.name}</p>
+                                      <p className="truncate flex-grow">
+                                        {modpack.conf.name}
+                                      </p>
 
                                       <Button
                                         size="sm"
                                         color="secondary"
                                         variant="flat"
                                         isIconOnly
-                                        onPress={() => onPlayModpack(modpack, version)}
+                                        onPress={() =>
+                                          onPlayModpack(modpack, version)
+                                        }
                                       >
                                         <Gamepad2 size={20} />
                                       </Button>
@@ -193,7 +207,7 @@ export function ChatModal({
                                 </Card>
                               ) : (
                                 <p className="text-sm text-warning">
-                                  {t('friends.chatAttachmentLoadError')}
+                                  {t("friends.chatAttachmentLoadError")}
                                 </p>
                               ))}
 
@@ -202,7 +216,7 @@ export function ChatModal({
                             </p>
                           </div>
                         </div>
-                      )
+                      );
                     })}
                   </div>
                 </ScrollShadow>
@@ -234,7 +248,7 @@ export function ChatModal({
                   variant="flat"
                   isIconOnly
                   isDisabled={!canSend}
-                  isLoading={isLoading && loadingType === 'messageSend'}
+                  isLoading={isLoading && loadingType === "messageSend"}
                   onPress={onSendMessage}
                 >
                   <SendHorizontal size={20} />
@@ -245,5 +259,5 @@ export function ChatModal({
         </ModalBody>
       </ModalContent>
     </Modal>
-  )
+  );
 }

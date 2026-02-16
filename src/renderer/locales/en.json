@@ -46,7 +46,8 @@
     "nickname": "Nickname",
     "type": "Account type",
     "avatar": "Avatar",
-    "cancelled": "Authentication canceled"
+    "cancelled": "Authentication canceled",
+    "confirmation": "Are you sure you want to delete the account {{nickname}}?"
   },
   "serverManager": {
     "logoEdited": "Logo edited",
@@ -54,7 +55,8 @@
     "deleted": "Server deleted",
     "run": "Run",
     "configNotFound": "Server configuration file not found",
-    "deleteError": "Server deletion error"
+    "deleteError": "Server deletion error",
+    "confirmation": "Are you sure you want to delete the server?"
   },
   "serverMotd": {
     "preview": "Preview"
@@ -204,7 +206,8 @@
     },
     "fromFile": {
       "error": "Failed to recognize file"
-    }
+    },
+    "localModsWarning": "This modpack contains local modifications. Install it only if you trust the modpack author."
   },
   "servers": {
     "title": "Servers",
@@ -297,7 +300,7 @@
     "notFoundServerCore": "No suitable core found",
     "serverInstalled": "Server installed",
     "serverInstallError": "Failed to install server",
-    "completeRemovalInfo": "Will delete libraries and resources (Not recommended)",
+    "completeRemovalInfo": "Libraries and assets will be deleted; they may be shared with other versions. Not recommended!",
     "shareOptions": "Share options",
     "shareGameSettings": "Share game settings",
     "copyRelativePath": "Copy command with relative path",
@@ -448,7 +451,6 @@
     "players": "Players"
   },
   "share": {
-    "deleted": "Build deleted from server",
     "limitExceeded": "1 GB limit exceeded"
   },
   "manageSkins": {
@@ -505,7 +507,8 @@
     "resetIcon": "Reset icon",
     "renameError": "Error renaming world",
     "renamed": "World renamed",
-    "iconReseted": "Icon reseted"
+    "iconReseted": "Icon reseted",
+    "confirmation": "Are you sure you want to delete the world {{name}}?"
   },
   "tips": {
     "checkIntegrity": "Check the integrity of game files"
@@ -525,5 +528,12 @@
     "timeRemaining": "Time remaining"
   },
   "sizes": ["B", "KB", "MB", "GB", "TB"],
-  "timeUnits": ["s", "m", "h", "d"]
+  "timeUnits": ["s", "m", "h", "d"],
+  "ownModpacks": {
+    "title": "My modpacks",
+    "noModpacks": "You haven't shared any modpacks",
+    "deleted": "Modpack deleted",
+    "deleteError": "Error deleting modpack",
+    "confirmation": "Are you sure you want to delete the modpack {{name}}? It will be removed from the server and become unavailable for download"
+  }
 }

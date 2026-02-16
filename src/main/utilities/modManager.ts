@@ -44,6 +44,7 @@ export function dependencyToLocalProject(dependencies: IVersionDependency[]) {
     const project = dependency.project
 
     if (!project) continue
+    if (!project.versions || project.versions.length === 0) continue
 
     const version = project.versions[0]
     newMods.push({
@@ -70,7 +71,9 @@ export async function cfModpackToModpack(modpack: CurseForgeModpack): Promise<IM
   const files = await CurseForge.getFiles(modpack.files.map((file) => file.fileID))
 
   function getLoaderName(minecraft: CurseForgeModpack['minecraft']): Loader | null {
-    return (minecraft.modLoaders?.[0]?.id.split('-')[0] as Loader) || null
+    const raw = minecraft.modLoaders?.[0]?.id
+    const id = typeof raw === 'string' ? raw : String(raw ?? '')
+    return (id.split('-')[0] as Loader) || null
   }
 
   const loader = getLoaderName(modpack.minecraft)
@@ -117,7 +120,7 @@ export async function cfModpackToModpack(modpack: CurseForgeModpack): Promise<IM
             size: file.fileLength,
             url: file.downloadUrl || `blocked::${mod.links.websiteUrl}/download/${file.id}`,
             sha1: file.hashes.find((h) => h.algo == 1)?.value || '',
-            isServer: file.isServerPack || true
+            isServer: (file.isServerPack ?? true)
           }
         ]
       }
@@ -135,11 +138,16 @@ export async function cfModpackToModpack(modpack: CurseForgeModpack): Promise<IM
 }
 
 export async function mrModpackToModpack(modpack: ModrinthModpack): Promise<IModpack> {
-  function getLoaderName(dependencies: IModpackDependencies[]): Loader | null {
+  function getLoaderName(dependencies: IModpackDependencies | Record<string, any> | any): Loader | null {
     const loaders = ['forge', 'neoforge', 'fabric-loader', 'quilt-loader']
-    return (
-      (loaders.find((loader) => loader in dependencies)?.replace('-loader', '') as Loader) || null
-    )
+
+    const depObj =
+      dependencies && typeof dependencies === 'object' && !Array.isArray(dependencies)
+        ? dependencies
+        : null
+
+    const found = depObj ? loaders.find((loader) => loader in depObj) : null
+    return ((found?.replace('-loader', '') as Loader) || null)
   }
 
   return {
@@ -201,21 +209,21 @@ export function mrProjectToProject(
         gallery.push({ url: image, description: '', title: '' })
       } else if (image && typeof image === 'object' && 'url' in image) {
         gallery.push({
-          url: image.raw_url || image.url,
-          description: image.description || '',
-          title: image.title || ''
+          url: (image as any).raw_url || (image as any).url,
+          description: (image as any).description || '',
+          title: (image as any).title || ''
         })
       }
     }
   }
 
   return {
-    url: `https://modrinth.com/${project.project_type}/${project.slug}`,
-    description: project.description,
-    iconUrl: project.icon_url,
-    id: mrIsResultProject(project) ? project.project_id : project.id,
+    url: `https://modrinth.com/${(project as any).project_type}/${(project as any).slug}`,
+    description: (project as any).description,
+    iconUrl: (project as any).icon_url,
+    id: mrIsResultProject(project) ? (project as any).project_id : (project as any).id,
     projectType,
-    title: project.title,
+    title: (project as any).title,
     provider: Provider.MODRINTH,
     versions: [],
     body,
@@ -250,7 +258,7 @@ export function cfFileToVersion(file: IFile, projectType: ProjectType, modUrl: s
         filename: projectType != ProjectType.WORLD ? file.fileName : file.fileName,
         size: file.fileLength,
         url: file.downloadUrl || `blocked::${modUrl}/download/${file.id}`,
-        isServer: file.isServerPack || true,
+        isServer: (file.isServerPack ?? true),
         sha1: file.hashes.find((h) => h.algo == 1)?.value || ''
       }
     ]
@@ -355,7 +363,7 @@ export async function checkLocalMod(modPath: string): Promise<ILocalFileInfo | n
 
           return {
             ...fabricMod,
-            url: fabricMod.contact.homepage,
+            url: fabricMod.contact?.homepage || '',
             filename: fileName,
             size: fileSize,
             path: modPath,
@@ -450,7 +458,7 @@ export async function checkLocalMod(modPath: string): Promise<ILocalFileInfo | n
       sha1,
       icon: null
     }
-  } catch (err) {
+  } catch {
     return null
   } finally {
     if (tempPath && (await fs.pathExists(tempPath))) {
@@ -464,7 +472,7 @@ async function parseModsToml(filePath: string): Promise<any> {
     const fileContent = await fs.readFile(filePath, 'utf-8')
     const parsedContent = toml.parse(fileContent)
     return parsedContent
-  } catch (error) {
+  } catch {
     return null
   }
 }
@@ -590,7 +598,7 @@ export async function checkModpack(
               size: file.fileSize,
               url: downloadUrl,
               sha1: file.hashes.sha1,
-              isServer: file.env?.server == 'required' || true
+              isServer: (file.env?.server ? file.env.server !== 'unsupported' : true)
             }
           ]
         }
@@ -605,17 +613,20 @@ export async function checkModpack(
     const targetFolders = ['mods', 'resourcepacks', 'shaderpacks', 'datapacks']
     const files = await getFilesRecursively(overridesPath, null, targetFolders)
 
-    for (const file of files) {
-      const folder = path.relative(overridesPath, path.dirname(file)).split(path.sep)[0]
+    for (const relativeFile of files) {
+      const folder = relativeFile.split(path.sep)[0]
+
       if (!targetFolders.includes(folder)) continue
 
-      const fileName = path.basename(file)
+      const fileName = path.basename(relativeFile)
       if (!fileName) continue
 
       const projectType = folderToProjectType(folder)
       if (!projectType) continue
 
-      const info = await checkLocalMod(file)
+      const absoluteFilePath = path.join(overridesPath, relativeFile)
+
+      const info = await checkLocalMod(absoluteFilePath)
 
       modpack.mods.push({
         description: info?.description || '',
@@ -697,7 +708,7 @@ export function compareMods(a: ILocalProject[], b: ILocalProject[]): boolean {
   const sig = (m: ILocalProject) => {
     const v = m.version
     const fileSig = v?.files?.map((f) => `${f.filename}:${f.sha1}:${f.size}`).join('|') ?? ''
-    const depSig = v?.dependencies?.map((d) => `${d.title}:${d.relationType}`).join('|') ?? ''
+    const depSig = v?.dependencies?.map((d: any) => `${d.title}:${d.relationType}`).join('|') ?? ''
     return `${m.id}#${m.provider}#${m.projectType}#${v?.id ?? 'null'}#${fileSig}#${depSig}`
   }
 

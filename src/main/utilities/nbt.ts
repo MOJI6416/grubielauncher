@@ -42,7 +42,13 @@ export async function readNBT(path: string) {
     const fileData = await fs.readFile(path)
     const u = new Uint8Array(fileData)
     const readed: { servers: IServer[] } = await deserialize(u)
-    return readed.servers
+    
+    return readed.servers.map((s) => ({
+      name: s.name,
+      ip: s.ip,
+      icon: s.icon,
+      acceptTextures: s.acceptTextures ?? null
+    }))
   } catch (err) {
     console.log(`Error reading NBT file:`, err)
     return []

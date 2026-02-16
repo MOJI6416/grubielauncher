@@ -5,6 +5,26 @@ import { ICape, IGrubieSkin, IMojangProfile, ISkinsConfig, SkinsData } from '@/t
 import fs from 'fs-extra'
 import { Downloader } from '../utilities/downloader'
 import { BACKEND_URL } from '@/shared/config'
+import { pathToFileURL } from 'url'
+
+function toFileUrl(filePath: string): string {
+  return pathToFileURL(filePath).href
+}
+
+function extractIdFromUrl(url: string): string | null {
+  try {
+    const u = new URL(url)
+    const base = path.basename(u.pathname)
+    const id = base.replace(/\.png$/i, '')
+    return id || null
+  } catch {
+    const last = url.split('/').pop()
+    if (!last) return null
+    const base = last.split('?')[0]
+    const id = base.replace(/\.png$/i, '')
+    return id || null
+  }
+}
 
 export class SkinsManager extends BaseService {
   public skinsPath: string = ''
@@ -60,10 +80,21 @@ export class SkinsManager extends BaseService {
       for (const skin of data.skins) {
         const skinPath = path.join(this.skinsPath, `${skin.id}.png`)
         if (await fs.pathExists(skinPath)) {
-          this.skins.skins.push({
-            ...skin,
-            character: await renderCharacter(skinPath)
-          })
+          const character = await renderCharacter(skinPath)
+
+          const existingIndex = this.skins.skins.findIndex((s) => s.id === skin.id)
+          if (existingIndex === -1) {
+            this.skins.skins.push({
+              ...skin,
+              character
+            })
+          } else {
+            this.skins.skins[existingIndex] = {
+              ...this.skins.skins[existingIndex],
+              ...skin,
+              character
+            }
+          }
         }
       }
     } catch {
@@ -110,8 +141,10 @@ export class SkinsManager extends BaseService {
 
       let capeId: string | undefined = undefined
       if (skin.capeUrl) {
-        capeId = skin.capeUrl.split('/').pop()?.split('?')[0].replace('.png', '')
-        const capePath = path.join(this.skinsPath, 'capes', `${capeId}.png`)
+        const extracted = extractIdFromUrl(skin.capeUrl)
+        capeId = extracted || undefined
+
+        const capePath = capeId ? path.join(this.skinsPath, 'capes', `${capeId}.png`) : ''
 
         if (capeId) {
           if (!this.capes.find((c) => c.id == capeId)) {
@@ -147,7 +180,7 @@ export class SkinsManager extends BaseService {
           model: skin.model,
           name: this.skins.skins.find((s) => s.name == this.nickname) ? skin._id : this.nickname,
           id: skin._id,
-          url: `file://${skinPath}`,
+          url: toFileUrl(skinPath),
           capeId,
           character: await renderCharacter(skinPath)
         })
@@ -180,7 +213,7 @@ export class SkinsManager extends BaseService {
 
           this.capes.push({
             id: capeId,
-            url: `file://${capePath}`,
+            url: toFileUrl(capePath),
             cape: await renderCape(capePath),
             alias: capeId
           })
@@ -218,10 +251,13 @@ export class SkinsManager extends BaseService {
 
         this.capes.push({
           ...cape,
-          url: `file://${destination}`,
+          url: toFileUrl(destination),
           cape: await renderCape(destination)
         })
       }
+
+      const defaultCapeId =
+        capes.length > 0 && capes[0].state == 'ACTIVE' ? capes[0].id : undefined
 
       for (const skin of skins) {
         let isExists = false
@@ -231,7 +267,7 @@ export class SkinsManager extends BaseService {
             name: this.skins.skins.find((s) => s.name == name) ? skin.id : name,
             id: skin.id,
             url: skin.url,
-            capeId: capes[0].state == 'ACTIVE' ? capes[0].id : undefined
+            capeId: defaultCapeId
           })
         } else isExists = true
 
@@ -272,7 +308,7 @@ export class SkinsManager extends BaseService {
         ])
 
         if (!isExists) {
-          _skin.url = `file://${skinPath}`
+          _skin.url = toFileUrl(skinPath)
           _skin.character = await renderCharacter(skinPath)
         }
       }
@@ -322,7 +358,7 @@ export class SkinsManager extends BaseService {
 
   public async importByUrl(url: string, type: 'skin' | 'cape' = 'skin') {
     try {
-      const id = url.split('/').pop()?.split('?')[0]
+      const id = extractIdFromUrl(url)
       if (!id) return
 
       if (type == 'skin') {
@@ -343,7 +379,7 @@ export class SkinsManager extends BaseService {
           model: await detectSkinModel(skinPath),
           name: id,
           id: id,
-          url: `file://${skinPath}`,
+          url: toFileUrl(skinPath),
           character: await renderCharacter(skinPath)
         })
       } else {
@@ -362,7 +398,7 @@ export class SkinsManager extends BaseService {
 
         this.capes.push({
           id: id,
-          url: `file://${capePath}`,
+          url: toFileUrl(capePath),
           cape: await renderCape(capePath),
           alias: id
         })
@@ -402,7 +438,7 @@ export class SkinsManager extends BaseService {
           model: await detectSkinModel(skinPath),
           name: fileName,
           id: fileName,
-          url: `file://${skinPath}`,
+          url: toFileUrl(skinPath),
           character
         })
       } else {
@@ -414,7 +450,7 @@ export class SkinsManager extends BaseService {
 
         this.capes.push({
           id: fileName,
-          url: `file://${capePath}`,
+          url: toFileUrl(capePath),
           cape: await renderCape(capePath),
           alias: fileName
         })
@@ -443,7 +479,7 @@ export class SkinsManager extends BaseService {
 
       const { skin } = skins
 
-      const skinId = skin.split('/').pop()?.split('?')[0]
+      const skinId = extractIdFromUrl(skin)
       if (!skinId) return
 
       const skinExists = this.skins.skins.find((s) => s.id == skinId)
@@ -462,7 +498,7 @@ export class SkinsManager extends BaseService {
         model: await detectSkinModel(skinPath),
         name: this.skins.skins.find((s) => s.name == nickname) ? skinId : nickname,
         id: skinId,
-        url: `file://${skinPath}`,
+        url: toFileUrl(skinPath),
         character: await renderCharacter(skinPath)
       })
       await this.saveSkins()
@@ -474,6 +510,11 @@ export class SkinsManager extends BaseService {
 
   public async uploadSkin(skinId: string) {
     try {
+      if (typeof FormData === 'undefined' || typeof Blob === 'undefined') {
+        console.error('FormData/Blob is not available in this environment')
+        return
+      }
+
       const skin = this.skins.skins.find((s) => s.id == skinId)
       if (!skin) return
 
@@ -549,9 +590,6 @@ export class SkinsManager extends BaseService {
 
   private async showCape(capeId: string) {
     try {
-      const formData = new FormData()
-      formData.append('capeId', capeId)
-
       await this.api.put(
         `${this.skinServiceUrl}/minecraft/profile/capes/active`,
         { capeId },

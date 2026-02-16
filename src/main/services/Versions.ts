@@ -22,202 +22,258 @@ export interface IFabricQuiltLoader {
 }
 
 export class VersionsService extends BaseService {
-  public static async getVersions(loader: Loader, snapshots = false) {
-    let versions: IVersion[] = []
-    if (loader == 'vanilla') {
-      versions = await VersionsService.getVersionsVanilla(snapshots)
-    } else if (loader == 'forge') {
-      versions = await VersionsService.getVersionsForge()
-    } else if (loader == 'neoforge') {
-      versions = await VersionsService.getVersionsNeoForge()
-    } else if (loader == 'fabric') {
-      versions = await VersionsService.getVersionsFabric()
-    } else if (loader == 'quilt') {
-      versions = await VersionsService.getVersionsQuilt()
-    }
+  private static api = axios.create({
+    timeout: 30000
+  })
 
-    return versions
+  public static async getVersions(loader: Loader, snapshots = false) {
+    try {
+      let versions: IVersion[] = []
+      if (loader == 'vanilla') {
+        versions = await VersionsService.getVersionsVanilla(snapshots)
+      } else if (loader == 'forge') {
+        versions = await VersionsService.getVersionsForge()
+      } else if (loader == 'neoforge') {
+        versions = await VersionsService.getVersionsNeoForge()
+      } else if (loader == 'fabric') {
+        versions = await VersionsService.getVersionsFabric()
+      } else if (loader == 'quilt') {
+        versions = await VersionsService.getVersionsQuilt()
+      }
+
+      return versions
+    } catch {
+      return []
+    }
   }
 
   public static async getLoaderVersions(loader: Loader, versionId: string) {
-    let versions: LoaderVersion[] = []
-    if (loader == 'forge') {
-      versions = await VersionsService.getLoadersForge(versionId)
-    } else if (loader == 'neoforge') {
-      versions = await VersionsService.getLoadersNeoForge(versionId)
-    } else if (loader == 'fabric') {
-      versions = await VersionsService.getLoadersFabric(versionId)
-    } else if (loader == 'quilt') {
-      versions = await VersionsService.getLoadersQuilt(versionId)
-    }
+    try {
+      let versions: LoaderVersion[] = []
+      if (loader == 'forge') {
+        versions = await VersionsService.getLoadersForge(versionId)
+      } else if (loader == 'neoforge') {
+        versions = await VersionsService.getLoadersNeoForge(versionId)
+      } else if (loader == 'fabric') {
+        versions = await VersionsService.getLoadersFabric(versionId)
+      } else if (loader == 'quilt') {
+        versions = await VersionsService.getLoadersQuilt(versionId)
+      }
 
-    return versions
+      return versions
+    } catch {
+      return []
+    }
   }
 
   private static async getVersionsVanilla(snapshots: boolean = false): Promise<IVersion[]> {
-    const response = await axios.get(
-      'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json'
-    )
+    try {
+      const response = await this.api.get('https://piston-meta.mojang.com/mc/game/version_manifest_v2.json')
 
-    const versionsManifest: IVersionsManifest = response.data
+      const versionsManifest: IVersionsManifest = response.data
 
-    const versions: IVersion[] = []
+      const versions: IVersion[] = []
 
-    let serverMangaer = true
+      let serverMangaer = true
 
-    for (let index = 0; index < versionsManifest.versions.length; index++) {
-      const version = versionsManifest.versions[index]
+      for (let index = 0; index < versionsManifest.versions.length; index++) {
+        const version = versionsManifest.versions[index]
 
-      if (version.type != 'release' && !snapshots) continue
+        if (version.type != 'release' && !snapshots) continue
 
-      version.serverManager = serverMangaer
+        version.serverManager = serverMangaer
 
-      versions.push(version)
+        versions.push(version)
 
-      if (version.id == '1.8.0') {
-        serverMangaer = false
+        if (version.id == '1.8.0') {
+          serverMangaer = false
+        }
       }
-    }
 
-    return versions
+      return versions
+    } catch {
+      return []
+    }
   }
 
   private static async getVersionsForge(): Promise<IVersion[]> {
-    const response = await axios.get(`${BACKEND_URL}/loaders/forge.json`)
+    try {
+      const response = await this.api.get(`${BACKEND_URL}/loaders/forge.json`)
 
-    const versionsVanilla = await this.getVersionsVanilla()
-    const versionsForge: {
-      [key: string]: LoaderVersion[]
-    } = response.data
+      const versionsVanilla = await this.getVersionsVanilla()
+      const versionsForge: {
+        [key: string]: LoaderVersion[]
+      } = response.data
 
-    const versions: IVersion[] = []
-    const notSupported: string[] = ['1.15.2', '1.16.1', '1.16.2', '1.16.3', '1.16.4', '1.16.5']
+      const versions: IVersion[] = []
+      const notSupported: string[] = ['1.15.2', '1.16.1', '1.16.2', '1.16.3', '1.16.4', '1.16.5']
 
-    for (let index = 0; index < versionsVanilla.length; index++) {
-      const version = versionsVanilla[index]
-      const forge = versionsForge[version.id]
+      for (let index = 0; index < versionsVanilla.length; index++) {
+        const version = versionsVanilla[index]
+        const forge = versionsForge[version.id]
 
-      if (!forge) continue
+        if (!forge) continue
 
-      if (notSupported.includes(version.id)) continue
-      versions.push(version)
+        if (notSupported.includes(version.id)) continue
+        versions.push(version)
+      }
+
+      return versions
+    } catch {
+      return []
     }
-
-    return versions
   }
 
   private static async getVersionsNeoForge(): Promise<IVersion[]> {
-    const response = await axios.get(`${BACKEND_URL}/loaders/neoforge.json`)
+    try {
+      const response = await this.api.get(`${BACKEND_URL}/loaders/neoforge.json`)
 
-    const versionsVanilla = await this.getVersionsVanilla()
-    const versionsNeoForged: {
-      [key: string]: LoaderVersion[]
-    } = response.data
+      const versionsVanilla = await this.getVersionsVanilla()
+      const versionsNeoForged: {
+        [key: string]: LoaderVersion[]
+      } = response.data
 
-    const versions: IVersion[] = []
+      const versions: IVersion[] = []
 
-    for (let index = 0; index < versionsVanilla.length; index++) {
-      const version = versionsVanilla[index]
-      const neoForge = versionsNeoForged[version.id]
+      for (let index = 0; index < versionsVanilla.length; index++) {
+        const version = versionsVanilla[index]
+        const neoForge = versionsNeoForged[version.id]
 
-      if (neoForge == undefined) continue
-      versions.push(version)
+        if (neoForge == undefined) continue
+        versions.push(version)
+      }
+
+      return versions
+    } catch {
+      return []
     }
-
-    return versions
   }
 
   private static async getLoadersNeoForge(version: string): Promise<LoaderVersion[]> {
-    const response = await axios.get(`${BACKEND_URL}/loaders/neoforge.json`)
+    try {
+      const response = await this.api.get(`${BACKEND_URL}/loaders/neoforge.json`)
 
-    const versionsNeoForged: {
-      [key: string]: LoaderVersion[]
-    } = response.data
+      const versionsNeoForged: {
+        [key: string]: LoaderVersion[]
+      } = response.data
 
-    const neoForged = versionsNeoForged[version]
-    if (neoForged == undefined) return []
+      const neoForged = versionsNeoForged[version]
+      if (neoForged == undefined) return []
 
-    return neoForged
+      return neoForged
+    } catch {
+      return []
+    }
   }
 
   private static async getLoadersForge(version: string): Promise<LoaderVersion[]> {
-    const response = await axios.get(`${BACKEND_URL}/loaders/forge.json`)
+    try {
+      const response = await this.api.get(`${BACKEND_URL}/loaders/forge.json`)
 
-    const versionsForge: {
-      [key: string]: LoaderVersion[]
-    } = response.data
+      const versionsForge: {
+        [key: string]: LoaderVersion[]
+      } = response.data
 
-    const forge = versionsForge[version]
-    if (forge == undefined) return []
+      const forge = versionsForge[version]
+      if (forge == undefined) return []
 
-    return forge
+      return forge
+    } catch {
+      return []
+    }
   }
 
   private static async getVersionsFabric(): Promise<IVersion[]> {
-    const response = await axios.get<{ version: string; stable: boolean }[]>(
-      'https://meta.fabricmc.net/v2/versions/game'
-    )
+    try {
+      const response = await this.api.get<{ version: string; stable: boolean }[]>(
+        'https://meta.fabricmc.net/v2/versions/game'
+      )
 
-    const versionsVanilla = await this.getVersionsVanilla()
-    const versionsFabric: IVersion[] = []
+      const versionsVanilla = await this.getVersionsVanilla()
+      const versionsFabric: IVersion[] = []
 
-    for (let index = 0; index < response.data.length; index++) {
-      const version = response.data[index]
+      const vanillaById = new Map(versionsVanilla.map((v) => [v.id, v]))
 
-      if (!version.stable) continue
-      for (let index = 0; index < versionsVanilla.length; index++) {
-        const versionVanilla = versionsVanilla[index]
+      for (let index = 0; index < response.data.length; index++) {
+        const version = response.data[index]
+        if (!version.stable) continue
 
-        if (versionVanilla.id == version.version) {
-          versionsFabric.push(versionVanilla)
-        }
+        const v = vanillaById.get(version.version)
+        if (v) versionsFabric.push(v)
       }
-    }
 
-    return versionsFabric
+      return versionsFabric
+    } catch {
+      return []
+    }
   }
 
   private static async getLoadersFabric(version: string): Promise<LoaderVersion[]> {
-    const response = await axios.get<IFabricQuiltLoader[]>(
-      'https://meta.fabricmc.net/v2/versions/loader'
-    )
+    try {
+      type FabricLoaderForGame = {
+        loader: { version: string; stable: boolean }
+      }
 
-    return response.data.map((loader) => ({
-      id: loader.version,
-      url: `https://meta.fabricmc.net/v2/versions/loader/${version}/${loader.version}/profile/json`
-    }))
+      const response = await this.api.get<FabricLoaderForGame[]>(
+        `https://meta.fabricmc.net/v2/versions/loader/${version}`
+      )
+
+      return response.data
+        .map((item) => item.loader)
+        .filter((l) => l?.version)
+        .map((loader) => ({
+          id: loader.version,
+          url: `https://meta.fabricmc.net/v2/versions/loader/${version}/${loader.version}/profile/json`
+        }))
+    } catch {
+      return []
+    }
   }
 
   private static async getVersionsQuilt(): Promise<IVersion[]> {
-    const response = await axios.get<{ version: string; stable: boolean }[]>(
-      'https://meta.quiltmc.org/v3/versions/game'
-    )
+    try {
+      const response = await this.api.get<{ version: string; stable: boolean }[]>(
+        'https://meta.quiltmc.org/v3/versions/game'
+      )
 
-    const versionsVanilla = await this.getVersionsVanilla()
-    const versionsQuilt: IVersion[] = []
+      const versionsVanilla = await this.getVersionsVanilla()
+      const versionsQuilt: IVersion[] = []
 
-    for (let index = 0; index < response.data.length; index++) {
-      const version = response.data[index]
+      const vanillaById = new Map(versionsVanilla.map((v) => [v.id, v]))
 
-      if (!version.stable) continue
-      for (let index = 0; index < versionsVanilla.length; index++) {
-        const versionVanilla = versionsVanilla[index]
+      for (let index = 0; index < response.data.length; index++) {
+        const version = response.data[index]
+        if (!version.stable) continue
 
-        if (versionVanilla.id == version.version) versionsQuilt.push(versionVanilla)
+        const v = vanillaById.get(version.version)
+        if (v) versionsQuilt.push(v)
       }
-    }
 
-    return versionsQuilt
+      return versionsQuilt
+    } catch {
+      return []
+    }
   }
 
   private static async getLoadersQuilt(version: string): Promise<LoaderVersion[]> {
-    const response = await axios.get<IFabricQuiltLoader[]>(
-      'https://meta.quiltmc.org/v3/versions/loader'
-    )
+    try {
+      type QuiltLoaderForGame = {
+        loader: { version: string }
+      }
 
-    return response.data.map((loader) => ({
-      id: loader.version,
-      url: `https://meta.quiltmc.org/v3/versions/loader/${version}/${loader.version}/profile/json`
-    }))
+      const response = await this.api.get<QuiltLoaderForGame[]>(
+        `https://meta.quiltmc.org/v3/versions/loader/${version}`
+      )
+
+      return response.data
+        .map((item) => item.loader)
+        .filter((l) => l?.version)
+        .map((loader) => ({
+          id: loader.version,
+          url: `https://meta.quiltmc.org/v3/versions/loader/${version}/${loader.version}/profile/json`
+        }))
+    } catch {
+      return []
+    }
   }
 }

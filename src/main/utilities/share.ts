@@ -1,4 +1,6 @@
 import path from 'path'
+import { fileURLToPath } from 'url'
+import fs from 'fs-extra'
 import { Version } from '../game/Version'
 import { projetTypeToFolder } from './modManager'
 import { Backend } from '../services/Backend'
@@ -17,11 +19,26 @@ export async function uploadMods(at: string, version: Version) {
 
       if (mod.provider != Provider.LOCAL) continue
       if (!mod.version || !mod.version.files[0]) continue
-      if (!mod.version.files[0].url.includes('file://')) continue
 
-      const filename = mod.version.files[0].filename
+      const file = mod.version.files[0]
+      const fileUrl = file.url
 
-      const modPath = path.join(version.versionPath, projetTypeToFolder(mod.projectType), filename)
+      if (!fileUrl || typeof fileUrl !== 'string' || !fileUrl.startsWith('file://')) continue
+
+      const filename = file.filename
+
+      let modPath = ''
+      try {
+        modPath = fileURLToPath(fileUrl)
+      } catch {
+        modPath = ''
+      }
+
+      if (!modPath) {
+        modPath = path.join(version.versionPath, projetTypeToFolder(mod.projectType), filename)
+      }
+
+      if (!(await fs.pathExists(modPath))) continue
 
       const url = await backend.uploadFileFromPath(
         modPath,

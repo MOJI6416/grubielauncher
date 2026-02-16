@@ -1,201 +1,138 @@
-import { ipcMain } from 'electron'
 import fs from 'fs-extra'
 import path from 'path'
 import { rimraf } from 'rimraf'
 import { getDirectories, getSha1, getTotalSizes } from '../utilities/files'
 import { createZipArchive, extractZip } from '../utilities/archiver'
+import { handleSafe } from '../utilities/ipc'
+
+type DirEntry = { path: string; type: 'folder' | 'file' }
+
 
 export function registerFsIpc() {
-  ipcMain.handle('fs:readdirWithTypes', async (_, folderPath: string) => {
-    try {
-      const entries = await fs.readdir(folderPath)
-      const result = await Promise.all(
-        entries.map(async (entry) => {
-          const fullPath = path.join(folderPath, entry)
-          const stats = await fs.stat(fullPath)
-          return {
-            path: entry,
-            type: stats.isDirectory() ? 'folder' : ('file' as 'folder' | 'file')
-          }
-        })
-      )
+  handleSafe<DirEntry[]>('fs:readdirWithTypes', [], async (_, folderPath: string) => {
+    const entries = await fs.readdir(folderPath, { withFileTypes: true })
 
-      result.sort((a, b) => {
-        if (a.type === 'folder' && b.type === 'file') return -1
-        if (a.type === 'file' && b.type === 'folder') return 1
-        return a.path.localeCompare(b.path)
+    const result: DirEntry[] = await Promise.all(
+      entries.map(async (dirent) => {
+        const fullPath = path.join(folderPath, dirent.name)
+
+        if (dirent.isDirectory()) {
+          return { path: dirent.name, type: 'folder' }
+        }
+
+        if (dirent.isFile()) {
+          return { path: dirent.name, type: 'file' }
+        }
+
+        const stats = await fs.stat(fullPath)
+        return {
+          path: dirent.name,
+          type: stats.isDirectory() ? 'folder' : 'file'
+        }
       })
+    )
 
-      return result
-    } catch (error) {
-      console.error('Error reading directory:', error)
-      throw new Error('Failed to read directory')
-    }
+    result.sort((a, b) => {
+      if (a.type === 'folder' && b.type === 'file') return -1
+      if (a.type === 'file' && b.type === 'folder') return 1
+      return a.path.localeCompare(b.path)
+    })
+
+    return result
   })
 
-  ipcMain.handle('fs:getDirectories', async (_, source: string) => {
+  handleSafe<string[]>('fs:getDirectories', [], async (_, source: string) => {
     return await getDirectories(source)
   })
 
-  ipcMain.handle('path:join', (_, ...args) => {
+  handleSafe<string>('path:join', '', async (_, ...args: string[]) => {
     return path.join(...args)
   })
 
-  ipcMain.handle('path:basename', (_, filePath: string, suffix?: string) => {
+  handleSafe<string>('path:basename', '', async (_, filePath: string, suffix?: string) => {
     return path.basename(filePath, suffix)
   })
 
-  ipcMain.handle('path:extname', (_, filePath: string) => {
+  handleSafe<string>('path:extname', '', async (_, filePath: string) => {
     return path.extname(filePath)
   })
 
-  ipcMain.handle('fs:readFile', async (_, filePath, encoding = 'utf-8') => {
-    try {
-      const data = await fs.readFile(filePath, encoding)
-      return data
-    } catch (error) {
-      console.error(`Error reading file ${filePath}:`, error)
-      throw new Error(`Failed to read file: ${error}`)
-    }
+  handleSafe<string>('fs:readFile', '', async (_, filePath: string, encoding: BufferEncoding = 'utf-8') => {
+    return await fs.readFile(filePath, encoding)
   })
 
-  ipcMain.handle('fs:rimraf', async (_, targetPath) => {
-    try {
-      await rimraf(targetPath)
-      return true
-    } catch (error) {
-      console.error(`Error deleting ${targetPath}:`, error)
-      throw new Error(`Failed to delete path: ${error}`)
-    }
+  handleSafe<boolean>('fs:rimraf', false, async (_, targetPath: string | string[]) => {
+    await rimraf(targetPath)
+    return true
   })
 
-  ipcMain.handle('file:archiveFiles', async (_, filesToArchive, zipPath) => {
-    try {
-      await createZipArchive(filesToArchive, zipPath)
-      return true
-    } catch (error) {
-      console.error('Error archiving files:', error)
-      throw new Error(`Failed to archive files: ${error}`)
-    }
+  handleSafe<boolean>('file:archiveFiles', false, async (_, filesToArchive: string[], zipPath: string) => {
+    await createZipArchive(filesToArchive, zipPath)
+    return true
   })
 
-  ipcMain.handle('file:getTotalSizes', async (_, filePaths) => {
-    try {
-      const totalSize = await getTotalSizes(filePaths)
-      return totalSize
-    } catch (error) {
-      console.error('Error calculating total sizes:', error)
-      throw new Error(`Failed to calculate total sizes: ${error}`)
-    }
+  handleSafe<number>('file:getTotalSizes', 0, async (_, filePaths: string[]) => {
+    return await getTotalSizes(filePaths)
   })
 
-  ipcMain.handle('fs:ensure', async (_, dirPath) => {
-    try {
-      await fs.ensureDir(dirPath)
-      return true
-    } catch (error) {
-      console.error(`Error ensuring directory ${dirPath}:`, error)
-      throw new Error(`Failed to ensure directory: ${error}`)
-    }
+  handleSafe<boolean>('fs:ensure', false, async (_, dirPath: string) => {
+    await fs.ensureDir(dirPath)
+    return true
   })
 
-  ipcMain.handle('fs:copy', async (_, srcPath, destPath) => {
-    try {
-      await fs.copy(srcPath, destPath, { overwrite: true })
-      return true
-    } catch (error) {
-      console.error(`Error copying file from ${srcPath} to ${destPath}:`, error)
-      throw new Error(`Failed to copy file: ${error}`)
-    }
+  handleSafe<boolean>('fs:copy', false, async (_, srcPath: string, destPath: string) => {
+    await fs.copy(srcPath, destPath, { overwrite: true })
+    return true
   })
 
-  ipcMain.handle('fs:writeFile', async (_, filePath, data, encoding = 'utf-8') => {
-    try {
-      await fs.writeFile(filePath, data, { encoding })
-      return true
-    } catch (error) {
-      console.error(`Error writing file ${filePath}:`, error)
-      throw new Error(`Failed to write file: ${error}`)
-    }
+  handleSafe<boolean>('fs:writeFile', false, async (_, filePath: string, data: any, encoding: BufferEncoding = 'utf-8') => {
+    await fs.writeFile(filePath, data, { encoding })
+    return true
   })
 
-  ipcMain.handle('file:fromBuffer', (_, data) => {
+  handleSafe<string>('file:fromBuffer', '', async (_, data: any) => {
     const buffer = Buffer.from(data)
     return buffer.toString('binary')
   })
 
-  ipcMain.handle('fs:pathExists', async (_, targetPath: string) => {
+  handleSafe<boolean>('fs:pathExists', false, async (_, targetPath: string) => {
     return await fs.pathExists(targetPath)
   })
 
-  ipcMain.handle('fs:sha1', async (_, filePath: string) => {
+  handleSafe<string>('fs:sha1', '', async (_, filePath: string) => {
     return await getSha1(filePath)
   })
 
-  ipcMain.handle('fs:move', async (_, srcPath: string, destPath: string) => {
-    try {
-      await fs.move(srcPath, destPath, { overwrite: true })
-      return true
-    } catch (error) {
-      console.error(`Error moving file from ${srcPath} to ${destPath}:`, error)
-      throw new Error(`Failed to move file: ${error}`)
-    }
+  handleSafe<boolean>('fs:move', false, async (_, srcPath: string, destPath: string) => {
+    await fs.move(srcPath, destPath, { overwrite: true })
+    return true
   })
 
-  ipcMain.handle('fs:readdir', async (_, dirPath: string) => {
-    try {
-      const files = await fs.readdir(dirPath)
-      return files
-    } catch (error) {
-      console.error(`Error reading directory ${dirPath}:`, error)
-      throw new Error(`Failed to read directory: ${error}`)
-    }
+  handleSafe<string[]>('fs:readdir', [], async (_, dirPath: string) => {
+    return await fs.readdir(dirPath)
   })
 
-  ipcMain.handle('fs:extractZip', async (_, zipPath: string, destination: string) => {
-    return await extractZip(zipPath, destination)
+  handleSafe<boolean>('fs:extractZip', false, async (_, zipPath: string, destination: string) => {
+    await extractZip(zipPath, destination)
+    return true
   })
 
-  ipcMain.handle('fs:rename', async (_, oldPath: string, newPath: string) => {
-    try {
-      await fs.rename(oldPath, newPath)
-      return true
-    } catch (error) {
-      console.error(`Error renaming from ${oldPath} to ${newPath}:`, error)
-      throw new Error(`Failed to rename: ${error}`)
-    }
+  handleSafe<boolean>('fs:rename', false, async (_, oldPath: string, newPath: string) => {
+    await fs.rename(oldPath, newPath)
+    return true
   })
 
-  ipcMain.handle('fs:writeJSON', async (_, filePath: string, data: any) => {
-    try {
-      await fs.writeJSON(filePath, data, {
-        encoding: 'utf-8',
-        spaces: 2
-      })
-      return true
-    } catch (error) {
-      console.error(`Error writing JSON file ${filePath}:`, error)
-      throw new Error(`Failed to write JSON file: ${error}`)
-    }
+  handleSafe<boolean>('fs:writeJSON', false, async (_, filePath: string, data: any) => {
+    await fs.writeJSON(filePath, data, { encoding: 'utf-8', spaces: 2 })
+    return true
   })
 
-  ipcMain.handle('fs:readJSON', async (_, filePath: string, encoding?: BufferEncoding) => {
-    try {
-      const data = await fs.readJSON(filePath, { encoding })
-      return data
-    } catch (error) {
-      console.error(`Error reading JSON file ${filePath}:`, error)
-      throw new Error(`Failed to read JSON file: ${error}`)
-    }
+  handleSafe<any>('fs:readJSON', null, async (_, filePath: string, encoding?: BufferEncoding) => {
+    return await fs.readJSON(filePath, { encoding })
   })
 
-  ipcMain.handle('fs:isDirectory', async (_, targetPath: string) => {
-    try {
-      const stats = await fs.stat(targetPath)
-      return stats.isDirectory()
-    } catch (error) {
-      console.error(`Error checking if directory ${targetPath}:`, error)
-      throw new Error(`Failed to check if directory: ${error}`)
-    }
+  handleSafe<boolean>('fs:isDirectory', false, async (_, targetPath: string) => {
+    const stats = await fs.stat(targetPath)
+    return stats.isDirectory()
   })
 }

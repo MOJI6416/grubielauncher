@@ -21,6 +21,7 @@ export class Mods {
   }[] = []
   private downloadLimit = 6
   private downloader: Downloader
+  private initPromise: Promise<void>
 
   constructor(settings: TSettings, version: IVersionConf, server?: IServerConf) {
     this.conf = version
@@ -29,14 +30,19 @@ export class Mods {
     this.downloader = new Downloader(this.downloadLimit)
 
     this.version = new Version(settings, this.conf)
-    this.version.init()
+    this.initPromise = Promise.resolve(this.version.init()).catch(() => {})
   }
 
   async check() {
+    await this.initPromise
+
+    this.files = []
+
     const storagePath = path.join(this.version.versionPath, 'storage')
 
     const downloadFiles: DownloadItem[] = []
     const worlds: string[] = []
+    const worldZips: string[] = []
 
     for (const mod of this.version.version.loader.mods) {
       if (!mod.version) continue
@@ -56,6 +62,9 @@ export class Mods {
 
         if (mod.projectType == ProjectType.WORLD) {
           filepath = path.join(storagePath, 'worlds', file.filename)
+
+          worldZips.push(filepath)
+
           const existsStorage = (await fs.pathExists(filepath)) ? filepath : null
           const existsUrl = file.localPath
             ? (await fs.pathExists(file.localPath))
@@ -126,6 +135,19 @@ export class Mods {
 
     await this.downloader.downloadFiles(downloadFiles)
 
+    for (const zipPath of [...new Set(worldZips)]) {
+      if (!(await fs.pathExists(zipPath))) continue
+
+      const worldName = await getWorldName(zipPath)
+      if (!worldName) continue
+
+      if (!worlds.includes(worldName)) worlds.push(worldName)
+
+      if (!this.files.some((f) => f.type === ProjectType.WORLD && f.filename === worldName)) {
+        this.files.push({ filename: worldName, type: ProjectType.WORLD })
+      }
+    }
+
     for (const world of worlds) {
       const worldPath = path.join(this.version.versionPath, 'saves', world)
       if (await fs.pathExists(worldPath)) {
@@ -134,17 +156,22 @@ export class Mods {
       }
     }
 
-    this.comparison(ProjectType.MOD)
-    this.comparison(ProjectType.RESOURCEPACK)
-    this.comparison(ProjectType.SHADER)
-    this.comparison(ProjectType.WORLD)
-    this.comparison(ProjectType.DATAPACK)
+    const tasks: Promise<void>[] = [
+      this.comparison(ProjectType.MOD),
+      this.comparison(ProjectType.RESOURCEPACK),
+      this.comparison(ProjectType.SHADER),
+      this.comparison(ProjectType.WORLD),
+      this.comparison(ProjectType.DATAPACK)
+    ]
 
     if (
       this.server &&
       [ServerCore.BUKKIT, ServerCore.SPIGOT, ServerCore.PAPER].includes(this.server.core)
-    )
-      this.comparison(ProjectType.PLUGIN)
+    ) {
+      tasks.push(this.comparison(ProjectType.PLUGIN))
+    }
+
+    await Promise.all(tasks)
   }
 
   private async comparison(projectType: ProjectType) {
@@ -166,7 +193,13 @@ export class Mods {
 
     for (const file of files) {
       const filePath = path.join(folderPath, file)
-      const isDirectory = fs.lstatSync(filePath).isDirectory()
+
+      let isDirectory = false
+      try {
+        isDirectory = fs.lstatSync(filePath).isDirectory()
+      } catch {
+        continue
+      }
 
       if (
         projectType == ProjectType.WORLD &&
@@ -196,31 +229,37 @@ export class Mods {
 
     if (projectType == ProjectType.WORLD) {
       const worldsPath = path.join(storagePath, 'worlds')
-      const files = await fs.readdir(worldsPath)
+      if (await fs.pathExists(worldsPath)) {
+        const files = await fs.readdir(worldsPath)
 
-      for (const file of files)
-        if (!filenames.includes(file)) deleteFiles.push(path.join(worldsPath, file))
+        for (const file of files) if (!filenames.includes(file)) deleteFiles.push(path.join(worldsPath, file))
+      }
     }
 
     await rimraf(deleteFiles)
   }
 
   async downloadOther() {
+    await this.initPromise
+
     if (!this.version.version.loader.other) return
 
     const tempPath = path.join(this.version.versionPath, 'temp')
 
-    await this.downloader.downloadFiles([
-      {
-        destination: path.join(tempPath, 'other.zip'),
-        group: 'other',
-        url: this.version.version.loader.other.url,
-        options: {
-          extract: true,
-          extractFolder: this.version.versionPath
+    try {
+      await this.downloader.downloadFiles([
+        {
+          destination: path.join(tempPath, 'other.zip'),
+          group: 'other',
+          url: this.version.version.loader.other.url,
+          options: {
+            extract: true,
+            extractFolder: this.version.versionPath
+          }
         }
-      }
-    ])
-    await rimraf(tempPath)
+      ])
+    } finally {
+      await rimraf(tempPath).catch(() => {})
+    }
   }
 }

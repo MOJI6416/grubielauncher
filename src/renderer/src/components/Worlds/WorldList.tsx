@@ -1,4 +1,4 @@
-import { IWorld } from '@/types/World'
+import { IWorld } from "@/types/World";
 import {
   addToast,
   Button,
@@ -10,11 +10,11 @@ import {
   DropdownTrigger,
   Image,
   Input,
-  ScrollShadow
-} from '@heroui/react'
-import { RunGameParams } from '@renderer/App'
-import { selectedVersionAtom } from '@renderer/stores/atoms'
-import { useAtom } from 'jotai'
+  ScrollShadow,
+} from "@heroui/react";
+import { RunGameParams } from "@renderer/App";
+import { selectedVersionAtom } from "@renderer/stores/atoms";
+import { useAtom } from "jotai";
 import {
   Clock,
   Copy,
@@ -25,122 +25,147 @@ import {
   ImageOff,
   Package,
   Trash,
-  X
-} from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Datapacks } from './Datapacks'
-import { ILocalProject, ProjectType } from '@/types/ModManager'
-import { formatTime } from '@renderer/utilities/date'
-import { useTranslation } from 'react-i18next'
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Datapacks } from "./Datapacks";
+import { ILocalProject, ProjectType } from "@/types/ModManager";
+import { formatTime } from "@renderer/utilities/date";
+import { useTranslation } from "react-i18next";
+import { Confirmation } from "../Modals/Confirmation";
 
-const api = window.api
+const api = window.api;
 
 export function WorldList({
   worlds,
   setWorlds,
   isOwner,
   runGame,
-  closeModal
+  closeModal,
 }: {
-  worlds: IWorld[]
-  setWorlds: (worlds: IWorld[]) => void
-  isOwner: boolean
-  runGame: (params: RunGameParams) => Promise<void>
-  closeModal: () => void
+  worlds: IWorld[];
+  setWorlds: (worlds: IWorld[]) => void;
+  isOwner: boolean;
+  runGame: (params: RunGameParams) => Promise<void>;
+  closeModal: () => void;
 }) {
-  const [editingIndex, setEditingIndex] = useState<number | null>(null)
-  const [version] = useAtom(selectedVersionAtom)
-  const [editValue, setEditValue] = useState<string>('')
-  const [isDatapacksOpen, setIsDatapacksOpen] = useState(false)
-  const [selectedWorld, setSelectedWorld] = useState<IWorld | null>(null)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [version] = useAtom(selectedVersionAtom);
+  const [editValue, setEditValue] = useState<string>("");
+  const [isDatapacksOpen, setIsDatapacksOpen] = useState(false);
+  const [selectedWorld, setSelectedWorld] = useState<IWorld | null>(null);
   const [datapacks, setDatapacks] = useState<
     { mod: ILocalProject; path: string; filename: string }[]
-  >([])
+  >([]);
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
 
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
-  const isMountedRef = useRef(true)
+  const isMountedRef = useRef(true);
   useEffect(() => {
     return () => {
-      isMountedRef.current = false
-    }
-  }, [])
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
-    ;(async () => {
+    (async () => {
       try {
         if (!version) {
-          if (!cancelled && isMountedRef.current) setDatapacks([])
-          return
+          if (!cancelled && isMountedRef.current) setDatapacks([]);
+          return;
         }
 
         const mods = version.version.loader.mods.filter(
-          (m) => m.projectType === ProjectType.DATAPACK
-        )
+          (m) => m.projectType === ProjectType.DATAPACK,
+        );
         const folderPath = await api.path.join(
           version.versionPath,
-          await api.modManager.ptToFolder(ProjectType.DATAPACK)
-        )
+          await api.modManager.ptToFolder(ProjectType.DATAPACK),
+        );
 
-        const list: { mod: ILocalProject; path: string; filename: string }[] = []
+        const list: { mod: ILocalProject; path: string; filename: string }[] =
+          [];
 
         for (const mod of mods) {
-          const filename = mod.version?.files?.[0]?.filename
-          if (!filename) continue
+          const filename = mod.version?.files?.[0]?.filename;
+          if (!filename) continue;
 
-          const modPath = await api.path.join(folderPath, filename)
-          if (!(await api.fs.pathExists(modPath))) continue
+          const modPath = await api.path.join(folderPath, filename);
+          if (!(await api.fs.pathExists(modPath))) continue;
 
           list.push({
             mod,
             path: modPath,
-            filename: await api.path.basename(modPath)
-          })
+            filename: await api.path.basename(modPath),
+          });
         }
 
-        if (!cancelled && isMountedRef.current) setDatapacks(list)
+        if (!cancelled && isMountedRef.current) setDatapacks(list);
       } catch (err) {
-        console.error(err)
-        if (!cancelled && isMountedRef.current) setDatapacks([])
+        console.error(err);
+        if (!cancelled && isMountedRef.current) setDatapacks([]);
       }
-    })()
+    })();
 
     return () => {
-      cancelled = true
-    }
-  }, [version])
+      cancelled = true;
+    };
+  }, [version]);
 
-  const canPlay = !!version?.isQuickPlayMultiplayer
+  const canPlay = !!version?.isQuickPlayMultiplayer;
+
+  const handleDelete = useCallback(async () => {
+    if (!selectedWorld) return;
+
+    try {
+      await api.fs.rimraf(selectedWorld.path);
+      setWorlds(worlds.filter((w) => w.path !== selectedWorld.path));
+
+      addToast({
+        title: t("worlds.deleted"),
+        color: "success",
+      });
+    } catch {
+      addToast({
+        title: t("worlds.deleteError"),
+        color: "danger",
+      });
+    }
+  }, []);
 
   return (
     <>
       <ScrollShadow className="h-80 w-full min-w-0">
         <div className="flex flex-col gap-2 pr-1 min-w-0">
           {worlds.map((world, index) => {
-            const isEditing = editingIndex === index
+            const isEditing = editingIndex === index;
 
             const disabledKeys = useMemo(() => {
-              const keys = new Set<string>()
-              if (!canPlay) keys.add('play')
+              const keys = new Set<string>();
+              if (!canPlay) keys.add("play");
               if (!isOwner) {
-                keys.add('datapacks')
-                keys.add('rename')
-                keys.add('resetIcon')
-                keys.add('openFolder')
-                keys.add('delete')
+                keys.add("datapacks");
+                keys.add("rename");
+                keys.add("resetIcon");
+                keys.add("openFolder");
+                keys.add("delete");
               }
               if (world.isDownloaded) {
-                keys.add('rename')
-                keys.add('delete')
+                keys.add("rename");
+                keys.add("delete");
               }
-              if (!world.icon) keys.add('resetIcon')
-              return keys
-            }, [canPlay, isOwner, world.isDownloaded, world.icon])
+              if (!world.icon) keys.add("resetIcon");
+              return keys;
+            }, [canPlay, isOwner, world.isDownloaded, world.icon]);
 
             return (
-              <Card key={world.path || world.folderName || world.name}>
+              <Card
+                key={world.path || world.folderName || world.name}
+                className="border-white/20 border-1"
+              >
                 <CardBody>
                   <div className="flex items-center gap-3 justify-between min-w-0">
                     <div className="flex items-center space-x-2 min-w-0">
@@ -160,17 +185,21 @@ export function WorldList({
                           onChange={(e) => setEditValue(e.target.value)}
                           size="sm"
                           onKeyDown={(e) => {
-                            if (e.key === 'Escape') {
-                              setEditingIndex(null)
-                              setEditValue('')
+                            if (e.key === "Escape") {
+                              setEditingIndex(null);
+                              setEditValue("");
                             }
                           }}
                         />
                       ) : (
                         <div className="flex flex-col min-w-0">
-                          <p className="text-sm font-semibold truncate">{world.name}</p>
+                          <p className="text-sm font-semibold truncate">
+                            {world.name}
+                          </p>
                           {world.name !== world.folderName && (
-                            <p className="text-xs text-gray-400 truncate">{world.folderName}</p>
+                            <p className="text-xs text-gray-400 truncate">
+                              {world.folderName}
+                            </p>
                           )}
                         </div>
                       )}
@@ -182,14 +211,16 @@ export function WorldList({
                           <Clock className="text-gray-400 shrink-0" size={18} />
                           <p className="text-xs text-gray-400">
                             {formatTime(
-                              (world.statistics.stats['minecraft:custom']['minecraft:play_time'] *
+                              (world.statistics.stats["minecraft:custom"][
+                                "minecraft:play_time"
+                              ] *
                                 50) /
                                 1000,
                               {
-                                h: t('time.h'),
-                                m: t('time.m'),
-                                s: t('time.s')
-                              }
+                                h: t("time.h"),
+                                m: t("time.m"),
+                                s: t("time.s"),
+                              },
                             )}
                           </p>
                         </div>
@@ -204,23 +235,35 @@ export function WorldList({
                               color="success"
                               isIconOnly
                               isDisabled={
-                                editValue.trim() === '' ||
+                                editValue.trim() === "" ||
                                 editValue.trim() === world.name ||
-                                worlds.some((w, i) => i !== index && w.name === editValue.trim()) ||
+                                worlds.some(
+                                  (w, i) =>
+                                    i !== index && w.name === editValue.trim(),
+                                ) ||
                                 editValue.trim().length > 64
                               }
                               onPress={async () => {
                                 try {
-                                  const nextName = editValue.trim()
-                                  const result = await api.worlds.writeName(world.path, nextName)
+                                  const nextName = editValue.trim();
+                                  const result = await api.worlds.writeName(
+                                    world.path,
+                                    nextName,
+                                  );
 
                                   if (!result) {
-                                    addToast({ title: t('worlds.renameError'), color: 'danger' })
-                                    return
+                                    addToast({
+                                      title: t("worlds.renameError"),
+                                      color: "danger",
+                                    });
+                                    return;
                                   }
 
-                                  const newFolderName = await api.path.basename(result)
-                                  const newIcon = world.icon ? `${result}/icon.png` : undefined
+                                  const newFolderName =
+                                    await api.path.basename(result);
+                                  const newIcon = world.icon
+                                    ? `${result}/icon.png`
+                                    : undefined;
 
                                   setWorlds(
                                     worlds.map((w) =>
@@ -230,18 +273,24 @@ export function WorldList({
                                             name: nextName,
                                             path: result,
                                             folderName: newFolderName,
-                                            icon: newIcon
+                                            icon: newIcon,
                                           }
-                                        : w
-                                    )
-                                  )
+                                        : w,
+                                    ),
+                                  );
 
-                                  setEditingIndex(null)
-                                  setEditValue('')
-                                  addToast({ title: t('worlds.renamed'), color: 'success' })
+                                  setEditingIndex(null);
+                                  setEditValue("");
+                                  addToast({
+                                    title: t("worlds.renamed"),
+                                    color: "success",
+                                  });
                                 } catch (err) {
-                                  console.error(err)
-                                  addToast({ title: t('worlds.renameError'), color: 'danger' })
+                                  console.error(err);
+                                  addToast({
+                                    title: t("worlds.renameError"),
+                                    color: "danger",
+                                  });
                                 }
                               }}
                             >
@@ -254,8 +303,8 @@ export function WorldList({
                               size="sm"
                               isIconOnly
                               onPress={() => {
-                                setEditingIndex(null)
-                                setEditValue('')
+                                setEditingIndex(null);
+                                setEditValue("");
                               }}
                             >
                               <X size={20} />
@@ -263,7 +312,10 @@ export function WorldList({
                           </>
                         )}
 
-                        <Dropdown isTriggerDisabled={editingIndex !== null} size="sm">
+                        <Dropdown
+                          isTriggerDisabled={editingIndex !== null}
+                          size="sm"
+                        >
                           <DropdownTrigger>
                             <Button isIconOnly variant="flat" size="sm">
                               <EllipsisVertical size={22} />
@@ -274,18 +326,20 @@ export function WorldList({
                               key="play"
                               color="secondary"
                               className="text-secondary"
-                              startContent={<Gamepad2 className="shrink-0" size={20} />}
+                              startContent={
+                                <Gamepad2 className="shrink-0" size={20} />
+                              }
                               onPress={() => {
                                 runGame({
                                   version,
                                   quick: {
-                                    single: world.folderName
-                                  }
-                                })
-                                closeModal()
+                                    single: world.folderName,
+                                  },
+                                });
+                                closeModal();
                               }}
                             >
-                              {t('nav.play')}
+                              {t("nav.play")}
                             </DropdownItem>
                             <DropdownItem
                               key="datapacks"
@@ -294,33 +348,33 @@ export function WorldList({
                               color="primary"
                               startContent={<Package size={20} />}
                               onPress={() => {
-                                setSelectedWorld(world)
-                                setIsDatapacksOpen(true)
+                                setSelectedWorld(world);
+                                setIsDatapacksOpen(true);
                               }}
                             >
-                              {t('worlds.datapacks')}
+                              {t("worlds.datapacks")}
                             </DropdownItem>
                             <DropdownItem
                               key="rename"
                               variant="flat"
                               startContent={<Edit size={20} />}
                               onPress={() => {
-                                setEditingIndex(index)
-                                setEditValue(world.name)
+                                setEditingIndex(index);
+                                setEditValue(world.name);
                               }}
                             >
-                              {t('common.rename')}
+                              {t("common.rename")}
                             </DropdownItem>
                             <DropdownItem
                               key="copySeed"
                               variant="flat"
                               startContent={<Copy size={20} />}
                               onPress={async () => {
-                                await api.clipboard.writeText(world.seed)
-                                addToast({ title: t('common.copied') })
+                                await api.clipboard.writeText(world.seed);
+                                addToast({ title: t("common.copied") });
                               }}
                             >
-                              {t('worlds.copySeed')}
+                              {t("worlds.copySeed")}
                             </DropdownItem>
                             <DropdownItem
                               key="resetIcon"
@@ -328,28 +382,40 @@ export function WorldList({
                               startContent={<ImageOff size={20} />}
                               onPress={async () => {
                                 try {
-                                  await api.fs.rimraf(await api.path.join(world.path, 'icon.png'))
+                                  await api.fs.rimraf(
+                                    await api.path.join(world.path, "icon.png"),
+                                  );
                                   setWorlds(
                                     worlds.map((w) =>
-                                      w.path === world.path ? { ...w, icon: undefined } : w
-                                    )
-                                  )
-                                  addToast({ title: t('worlds.iconReseted'), color: 'success' })
+                                      w.path === world.path
+                                        ? { ...w, icon: undefined }
+                                        : w,
+                                    ),
+                                  );
+                                  addToast({
+                                    title: t("worlds.iconReseted"),
+                                    color: "success",
+                                  });
                                 } catch (err) {
-                                  console.error(err)
-                                  addToast({ title: t('common.error') || 'Error', color: 'danger' })
+                                  console.error(err);
+                                  addToast({
+                                    title: t("common.error") || "Error",
+                                    color: "danger",
+                                  });
                                 }
                               }}
                             >
-                              {t('worlds.resetIcon')}
+                              {t("worlds.resetIcon")}
                             </DropdownItem>
                             <DropdownItem
                               key="openFolder"
                               variant="flat"
                               startContent={<Folder size={20} />}
-                              onPress={async () => await api.shell.openPath(world.path)}
+                              onPress={async () =>
+                                await api.shell.openPath(world.path)
+                              }
                             >
-                              {t('worlds.openFolder')}
+                              {t("worlds.openFolder")}
                             </DropdownItem>
                             <DropdownItem
                               key="delete"
@@ -357,19 +423,12 @@ export function WorldList({
                               variant="flat"
                               color="danger"
                               startContent={<Trash size={20} />}
-                              onPress={async () => {
-                                try {
-                                  await api.fs.rimraf(world.path)
-                                  setWorlds(worlds.filter((w) => w.path !== world.path))
-
-                                  addToast({ title: t('worlds.deleted'), color: 'success' })
-                                } catch (err) {
-                                  console.error(err)
-                                  addToast({ title: t('worlds.deleteError'), color: 'danger' })
-                                }
+                              onPress={() => {
+                                setSelectedWorld(world);
+                                setIsConfirmationOpen(true);
                               }}
                             >
-                              {t('common.delete')}
+                              {t("common.delete")}
                             </DropdownItem>
                           </DropdownMenu>
                         </Dropdown>
@@ -378,7 +437,7 @@ export function WorldList({
                   </div>
                 </CardBody>
               </Card>
-            )
+            );
           })}
         </div>
       </ScrollShadow>
@@ -390,6 +449,33 @@ export function WorldList({
           world={selectedWorld}
         />
       )}
+
+      {isConfirmationOpen && selectedWorld && (
+        <Confirmation
+          content={[
+            {
+              text: t("worlds.confirmation"),
+              color: "warning",
+            },
+          ]}
+          buttons={[
+            {
+              text: t("common.yes"),
+              color: "danger",
+              onClick: async () => {
+                await handleDelete();
+                setIsConfirmationOpen(false);
+              },
+            },
+            {
+              text: t("common.no"),
+              color: "default",
+              onClick: () => setIsConfirmationOpen(false),
+            },
+          ]}
+          onClose={() => setIsConfirmationOpen(false)}
+        />
+      )}
     </>
-  )
+  );
 }

@@ -39,20 +39,32 @@ export class ServerGame {
   async install() {
     if (!this.serverConf) return
 
+    await fs.ensureDir(this.serverPath)
+
     const java = new Java(this.serverConf.javaMajorVersion)
     await java.init()
+
+    if (!java.javaServerPath) return
 
     if (!this.version || !this.account) return
 
     const jar = `${this.serverConf.core}.jar`
+    const jarPath = path.join(this.serverPath, jar)
 
     let cwd = this.serverPath
+
     const backend = new Backend()
-    const authlib = await backend.getAuthlib()
+    let authlib: any = null
+    try {
+      authlib = await backend.getAuthlib()
+    } catch {
+      authlib = null
+    }
 
     let javaagent = ''
 
-    let params = ['-jar', jar]
+    const params = ['-jar', jarPath]
+
     if (this.serverConf.core == ServerCore.QUILT) {
       params.push(...['install', 'server', this.version.version.id, '--download-server'])
       cwd = this.versionPath
@@ -66,7 +78,11 @@ export class ServerGame {
     await installServer(java.javaServerPath, params, cwd)
 
     if (this.account.type != 'microsoft' && this.account.type != 'plain' && authlib) {
-      javaagent = `${getJavaAgent(this.account.type, `${path.join('libraries', authlib.path)}`, true)} `
+      javaagent = `${getJavaAgent(
+        this.account.type,
+        `${path.join('libraries', authlib.path)}`,
+        true
+      )} `
 
       await this.downloader.downloadFiles([
         {
@@ -83,9 +99,12 @@ export class ServerGame {
     const shPath = path.join(this.serverPath, 'run.sh')
 
     let isCreateRunFiles = true
+
     if (this.serverConf.core == ServerCore.QUILT) {
-      await rimraf(jar)
-      await fs.rename(path.join(this.serverPath, 'quilt-server-launch.jar'), jar)
+      await rimraf(jarPath).catch(() => {})
+
+      const quiltLaunchJar = path.join(this.serverPath, 'quilt-server-launch.jar')
+      await fs.rename(quiltLaunchJar, jarPath)
     } else if (
       this.serverConf.core == ServerCore.FORGE ||
       this.serverConf.core == ServerCore.NEOFORGE
@@ -97,40 +116,51 @@ export class ServerGame {
       if (!isExists) {
         isCreateRunFiles = false
 
-        const batData = await fs.readFile(batPath, 'utf-8')
-        await fs.writeFile(
-          batPath,
-          batData.replaceAll('java', java.javaServerPath).replaceAll('%*', 'nogui %*'),
-          'utf-8'
-        )
+        const batExists = await fs.pathExists(batPath)
+        const shExists = await fs.pathExists(shPath)
 
-        const shData = await fs.readFile(shPath, 'utf-8')
-        await fs.writeFile(
-          shPath,
-          shData.replaceAll('java', java.javaServerPath).replaceAll('"$@"', 'nogui "$@"'),
-          'utf-8'
-        )
+        if (!batExists || !shExists) {
+          isCreateRunFiles = true
+        } else {
+          const batData = await fs.readFile(batPath, 'utf-8')
+          await fs.writeFile(
+            batPath,
+            batData.replaceAll('java', java.javaServerPath).replaceAll('%*', 'nogui %*'),
+            'utf-8'
+          )
 
-        const jvmArgs = path.join(this.serverPath, 'user_jvm_args.txt')
-        await fs.writeFile(jvmArgs, `${javaagent}-Xmx${this.serverConf.memory}M`, 'utf-8')
+          const shData = await fs.readFile(shPath, 'utf-8')
+          await fs.writeFile(
+            shPath,
+            shData.replaceAll('java', java.javaServerPath).replaceAll('"$@"', 'nogui "$@"'),
+            'utf-8'
+          )
+
+          const jvmArgs = path.join(this.serverPath, 'user_jvm_args.txt')
+          await fs.writeFile(jvmArgs, `${javaagent}-Xmx${this.serverConf.memory}M`, 'utf-8')
+        }
       } else {
-        await rimraf(jar)
-        await fs.rename(serverJar, jar)
+        await rimraf(jarPath).catch(() => {})
+
+        await fs.rename(serverJar, jarPath)
       }
     }
 
+    const javaCmd =
+      java.javaServerPath.includes(' ') ? `"${java.javaServerPath}"` : java.javaServerPath
+
     if (isCreateRunFiles) {
       const batData = `@echo off
-${java.javaServerPath} ${javaagent} -Xmx${this.serverConf.memory}M -jar ${jar} nogui
+${javaCmd} ${javaagent} -Xmx${this.serverConf.memory}M -jar ${jar} nogui
 pause`
 
       const shData = `#!/bin/sh
-${java.javaServerPath} ${javaagent} -Xmx${this.serverConf.memory}M -jar ${jar} nogui
+${javaCmd} ${javaagent} -Xmx${this.serverConf.memory}M -jar ${jar} nogui
 read -p "Press [Enter] key to continue..."`
 
       await fs.writeFile(batPath, batData, 'utf-8')
       await fs.writeFile(shPath, shData, 'utf-8')
-      await fs.chmod(shPath, 0o755)
+      await fs.chmod(shPath, 0o755).catch(() => {})
     }
 
     return

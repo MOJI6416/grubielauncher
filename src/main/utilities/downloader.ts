@@ -191,20 +191,32 @@ export class Downloader {
   }
 
   private updateTaskbarProgress = (completed: number, total: number) => {
-    if (!mainWindow) return
+    if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) return
 
     const progress = completed / total
-    mainWindow.setProgressBar(progress)
+    try {
+      mainWindow.setProgressBar(progress)
+    } catch {
+
+    }
   }
 
   private clearTaskbarProgress = () => {
-    if (!mainWindow) return
+    if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) return
 
-    mainWindow.setProgressBar(-1)
+    try {
+      mainWindow.setProgressBar(-1)
+    } catch {
+    }
   }
 
   private sendInfo = (info: DownloaderInfo | null) => {
-    mainWindow?.webContents.send('downloaderInfo', info)
+    if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) return
+
+    try {
+      mainWindow.webContents.send('downloaderInfo', info)
+    } catch {
+    }
   }
 
   private validateItem = (item: DownloadItem): boolean => {
@@ -247,12 +259,15 @@ export class Downloader {
 
     let attempts = 0
     let lastError: Error | null = null
-    let startByte = 0
+
+    let countedExistingBytes = 0
+    let addedToTotalBytes = 0
 
     while (attempts < maxRetries) {
       let writer: fs.WriteStream | null = null
-      let downloadedInThisAttempt = 0
+      let downloadedChunksBytes = 0
       let fileSizeFromServer = 0
+      let startByte = 0
 
       try {
         if (fs.pathExistsSync(destination) && attempts > 0) {
@@ -264,34 +279,92 @@ export class Downloader {
           writer = fs.createWriteStream(destination)
         }
 
-        const headers: Record<string, string> = {}
-        if (startByte > 0) {
-          headers['Range'] = `bytes=${startByte}-`
+        if (startByte > countedExistingBytes) {
+          this.downloadedBytes += startByte - countedExistingBytes
+          countedExistingBytes = startByte
         }
 
-        const response = await axios.get(url, {
-          responseType: 'stream',
-          timeout: 30000,
-          headers,
-          signal: this.abortController?.signal
-        })
+
+        const makeRequest = async (rangeStart: number) => {
+          const headers: Record<string, string> = {}
+          if (rangeStart > 0) {
+            headers['Range'] = `bytes=${rangeStart}-`
+          }
+
+          return axios.get(url, {
+            responseType: 'stream',
+            timeout: 30000,
+            headers,
+            signal: this.abortController?.signal
+          })
+        }
+
+        let response = await makeRequest(startByte)
+
+        if (startByte > 0 && response.status !== 206) {
+          try {
+            response.data.destroy()
+          } catch {}
+
+          try {
+            writer.destroy()
+          } catch {}
+
+          await fs.truncate(destination, 0)
+          this.downloadedBytes -= countedExistingBytes
+          countedExistingBytes = 0
+
+          startByte = 0
+          writer = fs.createWriteStream(destination)
+
+          response = await makeRequest(0)
+        }
 
         fileSizeFromServer = parseInt(response.headers['content-length'] || '0', 10)
 
-        if (startByte > 0 && response.status === 206) {
-          this.downloadedBytes += startByte
-          downloadedInThisAttempt = startByte
+        if (!item.size && fileSizeFromServer > 0) {
+          const totalForThisFile = response.status === 206 ? startByte + fileSizeFromServer : fileSizeFromServer
+          if (totalForThisFile > addedToTotalBytes) {
+            this.totalBytes += totalForThisFile - addedToTotalBytes
+            addedToTotalBytes = totalForThisFile
+          }
         }
 
-        if (!item.size && fileSizeFromServer > 0) {
-          this.totalBytes += fileSizeFromServer
-        }
         let lastProgressUpdate = Date.now()
         const PROGRESS_UPDATE_INTERVAL = 100
 
+        const signal = this.abortController?.signal
+
         await new Promise<void>((resolve, reject) => {
+          const cleanup = () => {
+            if (signal && onAbort) {
+              try {
+                signal.removeEventListener('abort', onAbort)
+              } catch {}
+            }
+          }
+
+          const onAbort = () => {
+            try {
+              response.data.destroy()
+            } catch {}
+            try {
+              writer?.destroy()
+            } catch {}
+            cleanup()
+            reject(new Error('AbortError'))
+          }
+
+          if (signal) {
+            try {
+              signal.addEventListener('abort', onAbort)
+            } catch {
+
+            }
+          }
+
           response.data.on('data', (chunk: Buffer) => {
-            downloadedInThisAttempt += chunk.length
+            downloadedChunksBytes += chunk.length
             this.downloadedBytes += chunk.length
 
             const now = Date.now()
@@ -302,17 +375,18 @@ export class Downloader {
           })
 
           response.data.pipe(writer!)
-          writer!.on('finish', resolve)
-          writer!.on('error', reject)
-          response.data.on('error', reject)
-
-          if (this.abortController?.signal) {
-            this.abortController.signal.addEventListener('abort', () => {
-              response.data.destroy()
-              writer?.destroy()
-              reject(new Error('AbortError'))
-            })
-          }
+          writer!.on('finish', () => {
+            cleanup()
+            resolve()
+          })
+          writer!.on('error', (e) => {
+            cleanup()
+            reject(e)
+          })
+          response.data.on('error', (e: any) => {
+            cleanup()
+            reject(e)
+          })
         })
 
         return
@@ -325,15 +399,13 @@ export class Downloader {
 
         attempts++
 
-        const bytesToRollback = downloadedInThisAttempt - (startByte || 0)
-        this.downloadedBytes -= bytesToRollback
+        this.downloadedBytes -= downloadedChunksBytes
 
-        if (!item.size && fileSizeFromServer > 0 && attempts === 1) {
-          this.totalBytes -= fileSizeFromServer
-        }
 
         if (writer) {
-          writer.destroy()
+          try {
+            writer.destroy()
+          } catch {}
         }
 
         if (attempts >= maxRetries) {
@@ -344,6 +416,12 @@ export class Downloader {
               console.error(`Failed to remove corrupted file ${destination}:`, e)
             }
           }
+
+          if (!item.size && addedToTotalBytes > 0) {
+            this.totalBytes -= addedToTotalBytes
+
+          }
+
           throw lastError
         }
 
@@ -422,6 +500,86 @@ export class Downloader {
     this.directoryCreationCache.add(dir)
   }
 
+  private getSafeExtractPath(destinationRoot: string, entryName: string): string {
+
+    const name = (entryName || '').replace(/\\/g, '/')
+
+    if (!name || name === '.' || name === '/') {
+      throw new Error(`Invalid archive entry name: "${entryName}"`)
+    }
+
+    if (name.startsWith('/') || name.startsWith('\\') || /^[a-zA-Z]:/.test(name)) {
+      throw new Error(`Unsafe archive entry path (absolute): "${entryName}"`)
+    }
+
+    const normalized = path.posix.normalize(name)
+
+    if (normalized.startsWith('..') || normalized.includes('/..')) {
+      throw new Error(`Unsafe archive entry path (traversal): "${entryName}"`)
+    }
+
+    const root = path.resolve(destinationRoot)
+    const target = path.resolve(root, normalized)
+
+    if (target !== root && !target.startsWith(root + path.sep)) {
+      throw new Error(`Unsafe archive entry path (escape): "${entryName}"`)
+    }
+
+    return target
+  }
+
+  private extractZipSafe = async (filePath: string, targetPath: string): Promise<void> => {
+
+    const zip = new AdmZip(filePath)
+    const entries = zip.getEntries()
+
+    await fs.ensureDir(targetPath)
+
+    for (const entry of entries) {
+      const entryName = entry.entryName
+      const outPath = this.getSafeExtractPath(targetPath, entryName)
+
+      if ((entry as any).isDirectory) {
+        await fs.ensureDir(outPath)
+        continue
+      }
+
+      await fs.ensureDir(path.dirname(outPath))
+      await fs.writeFile(outPath, entry.getData())
+    }
+  }
+
+  private extractTarSafe = async (filePath: string, targetPath: string): Promise<void> => {
+    await fs.ensureDir(targetPath)
+
+    await tar.x({
+      file: filePath,
+      cwd: targetPath,
+      filter: (p: string, entry: any) => {
+        const safePath = this.getSafeExtractPath(targetPath, p)
+
+        const type = entry?.type as string | undefined
+        const linkpath = entry?.linkpath as string | undefined
+
+        if (type === 'Link' || type === 'SymbolicLink') {
+          if (!linkpath) return false
+
+          const lp = linkpath.replace(/\\/g, '/')
+          if (lp.startsWith('/') || lp.startsWith('\\') || /^[a-zA-Z]:/.test(lp)) {
+            throw new Error(`Unsafe tar linkpath (absolute): "${linkpath}"`)
+          }
+
+          const lpn = path.posix.normalize(lp)
+          if (lpn.startsWith('..') || lpn.includes('/..')) {
+            throw new Error(`Unsafe tar linkpath (traversal): "${linkpath}"`)
+          }
+        }
+
+        return !!safePath
+      }
+    })
+  }
+
   private extractFile = async (
     filePath: string,
     targetPath: string,
@@ -430,11 +588,12 @@ export class Downloader {
     const ext = path.extname(filePath).toLowerCase()
 
     try {
+      await fs.ensureDir(targetPath)
+
       if (ext === '.zip' || ext === '.jar' || ext === '.mrpack') {
-        const zip = new AdmZip(filePath)
-        zip.extractAllTo(targetPath, true)
+        await this.extractZipSafe(filePath, targetPath)
       } else if (ext === '.gz' || ext === '.tgz') {
-        await tar.x({ file: filePath, cwd: targetPath })
+        await this.extractTarSafe(filePath, targetPath)
       } else {
         throw new Error(`Unsupported archive format: ${ext}`)
       }

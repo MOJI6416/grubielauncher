@@ -5,18 +5,20 @@ export function compareServers(servers1: IServer[], servers2: IServer[]) {
     return false
   }
 
-  const names1 = servers1.map((mod) => mod.name)
-  const names2 = servers2.map((mod) => mod.name)
+  const norm = (s: IServer) => ({
+    name: s.name,
+    ip: s.ip,
+    acceptTextures: s.acceptTextures ?? null
+  })
 
-  const ips1 = servers1.map((mod) => mod.ip)
-  const ips2 = servers2.map((mod) => mod.ip)
+  const a = servers1.map(norm)
+  const b = servers2.map(norm)
 
-  const acceptTextures1 = servers1.map((mod) => mod.acceptTextures)
-  const acceptTextures2 = servers2.map((mod) => mod.acceptTextures)
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].name !== b[i].name) return false
+    if (a[i].ip !== b[i].ip) return false
+    if (a[i].acceptTextures !== b[i].acceptTextures) return false
+  }
 
-  return (
-    JSON.stringify(names1) === JSON.stringify(names2) &&
-    JSON.stringify(ips1) === JSON.stringify(ips2) &&
-    JSON.stringify(acceptTextures1) === JSON.stringify(acceptTextures2)
-  )
+  return true
 }

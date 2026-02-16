@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react' // Изменено: добавили useMemo/useState
+import { useMemo, useState } from "react"; // Изменено: добавили useMemo/useState
 import {
   Alert,
   Button,
@@ -6,50 +6,62 @@ import {
   ModalBody,
   ModalContent,
   ModalFooter,
-  ModalHeader
-} from '@heroui/react'
-import { useTranslation } from 'react-i18next'
+  ModalHeader,
+} from "@heroui/react";
+import { useTranslation } from "react-i18next";
 
 export function Confirmation({
   onClose,
   title,
   content,
-  buttons
+  buttons,
 }: {
-  onClose: () => void
-  title?: string
+  onClose: () => void;
+  title?: string;
   content: {
-    text: string
-    color?: 'primary' | 'danger' | 'success' | 'warning' | 'default' | 'secondary'
-  }[]
+    text: string;
+    color?:
+      | "primary"
+      | "danger"
+      | "success"
+      | "warning"
+      | "default"
+      | "secondary";
+  }[];
   buttons: {
-    text: string
-    color?: 'primary' | 'danger' | 'success' | 'warning' | 'default' | 'secondary'
-    loading?: boolean
-    onClick: () => Promise<void>
-  }[]
+    text: string;
+    color?:
+      | "primary"
+      | "danger"
+      | "success"
+      | "warning"
+      | "default"
+      | "secondary";
+    loading?: boolean;
+    onClick: () => Promise<void> | void;
+  }[];
 }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
-  const [activeBtn, setActiveBtn] = useState<number | null>(null)
+  const [activeBtn, setActiveBtn] = useState<number | null>(null);
 
   const isBusy = useMemo(
     () => activeBtn !== null || buttons.some((b) => !!b.loading),
-    [activeBtn, buttons]
-  )
+    [activeBtn, buttons],
+  );
 
   return (
     <Modal
       isOpen={true}
       onClose={() => {
-        if (isBusy) return
-        onClose()
+        if (isBusy) return;
+        onClose();
       }}
       isDismissable={!isBusy}
       isKeyboardDismissDisabled={isBusy}
     >
       <ModalContent>
-        <ModalHeader>{title || t('common.confirmation')}</ModalHeader>
+        <ModalHeader>{title || t("common.confirmation")}</ModalHeader>
         <ModalBody>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
@@ -69,12 +81,12 @@ export function Confirmation({
                 isLoading={b.loading || activeBtn === index}
                 isDisabled={isBusy && activeBtn !== index}
                 onPress={async () => {
-                  if (isBusy && activeBtn !== index) return
+                  if (isBusy && activeBtn !== index) return;
                   try {
-                    setActiveBtn(index)
-                    await b.onClick()
+                    setActiveBtn(index);
+                    await b.onClick();
                   } finally {
-                    setActiveBtn(null)
+                    setActiveBtn(null);
                   }
                 }}
               >
@@ -85,5 +97,5 @@ export function Confirmation({
         </ModalFooter>
       </ModalContent>
     </Modal>
-  )
+  );
 }

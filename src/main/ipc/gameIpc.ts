@@ -1,6 +1,6 @@
 import { ChildProcessWithoutNullStreams } from 'child_process'
-import { ipcMain } from 'electron'
 import { closeGame, installServer, runGame, runJar } from '../utilities/game'
+import { handleSafe } from '../utilities/ipc'
 
 export const gameProcesses = new Map<
   string,
@@ -11,31 +11,39 @@ export const gameProcesses = new Map<
   }
 >()
 
+
 export function registerGameIpc() {
-  ipcMain.handle('game:runJar', async (_event, command, args, cwd) => {
-    return runJar(command, args, cwd)
+  handleSafe<any>('game:runJar', null, async (_event, command: string, args: string[], cwd: string) => {
+    return await runJar(command, args, cwd)
   })
 
-  ipcMain.handle('game:installServer', async (_event, command, args, serverPath: string) => {
-    return installServer(command, args, serverPath)
+  handleSafe<any>(
+    'game:installServer',
+    null,
+    async (_event, command: string, args: string[], serverPath: string) => {
+      return await installServer(command, args, serverPath)
+    }
+  )
+
+  handleSafe<boolean>('game:closeGame', false, async (_event, versionName: string, instance: number) => {
+    closeGame(versionName, instance)
+    return true
   })
 
-  ipcMain.handle('game:closeGame', async (_event, versionName: string, instance: number) => {
-    return closeGame(versionName, instance)
-  })
-
-  ipcMain.handle(
+  handleSafe<boolean>(
     'game:runGame',
+    false,
     async (
       _event,
-      command,
-      args,
+      command: string,
+      args: string[],
       versionPath: string,
       versionName: string,
       instance: number,
       accessToken: string
     ) => {
-      return runGame(command, args, versionPath, versionName, instance, accessToken)
+      runGame(command, args, versionPath, versionName, instance, accessToken)
+      return true
     }
   )
 }

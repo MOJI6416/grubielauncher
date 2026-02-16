@@ -1,9 +1,9 @@
-import { ipcMain } from 'electron'
 import { Java } from '../game/Java'
 import fs from 'fs-extra'
+import { handleSafe } from '../utilities/ipc'
 
 export function registerJavaIpc() {
-  ipcMain.handle('java:getPath', async (_, majorVersion: number) => {
+  handleSafe<string | null>('java:getPath', null, async (_event, majorVersion: number) => {
     const java = new Java(majorVersion)
     await java.init()
 
@@ -15,7 +15,7 @@ export function registerJavaIpc() {
     return java.javaPath
   })
 
-  ipcMain.handle('java:install', async (_, majorVersion: number) => {
+  handleSafe<string | null>('java:install', null, async (_event, majorVersion: number) => {
     const java = new Java(majorVersion)
     await java.init()
     await java.install()

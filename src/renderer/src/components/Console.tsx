@@ -1,4 +1,4 @@
-import { IConsole } from '@/types/Console'
+import { IConsole } from "@/types/Console";
 import {
   Button,
   Card,
@@ -11,124 +11,150 @@ import {
   ModalHeader,
   ScrollShadow,
   Tooltip,
-  Alert
-} from '@heroui/react'
-import { RunGameParams } from '@renderer/App'
-import { consolesAtom, versionsAtom } from '@renderer/stores/atoms'
-import clsx from 'clsx'
-import { useAtom } from 'jotai'
-import { Play, Square, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+  Alert,
+} from "@heroui/react";
+import { RunGameParams } from "@renderer/App";
+import { consolesAtom, versionsAtom } from "@renderer/stores/atoms";
+import clsx from "clsx";
+import { useAtom } from "jotai";
+import { Play, Square, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useLayoutEffect } from "react";
+import { useTranslation } from "react-i18next";
 
-const api = window.api
+const api = window.api;
 
 interface IInstance {
-  versionName: string
-  instance: number
+  versionName: string;
+  instance: number;
 }
 
 export function Console({
   onClose,
-  runGame
+  runGame,
 }: {
-  onClose: () => void
-  runGame: (params: RunGameParams) => Promise<void>
+  onClose: () => void;
+  runGame: (params: RunGameParams) => Promise<void>;
 }) {
-  const [consoles, setConsoles] = useAtom(consolesAtom)
-  const [versions] = useAtom(versionsAtom)
-  const [selectedInstance, setSelectedInstance] = useState<IInstance | null>(null)
-  const [elapsedTimes, setElapsedTimes] = useState<Record<string, string>>({})
+  const [consoles, setConsoles] = useAtom(consolesAtom);
+  const [versions] = useAtom(versionsAtom);
+  const [selectedInstance, setSelectedInstance] = useState<IInstance | null>(
+    null,
+  );
+  const [elapsedTimes, setElapsedTimes] = useState<Record<string, string>>({});
 
-  const ref = useRef<HTMLDivElement>(null)
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
-  const consolesRef = useRef(consoles.consoles)
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const pinnedToBottomRef = useRef(true);
+
+  const consolesRef = useRef(consoles.consoles);
   useEffect(() => {
-    consolesRef.current = consoles.consoles
-  }, [consoles.consoles])
+    consolesRef.current = consoles.consoles;
+  }, [consoles.consoles]);
 
-  const getKey = (v: string, i: number) => `${v}::${i}`
+  const getKey = (v: string, i: number) => `${v}::${i}`;
 
   const instances = useMemo<IInstance[]>(() => {
-    return consoles.consoles.map((c) => ({ versionName: c.versionName, instance: c.instance }))
-  }, [consoles.consoles])
+    return consoles.consoles.map((c) => ({
+      versionName: c.versionName,
+      instance: c.instance,
+    }));
+  }, [consoles.consoles]);
 
   const selectedConsole = useMemo<IConsole | null>(() => {
-    if (!selectedInstance) return null
+    if (!selectedInstance) return null;
     return (
       consoles.consoles.find(
         (c) =>
-          c.versionName === selectedInstance.versionName && c.instance === selectedInstance.instance
+          c.versionName === selectedInstance.versionName &&
+          c.instance === selectedInstance.instance,
       ) || null
-    )
-  }, [selectedInstance, consoles.consoles])
+    );
+  }, [selectedInstance, consoles.consoles]);
 
   useEffect(() => {
     if (instances.length === 0) {
-      setSelectedInstance(null)
-      return
+      setSelectedInstance(null);
+      return;
     }
 
     const currentKey = selectedInstance
       ? getKey(selectedInstance.versionName, selectedInstance.instance)
-      : null
+      : null;
     const exists = currentKey
       ? instances.some((i) => getKey(i.versionName, i.instance) === currentKey)
-      : false
+      : false;
 
-    if (exists) return
+    if (exists) return;
 
-    const running = consoles.consoles.find((c) => c.status === 'running')
+    const running = consoles.consoles.find((c) => c.status === "running");
     if (running) {
-      setSelectedInstance({ versionName: running.versionName, instance: running.instance })
-      return
+      setSelectedInstance({
+        versionName: running.versionName,
+        instance: running.instance,
+      });
+      return;
     }
 
-    setSelectedInstance(instances[0])
-  }, [instances, consoles.consoles, selectedInstance])
+    setSelectedInstance(instances[0]);
+  }, [instances, consoles.consoles, selectedInstance]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const list = consolesRef.current
-      const next: Record<string, string> = {}
+      const list = consolesRef.current;
+      const next: Record<string, string> = {};
 
       list.forEach(({ versionName, instance, startTime, status }) => {
-        if (status !== 'running' || !startTime) return
+        if (status !== "running" || !startTime) return;
 
-        const diff = Date.now() - new Date(startTime).getTime()
-        const seconds = Math.floor(diff / 1000) % 60
-        const minutes = Math.floor(diff / 1000 / 60) % 60
-        const hours = Math.floor(diff / 1000 / 60 / 60)
+        const diff = Date.now() - new Date(startTime).getTime();
+        const seconds = Math.floor(diff / 1000) % 60;
+        const minutes = Math.floor(diff / 1000 / 60) % 60;
+        const hours = Math.floor(diff / 1000 / 60 / 60);
 
         next[getKey(versionName, instance)] =
-          `${hours.toString().padStart(2, '0')}:` +
-          `${minutes.toString().padStart(2, '0')}:` +
-          `${seconds.toString().padStart(2, '0')}`
-      })
+          `${hours.toString().padStart(2, "0")}:` +
+          `${minutes.toString().padStart(2, "0")}:` +
+          `${seconds.toString().padStart(2, "0")}`;
+      });
 
-      setElapsedTimes(next)
-    }, 1000)
+      setElapsedTimes(next);
+    }, 1000);
 
-    return () => clearInterval(interval)
-  }, [])
+    return () => clearInterval(interval);
+  }, []);
 
-  useEffect(() => {
-    if (!ref.current) return
-    ref.current.scrollTo({ top: ref.current.scrollHeight })
-  }, [selectedInstance, selectedConsole?.messages.length])
+  function scrollToBottom() {
+    const el = viewportRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight });
+  }
+
+  function handleScroll() {
+    const el = viewportRef.current;
+    if (!el) return;
+
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    pinnedToBottomRef.current = distanceToBottom < 60;
+  }
+
+  useLayoutEffect(() => {
+    if (!viewportRef.current) return;
+    if (pinnedToBottomRef.current) scrollToBottom();
+  }, [selectedInstance, selectedConsole?.messages.length]);
 
   async function removeConsole(inst: IInstance) {
     const next = consoles.consoles.filter(
-      (c) => !(c.versionName === inst.versionName && c.instance === inst.instance)
-    )
-    setConsoles({ consoles: next })
-    if (next.length === 0) onClose()
+      (c) =>
+        !(c.versionName === inst.versionName && c.instance === inst.instance),
+    );
+    setConsoles({ consoles: next });
+    if (next.length === 0) onClose();
   }
 
   function getTipsForConsole(c: IConsole) {
-    const tips = c.messages.map((m) => m.tips).flat()
-    return Array.from(new Set(tips))
+    const tips = c.messages.map((m) => m.tips).flat();
+    return Array.from(new Set(tips));
   }
 
   return (
@@ -136,11 +162,11 @@ export function Console({
       isOpen={true}
       size="5xl"
       onClose={() => {
-        onClose()
+        onClose();
       }}
     >
       <ModalContent>
-        <ModalHeader>{t('console.title')}</ModalHeader>
+        <ModalHeader>{t("console.title")}</ModalHeader>
 
         <ModalBody>
           <div className="flex items-center space-x-2 h-96">
@@ -148,34 +174,44 @@ export function Console({
               <ScrollShadow className="w-full h-full">
                 {instances.length === 0 ? (
                   <div className="p-2">
-                    <Alert title={t('console.noInstances') || 'No instances'} />
+                    <Alert title={t("console.noInstances") || "No instances"} />
                   </div>
                 ) : (
                   instances.map((inst) => {
-                    const versionItem = versions.find((v) => v.version.name === inst.versionName)
+                    const versionItem = versions.find(
+                      (v) => v.version.name === inst.versionName,
+                    );
                     const versionConsole = consoles.consoles.find(
-                      (c) => c.versionName === inst.versionName && c.instance === inst.instance
-                    )
+                      (c) =>
+                        c.versionName === inst.versionName &&
+                        c.instance === inst.instance,
+                    );
 
-                    if (!versionItem || !versionConsole) return null
+                    if (!versionItem || !versionConsole) return null;
 
                     const isSelected =
                       selectedInstance?.versionName === inst.versionName &&
-                      selectedInstance.instance === inst.instance
+                      selectedInstance.instance === inst.instance;
 
-                    const tipCodes = getTipsForConsole(versionConsole)
-                    const tipText = tipCodes.map((tip) => t(`tips.${tip}`)).join(', ')
+                    const tipCodes = getTipsForConsole(versionConsole);
+                    const tipText = tipCodes
+                      .map((tip) => t(`tips.${tip}`))
+                      .join(", ");
 
                     return (
                       <Card
                         key={getKey(inst.versionName, inst.instance)}
                         className={clsx(
-                          'w-full mb-2',
-                          isSelected ? 'border-primary-200 border-1' : 'border-none'
+                          "w-full mb-2 border-1",
+                          isSelected
+                            ? "border-primary-200"
+                            : "border-white/20 ",
                         )}
                         isPressable
                         onPress={() => {
-                          setSelectedInstance(inst)
+                          setSelectedInstance(inst);
+                          pinnedToBottomRef.current = true;
+                          requestAnimationFrame(scrollToBottom);
                         }}
                       >
                         <CardBody>
@@ -196,13 +232,16 @@ export function Console({
                                   <p className="text-sm truncate flex-grow">
                                     {versionItem.version.name}
                                   </p>
-                                  <p className="text-xs text-gray-500">[{inst.instance}]</p>
+                                  <p className="text-xs text-gray-500">
+                                    [{inst.instance}]
+                                  </p>
                                 </div>
 
-                                {versionConsole.status === 'running' && (
+                                {versionConsole.status === "running" && (
                                   <span className="text-xs text-gray-500">
-                                    {elapsedTimes[getKey(inst.versionName, inst.instance)] ||
-                                      '00:00:00'}
+                                    {elapsedTimes[
+                                      getKey(inst.versionName, inst.instance)
+                                    ] || "00:00:00"}
                                   </span>
                                 )}
                               </div>
@@ -216,34 +255,39 @@ export function Console({
                               >
                                 <Chip
                                   size="sm"
-                                  className={tipCodes.length ? 'cursor-help' : ''}
+                                  className={
+                                    tipCodes.length ? "cursor-help" : ""
+                                  }
                                   variant="dot"
                                   color={
-                                    versionConsole.status === 'running'
-                                      ? 'success'
-                                      : versionConsole.status === 'stopped'
-                                        ? 'warning'
-                                        : 'danger'
+                                    versionConsole.status === "running"
+                                      ? "success"
+                                      : versionConsole.status === "stopped"
+                                        ? "warning"
+                                        : "danger"
                                   }
                                 >
-                                  {versionConsole.status === 'running'
-                                    ? t('console.running')
-                                    : versionConsole.status === 'stopped'
-                                      ? t('console.stopped')
-                                      : t('console.error')}
+                                  {versionConsole.status === "running"
+                                    ? t("console.running")
+                                    : versionConsole.status === "stopped"
+                                      ? t("console.stopped")
+                                      : t("console.error")}
                                 </Chip>
                               </Tooltip>
 
                               <div className="flex items-center space-x-1">
-                                {versionConsole.status === 'running' ? (
+                                {versionConsole.status === "running" ? (
                                   <Button
                                     isIconOnly
                                     variant="flat"
                                     size="sm"
                                     color="danger"
                                     onPress={async () => {
-                                      setSelectedInstance(inst)
-                                      await api.game.closeGame(inst.versionName, inst.instance)
+                                      setSelectedInstance(inst);
+                                      await api.game.closeGame(
+                                        inst.versionName,
+                                        inst.instance,
+                                      );
                                     }}
                                   >
                                     <Square size={22} />
@@ -256,11 +300,11 @@ export function Console({
                                       size="sm"
                                       color="secondary"
                                       onPress={async () => {
-                                        setSelectedInstance(inst)
+                                        setSelectedInstance(inst);
                                         await runGame({
                                           version: versionItem,
-                                          instance: inst.instance
-                                        })
+                                          instance: inst.instance,
+                                        });
                                       }}
                                     >
                                       <Play size={22} />
@@ -272,7 +316,7 @@ export function Console({
                                       size="sm"
                                       color="warning"
                                       onPress={async () => {
-                                        await removeConsole(inst)
+                                        await removeConsole(inst);
                                       }}
                                     >
                                       <X size={22} />
@@ -284,7 +328,7 @@ export function Console({
                           </div>
                         </CardBody>
                       </Card>
-                    )
+                    );
                   })
                 )}
               </ScrollShadow>
@@ -294,31 +338,41 @@ export function Console({
               <Card className="h-full bg-gray-900 border-none shadow-lg">
                 <CardBody className="h-full p-0">
                   <div
-                    className="w-full h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800"
-                    ref={ref}
+                    ref={viewportRef}
+                    onScroll={handleScroll}
+                    className="w-full h-full overflow-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800"
                   >
-                    {selectedConsole?.messages.map((message, index) => (
-                      <Tooltip
-                        size="sm"
-                        key={index}
-                        isDisabled={message.tips.length === 0}
-                        content={message.tips.map((tip) => t('tips.' + tip)).join(', ')}
-                      >
-                        <div
-                          className={`p-2 text-xs font-mono break-all border-l-4 ${
-                            message.tips.length > 0 ? 'cursor-help' : ''
-                          } ${
-                            message.type === 'info'
-                              ? 'bg-blue-950/50 text-blue-300 border-blue-500'
-                              : message.type === 'error'
-                                ? 'bg-red-950/50 text-red-300 border-red-500'
-                                : 'bg-green-950/50 text-green-300 border-green-500'
-                          } first:pt-2 last:pb-2 transition-colors duration-200 hover:bg-opacity-75`}
+                    {selectedConsole?.messages.map((message, index) => {
+                      const text = message.message.length
+                        ? message.message
+                        : " ";
+
+                      return (
+                        <Tooltip
+                          size="sm"
+                          key={index}
+                          isDisabled={message.tips.length === 0}
+                          content={message.tips
+                            .map((tip) => t("tips." + tip))
+                            .join(", ")}
                         >
-                          {message.message}
-                        </div>
-                      </Tooltip>
-                    ))}
+                          <pre
+                            style={{ tabSize: 4 }}
+                            className={`m-0 p-2 text-xs font-mono whitespace-pre border-l-4 ${
+                              message.tips.length > 0 ? "cursor-help" : ""
+                            } ${
+                              message.type === "info"
+                                ? "bg-blue-950/50 text-blue-300 border-blue-500"
+                                : message.type === "error"
+                                  ? "bg-red-950/50 text-red-300 border-red-500"
+                                  : "bg-green-950/50 text-green-300 border-green-500"
+                            } first:pt-2 last:pb-2 transition-colors duration-200 hover:bg-opacity-75`}
+                          >
+                            {text}
+                          </pre>
+                        </Tooltip>
+                      );
+                    })}
                   </div>
                 </CardBody>
               </Card>
@@ -327,5 +381,5 @@ export function Console({
         </ModalBody>
       </ModalContent>
     </Modal>
-  )
+  );
 }

@@ -49,13 +49,20 @@ export class ModManager {
 
     try {
       if (provider == 'curseforge') {
+        let cfSortField: ModsSearchSortField | undefined = undefined
+
+        if (sort && sort !== '') {
+          const mapped = (ModsSearchSortField as any)[sort]
+          if (typeof mapped === 'number') cfSortField = mapped as ModsSearchSortField
+        }
+
         const curseforge = await CurseForge.search(
           query,
           {
             loader: loader ? loaderToCfLoader(loader) : undefined,
             version: version,
             modType: ModTypeClassIds[projectType],
-            sortField: sort as unknown as ModsSearchSortField,
+            sortField: cfSortField,
             category: filter
           },
           {
@@ -112,7 +119,7 @@ export class ModManager {
     if (provider == Provider.CURSEFORGE) {
       return Object.keys(ModsSearchSortField).filter((key) => isNaN(Number(key)))
     } else if (provider == Provider.MODRINTH) {
-      return Object.keys(SortValue).map((sv) => sv)
+      return Object.keys(SortValue).filter((key) => isNaN(Number(key)))
     }
 
     return []

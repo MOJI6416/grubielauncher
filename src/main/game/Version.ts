@@ -39,11 +39,24 @@ export class Version {
   private manifestPath: string = ''
 
   private downloader: Downloader
+  private initPromise: Promise<void> | null = null
 
   constructor(settings: TSettings, version: IVersionConf) {
     this.version = version
     this.settings = settings
     this.downloader = new Downloader(this.settings.downloadLimit)
+  }
+
+  private async ensureInitialized() {
+    if (this.launcherPath && this.minecraftPath && this.versionPath) return
+
+    if (!this.initPromise) {
+      this.initPromise = this.init().finally(() => {
+        this.initPromise = null
+      })
+    }
+
+    await this.initPromise
   }
 
   public async init() {
@@ -66,6 +79,8 @@ export class Version {
   }
 
   public async install(account: ILocalAccount, items: DownloadItem[] = []) {
+    await this.ensureInitialized()
+
     const downloadItems: DownloadItem[] = [...items]
 
     const manifestPath = path.join(this.versionPath, `${this.version.version.id}.json`)
@@ -249,8 +264,9 @@ export class Version {
           if (forgeManifest.arguments?.game && this.manifest.arguments?.game)
             this.manifest.arguments.game.push(...forgeManifest.arguments.game)
 
-          if (forgeManifest.minecraftArguments && this.manifest.minecraftArguments)
+          if (forgeManifest.minecraftArguments) {
             this.manifest.minecraftArguments = forgeManifest.minecraftArguments
+          }
 
           this.manifest.libraries = this.removeDuplicateLibraries(
             [...forgeManifest.libraries, ...this.manifest.libraries],
@@ -342,6 +358,8 @@ export class Version {
   }
 
   public async save() {
+    await this.ensureInitialized()
+
     this.versionPath = path.join(this.minecraftPath, 'versions', this.version.name)
     await fs.writeJSON(path.join(this.versionPath, 'version.json'), this.version, {
       encoding: 'utf-8',
@@ -384,9 +402,13 @@ export class Version {
       if (!isAllow) continue
 
       const natives = library.natives
-      const artifact = library.downloads.artifact
+      const downloads = (library as any).downloads
+
+      const artifact = downloads?.artifact
 
       if (!natives) {
+        if (!artifact?.path || !artifact?.url) continue
+
         const libraryPath = path.join(librariesPath, artifact.path)
         paths.push(libraryPath)
         downloadItems.push({
@@ -400,10 +422,12 @@ export class Version {
         const native = natives[platform.os]?.replace('${arch}', '64')
         if (!native) continue
 
-        const classifiers = library.downloads.classifiers
+        const classifiers = downloads?.classifiers
         if (!classifiers) continue
 
         const classifier = classifiers[native]
+        if (!classifier?.path || !classifier?.url) continue
+
         const fileName = classifier.path.split('/').pop()
         if (!fileName) continue
 
@@ -501,10 +525,12 @@ export class Version {
           if (!a.rules) continue
 
           const rule = a.rules[0]
-          if (rule.action == 'allow' && rule.features.is_quick_play_multiplayer)
+          const features = rule?.features
+
+          if (rule.action == 'allow' && features?.is_quick_play_multiplayer)
             this.isQuickPlayMultiplayer = true
 
-          if (rule.action == 'allow' && rule.features.is_quick_play_singleplayer)
+          if (rule.action == 'allow' && features?.is_quick_play_singleplayer)
             this.isQuickPlaySingleplayer = true
         }
     } catch (error) {}
@@ -533,6 +559,11 @@ export class Version {
       'indexes',
       `${assetsIndex.id}.json`
     )
+
+    const existsIndex = await fs.pathExists(assetsIndexPath)
+    if (!existsIndex) {
+      return { downloadItems: [], paths: [] }
+    }
 
     const assets: IAssetIndex = await fs.readJSON(assetsIndexPath, 'utf-8')
 
@@ -701,6 +732,8 @@ export class Version {
     quickSingle?: string,
     quickMultiplayer?: string
   ) {
+    await this.ensureInitialized()
+
     if (!this.manifest) return null
 
     const runArguments = await this.getRunArguments(
@@ -742,6 +775,8 @@ export class Version {
       multiplayer?: string
     }
   ) {
+    await this.ensureInitialized()
+
     const command = await this.getRunCommand(
       account,
       settings,
@@ -781,6 +816,8 @@ export class Version {
   }
 
   public async delete(isFull: boolean = false) {
+    await this.ensureInitialized()
+
     if (!isFull) return await rimraf(this.versionPath)
 
     const libraries = this.getLibraries()

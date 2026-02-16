@@ -14,14 +14,18 @@ export function createUpdaterWindow() {
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       devTools: is.dev,
-      webSecurity: false,
+      webSecurity: is.dev ? false : true,
       nodeIntegration: false,
       sandbox: true,
       contextIsolation: true
     }
   })
 
-  updaterWindow.on('ready-to-show', () => {
+  updaterWindow.on('closed', () => {
+    updaterWindow = null
+  })
+
+  updaterWindow.once('ready-to-show', () => {
     updaterWindow?.show()
   })
 

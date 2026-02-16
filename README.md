@@ -43,9 +43,9 @@
 # 🛠️ Installation & Launch
 
 1. Download the latest version from [Releases](https://github.com/MOJI6416/grubielauncher/releases).
-2. Run `grubie-launcher-setup`.
+2. Run `grubie-launcher`.
 
-_(Supported platforms: Windows)_
+_(Supported platforms: Windows, Linux)_
 
 # 📜 License
 

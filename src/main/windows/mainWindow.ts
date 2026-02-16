@@ -20,11 +20,15 @@ export function createMainWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       devTools: is.dev,
-      webSecurity: false,
+      webSecurity: is.dev ? false : true,
       nodeIntegration: false,
       sandbox: true,
       contextIsolation: true
     }
+  })
+
+  mainWindow.on('closed', () => {
+    mainWindow = null
   })
 
   mainWindow.once('ready-to-show', () => {
@@ -33,7 +37,13 @@ export function createMainWindow(): void {
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    try {
+      const url = new URL(details.url)
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        shell.openExternal(details.url)
+      }
+    } catch {
+    }
     return { action: 'deny' }
   })
 

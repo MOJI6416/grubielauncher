@@ -2,7 +2,7 @@ import { IVersionManifest } from '@/types/IVersionManifest'
 import { IArch, IOS } from '@/types/OS'
 import { createHash } from 'crypto'
 import { app } from 'electron'
-import path from 'path/win32'
+import path from 'path'
 
 export function getOS(): {
   os: IOS
@@ -59,15 +59,17 @@ export function removeDuplicatesLibraries(
   items: IVersionManifest['libraries']
 ): IVersionManifest['libraries'] {
   const uniqueNames = new Set<string>()
+
   return items.filter((item) => {
     if (item.natives) return true
 
-    item.name = item.name.replace('@jar', '')
+    const normalizedName = item.name.replace('@jar', '')
 
-    if (uniqueNames.has(item.name)) {
+    if (uniqueNames.has(normalizedName)) {
       return false
     }
-    uniqueNames.add(item.name)
+
+    uniqueNames.add(normalizedName)
     return true
   })
 }

@@ -16,6 +16,11 @@ import axios from 'axios'
 const URL = 'https://api.modrinth.com/v2'
 
 export class Modrinth {
+  private static api = axios.create({
+    baseURL: URL,
+    timeout: 30000
+  })
+
   static async search(
     query: string,
     options: {
@@ -39,24 +44,29 @@ export class Modrinth {
       if (sort) params.append('index', sort.toString())
 
       const facets: string[][] = []
-      if (version) facets.push([`versions:${version}`], [`project_type:${projectType}`])
-      else facets.push([`project_type:${projectType}`])
+
+      facets.push([`project_type:${projectType}`])
+
+      if (version) facets.push([`versions:${version}`])
 
       if (
         loader &&
         projectType !== ProjectType.RESOURCEPACK &&
         projectType !== ProjectType.SHADER &&
         projectType !== ProjectType.DATAPACK
-      )
+      ) {
         facets.push([`categories:${loader}`])
+      }
 
-      if (category) facets.push(...category.map((c) => [`categories:${c.replace('+', '')}`]))
+      if (category && category.length > 0) {
+        facets.push(...category.map((c) => [`categories:${c.replace(/\+/g, '')}`]))
+      }
 
       params.append('facets', JSON.stringify(facets))
       params.append('limit', pagination.limit.toString())
       params.append('offset', pagination.offset.toString())
 
-      const response = await axios.get<IResult>(`${URL}/search`, {
+      const response = await this.api.get<IResult>('/search', {
         params
       })
 
@@ -68,8 +78,7 @@ export class Modrinth {
 
   static async get(id: string) {
     try {
-      const response = await axios.get<IProject>(`${URL}/project/${id}`)
-
+      const response = await this.api.get<IProject>(`/project/${id}`)
       return response.data
     } catch {
       return null
@@ -78,8 +87,7 @@ export class Modrinth {
 
   static async getVersion(id: string) {
     try {
-      const response = await axios.get<IVersion>(`${URL}/version/${id}`)
-
+      const response = await this.api.get<IVersion>(`/version/${id}`)
       return response.data
     } catch {
       return null
@@ -104,7 +112,7 @@ export class Modrinth {
       )
         params.append('loaders', JSON.stringify([loader]))
 
-      const response = await axios.get<IVersion[]>(`${URL}/project/${project_id}/version`, {
+      const response = await this.api.get<IVersion[]>(`/project/${project_id}/version`, {
         params
       })
 
@@ -116,8 +124,7 @@ export class Modrinth {
 
   static async getFilter(projectType: ProjectType) {
     try {
-      const response = await axios.get<ICategoryTag[]>(`${URL}/tag/category`)
-
+      const response = await this.api.get<ICategoryTag[]>(`/tag/category`)
       return response.data.filter((c) => c.project_type == projectType)
     } catch {
       return null
@@ -126,8 +133,8 @@ export class Modrinth {
 
   static async tags() {
     try {
-      const categories = await axios.get<ICategoryTag[]>(`${URL}/tag/category`)
-      const loaders = await axios.get<ILoaderTag[]>(`${URL}/tag/loader`)
+      const categories = await this.api.get<ICategoryTag[]>(`/tag/category`)
+      const loaders = await this.api.get<ILoaderTag[]>(`/tag/loader`)
 
       return {
         tags: [...categories.data, ...loaders.data],
@@ -140,9 +147,7 @@ export class Modrinth {
 
   static async getDependencies(project_id: string, deps: VersionDependency[]) {
     try {
-      const response = await axios.get<IProjectDependencies>(
-        `${URL}/project/${project_id}/dependencies`
-      )
+      const response = await this.api.get<IProjectDependencies>(`/project/${project_id}/dependencies`)
 
       const dependencies: IProject[] = []
       for (let index = 0; index < deps.length; index++) {
@@ -166,7 +171,7 @@ export class Modrinth {
       const params = new URLSearchParams()
       params.append('ids', JSON.stringify(ids))
 
-      const response = await axios.get<IProject[]>(`${URL}/projects`, {
+      const response = await this.api.get<IProject[]>(`/projects`, {
         params
       })
 

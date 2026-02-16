@@ -33,17 +33,26 @@ export async function updateServerProperty(
   filePath: string,
   settings: IServerSettings
 ): Promise<void> {
-  const fileContent = await fs.readFile(filePath, 'utf8')
+  let fileContent = ''
+  let eol = '\n'
 
-  const lines = fileContent.split('\n')
+  try {
+    fileContent = await fs.readFile(filePath, 'utf8')
+    eol = fileContent.includes('\r\n') ? '\r\n' : '\n'
+  } catch (err: any) {
+    if (err?.code !== 'ENOENT') throw err
+    fileContent = ''
+  }
 
+  const lines = fileContent ? fileContent.split(/\r?\n/) : []
   let updatedLines = [...lines]
 
   function update(property: string, value: string | number | boolean) {
     let updated = false
 
     updatedLines = updatedLines.map((line) => {
-      if (line.trim().startsWith('#') || line.trim() === '') {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('#') || trimmed === '') {
         return line
       }
 
@@ -84,16 +93,47 @@ export async function updateServerProperty(
   update('server-ip', settings.serverIp)
   update('server-port', settings.serverPort)
 
-  await fs.writeFile(filePath, updatedLines.join('\n'), 'utf8')
+  await fs.writeFile(filePath, updatedLines.join(eol), 'utf8')
 }
 
 export async function getServerSettings(filePath: string): Promise<IServerSettings> {
-  const fileContent = await fs.readFile(filePath, 'utf8')
-  const lines = fileContent.split('\n')
+  let fileContent = ''
+
+  try {
+    fileContent = await fs.readFile(filePath, 'utf8')
+  } catch (err: any) {
+    if (err?.code !== 'ENOENT') throw err
+
+    return {
+      maxPlayers: 20,
+      gameMode: 'survival',
+      difficulty: 'normal',
+      whitelist: false,
+      onlineMode: false,
+      pvp: false,
+      enableCommandBlock: false,
+      allowFlight: false,
+      spawnAnimals: false,
+      spawnMonsters: false,
+      spawnNpcs: false,
+      allowNether: false,
+      forceGamemode: false,
+      spawnProtection: 16,
+      requireResourcePack: false,
+      resourcePack: '',
+      resourcePackPrompt: '',
+      motd: '',
+      serverIp: '',
+      serverPort: 25565
+    }
+  }
+
+  const lines = fileContent.split(/\r?\n/)
 
   function getServerProperty(property: string) {
     for (const line of lines) {
-      if (line.trim().startsWith('#') || line.trim() === '') {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('#') || trimmed === '') {
         continue
       }
 

@@ -1,18 +1,17 @@
 import { ILocalAccount } from '@/types/Account'
-import { ipcMain } from 'electron'
 import { loadStatistics, readWorld, writeWorldName } from '../utilities/worlds'
+import { handleSafe } from '../utilities/ipc'
 
 export function registerWorldIpc() {
-  ipcMain.handle('worlds:loadStatistics', async (_, worldPath: string, account: ILocalAccount) => {
+  handleSafe('worlds:loadStatistics', null, async (_, worldPath: string, account: ILocalAccount) => {
     return await loadStatistics(worldPath, account)
   })
 
-  ipcMain.handle('worlds:readWorld', async (_, worldPath: string, account: ILocalAccount) => {
-    const worldData = await readWorld(worldPath, account)
-    return worldData
+  handleSafe('worlds:readWorld', null, async (_, worldPath: string, account: ILocalAccount) => {
+    return await readWorld(worldPath, account)
   })
 
-  ipcMain.handle('worlds:writeName', async (_, worldPath: string, newName: string) => {
+  handleSafe('worlds:writeName', null, async (_, worldPath: string, newName: string) => {
     return await writeWorldName(worldPath, newName)
   })
 }

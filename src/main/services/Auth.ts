@@ -7,92 +7,86 @@ import {
 } from '@/types/Auth'
 import axios from 'axios'
 
-export async function authMicrosoft(code: string): Promise<IAuthResponse | null> {
+const api = axios.create({
+  baseURL: BACKEND_URL,
+  timeout: 30000
+})
+
+function logAxiosError(prefix: string, error: unknown) {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status
+    const statusText = error.response?.statusText
+    const message = error.message
+    console.error(`${prefix}:`, status ? `HTTP ${status}${statusText ? ` ${statusText}` : ''}` : message)
+    return
+  }
+
+  console.error(`${prefix}:`, error)
+}
+
+async function postOrNull<TResponse>(url: string, data: any, errorPrefix: string): Promise<TResponse | null> {
   try {
-    const response = await axios.post<IAuthResponse>(`${BACKEND_URL}/auth/microsoft`, {
-      code
-    } as IAuthRequest)
+    const response = await api.post<TResponse>(url, data)
     return response.data
   } catch (error) {
-    console.error('Microsoft auth error:', error)
+    logAxiosError(errorPrefix, error)
     return null
   }
+}
+
+export async function authMicrosoft(code: string): Promise<IAuthResponse | null> {
+  return postOrNull<IAuthResponse>(
+    '/auth/microsoft',
+    { code } as IAuthRequest,
+    'Microsoft auth error'
+  )
 }
 
 export async function refreshMicrosoftToken(
   refreshToken: string,
   id: string
 ): Promise<IRefreshTokenResponse | null> {
-  try {
-    const response = await axios.post<IRefreshTokenResponse>(
-      `${BACKEND_URL}/auth/microsoft/refresh`,
-      {
-        refreshToken,
-        id
-      } as IRefreshTokenRequest
-    )
-    return response.data
-  } catch (error) {
-    console.error('Microsoft refresh error:', error)
-    return null
-  }
+  return postOrNull<IRefreshTokenResponse>(
+    '/auth/microsoft/refresh',
+    { refreshToken, id } as IRefreshTokenRequest,
+    'Microsoft refresh error'
+  )
 }
 
 export async function authElyBy(code: string): Promise<IAuthResponse | null> {
-  try {
-    const response = await axios.post<IAuthResponse>(`${BACKEND_URL}/auth/elyby`, {
-      code
-    } as IAuthRequest)
-    return response.data
-  } catch (error) {
-    console.error('ElyBy auth error:', error)
-    return null
-  }
+  return postOrNull<IAuthResponse>(
+    '/auth/elyby',
+    { code } as IAuthRequest,
+    'ElyBy auth error'
+  )
 }
 
 export async function refreshElyByToken(
   refreshToken: string,
   id: string
 ): Promise<IRefreshTokenResponse | null> {
-  try {
-    const response = await axios.post<IRefreshTokenResponse>(`${BACKEND_URL}/auth/elyby/refresh`, {
-      refreshToken,
-      id
-    } as IRefreshTokenRequest)
-    return response.data
-  } catch (error) {
-    console.error('ElyBy refresh error:', error)
-    return null
-  }
+  return postOrNull<IRefreshTokenResponse>(
+    '/auth/elyby/refresh',
+    { refreshToken, id } as IRefreshTokenRequest,
+    'ElyBy refresh error'
+  )
 }
 
 export async function authDiscord(code: string): Promise<IAuthResponse | null> {
-  try {
-    const response = await axios.post<IAuthResponse>(`${BACKEND_URL}/auth/discord`, {
-      code
-    } as IAuthRequest)
-    return response.data
-  } catch (error) {
-    console.error('Discord auth error:', error)
-    return null
-  }
+  return postOrNull<IAuthResponse>(
+    '/auth/discord',
+    { code } as IAuthRequest,
+    'Discord auth error'
+  )
 }
 
 export async function refreshDiscordToken(
   refreshToken: string,
   id: string
 ): Promise<IRefreshTokenResponse | null> {
-  try {
-    const response = await axios.post<IRefreshTokenResponse>(
-      `${BACKEND_URL}/auth/discord/refresh`,
-      {
-        refreshToken,
-        id
-      } as IRefreshTokenRequest
-    )
-    return response.data
-  } catch (error) {
-    console.error('Discord refresh error:', error)
-    return null
-  }
+  return postOrNull<IRefreshTokenResponse>(
+    '/auth/discord/refresh',
+    { refreshToken, id } as IRefreshTokenRequest,
+    'Discord refresh error'
+  )
 }

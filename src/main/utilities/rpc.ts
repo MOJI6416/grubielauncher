@@ -3,7 +3,6 @@ import * as DiscordRPC from 'discord-rpc'
 
 const baseActivity: DiscordRPC.Presence = {
   details: 'Nextgen Minecraft Launcher',
-  startTimestamp: new Date(),
   largeImageKey: 'icon',
   largeImageText: 'Grubie Launcher',
   instance: false,
@@ -13,8 +12,15 @@ const baseActivity: DiscordRPC.Presence = {
   ]
 }
 
+function createBaseActivity(): DiscordRPC.Presence {
+  return {
+    ...baseActivity,
+    startTimestamp: new Date()
+  }
+}
+
 export class RPC {
-  public activity: DiscordRPC.Presence = { ...baseActivity }
+  public activity: DiscordRPC.Presence = { ...createBaseActivity() }
   public rpc = new DiscordRPC.Client({ transport: 'ipc' })
 
   async login() {
@@ -27,8 +33,12 @@ export class RPC {
   }
 
   async updateActivity(activity?: DiscordRPC.Presence) {
-    if (!activity) this.activity = { ...baseActivity }
+    if (!activity) this.activity = { ...createBaseActivity() }
     else this.activity = { ...this.activity, ...activity }
-    await this.rpc.setActivity(this.activity)
+
+    try {
+      await this.rpc.setActivity(this.activity)
+    } catch {
+    }
   }
 }

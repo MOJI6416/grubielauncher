@@ -1,21 +1,29 @@
-import { ipcMain } from 'electron'
 import { getSkin } from '../utilities/skin'
 import { SkinsManager } from '../game/SkinsManager'
+import type { SkinsData } from '@/types/SkinManager'
+import type { ISkinData } from '@/types/Skin'
+import { handleSafe } from '../utilities/ipc'
 
 const skinsManagers = new Map<string, SkinsManager>()
 const getManagerKey = (platform: string, userId: string) => `${platform}_${userId}`
 
+const emptySkinsData: SkinsData = {
+  skins: { skins: [] },
+  capes: [],
+  selectedSkin: null,
+  activeSkin: undefined,
+  activeCape: undefined,
+  activeModel: undefined
+}
+
 export function registerSkinsIpc() {
-  ipcMain.handle(
+  handleSafe<
+    SkinsData,
+    [string, 'microsoft' | 'discord', string, string, string]
+  >(
     'skins:load',
-    async (
-      _,
-      launcherPath: string,
-      platform: 'microsoft' | 'discord',
-      userId: string,
-      nickname: string,
-      accessToken: string
-    ) => {
+    emptySkinsData,
+    async (_, launcherPath, platform, userId, nickname, accessToken) => {
       const key = getManagerKey(platform, userId)
       let manager = skinsManagers.get(key)
 
@@ -29,138 +37,175 @@ export function registerSkinsIpc() {
     }
   )
 
-  ipcMain.handle(
+  handleSafe<
+    SkinsData | null,
+    [string, string, string | null]
+  >(
     'skins:selectSkin',
-    async (_, userId: string, platform: string, skinId: string | null) => {
+    null,
+    async (_, userId, platform, skinId) => {
       const manager = skinsManagers.get(getManagerKey(platform, userId))
-      if (manager) {
-        manager.selectedSkin = skinId
-        return manager.getData()
-      }
-      return null
+      if (!manager) return null
+
+      manager.selectedSkin = skinId
+      return manager.getData()
     }
   )
 
-  ipcMain.handle(
+  handleSafe<
+    SkinsData | null,
+    [string, string, string | undefined]
+  >(
     'skins:setCape',
-    async (_, userId: string, platform: string, capeId: string | undefined) => {
+    null,
+    async (_, userId, platform, capeId) => {
       const manager = skinsManagers.get(getManagerKey(platform, userId))
-      if (manager) {
-        await manager.setCapeId(capeId)
-        await manager.saveSkins()
-        return manager.getData()
-      }
-      return null
+      if (!manager) return null
+
+      await manager.setCapeId(capeId)
+      await manager.saveSkins()
+      return manager.getData()
     }
   )
 
-  ipcMain.handle(
+  handleSafe<
+    SkinsData | null,
+    [string, string, 'classic' | 'slim']
+  >(
     'skins:changeModel',
-    async (_, userId: string, platform: string, model: 'classic' | 'slim') => {
+    null,
+    async (_, userId, platform, model) => {
       const manager = skinsManagers.get(getManagerKey(platform, userId))
-      if (manager) {
-        await manager.changeModel(model)
-        await manager.saveSkins()
-        return manager.getData()
-      }
-      return null
+      if (!manager) return null
+
+      await manager.changeModel(model)
+      await manager.saveSkins()
+      return manager.getData()
     }
   )
 
-  ipcMain.handle('skins:clearManager', async (_, userId: string, platform: string) => {
-    const key = getManagerKey(platform, userId)
-    const manager = skinsManagers.get(key)
-    if (manager) {
+  handleSafe<boolean, [string, string]>(
+    'skins:clearManager',
+    false,
+    async (_, userId, platform) => {
+      const key = getManagerKey(platform, userId)
+      const manager = skinsManagers.get(key)
+      if (!manager) return false
+
       skinsManagers.delete(key)
       return true
     }
-    return false
-  })
+  )
 
-  ipcMain.handle(
+  handleSafe<
+    SkinsData | null,
+    [string, string, string]
+  >(
     'skins:uploadSkin',
-    async (_, userId: string, platform: string, skinId: string) => {
+    null,
+    async (_, userId, platform, skinId) => {
       const manager = skinsManagers.get(getManagerKey(platform, userId))
-      if (manager) {
-        await manager.uploadSkin(skinId)
-        return manager.getData()
-      }
-      return null
+      if (!manager) return null
+
+      await manager.uploadSkin(skinId)
+      return manager.getData()
     }
   )
 
-  ipcMain.handle(
+  handleSafe<
+    SkinsData | null,
+    [string, string, string, 'skin' | 'cape']
+  >(
     'skins:deleteSkin',
-    async (_, userId: string, platform: string, skinId: string, type: 'skin' | 'cape') => {
+    null,
+    async (_, userId, platform, skinId, type) => {
       const manager = skinsManagers.get(getManagerKey(platform, userId))
-      if (manager) {
-        await manager.deleteSkin(skinId, type)
-        return manager.getData()
-      }
-      return null
+      if (!manager) return null
+
+      await manager.deleteSkin(skinId, type)
+      return manager.getData()
     }
   )
 
-  ipcMain.handle('skins:resetSkin', async (_, userId: string, platform: string) => {
-    const manager = skinsManagers.get(getManagerKey(platform, userId))
-    if (manager) {
+  handleSafe<SkinsData | null, [string, string]>(
+    'skins:resetSkin',
+    null,
+    async (_, userId, platform) => {
+      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      if (!manager) return null
+
       await manager.resetSkin()
       return manager.getData()
     }
-    return null
-  })
+  )
 
-  ipcMain.handle(
+  handleSafe<
+    SkinsData | null,
+    [string, string, string, 'skin' | 'cape']
+  >(
     'skins:importByUrl',
-    async (_, userId: string, platform: string, url: string, type: 'skin' | 'cape') => {
+    null,
+    async (_, userId, platform, url, type) => {
       const manager = skinsManagers.get(getManagerKey(platform, userId))
-      if (manager) {
-        await manager.importByUrl(url, type)
-        return manager.getData()
-      }
-      return null
+      if (!manager) return null
+
+      await manager.importByUrl(url, type)
+      return manager.getData()
     }
   )
 
-  ipcMain.handle(
+  handleSafe<
+    SkinsData | null,
+    [string, string, string, 'skin' | 'cape']
+  >(
     'skins:importByFile',
-    async (_, userId: string, platform: string, filePath: string, type: 'skin' | 'cape') => {
+    null,
+    async (_, userId, platform, filePath, type) => {
       const manager = skinsManagers.get(getManagerKey(platform, userId))
-      if (manager) {
-        await manager.importByFile(filePath, type)
-        return manager.getData()
-      }
-      return null
+      if (!manager) return null
+
+      await manager.importByFile(filePath, type)
+      return manager.getData()
     }
   )
 
-  ipcMain.handle(
+  handleSafe<
+    SkinsData | null,
+    [string, string, string]
+  >(
     'skins:importByNickname',
-    async (_, userId: string, platform: string, nickname: string) => {
+    null,
+    async (_, userId, platform, nickname) => {
       const manager = skinsManagers.get(getManagerKey(platform, userId))
-      if (manager) {
-        await manager.importByNickname(nickname)
-        return manager.getData()
-      }
-      return null
+      if (!manager) return null
+
+      await manager.importByNickname(nickname)
+      return manager.getData()
     }
   )
 
-  ipcMain.handle(
+  handleSafe<
+    SkinsData | null,
+    [string, string, string, string]
+  >(
     'skins:renameSkin',
-    async (_, userId: string, platform: string, skinId: string, newName: string) => {
+    null,
+    async (_, userId, platform, skinId, newName) => {
       const manager = skinsManagers.get(getManagerKey(platform, userId))
-      if (manager) {
-        await manager.renameSkin(skinId, newName)
-        return manager.getData()
-      }
-      return null
+      if (!manager) return null
+
+      await manager.renameSkin(skinId, newName)
+      return manager.getData()
     }
   )
 
-  ipcMain.handle(
+  handleSafe<
+    ISkinData | null,
+    [string, string, string, string?]
+  >(
     'skin:get',
-    async (_, type: string, uuid: string, nickname: string, accessToken?: string) => {
+    null,
+    async (_, type, uuid, nickname, accessToken) => {
       return await getSkin(type, uuid, nickname, accessToken)
     }
   )

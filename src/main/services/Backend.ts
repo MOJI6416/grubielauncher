@@ -1,201 +1,249 @@
-import { IModpack, IModpackUpdate } from '@/types/Backend'
-import { ICreateUser, IUpdateUser, IUser } from '@/types/IUser'
-import { BaseService } from './Base'
-import { INews } from '@/types/News'
-import { IGrubieSkin } from '@/types/SkinManager'
-import FormData from 'form-data'
-import fs from 'fs-extra'
-import path from 'path'
-import { IAuthlib } from '@/types/IAuthlib'
+import { IModpack, IModpackUpdate } from "@/types/Backend";
+import { ICreateUser, IUpdateUser, IUser } from "@/types/IUser";
+import { BaseService } from "./Base";
+import { INews } from "@/types/News";
+import { IGrubieSkin } from "@/types/SkinManager";
+import FormData from "form-data";
+import fs from "fs-extra";
+import path from "path";
+import { IAuthlib } from "@/types/IAuthlib";
 
 export class Backend extends BaseService {
   constructor(accessToken?: string) {
-    super(accessToken)
+    super(accessToken);
   }
 
-  async shareModpack(modpack: { conf: IModpack['conf'] }) {
+  async shareModpack(modpack: { conf: IModpack["conf"] }) {
     try {
-      if (modpack.conf.loader.mods.length > 0) {
-        modpack.conf.loader.mods = modpack.conf.loader.mods.filter(
-          (mod) => mod.id !== 'sponge-core' && mod.projectType !== 'plugin'
-        )
-      }
+      const filteredMods =
+        modpack.conf.loader.mods.length > 0
+          ? modpack.conf.loader.mods.filter(
+              (mod) => mod.projectType !== "plugin",
+            )
+          : modpack.conf.loader.mods;
+
+      const payload =
+        filteredMods === modpack.conf.loader.mods
+          ? modpack
+          : {
+              ...modpack,
+              conf: {
+                ...modpack.conf,
+                loader: {
+                  ...modpack.conf.loader,
+                  mods: filteredMods,
+                },
+              },
+            };
 
       const response = await this.api.post<{ shareCode: string }>(
         `${this.baseUrl}/modpacks`,
-        modpack
-      )
+        payload,
+      );
 
-      return response.data.shareCode
+      return response.data.shareCode;
     } catch (error) {
-      throw error
+      throw error;
     }
   }
 
   async updateModpack(shareCode: string, update: IModpackUpdate) {
     try {
-      if (update.mods && update.mods.length > 0) {
-        update.mods = update.mods.filter(
-          (mod) => mod.id !== 'sponge-core' && mod.projectType !== 'plugin'
-        )
-      }
+      const payload: IModpackUpdate =
+        update.mods && update.mods.length > 0
+          ? {
+              ...update,
+              mods: update.mods.filter((mod) => mod.projectType !== "plugin"),
+            }
+          : update;
 
       await this.api.patch(`${this.baseUrl}/modpacks/${shareCode}`, {
-        ...update
-      })
+        ...payload,
+      });
 
-      return true
+      return true;
     } catch (error) {
-      throw error
+      throw error;
     }
   }
 
   async getModpack(shareCode: string): Promise<{
-    status: 'success' | 'not_found' | 'error'
-    data: IModpack | null
+    status: "success" | "not_found" | "error";
+    data: IModpack | null;
   }> {
     try {
-      const response = await this.api.get<IModpack>(`${this.baseUrl}/modpacks/${shareCode}`)
+      const response = await this.api.get<IModpack>(
+        `${this.baseUrl}/modpacks/${shareCode}`,
+      );
 
       return {
-        status: 'success',
-        data: response.data
-      }
+        status: "success",
+        data: response.data,
+      };
     } catch (error: any) {
       if (error.response && error.response.status === 404) {
-        return { status: 'not_found', data: null }
+        return { status: "not_found", data: null };
       } else {
-        return { status: 'error', data: null }
+        return { status: "error", data: null };
       }
+    }
+  }
+
+  async getOwnModpacks(): Promise<IModpack[]> {
+    try {
+      const response = await this.api.get<IModpack[]>(
+        `${this.baseUrl}/modpacks/own`,
+      );
+      return response.data;
+    } catch {
+      return [];
     }
   }
 
   async deleteModpack(shareCode: string) {
     try {
-      await this.api.delete(`modpacks/${shareCode}`)
-    } catch {}
+      await this.api.delete(`${this.baseUrl}/modpacks/${shareCode}`);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async createUser(user: ICreateUser) {
     try {
       const response = await this.api.post<IUser>(`${this.baseUrl}/users`, {
-        ...user
-      })
+        ...user,
+      });
 
-      return response.data
+      return response.data;
     } catch {
-      return null
+      return null;
     }
   }
 
   async updateUser(id: string, user: IUpdateUser) {
     try {
-      const response = await this.api.patch<IUser>(`${this.baseUrl}/users/${id}`, user)
+      const response = await this.api.patch<IUser>(
+        `${this.baseUrl}/users/${id}`,
+        user,
+      );
 
-      return response.data
+      return response.data;
     } catch (error) {
-      return null
+      return null;
     }
   }
 
   async getUser(id: string) {
     try {
-      const response = await this.api.get<IUser>(`${this.baseUrl}/users/` + id)
+      const response = await this.api.get<IUser>(`${this.baseUrl}/users/` + id);
 
-      return response.data
+      return response.data;
     } catch {
-      return null
+      return null;
     }
   }
 
   async uploadFileFromPath(
     filePath: string,
     fileName?: string,
-    folder?: string
+    folder?: string,
   ): Promise<string | null> {
     try {
-      const formData = new FormData()
+      const formData = new FormData();
 
-      const stream = fs.createReadStream(filePath)
+      const stream = fs.createReadStream(filePath);
 
-      formData.append('file', stream, {
+      formData.append("file", stream, {
         filename: fileName ?? path.basename(filePath),
-        contentType: 'application/octet-stream'
-      })
+        contentType: "application/octet-stream",
+      });
 
-      if (folder) formData.append('folder', folder)
+      if (folder) formData.append("folder", folder);
 
-      const response = await this.api.post<string>(`${this.baseUrl}/files/upload`, formData, {
-        headers: formData.getHeaders()
-      })
+      const response = await this.api.post<string>(
+        `${this.baseUrl}/files/upload`,
+        formData,
+        {
+          headers: formData.getHeaders(),
+        },
+      );
 
-      return response.data
+      return response.data;
     } catch (err) {
-      console.error('Upload error:', err)
-      return null
+      console.error("Upload error:", err);
+      return null;
     }
   }
 
   async deleteFile(key: string, isDirectory = false) {
     try {
       await this.api.delete(`${this.baseUrl}/files`, {
-        data: { key, isDirectory }
-      })
+        data: { key, isDirectory },
+      });
     } catch {}
   }
 
   async modpackDownloaded(shareCode: string) {
     try {
-      await this.api.patch(`${this.baseUrl}/modpacks/${shareCode}/downloaded`)
+      await this.api.patch(`${this.baseUrl}/modpacks/${shareCode}/downloaded`);
     } catch {}
   }
 
   async getNews() {
     try {
-      const response = await this.api.get<INews[]>(`${this.baseUrl}/news.json`)
-      return response.data
+      const response = await this.api.get<INews[]>(`${this.baseUrl}/news.json`);
+      return response.data;
     } catch {
-      return []
+      return [];
     }
   }
 
   async login(
     id: string,
     auth: {
-      accessToken: string
-      refreshToken: string
-      expiresAt: number
-    }
+      accessToken: string;
+      refreshToken: string;
+      expiresAt: number;
+    },
   ) {
     try {
-      const response = await this.api.post<{ access_token: string }>(`${this.baseUrl}/auth/login`, {
-        id,
-        auth
-      })
+      const response = await this.api.post<{ access_token: string }>(
+        `${this.baseUrl}/auth/login`,
+        {
+          id,
+          auth,
+        },
+      );
 
-      return response.data.access_token
+      return response.data.access_token;
     } catch {
-      return null
+      return null;
     }
   }
 
   async getSkin(uuid: string) {
     try {
-      const response = await this.api.get<IGrubieSkin>(`${this.baseUrl}/skins/${uuid}`)
-      return response.data
+      const response = await this.api.get<IGrubieSkin>(
+        `${this.baseUrl}/skins/${uuid}`,
+      );
+      return response.data;
     } catch {
-      return null
+      return null;
     }
   }
 
   async discordAuthenticated(userId: string) {
     try {
-      const response = await this.api.put<boolean>(`${this.baseUrl}/discord/authenticated`, {
-        userId
-      })
-      return response.data
+      const response = await this.api.put<boolean>(
+        `${this.baseUrl}/discord/authenticated`,
+        {
+          userId,
+        },
+      );
+      return response.data;
     } catch {
-      return false
+      return false;
     }
   }
 
@@ -204,24 +252,26 @@ export class Backend extends BaseService {
       const response = await this.api.post<{ completion: string }>(
         `${this.baseUrl}/ai/complete`,
         {
-          prompt
+          prompt,
         },
         {
-          timeout: (this.api.defaults.timeout || 30000) * 2
-        }
-      )
-      return response.data.completion
+          timeout: (this.api.defaults.timeout || 30000) * 2,
+        },
+      );
+      return response.data.completion;
     } catch {
-      return null
+      return null;
     }
   }
 
   async getAuthlib() {
     try {
-      const response = await this.api.get<IAuthlib>(`${this.baseUrl}/libs/authlib`)
-      return response.data
+      const response = await this.api.get<IAuthlib>(
+        `${this.baseUrl}/libs/authlib`,
+      );
+      return response.data;
     } catch {
-      return null
+      return null;
     }
   }
 }

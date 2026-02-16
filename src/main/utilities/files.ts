@@ -5,12 +5,19 @@ import crypto from 'crypto'
 export async function getDirectories(source: string) {
   const entries = await fs.readdir(source)
 
-  const directories = entries.filter(async (entry) => {
-    const fullPath = path.join(source, entry)
-    return (await fs.stat(fullPath)).isDirectory()
-  })
+  const stats = await Promise.all(
+    entries.map(async (entry) => {
+      const fullPath = path.join(source, entry)
+      try {
+        const st = await fs.lstat(fullPath)
+        return { entry, isDir: st.isDirectory() }
+      } catch {
+        return { entry, isDir: false }
+      }
+    })
+  )
 
-  return directories
+  return stats.filter((x) => x.isDir).map((x) => x.entry)
 }
 
 export async function getFilesRecursively(
@@ -25,9 +32,16 @@ export async function getFilesRecursively(
   for (const file of list) {
     const filePath = path.join(directory, file)
 
-    if ((await fs.stat(filePath)).isDirectory()) {
+    let st: fs.Stats
+    try {
+      st = await fs.lstat(filePath)
+    } catch {
+      continue
+    }
+
+    if (st.isDirectory()) {
       if (targetDirs.length > 0 && !targetDirs.includes(file)) continue
-      results = results.concat(await getFilesRecursively(filePath, rootDirectory))
+      results = results.concat(await getFilesRecursively(filePath, rootDirectory, targetDirs))
     } else {
       const relativePath = path.relative(rootDirectory, filePath)
       results.push(relativePath)
@@ -44,11 +58,18 @@ async function getDirectorySize(directoryPath: string): Promise<number> {
 
   for (const file of files) {
     const filePath = path.join(directoryPath, file)
-    const fileStats = await fs.stat(filePath)
-    if ((await fs.stat(filePath)).isDirectory()) {
+
+    let st: fs.Stats
+    try {
+      st = await fs.lstat(filePath)
+    } catch {
+      continue
+    }
+
+    if (st.isDirectory()) {
       totalSize += await getDirectorySize(filePath)
     } else {
-      totalSize += fileStats.size
+      totalSize += st.size
     }
   }
 
@@ -60,14 +81,14 @@ export async function getTotalSizes(paths: string[]): Promise<number> {
 
   for (const p of paths) {
     try {
-      if ((await fs.stat(p)).isDirectory()) {
-        const size = await getDirectorySize(p)
-        totalSize += size
+      const st = await fs.lstat(p)
+
+      if (st.isDirectory()) {
+        totalSize += await getDirectorySize(p)
       } else {
-        const stats = await fs.stat(p)
-        totalSize += stats.size
+        totalSize += st.size
       }
-    } catch (err) {
+    } catch {
       continue
     }
   }

@@ -1,15 +1,37 @@
 import { IAuth, ILocalAccount } from '@/types/Account'
-import { IVersionClassData, IVersionConf } from '@/types/IVersion'
+import { IImportModpack, IVersionClassData, IVersionConf } from '@/types/IVersion'
 import { TSettings } from '@/types/Settings'
-import { ipcMain } from 'electron'
 import { Version } from '../game/Version'
 import { DownloadItem } from '@/types/Downloader'
 import { importVersion } from '../utilities/versions'
 import { uploadMods } from '../utilities/share'
+import { handleSafe } from '../utilities/ipc'
+
+const fallbackVersionInit: IVersionClassData = {
+  version: {} as IVersionConf,
+  launcherPath: '',
+  minecraftPath: '',
+  versionPath: '',
+  javaPath: '',
+  isQuickPlayMultiplayer: false,
+  isQuickPlaySingleplayer: false,
+  manifest: undefined
+}
+
+const fallbackImport: IImportModpack = {
+  type: 'other',
+  other: null as any
+}
+
+const fallbackUploadMods = {
+  mods: [],
+  success: false
+}
 
 export function registerVersionIpc() {
-  ipcMain.handle(
+  handleSafe(
     'version:init',
+    fallbackVersionInit,
     async (_, settings: TSettings, versionConf: IVersionConf): Promise<IVersionClassData> => {
       const vm = new Version(settings, versionConf)
       await vm.init()
@@ -26,8 +48,9 @@ export function registerVersionIpc() {
     }
   )
 
-  ipcMain.handle(
+  handleSafe(
     'version:install',
+    false,
     async (
       _,
       settings: TSettings,
@@ -43,8 +66,9 @@ export function registerVersionIpc() {
     }
   )
 
-  ipcMain.handle(
+  handleSafe(
     'version:getRunCommand',
+    null,
     async (
       _,
       settings: TSettings,
@@ -67,8 +91,9 @@ export function registerVersionIpc() {
     }
   )
 
-  ipcMain.handle(
+  handleSafe(
     'version:run',
+    false,
     async (
       _,
       settings: TSettings,
@@ -85,27 +110,44 @@ export function registerVersionIpc() {
     }
   )
 
-  ipcMain.handle('version:delete', async (_, versionConf: IVersionConf, isFull: boolean) => {
-    const vm = new Version({} as TSettings, versionConf)
-    await vm.init()
-    await vm.delete(isFull)
-    return true
-  })
+  handleSafe(
+    'version:delete',
+    false,
+    async (_, versionConf: IVersionConf, isFull: boolean) => {
+      const vm = new Version({} as TSettings, versionConf)
+      await vm.init()
+      await vm.delete(isFull)
+      return true
+    }
+  )
 
-  ipcMain.handle('version:save', async (_, settings: TSettings, versionConf: IVersionConf) => {
-    const vm = new Version(settings, versionConf)
-    await vm.init()
-    await vm.save()
-  })
+  handleSafe(
+    'version:save',
+    false,
+    async (_, settings: TSettings, versionConf: IVersionConf) => {
+      const vm = new Version(settings, versionConf)
+      await vm.init()
+      await vm.save()
+      return true
+    }
+  )
 
-  ipcMain.handle('version:import', async (_, filePath: string, tempPath) => {
-    const version = await importVersion(filePath, tempPath)
-    return version
-  })
+  handleSafe(
+    'version:import',
+    fallbackImport,
+    async (_, filePath: string, tempPath: string) => {
+      const version = await importVersion(filePath, tempPath)
+      return version
+    }
+  )
 
-  ipcMain.handle('share:uploadMods', async (_, at: string, versionConf: IVersionConf) => {
-    const version = new Version({} as TSettings, versionConf)
-    await version.init()
-    return uploadMods(at, version)
-  })
+  handleSafe(
+    'share:uploadMods',
+    fallbackUploadMods,
+    async (_, at: string, versionConf: IVersionConf) => {
+      const version = new Version({} as TSettings, versionConf)
+      await version.init()
+      return uploadMods(at, version)
+    }
+  )
 }

@@ -7,19 +7,28 @@ import path from 'path'
 import fs from 'fs-extra'
 import zlib from 'zlib'
 import zip from 'adm-zip'
+import { pathToFileURL } from 'url'
+
+function getAccountUuid(account: ILocalAccount): string {
+  if (account.accessToken && typeof account.accessToken === 'string' && account.accessToken.trim()) {
+    try {
+      const decode = jwtDecode<IAuth>(account.accessToken)
+      const rawUuid: string | undefined = decode?.uuid
+      
+      if (typeof rawUuid === 'string' && rawUuid) {
+        return rawUuid.includes('-') ? rawUuid : toUUID(rawUuid)
+      }
+    } catch {}
+  }
+
+  return toUUID(generateOfflineUUID(account.nickname))
+}
 
 export async function loadStatistics(
   worldPath: string,
   account: ILocalAccount
 ): Promise<IWorldStatistics | null> {
-  let accountUUID: string
-
-  if (account.accessToken) {
-    const decode = jwtDecode<IAuth>(account.accessToken)
-
-    if (decode.uuid.includes('-')) accountUUID = decode.uuid
-    else accountUUID = toUUID(decode.uuid)
-  } else accountUUID = toUUID(generateOfflineUUID(account.nickname))
+  const accountUUID = getAccountUuid(account)
 
   const statisticsPath = path.join(worldPath, 'stats', `${accountUUID}.json`)
   if (!(await fs.pathExists(statisticsPath))) return null
@@ -46,15 +55,28 @@ export async function readWorld(worldPath: string, account: ILocalAccount): Prom
     const nbtData: any = await deserialize(decompressed)
 
     const name = nbtData?.Data?.LevelName ?? null
-    const seed = String(nbtData?.Data?.WorldGenSettings?.seed ?? nbtData?.Data?.RandomSeed ?? null)
+
+    const seedValue =
+      nbtData?.Data?.WorldGenSettings?.seed ?? nbtData?.Data?.RandomSeed ?? null
+    const seed = seedValue === null || seedValue === undefined ? null : String(seedValue)
+
     if (!name || !seed) {
       return null
     }
 
     let icon: string | undefined
-    if (await fs.pathExists(iconPath)) icon = `file://${iconPath}`
+    if (await fs.pathExists(iconPath)) {
+      icon = pathToFileURL(iconPath).href
+    }
 
-    const datapacks = await fs.readdir(datapacksPath)
+    let datapacks: string[] = []
+    try {
+      if (await fs.pathExists(datapacksPath)) {
+        datapacks = await fs.readdir(datapacksPath)
+      }
+    } catch {
+      datapacks = []
+    }
 
     return {
       name,
@@ -93,7 +115,9 @@ export async function writeWorldName(worldPath: string, newName: string): Promis
 
     await fs.writeFile(levelDatPath, compressed)
 
-    const newFolderName = newName.replace(/[^a-zA-Z0-9_\- ]/g, '').trim()
+    const sanitized = newName.replace(/[^a-zA-Z0-9_\- ]/g, '').trim()
+    const newFolderName = sanitized || path.basename(worldPath)
+
     const newWorldPath = path.join(path.dirname(worldPath), newFolderName)
 
     if (await fs.pathExists(newWorldPath)) return worldPath
@@ -116,8 +140,10 @@ export async function getWorldName(zipPath: string) {
   const rootFolders = new Set<string>()
 
   for (const entry of entries) {
-    const parts = entry.entryName.split('/')
-    if (parts.length > 1) {
+    const entryName = String((entry as any).entryName || '').replace(/\\/g, '/')
+
+    const parts = entryName.split('/')
+    if (parts.length > 1 && parts[0]) {
       rootFolders.add(parts[0])
     }
   }
