@@ -1,5 +1,3 @@
-const api = window.api;
-
 import { Presence } from "discord-rpc";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Versions } from "./components/Versions";
@@ -52,6 +50,8 @@ import { DownloadProgress } from "./components/DownloadProgress";
 import { BACKEND_URL } from "@/shared/config";
 import { IRefreshTokenResponse } from "@/types/Auth";
 
+const api = window.api;
+
 export interface RunGameParams {
   skipUpdate?: boolean;
   version?: Version;
@@ -62,6 +62,18 @@ export interface RunGameParams {
   };
 }
 
+function useLatestRef<T>(value: T) {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+}
+
+function useEventCallback<T extends (...args: any[]) => any>(fn: T): T {
+  const fnRef = useRef(fn);
+  fnRef.current = fn;
+  return useCallback(((...args: any[]) => fnRef.current(...args)) as T, []);
+}
+
 function App() {
   const [selectedAccount, setSelectedAccount] = useAtom(accountAtom);
   const [settings, setSettings] = useAtom(settingsAtom);
@@ -70,16 +82,18 @@ function App() {
   const [isFriends, setIsFriends] = useState(false);
 
   const [friendSocket, setFriendSocket] = useAtom(friendSocketAtom);
-  const [friendRequests, setFriendRequests] = useAtom(friendRequestsAtom);
+  const [_, setFriendRequests] = useAtom(friendRequestsAtom);
   const [selectedFriend] = useAtom(selectedFriendAtom);
   const [localFriends, setLocalFriends] = useAtom(localFriendsAtom);
   const [, setIsFriendsConnected] = useAtom(isFriendsConnectedAtom);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingType, setLoadingType] = useState<"update">();
+  const [loadingType, setLoadingType] = useState<"update" | undefined>(
+    undefined,
+  );
 
   const [paths, setPaths] = useAtom(pathsAtom);
-  const [isNetwork, setIsNetwork] = useAtom(networkAtom);
+  const [, setIsNetwork] = useAtom(networkAtom);
   const [selectedVersion, setSelectedVersion] = useAtom(selectedVersionAtom);
   const [accounts, setAccounts] = useAtom(accountsAtom);
   const [isUpdateModal, setIsUpdateModal] = useState(false);
@@ -96,72 +110,21 @@ function App() {
   const onlineSocket = useRef<Socket | null>(null);
 
   const { t, i18n } = useTranslation();
-  const tRef = useRef(t);
-  useEffect(() => {
-    tRef.current = t;
-  }, [t]);
 
-  const selectedAccountRef = useRef(selectedAccount);
-  const settingsRef = useRef(settings);
-  const pathsRef = useRef(paths);
-  const isNetworkRef = useRef(isNetwork);
-  const selectedVersionRef = useRef(selectedVersion);
-  const accountsRef = useRef(accounts);
-  const authDataRef = useRef(authData);
-  const consolesRef = useRef(consoles);
-  const versionsRef = useRef(versions);
-  const friendSocketRef = useRef<typeof friendSocket>(friendSocket);
-  const friendRequestsRef = useRef(friendRequests);
-  const selectedFriendRef = useRef(selectedFriend);
-  const localFriendsRef = useRef(localFriends);
-  const isOwnerVersionRef = useRef(isOwnerVersion);
-  const serversRef = useRef(servers);
-
-  useEffect(() => {
-    selectedAccountRef.current = selectedAccount;
-  }, [selectedAccount]);
-  useEffect(() => {
-    settingsRef.current = settings;
-  }, [settings]);
-  useEffect(() => {
-    pathsRef.current = paths;
-  }, [paths]);
-  useEffect(() => {
-    isNetworkRef.current = isNetwork;
-  }, [isNetwork]);
-  useEffect(() => {
-    selectedVersionRef.current = selectedVersion;
-  }, [selectedVersion]);
-  useEffect(() => {
-    accountsRef.current = accounts;
-  }, [accounts]);
-  useEffect(() => {
-    authDataRef.current = authData;
-  }, [authData]);
-  useEffect(() => {
-    consolesRef.current = consoles;
-  }, [consoles]);
-  useEffect(() => {
-    versionsRef.current = versions;
-  }, [versions]);
-  useEffect(() => {
-    friendSocketRef.current = friendSocket;
-  }, [friendSocket]);
-  useEffect(() => {
-    friendRequestsRef.current = friendRequests;
-  }, [friendRequests]);
-  useEffect(() => {
-    selectedFriendRef.current = selectedFriend;
-  }, [selectedFriend]);
-  useEffect(() => {
-    localFriendsRef.current = localFriends;
-  }, [localFriends]);
-  useEffect(() => {
-    isOwnerVersionRef.current = isOwnerVersion;
-  }, [isOwnerVersion]);
-  useEffect(() => {
-    serversRef.current = servers;
-  }, [servers]);
+  const tRef = useLatestRef(t);
+  const selectedAccountRef = useLatestRef(selectedAccount);
+  const settingsRef = useLatestRef(settings);
+  const pathsRef = useLatestRef(paths);
+  const selectedVersionRef = useLatestRef(selectedVersion);
+  const accountsRef = useLatestRef(accounts);
+  const authDataRef = useLatestRef(authData);
+  const consolesRef = useLatestRef(consoles);
+  const versionsRef = useLatestRef(versions);
+  const friendSocketRef = useLatestRef(friendSocket);
+  const selectedFriendRef = useLatestRef(selectedFriend);
+  const localFriendsRef = useLatestRef(localFriends);
+  const isOwnerVersionRef = useLatestRef(isOwnerVersion);
+  const serversRef = useLatestRef(servers);
 
   useEffect(() => {
     onlineSocket.current?.disconnect();
@@ -175,9 +138,7 @@ function App() {
     onlineSocket.current = socket;
 
     const onConnect = () => setIsNetwork(true);
-    const onDisconnect = () => {
-      setIsNetwork(false);
-    };
+    const onDisconnect = () => setIsNetwork(false);
     const onConnectError = () => setIsNetwork(false);
 
     socket.on("connect", onConnect);
@@ -203,7 +164,7 @@ function App() {
 
         setPaths(p);
 
-        const [s, acc] = await Promise.all([
+        const [s] = await Promise.all([
           getSettings(p.launcher),
           getAccounts(p.launcher),
         ]);
@@ -212,6 +173,7 @@ function App() {
         const versionsPath = await api.path.join(p.minecraft, "versions");
 
         if (await api.fs.pathExists(versionsPath)) {
+          const acc = selectedAccountRef.current ?? null;
           const v = await readVerions(p.launcher, s, acc);
           if (!cancelled) setVersions(v);
         } else {
@@ -228,6 +190,35 @@ function App() {
       cancelled = true;
     };
   }, [setPaths, setVersions]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshVersionsBySettings = async () => {
+      try {
+        const p = pathsRef.current;
+        const s = settingsRef.current;
+
+        if (!p?.launcher || !p?.minecraft) return;
+
+        const versionsPath = await api.path.join(p.minecraft, "versions");
+        if (!(await api.fs.pathExists(versionsPath))) return;
+
+        const acc = selectedAccountRef.current ?? null;
+
+        const v = await readVerions(p.launcher, s, acc);
+        if (!cancelled) setVersions(v);
+      } catch (err) {
+        console.error("Refresh versions by settings error:", err);
+      }
+    };
+
+    refreshVersionsBySettings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [settings, setVersions]);
 
   useEffect(() => {
     const updatePlayingTime = async (time: number) => {
@@ -248,7 +239,10 @@ function App() {
     };
 
     api.events.onConsoleChangeStatus(async (versionName, instance, status) => {
-      let startTimeForCalc = 0;
+      const current = consolesRef.current.consoles.find(
+        (c) => c.versionName === versionName && c.instance === instance,
+      );
+      const startTimeForCalc = current?.startTime ?? 0;
 
       setConsoles((prev) => {
         const idx = prev.consoles.findIndex(
@@ -256,11 +250,8 @@ function App() {
         );
         if (idx === -1) return prev;
 
-        const current = prev.consoles[idx];
-        startTimeForCalc = current.startTime;
-
         const next = [...prev.consoles];
-        next[idx] = { ...current, status };
+        next[idx] = { ...next[idx], status };
         return { consoles: next };
       });
 
@@ -354,7 +345,7 @@ function App() {
       api.events.removeAllListeners("launch");
       api.events.removeAllListeners("friendUpdate");
       api.events.removeAllListeners("consoleChangeStatus");
-      api.events.removeAllListeners("consolePublicAddress");
+      api.events.removeAllListeners("downloaderInfo");
     };
   }, [setConsoles, setSelectedVersion, setIsRunning]);
 
@@ -545,15 +536,15 @@ function App() {
 
     setAccounts(data.accounts);
 
-    let selected = data.accounts[0];
+    const fallback = data.accounts[0] ?? null;
+
     if (data.lastPlayed) {
       const lastPlayed = data.accounts.find(
         (a) => `${a.type}_${a.nickname}` == data.lastPlayed,
       );
-      setSelectedAccount(lastPlayed);
 
       if (lastPlayed) {
-        selected = lastPlayed;
+        setSelectedAccount(lastPlayed);
 
         const activity: Presence = {
           smallImageKey: "steve",
@@ -561,21 +552,21 @@ function App() {
         };
 
         api.rpc.updateActivity(activity);
+
+        return lastPlayed;
       }
+
+      if (fallback) setSelectedAccount(fallback);
+      return fallback;
     }
 
-    return selected;
+    if (fallback) setSelectedAccount(fallback);
+    return fallback;
   }
 
-  const runRef = useRef<(params: RunGameParams) => Promise<void>>(
-    async () => {},
-  );
-  runRef.current = async ({
-    skipUpdate,
-    version,
-    instance,
-    quick,
-  }: RunGameParams) => {
+  const runGame = useEventCallback(async (params: RunGameParams) => {
+    const { skipUpdate, version, instance, quick } = params;
+
     const launchVersion = version || selectedVersionRef.current;
     if (!launchVersion) {
       addToast({ title: tRef.current("app.startupError"), color: "danger" });
@@ -660,7 +651,7 @@ function App() {
         !skipUpdate &&
         launchVersion.version.shareCode &&
         launchVersion.version.downloadedVersion &&
-        isNetworkRef.current
+        !!onlineSocket.current?.connected
       ) {
         const serversPath = await api.path.join(
           p0.minecraft,
@@ -782,12 +773,7 @@ function App() {
       setSelectedVersion(undefined);
       setIsRunning(false);
     }
-  };
-
-  const runGame = useCallback(
-    async (params: RunGameParams) => runRef.current(params),
-    [],
-  );
+  });
 
   return (
     <div className="h-screen w-full flex flex-col">
