@@ -92,7 +92,7 @@ export function getJavaAgent(
       authServer = `ely.by`;
       break;
     case "discord":
-      authServer = `api.grubielauncher.com/yggdrasil`;
+      authServer = `grubielauncher.com`;
       break;
   }
 
