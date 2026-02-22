@@ -153,7 +153,7 @@ export function DeleteVersion({
                     ),
                   }));
 
-                  await version.delete(fullDel);
+                  await version.delete(account, fullDel);
 
                   setVersions((prev) =>
                     prev.filter((v) => {

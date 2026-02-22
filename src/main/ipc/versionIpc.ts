@@ -1,40 +1,44 @@
-import { IAuth, ILocalAccount } from '@/types/Account'
-import { IImportModpack, IVersionClassData, IVersionConf } from '@/types/IVersion'
-import { TSettings } from '@/types/Settings'
-import { Version } from '../game/Version'
-import { DownloadItem } from '@/types/Downloader'
-import { importVersion } from '../utilities/versions'
-import { uploadMods } from '../utilities/share'
-import { handleSafe } from '../utilities/ipc'
+import { IAuth, ILocalAccount } from "@/types/Account";
+import {
+  IImportModpack,
+  IVersionClassData,
+  IVersionConf,
+} from "@/types/IVersion";
+import { TSettings } from "@/types/Settings";
+import { Version } from "../game/Version";
+import { DownloadItem } from "@/types/Downloader";
+import { importVersion } from "../utilities/versions";
+import { uploadMods } from "../utilities/share";
+import { handleSafe } from "../utilities/ipc";
 
 const fallbackVersionInit: IVersionClassData = {
   version: {} as IVersionConf,
-  launcherPath: '',
-  minecraftPath: '',
-  versionPath: '',
-  javaPath: '',
+  launcherPath: "",
+  minecraftPath: "",
+  versionPath: "",
+  javaPath: "",
   isQuickPlayMultiplayer: false,
   isQuickPlaySingleplayer: false,
-  manifest: undefined
-}
+  manifest: undefined,
+};
 
 const fallbackImport: IImportModpack = {
-  type: 'other',
-  other: null as any
-}
+  type: "other",
+  other: null as any,
+};
 
 const fallbackUploadMods = {
   mods: [],
-  success: false
-}
+  success: false,
+};
 
 export function registerVersionIpc() {
   handleSafe(
-    'version:init',
+    "version:init",
     fallbackVersionInit,
-    async (_, settings: TSettings, versionConf: IVersionConf): Promise<IVersionClassData> => {
-      const vm = new Version(settings, versionConf)
-      await vm.init()
+    async (_, versionConf: IVersionConf): Promise<IVersionClassData> => {
+      const vm = new Version(versionConf);
+      await vm.init();
       return {
         version: vm.version,
         launcherPath: vm.launcherPath,
@@ -43,111 +47,112 @@ export function registerVersionIpc() {
         javaPath: vm.javaPath,
         isQuickPlayMultiplayer: vm.isQuickPlayMultiplayer,
         isQuickPlaySingleplayer: vm.isQuickPlaySingleplayer,
-        manifest: vm.manifest
-      }
-    }
-  )
+        manifest: vm.manifest,
+      };
+    },
+  );
 
   handleSafe(
-    'version:install',
+    "version:install",
     false,
     async (
       _,
+      account: ILocalAccount,
       settings: TSettings,
       versionConf: IVersionConf,
-      account: ILocalAccount,
-      extraItems?: DownloadItem[]
+      extraItems?: DownloadItem[],
     ) => {
-      const vm = new Version(settings, versionConf)
-      await vm.init()
-      await vm.install(account, extraItems || [])
-      await vm.save()
-      return true
-    }
-  )
+      const vm = new Version(versionConf);
+      await vm.init();
+      await vm.install(settings, account, extraItems || []);
+      await vm.save();
+      return true;
+    },
+  );
 
   handleSafe(
-    'version:getRunCommand',
+    "version:getRunCommand",
     null,
     async (
       _,
+      account: ILocalAccount,
       settings: TSettings,
       versionConf: IVersionConf,
-      account: ILocalAccount,
       authData: IAuth | null,
       isRelative: boolean,
-      quick?: { single?: string; multiplayer?: string }
+      quick?: { single?: string; multiplayer?: string },
     ) => {
-      const vm = new Version(settings, versionConf)
-      await vm.init()
+      const vm = new Version(versionConf);
+      await vm.init();
       return await vm.getRunCommand(
         account,
         settings,
-        authData,
         isRelative,
+        authData,
         quick?.single,
-        quick?.multiplayer
-      )
-    }
-  )
+        quick?.multiplayer,
+      );
+    },
+  );
 
   handleSafe(
-    'version:run',
+    "version:run",
     false,
     async (
       _,
+      account: ILocalAccount,
       settings: TSettings,
       versionConf: IVersionConf,
-      account: ILocalAccount,
       authData: IAuth | null,
       instance: number,
-      quick: { single?: string; multiplayer?: string }
+      quick: { single?: string; multiplayer?: string },
     ) => {
-      const vm = new Version(settings, versionConf)
-      await vm.init()
-      await vm.run(account, settings, authData, instance, quick)
-      return true
-    }
-  )
+      const vm = new Version(versionConf);
+      await vm.init();
+      await vm.run(account, settings, authData, instance, quick);
+      return true;
+    },
+  );
 
   handleSafe(
-    'version:delete',
+    "version:delete",
     false,
-    async (_, versionConf: IVersionConf, isFull: boolean) => {
-      const vm = new Version({} as TSettings, versionConf)
-      await vm.init()
-      await vm.delete(isFull)
-      return true
-    }
-  )
+    async (
+      _,
+      account: ILocalAccount,
+      versionConf: IVersionConf,
+      isFull: boolean,
+    ) => {
+      const vm = new Version(versionConf);
+      await vm.init();
+      await vm.delete(account, isFull);
+      return true;
+    },
+  );
+
+  handleSafe("version:save", false, async (_, versionConf: IVersionConf) => {
+    const vm = new Version(versionConf);
+    await vm.init();
+    await vm.save();
+    return true;
+  });
 
   handleSafe(
-    'version:save',
-    false,
-    async (_, settings: TSettings, versionConf: IVersionConf) => {
-      const vm = new Version(settings, versionConf)
-      await vm.init()
-      await vm.save()
-      return true
-    }
-  )
-
-  handleSafe(
-    'version:import',
+    "version:import",
     fallbackImport,
     async (_, filePath: string, tempPath: string) => {
-      const version = await importVersion(filePath, tempPath)
-      return version
-    }
-  )
+      const version = await importVersion(filePath, tempPath);
+      return version;
+    },
+  );
 
   handleSafe(
-    'share:uploadMods',
+    "share:uploadMods",
     fallbackUploadMods,
     async (_, at: string, versionConf: IVersionConf) => {
-      const version = new Version({} as TSettings, versionConf)
-      await version.init()
-      return uploadMods(at, version)
-    }
-  )
+      const version = new Version(versionConf);
+      await version.init();
+      return uploadMods(at, version);
+    },
+  );
 }

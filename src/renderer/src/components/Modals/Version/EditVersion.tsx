@@ -323,7 +323,7 @@ export function EditVersion({
     setIsLoading(true);
 
     try {
-      await version.install(account);
+      await version.install(account, settings);
 
       const versionMods = new Mods(settings, version.version, server);
       await versionMods.check();
@@ -842,6 +842,7 @@ export function EditVersion({
                             if (!version || !account) return;
                             const command = await version.getRunCommand(
                               account,
+                              settings,
                               authData,
                             );
                             if (!command) return;
@@ -865,6 +866,7 @@ export function EditVersion({
                             if (!version || !account) return;
                             const command = await version.getRunCommand(
                               account,
+                              settings,
                               authData,
                               true,
                             );

@@ -316,9 +316,9 @@ export function AddVersion({
       await api.fs.rimraf(importModpack.folderPath);
     }
 
-    const newVersion = new Version(settings, newVersionConf);
+    const newVersion = new Version(newVersionConf);
     await newVersion.init();
-    await newVersion.install(account);
+    await newVersion.install(account, settings);
     await newVersion.save();
 
     if (selectedTab != "fromFile") {

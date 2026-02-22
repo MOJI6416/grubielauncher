@@ -109,34 +109,35 @@ export interface IElectronAPI {
   };
   version: {
     import: (filePath: string, tempPath: string) => Promise<IImportModpack>;
-    init: (
-      settings: TSettings,
-      versionConf: IVersionConf,
-    ) => Promise<IVersionClassData>;
+    init: (versionConf: IVersionConf) => Promise<IVersionClassData>;
     install: (
+      account: ILocalAccount,
       settings: TSettings,
       versionConf: IVersionConf,
-      account: ILocalAccount,
       extraItems?: DownloadItem[],
     ) => Promise<boolean>;
     getRunCommand: (
+      account: ILocalAccount,
       settings: TSettings,
       versionConf: IVersionConf,
-      account: ILocalAccount,
       authData: IAuth | null,
       isRelative: boolean,
       quick?: { single?: string; multiplayer?: string },
     ) => Promise<string[] | null>;
     run: (
+      account: ILocalAccount,
       settings: TSettings,
       versionConf: IVersionConf,
-      account: ILocalAccount,
       authData: IAuth | null,
       instance: number,
       quick: { single?: string; multiplayer?: string },
     ) => Promise<boolean>;
-    delete: (versionConf: IVersionConf, isFull: boolean) => Promise<boolean>;
-    save: (settings: TSettings, versionConf: IVersionConf) => Promise<boolean>;
+    delete: (
+      account: ILocalAccount,
+      versionConf: IVersionConf,
+      isFull: boolean,
+    ) => Promise<boolean>;
+    save: (versionConf: IVersionConf) => Promise<boolean>;
     share: {
       uploadMods: (
         at: string,
@@ -559,59 +560,62 @@ export const api = {
   version: {
     import: (filePath: string, tempPath: string) =>
       ipcRenderer.invoke("version:import", filePath, tempPath),
-    init: (settings: TSettings, versionConf: IVersionConf) =>
-      ipcRenderer.invoke("version:init", settings, versionConf),
+    init: (versionConf: IVersionConf) =>
+      ipcRenderer.invoke("version:init", versionConf),
     install: (
+      account: ILocalAccount,
       settings: TSettings,
       versionConf: IVersionConf,
-      account: ILocalAccount,
       extraItems?: DownloadItem[],
     ) =>
       ipcRenderer.invoke(
         "version:install",
+        account,
         settings,
         versionConf,
-        account,
         extraItems,
       ),
     getRunCommand: (
+      account: ILocalAccount,
       settings: TSettings,
       versionConf: IVersionConf,
-      account: ILocalAccount,
       authData: IAuth | null,
       isRelative: boolean,
       quick?: { single?: string; multiplayer?: string },
     ) =>
       ipcRenderer.invoke(
         "version:getRunCommand",
+        account,
         settings,
         versionConf,
-        account,
         authData,
         isRelative,
         quick,
       ),
     run: (
+      account: ILocalAccount,
       settings: TSettings,
       versionConf: IVersionConf,
-      account: ILocalAccount,
       authData: IAuth | null,
       instance: number,
       quick: { single?: string; multiplayer?: string },
     ) =>
       ipcRenderer.invoke(
         "version:run",
+        account,
         settings,
         versionConf,
-        account,
         authData,
         instance,
         quick,
       ),
-    delete: (versionConf: IVersionConf, isFull: boolean) =>
-      ipcRenderer.invoke("version:delete", versionConf, isFull),
-    save: (settings: TSettings, versionConf: IVersionConf) =>
-      ipcRenderer.invoke("version:save", settings, versionConf),
+    delete: (
+      account: ILocalAccount,
+      versionConf: IVersionConf,
+      isFull: boolean,
+    ) => ipcRenderer.invoke("version:delete", account, versionConf, isFull),
+    save: (versionConf: IVersionConf) =>
+      ipcRenderer.invoke("version:save", versionConf),
     share: {
       uploadMods: (at: string, versionConf: IVersionConf) =>
         ipcRenderer.invoke("share:uploadMods", at, versionConf),

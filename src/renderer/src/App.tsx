@@ -164,17 +164,14 @@ function App() {
 
         setPaths(p);
 
-        const [s] = await Promise.all([
-          getSettings(p.launcher),
-          getAccounts(p.launcher),
-        ]);
+        await Promise.all([getSettings(p.launcher), getAccounts(p.launcher)]);
         if (cancelled) return;
 
         const versionsPath = await api.path.join(p.minecraft, "versions");
 
         if (await api.fs.pathExists(versionsPath)) {
           const acc = selectedAccountRef.current ?? null;
-          const v = await readVerions(p.launcher, s, acc);
+          const v = await readVerions(p.launcher, acc);
           if (!cancelled) setVersions(v);
         } else {
           await api.fs.ensure(versionsPath);
@@ -190,35 +187,6 @@ function App() {
       cancelled = true;
     };
   }, [setPaths, setVersions]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const refreshVersionsBySettings = async () => {
-      try {
-        const p = pathsRef.current;
-        const s = settingsRef.current;
-
-        if (!p?.launcher || !p?.minecraft) return;
-
-        const versionsPath = await api.path.join(p.minecraft, "versions");
-        if (!(await api.fs.pathExists(versionsPath))) return;
-
-        const acc = selectedAccountRef.current ?? null;
-
-        const v = await readVerions(p.launcher, s, acc);
-        if (!cancelled) setVersions(v);
-      } catch (err) {
-        console.error("Refresh versions by settings error:", err);
-      }
-    };
-
-    refreshVersionsBySettings();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [settings, setVersions]);
 
   useEffect(() => {
     const updatePlayingTime = async (time: number) => {
@@ -736,7 +704,7 @@ function App() {
         return { consoles: [...prev.consoles, newConsole] };
       });
 
-      await launchVersion.run(account, ad, _instance, quick);
+      await launchVersion.run(account, settings, ad, _instance, quick);
 
       const activity: Presence = {
         state: `${tRef.current("rpc.playing")} ${launchVersion.version.name}`,
