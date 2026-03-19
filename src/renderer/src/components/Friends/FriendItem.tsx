@@ -1,6 +1,13 @@
-import { useMemo } from 'react'
-import { ILocalFriend } from '@/types/ILocalFriend'
-import { Avatar, Chip, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger } from '@heroui/react'
+import { useMemo } from "react";
+import { ILocalFriend } from "@/types/ILocalFriend";
+import {
+  Avatar,
+  Chip,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+} from "@heroui/react";
 import {
   CalendarClock,
   Earth,
@@ -11,32 +18,38 @@ import {
   User,
   UserMinus,
   Volume,
-  VolumeX
-} from 'lucide-react'
-import { getPlatformIcon } from './Friends'
-import { IFriend } from '@/types/IFriend'
-import { formatDate } from '@renderer/utilities/date'
+  VolumeX,
+} from "lucide-react";
+import { getPlatformIcon } from "./Friends";
+import { IFriend } from "@/types/IFriend";
+import { formatDate } from "@renderer/utilities/date";
+import { ActiveFriendShare } from "@/types/Share";
+import { Version } from "@renderer/classes/Version";
 
 interface FriendItemProps {
-  friend: IFriend
-  isNotRead: boolean
-  local?: ILocalFriend
-  isRunning: boolean
-  onSelect: () => void
-  onJoin: () => void
-  onViewAccount: () => void
-  onOpenChat: () => void
-  onViewSkin: () => void
-  onToggleMute: () => void
-  onRemove: () => void
-  t: any
+  friend: IFriend;
+  activeShare?: ActiveFriendShare;
+  isNotRead: boolean;
+  local?: ILocalFriend;
+  isRunning: boolean;
+  version?: Version;
+  onSelect: () => void;
+  onJoin: () => void;
+  onViewAccount: () => void;
+  onOpenChat: () => void;
+  onViewSkin: () => void;
+  onToggleMute: () => void;
+  onRemove: () => void;
+  t: any;
 }
 
 export function FriendItem({
   friend,
+  activeShare,
   isNotRead,
   local,
   isRunning,
+  version,
   onSelect,
   onJoin,
   onViewAccount,
@@ -44,23 +57,27 @@ export function FriendItem({
   onViewSkin,
   onToggleMute,
   onRemove,
-  t
+  t,
 }: FriendItemProps) {
-  const canJoin = !!friend.versionName && friend.versionCode !== '' && !isRunning
+  const canJoin =
+    (friend.serverAddress || !!activeShare || version) && !isRunning;
   const disabledKeys = useMemo(() => {
-    const keys = ['last'] as string[]
-    if (!canJoin) keys.push('join')
-    return keys
-  }, [canJoin])
+    const keys = ["last"] as string[];
+    if (!canJoin) keys.push("join");
+    return keys;
+  }, [canJoin]);
 
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
         <Dropdown>
           <DropdownTrigger>
-            <div className="flex items-center gap-2 cursor-pointer min-w-0" onClick={onSelect}>
+            <div
+              className="flex items-center gap-2 cursor-pointer min-w-0"
+              onClick={onSelect}
+            >
               <Avatar
-                src={friend.user.image || ''}
+                src={friend.user.image || ""}
                 name={friend.user.nickname}
                 className="min-w-8 min-h-8"
                 size="sm"
@@ -69,26 +86,41 @@ export function FriendItem({
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center space-x-1 min-w-0">
                   <p className="truncate flex-shrink">{friend.user.nickname}</p>
-                  <div className="flex-shrink-0">{getPlatformIcon(friend.user.platform)}</div>
+                  <div className="flex-shrink-0">
+                    {getPlatformIcon(friend.user.platform)}
+                  </div>
                 </div>
 
                 {friend.isOnline && friend.versionName && (
                   <div className="flex items-center space-x-1 min-w-0">
                     <Gamepad2 size={16} className="flex-shrink-0" />
-                    <p className="text-xs truncate flex-grow">{friend.versionName}</p>
+                    <p className="text-xs truncate flex-grow">
+                      {friend.versionName}
+                    </p>
                   </div>
                 )}
 
-                {friend.isOnline && friend.serverAddress && (
+                {(friend.serverAddress || activeShare) && (
                   <div className="flex items-center space-x-1 min-w-0">
                     <Earth size={16} className="flex-shrink-0" />
-                    <p className="text-xs truncate flex-grow">{friend.serverAddress}</p>
+                    <p className="text-xs truncate flex-grow">
+                      {friend.serverAddress ||
+                        (activeShare?.publicAddress.includes(
+                          "join.grubielauncher.com",
+                        )
+                          ? "Shared World"
+                          : activeShare?.publicAddress)}
+                    </p>
                   </div>
                 )}
               </div>
 
-              <Chip variant="flat" color={friend.isOnline ? 'success' : 'danger'} size="sm">
-                {friend.isOnline ? t('friends.online') : t('friends.offline')}
+              <Chip
+                variant="flat"
+                color={friend.isOnline ? "success" : "danger"}
+                size="sm"
+              >
+                {friend.isOnline ? t("friends.online") : t("friends.offline")}
               </Chip>
 
               {isNotRead && (
@@ -101,12 +133,16 @@ export function FriendItem({
 
           <DropdownMenu disabledKeys={disabledKeys}>
             {!friend.isOnline ? (
-              <DropdownItem showDivider key="last" startContent={<CalendarClock size={22} />}>
+              <DropdownItem
+                showDivider
+                key="last"
+                startContent={<CalendarClock size={22} />}
+              >
                 {formatDate(new Date(friend.user.lastActive))}
               </DropdownItem>
             ) : null}
 
-            {friend.versionName ? (
+            {friend.serverAddress || activeShare || version ? (
               <DropdownItem
                 key="join"
                 className="text-secondary"
@@ -114,30 +150,44 @@ export function FriendItem({
                 onPress={onJoin}
                 startContent={<Gamepad2 size={22} />}
               >
-                {t('friends.join')}
+                {t("friends.join")}
               </DropdownItem>
             ) : null}
 
-            <DropdownItem key="account" onPress={onViewAccount} startContent={<User size={22} />}>
-              {t('accountInfo.viewAccount')}
+            <DropdownItem
+              key="account"
+              onPress={onViewAccount}
+              startContent={<User size={22} />}
+            >
+              {t("accountInfo.viewAccount")}
             </DropdownItem>
 
-            <DropdownItem key="chat" onPress={onOpenChat} startContent={<Mail size={22} />}>
-              {t('friends.chat')}
+            <DropdownItem
+              key="chat"
+              onPress={onOpenChat}
+              startContent={<Mail size={22} />}
+            >
+              {t("friends.chat")}
             </DropdownItem>
 
-            <DropdownItem key="skin" onPress={onViewSkin} startContent={<Shirt size={22} />}>
-              {t('skinView.title')}
+            <DropdownItem
+              key="skin"
+              onPress={onViewSkin}
+              startContent={<Shirt size={22} />}
+            >
+              {t("skinView.title")}
             </DropdownItem>
 
             <DropdownItem
               key="mute"
               onPress={onToggleMute}
-              startContent={local?.isMuted ? <Volume size={22} /> : <VolumeX size={22} />}
+              startContent={
+                local?.isMuted ? <Volume size={22} /> : <VolumeX size={22} />
+              }
             >
               {local?.isMuted
-                ? t('friends.enableNotifications')
-                : t('friends.disableNotifications')}
+                ? t("friends.enableNotifications")
+                : t("friends.disableNotifications")}
             </DropdownItem>
 
             <DropdownItem
@@ -147,11 +197,11 @@ export function FriendItem({
               onPress={onRemove}
               startContent={<UserMinus size={22} />}
             >
-              {t('common.delete')}
+              {t("common.delete")}
             </DropdownItem>
           </DropdownMenu>
         </Dropdown>
       </div>
     </div>
-  )
+  );
 }

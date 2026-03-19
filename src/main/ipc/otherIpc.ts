@@ -12,13 +12,23 @@ import { Downloader } from '../utilities/downloader'
 import { mainWindow } from '../windows/mainWindow'
 import { getLauncherPaths } from '../utilities/other'
 import { rpc } from '../rpc'
+import { RpcRendererContext } from '@/types/Rpc'
 import icon from '../../../resources/icon.png?asset'
 import axios from 'axios'
 import { handleSafe } from '../utilities/ipc'
 
+function assertSafeExternalUrl(url: string): string {
+  const parsed = new URL(url)
+  if (!['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
+    throw new Error('Unsupported external URL protocol')
+  }
+
+  return parsed.toString()
+}
+
 export function registerOtherIpc() {
   handleSafe<void, [string]>('shell:openExternal', undefined, async (_, url: string) => {
-    await shell.openExternal(url)
+    await shell.openExternal(assertSafeExternalUrl(url))
   })
 
   handleSafe<void, [string]>('clipboard:writeText', undefined, async (_, text: string) => {
@@ -102,8 +112,8 @@ export function registerOtherIpc() {
     await shell.openPath(p)
   })
 
-  handleSafe<void, [any]>('rpc:updateActivity', undefined, async (_, activity) => {
-    await rpc.updateActivity(activity)
+  handleSafe<void, [RpcRendererContext]>('rpc:syncContext', undefined, async (_, context) => {
+    await rpc.syncContext(context)
   })
 
   handleSafe<void, [Electron.NotificationConstructorOptions]>(
@@ -130,4 +140,18 @@ export function registerOtherIpc() {
       })
     }
   )
+
+  handleSafe<void>('other:restoreWindow', undefined, () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+
+    if (!mainWindow.isVisible()) {
+      mainWindow.show()
+    }
+
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore()
+    }
+
+    mainWindow.focus()
+  })
 }

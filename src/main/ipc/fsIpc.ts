@@ -90,11 +90,6 @@ export function registerFsIpc() {
     return true
   })
 
-  handleSafe<string>('file:fromBuffer', '', async (_, data: any) => {
-    const buffer = Buffer.from(data)
-    return buffer.toString('binary')
-  })
-
   handleSafe<boolean>('fs:pathExists', false, async (_, targetPath: string) => {
     return await fs.pathExists(targetPath)
   })

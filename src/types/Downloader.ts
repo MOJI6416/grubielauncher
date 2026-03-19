@@ -3,6 +3,8 @@ export interface DownloadItem {
   destination: string
   group: string
   sha1?: string
+  checksum?: string
+  checksumType?: 'sha1' | 'sha256'
   size?: number
   options?: {
     extract?: boolean

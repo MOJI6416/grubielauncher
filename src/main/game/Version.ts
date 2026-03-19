@@ -487,17 +487,23 @@ export class Version {
       const artifact = downloads?.artifact;
 
       if (!natives) {
-        if (!artifact?.path || !artifact?.url) continue;
+        if (!artifact?.path) continue;
 
         const libraryPath = path.join(librariesPath, artifact.path);
+
+        if (!artifact.url && !fs.existsSync(libraryPath)) continue;
+
         paths.push(libraryPath);
-        downloadItems.push({
-          url: artifact.url,
-          destination: libraryPath,
-          sha1: artifact.sha1,
-          size: artifact.size,
-          group: "libraries",
-        });
+
+        if (artifact.url) {
+          downloadItems.push({
+            url: artifact.url,
+            destination: libraryPath,
+            sha1: artifact.sha1,
+            size: artifact.size,
+            group: "libraries",
+          });
+        }
       } else {
         const native = natives[platform.os]?.replace("${arch}", "64");
         if (!native) continue;
@@ -920,6 +926,7 @@ export class Version {
       this.version.name,
       instance,
       account.accessToken || "",
+      quick.multiplayer || this.version.quickServer,
     );
   }
 

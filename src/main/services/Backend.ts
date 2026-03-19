@@ -7,6 +7,16 @@ import FormData from "form-data";
 import fs from "fs-extra";
 import path from "path";
 import { IAuthlib } from "@/types/IAuthlib";
+import {
+  ActiveFriendSharesResponse,
+  ShareAccessResponse,
+  ShareHeartbeatResponse,
+  ShareJoinTicketResponse,
+  ShareStartRequest,
+  ShareStartResponse,
+  ShareStopResponse,
+  ShareVisibility,
+} from "@/types/Share";
 
 export class Backend extends BaseService {
   constructor(accessToken?: string) {
@@ -273,5 +283,52 @@ export class Backend extends BaseService {
     } catch {
       return null;
     }
+  }
+
+  async startShare(payload: ShareStartRequest) {
+    const response = await this.api.post<ShareStartResponse>(
+      `${this.baseUrl}/share/start`,
+      payload,
+    );
+    return response.data;
+  }
+
+  async heartbeatShare(sessionId: string) {
+    const response = await this.api.post<ShareHeartbeatResponse>(
+      `${this.baseUrl}/share/heartbeat`,
+      { sessionId },
+    );
+    return response.data;
+  }
+
+  async updateShareVisibility(sessionId: string, visibility: ShareVisibility) {
+    const response = await this.api.patch<ShareAccessResponse>(
+      `${this.baseUrl}/share/${sessionId}/access`,
+      { visibility },
+    );
+    return response.data;
+  }
+
+  async stopShare(sessionId: string) {
+    const response = await this.api.post<ShareStopResponse>(
+      `${this.baseUrl}/share/stop`,
+      { sessionId },
+    );
+    return response.data;
+  }
+
+  async createJoinTicket(slug: string) {
+    const response = await this.api.post<ShareJoinTicketResponse>(
+      `${this.baseUrl}/share/${slug}/join-ticket`,
+      {},
+    );
+    return response.data;
+  }
+
+  async getActiveFriendShares() {
+    const response = await this.api.get<ActiveFriendSharesResponse>(
+      `${this.baseUrl}/share/friends/active`,
+    );
+    return response.data.items;
   }
 }

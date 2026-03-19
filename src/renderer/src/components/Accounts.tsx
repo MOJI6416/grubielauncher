@@ -6,7 +6,6 @@ import { FaDiscord, FaMicrosoft } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
 import { CircleAlert, User, UserMinus, UserPlus, X } from "lucide-react";
 import { TbSquareLetterE } from "react-icons/tb";
-import { Presence } from "discord-rpc";
 import AccountInfo from "./Account/AccountInfo";
 import { IUser } from "@/types/IUser";
 import { useAtom } from "jotai";
@@ -79,21 +78,6 @@ export function Accounts() {
     [],
   );
 
-  const writeAccountsConf = useCallback(
-    async (nextAccounts: ILocalAccount[], lastPlayed: string | null) => {
-      if (!paths.launcher) return;
-      const accountsConfPath = await api.path.join(
-        paths.launcher,
-        "accounts.json",
-      );
-      await api.fs.writeJSON(accountsConfPath, {
-        accounts: nextAccounts,
-        lastPlayed,
-      });
-    },
-    [paths.launcher],
-  );
-
   const closeModalSelect = useCallback(() => {
     setIsOpenModalSelect(false);
   }, []);
@@ -154,7 +138,7 @@ export function Accounts() {
         const nextAccounts = [...current, account];
 
         setAccounts(nextAccounts);
-        await writeAccountsConf(nextAccounts, getAccountKey(account));
+        await api.accounts.save(nextAccounts, getAccountKey(account));
 
         setSelectedAccount(account);
         closeModalSelect();
@@ -178,7 +162,6 @@ export function Accounts() {
       t,
       closeModalSelect,
       closeModalAdd,
-      writeAccountsConf,
       getAccountKey,
     ],
   );
@@ -221,7 +204,7 @@ export function Accounts() {
     const nextAccounts = [...current, account];
 
     setAccounts(nextAccounts);
-    await writeAccountsConf(nextAccounts, getAccountKey(account));
+    await api.accounts.save(nextAccounts, getAccountKey(account));
 
     setSelectedAccount(account);
     closeModalSelect();
@@ -235,7 +218,6 @@ export function Accounts() {
     t,
     closeModalSelect,
     closeModalAdd,
-    writeAccountsConf,
     getAccountKey,
   ]);
 
@@ -257,24 +239,9 @@ export function Accounts() {
       setSelectedAccount(account);
       setVersion(undefined);
 
-      try {
-        const activity: Presence = {
-          smallImageKey: "steve",
-          smallImageText: account.nickname,
-        };
-        await api.rpc.updateActivity(activity);
-      } catch {}
-
-      await writeAccountsConf(current, getAccountKey(account));
+      await api.accounts.save(current, getAccountKey(account));
     },
-    [
-      selectedAccount,
-      setSelectedAccount,
-      authData,
-      setVersion,
-      writeAccountsConf,
-      getAccountKey,
-    ],
+    [selectedAccount, setSelectedAccount, authData, setVersion, getAccountKey],
   );
 
   const deleteAccount = useCallback(async () => {
@@ -300,7 +267,7 @@ export function Accounts() {
     setAccounts(nextAccounts);
     setSelectedAccount(nextSelected);
 
-    await writeAccountsConf(
+    await api.accounts.save(
       nextAccounts,
       nextSelected ? getAccountKey(nextSelected) : null,
     );
@@ -313,31 +280,39 @@ export function Accounts() {
     setSelectedAccount,
     t,
     authData,
-    writeAccountsConf,
     getAccountKey,
   ]);
 
   async function Auth(type: "microsoft" | "elyby" | "discord") {
     setIsPlain(false);
 
+    const state = `${type}:${crypto.randomUUID()}`;
     let authUrl = "";
     if (type === "microsoft")
-      authUrl = `https://login.live.com/oauth20_authorize.srf?client_id=${MICROSOFT_CLIENT_ID}&response_type=code&redirect_uri=http://localhost:53213/callback&scope=XboxLive.signin%20offline_access&state=microsoft`;
+      authUrl = `https://login.live.com/oauth20_authorize.srf?client_id=${MICROSOFT_CLIENT_ID}&response_type=code&redirect_uri=http://localhost:53213/callback&scope=XboxLive.signin%20offline_access&state=${encodeURIComponent(state)}`;
     else if (type === "elyby")
-      authUrl = `https://account.ely.by/oauth2/v1?client_id=${ELYBY_CLIENT_ID}&redirect_uri=http://localhost:53213/callback&response_type=code&scope=offline_access,account_info,minecraft_server_session&state=elyby`;
+      authUrl = `https://account.ely.by/oauth2/v1?client_id=${ELYBY_CLIENT_ID}&redirect_uri=http://localhost:53213/callback&response_type=code&scope=offline_access,account_info,minecraft_server_session&state=${encodeURIComponent(state)}`;
     else
-      authUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A53213%2Fcallback&scope=identify+guilds.join&state=discord`;
+      authUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A53213%2Fcallback&scope=identify+guilds.join&state=${encodeURIComponent(state)}`;
 
     const sessionId = ++authSessionRef.current;
 
-    await api.shell.openExternal(authUrl);
     setSignType(type);
     setIsSigning(true);
+    const waitForOAuth = api.auth.startServer(state);
 
-    const { provider, code } = await api.auth.startServer();
+    try {
+      await api.shell.openExternal(authUrl);
+      const { provider, code } = await waitForOAuth;
 
-    if (authSessionRef.current !== sessionId) return;
-    await oauth(provider, code, sessionId);
+      if (authSessionRef.current !== sessionId) return;
+      await oauth(provider, code, sessionId);
+    } catch {
+      if (authSessionRef.current !== sessionId) return;
+      setIsSigning(false);
+      setSignType(undefined);
+      addToast({ color: "danger", title: t("accounts.failedLogIn") });
+    }
   }
 
   const selectedKey = selectedAccount

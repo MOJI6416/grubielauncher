@@ -32,7 +32,7 @@ export function createMainWindow(): void {
   })
 
   mainWindow.once('ready-to-show', () => {
-    rpc.login()
+    void rpc.login()
     mainWindow?.show()
   })
 

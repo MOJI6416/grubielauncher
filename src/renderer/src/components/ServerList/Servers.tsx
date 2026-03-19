@@ -154,10 +154,7 @@ export function Servers({
                         disabledKeys.add("moveDown");
 
                       return (
-                        <Card
-                          key={server.ip || index}
-                          className="border-white/20 border-1"
-                        >
+                        <Card key={server.ip || index}>
                           <CardBody>
                             <div className="flex items-center justify-between gap-2 min-w-0">
                               <div className="flex items-center gap-2 min-w-0">

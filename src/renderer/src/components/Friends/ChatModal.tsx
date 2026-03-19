@@ -136,6 +136,8 @@ export function ChatModal({
                 <ScrollShadow className="h-full" ref={messagesRef}>
                   <div className="flex flex-col gap-2">
                     {messages.map((msg, index) => {
+                      if (!msg.message) return null;
+
                       const sender = resolveSender(msg);
 
                       const isModpackMsg = msg.message._type === "modpack";
@@ -175,7 +177,7 @@ export function ChatModal({
                                   <p>{t("friends.chatAttachmentLoading")}</p>
                                 </div>
                               ) : modpack ? (
-                                <Card className="border-white/20 border-1">
+                                <Card>
                                   <CardBody>
                                     <div className="flex items-center gap-2 min-w-0">
                                       {modpack.conf.image && (

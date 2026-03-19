@@ -106,7 +106,7 @@ function ModalGallery({
     >
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 text-white text-3xl"
+        className="absolute top-4 right-4 border bg-black/20 border-white/10 backdrop-blur-sm text-white text-3xl"
         aria-label="Close"
       >
         &times;
@@ -119,7 +119,7 @@ function ModalGallery({
 
       <button
         onClick={scrollPrev}
-        className="absolute left-6 text-white text-4xl select-none"
+        className="absolute left-6 border bg-black/20 border-white/10 backdrop-blur-sm text-white text-4xl select-none"
         aria-label="Previous"
       >
         &lt;
@@ -127,7 +127,7 @@ function ModalGallery({
 
       <button
         onClick={scrollNext}
-        className="absolute right-6 text-white text-4xl select-none"
+        className="absolute right-6 border bg-black/20 border-white/10 backdrop-blur-sm text-white text-4xl select-none"
         aria-label="Next"
       >
         &gt;

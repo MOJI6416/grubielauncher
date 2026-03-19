@@ -100,7 +100,7 @@ const SkinCard = memo(
           isDisabled={isLoading || actionLoading !== null}
           isPressable
           onPress={handlePress}
-          className={`w-28 break-all border-1 ${isActive ? "border-success-500" : isSelected ? "border-primary-500" : "border-white/20"}`}
+          className={`w-28 break-all border ${isActive ? "border-success-200" : isSelected ? "border-primary-200" : "border-white/10"}`}
         >
           <CardBody>
             <div className="flex flex-col items-center space-y-2">
@@ -122,14 +122,14 @@ const SkinCard = memo(
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              className="block w-full text-left px-4 py-2 text-small hover:bg-default-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="block w-full text-left px-4 py-2 text-small border bg-black/20 border-white/10 backdrop-blur-sm hover:bg-default-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleRename}
               disabled={isRenameDisabled}
             >
               {t("manageSkins.rename")}
             </button>
             <button
-              className="block w-full text-left px-4 py-2 text-small text-danger hover:bg-danger-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="block w-full text-left px-4 py-2 text-small border bg-black/20 border-white/10 backdrop-blur-sm text-danger hover:bg-danger-100 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleDelete}
               disabled={isDeleteDisabled}
             >

@@ -202,10 +202,8 @@ export function Console({
                       <Card
                         key={getKey(inst.versionName, inst.instance)}
                         className={clsx(
-                          "w-full mb-2 border-1",
-                          isSelected
-                            ? "border-primary-200"
-                            : "border-white/20 ",
+                          "w-full mb-2 border",
+                          isSelected ? "border-primary-200" : "border-white/10",
                         )}
                         isPressable
                         onPress={() => {

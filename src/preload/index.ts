@@ -33,11 +33,20 @@ import {
   IModpack as IModpackModManager,
   ILocalProject,
 } from "@/types/ModManager";
-import * as DiscordRPC from "discord-rpc";
 import { ISkinData } from "@/types/Skin";
 import { IWorld, IWorldStatistics } from "@/types/World";
 import { IAuthlib } from "@/types/IAuthlib";
 import { IAuthResponse, IRefreshTokenResponse } from "@/types/Auth";
+import {
+  ActiveFriendShare,
+  ResolvedFriendShareConnection,
+  ShareCommandResult,
+  SharePeerInfo,
+  ShareState,
+  ShareStateError,
+  ShareVisibility,
+} from "@/types/Share";
+import { RpcRendererContext } from "@/types/Rpc";
 
 export interface IElectronAPI {
   os: {
@@ -149,10 +158,10 @@ export interface IElectronAPI {
     };
   };
   accounts: {
+    load: () => Promise<IAccountConf>;
     save: (
       accounts: IAccountConf["accounts"],
-      lastPlayed: string,
-      launcherPath: string,
+      lastPlayed: string | null,
     ) => Promise<boolean>;
   };
   auth: {
@@ -171,7 +180,7 @@ export interface IElectronAPI {
       refreshToken: string,
       id: string,
     ) => Promise<IRefreshTokenResponse | null>;
-    startServer: () => Promise<{
+    startServer: (expectedState: string) => Promise<{
       code: string;
       provider: "microsoft" | "discord" | "elyby";
     }>;
@@ -307,6 +316,7 @@ export interface IElectronAPI {
     ) => Promise<string>;
     notify: (options: Electron.NotificationConstructorOptions) => Promise<void>;
     getLocale: () => Promise<string>;
+    restoreWindow: () => Promise<void>;
   };
   server: {
     install: (
@@ -448,7 +458,7 @@ export interface IElectronAPI {
     writeName: (worldPath: string, newName: string) => Promise<string | null>;
   };
   rpc: {
-    updateActivity: (activity: DiscordRPC.Presence) => Promise<void>;
+    syncContext: (context: RpcRendererContext) => Promise<void>;
   };
   skin: {
     get: (
@@ -458,6 +468,31 @@ export interface IElectronAPI {
       accessToken?: string,
     ) => Promise<ISkinData | null>;
   };
+  share: {
+    startShare: (
+      visibility: ShareVisibility,
+    ) => Promise<ShareCommandResult<ShareState>>;
+    stopShare: () => Promise<ShareCommandResult<ShareState>>;
+    updateShareVisibility: (
+      visibility: ShareVisibility,
+    ) => Promise<ShareCommandResult<ShareState>>;
+    getShareState: () => Promise<ShareState>;
+    getSharePeers: () => Promise<SharePeerInfo[]>;
+    fetchActiveFriendShares: () => Promise<
+      ShareCommandResult<ActiveFriendShare[]>
+    >;
+    requestJoinTicket: (
+      slug: string,
+    ) => Promise<ShareCommandResult<ResolvedFriendShareConnection>>;
+    connectToFriendShare: (
+      slug: string,
+    ) => Promise<ShareCommandResult<ResolvedFriendShareConnection>>;
+    onShareStateChanged: (callback: (state: ShareState) => void) => () => void;
+    onShareError: (callback: (error: ShareStateError) => void) => () => void;
+    onSharePeersChanged: (
+      callback: (peers: SharePeerInfo[]) => void,
+    ) => () => void;
+  };
 
   events: {
     onConsoleChangeStatus: (
@@ -466,17 +501,17 @@ export interface IElectronAPI {
         instance: number,
         status: "running" | "stopped" | "error",
       ) => void,
-    ) => void;
+    ) => () => void;
     onConsoleMessage: (
       callback: (versionName: string, instance: number, message: any) => void,
-    ) => void;
+    ) => () => void;
     onConsoleClear: (
       callback: (versionName: string, instance: number) => void,
-    ) => void;
-    onLaunch: (callback: () => void) => void;
-    onFriendUpdate: (callback: (data: any) => void) => void;
+    ) => () => void;
+    onLaunch: (callback: () => void) => () => void;
+    onFriendUpdate: (callback: (data: any) => void) => () => void;
     removeAllListeners: (channel: string) => void;
-    onDownloaderInfo: (callback: (info: DownloaderInfo | null) => void) => void;
+    onDownloaderInfo: (callback: (info: DownloaderInfo | null) => void) => () => void;
     updater: {
       onDownloadProgress: (callback: (progress: number) => void) => void;
     };
@@ -541,8 +576,7 @@ export const api = {
     getTotalSizes: (filePaths: string[]) =>
       ipcRenderer.invoke("file:getTotalSizes", filePaths),
     getFile: (filePath: string) => ipcRenderer.invoke("file:getFile", filePath),
-    fromBuffer: (data: ArrayBuffer) =>
-      ipcRenderer.invoke("file:fromBuffer", data),
+    fromBuffer: (data: ArrayBuffer) => Buffer.from(data).toString("binary"),
     download: (items: DownloadItem[], limit: number) =>
       ipcRenderer.invoke("file:download", items, limit),
   },
@@ -622,12 +656,9 @@ export const api = {
     },
   },
   accounts: {
-    save: (
-      accounts: IAccountConf["accounts"],
-      lastPlayed: string,
-      launcherPath: string,
-    ) =>
-      ipcRenderer.invoke("accounts:save", accounts, lastPlayed, launcherPath),
+    load: () => ipcRenderer.invoke("accounts:load"),
+    save: (accounts: IAccountConf["accounts"], lastPlayed: string | null) =>
+      ipcRenderer.invoke("accounts:save", accounts, lastPlayed),
   },
   auth: {
     microsoft: (code: string) => ipcRenderer.invoke("auth:microsoft", code),
@@ -639,7 +670,8 @@ export const api = {
     discord: (code: string) => ipcRenderer.invoke("auth:discord", code),
     discordRefresh: (refreshToken: string, id: string) =>
       ipcRenderer.invoke("auth:discord:refresh", refreshToken, id),
-    startServer: () => ipcRenderer.invoke("auth:startServer"),
+    startServer: (expectedState: string) =>
+      ipcRenderer.invoke("auth:startServer", expectedState),
   },
   backend: {
     getModpack: (at: string, code: string) =>
@@ -746,6 +778,7 @@ export const api = {
     notify: (options: Electron.NotificationConstructorOptions) =>
       ipcRenderer.invoke("other:notify", options),
     getLocale: () => ipcRenderer.invoke("other:getLocale"),
+    restoreWindow: () => ipcRenderer.invoke("other:restoreWindow"),
   },
   server: {
     install: (
@@ -899,12 +932,49 @@ export const api = {
       ipcRenderer.invoke("worlds:writeName", worldPath, newName),
   },
   rpc: {
-    updateActivity: (activity: any) =>
-      ipcRenderer.invoke("rpc:updateActivity", activity),
+    syncContext: (context: RpcRendererContext) =>
+      ipcRenderer.invoke("rpc:syncContext", context),
   },
   skin: {
     get: (type: string, uuid: string, nickname: string, accessToken?: string) =>
       ipcRenderer.invoke("skin:get", type, uuid, nickname, accessToken),
+  },
+  share: {
+    startShare: (visibility: ShareVisibility) =>
+      ipcRenderer.invoke("share:start", visibility),
+    stopShare: () => ipcRenderer.invoke("share:stop"),
+    updateShareVisibility: (visibility: ShareVisibility) =>
+      ipcRenderer.invoke("share:updateVisibility", visibility),
+    getShareState: () => ipcRenderer.invoke("share:getState"),
+    getSharePeers: () => ipcRenderer.invoke("share:getPeers"),
+    fetchActiveFriendShares: () =>
+      ipcRenderer.invoke("share:fetchActiveFriendShares"),
+    requestJoinTicket: (slug: string) =>
+      ipcRenderer.invoke("share:requestJoinTicket", slug),
+    connectToFriendShare: (slug: string) =>
+      ipcRenderer.invoke("share:connectToFriendShare", slug),
+    onShareStateChanged: (callback: (state: ShareState) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, state: ShareState) =>
+        callback(state);
+      ipcRenderer.on("share:stateChanged", listener);
+      return () => ipcRenderer.off("share:stateChanged", listener);
+    },
+    onShareError: (callback: (error: ShareStateError) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        error: ShareStateError,
+      ) => callback(error);
+      ipcRenderer.on("share:error", listener);
+      return () => ipcRenderer.off("share:error", listener);
+    },
+    onSharePeersChanged: (callback: (peers: SharePeerInfo[]) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        peers: SharePeerInfo[],
+      ) => callback(peers);
+      ipcRenderer.on("share:peersChanged", listener);
+      return () => ipcRenderer.off("share:peersChanged", listener);
+    },
   },
   events: {
     onConsoleChangeStatus: (
@@ -914,43 +984,47 @@ export const api = {
         status: "running" | "stopped" | "error",
       ) => void,
     ) => {
-      ipcRenderer.on(
-        "consoleChangeStatus",
-        (_event, versionName, instance, status) => {
-          callback(versionName, instance, status);
-        },
-      );
+      const listener = (_event, versionName, instance, status) => {
+        callback(versionName, instance, status);
+      };
+      ipcRenderer.on("consoleChangeStatus", listener);
+      return () => ipcRenderer.off("consoleChangeStatus", listener);
     },
 
     onConsoleMessage: (
       callback: (versionName: string, instance: number, message: any) => void,
     ) => {
-      ipcRenderer.on(
-        "consoleMessage",
-        (_event, versionName, instance, message) => {
-          callback(versionName, instance, message);
-        },
-      );
+      const listener = (_event, versionName, instance, message) => {
+        callback(versionName, instance, message);
+      };
+      ipcRenderer.on("consoleMessage", listener);
+      return () => ipcRenderer.off("consoleMessage", listener);
     },
 
     onConsoleClear: (
       callback: (versionName: string, instance: number) => void,
     ) => {
-      ipcRenderer.on("consoleClear", (_event, versionName, instance) => {
+      const listener = (_event, versionName, instance) => {
         callback(versionName, instance);
-      });
+      };
+      ipcRenderer.on("consoleClear", listener);
+      return () => ipcRenderer.off("consoleClear", listener);
     },
 
     onLaunch: (callback: () => void) => {
-      ipcRenderer.on("launch", () => {
+      const listener = () => {
         callback();
-      });
+      };
+      ipcRenderer.on("launch", listener);
+      return () => ipcRenderer.off("launch", listener);
     },
 
     onFriendUpdate: (callback: (data: any) => void) => {
-      ipcRenderer.on("friendUpdate", (_event, data) => {
+      const listener = (_event, data) => {
         callback(data);
-      });
+      };
+      ipcRenderer.on("friendUpdate", listener);
+      return () => ipcRenderer.off("friendUpdate", listener);
     },
 
     removeAllListeners: (channel: string) => {
@@ -958,9 +1032,11 @@ export const api = {
     },
 
     onDownloaderInfo: (callback: (info: DownloaderInfo | null) => void) => {
-      ipcRenderer.on("downloaderInfo", (_event, info) => {
+      const listener = (_event, info) => {
         callback(info);
-      });
+      };
+      ipcRenderer.on("downloaderInfo", listener);
+      return () => ipcRenderer.off("downloaderInfo", listener);
     },
 
     updater: {

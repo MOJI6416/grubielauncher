@@ -140,7 +140,7 @@ export function Versions({
 
               return (
                 <Card
-                  className={`w-full mb-2 ${isSelected ? "border-primary-200 border-1" : ""}`}
+                  className={`w-full border mb-2 ${isSelected ? "border-primary-200" : "border-white/10"}`}
                   key={vc.versionPath || vc.version.name}
                   isPressable={!isRunning && !!account && !isSelected}
                   onPress={async () => {

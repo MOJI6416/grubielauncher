@@ -91,10 +91,7 @@ export function OwnModpacks({
               ) : (
                 <div className="flex flex-col gap-2">
                   {modpacks.map((modpack) => (
-                    <Card
-                      key={modpack._id}
-                      className="border-white/20 border-1"
-                    >
+                    <Card key={modpack._id}>
                       <CardBody>
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-2 min-w-0">

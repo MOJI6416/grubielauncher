@@ -123,7 +123,23 @@
     "chatAttachmentLoading": "Loading attachment"
   },
   "rpc": {
-    "playing": "Playing"
+    "playing": "Playing",
+    "buttons": {
+      "download": "Download",
+      "discord": "Discord"
+    },
+    "details": {
+      "launcher": "Grubie Launcher",
+      "downloading": "Downloading files"
+    },
+    "states": {
+      "idle": "In launcher",
+      "launching": "Launching Minecraft",
+      "playing": "Playing Minecraft",
+      "playingServer": "Server: {{server}}",
+      "downloading": "{{progress}}% downloaded",
+      "downloadingFile": "{{progress}}% - {{file}}"
+    }
   },
   "modManager": {
     "title": "Mod Manager",
@@ -451,7 +467,77 @@
     "players": "Players"
   },
   "share": {
-    "limitExceeded": "1 GB limit exceeded"
+    "limitExceeded": "1 GB limit exceeded",
+    "title": "Open Access to Your World",
+    "authenticated": "Authenticated",
+    "degraded": "Degraded",
+    "peers": "Peers: {{count}}",
+    "world": "World",
+    "address": "Public address",
+    "copyAddress": "Copy address",
+    "plainAccountDisabled": "Opening access to your world is only available for signed-in accounts.",
+    "waitForLan": "Open your world to the network and wait while the launcher prepares the connection.",
+    "public": "Public",
+    "friends": "Friends",
+    "start": "Open Access to Your World",
+    "stop": "Close Access to Your World",
+    "publicOnline": "World is available by address",
+    "friendsOnline": "World is available to friends only",
+    "awaitingAuth": "Confirming connection",
+    "activeFriendShares": "Friends' available worlds",
+    "noActiveFriendShares": "No worlds from friends are available right now",
+    "selectVersionToJoin": "Select a version before joining the server",
+    "installVersionToJoin": "Install your friend's version, then join again",
+    "addressPending": "The address will appear when access is opened.",
+    "visibility": "Who can connect",
+    "visibilityDescriptions": {
+      "public": "Anyone with the address can connect to your world.",
+      "friends": "Only friends can connect through the launcher."
+    },
+    "states": {
+      "idle": "Waiting",
+      "lanNotFound": "World not open",
+      "lanReady": "World ready",
+      "shareStarting": "Opening access",
+      "tunnelConnecting": "Preparing connection",
+      "pending": "Confirming access",
+      "online": "Access open",
+      "reconnecting": "Restoring connection",
+      "stopped": "Access closed",
+      "conflict": "Conflict",
+      "error": "Error"
+    },
+    "descriptions": {
+      "idle": "Open your world to the network to make it available over the internet.",
+      "lanNotFound": "The launcher has not found a world that can be shared yet.",
+      "lanReady": "World found. You can open access for friends now.",
+      "shareStarting": "Creating a session and preparing access to your world.",
+      "tunnelConnecting": "Preparing the connection so friends can join.",
+      "pending": "Finishing setup. Your world will be available in a moment.",
+      "online": "Access is open. Friends can join now.",
+      "reconnecting": "Trying to restore the connection to your world.",
+      "stopped": "Access to the world is closed.",
+      "conflict": "Another access session is already active for this account.",
+      "error": "Could not open access. Check the message below and try again."
+    },
+    "errors": {
+      "usePublicAddress": "This world is already available by address. Use it to connect.",
+      "sessionNotOnline": "The world is still being prepared.",
+      "activeShareExists": "An access session is already active for this account.",
+      "notFriend": "Only friends can connect.",
+      "lanNotFound": "Could not find a world opened to the network.",
+      "localPortUnreachable": "Could not connect to the world on this device.",
+      "shareNotStarted": "Access to the world is not open yet.",
+      "notAuthenticated": "You need to sign in to open access to your world.",
+      "shareAlreadyRunning": "Access to the world is already open.",
+      "shareBusy": "Access to the world is already being opened.",
+      "tunnelAuthFailed": "Could not prepare the connection. Try opening access again.",
+      "tunnelDisconnected": "The connection to the world was interrupted.",
+      "tunnelProtocolError": "An error occurred while connecting to the world.",
+      "joinShareNotFound": "Your friend's available world was not found.",
+      "invalidResponse": "Server returned an invalid response.",
+      "unknown": "Could not open access to the world."
+    }
   },
   "manageSkins": {
     "reset": "Reset skin",

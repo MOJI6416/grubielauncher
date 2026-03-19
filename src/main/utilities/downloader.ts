@@ -20,6 +20,11 @@ export interface DownloaderInfo {
   downloadedBytes: number
 }
 
+type DownloadFailure = {
+  item: DownloadItem
+  error: string
+}
+
 export class Downloader {
   private limit = pLimit(6)
   private totalBytes = 0
@@ -60,82 +65,109 @@ export class Downloader {
     const totalItems = items.length
     let completedItems = 0
     let failedItems = 0
+    const failures: DownloadFailure[] = []
 
-    const groups = this.sortByGroup(items)
+    try {
+      const groups = this.sortByGroup(items)
 
-    for (const group of groups) {
-      const groupName = group[0].group
+      for (const group of groups) {
+        const groupName = group[0].group
 
-      const promises = group.map((item) => {
-        const { destination, sha1, size = 0 } = item
+        const promises = group.map((item) => {
+          const { destination, sha1, checksum, checksumType, size = 0 } = item
+          const expectedChecksum = checksum || sha1 || ''
+          const expectedChecksumType = checksum
+            ? (checksumType ?? 'sha256')
+            : ('sha1' as const)
 
-        return this.limit(async () => {
-          const fileStartTime = Date.now()
+          return this.limit(async () => {
+            const fileStartTime = Date.now()
 
-          try {
-            if (!this.validateItem(item)) {
-              console.error(`Invalid item:`, item)
-              failedItems++
-              this.sendInfo(this.createInfo(totalItems, completedItems, failedItems))
-              return
-            }
+            try {
+              if (!this.validateItem(item)) {
+                const error = 'Invalid download item.'
+                console.error(error, item)
+                failures.push({ item, error })
+                failedItems++
+                this.sendInfo(this.createInfo(totalItems, completedItems, failedItems))
+                return
+              }
 
-            const fileMatches = await this.fileExistsAndMatches(destination, sha1 || '', size)
-            if (fileMatches) {
-              completedItems++
-              this.downloadedBytes += size
+              const fileMatches = await this.fileExistsAndMatches(
+                destination,
+                expectedChecksum,
+                expectedChecksumType,
+                size
+              )
+              if (fileMatches) {
+                completedItems++
+                this.downloadedBytes += size
+
+                const fileName = `[${groupName}] ${path.basename(destination)}`
+                this.sendInfo(this.createInfo(totalItems, completedItems, failedItems, fileName))
+                this.updateTaskbarProgress(completedItems, totalItems)
+                return
+              }
+
+              this.ensureDirectoryExists(destination)
 
               const fileName = `[${groupName}] ${path.basename(destination)}`
               this.sendInfo(this.createInfo(totalItems, completedItems, failedItems, fileName))
+
+              await this.downloadFile(item, 3, () => {
+                this.sendInfo(this.createInfo(totalItems, completedItems, failedItems, fileName))
+              })
+
+              if (item.options?.extract) {
+                await this.extractFile(
+                  destination,
+                  item.options.extractFolder || path.dirname(destination),
+                  item.options.extractDelete ?? true
+                )
+              }
+
+              completedItems++
+
+              const fileTime = Date.now() - fileStartTime
+              this.fileCompletionTimes.push(fileTime)
+              if (this.fileCompletionTimes.length > 10) {
+                this.fileCompletionTimes.shift()
+              }
+
+              this.sendInfo(this.createInfo(totalItems, completedItems, failedItems))
               this.updateTaskbarProgress(completedItems, totalItems)
-              return
+            } catch (err) {
+              if (axios.isCancel(err) || (err as Error).name === 'AbortError') {
+                console.log('Download cancelled by user')
+                throw err
+              }
+
+              const errorMessage =
+                err instanceof Error ? err.message : String(err)
+
+              console.error(`Download error ${item.url}:`, err)
+              failures.push({ item, error: errorMessage })
+              failedItems++
+              this.sendInfo(this.createInfo(totalItems, completedItems, failedItems))
             }
-
-            this.ensureDirectoryExists(destination)
-
-            const fileName = `[${groupName}] ${path.basename(destination)}`
-            this.sendInfo(this.createInfo(totalItems, completedItems, failedItems, fileName))
-
-            await this.downloadFile(item, 3, () => {
-              this.sendInfo(this.createInfo(totalItems, completedItems, failedItems, fileName))
-            })
-
-            if (item.options?.extract) {
-              await this.extractFile(
-                destination,
-                item.options.extractFolder || path.dirname(destination),
-                item.options.extractDelete ?? true
-              )
-            }
-
-            completedItems++
-
-            const fileTime = Date.now() - fileStartTime
-            this.fileCompletionTimes.push(fileTime)
-            if (this.fileCompletionTimes.length > 10) {
-              this.fileCompletionTimes.shift()
-            }
-
-            this.sendInfo(this.createInfo(totalItems, completedItems, failedItems))
-            this.updateTaskbarProgress(completedItems, totalItems)
-          } catch (err) {
-            if (axios.isCancel(err) || (err as Error).name === 'AbortError') {
-              console.log('Download cancelled by user')
-              return
-            }
-            console.error(`Download error ${item.url}:`, err)
-            failedItems++
-            this.sendInfo(this.createInfo(totalItems, completedItems, failedItems))
-          }
+          })
         })
-      })
 
-      await Promise.all(promises)
+        await Promise.all(promises)
+      }
+    } finally {
+      this.sendInfo(null)
+      this.clearTaskbarProgress()
+      this.abortController = null
     }
 
-    this.sendInfo(null)
-    this.clearTaskbarProgress()
-    this.abortController = null
+    if (failures.length > 0) {
+      throw new Error(
+        `Failed to download ${failures.length} file(s): ${failures
+          .map((failure) => path.basename(failure.item.destination || failure.item.url))
+          .join(', ')}`
+      )
+    }
   }
 
   private createInfo = (
@@ -439,9 +471,12 @@ export class Downloader {
     return Object.values(groups)
   }
 
-  private getFileSha1 = async (filePath: string): Promise<string> => {
+  private getFileHash = async (
+    filePath: string,
+    algorithm: 'sha1' | 'sha256'
+  ): Promise<string> => {
     return new Promise((resolve, reject) => {
-      const hash = crypto.createHash('sha1')
+      const hash = crypto.createHash(algorithm)
       const stream = fs.createReadStream(filePath)
 
       stream.on('data', (chunk) => hash.update(chunk))
@@ -455,7 +490,8 @@ export class Downloader {
 
   private fileExistsAndMatches = async (
     filePath: string,
-    sha1: string,
+    checksum: string,
+    checksumType: 'sha1' | 'sha256',
     size: number
   ): Promise<boolean> => {
     const actualPath = fs.pathExistsSync(filePath)
@@ -467,9 +503,9 @@ export class Downloader {
     if (!actualPath) return false
 
     try {
-      if (sha1) {
-        const currentSha1 = await this.getFileSha1(actualPath)
-        if (currentSha1 !== sha1) return false
+      if (checksum) {
+        const currentChecksum = await this.getFileHash(actualPath, checksumType)
+        if (currentChecksum.toLowerCase() !== checksum.toLowerCase()) return false
       }
 
       if (size) {

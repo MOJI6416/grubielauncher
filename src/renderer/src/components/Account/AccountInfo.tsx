@@ -195,7 +195,6 @@ export default function AccountInfo({
       await api.accounts.save(
         updatedAccounts,
         `${updatedLocalAccount.type}_${updatedLocalAccount.nickname}`,
-        paths.launcher,
       );
 
       setImage(url);
@@ -294,7 +293,6 @@ export default function AccountInfo({
           await api.accounts.save(
             updatedAccounts,
             `${newData.type}_${newData.nickname}`,
-            paths.launcher,
           );
         }
       }

@@ -64,9 +64,13 @@ export function registerAuthIpc() {
     return auth
   })
 
-  register('auth:startServer', async () => {
+  register('auth:startServer', async (_, expectedState: string) => {
+    if (typeof expectedState !== 'string' || !expectedState) {
+      throw new Error('Invalid OAuth state')
+    }
+
     if (!oauthServerPromise) {
-      oauthServerPromise = startOAuthServer().finally(() => {
+      oauthServerPromise = startOAuthServer(expectedState).finally(() => {
         oauthServerPromise = null
       })
     }

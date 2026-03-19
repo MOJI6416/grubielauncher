@@ -1,249 +1,343 @@
-import { IArch, IPlatform } from '@/types/OS'
+import { IPlatform } from '@/types/OS'
+import axios from 'axios'
 import { app } from 'electron'
 import path from 'path'
 import fs from 'fs-extra'
 import { Downloader } from '../utilities/downloader'
 import { getOS } from '../utilities/other'
 
-interface IJava {
-  version: number
+interface IJavaAsset {
   id: string
-  windows: IArchitecture[]
-  osx: IArchitecture[]
-  linux: IArchitecture[]
+  fileName: string
+  url: string
+  size: number
+  checksum: string
+  imageType: IAdoptiumImageType
+  checksumType: 'sha256'
 }
 
-interface IArchitecture {
-  url: string
-  name: IArch
+interface IAdoptiumPackage {
+  name: string
+  link: string
   size: number
-  sha1: string
+  checksum: string
 }
+
+interface IAdoptiumRelease {
+  release_name: string
+  binary?: {
+    package?: IAdoptiumPackage
+  }
+}
+
+type IAdoptiumArch = 'x64' | 'aarch64'
+type IAdoptiumImageType = 'jre' | 'jdk'
+type IAdoptiumOs = 'windows' | 'mac' | 'linux'
 
 export class Java {
   public javaPath: string = ''
   public javaServerPath: string = ''
   public majorVersion: number = 21
-  private version: IJava | undefined
   public platform: IPlatform | null = null
 
-  private versionsJava: IJava[] = [
-    {
-      version: 21,
-      id: 'jdk-21.0.8+9',
-      windows: [
-        {
-          name: 'x64',
-          url: 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.zip',
-          size: 204850009,
-          sha1: 'b30ddedf02ce94bd32e5e4b92b4d4c1cb7229259'
-        },
-        {
-          name: 'arm64',
-          url: 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_aarch64_windows_hotspot_21.0.8_9.zip',
-          size: 191992920,
-          sha1: '7097456ef6a8dde4c1744ab9732441ec190c90d7'
-        }
-      ],
-      osx: [
-        {
-          name: 'x64',
-          url: 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_mac_hotspot_21.0.8_9.tar.gz',
-          size: 194046408,
-          sha1: '03b4305e7c52aa37e856f1dffaff4015b738920f'
-        },
-        {
-          name: 'arm64',
-          url: 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.8_9.tar.gz',
-          size: 199817579,
-          sha1: '880b478db959f95276a2cdfc4651f6c3583c7451'
-        }
-      ],
-      linux: [
-        {
-          name: 'x64',
-          url: 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_linux_hotspot_21.0.8_9.tar.gz',
-          size: 207098019,
-          sha1: '1aa50043e45d4d308d6935a7e4a03872a3b5cb04'
-        },
-        {
-          name: 'arm64',
-          url: 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_aarch64_linux_hotspot_21.0.8_9.tar.gz',
-          size: 205275133,
-          sha1: '63cb34bf2856b9865a2d636ea2f31bdcc48d525b'
-        }
-      ]
-    },
-    {
-      version: 17,
-      id: 'jdk-17.0.16+8',
-      windows: [
-        {
-          name: 'x64',
-          url: 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.16%2B8/OpenJDK17U-jdk_x64_windows_hotspot_17.0.16_8.zip',
-          size: 190520081,
-          sha1: '64a54dd06e8921e05bcfb570628cb4a6c169bd3e'
-        }
-      ],
-      osx: [
-        {
-          name: 'x64',
-          url: 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.16%2B8/OpenJDK17U-jdk_x64_mac_hotspot_17.0.16_8.tar.gz',
-          size: 180154703,
-          sha1: 'ab0e548991ea2434b93beca92aad0bce778d7b92'
-        },
-        {
-          name: 'arm64',
-          url: 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.16%2B8/OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.16_8.tar.gz',
-          size: 185444095,
-          sha1: 'a182029c634557ac731f670a72932d9a53ee139e'
-        }
-      ],
-      linux: [
-        {
-          name: 'x64',
-          url: 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.16%2B8/OpenJDK17U-jdk_x64_linux_hotspot_17.0.16_8.tar.gz',
-          size: 192062472,
-          sha1: '09b9bd71fc47f37d75ec7ba9eb6c8541c9a5b474'
-        },
-        {
-          name: 'arm64',
-          url: 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.16%2B8/OpenJDK17U-jdk_aarch64_linux_hotspot_17.0.16_8.tar.gz',
-          size: 190777911,
-          sha1: 'db76a7ad08287715f932ac3ea98c43b2111521a0'
-        }
-      ]
-    },
-    {
-      version: 16,
-      id: 'jdk-16.0.2+7',
-      windows: [
-        {
-          name: 'x64',
-          url: 'https://github.com/adoptium/temurin16-binaries/releases/download/jdk-16.0.2%2B7/OpenJDK16U-jdk_x64_windows_hotspot_16.0.2_7.zip',
-          size: 203448494,
-          sha1: '3171b4bb3c7a8a5a0749d68c9343f9e2efb04ed9'
-        }
-      ],
-      osx: [
-        {
-          name: 'x64',
-          url: 'https://github.com/adoptium/temurin16-binaries/releases/download/jdk-16.0.2%2B7/OpenJDK16U-jdk_x64_mac_hotspot_16.0.2_7.tar.gz',
-          size: 206621395,
-          sha1: 'd4517e4dcb555ac3e517bcff9a3f2798222b4f4c'
-        }
-      ],
-      linux: [
-        {
-          name: 'x64',
-          url: 'https://github.com/adoptium/temurin16-binaries/releases/download/jdk-16.0.2%2B7/OpenJDK16U-jdk_x64_linux_hotspot_16.0.2_7.tar.gz',
-          size: 205463525,
-          sha1: '7da16d37a9634076f16476579e74f64a7ffd347a'
-        },
-        {
-          name: 'arm64',
-          url: 'https://github.com/adoptium/temurin16-binaries/releases/download/jdk-16.0.2%2B7/OpenJDK16U-jdk_aarch64_linux_hotspot_16.0.2_7.tar.gz',
-          size: 203084034,
-          sha1: 'e5bfb83c6cf3e7e979e1660c2152c33c1722be20'
-        }
-      ]
-    },
-    {
-      version: 8,
-      id: 'jdk8u462-b08',
-      windows: [
-        {
-          name: 'x64',
-          url: 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u462-b08/OpenJDK8U-jdk_x64_windows_hotspot_8u462b08.zip',
-          size: 106969643,
-          sha1: '0395a0bcfc99a1eaad9ab191c51a1a104a9fe285'
-        }
-      ],
-      osx: [
-        {
-          name: 'x64',
-          url: 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u462-b08/OpenJDK8U-jdk_x64_mac_hotspot_8u462b08.tar.gz',
-          size: 109572785,
-          sha1: 'd982110214a16d88699fcae369e8a0aabd399dd2'
-        }
-      ],
-      linux: [
-        {
-          name: 'x64',
-          url: 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u462-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u462b08.tar.gz',
-          size: 103087414,
-          sha1: 'd44e52bcd332b6d8be54ff4d1b81768891d8f01a'
-        },
-        {
-          name: 'arm64',
-          url: 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u462-b08/OpenJDK8U-jdk_aarch64_linux_hotspot_8u462b08.tar.gz',
-          size: 102210204,
-          sha1: 'ea004e11ff421b1bd0825048ca5b43950921aa4b'
-        }
-      ]
-    }
-  ]
+  private resolvedAsset: IJavaAsset | null = null
+  private static readonly apiUrl = 'https://api.adoptium.net/v3/assets/latest'
+  private static readonly preferredImageTypes: IAdoptiumImageType[] = ['jre', 'jdk']
 
   constructor(version: number) {
     this.majorVersion = version
-    this.version = this.versionsJava.find((v) => v.version === version)
     this.platform = getOS()
   }
 
   async init() {
-    if (!this.version || !this.platform) return
+    if (!this.platform) return
 
-    if (!app.isReady()) {
-      await app.whenReady()
+    await this.ensureAppReady()
+
+    const installedJavaRoot = await this.findInstalledJavaRoot()
+    if (installedJavaRoot) {
+      this.setJavaPaths(installedJavaRoot)
+      return
     }
 
-    const javaRoot = path.join(
-      app.getPath('appData'),
-      '.grubielauncher',
-      'java',
-      this.version.id
-    )
+    const asset = await this.resolveJavaAsset()
+    if (!asset) return
 
-    const javaBinDir =
-      this.platform.os === 'osx'
-        ? path.join(javaRoot, 'Contents', 'Home', 'bin')
-        : path.join(javaRoot, 'bin')
-
-    const ext = this.platform.os === 'windows' ? '.exe' : ''
-    const clientBinary = this.platform.os === 'windows' ? 'javaw' : 'java'
-
-    this.javaPath = path.join(javaBinDir, clientBinary + ext)
-    this.javaServerPath = path.join(javaBinDir, 'java' + ext)
+    this.setJavaPaths(this.getExpectedJavaRoot(asset))
   }
 
   async install() {
-    if (!this.version || !this.platform) return
+    if (!this.platform) return
 
     await this.init()
 
     if (this.javaPath && (await fs.pathExists(this.javaPath))) return
     if (this.javaServerPath && (await fs.pathExists(this.javaServerPath))) return
 
-    const javaFile = this.version[this.platform.os].find((a) => a.name === this.platform?.arch)
-    if (!javaFile) return
+    const asset = await this.resolveJavaAsset()
+    if (!asset) return
 
-    const fileName =
-      javaFile.url.split('/').pop() || `java.${this.platform.os === 'windows' ? 'zip' : 'tar.gz'}`
-
-    const javaBaseDir = path.join(app.getPath('appData'), '.grubielauncher', 'java')
+    const javaBaseDir = this.getJavaBaseDir()
     await fs.ensureDir(javaBaseDir)
+
+    this.setJavaPaths(this.getJavaRoot(asset.id))
 
     const downloader = new Downloader()
 
     await downloader.downloadFiles([
       {
-        url: javaFile.url,
-        destination: path.join(javaBaseDir, fileName),
-        sha1: javaFile.sha1,
-        size: javaFile.size,
+        url: asset.url,
+        destination: path.join(javaBaseDir, asset.fileName),
+        checksum: asset.checksum,
+        checksumType: asset.checksumType,
+        size: asset.size,
         group: 'java',
         options: { extract: true }
       }
     ])
+
+    const installedJavaRoot = await this.findInstalledJavaRoot()
+    if (installedJavaRoot) {
+      this.setJavaPaths(installedJavaRoot)
+    }
+  }
+
+  private async resolveJavaAsset(): Promise<IJavaAsset | null> {
+    if (this.resolvedAsset) return this.resolvedAsset
+
+    const cachedAsset = await this.readCachedAsset()
+
+    try {
+      const asset = await this.fetchJavaAsset()
+      this.resolvedAsset = asset
+      await this.writeCachedAsset(asset)
+      return asset
+    } catch (error) {
+      if (cachedAsset) {
+        this.resolvedAsset = cachedAsset
+        return cachedAsset
+      }
+
+      console.error(
+        `Failed to resolve Java ${this.majorVersion} build from Adoptium API:`,
+        error
+      )
+      return null
+    }
+  }
+
+  private async fetchJavaAsset(): Promise<IJavaAsset> {
+    const apiOs = this.getAdoptiumOs()
+    const apiArch = this.getAdoptiumArch()
+
+    if (!apiOs || !apiArch) {
+      throw new Error('Unsupported operating system or architecture')
+    }
+
+    for (const imageType of Java.preferredImageTypes) {
+      const response = await axios.get<IAdoptiumRelease[]>(
+        `${Java.apiUrl}/${this.majorVersion}/hotspot`,
+        {
+          timeout: 30000,
+          params: {
+            architecture: apiArch,
+            heap_size: 'normal',
+            image_type: imageType,
+            os: apiOs,
+            vendor: 'eclipse'
+          }
+        }
+      )
+
+      const release = response.data.find((item) => item.binary?.package?.link)
+      const javaPackage = release?.binary?.package
+
+      if (!release || !javaPackage) {
+        continue
+      }
+
+      return {
+        id: release.release_name,
+        fileName: javaPackage.name,
+        url: javaPackage.link,
+        size: javaPackage.size,
+        checksum: javaPackage.checksum,
+        imageType,
+        checksumType: 'sha256'
+      }
+    }
+
+    throw new Error(
+      `No Adoptium JRE or JDK package found for Java ${this.majorVersion} on ${apiOs}/${apiArch}`
+    )
+  }
+
+  private async readCachedAsset(): Promise<IJavaAsset | null> {
+    const cachePath = this.getCachePath()
+    if (!cachePath || !(await fs.pathExists(cachePath))) return null
+
+    try {
+      const cachedAsset = (await fs.readJSON(cachePath)) as Partial<IJavaAsset>
+      if (
+        !cachedAsset ||
+        typeof cachedAsset.id !== 'string' ||
+        typeof cachedAsset.fileName !== 'string' ||
+        typeof cachedAsset.url !== 'string' ||
+        typeof cachedAsset.size !== 'number' ||
+        typeof cachedAsset.checksum !== 'string'
+      ) {
+        return null
+      }
+
+      return {
+        id: cachedAsset.id,
+        fileName: cachedAsset.fileName,
+        url: cachedAsset.url,
+        size: cachedAsset.size,
+        checksum: cachedAsset.checksum,
+        imageType:
+          cachedAsset.imageType === 'jre' || cachedAsset.imageType === 'jdk'
+            ? cachedAsset.imageType
+            : 'jdk',
+        checksumType: 'sha256'
+      }
+    } catch (error) {
+      console.error(`Failed to read cached Java asset ${cachePath}:`, error)
+      return null
+    }
+  }
+
+  private async writeCachedAsset(asset: IJavaAsset): Promise<void> {
+    const cachePath = this.getCachePath()
+    if (!cachePath) return
+
+    try {
+      await fs.ensureDir(path.dirname(cachePath))
+      await fs.writeJSON(cachePath, asset, { spaces: 2 })
+    } catch (error) {
+      console.error(`Failed to cache Java asset ${cachePath}:`, error)
+    }
+  }
+
+  private async findInstalledJavaRoot(): Promise<string | null> {
+    const javaBaseDir = this.getJavaBaseDir()
+    if (!(await fs.pathExists(javaBaseDir))) return null
+
+    const entries = await fs.readdir(javaBaseDir)
+    const candidates: { root: string; mtimeMs: number }[] = []
+
+    for (const entry of entries) {
+      if (!this.isJavaDirectoryForMajor(entry)) continue
+
+      const javaRoot = path.join(javaBaseDir, entry)
+      let stats
+
+      try {
+        stats = await fs.stat(javaRoot)
+      } catch {
+        continue
+      }
+
+      if (!stats.isDirectory()) continue
+
+      const paths = this.buildJavaPaths(javaRoot)
+      if (!(await fs.pathExists(paths.client)) && !(await fs.pathExists(paths.server))) continue
+
+      candidates.push({ root: javaRoot, mtimeMs: stats.mtimeMs })
+    }
+
+    if (candidates.length === 0) return null
+
+    candidates.sort((left, right) => right.mtimeMs - left.mtimeMs)
+    return candidates[0].root
+  }
+
+  private isJavaDirectoryForMajor(dirName: string): boolean {
+    if (this.majorVersion === 8) {
+      return /^jdk8u/i.test(dirName)
+    }
+
+    return new RegExp(`^jdk-${this.majorVersion}(?:[.+-]|$)`, 'i').test(dirName)
+  }
+
+  private setJavaPaths(javaRoot: string) {
+    const paths = this.buildJavaPaths(javaRoot)
+    this.javaPath = paths.client
+    this.javaServerPath = paths.server
+  }
+
+  private buildJavaPaths(javaRoot: string) {
+    const javaBinDir =
+      this.platform?.os === 'osx'
+        ? path.join(javaRoot, 'Contents', 'Home', 'bin')
+        : path.join(javaRoot, 'bin')
+
+    const ext = this.platform?.os === 'windows' ? '.exe' : ''
+    const clientBinary = this.platform?.os === 'windows' ? 'javaw' : 'java'
+
+    return {
+      client: path.join(javaBinDir, clientBinary + ext),
+      server: path.join(javaBinDir, 'java' + ext)
+    }
+  }
+
+  private getJavaBaseDir(): string {
+    return path.join(app.getPath('appData'), '.grubielauncher', 'java')
+  }
+
+  private getJavaRoot(releaseName: string): string {
+    return path.join(this.getJavaBaseDir(), releaseName)
+  }
+
+  private getExpectedJavaRoot(asset: IJavaAsset): string {
+    if (asset.imageType === 'jre') {
+      return this.getJavaRoot(`${asset.id}-jre`)
+    }
+
+    return this.getJavaRoot(asset.id)
+  }
+
+  private getCachePath(): string | null {
+    if (!this.platform) return null
+
+    return path.join(
+      this.getJavaBaseDir(),
+      'cache',
+      `${this.majorVersion}-${this.platform.os}-${this.platform.arch}.json`
+    )
+  }
+
+  private getAdoptiumOs(): IAdoptiumOs | null {
+    if (!this.platform) return null
+
+    switch (this.platform.os) {
+      case 'windows':
+        return 'windows'
+      case 'osx':
+        return 'mac'
+      case 'linux':
+        return 'linux'
+      default:
+        return null
+    }
+  }
+
+  private getAdoptiumArch(): IAdoptiumArch | null {
+    if (!this.platform) return null
+
+    switch (this.platform.arch) {
+      case 'x64':
+        return 'x64'
+      case 'arm64':
+        return 'aarch64'
+      default:
+        return null
+    }
+  }
+
+  private async ensureAppReady() {
+    if (!app.isReady()) {
+      await app.whenReady()
+    }
   }
 }

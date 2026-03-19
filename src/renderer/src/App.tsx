@@ -1,4 +1,3 @@
-import { Presence } from "discord-rpc";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Versions } from "./components/Versions";
 import { Nav } from "./components/Nav";
@@ -18,16 +17,19 @@ import {
   isFriendsConnectedAtom,
   isOwnerVersionAtom,
   isRunningAtom,
+  isShareModalOpenAtom,
   localFriendsAtom,
   networkAtom,
   pathsAtom,
+  sharePeersAtom,
+  shareStateAtom,
   selectedFriendAtom,
   selectedVersionAtom,
   settingsAtom,
   versionsAtom,
 } from "./stores/atoms";
 import { Confirmation } from "./components/Modals/Confirmation";
-import { addToast } from "@heroui/toast";
+import { addToast } from "@heroui/react";
 import { LANGUAGES, TSettings } from "@/types/Settings";
 import { IAccountConf } from "@/types/Account";
 import { IServer } from "@/types/ServersList";
@@ -49,8 +51,10 @@ import { DownloaderInfo } from "@/types/Downloader";
 import { DownloadProgress } from "./components/DownloadProgress";
 import { BACKEND_URL } from "@/shared/config";
 import { IRefreshTokenResponse } from "@/types/Auth";
+import { getShareErrorText } from "./utilities/share";
 
 const api = window.api;
+const MAX_CONSOLE_MESSAGES = 1000;
 
 export interface RunGameParams {
   skipUpdate?: boolean;
@@ -102,12 +106,22 @@ function App() {
   const [consoles, setConsoles] = useAtom(consolesAtom);
   const [versions, setVersions] = useAtom(versionsAtom);
   const [isOwnerVersion] = useAtom(isOwnerVersionAtom);
+  const [shareState, setShareState] = useAtom(shareStateAtom);
+  const [, setSharePeers] = useAtom(sharePeersAtom);
+  const [, setIsShareModalOpen] = useAtom(isShareModalOpenAtom);
 
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>([]);
   const [isBlockedMods, setIsBlockedMods] = useState(false);
   const [downloder, setDownloader] = useState<DownloaderInfo | null>(null);
 
   const onlineSocket = useRef<Socket | null>(null);
+  const previousShareLanDetectionRef = useRef<{
+    phase: string;
+    candidateKey: string | null;
+  }>({
+    phase: "idle",
+    candidateKey: null,
+  });
 
   const { t, i18n } = useTranslation();
 
@@ -125,6 +139,23 @@ function App() {
   const localFriendsRef = useLatestRef(localFriends);
   const isOwnerVersionRef = useLatestRef(isOwnerVersion);
   const serversRef = useLatestRef(servers);
+
+  useEffect(() => {
+    void api.rpc.syncContext({
+      account: selectedAccount
+        ? {
+            nickname: selectedAccount.nickname,
+            type: selectedAccount.type,
+          }
+        : null,
+      lang: i18n.resolvedLanguage || i18n.language || "en",
+    });
+  }, [
+    i18n.language,
+    i18n.resolvedLanguage,
+    selectedAccount?.nickname,
+    selectedAccount?.type,
+  ]);
 
   useEffect(() => {
     onlineSocket.current?.disconnect();
@@ -157,6 +188,79 @@ function App() {
   useEffect(() => {
     let cancelled = false;
 
+    const initShare = async () => {
+      try {
+        const [state, peers] = await Promise.all([
+          api.share.getShareState(),
+          api.share.getSharePeers(),
+        ]);
+
+        if (!cancelled) {
+          setShareState(state);
+          setSharePeers(peers);
+        }
+      } catch {}
+    };
+
+    initShare();
+
+    const unsubscribeState = api.share.onShareStateChanged((state) => {
+      setShareState(state);
+    });
+
+    const unsubscribePeers = api.share.onSharePeersChanged((peers) => {
+      setSharePeers(peers);
+    });
+
+    const unsubscribeError = api.share.onShareError((error) => {
+      addToast({
+        color: error.code === "active_share_exists" ? "warning" : "danger",
+        title: getShareErrorText(tRef.current, error),
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribeState();
+      unsubscribePeers();
+      unsubscribeError();
+    };
+  }, [setSharePeers, setShareState, tRef]);
+
+  useEffect(() => {
+    const previous = previousShareLanDetectionRef.current;
+    const candidateKey = shareState.candidate?.key ?? null;
+    const isLanDetected =
+      shareState.phase === "lan_ready" && candidateKey !== null;
+    const justDetected =
+      isLanDetected &&
+      (previous.phase !== "lan_ready" || previous.candidateKey !== candidateKey);
+
+    previousShareLanDetectionRef.current = {
+      phase: shareState.phase,
+      candidateKey,
+    };
+
+    if (!justDetected) {
+      return;
+    }
+
+    if (!selectedAccount || selectedAccount.type === "plain") {
+      return;
+    }
+
+    setIsShareModalOpen(true);
+    void api.other.restoreWindow();
+  }, [
+    selectedAccount,
+    setIsShareModalOpen,
+    shareState.candidate?.key,
+    shareState.phase,
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+
     const init = async () => {
       try {
         const p = await api.other.getPaths();
@@ -164,7 +268,7 @@ function App() {
 
         setPaths(p);
 
-        await Promise.all([getSettings(p.launcher), getAccounts(p.launcher)]);
+        await Promise.all([getSettings(p.launcher), getAccounts()]);
         if (cancelled) return;
 
         const versionsPath = await api.path.join(p.minecraft, "versions");
@@ -206,7 +310,8 @@ function App() {
       }
     };
 
-    api.events.onConsoleChangeStatus(async (versionName, instance, status) => {
+    const unsubscribeConsoleStatus = api.events.onConsoleChangeStatus(
+      async (versionName, instance, status) => {
       const current = consolesRef.current.consoles.find(
         (c) => c.versionName === versionName && c.instance === instance,
       );
@@ -259,9 +364,11 @@ function App() {
 
         await api.fs.writeJSON(statPath, statData);
       }
-    });
+      },
+    );
 
-    api.events.onConsoleMessage(async (versionName, instance, message) => {
+    const unsubscribeConsoleMessage = api.events.onConsoleMessage(
+      async (versionName, instance, message) => {
       setConsoles((prev) => {
         const idx = prev.consoles.findIndex(
           (c) => c.versionName === versionName && c.instance === instance,
@@ -271,13 +378,17 @@ function App() {
         const next = [...prev.consoles];
         next[idx] = {
           ...next[idx],
-          messages: [...next[idx].messages, message],
+          messages: [...next[idx].messages, message].slice(
+            -MAX_CONSOLE_MESSAGES,
+          ),
         };
         return { consoles: next };
       });
-    });
+      },
+    );
 
-    api.events.onConsoleClear(async (versionName, instance) => {
+    const unsubscribeConsoleClear = api.events.onConsoleClear(
+      async (versionName, instance) => {
       setConsoles((prev) => {
         const idx = prev.consoles.findIndex(
           (c) => c.versionName === versionName && c.instance === instance,
@@ -292,28 +403,29 @@ function App() {
         };
         return { consoles: next };
       });
-    });
+      },
+    );
 
-    api.events.onLaunch(() => {
+    const unsubscribeLaunch = api.events.onLaunch(() => {
       setSelectedVersion(undefined);
       setIsRunning(false);
     });
 
-    api.events.onFriendUpdate((data) => {
+    const unsubscribeFriendUpdate = api.events.onFriendUpdate((data) => {
       friendSocketRef.current?.emit("friendUpdate", { ...data });
     });
 
-    api.events.onDownloaderInfo((info) => {
+    const unsubscribeDownloaderInfo = api.events.onDownloaderInfo((info) => {
       setDownloader(info);
     });
 
     return () => {
-      api.events.removeAllListeners("consoleMessage");
-      api.events.removeAllListeners("consoleClear");
-      api.events.removeAllListeners("launch");
-      api.events.removeAllListeners("friendUpdate");
-      api.events.removeAllListeners("consoleChangeStatus");
-      api.events.removeAllListeners("downloaderInfo");
+      unsubscribeConsoleStatus();
+      unsubscribeConsoleMessage();
+      unsubscribeConsoleClear();
+      unsubscribeLaunch();
+      unsubscribeFriendUpdate();
+      unsubscribeDownloaderInfo();
     };
   }, [setConsoles, setSelectedVersion, setIsRunning]);
 
@@ -486,21 +598,8 @@ function App() {
     return data;
   }
 
-  async function getAccounts(launcherPath: string) {
-    const accountsConfPath = await api.path.join(launcherPath, "accounts.json");
-
-    if (!(await api.fs.pathExists(accountsConfPath))) {
-      const data: IAccountConf = {
-        accounts: [],
-        lastPlayed: null,
-      };
-
-      setAccounts(data.accounts);
-      await api.fs.writeFile(accountsConfPath, JSON.stringify(data), "utf-8");
-      return null;
-    }
-
-    const data: IAccountConf = await api.fs.readJSON(accountsConfPath, "utf-8");
+  async function getAccounts() {
+    const data: IAccountConf = await api.accounts.load();
 
     setAccounts(data.accounts);
 
@@ -513,14 +612,6 @@ function App() {
 
       if (lastPlayed) {
         setSelectedAccount(lastPlayed);
-
-        const activity: Presence = {
-          smallImageKey: "steve",
-          smallImageText: lastPlayed.nickname,
-        };
-
-        api.rpc.updateActivity(activity);
-
         return lastPlayed;
       }
 
@@ -563,6 +654,7 @@ function App() {
     }
 
     let account = a0;
+    let currentAccounts = accountsRef.current;
     const ad = authDataRef.current;
 
     try {
@@ -599,16 +691,14 @@ function App() {
               account = { ...account, ...authUser };
               const newAccounts = [...accs];
               newAccounts[idx] = account;
+              currentAccounts = newAccounts;
 
               setAccounts(newAccounts);
               setSelectedAccount(account);
 
-              await api.fs.writeJSON(
-                await api.path.join(p0.launcher, "accounts.json"),
-                {
-                  accounts: newAccounts,
-                  lastPlayed: `${account.type}_${account.nickname}`,
-                },
+              await api.accounts.save(
+                newAccounts,
+                `${account.type}_${account.nickname}`,
               );
             }
           }
@@ -706,11 +796,6 @@ function App() {
 
       await launchVersion.run(account, settings, ad, _instance, quick);
 
-      const activity: Presence = {
-        state: `${tRef.current("rpc.playing")} ${launchVersion.version.name}`,
-      };
-      await api.rpc.updateActivity(activity);
-
       friendSocketRef.current?.emit("friendUpdate", {
         versionName: launchVersion.version.name,
         versionCode: launchVersion.version.shareCode,
@@ -718,23 +803,10 @@ function App() {
       });
 
       await launchVersion.save();
-
-      const accountsPath = await api.path.join(p0.launcher, "accounts.json");
-      const accountsData: IAccountConf = await api.fs.readJSON(
-        accountsPath,
-        "utf-8",
+      await api.accounts.save(
+        currentAccounts,
+        `${account.type}_${account.nickname}`,
       );
-
-      const [lastType, lastNickname] = accountsData.lastPlayed
-        ? accountsData.lastPlayed.split("_")
-        : ["plain", ""];
-
-      if (lastType != account.type || lastNickname != account.nickname) {
-        await api.fs.writeJSON(accountsPath, {
-          ...accountsData,
-          lastPlayed: `${account.type}_${account.nickname}`,
-        });
-      }
     } catch (err) {
       console.log(err);
       addToast({ title: tRef.current("app.startupError"), color: "danger" });

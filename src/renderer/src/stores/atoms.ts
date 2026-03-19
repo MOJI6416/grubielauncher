@@ -8,6 +8,7 @@ import { TSettings } from "@/types/Settings";
 import { IServer } from "@/types/ServersList";
 import { IConsoles } from "@/types/Console";
 import { Version } from "@renderer/classes/Version";
+import { SharePeerInfo, ShareState } from "@/types/Share";
 
 export const pathsAtom = atom<{
   launcher: string;
@@ -44,3 +45,18 @@ export const isDownloadedVersionAtom = atom<boolean>(false);
 export const isOwnerVersionAtom = atom<boolean>(false);
 export const consolesAtom = atom<IConsoles>({ consoles: [] });
 export const isFriendsConnectedAtom = atom<boolean>(false);
+
+export const shareStateAtom = atom<ShareState>({
+  phase: "idle",
+  candidate: null,
+  target: null,
+  isTunnelConnected: false,
+  isAuthenticated: false,
+  isHeartbeatActive: false,
+  isDegraded: false,
+  reconnectAttempt: 0,
+  updatedAt: new Date(0).toISOString(),
+});
+
+export const sharePeersAtom = atom<SharePeerInfo[]>([]);
+export const isShareModalOpenAtom = atom(false);

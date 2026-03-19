@@ -51,7 +51,7 @@ export function Datapacks({
     const pack = datapacks.find((dp) => dp.filename === fileName);
 
     return (
-      <Card className="border-white/20 border-1">
+      <Card>
         <CardBody>
           <div className="flex items-center justify-between gap-4 min-w-0">
             <div className="flex items-center gap-1 min-w-0">

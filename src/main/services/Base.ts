@@ -1,10 +1,7 @@
-import { IAccountConf } from '@/types/Account'
 import axios from 'axios'
 import { checkToken } from '../utilities/jwt'
-import { app, ipcRenderer } from 'electron'
-import path from 'path'
-import fs from 'fs-extra'
 import { BACKEND_URL } from '@/shared/config'
+import { readAccountsConfig, saveAccountsConfig } from '../utilities/accounts'
 
 export class BaseService {
   public readonly baseUrl: string = BACKEND_URL
@@ -103,25 +100,25 @@ export class BaseService {
 
   private async saveToken(token: string, oldToken: string) {
     try {
-      const appData =
-        app && typeof app.getPath === 'function'
-          ? app.getPath('appData')
-          : ipcRenderer && typeof ipcRenderer.invoke === 'function'
-            ? await ipcRenderer.invoke('getPath', 'appData')
-            : null
+      const accounts = await readAccountsConfig()
+      if (!accounts) return
 
-      if (!appData) return
+      let didUpdate = false
+      const nextAccounts = accounts.accounts.map((account) => {
+        if (account.accessToken !== oldToken) return account
+        didUpdate = true
+        return {
+          ...account,
+          accessToken: token
+        }
+      })
 
-      const accountsPath = path.join(appData, '.grubielauncher', 'accounts.json')
+      if (!didUpdate) return
 
-      const accounts: IAccountConf = await fs.readJSON(accountsPath, 'utf-8')
-
-      const account = accounts.accounts.find((acc) => acc.accessToken === oldToken)
-      if (!account) return
-
-      account.accessToken = token
-
-      await fs.writeJSON(accountsPath, accounts, { spaces: 2 })
+      await saveAccountsConfig({
+        ...accounts,
+        accounts: nextAccounts
+      })
     } catch {
       return
     }

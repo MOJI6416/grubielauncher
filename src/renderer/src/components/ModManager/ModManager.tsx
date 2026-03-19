@@ -25,13 +25,13 @@ import {
   Globe,
   Search,
   Settings,
-  X,
   PackageCheck,
   Trash,
   CircleArrowDown,
   PanelTopOpen,
   Info,
   Languages,
+  ListRestart,
 } from "lucide-react";
 import { useAtom } from "jotai";
 import {
@@ -1050,7 +1050,7 @@ export function ModManager({
                         });
                       }}
                     >
-                      <X size={22} />
+                      <ListRestart size={22} />
                     </Button>
                   )}
 
@@ -1139,10 +1139,7 @@ export function ModManager({
                           installedByTitle.get(item.title.toLowerCase());
 
                         return (
-                          <Card
-                            key={index}
-                            className="mb-2 border-white/20 border-1 mr-2"
-                          >
+                          <Card key={index} className="mb-2 mr-2">
                             <CardBody>
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2">

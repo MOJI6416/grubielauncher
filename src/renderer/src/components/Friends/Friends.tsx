@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import { IUser } from '@/types/IUser'
-import { FaDiscord, FaMicrosoft } from 'react-icons/fa'
-import { TbSquareLetterE } from 'react-icons/tb'
-import { IFriend } from '@/types/IFriend'
-import { useTranslation } from 'react-i18next'
-import { SkinView } from '../SkinView'
-import { IMessage } from '@/types/IMessage'
-import { ILocalFriend } from '@/types/ILocalFriend'
-import { ClipboardCopy, SendHorizontal, UserPlus } from 'lucide-react'
-import AccountInfo from '../Account/AccountInfo'
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { IUser } from "@/types/IUser";
+import { FaDiscord, FaMicrosoft } from "react-icons/fa";
+import { TbSquareLetterE } from "react-icons/tb";
+import { IFriend } from "@/types/IFriend";
+import { useTranslation } from "react-i18next";
+import { SkinView } from "../SkinView";
+import { IMessage } from "@/types/IMessage";
+import { ILocalFriend } from "@/types/ILocalFriend";
+import { ClipboardCopy, SendHorizontal, UserPlus } from "lucide-react";
+import AccountInfo from "../Account/AccountInfo";
 import {
   accountAtom,
   accountsAtom,
@@ -17,14 +17,13 @@ import {
   friendSocketAtom,
   isRunningAtom,
   localFriendsAtom,
-  pathsAtom,
   selectedFriendAtom,
   selectedVersionAtom,
-  versionsAtom
-} from '@renderer/stores/atoms'
-import { useAtom } from 'jotai'
-import { IModpack } from '@/types/Backend'
-import { AddVersion } from '../Modals/Version/AddVersion'
+  versionsAtom,
+} from "@renderer/stores/atoms";
+import { useAtom } from "jotai";
+import { IModpack } from "@/types/Backend";
+import { AddVersion } from "../Modals/Version/AddVersion";
 import {
   addToast,
   Alert,
@@ -42,504 +41,661 @@ import {
   Spinner,
   Tooltip,
   Image,
-  ModalFooter
-} from '@heroui/react'
-import { ISkinData } from '@/types/Skin'
-import { RunGameParams } from '@renderer/App'
-import { Version } from '@renderer/classes/Version'
-import { ChatModal } from './ChatModal'
-import { FriendItem } from './FriendItem'
-import { FriendRequestItem } from './FriendRequestItem'
+  ModalFooter,
+} from "@heroui/react";
+import { ISkinData } from "@/types/Skin";
+import { RunGameParams } from "@renderer/App";
+import { Version } from "@renderer/classes/Version";
+import { ChatModal } from "./ChatModal";
+import { FriendItem } from "./FriendItem";
+import { FriendRequestItem } from "./FriendRequestItem";
+import { ActiveFriendShare } from "@/types/Share";
+import { getShareErrorText } from "@renderer/utilities/share";
 
-const api = window.api
+const api = window.api;
 
 export interface IFriendRequest {
-  requestId: string
-  user: IUser
-  type: 'requester' | 'recipient'
+  requestId: string;
+  user: IUser;
+  type: "requester" | "recipient";
 }
 
 export type LoadingType =
-  | 'general'
-  | 'friendRequest'
-  | 'accept'
-  | 'reject'
-  | 'skin'
-  | 'messages'
-  | 'messageSend'
-  | 'friendRemove'
-  | 'chatModpack'
+  | "general"
+  | "friendRequest"
+  | "accept"
+  | "reject"
+  | "skin"
+  | "messages"
+  | "messageSend"
+  | "friendRemove"
+  | "chatModpack";
 
-export function Friends({ runGame }: { runGame: (params: RunGameParams) => Promise<void> }) {
-  const { t } = useTranslation()
+export function Friends({
+  runGame,
+}: {
+  runGame: (params: RunGameParams) => Promise<void>;
+}) {
+  const { t } = useTranslation();
 
-  const [account] = useAtom(accountAtom)
-  const [accounts] = useAtom(accountsAtom)
-  const [paths] = useAtom(pathsAtom)
-  const [versions] = useAtom(versionsAtom)
-  const [isRunning] = useAtom(isRunningAtom)
-  const [localFriends, setLocalFriends] = useAtom(localFriendsAtom)
-  const [socket] = useAtom(friendSocketAtom)
-  const [friendRequests, setFriendRequests] = useAtom(friendRequestsAtom)
-  const [selectedFriend, setSelectedFriend] = useAtom(selectedFriendAtom)
-  const [authData] = useAtom(authDataAtom)
-  const [, setSelectedVersion] = useAtom(selectedVersionAtom)
+  const [account] = useAtom(accountAtom);
+  const [accounts] = useAtom(accountsAtom);
+  const [versions] = useAtom(versionsAtom);
+  const [isRunning] = useAtom(isRunningAtom);
+  const [localFriends, setLocalFriends] = useAtom(localFriendsAtom);
+  const [socket] = useAtom(friendSocketAtom);
+  const [friendRequests, setFriendRequests] = useAtom(friendRequestsAtom);
+  const [selectedFriend, setSelectedFriend] = useAtom(selectedFriendAtom);
+  const [authData] = useAtom(authDataAtom);
+  const [selectedVersion, setSelectedVersion] = useAtom(selectedVersionAtom);
 
-  const [isLoading, setIsLoading] = useState(false)
-  const [loadingType, setLoadingType] = useState<LoadingType>()
-  const [friends, setFriends] = useState<IFriend[]>([])
-  const [notReads, setNotReads] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingType, setLoadingType] = useState<LoadingType>();
+  const [friends, setFriends] = useState<IFriend[]>([]);
+  const [notReads, setNotReads] = useState<string[]>([]);
+  const [activeShares, setActiveShares] = useState<ActiveFriendShare[]>([]);
 
-  const [isRequests, setIsRequests] = useState(false)
-  const [addFriend, setAddFriend] = useState(false)
-  const [skinModal, setSkinModal] = useState(false)
-  const [chatModal, setChatModal] = useState(false)
-  const [friendRemoveModal, setFriendRemoveModal] = useState(false)
-  const [accountInfo, setAccountInfo] = useState(false)
-  const [isAddVersion, setIsAddVersion] = useState(false)
-  const [isSelectVersions, setIsSelectVersions] = useState(false)
+  const [isRequests, setIsRequests] = useState(false);
+  const [addFriend, setAddFriend] = useState(false);
+  const [skinModal, setSkinModal] = useState(false);
+  const [chatModal, setChatModal] = useState(false);
+  const [friendRemoveModal, setFriendRemoveModal] = useState(false);
+  const [accountInfo, setAccountInfo] = useState(false);
+  const [isAddVersion, setIsAddVersion] = useState(false);
+  const [isSelectVersions, setIsSelectVersions] = useState(false);
 
-  const [friendId, setFriendId] = useState('')
-  const [friend, setFriend] = useState<IFriend>()
-  const [user, setUser] = useState<IUser>()
-  const [skinData, setSkinData] = useState<ISkinData>({ skin: 'steve' })
-  const [messages, setMessages] = useState<IMessage[]>([])
-  const [messageText, setMessageText] = useState('')
-  const [chatModpacks, setChatModpacks] = useState<IModpack[]>([])
-  const [loadingIndex, setLoadingIndex] = useState(-1)
-  const [tempModpack, setTempModpack] = useState<IModpack>()
+  const [friendId, setFriendId] = useState("");
+  const [friend, setFriend] = useState<IFriend>();
+  const [user, setUser] = useState<IUser>();
+  const [skinData, setSkinData] = useState<ISkinData>({ skin: "steve" });
+  const [messages, setMessages] = useState<IMessage[]>([]);
+  const [messageText, setMessageText] = useState("");
+  const [chatModpacks, setChatModpacks] = useState<IModpack[]>([]);
+  const [loadingIndex, setLoadingIndex] = useState(-1);
+  const [tempModpack, setTempModpack] = useState<IModpack>();
 
-  const messagesRef = useRef<HTMLDivElement>(null)
-  const messageInputRef = useRef<HTMLInputElement>(null)
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
+  const friendsRef = useRef(friends);
+  const localFriendsRef = useRef(localFriends);
+  const selectedFriendRef = useRef(selectedFriend);
+  const loadingTypeRef = useRef(loadingType);
+  const authSubRef = useRef(authData?.sub);
+  const messagesStateRef = useRef(messages);
+  const chatModpackIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    friendsRef.current = friends;
+  }, [friends]);
+
+  useEffect(() => {
+    localFriendsRef.current = localFriends;
+  }, [localFriends]);
+
+  useEffect(() => {
+    selectedFriendRef.current = selectedFriend;
+  }, [selectedFriend]);
+
+  useEffect(() => {
+    loadingTypeRef.current = loadingType;
+  }, [loadingType]);
+
+  useEffect(() => {
+    authSubRef.current = authData?.sub;
+  }, [authData?.sub]);
+
+  useEffect(() => {
+    messagesStateRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    chatModpackIdsRef.current = new Set(
+      chatModpacks.map((modpack) => modpack._id),
+    );
+  }, [chatModpacks]);
 
   const stopLoading = useCallback(() => {
-    setIsLoading(false)
-    setLoadingType(undefined)
-  }, [])
+    setIsLoading(false);
+    setLoadingType(undefined);
+  }, []);
 
   const startLoading = useCallback((type: LoadingType) => {
-    setIsLoading(true)
-    setLoadingType(type)
-  }, [])
+    setIsLoading(true);
+    setLoadingType(type);
+  }, []);
+
+  const loadActiveShares = useCallback(async () => {
+    if (!account?.accessToken) {
+      setActiveShares([]);
+      return;
+    }
+
+    const result = await api.share.fetchActiveFriendShares();
+
+    if (result.ok && result.data) {
+      setActiveShares(result.data);
+    } else {
+      setActiveShares([]);
+    }
+  }, [account?.accessToken]);
 
   const saveLocalFriends = useCallback(
     async (newLocalFriends: ILocalFriend[]) => {
-      if (!accounts || !account) return
+      if (!account) return;
 
-      setLocalFriends(newLocalFriends)
+      setLocalFriends(newLocalFriends);
 
-      const accountIndex = accounts.findIndex(
-        (a) => a.type === account.type && a.nickname === account.nickname
-      )
+      const nextAccounts = accounts.map((currentAccount) =>
+        currentAccount.type === account.type &&
+        currentAccount.nickname === account.nickname
+          ? { ...currentAccount, friends: newLocalFriends }
+          : currentAccount,
+      );
 
-      if (accountIndex === -1) return
-
-      accounts[accountIndex].friends = newLocalFriends
-
-      await api.fs.writeJSON(await api.path.join(paths.launcher, 'accounts.json'), {
-        accounts,
-        lastPlayed: `${account.type}_${account.nickname}`
-      })
+      await api.accounts.save(
+        nextAccounts,
+        `${account.type}_${account.nickname}`,
+      );
     },
-    [accounts, account, paths.launcher, setLocalFriends]
-  )
+    [accounts, account, setLocalFriends],
+  );
 
   const focusMessageInput = useCallback(() => {
     setTimeout(() => {
-      messageInputRef?.current?.querySelector('input')?.focus()
-    }, 200)
-  }, [])
+      messageInputRef?.current?.querySelector("input")?.focus();
+    }, 200);
+  }, []);
 
   useEffect(() => {
-    if (!socket) return
+    if (!socket) return;
 
     const handleFriends = async (data: { friends: IFriend[] }) => {
-      if (loadingType === 'friendRemove') {
-        stopLoading()
+      if (loadingTypeRef.current === "friendRemove") {
+        stopLoading();
 
-        const localIndex = localFriends.findIndex((lf) => lf.id === selectedFriend)
+        const localIndex = localFriendsRef.current.findIndex(
+          (lf) => lf.id === selectedFriendRef.current,
+        );
 
         if (localIndex !== -1) {
-          const newLocalFriends = [...localFriends]
-          newLocalFriends.splice(localIndex, 1)
-          await saveLocalFriends(newLocalFriends)
+          const newLocalFriends = [...localFriendsRef.current];
+          newLocalFriends.splice(localIndex, 1);
+          await saveLocalFriends(newLocalFriends);
         }
 
-        const nickname = friends.find((f) => f.user._id === selectedFriend)?.user.nickname
+        const nickname = friendsRef.current.find(
+          (f) => f.user._id === selectedFriendRef.current,
+        )?.user.nickname;
         addToast({
-          color: 'success',
-          title: `${nickname} ${t('friends.deleted')}`
-        })
+          color: "success",
+          title: `${nickname} ${t("friends.deleted")}`,
+        });
 
-        setSelectedFriend('')
-        setFriendRemoveModal(false)
+        setSelectedFriend("");
+        setFriendRemoveModal(false);
       }
 
-      setFriends(data.friends)
-    }
+      setFriends(data.friends);
+    };
 
     const handleFriendNotFound = () => {
-      stopLoading()
+      stopLoading();
       addToast({
-        color: 'danger',
-        title: t('friends.notFound')
-      })
-    }
+        color: "danger",
+        title: t("friends.notFound"),
+      });
+    };
 
     const handleFriendUpdate = (data: IFriend) => {
       setFriends((prev) => {
-        const index = prev.findIndex((f) => f.user._id === data.user._id)
-        if (index === -1) return prev
+        const index = prev.findIndex((f) => f.user._id === data.user._id);
+        if (index === -1) return prev;
 
-        const newFriends = [...prev]
-        newFriends[index] = { ...newFriends[index], ...data }
-        return newFriends
-      })
-    }
+        const newFriends = [...prev];
+        newFriends[index] = {
+          ...newFriends[index],
+          versionCode: data.versionCode,
+          versionName: data.versionName,
+          serverAddress: data.serverAddress,
+          isOnline: data.isOnline,
+        };
+        return newFriends;
+      });
+    };
 
-    socket.on('friends', handleFriends)
-    socket.on('friendNotFound', handleFriendNotFound)
-    socket.on('friendUpdate', handleFriendUpdate)
+    socket.on("friends", handleFriends);
+    socket.on("friendNotFound", handleFriendNotFound);
+    socket.on("friendUpdate", handleFriendUpdate);
 
     return () => {
-      socket.off('friends', handleFriends)
-      socket.off('friendUpdate', handleFriendUpdate)
-      socket.off('friendNotFound', handleFriendNotFound)
-    }
-  }, [socket, friends, selectedFriend, loadingType, localFriends, saveLocalFriends, stopLoading, t])
+      socket.off("friends", handleFriends);
+      socket.off("friendUpdate", handleFriendUpdate);
+      socket.off("friendNotFound", handleFriendNotFound);
+    };
+  }, [socket, saveLocalFriends, stopLoading, t]);
 
   useEffect(() => {
-    if (!socket || !account) return
+    if (!socket || !account) return;
 
     const loadModpack = async (modpackId: string, messageIndex: number) => {
-      if (chatModpacks.find((m) => m._id === modpackId)) return
+      if (chatModpackIdsRef.current.has(modpackId)) return;
+      chatModpackIdsRef.current.add(modpackId);
 
-      setLoadingIndex(messageIndex)
+      setLoadingIndex(messageIndex);
       try {
-        const modpackData = await api.backend.getModpack(account.accessToken || '', modpackId)
+        const modpackData = await api.backend.getModpack(
+          account.accessToken || "",
+          modpackId,
+        );
         if (modpackData.data) {
-          setChatModpacks((prev) => [...prev, modpackData.data!])
+          setChatModpacks((prev) => [...prev, modpackData.data!]);
+        } else {
+          chatModpackIdsRef.current.delete(modpackId);
         }
+      } catch (error) {
+        chatModpackIdsRef.current.delete(modpackId);
+        throw error;
       } finally {
-        setLoadingIndex(-1)
+        setLoadingIndex(-1);
       }
-    }
+    };
 
     const handleGetMessages = async (data: { messages: IMessage[] }) => {
-      setMessages(data.messages)
-      stopLoading()
+      setMessages(data.messages);
+      stopLoading();
 
       for (const msg of data.messages) {
-        if (msg.message._type === 'modpack') {
-          await loadModpack(msg.message.value, data.messages.indexOf(msg))
+        if (!msg.message) continue;
+        if (msg.message._type === "modpack") {
+          await loadModpack(msg.message.value, data.messages.indexOf(msg));
         }
       }
-    }
+    };
 
     const handleSendMessage = async (message: IMessage) => {
-      if (loadingType === 'messageSend') {
-        setMessageText('')
-        stopLoading()
+      if (loadingTypeRef.current === "messageSend") {
+        setMessageText("");
+        stopLoading();
       }
 
-      if (message.sender !== selectedFriend && message.sender !== authData?.sub) return
+      if (
+        message.sender !== selectedFriendRef.current &&
+        message.sender !== authSubRef.current
+      )
+        return;
 
-      setMessages((prev) => [...prev, message])
-      focusMessageInput()
+      setMessages((prev) => [...prev, message]);
+      focusMessageInput();
 
-      if (message.message._type === 'modpack') {
-        await loadModpack(message.message.value, messages.length + 1)
+      if (message?.message?._type === "modpack") {
+        await loadModpack(
+          message.message.value,
+          messagesStateRef.current.length + 1,
+        );
       }
-    }
+    };
 
-    socket.on('getMessages', handleGetMessages)
-    socket.on('sendMessage', handleSendMessage)
+    socket.on("getMessages", handleGetMessages);
+    socket.on("sendMessage", handleSendMessage);
 
     return () => {
-      socket.off('getMessages', handleGetMessages)
-      socket.off('sendMessage', handleSendMessage)
-    }
-  }, [
-    socket,
-    account,
-    selectedFriend,
-    loadingType,
-    messages.length,
-    chatModpacks,
-    authData,
-    stopLoading,
-    focusMessageInput
-  ])
+      socket.off("getMessages", handleGetMessages);
+      socket.off("sendMessage", handleSendMessage);
+    };
+  }, [socket, account, stopLoading, focusMessageInput]);
 
   useEffect(() => {
-    messagesRef.current?.scrollTo(0, messagesRef.current.scrollHeight)
-  }, [messages])
+    messagesRef.current?.scrollTo(0, messagesRef.current.scrollHeight);
+  }, [messages]);
 
   useEffect(() => {
-    if (chatModal) focusMessageInput()
-  }, [chatModal, focusMessageInput])
+    if (chatModal) focusMessageInput();
+  }, [chatModal, focusMessageInput]);
 
   useEffect(() => {
-    if (!socket) return
+    if (!socket) return;
 
-    startLoading('general')
-    socket.emit('getFriends')
+    startLoading("general");
+    socket.emit("getFriends");
 
     const handleFriendRequests = (data: { requests: IFriendRequest[] }) => {
-      setFriendRequests(data.requests)
-      stopLoading()
-    }
+      setFriendRequests(data.requests);
+      stopLoading();
+    };
 
     const handleNotReads = (data: { users: string[] }) => {
-      setNotReads(data.users)
-    }
+      setNotReads(data.users);
+    };
 
-    socket.on('friendRequests', handleFriendRequests)
-    socket.on('notReads', handleNotReads)
+    socket.on("friendRequests", handleFriendRequests);
+    socket.on("notReads", handleNotReads);
 
     return () => {
-      socket.off('friendRequests', handleFriendRequests)
-      socket.off('notReads', handleNotReads)
-    }
-  }, [socket, startLoading, stopLoading, setFriendRequests])
+      socket.off("friendRequests", handleFriendRequests);
+      socket.off("notReads", handleNotReads);
+    };
+  }, [socket, startLoading, stopLoading, setFriendRequests]);
 
   useEffect(() => {
-    if (loadingType === 'accept' || loadingType === 'reject') {
-      stopLoading()
-    } else if (loadingType === 'friendRequest') {
-      stopLoading()
-      setAddFriend(false)
+    if (!account?.accessToken) {
+      setActiveShares([]);
+      return;
     }
-  }, [friendRequests, loadingType, stopLoading])
+
+    void loadActiveShares();
+
+    const interval = setInterval(() => {
+      void loadActiveShares();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [account?.accessToken, loadActiveShares]);
+
+  useEffect(() => {
+    if (loadingType === "accept" || loadingType === "reject") {
+      stopLoading();
+    } else if (loadingType === "friendRequest") {
+      stopLoading();
+      setAddFriend(false);
+    }
+  }, [friendRequests, loadingType, stopLoading]);
 
   const handleCopyId = useCallback(async () => {
-    if (!authData) return
-    await api.clipboard.writeText(authData.sub)
-    addToast({ title: t('common.copied') })
-  }, [authData, t])
+    if (!authData) return;
+    await api.clipboard.writeText(authData.sub);
+    addToast({ title: t("common.copied") });
+  }, [authData, t]);
 
   const handleSendFriendRequest = useCallback(() => {
-    if (!socket || !friendId) return
-    startLoading('friendRequest')
-    socket.emit('friendRequest', { friendId })
-  }, [socket, friendId, startLoading])
+    if (!socket || !friendId) return;
+    startLoading("friendRequest");
+    socket.emit("friendRequest", { friendId });
+  }, [socket, friendId, startLoading]);
 
   const handleAcceptRequest = useCallback(
     (requestId: string) => {
-      if (!socket) return
-      startLoading('accept')
-      socket.emit('acceptFriendRequest', { requestId })
+      if (!socket) return;
+      startLoading("accept");
+      socket.emit("acceptFriendRequest", { requestId });
     },
-    [socket, startLoading]
-  )
+    [socket, startLoading],
+  );
 
   const handleRejectRequest = useCallback(
     (requestId: string) => {
-      if (!socket) return
-      startLoading('reject')
-      socket.emit('rejectFriendRequest', { requestId })
+      if (!socket) return;
+      startLoading("reject");
+      socket.emit("rejectFriendRequest", { requestId });
     },
-    [socket, startLoading]
-  )
+    [socket, startLoading],
+  );
 
   const handleViewAccount = useCallback(
     async (userId: string) => {
       try {
-        if (!account?.accessToken) return
+        if (!account?.accessToken) return;
 
-        const userData = await api.backend.getUser(account.accessToken, userId)
+        const userData = await api.backend.getUser(account.accessToken, userId);
         if (userData) {
-          setUser(userData)
-          setAccountInfo(true)
+          setUser(userData);
+          setAccountInfo(true);
         } else {
-          throw new Error()
+          throw new Error();
         }
       } catch {
         addToast({
-          color: 'danger',
-          title: t('accountInfo.error')
-        })
+          color: "danger",
+          title: t("accountInfo.error"),
+        });
       }
     },
-    [account, t]
-  )
+    [account, t],
+  );
 
   const handleOpenChat = useCallback(
     (friendId: string) => {
-      if (!socket) return
+      if (!socket) return;
 
-      startLoading('messages')
-      setChatModal(true)
+      startLoading("messages");
+      setChatModal(true);
 
-      const index = notReads.indexOf(friendId)
+      const index = notReads.indexOf(friendId);
       if (index !== -1) {
-        setNotReads((prev) => prev.filter((id) => id !== friendId))
+        setNotReads((prev) => prev.filter((id) => id !== friendId));
       }
 
-      socket.emit('getMessages', { friendId })
+      socket.emit("getMessages", { friendId });
     },
-    [socket, notReads, startLoading]
-  )
+    [socket, notReads, startLoading],
+  );
 
   const handleViewSkin = useCallback(
     async (friend: IFriend) => {
-      startLoading('skin')
-      setSkinModal(true)
+      startLoading("skin");
+      setSkinModal(true);
 
       const skinData = await api.skin.get(
         friend.user.platform,
         friend.user.uuid,
         friend.user.nickname,
-        account?.accessToken
-      )
+        account?.accessToken,
+      );
 
       if (skinData) {
-        setSkinData(skinData)
+        setSkinData(skinData);
       } else {
-        setSkinModal(false)
+        setSkinModal(false);
         addToast({
-          color: 'danger',
-          title: t('skinView.error')
-        })
+          color: "danger",
+          title: t("skinView.error"),
+        });
       }
 
-      stopLoading()
+      stopLoading();
     },
-    [account, startLoading, stopLoading, t]
-  )
+    [account, startLoading, stopLoading, t],
+  );
 
   const handleToggleMute = useCallback(
-    async (friend: IFriend, local: ILocalFriend | undefined, localIndex: number) => {
-      const newLocalFriends = [...localFriends]
+    async (
+      friend: IFriend,
+      local: ILocalFriend | undefined,
+      localIndex: number,
+    ) => {
+      const newLocalFriends = [...localFriends];
 
       if (!local) {
-        local = { id: friend.user._id, isMuted: true }
-        newLocalFriends.push(local)
+        local = { id: friend.user._id, isMuted: true };
+        newLocalFriends.push(local);
       } else {
-        local.isMuted = !local.isMuted
-        newLocalFriends[localIndex] = local
+        local.isMuted = !local.isMuted;
+        newLocalFriends[localIndex] = local;
       }
 
-      await saveLocalFriends(newLocalFriends)
+      await saveLocalFriends(newLocalFriends);
 
       addToast({
-        color: 'success',
-        title: local.isMuted ? t('friends.notificationDisabled') : t('friends.notificationEnabled')
-      })
+        color: "success",
+        title: local.isMuted
+          ? t("friends.notificationDisabled")
+          : t("friends.notificationEnabled"),
+      });
     },
-    [localFriends, saveLocalFriends, t]
-  )
+    [localFriends, saveLocalFriends, t],
+  );
 
   const handleRemoveFriend = useCallback(() => {
-    if (!socket || !friend) return
-    startLoading('friendRemove')
-    socket.emit('friendRemove', { friendId: friend.user._id })
-  }, [socket, friend, startLoading])
+    if (!socket || !friend) return;
+    startLoading("friendRemove");
+    socket.emit("friendRemove", { friendId: friend.user._id });
+  }, [socket, friend, startLoading]);
 
   const handleSendMessage = useCallback(() => {
-    if (!authData || !socket || !friend || !messageText.trim()) return
+    if (!authData || !socket || !friend || !messageText.trim()) return;
 
-    startLoading('messageSend')
+    startLoading("messageSend");
 
     const message: IMessage = {
       sender: authData.sub,
       message: {
-        _type: 'text',
-        value: messageText
+        _type: "text",
+        value: messageText,
       },
-      time: new Date()
-    }
+      time: new Date(),
+    };
 
-    socket.emit('sendMessage', {
+    socket.emit("sendMessage", {
       message,
-      recipient: friend.user._id
-    })
+      recipient: friend.user._id,
+    });
 
-    focusMessageInput()
-  }, [authData, socket, friend, messageText, startLoading, focusMessageInput])
+    focusMessageInput();
+  }, [authData, socket, friend, messageText, startLoading, focusMessageInput]);
 
   const handleSendModpack = useCallback(
     async (version: Version) => {
-      if (!account || !socket || !version.version.shareCode || !authData || !friend) return
+      if (
+        !account ||
+        !socket ||
+        !version.version.shareCode ||
+        !authData ||
+        !friend
+      )
+        return;
 
-      setIsSelectVersions(false)
-      startLoading('messageSend')
+      setIsSelectVersions(false);
+      startLoading("messageSend");
 
       const message: IMessage = {
         sender: authData.sub,
         message: {
-          _type: 'modpack',
-          value: version.version.shareCode
+          _type: "modpack",
+          value: version.version.shareCode,
         },
-        time: new Date()
-      }
+        time: new Date(),
+      };
 
-      socket.emit('sendMessage', {
+      socket.emit("sendMessage", {
         message,
-        recipient: friend.user._id
-      })
+        recipient: friend.user._id,
+      });
     },
-    [account, socket, authData, friend, startLoading]
-  )
+    [account, socket, authData, friend, startLoading],
+  );
 
   const handleJoinFriend = useCallback(
-    async (friend: IFriend, version: Version | undefined) => {
+    async (
+      friend: IFriend | undefined,
+      version: Version | undefined,
+      activeShare: ActiveFriendShare | undefined,
+    ) => {
+      if (!friend?.serverAddress && !activeShare && !version) return;
+
+      let address = friend?.serverAddress;
+
+      if (activeShare) {
+        const result = await api.share.connectToFriendShare(activeShare.slug);
+        if (!result.ok || !result.data) {
+          addToast({
+            color:
+              result.error?.code === "session_not_online"
+                ? "warning"
+                : "danger",
+            title: getShareErrorText(t, result.error),
+          });
+          return;
+        }
+
+        address = result.data.connectHost;
+      }
+
       if (version) {
-        setSelectedVersion(version)
+        setSelectedVersion(version);
         await runGame({
           version,
+          quick: address
+            ? {
+                multiplayer: address,
+              }
+            : undefined,
+        });
+        return;
+      }
+
+      if (selectedVersion && address) {
+        await runGame({
           quick: {
-            multiplayer: friend.serverAddress ?? undefined
-          }
-        })
-        return
+            multiplayer: address,
+          },
+        });
+        return;
+      }
+
+      if (!friend?.versionCode) {
+        addToast({
+          color: "warning",
+          title: t("share.selectVersionToJoin"),
+        });
+        return;
       }
 
       const modpackData = await api.backend.getModpack(
-        account?.accessToken || '',
-        friend.versionCode
-      )
+        account?.accessToken || "",
+        friend.versionCode,
+      );
 
       if (modpackData.data) {
-        setTempModpack(modpackData.data)
-        setIsAddVersion(true)
+        setTempModpack(modpackData.data);
+        setIsAddVersion(true);
+        addToast({
+          color: "warning",
+          title: t("share.installVersionToJoin"),
+        });
       }
     },
-    [account, runGame, setSelectedVersion]
-  )
+    [account, runGame, selectedVersion, setSelectedVersion, t],
+  );
 
   const isFriendIdInvalid = useMemo(() => {
     return (
       !!friends.find((f) => f?.user?._id === friendId) ||
       friendId === authData?.sub ||
       !!friendRequests.find((fr) => fr.user._id === friendId) ||
-      friendId === ''
-    )
-  }, [friends, friendId, authData, friendRequests])
+      friendId === ""
+    );
+  }, [friends, friendId, authData, friendRequests]);
 
   const recipientRequests = useMemo(
-    () => friendRequests.filter((fr) => fr.type === 'recipient'),
-    [friendRequests]
-  )
+    () => friendRequests.filter((fr) => fr.type === "recipient"),
+    [friendRequests],
+  );
 
-  const shareableVersions = useMemo(() => versions.filter((v) => v.version.shareCode), [versions])
+  const activeShareByHost = useMemo(
+    () => new Map(activeShares.map((share) => [share.hostUserId, share])),
+    [activeShares],
+  );
+
+  const shareableVersions = useMemo(
+    () => versions.filter((v) => v.version.shareCode),
+    [versions],
+  );
 
   return (
     <>
-      <Card className="h-full w-[510px]" style={{ marginTop: '0px' }}>
+      <Card className="h-full w-[510px]" style={{ marginTop: "0px" }}>
         <CardHeader>
           <div className="flex items-center gap-2 w-full justify-between">
             <div className="flex items-center gap-2">
               <span
-                className={isRequests ? 'cursor-pointer' : ''}
+                className={isRequests ? "cursor-pointer" : ""}
                 onClick={() => setIsRequests(false)}
               >
-                <p className={!isRequests ? 'text-md font-bold' : 'text-md'}>
-                  {t('friends.title')}
+                <p className={!isRequests ? "text-md font-bold" : "text-md"}>
+                  {t("friends.title")}
                 </p>
               </span>
               <span
-                className={!isRequests ? 'cursor-pointer' : ''}
+                className={!isRequests ? "cursor-pointer" : ""}
                 onClick={() => setIsRequests(true)}
               >
                 {!isRequests && recipientRequests.length > 0 ? (
@@ -547,33 +703,37 @@ export function Friends({ runGame }: { runGame: (params: RunGameParams) => Promi
                     size="sm"
                     color="warning"
                     variant="flat"
-                    content={<p className="text-sm font-bold">+{recipientRequests.length}</p>}
+                    content={
+                      <p className="text-sm font-bold">
+                        +{recipientRequests.length}
+                      </p>
+                    }
                   >
-                    <p className={isRequests ? 'text-md font-bold' : 'text-md'}>
-                      {t('friends.requests')}
+                    <p className={isRequests ? "text-md font-bold" : "text-md"}>
+                      {t("friends.requests")}
                     </p>
                   </Badge>
                 ) : (
-                  <p className={isRequests ? 'text-md font-bold' : 'text-md'}>
-                    {t('friends.requests')}
+                  <p className={isRequests ? "text-md font-bold" : "text-md"}>
+                    {t("friends.requests")}
                   </p>
                 )}
               </span>
             </div>
             <div className="flex items-center gap-1">
-              <Tooltip content={t('friends.copyId')} delay={1000}>
+              <Tooltip content={t("friends.copyId")} delay={1000}>
                 <Button variant="flat" isIconOnly onPress={handleCopyId}>
                   <ClipboardCopy size={22} />
                 </Button>
               </Tooltip>
-              <Tooltip content={t('friends.sendRequest')} delay={1000}>
+              <Tooltip content={t("friends.sendRequest")} delay={1000}>
                 <Button
                   variant="flat"
                   isIconOnly
                   onPress={() => {
-                    setFriendId('')
-                    setFriend(undefined)
-                    setAddFriend(true)
+                    setFriendId("");
+                    setFriend(undefined);
+                    setAddFriend(true);
                   }}
                 >
                   <UserPlus size={22} />
@@ -583,7 +743,7 @@ export function Friends({ runGame }: { runGame: (params: RunGameParams) => Promi
           </div>
         </CardHeader>
         <CardBody>
-          {isLoading && loadingType === 'general' && (
+          {isLoading && loadingType === "general" && (
             <div className="text-center">
               <Spinner size="sm" />
             </div>
@@ -591,42 +751,58 @@ export function Friends({ runGame }: { runGame: (params: RunGameParams) => Promi
 
           <ScrollShadow>
             <div className="flex flex-col gap-2">
-              {!(isLoading && loadingType === 'general') && !isRequests && socket?.connected ? (
+              {!(isLoading && loadingType === "general") &&
+              !isRequests &&
+              socket?.connected ? (
                 friends.length > 0 ? (
                   <div className="flex flex-col space-y-4">
                     {friends.map((f) => {
                       const version = f.versionCode
-                        ? versions.find((v) => v.version.shareCode === f.versionCode)
-                        : undefined
+                        ? versions.find(
+                            (v) => v.version.shareCode === f.versionCode,
+                          )
+                        : undefined;
+                      const activeShare = activeShareByHost.get(f.user._id);
 
-                      const isNotRead = notReads.includes(f.user._id)
-                      const localIndex = localFriends.findIndex((lf) => lf.id === f.user._id)
-                      const local = localIndex !== -1 ? localFriends[localIndex] : undefined
+                      const isNotRead = notReads.includes(f.user._id);
+                      const localIndex = localFriends.findIndex(
+                        (lf) => lf.id === f.user._id,
+                      );
+                      const local =
+                        localIndex !== -1
+                          ? localFriends[localIndex]
+                          : undefined;
 
                       return (
                         <FriendItem
                           key={f.user._id}
                           friend={f}
+                          activeShare={activeShare}
                           isNotRead={isNotRead}
                           local={local}
+                          version={version}
                           isRunning={isRunning}
                           onSelect={() => {
-                            setSelectedFriend(f.user._id)
-                            setFriend(f)
+                            setSelectedFriend(f.user._id);
+                            setFriend(f);
                           }}
-                          onJoin={() => handleJoinFriend(f, version)}
+                          onJoin={() =>
+                            handleJoinFriend(f, version, activeShare)
+                          }
                           onViewAccount={() => handleViewAccount(f.user._id)}
                           onOpenChat={() => handleOpenChat(f.user._id)}
                           onViewSkin={() => handleViewSkin(f)}
-                          onToggleMute={() => handleToggleMute(f, local, localIndex)}
+                          onToggleMute={() =>
+                            handleToggleMute(f, local, localIndex)
+                          }
                           onRemove={() => setFriendRemoveModal(true)}
                           t={t}
                         />
-                      )
+                      );
                     })}
                   </div>
                 ) : (
-                  <Alert color="warning" title={t('friends.noFriends')} />
+                  <Alert color="warning" title={t("friends.noFriends")} />
                 )
               ) : undefined}
 
@@ -646,7 +822,7 @@ export function Friends({ runGame }: { runGame: (params: RunGameParams) => Promi
                     ))}
                   </div>
                 ) : (
-                  <Alert color="warning" title={t('friends.noRequests')} />
+                  <Alert color="warning" title={t("friends.noRequests")} />
                 )
               ) : undefined}
             </div>
@@ -656,16 +832,16 @@ export function Friends({ runGame }: { runGame: (params: RunGameParams) => Promi
 
       <Modal isOpen={addFriend} size="sm" onClose={() => setAddFriend(false)}>
         <ModalContent>
-          <ModalHeader>{t('friends.adding')}</ModalHeader>
+          <ModalHeader>{t("friends.adding")}</ModalHeader>
           <ModalBody>
             <Input
-              label={t('friends.friendId')}
+              label={t("friends.friendId")}
               isDisabled={isLoading}
               value={friendId}
               onChange={(e) => setFriendId(e.currentTarget.value.trim())}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !isFriendIdInvalid) {
-                  handleSendFriendRequest()
+                if (e.key === "Enter" && !isFriendIdInvalid) {
+                  handleSendFriendRequest();
                 }
               }}
             />
@@ -675,11 +851,11 @@ export function Friends({ runGame }: { runGame: (params: RunGameParams) => Promi
               variant="flat"
               color="primary"
               endContent={<SendHorizontal size={22} />}
-              isLoading={isLoading && loadingType === 'friendRequest'}
+              isLoading={isLoading && loadingType === "friendRequest"}
               isDisabled={isFriendIdInvalid}
               onPress={handleSendFriendRequest}
             >
-              {t('friends.send')}
+              {t("friends.send")}
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -690,8 +866,8 @@ export function Friends({ runGame }: { runGame: (params: RunGameParams) => Promi
           nickname={friend.user.nickname}
           isOwner={false}
           onClose={() => {
-            setSkinModal(false)
-            setFriend(undefined)
+            setSkinModal(false);
+            setFriend(undefined);
           }}
         />
       )}
@@ -711,21 +887,21 @@ export function Friends({ runGame }: { runGame: (params: RunGameParams) => Promi
           messageInputRef={messageInputRef}
           account={account}
           onClose={() => {
-            setChatModal(false)
-            setSelectedFriend('')
-            setFriend(undefined)
+            setChatModal(false);
+            setSelectedFriend("");
+            setFriend(undefined);
           }}
           onMessageChange={setMessageText}
           onSendMessage={handleSendMessage}
           onOpenVersionSelect={() => setIsSelectVersions(true)}
           onPlayModpack={async (modpack: IModpack, version?: Version) => {
             if (version) {
-              setSelectedVersion(version)
-              setChatModal(false)
-              await runGame({ version })
+              setSelectedVersion(version);
+              setChatModal(false);
+              await runGame({ version });
             } else {
-              setTempModpack(modpack)
-              setIsAddVersion(true)
+              setTempModpack(modpack);
+              setIsAddVersion(true);
             }
           }}
           t={t}
@@ -737,30 +913,33 @@ export function Friends({ runGame }: { runGame: (params: RunGameParams) => Promi
           isOpen={true}
           onClose={() => {
             if (!isLoading) {
-              setFriendRemoveModal(false)
-              setFriend(undefined)
+              setFriendRemoveModal(false);
+              setFriend(undefined);
             }
           }}
         >
           <ModalContent>
-            <ModalHeader>{t('common.confirmation')}</ModalHeader>
+            <ModalHeader>{t("common.confirmation")}</ModalHeader>
             <ModalBody>
               <Alert
                 color="warning"
-                title={`${t('friends.deleteAlert')} ${friend.user.nickname}?`}
+                title={`${t("friends.deleteAlert")} ${friend.user.nickname}?`}
               />
             </ModalBody>
             <ModalFooter>
               <Button
                 color="danger"
                 variant="flat"
-                isLoading={isLoading && loadingType === 'friendRemove'}
+                isLoading={isLoading && loadingType === "friendRemove"}
                 onPress={handleRemoveFriend}
               >
-                {t('common.yes')}
+                {t("common.yes")}
               </Button>
-              <Button variant="flat" onPress={() => setFriendRemoveModal(false)}>
-                {t('common.no')}
+              <Button
+                variant="flat"
+                onPress={() => setFriendRemoveModal(false)}
+              >
+                {t("common.no")}
               </Button>
             </ModalFooter>
           </ModalContent>
@@ -768,20 +947,31 @@ export function Friends({ runGame }: { runGame: (params: RunGameParams) => Promi
       )}
 
       {accountInfo && user && (
-        <AccountInfo onClose={() => setAccountInfo(false)} user={user} isOwner={false} />
+        <AccountInfo
+          onClose={() => setAccountInfo(false)}
+          user={user}
+          isOwner={false}
+        />
       )}
 
       {isAddVersion && tempModpack && (
-        <AddVersion closeModal={() => setIsAddVersion(false)} modpack={tempModpack} />
+        <AddVersion
+          closeModal={() => setIsAddVersion(false)}
+          modpack={tempModpack}
+        />
       )}
 
       {isSelectVersions && friend && (
-        <Modal isOpen={true} onClose={() => setIsSelectVersions(false)} size="xs">
+        <Modal
+          isOpen={true}
+          onClose={() => setIsSelectVersions(false)}
+          size="xs"
+        >
           <ModalContent>
-            <ModalHeader>{t('versions.selectVersion')}</ModalHeader>
+            <ModalHeader>{t("versions.selectVersion")}</ModalHeader>
             <ModalBody>
               {shareableVersions.length === 0 ? (
-                <Alert color="warning" title={t('versions.noVersions')} />
+                <Alert color="warning" title={t("versions.noVersions")} />
               ) : (
                 <ScrollShadow className="h-[300px]">
                   <div className="flex flex-col gap-2">
@@ -812,18 +1002,18 @@ export function Friends({ runGame }: { runGame: (params: RunGameParams) => Promi
         </Modal>
       )}
     </>
-  )
+  );
 }
 
 export function getPlatformIcon(platform: string) {
   switch (platform) {
-    case 'microsoft':
-      return <FaMicrosoft size={20} />
-    case 'elyby':
-      return <TbSquareLetterE size={20} />
-    case 'discord':
-      return <FaDiscord size={20} />
+    case "microsoft":
+      return <FaMicrosoft size={20} />;
+    case "elyby":
+      return <TbSquareLetterE size={20} />;
+    case "discord":
+      return <FaDiscord size={20} />;
     default:
-      return null
+      return null;
   }
 }

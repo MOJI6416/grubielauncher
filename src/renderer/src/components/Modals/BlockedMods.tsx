@@ -215,10 +215,7 @@ export function BlockedMods({
               </div>
               <div className="max-h-[215px] overflow-auto pr-1">
                 {filteredMods.map((mod) => (
-                  <Card
-                    key={`${mod.projectId}-${mod.fileName}`}
-                    className="mb-2 border-white/20 border-1"
-                  >
+                  <Card key={`${mod.projectId}-${mod.fileName}`} className="mb-2">
                     <CardBody>
                       <div className="flex justify-between space-x-2 items-center">
                         <div className="flex flex-col">

@@ -3,6 +3,21 @@ import { Server } from 'http'
 
 let serverInstance: Server | null = null
 let pendingReject: ((err: Error) => void) | null = null
+const OAUTH_TIMEOUT_MS = 2 * 60 * 1000
+
+function parseExpectedState(expectedState: string): 'microsoft' | 'discord' | 'elyby' {
+  const [provider, nonce] = expectedState.split(':', 2)
+
+  if (!nonce || !/^[a-zA-Z0-9-]{16,}$/.test(nonce)) {
+    throw new Error('Invalid OAuth state.')
+  }
+
+  if (provider === 'microsoft' || provider === 'discord' || provider === 'elyby') {
+    return provider
+  }
+
+  throw new Error('Invalid OAuth provider.')
+}
 
 function closeServer(): Promise<void> {
   return new Promise((resolve) => {
@@ -19,16 +34,26 @@ function closeServer(): Promise<void> {
   })
 }
 
-export function startOAuthServer(): Promise<{
+export function startOAuthServer(expectedState: string): Promise<{
   code: string
   provider: 'microsoft' | 'discord' | 'elyby'
 }> {
   return new Promise((resolve, reject) => {
     let settled = false
+    let timeoutId: NodeJS.Timeout | null = null
+    let expectedProvider: 'microsoft' | 'discord' | 'elyby'
+
+    try {
+      expectedProvider = parseExpectedState(expectedState)
+    } catch (error) {
+      reject(error instanceof Error ? error : new Error(String(error)))
+      return
+    }
 
     const safeResolve = (data: { code: string; provider: 'microsoft' | 'discord' | 'elyby' }) => {
       if (settled) return
       settled = true
+      if (timeoutId) clearTimeout(timeoutId)
       pendingReject = null
       resolve(data)
     }
@@ -36,6 +61,7 @@ export function startOAuthServer(): Promise<{
     const safeReject = (err: Error) => {
       if (settled) return
       settled = true
+      if (timeoutId) clearTimeout(timeoutId)
       pendingReject = null
       reject(err)
     }
@@ -50,23 +76,23 @@ export function startOAuthServer(): Promise<{
       await closeServer()
 
       const app = express()
+      timeoutId = setTimeout(async () => {
+        await closeServer()
+        safeReject(new Error('OAuth callback timed out.'))
+      }, OAUTH_TIMEOUT_MS)
 
       app.get('/callback', async (req: Request, res: Response) => {
         const codeParam = req.query.code?.toString()
         const stateParam = req.query.state
 
         const code = Array.isArray(codeParam) ? codeParam[0] : (codeParam as string | undefined)
-        const provider = Array.isArray(stateParam)
-          ? stateParam[0]
-          : (stateParam as string | undefined)
+        const state = Array.isArray(stateParam) ? stateParam[0] : (stateParam as string | undefined)
+        const isValidState = state === expectedState
 
-        const isValidProvider =
-          provider === 'microsoft' || provider === 'discord' || provider === 'elyby'
-
-        if (!code || !isValidProvider) {
+        if (!code || !isValidState) {
           res.redirect('https://grubielauncher.com/auth/failed')
           await closeServer()
-          return safeReject(new Error('Invalid request. Missing code or provider.'))
+          return safeReject(new Error('Invalid request. Missing code or OAuth state.'))
         }
 
         res.redirect('https://grubielauncher.com/auth/success')
@@ -75,7 +101,7 @@ export function startOAuthServer(): Promise<{
 
         safeResolve({
           code,
-          provider
+          provider: expectedProvider
         })
       })
 

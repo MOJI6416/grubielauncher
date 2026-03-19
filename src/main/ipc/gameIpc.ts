@@ -1,15 +1,5 @@
-import { ChildProcessWithoutNullStreams } from 'child_process'
 import { closeGame, installServer, runGame, runJar } from '../utilities/game'
 import { handleSafe } from '../utilities/ipc'
-
-export const gameProcesses = new Map<
-  string,
-  {
-    process: ChildProcessWithoutNullStreams
-    serverPort: number | null
-    accessToken: string
-  }
->()
 
 
 export function registerGameIpc() {
@@ -26,7 +16,7 @@ export function registerGameIpc() {
   )
 
   handleSafe<boolean>('game:closeGame', false, async (_event, versionName: string, instance: number) => {
-    closeGame(versionName, instance)
+    await closeGame(versionName, instance)
     return true
   })
 

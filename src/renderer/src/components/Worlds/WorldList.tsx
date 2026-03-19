@@ -162,10 +162,7 @@ export function WorldList({
             }, [canPlay, isOwner, world.isDownloaded, world.icon]);
 
             return (
-              <Card
-                key={world.path || world.folderName || world.name}
-                className="border-white/20 border-1"
-              >
+              <Card key={world.path || world.folderName || world.name}>
                 <CardBody>
                   <div className="flex items-center gap-3 justify-between min-w-0">
                     <div className="flex items-center space-x-2 min-w-0">
