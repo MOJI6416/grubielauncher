@@ -34,6 +34,15 @@ function closeServer(): Promise<void> {
   })
 }
 
+export async function stopOAuthServer(reason = 'OAuth server was stopped.'): Promise<void> {
+  const rejectPending = pendingReject
+  pendingReject = null
+
+  await closeServer()
+
+  rejectPending?.(new Error(reason))
+}
+
 export function startOAuthServer(expectedState: string): Promise<{
   code: string
   provider: 'microsoft' | 'discord' | 'elyby'

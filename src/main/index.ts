@@ -6,11 +6,14 @@ import { lanShareService } from "./share";
 import { createMainWindow, mainWindow } from "./windows/mainWindow";
 import { createUpdaterWindow, updaterWindow } from "./windows/updaterWindow";
 import { rpc } from "./rpc";
+import { stopOAuthServer } from "./utilities/authServer";
 import path from "path";
 import fs from "fs-extra";
 
 const gotTheLock = app.requestSingleInstanceLock();
-let isShareShutdownInProgress = false;
+const APP_SHUTDOWN_TIMEOUT_MS = 5000;
+let isAppShutdownInProgress = false;
+let appShutdownTimeout: NodeJS.Timeout | null = null;
 void gotTheLock;
 
 if (!gotTheLock) {
@@ -74,18 +77,30 @@ if (!gotTheLock) {
   });
 
   app.on("before-quit", (event) => {
-    if (isShareShutdownInProgress) {
+    if (isAppShutdownInProgress) {
       return;
     }
 
-    isShareShutdownInProgress = true;
+    isAppShutdownInProgress = true;
     event.preventDefault();
 
-    void Promise.allSettled([lanShareService.dispose(), rpc.dispose()]).finally(
-      () => {
-        app.quit();
-      },
-    );
+    appShutdownTimeout = setTimeout(() => {
+      console.warn("[Shutdown] Cleanup timed out, forcing app exit.");
+      app.exit(0);
+    }, APP_SHUTDOWN_TIMEOUT_MS);
+
+    void Promise.allSettled([
+      lanShareService.dispose(),
+      rpc.dispose(),
+      stopOAuthServer("Application shutdown."),
+    ]).finally(() => {
+      if (appShutdownTimeout) {
+        clearTimeout(appShutdownTimeout);
+        appShutdownTimeout = null;
+      }
+
+      app.quit();
+    });
   });
 
   app.on("window-all-closed", () => {
