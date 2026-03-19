@@ -269,11 +269,10 @@ export function LanShareModal({
 
                 <ButtonGroup className="w-full">
                   <Button
-                    className={`flex-1 justify-center ${
-                      selectedVisibility === "public"
-                        ? "!border-primary-300 !bg-primary/30 !text-primary-50 shadow-lg shadow-primary/20"
-                        : "text-default-300 hover:!bg-white/10"
-                    }`}
+                    className="flex-1"
+                    color={
+                      selectedVisibility === "public" ? "primary" : "default"
+                    }
                     variant="flat"
                     isDisabled={
                       isPlainShareBlocked ||
@@ -286,11 +285,10 @@ export function LanShareModal({
                     {t("share.public")}
                   </Button>
                   <Button
-                    className={`flex-1 justify-center ${
-                      selectedVisibility === "friends"
-                        ? "!border-primary-300 !bg-primary/30 !text-primary-50 shadow-lg shadow-primary/20"
-                        : "text-default-300 hover:!bg-white/10"
-                    }`}
+                    className="flex-1"
+                    color={
+                      selectedVisibility === "friends" ? "primary" : "default"
+                    }
                     variant="flat"
                     isDisabled={
                       isPlainShareBlocked ||
@@ -331,6 +329,7 @@ export function LanShareModal({
 
               <div className="flex items-center justify-end gap-2">
                 <Button
+                  variant="flat"
                   color={primaryAction.color}
                   isLoading={primaryAction.isLoading}
                   isDisabled={primaryAction.isDisabled}

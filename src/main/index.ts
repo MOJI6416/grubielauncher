@@ -13,82 +13,84 @@ const gotTheLock = app.requestSingleInstanceLock();
 let isShareShutdownInProgress = false;
 void gotTheLock;
 
-// if (!gotTheLock) {
-//   app.quit();
-// } else {
-app.on("second-instance", () => {
-  if (mainWindow) {
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.focus();
-  }
-});
-
-app.whenReady().then(async () => {
-  electronApp.setAppUserModelId("com.grubielauncher");
-
-  const appdata = app.getPath("appData");
-  const launcherPath = path.join(appdata, ".grubielauncher");
-  await fs.ensureDir(launcherPath);
-
-  app.on("browser-window-created", (_, window) => {
-    optimizer.watchWindowShortcuts(window);
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
   });
 
-  Object.values(ipcHandlers).forEach((register) => register());
+  app.whenReady().then(async () => {
+    electronApp.setAppUserModelId("com.grubielauncher");
 
-  if (is.dev) {
-    createMainWindow();
-    return;
-  }
+    const appdata = app.getPath("appData");
+    const launcherPath = path.join(appdata, ".grubielauncher");
+    await fs.ensureDir(launcherPath);
 
-  createUpdaterWindow();
+    app.on("browser-window-created", (_, window) => {
+      optimizer.watchWindowShortcuts(window);
+    });
 
-  autoUpdater.on("download-progress", (p) => {
-    updaterWindow?.webContents.send(
-      "updater:downloadProgress",
-      p.percent.toFixed(1),
+    Object.values(ipcHandlers).forEach((register) => register());
+
+    if (is.dev) {
+      createMainWindow();
+      return;
+    }
+
+    createUpdaterWindow();
+
+    autoUpdater.on("download-progress", (p) => {
+      updaterWindow?.webContents.send(
+        "updater:downloadProgress",
+        p.percent.toFixed(1),
+      );
+    });
+
+    autoUpdater.on("update-downloaded", () => {
+      autoUpdater.quitAndInstall();
+    });
+
+    autoUpdater.on("update-not-available", () => {
+      updaterWindow?.close();
+      createMainWindow();
+    });
+
+    autoUpdater.on("error", () => {
+      updaterWindow?.close();
+      createMainWindow();
+    });
+
+    autoUpdater.checkForUpdates();
+  });
+
+  app.on("activate", () => {
+    if (process.platform === "darwin" && !mainWindow) {
+      createMainWindow();
+    }
+  });
+
+  app.on("before-quit", (event) => {
+    if (isShareShutdownInProgress) {
+      return;
+    }
+
+    isShareShutdownInProgress = true;
+    event.preventDefault();
+
+    void Promise.allSettled([lanShareService.dispose(), rpc.dispose()]).finally(
+      () => {
+        app.quit();
+      },
     );
   });
 
-  autoUpdater.on("update-downloaded", () => {
-    autoUpdater.quitAndInstall();
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") {
+      app.quit();
+    }
   });
-
-  autoUpdater.on("update-not-available", () => {
-    updaterWindow?.close();
-    createMainWindow();
-  });
-
-  autoUpdater.on("error", () => {
-    updaterWindow?.close();
-    createMainWindow();
-  });
-
-  autoUpdater.checkForUpdates();
-});
-
-app.on("activate", () => {
-  if (process.platform === "darwin" && !mainWindow) {
-    createMainWindow();
-  }
-});
-
-app.on("before-quit", (event) => {
-  if (isShareShutdownInProgress) {
-    return;
-  }
-
-  isShareShutdownInProgress = true;
-  event.preventDefault();
-
-  void Promise.allSettled([lanShareService.dispose(), rpc.dispose()]).finally(() => {
-    app.quit();
-  });
-});
-
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
-});
-// }
+}
