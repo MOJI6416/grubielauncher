@@ -336,9 +336,10 @@
     "publicModpack": "Публічна збірка",
     "updateLogo": "Оновити логотип",
     "selectTags": "Оберіть теги",
-    "versionShareDel": "Видалити збірку з сервера"
-  },
-  "app": {
+    "versionShareDel": "Видалити збірку з сервера",
+    "ownerTooltip": "Власник: {{nickname}}"
+    },
+    "app": {
     "starting": "Запуск гри...",
     "startupError": "Помилка запуску",
     "newsFeed": "Новини",

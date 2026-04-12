@@ -42,6 +42,8 @@ import {
 } from "@/shared/config";
 import { IAuthResponse } from "@/types/Auth";
 import { Confirmation } from "./Modals/Confirmation";
+import { MiniSkinWidget } from "./MiniSkinWidget";
+import { ensureAccountSession } from "@renderer/utilities/accountSession";
 
 export function Accounts() {
   const [modalSelectIsOpen, setIsOpenModalSelect] = useState(false);
@@ -330,7 +332,12 @@ export function Accounts() {
                   ? "cursor-pointer"
                   : ""
               }`}
-              onClick={async () => {
+              onClick={async (event) => {
+                const target = event.target as HTMLElement | null;
+                if (target?.closest("[data-account-click-ignore='true']")) {
+                  return;
+                }
+
                 if (
                   isLoading ||
                   selectedAccount.type == "plain" ||
@@ -344,8 +351,20 @@ export function Accounts() {
                 setLoadingType("user");
 
                 try {
+                  const accountForRequest = authData
+                    ? (
+                        await ensureAccountSession({
+                          accounts: accountsSafe,
+                          authData,
+                          selectedAccount,
+                          setAccounts,
+                          setSelectedAccount,
+                        })
+                      ).account
+                    : selectedAccount;
+
                   const user = await api.backend.getUser(
-                    selectedAccount.accessToken,
+                    accountForRequest.accessToken || "",
                     authData.sub,
                   );
                   if (user) {
@@ -367,9 +386,10 @@ export function Accounts() {
                 src={selectedAccount.image}
                 name={selectedAccount.nickname}
               />
-              <p className="text-xl font-semibold truncate flex-grow">
+              <p className="text-xl font-semibold truncate min-w-0 flex-grow">
                 {selectedAccount.nickname}
               </p>
+              <MiniSkinWidget />
               {isLoading && loadingType == "user" && <Spinner size="sm" />}
             </div>
 

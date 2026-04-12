@@ -11,3 +11,38 @@ body {
   min-height: 100vh;
   min-width: 100vw;
 }
+
+.skin-marquee {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.skin-marquee__single {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skin-marquee__track {
+  display: flex;
+  width: max-content;
+  animation: skin-marquee-slide 8s linear infinite;
+}
+
+.skin-marquee__item {
+  display: inline-block;
+  padding-right: 1.5rem;
+  white-space: nowrap;
+}
+
+@keyframes skin-marquee-slide {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}

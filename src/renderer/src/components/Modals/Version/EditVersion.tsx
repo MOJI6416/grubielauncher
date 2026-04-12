@@ -41,7 +41,7 @@ import {
   Trash,
   X,
 } from "lucide-react";
-import { loaders } from "@renderer/components/Loaders";
+import { LoaderLabel } from "@renderer/components/Loaders";
 import { SiCurseforge, SiModrinth } from "react-icons/si";
 import { VersionDiffence } from "@renderer/components/Versions";
 import { IServerOption } from "@/types/Server";
@@ -629,11 +629,7 @@ export function EditVersion({
                     <Chip variant="flat">
                       <div className="flex items-center gap-1">
                         <Cpu size={20} />
-                        <p
-                          className={loaders[version.version.loader.name].style}
-                        >
-                          {loaders[version.version.loader.name].name}
-                        </p>
+                        <LoaderLabel loader={version.version.loader.name} />
                         {version.version.loader.name !== "vanilla" && (
                           <p>({version.version.loader.version?.id})</p>
                         )}

@@ -45,6 +45,7 @@ import { formatDate, formatTime } from "@renderer/utilities/date";
 import axios from "axios";
 import { IModpack } from "@/types/Backend";
 import { OwnModpacks } from "./OwnModpacks";
+import { ensureAccountSession } from "@renderer/utilities/accountSession";
 
 const api = window.api;
 
@@ -266,36 +267,13 @@ export default function AccountInfo({
 
     startLoading("manageSkins");
     try {
-      if (
-        user.platform === "microsoft" &&
-        authData.auth.expiresAt &&
-        authData.auth.refreshToken
-      ) {
-        const { expiresAt, refreshToken } = authData.auth;
-
-        if (Date.now() > expiresAt) {
-          const authUser = await api.auth.microsoftRefresh(
-            refreshToken,
-            authData.sub,
-          );
-          if (!authUser) throw new Error("Refresh failed");
-
-          const newData = { ...localAccount, ...authUser };
-          const updatedAccounts = accounts.map((a: ILocalAccount) =>
-            a.nickname === localAccount.nickname && a.type === localAccount.type
-              ? newData
-              : a,
-          );
-
-          setLocalAccount(newData);
-          setAccounts(updatedAccounts);
-
-          await api.accounts.save(
-            updatedAccounts,
-            `${newData.type}_${newData.nickname}`,
-          );
-        }
-      }
+      await ensureAccountSession({
+        accounts,
+        authData,
+        selectedAccount: localAccount,
+        setAccounts,
+        setSelectedAccount: setLocalAccount,
+      });
 
       setIsManageSkins(true);
     } catch {
@@ -309,7 +287,6 @@ export default function AccountInfo({
     authData,
     localAccount,
     accounts,
-    paths.launcher,
     setAccounts,
     setLocalAccount,
     t,

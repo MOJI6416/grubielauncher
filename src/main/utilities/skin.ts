@@ -4,6 +4,29 @@ import { Backend } from '../services/Backend'
 import { createCanvas, loadImage } from 'canvas'
 import fs from 'fs'
 
+interface IMicrosoftProfileTexture {
+  id: string
+  state?: string
+  url?: string
+}
+
+interface IMicrosoftProfile {
+  id: string
+  name: string
+  skins?: IMicrosoftProfileTexture[]
+  capes?: IMicrosoftProfileTexture[]
+}
+
+function pickActiveTexture(items?: IMicrosoftProfileTexture[]) {
+  if (!items?.length) return undefined
+
+  return (
+    items.find(item => item.url && item.state?.toUpperCase() === 'ACTIVE') ??
+    items.find(item => item.url && item.state?.toUpperCase() === 'EQUIPPED') ??
+    items.find(item => item.url)
+  )
+}
+
 export async function getSkin(
   type: string,
   uuid: string,
@@ -12,6 +35,27 @@ export async function getSkin(
 ): Promise<ISkinData | null> {
   if (type == 'microsoft') {
     try {
+      if (accessToken) {
+        const profileResponse = await axios.get<IMicrosoftProfile>(
+          'https://api.minecraftservices.com/minecraft/profile',
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`
+            }
+          }
+        )
+
+        const activeSkin = pickActiveTexture(profileResponse.data.skins)
+        if (activeSkin?.url) {
+          return {
+            skin: activeSkin.url,
+            cape: pickActiveTexture(profileResponse.data.capes)?.url
+          }
+        }
+      }
+
+      if (!uuid) return null
+
       const response = await axios.get<IPlayerSkin>(
         `https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?timestamp=${new Date().getTime()}`
       )

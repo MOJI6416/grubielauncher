@@ -31,6 +31,8 @@ export function registerSkinsIpc() {
         manager = new SkinsManager(launcherPath, platform, userId, nickname, accessToken)
         await manager.load()
         skinsManagers.set(key, manager)
+      } else {
+        manager.refreshSession(nickname, accessToken)
       }
 
       return manager.getData()

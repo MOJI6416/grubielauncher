@@ -1,6 +1,12 @@
 import { IAuth } from '@/types/Account'
+import { IRefreshTokenResponse } from '@/types/Auth'
 import { jwtDecode } from 'jwt-decode'
-import { Backend } from '../services/Backend'
+import {
+  refreshDiscordToken,
+  refreshElyByToken,
+  refreshMicrosoftToken
+} from '../services/Auth'
+import { readAccountsConfig } from './accounts'
 
 function isTokenExpired(token: string) {
   try {
@@ -48,8 +54,27 @@ export async function checkToken(token: string) {
   }
 
   try {
-    const backend = new Backend(token)
-    const newToken = await backend.login(sub, auth)
+    const accounts = await readAccountsConfig()
+    const account = accounts?.accounts.find((entry) => entry.accessToken === token)
+    const refreshToken = auth?.refreshToken
+
+    if (!account || typeof refreshToken !== 'string' || refreshToken.trim() === '') {
+      return null
+    }
+
+    let refreshResult: IRefreshTokenResponse | null = null
+
+    if (account.type === 'microsoft') {
+      refreshResult = await refreshMicrosoftToken(refreshToken, sub)
+    } else if (account.type === 'elyby') {
+      refreshResult = await refreshElyByToken(refreshToken, sub)
+    } else if (account.type === 'discord') {
+      refreshResult = await refreshDiscordToken(refreshToken, sub)
+    } else {
+      return null
+    }
+
+    const newToken = refreshResult?.accessToken
     if (!newToken) return null
 
     return {

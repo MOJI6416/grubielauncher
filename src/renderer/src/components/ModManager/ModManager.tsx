@@ -12,7 +12,7 @@ import {
   IAddedLocalProject,
   IUpdateProject,
 } from "@/types/ModManager";
-import { loaders } from "../Loaders";
+import { LoaderLabel } from "../Loaders";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SiCurseforge, SiModrinth } from "react-icons/si";
 import SVG from "react-inlinesvg";
@@ -779,7 +779,16 @@ export function ModManager({
                         size="sm"
                         className="w-36 min-w-36"
                         isDisabled={isLoading}
-                        selectedKeys={[loader ? loader : ""]}
+                        renderValue={(items) =>
+                          items.map((item) => (
+                            <LoaderLabel
+                              key={String(item.key)}
+                              loader={String(item.key)}
+                              className="max-w-full"
+                            />
+                          ))
+                        }
+                        selectedKeys={loader ? [loader] : []}
                         onChange={async (event) => {
                           clearDebounce();
                           const l = event.target.value as Loader;
@@ -799,17 +808,17 @@ export function ModManager({
                           });
                         }}
                       >
-                        <SelectItem key="forge">
-                          {loaders["forge"].name}
+                        <SelectItem key="forge" textValue="Forge">
+                          <LoaderLabel loader="forge" />
                         </SelectItem>
-                        <SelectItem key="neoforge">
-                          {loaders["neoforge"].name}
+                        <SelectItem key="neoforge" textValue="NeoForge">
+                          <LoaderLabel loader="neoforge" />
                         </SelectItem>
-                        <SelectItem key="fabric">
-                          {loaders["fabric"].name}
+                        <SelectItem key="fabric" textValue="Fabric">
+                          <LoaderLabel loader="fabric" />
                         </SelectItem>
-                        <SelectItem key="quilt">
-                          {loaders["quilt"].name}
+                        <SelectItem key="quilt" textValue="Quilt">
+                          <LoaderLabel loader="quilt" />
                         </SelectItem>
                       </Select>
                     </>
@@ -1542,14 +1551,16 @@ export function ModManager({
                   );
                 }}
               >
-                <ModalContent>
-                  <ModalHeader>{t("common.installation")}</ModalHeader>
+                <ModalContent className="h-[min(44rem,calc(100vh-8rem))] max-h-[calc(100vh-8rem)]">
+                  <ModalHeader className="shrink-0">
+                    {t("common.installation")}
+                  </ModalHeader>
 
-                  <ModalBody>
+                  <ModalBody className="min-h-0 overflow-hidden">
                     {project ? (
-                      <div className="flex space-x-4 justify-between">
+                      <div className="flex h-full min-h-0 justify-between gap-4 overflow-hidden">
                         <div
-                          className={`flex flex-col gap-4 min-w-0 ${project.body != "" ? "w-4/12" : ""}`}
+                          className={`flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto pr-1 ${project.body != "" ? "w-4/12" : "flex-1"}`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             {project.iconUrl && (
@@ -2272,14 +2283,16 @@ export function ModManager({
                         </div>
 
                         {project.body != "" && (
-                          <div className="flex flex-col w-8/12 space-y-2 h-full">
-                            <ScrollShadow
-                              className={`${project.gallery.length > 0 ? "max-h-[355px]" : "max-h-[435px]"} pr-1`}
-                            >
+                          <div className="flex min-h-0 w-8/12 flex-col gap-2">
+                            <ScrollShadow className="min-h-0 flex-1 pr-1">
                               <ModBody body={project.body} />
                             </ScrollShadow>
 
-                            <GalleryCarousel gallery={project.gallery} />
+                            {project.gallery.length > 0 && (
+                              <div className="shrink-0">
+                                <GalleryCarousel gallery={project.gallery} />
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

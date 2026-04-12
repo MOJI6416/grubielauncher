@@ -142,7 +142,10 @@ export function FriendItem({
               </DropdownItem>
             ) : null}
 
-            {friend.serverAddress || activeShare || version ? (
+            {friend.versionCode ||
+            version ||
+            friend.serverAddress ||
+            activeShare ? (
               <DropdownItem
                 key="join"
                 className="text-secondary"

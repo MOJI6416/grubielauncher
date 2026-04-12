@@ -550,11 +550,12 @@ export function AddVersion({
                   importData ||
                   importModpack) && (
                   <>
-                    <div className="m-auto">
+                    <div className="w-full">
                       <Loaders
                         isDisabled={isDownloadedVersion}
                         select={(loader) => setLoader(loader)}
                         isLoading={isLoading}
+                        label={t("versions.loader")}
                         loader={loader || "vanilla"}
                       />
                     </div>

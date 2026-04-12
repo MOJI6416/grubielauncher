@@ -1,7 +1,7 @@
 const api = window.api;
 
 import { useMemo, useRef, useState } from "react";
-import { loaders } from "./Loaders";
+import { LoaderLabel } from "./Loaders";
 
 import { IServer as IServerSM } from "@/types/ServersList";
 import { useTranslation } from "react-i18next";
@@ -35,9 +35,14 @@ import {
   CardBody,
   Image,
   ScrollShadow,
+  Tooltip,
 } from "@heroui/react";
 import { RunGameParams } from "@renderer/App";
-import { checkDiffenceUpdateData, isOwner } from "@renderer/utilities/version";
+import {
+  checkDiffenceUpdateData,
+  isOwner,
+  parseVersionOwner,
+} from "@renderer/utilities/version";
 
 export interface IProgress {
   value: number;
@@ -126,17 +131,15 @@ export function Versions({
               );
 
               const ownerOk = isOwner(vc.version.owner, account);
-              const ownerParts = vc.version.owner?.split("_");
+              const ownerInfo = parseVersionOwner(vc.version.owner);
               const ownerAvatar =
-                vc.version.owner && !ownerOk && ownerParts?.length === 2
+                ownerInfo && !ownerOk
                   ? accounts?.find(
                       (a) =>
-                        a.type == ownerParts[0] && a.nickname == ownerParts[1],
+                        a.type == ownerInfo.type &&
+                        a.nickname == ownerInfo.nickname,
                     )
                   : undefined;
-
-              const loaderInfo =
-                loaders[vc.version.loader.name] || loaders["vanilla"];
 
               return (
                 <Card
@@ -195,12 +198,21 @@ export function Versions({
                   <CardBody>
                     <div className="flex items-center justify-between">
                       <div className="flex gap-4 items-center min-w-0">
-                        {ownerAvatar && (
-                          <Avatar
-                            src={ownerAvatar.image}
-                            name={ownerAvatar.nickname}
-                            size="sm"
-                          />
+                        {!ownerOk && ownerInfo && (
+                          <Tooltip
+                            delay={300}
+                            content={t("versions.ownerTooltip", {
+                              nickname: ownerInfo.nickname,
+                            })}
+                          >
+                            <div className="flex-shrink-0 rounded-full border-2 border-warning-400 p-[1px]">
+                              <Avatar
+                                src={ownerAvatar?.image}
+                                name={ownerInfo.nickname}
+                                size="sm"
+                              />
+                            </div>
+                          </Tooltip>
                         )}
                         {vc.version.image && (
                           <Image
@@ -211,9 +223,11 @@ export function Versions({
                           />
                         )}
                         <p className="truncate flex-grow">{vc.version.name}</p>
-                        <p className={loaderInfo?.style || ""}>
-                          {loaderInfo?.name || vc.version.loader.name}
-                        </p>
+                        <LoaderLabel
+                          loader={vc.version.loader.name}
+                          className="flex-shrink-0"
+                          textClassName="whitespace-nowrap"
+                        />
                         <p>{vc.version.version.id}</p>
                       </div>
 

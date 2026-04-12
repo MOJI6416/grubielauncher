@@ -71,6 +71,11 @@ export type LoadingType =
   | "friendRemove"
   | "chatModpack";
 
+function getFriendLastActiveTime(friend: IFriend) {
+  const lastActive = new Date(friend.user.lastActive).getTime();
+  return Number.isNaN(lastActive) ? 0 : lastActive;
+}
+
 export function Friends({
   runGame,
 }: {
@@ -589,7 +594,13 @@ export function Friends({
       version: Version | undefined,
       activeShare: ActiveFriendShare | undefined,
     ) => {
-      if (!friend?.serverAddress && !activeShare && !version) return;
+      if (
+        !friend?.versionCode &&
+        !version &&
+        !friend?.serverAddress &&
+        !activeShare
+      )
+        return;
 
       let address = friend?.serverAddress;
 
@@ -631,13 +642,15 @@ export function Friends({
         return;
       }
 
-      if (!friend?.versionCode) {
+      if (!friend?.versionCode && address) {
         addToast({
           color: "warning",
           title: t("share.selectVersionToJoin"),
         });
         return;
       }
+
+      if (!friend?.versionCode) return;
 
       const modpackData = await api.backend.getModpack(
         account?.accessToken || "",
@@ -679,6 +692,22 @@ export function Friends({
     () => versions.filter((v) => v.version.shareCode),
     [versions],
   );
+
+  const sortedFriends = useMemo(() => {
+    return [...friends].sort((a, b) => {
+      if (a.isOnline !== b.isOnline) {
+        return a.isOnline ? -1 : 1;
+      }
+
+      const lastActiveDiff =
+        getFriendLastActiveTime(b) - getFriendLastActiveTime(a);
+      if (lastActiveDiff !== 0) {
+        return lastActiveDiff;
+      }
+
+      return a.user.nickname.localeCompare(b.user.nickname);
+    });
+  }, [friends]);
 
   return (
     <>
@@ -754,9 +783,9 @@ export function Friends({
               {!(isLoading && loadingType === "general") &&
               !isRequests &&
               socket?.connected ? (
-                friends.length > 0 ? (
+                sortedFriends.length > 0 ? (
                   <div className="flex flex-col space-y-4">
-                    {friends.map((f) => {
+                    {sortedFriends.map((f) => {
                       const version = f.versionCode
                         ? versions.find(
                             (v) => v.version.shareCode === f.versionCode,

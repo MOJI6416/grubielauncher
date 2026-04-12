@@ -321,6 +321,7 @@
     "shareGameSettings": "Share game settings",
     "copyRelativePath": "Copy command with relative path",
     "copyAbsolutePath": "Copy command with absolute path",
+    "ownerTooltip": "Owner: {{nickname}}",
     "synchronizeDescription": "Download the latest build version from the server",
     "synchronize": "Synchronize",
     "shareMods": "Share mods",

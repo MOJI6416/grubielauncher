@@ -3,7 +3,9 @@ export interface ISkinsConfig {
 }
 
 export interface ISkinEntry {
+  hash: string
   capeId?: string
+  remoteId?: string
   model: 'slim' | 'classic'
   name: string
   id: string
@@ -46,6 +48,8 @@ export interface IMojangProfile {
 
 export interface ICape {
   id: string
+  hash: string
+  remoteId?: string
   alias: string
   url: string
   cape: string

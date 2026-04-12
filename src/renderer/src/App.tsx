@@ -31,7 +31,7 @@ import {
 import { Confirmation } from "./components/Modals/Confirmation";
 import { addToast } from "@heroui/react";
 import { LANGUAGES, TSettings } from "@/types/Settings";
-import { IAccountConf } from "@/types/Account";
+import { IAccountConf, IAuth } from "@/types/Account";
 import { IServer } from "@/types/ServersList";
 import { NewsFeed } from "./components/NewsFeed";
 import { IConsole } from "@/types/Console";
@@ -50,8 +50,9 @@ import { Mods } from "./classes/Mods";
 import { DownloaderInfo } from "@/types/Downloader";
 import { DownloadProgress } from "./components/DownloadProgress";
 import { BACKEND_URL } from "@/shared/config";
-import { IRefreshTokenResponse } from "@/types/Auth";
 import { getShareErrorText } from "./utilities/share";
+import { ensureAccountSession } from "./utilities/accountSession";
+import { jwtDecode } from "jwt-decode";
 
 const api = window.api;
 const MAX_CONSOLE_MESSAGES = 1000;
@@ -656,52 +657,23 @@ function App() {
     let account = a0;
     let currentAccounts = accountsRef.current;
     const ad = authDataRef.current;
+    let runtimeAuthData = ad;
 
     try {
-      if (ad) {
-        const { expiresAt } = ad.auth;
+      if (ad && account.type !== "plain") {
+        const refreshed = await ensureAccountSession({
+          accounts: currentAccounts,
+          authData: ad,
+          selectedAccount: account,
+          setAccounts,
+          setSelectedAccount,
+        });
 
-        if (
-          (account.type != "discord" && Date.now() > expiresAt) ||
-          (account.type == "discord" && Date.now() / 1000 > ad.exp)
-        ) {
-          let authUser: IRefreshTokenResponse | null = null;
+        account = refreshed.account;
+        currentAccounts = refreshed.accounts;
 
-          if (account.type == "microsoft")
-            authUser = await api.auth.microsoftRefresh(
-              ad.auth.refreshToken,
-              ad.sub,
-            );
-          else if (account.type == "elyby")
-            authUser = await api.auth.elybyRefresh(
-              ad.auth.refreshToken,
-              ad.sub,
-            );
-          else if (account.type == "discord") {
-            await api.backend.getUser(account.accessToken || "", ad.sub);
-          }
-
-          if (authUser && account.type !== "discord") {
-            const accs = accountsRef.current;
-            const idx = accs.findIndex(
-              (x) => x.type === account.type && x.nickname === account.nickname,
-            );
-
-            if (idx !== -1) {
-              account = { ...account, ...authUser };
-              const newAccounts = [...accs];
-              newAccounts[idx] = account;
-              currentAccounts = newAccounts;
-
-              setAccounts(newAccounts);
-              setSelectedAccount(account);
-
-              await api.accounts.save(
-                newAccounts,
-                `${account.type}_${account.nickname}`,
-              );
-            }
-          }
+        if (refreshed.refreshed && account.accessToken) {
+          runtimeAuthData = jwtDecode<IAuth>(account.accessToken);
         }
       }
 
@@ -794,7 +766,13 @@ function App() {
         return { consoles: [...prev.consoles, newConsole] };
       });
 
-      await launchVersion.run(account, settings, ad, _instance, quick);
+      await launchVersion.run(
+        account,
+        settings,
+        runtimeAuthData,
+        _instance,
+        quick,
+      );
 
       friendSocketRef.current?.emit("friendUpdate", {
         versionName: launchVersion.version.name,

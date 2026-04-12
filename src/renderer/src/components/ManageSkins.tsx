@@ -20,11 +20,65 @@ import {
 import { accountAtom, authDataAtom, pathsAtom } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
 import { FilePlus2, Link, Mars, Trash, User, Venus } from "lucide-react";
-import { useEffect, useMemo, useState, useCallback, memo } from "react";
+import { useEffect, useMemo, useState, useCallback, memo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import ReactSkinview3d from "react-skinview3d";
 
 const api = window.api;
+
+const ScrollingText = memo(({ text }: { text: string }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      const containerWidth = containerRef.current?.clientWidth ?? 0;
+      const textWidth = textRef.current?.scrollWidth ?? 0;
+      setIsOverflowing(textWidth > containerWidth);
+    };
+
+    checkOverflow();
+
+    const resizeObserver = new ResizeObserver(checkOverflow);
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    if (textRef.current) {
+      resizeObserver.observe(textRef.current);
+    }
+
+    window.addEventListener("resize", checkOverflow);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", checkOverflow);
+    };
+  }, [text]);
+
+  return (
+    <div ref={containerRef} className="skin-marquee">
+      {isOverflowing ? (
+        <div className="skin-marquee__track">
+          <span ref={textRef} className="skin-marquee__item">
+            {text}
+          </span>
+          <span className="skin-marquee__item" aria-hidden="true">
+            {text}
+          </span>
+        </div>
+      ) : (
+        <span ref={textRef} className="skin-marquee__single">
+          {text}
+        </span>
+      )}
+    </div>
+  );
+});
+
+ScrollingText.displayName = "ScrollingText";
 
 const SkinCard = memo(
   ({
@@ -33,110 +87,51 @@ const SkinCard = memo(
     isActive,
     isLoading,
     actionLoading,
-    inputValue,
-    skinsData,
     onSelectSkin,
-    onRename,
-    onDelete,
-    t,
+    onOpenContextMenu,
   }: {
     skin: ISkinEntry;
     isSelected: boolean;
     isActive: boolean;
     isLoading: boolean;
     actionLoading: string | null;
-    inputValue: string;
-    skinsData: SkinsData;
     onSelectSkin: (id: string) => void;
-    onRename: (id: string) => void;
-    onDelete: (id: string, type: "skin" | "cape") => void;
-    t: any;
+    onOpenContextMenu: (skinId: string, x: number, y: number) => void;
   }) => {
-    const [contextMenu, setContextMenu] = useState<{
-      x: number;
-      y: number;
-    } | null>(null);
-
     const handleRightClick = useCallback((e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      setContextMenu({ x: e.clientX, y: e.clientY });
-    }, []);
-
-    const closeContextMenu = useCallback(() => {
-      setContextMenu(null);
-    }, []);
-
-    useEffect(() => {
-      if (contextMenu) {
-        document.addEventListener("click", closeContextMenu);
-        return () => document.removeEventListener("click", closeContextMenu);
-      }
-      return undefined;
-    }, [contextMenu, closeContextMenu]);
+      onOpenContextMenu(skin.id, e.clientX, e.clientY);
+    }, [onOpenContextMenu, skin.id]);
 
     const handlePress = useCallback(() => {
       onSelectSkin(skin.id);
     }, [onSelectSkin, skin.id]);
 
-    const handleRename = useCallback(() => {
-      closeContextMenu();
-      onRename(skin.id);
-    }, [onRename, skin.id, closeContextMenu]);
-
-    const handleDelete = useCallback(() => {
-      closeContextMenu();
-      onDelete(skin.id, "skin");
-    }, [onDelete, skin.id, closeContextMenu]);
-
-    const isRenameDisabled =
-      inputValue.trim() === "" ||
-      skinsData?.skins.skins.some((s) => s.name === inputValue.trim());
-    const isDeleteDisabled = skin.id === skinsData?.activeSkin;
-
     return (
-      <div onContextMenu={handleRightClick}>
+      <div data-skin-card="true">
         <Card
+          data-skin-card="true"
           isDisabled={isLoading || actionLoading !== null}
           isPressable
           onPress={handlePress}
-          className={`w-28 break-all border ${isActive ? "border-success-200" : isSelected ? "border-primary-200" : "border-white/10"}`}
+          onContextMenu={handleRightClick}
+          className={`w-28 overflow-hidden border ${isActive ? "border-success-200" : isSelected ? "border-primary-200" : "border-white/10"}`}
         >
           <CardBody>
-            <div className="flex flex-col items-center space-y-2">
+            <div className="flex flex-col items-center gap-2 overflow-hidden">
               <Image
                 src={skin.character || skin.url}
                 width={64}
                 height={128}
                 loading="lazy"
               />
-              <p className="text-xs">{skin.name}</p>
+              <div className="w-full text-xs">
+                <ScrollingText text={skin.name} />
+              </div>
             </div>
           </CardBody>
         </Card>
-
-        {contextMenu && (
-          <div
-            className="fixed z-50 bg-content1 rounded-medium shadow-large py-1 min-w-[160px]"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="block w-full text-left px-4 py-2 text-small border bg-black/20 border-white/10 backdrop-blur-sm hover:bg-default-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleRename}
-              disabled={isRenameDisabled}
-            >
-              {t("manageSkins.rename")}
-            </button>
-            <button
-              className="block w-full text-left px-4 py-2 text-small border bg-black/20 border-white/10 backdrop-blur-sm text-danger hover:bg-danger-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleDelete}
-              disabled={isDeleteDisabled}
-            >
-              {t("manageSkins.deleteSkin")}
-            </button>
-          </div>
-        )}
       </div>
     );
   },
@@ -150,6 +145,11 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     "apply" | "byFile" | "reset" | "byLink" | "byPlayer" | null
   >(null);
   const [skinsData, setSkinsData] = useState<SkinsData | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    skinId: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [skinType, setSkinType] = useState<"skin" | "cape">("skin");
 
@@ -158,6 +158,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
   const [authData] = useAtom(authDataAtom);
 
   const { t } = useTranslation();
+  const isMicrosoftAccount = selectedAccount?.type === "microsoft";
 
   useEffect(() => {
     const loadSkins = async () => {
@@ -279,7 +280,9 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
   }, [authData, selectedAccount, refreshSkins]);
 
   const handleImportByUrl = useCallback(async () => {
-    if (!authData || !selectedAccount || !inputValue.trim()) return;
+    if (!authData || !selectedAccount || !inputValue.trim()) {
+      return;
+    }
     setActionLoading("byLink");
     try {
       await api.skins.importByUrl(
@@ -297,7 +300,9 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
   }, [authData, selectedAccount, inputValue, skinType, refreshSkins]);
 
   const handleImportByNickname = useCallback(async () => {
-    if (!authData || !selectedAccount || !inputValue.trim()) return;
+    if (!authData || !selectedAccount || !inputValue.trim()) {
+      return;
+    }
     setActionLoading("byPlayer");
     try {
       await api.skins.importByNickname(
@@ -314,7 +319,9 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
   }, [authData, selectedAccount, inputValue, refreshSkins]);
 
   const handleImportByFile = useCallback(async () => {
-    if (!authData || !selectedAccount) return;
+    if (!authData || !selectedAccount) {
+      return;
+    }
     setActionLoading("byFile");
     const filePaths = await api.other.openFileDialog(false, [
       { name: "Skins", extensions: ["png"] },
@@ -360,6 +367,65 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     setInputValue("");
   }, []);
 
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const handleOpenContextMenu = useCallback(
+    (skinId: string, x: number, y: number) => {
+      if (isLoading || actionLoading !== null) return;
+      setContextMenu({ skinId, x, y });
+    },
+    [actionLoading, isLoading],
+  );
+
+  useEffect(() => {
+    if (!contextMenu) return undefined;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("[data-skin-context-menu='true']")) return;
+      setContextMenu(null);
+    };
+
+    const handleGlobalContextMenu = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("[data-skin-card='true']")) return;
+      setContextMenu(null);
+    };
+
+    const handleScroll = () => setContextMenu(null);
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("contextmenu", handleGlobalContextMenu);
+    document.addEventListener("scroll", handleScroll, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("contextmenu", handleGlobalContextMenu);
+      document.removeEventListener("scroll", handleScroll, true);
+    };
+  }, [contextMenu]);
+
+  const selectedContextSkin = useMemo(() => {
+    if (!skinsData || !contextMenu) return null;
+    return skinsData.skins.skins.find((skin) => skin.id === contextMenu.skinId) || null;
+  }, [contextMenu, skinsData]);
+
+  const isRenameDisabled = useMemo(() => {
+    if (!selectedContextSkin) return true;
+    const nextName = inputValue.trim();
+    if (!nextName) return true;
+    return skinsData?.skins.skins.some(
+      (skin) => skin.name === nextName && skin.id !== selectedContextSkin.id,
+    ) ?? true;
+  }, [inputValue, selectedContextSkin, skinsData]);
+
+  const isDeleteDisabled = useMemo(() => {
+    if (!selectedContextSkin) return true;
+    return selectedContextSkin.id === skinsData?.activeSkin;
+  }, [selectedContextSkin, skinsData]);
+
   const handleCapeChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       handleSetCape(e.target.value || undefined);
@@ -374,7 +440,11 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       isDismissable={!isLoading && !actionLoading}
     >
-      <ModalContent>
+      <ModalContent
+        data-account-click-ignore="true"
+        onClick={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <ModalHeader>{t("manageSkins.title")}</ModalHeader>
         <ModalBody>
           <div className="flex items-center space-x-2 justify-between min-h-[375px] max-h-[375px]">
@@ -405,6 +475,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
                         }
                         selectedKeys={selectedCape?.id ? [selectedCape.id] : []}
                         onChange={handleCapeChange}
+                        label={t("manageSkins.capes")}
                         placeholder={t("manageSkins.noCape")}
                         renderValue={(items) => {
                           const cape = skinsData.capes.find(
@@ -518,12 +589,8 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
                           isActive={isActive}
                           isLoading={isLoading}
                           actionLoading={actionLoading}
-                          inputValue={inputValue}
-                          skinsData={skinsData}
                           onSelectSkin={handleSelectSkin}
-                          onRename={handleRename}
-                          onDelete={handleDeleteSkin}
-                          t={t}
+                          onOpenContextMenu={handleOpenContextMenu}
                         />
                       );
                     })}
@@ -594,7 +661,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
               </Button>
             </Tooltip>
 
-            {selectedAccount.type === "microsoft" && (
+            {isMicrosoftAccount && (
               <Button
                 variant="flat"
                 isDisabled={actionLoading !== null}
@@ -605,6 +672,38 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
               </Button>
             )}
           </ModalFooter>
+        )}
+
+        {contextMenu && selectedContextSkin && (
+          <div
+            data-account-click-ignore="true"
+            data-skin-context-menu="true"
+            className="fixed z-50 bg-content1 rounded-medium shadow-large py-1 min-w-[160px]"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <button
+              className="block w-full text-left px-4 py-2 text-small border bg-black/20 border-white/10 backdrop-blur-sm hover:bg-default-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => {
+                closeContextMenu();
+                handleRename(selectedContextSkin.id);
+              }}
+              disabled={isRenameDisabled}
+            >
+              {t("manageSkins.rename")}
+            </button>
+            <button
+              className="block w-full text-left px-4 py-2 text-small border bg-black/20 border-white/10 backdrop-blur-sm text-danger hover:bg-danger-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => {
+                closeContextMenu();
+                handleDeleteSkin(selectedContextSkin.id, "skin");
+              }}
+              disabled={isDeleteDisabled}
+            >
+              {t("manageSkins.deleteSkin")}
+            </button>
+          </div>
         )}
       </ModalContent>
     </Modal>

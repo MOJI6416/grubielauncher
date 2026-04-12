@@ -1,11 +1,13 @@
 import path from 'path'
+import { randomUUID } from 'crypto'
+import fs from 'fs-extra'
+import { fileURLToPath, pathToFileURL } from 'url'
 import { BaseService } from '../services/Base'
 import { detectSkinModel, getSkin, renderCape, renderCharacter } from '../utilities/skin'
-import { ICape, IGrubieSkin, IMojangProfile, ISkinsConfig, SkinsData } from '@/types/SkinManager'
-import fs from 'fs-extra'
+import { getSha1 } from '../utilities/files'
 import { Downloader } from '../utilities/downloader'
 import { BACKEND_URL } from '@/shared/config'
-import { pathToFileURL } from 'url'
+import { ICape, IGrubieSkin, IMojangProfile, ISkinEntry, ISkinsConfig, SkinsData } from '@/types/SkinManager'
 
 function toFileUrl(filePath: string): string {
   return pathToFileURL(filePath).href
@@ -26,6 +28,35 @@ function extractIdFromUrl(url: string): string | null {
   }
 }
 
+function tryGetFilePathFromUrl(url?: string): string | null {
+  if (!url) return null
+
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'file:') return null
+    return fileURLToPath(parsed)
+  } catch {
+    return null
+  }
+}
+
+type SkinRegistrationOptions = {
+  capeId?: string
+  model?: 'slim' | 'classic'
+  name?: string
+  remoteId?: string
+  syncCape?: boolean
+}
+
+type CapeRegistrationOptions = {
+  alias?: string
+  remoteId?: string
+}
+
+type StoredSkinsConfig = {
+  skins: Array<Partial<ISkinEntry> & Pick<ISkinEntry, 'id' | 'model' | 'name' | 'url'>>
+}
+
 export class SkinsManager extends BaseService {
   public skinsPath: string = ''
   public skins: ISkinsConfig = { skins: [] }
@@ -39,6 +70,7 @@ export class SkinsManager extends BaseService {
   private userId: string = ''
   private nickname: string = ''
   private downloader: Downloader
+  private legacyCapeIdMap = new Map<string, string>()
 
   constructor(
     laucnherPath: string,
@@ -73,28 +105,273 @@ export class SkinsManager extends BaseService {
     }
   }
 
+  private getSkinFilePath(hash: string): string {
+    return path.join(this.skinsPath, `${hash}.png`)
+  }
+
+  private getCapeFilePath(hash: string): string {
+    return path.join(this.skinsPath, 'capes', `${hash}.png`)
+  }
+
+  private createTempFilePath(type: 'skin' | 'cape'): string {
+    const directory = type === 'skin' ? this.skinsPath : path.join(this.skinsPath, 'capes')
+    return path.join(directory, `.tmp-${randomUUID()}.png`)
+  }
+
+  private findSkinById(skinId: string | null | undefined): ISkinEntry | undefined {
+    if (!skinId) return undefined
+    return this.skins.skins.find((skin) => skin.id === skinId)
+  }
+
+  private findSkinByHash(hash: string): ISkinEntry | undefined {
+    return this.skins.skins.find((skin) => skin.hash === hash)
+  }
+
+  private findCapeById(capeId: string | undefined): ICape | undefined {
+    if (!capeId) return undefined
+    return this.capes.find((cape) => cape.id === capeId)
+  }
+
+  private getSkinName(name: string | undefined, hash: string, currentId?: string): string {
+    const baseName = name?.trim() || hash.slice(0, 12)
+    const hasConflict = this.skins.skins.some(
+      (skin) => skin.name === baseName && skin.id !== currentId
+    )
+
+    if (!hasConflict) return baseName
+    return `${baseName}-${hash.slice(0, 6)}`
+  }
+
+  private shouldUpdateSkinName(
+    currentName: string,
+    hash: string,
+    remoteId?: string
+  ): boolean {
+    const normalizedName = currentName.trim().toLowerCase()
+    if (!normalizedName) return true
+    if (normalizedName === hash.toLowerCase()) return true
+    if (normalizedName === hash.slice(0, 12).toLowerCase()) return true
+    if (remoteId && normalizedName === remoteId.toLowerCase()) return true
+    return false
+  }
+
+  private async normalizeAssetFile(
+    filePath: string,
+    type: 'skin' | 'cape'
+  ): Promise<{ hash: string; filePath: string }> {
+    const hash = await getSha1(filePath)
+    const finalPath = type === 'skin' ? this.getSkinFilePath(hash) : this.getCapeFilePath(hash)
+
+    if (path.resolve(filePath) !== path.resolve(finalPath)) {
+      if (await fs.pathExists(finalPath)) {
+        await fs.remove(filePath)
+      } else {
+        await fs.move(filePath, finalPath, { overwrite: true })
+      }
+    }
+
+    return { hash, filePath: finalPath }
+  }
+
+  private async downloadToTemp(url: string, type: 'skin' | 'cape'): Promise<string> {
+    const tempPath = this.createTempFilePath(type)
+
+    await this.downloader.downloadFiles([
+      {
+        destination: tempPath,
+        group: type === 'skin' ? 'skins' : 'capes',
+        url
+      }
+    ])
+
+    return tempPath
+  }
+
+  private async registerSkinFromFile(
+    filePath: string,
+    options: SkinRegistrationOptions = {}
+  ): Promise<ISkinEntry | null> {
+    if (!(await fs.pathExists(filePath))) return null
+
+    const { hash, filePath: normalizedPath } = await this.normalizeAssetFile(filePath, 'skin')
+    const character = await renderCharacter(normalizedPath)
+    const model = options.model || (await detectSkinModel(normalizedPath))
+    const existingSkin = this.findSkinByHash(hash)
+
+    if (existingSkin) {
+      existingSkin.hash = hash
+      existingSkin.url = toFileUrl(normalizedPath)
+      existingSkin.character = character || existingSkin.character
+      existingSkin.model = model
+
+      if (options.remoteId) {
+        existingSkin.remoteId = options.remoteId
+      }
+
+      if (options.syncCape) {
+        existingSkin.capeId = options.capeId
+      }
+
+      if (
+        options.name &&
+        this.shouldUpdateSkinName(
+          existingSkin.name,
+          hash,
+          options.remoteId || existingSkin.remoteId
+        )
+      ) {
+        existingSkin.name = this.getSkinName(options.name, hash, existingSkin.id)
+      }
+
+      return existingSkin
+    }
+
+    const skin: ISkinEntry = {
+      id: hash,
+      hash,
+      remoteId: options.remoteId,
+      model,
+      name: this.getSkinName(options.name, hash, hash),
+      url: toFileUrl(normalizedPath),
+      character,
+      capeId: options.syncCape ? options.capeId : undefined
+    }
+
+    this.skins.skins.push(skin)
+    return skin
+  }
+
+  private async registerCapeFromFile(
+    filePath: string,
+    options: CapeRegistrationOptions = {}
+  ): Promise<ICape | null> {
+    if (!(await fs.pathExists(filePath))) return null
+
+    const { hash, filePath: normalizedPath } = await this.normalizeAssetFile(filePath, 'cape')
+    const capePreview = await renderCape(normalizedPath)
+    const existingCape = this.findCapeById(hash)
+    const alias = options.alias?.trim() || hash.slice(0, 12)
+
+    if (existingCape) {
+      existingCape.hash = hash
+      existingCape.url = toFileUrl(normalizedPath)
+      existingCape.cape = capePreview || existingCape.cape
+
+      if (options.remoteId) {
+        existingCape.remoteId = options.remoteId
+      }
+
+      if (options.alias?.trim()) {
+        existingCape.alias = options.alias.trim()
+      }
+
+      return existingCape
+    }
+
+    const cape: ICape = {
+      id: hash,
+      hash,
+      remoteId: options.remoteId,
+      alias,
+      url: toFileUrl(normalizedPath),
+      cape: capePreview
+    }
+
+    this.capes.push(cape)
+    return cape
+  }
+
+  private async syncSkinFromUrl(
+    url: string,
+    options: SkinRegistrationOptions = {}
+  ): Promise<ISkinEntry | null> {
+    const tempPath = await this.downloadToTemp(url, 'skin')
+
+    try {
+      return await this.registerSkinFromFile(tempPath, options)
+    } finally {
+      await fs.remove(tempPath).catch(() => {})
+    }
+  }
+
+  private async syncCapeFromUrl(
+    url: string,
+    options: CapeRegistrationOptions = {}
+  ): Promise<ICape | null> {
+    const tempPath = await this.downloadToTemp(url, 'cape')
+
+    try {
+      return await this.registerCapeFromFile(tempPath, options)
+    } finally {
+      await fs.remove(tempPath).catch(() => {})
+    }
+  }
+
+  private async importSkinFromExternalFile(
+    sourceFilePath: string,
+    options: SkinRegistrationOptions = {}
+  ): Promise<ISkinEntry | null> {
+    const tempPath = this.createTempFilePath('skin')
+    await fs.copyFile(sourceFilePath, tempPath)
+
+    try {
+      return await this.registerSkinFromFile(tempPath, options)
+    } finally {
+      await fs.remove(tempPath).catch(() => {})
+    }
+  }
+
+  private async importCapeFromExternalFile(
+    sourceFilePath: string,
+    options: CapeRegistrationOptions = {}
+  ): Promise<ICape | null> {
+    const tempPath = this.createTempFilePath('cape')
+    await fs.copyFile(sourceFilePath, tempPath)
+
+    try {
+      return await this.registerCapeFromFile(tempPath, options)
+    } finally {
+      await fs.remove(tempPath).catch(() => {})
+    }
+  }
+
+  private async resolveStoredSkinPath(storedSkin: StoredSkinsConfig['skins'][0]): Promise<string | null> {
+    const candidates = [
+      storedSkin.hash ? this.getSkinFilePath(storedSkin.hash) : null,
+      storedSkin.id ? path.join(this.skinsPath, `${storedSkin.id}.png`) : null,
+      tryGetFilePathFromUrl(storedSkin.url)
+    ].filter((candidate): candidate is string => !!candidate)
+
+    for (const candidate of candidates) {
+      if (await fs.pathExists(candidate)) {
+        return candidate
+      }
+    }
+
+    return null
+  }
+
   private async loadSkinsFromIndex() {
     const indexPath = path.join(this.skinsPath, 'index.json')
-    try {
-      const data: ISkinsConfig = await fs.readJSON(indexPath, 'utf-8')
-      for (const skin of data.skins) {
-        const skinPath = path.join(this.skinsPath, `${skin.id}.png`)
-        if (await fs.pathExists(skinPath)) {
-          const character = await renderCharacter(skinPath)
 
-          const existingIndex = this.skins.skins.findIndex((s) => s.id === skin.id)
-          if (existingIndex === -1) {
-            this.skins.skins.push({
-              ...skin,
-              character
-            })
-          } else {
-            this.skins.skins[existingIndex] = {
-              ...this.skins.skins[existingIndex],
-              ...skin,
-              character
-            }
-          }
+    try {
+      const data: StoredSkinsConfig = await fs.readJSON(indexPath, 'utf-8')
+      this.skins.skins = []
+
+      for (const storedSkin of data.skins || []) {
+        const skinPath = await this.resolveStoredSkinPath(storedSkin)
+        if (!skinPath) continue
+
+        const skin = await this.registerSkinFromFile(skinPath, {
+          capeId: storedSkin.capeId,
+          model: storedSkin.model,
+          name: storedSkin.name,
+          remoteId: storedSkin.remoteId,
+          syncCape: Object.prototype.hasOwnProperty.call(storedSkin, 'capeId')
+        })
+
+        if (skin && storedSkin.capeId && storedSkin.capeId !== skin.capeId) {
+          this.legacyCapeIdMap.set(storedSkin.capeId, skin.capeId || storedSkin.capeId)
         }
       }
     } catch {
@@ -106,20 +383,50 @@ export class SkinsManager extends BaseService {
     await fs.mkdir(this.skinsPath, { recursive: true })
     await fs.mkdir(path.join(this.skinsPath, 'capes'), { recursive: true })
 
-    await this.loadSkinsFromIndex()
     if (this.platform === 'microsoft') {
+      this.capes = []
+      this.legacyCapeIdMap.clear()
+      await this.loadSkinsFromIndex()
       await this.getMojangSkins()
     } else {
       await this.getLocalCapes()
+      await this.loadSkinsFromIndex()
       await this.getGrubieSkin()
     }
+
     await this.checkSkins()
+    await this.saveSkins()
   }
 
   private async checkSkins() {
+    const capeMap = new Map<string, string>()
+
+    for (const cape of this.capes) {
+      capeMap.set(cape.id, cape.id)
+      capeMap.set(cape.hash, cape.id)
+
+      if (cape.remoteId) {
+        capeMap.set(cape.remoteId, cape.id)
+      }
+    }
+
+    for (const [legacyCapeId, hash] of this.legacyCapeIdMap.entries()) {
+      capeMap.set(legacyCapeId, hash)
+    }
+
     for (const skin of this.skins.skins) {
       if (skin.capeId) {
-        skin.capeId = this.capes.find((c) => c.id === skin.capeId)?.id
+        const mappedCapeId = capeMap.get(skin.capeId)
+        if (mappedCapeId) {
+          skin.capeId = mappedCapeId
+        }
+      }
+    }
+
+    if (this.activeCape) {
+      const mappedActiveCapeId = capeMap.get(this.activeCape)
+      if (mappedActiveCapeId) {
+        this.activeCape = mappedActiveCapeId
       }
     }
   }
@@ -135,63 +442,33 @@ export class SkinsManager extends BaseService {
         }
       )
 
-      const skin = response.data
+      const grubieSkin = response.data
+      const capeAlias = grubieSkin.capeUrl ? extractIdFromUrl(grubieSkin.capeUrl) || undefined : undefined
+      const cape = grubieSkin.capeUrl
+        ? await this.syncCapeFromUrl(grubieSkin.capeUrl, {
+            alias: capeAlias,
+            remoteId: capeAlias
+          })
+        : null
 
-      const skinPath = path.join(this.skinsPath, `${skin._id}.png`)
+      const skin = await this.syncSkinFromUrl(grubieSkin.skinUrl, {
+        capeId: cape?.id,
+        model: grubieSkin.model,
+        name: this.nickname,
+        remoteId: grubieSkin._id,
+        syncCape: true
+      })
 
-      let capeId: string | undefined = undefined
-      if (skin.capeUrl) {
-        const extracted = extractIdFromUrl(skin.capeUrl)
-        capeId = extracted || undefined
+      if (!skin) return
 
-        const capePath = capeId ? path.join(this.skinsPath, 'capes', `${capeId}.png`) : ''
+      skin.model = grubieSkin.model
+      skin.remoteId = grubieSkin._id
+      skin.capeId = cape?.id
 
-        if (capeId) {
-          if (!this.capes.find((c) => c.id == capeId)) {
-            await this.downloader.downloadFiles([
-              {
-                group: 'capes',
-                url: skin.capeUrl,
-                destination: path.join(this.skinsPath, 'capes', `${capeId}.png`)
-              }
-            ])
-
-            this.capes.push({
-              id: capeId,
-              url: skin.capeUrl,
-              cape: await renderCape(capePath),
-              alias: capeId
-            })
-          }
-        }
-      }
-
-      const skinExists = this.skins.skins.find((s) => s.id == skin._id)
-      if (!skinExists) {
-        await this.downloader.downloadFiles([
-          {
-            group: 'skins',
-            url: skin.skinUrl,
-            destination: skinPath
-          }
-        ])
-
-        this.skins.skins.push({
-          model: skin.model,
-          name: this.skins.skins.find((s) => s.name == this.nickname) ? skin._id : this.nickname,
-          id: skin._id,
-          url: toFileUrl(skinPath),
-          capeId,
-          character: await renderCharacter(skinPath)
-        })
-      } else {
-        skinExists.capeId = capeId
-      }
-
-      this.activeSkin = skin._id
-      this.selectedSkin = skin._id
-      this.activeCape = capeId
-      this.activeModel = skin.model
+      this.activeSkin = skin.id
+      this.selectedSkin = skin.id
+      this.activeCape = cape?.id
+      this.activeModel = grubieSkin.model
 
       await this.saveSkins()
     } catch (error) {
@@ -205,18 +482,14 @@ export class SkinsManager extends BaseService {
       const capeFiles = await fs.readdir(capesDir)
 
       for (const file of capeFiles) {
-        if (file.endsWith('.png')) {
-          const capeId = file.replace('.png', '')
-          const capePath = path.join(capesDir, file)
+        if (!file.endsWith('.png')) continue
 
-          if (this.capes.find((c) => c.id == capeId)) continue
+        const legacyId = file.replace(/\.png$/i, '')
+        const capePath = path.join(capesDir, file)
+        const cape = await this.registerCapeFromFile(capePath, { alias: legacyId })
 
-          this.capes.push({
-            id: capeId,
-            url: toFileUrl(capePath),
-            cape: await renderCape(capePath),
-            alias: capeId
-          })
+        if (cape && legacyId !== cape.id) {
+          this.legacyCapeIdMap.set(legacyId, cape.id)
         }
       }
     } catch (error) {
@@ -237,79 +510,52 @@ export class SkinsManager extends BaseService {
 
       const { skins, capes, name } = response.data
 
+      let activeCapeId: string | undefined = undefined
+
       for (const cape of capes) {
-        if (this.capes.find((c) => c.id == cape.id)) continue
-        const destination = path.join(this.skinsPath, 'capes', `${cape.id}.png`)
-
-        await this.downloader.downloadFiles([
-          {
-            group: 'capes',
-            url: cape.url,
-            destination
-          }
-        ])
-
-        this.capes.push({
-          ...cape,
-          url: toFileUrl(destination),
-          cape: await renderCape(destination)
+        const localCape = await this.syncCapeFromUrl(cape.url, {
+          alias: cape.alias || cape.id,
+          remoteId: cape.id
         })
+
+        if (!localCape) continue
+
+        if (cape.state === 'ACTIVE') {
+          activeCapeId = localCape.id
+        }
       }
 
-      const defaultCapeId =
-        capes.length > 0 && capes[0].state == 'ACTIVE' ? capes[0].id : undefined
+      for (const mojangSkin of skins) {
+        const localSkin = await this.syncSkinFromUrl(mojangSkin.url, {
+          model: mojangSkin.variant == 'SLIM' ? 'slim' : 'classic',
+          name,
+          remoteId: mojangSkin.id
+        })
 
-      for (const skin of skins) {
-        let isExists = false
-        if (!this.skins.skins.find((s) => s.id == skin.id)) {
-          this.skins.skins.push({
-            model: skin.variant == 'SLIM' ? 'slim' : 'classic',
-            name: this.skins.skins.find((s) => s.name == name) ? skin.id : name,
-            id: skin.id,
-            url: skin.url,
-            capeId: defaultCapeId
-          })
-        } else isExists = true
+        if (!localSkin) continue
 
-        const _skin = this.skins.skins.find((s) => s.id == skin.id)
+        localSkin.remoteId = mojangSkin.id
+        localSkin.model = mojangSkin.variant == 'SLIM' ? 'slim' : 'classic'
 
-        if (!_skin) continue
-
-        if (skin.state == 'ACTIVE') {
-          this.activeSkin = skin.id
-          this.selectedSkin = skin.id
-          this.activeModel = _skin.model
-
-          const cape = capes.find((c) => c.id == _skin.capeId)
-
-          if (cape) {
-            if (cape.state == 'INACTIVE') {
-              this.activeCape = undefined
-              if (_skin.capeId) {
-                _skin.capeId = undefined
-              }
-            } else {
-              this.activeCape = cape.id
-              if (_skin.capeId != cape.id) {
-                _skin.capeId = cape.id
-              }
-            }
-          }
+        if (mojangSkin.state == 'ACTIVE') {
+          this.activeSkin = localSkin.id
+          this.selectedSkin = localSkin.id
+          this.activeModel = localSkin.model
+          this.activeCape = activeCapeId
+          localSkin.capeId = activeCapeId
+        } else if (!localSkin.capeId && activeCapeId) {
+          localSkin.capeId = activeCapeId
         }
+      }
 
-        const skinPath = path.join(this.skinsPath, `${skin.id}.png`)
+      if (!activeCapeId) {
+        this.activeCape = undefined
 
-        await this.downloader.downloadFiles([
-          {
-            group: 'skins',
-            url: skin.url,
-            destination: skinPath
+        if (this.activeSkin) {
+          const activeSkin = this.findSkinById(this.activeSkin)
+          if (activeSkin) {
+            activeSkin.capeId = undefined
           }
-        ])
-
-        if (!isExists) {
-          _skin.url = toFileUrl(skinPath)
-          _skin.character = await renderCharacter(skinPath)
         }
       }
 
@@ -320,25 +566,52 @@ export class SkinsManager extends BaseService {
   }
 
   public async setCapeId(capeId: string | undefined) {
-    const skin = this.skins.skins.find((s) => s.id === this.selectedSkin)
+    const skin = this.findSkinById(this.selectedSkin)
     if (skin) skin.capeId = capeId
   }
 
   public async changeModel(model: 'classic' | 'slim') {
-    const skin = this.skins.skins.find((s) => s.id === this.selectedSkin)
+    const skin = this.findSkinById(this.selectedSkin)
     if (skin) skin.model = model
   }
 
   public async deleteSkin(skinId: string, type: 'skin' | 'cape' = 'skin') {
     if (type === 'skin') {
-      const index = this.skins.skins.findIndex((s) => s.id === skinId)
-      if (index !== -1) this.skins.skins.splice(index, 1)
-      await fs.unlink(path.join(this.skinsPath, `${skinId}.png`)).catch(() => {})
+      const index = this.skins.skins.findIndex((skin) => skin.id === skinId)
+
+      if (index !== -1) {
+        this.skins.skins.splice(index, 1)
+        await fs.unlink(this.getSkinFilePath(skinId)).catch(() => {})
+      }
+
+      if (this.selectedSkin === skinId) {
+        this.selectedSkin = this.activeSkin && this.activeSkin !== skinId ? this.activeSkin : null
+      }
+
+      if (this.activeSkin === skinId) {
+        this.activeSkin = undefined
+        this.activeCape = undefined
+        this.activeModel = undefined
+      }
     } else {
-      const index = this.capes.findIndex((c) => c.id === skinId)
-      if (index !== -1) this.capes.splice(index, 1)
-      await fs.unlink(path.join(this.skinsPath, 'capes', `${skinId}.png`)).catch(() => {})
+      const index = this.capes.findIndex((cape) => cape.id === skinId)
+
+      if (index !== -1) {
+        this.capes.splice(index, 1)
+        await fs.unlink(this.getCapeFilePath(skinId)).catch(() => {})
+      }
+
+      for (const skin of this.skins.skins) {
+        if (skin.capeId === skinId) {
+          skin.capeId = undefined
+        }
+      }
+
+      if (this.activeCape === skinId) {
+        this.activeCape = undefined
+      }
     }
+
     await this.saveSkins()
   }
 
@@ -358,54 +631,16 @@ export class SkinsManager extends BaseService {
 
   public async importByUrl(url: string, type: 'skin' | 'cape' = 'skin') {
     try {
-      const id = extractIdFromUrl(url)
-      if (!id) return
+      const extractedId = extractIdFromUrl(url) || undefined
 
       if (type == 'skin') {
-        const skinExists = this.skins.skins.find((s) => s.id == id)
-        if (skinExists) return
-
-        const skinPath = path.join(this.skinsPath, `${id}.png`)
-
-        await this.downloader.downloadFiles([
-          {
-            destination: skinPath,
-            group: 'skins',
-            url
-          }
-        ])
-
-        this.skins.skins.push({
-          model: await detectSkinModel(skinPath),
-          name: id,
-          id: id,
-          url: toFileUrl(skinPath),
-          character: await renderCharacter(skinPath)
-        })
+        await this.syncSkinFromUrl(url, { name: extractedId })
       } else {
-        const capeExists = this.capes.find((c) => c.id == id)
-        if (capeExists) return
+        const cape = await this.syncCapeFromUrl(url, { alias: extractedId })
+        const skin = this.findSkinById(this.selectedSkin)
 
-        const capePath = path.join(this.skinsPath, 'capes', `${id}.png`)
-
-        await this.downloader.downloadFiles([
-          {
-            destination: capePath,
-            group: 'capes',
-            url
-          }
-        ])
-
-        this.capes.push({
-          id: id,
-          url: toFileUrl(capePath),
-          cape: await renderCape(capePath),
-          alias: id
-        })
-
-        const skin = this.skins.skins.find((s) => s.id == this.selectedSkin)
         if (skin) {
-          skin.capeId = id
+          skin.capeId = cape?.id
         }
       }
 
@@ -421,43 +656,13 @@ export class SkinsManager extends BaseService {
       const fileName = path.basename(filePath, '.png')
 
       if (type == 'skin') {
-        const skinExists = this.skins.skins.find((s) => s.id == fileName)
-        if (skinExists) return
-
-        const skinPath = path.join(this.skinsPath, `${fileName}.png`)
-        await fs.copyFile(filePath, skinPath)
-
-        let character: string | undefined = undefined
-        try {
-          character = await renderCharacter(skinPath)
-        } catch (error) {
-          console.log('Error rendering character:', error)
-        }
-
-        this.skins.skins.push({
-          model: await detectSkinModel(skinPath),
-          name: fileName,
-          id: fileName,
-          url: toFileUrl(skinPath),
-          character
-        })
+        await this.importSkinFromExternalFile(filePath, { name: fileName })
       } else {
-        const capeExists = this.capes.find((c) => c.id == fileName)
-        if (capeExists) return
+        const cape = await this.importCapeFromExternalFile(filePath, { alias: fileName })
+        const skin = this.findSkinById(this.selectedSkin)
 
-        const capePath = path.join(this.skinsPath, 'capes', `${fileName}.png`)
-        await fs.copyFile(filePath, capePath)
-
-        this.capes.push({
-          id: fileName,
-          url: toFileUrl(capePath),
-          cape: await renderCape(capePath),
-          alias: fileName
-        })
-
-        const skin = this.skins.skins.find((s) => s.id == this.selectedSkin)
         if (skin) {
-          skin.capeId = fileName
+          skin.capeId = cape?.id
         }
       }
 
@@ -469,38 +674,15 @@ export class SkinsManager extends BaseService {
 
   public async importByNickname(nickname: string) {
     try {
-      const player = await this.api.get<{
-        id: string
-      }>(`https://api.mojang.com/users/profiles/minecraft/${nickname}`)
+      const player = await this.api.get<{ id: string }>(
+        `https://api.mojang.com/users/profiles/minecraft/${nickname}`
+      )
 
       const playerId = player.data.id
       const skins = await getSkin('microsoft', playerId, nickname)
       if (!skins) return
 
-      const { skin } = skins
-
-      const skinId = extractIdFromUrl(skin)
-      if (!skinId) return
-
-      const skinExists = this.skins.skins.find((s) => s.id == skinId)
-      if (skinExists) return
-
-      const skinPath = path.join(this.skinsPath, `${skinId}.png`)
-      await this.downloader.downloadFiles([
-        {
-          destination: skinPath,
-          group: 'skins',
-          url: skin
-        }
-      ])
-
-      this.skins.skins.push({
-        model: await detectSkinModel(skinPath),
-        name: this.skins.skins.find((s) => s.name == nickname) ? skinId : nickname,
-        id: skinId,
-        url: toFileUrl(skinPath),
-        character: await renderCharacter(skinPath)
-      })
+      await this.syncSkinFromUrl(skins.skin, { name: nickname })
       await this.saveSkins()
     } catch (error) {
       console.error('Error importing skin by nickname:', error)
@@ -515,10 +697,18 @@ export class SkinsManager extends BaseService {
         return
       }
 
-      const skin = this.skins.skins.find((s) => s.id == skinId)
+      const skin = this.findSkinById(skinId)
       if (!skin) return
 
-      const skinPath = path.join(this.skinsPath, `${skinId}.png`)
+      const skinPath = this.getSkinFilePath(skin.hash)
+      const selectedCape = skin.capeId ? this.findCapeById(skin.capeId) : undefined
+      const appliedCapeId =
+        this.platform === 'microsoft'
+          ? selectedCape?.remoteId
+            ? selectedCape.id
+            : undefined
+          : selectedCape?.id
+
       if (!(await fs.pathExists(skinPath))) {
         console.error('Skin file does not exist:', skinPath)
         return
@@ -526,9 +716,10 @@ export class SkinsManager extends BaseService {
 
       const formData = new FormData()
       formData.append('variant', skin.model)
-      const buffer = await fs.readFile(skinPath)
-      const blob = new Blob([buffer], { type: 'image/png' })
-      formData.append('file', blob, `${skinId}.png`)
+
+      const skinBuffer = await fs.readFile(skinPath)
+      const skinBlob = new Blob([skinBuffer], { type: 'image/png' })
+      formData.append('file', skinBlob, `${skin.hash}.png`)
 
       if (this.platform == 'microsoft') {
         const profile = await this.api.post<IMojangProfile>(
@@ -541,14 +732,15 @@ export class SkinsManager extends BaseService {
           }
         )
 
-        skin.id = profile.data.skins[0].id
-        skin.url = skin.url.replace(skinId, profile.data.skins[0].id)
+        skin.remoteId = profile.data.skins[0]?.id || skin.remoteId
       } else {
-        if (skin.capeId) {
-          const capePath = path.join(this.skinsPath, 'capes', `${skin.capeId}.png`)
-          const buffer = await fs.readFile(capePath)
-          const blob = new Blob([buffer], { type: 'image/png' })
-          formData.append('cape', blob, `${skin.capeId}.png`)
+        if (selectedCape) {
+          const capePath = this.getCapeFilePath(selectedCape.hash)
+          if (await fs.pathExists(capePath)) {
+            const capeBuffer = await fs.readFile(capePath)
+            const capeBlob = new Blob([capeBuffer], { type: 'image/png' })
+            formData.append('cape', capeBlob, `${selectedCape.hash}.png`)
+          }
         }
 
         const response = await this.api.post<IGrubieSkin>(
@@ -561,24 +753,19 @@ export class SkinsManager extends BaseService {
           }
         )
 
-        const newSkin = response.data
-        skin.id = newSkin._id
-        skin.url = skin.url.replace(skinId, newSkin._id)
+        skin.remoteId = response.data._id
       }
-
-      await fs.rename(skinPath, path.join(this.skinsPath, `${skin.id}.png`))
-      this.skins.skins = this.skins.skins.map((s) => (s.id === skinId ? skin : s))
 
       this.selectedSkin = skin.id
       this.activeSkin = skin.id
-      this.activeCape = skin.capeId
+      this.activeCape = appliedCapeId
       this.activeModel = skin.model
 
       await this.saveSkins()
 
       if (this.platform == 'microsoft') {
-        if (skin.capeId) {
-          await this.showCape(skin.capeId)
+        if (appliedCapeId) {
+          await this.showCape(appliedCapeId)
         } else {
           await this.hideCape()
         }
@@ -590,9 +777,15 @@ export class SkinsManager extends BaseService {
 
   private async showCape(capeId: string) {
     try {
+      const cape = this.findCapeById(capeId)
+      if (!cape?.remoteId) {
+        console.error('Cape remote id is missing:', capeId)
+        return
+      }
+
       await this.api.put(
         `${this.skinServiceUrl}/minecraft/profile/capes/active`,
-        { capeId },
+        { capeId: cape.remoteId },
         {
           headers: {
             Authorization: `Bearer ${this.accessToken}`
@@ -617,12 +810,33 @@ export class SkinsManager extends BaseService {
   }
 
   public addSkin(skin: ISkinsConfig['skins'][0]) {
-    this.skins.skins.push(skin)
+    const normalizedSkin = {
+      ...skin,
+      hash: skin.hash || skin.id
+    }
+
+    const existingIndex = this.skins.skins.findIndex((entry) => entry.id === normalizedSkin.id)
+
+    if (existingIndex === -1) {
+      this.skins.skins.push(normalizedSkin)
+    } else {
+      this.skins.skins[existingIndex] = normalizedSkin
+    }
+
     this.saveSkins()
   }
 
+  public refreshSession(nickname: string, accessToken: string) {
+    this.nickname = nickname
+    this.setAccessToken(accessToken)
+  }
+
   public async saveSkins() {
-    const skinsToSave = this.skins.skins.map(({ character, ...rest }) => rest)
+    const skinsToSave = this.skins.skins.map(({ character, ...rest }) => ({
+      ...rest,
+      url: toFileUrl(this.getSkinFilePath(rest.hash))
+    }))
+
     await fs.writeJSON(
       path.join(this.skinsPath, 'index.json'),
       { skins: skinsToSave },
@@ -631,9 +845,10 @@ export class SkinsManager extends BaseService {
   }
 
   public async renameSkin(skinId: string, newName: string) {
-    const skin = this.skins.skins.find((s) => s.id === skinId)
+    const skin = this.findSkinById(skinId)
+
     if (skin) {
-      skin.name = newName
+      skin.name = this.getSkinName(newName, skin.hash, skin.id)
       await this.saveSkins()
     }
   }

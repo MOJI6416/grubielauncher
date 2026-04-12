@@ -15,6 +15,23 @@ export function isOwner(owner?: string, account?: ILocalAccount) {
   return `${account.type}_${account.nickname}` === owner;
 }
 
+export function parseVersionOwner(owner?: string) {
+  if (!owner) return null;
+
+  const separatorIndex = owner.indexOf("_");
+  if (separatorIndex <= 0 || separatorIndex === owner.length - 1) {
+    return {
+      type: undefined,
+      nickname: owner,
+    };
+  }
+
+  return {
+    type: owner.slice(0, separatorIndex),
+    nickname: owner.slice(separatorIndex + 1),
+  };
+}
+
 export const forbiddenSymbols: string[] = [
   "\\",
   "/",
