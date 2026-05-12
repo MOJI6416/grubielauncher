@@ -1,20 +1,22 @@
-import { Image } from "@heroui/react";
 import { IProject } from "@/types/ModManager";
+import { Button } from "@/components/ui/button";
 import useEmblaCarousel from "embla-carousel-react";
-import { useCallback, useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function GalleryCarousel({
   gallery,
 }: {
   gallery: IProject["gallery"];
 }) {
-  const [thumbEmblaRef] = useEmblaCarousel({
+  const [thumbEmblaRef, thumbEmblaApi] = useEmblaCarousel({
     dragFree: true,
     containScroll: "trimSnaps",
   });
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const lastWheelAtRef = useRef(0);
 
   if (!gallery?.length) return null;
 
@@ -23,20 +25,37 @@ export default function GalleryCarousel({
     setModalOpen(true);
   };
 
+  const handleThumbWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (!thumbEmblaApi || gallery.length < 2) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const now = Date.now();
+    if (now - lastWheelAtRef.current < 180) return;
+    lastWheelAtRef.current = now;
+
+    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    if (delta > 0) thumbEmblaApi.scrollNext();
+    else if (delta < 0) thumbEmblaApi.scrollPrev();
+  };
+
   return (
     <>
-      <div className="overflow-hidden" ref={thumbEmblaRef}>
+      <div className="overflow-hidden" ref={thumbEmblaRef} onWheel={handleThumbWheel}>
         <div className="flex gap-2 items-center">
           {gallery.map((image, idx) => (
             <div
               key={idx}
-              className="min-w-[100px] max-w-[100px] cursor-pointer"
+              className="min-w-[120px] max-w-[120px] cursor-pointer"
               onClick={() => openModal(idx)}
             >
-              <Image
+              <img
                 src={image.url}
-                className="object-cover mx-auto select-none"
+                alt=""
+                className="h-20 w-full rounded-lg border border-border bg-muted/30 object-cover select-none transition-opacity hover:opacity-80"
                 loading="lazy"
+                draggable={false}
               />
             </div>
           ))}
@@ -65,6 +84,7 @@ function ModalGallery({
 }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [current, setCurrent] = useState(startIndex);
+  const lastWheelAtRef = useRef(0);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -107,52 +127,93 @@ function ModalGallery({
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+  const handleWheel = useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      if (!emblaApi || gallery.length < 2) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const now = Date.now();
+      if (now - lastWheelAtRef.current < 180) return;
+      lastWheelAtRef.current = now;
+
+      const delta =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+          ? event.deltaX
+          : event.deltaY;
+
+      if (delta > 0) emblaApi.scrollNext();
+      else if (delta < 0) emblaApi.scrollPrev();
+    },
+    [emblaApi, gallery.length],
+  );
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      onWheel={handleWheel}
+      onPointerDown={(event) => {
+        event.stopPropagation();
+        if (event.target === event.currentTarget) onClose();
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
       }}
     >
-      <button
+      <Button
+        type="button"
+        variant="secondary"
+        size="icon"
         onClick={onClose}
-        className="absolute top-4 right-4 text-white text-3xl"
+        className="absolute top-4 right-4"
         aria-label="Close"
       >
-        &times;
-      </button>
+        <X className="size-4" />
+      </Button>
 
-      <div className="absolute top-4 left-4 text-white text-sm select-none">
-        {" "}
+      <div className="absolute top-4 left-4 rounded-lg border border-white/10 bg-black/40 px-3 py-1.5 text-sm text-white select-none">
         {current + 1}/{gallery.length}
       </div>
 
-      <button
+      <Button
+        type="button"
+        variant="secondary"
+        size="icon"
         onClick={scrollPrev}
-        className="absolute left-6 text-white text-4xl select-none"
+        className="absolute left-6"
         aria-label="Previous"
       >
-        &lt;
-      </button>
+        <ChevronLeft className="size-5" />
+      </Button>
 
-      <button
+      <Button
+        type="button"
+        variant="secondary"
+        size="icon"
         onClick={scrollNext}
-        className="absolute right-6 text-white text-4xl select-none"
+        className="absolute right-6"
         aria-label="Next"
       >
-        &gt;
-      </button>
+        <ChevronRight className="size-5" />
+      </Button>
 
-      <div className="w-full max-w-4xl overflow-hidden" ref={emblaRef}>
-        <div className="flex">
+      <div
+        className="h-[calc(100vh-6rem)] w-[calc(100vw-8rem)] max-w-6xl overflow-hidden"
+        ref={emblaRef}
+      >
+        <div className="flex h-full">
           {gallery.map((image, idx) => (
-            <div key={idx} className="min-w-full flex justify-center">
-              <Image
+            <div
+              key={idx}
+              className="flex h-full min-w-full items-center justify-center px-4"
+            >
+              <img
                 src={image.url}
                 alt=""
-                className="max-h-[90vh] max-w-full object-contain mx-auto"
+                className="h-full max-h-full w-full max-w-full rounded-xl border border-white/10 bg-black/40 object-contain shadow-2xl"
                 loading="lazy"
+                draggable={false}
               />
             </div>
           ))}

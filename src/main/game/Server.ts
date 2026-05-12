@@ -14,7 +14,6 @@ export class ServerGame {
   private serverPath: string = ''
   private version: IVersionConf | undefined = undefined
   private serverConf: IServerConf | null = null
-  private versionPath: string = ''
   private downloadLimit: number = 6
   private account: ILocalAccount | undefined = undefined
   private downloader: Downloader
@@ -22,13 +21,12 @@ export class ServerGame {
   constructor(
     account: ILocalAccount | undefined,
     downloadLimit: number,
-    versionPath: string,
+    _versionPath: string,
     serverPath: string,
     conf: IServerConf,
     version?: IVersionConf
   ) {
     this.account = account
-    this.versionPath = versionPath
     this.serverPath = serverPath
     this.version = version
     this.serverConf = conf
@@ -44,14 +42,18 @@ export class ServerGame {
     const java = new Java(this.serverConf.javaMajorVersion)
     await java.init()
 
-    if (!java.javaServerPath) return
+    if (!java.javaServerPath) throw new Error('Server Java runtime was not found')
 
-    if (!this.version || !this.account) return
+    if (!this.version || !this.account) {
+      throw new Error('Server install requires version and account data')
+    }
 
     const jar = `${this.serverConf.core}.jar`
     const jarPath = path.join(this.serverPath, jar)
 
     let cwd = this.serverPath
+    const javaCmd =
+      java.javaServerPath.includes(' ') ? `"${java.javaServerPath}"` : java.javaServerPath
 
     const backend = new Backend()
     let authlib: any = null
@@ -67,7 +69,6 @@ export class ServerGame {
 
     if (this.serverConf.core == ServerCore.QUILT) {
       params.push(...['install', 'server', this.version.version.id, '--download-server'])
-      cwd = this.versionPath
     } else if (
       this.serverConf.core == ServerCore.FORGE ||
       this.serverConf.core == ServerCore.NEOFORGE
@@ -125,14 +126,14 @@ export class ServerGame {
           const batData = await fs.readFile(batPath, 'utf-8')
           await fs.writeFile(
             batPath,
-            batData.replaceAll('java', java.javaServerPath).replaceAll('%*', 'nogui %*'),
+            batData.replace(/^java\b/m, javaCmd).replaceAll('%*', 'nogui %*'),
             'utf-8'
           )
 
           const shData = await fs.readFile(shPath, 'utf-8')
           await fs.writeFile(
             shPath,
-            shData.replaceAll('java', java.javaServerPath).replaceAll('"$@"', 'nogui "$@"'),
+            shData.replace(/^java\b/m, javaCmd).replaceAll('"$@"', 'nogui "$@"'),
             'utf-8'
           )
 
@@ -145,9 +146,6 @@ export class ServerGame {
         await fs.rename(serverJar, jarPath)
       }
     }
-
-    const javaCmd =
-      java.javaServerPath.includes(' ') ? `"${java.javaServerPath}"` : java.javaServerPath
 
     if (isCreateRunFiles) {
       const batData = `@echo off

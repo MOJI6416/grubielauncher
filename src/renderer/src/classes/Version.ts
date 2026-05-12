@@ -1,5 +1,10 @@
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { DownloadItem } from "@/types/Downloader";
+import {
+  VERSION_INSTALL_CANCELLED,
+  VersionInstallOptions,
+  VersionInstallResult,
+} from "@/types/InstallationProgress";
 import { IVersionConf } from "@/types/IVersion";
 import { IVersionManifest } from "@/types/IVersionManifest";
 import { TSettings } from "@/types/Settings";
@@ -36,8 +41,32 @@ export class Version {
     account: ILocalAccount,
     settings: TSettings,
     items: DownloadItem[] = [],
+    options?: VersionInstallOptions,
   ) {
-    await api.version.install(account, settings, this.version, items);
+    const result = (await api.version.install(
+      account,
+      settings,
+      this.version,
+      items,
+      options,
+    )) as VersionInstallResult | boolean | undefined;
+
+    if (typeof result === "boolean") {
+      if (!result) {
+        throw new Error(`Failed to install version ${this.version.name}`);
+      }
+      return;
+    }
+
+    if (!result?.success) {
+      if (result?.cancelled) {
+        throw new Error(VERSION_INSTALL_CANCELLED);
+      }
+
+      throw new Error(
+        result?.error || `Failed to install version ${this.version.name}`,
+      );
+    }
   }
 
   async getRunCommand(
@@ -65,7 +94,7 @@ export class Version {
     instance: number,
     quick: { single?: string; multiplayer?: string } = {},
   ) {
-    await api.version.run(
+    return await api.version.run(
       account,
       settings,
       this.version,

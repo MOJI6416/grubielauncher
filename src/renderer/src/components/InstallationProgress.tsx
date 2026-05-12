@@ -1,0 +1,261 @@
+import { DownloaderInfo } from "@/types/Downloader";
+import { VersionInstallProgress } from "@/types/InstallationProgress";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { formatBytes } from "@renderer/utilities/file";
+import { CheckCircle2, Download, Loader2, PackageCheck } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
+export function InstallationProgress({
+  info,
+  downloadInfo,
+  onCancel,
+  isCancelling = false,
+}: {
+  info: VersionInstallProgress;
+  downloadInfo: DownloaderInfo | null;
+  onCancel?: () => void;
+  isCancelling?: boolean;
+}) {
+  const { t } = useTranslation();
+
+  const sizes = [
+    t("sizes.0"),
+    t("sizes.1"),
+    t("sizes.2"),
+    t("sizes.3"),
+    t("sizes.4"),
+  ];
+  const timeUnits = [
+    t("timeUnits.0"),
+    t("timeUnits.1"),
+    t("timeUnits.2"),
+    t("timeUnits.3"),
+  ];
+
+  const formatSpeed = (bytesPerSecond: number): string => {
+    return `${formatBytes(bytesPerSecond, sizes)}/${timeUnits[0]}`;
+  };
+
+  const formatTime = (seconds: number): string => {
+    if (seconds < 60) return `${seconds}${timeUnits[0]}`;
+    if (seconds < 3600)
+      return `${Math.floor(seconds / 60)}${timeUnits[1]} ${
+        seconds % 60
+      }${timeUnits[0]}`;
+
+    return `${Math.floor(seconds / 3600)}${timeUnits[2]} ${Math.floor(
+      (seconds % 3600) / 60,
+    )}${timeUnits[1]}`;
+  };
+
+  const formatDownloadGroup = (group?: string): string => {
+    if (!group) return t("downloadProgress.preparing");
+
+    return t(`downloadProgress.groups.${group}`, {
+      defaultValue: group,
+    });
+  };
+
+  const stageLabel = t(`installationProgress.stages.${info.stage}`);
+  const title =
+    info.operation === "integrity"
+      ? t("installationProgress.integrityTitle")
+      : t("installationProgress.title");
+  const installProgressValue = info.isIndeterminate
+    ? 100
+    : Math.max(0, Math.min(100, info.progressPercent));
+  const downloadProgressValue =
+    downloadInfo?.progressPercent === 0
+      ? 100
+      : Math.max(0, Math.min(100, downloadInfo?.progressPercent ?? 0));
+  const isDone = info.stage === "done";
+  const canCancel = !!onCancel && !isDone && info.operation === "install";
+
+  return (
+    <Dialog open>
+      <DialogContent
+        showCloseButton={false}
+        className="w-[calc(100vw-2rem)] overflow-hidden p-0 sm:w-[28rem] sm:max-w-[28rem]"
+        onEscapeKeyDown={(event) => event.preventDefault()}
+        onPointerDownOutside={(event) => event.preventDefault()}
+        onInteractOutside={(event) => event.preventDefault()}
+      >
+        <DialogHeader className="border-b bg-muted/20 px-5 py-4 text-left">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/20 text-muted-foreground">
+              {isDone ? (
+                <CheckCircle2 className="size-4" />
+              ) : (
+                <PackageCheck className="size-4" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <DialogTitle className="max-w-full truncate text-base">
+                {title}
+              </DialogTitle>
+              <DialogDescription
+                className="block max-w-full truncate"
+                title={info.versionName}
+              >
+                {info.versionName}
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="grid gap-3 px-5 pb-4">
+          <section className="min-w-0 rounded-lg border bg-muted/15 p-3">
+            <div className="mb-2.5 flex min-w-0 items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                {info.isIndeterminate ? (
+                  <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
+                ) : (
+                  <PackageCheck className="size-4 shrink-0 text-muted-foreground" />
+                )}
+                <span className="min-w-0 truncate text-sm font-medium">
+                  {stageLabel}
+                </span>
+              </div>
+              <Badge
+                variant="outline"
+                className="w-14 shrink-0 justify-center bg-muted/40 tabular-nums"
+              >
+                {info.progressPercent}%
+              </Badge>
+            </div>
+
+            <Progress
+              value={installProgressValue}
+              max={100}
+              className={
+                info.isIndeterminate
+                  ? "[&_[data-slot=progress-indicator]]:animate-pulse"
+                  : undefined
+              }
+            />
+
+            {info.details ? (
+              <p className="mt-2 line-clamp-1 break-words text-xs text-muted-foreground">
+                {info.details}
+              </p>
+            ) : null}
+          </section>
+
+          {downloadInfo ? (
+            <section className="min-w-0 rounded-lg border bg-muted/15 p-3">
+              <div className="mb-2.5 flex min-w-0 items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                  <Download className="size-4 shrink-0 text-muted-foreground" />
+                  <span
+                    className="min-w-0 truncate text-sm font-medium"
+                    title={downloadInfo.currentFileName}
+                  >
+                    {formatDownloadGroup(downloadInfo.currentGroup)}
+                  </span>
+                </div>
+                <Badge
+                  variant="outline"
+                  className="w-14 shrink-0 justify-center bg-muted/40 tabular-nums"
+                >
+                  {downloadInfo.progressPercent}%
+                </Badge>
+              </div>
+
+              <Progress
+                value={downloadProgressValue}
+                max={100}
+                className={
+                  downloadInfo.progressPercent === 0
+                    ? "[&_[data-slot=progress-indicator]]:animate-pulse"
+                    : undefined
+                }
+              />
+
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div className="min-w-0 rounded-md border bg-muted/20 px-2.5 py-2">
+                  <p className="truncate text-muted-foreground">
+                    {t("downloadProgress.files")}
+                  </p>
+                  <p className="truncate font-medium tabular-nums">
+                    {downloadInfo.completedItems}/{downloadInfo.totalItems}
+                  </p>
+                </div>
+
+                {downloadInfo.totalBytes > 0 ? (
+                  <div className="min-w-0 rounded-md border bg-muted/20 px-2.5 py-2">
+                    <p className="truncate text-muted-foreground">
+                      {t("downloadProgress.size")}
+                    </p>
+                    <p className="truncate font-medium tabular-nums">
+                      {formatBytes(downloadInfo.downloadedBytes, sizes)} /{" "}
+                      {formatBytes(downloadInfo.totalBytes, sizes)}
+                    </p>
+                  </div>
+                ) : null}
+
+                {downloadInfo.downloadSpeed &&
+                downloadInfo.downloadSpeed > 0 ? (
+                  <div className="min-w-0 rounded-md border bg-muted/20 px-2.5 py-2">
+                    <p className="truncate text-muted-foreground">
+                      {t("skinView.speed")}
+                    </p>
+                    <p className="truncate font-medium tabular-nums">
+                      {formatSpeed(downloadInfo.downloadSpeed)}
+                    </p>
+                  </div>
+                ) : null}
+
+                {downloadInfo.estimatedTimeRemaining &&
+                downloadInfo.estimatedTimeRemaining > 0 ? (
+                  <div className="min-w-0 rounded-md border bg-muted/20 px-2.5 py-2">
+                    <p className="truncate text-muted-foreground">
+                      {t("downloadProgress.timeRemaining")}
+                    </p>
+                    <p className="truncate font-medium tabular-nums">
+                      {formatTime(downloadInfo.estimatedTimeRemaining)}
+                    </p>
+                  </div>
+                ) : null}
+
+                {downloadInfo.failedItems > 0 ? (
+                  <div className="min-w-0 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-2 text-destructive">
+                    <p className="truncate">{t("downloadProgress.failed")}</p>
+                    <p className="truncate font-medium tabular-nums">
+                      {downloadInfo.failedItems}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+        </div>
+
+        {canCancel ? (
+          <DialogFooter className="m-0 rounded-none border-t bg-muted/25 px-5 py-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={isCancelling}
+            >
+              {isCancelling ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : null}
+              {t("common.cancel")}
+            </Button>
+          </DialogFooter>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}

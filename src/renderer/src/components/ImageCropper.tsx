@@ -3,7 +3,13 @@ import { createRef } from 'react'
 import Cropper, { ReactCropperElement } from 'react-cropper'
 import { useTranslation } from 'react-i18next'
 import 'cropperjs/dist/cropper.css'
-import { Button, Modal, ModalBody, ModalContent, ModalHeader } from '@heroui/react'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
 
 export function ImageCropper({
   title,
@@ -41,46 +47,49 @@ export function ImageCropper({
   }
 
   return (
-    <Modal isOpen={true} onClose={onClose}>
-      <ModalContent>
-        <ModalHeader>{title}</ModalHeader>
-        <ModalBody>
-          <div className="flex flex-col gap-4">
-            <div className="p-1">
-              <Cropper
-                className="rounded-3xl"
-                ref={cropperRef}
-                style={{ height: 350, width: '100%' }}
-                initialAspectRatio={1}
-                preview=".img-preview"
-                src={image}
-                viewMode={1}
-                minCropBoxHeight={size.height}
-                minCropBoxWidth={size.width}
-                cropBoxResizable={false}
-                background={false}
-                responsive={false}
-                checkOrientation={false} // https://github.com/fengyuanchen/cropperjs/issues/671
-                guides={true}
-                dragMode="move"
-                rotatable={true}
-              />
-            </div>
-            <div className="flex gap-2 items-center">
-              <Button
-                variant="flat"
-                color="success"
-                startContent={<Save size={22} />}
-                onPress={async () => {
-                  await getCropData()
-                }}
-              >
-                {t('common.save')}
-              </Button>
-            </div>
+    <Dialog
+      open={true}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <div className="p-1">
+            <Cropper
+              className="rounded-3xl"
+              ref={cropperRef}
+              style={{ height: 350, width: '100%' }}
+              initialAspectRatio={1}
+              preview=".img-preview"
+              src={image}
+              viewMode={1}
+              minCropBoxHeight={size.height}
+              minCropBoxWidth={size.width}
+              cropBoxResizable={false}
+              background={false}
+              responsive={false}
+              checkOrientation={false} // https://github.com/fengyuanchen/cropperjs/issues/671
+              guides={true}
+              dragMode="move"
+              rotatable={true}
+            />
           </div>
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+          <div className="flex gap-2 items-center">
+            <Button
+              onClick={async () => {
+                await getCropData()
+              }}
+            >
+              <Save className="size-4" />
+              {t('common.save')}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

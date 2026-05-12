@@ -1,24 +1,42 @@
-import { IConsole } from "@/types/Console";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  Button,
-  Card,
-  CardBody,
-  Chip,
-  Image,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalHeader,
-  ScrollShadow,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
   Tooltip,
-  Alert,
-} from "@heroui/react";
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { IConsole } from "@/types/Console";
 import { RunGameParams } from "@renderer/App";
 import { consolesAtom, versionsAtom } from "@renderer/stores/atoms";
-import clsx from "clsx";
 import { useAtom } from "jotai";
-import { Play, Square, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useLayoutEffect } from "react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Circle,
+  RotateCcw,
+  Square,
+  Terminal,
+  Trash2,
+} from "lucide-react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 const api = window.api;
@@ -26,6 +44,53 @@ const api = window.api;
 interface IInstance {
   versionName: string;
   instance: number;
+}
+
+function getKey(v: string, i: number) {
+  return `${v}::${i}`;
+}
+
+function formatElapsed(startTime: number) {
+  const diff = Date.now() - new Date(startTime).getTime();
+  const seconds = Math.floor(diff / 1000) % 60;
+  const minutes = Math.floor(diff / 1000 / 60) % 60;
+  const hours = Math.floor(diff / 1000 / 60 / 60);
+
+  return (
+    `${hours.toString().padStart(2, "0")}:` +
+    `${minutes.toString().padStart(2, "0")}:` +
+    `${seconds.toString().padStart(2, "0")}`
+  );
+}
+
+function getStatusMeta(
+  status: IConsole["status"],
+  t: ReturnType<typeof useTranslation>["t"],
+) {
+  if (status === "running") {
+    return {
+      label: t("console.running"),
+      Icon: Circle,
+      badgeClassName: "border-primary/40 bg-primary/10 text-primary",
+      dotClassName: "bg-primary",
+    };
+  }
+
+  if (status === "stopped") {
+    return {
+      label: t("console.stopped"),
+      Icon: CheckCircle2,
+      badgeClassName: "border-border bg-secondary text-secondary-foreground",
+      dotClassName: "bg-muted-foreground",
+    };
+  }
+
+  return {
+    label: t("console.error"),
+    Icon: AlertTriangle,
+    badgeClassName: "border-destructive/40 bg-destructive/10 text-destructive",
+    dotClassName: "bg-destructive",
+  };
 }
 
 export function Console({
@@ -46,13 +111,15 @@ export function Console({
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const pinnedToBottomRef = useRef(true);
-
   const consolesRef = useRef(consoles.consoles);
+
   useEffect(() => {
     consolesRef.current = consoles.consoles;
   }, [consoles.consoles]);
 
-  const getKey = (v: string, i: number) => `${v}::${i}`;
+  const versionsByName = useMemo(() => {
+    return new Map(versions.map((version) => [version.version.name, version]));
+  }, [versions]);
 
   const instances = useMemo<IInstance[]>(() => {
     return consoles.consoles.map((c) => ({
@@ -63,6 +130,7 @@ export function Console({
 
   const selectedConsole = useMemo<IConsole | null>(() => {
     if (!selectedInstance) return null;
+
     return (
       consoles.consoles.find(
         (c) =>
@@ -71,6 +139,10 @@ export function Console({
       ) || null
     );
   }, [selectedInstance, consoles.consoles]);
+
+  const selectedVersion = selectedConsole
+    ? versionsByName.get(selectedConsole.versionName)
+    : undefined;
 
   useEffect(() => {
     if (instances.length === 0) {
@@ -88,35 +160,23 @@ export function Console({
     if (exists) return;
 
     const running = consoles.consoles.find((c) => c.status === "running");
-    if (running) {
-      setSelectedInstance({
-        versionName: running.versionName,
-        instance: running.instance,
-      });
-      return;
-    }
-
-    setSelectedInstance(instances[0]);
+    const next = running || consoles.consoles[0];
+    setSelectedInstance({
+      versionName: next.versionName,
+      instance: next.instance,
+    });
   }, [instances, consoles.consoles, selectedInstance]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const list = consolesRef.current;
       const next: Record<string, string> = {};
 
-      list.forEach(({ versionName, instance, startTime, status }) => {
-        if (status !== "running" || !startTime) return;
-
-        const diff = Date.now() - new Date(startTime).getTime();
-        const seconds = Math.floor(diff / 1000) % 60;
-        const minutes = Math.floor(diff / 1000 / 60) % 60;
-        const hours = Math.floor(diff / 1000 / 60 / 60);
-
-        next[getKey(versionName, instance)] =
-          `${hours.toString().padStart(2, "0")}:` +
-          `${minutes.toString().padStart(2, "0")}:` +
-          `${seconds.toString().padStart(2, "0")}`;
-      });
+      consolesRef.current.forEach(
+        ({ versionName, instance, startTime, status }) => {
+          if (status !== "running" || !startTime) return;
+          next[getKey(versionName, instance)] = formatElapsed(startTime);
+        },
+      );
 
       setElapsedTimes(next);
     }, 1000);
@@ -152,232 +212,299 @@ export function Console({
     if (next.length === 0) onClose();
   }
 
-  function getTipsForConsole(c: IConsole) {
-    const tips = c.messages.map((m) => m.tips).flat();
-    return Array.from(new Set(tips));
-  }
+  const selectedStatus = selectedConsole
+    ? getStatusMeta(selectedConsole.status, t)
+    : null;
 
   return (
-    <Modal
-      isOpen={true}
-      size="5xl"
-      onClose={() => {
-        onClose();
-      }}
-    >
-      <ModalContent>
-        <ModalHeader>{t("console.title")}</ModalHeader>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="grid h-[min(40rem,calc(100vh-4rem))] w-[min(64rem,calc(100vw-2rem))] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:max-w-none">
+        <DialogHeader className="border-b px-5 py-4 pr-12">
+          <DialogTitle>{t("console.title")}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {t("console.title")}
+          </DialogDescription>
+        </DialogHeader>
 
-        <ModalBody>
-          <div className="flex items-center space-x-2 h-96">
-            <div className="flex flex-col w-4/12 h-full">
-              <ScrollShadow className="w-full h-full">
-                {instances.length === 0 ? (
-                  <div className="p-2">
-                    <Alert title={t("console.noInstances") || "No instances"} />
-                  </div>
-                ) : (
-                  instances.map((inst) => {
-                    const versionItem = versions.find(
-                      (v) => v.version.name === inst.versionName,
-                    );
-                    const versionConsole = consoles.consoles.find(
-                      (c) =>
-                        c.versionName === inst.versionName &&
-                        c.instance === inst.instance,
-                    );
+        <TooltipProvider delayDuration={250}>
+          <div className="grid min-h-0 min-w-0 grid-cols-[16rem_minmax(0,1fr)]">
+            <aside className="min-h-0 min-w-0 border-r bg-card">
+              <div className="flex h-full min-h-0 flex-col">
+                <div className="flex items-center justify-between border-b bg-muted/20 px-3 py-2.5">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {t("console.instances")}
+                  </p>
+                  <Badge variant="secondary" className="rounded-md">
+                    {instances.length}
+                  </Badge>
+                </div>
 
-                    if (!versionItem || !versionConsole) return null;
+                <ScrollArea className="min-h-0 flex-1">
+                  <div className="grid gap-1.5 p-2">
+                    {instances.length === 0 ? (
+                      <Empty className="min-h-52 border bg-transparent">
+                        <EmptyHeader>
+                          <EmptyMedia variant="icon">
+                            <Terminal />
+                          </EmptyMedia>
+                          <EmptyTitle>{t("console.noInstances")}</EmptyTitle>
+                        </EmptyHeader>
+                      </Empty>
+                    ) : (
+                      instances.map((inst) => {
+                        const versionConsole = consoles.consoles.find(
+                          (c) =>
+                            c.versionName === inst.versionName &&
+                            c.instance === inst.instance,
+                        );
+                        if (!versionConsole) return null;
 
-                    const isSelected =
-                      selectedInstance?.versionName === inst.versionName &&
-                      selectedInstance.instance === inst.instance;
+                        const versionItem = versionsByName.get(
+                          inst.versionName,
+                        );
+                        const isSelected =
+                          selectedInstance?.versionName === inst.versionName &&
+                          selectedInstance.instance === inst.instance;
+                        const statusMeta = getStatusMeta(
+                          versionConsole.status,
+                          t,
+                        );
 
-                    const tipCodes = getTipsForConsole(versionConsole);
-                    const tipText = tipCodes
-                      .map((tip) => t(`tips.${tip}`))
-                      .join(", ");
-
-                    return (
-                      <Card
-                        key={getKey(inst.versionName, inst.instance)}
-                        className={clsx(
-                          "w-full mb-2 border",
-                          isSelected ? "border-primary-200" : "border-white/10",
-                        )}
-                        isPressable
-                        onPress={() => {
-                          setSelectedInstance(inst);
-                          pinnedToBottomRef.current = true;
-                          requestAnimationFrame(scrollToBottom);
-                        }}
-                      >
-                        <CardBody>
-                          <div className="flex items-center justify-between space-x-2 w-full">
-                            <div className="flex items-center space-x-2 min-w-0">
-                              {versionItem.version.image && (
-                                <Image
+                        return (
+                          <button
+                            key={getKey(inst.versionName, inst.instance)}
+                            type="button"
+                            className={cn(
+                              "grid min-w-0 gap-2 rounded-lg border bg-background/85 p-2 text-left text-foreground transition-colors outline-none hover:border-primary/35 hover:bg-accent/45 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                              isSelected &&
+                                "border-primary/60 bg-accent/70 shadow-sm",
+                            )}
+                            onClick={() => {
+                              setSelectedInstance(inst);
+                              pinnedToBottomRef.current = true;
+                              requestAnimationFrame(scrollToBottom);
+                            }}
+                          >
+                            <div className="flex min-w-0 items-center gap-2">
+                              {versionItem?.version.image ? (
+                                <img
                                   src={versionItem.version.image}
                                   alt={inst.versionName}
                                   width={32}
                                   height={32}
-                                  className="min-w-8 min-h-8"
+                                  className="size-8 shrink-0 rounded-md border bg-muted object-cover"
                                 />
+                              ) : (
+                                <div className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-muted text-muted-foreground">
+                                  <Terminal className="size-4" />
+                                </div>
                               )}
 
-                              <div className="flex flex-col min-w-0">
-                                <div className="flex items-center space-x-1">
-                                  <p className="text-sm truncate flex-grow">
-                                    {versionItem.version.name}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    [{inst.instance}]
-                                  </p>
-                                </div>
-
-                                {versionConsole.status === "running" && (
-                                  <span className="text-xs text-gray-500">
-                                    {elapsedTimes[
-                                      getKey(inst.versionName, inst.instance)
-                                    ] || "00:00:00"}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <Tooltip
-                                isDisabled={tipCodes.length === 0}
-                                content={tipText}
-                                size="sm"
-                              >
-                                <Chip
-                                  size="sm"
-                                  className={
-                                    tipCodes.length ? "cursor-help" : ""
-                                  }
-                                  variant="dot"
-                                  color={
-                                    versionConsole.status === "running"
-                                      ? "success"
-                                      : versionConsole.status === "stopped"
-                                        ? "warning"
-                                        : "danger"
-                                  }
+                              <div className="min-w-0 flex-1">
+                                <p
+                                  className="truncate text-sm font-medium"
+                                  title={inst.versionName}
                                 >
-                                  {versionConsole.status === "running"
-                                    ? t("console.running")
-                                    : versionConsole.status === "stopped"
-                                      ? t("console.stopped")
-                                      : t("console.error")}
-                                </Chip>
-                              </Tooltip>
-
-                              <div className="flex items-center space-x-1">
-                                {versionConsole.status === "running" ? (
-                                  <Button
-                                    isIconOnly
-                                    variant="flat"
-                                    size="sm"
-                                    color="danger"
-                                    onPress={async () => {
-                                      setSelectedInstance(inst);
-                                      await api.game.closeGame(
-                                        inst.versionName,
-                                        inst.instance,
-                                      );
-                                    }}
-                                  >
-                                    <Square size={22} />
-                                  </Button>
-                                ) : (
-                                  <>
-                                    <Button
-                                      isIconOnly
-                                      variant="flat"
-                                      size="sm"
-                                      color="secondary"
-                                      onPress={async () => {
-                                        setSelectedInstance(inst);
-                                        await runGame({
-                                          version: versionItem,
-                                          instance: inst.instance,
-                                        });
-                                      }}
-                                    >
-                                      <Play size={22} />
-                                    </Button>
-
-                                    <Button
-                                      isIconOnly
-                                      variant="flat"
-                                      size="sm"
-                                      color="warning"
-                                      onPress={async () => {
-                                        await removeConsole(inst);
-                                      }}
-                                    >
-                                      <X size={22} />
-                                    </Button>
-                                  </>
-                                )}
+                                  {inst.versionName}
+                                </p>
+                                <p className="truncate text-xs text-muted-foreground">
+                                  {t("console.instance")} #{inst.instance}
+                                </p>
                               </div>
                             </div>
-                          </div>
-                        </CardBody>
-                      </Card>
-                    );
-                  })
-                )}
-              </ScrollShadow>
-            </div>
 
-            <div className="w-8/12 h-full">
-              <Card className="h-full bg-gray-900 border-none shadow-lg">
-                <CardBody className="h-full p-0">
+                            <div className="flex min-w-0 items-center justify-between gap-2">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "min-w-0 justify-start gap-1.5 rounded-md px-1.5 font-normal",
+                                  statusMeta.badgeClassName,
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    "size-1.5 shrink-0 rounded-full",
+                                    statusMeta.dotClassName,
+                                  )}
+                                />
+                                <span className="truncate">
+                                  {statusMeta.label}
+                                </span>
+                              </Badge>
+
+                              {versionConsole.status === "running" && (
+                                <span className="shrink-0 text-xs text-muted-foreground">
+                                  {elapsedTimes[
+                                    getKey(inst.versionName, inst.instance)
+                                  ] || "00:00:00"}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            </aside>
+
+            <section className="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] bg-card">
+              <div className="flex min-w-0 items-center justify-between gap-3 border-b bg-muted/20 px-4 py-3">
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Terminal className="size-4 shrink-0 text-muted-foreground" />
+                    <p
+                      className="truncate text-sm font-medium"
+                      title={selectedConsole?.versionName}
+                    >
+                      {selectedConsole?.versionName || t("console.title")}
+                    </p>
+                    {selectedConsole && selectedStatus && (
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "shrink-0 gap-1.5 rounded-md px-1.5 font-normal",
+                          selectedStatus.badgeClassName,
+                        )}
+                      >
+                        <selectedStatus.Icon className="size-3" />
+                        {selectedStatus.label}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">
+                    {selectedConsole
+                      ? `${t("console.instance")} #${selectedConsole.instance} - ${selectedConsole.messages.length} ${t("console.messages")}`
+                      : t("console.noInstances")}
+                  </p>
+                </div>
+
+                {selectedConsole && (
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {selectedConsole.status === "running" ? (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        type="button"
+                        onClick={async () => {
+                          await api.game.closeGame(
+                            selectedConsole.versionName,
+                            selectedConsole.instance,
+                          );
+                        }}
+                      >
+                        <Square />
+                        {t("console.stop")}
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          type="button"
+                          disabled={!selectedVersion}
+                          onClick={async () => {
+                            if (!selectedVersion) return;
+                            await runGame({
+                              version: selectedVersion,
+                              instance: selectedConsole.instance,
+                            });
+                          }}
+                        >
+                          <RotateCcw />
+                          {t("console.restart")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          type="button"
+                          onClick={() =>
+                            removeConsole({
+                              versionName: selectedConsole.versionName,
+                              instance: selectedConsole.instance,
+                            })
+                          }
+                        >
+                          <Trash2 />
+                          {t("console.remove")}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <Card className="m-3 min-h-0 overflow-hidden border-border bg-card py-0 shadow-sm">
+                <CardContent className="h-full min-h-0 p-0">
                   <div
                     ref={viewportRef}
                     onScroll={handleScroll}
-                    className="w-full h-full overflow-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800"
+                    className="h-full w-full overflow-auto bg-background p-3 text-foreground"
                   >
-                    {selectedConsole?.messages.map((message, index) => {
-                      const text = message.message.length
-                        ? message.message
-                        : " ";
+                    {!selectedConsole ||
+                    selectedConsole.messages.length === 0 ? (
+                      <Empty className="h-full min-h-56 border bg-background/80">
+                        <EmptyHeader>
+                          <EmptyMedia variant="icon">
+                            <Terminal />
+                          </EmptyMedia>
+                          <EmptyTitle>{t("console.noMessages")}</EmptyTitle>
+                          <EmptyDescription>
+                            {t("console.noMessagesDescription")}
+                          </EmptyDescription>
+                        </EmptyHeader>
+                      </Empty>
+                    ) : (
+                      <div className="min-w-0 space-y-2">
+                        {selectedConsole.messages.map((message, index) => {
+                          const text = message.message.length
+                            ? message.message
+                            : " ";
+                          const hasTips = message.tips.length > 0;
 
-                      return (
-                        <Tooltip
-                          size="sm"
-                          key={index}
-                          isDisabled={message.tips.length === 0}
-                          content={message.tips
-                            .map((tip) => t("tips." + tip))
-                            .join(", ")}
-                        >
-                          <pre
-                            style={{ tabSize: 4 }}
-                            className={`m-0 p-2 text-xs font-mono whitespace-pre border-l-4 ${
-                              message.tips.length > 0 ? "cursor-help" : ""
-                            } ${
-                              message.type === "info"
-                                ? "bg-blue-950/50 text-blue-300 border-blue-500"
-                                : message.type === "error"
-                                  ? "bg-red-950/50 text-red-300 border-red-500"
-                                  : "bg-green-950/50 text-green-300 border-green-500"
-                            } first:pt-2 last:pb-2 transition-colors duration-200 hover:bg-opacity-75`}
-                          >
-                            {text}
-                          </pre>
-                        </Tooltip>
-                      );
-                    })}
+                          return (
+                            <Tooltip
+                              key={index}
+                              open={hasTips ? undefined : false}
+                            >
+                              <TooltipTrigger asChild>
+                                <pre
+                                  style={{ tabSize: 4 }}
+                                  className={cn(
+                                    "m-0 min-w-0 max-w-full overflow-hidden whitespace-pre-wrap rounded-md border border-l-2 bg-card px-3 py-2 font-mono text-[0.72rem] leading-relaxed shadow-xs [overflow-wrap:anywhere]",
+                                    hasTips && "cursor-help",
+                                    message.type === "info" &&
+                                      "border-l-primary/70 text-foreground",
+                                    message.type === "error" &&
+                                      "border-l-destructive text-destructive",
+                                    message.type !== "info" &&
+                                      message.type !== "error" &&
+                                      "border-l-primary text-foreground",
+                                  )}
+                                >
+                                  {text}
+                                </pre>
+                              </TooltipTrigger>
+                              {hasTips && (
+                                <TooltipContent>
+                                  {message.tips
+                                    .map((tip) => t("tips." + tip))
+                                    .join(", ")}
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                </CardBody>
+                </CardContent>
               </Card>
-            </div>
+            </section>
           </div>
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+        </TooltipProvider>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,14 +1,18 @@
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  addToast,
-  Button,
-  Checkbox,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Tooltip,
-} from "@heroui/react";
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ILoader } from "@/types/Loader";
 import { SelectPaths } from "@renderer/components/Modals/Version/Share/SelectPaths";
 import { IModpack, IModpackUpdate } from "@/types/Backend";
@@ -22,11 +26,12 @@ import {
   versionServersAtom,
 } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
-import { ArrowUpFromLine, FolderOpen, Trash } from "lucide-react";
+import { ArrowUpFromLine, FolderOpen, Loader2, Trash } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "@renderer/utilities/file";
 import { Confirmation } from "../../Confirmation";
+import { toast } from "sonner";
 
 const api = window.api;
 
@@ -37,11 +42,13 @@ export function Share({
   modpack,
   shareType,
   diffenceUpdateData,
+  onPublished,
 }: {
   closeModal: () => void;
   modpack?: IModpack;
   shareType: "new" | "update";
   diffenceUpdateData: string;
+  onPublished?: (shareCode: string) => void;
 }) {
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
@@ -69,7 +76,6 @@ export function Share({
   const [account] = useAtom(accountAtom);
   const [globalPaths] = useAtom(pathsAtom);
   const [versions, setVersions] = useAtom(versionsAtom);
-  const [build] = useState(0);
   const [authData] = useAtom(authDataAtom);
 
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
@@ -139,7 +145,13 @@ export function Share({
   const hasAnyUpdateChanges = useMemo(() => {
     if (shareType !== "update" || !modpack || !selectedVersion) return true;
 
-    const otherSizeSame = totalSize === modpack.conf.loader.other?.size || 0;
+    const previousOtherPaths = modpack.conf.loader.other?.paths || [];
+    const nextOtherPaths = paths;
+    const otherPathsSame =
+      previousOtherPaths.length === nextOtherPaths.length &&
+      previousOtherPaths.every((p) => nextOtherPaths.includes(p));
+    const otherSizeSame = totalSize === (modpack.conf.loader.other?.size || 0);
+    const otherSame = otherSizeSame && otherPathsSame;
 
     const anyShareFlags =
       isShareName ||
@@ -148,7 +160,7 @@ export function Share({
       isShareServers ||
       isShareImage ||
       isShareArguments ||
-      (isShareOtherFiles && !otherSizeSame);
+      (isShareOtherFiles && !otherSame);
 
     return anyShareFlags;
   }, [
@@ -162,6 +174,7 @@ export function Share({
     isShareImage,
     isShareArguments,
     isShareOtherFiles,
+    paths,
     totalSize,
   ]);
 
@@ -187,6 +200,9 @@ export function Share({
       }
 
       let isUpdateVersionLocal = false;
+      const nextBuild = silentMode
+        ? selectedVersion.version.build || 0
+        : (selectedVersion.version.build || 0) + 1;
 
       if (isShareMods) {
         const result = await api.version.share.uploadMods(
@@ -196,7 +212,8 @@ export function Share({
             shareCode,
           },
         );
-        if (result.success) mods = result.mods;
+        if (!result.success) throw new Error("local mods upload failed");
+        mods = result.mods;
       }
 
       let other: ILoader["other"] | null = null;
@@ -219,10 +236,10 @@ export function Share({
 
           const tmpZipPath = await api.path.join(
             await api.other.getPath("temp"),
-            `other_${shareCode}.zip`,
+            `other_${shareCode}_${Date.now()}.zip`,
           );
 
-          await api.file.archiveFiles(validPaths, tmpZipPath);
+          await api.file.archiveFiles(validPaths, tmpZipPath, versionPath);
 
           const url = await api.backend.uploadFileFromPath(
             account.accessToken!,
@@ -237,10 +254,6 @@ export function Share({
 
           other = { paths, url, size: computedTotalSize };
 
-          if (versionIndex !== -1) {
-            versions[versionIndex].version.loader.other = other;
-            setVersions([...versions]);
-          }
         }
 
         selectedVersion.version.loader.other = other;
@@ -276,13 +289,8 @@ export function Share({
         }
       }
 
-      if (isUpdateVersionLocal) {
-        await selectedVersion.save();
-        setSelectedVersion(selectedVersion);
-      }
-
       const update: IModpackUpdate = {
-        build,
+        build: nextBuild,
         name: isShareName ? selectedVersion.version.name : null,
         mods: isShareMods ? mods : null,
         servers: isShareServers ? servers : null,
@@ -305,18 +313,31 @@ export function Share({
       );
       if (!isUpdated) throw new Error("not updated");
 
+      selectedVersion.version.build = nextBuild;
+      isUpdateVersionLocal = true;
+
+      if (versionIndex !== -1) {
+        versions[versionIndex].version.build = nextBuild;
+        if (isShareOtherFiles) {
+          if (other) versions[versionIndex].version.loader.other = other;
+          else delete versions[versionIndex].version.loader.other;
+        }
+        if (isShareImage || silentMode)
+          versions[versionIndex].version.image = updateImage;
+        setVersions([...versions]);
+      }
+
+      if (isUpdateVersionLocal) {
+        await selectedVersion.save();
+        setSelectedVersion(selectedVersion);
+      }
+
       if (!silentMode) {
-        addToast({
-          title: t("versions.published"),
-          color: "success",
-        });
+        toast.success(t("versions.published"));
       }
     } catch {
       if (!silentMode) {
-        addToast({
-          title: t("versions.publishError"),
-          color: "danger",
-        });
+        toast.error(t("versions.publishError"));
       }
     } finally {
       setIsLoading(false);
@@ -343,10 +364,7 @@ export function Share({
     );
 
     if (!result) {
-      addToast({
-        color: "danger",
-        title: t("ownModpacks.deleteError"),
-      });
+      toast.error(t("ownModpacks.deleteError"));
 
       setIsLoading(false);
       setLoadingType(undefined);
@@ -370,186 +388,225 @@ export function Share({
     setLoadingType(undefined);
 
     closeModal();
-    addToast({
-      title: t("ownModpacks.deleted"),
-      color: "success",
-    });
+    toast.success(t("ownModpacks.deleted"));
   }, [selectedVersion, account, authData, versions, closeModal, t]);
 
   return (
     <>
-      <Modal
-        isOpen={true}
-        onClose={() => {
-          if (isLoading) return;
-          closeModal();
+      <Dialog
+        open={true}
+        onOpenChange={(open) => {
+          if (!open && !isLoading) closeModal();
         }}
       >
-        <ModalContent>
-          <ModalHeader>{t("versions.shareOptions")}</ModalHeader>
-          <ModalBody>
-            <div className="flex flex-col gap-2">
-              {shareType === "update" && (
-                <>
+        <DialogContent
+          className="overflow-hidden p-0 sm:max-w-md"
+          onPointerDownOutside={(event) => {
+            if (isLoading) event.preventDefault();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (isLoading) event.preventDefault();
+          }}
+        >
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle>{t("versions.shareOptions")}</DialogTitle>
+          </DialogHeader>
+          <TooltipProvider>
+            <div className="px-6 pb-2">
+              <div className="grid gap-0.5 rounded-lg border bg-card p-1.5">
+                {shareType === "update" && (
+                  <>
+                  <label className="flex min-h-8 items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent/50">
+                      <Checkbox
+                        disabled={
+                          !diffenceUpdateData.includes("name") || isLoading
+                        }
+                        checked={isShareName}
+                        onCheckedChange={(checked) =>
+                          setIsShareName(checked === true)
+                        }
+                      />
+                      {t("versions.updateName")}
+                    </label>
+                  <label className="flex min-h-8 items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent/50">
+                      <Checkbox
+                        disabled={
+                          !diffenceUpdateData.includes("logo") || isLoading
+                        }
+                        checked={isShareImage}
+                        onCheckedChange={(checked) =>
+                          setIsShareImage(checked === true)
+                        }
+                      />
+                      {t("versions.updateLogo")}
+                    </label>
+                  </>
+                )}
+
+              <label className="flex min-h-8 items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent/50">
                   <Checkbox
-                    isDisabled={
-                      !diffenceUpdateData.includes("name") || isLoading
+                    disabled={
+                      (shareType === "new"
+                        ? (selectedVersion?.version.loader.mods.length ?? 0) ===
+                          0
+                        : !diffenceUpdateData.includes("mods")) || isLoading
                     }
-                    isSelected={isShareName}
-                    onValueChange={(v) => setIsShareName(v)}
-                  >
-                    {t("versions.updateName")}
-                  </Checkbox>
-                  <Checkbox
-                    isDisabled={
-                      !diffenceUpdateData.includes("logo") || isLoading
+                    checked={isShareMods}
+                    onCheckedChange={(checked) =>
+                      setIsShareMods(checked === true)
                     }
-                    isSelected={isShareImage}
-                    onValueChange={(v) => setIsShareImage(v)}
-                  >
-                    {t("versions.updateLogo")}
-                  </Checkbox>
-                </>
-              )}
-
-              <Checkbox
-                isDisabled={
-                  (shareType === "new"
-                    ? (selectedVersion?.version.loader.mods.length ?? 0) === 0
-                    : !diffenceUpdateData.includes("mods")) || isLoading
-                }
-                isSelected={isShareMods}
-                onValueChange={(v) => setIsShareMods(v)}
-              >
-                {shareType === "new"
-                  ? t("versions.shareMods")
-                  : t("versions.updateMods")}
-              </Checkbox>
-
-              <Checkbox
-                isDisabled={
-                  (shareType === "new"
-                    ? servers.length === 0
-                    : !diffenceUpdateData.includes("servers")) || isLoading
-                }
-                isSelected={isShareServers}
-                onValueChange={(v) => setIsShareServers(v)}
-              >
-                {shareType === "new"
-                  ? t("versions.shareServers")
-                  : t("versions.updateServers")}
-              </Checkbox>
-
-              <Checkbox
-                isDisabled={
-                  (shareType === "new"
-                    ? !isExistsOptionsFile
-                    : !diffenceUpdateData.includes("options")) || isLoading
-                }
-                isSelected={isShareOptions}
-                onValueChange={(v) => setIsShareOptions(v)}
-              >
-                {shareType === "new"
-                  ? t("versions.shareGameSettings")
-                  : t("versions.updateGameSettings")}
-              </Checkbox>
-
-              <Checkbox
-                isDisabled={
-                  (shareType === "new"
-                    ? !selectedVersion?.version.runArguments?.jvm &&
-                      !selectedVersion?.version.runArguments?.game
-                    : !diffenceUpdateData.includes("arguments")) || isLoading
-                }
-                isSelected={isShareArguments}
-                onValueChange={(v) => setIsShareArguments(v)}
-              >
-                {shareType === "new"
-                  ? t("versions.shareArguments")
-                  : t("versions.updateArguments")}
-              </Checkbox>
-
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  isDisabled={
-                    (shareType === "update" &&
-                      !diffenceUpdateData.includes("other")) ||
-                    isLoading
-                  }
-                  isSelected={isShareOtherFiles}
-                  onValueChange={(v) => {
-                    setIsShareOtherFiles(v);
-                    if (v)
-                      setPaths(
-                        selectedVersion?.version.loader.other?.paths || [],
-                      );
-                  }}
-                >
+                  />
                   {shareType === "new"
-                    ? t("versions.shareOtherFiles")
-                    : t("versions.updateOtherFiles")}
-                </Checkbox>
+                    ? t("versions.shareMods")
+                    : t("versions.updateMods")}
+                </label>
 
-                <Tooltip
-                  content={t("share.limitExceeded")}
-                  isDisabled={totalSize <= MAX_OTHER_BYTES}
-                >
-                  <div className="flex items-center space-x-1">
-                    <Button
-                      color={
-                        totalSize > MAX_OTHER_BYTES ? "warning" : "default"
-                      }
-                      isLoading={isLoading && loadingType === "size"}
-                      variant="flat"
-                      isIconOnly
-                      size="sm"
-                      isDisabled={isLoading || !isShareOtherFiles}
-                      onPress={async () => {
-                        if (!selectedVersion) return;
-                        setSelectPathsFolder(selectedVersion.versionPath);
-                        setIsOpenSelectPaths(true);
-                      }}
+                <label className="flex min-h-8 items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent/50">
+                  <Checkbox
+                    disabled={
+                      (shareType === "new"
+                        ? servers.length === 0
+                        : !diffenceUpdateData.includes("servers")) || isLoading
+                    }
+                    checked={isShareServers}
+                    onCheckedChange={(checked) =>
+                      setIsShareServers(checked === true)
+                    }
+                  />
+                  {shareType === "new"
+                    ? t("versions.shareServers")
+                    : t("versions.updateServers")}
+                </label>
+
+                <label className="flex min-h-8 items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent/50">
+                  <Checkbox
+                    disabled={
+                      (shareType === "new"
+                        ? !isExistsOptionsFile
+                        : !diffenceUpdateData.includes("options")) || isLoading
+                    }
+                    checked={isShareOptions}
+                    onCheckedChange={(checked) =>
+                      setIsShareOptions(checked === true)
+                    }
+                  />
+                  {shareType === "new"
+                    ? t("versions.shareGameSettings")
+                    : t("versions.updateGameSettings")}
+                </label>
+
+                <label className="flex min-h-8 items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent/50">
+                  <Checkbox
+                    disabled={
+                      (shareType === "new"
+                        ? !selectedVersion?.version.runArguments?.jvm &&
+                          !selectedVersion?.version.runArguments?.game
+                        : !diffenceUpdateData.includes("arguments")) ||
+                      isLoading
+                    }
+                    checked={isShareArguments}
+                    onCheckedChange={(checked) =>
+                      setIsShareArguments(checked === true)
+                    }
+                  />
+                  {shareType === "new"
+                    ? t("versions.shareArguments")
+                    : t("versions.updateArguments")}
+                </label>
+
+                <div className="grid gap-1 rounded-md px-2 py-1 transition-colors hover:bg-accent/50">
+                  <div className="flex min-w-0 items-center justify-between gap-3">
+                    <label className="flex min-w-0 items-center gap-2.5 text-sm">
+                      <Checkbox
+                        disabled={
+                          (shareType === "update" &&
+                            !diffenceUpdateData.includes("other")) ||
+                          isLoading
+                        }
+                        checked={isShareOtherFiles}
+                        onCheckedChange={(checked) => {
+                          const value = checked === true;
+                          setIsShareOtherFiles(value);
+                          if (value)
+                            setPaths(
+                              selectedVersion?.version.loader.other?.paths ||
+                                [],
+                            );
+                        }}
+                      />
+                      {shareType === "new"
+                        ? t("versions.shareOtherFiles")
+                        : t("versions.updateOtherFiles")}
+                    </label>
+
+                    <Tooltip
+                      open={totalSize > MAX_OTHER_BYTES ? undefined : false}
                     >
-                      <FolderOpen size={22} />
-                    </Button>
+                      <TooltipTrigger asChild>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Button
+                            type="button"
+                            variant={
+                              totalSize > MAX_OTHER_BYTES
+                                ? "secondary"
+                                : "outline"
+                            }
+                            size="icon-sm"
+                            disabled={isLoading || !isShareOtherFiles}
+                            onClick={async () => {
+                              if (!selectedVersion) return;
+                              setSelectPathsFolder(selectedVersion.versionPath);
+                              setIsOpenSelectPaths(true);
+                            }}
+                          >
+                            {isLoading && loadingType === "size" ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <FolderOpen className="size-4" />
+                            )}
+                          </Button>
 
-                    {totalSize > 0 && isShareOtherFiles && (
-                      <p
-                        className={`text-xs ${
-                          totalSize > MAX_OTHER_BYTES
-                            ? "text-warning-400"
-                            : "text-gray-400"
-                        }`}
-                      >
-                        {formatBytes(totalSize, [
-                          t("sizes.0"),
-                          t("sizes.1"),
-                          t("sizes.2"),
-                          t("sizes.3"),
-                          t("sizes.4"),
-                        ])}
-                      </p>
-                    )}
+                          {totalSize > 0 && isShareOtherFiles && (
+                            <p
+                              className={`max-w-24 truncate text-xs ${
+                                totalSize > MAX_OTHER_BYTES
+                                  ? "text-destructive"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {formatBytes(totalSize, [
+                                t("sizes.0"),
+                                t("sizes.1"),
+                                t("sizes.2"),
+                                t("sizes.3"),
+                                t("sizes.4"),
+                              ])}
+                            </p>
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      {totalSize > MAX_OTHER_BYTES && (
+                        <TooltipContent>
+                          {t("share.limitExceeded")}
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
                   </div>
-                </Tooltip>
+                </div>
               </div>
             </div>
-          </ModalBody>
+          </TooltipProvider>
 
-          <ModalFooter>
-            <div className="flex items-center gap-2">
+          <DialogFooter className="border-t bg-muted/20 px-6 pt-4 pb-8">
+            <div className="flex w-full items-center justify-end gap-2">
               <Button
-                color="primary"
-                variant="flat"
-                startContent={<ArrowUpFromLine size={22} />}
-                isDisabled={
+                disabled={
                   isLoading ||
                   !isNetwork ||
                   totalSize > MAX_OTHER_BYTES ||
                   (shareType === "update" ? !hasAnyUpdateChanges : false)
                 }
-                isLoading={isLoading && loadingType === "share"}
-                onPress={async () => {
+                onClick={async () => {
                   if (!selectedVersion || !account || !authData) return;
 
                   if (
@@ -600,17 +657,13 @@ export function Share({
                     }
 
                     await selectedVersion.save();
+                    setSelectedVersion(selectedVersion);
+                    onPublished?.(shareCode);
                     await api.clipboard.writeText(shareCode);
 
-                    addToast({
-                      title: t("versions.published"),
-                      color: "success",
-                    });
+                    toast.success(t("versions.published"));
                   } catch {
-                    addToast({
-                      title: t("versions.publishError"),
-                      color: "danger",
-                    });
+                    toast.error(t("versions.publishError"));
                   } finally {
                     setIsLoading(false);
                     setLoadingType(undefined);
@@ -618,26 +671,30 @@ export function Share({
                   }
                 }}
               >
+                {isLoading && loadingType === "share" ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <ArrowUpFromLine className="size-4" />
+                )}
                 {shareType === "new" ? t("versions.share") : t("common.update")}
               </Button>
 
               {shareType === "update" && (
                 <Button
-                  color="danger"
-                  variant="flat"
-                  isDisabled={isLoading}
-                  onPress={() => {
+                  variant="destructive"
+                  disabled={isLoading}
+                  onClick={() => {
                     setIsConfirmationOpen(true);
                   }}
-                  startContent={<Trash size={22} />}
                 >
+                  <Trash className="size-4" />
                   {t("common.delete")}
                 </Button>
               )}
             </div>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {isOpenSelectPaths && selectedVersion && (
         <SelectPaths

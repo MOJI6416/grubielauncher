@@ -1,8 +1,9 @@
 import { ILocalProject, ProjectType } from '@/types/ModManager'
-import { addToast, Button } from '@heroui/react'
+import { Button } from '@/components/ui/button'
 import { BookCheck, BookX } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from "sonner";
 
 const api = window.api
 
@@ -96,7 +97,7 @@ export const ModToggleButton = ({
     try {
       const fromExists = await api.fs.pathExists(from)
       if (!fromExists) {
-        addToast({ color: 'warning', title: t('modManager.invalidMod') })
+        toast.warning(t('modManager.invalidMod'))
         return
       }
 
@@ -104,15 +105,9 @@ export const ModToggleButton = ({
 
       setIsEnabled((prev) => !prev)
 
-      addToast({
-        color: 'success',
-        title: t(isEnabled ? 'modManager.disabled' : 'modManager.enabled')
-      })
+      toast.success(t(isEnabled ? 'modManager.disabled' : 'modManager.enabled'))
     } catch {
-      addToast({
-        color: 'danger',
-        title: t('common.error')
-      })
+      toast.error(t('modManager.toggleError'))
     } finally {
       setIsToggling(false)
     }
@@ -120,13 +115,12 @@ export const ModToggleButton = ({
 
   return (
     <Button
-      variant="flat"
-      color={!isExists ? 'default' : isEnabled ? 'success' : 'warning'}
-      isDisabled={!isToggleAllowed}
-      isIconOnly
-      onPress={handleToggle}
+      variant={!isExists ? 'secondary' : isEnabled ? 'default' : 'secondary'}
+      disabled={!isToggleAllowed}
+      size="icon"
+      onClick={handleToggle}
     >
-      {isEnabled ? <BookCheck size={22} /> : <BookX size={22} />}
+      {isEnabled ? <BookCheck className="size-4" /> : <BookX className="size-4" />}
     </Button>
   )
 }

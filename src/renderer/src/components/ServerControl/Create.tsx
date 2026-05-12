@@ -1,97 +1,113 @@
+import { Button } from "@/components/ui/button";
 import {
-  addToast,
-  Button,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
-  SelectItem
-} from '@heroui/react'
-import { IServerConf, IServerOption } from '@/types/Server'
-import { accountAtom, selectedVersionAtom, serverAtom, settingsAtom } from '@renderer/stores/atoms'
-import { useAtom } from 'jotai'
-import { HardDriveDownload } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { ServerGame } from '@renderer/classes/ServerGame'
-import { Mods } from '@renderer/classes/Mods'
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { IServerConf, IServerOption } from "@/types/Server";
+import {
+  accountAtom,
+  selectedVersionAtom,
+  serverAtom,
+  settingsAtom,
+} from "@renderer/stores/atoms";
+import { useAtom } from "jotai";
+import { HardDriveDownload, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { ServerGame } from "@renderer/classes/ServerGame";
+import { Mods } from "@renderer/classes/Mods";
+import { toast } from "sonner";
 
-const api = window.api
+const api = window.api;
 
 export function CreateServer({
   close,
-  serverCores
+  serverCores,
 }: {
-  close: (isSuccess?: boolean) => void
-  serverCores: IServerOption[]
+  close: (isSuccess?: boolean) => void;
+  serverCores: IServerOption[];
 }) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [loadingType, setLoadingType] = useState<'install'>()
-  const [selectedVersion] = useAtom(selectedVersionAtom)
-  const [account] = useAtom(accountAtom)
-  const { t } = useTranslation()
-  const [, setServer] = useAtom(serverAtom)
-  const [settings] = useAtom(settingsAtom)
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingType, setLoadingType] = useState<"install">();
+  const [selectedVersion] = useAtom(selectedVersionAtom);
+  const [account] = useAtom(accountAtom);
+  const { t } = useTranslation();
+  const [, setServer] = useAtom(serverAtom);
+  const [settings] = useAtom(settingsAtom);
 
-  const [selectedCore, setSelectedCore] = useState<string | null>(serverCores[0]?.core ?? null)
+  const [selectedCore, setSelectedCore] = useState<string | null>(
+    serverCores[0]?.core ?? null,
+  );
 
   const selectedServerCore = useMemo(() => {
-    return selectedCore ? serverCores.find((sc) => sc.core === selectedCore) : undefined
-  }, [selectedCore, serverCores])
+    return selectedCore
+      ? serverCores.find((sc) => sc.core === selectedCore)
+      : undefined;
+  }, [selectedCore, serverCores]);
 
   useEffect(() => {
     if (!selectedCore && serverCores.length) {
-      setSelectedCore(serverCores[0].core)
+      setSelectedCore(serverCores[0].core);
     }
-  }, [serverCores, selectedCore])
+  }, [serverCores, selectedCore]);
 
-  const isMountedRef = useRef(true)
+  const isMountedRef = useRef(true);
   useEffect(() => {
     return () => {
-      isMountedRef.current = false
-    }
-  }, [])
+      isMountedRef.current = false;
+    };
+  }, []);
 
-  const canInstall = !!selectedVersion && !!selectedServerCore && !!account
+  const canInstall = !!selectedVersion && !!selectedServerCore && !!account;
 
   const handleInstall = useCallback(async () => {
-    if (isLoading) return
-    if (!selectedVersion || !selectedServerCore || !account) return
+    if (isLoading) return;
+    if (!selectedVersion || !selectedServerCore || !account) return;
 
-    const versionPath = selectedVersion.versionPath
+    const versionPath = selectedVersion.versionPath;
 
-    setLoadingType('install')
-    setIsLoading(true)
+    setLoadingType("install");
+    setIsLoading(true);
 
-    let success = false
+    let success = false;
 
     try {
-      const serverPath = await api.path.join(versionPath, 'server')
-      await api.fs.ensure(serverPath)
+      const serverPath = await api.path.join(versionPath, "server");
+      await api.fs.ensure(serverPath);
 
       const conf: IServerConf = {
         core: selectedServerCore.core,
-        javaMajorVersion: selectedVersion.manifest?.javaVersion.majorVersion || 21,
-        memory: selectedVersion.version.loader.name == 'vanilla' ? 2048 : 4096,
+        javaMajorVersion:
+          selectedVersion.manifest?.javaVersion.majorVersion || 21,
+        memory: selectedVersion.version.loader.name == "vanilla" ? 2048 : 4096,
         downloads: {
-          server: selectedServerCore.url
-        }
-      }
-
-      await api.fs.writeJSON(await api.path.join(serverPath, 'conf.json'), conf)
+          server: selectedServerCore.url,
+        },
+      };
 
       await api.file.download(
         [
           {
             url: selectedServerCore.url,
-            destination: await api.path.join(serverPath, selectedServerCore.core + '.jar'),
-            group: 'server'
-          }
+            destination: await api.path.join(
+              serverPath,
+              selectedServerCore.core + ".jar",
+            ),
+            group: "server",
+          },
         ],
-        settings.downloadLimit
-      )
+        settings.downloadLimit,
+      );
 
       const serverGame = new ServerGame(
         account,
@@ -99,40 +115,44 @@ export function CreateServer({
         versionPath,
         serverPath,
         conf,
-        selectedVersion.version
-      )
+        selectedVersion.version,
+      );
 
-      await serverGame.install()
-      setServer(conf)
+      await serverGame.install();
 
-      await api.fs.writeFile(await api.path.join(serverPath, 'eula.txt'), 'eula=true', 'utf-8')
+      await api.fs.writeJSON(
+        await api.path.join(serverPath, "conf.json"),
+        conf,
+      );
+
+      setServer(conf);
+
+      await api.fs.writeFile(
+        await api.path.join(serverPath, "eula.txt"),
+        "eula=true",
+        "utf-8",
+      );
 
       if (selectedVersion.version.loader.mods.length > 0) {
-        const mods = new Mods(settings, selectedVersion.version, conf)
-        await mods.check()
+        const mods = new Mods(settings, selectedVersion.version, conf);
+        await mods.check();
       }
 
-      addToast({
-        title: t('versions.serverInstalled'),
-        color: 'success'
-      })
+      toast.success(t("versions.serverInstalled"));
 
-      success = true
+      success = true;
     } catch (err) {
-      console.error(err)
+      console.error(err);
 
-      addToast({
-        title: t('versions.serverInstallError'),
-        color: 'danger'
-      })
+      toast.error(t("versions.serverInstallError"));
     } finally {
       if (isMountedRef.current) {
-        setIsLoading(false)
-        setLoadingType(undefined)
+        setIsLoading(false);
+        setLoadingType(undefined);
       }
     }
 
-    if (success) close(true)
+    if (success) close(true);
   }, [
     isLoading,
     selectedVersion,
@@ -142,51 +162,68 @@ export function CreateServer({
     setServer,
     close,
     t,
-    settings
-  ])
+    settings,
+  ]);
 
   return (
-    <Modal
-      size="xs"
-      isOpen={true}
-      onClose={() => {
-        if (isLoading) return
-        close()
+    <Dialog
+      open={true}
+      onOpenChange={(open) => {
+        if (!open && !isLoading) close();
       }}
     >
-      <ModalContent>
-        <ModalHeader>{t('versions.createingServer')}</ModalHeader>
-        <ModalBody>
+      <DialogContent
+        className="overflow-hidden p-0 sm:max-w-xs"
+        onPointerDownOutside={(event) => {
+          if (isLoading) event.preventDefault();
+        }}
+        onEscapeKeyDown={(event) => {
+          if (isLoading) event.preventDefault();
+        }}
+      >
+        <DialogHeader className="px-5 pt-5">
+          <DialogTitle>{t("versions.createingServer")}</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 px-5 pb-5">
           {serverCores.length ? (
-            <Select
-              label={t('versions.serverCore')}
-              selectedKeys={selectedCore ? new Set([selectedCore]) : new Set()}
-              className="w-full"
-              isDisabled={isLoading}
-              onChange={(event) => {
-                const value = event.target.value
-                setSelectedCore(value || null)
-              }}
-            >
-              {serverCores.map((sc) => {
-                return <SelectItem key={sc.core}>{sc.core}</SelectItem>
-              })}
-            </Select>
+            <div className="grid gap-2">
+              <span className="text-sm font-medium text-muted-foreground">
+                {t("versions.serverCore")}
+              </span>
+              <Select
+                value={selectedCore ?? serverCores[0]?.core ?? ""}
+                disabled={isLoading}
+                onValueChange={(value) => {
+                  setSelectedCore(value || null);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("versions.serverCore")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {serverCores.map((sc) => {
+                    return (
+                      <SelectItem key={sc.core} value={sc.core}>
+                        {sc.core}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
           ) : undefined}
-        </ModalBody>
-        <ModalFooter>
-          <Button
-            color="primary"
-            variant="flat"
-            isDisabled={!canInstall || isLoading}
-            isLoading={isLoading && loadingType == 'install'}
-            startContent={<HardDriveDownload size={22} />}
-            onPress={handleInstall}
-          >
-            {t('common.install')}
+        </div>
+        <DialogFooter className="m-0 rounded-none border-t bg-muted/25 px-5 py-4">
+          <Button disabled={!canInstall || isLoading} onClick={handleInstall}>
+            {isLoading && loadingType == "install" ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <HardDriveDownload className="size-5" />
+            )}
+            {t("common.install")}
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
-  )
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }

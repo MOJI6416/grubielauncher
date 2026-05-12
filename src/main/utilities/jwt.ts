@@ -28,6 +28,16 @@ function isTokenExpired(token: string) {
   }
 }
 
+function getTokenSubject(token?: string) {
+  if (!token) return null
+
+  try {
+    return jwtDecode<IAuth>(token).sub || null
+  } catch {
+    return null
+  }
+}
+
 export async function checkToken(token: string) {
   if (!token || typeof token !== 'string' || token.trim() === '') {
     return null
@@ -47,7 +57,7 @@ export async function checkToken(token: string) {
   }
 
   const sub = (decoded as any)?.sub
-  const auth = (decoded as any)?.auth
+  let auth = (decoded as any)?.auth
 
   if (!sub || !auth) {
     return null
@@ -55,7 +65,26 @@ export async function checkToken(token: string) {
 
   try {
     const accounts = await readAccountsConfig()
-    const account = accounts?.accounts.find((entry) => entry.accessToken === token)
+    let account = accounts?.accounts.find((entry) => entry.accessToken === token)
+
+    if (!account) {
+      account = accounts?.accounts.find(
+        (entry) => getTokenSubject(entry.accessToken) === sub
+      )
+
+      if (account?.accessToken && account.accessToken !== token) {
+        const current = isTokenExpired(account.accessToken)
+        if (!current.isExpired) {
+          return {
+            token: account.accessToken,
+            isValid: true
+          }
+        }
+
+        auth = current.decoded?.auth || auth
+      }
+    }
+
     const refreshToken = auth?.refreshToken
 
     if (!account || typeof refreshToken !== 'string' || refreshToken.trim() === '') {

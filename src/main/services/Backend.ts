@@ -23,24 +23,55 @@ export class Backend extends BaseService {
     super(accessToken);
   }
 
+  private normalizeModpackVersion(version: IModpack["conf"]["version"] | string | any) {
+    if (typeof version === "string") {
+      return {
+        id: version,
+        type: "release",
+        url: "",
+        serverManager: false,
+      };
+    }
+
+    return {
+      id: String(version?.id || ""),
+      type: String(version?.type || "release"),
+      url: String(version?.url || ""),
+      isNew: Boolean(version?.isNew),
+      serverManager: Boolean(version?.serverManager),
+    };
+  }
+
+  private normalizeModpackConf(conf: IModpack["conf"]) {
+    return {
+      ...conf,
+      version: this.normalizeModpackVersion(conf.version),
+    };
+  }
+
   async shareModpack(modpack: { conf: IModpack["conf"] }) {
     try {
+      const normalizedModpack = {
+        ...modpack,
+        conf: this.normalizeModpackConf(modpack.conf),
+      };
+
       const filteredMods =
-        modpack.conf.loader.mods.length > 0
-          ? modpack.conf.loader.mods.filter(
+        normalizedModpack.conf.loader.mods.length > 0
+          ? normalizedModpack.conf.loader.mods.filter(
               (mod) => mod.projectType !== "plugin",
             )
-          : modpack.conf.loader.mods;
+          : normalizedModpack.conf.loader.mods;
 
       const payload =
-        filteredMods === modpack.conf.loader.mods
-          ? modpack
+        filteredMods === normalizedModpack.conf.loader.mods
+          ? normalizedModpack
           : {
-              ...modpack,
+              ...normalizedModpack,
               conf: {
-                ...modpack.conf,
+                ...normalizedModpack.conf,
                 loader: {
-                  ...modpack.conf.loader,
+                  ...normalizedModpack.conf.loader,
                   mods: filteredMods,
                 },
               },
@@ -196,8 +227,14 @@ export class Backend extends BaseService {
 
   async modpackDownloaded(shareCode: string) {
     try {
-      await this.api.patch(`${this.baseUrl}/modpacks/${shareCode}/downloaded`);
-    } catch {}
+      const response = await this.api.patch<{
+        counted: boolean;
+        reason?: string;
+      }>(`${this.baseUrl}/modpacks/${shareCode}/downloaded`);
+      return response.data.counted;
+    } catch {
+      return false;
+    }
   }
 
   async getNews() {

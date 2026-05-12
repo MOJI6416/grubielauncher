@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Versions } from "./components/Versions";
 import { Nav } from "./components/Nav";
 import { useTranslation } from "react-i18next";
 import { io, Socket } from "socket.io-client";
-import { Friends, IFriendRequest } from "./components/Friends/Friends";
+import { Loader2 } from "lucide-react";
+import type { IFriendRequest } from "./components/Friends/Friends";
 import { IUser } from "../../types/IUser";
 import { IVersionStatistics } from "../../types/VersionStatistics";
 import { useAtom } from "jotai";
@@ -15,11 +16,13 @@ import {
   friendRequestsAtom,
   friendSocketAtom,
   isFriendsConnectedAtom,
-  isOwnerVersionAtom,
   isRunningAtom,
   isShareModalOpenAtom,
+  internetAtom,
   localFriendsAtom,
   networkAtom,
+  ownPresenceAtom,
+  pendingFriendChatAtom,
   pathsAtom,
   sharePeersAtom,
   shareStateAtom,
@@ -29,13 +32,22 @@ import {
   versionsAtom,
 } from "./stores/atoms";
 import { Confirmation } from "./components/Modals/Confirmation";
-import { addToast } from "@heroui/react";
-import { LANGUAGES, TSettings } from "@/types/Settings";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { LANGUAGES, normalizeSettings, TSettings } from "@/types/Settings";
 import { IAccountConf, IAuth } from "@/types/Account";
+import { IUpdateStatus } from "@/types/IFriend";
 import { IServer } from "@/types/ServersList";
-import { NewsFeed } from "./components/NewsFeed";
 import { IConsole } from "@/types/Console";
 import {
+  applyBlockedModFilePaths,
   BlockedMods,
   checkBlockedMods,
   IBlockedMod,
@@ -43,19 +55,44 @@ import {
 import { Version } from "./classes/Version";
 import {
   checkDiffenceUpdateData,
+  isOwner,
   readVerions,
   syncShare,
 } from "./utilities/version";
 import { Mods } from "./classes/Mods";
-import { DownloaderInfo } from "@/types/Downloader";
-import { DownloadProgress } from "./components/DownloadProgress";
+import { DownloaderFailuresInfo, DownloaderInfo } from "@/types/Downloader";
+import { InstallationProgress } from "./components/InstallationProgress";
+import { DownloadFailuresModal } from "./components/DownloadFailuresModal";
 import { BACKEND_URL } from "@/shared/config";
 import { getShareErrorText } from "./utilities/share";
 import { ensureAccountSession } from "./utilities/accountSession";
 import { jwtDecode } from "jwt-decode";
+import { VersionInstallProgress } from "@/types/InstallationProgress";
+import { GameInvite } from "@/types/GameInvite";
+import { IModpack } from "@/types/Backend";
+import { toast } from "sonner";
+import { lazyWithPreload, schedulePreload } from "./utilities/lazyPreload";
+import { LazyDialogFallback } from "./components/LazyDialogFallback";
 
 const api = window.api;
 const MAX_CONSOLE_MESSAGES = 1000;
+
+const loadFriends = () =>
+  import("./components/Friends/Friends").then((module) => ({
+    default: module.Friends,
+  }));
+const loadAddVersion = () =>
+  import("./components/Modals/Version/AddVersion").then((module) => ({
+    default: module.AddVersion,
+  }));
+const loadNewsFeed = () =>
+  import("./components/NewsFeed").then((module) => ({
+    default: module.NewsFeed,
+  }));
+
+const LazyFriends = lazyWithPreload(loadFriends);
+const LazyAddVersion = lazyWithPreload(loadAddVersion);
+const LazyNewsFeed = lazyWithPreload(loadNewsFeed);
 
 export interface RunGameParams {
   skipUpdate?: boolean;
@@ -79,6 +116,17 @@ function useEventCallback<T extends (...args: any[]) => any>(fn: T): T {
   return useCallback(((...args: any[]) => fnRef.current(...args)) as T, []);
 }
 
+function applyPresenceUpdate(
+  previous: Required<IUpdateStatus>,
+  update: IUpdateStatus,
+): Required<IUpdateStatus> {
+  return {
+    versionName: update.versionName ?? previous.versionName,
+    versionCode: update.versionCode ?? previous.versionCode,
+    serverAddress: update.serverAddress ?? previous.serverAddress,
+  };
+}
+
 function App() {
   const [selectedAccount, setSelectedAccount] = useAtom(accountAtom);
   const [settings, setSettings] = useAtom(settingsAtom);
@@ -88,9 +136,11 @@ function App() {
 
   const [friendSocket, setFriendSocket] = useAtom(friendSocketAtom);
   const [_, setFriendRequests] = useAtom(friendRequestsAtom);
-  const [selectedFriend] = useAtom(selectedFriendAtom);
+  const [selectedFriend, setSelectedFriend] = useAtom(selectedFriendAtom);
   const [localFriends, setLocalFriends] = useAtom(localFriendsAtom);
   const [, setIsFriendsConnected] = useAtom(isFriendsConnectedAtom);
+  const [, setPendingFriendChat] = useAtom(pendingFriendChatAtom);
+  const [ownPresence, setOwnPresence] = useAtom(ownPresenceAtom);
 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState<"update" | undefined>(
@@ -98,7 +148,8 @@ function App() {
   );
 
   const [paths, setPaths] = useAtom(pathsAtom);
-  const [, setIsNetwork] = useAtom(networkAtom);
+  const [, setIsInternetOnline] = useAtom(internetAtom);
+  const [, setIsBackendOnline] = useAtom(networkAtom);
   const [selectedVersion, setSelectedVersion] = useAtom(selectedVersionAtom);
   const [accounts, setAccounts] = useAtom(accountsAtom);
   const [isUpdateModal, setIsUpdateModal] = useState(false);
@@ -106,7 +157,6 @@ function App() {
   const [authData] = useAtom(authDataAtom);
   const [consoles, setConsoles] = useAtom(consolesAtom);
   const [versions, setVersions] = useAtom(versionsAtom);
-  const [isOwnerVersion] = useAtom(isOwnerVersionAtom);
   const [shareState, setShareState] = useAtom(shareStateAtom);
   const [, setSharePeers] = useAtom(sharePeersAtom);
   const [, setIsShareModalOpen] = useAtom(isShareModalOpenAtom);
@@ -114,8 +164,17 @@ function App() {
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>([]);
   const [isBlockedMods, setIsBlockedMods] = useState(false);
   const [downloder, setDownloader] = useState<DownloaderInfo | null>(null);
+  const [downloadFailures, setDownloadFailures] =
+    useState<DownloaderFailuresInfo | null>(null);
+  const [installProgress, setInstallProgress] =
+    useState<VersionInstallProgress | null>(null);
+  const [isCancellingInstall, setIsCancellingInstall] = useState(false);
+  const [incomingInvite, setIncomingInvite] = useState<GameInvite | null>(null);
+  const [inviteModpack, setInviteModpack] = useState<IModpack | null>(null);
+  const [isJoiningInvite, setIsJoiningInvite] = useState(false);
 
   const onlineSocket = useRef<Socket | null>(null);
+  const pendingLaunchRef = useRef<RunGameParams | null>(null);
   const previousShareLanDetectionRef = useRef<{
     phase: string;
     candidateKey: string | null;
@@ -123,6 +182,7 @@ function App() {
     phase: "idle",
     candidateKey: null,
   });
+  const previousShareBroadcastRef = useRef("offline");
 
   const { t, i18n } = useTranslation();
 
@@ -138,8 +198,14 @@ function App() {
   const friendSocketRef = useLatestRef(friendSocket);
   const selectedFriendRef = useLatestRef(selectedFriend);
   const localFriendsRef = useLatestRef(localFriends);
-  const isOwnerVersionRef = useLatestRef(isOwnerVersion);
   const serversRef = useLatestRef(servers);
+
+  useEffect(() => {
+    return schedulePreload(
+      [LazyNewsFeed.preload, LazyFriends.preload, LazyAddVersion.preload],
+      900,
+    );
+  }, []);
 
   useEffect(() => {
     void api.rpc.syncContext({
@@ -159,6 +225,21 @@ function App() {
   ]);
 
   useEffect(() => {
+    const updateInternetStatus = () => {
+      setIsInternetOnline(window.navigator.onLine);
+    };
+
+    updateInternetStatus();
+    window.addEventListener("online", updateInternetStatus);
+    window.addEventListener("offline", updateInternetStatus);
+
+    return () => {
+      window.removeEventListener("online", updateInternetStatus);
+      window.removeEventListener("offline", updateInternetStatus);
+    };
+  }, [setIsInternetOnline]);
+
+  useEffect(() => {
     onlineSocket.current?.disconnect();
     onlineSocket.current = null;
 
@@ -169,9 +250,9 @@ function App() {
 
     onlineSocket.current = socket;
 
-    const onConnect = () => setIsNetwork(true);
-    const onDisconnect = () => setIsNetwork(false);
-    const onConnectError = () => setIsNetwork(false);
+    const onConnect = () => setIsBackendOnline(true);
+    const onDisconnect = () => setIsBackendOnline(false);
+    const onConnectError = () => setIsBackendOnline(false);
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
@@ -184,7 +265,7 @@ function App() {
       socket.disconnect();
       onlineSocket.current = null;
     };
-  }, [setIsNetwork]);
+  }, [setIsBackendOnline]);
 
   useEffect(() => {
     let cancelled = false;
@@ -214,10 +295,7 @@ function App() {
     });
 
     const unsubscribeError = api.share.onShareError((error) => {
-      addToast({
-        color: error.code === "active_share_exists" ? "warning" : "danger",
-        title: getShareErrorText(tRef.current, error),
-      });
+      toast(getShareErrorText(tRef.current, error));
     });
 
     return () => {
@@ -235,7 +313,8 @@ function App() {
       shareState.phase === "lan_ready" && candidateKey !== null;
     const justDetected =
       isLanDetected &&
-      (previous.phase !== "lan_ready" || previous.candidateKey !== candidateKey);
+      (previous.phase !== "lan_ready" ||
+        previous.candidateKey !== candidateKey);
 
     previousShareLanDetectionRef.current = {
       phase: shareState.phase,
@@ -258,6 +337,51 @@ function App() {
     shareState.candidate?.key,
     shareState.phase,
   ]);
+
+  useEffect(() => {
+    if (!ownPresence.versionName || !ownPresence.versionCode) {
+      return;
+    }
+
+    const sharePresenceKey =
+      shareState.phase === "online" &&
+      shareState.slug &&
+      shareState.publicAddress
+        ? `online:${shareState.sessionId || ""}:${shareState.slug}:${
+            shareState.visibility || ""
+          }`
+        : "offline";
+
+    if (previousShareBroadcastRef.current === sharePresenceKey) {
+      return;
+    }
+
+    previousShareBroadcastRef.current = sharePresenceKey;
+    friendSocketRef.current?.emit("friendUpdate", { ...ownPresence });
+  }, [
+    ownPresence,
+    shareState.phase,
+    shareState.publicAddress,
+    shareState.sessionId,
+    shareState.slug,
+    shareState.visibility,
+  ]);
+
+  useEffect(() => {
+    return api.other.onNotificationClick((action) => {
+      if (action.type === "game_invite") {
+        void api.other.restoreWindow();
+        return;
+      }
+
+      if (action.type !== "friend_message") return;
+
+      setIsFriends(true);
+      setSelectedFriend(action.friendId);
+      setPendingFriendChat(action.friendId);
+      void api.other.restoreWindow();
+    });
+  }, [setPendingFriendChat, setSelectedFriend]);
 
   useEffect(() => {
     let cancelled = false;
@@ -296,9 +420,21 @@ function App() {
   useEffect(() => {
     const updatePlayingTime = async (time: number) => {
       try {
-        const a = selectedAccountRef.current;
+        let a = selectedAccountRef.current;
         const ad = authDataRef.current;
         if (!ad || !a || !a.accessToken) return;
+
+        if (a.type !== "plain") {
+          const refreshed = await ensureAccountSession({
+            accounts: accountsRef.current,
+            authData: ad,
+            selectedAccount: a,
+            setAccounts,
+            setSelectedAccount,
+          });
+
+          a = refreshed.account;
+        }
 
         const user = await api.backend.getUser(a.accessToken || "", ad.sub);
         if (!user) return;
@@ -307,103 +443,111 @@ function App() {
           playTime: user.playTime + time,
         });
       } catch (err) {
-        console.log(err);
+        console.error(err);
       }
     };
 
     const unsubscribeConsoleStatus = api.events.onConsoleChangeStatus(
       async (versionName, instance, status) => {
-      const current = consolesRef.current.consoles.find(
-        (c) => c.versionName === versionName && c.instance === instance,
-      );
-      const startTimeForCalc = current?.startTime ?? 0;
-
-      setConsoles((prev) => {
-        const idx = prev.consoles.findIndex(
+        const current = consolesRef.current.consoles.find(
           (c) => c.versionName === versionName && c.instance === instance,
         );
-        if (idx === -1) return prev;
+        const startTimeForCalc = current?.startTime ?? 0;
+        const isTerminalStatus = status === "stopped" || status === "error";
+        const shouldCountSession =
+          isTerminalStatus &&
+          current?.status === "running" &&
+          !!startTimeForCalc;
 
-        const next = [...prev.consoles];
-        next[idx] = { ...next[idx], status };
-        return { consoles: next };
-      });
-
-      if (status !== "stopped" || !startTimeForCalc) return;
-
-      const time = Date.now() - startTimeForCalc;
-      const playTime = Math.floor(time / 1000);
-
-      await updatePlayingTime(playTime);
-
-      if (isOwnerVersionRef.current) {
-        const v = versionsRef.current.find(
-          (vv) => vv.version.name == versionName,
-        );
-        if (!v) return;
-
-        const statPath = await api.path.join(v.versionPath, "statistics.json");
-        const statIsExists = await api.fs.pathExists(statPath);
-
-        let statData: IVersionStatistics = {
-          lastLaunched: new Date(),
-          launches: 1,
-          playTime,
-        };
-
-        if (statIsExists) {
-          const existed: IVersionStatistics = await api.fs.readJSON(
-            statPath,
-            "utf-8",
+        setConsoles((prev) => {
+          const idx = prev.consoles.findIndex(
+            (c) => c.versionName === versionName && c.instance === instance,
           );
-          statData = {
-            lastLaunched: new Date(),
-            launches: (existed.launches || 0) + 1,
-            playTime: (existed.playTime || 0) + playTime,
-          };
-        }
+          if (idx === -1) return prev;
 
-        await api.fs.writeJSON(statPath, statData);
-      }
+          const next = [...prev.consoles];
+          next[idx] = { ...next[idx], status };
+          return { consoles: next };
+        });
+
+        if (!shouldCountSession) return;
+
+        const time = Date.now() - startTimeForCalc;
+        const playTime = Math.floor(time / 1000);
+
+        await updatePlayingTime(playTime);
+
+        if (current?.trackStatistics) {
+          const v = versionsRef.current.find(
+            (vv) => vv.version.name == versionName,
+          );
+          if (!v) return;
+
+          const statPath = await api.path.join(
+            v.versionPath,
+            "statistics.json",
+          );
+          const statIsExists = await api.fs.pathExists(statPath);
+
+          let statData: IVersionStatistics = {
+            lastLaunched: new Date(),
+            launches: 1,
+            playTime,
+          };
+
+          if (statIsExists) {
+            const existed: IVersionStatistics = await api.fs.readJSON(
+              statPath,
+              "utf-8",
+            );
+            statData = {
+              lastLaunched: new Date(),
+              launches: (existed.launches || 0) + 1,
+              playTime: (existed.playTime || 0) + playTime,
+            };
+          }
+
+          await api.fs.writeJSON(statPath, statData);
+        }
       },
     );
 
     const unsubscribeConsoleMessage = api.events.onConsoleMessage(
       async (versionName, instance, message) => {
-      setConsoles((prev) => {
-        const idx = prev.consoles.findIndex(
-          (c) => c.versionName === versionName && c.instance === instance,
-        );
-        if (idx === -1) return prev;
+        setConsoles((prev) => {
+          const idx = prev.consoles.findIndex(
+            (c) => c.versionName === versionName && c.instance === instance,
+          );
+          if (idx === -1) return prev;
 
-        const next = [...prev.consoles];
-        next[idx] = {
-          ...next[idx],
-          messages: [...next[idx].messages, message].slice(
-            -MAX_CONSOLE_MESSAGES,
-          ),
-        };
-        return { consoles: next };
-      });
+          const next = [...prev.consoles];
+          next[idx] = {
+            ...next[idx],
+            messages: [...next[idx].messages, message].slice(
+              -MAX_CONSOLE_MESSAGES,
+            ),
+          };
+          return { consoles: next };
+        });
       },
     );
 
     const unsubscribeConsoleClear = api.events.onConsoleClear(
       async (versionName, instance) => {
-      setConsoles((prev) => {
-        const idx = prev.consoles.findIndex(
-          (c) => c.versionName === versionName && c.instance === instance,
-        );
-        if (idx === -1) return prev;
+        setConsoles((prev) => {
+          const idx = prev.consoles.findIndex(
+            (c) => c.versionName === versionName && c.instance === instance,
+          );
+          if (idx === -1) return prev;
 
-        const next = [...prev.consoles];
-        next[idx] = {
-          ...next[idx],
-          messages: [],
-          startTime: Date.now(),
-        };
-        return { consoles: next };
-      });
+          const next = [...prev.consoles];
+          next[idx] = {
+            ...next[idx],
+            messages: [],
+            startTime: Date.now(),
+          };
+          return { consoles: next };
+        });
       },
     );
 
@@ -413,12 +557,30 @@ function App() {
     });
 
     const unsubscribeFriendUpdate = api.events.onFriendUpdate((data) => {
+      setOwnPresence((prev) => applyPresenceUpdate(prev, data));
       friendSocketRef.current?.emit("friendUpdate", { ...data });
     });
 
     const unsubscribeDownloaderInfo = api.events.onDownloaderInfo((info) => {
       setDownloader(info);
     });
+
+    const unsubscribeDownloaderFailures = api.events.onDownloaderFailures(
+      (info) => {
+        setDownloadFailures(info);
+      },
+    );
+
+    const unsubscribeVersionInstallProgress =
+      api.events.onVersionInstallProgress((info) => {
+        if (info?.stage === "preparing") {
+          setIsCancellingInstall(false);
+        }
+        if (!info) {
+          setIsCancellingInstall(false);
+        }
+        setInstallProgress(info);
+      });
 
     return () => {
       unsubscribeConsoleStatus();
@@ -427,8 +589,10 @@ function App() {
       unsubscribeLaunch();
       unsubscribeFriendUpdate();
       unsubscribeDownloaderInfo();
+      unsubscribeDownloaderFailures();
+      unsubscribeVersionInstallProgress();
     };
-  }, [setConsoles, setSelectedVersion, setIsRunning]);
+  }, [setConsoles, setSelectedVersion, setIsRunning, setOwnPresence]);
 
   useEffect(() => {
     setIsFriends(false);
@@ -440,6 +604,11 @@ function App() {
       friendSocketRef.current?.disconnect();
       setFriendSocket(undefined);
       setIsFriendsConnected(false);
+      setOwnPresence({
+        versionName: "",
+        versionCode: "",
+        serverAddress: "",
+      });
       return;
     }
 
@@ -465,13 +634,18 @@ function App() {
     setFriendSocket,
     setLocalFriends,
     setIsFriendsConnected,
+    setOwnPresence,
   ]);
 
   useEffect(() => {
     if (!friendSocket) return;
 
     const onFriendRequest = async (data: IFriendRequest) => {
-      setFriendRequests((prev) => [...prev, data]);
+      setFriendRequests((prev) =>
+        prev.some((request) => request.requestId === data.requestId)
+          ? prev
+          : [...prev, data],
+      );
 
       if (data.type == "recipient") {
         const options: Electron.NotificationConstructorOptions = {
@@ -483,10 +657,7 @@ function App() {
       }
 
       if (data.type == "requester") {
-        addToast({
-          title: tRef.current("friends.requestSent"),
-          color: "success",
-        });
+        toast.success(tRef.current("friends.requestSent"));
       }
     };
 
@@ -519,15 +690,8 @@ function App() {
         }
       } else {
         if (type == "accept")
-          addToast({
-            color: "success",
-            title: tRef.current("friends.requestAccepted"),
-          });
-        else
-          addToast({
-            color: "success",
-            title: tRef.current("friends.requestDeclined"),
-          });
+          toast.success(tRef.current("friends.requestAccepted"));
+        else toast.success(tRef.current("friends.requestDeclined"));
       }
     };
 
@@ -543,10 +707,41 @@ function App() {
         icon: user.image || "",
       };
 
-      await api.other.notify(options);
-      addToast({
-        title: tRef.current("friends.newMessage"),
+      await api.other.notify(options, {
+        type: "friend_message",
+        friendId: user._id,
+      });
+      toast(tRef.current("friends.newMessage"), {
         description: `${user.nickname} ${tRef.current("friends.sentMessage")}`,
+      });
+    };
+
+    const onGameInvite = async (invite: GameInvite) => {
+      setIncomingInvite(invite);
+
+      const lf = localFriendsRef.current.find((x) => x.id == invite.sender._id);
+      if (lf?.isMuted) return;
+
+      const notificationBody =
+        invite.target.type === "server"
+          ? tRef.current("friends.gameInviteNotificationServer", {
+              nickname: invite.sender.nickname,
+              version: invite.versionName,
+              address: invite.target.address,
+            })
+          : tRef.current("friends.gameInviteNotificationWorld", {
+              nickname: invite.sender.nickname,
+              version: invite.versionName,
+            });
+      const options: Electron.NotificationConstructorOptions = {
+        title: tRef.current("friends.gameInviteNotificationTitle"),
+        body: notificationBody,
+        icon: invite.sender.image || "",
+      };
+
+      await api.other.notify(options, {
+        type: "game_invite",
+        inviteId: invite.inviteId,
       });
     };
 
@@ -559,18 +754,26 @@ function App() {
       setIsFriendsConnected(false);
     };
 
+    const onConnectError = () => {
+      setIsFriendsConnected(false);
+    };
+
     friendSocket.on("friendRequest", onFriendRequest);
     friendSocket.on("friendRequestRemove", onFriendRequestRemove);
     friendSocket.on("messageNotification", onMessageNotification);
+    friendSocket.on("gameInvite", onGameInvite);
     friendSocket.on("connect", onConnect);
     friendSocket.on("disconnect", onDisconnect);
+    friendSocket.on("connect_error", onConnectError);
 
     return () => {
       friendSocket.off("friendRequest", onFriendRequest);
       friendSocket.off("friendRequestRemove", onFriendRequestRemove);
       friendSocket.off("messageNotification", onMessageNotification);
+      friendSocket.off("gameInvite", onGameInvite);
       friendSocket.off("connect", onConnect);
       friendSocket.off("disconnect", onDisconnect);
+      friendSocket.off("connect_error", onConnectError);
     };
   }, [friendSocket, setFriendRequests, setIsFriendsConnected]);
 
@@ -580,22 +783,22 @@ function App() {
 
     const settingsConfPath = await api.path.join(launcherPath, "settings.json");
 
-    let data: TSettings;
+    let rawData: Partial<TSettings> | null = null;
     if (await api.fs.pathExists(settingsConfPath)) {
-      data = await api.fs.readJSON(settingsConfPath, "utf-8");
-    } else {
-      data = {
-        xmx: 2048,
-        lang: l?.code || i18n.language,
-        devMode: false,
-        downloadLimit: 6,
-      };
+      try {
+        rawData = await api.fs.readJSON(settingsConfPath, "utf-8");
+      } catch {
+        rawData = null;
+      }
+    }
 
+    const data = normalizeSettings(rawData, l?.code || i18n.language);
+    if (JSON.stringify(rawData) !== JSON.stringify(data)) {
       await api.fs.writeJSON(settingsConfPath, data);
     }
 
     setSettings(data);
-    i18n.changeLanguage(data.lang || l?.code || i18n.language);
+    i18n.changeLanguage(data.lang);
     return data;
   }
 
@@ -616,11 +819,23 @@ function App() {
         return lastPlayed;
       }
 
-      if (fallback) setSelectedAccount(fallback);
+      if (fallback) {
+        setSelectedAccount(fallback);
+        await api.accounts.save(
+          data.accounts,
+          `${fallback.type}_${fallback.nickname}`,
+        );
+      }
       return fallback;
     }
 
-    if (fallback) setSelectedAccount(fallback);
+    if (fallback) {
+      setSelectedAccount(fallback);
+      await api.accounts.save(
+        data.accounts,
+        `${fallback.type}_${fallback.nickname}`,
+      );
+    }
     return fallback;
   }
 
@@ -629,7 +844,7 @@ function App() {
 
     const launchVersion = version || selectedVersionRef.current;
     if (!launchVersion) {
-      addToast({ title: tRef.current("app.startupError"), color: "danger" });
+      toast.error(tRef.current("app.startupError"));
       return;
     }
 
@@ -638,7 +853,7 @@ function App() {
     const p0 = pathsRef.current;
 
     if (!a0 || !s0 || !p0?.launcher || !p0?.minecraft) {
-      addToast({ title: tRef.current("app.startupError"), color: "danger" });
+      toast.error(tRef.current("app.startupError"));
       return;
     }
 
@@ -723,6 +938,11 @@ function App() {
           );
 
           if (diff) {
+            pendingLaunchRef.current = {
+              version: launchVersion,
+              instance: _instance,
+              quick,
+            };
             setSelectedVersion(launchVersion);
             setIsUpdateModal(true);
             setIsRunning(false);
@@ -734,8 +954,9 @@ function App() {
       setIsRunning(true);
 
       launchVersion.version.lastLaunch = new Date();
+      const trackStatistics = isOwner(launchVersion.version.owner, account);
 
-      addToast({ title: tRef.current("app.starting") });
+      toast(tRef.current("app.starting"));
 
       setConsoles((prev) => {
         const idx = prev.consoles.findIndex(
@@ -750,6 +971,7 @@ function App() {
             ...next[idx],
             status: "running",
             startTime: Date.now(),
+            trackStatistics,
             messages: [],
           };
           return { consoles: next };
@@ -760,25 +982,30 @@ function App() {
           status: "running",
           instance: _instance,
           startTime: Date.now(),
+          trackStatistics,
           messages: [],
         };
 
         return { consoles: [...prev.consoles, newConsole] };
       });
 
-      await launchVersion.run(
+      const started = await launchVersion.run(
         account,
         settings,
         runtimeAuthData,
         _instance,
         quick,
       );
+      if (!started) throw new Error("Game process did not start");
 
-      friendSocketRef.current?.emit("friendUpdate", {
+      const nextPresence = {
         versionName: launchVersion.version.name,
-        versionCode: launchVersion.version.shareCode,
+        versionCode: launchVersion.version.shareCode || "",
         serverAddress: "",
-      });
+      };
+
+      setOwnPresence(nextPresence);
+      friendSocketRef.current?.emit("friendUpdate", nextPresence);
 
       await launchVersion.save();
       await api.accounts.save(
@@ -786,31 +1013,141 @@ function App() {
         `${account.type}_${account.nickname}`,
       );
     } catch (err) {
-      console.log(err);
-      addToast({ title: tRef.current("app.startupError"), color: "danger" });
+      console.error(err);
+      toast.error(tRef.current("app.startupError"));
+      setConsoles((prev) => {
+        const idx = prev.consoles.findIndex(
+          (c) =>
+            c.versionName === launchVersion.version.name &&
+            c.instance === _instance &&
+            c.status === "running",
+        );
+        if (idx === -1) return prev;
+
+        const next = [...prev.consoles];
+        next[idx] = { ...next[idx], status: "error" };
+        return { consoles: next };
+      });
       setSelectedVersion(undefined);
       setIsRunning(false);
     }
   });
 
+  const joinInvite = useEventCallback(async (invite: GameInvite) => {
+    if (isJoiningInvite) return;
+
+    setIsJoiningInvite(true);
+    try {
+      let address =
+        invite.target.type === "server" ? invite.target.address : undefined;
+
+      if (invite.target.type === "world") {
+        const result = await api.share.connectToFriendShare(invite.target.slug);
+        if (!result.ok || !result.data) {
+          toast(getShareErrorText(tRef.current, result.error));
+          return;
+        }
+
+        address = result.data.connectHost;
+      }
+
+      const version = versionsRef.current.find(
+        (v) => v.version.shareCode === invite.versionCode,
+      );
+
+      if (!version) {
+        const account = selectedAccountRef.current;
+        const modpackData = await api.backend.getModpack(
+          account?.accessToken || "",
+          invite.versionCode,
+        );
+
+        if (modpackData.data) {
+          setInviteModpack(modpackData.data);
+          setIncomingInvite(null);
+          toast.warning(tRef.current("friends.gameInviteInstall"));
+        } else {
+          toast.error(tRef.current("share.errors.joinShareNotFound"));
+        }
+        return;
+      }
+
+      setIncomingInvite(null);
+      setSelectedVersion(version);
+      await runGame({
+        version,
+        quick: address
+          ? {
+              multiplayer: address,
+            }
+          : undefined,
+      });
+    } finally {
+      setIsJoiningInvite(false);
+    }
+  });
+
+  const incomingInviteText = incomingInvite
+    ? incomingInvite.target.type === "server"
+      ? t("friends.gameInviteServerBody", {
+          nickname: incomingInvite.sender.nickname,
+          version: incomingInvite.versionName,
+          address: incomingInvite.target.address,
+        })
+      : t("friends.gameInviteWorldBody", {
+          nickname: incomingInvite.sender.nickname,
+          version: incomingInvite.versionName,
+        })
+    : "";
+
+  const cancelVersionInstall = useEventCallback(async () => {
+    setIsCancellingInstall(true);
+    try {
+      await Promise.all([
+        api.version.cancelInstall(),
+        api.mods.cancelInstall(),
+      ]);
+    } catch (error) {
+      console.error(error);
+      setIsCancellingInstall(false);
+    }
+  });
+
   return (
-    <div className="h-screen w-full flex flex-col">
+    <div className="flex h-screen w-full flex-col overflow-hidden">
       <>
         <Nav runGame={runGame} setIsFriends={setIsFriends} />
 
-        <div className="flex-1 overflow-y-auto px-4 py-2 min-h-0">
-          <div className="flex space-x-4 h-full">
+        <main className="min-h-0 flex-1 px-4 py-3">
+          <div className="flex h-full min-h-0 gap-4">
             <Versions runGame={runGame} />
-            {isFriends && <Friends runGame={runGame} />}
+            {isFriends && (
+              <Suspense
+                fallback={
+                  <div className="flex h-full w-[320px] shrink-0 items-center justify-center rounded-xl border bg-card">
+                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                  </div>
+                }
+              >
+                <LazyFriends runGame={runGame} />
+              </Suspense>
+            )}
           </div>
-        </div>
+        </main>
 
-        <NewsFeed />
+        <Suspense
+          fallback={
+            <div className="mx-4 mb-3 h-[8.25rem] rounded-xl border bg-card" />
+          }
+        >
+          <LazyNewsFeed />
+        </Suspense>
 
         {isUpdateModal && (
           <Confirmation
             onClose={() => {
               if (isLoading) return;
+              pendingLaunchRef.current = null;
               setIsUpdateModal(false);
               setIsRunning(false);
             }}
@@ -847,6 +1184,7 @@ function App() {
 
                     const bMods: IBlockedMod[] = await checkBlockedMods(
                       updated.version.loader.mods,
+                      updated.versionPath,
                     );
                     if (bMods.length > 0) {
                       setBlockedMods(bMods);
@@ -861,7 +1199,14 @@ function App() {
                     setIsLoading(false);
                     setLoadingType(undefined);
 
-                    await runGame({ skipUpdate: true, version: updated });
+                    const pendingLaunch = pendingLaunchRef.current;
+                    pendingLaunchRef.current = null;
+
+                    await runGame({
+                      ...pendingLaunch,
+                      skipUpdate: true,
+                      version: updated,
+                    });
                   } catch {
                     setIsLoading(false);
                     setLoadingType(undefined);
@@ -872,7 +1217,15 @@ function App() {
                 text: t("versions.runWithoutUpdating"),
                 onClick: async () => {
                   setIsUpdateModal(false);
-                  await runGame({ skipUpdate: true });
+                  const pendingLaunch = pendingLaunchRef.current;
+                  pendingLaunchRef.current = null;
+
+                  await runGame({
+                    ...pendingLaunch,
+                    skipUpdate: true,
+                    version:
+                      pendingLaunch?.version || selectedVersionRef.current,
+                  });
                 },
               },
             ]}
@@ -889,16 +1242,11 @@ function App() {
               const s0 = settingsRef.current;
               if (!sv || !s0) return;
 
-              for (const bMod of bMods) {
-                if (!bMod.filePath) continue;
-
-                const mod = sv.version.loader.mods.find(
-                  (m) => m.id == bMod.projectId,
-                );
-                if (!mod || !mod.version) continue;
-
-                mod.version.files[0].localPath = bMod.filePath;
-              }
+              const hasBlockedPaths = applyBlockedModFilePaths(
+                sv.version.loader.mods,
+                bMods,
+              );
+              if (hasBlockedPaths) await sv.save();
 
               const versionMods = new Mods(s0, sv.version);
               await versionMods.check();
@@ -907,12 +1255,84 @@ function App() {
               setIsLoading(false);
               setLoadingType(undefined);
 
-              await runGame({ skipUpdate: true });
+              const pendingLaunch = pendingLaunchRef.current;
+              pendingLaunchRef.current = null;
+
+              await runGame({
+                ...pendingLaunch,
+                skipUpdate: true,
+                version: sv,
+              });
             }}
           />
         )}
 
-        {downloder && <DownloadProgress info={downloder} />}
+        {installProgress ? (
+          <InstallationProgress
+            info={installProgress}
+            downloadInfo={downloder}
+            onCancel={cancelVersionInstall}
+            isCancelling={isCancellingInstall}
+          />
+        ) : null}
+
+        {downloadFailures && (
+          <DownloadFailuresModal
+            info={downloadFailures}
+            onClose={() => setDownloadFailures(null)}
+          />
+        )}
+
+        {incomingInvite && (
+          <Dialog
+            open={true}
+            onOpenChange={(open) => {
+              if (!open && !isJoiningInvite) setIncomingInvite(null);
+            }}
+          >
+            <DialogContent
+              className="sm:max-w-md"
+              onPointerDownOutside={(event) => {
+                if (isJoiningInvite) event.preventDefault();
+              }}
+              onEscapeKeyDown={(event) => {
+                if (isJoiningInvite) event.preventDefault();
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle>{t("friends.gameInviteTitle")}</DialogTitle>
+                <DialogDescription className="rounded-lg border bg-muted/30 p-3 text-sm leading-6 text-foreground">
+                  {incomingInviteText}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => setIncomingInvite(null)}
+                  disabled={isJoiningInvite}
+                >
+                  {t("common.close")}
+                </Button>
+                <Button
+                  disabled={isJoiningInvite}
+                  onClick={() => joinInvite(incomingInvite)}
+                >
+                  {isJoiningInvite && <Loader2 className="animate-spin" />}
+                  {t("friends.gameInviteJoin")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {inviteModpack && (
+          <Suspense fallback={<LazyDialogFallback variant="wide" />}>
+            <LazyAddVersion
+              closeModal={() => setInviteModpack(null)}
+              modpack={inviteModpack}
+            />
+          </Suspense>
+        )}
       </>
     </div>
   );

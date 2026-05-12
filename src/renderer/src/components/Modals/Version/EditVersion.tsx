@@ -1,9 +1,9 @@
-import { Servers } from "@renderer/components/ServerList/Servers";
 import { ILocalProject } from "@/types/ModManager";
 import {
   accountAtom,
   authDataAtom,
   consolesAtom,
+  internetAtom,
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
   networkAtom,
@@ -15,11 +15,10 @@ import {
   versionServersAtom,
 } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { IArguments } from "@/types/IArguments";
 import { useTranslation } from "react-i18next";
 import {
-  CircleAlert,
   CloudCog,
   CloudDownload,
   CopyCheck,
@@ -31,6 +30,7 @@ import {
   Gamepad2,
   ImageMinus,
   ImagePlus,
+  Loader2,
   Pencil,
   Save,
   ScanLine,
@@ -46,40 +46,132 @@ import { SiCurseforge, SiModrinth } from "react-icons/si";
 import { VersionDiffence } from "@renderer/components/Versions";
 import { IServerOption } from "@/types/Server";
 import { IModpack } from "@/types/Backend";
-import { Share as ShareModal } from "@renderer/components/Modals/Version/Share/Share";
 import { CreateServer } from "../../ServerControl/Create";
-import { Export } from "@renderer/components/Export";
-import { ImageCropper } from "@renderer/components/ImageCropper";
-import { ModManager } from "@renderer/components/ModManager/ModManager";
-import { Arguments } from "@renderer/components/Arguments";
 import { Confirmation } from "../Confirmation";
-import { ServerControl } from "@renderer/components/ServerControl/Control";
-import { DeleteVersion } from "./DeleteVersion";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
-  addToast,
-  Button,
-  ButtonGroup,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalHeader,
-  Image,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
   Tooltip,
-  Chip,
-} from "@heroui/react";
-import { BlockedMods, checkBlockedMods, IBlockedMod } from "../BlockedMods";
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  applyBlockedModFilePaths,
+  BlockedMods,
+  checkBlockedMods,
+  IBlockedMod,
+} from "../BlockedMods";
 import { IServer } from "@/types/ServersList";
-import { Worlds } from "@renderer/components/Worlds/WorldsModal";
-import { RunGameParams } from "@renderer/App";
+import type { RunGameParams } from "@renderer/App";
 import {
   checkDiffenceUpdateData,
   checkVersionName,
   syncShare,
 } from "@renderer/utilities/version";
 import { Mods } from "@renderer/classes/Mods";
+import { toast } from "sonner";
+import { LazyDialogFallback } from "@renderer/components/LazyDialogFallback";
+import {
+  lazyWithPreload,
+  schedulePreload,
+} from "@renderer/utilities/lazyPreload";
 
 const api = window.api;
+
+const loadServers = () =>
+  import("@renderer/components/ServerList/Servers").then((module) => ({
+    default: module.Servers,
+  }));
+const loadShareModal = () =>
+  import("@renderer/components/Modals/Version/Share/Share").then((module) => ({
+    default: module.Share,
+  }));
+const loadExport = () =>
+  import("@renderer/components/Export").then((module) => ({
+    default: module.Export,
+  }));
+const loadImageCropper = () =>
+  import("@renderer/components/ImageCropper").then((module) => ({
+    default: module.ImageCropper,
+  }));
+const loadModManager = () =>
+  import("@renderer/components/ModManager/ModManager").then((module) => ({
+    default: module.ModManager,
+  }));
+const loadArguments = () =>
+  import("@renderer/components/Arguments").then((module) => ({
+    default: module.Arguments,
+  }));
+const loadServerControl = () =>
+  import("@renderer/components/ServerControl/Control").then((module) => ({
+    default: module.ServerControl,
+  }));
+const loadDeleteVersion = () =>
+  import("./DeleteVersion").then((module) => ({
+    default: module.DeleteVersion,
+  }));
+const loadWorlds = () =>
+  import("@renderer/components/Worlds/WorldsModal").then((module) => ({
+    default: module.Worlds,
+  }));
+
+const LazyServers = lazyWithPreload(loadServers);
+const LazyShareModal = lazyWithPreload(loadShareModal);
+const LazyExport = lazyWithPreload(loadExport);
+const LazyImageCropper = lazyWithPreload(loadImageCropper);
+const LazyModManager = lazyWithPreload(loadModManager);
+const LazyArguments = lazyWithPreload(loadArguments);
+const LazyServerControl = lazyWithPreload(loadServerControl);
+const LazyDeleteVersion = lazyWithPreload(loadDeleteVersion);
+const LazyWorlds = lazyWithPreload(loadWorlds);
+
+function loaderRequiresBackend(loader?: string) {
+  return loader == "forge" || loader == "neoforge";
+}
+
+function quoteRunCommandArg(arg: string) {
+  if (arg === "") return '""';
+  if (!/[\s"&^<>|()]/.test(arg)) return arg;
+
+  let quoted = '"';
+  let backslashes = 0;
+
+  for (const char of arg) {
+    if (char === "\\") {
+      backslashes++;
+      continue;
+    }
+
+    if (char === '"') {
+      quoted += "\\".repeat(backslashes * 2 + 1);
+      quoted += char;
+      backslashes = 0;
+      continue;
+    }
+
+    quoted += "\\".repeat(backslashes);
+    quoted += char;
+    backslashes = 0;
+  }
+
+  quoted += "\\".repeat(backslashes * 2);
+  quoted += '"';
+  return quoted;
+}
+
+function formatRunCommandForClipboard(command: string[]) {
+  return command.map(quoteRunCommandArg).join(" ");
+}
 
 export function EditVersion({
   closeModal,
@@ -143,6 +235,7 @@ export function EditVersion({
   const [serverCores, setServerCores] = useState<IServerOption[]>([]);
   const [isServerCreate, setIsServerCreate] = useState(false);
 
+  const [isInternetOnline] = useAtom(internetAtom);
   const [isDownloadedVersion] = useAtom(isDownloadedVersionAtom);
   const [isOwnerVersion] = useAtom(isOwnerVersionAtom);
 
@@ -153,7 +246,10 @@ export function EditVersion({
 
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>([]);
   const [isBlockedMods, setIsBlockedMods] = useState(false);
-  const [blockedCloseType, setBlockedCloseType] = useState<"save" | "check">();
+  const [blockedCloseType, setBlockedCloseType] = useState<
+    "save" | "check" | "sync"
+  >();
+  const [syncModpack, setSyncModpack] = useState<IModpack>();
 
   const [authData] = useAtom(authDataAtom);
   const [, setConsoles] = useAtom(consolesAtom);
@@ -161,6 +257,7 @@ export function EditVersion({
   const [isOpenWorlds, setIsOpenWorlds] = useState(false);
 
   const [hasChanges, setHasChanges] = useState(false);
+  const [hasOnlyDownloadedRename, setHasOnlyDownloadedRename] = useState(false);
   const calcSeqRef = useRef(0);
 
   const [hasSaves, setHasSaves] = useState(false);
@@ -176,9 +273,28 @@ export function EditVersion({
       setRunArguments(version.version.runArguments || { game: "", jvm: "" });
       setServers(version.version.version.serverManager ? nbtServers : []);
       setQuickConnectIp(version.version.quickServer);
+      setIsLogoChanged(false);
+      setEditName(false);
 
       vd && setVersionDiffence(vd);
     })();
+  }, []);
+
+  useEffect(() => {
+    return schedulePreload(
+      [
+        LazyServers.preload,
+        LazyShareModal.preload,
+        LazyExport.preload,
+        LazyImageCropper.preload,
+        LazyModManager.preload,
+        LazyArguments.preload,
+        LazyServerControl.preload,
+        LazyDeleteVersion.preload,
+        LazyWorlds.preload,
+      ],
+      900,
+    );
   }, []);
 
   useEffect(() => {
@@ -226,9 +342,19 @@ export function EditVersion({
     if (isLoading) return false;
     if (!hasChanges) return false;
     if (!isNameValid) return false;
-    if (version.version.owner && account && !isOwnerVersion) return false;
+    if (version.version.owner && account && !isOwnerVersion) {
+      return hasOnlyDownloadedRename;
+    }
     return true;
-  }, [version, isLoading, hasChanges, isNameValid, account, isOwnerVersion]);
+  }, [
+    version,
+    isLoading,
+    hasChanges,
+    isNameValid,
+    account,
+    isOwnerVersion,
+    hasOnlyDownloadedRename,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -237,6 +363,7 @@ export function EditVersion({
     const calc = async () => {
       if (!version) {
         setHasChanges(false);
+        setHasOnlyDownloadedRename(false);
         return;
       }
 
@@ -273,13 +400,23 @@ export function EditVersion({
 
       if (cancelled || seq !== calcSeqRef.current) return;
 
-      setHasChanges(
+      const onlyNameChanged =
+        nameChanged &&
+        !modsChanged &&
+        !serversChanged &&
+        !argsChanged &&
+        !otherChanged;
+      const hasAnyChanges =
         nameChanged ||
-          modsChanged ||
-          serversChanged ||
-          argsChanged ||
-          otherChanged,
+        modsChanged ||
+        serversChanged ||
+        argsChanged ||
+        otherChanged;
+
+      setHasOnlyDownloadedRename(
+        !!version.version.downloadedVersion && onlyNameChanged,
       );
+      setHasChanges(hasAnyChanges);
     };
 
     calc();
@@ -300,50 +437,102 @@ export function EditVersion({
     isLoading,
   ]);
 
-  async function sync() {
-    if (!version) return;
+  async function sync(
+    resolvedBlockedMods: IBlockedMod[] = [],
+    preparedModpack?: IModpack,
+  ) {
+    if (!version || !account || !version.version.shareCode) return;
 
-    await syncShare(version, servers, settings, account?.accessToken || "");
+    setLoadingType("sync");
+    setIsLoading(true);
 
-    setLoadingType(undefined);
-    setIsLoading(false);
+    try {
+      const modpack =
+        preparedModpack ||
+        (
+          await api.backend.getModpack(
+            account.accessToken || "",
+            version.version.shareCode,
+          )
+        ).data;
 
-    addToast({
-      color: "success",
-      title: t("versions.updated"),
-    });
+      if (!modpack) throw new Error("not share version");
 
-    closeModal();
+      const hasBlockedPaths = applyBlockedModFilePaths(
+        modpack.conf.loader.mods,
+        resolvedBlockedMods,
+      );
+      const missingBlockedMods = await checkBlockedMods(
+        modpack.conf.loader.mods,
+        version.versionPath,
+      );
+
+      if (missingBlockedMods.length > 0) {
+        setBlockedMods(missingBlockedMods);
+        setSyncModpack(modpack);
+        setBlockedCloseType("sync");
+        setIsBlockedMods(true);
+        return;
+      }
+
+      if (hasBlockedPaths) setBlockedMods([]);
+
+      await syncShare(
+        version,
+        servers,
+        settings,
+        account.accessToken || "",
+        modpack,
+      );
+
+      toast.success(t("versions.updated"));
+
+      closeModal();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(t("versions.updateError"), { description: message });
+    } finally {
+      setLoadingType(undefined);
+      setIsLoading(false);
+    }
   }
 
-  async function checkIntegrity() {
+  async function checkIntegrity(
+    resolvedBlockedMods: IBlockedMod[] = blockedMods,
+  ) {
     if (!version || !account) return;
 
     setLoadingType("check");
     setIsLoading(true);
 
     try {
-      await version.install(account, settings);
+      const hasBlockedPaths = applyBlockedModFilePaths(
+        mods,
+        resolvedBlockedMods,
+      );
+      if (hasBlockedPaths) {
+        version.version.loader.mods = mods;
+        await version.save();
+        setBlockedMods([]);
+      }
+
+      await version.install(account, settings, [], { operation: "integrity" });
 
       const versionMods = new Mods(settings, version.version, server);
       await versionMods.check();
 
-      addToast({
-        color: "success",
-        title: t("versions.integrityOk"),
-      });
-    } catch {
-      addToast({
-        color: "danger",
-        title: t("versions.integrityError"),
-      });
+      toast.success(t("versions.integrityOk"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      toast.error(t("versions.integrityError"), { description: message });
     } finally {
       setIsLoading(false);
       setLoadingType(undefined);
     }
   }
 
-  async function saveVersion() {
+  async function saveVersion(resolvedBlockedMods: IBlockedMod[] = blockedMods) {
     if (!version) return;
 
     let isShare = false;
@@ -374,10 +563,7 @@ export function EditVersion({
 
         isShare = true;
       } catch {
-        addToast({
-          color: "danger",
-          title: t("versions.renameError"),
-        });
+        toast.error(t("versions.renameError"));
 
         setIsLoading(false);
         setLoadingType(undefined);
@@ -389,29 +575,37 @@ export function EditVersion({
       }
     }
 
-    if (
-      !(await api.modManager.compareMods(
+    try {
+      const hasBlockedPaths = applyBlockedModFilePaths(
+        mods,
+        resolvedBlockedMods,
+      );
+      const hasModsChanged = !(await api.modManager.compareMods(
         version.version.loader.mods || [],
         mods,
-      ))
-    ) {
-      version.version.loader.mods = mods;
+      ));
 
-      for (const bMod of blockedMods) {
-        if (!bMod.filePath) continue;
+      if (hasModsChanged || hasBlockedPaths) {
+        const previousMods = version.version.loader.mods;
+        version.version.loader.mods = mods;
 
-        const mod = mods.find((m) => m.id === bMod.projectId);
+        try {
+          const versionMods = new Mods(settings, version.version, server);
+          await versionMods.check();
+        } catch (error) {
+          version.version.loader.mods = previousMods;
+          throw error;
+        }
 
-        if (!mod || !mod.version) continue;
-
-        mod.version.files[0].localPath = bMod.filePath;
+        isShare = true;
+        setBlockedMods([]);
       }
-
-      const versionMods = new Mods(settings, version.version, server);
-      await versionMods.check();
-
-      isShare = true;
-      setBlockedMods([]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(t("versions.updateError"), { description: message });
+      setIsLoading(false);
+      setLoadingType(undefined);
+      return;
     }
 
     if (version.version.version.serverManager) {
@@ -439,7 +633,10 @@ export function EditVersion({
       isShare = true;
     }
 
-    if (isLogoChanged || (isRename && !isDownloadedVersion && isOwnerVersion)) {
+    if (
+      !isDownloadedVersion &&
+      (isLogoChanged || (isRename && isOwnerVersion))
+    ) {
       const filename = "logo.png";
       const filePath = await api.path.join(version.versionPath, filename);
 
@@ -479,10 +676,7 @@ export function EditVersion({
       await api.fs.rimraf(await api.path.join(version.versionPath, "temp"));
     } catch {}
 
-    addToast({
-      title: t("versions.updated"),
-      color: "success",
-    });
+    toast.success(t("versions.updated"));
 
     setIsLogoChanged(false);
     setLoadingType(undefined);
@@ -498,343 +692,350 @@ export function EditVersion({
     }
   }
 
+  const hasNestedDialog =
+    isShareModal ||
+    isServerCreate ||
+    isOpenExportModal ||
+    isCropping ||
+    isModManager ||
+    isServers ||
+    isOpenArguments ||
+    notSavedModal ||
+    isServerManager ||
+    isOpenShareModal ||
+    isOpenDel ||
+    isBlockedMods ||
+    isOpenWorlds;
+  const showShareAction = !!version && !version.version.shareCode;
+  const showPublishActions =
+    versionDiffence === "new" &&
+    !version?.version.downloadedVersion &&
+    !!version?.version.shareCode;
+  const showSyncAction =
+    versionDiffence === "old" && !!version?.version.downloadedVersion;
+  const showServerManagerAction =
+    !!version && !version.version.downloadedVersion;
+  const showRemoteActions =
+    showShareAction ||
+    showPublishActions ||
+    showSyncAction ||
+    showServerManagerAction;
+  const canFetchServerCore =
+    isInternetOnline &&
+    (!loaderRequiresBackend(version?.version.loader.name) || isNetwork);
+  const canRenameVersion =
+    !!version &&
+    (!version.version.owner ||
+      !account ||
+      isOwnerVersion ||
+      version.version.downloadedVersion);
+  const canEditLogo =
+    !!version &&
+    !version.version.downloadedVersion &&
+    (!version.version.owner || !account || isOwnerVersion);
+
+  function handleRequestClose() {
+    if (isLoading || hasNestedDialog) return;
+
+    if (hasChanges) {
+      setNotSavedModal(true);
+      return;
+    }
+
+    closeModal();
+  }
+
   return (
     <>
-      <Modal
-        scrollBehavior="outside"
-        isOpen={true}
-        size="3xl"
-        onClose={() => {
-          if (isLoading) return;
-
-          if (hasChanges) {
-            setNotSavedModal(true);
-            return;
-          }
-
-          closeModal();
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (open) return;
+          handleRequestClose();
         }}
       >
-        <ModalContent>
-          <ModalHeader>{t("versions.versionSettings")}</ModalHeader>
-          <ModalBody>
-            <div className={`flex flex-col gap-4`}>
-              <div className="flex flex-col gap-2 min-w-0">
-                <div className="flex items-center gap-2 min-w-0">
-                  {image && (
-                    <Image
-                      src={image}
-                      alt={"logo"}
-                      width={64}
-                      height={64}
-                      className="min-w-16 min-h-16"
-                      onClick={() => {
-                        if (!image || isDownloadedVersion) return;
-                      }}
-                    />
-                  )}
+        <DialogContent
+          className="max-h-[90vh] overflow-hidden p-0 sm:max-w-2xl"
+          onClick={(event) => event.stopPropagation()}
+          onEscapeKeyDown={(event) => {
+            if (isLoading || hasNestedDialog) event.preventDefault();
+          }}
+          onInteractOutside={(event) => {
+            if (isLoading || hasNestedDialog) event.preventDefault();
+          }}
+        >
+          <TooltipProvider delayDuration={300}>
+            <DialogHeader className="px-5 pt-5">
+              <DialogTitle>{t("versions.versionSettings")}</DialogTitle>
+            </DialogHeader>
 
-                  {editName ? (
-                    <Input
-                      size="sm"
-                      startContent={
-                        !isNameValid ? (
-                          <CircleAlert className="text-warning" size={22} />
-                        ) : (
-                          ""
-                        )
-                      }
-                      placeholder={t("versions.namePlaceholder")}
-                      value={versionName}
-                      onChange={(event) =>
-                        setVersionName(event.currentTarget.value)
-                      }
-                      isDisabled={isLoading}
-                    />
-                  ) : (
-                    <p className="truncate flex-grow text-xl font-semibold">
-                      {versionName}
-                    </p>
-                  )}
+            <div className="grid max-h-[calc(90vh-9rem)] gap-4 overflow-y-auto px-5 pb-5">
+              <div className="grid gap-3 rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border bg-muted/40">
+                    {image ? (
+                      <img
+                        src={image}
+                        alt="logo"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                        <ImagePlus className="size-5" />
+                      </div>
+                    )}
+                  </div>
 
-                  <div className="flex items-center gap-1">
-                    {!version?.version.downloadedVersion && (
-                      <div className="flex items-center gap-1">
-                        {!editName && (
-                          <Button
-                            variant="flat"
-                            isIconOnly
-                            size="sm"
-                            isDisabled={isLoading || !isOwnerVersion}
-                            onPress={() => setEditName(true)}
-                          >
-                            <Pencil size={20} />
-                          </Button>
+                  <div className="grid min-w-0 flex-1 gap-2">
+                    {editName ? (
+                      <div className="grid gap-1.5">
+                        <Input
+                          aria-invalid={!isNameValid}
+                          placeholder={t("versions.namePlaceholder")}
+                          value={versionName}
+                          onChange={(event) =>
+                            setVersionName(event.currentTarget.value)
+                          }
+                          disabled={isLoading}
+                        />
+                        {!isNameValid && (
+                          <p className="text-xs leading-5 text-destructive">
+                            {t("addVersion.invalidName")}
+                          </p>
                         )}
-                        {editName && (
-                          <Button
-                            isIconOnly
-                            onPress={() => {
-                              setEditName(false);
-                              setVersionName(version?.version.name || "");
-                            }}
-                            variant="flat"
-                            size="sm"
+                      </div>
+                    ) : (
+                      <p className="truncate text-xl font-semibold">
+                        {versionName}
+                      </p>
+                    )}
+
+                    {version && (
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <Badge variant="secondary">
+                          <Gamepad2 />
+                          <span className="max-w-40 truncate">
+                            {version.version.version.id}
+                          </span>
+                        </Badge>
+
+                        <Badge variant="secondary">
+                          <Cpu />
+                          <LoaderLabel loader={version.version.loader.name} />
+                          {version.version.loader.name !== "vanilla" && (
+                            <span className="max-w-36 truncate">
+                              ({version.version.loader.version?.id})
+                            </span>
+                          )}
+                        </Badge>
+
+                        {version.version.shareCode && (
+                          <Badge
+                            variant="outline"
+                            asChild
+                            className="max-w-full cursor-pointer"
                           >
-                            <X size={20} />
-                          </Button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await api.clipboard.writeText(
+                                  version.version.shareCode || "",
+                                );
+                                toast(t("common.copied"));
+                              }}
+                            >
+                              <Share2 />
+                              <span className="max-w-64 truncate">
+                                {version.version.shareCode}
+                              </span>
+                            </button>
+                          </Badge>
                         )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {!editName ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        disabled={isLoading || !canRenameVersion}
+                        onClick={() => setEditName(true)}
+                      >
+                        <Pencil />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={async () => {
+                          setEditName(false);
+                          setVersionName(version?.version.name || "");
+                        }}
+                      >
+                        <X />
+                      </Button>
+                    )}
+
+                    {canEditLogo && (
+                      <>
                         <Button
-                          variant="flat"
-                          isIconOnly
-                          size="sm"
-                          isDisabled={isLoading || !isOwnerVersion}
-                          onPress={async () => {
+                          type="button"
+                          variant="outline"
+                          size="icon-sm"
+                          disabled={isLoading}
+                          onClick={async () => {
                             const filePaths = await api.other.openFileDialog();
                             if (!filePaths || filePaths.length === 0) return;
                             setCroppedImage(filePaths[0]);
                             setIsCropping(true);
                           }}
                         >
-                          <ImagePlus size={20} />
+                          <ImagePlus />
                         </Button>
+
                         {image && (
                           <Button
-                            size="sm"
-                            variant="flat"
-                            isIconOnly
-                            isDisabled={isLoading || !isOwnerVersion}
-                            onPress={() => {
+                            type="button"
+                            variant="outline"
+                            size="icon-sm"
+                            disabled={isLoading}
+                            onClick={() => {
                               setImage("");
                               setIsLogoChanged(true);
                             }}
                           >
-                            <ImageMinus size={20} />
+                            <ImageMinus />
                           </Button>
                         )}
-                      </div>
+                      </>
                     )}
                   </div>
                 </div>
-
-                {version && (
-                  <div className="flex items-center gap-1 m-auto">
-                    <Chip variant="flat">
-                      <div className="flex items-center gap-1">
-                        <Gamepad2 size={20} />
-                        <p className="text-sm">{version.version.version.id}</p>
-                      </div>
-                    </Chip>
-
-                    <Chip variant="flat">
-                      <div className="flex items-center gap-1">
-                        <Cpu size={20} />
-                        <LoaderLabel loader={version.version.loader.name} />
-                        {version.version.loader.name !== "vanilla" && (
-                          <p>({version.version.loader.version?.id})</p>
-                        )}
-                      </div>
-                    </Chip>
-
-                    {version.version.shareCode && (
-                      <Chip
-                        variant="flat"
-                        className="cursor-pointer m-auto"
-                        onClick={async () => {
-                          await api.clipboard.writeText(
-                            version.version.shareCode || "",
-                          );
-                          addToast({ title: t("common.copied") });
-                        }}
-                      >
-                        <div className="flex items-center gap-1">
-                          <Share2 size={20} />
-                          {version.version.shareCode}
-                        </div>
-                      </Chip>
-                    )}
-                  </div>
-                )}
               </div>
 
-              <div className="flex flex-col gap-2 m-auto">
-                <div className="flex items-center gap-2 m-auto">
-                  <span>
-                    <Button
-                      variant="flat"
-                      isDisabled={!version || isLoading || !isNetwork}
-                      startContent={
-                        <div className="flex items-center gap-1">
-                          <SiCurseforge size={22} />
-                          <SiModrinth size={22} />
-                        </div>
-                      }
-                      onPress={() => setIsModManager((prev) => !prev)}
-                    >
-                      {t("modManager.title")}
-                    </Button>
+              <div className="grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!version || isLoading || !isInternetOnline}
+                  onClick={() => setIsModManager((prev) => !prev)}
+                >
+                  <span className="flex items-center gap-1">
+                    <SiCurseforge />
+                    <SiModrinth />
                   </span>
+                  {t("modManager.title")}
+                </Button>
 
-                  {version?.version.version?.serverManager && (
-                    <span>
-                      <Button
-                        variant="flat"
-                        isDisabled={!version || isLoading}
-                        startContent={<Server size={22} />}
-                        onPress={() => setIsServers(true)}
-                      >
-                        {t("versions.servers")}
-                      </Button>
-                    </span>
+                {version?.version.version?.serverManager && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!version || isLoading}
+                    onClick={() => setIsServers(true)}
+                  >
+                    <Server />
+                    {t("versions.servers")}
+                  </Button>
+                )}
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={
+                    !version || isLoading || isCheckingSaves || !hasSaves
+                  }
+                  onClick={() => setIsOpenWorlds(true)}
+                >
+                  <Earth />
+                  {t("worlds.title")}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={
+                    (version?.version.downloadedVersion &&
+                      runArguments.game === "" &&
+                      runArguments.jvm === "") ||
+                    isLoading
+                  }
+                  onClick={() => setIsOpenArguments(true)}
+                >
+                  <SquareTerminal />
+                  {t("arguments.title")}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={async () => {
+                    if (!version) return;
+                    await api.shell.openPath(
+                      await api.path.join(
+                        paths.minecraft,
+                        "versions",
+                        version.version.name,
+                      ),
+                    );
+                  }}
+                >
+                  <Folder />
+                  {t("common.openFolder")}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={isLoading || !isInternetOnline}
+                  onClick={async () => {
+                    if (!version) return;
+
+                    const b = await checkBlockedMods(mods, version.versionPath);
+                    if (b.length > 0) {
+                      setBlockedMods(b);
+                      setIsBlockedMods(true);
+                      setBlockedCloseType("check");
+                      return;
+                    }
+
+                    await checkIntegrity();
+                  }}
+                >
+                  {isLoading && loadingType === "check" ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <ScanLine />
                   )}
+                  {t("versions.checkIntegrity")}
+                </Button>
+              </div>
 
-                  <span>
-                    <Button
-                      variant="flat"
-                      isDisabled={
-                        !version || isLoading || isCheckingSaves || !hasSaves
-                      }
-                      startContent={<Earth size={22} />}
-                      onPress={() => setIsOpenWorlds(true)}
-                    >
-                      {t("worlds.title")}
-                    </Button>
-                  </span>
-                </div>
+              <div className="grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={isLoading}
+                  onClick={() => setIsOpenExportModal(true)}
+                >
+                  <FolderArchive />
+                  {t("export.btn")}
+                </Button>
 
-                <div className="flex items-center gap-2 m-auto">
-                  <span>
-                    <Button
-                      variant="flat"
-                      isDisabled={
-                        (version?.version.downloadedVersion &&
-                          runArguments.game === "" &&
-                          runArguments.jvm === "") ||
-                        isLoading
-                      }
-                      startContent={<SquareTerminal size={22} />}
-                      onPress={() => setIsOpenArguments(true)}
-                    >
-                      {t("arguments.title")}
-                    </Button>
-                  </span>
-
-                  <span>
-                    <Button
-                      variant="flat"
-                      startContent={<Folder size={22} />}
-                      onPress={async () => {
-                        if (!version) return;
-                        await api.shell.openPath(
-                          await api.path.join(
-                            paths.minecraft,
-                            "versions",
-                            version.version.name,
-                          ),
-                        );
-                      }}
-                    >
-                      {t("common.openFolder")}
-                    </Button>
-                  </span>
-
-                  <span>
-                    <Button
-                      variant="flat"
-                      isDisabled={isLoading || !isNetwork}
-                      isLoading={isLoading && loadingType === "check"}
-                      startContent={<ScanLine size={22} />}
-                      onPress={async () => {
-                        if (!version) return;
-
-                        const b = await checkBlockedMods(
-                          mods,
-                          version.versionPath,
-                        );
-                        if (b.length > 0) {
-                          setBlockedMods(b);
-                          setIsBlockedMods(true);
-                          setBlockedCloseType("check");
-                          return;
-                        }
-
-                        await checkIntegrity();
-                      }}
-                    >
-                      {t("versions.checkIntegrity")}
-                    </Button>
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 m-auto">
-                  <span>
-                    <Button
-                      variant="flat"
-                      color={"success"}
-                      startContent={<Save size={22} />}
-                      isDisabled={!canSave}
-                      isLoading={isLoading && loadingType === "save"}
-                      onPress={async () => {
-                        if (!version) return;
-
-                        const b = await checkBlockedMods(
-                          mods,
-                          version.versionPath,
-                        );
-                        if (b.length > 0) {
-                          setBlockedMods(b);
-                          setIsBlockedMods(true);
-                          setBlockedCloseType("save");
-                          return;
-                        }
-
-                        await saveVersion();
-                      }}
-                    >
-                      {t("common.save")}
-                    </Button>
-                  </span>
-
-                  <span>
-                    <Button
-                      color="danger"
-                      variant="flat"
-                      isDisabled={
-                        isLoading ||
-                        (!!version?.version.owner && account && !isOwnerVersion)
-                      }
-                      startContent={<Trash size={22} />}
-                      onPress={() => setIsOpenDel(true)}
-                    >
-                      {t("common.delete")}
-                    </Button>
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 m-auto">
-                  <span>
-                    <Button
-                      variant="flat"
-                      isDisabled={isLoading}
-                      startContent={<FolderArchive size={22} />}
-                      onPress={() => setIsOpenExportModal(true)}
-                    >
-                      {t("export.btn")}
-                    </Button>
-                  </span>
-
-                  {settings?.devMode && (
-                    <ButtonGroup>
-                      <Tooltip
-                        content={t("versions.copyAbsolutePath")}
-                        delay={1000}
-                      >
+                {settings?.devMode && (
+                  <ButtonGroup className="w-full">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
                         <Button
-                          variant="flat"
-                          className="w-full"
-                          startContent={<CopyCheck size={22} />}
-                          isDisabled={isLoading}
-                          onPress={async () => {
+                          type="button"
+                          variant="secondary"
+                          className="min-w-0 flex-1"
+                          disabled={isLoading}
+                          onClick={async () => {
                             if (!version || !account) return;
                             const command = await version.getRunCommand(
                               account,
@@ -842,23 +1043,31 @@ export function EditVersion({
                               authData,
                             );
                             if (!command) return;
-                            await api.clipboard.writeText(command.join(" "));
-                            addToast({ title: t("common.copied") });
+                            await api.clipboard.writeText(
+                              formatRunCommandForClipboard(command),
+                            );
+                            toast(t("common.copied"));
                           }}
                         >
-                          {t("versions.copyRunComand")}
+                          <CopyCheck />
+                          <span className="truncate">
+                            {t("versions.copyRunComand")}
+                          </span>
                         </Button>
-                      </Tooltip>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t("versions.copyAbsolutePath")}
+                      </TooltipContent>
+                    </Tooltip>
 
-                      <Tooltip
-                        content={t("versions.copyRelativePath")}
-                        delay={1000}
-                      >
+                    <Tooltip>
+                      <TooltipTrigger asChild>
                         <Button
-                          variant="flat"
-                          isIconOnly
-                          isDisabled={isLoading}
-                          onPress={async () => {
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          disabled={isLoading}
+                          onClick={async () => {
                             if (!version || !account) return;
                             const command = await version.getRunCommand(
                               account,
@@ -867,235 +1076,295 @@ export function EditVersion({
                               true,
                             );
                             if (!command) return;
-                            await api.clipboard.writeText(command.join(" "));
-                            addToast({ title: t("common.copied") });
+                            await api.clipboard.writeText(
+                              formatRunCommandForClipboard(command),
+                            );
+                            toast(t("common.copied"));
                           }}
                         >
-                          <CopySlash size={22} />
+                          <CopySlash />
                         </Button>
-                      </Tooltip>
-                    </ButtonGroup>
-                  )}
-                </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t("versions.copyRelativePath")}
+                      </TooltipContent>
+                    </Tooltip>
+                  </ButtonGroup>
+                )}
+              </div>
 
-                <div className="flex items-center gap-2 m-auto">
-                  {version && !version.version.shareCode && (
-                    <span>
+              {showRemoteActions && (
+                <div className="grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-2">
+                  {version && showShareAction && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={
+                        hasChanges ||
+                        isLoading ||
+                        (version?.version.owner &&
+                          account &&
+                          !isOwnerVersion) ||
+                        !isNetwork ||
+                        account?.type === "plain"
+                      }
+                      onClick={async () => {
+                        setShareType("new");
+                        setShareModal(true);
+                      }}
+                    >
+                      <Share2 />
+                      {t("versions.share")}
+                    </Button>
+                  )}
+
+                  {version && showPublishActions && (
+                    <ButtonGroup className="w-full">
                       <Button
-                        variant="flat"
-                        isDisabled={
+                        type="button"
+                        className="min-w-0 flex-1"
+                        disabled={
                           hasChanges ||
                           isLoading ||
-                          (version.version.owner &&
-                            account &&
-                            !isOwnerVersion) ||
                           !isNetwork ||
-                          account?.type === "plain"
+                          !isOwnerVersion
                         }
-                        startContent={<Share2 size={22} />}
-                        onPress={async () => {
-                          setShareType("new");
-                          setShareModal(true);
+                        onClick={async () => {
+                          if (!account || !version.version.shareCode) return;
+
+                          try {
+                            setIsLoading(true);
+                            setLoadingType("check_diff");
+
+                            const diff = await checkDiffenceUpdateData(
+                              {
+                                mods: version.version.loader.mods,
+                                runArguments: version.version.runArguments || {
+                                  game: "",
+                                  jvm: "",
+                                },
+                                servers,
+                                version: version.version,
+                                versionPath: await api.path.join(
+                                  paths.minecraft,
+                                  "versions",
+                                  version.version.name,
+                                ),
+                                logo: image || "",
+                                quickServer: quickConnectIp,
+                              },
+                              account.accessToken || "",
+                            );
+
+                            setDiffenceUpdateData(diff);
+
+                            if (!diff) {
+                              setVersionDiffence("sync");
+                              throw new Error("not found diff");
+                            }
+
+                            const modpackData = await api.backend.getModpack(
+                              account.accessToken!,
+                              version.version.shareCode,
+                            );
+
+                            if (!modpackData.data)
+                              throw new Error("not found modpack");
+
+                            setTempModpack(modpackData.data);
+                            setShareType("update");
+                            setShareModal(true);
+                          } catch (error) {
+                            const message =
+                              error instanceof Error
+                                ? error.message
+                                : String(error);
+                            if (message !== "not found diff") {
+                              toast.error(t("versions.updateError"), {
+                                description: message,
+                              });
+                            }
+                          } finally {
+                            setIsLoading(false);
+                            setLoadingType(undefined);
+                          }
                         }}
                       >
-                        {t("versions.share")}
+                        {isLoading && loadingType === "check_diff" ? (
+                          <Loader2 className="animate-spin" />
+                        ) : (
+                          <CloudCog />
+                        )}
+                        {t("versions.publish")}
                       </Button>
-                    </span>
-                  )}
 
-                  {versionDiffence === "new" &&
-                    !version?.version.downloadedVersion &&
-                    version?.version.shareCode && (
-                      <span>
-                        <ButtonGroup>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                           <Button
-                            variant="flat"
-                            className="w-full"
-                            color={"primary"}
-                            isDisabled={
+                            type="button"
+                            size="icon"
+                            disabled={
                               hasChanges ||
                               isLoading ||
                               !isNetwork ||
                               !isOwnerVersion
                             }
-                            startContent={<CloudCog size={22} />}
-                            isLoading={
-                              isLoading && loadingType === "check_diff"
-                            }
-                            onPress={async () => {
-                              if (!account || !version.version.shareCode)
-                                return;
-
-                              try {
-                                setIsLoading(true);
-                                setLoadingType("check_diff");
-
-                                const diff = await checkDiffenceUpdateData(
-                                  {
-                                    mods: version.version.loader.mods,
-                                    runArguments: version.version
-                                      .runArguments || {
-                                      game: "",
-                                      jvm: "",
-                                    },
-                                    servers,
-                                    version: version.version,
-                                    versionPath: await api.path.join(
-                                      paths.minecraft,
-                                      "versions",
-                                      version.version.name,
-                                    ),
-                                    logo: image || "",
-                                    quickServer: quickConnectIp,
-                                  },
-                                  account.accessToken || "",
-                                );
-
-                                setDiffenceUpdateData(diff);
-
-                                if (!diff) {
-                                  setVersionDiffence("sync");
-                                  throw new Error("not found diff");
-                                }
-
-                                const modpackData =
-                                  await api.backend.getModpack(
-                                    account.accessToken!,
-                                    version.version.shareCode,
-                                  );
-
-                                if (!modpackData.data)
-                                  throw new Error("not found modpack");
-
-                                setTempModpack(modpackData.data);
-                                setShareType("update");
-                                setShareModal(true);
-                              } catch {
-                              } finally {
-                                setIsLoading(false);
-                                setLoadingType(undefined);
-                              }
-                            }}
-                          >
-                            {t("versions.publish")}
-                          </Button>
-
-                          <Tooltip
-                            content={t("versions.synchronizeDescription")}
-                            delay={1000}
-                          >
-                            <Button
-                              variant="flat"
-                              isIconOnly
-                              color={"primary"}
-                              isDisabled={
-                                hasChanges ||
-                                isLoading ||
-                                !isNetwork ||
-                                !isOwnerVersion
-                              }
-                              isLoading={isLoading && loadingType === "sync"}
-                              onPress={async () => {
-                                if (!account) return;
-                                setLoadingType("sync");
-                                setIsLoading(true);
-                                await sync();
-                              }}
-                            >
-                              <CloudDownload size={22} />
-                            </Button>
-                          </Tooltip>
-                        </ButtonGroup>
-                      </span>
-                    )}
-
-                  {versionDiffence === "old" &&
-                    version?.version.downloadedVersion && (
-                      <Tooltip content={t("versions.synchronizeDescription")}>
-                        <span>
-                          <Button
-                            variant="flat"
-                            color="primary"
-                            startContent={<CloudDownload size={22} />}
-                            isDisabled={hasChanges || isLoading || !isNetwork}
-                            isLoading={isLoading && loadingType === "sync"}
-                            onPress={async () => {
+                            onClick={async () => {
                               if (!account) return;
                               setLoadingType("sync");
                               setIsLoading(true);
                               await sync();
                             }}
                           >
-                            {t("versions.synchronize")}
+                            {isLoading && loadingType === "sync" ? (
+                              <Loader2 className="animate-spin" />
+                            ) : (
+                              <CloudDownload />
+                            )}
                           </Button>
-                        </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {t("versions.synchronizeDescription")}
+                        </TooltipContent>
                       </Tooltip>
-                    )}
+                    </ButtonGroup>
+                  )}
 
-                  {!version?.version.downloadedVersion && (
-                    <span>
-                      <Button
-                        variant="flat"
-                        isDisabled={
-                          isLoading ||
-                          (!!version?.version.owner &&
-                            account &&
-                            !isOwnerVersion) ||
-                          (!server && !isNetwork)
+                  {version && showSyncAction && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          disabled={hasChanges || isLoading || !isNetwork}
+                          onClick={async () => {
+                            if (!account) return;
+                            setLoadingType("sync");
+                            setIsLoading(true);
+                            await sync();
+                          }}
+                        >
+                          {isLoading && loadingType === "sync" ? (
+                            <Loader2 className="animate-spin" />
+                          ) : (
+                            <CloudDownload />
+                          )}
+                          {t("versions.synchronize")}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t("versions.synchronizeDescription")}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+
+                  {version && showServerManagerAction && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={
+                        isLoading ||
+                        (!!version?.version.owner &&
+                          account &&
+                          !isOwnerVersion) ||
+                        (!server && !canFetchServerCore)
+                      }
+                      onClick={async () => {
+                        if (!version) return;
+
+                        if (server) {
+                          setIsServerManager(true);
+                          return;
                         }
-                        isLoading={isLoading && loadingType === "server"}
-                        startContent={<ServerCog size={22} />}
-                        onPress={async () => {
-                          if (!version) return;
 
-                          if (server) {
-                            setIsServerManager(true);
-                            return;
-                          }
+                        setLoadingType("server");
+                        setIsLoading(true);
 
-                          setLoadingType("server");
-                          setIsLoading(true);
+                        const cores = await api.servers.get(
+                          version.version.version.id,
+                          version.version.loader.name,
+                        );
 
-                          const cores = await api.servers.get(
-                            version.version.version.id,
-                            version.version.loader.name,
-                          );
-
-                          if (!cores.length) {
-                            setIsLoading(false);
-                            setLoadingType(undefined);
-                            addToast({
-                              color: "danger",
-                              title: t("versions.notFoundServerCore"),
-                            });
-                            return;
-                          }
-
-                          setServerCores(cores);
-                          setIsServerCreate(true);
-
+                        if (!cores.length) {
                           setIsLoading(false);
                           setLoadingType(undefined);
-                        }}
-                      >
-                        {t("versions.serverManager")}
-                      </Button>
-                    </span>
+                          toast.error(t("versions.notFoundServerCore"));
+                          return;
+                        }
+
+                        setServerCores(cores);
+                        setIsServerCreate(true);
+
+                        setIsLoading(false);
+                        setLoadingType(undefined);
+                      }}
+                    >
+                      {isLoading && loadingType === "server" ? (
+                        <Loader2 className="animate-spin" />
+                      ) : (
+                        <ServerCog />
+                      )}
+                      {t("versions.serverManager")}
+                    </Button>
                   )}
                 </div>
-              </div>
+              )}
             </div>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+
+            <DialogFooter className="m-0 rounded-none border-t bg-muted/25 px-5 py-4">
+              <Button
+                type="button"
+                disabled={!canSave}
+                onClick={async () => {
+                  if (!version) return;
+
+                  const b = await checkBlockedMods(mods, version.versionPath);
+                  if (b.length > 0) {
+                    setBlockedMods(b);
+                    setIsBlockedMods(true);
+                    setBlockedCloseType("save");
+                    return;
+                  }
+
+                  await saveVersion();
+                }}
+              >
+                {isLoading && loadingType === "save" ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Save />
+                )}
+                {t("common.save")}
+              </Button>
+
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={
+                  isLoading ||
+                  (!!version?.version.owner && account && !isOwnerVersion)
+                }
+                onClick={() => setIsOpenDel(true)}
+              >
+                <Trash />
+                {t("common.delete")}
+              </Button>
+            </DialogFooter>
+          </TooltipProvider>
+        </DialogContent>
+      </Dialog>
 
       {isShareModal && (
-        <ShareModal
-          closeModal={() => setShareModal(false)}
-          shareType={shareType}
-          modpack={tempModpack}
-          diffenceUpdateData={diffenceUpdateData}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="form" />}>
+          <LazyShareModal
+            closeModal={() => setShareModal(false)}
+            shareType={shareType}
+            modpack={tempModpack}
+            diffenceUpdateData={diffenceUpdateData}
+            onPublished={() => {
+              setVersionDiffence("new");
+            }}
+          />
+        </Suspense>
       )}
 
       {isServerCreate && (
@@ -1106,62 +1375,72 @@ export function EditVersion({
       )}
 
       {isOpenExportModal && version && (
-        <Export
-          onClose={() => setIsOpenExportModal(false)}
-          versionPath={version.versionPath}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="compact" />}>
+          <LazyExport
+            onClose={() => setIsOpenExportModal(false)}
+            versionPath={version.versionPath}
+          />
+        </Suspense>
       )}
 
       {isCropping && (
-        <ImageCropper
-          onClose={() => {
-            setIsCropping(false);
-            setCroppedImage("");
-          }}
-          title={t("common.editingLogo")}
-          image={croppedImage}
-          size={{ width: 256, height: 256 }}
-          changeImage={async (url: string) => {
-            setImage(url);
-            setIsLogoChanged(true);
-          }}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="form" />}>
+          <LazyImageCropper
+            onClose={() => {
+              setIsCropping(false);
+              setCroppedImage("");
+            }}
+            title={t("common.editingLogo")}
+            image={croppedImage}
+            size={{ width: 256, height: 256 }}
+            changeImage={async (url: string) => {
+              setImage(url);
+              setIsLogoChanged(true);
+            }}
+          />
+        </Suspense>
       )}
 
       {isModManager && version && (
-        <ModManager
-          mods={mods}
-          setMods={(m: ILocalProject[]) => setMods(m)}
-          onClose={() => setIsModManager(false)}
-          loader={version.version.loader.name}
-          version={version.version.version}
-          isModpacks={false}
-          setLoader={() => {}}
-          setModpack={() => {}}
-          setVersion={() => {}}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="workspace" />}>
+          <LazyModManager
+            mods={mods}
+            setMods={(m: ILocalProject[]) => setMods(m)}
+            onClose={() => setIsModManager(false)}
+            loader={version.version.loader.name}
+            version={version.version.version}
+            isModpacks={false}
+            setLoader={() => {}}
+            setModpack={() => {}}
+            setVersion={() => {}}
+          />
+        </Suspense>
       )}
 
       {isServers && version && (
-        <Servers
-          quickConnectIp={quickConnectIp}
-          setQuickConnectIp={setQuickConnectIp}
-          closeModal={(isFull?: boolean) => {
-            if (isFull) closeModal();
-            else setIsServers(false);
-          }}
-          servers={servers}
-          setServers={setServers}
-          runGame={runGame}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="wide" />}>
+          <LazyServers
+            quickConnectIp={quickConnectIp}
+            setQuickConnectIp={setQuickConnectIp}
+            closeModal={(isFull?: boolean) => {
+              if (isFull) closeModal();
+              else setIsServers(false);
+            }}
+            servers={servers}
+            setServers={setServers}
+            runGame={runGame}
+          />
+        </Suspense>
       )}
 
       {isOpenArguments && version && (
-        <Arguments
-          runArguments={runArguments}
-          onClose={() => setIsOpenArguments(false)}
-          setArguments={setRunArguments}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="form" />}>
+          <LazyArguments
+            runArguments={runArguments}
+            onClose={() => setIsOpenArguments(false)}
+            setArguments={setRunArguments}
+          />
+        </Suspense>
       )}
 
       {notSavedModal && (
@@ -1184,10 +1463,12 @@ export function EditVersion({
       )}
 
       {isServerManager && version && (
-        <ServerControl
-          onClose={() => setIsServerManager(false)}
-          onDelete={() => setServer(undefined)}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="wide" />}>
+          <LazyServerControl
+            onClose={() => setIsServerManager(false)}
+            onDelete={() => setServer(undefined)}
+          />
+        </Suspense>
       )}
 
       {isOpenShareModal && (
@@ -1238,7 +1519,14 @@ export function EditVersion({
                   setIsOpenModalShare(false);
                   setShareType("update");
                   setShareModal(true);
-                } catch {
+                } catch (error) {
+                  const message =
+                    error instanceof Error ? error.message : String(error);
+                  if (message !== "not found diff") {
+                    toast.error(t("versions.updateError"), {
+                      description: message,
+                    });
+                  }
                 } finally {
                   setIsLoading(false);
                   setLoadingType(undefined);
@@ -1255,15 +1543,17 @@ export function EditVersion({
       )}
 
       {isOpenDel && (
-        <DeleteVersion
-          close={(isDeleted?: boolean) => {
-            setIsOpenDel(false);
-            if (isDeleted) {
-              setVersion(undefined);
-              closeModal();
-            }
-          }}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="compact" />}>
+          <LazyDeleteVersion
+            close={(isDeleted?: boolean) => {
+              setIsOpenDel(false);
+              if (isDeleted) {
+                setVersion(undefined);
+                closeModal();
+              }
+            }}
+          />
+        </Suspense>
       )}
 
       {isBlockedMods && blockedMods.length > 0 && (
@@ -1273,22 +1563,27 @@ export function EditVersion({
             setBlockedMods(bMods);
             setIsBlockedMods(false);
 
-            if (blockedCloseType === "save") await saveVersion();
-            if (blockedCloseType === "check") await checkIntegrity();
+            if (blockedCloseType === "save") await saveVersion(bMods);
+            if (blockedCloseType === "check") await checkIntegrity(bMods);
+            if (blockedCloseType === "sync") await sync(bMods, syncModpack);
 
+            setSyncModpack(undefined);
             setBlockedCloseType(undefined);
           }}
         />
       )}
 
       {isOpenWorlds && (
-        <Worlds
-          onClose={(isFull) => {
-            if (isFull) closeModal();
-            else setIsOpenWorlds(false);
-          }}
-          runGame={runGame}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="wide" />}>
+          <LazyWorlds
+            onClose={(isFull) => {
+              if (isFull) closeModal();
+              else setIsOpenWorlds(false);
+            }}
+            runGame={runGame}
+            mods={mods}
+          />
+        </Suspense>
       )}
     </>
   );

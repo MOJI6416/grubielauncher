@@ -13,6 +13,7 @@ import { mainWindow } from '../windows/mainWindow'
 import { getLauncherPaths } from '../utilities/other'
 import { rpc } from '../rpc'
 import { RpcRendererContext } from '@/types/Rpc'
+import { NotificationClickAction } from '@/types/Notification'
 import icon from '../../../resources/icon.png?asset'
 import axios from 'axios'
 import { handleSafe } from '../utilities/ipc'
@@ -26,13 +27,35 @@ function assertSafeExternalUrl(url: string): string {
   return parsed.toString()
 }
 
+function restoreMainWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+
+  if (!mainWindow.isVisible()) {
+    mainWindow.show()
+  }
+
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore()
+  }
+
+  mainWindow.focus()
+}
+
+function sendNotificationClick(action?: NotificationClickAction): void {
+  if (!action || !mainWindow || mainWindow.isDestroyed()) return
+  if (mainWindow.webContents.isDestroyed()) return
+
+  mainWindow.webContents.send('other:notificationClick', action)
+}
+
 export function registerOtherIpc() {
   handleSafe<void, [string]>('shell:openExternal', undefined, async (_, url: string) => {
     await shell.openExternal(assertSafeExternalUrl(url))
   })
 
-  handleSafe<void, [string]>('clipboard:writeText', undefined, async (_, text: string) => {
+  handleSafe<boolean, [string]>('clipboard:writeText', false, async (_, text: string) => {
     clipboard.writeText(text)
+    return true
   })
 
   handleSafe<string>('other:getLocale', 'en', () => {
@@ -116,10 +139,10 @@ export function registerOtherIpc() {
     await rpc.syncContext(context)
   })
 
-  handleSafe<void, [Electron.NotificationConstructorOptions]>(
+  handleSafe<void, [Electron.NotificationConstructorOptions, NotificationClickAction?]>(
     'other:notify',
     undefined,
-    async (_, options) => {
+    async (_, options, clickAction) => {
       let image: NativeImage | undefined = undefined
 
       if (options.icon && options.icon !== '') {
@@ -136,22 +159,13 @@ export function registerOtherIpc() {
       notification.show()
 
       notification.on('click', () => {
-        mainWindow?.restore()
+        restoreMainWindow()
+        sendNotificationClick(clickAction)
       })
     }
   )
 
   handleSafe<void>('other:restoreWindow', undefined, () => {
-    if (!mainWindow || mainWindow.isDestroyed()) return
-
-    if (!mainWindow.isVisible()) {
-      mainWindow.show()
-    }
-
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore()
-    }
-
-    mainWindow.focus()
+    restoreMainWindow()
   })
 }

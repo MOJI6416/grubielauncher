@@ -1,81 +1,180 @@
-import { IWorld, IWorldStatistics } from '@/types/World'
-import { generateOfflineUUID, toUUID } from './other'
-import { IAuth, ILocalAccount } from '@/types/Account'
-import { jwtDecode } from 'jwt-decode'
-import { deserialize, serialize } from '@xmcl/nbt'
-import path from 'path'
-import fs from 'fs-extra'
-import zlib from 'zlib'
-import zip from 'adm-zip'
-import { pathToFileURL } from 'url'
+import { IWorld, IWorldStatistics } from "@/types/World";
+import { generateOfflineUUID, toUUID } from "./other";
+import { IAuth, ILocalAccount } from "@/types/Account";
+import { jwtDecode } from "jwt-decode";
+import { deserialize, serialize } from "@xmcl/nbt";
+import path from "path";
+import fs from "fs-extra";
+import zlib from "zlib";
+import zip from "adm-zip";
+import { pathToFileURL } from "url";
+import { extractZip } from "./archiver";
 
 function getAccountUuid(account: ILocalAccount): string {
-  if (account.accessToken && typeof account.accessToken === 'string' && account.accessToken.trim()) {
+  if (
+    account.accessToken &&
+    typeof account.accessToken === "string" &&
+    account.accessToken.trim()
+  ) {
     try {
-      const decode = jwtDecode<IAuth>(account.accessToken)
-      const rawUuid: string | undefined = decode?.uuid
-      
-      if (typeof rawUuid === 'string' && rawUuid) {
-        return rawUuid.includes('-') ? rawUuid : toUUID(rawUuid)
+      const decode = jwtDecode<IAuth>(account.accessToken);
+      const rawUuid: string | undefined = decode?.uuid;
+
+      if (typeof rawUuid === "string" && rawUuid) {
+        return rawUuid.includes("-") ? rawUuid : toUUID(rawUuid);
       }
     } catch {}
   }
 
-  return toUUID(generateOfflineUUID(account.nickname))
+  return toUUID(generateOfflineUUID(account.nickname));
 }
 
 export async function loadStatistics(
   worldPath: string,
-  account: ILocalAccount
+  account: ILocalAccount,
 ): Promise<IWorldStatistics | null> {
-  const accountUUID = getAccountUuid(account)
+  const accountUUID = getAccountUuid(account);
 
-  const statisticsPath = path.join(worldPath, 'stats', `${accountUUID}.json`)
-  if (!(await fs.pathExists(statisticsPath))) return null
+  const statisticsPath = path.join(worldPath, "stats", `${accountUUID}.json`);
+  if (!(await fs.pathExists(statisticsPath))) return null;
 
   try {
-    const stats: IWorldStatistics = await fs.readJSON(statisticsPath)
-    return stats
+    const stats: IWorldStatistics = await fs.readJSON(statisticsPath);
+    return stats;
   } catch (error) {
-    console.error('Failed to load world statistics:', error)
-    return null
+    console.error("Failed to load world statistics:", error);
+    return null;
   }
 }
 
-export async function readWorld(worldPath: string, account: ILocalAccount): Promise<IWorld | null> {
+function stringifyNbtValue(value: any): string {
+  if (value === null || value === undefined) return "";
+
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "bigint" ||
+    typeof value === "boolean"
+  ) {
+    return String(value);
+  }
+
+  if (Array.isArray(value) && value.length === 2) {
+    const [low, high] = value;
+    if (typeof low === "number" && typeof high === "number") {
+      let result = (BigInt(high) << 32n) | (BigInt(low) & 0xffffffffn);
+      if (result >= 0x8000000000000000n) {
+        result -= 0x10000000000000000n;
+      }
+      return result.toString();
+    }
+  }
+
+  if (typeof value === "object") {
+    if (typeof value.low === "number" && typeof value.high === "number") {
+      let result =
+        (BigInt(value.high) << 32n) | (BigInt(value.low) & 0xffffffffn);
+      if (result >= 0x8000000000000000n) {
+        result -= 0x10000000000000000n;
+      }
+      return result.toString();
+    }
+
+    if ("value" in value) {
+      return stringifyNbtValue(value.value);
+    }
+
+    const result = value.toString?.();
+    if (typeof result === "string" && result !== "[object Object]") {
+      return result;
+    }
+  }
+
+  return "";
+}
+
+function findNbtValueByKey(source: any, keys: string[]): any {
+  if (!source || typeof source !== "object") return undefined;
+
+  for (const [key, value] of Object.entries(source)) {
+    const normalizedKey = key.toLowerCase();
+    if (keys.includes(normalizedKey)) return value;
+  }
+
+  for (const value of Object.values(source)) {
+    const result = findNbtValueByKey(value, keys);
+    if (result !== undefined) return result;
+  }
+
+  return undefined;
+}
+
+function getWorldSeed(nbtData: any): string {
+  const data = nbtData?.Data ?? nbtData?.data ?? nbtData;
+
+  const exactSeed =
+    data?.WorldGenSettings?.seed ??
+    data?.WorldGenSettings?.Seed ??
+    data?.worldGenSettings?.seed ??
+    data?.RandomSeed;
+
+  const seed = stringifyNbtValue(exactSeed);
+  if (seed) return seed;
+
+  return stringifyNbtValue(findNbtValueByKey(data, ["seed", "randomseed"]));
+}
+
+export async function readWorld(
+  worldPath: string,
+  account: ILocalAccount,
+): Promise<IWorld | null> {
   try {
-    const levelDatPath = path.join(worldPath, 'level.dat')
-    const datapacksPath = path.join(worldPath, 'datapacks')
-    const iconPath = path.join(worldPath, 'icon.png')
+    const levelDatPath = path.join(worldPath, "level.dat");
+    const datapacksPath = path.join(worldPath, "datapacks");
+    const iconPath = path.join(worldPath, "icon.png");
 
-    const levelData = await fs.readFile(levelDatPath)
-    const u = new Uint8Array(levelData)
-
-    const decompressed = zlib.gunzipSync(u)
-    const nbtData: any = await deserialize(decompressed)
-
-    const name = nbtData?.Data?.LevelName ?? null
-
-    const seedValue =
-      nbtData?.Data?.WorldGenSettings?.seed ?? nbtData?.Data?.RandomSeed ?? null
-    const seed = seedValue === null || seedValue === undefined ? null : String(seedValue)
-
-    if (!name || !seed) {
-      return null
+    if (!(await fs.pathExists(levelDatPath))) {
+      return null;
     }
 
-    let icon: string | undefined
+    let name = path.basename(worldPath);
+    let seed = "";
+
+    try {
+      const levelData = await fs.readFile(levelDatPath);
+      const u = new Uint8Array(levelData);
+
+      const decompressed = zlib.gunzipSync(u);
+      const nbtData: any = await deserialize(decompressed);
+
+      if (
+        typeof nbtData?.Data?.LevelName === "string" &&
+        nbtData.Data.LevelName.trim()
+      ) {
+        name = nbtData.Data.LevelName;
+      }
+
+      seed = getWorldSeed(nbtData);
+    } catch (err) {
+      console.warn(
+        "Failed to read world level data, using folder fallback:",
+        worldPath,
+        err,
+      );
+    }
+
+    let icon: string | undefined;
     if (await fs.pathExists(iconPath)) {
-      icon = pathToFileURL(iconPath).href
+      icon = pathToFileURL(iconPath).href;
     }
 
-    let datapacks: string[] = []
+    let datapacks: string[] = [];
     try {
       if (await fs.pathExists(datapacksPath)) {
-        datapacks = await fs.readdir(datapacksPath)
+        datapacks = await fs.readdir(datapacksPath);
       }
     } catch {
-      datapacks = []
+      datapacks = [];
     }
 
     return {
@@ -84,69 +183,142 @@ export async function readWorld(worldPath: string, account: ILocalAccount): Prom
       icon,
       datapacks,
       statistics: (await loadStatistics(worldPath, account)) || undefined,
-      isDownloaded: await fs.pathExists(path.join(worldPath, '.downloaded')),
+      isDownloaded: await fs.pathExists(path.join(worldPath, ".downloaded")),
       path: worldPath,
-      folderName: path.basename(worldPath)
-    }
+      folderName: path.basename(worldPath),
+    };
   } catch (err) {
-    console.error('Error reading world:', err)
-    return null
+    console.error("Error reading world:", err);
+    return null;
   }
 }
 
-export async function writeWorldName(worldPath: string, newName: string): Promise<string | null> {
+export async function writeWorldName(
+  worldPath: string,
+  newName: string,
+): Promise<string | null> {
   try {
-    const levelDatPath = path.join(worldPath, 'level.dat')
-    const fileData = await fs.readFile(levelDatPath)
-    const u = new Uint8Array(fileData)
+    const levelDatPath = path.join(worldPath, "level.dat");
+    const fileData = await fs.readFile(levelDatPath);
+    const u = new Uint8Array(fileData);
 
-    const decompressed = zlib.gunzipSync(u)
-    const nbtData: any = await deserialize(decompressed)
+    const decompressed = zlib.gunzipSync(u);
+    const nbtData: any = await deserialize(decompressed);
 
     if (nbtData?.Data) {
-      nbtData.Data.LevelName = newName
+      nbtData.Data.LevelName = newName;
     } else {
-      console.error('Data section not found in level.dat')
-      return null
+      console.error("Data section not found in level.dat");
+      return null;
     }
 
-    const modifiedBuffer = await serialize(nbtData)
-    const compressed = zlib.gzipSync(new Uint8Array(modifiedBuffer))
+    const modifiedBuffer = await serialize(nbtData);
+    const compressed = zlib.gzipSync(new Uint8Array(modifiedBuffer));
 
-    await fs.writeFile(levelDatPath, compressed)
+    await fs.writeFile(levelDatPath, compressed);
 
-    const sanitized = newName.replace(/[^a-zA-Z0-9_\- ]/g, '').trim()
-    const newFolderName = sanitized || path.basename(worldPath)
+    const sanitized = newName.replace(/[^a-zA-Z0-9_\- ]/g, "").trim();
+    const newFolderName = sanitized || path.basename(worldPath);
 
-    const newWorldPath = path.join(path.dirname(worldPath), newFolderName)
+    const newWorldPath = path.join(path.dirname(worldPath), newFolderName);
 
-    if (await fs.pathExists(newWorldPath)) return worldPath
+    if (await fs.pathExists(newWorldPath)) return worldPath;
 
     if (newWorldPath !== worldPath) {
-      await fs.rename(worldPath, newWorldPath)
+      await fs.rename(worldPath, newWorldPath);
     }
 
-    return newWorldPath
+    return newWorldPath;
   } catch (err) {
-    console.error('Error changing world name:', err)
-    return null
+    console.error("Error changing world name:", err);
+    return null;
   }
+}
+
+function getArchiveEntryPath(entry: any) {
+  return String(entry?.entryName || "").replace(/\\/g, "/");
+}
+
+function sanitizeWorldFolderName(name: string) {
+  return name.replace(/[<>:"/\\|?*\x00-\x1f]/g, "").trim();
+}
+
+async function getWorldArchiveInfo(zipPath: string) {
+  const archive = new zip(zipPath);
+  const entries = archive.getEntries();
+
+  const entryNames = entries
+    .map(getArchiveEntryPath)
+    .filter((entryName) => entryName && entryName !== "/" && entryName !== ".");
+
+  const hasRootLevelDat = entryNames.some(
+    (entryName) => entryName.toLowerCase() === "level.dat",
+  );
+
+  if (hasRootLevelDat) {
+    const fallbackName = sanitizeWorldFolderName(
+      path.basename(zipPath, path.extname(zipPath)),
+    );
+
+    return fallbackName
+      ? {
+          worldName: fallbackName,
+          hasRootFolder: false,
+        }
+      : null;
+  }
+
+  const rootsWithLevelDat = new Set<string>();
+  for (const entryName of entryNames) {
+    const parts = entryName.split("/").filter(Boolean);
+    if (parts.length >= 2 && parts[1].toLowerCase() === "level.dat") {
+      rootsWithLevelDat.add(parts[0]);
+    }
+  }
+
+  if (rootsWithLevelDat.size === 1) {
+    return {
+      worldName: [...rootsWithLevelDat][0],
+      hasRootFolder: true,
+    };
+  }
+
+  const rootFolders = new Set<string>();
+
+  for (const entryName of entryNames) {
+    const parts = entryName.split("/");
+    if (parts.length > 1 && parts[0]) {
+      rootFolders.add(parts[0]);
+    }
+  }
+
+  if (rootFolders.size === 1) {
+    return {
+      worldName: [...rootFolders][0],
+      hasRootFolder: true,
+    };
+  }
+
+  return null;
 }
 
 export async function getWorldName(zipPath: string) {
-  const archive = new zip(zipPath)
-  const entries = archive.getEntries()
+  const archiveInfo = await getWorldArchiveInfo(zipPath);
+  return archiveInfo?.worldName || null;
+}
 
-  const rootFolders = new Set<string>()
+export async function extractWorldArchive(
+  zipPath: string,
+  savesPath: string,
+): Promise<string | null> {
+  const archiveInfo = await getWorldArchiveInfo(zipPath);
+  if (!archiveInfo) return null;
 
-  for (const entry of entries) {
-    const entryName = String((entry as any).entryName || '').replace(/\\/g, '/')
+  const destination = archiveInfo.hasRootFolder
+    ? savesPath
+    : path.join(savesPath, archiveInfo.worldName);
 
-    const parts = entryName.split('/')
-    if (parts.length > 1 && parts[0]) {
-      rootFolders.add(parts[0])
-    }
-  }
+  await extractZip(zipPath, destination);
 
-  return rootFolders.size === 1 ? [...rootFolders][0] : null
+  return path.join(savesPath, archiveInfo.worldName);
 }

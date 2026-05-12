@@ -3,31 +3,22 @@ import { ImageCropper } from "../ImageCropper";
 import { ServerSettings } from "./Settings";
 import { ProjectType } from "@/types/ModManager";
 import { useTranslation } from "react-i18next";
-import {
-  Cpu,
-  Folder,
-  ImageMinus,
-  ImagePlus,
-  Settings,
-  Trash,
-} from "lucide-react";
+import { Cpu, Folder, ImagePlus, Settings, Trash, X } from "lucide-react";
 import { useAtom } from "jotai";
+import { selectedVersionAtom, serverAtom } from "@renderer/stores/atoms";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  pathsAtom,
-  selectedVersionAtom,
-  serverAtom,
-} from "@renderer/stores/atoms";
-import {
-  addToast,
-  Alert,
-  Button,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalHeader,
-  Image,
-} from "@heroui/react";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Alert, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import { Confirmation } from "../Modals/Confirmation";
+import { toast } from "sonner";
 
 enum LoadingType {
   RUN = "run",
@@ -51,7 +42,6 @@ export function ServerControl({
   const [serverLogo, setServerLogo] = useState("");
   const [server] = useAtom(serverAtom);
   const [version] = useAtom(selectedVersionAtom);
-  const [paths] = useAtom(pathsAtom);
   const [serverPath, setServerPath] = useState("");
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
 
@@ -59,47 +49,66 @@ export function ServerControl({
 
   const { t } = useTranslation();
 
+  function setLogoUrl(url: string) {
+    if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current);
+    logoUrlRef.current = null;
+    setServerLogo(url);
+  }
+
+  function arrayBufferToBase64(buffer: ArrayBuffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
   async function changeImage(url: string) {
     if (!server || !serverPath) return;
 
     const response = await fetch(url);
     const blob = await response.blob();
     const arrayBuffer = await blob.arrayBuffer();
+    const base64 = arrayBufferToBase64(arrayBuffer);
 
     const iconPath = await api.path.join(serverPath, "server-icon.png");
-    await api.fs.writeFile(iconPath, new Uint8Array(arrayBuffer), "binary");
+    await api.fs.writeFile(iconPath, base64, "base64");
 
-    if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current);
-    const objectUrl = URL.createObjectURL(
-      new Blob([arrayBuffer], { type: "image/png" }),
-    );
-    logoUrlRef.current = objectUrl;
-
-    setServerLogo(objectUrl);
+    setLogoUrl(`data:image/png;base64,${base64}`);
     setIsCropping(false);
-    addToast({ color: "success", title: t("serverManager.logoEdited") });
+    toast.success(t("serverManager.logoEdited"));
   }
+
+  const openLogoPicker = useCallback(async () => {
+    const filePaths = await api.other.openFileDialog();
+    if (!filePaths || filePaths.length === 0) return;
+
+    setImage(filePaths[0]);
+    setIsCropping(true);
+  }, []);
+
+  const deleteLogo = useCallback(async () => {
+    if (!serverPath || !serverLogo) return;
+
+    await api.fs.rimraf(await api.path.join(serverPath, "server-icon.png"));
+
+    setLogoUrl("");
+  }, [serverPath, serverLogo]);
 
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
-      if (!version || !paths.minecraft) return;
+      if (!version?.versionPath) return;
 
-      const sp = await api.path.join(
-        paths.minecraft,
-        "versions",
-        version?.version.name || "",
-        "server",
-      );
+      const sp = await api.path.join(version.versionPath, "server");
 
       if (cancelled) return;
       setServerPath(sp);
 
       if (!server) {
-        if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current);
-        logoUrlRef.current = null;
-        setServerLogo("");
+        setLogoUrl("");
         return;
       }
 
@@ -107,22 +116,15 @@ export function ServerControl({
       const isExists = await api.fs.pathExists(logoPath);
 
       if (!isExists) {
-        if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current);
-        logoUrlRef.current = null;
-        setServerLogo("");
+        setLogoUrl("");
         return;
       }
 
       try {
-        const fileBuffer = await api.fs.readFile(logoPath, "binary");
+        const base64 = await api.fs.readFile(logoPath, "base64");
         if (cancelled) return;
 
-        if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current);
-        const objectUrl = URL.createObjectURL(
-          new Blob([fileBuffer], { type: "image/png" }),
-        );
-        logoUrlRef.current = objectUrl;
-        setServerLogo(objectUrl);
+        setLogoUrl(`data:image/png;base64,${base64}`);
       } catch {}
     })();
 
@@ -131,7 +133,7 @@ export function ServerControl({
       if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current);
       logoUrlRef.current = null;
     };
-  }, [server, version, paths.minecraft]);
+  }, [server, version]);
 
   const handleDelete = useCallback(async () => {
     setIsLoading(true);
@@ -140,18 +142,12 @@ export function ServerControl({
     try {
       await api.fs.rimraf(serverPath);
 
-      addToast({
-        color: "success",
-        title: t("serverManager.deleted"),
-      });
+      toast.success(t("serverManager.deleted"));
 
       onDelete();
       onClose();
     } catch (error) {
-      addToast({
-        color: "danger",
-        title: t("serverManager.deleteError"),
-      });
+      toast.error(t("serverManager.deleteError"));
     } finally {
       setLoadingType(null);
       setIsLoading(false);
@@ -160,122 +156,117 @@ export function ServerControl({
 
   return server ? (
     <>
-      <Modal
-        size="xs"
-        isOpen={true}
-        onClose={() => {
-          if (!isLoading) onClose();
+      <Dialog
+        open={true}
+        onOpenChange={(open) => {
+          if (!open && !isLoading) onClose();
         }}
       >
-        <ModalContent>
-          <ModalHeader>{t("versions.serverManager")}</ModalHeader>
-          <ModalBody>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 justify-between">
-                {serverLogo && (
-                  <Image
-                    src={serverLogo}
-                    alt=""
-                    height={64}
-                    width={64}
-                    className="min-w-16 min-h-16"
-                  />
-                )}
-                <div className="flex items-center gap-1">
-                  <Cpu size={22} />
-                  <p>{server.core}</p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="sm"
-                    variant="flat"
-                    isIconOnly
-                    isDisabled={isLoading}
-                    onPress={async () => {
-                      const filePaths = await api.other.openFileDialog();
-                      if (!filePaths || filePaths.length === 0) return;
-
-                      setImage(filePaths[0]);
-                      setIsCropping(true);
-                    }}
-                  >
-                    <ImagePlus size={20} />
-                  </Button>
-
-                  {serverLogo && (
-                    <Button
-                      size="sm"
-                      variant="flat"
-                      isIconOnly
-                      isDisabled={isLoading}
-                      onPress={async () => {
-                        await api.fs.rimraf(
-                          await api.path.join(serverPath, "server-icon.png"),
-                        );
-
-                        if (logoUrlRef.current)
-                          URL.revokeObjectURL(logoUrlRef.current);
-                        logoUrlRef.current = null;
-
-                        setServerLogo("");
-                      }}
-                    >
-                      <ImageMinus size={20} />
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Button
-                  variant="flat"
-                  isDisabled={isLoading}
-                  startContent={<Settings size={22} />}
-                  onPress={async () => {
-                    const serverPropertiesPath = await api.path.join(
-                      serverPath,
-                      "server.properties",
-                    );
-                    const isExists =
-                      await api.fs.pathExists(serverPropertiesPath);
-                    if (!isExists) {
-                      addToast({
-                        color: "danger",
-                        title: t("serverManager.serverPropertiesNotFound"),
-                      });
-                      return;
+        <DialogContent
+          className="overflow-hidden p-0 sm:max-w-xs"
+          onPointerDownOutside={(event) => {
+            if (isLoading) event.preventDefault();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (isLoading) event.preventDefault();
+          }}
+        >
+          <DialogHeader className="px-5 pt-5">
+            <DialogTitle>{t("versions.serverManager")}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 px-5 pb-5">
+            <Card className="gap-0 overflow-hidden py-0 shadow-none">
+              <CardContent className="p-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={serverLogo ? deleteLogo : openLogoPicker}
+                    className="group relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-muted/35 text-muted-foreground transition-colors hover:bg-muted/55 disabled:pointer-events-none disabled:opacity-50"
+                    aria-label={
+                      serverLogo ? t("common.delete") : t("common.logo")
                     }
+                  >
+                    {serverLogo ? (
+                      <>
+                        <img
+                          src={serverLogo}
+                          alt=""
+                          height={56}
+                          width={56}
+                          className="h-full w-full object-cover"
+                        />
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                          <X className="size-4" />
+                        </span>
+                      </>
+                    ) : (
+                      <ImagePlus className="size-5" />
+                    )}
+                  </button>
 
-                    setIsSettings(true);
-                  }}
-                >
-                  {t("settings.title")}
-                </Button>
-                <Button
-                  variant="flat"
-                  startContent={<Folder size={22} />}
-                  onPress={async () => {
-                    await api.shell.openPath(serverPath);
-                  }}
-                >
-                  {t("common.openFolder")}
-                </Button>
-                <Button
-                  variant="flat"
-                  color="danger"
-                  isDisabled={isLoading}
-                  startContent={<Trash size={22} />}
-                  onPress={() => {
-                    setIsConfirmationOpen(true);
-                  }}
-                >
-                  {t("common.delete")}
-                </Button>
-              </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-1 text-xs text-muted-foreground">
+                      Ядро сервера
+                    </p>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Badge variant="secondary" className="min-w-0 px-2.5 py-1 text-sm">
+                        <Cpu className="size-3.5" />
+                        <span className="truncate">{server.core}</span>
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Separator />
+
+            <div className="grid gap-2">
+              <Button
+                variant="secondary"
+                disabled={isLoading}
+                onClick={async () => {
+                  const serverPropertiesPath = await api.path.join(
+                    serverPath,
+                    "server.properties",
+                  );
+                  const isExists =
+                    await api.fs.pathExists(serverPropertiesPath);
+                  if (!isExists) {
+                    toast.error(t("serverManager.serverPropertiesNotFound"));
+                    return;
+                  }
+
+                  setIsSettings(true);
+                }}
+              >
+                <Settings className="size-5" />
+                {t("settings.title")}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  await api.shell.openPath(serverPath);
+                }}
+              >
+                <Folder className="size-5" />
+                {t("common.openFolder")}
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={isLoading}
+                onClick={() => {
+                  setIsConfirmationOpen(true);
+                }}
+              >
+                <Trash className="size-5" />
+                {t("common.delete")}
+              </Button>
             </div>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {isSettings && version && (
         <ServerSettings
@@ -330,6 +321,8 @@ export function ServerControl({
       )}
     </>
   ) : (
-    <Alert color="warning" title={t("serverManager.configNotFound")} />
+    <Alert className="border-[var(--warning)]/40">
+      <AlertTitle>{t("serverManager.configNotFound")}</AlertTitle>
+    </Alert>
   );
 }

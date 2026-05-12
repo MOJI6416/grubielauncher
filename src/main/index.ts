@@ -16,6 +16,27 @@ let isAppShutdownInProgress = false;
 let appShutdownTimeout: NodeJS.Timeout | null = null;
 void gotTheLock;
 
+function sendUpdaterStatus(
+  status:
+    | "checking"
+    | "available"
+    | "downloading"
+    | "downloaded"
+    | "not-available"
+    | "error",
+  payload: { version?: string; message?: string } = {},
+) {
+  updaterWindow?.webContents.send("updater:status", {
+    status,
+    ...payload,
+  });
+}
+
+function openMainWindowOnce() {
+  if (mainWindow) return;
+  createMainWindow();
+}
+
 if (!gotTheLock) {
   app.quit();
 } else {
@@ -46,28 +67,56 @@ if (!gotTheLock) {
 
     createUpdaterWindow();
 
+    autoUpdater.on("checking-for-update", () => {
+      sendUpdaterStatus("checking");
+    });
+
+    autoUpdater.on("update-available", (info) => {
+      sendUpdaterStatus("available", { version: info.version });
+    });
+
     autoUpdater.on("download-progress", (p) => {
-      updaterWindow?.webContents.send(
-        "updater:downloadProgress",
-        p.percent.toFixed(1),
-      );
+      sendUpdaterStatus("downloading");
+      updaterWindow?.webContents.send("updater:downloadProgress", {
+        percent: Number(p.percent.toFixed(1)),
+        bytesPerSecond: p.bytesPerSecond,
+        transferred: p.transferred,
+        total: p.total,
+      });
     });
 
     autoUpdater.on("update-downloaded", () => {
-      autoUpdater.quitAndInstall();
+      sendUpdaterStatus("downloaded");
+      setTimeout(() => autoUpdater.quitAndInstall(), 700);
     });
 
     autoUpdater.on("update-not-available", () => {
+      sendUpdaterStatus("not-available");
       updaterWindow?.close();
-      createMainWindow();
+      openMainWindowOnce();
     });
 
-    autoUpdater.on("error", () => {
+    autoUpdater.on("error", (error) => {
+      sendUpdaterStatus("error", { message: error.message });
       updaterWindow?.close();
-      createMainWindow();
+      openMainWindowOnce();
     });
 
-    autoUpdater.checkForUpdates();
+    const checkForUpdates = () => {
+      sendUpdaterStatus("checking");
+      void autoUpdater.checkForUpdates().catch((error) => {
+        sendUpdaterStatus("error", { message: error.message });
+        updaterWindow?.close();
+        openMainWindowOnce();
+      });
+    };
+
+    if (updaterWindow?.webContents.isLoading()) {
+      updaterWindow.webContents.once("did-finish-load", checkForUpdates);
+      return;
+    }
+
+    checkForUpdates();
   });
 
   app.on("activate", () => {

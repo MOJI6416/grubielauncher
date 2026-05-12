@@ -21,6 +21,20 @@ export class Modrinth {
     timeout: 30000
   })
 
+  private static logAxiosError(prefix: string, error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status
+      const statusText = error.response?.statusText
+      console.error(
+        `${prefix}:`,
+        status ? `HTTP ${status}${statusText ? ` ${statusText}` : ''}` : error.message
+      )
+      return
+    }
+
+    console.error(`${prefix}:`, error)
+  }
+
   static async search(
     query: string,
     options: {
@@ -71,7 +85,8 @@ export class Modrinth {
       })
 
       return response.data
-    } catch {
+    } catch (error) {
+      this.logAxiosError('Error searching Modrinth projects', error)
       return null
     }
   }
@@ -80,7 +95,8 @@ export class Modrinth {
     try {
       const response = await this.api.get<IProject>(`/project/${id}`)
       return response.data
-    } catch {
+    } catch (error) {
+      this.logAxiosError('Error getting Modrinth project', error)
       return null
     }
   }
@@ -89,7 +105,8 @@ export class Modrinth {
     try {
       const response = await this.api.get<IVersion>(`/version/${id}`)
       return response.data
-    } catch {
+    } catch (error) {
+      this.logAxiosError('Error getting Modrinth version', error)
       return null
     }
   }
@@ -117,7 +134,8 @@ export class Modrinth {
       })
 
       return response.data
-    } catch {
+    } catch (error) {
+      this.logAxiosError('Error getting Modrinth versions', error)
       return null
     }
   }
@@ -126,7 +144,8 @@ export class Modrinth {
     try {
       const response = await this.api.get<ICategoryTag[]>(`/tag/category`)
       return response.data.filter((c) => c.project_type == projectType)
-    } catch {
+    } catch (error) {
+      this.logAxiosError('Error getting Modrinth filters', error)
       return null
     }
   }
@@ -140,7 +159,8 @@ export class Modrinth {
         tags: [...categories.data, ...loaders.data],
         categories: categories.data
       }
-    } catch {
+    } catch (error) {
+      this.logAxiosError('Error getting Modrinth tags', error)
       return null
     }
   }
@@ -161,7 +181,8 @@ export class Modrinth {
       }
 
       return dependencies
-    } catch {
+    } catch (error) {
+      this.logAxiosError('Error getting Modrinth dependencies', error)
       return []
     }
   }
@@ -176,7 +197,8 @@ export class Modrinth {
       })
 
       return response.data
-    } catch {
+    } catch (error) {
+      this.logAxiosError('Error getting Modrinth projects', error)
       return []
     }
   }

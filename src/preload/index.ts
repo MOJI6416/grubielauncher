@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { IServer } from "@/types/ServersList";
 import {
   IImportModpack,
@@ -19,7 +19,11 @@ import {
   IServerSettings,
   ServerCore,
 } from "@/types/Server";
-import { DownloaderInfo, DownloadItem } from "@/types/Downloader";
+import {
+  DownloaderFailuresInfo,
+  DownloaderInfo,
+  DownloadItem,
+} from "@/types/Downloader";
 import { Loader } from "@/types/Loader";
 import {
   IFilterGroup,
@@ -47,6 +51,33 @@ import {
   ShareVisibility,
 } from "@/types/Share";
 import { RpcRendererContext } from "@/types/Rpc";
+import {
+  VersionInstallOptions,
+  VersionInstallProgress,
+  VersionInstallResult,
+} from "@/types/InstallationProgress";
+import { NotificationClickAction } from "@/types/Notification";
+
+export type UpdaterStatus =
+  | "checking"
+  | "available"
+  | "downloading"
+  | "downloaded"
+  | "not-available"
+  | "error";
+
+export interface UpdaterProgress {
+  percent: number;
+  bytesPerSecond: number;
+  transferred: number;
+  total: number;
+}
+
+export interface UpdaterStatusPayload {
+  status: UpdaterStatus;
+  version?: string;
+  message?: string;
+}
 
 export interface IElectronAPI {
   os: {
@@ -74,6 +105,7 @@ export interface IElectronAPI {
     archiveFiles: (
       filesToArchive: string[],
       zipPath: string,
+      basePath?: string,
     ) => Promise<boolean>;
     getTotalSizes: (filePaths: string[]) => Promise<number>;
     sha1: (filePath: string) => Promise<string>;
@@ -98,6 +130,7 @@ export interface IElectronAPI {
     archiveFiles: (
       filesToArchive: string[],
       zipPath: string,
+      basePath?: string,
     ) => Promise<boolean>;
     getTotalSizes: (filePaths: string[]) => Promise<number>;
     fromBuffer: (data: ArrayBuffer) => string;
@@ -124,7 +157,9 @@ export interface IElectronAPI {
       settings: TSettings,
       versionConf: IVersionConf,
       extraItems?: DownloadItem[],
-    ) => Promise<boolean>;
+      options?: VersionInstallOptions,
+    ) => Promise<VersionInstallResult>;
+    cancelInstall: () => Promise<boolean>;
     getRunCommand: (
       account: ILocalAccount,
       settings: TSettings,
@@ -154,6 +189,7 @@ export interface IElectronAPI {
       ) => Promise<{
         mods: ILocalProject[];
         success: boolean;
+        uploaded: number;
       }>;
     };
   };
@@ -221,7 +257,7 @@ export interface IElectronAPI {
       key: string,
       isDirectory?: boolean,
     ) => Promise<void>;
-    modpackDownloaded: (at: string, shareCode: string) => Promise<void>;
+    modpackDownloaded: (at: string, shareCode: string) => Promise<boolean>;
     getNews: () => Promise<INews[]>;
     login: (
       at: string,
@@ -276,11 +312,14 @@ export interface IElectronAPI {
       settings: TSettings,
       versionConf: IVersionConf,
       server?: IServerConf,
-    ) => Promise<boolean>;
+      options?: VersionInstallOptions,
+    ) => Promise<VersionInstallResult>;
     downloadOther: (
       settings: TSettings,
       versionConf: IVersionConf,
-    ) => Promise<boolean>;
+      options?: VersionInstallOptions,
+    ) => Promise<VersionInstallResult>;
+    cancelInstall: () => Promise<boolean>;
   };
   other: {
     getVersion: () => Promise<string>;
@@ -289,6 +328,7 @@ export interface IElectronAPI {
       filters?: { name: string; extensions: string[] }[],
       multi?: boolean,
     ) => Promise<string[]>;
+    getPathForFile: (file: File) => string;
     getPaths: () => Promise<{
       launcher: string;
       minecraft: string;
@@ -314,9 +354,15 @@ export interface IElectronAPI {
         | "logs"
         | "crashDumps",
     ) => Promise<string>;
-    notify: (options: Electron.NotificationConstructorOptions) => Promise<void>;
+    notify: (
+      options: Electron.NotificationConstructorOptions,
+      clickAction?: NotificationClickAction,
+    ) => Promise<void>;
     getLocale: () => Promise<string>;
     restoreWindow: () => Promise<void>;
+    onNotificationClick: (
+      callback: (action: NotificationClickAction) => void,
+    ) => () => void;
   };
   server: {
     install: (
@@ -511,9 +557,20 @@ export interface IElectronAPI {
     onLaunch: (callback: () => void) => () => void;
     onFriendUpdate: (callback: (data: any) => void) => () => void;
     removeAllListeners: (channel: string) => void;
-    onDownloaderInfo: (callback: (info: DownloaderInfo | null) => void) => () => void;
+    onDownloaderInfo: (
+      callback: (info: DownloaderInfo | null) => void,
+    ) => () => void;
+    onDownloaderFailures: (
+      callback: (info: DownloaderFailuresInfo) => void,
+    ) => () => void;
+    onVersionInstallProgress: (
+      callback: (info: VersionInstallProgress | null) => void,
+    ) => () => void;
     updater: {
-      onDownloadProgress: (callback: (progress: number) => void) => void;
+      onStatus: (callback: (payload: UpdaterStatusPayload) => void) => () => void;
+      onDownloadProgress: (
+        callback: (progress: UpdaterProgress) => void,
+      ) => () => void;
     };
   };
 }
@@ -571,8 +628,8 @@ export const api = {
     openPath: (path: string) => ipcRenderer.invoke("shell:openPath", path),
   },
   file: {
-    archiveFiles: (filesToArchive: string[], zipPath: string) =>
-      ipcRenderer.invoke("file:archiveFiles", filesToArchive, zipPath),
+    archiveFiles: (filesToArchive: string[], zipPath: string, basePath?: string) =>
+      ipcRenderer.invoke("file:archiveFiles", filesToArchive, zipPath, basePath),
     getTotalSizes: (filePaths: string[]) =>
       ipcRenderer.invoke("file:getTotalSizes", filePaths),
     getFile: (filePath: string) => ipcRenderer.invoke("file:getFile", filePath),
@@ -601,6 +658,7 @@ export const api = {
       settings: TSettings,
       versionConf: IVersionConf,
       extraItems?: DownloadItem[],
+      options?: VersionInstallOptions,
     ) =>
       ipcRenderer.invoke(
         "version:install",
@@ -608,7 +666,9 @@ export const api = {
         settings,
         versionConf,
         extraItems,
+        options,
       ),
+    cancelInstall: () => ipcRenderer.invoke("version:cancelInstall"),
     getRunCommand: (
       account: ILocalAccount,
       settings: TSettings,
@@ -707,9 +767,10 @@ export const api = {
       ipcRenderer.invoke("backend:modpackDownloaded", at, shareCode),
     getNews: () => ipcRenderer.invoke("backend:getNews"),
     login: (
+      at: string,
       id: string,
       auth: { accessToken: string; refreshToken: string; expiresAt: number },
-    ) => ipcRenderer.invoke("backend:login", id, auth),
+    ) => ipcRenderer.invoke("backend:login", at, id, auth),
     getSkin: (at: string, uuid: string) =>
       ipcRenderer.invoke("backend:getSkin", at, uuid),
     discordAuthenticated: (at: string, userId: string) =>
@@ -762,9 +823,14 @@ export const api = {
       settings: TSettings,
       versionConf: IVersionConf,
       server?: IServerConf,
-    ) => ipcRenderer.invoke("mods:check", settings, versionConf, server),
-    downloadOther: (settings: TSettings, versionConf: IVersionConf) =>
-      ipcRenderer.invoke("mods:downloadOther", settings, versionConf),
+      options?: VersionInstallOptions,
+    ) => ipcRenderer.invoke("mods:check", settings, versionConf, server, options),
+    downloadOther: (
+      settings: TSettings,
+      versionConf: IVersionConf,
+      options?: VersionInstallOptions,
+    ) => ipcRenderer.invoke("mods:downloadOther", settings, versionConf, options),
+    cancelInstall: () => ipcRenderer.invoke("mods:cancelInstall"),
   },
   other: {
     getVersion: () => ipcRenderer.invoke("other:getVersion"),
@@ -773,12 +839,25 @@ export const api = {
       filters?: { name: string; extensions: string[] }[],
       multi?: boolean,
     ) => ipcRenderer.invoke("other:openFileDialog", isFolder, filters, multi),
+    getPathForFile: (file: File) => webUtils.getPathForFile(file),
     getPaths: () => ipcRenderer.invoke("other:getPaths"),
     getPath: (pathKey: string) => ipcRenderer.invoke("other:getPath", pathKey),
-    notify: (options: Electron.NotificationConstructorOptions) =>
-      ipcRenderer.invoke("other:notify", options),
+    notify: (
+      options: Electron.NotificationConstructorOptions,
+      clickAction?: NotificationClickAction,
+    ) => ipcRenderer.invoke("other:notify", options, clickAction),
     getLocale: () => ipcRenderer.invoke("other:getLocale"),
     restoreWindow: () => ipcRenderer.invoke("other:restoreWindow"),
+    onNotificationClick: (
+      callback: (action: NotificationClickAction) => void,
+    ) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        action: NotificationClickAction,
+      ) => callback(action);
+      ipcRenderer.on("other:notificationClick", listener);
+      return () => ipcRenderer.off("other:notificationClick", listener);
+    },
   },
   server: {
     install: (
@@ -1039,11 +1118,46 @@ export const api = {
       return () => ipcRenderer.off("downloaderInfo", listener);
     },
 
+    onDownloaderFailures: (
+      callback: (info: DownloaderFailuresInfo) => void,
+    ) => {
+      const listener = (_event, info) => {
+        callback(info);
+      };
+      ipcRenderer.on("downloaderFailures", listener);
+      return () => ipcRenderer.off("downloaderFailures", listener);
+    },
+
+    onVersionInstallProgress: (
+      callback: (info: VersionInstallProgress | null) => void,
+    ) => {
+      const listener = (_event, info) => {
+        callback(info);
+      };
+      ipcRenderer.on("versionInstallProgress", listener);
+      return () => ipcRenderer.off("versionInstallProgress", listener);
+    },
+
     updater: {
-      onDownloadProgress: (callback: (progress: number) => void) => {
-        ipcRenderer.on("updater:downloadProgress", (_event, progress) => {
+      onStatus: (callback: (payload: UpdaterStatusPayload) => void) => {
+        const listener = (
+          _event: Electron.IpcRendererEvent,
+          payload: UpdaterStatusPayload,
+        ) => {
+          callback(payload);
+        };
+        ipcRenderer.on("updater:status", listener);
+        return () => ipcRenderer.off("updater:status", listener);
+      },
+      onDownloadProgress: (callback: (progress: UpdaterProgress) => void) => {
+        const listener = (
+          _event: Electron.IpcRendererEvent,
+          progress: UpdaterProgress,
+        ) => {
           callback(progress);
-        });
+        };
+        ipcRenderer.on("updater:downloadProgress", listener);
+        return () => ipcRenderer.off("updater:downloadProgress", listener);
       },
     },
   },

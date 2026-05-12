@@ -1,143 +1,180 @@
-import { IServer } from '@/types/ServersList'
+import { IServer } from "@/types/ServersList";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  addToast,
-  Button,
-  Checkbox,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
   Select,
-  SelectItem
-} from '@heroui/react'
-import { selectedVersionAtom } from '@renderer/stores/atoms'
-import { useAtom } from 'jotai'
-import { Plus } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { selectedVersionAtom } from "@renderer/stores/atoms";
+import { useAtom } from "jotai";
+import { Plus } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 export function CreateServer({
   onClose,
   servers,
   setServers,
-  setQuickConnectIp
+  setQuickConnectIp,
 }: {
-  onClose: () => void
-  servers: IServer[]
-  setServers: React.Dispatch<React.SetStateAction<IServer[]>>
-  setQuickConnectIp: (ip: string) => void
+  onClose: () => void;
+  servers: IServer[];
+  setServers: React.Dispatch<React.SetStateAction<IServer[]>>;
+  setQuickConnectIp: (ip: string) => void;
 }) {
-  const [serverName, setServerName] = useState('')
-  const [serverAddress, setServerAddress] = useState('')
-  const [acceptTextures, setAcceptTextures] = useState<number | null>(null)
-  const [isQuickConnect, setIsQuickConnect] = useState(false)
-  const [selectedVersion] = useAtom(selectedVersionAtom)
+  const [serverName, setServerName] = useState("");
+  const [serverAddress, setServerAddress] = useState("");
+  const [acceptTextures, setAcceptTextures] = useState<number | null>(null);
+  const [isQuickConnect, setIsQuickConnect] = useState(false);
+  const [selectedVersion] = useAtom(selectedVersionAtom);
 
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
-  const normalizedName = useMemo(() => serverName.trim(), [serverName])
-  const normalizedAddress = useMemo(() => serverAddress.trim(), [serverAddress])
+  const normalizedName = useMemo(() => serverName.trim(), [serverName]);
+  const normalizedAddress = useMemo(
+    () => serverAddress.trim(),
+    [serverAddress],
+  );
 
   const normalizedAddressKey = useMemo(() => {
-    return normalizedAddress.toLowerCase()
-  }, [normalizedAddress])
+    return normalizedAddress.toLowerCase();
+  }, [normalizedAddress]);
 
   const isAddressValid = useMemo(() => {
-    if (!normalizedAddress) return false
-    if (normalizedAddress.includes(' ')) return false
-    return true
-  }, [normalizedAddress])
+    if (!normalizedAddress) return false;
+    if (normalizedAddress.includes(" ")) return false;
+    return true;
+  }, [normalizedAddress]);
 
   const isDuplicate = useMemo(() => {
-    const nameKey = normalizedName.toLowerCase()
+    const nameKey = normalizedName.toLowerCase();
     return servers.some(
       (s) =>
         s.name.trim().toLowerCase() === nameKey ||
-        s.ip.trim().toLowerCase() === normalizedAddressKey
-    )
-  }, [servers, normalizedName, normalizedAddressKey])
+        s.ip.trim().toLowerCase() === normalizedAddressKey,
+    );
+  }, [servers, normalizedName, normalizedAddressKey]);
+
+  const canCreate =
+    normalizedName !== "" &&
+    normalizedAddress !== "" &&
+    isAddressValid &&
+    !isDuplicate;
+
+  const createServer = () => {
+    if (!canCreate) return;
+
+    const newServer: IServer = {
+      name: normalizedName,
+      ip: normalizedAddress,
+      acceptTextures,
+    };
+
+    setServers((prev) => [...prev, newServer]);
+
+    if (isQuickConnect) {
+      setQuickConnectIp(newServer.ip);
+    }
+
+    toast.success(t("servers.added"));
+    onClose();
+  };
 
   return (
-    <Modal isOpen onClose={onClose}>
-      <ModalContent>
-        <ModalHeader>{t('servers.adding')}</ModalHeader>
-        <ModalBody>
-          <div className="flex flex-col space-y-2">
-            <Input
-              label={t('servers.name')}
-              value={serverName}
-              onChange={(e) => setServerName(e.currentTarget.value)}
-            />
+    <>
+      <DialogHeader className="border-b py-4 pr-12 pl-5">
+        <DialogTitle>{t("servers.adding")}</DialogTitle>
+      </DialogHeader>
 
-            <Input
-              label={t('servers.address')}
-              value={serverAddress}
-              onChange={(e) => setServerAddress(e.currentTarget.value)}
-            />
+      <form
+        className="grid gap-4 px-5 py-"
+        onSubmit={(event) => {
+          event.preventDefault();
+          createServer();
+        }}
+      >
+        <div className="grid gap-2">
+          <Label htmlFor="server-name">{t("servers.name")}</Label>
+          <Input
+            id="server-name"
+            value={serverName}
+            onChange={(e) => setServerName(e.currentTarget.value)}
+            autoFocus
+          />
+        </div>
 
-            <div className="flex flex-col gap-1">
-              <Select
-                label={t('servers.resources')}
-                selectedKeys={new Set([acceptTextures === null ? 'null' : String(acceptTextures)])}
-                onChange={(event) => {
-                  const { value } = event.target
-                  if (!value) return
-                  setAcceptTextures(value === 'null' ? null : Number(value))
-                }}
-              >
-                <SelectItem key={'null'}>{t('servers.resourceSets.0')}</SelectItem>
-                <SelectItem key={'1'}>{t('servers.resourceSets.1')}</SelectItem>
-                <SelectItem key={'0'}>{t('servers.resourceSets.2')}</SelectItem>
-              </Select>
+        <div className="grid gap-2">
+          <Label htmlFor="server-address">{t("servers.address")}</Label>
+          <Input
+            id="server-address"
+            value={serverAddress}
+            onChange={(e) => setServerAddress(e.currentTarget.value)}
+            className="font-mono text-sm"
+          />
+        </div>
 
-              {selectedVersion?.isQuickPlayMultiplayer && (
-                <Checkbox
-                  onChange={() => setIsQuickConnect((prev) => !prev)}
-                  isSelected={isQuickConnect}
-                >
-                  {t('servers.quickConnect')}
-                </Checkbox>
-              )}
-            </div>
-          </div>
-        </ModalBody>
-
-        <ModalFooter>
-          <Button
-            color="success"
-            variant="flat"
-            isDisabled={
-              normalizedName === '' || normalizedAddress === '' || !isAddressValid || isDuplicate
-            }
-            onPress={() => {
-              if (isDuplicate) {
-                addToast({ title: t('servers.already'), color: 'warning' })
-                return
-              }
-
-              const newServer: IServer = {
-                name: normalizedName,
-                ip: normalizedAddress,
-                acceptTextures
-              }
-
-              setServers((prev) => [...prev, newServer])
-
-              if (isQuickConnect) {
-                setQuickConnectIp(newServer.ip)
-              }
-
-              addToast({ title: t('servers.added'), color: 'success' })
-              onClose()
+        <div className="grid gap-2">
+          <Label>{t("servers.resources")}</Label>
+          <Select
+            value={acceptTextures === null ? "null" : String(acceptTextures)}
+            onValueChange={(value) => {
+              if (!value) return;
+              setAcceptTextures(value === "null" ? null : Number(value));
             }}
-            startContent={<Plus size={22} />}
           >
-            {t('servers.add')}
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
-  )
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("servers.resources")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="null">
+                {t("servers.resourceSets.0")}
+              </SelectItem>
+              <SelectItem value="1">{t("servers.resourceSets.1")}</SelectItem>
+              <SelectItem value="0">{t("servers.resourceSets.2")}</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {selectedVersion?.isQuickPlayMultiplayer && (
+            <label className="mt-1 flex items-center gap-3 rounded-lg border bg-muted/20 px-3 py-2.5 text-sm">
+              <Checkbox
+                checked={isQuickConnect}
+                onCheckedChange={(checked) =>
+                  setIsQuickConnect(checked === true)
+                }
+              />
+              {t("servers.quickConnect")}
+            </label>
+          )}
+        </div>
+      </form>
+
+      <DialogFooter className="mx-0 mb-0 flex-row justify-end gap-2 rounded-none rounded-b-xl border-t bg-muted/20 px-5 py-4 sm:gap-2">
+        <Button type="button" variant="outline" onClick={onClose}>
+          {t("common.cancel")}
+        </Button>
+        <Button
+          type="button"
+          disabled={!canCreate}
+          onClick={() => {
+            if (isDuplicate) toast.warning(t("servers.already"));
+            createServer();
+          }}
+        >
+          <Plus />
+          {t("servers.add")}
+        </Button>
+      </DialogFooter>
+    </>
+  );
 }

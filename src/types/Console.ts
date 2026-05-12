@@ -3,6 +3,7 @@ export interface IConsole {
   instance: number
   status: 'running' | 'stopped' | 'error'
   startTime: number
+  trackStatistics?: boolean
   messages: IConsoleMessage[]
   publicAddress?: string
 }

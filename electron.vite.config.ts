@@ -1,39 +1,40 @@
-import { resolve } from 'path'
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
-import react from '@vitejs/plugin-react'
+import { resolve } from "path";
+import { defineConfig, externalizeDepsPlugin } from "electron-vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 const alias = {
-  '@': resolve(__dirname, 'src'),
-  '@renderer': resolve(__dirname, 'src/renderer/src')
-}
+  "@": resolve(__dirname, "src"),
+  "@renderer": resolve(__dirname, "src/renderer/src"),
+};
 
 export default defineConfig(() => {
   return {
     main: {
       plugins: [externalizeDepsPlugin()],
       resolve: {
-        alias
-      }
+        alias,
+      },
     },
     preload: {
       plugins: [externalizeDepsPlugin()],
       resolve: {
-        alias
-      }
+        alias,
+      },
     },
     renderer: {
       resolve: {
-        alias
+        alias,
       },
-      plugins: [react()],
+      plugins: [react(), tailwindcss()],
       build: {
         rollupOptions: {
           input: {
-            main: resolve(__dirname, 'src/renderer/index.html'),
-            updater: resolve(__dirname, 'src/renderer/updater.html')
-          }
-        }
-      }
-    }
-  }
-})
+            main: resolve(__dirname, "src/renderer/index.html"),
+            updater: resolve(__dirname, "src/renderer/updater.html"),
+          },
+        },
+      },
+    },
+  };
+});

@@ -11,6 +11,7 @@
     "choose": "Choose",
     "select": "Select",
     "delete": "Delete",
+    "deletion": "Deletion",
     "installation": "Installation",
     "install": "Install",
     "update": "Update",
@@ -44,6 +45,7 @@
     "elyby": "Ely.by",
     "notSelected": "No account selected",
     "nickname": "Nickname",
+    "invalidNickname": "Nickname must be unique and 3-16 characters long.",
     "type": "Account type",
     "avatar": "Avatar",
     "cancelled": "Authentication canceled",
@@ -83,8 +85,18 @@
     "editDescription": "Edit description",
     "desctiption": "Server description",
     "unsavedChanges": "Are you sure you want to close the settings without saving?",
-    "gameModes": ["Survival", "Creative", "Adventure", "Spectator"],
-    "difficulties": ["Peaceful", "Easy", "Normal", "Hard"]
+    "gameModes": [
+      "Survival",
+      "Creative",
+      "Adventure",
+      "Spectator"
+    ],
+    "difficulties": [
+      "Peaceful",
+      "Easy",
+      "Normal",
+      "Hard"
+    ]
   },
   "friends": {
     "title": "Friends",
@@ -109,6 +121,18 @@
     "friendId": "Friend ID",
     "send": "Send",
     "notFound": "User not found",
+    "operationErrors": {
+      "invalid_user": "Check the user ID.",
+      "already_friends": "This user is already your friend.",
+      "request_exists": "A request has already been sent or is waiting for a response.",
+      "request_not_found": "This request is no longer active.",
+      "not_allowed": "You are not allowed to do this.",
+      "invalid_message": "The message is empty or invalid.",
+      "user_not_found": "User not found.",
+      "not_friend": "Add this user as a friend first.",
+      "timeout": "The server did not respond. Try again.",
+      "unknown": "Failed to complete the action."
+    },
     "newRequest": "New friend request",
     "sentRequest": "sent a friend request",
     "requestSent": "Request sent",
@@ -120,7 +144,45 @@
     "sentMessage": "sent you a message",
     "chat": "Message",
     "chatAttachmentLoadError": "Attachment loading error",
-    "chatAttachmentLoading": "Loading attachment"
+    "chatAttachmentLoading": "Loading attachment",
+    "invite": "Invite",
+    "inviteSent": "Invite sent",
+    "openSharePanel": "Open access",
+    "shareBuildTitle": "Share a build",
+    "noPublishedBuilds": "Publish a build first, then you can send it in chat.",
+    "friendBuildNotPublished": "Your friend's build is not published, so the launcher cannot prepare the same game files.",
+    "friendNoJoinTarget": "Your friend is in game, but not on a server and has not opened a world for friends.",
+    "gameInviteTitle": "Game invite",
+    "gameInviteJoin": "Join",
+    "gameInviteInstall": "Install this build first",
+    "gameInviteServerBody": "{{nickname}} invites you to {{version}} on server {{address}}.",
+    "gameInviteWorldBody": "{{nickname}} invites you to {{version}} in a shared world.",
+    "gameInviteNotificationTitle": "Game invite",
+    "gameInviteNotificationServer": "{{nickname}} invites you to {{version}} on {{address}}.",
+    "gameInviteNotificationWorld": "{{nickname}} invites you to {{version}} in a shared world.",
+    "inviteGuide": {
+      "noGameTitle": "Start the build first",
+      "noGameDescription": "1. Launch the published build you want to play. 2. Join a server or open a single-player world. 3. Invite your friend again.",
+      "unpublishedTitle": "Publish this build first",
+      "unpublishedDescription": "Open the build settings and publish/share it. After publishing, launch the build again so your friend can install exactly the same files.",
+      "worldLanTitle": "Open the world for friends",
+      "worldLanDescription": "If you are in a single-player world, open Minecraft pause menu, choose Open to LAN, then Start LAN World. After the launcher finds the world, open access for friends and invite again.",
+      "worldReadyTitle": "World found",
+      "worldReadyDescription": "The launcher found your LAN world. Open the access panel, press Start, wait for Access open, then invite your friend again.",
+      "shareStartingTitle": "World access is starting",
+      "shareStartingDescription": "Wait until the access status becomes Access open, then send the invite again."
+    },
+    "inviteErrors": {
+      "invalid_recipient": "Choose an online friend to invite.",
+      "invalid_target": "The launcher could not understand where to invite your friend.",
+      "not_in_game": "Start the published build first.",
+      "unpublished_version": "Publish this build first.",
+      "user_not_found": "User not found.",
+      "not_friend": "You can invite only friends.",
+      "recipient_offline": "You can invite only friends who are online.",
+      "not_joinable": "Join a server or open your world for friends first.",
+      "unknown": "Failed to send invite."
+    }
   },
   "rpc": {
     "playing": "Playing",
@@ -154,7 +216,13 @@
     "added": "Mod added",
     "deleted": "Mod deleted",
     "updated": "Mod updated",
-    "dependencyTypes": ["Unknown", "Required", "Optional", "Embedded", "Incompatible"],
+    "dependencyTypes": [
+      "Unknown",
+      "Required",
+      "Optional",
+      "Embedded",
+      "Incompatible"
+    ],
     "notFoundMod": "Mod not found",
     "noDependencies": "No dependencies",
     "projectTypes": {
@@ -201,7 +269,8 @@
     "availableUpdates": "Available updates for {{count}} mods",
     "noAvailableUpdates": "No available updates",
     "updatingMods": "Updating mods",
-    "updatedMultiple": "{{count}} mods updated"
+    "updatedMultiple": "{{count}} mods updated",
+    "toggleError": "Failed to change mod state"
   },
   "nav": {
     "play": "Play",
@@ -221,9 +290,11 @@
       "notFound": "Build not found"
     },
     "fromFile": {
-      "error": "Failed to recognize file"
+      "error": "Failed to recognize file",
+      "supportedFormats": "Supported formats: .zip (Grubie or CurseForge build) and .mrpack (Modrinth build)."
     },
-    "localModsWarning": "This modpack contains local modifications. Install it only if you trust the modpack author."
+    "localModsWarning": "This modpack contains local modifications. Install it only if you trust the modpack author.",
+    "invalidName": "Use a unique version name without invalid characters."
   },
   "servers": {
     "title": "Servers",
@@ -242,7 +313,11 @@
     "copyAddress": "Copy address",
     "moveUp": "Move up",
     "moveDown": "Move down",
-    "resourceSets": ["Ask", "Enabled", "Disabled"]
+    "resourceSets": [
+      "Ask",
+      "Enabled",
+      "Disabled"
+    ]
   },
   "settings": {
     "title": "Settings",
@@ -253,7 +328,11 @@
     "mb": "MB",
     "devMode": "Developer mode",
     "theme": "Theme",
-    "themes": ["Light", "Dark", "System"],
+    "themes": [
+      "Light",
+      "Dark",
+      "System"
+    ],
     "downloadLimit": "Download limit"
   },
   "skinView": {
@@ -263,7 +342,13 @@
     "rotation": "Rotation",
     "speed": "Speed",
     "animation": "Animation",
-    "animations": ["None", "Idle", "Walk", "Run", "Fly"],
+    "animations": [
+      "None",
+      "Idle",
+      "Walk",
+      "Run",
+      "Fly"
+    ],
     "additionally": "Additionally",
     "showName": "Show nickname",
     "setAvatat": "Set as avatar",
@@ -304,6 +389,7 @@
     "updateError": "Failed to update version",
     "integrityOk": "Version integrity verified",
     "integrityError": "Integrity check error",
+    "installError": "Failed to install version",
     "checkIntegrity": "Check integrity",
     "renameError": "Rename error",
     "publishError": "Failed to publish version",
@@ -316,7 +402,7 @@
     "notFoundServerCore": "No suitable core found",
     "serverInstalled": "Server installed",
     "serverInstallError": "Failed to install server",
-    "completeRemovalInfo": "Libraries and assets will be deleted; they may be shared with other versions. Not recommended!",
+    "completeRemovalInfo": "The launcher will remove unused libraries and assets.",
     "shareOptions": "Share options",
     "shareGameSettings": "Share game settings",
     "copyRelativePath": "Copy command with relative path",
@@ -344,7 +430,11 @@
     "startupError": "Startup error",
     "newsFeed": "News feed",
     "online": "Now online: {{count}}",
-    "serverUnavailable": "Server unavailable"
+    "serverUnavailable": "Server unavailable",
+    "internetOnline": "Internet available",
+    "internetUnavailable": "No internet connection",
+    "backendOnline": "Server available",
+    "backendUnavailable": "Server unavailable"
   },
   "game": {
     "download": "Download"
@@ -393,7 +483,12 @@
     "servers": "Servers",
     "refresh": "Refresh",
     "sort": "Sort",
-    "sorts": ["Name", "Downloads", "Update", "New"],
+    "sorts": [
+      "Name",
+      "Downloads",
+      "Update",
+      "New"
+    ],
     "filter": "Filter",
     "search": "Search",
     "tagsTitle": "Tags",
@@ -558,21 +653,82 @@
     "cape": "Cape",
     "deleteCape": "Remove cape from system",
     "slimModel": "Slim model",
-    "classicModel": "Classic model"
+    "classicModel": "Classic model",
+    "slim": "Slim",
+    "classic": "Classic",
+    "model": "Model",
+    "active": "Active",
+    "settings": "Settings",
+    "import": "Import",
+    "nickOrLink": "Nickname / link",
+    "link": "Link",
+    "addSkin": "Add skin",
+    "addCape": "Add cape",
+    "openError": "Failed to open skin manager"
   },
   "blockedMods": {
     "title": "Blocked mods found",
     "description": "These files are not available for third-party launchers. You will need to download them manually.",
     "watchedFolder": "Watched folder",
     "openAll": "Open all",
-    "files": "Files"
+    "files": "Files",
+    "foundCount": "{{installed}} of {{total}} found in Downloads",
+    "missing": "Required",
+    "ready": "Found",
+    "showAll": "Show all",
+    "showMissing": "Missing only",
+    "empty": "All required files were found."
   },
   "updater": {
+    "launcherUpdate": "Launcher update",
     "checking": "Checking for updates",
-    "downloading": "Downloading updates"
+    "checkingDescription": "Looking for a newer launcher version.",
+    "availableTitle": "Update found",
+    "availableDescription": "Preparing the download.",
+    "availableDescriptionWithVersion": "Version {{version}} is ready to download.",
+    "downloading": "Downloading update",
+    "downloadingDescription": "The launcher will restart after the update is ready.",
+    "downloadedTitle": "Update ready",
+    "downloadedDescription": "Restarting the launcher.",
+    "readyTitle": "Launcher is up to date",
+    "readyDescription": "Opening the launcher.",
+    "errorTitle": "Update check failed",
+    "errorDescription": "Opening the launcher without updating.",
+    "progress": "Progress",
+    "preparing": "Preparing",
+    "percent": "{{percent}}%",
+    "speed": "Speed",
+    "speedValue": "{{value}}/s",
+    "downloaded": "Loaded",
+    "total": "Total",
+    "waiting": "—",
+    "doNotClose": "Do not close this window while the update is being installed.",
+    "status": {
+      "checking": "Checking",
+      "available": "Available",
+      "downloading": "Downloading",
+      "downloaded": "Ready",
+      "ready": "Ready",
+      "error": "Error"
+    },
+    "units": {
+      "b": "B",
+      "kb": "KB",
+      "mb": "MB",
+      "gb": "GB"
+    }
   },
   "console": {
     "title": "Console",
+    "instances": "Instances",
+    "instance": "Instance",
+    "messages": "messages",
+    "noInstances": "No instances",
+    "noMessages": "No logs",
+    "noMessagesDescription": "Messages will appear after the game starts.",
+    "stop": "Stop",
+    "restart": "Restart",
+    "remove": "Remove",
     "running": "Running",
     "stopped": "Stopped",
     "error": "Error"
@@ -595,13 +751,19 @@
     "renameError": "Error renaming world",
     "renamed": "World renamed",
     "iconReseted": "Icon reseted",
-    "confirmation": "Are you sure you want to delete the world {{name}}?"
+    "confirmation": "Are you sure you want to delete the world {{name}}?",
+    "iconResetError": "Failed to reset world icon",
+    "datapackUnavailable": "Datapack file is unavailable",
+    "datapackAddError": "Failed to add datapack",
+    "datapackRemoveError": "Failed to remove datapack",
+    "openDatapacksFolderError": "Failed to open datapacks folder"
   },
   "tips": {
     "checkIntegrity": "Check the integrity of game files"
   },
   "achievements": {
     "title": "Achievements",
+    "showAll": "Show all",
     "noAchievements": "No achievements",
     "pt100": "Playtime 100 hours",
     "pt500": "Playtime 500 hours",
@@ -612,15 +774,73 @@
     "preparing": "Preparing...",
     "files": "Files",
     "failed": "Failed",
-    "timeRemaining": "Time remaining"
+    "timeRemaining": "Time remaining",
+    "size": "Size",
+    "groups": {
+      "manifest": "Manifest",
+      "java": "Java",
+      "client": "Minecraft client",
+      "assets": "Game assets",
+      "libraries": "Libraries",
+      "natives": "Native libraries",
+      "mods": "Mods",
+      "other": "Additional files",
+      "server": "Server files",
+      "skins": "Skins",
+      "capes": "Capes",
+      "fabric": "Fabric loader",
+      "forge": "Forge loader",
+      "neoforge": "NeoForge loader",
+      "quilt": "Quilt loader"
+    }
   },
-  "sizes": ["B", "KB", "MB", "GB", "TB"],
-  "timeUnits": ["s", "m", "h", "d"],
+  "downloadFailures": {
+    "title": "Some files were not downloaded",
+    "description": "The download finished, but these files failed. You can retry the action after checking the connection or file source.",
+    "failed": "Failed",
+    "completed": "Completed",
+    "destination": "Destination",
+    "url": "URL",
+    "error": "Error"
+  },
+  "installationProgress": {
+    "title": "Installing version",
+    "integrityTitle": "Checking integrity",
+    "stages": {
+      "preparing": "Preparing",
+      "manifest": "Checking manifest",
+      "java": "Preparing Java",
+      "loader": "Preparing loader",
+      "installer": "Running loader installer",
+      "assets": "Checking assets",
+      "files": "Checking game files",
+      "mods": "Checking modpack files",
+      "other": "Installing additional files",
+      "options": "Writing options",
+      "done": "Done"
+    }
+  },
+  "sizes": [
+    "B",
+    "KB",
+    "MB",
+    "GB",
+    "TB"
+  ],
+  "timeUnits": [
+    "s",
+    "m",
+    "h",
+    "d"
+  ],
   "ownModpacks": {
     "title": "My modpacks",
     "noModpacks": "You haven't shared any modpacks",
     "deleted": "Modpack deleted",
     "deleteError": "Error deleting modpack",
-    "confirmation": "Are you sure you want to delete the modpack {{name}}? It will be removed from the server and become unavailable for download"
+    "confirmation": "Are you sure you want to delete the modpack {{name}}? It will be removed from the server and become unavailable for download",
+    "downloads": "Downloads",
+    "copyId": "Copy ID",
+    "addToLauncher": "Add to launcher"
   }
 }

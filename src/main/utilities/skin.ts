@@ -34,8 +34,10 @@ export async function getSkin(
   accessToken?: string
 ): Promise<ISkinData | null> {
   if (type == 'microsoft') {
-    try {
-      if (accessToken) {
+    const cleanUuid = uuid?.replace(/-/g, '')
+
+    if (accessToken) {
+      try {
         const profileResponse = await axios.get<IMicrosoftProfile>(
           'https://api.minecraftservices.com/minecraft/profile',
           {
@@ -52,12 +54,17 @@ export async function getSkin(
             cape: pickActiveTexture(profileResponse.data.capes)?.url
           }
         }
+      } catch {
+        // Fall through to the public sessionserver lookup when the account token
+        // is expired, unavailable, or not a Minecraft Services token.
       }
+    }
 
-      if (!uuid) return null
+    try {
+      if (!cleanUuid) return null
 
       const response = await axios.get<IPlayerSkin>(
-        `https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?timestamp=${new Date().getTime()}`
+        `https://sessionserver.mojang.com/session/minecraft/profile/${cleanUuid}?timestamp=${new Date().getTime()}`
       )
 
       const texturesProperty = response.data.properties.find(

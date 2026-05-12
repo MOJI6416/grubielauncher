@@ -1,14 +1,14 @@
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  addToast,
-  Alert,
-  Button,
-  Checkbox,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-} from "@heroui/react";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import {
   accountAtom,
   authDataAtom,
@@ -18,9 +18,10 @@ import {
   versionsAtom,
 } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
-import { ArrowLeft, Trash } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 const api = window.api;
 
@@ -57,6 +58,8 @@ export function DeleteVersion({
     );
   }, [version, shareDel, isNetwork, authData, account?.accessToken]);
 
+  const versionName = version?.version.name || "";
+
   const versionKey = useMemo(() => {
     if (!version) return null;
     return {
@@ -65,131 +68,148 @@ export function DeleteVersion({
     };
   }, [version]);
 
+  async function handleDelete() {
+    if (!version || !account || !versionKey) return;
+
+    setIsLoading(true);
+
+    try {
+      if (canDeleteRemote && version.version.shareCode) {
+        const token = account.accessToken || "";
+        const isRemoteDeleted = await api.backend.deleteModpack(
+          token,
+          version.version.shareCode,
+        );
+
+        if (!isRemoteDeleted) throw new Error("Remote deletion failed");
+      }
+
+      setConsoles((prev) => ({
+        consoles: prev.consoles.filter(
+          (c) => c.versionName !== version.version.name,
+        ),
+      }));
+
+      await version.delete(account, fullDel);
+
+      setVersions((prev) =>
+        prev.filter((v) => {
+          if (versionKey.path && v.versionPath) {
+            return v.versionPath !== versionKey.path;
+          }
+
+          return v.version.name !== versionKey.name;
+        }),
+      );
+
+      toast.success(t("versions.deleted"));
+
+      close(true);
+    } catch (error) {
+      console.error(error);
+      toast.error(t("versions.deleteError"));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
-    <Modal
-      isOpen={true}
-      onClose={() => {
-        if (isLoading) return;
-        close();
+    <Dialog
+      open={true}
+      onOpenChange={(open) => {
+        if (!open && !isLoading) close();
       }}
-      isDismissable={!isLoading}
     >
-      <ModalContent>
-        <ModalHeader>{t("common.confirmation")}</ModalHeader>
+      <DialogContent
+        className="sm:max-w-sm"
+        onEscapeKeyDown={(event) => {
+          if (isLoading) event.preventDefault();
+        }}
+        onPointerDownOutside={(event) => {
+          if (isLoading) event.preventDefault();
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>{t("common.deletion")}</DialogTitle>
+          <DialogDescription>
+            {t("versions.savesInfo")}
+          </DialogDescription>
+        </DialogHeader>
 
-        <ModalBody>
-          <div className="flex flex-col space-y-2 max-w-96">
-            <div className="flex flex-col gap-1.5">
-              <Alert color="warning" title={t("versions.savesInfo")} />
+        <div className="space-y-3">
+          <div className="min-w-0 rounded-md border bg-card px-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              {t("versions.version")}
+            </p>
+            <p className="truncate text-sm font-medium">{versionName}</p>
+          </div>
 
-              {canOfferRemoteDelete && shareDel && (
-                <Alert color="warning" title={t("versions.hostInfo")} />
-              )}
-
-              {fullDel && (
-                <Alert
-                  color="danger"
-                  title={t("versions.completeRemovalInfo")}
-                />
-              )}
-            </div>
-
-            <div className="flex flex-col gap-2 items-center">
+          <div className="space-y-2">
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border bg-card px-3 py-2.5 text-sm transition-colors hover:bg-accent/40 has-disabled:cursor-not-allowed has-disabled:opacity-60">
               <Checkbox
-                isDisabled={isLoading}
-                isSelected={fullDel}
-                onChange={() => setFullDel((prev) => !prev)}
-              >
-                {t("versions.completeRemoval")}
-              </Checkbox>
-
-              {canOfferRemoteDelete && (
-                <Checkbox
-                  isSelected={shareDel}
-                  isDisabled={isLoading || !isNetwork}
-                  onChange={() => setShareDel((prev) => !prev)}
+                className="mt-0.5"
+                disabled={isLoading}
+                checked={fullDel}
+                onCheckedChange={(checked) => setFullDel(checked === true)}
+              />
+              <span className="grid min-w-0 gap-1">
+                <span className="font-medium leading-none">
+                  {t("versions.completeRemoval")}
+                </span>
+                <span
+                  className="text-xs leading-5 text-muted-foreground"
                 >
-                  {t("versions.versionShareDel")}
-                </Checkbox>
-              )}
-            </div>
+                  {t("versions.completeRemovalInfo")}
+                </span>
+              </span>
+            </label>
+
+            {canOfferRemoteDelete && (
+              <label
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-md border bg-card px-3 py-2.5 text-sm transition-colors hover:bg-accent/40 has-disabled:cursor-not-allowed has-disabled:opacity-60",
+                  !isNetwork && "cursor-not-allowed opacity-60",
+                )}
+              >
+                <Checkbox
+                  className="mt-0.5"
+                  checked={shareDel && isNetwork}
+                  disabled={isLoading || !isNetwork}
+                  onCheckedChange={(checked) => setShareDel(checked === true)}
+                />
+                <span className="grid gap-1">
+                  <span className="font-medium">
+                    {t("versions.versionShareDel")}
+                  </span>
+                  <span className="text-xs leading-5 text-muted-foreground">
+                    {t("versions.hostInfo")}
+                  </span>
+                </span>
+              </label>
+            )}
           </div>
-        </ModalBody>
+        </div>
 
-        <ModalFooter>
-          <div className="flex gap-2 items-center justify-center">
-            <Button
-              variant="flat"
-              startContent={<ArrowLeft size={22} />}
-              isDisabled={isLoading}
-              onPress={() => close()}
-            >
-              {t("versions.willReturn")}
-            </Button>
+        <DialogFooter>
+          <Button
+            variant="secondary"
+            disabled={isLoading}
+            onClick={() => close()}
+          >
+            <ArrowLeft />
+            {t("versions.willReturn")}
+          </Button>
 
-            <Button
-              color="danger"
-              variant="flat"
-              startContent={<Trash size={22} />}
-              isLoading={isLoading}
-              isDisabled={!version || !account || !versionKey}
-              onPress={async () => {
-                if (!version || !account || !versionKey) return;
-
-                setIsLoading(true);
-
-                try {
-                  if (canDeleteRemote && version.version.shareCode) {
-                    const token = account.accessToken || "";
-                    await api.backend.deleteModpack(
-                      token,
-                      version.version.shareCode,
-                    );
-                  }
-
-                  setConsoles((prev) => ({
-                    consoles: prev.consoles.filter(
-                      (c) => c.versionName !== version.version.name,
-                    ),
-                  }));
-
-                  await version.delete(account, fullDel);
-
-                  setVersions((prev) =>
-                    prev.filter((v) => {
-                      const sameName = v.version.name === versionKey.name;
-                      const samePath =
-                        versionKey.path && v.versionPath
-                          ? v.versionPath === versionKey.path
-                          : false;
-                      return !(
-                        sameName &&
-                        (!versionKey.path || samePath || true)
-                      );
-                    }),
-                  );
-
-                  addToast({
-                    color: "success",
-                    title: t("versions.deleted"),
-                  });
-
-                  close(true);
-                } catch {
-                  addToast({
-                    color: "danger",
-                    title: t("versions.deleteError"),
-                  });
-                } finally {
-                  setIsLoading(false);
-                }
-              }}
-            >
-              {t("common.delete")}
-            </Button>
-          </div>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+          <Button
+            variant="destructive"
+            disabled={isLoading || !version || !account || !versionKey}
+            onClick={handleDelete}
+          >
+            {isLoading ? <Loader2 className="animate-spin" /> : <Trash2 />}
+            {t("common.delete")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

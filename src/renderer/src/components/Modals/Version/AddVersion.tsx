@@ -1,8 +1,10 @@
 import {
   accountAtom,
   authDataAtom,
+  internetAtom,
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
+  networkAtom,
   pathsAtom,
   settingsAtom,
   versionsAtom,
@@ -11,44 +13,55 @@ import { useAtom } from "jotai";
 import {
   CircleAlert,
   HardDriveDownload,
+  ImageOff,
   ImagePlus,
+  Info,
+  Loader2,
   PackageSearch,
   Server,
   SquareTerminal,
   File,
+  FolderInput,
+  Layers3,
+  PencilLine,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { loaders, Loaders } from "../../Loaders";
 import { SiCurseforge, SiModrinth } from "react-icons/si";
 import { IArguments } from "@/types/IArguments";
 import { ILocalProject, Provider } from "@/types/ModManager";
-import { Servers } from "@renderer/components/ServerList/Servers";
-import { ImageCropper } from "@renderer/components/ImageCropper";
-import { Arguments } from "@renderer/components/Arguments";
-import { ModManager } from "@renderer/components/ModManager/ModManager";
 import { IModpack } from "@/types/Backend";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  addToast,
-  Button,
-  Checkbox,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalHeader,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
   Select,
+  SelectContent,
   SelectItem,
-  Spinner,
-  Image,
-  Tabs,
-  Tab,
-  Progress,
-  Alert,
-} from "@heroui/react";
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { IModpack as IImportModpack } from "@/types/ModManager";
 import { IModpackFile, IVersion, IVersionConf } from "@/types/IVersion";
-import { BlockedMods, checkBlockedMods, IBlockedMod } from "../BlockedMods";
+import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
+import {
+  applyBlockedModFilePaths,
+  BlockedMods,
+  checkBlockedMods,
+  IBlockedMod,
+} from "../BlockedMods";
 
 import axios from "axios";
 import { Loader } from "@/types/Loader";
@@ -57,8 +70,40 @@ import { LoaderVersion } from "@/types/VersionsService";
 import { checkVersionName } from "@renderer/utilities/version";
 import { Version } from "@renderer/classes/Version";
 import { Mods } from "@renderer/classes/Mods";
+import { toast } from "sonner";
+import { LazyDialogFallback } from "@renderer/components/LazyDialogFallback";
+import {
+  lazyWithPreload,
+  schedulePreload,
+} from "@renderer/utilities/lazyPreload";
+import {
+  canLoadLoaderData as canLoadLoaderDataForConnectivity,
+  loaderRequiresBackend,
+} from "@renderer/utilities/connectivity";
 
 const api = window.api;
+
+const loadServers = () =>
+  import("@renderer/components/ServerList/Servers").then((module) => ({
+    default: module.Servers,
+  }));
+const loadImageCropper = () =>
+  import("@renderer/components/ImageCropper").then((module) => ({
+    default: module.ImageCropper,
+  }));
+const loadArguments = () =>
+  import("@renderer/components/Arguments").then((module) => ({
+    default: module.Arguments,
+  }));
+const loadModManager = () =>
+  import("@renderer/components/ModManager/ModManager").then((module) => ({
+    default: module.ModManager,
+  }));
+
+const LazyServers = lazyWithPreload(loadServers);
+const LazyImageCropper = lazyWithPreload(loadImageCropper);
+const LazyArguments = lazyWithPreload(loadArguments);
+const LazyModManager = lazyWithPreload(loadModManager);
 
 export function AddVersion({
   closeModal,
@@ -79,7 +124,7 @@ export function AddVersion({
   const [image, setImage] = useState("");
   const [croppedImage, setCroppedImage] = useState("");
   const [isCropping, setIsCropping] = useState(false);
-  const [loader, setLoader] = useState<Loader>();
+  const [loader, setLoader] = useState<Loader | undefined>("vanilla");
   const [selectVersions, setSelectVersions] = useState<IVersion[]>([]);
   const [selectVersion, setSelectVersion] = useState<IVersion>();
   const [isDownloadedVersion, setIsDownloadedVersion] = useAtom(
@@ -116,59 +161,180 @@ export function AddVersion({
   const [quickConnectIp, setQuickConnectIp] = useState("");
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>([]);
   const [isBlockedMods, setIsBlockedMods] = useState(false);
+
+  useEffect(() => {
+    return schedulePreload(
+      [
+        LazyArguments.preload,
+        LazyImageCropper.preload,
+        LazyModManager.preload,
+        LazyServers.preload,
+      ],
+      900,
+    );
+  }, []);
   const [authData] = useAtom(authDataAtom);
+  const [isInternetOnline] = useAtom(internetAtom);
+  const [isBackendOnline] = useAtom(networkAtom);
 
   const isPresenceOfLocalMods = useMemo(() => {
     return mods.some((mod) => mod.provider == Provider.LOCAL);
   }, [mods]);
 
+  const canLoadLoaderData = useCallback(
+    (targetLoader?: Loader) => {
+      return canLoadLoaderDataForConnectivity(targetLoader, {
+        isInternetOnline,
+        isBackendOnline,
+      });
+    },
+    [isBackendOnline, isInternetOnline],
+  );
+
   useEffect(() => {
     setSelectVersion(undefined);
     setIsDownloadedVersion(false);
     setIsOwnerVersion(true);
-    setLoader("vanilla");
 
     if (modpack) searchVersion(modpack);
   }, []);
 
   useEffect(() => {
     if (!importModpack) return;
+    let isCancelled = false;
 
-    setVersionName(importModpack.name);
-    setSelectVersion(selectVersions.find((v) => v.id == importModpack.version));
-    setLoader(importModpack.loader);
-    setImage(importModpack.image || "");
-    setMods(importModpack.mods);
-    setIsDownloadedVersion(true);
-  }, [importModpack]);
-
-  useEffect(() => {
-    if (modpack || selectedTab != "manually") return;
     (async () => {
+      setVersionName(importModpack.name);
+      setLoader(importModpack.loader);
+      setImage(importModpack.image || "");
+      setMods(importModpack.mods);
+      setIsDownloadedVersion(true);
+      setSelectVersion(undefined);
+      setLoaderVersion(undefined);
+      setLoaderVersions([]);
+
+      if (!importModpack.loader || !importModpack.version) return;
+
+      if (!canLoadLoaderData(importModpack.loader)) {
+        setSelectVersions([]);
+        setLoaderVersions([]);
+        setSelectVersion(undefined);
+        setLoaderVersion(undefined);
+        return;
+      }
+
       setIsLoading(true);
       setLoadingType("versions");
 
-      const data = await api.versions.getList(
-        loader || "vanilla",
-        viewSnapshots,
-      );
-      setSelectVersion(data[0]);
-      setSelectVersions(data);
+      try {
+        const versionList = await api.versions.getList(
+          importModpack.loader,
+          true,
+        );
+        if (isCancelled) return;
 
-      if (loader == "vanilla") {
-        setIsLoading(false);
-        setLoadingType(undefined);
+        setSelectVersions(versionList);
 
-        setVersionName(getVersionName("vanilla", data[0].id));
+        const importedVersion = versionList.find(
+          (v) => v.id == importModpack.version,
+        );
+
+        if (!importedVersion) {
+          toast.error(t("versions.notFound"));
+          return;
+        }
+
+        setSelectVersion(importedVersion);
+
+        if (importModpack.loader == "vanilla") return;
+
+        setLoadingType("loaders");
+        const importedLoaderVersions = await api.versions.getLoaderVersions(
+          importModpack.loader,
+          importedVersion.id,
+        );
+        if (isCancelled) return;
+
+        setLoaderVersions(importedLoaderVersions);
+        setLoaderVersion(
+          importedLoaderVersions.find(
+            (v) => v.id == importModpack.loaderVersion,
+          ) || importedLoaderVersions[0],
+        );
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+          setLoadingType(undefined);
+        }
       }
     })();
-  }, [loader, viewSnapshots]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [canLoadLoaderData, importModpack]);
+
+  useEffect(() => {
+    if (modpack || selectedTab != "manually") return;
+    let isCancelled = false;
+    let shouldWaitForLoaderVersions = false;
+
+    const targetLoader = loader || "vanilla";
+
+    if (!canLoadLoaderData(targetLoader)) {
+      setSelectVersions([]);
+      setLoaderVersions([]);
+      setSelectVersion(undefined);
+      setLoaderVersion(undefined);
+      setIsLoading(false);
+      setLoadingType(undefined);
+      return;
+    }
+
+    (async () => {
+      setIsLoading(true);
+      setLoadingType("versions");
+      setLoaderVersions([]);
+      setLoaderVersion(undefined);
+
+      try {
+        const data = await api.versions.getList(targetLoader, viewSnapshots);
+        if (isCancelled) return;
+
+        setSelectVersions(data);
+        setSelectVersion(data[0]);
+
+        if (!data[0]) {
+          setIsLoading(false);
+          setLoadingType(undefined);
+          return;
+        }
+
+        if (targetLoader == "vanilla") {
+          setVersionName(getVersionName("vanilla", data[0].id));
+        } else {
+          shouldWaitForLoaderVersions = true;
+        }
+      } finally {
+        if (isCancelled) return;
+        if (!shouldWaitForLoaderVersions) {
+          setIsLoading(false);
+          setLoadingType(undefined);
+        }
+      }
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [canLoadLoaderData, loader, modpack, selectedTab, viewSnapshots]);
 
   useEffect(() => {
     if (
       modpack ||
       selectedTab == "fromFile" ||
       selectedTab == "fromServer" ||
+      !!importModpack ||
       (selectedTab == "modpacks" && !importModpack)
     )
       return;
@@ -178,23 +344,56 @@ export function AddVersion({
     if (selectedTab != "modpacks" && !importModpack)
       setVersionName(getVersionName(loader || "vanilla", selectVersion.id));
 
-    if (loader == "vanilla") return;
+    if (loader == "vanilla") {
+      setLoaderVersions([]);
+      setLoaderVersion(undefined);
+      setIsLoading(false);
+      setLoadingType(undefined);
+      return;
+    }
+
+    const targetLoader = loader || "forge";
+    if (!canLoadLoaderData(targetLoader)) {
+      setLoaderVersions([]);
+      setLoaderVersion(undefined);
+      setIsLoading(false);
+      setLoadingType(undefined);
+      return;
+    }
+
+    let isCancelled = false;
+
     (async () => {
       setIsLoading(true);
       setLoadingType("loaders");
 
-      const data = await api.versions.getLoaderVersions(
-        loader || "forge",
-        selectVersion.id,
-      );
+      try {
+        const data = await api.versions.getLoaderVersions(
+          targetLoader,
+          selectVersion.id,
+        );
+        if (isCancelled) return;
 
-      setLoaderVersion(data[0]);
-      setLoaderVersions(data);
-
-      setIsLoading(false);
-      setLoadingType(undefined);
+        setLoaderVersion(data[0]);
+        setLoaderVersions(data);
+      } finally {
+        if (isCancelled) return;
+        setIsLoading(false);
+        setLoadingType(undefined);
+      }
     })();
-  }, [selectVersion]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    canLoadLoaderData,
+    importModpack,
+    loader,
+    modpack,
+    selectVersion,
+    selectedTab,
+  ]);
 
   useEffect(() => {
     if (!versionName) {
@@ -211,14 +410,36 @@ export function AddVersion({
     setIsValidVersionName(result);
   }, [versionName]);
 
-  async function addVersion() {
+  async function addVersion(resolvedBlockedMods: IBlockedMod[] = blockedMods) {
+    let isClosed = false;
+
+    try {
+      isClosed = await addVersionInternal(resolvedBlockedMods);
+    } catch (error) {
+      console.error(error);
+      const message = error instanceof Error ? error.message : String(error);
+
+      if (message === VERSION_INSTALL_CANCELLED) {
+        return;
+      }
+
+      toast.error(t("versions.installError"), { description: message });
+    } finally {
+      if (!isClosed) {
+        setIsLoading(false);
+        setLoadingType(undefined);
+      }
+    }
+  }
+
+  async function addVersionInternal(resolvedBlockedMods: IBlockedMod[]) {
     if (
       !account ||
       !selectVersion ||
       !loader ||
       (loader != "vanilla" && !loaderVersion)
     )
-      return;
+      return false;
 
     const newVersionPath = await api.path.join(
       paths.minecraft,
@@ -228,124 +449,164 @@ export function AddVersion({
 
     await api.fs.ensure(newVersionPath);
 
-    let newImage: string = image || "";
-    if (image && selectedTab != "fromServer") {
-      const filename = "logo.png";
-      try {
-        const filePath = await api.path.join(newVersionPath, filename);
+    let newVersion: Version | undefined;
 
-        if (image.startsWith("file://")) {
-          const file = image.replace("file://", "");
-          await api.fs.copy(file, filePath);
-        } else {
-          const response = await axios.get(image, {
-            responseType: "arraybuffer",
-          });
+    try {
+      let newImage: string = image || "";
+      if (image && selectedTab != "fromServer") {
+        const filename = "logo.png";
+        try {
+          const filePath = await api.path.join(newVersionPath, filename);
 
-          const buffer = api.file.fromBuffer(response.data);
-          await api.fs.writeFile(filePath, buffer, "binary");
+          if (image.startsWith("file://")) {
+            const file = image.replace("file://", "");
+            await api.fs.copy(file, filePath);
+          } else {
+            const response = await axios.get(image, {
+              responseType: "arraybuffer",
+            });
+
+            const buffer = api.file.fromBuffer(response.data);
+            await api.fs.writeFile(filePath, buffer, "binary");
+          }
+
+          newImage = `file://${filePath}?t=${new Date().getTime()}`;
+        } catch {}
+      }
+
+      const tmpVersion: Partial<IVersionConf> = shareVersion
+        ? { ...shareVersion }
+        : importData
+          ? { ...importData.conf }
+          : {};
+
+      const isDownloadedVersion = shareVersion
+        ? isOwnerVersion
+          ? !!versions.find(
+              (v) => v.version.shareCode == shareVersion.shareCode,
+            )
+          : true
+        : false;
+
+      const newVersionConf: IVersionConf = {
+        ...tmpVersion,
+        name: versionName.trim(),
+        version: {
+          ...selectVersion,
+        },
+        lastLaunch: new Date(),
+        downloadedVersion: isDownloadedVersion,
+        shareCode,
+        lastUpdate: new Date(),
+        build: 0,
+        runArguments: runArguments,
+        image: newImage,
+        loader: {
+          name: loader,
+          mods,
+          version: loaderVersion,
+          other: tmpVersion.loader?.other || undefined,
+        },
+        owner: `${account.type}_${account.nickname}`,
+      };
+
+      setIsLoading(true);
+      setLoadingType("install");
+
+      if (selectedTab == "fromServer" || selectedTab == "manually") {
+        if (servers.length > 0) {
+          const serversPath = await api.path.join(
+            newVersionPath,
+            "servers.dat",
+          );
+          await api.servers.write(servers, serversPath);
         }
 
-        newImage = `file://${filePath}?t=${new Date().getTime()}`;
-      } catch {}
-    }
-
-    const tmpVersion: Partial<IVersionConf> = shareVersion
-      ? { ...shareVersion }
-      : importData
-        ? { ...importData.conf }
-        : {};
-
-    const isDownloadedVersion = shareVersion
-      ? isOwnerVersion
-        ? !!versions.find((v) => v.version.shareCode == shareVersion.shareCode)
-        : true
-      : false;
-
-    const newVersionConf: IVersionConf = {
-      ...tmpVersion,
-      name: versionName.trim(),
-      version: {
-        ...selectVersion,
-      },
-      lastLaunch: new Date(),
-      downloadedVersion: isDownloadedVersion,
-      shareCode,
-      lastUpdate: new Date(),
-      build: 0,
-      runArguments: runArguments,
-      image: newImage,
-      loader: {
-        name: loader,
-        mods,
-        version: loaderVersion,
-        other: tmpVersion.loader?.other || undefined,
-      },
-      owner: `${account.type}_${account.nickname}`,
-    };
-
-    setIsLoading(true);
-    setLoadingType("install");
-
-    if (selectedTab == "fromServer" || selectedTab == "manually") {
-      if (servers.length > 0) {
-        const serversPath = await api.path.join(newVersionPath, "servers.dat");
-        await api.servers.write(servers, serversPath);
+        if (options != "") {
+          const optionsPath = await api.path.join(
+            newVersionPath,
+            "options.txt",
+          );
+          await api.fs.writeFile(optionsPath, options, "utf-8");
+        }
       }
 
-      if (options != "") {
-        const optionsPath = await api.path.join(newVersionPath, "options.txt");
-        await api.fs.writeFile(optionsPath, options, "utf-8");
-      }
-
-      if (shareCode && isDownloadedVersion)
-        await api.backend.modpackDownloaded(
-          account?.accessToken || "",
-          shareCode,
+      if (importData) {
+        await api.fs.copy(importData.path, newVersionPath);
+        await api.fs.rimraf(importData.path);
+      } else if (importModpack) {
+        await api.fs.copy(
+          await api.path.join(importModpack.folderPath, "overrides"),
+          newVersionPath,
         );
-    }
-
-    if (importData) {
-      await api.fs.copy(importData.path, newVersionPath);
-      await api.fs.rimraf(importData.path);
-    } else if (importModpack) {
-      await api.fs.copy(
-        await api.path.join(importModpack.folderPath, "overrides"),
-        newVersionPath,
-      );
-      await api.fs.rimraf(importModpack.folderPath);
-    }
-
-    const newVersion = new Version(newVersionConf);
-    await newVersion.init();
-    await newVersion.install(account, settings);
-    await newVersion.save();
-
-    if (selectedTab != "fromFile") {
-      for (const bMod of blockedMods) {
-        if (!bMod.filePath) continue;
-
-        const mod = mods.find((m) => m.id == bMod.projectId);
-        if (!mod || !mod.version) continue;
-
-        mod.version.files[0].localPath = bMod.filePath;
+        await api.fs.rimraf(importModpack.folderPath);
       }
 
-      const versionMods = new Mods(settings, newVersionConf);
-      await versionMods.check();
+      newVersion = new Version(newVersionConf);
+      await newVersion.init();
 
-      if (newVersionConf.loader.other?.url) await versionMods.downloadOther();
-      setBlockedMods([]);
+      await newVersion.install(account, settings, [], {
+        cleanupOnCancel: true,
+        keepProgressOpen: selectedTab != "fromFile",
+      });
+      await newVersion.save();
+
+      if (selectedTab != "fromFile") {
+        const hasBlockedPaths = applyBlockedModFilePaths(
+          mods,
+          resolvedBlockedMods,
+        );
+        if (hasBlockedPaths) newVersion.version.loader.mods = mods;
+
+        const versionMods = new Mods(settings, newVersionConf);
+        await versionMods.check({
+          operation: "install",
+          keepProgressOpen: !!newVersionConf.loader.other?.url,
+        });
+
+        if (newVersionConf.loader.other?.url) {
+          await versionMods.downloadOther({ operation: "install" });
+        }
+        if (hasBlockedPaths) await newVersion.save();
+        setBlockedMods([]);
+      }
+
+      if (shareCode && isDownloadedVersion && isBackendOnline) {
+        await api.backend
+          .modpackDownloaded(account?.accessToken || "", shareCode)
+          .catch((error) =>
+            console.error("[version:add] download mark failed", error),
+          );
+      }
+
+      setVersions([...versions, newVersion]);
+
+      successCallback?.();
+      closeModal();
+      toast.success(t("versions.added"));
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message !== VERSION_INSTALL_CANCELLED) {
+        if (newVersion) {
+          await newVersion.delete(account, true).catch((cleanupError) => {
+            console.error(
+              "[version:add] failed to cleanup version",
+              cleanupError,
+            );
+          });
+        } else {
+          await api.fs.rimraf(newVersionPath).catch((cleanupError) => {
+            console.error(
+              "[version:add] failed to cleanup version path",
+              cleanupError,
+            );
+          });
+        }
+      }
+
+      throw error;
     }
-
-    setVersions([...versions, newVersion]);
-
-    successCallback?.();
-    closeModal();
-    addToast({
-      color: "success",
-      title: t("versions.added"),
-    });
   }
 
   async function searchVersion(modpack: IModpack) {
@@ -380,542 +641,700 @@ export function AddVersion({
     return `${loaders[loader].name} ${version}`;
   }
 
+  const hasNestedDialog =
+    isOpenArguments || isCropping || isModManager || isServers || isBlockedMods;
+  const isVersionNameInput =
+    selectedTab == "manually" ||
+    !!shareVersion ||
+    !!importData ||
+    !!importModpack;
+  const showPrimaryInput =
+    selectedTab == "manually" ||
+    selectedTab == "fromServer" ||
+    !!importData ||
+    !!importModpack;
+  const showVersionSettings =
+    selectedTab == "manually" ||
+    !!shareVersion ||
+    !!importData ||
+    !!importModpack;
+  const showImageControls =
+    selectedTab == "manually" ||
+    !!shareVersion ||
+    !!importData ||
+    !!importModpack;
+  const canEditLogo =
+    showImageControls && !isDownloadedVersion && selectedTab != "fromServer";
+  const isPendingServerLookup =
+    selectedTab == "fromServer" &&
+    !shareVersion &&
+    !importData &&
+    !importModpack;
+  const showLogoSlot = showImageControls || !!image || !isPendingServerLookup;
+  const versionSelectItems = selectVersions.length
+    ? selectVersions
+    : selectVersion
+      ? [selectVersion]
+      : [];
+  const loaderVersionSelectItems = loaderVersions.length
+    ? loaderVersions
+    : loaderVersion
+      ? [loaderVersion]
+      : [];
+  const currentLoader = loader || "vanilla";
+  const currentManualLoaderRequiresBackend =
+    selectedTab == "manually" && loaderRequiresBackend(currentLoader);
+  const canInstall =
+    !isLoading &&
+    isInternetOnline &&
+    !!selectVersion &&
+    !!loader &&
+    (loader != "vanilla" ? !!loaderVersion : true) &&
+    isValidVersionName &&
+    (!currentManualLoaderRequiresBackend || isBackendOnline);
+  const showVersionNameError =
+    isVersionNameInput && versionName.trim() != "" && !isValidVersionName;
+  const hasResolvedPack = !!shareVersion || !!importData || !!importModpack;
+  const hasVersionActions =
+    loadingType != "install" &&
+    (mods.length > 0 ||
+      (servers.length > 0 && !!selectVersion?.serverManager) ||
+      (runArguments.game != "" && runArguments.jvm != "") ||
+      isPresenceOfLocalMods);
+
+  const cleanupImportedTemp = useCallback(async () => {
+    const cleanupPath = importData?.path || importModpack?.folderPath;
+    if (!cleanupPath) return;
+
+    await api.fs.rimraf(cleanupPath).catch(() => {});
+  }, [importData?.path, importModpack?.folderPath]);
+
+  const closeWithImportCleanup = useCallback(() => {
+    void cleanupImportedTemp();
+    closeModal();
+  }, [cleanupImportedTemp, closeModal]);
+
+  function handleTabChange(key: string) {
+    const tab = key as "manually" | "fromServer" | "fromFile" | "modpacks";
+
+    void cleanupImportedTemp();
+
+    setSelectedTab(tab);
+    setShareVersion(undefined);
+    setVersionName("");
+    setShareCode("");
+    setRunArguments({ game: "", jvm: "" });
+    setImage("");
+    setMods([]);
+    setServers([]);
+    setOptions("");
+    setSelectVersion(selectVersions[0]);
+    setLoader("vanilla");
+    setLoaderVersion(undefined);
+    setIsDownloadedVersion(false);
+    setIsOwnerVersion(true);
+    setSearchCode("");
+    setImportData(undefined);
+    setImportModpack(undefined);
+
+    if (tab == "modpacks") {
+      setSelectVersion(undefined);
+      setLoader(undefined);
+      setIsModManager(true);
+    } else if (tab == "manually") {
+      setVersionName(getVersionName("vanilla", selectVersions[0]?.id || ""));
+    }
+  }
+
+  async function handleInstallClick() {
+    if (selectedTab != "fromFile" && mods.length > 0) {
+      const blockedMods: IBlockedMod[] = await checkBlockedMods(mods);
+
+      if (blockedMods.length > 0) {
+        setBlockedMods(blockedMods);
+        setIsBlockedMods(true);
+        return;
+      }
+    }
+
+    addVersion();
+  }
+
   return (
     <>
-      <Modal
-        size="lg"
-        isOpen
-        onClose={async () => {
-          if (isLoading) return;
-          closeModal();
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (open || isLoading || hasNestedDialog) return;
+          closeWithImportCleanup();
         }}
       >
-        <ModalContent>
-          <ModalHeader>{t("versions.addingVersion")}</ModalHeader>
-          <ModalBody>
-            <Tabs
-              className="mx-auto"
-              isDisabled={isLoading || !!modpack}
-              selectedKey={selectedTab}
-              onSelectionChange={(key) => {
-                setSelectedTab(
-                  key as "manually" | "fromServer" | "fromFile" | "modpacks",
-                );
-                setShareVersion(undefined);
-                setVersionName("");
-                setShareCode("");
-                setRunArguments({ game: "", jvm: "" });
-                setImage("");
-                setMods([]);
-                setServers([]);
-                setOptions("");
-                setSelectVersion(selectVersions[0]);
-                setLoader("vanilla");
-                setLoaderVersion(undefined);
-                setIsDownloadedVersion(false);
-                setIsOwnerVersion(true);
-                setSearchCode("");
-                setImportData(undefined);
-                setImportModpack(undefined);
+        <DialogContent
+          className="max-h-[90vh] overflow-hidden p-0 sm:max-w-lg"
+          onClick={(event) => event.stopPropagation()}
+          onEscapeKeyDown={(event) => {
+            if (isLoading || hasNestedDialog) event.preventDefault();
+          }}
+          onInteractOutside={(event) => {
+            if (isLoading || hasNestedDialog) event.preventDefault();
+          }}
+        >
+          <DialogHeader className="px-5 pt-5">
+            <DialogTitle>{t("versions.addingVersion")}</DialogTitle>
+          </DialogHeader>
 
-                if (key == "modpacks") {
-                  setSelectVersion(undefined);
-                  setLoader(undefined);
-                  setIsModManager(true);
-                } else if (key == "manually") {
-                  setVersionName(
-                    getVersionName("vanilla", selectVersions[0]?.id || ""),
-                  );
-                }
-              }}
-            >
-              <Tab key="manually" title={t("addVersion.tabs.manually")}></Tab>
-              <Tab key="modpacks" title={t("addVersion.tabs.modpacks")}></Tab>
-              <Tab
-                key="fromServer"
-                title={t("addVersion.tabs.fromServer")}
-              ></Tab>
-              <Tab key="fromFile" title={t("addVersion.tabs.fromFile")}></Tab>
-            </Tabs>
-            <div className={`flex flex-col gap-4`}>
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  {(selectedTab == "manually" ||
-                    shareVersion ||
-                    importData ||
-                    importModpack) && (
-                    <>
-                      {image && (
-                        <Image
-                          onClick={async () => {
-                            if (image) {
-                              setImage("");
-                              return;
-                            }
-                          }}
-                          src={image}
-                          width={64}
-                          height={64}
-                          className="min-w-16 min-h-16 cursor-pointer"
-                        />
-                      )}
-                      {!image &&
-                        (!isDownloadedVersion ||
-                          (selectedTab != "manually" &&
-                            selectedTab != "fromServer")) && (
-                          <Button
-                            variant="flat"
-                            isIconOnly
-                            isDisabled={isLoading}
-                            onPress={async () => {
-                              const filePaths =
-                                await api.other.openFileDialog();
+          <div className="max-h-[calc(90vh-8.5rem)] overflow-y-auto px-5 pb-5">
+            <div className="grid gap-4">
+              {!hasResolvedPack && (
+                <Tabs
+                  value={selectedTab}
+                  onValueChange={handleTabChange}
+                  className="w-full"
+                >
+                  <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl bg-muted/50 group-data-[orientation=horizontal]/tabs:h-auto">
+                    <TabsTrigger
+                      value="manually"
+                      className="h-12 w-full flex-none justify-center gap-2 px-3"
+                      disabled={isLoading || !!modpack || !isInternetOnline}
+                    >
+                      <PencilLine className="size-4" />
+                      {t("addVersion.tabs.manually")}
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="modpacks"
+                      className="h-12 w-full flex-none justify-center gap-2 px-3"
+                      disabled={isLoading || !!modpack || !isInternetOnline}
+                    >
+                      <Layers3 className="size-4" />
+                      {t("addVersion.tabs.modpacks")}
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="fromServer"
+                      className="h-12 w-full flex-none justify-center gap-2 px-3"
+                      disabled={isLoading || !!modpack || !isBackendOnline}
+                    >
+                      <Server className="size-4" />
+                      {t("addVersion.tabs.fromServer")}
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="fromFile"
+                      className="h-12 w-full flex-none justify-center gap-2 px-3"
+                      disabled={isLoading || !!modpack}
+                    >
+                      <FolderInput className="size-4" />
+                      {t("addVersion.tabs.fromFile")}
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              )}
 
-                              if (!filePaths.length) return;
-                              setCroppedImage(filePaths[0]);
-                              setIsCropping(true);
-                            }}
-                          >
-                            <ImagePlus size={22} />
-                          </Button>
-                        )}
-                    </>
-                  )}
-                  {(selectedTab == "manually" ||
-                    selectedTab == "fromServer" ||
-                    importData ||
-                    importModpack) && (
-                    <Input
-                      label={
-                        <>
-                          {(selectedTab == "manually" ||
-                            shareVersion ||
-                            importData ||
-                            importModpack) && <p>{t("versions.name")}</p>}
-                          {selectedTab == "fromServer" && !shareVersion && (
-                            <p>{t("addVersion.fromServer.shareCode")}</p>
-                          )}
-                        </>
-                      }
-                      startContent={
-                        selectedTab == "manually" ||
-                        shareVersion ||
-                        importData ||
-                        importModpack ? (
-                          !isValidVersionName ? (
-                            <CircleAlert size={22} className="text-warning" />
-                          ) : (
-                            ""
-                          )
-                        ) : (
-                          ""
-                        )
-                      }
-                      placeholder={
-                        selectedTab == "manually" ||
-                        shareVersion ||
-                        importData ||
-                        importModpack
-                          ? t("versions.namePlaceholder")
-                          : ""
-                      }
-                      value={
-                        selectedTab == "manually" ||
-                        shareVersion ||
-                        importData ||
-                        importModpack
-                          ? versionName
-                          : searchCode
-                      }
-                      onChange={(event) => {
-                        const value = event.target.value;
-
-                        if (
-                          selectedTab == "manually" ||
-                          shareVersion ||
-                          importData ||
-                          importModpack
-                        ) {
-                          setVersionName(value);
-                        } else if (selectedTab == "fromServer") {
-                          setSearchCode(value);
-                        }
-                      }}
-                      isDisabled={isLoading}
-                    />
-                  )}
-                </div>
+              <div className="grid gap-4">
                 {(selectedTab == "manually" ||
+                  selectedTab == "fromServer" ||
                   shareVersion ||
                   importData ||
                   importModpack) && (
-                  <>
-                    <div className="w-full">
-                      <Loaders
-                        isDisabled={isDownloadedVersion}
-                        select={(loader) => setLoader(loader)}
-                        isLoading={isLoading}
-                        label={t("versions.loader")}
-                        loader={loader || "vanilla"}
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Select
-                        label={t("versions.version")}
-                        isDisabled={
-                          isLoading ||
-                          selectVersions.length == 0 ||
-                          isDownloadedVersion
-                        }
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          if (!value) return;
-                          const version = selectVersions.find(
-                            (v) => v.id == value,
-                          );
-                          if (version) setSelectVersion(version);
-                        }}
-                        startContent={
-                          isLoading && loadingType == "versions" ? (
-                            <Spinner size="sm" />
-                          ) : (
-                            ""
-                          )
-                        }
-                        selectedKeys={[selectVersion?.id || ""]}
-                      >
-                        <>
-                          {selectVersions.map((v) => {
-                            return <SelectItem key={v.id}>{v.id}</SelectItem>;
-                          })}
-                          {!selectVersions.length && selectVersion?.id && (
-                            <SelectItem key={selectVersion.id}>
-                              {selectVersion.id}
-                            </SelectItem>
-                          )}
-                        </>
-                      </Select>
-
-                      {loader == "vanilla" &&
-                      selectVersions.length != 0 &&
-                      !isDownloadedVersion &&
-                      loadingType != "install" ? (
-                        <Checkbox
-                          isSelected={viewSnapshots}
-                          isDisabled={isLoading}
-                          onChange={() => {
-                            setViewSnapshots((prev) => !prev);
-                          }}
-                        >
-                          {t("versions.snapshots")}
-                        </Checkbox>
-                      ) : undefined}
-                    </div>
-                    {loader && loader != "vanilla" && (
-                      <div className="flex items-center gap-2">
-                        <Select
-                          label={t("versions.loaderVersion")}
-                          isDisabled={isLoading || isDownloadedVersion}
-                          startContent={
-                            isLoading &&
-                            (loadingType == "loaders" ||
-                              loadingType == "versions") ? (
-                              <Spinner size="sm" />
-                            ) : (
-                              ""
-                            )
+                  <Card className="gap-4 py-4 shadow-none">
+                    <CardContent className="grid gap-4 px-4">
+                      {(showImageControls || showPrimaryInput) && (
+                        <div
+                          className={
+                            showLogoSlot
+                              ? "grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start"
+                              : "grid gap-3"
                           }
-                          onChange={(event) => {
-                            const value = event.target.value;
-                            if (!value) return;
-
-                            const version = loaderVersions.find(
-                              (v) => v.id == value,
-                            );
-                            if (version) setLoaderVersion(version);
-                          }}
-                          selectedKeys={[loaderVersion?.id || ""]}
                         >
-                          <>
-                            {loaderVersions.map((v) => (
-                              <SelectItem key={v.id}>{v.id}</SelectItem>
+                          {showLogoSlot &&
+                            (image ? (
+                              <div className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border bg-muted/40">
+                                <img
+                                  src={image}
+                                  alt={versionName || t("versions.name")}
+                                  className="h-full w-full object-cover"
+                                />
+                                {canEditLogo && (
+                                  <button
+                                    type="button"
+                                    disabled={isLoading}
+                                    className="absolute inset-0 flex items-center justify-center bg-black/65 px-1 text-[10px] text-white opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-0"
+                                    onClick={() => setImage("")}
+                                  >
+                                    {t("common.delete")}
+                                  </button>
+                                )}
+                              </div>
+                            ) : canEditLogo ? (
+                              <button
+                                type="button"
+                                disabled={isLoading}
+                                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-dashed bg-muted/30 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                                aria-label={t("common.editingLogo")}
+                                onClick={async () => {
+                                  const filePaths =
+                                    await api.other.openFileDialog();
+
+                                  if (!filePaths.length) return;
+                                  setCroppedImage(filePaths[0]);
+                                  setIsCropping(true);
+                                }}
+                              >
+                                <ImagePlus className="size-5" />
+                              </button>
+                            ) : (
+                              <div
+                                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-dashed bg-muted/25 text-muted-foreground"
+                                title={t("common.logo")}
+                              >
+                                <ImageOff className="size-5" />
+                              </div>
                             ))}
-                            {!loaderVersions.length && loaderVersion?.id && (
-                              <SelectItem key={loaderVersion.id}>
-                                {loaderVersion.id}
-                              </SelectItem>
-                            )}
-                          </>
-                        </Select>
-                      </div>
-                    )}
-                  </>
+
+                          {showPrimaryInput && (
+                            <div className="grid min-w-0 flex-1 gap-2">
+                              <Label htmlFor="add-version-primary-input">
+                                {isVersionNameInput
+                                  ? t("versions.name")
+                                  : t("addVersion.fromServer.shareCode")}
+                              </Label>
+                              <div className="grid min-w-0 flex-1 gap-1">
+                                <div className="relative">
+                                  <Input
+                                    id="add-version-primary-input"
+                                    aria-invalid={showVersionNameError}
+                                    placeholder={
+                                      isVersionNameInput
+                                        ? t("versions.namePlaceholder")
+                                        : undefined
+                                    }
+                                    value={
+                                      isVersionNameInput
+                                        ? versionName
+                                        : searchCode
+                                    }
+                                    onChange={(event) => {
+                                      const value = event.target.value;
+
+                                      if (isVersionNameInput) {
+                                        setVersionName(value);
+                                      } else if (selectedTab == "fromServer") {
+                                        setSearchCode(value);
+                                      }
+                                    }}
+                                    disabled={isLoading}
+                                  />
+                                </div>
+                                {showVersionNameError && (
+                                  <p className="text-xs leading-5 text-destructive">
+                                    {t("addVersion.invalidName")}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {(selectedTab == "manually" ||
+                        shareVersion ||
+                        importData ||
+                        importModpack) && (
+                        <div className="grid gap-4">
+                          <div className="grid gap-3 sm:grid-cols-[9.5rem_minmax(0,1fr)]">
+                            <div className="min-w-0">
+                              <Loaders
+                                isDisabled={isDownloadedVersion}
+                                disabledLoaders={
+                                  isBackendOnline ? [] : ["forge", "neoforge"]
+                                }
+                                select={(loader) => setLoader(loader)}
+                                isLoading={isLoading}
+                                label={t("versions.loader")}
+                                loader={loader || "vanilla"}
+                              />
+                            </div>
+
+                            <div className="grid min-w-0 gap-2">
+                              <div className="flex h-5 items-center gap-2">
+                                <Label>{t("versions.version")}</Label>
+                                {isLoading && loadingType == "versions" && (
+                                  <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+                                )}
+                              </div>
+                              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                                <Select
+                                  value={selectVersion?.id || ""}
+                                  disabled={
+                                    isLoading ||
+                                    !canLoadLoaderData(currentLoader) ||
+                                    versionSelectItems.length == 0 ||
+                                    isDownloadedVersion
+                                  }
+                                  onValueChange={(value) => {
+                                    const version = versionSelectItems.find(
+                                      (v) => v.id == value,
+                                    );
+                                    if (version) setSelectVersion(version);
+                                  }}
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue
+                                      placeholder={t("versions.version")}
+                                    />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {versionSelectItems.map((v) => (
+                                      <SelectItem key={v.id} value={v.id}>
+                                        {v.id}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+
+                                {loader == "vanilla" &&
+                                selectVersions.length != 0 &&
+                                !isDownloadedVersion &&
+                                loadingType != "install" ? (
+                                  <div className="flex h-8 items-center gap-2 rounded-lg border bg-muted/30 px-3">
+                                    <Checkbox
+                                      id="add-version-snapshots"
+                                      checked={viewSnapshots}
+                                      disabled={isLoading}
+                                      onCheckedChange={(checked) => {
+                                        setViewSnapshots(checked === true);
+                                      }}
+                                    />
+                                    <Label
+                                      htmlFor="add-version-snapshots"
+                                      className="cursor-pointer text-sm"
+                                    >
+                                      {t("versions.snapshots")}
+                                    </Label>
+                                  </div>
+                                ) : undefined}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-3">
+                            {loader && loader != "vanilla" ? (
+                              <div className="grid min-w-0 gap-2">
+                                <div className="flex h-5 items-center gap-2">
+                                  <Label>{t("versions.loaderVersion")}</Label>
+                                  {isLoading &&
+                                    (loadingType == "loaders" ||
+                                      loadingType == "versions") && (
+                                      <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+                                    )}
+                                </div>
+                                <Select
+                                  value={loaderVersion?.id || ""}
+                                  disabled={
+                                    isLoading ||
+                                    !canLoadLoaderData(currentLoader) ||
+                                    isDownloadedVersion ||
+                                    loaderVersionSelectItems.length == 0
+                                  }
+                                  onValueChange={(value) => {
+                                    const version =
+                                      loaderVersionSelectItems.find(
+                                        (v) => v.id == value,
+                                      );
+                                    if (version) setLoaderVersion(version);
+                                  }}
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue
+                                      placeholder={t("versions.loaderVersion")}
+                                    />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {loaderVersionSelectItems.map((v) => (
+                                      <SelectItem key={v.id} value={v.id}>
+                                        {v.id}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            ) : undefined}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 )}
-              </div>
 
-              {selectedTab == "fromFile" && !importData && (
-                <Button
-                  variant="flat"
-                  color="primary"
-                  startContent={<File size={22} />}
-                  isLoading={isLoading && loadingType == "file"}
-                  onPress={async () => {
-                    try {
-                      setIsLoading(true);
-                      setLoadingType("file");
+                {selectedTab == "fromFile" && !importData && (
+                  <Card className="gap-4 py-4 shadow-none">
+                    <CardContent className="grid gap-3 px-4">
+                      <div className="flex gap-3 rounded-xl border bg-muted/25 p-3 text-sm text-muted-foreground">
+                        <Info className="mt-0.5 size-4 shrink-0" />
+                        <p className="min-w-0 leading-relaxed">
+                          {t("addVersion.fromFile.supportedFormats")}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        className="w-full"
+                        disabled={isLoading}
+                        onClick={async () => {
+                          try {
+                            setIsLoading(true);
+                            setLoadingType("file");
 
-                      const filePaths = await api.other.openFileDialog(false, [
-                        {
-                          name: "Modpack",
-                          extensions: ["zip", "mrpack"],
-                        },
-                      ]);
+                            const filePaths = await api.other.openFileDialog(
+                              false,
+                              [
+                                {
+                                  name: "Modpack",
+                                  extensions: ["zip", "mrpack"],
+                                },
+                              ],
+                            );
 
-                      if (!filePaths.length) {
+                            if (!filePaths.length) {
+                              setIsLoading(false);
+                              setLoadingType(undefined);
+                              return;
+                            }
+
+                            const data = await api.version.import(
+                              filePaths[0],
+                              await api.path.join(paths.launcher, "temp"),
+                            );
+
+                            const { type, gl, other } = data;
+
+                            if (type == "gl" && gl) {
+                              const { conf, servers, options } = gl;
+                              setVersionName(conf.name);
+                              setShareCode(conf.shareCode);
+                              setRunArguments(
+                                conf.runArguments || { game: "", jvm: "" },
+                              );
+                              setImage(conf.image);
+                              setMods(conf.loader.mods);
+                              setServers(servers);
+                              setOptions(options);
+                              setSelectVersion(conf.version);
+                              setLoader(conf.loader.name);
+                              setLoaderVersion(conf.loader.version);
+                              setQuickConnectIp(conf.quickServer || "");
+                              setIsDownloadedVersion(true);
+                              setIsOwnerVersion(true);
+
+                              setImportData({ ...gl });
+                            } else if (type == "other" && other) {
+                              setSelectedTab("modpacks");
+                              setImportModpack(other);
+                            }
+                          } catch {
+                            setImportData(undefined);
+                            toast.error(t("addVersion.fromFile.error"));
+                          } finally {
+                            setIsLoading(false);
+                            setLoadingType(undefined);
+                          }
+                        }}
+                      >
+                        {isLoading && loadingType == "file" ? (
+                          <Loader2 className="animate-spin" />
+                        ) : (
+                          <File />
+                        )}
+                        {t("common.choose")}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {!(isLoading && loadingType == "install") &&
+                  selectedTab == "fromServer" &&
+                  !shareVersion &&
+                  selectedTab == "fromServer" && (
+                    <Button
+                      type="button"
+                      disabled={
+                        searchCode.trim() == "" || isLoading || !isBackendOnline
+                      }
+                      onClick={async () => {
+                        setIsLoading(true);
+                        setLoadingType("search");
+
+                        const modpackData = await api.backend.getModpack(
+                          account?.accessToken || "",
+                          searchCode.trim(),
+                        );
+                        if (modpackData.data)
+                          await searchVersion(modpackData.data);
+                        else toast.error(t("addVersion.fromServer.notFound"));
+
                         setIsLoading(false);
                         setLoadingType(undefined);
-                        return;
-                      }
+                      }}
+                    >
+                      {isLoading && loadingType == "search" ? (
+                        <Loader2 className="animate-spin" />
+                      ) : (
+                        <PackageSearch />
+                      )}
+                      {t("addVersion.fromServer.find")}
+                    </Button>
+                  )}
 
-                      const data = await api.version.import(
-                        filePaths[0],
-                        await api.path.join(paths.launcher, "temp"),
-                      );
+                {showVersionSettings && hasVersionActions && (
+                  <Card className="gap-4 py-4 shadow-none">
+                    <CardContent className="grid gap-2 px-4">
+                      {mods.length > 0 && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          disabled={!selectVersion || isLoading}
+                          onClick={() => {
+                            setIsModManager((prev) => !prev);
+                          }}
+                        >
+                          <span className="flex items-center gap-1">
+                            <SiCurseforge />
+                            <SiModrinth />
+                          </span>
+                          {t("modManager.title")}
+                        </Button>
+                      )}
 
-                      const { type, gl, other } = data;
+                      {servers.length > 0 && selectVersion?.serverManager ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => {
+                            setIsServers(true);
+                          }}
+                        >
+                          <Server />
+                          {t("versions.servers")}
+                        </Button>
+                      ) : (
+                        ""
+                      )}
 
-                      if (type == "gl" && gl) {
-                        const { conf, servers, options } = gl;
-                        setVersionName(conf.name);
-                        setShareCode(conf.shareCode);
-                        setRunArguments(
-                          conf.runArguments || { game: "", jvm: "" },
-                        );
-                        setImage(conf.image);
-                        setMods(conf.loader.mods);
-                        setServers(servers);
-                        setOptions(options);
-                        setSelectVersion(conf.version);
-                        setLoader(conf.loader.name);
-                        setLoaderVersion(conf.loader.version);
-                        setQuickConnectIp(conf.quickServer || "");
-                        setIsDownloadedVersion(true);
-                        setIsOwnerVersion(true);
+                      {runArguments.game != "" && runArguments.jvm != "" && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => {
+                            setIsOpenArguments(true);
+                          }}
+                        >
+                          <SquareTerminal />
+                          {t("arguments.title")}
+                        </Button>
+                      )}
 
-                        setImportData({ ...gl });
-                      } else if (type == "other" && other) {
-                        setSelectedTab("modpacks");
-                        setImportModpack(other);
-                      }
-                    } catch {
-                      setImportData(undefined);
-                      addToast({
-                        color: "danger",
-                        title: t("addVersion.fromFile.error"),
-                      });
-                    } finally {
-                      setIsLoading(false);
-                      setLoadingType(undefined);
-                    }
-                  }}
-                >
-                  {t("common.choose")}
-                </Button>
-              )}
-
-              {!(isLoading && loadingType == "install") &&
-                selectedTab == "fromServer" &&
-                !shareVersion &&
-                selectedTab == "fromServer" && (
-                  <Button
-                    variant="flat"
-                    color="primary"
-                    isLoading={isLoading && loadingType == "search"}
-                    isDisabled={searchCode.trim() == "" || isLoading}
-                    onPress={async () => {
-                      setIsLoading(true);
-                      setLoadingType("search");
-
-                      const modpackData = await api.backend.getModpack(
-                        account?.accessToken || "",
-                        searchCode.trim(),
-                      );
-                      if (modpackData.data)
-                        await searchVersion(modpackData.data);
-                      else
-                        addToast({
-                          color: "danger",
-                          title: t("addVersion.fromServer.notFound"),
-                        });
-
-                      setIsLoading(false);
-                      setLoadingType(undefined);
-                    }}
-                    startContent={<PackageSearch size={22} />}
-                  >
-                    {t("addVersion.fromServer.find")}
-                  </Button>
+                      {isPresenceOfLocalMods && (
+                        <Alert className="border-border/70 bg-muted/20 text-muted-foreground">
+                          <CircleAlert className="text-muted-foreground" />
+                          <AlertDescription>
+                            {t("addVersion.localModsWarning")}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </CardContent>
+                  </Card>
                 )}
-
-              {(selectedTab == "manually" ||
-                shareVersion ||
-                importData ||
-                importModpack) && (
-                <div className="flex flex-col gap-2 w-full">
-                  {loadingType != "install" && mods.length > 0 && (
-                    <Button
-                      variant="flat"
-                      isDisabled={!selectVersion || isLoading}
-                      startContent={
-                        <div className="flex items-center gap-1">
-                          <SiCurseforge size={22} />
-                          <SiModrinth size={22} />
-                        </div>
-                      }
-                      onPress={() => {
-                        setIsModManager((prev) => !prev);
-                      }}
-                    >
-                      {t("modManager.title")}
-                    </Button>
-                  )}
-
-                  {loadingType != "install" &&
-                  servers.length > 0 &&
-                  selectVersion?.serverManager ? (
-                    <Button
-                      variant="flat"
-                      startContent={<Server size={22} />}
-                      onPress={() => {
-                        setIsServers(true);
-                      }}
-                    >
-                      {t("versions.servers")}
-                    </Button>
-                  ) : (
-                    ""
-                  )}
-
-                  {loadingType != "install" &&
-                    runArguments.game != "" &&
-                    runArguments.jvm != "" && (
-                      <Button
-                        variant="flat"
-                        startContent={<SquareTerminal size={22} />}
-                        onPress={() => {
-                          setIsOpenArguments(true);
-                        }}
-                      >
-                        {t("arguments.title")}
-                      </Button>
-                    )}
-
-                  {loadingType != "install" && isPresenceOfLocalMods && (
-                    <Alert
-                      color="warning"
-                      title={t("addVersion.localModsWarning")}
-                    />
-                  )}
-
-                  {loadingType != "install" && (
-                    <Button
-                      variant="flat"
-                      color="success"
-                      startContent={<HardDriveDownload size={22} />}
-                      onPress={async () => {
-                        if (selectedTab != "fromFile" && mods.length > 0) {
-                          const blockedMods: IBlockedMod[] =
-                            await checkBlockedMods(mods);
-
-                          if (blockedMods.length > 0) {
-                            setBlockedMods(blockedMods);
-                            setIsBlockedMods(true);
-                            return;
-                          }
-                        }
-
-                        addVersion();
-                      }}
-                      isDisabled={
-                        isLoading ||
-                        !(
-                          selectVersion &&
-                          loader &&
-                          (loader != "vanilla" ? loaderVersion : true)
-                        ) ||
-                        !isValidVersionName
-                      }
-                    >
-                      {t("common.install")}
-                    </Button>
-                  )}
-                </div>
-              )}
-
-              {isLoading && loadingType == "install" && (
-                <Progress
-                  isIndeterminate
-                  label={t("common.installation")}
-                  size="sm"
-                />
-              )}
+              </div>
             </div>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+          </div>
+
+          {showVersionSettings && (
+            <DialogFooter className="m-0 rounded-none border-t bg-muted/30 px-5 py-4">
+              {isLoading && loadingType == "install" ? (
+                <div className="flex w-full items-center justify-center gap-2 rounded-lg border bg-background/60 p-3 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  {t("common.install")}
+                </div>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isLoading}
+                    onClick={closeWithImportCleanup}
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={!canInstall}
+                    onClick={handleInstallClick}
+                  >
+                    <HardDriveDownload />
+                    {t("common.install")}
+                  </Button>
+                </>
+              )}
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
       {isOpenArguments && (
-        <Arguments
-          runArguments={runArguments}
-          onClose={() => setIsOpenArguments(false)}
-          setArguments={(args) => setRunArguments(args)}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="form" />}>
+          <LazyArguments
+            runArguments={runArguments}
+            onClose={() => setIsOpenArguments(false)}
+            setArguments={(args) => setRunArguments(args)}
+          />
+        </Suspense>
       )}
       {isCropping && (
-        <ImageCropper
-          onClose={() => {
-            setIsCropping(false);
-            setCroppedImage("");
-          }}
-          title={t("common.editingLogo")}
-          image={croppedImage}
-          size={{ width: 256, height: 256 }}
-          changeImage={async (url: string) => {
-            setImage(url);
-            console.log(url);
-          }}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="form" />}>
+          <LazyImageCropper
+            onClose={() => {
+              setIsCropping(false);
+              setCroppedImage("");
+            }}
+            title={t("common.editingLogo")}
+            image={croppedImage}
+            size={{ width: 256, height: 256 }}
+            changeImage={async (url: string) => {
+              setImage(url);
+            }}
+          />
+        </Suspense>
       )}
       {isModManager && (
-        <ModManager
-          mods={mods}
-          setMods={(mods) => setMods(mods)}
-          onClose={(modpack) => {
-            setIsModManager(false);
+        <Suspense fallback={<LazyDialogFallback variant="workspace" />}>
+          <LazyModManager
+            mods={mods}
+            setMods={(mods) => setMods(mods)}
+            onClose={(modpack) => {
+              setIsModManager(false);
 
-            if (!modpack && !importModpack && selectedTab == "modpacks") {
-              setSelectVersion(selectVersions[0]);
-              setLoader("vanilla");
-              setSelectedTab("manually");
-            }
-          }}
-          loader={loader}
-          version={selectVersion}
-          isModpacks={selectedTab == "modpacks" && !importModpack}
-          setLoader={(loader) => setLoader(loader)}
-          setVersion={(setVersion) => setSelectVersion(setVersion)}
-          setModpack={(setModpack) => setImportModpack(setModpack)}
-        />
+              if (!modpack && !importModpack && selectedTab == "modpacks") {
+                setSelectVersion(selectVersions[0]);
+                setLoader("vanilla");
+                setSelectedTab("manually");
+              }
+            }}
+            loader={loader}
+            version={selectVersion}
+            isModpacks={selectedTab == "modpacks" && !importModpack}
+            setLoader={(loader) => setLoader(loader)}
+            setVersion={(setVersion) => setSelectVersion(setVersion)}
+            setModpack={(setModpack) => setImportModpack(setModpack)}
+          />
+        </Suspense>
       )}
       {isServers && (
-        <Servers
-          isAdding
-          servers={servers}
-          setServers={setServers}
-          closeModal={() => setIsServers(false)}
-          quickConnectIp={quickConnectIp}
-          setQuickConnectIp={(ip) => setQuickConnectIp(ip)}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="wide" />}>
+          <LazyServers
+            isAdding
+            servers={servers}
+            setServers={setServers}
+            closeModal={() => setIsServers(false)}
+            quickConnectIp={quickConnectIp}
+            setQuickConnectIp={(ip) => setQuickConnectIp(ip)}
+          />
+        </Suspense>
       )}
 
       {isBlockedMods && blockedMods.length && (
@@ -924,7 +1343,7 @@ export function AddVersion({
           onClose={(bMods) => {
             setBlockedMods(bMods);
             setIsBlockedMods(false);
-            addVersion();
+            addVersion(bMods);
           }}
         />
       )}

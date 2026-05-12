@@ -208,14 +208,6 @@ export class TunnelClient extends EventEmitter {
   private sendControl(message: AuthMessage | PongMessage | StreamOpenedMessage | CloseStreamMessage): void {
     if (!this.isWritable() || !this.ws) return
 
-    if (message.type === 'AUTH') {
-      const sanitized = {
-        ...message,
-        token: '[redacted]',
-      }
-      console.log('[Tunnel] send', JSON.stringify(sanitized))
-    }
-
     this.ws.send(JSON.stringify(message))
   }
 

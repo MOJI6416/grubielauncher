@@ -1,19 +1,17 @@
 import { IWorld } from "@/types/World";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  addToast,
-  Button,
-  Card,
-  CardBody,
-  Dropdown,
-  DropdownItem,
   DropdownMenu,
-  DropdownTrigger,
-  Image,
-  Input,
-  ScrollShadow,
-} from "@heroui/react";
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { RunGameParams } from "@renderer/App";
-import { selectedVersionAtom } from "@renderer/stores/atoms";
+import { accountAtom, selectedVersionAtom } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
 import {
   Clock,
@@ -21,18 +19,20 @@ import {
   Edit,
   EllipsisVertical,
   Folder,
+  FolderOpen,
   Gamepad2,
   ImageOff,
   Package,
   Trash,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Datapacks } from "./Datapacks";
 import { ILocalProject, ProjectType } from "@/types/ModManager";
 import { formatTime } from "@renderer/utilities/date";
 import { useTranslation } from "react-i18next";
 import { Confirmation } from "../Modals/Confirmation";
+import { toast } from "sonner";
 
 const api = window.api;
 
@@ -42,20 +42,29 @@ export function WorldList({
   isOwner,
   runGame,
   closeModal,
+  mods: availableMods,
 }: {
   worlds: IWorld[];
   setWorlds: (worlds: IWorld[]) => void;
   isOwner: boolean;
   runGame: (params: RunGameParams) => Promise<void>;
   closeModal: () => void;
+  mods?: ILocalProject[];
 }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [version] = useAtom(selectedVersionAtom);
+  const [account] = useAtom(accountAtom);
   const [editValue, setEditValue] = useState<string>("");
   const [isDatapacksOpen, setIsDatapacksOpen] = useState(false);
   const [selectedWorld, setSelectedWorld] = useState<IWorld | null>(null);
   const [datapacks, setDatapacks] = useState<
-    { mod: ILocalProject; path: string; filename: string }[]
+    {
+      mod: ILocalProject;
+      file: NonNullable<ILocalProject["version"]>["files"][number];
+      path: string;
+      filename: string;
+      isDownloaded: boolean;
+    }[]
   >([]);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
 
@@ -63,6 +72,8 @@ export function WorldList({
 
   const isMountedRef = useRef(true);
   useEffect(() => {
+    isMountedRef.current = true;
+
     return () => {
       isMountedRef.current = false;
     };
@@ -78,29 +89,51 @@ export function WorldList({
           return;
         }
 
-        const mods = version.version.loader.mods.filter(
-          (m) => m.projectType === ProjectType.DATAPACK,
-        );
+        const mods = (
+          availableMods ??
+          version.version.loader.mods ??
+          []
+        ).filter((m) => m.projectType === ProjectType.DATAPACK);
         const folderPath = await api.path.join(
           version.versionPath,
           await api.modManager.ptToFolder(ProjectType.DATAPACK),
         );
 
-        const list: { mod: ILocalProject; path: string; filename: string }[] =
-          [];
+        const list: {
+          mod: ILocalProject;
+          file: NonNullable<ILocalProject["version"]>["files"][number];
+          path: string;
+          filename: string;
+          isDownloaded: boolean;
+        }[] = [];
+
+        const addedFilenames = new Set<string>();
 
         for (const mod of mods) {
-          const filename = mod.version?.files?.[0]?.filename;
-          if (!filename) continue;
+          for (const file of mod.version?.files ?? []) {
+            const filename = file.filename;
+            if (!filename) continue;
+            if (addedFilenames.has(filename)) continue;
 
-          const modPath = await api.path.join(folderPath, filename);
-          if (!(await api.fs.pathExists(modPath))) continue;
+            const storagePath = await api.path.join(folderPath, filename);
+            const storageExists = await api.fs.pathExists(storagePath);
+            const localPath =
+              file.localPath && (await api.fs.pathExists(file.localPath))
+                ? file.localPath
+                : undefined;
+            const datapackPath = storageExists
+              ? storagePath
+              : localPath || storagePath;
 
-          list.push({
-            mod,
-            path: modPath,
-            filename: await api.path.basename(modPath),
-          });
+            addedFilenames.add(filename);
+            list.push({
+              mod,
+              file,
+              path: datapackPath,
+              filename,
+              isDownloaded: storageExists || Boolean(localPath),
+            });
+          }
         }
 
         if (!cancelled && isMountedRef.current) setDatapacks(list);
@@ -113,9 +146,9 @@ export function WorldList({
     return () => {
       cancelled = true;
     };
-  }, [version]);
+  }, [version, availableMods]);
 
-  const canPlay = !!version?.isQuickPlayMultiplayer;
+  const canPlay = !!version?.isQuickPlaySingleplayer;
 
   const handleDelete = useCallback(async () => {
     if (!selectedWorld) return;
@@ -124,63 +157,65 @@ export function WorldList({
       await api.fs.rimraf(selectedWorld.path);
       setWorlds(worlds.filter((w) => w.path !== selectedWorld.path));
 
-      addToast({
-        title: t("worlds.deleted"),
-        color: "success",
-      });
+      toast.success(t("worlds.deleted"));
     } catch {
-      addToast({
-        title: t("worlds.deleteError"),
-        color: "danger",
-      });
+      toast.error(t("worlds.deletedError"));
     }
-  }, []);
+  }, [selectedWorld, setWorlds, t, worlds]);
 
   return (
     <>
-      <ScrollShadow className="h-80 w-full min-w-0">
-        <div className="flex flex-col gap-2 pr-1 min-w-0">
+      <ScrollArea className="h-[26rem] w-full min-w-0">
+        <div className="flex min-w-0 flex-col gap-2 pr-3">
           {worlds.map((world, index) => {
             const isEditing = editingIndex === index;
+            const playTicks =
+              world.statistics?.stats?.["minecraft:custom"]?.[
+                "minecraft:play_time"
+              ];
 
-            const disabledKeys = useMemo(() => {
-              const keys = new Set<string>();
-              if (!canPlay) keys.add("play");
-              if (!isOwner) {
-                keys.add("datapacks");
-                keys.add("rename");
-                keys.add("resetIcon");
-                keys.add("openFolder");
-                keys.add("delete");
-              }
-              if (world.isDownloaded) {
-                keys.add("rename");
-                keys.add("delete");
-              }
-              if (!world.icon) keys.add("resetIcon");
-              return keys;
-            }, [canPlay, isOwner, world.isDownloaded, world.icon]);
+            const disabledKeys = new Set<string>();
+            if (!canPlay) disabledKeys.add("play");
+            if (!isOwner) {
+              disabledKeys.add("rename");
+              disabledKeys.add("resetIcon");
+              disabledKeys.add("openFolder");
+              disabledKeys.add("delete");
+            }
+            if (world.isDownloaded) {
+              disabledKeys.add("rename");
+              disabledKeys.add("delete");
+            }
+            if (!world.icon) disabledKeys.add("resetIcon");
+            if (!world.seed) disabledKeys.add("copySeed");
 
             return (
-              <Card key={world.path || world.folderName || world.name}>
-                <CardBody>
-                  <div className="flex items-center gap-3 justify-between min-w-0">
-                    <div className="flex items-center space-x-2 min-w-0">
-                      {world.icon && (
-                        <Image
-                          src={world.icon}
-                          alt={`${world.name} icon`}
-                          width={40}
-                          height={40}
-                          className="min-h-10 min-w-10 shrink-0"
-                        />
-                      )}
+              <Card
+                key={world.path || world.folderName || world.name}
+                className="gap-0 overflow-hidden py-0 shadow-none transition-colors hover:bg-accent/25"
+              >
+                <CardContent className="p-3">
+                  <div className="flex min-w-0 items-center justify-between gap-3">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/30 text-muted-foreground">
+                        {world.icon ? (
+                          <img
+                            src={world.icon}
+                            alt={`${world.name} icon`}
+                            width={44}
+                            height={44}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <FolderOpen className="size-5" />
+                        )}
+                      </div>
 
                       {isEditing ? (
                         <Input
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          size="sm"
+                          className="h-9 min-w-0"
                           onKeyDown={(e) => {
                             if (e.key === "Escape") {
                               setEditingIndex(null);
@@ -189,12 +224,18 @@ export function WorldList({
                           }}
                         />
                       ) : (
-                        <div className="flex flex-col min-w-0">
-                          <p className="text-sm font-semibold truncate">
+                        <div className="grid min-w-0 gap-1">
+                          <p
+                            className="truncate text-sm font-semibold text-foreground"
+                            title={world.name}
+                          >
                             {world.name}
                           </p>
                           {world.name !== world.folderName && (
-                            <p className="text-xs text-gray-400 truncate">
+                            <p
+                              className="truncate text-xs text-muted-foreground"
+                              title={world.folderName}
+                            >
                               {world.folderName}
                             </p>
                           )}
@@ -202,36 +243,29 @@ export function WorldList({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      {world.statistics && !isEditing && (
-                        <div className="flex items-center gap-1">
-                          <Clock className="text-gray-400 shrink-0" size={18} />
-                          <p className="text-xs text-gray-400">
-                            {formatTime(
-                              (world.statistics.stats["minecraft:custom"][
-                                "minecraft:play_time"
-                              ] *
-                                50) /
-                                1000,
-                              {
-                                h: t("time.h"),
-                                m: t("time.m"),
-                                s: t("time.s"),
-                              },
-                            )}
-                          </p>
-                        </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {typeof playTicks === "number" && !isEditing && (
+                        <Badge
+                          variant="secondary"
+                          className="hidden max-w-28 gap-1 font-normal md:inline-flex"
+                        >
+                          <Clock className="size-3 shrink-0 text-muted-foreground" />
+                          <span className="truncate">
+                            {formatTime((playTicks * 50) / 1000, {
+                              h: t("time.h"),
+                              m: t("time.m"),
+                              s: t("time.s"),
+                            })}
+                          </span>
+                        </Badge>
                       )}
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         {isEditing && (
                           <>
                             <Button
-                              variant="flat"
-                              size="sm"
-                              color="success"
-                              isIconOnly
-                              isDisabled={
+                              size="icon-sm"
+                              disabled={
                                 editValue.trim() === "" ||
                                 editValue.trim() === world.name ||
                                 worlds.some(
@@ -240,7 +274,7 @@ export function WorldList({
                                 ) ||
                                 editValue.trim().length > 64
                               }
-                              onPress={async () => {
+                              onClick={async () => {
                                 try {
                                   const nextName = editValue.trim();
                                   const result = await api.worlds.writeName(
@@ -249,28 +283,27 @@ export function WorldList({
                                   );
 
                                   if (!result) {
-                                    addToast({
-                                      title: t("worlds.renameError"),
-                                      color: "danger",
-                                    });
+                                    toast.error(t("worlds.renameError"));
                                     return;
                                   }
 
                                   const newFolderName =
                                     await api.path.basename(result);
-                                  const newIcon = world.icon
-                                    ? `${result}/icon.png`
-                                    : undefined;
+                                  const updatedWorld = account
+                                    ? await api.worlds.readWorld(
+                                        result,
+                                        account,
+                                      )
+                                    : null;
 
                                   setWorlds(
                                     worlds.map((w) =>
                                       w.path === world.path
-                                        ? {
+                                        ? updatedWorld || {
                                             ...w,
                                             name: nextName,
                                             path: result,
                                             folderName: newFolderName,
-                                            icon: newIcon,
                                           }
                                         : w,
                                     ),
@@ -278,16 +311,10 @@ export function WorldList({
 
                                   setEditingIndex(null);
                                   setEditValue("");
-                                  addToast({
-                                    title: t("worlds.renamed"),
-                                    color: "success",
-                                  });
+                                  toast.success(t("worlds.renamed"));
                                 } catch (err) {
                                   console.error(err);
-                                  addToast({
-                                    title: t("worlds.renameError"),
-                                    color: "danger",
-                                  });
+                                  toast.error(t("worlds.renameError"));
                                 }
                               }}
                             >
@@ -295,11 +322,9 @@ export function WorldList({
                             </Button>
 
                             <Button
-                              variant="flat"
-                              color="danger"
-                              size="sm"
-                              isIconOnly
-                              onPress={() => {
+                              variant="destructive"
+                              size="icon-sm"
+                              onClick={() => {
                                 setEditingIndex(null);
                                 setEditValue("");
                               }}
@@ -309,24 +334,21 @@ export function WorldList({
                           </>
                         )}
 
-                        <Dropdown
-                          isTriggerDisabled={editingIndex !== null}
-                          size="sm"
-                        >
-                          <DropdownTrigger>
-                            <Button isIconOnly variant="flat" size="sm">
-                              <EllipsisVertical size={22} />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon-sm"
+                              className="size-8 bg-background/40 hover:bg-accent"
+                              disabled={editingIndex !== null}
+                            >
+                              <EllipsisVertical />
                             </Button>
-                          </DropdownTrigger>
-                          <DropdownMenu disabledKeys={[...disabledKeys]}>
-                            <DropdownItem
-                              key="play"
-                              color="secondary"
-                              className="text-secondary"
-                              startContent={
-                                <Gamepad2 className="shrink-0" size={20} />
-                              }
-                              onPress={() => {
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              disabled={disabledKeys.has("play")}
+                              onSelect={() => {
                                 runGame({
                                   version,
                                   quick: {
@@ -336,48 +358,42 @@ export function WorldList({
                                 closeModal();
                               }}
                             >
-                              {t("nav.play")}
-                            </DropdownItem>
-                            <DropdownItem
-                              key="datapacks"
-                              variant="flat"
-                              className="text-primary-500"
-                              color="primary"
-                              startContent={<Package size={20} />}
-                              onPress={() => {
+                              <Gamepad2 />
+                              <span>{t("nav.play")}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={disabledKeys.has("datapacks")}
+                              onSelect={() => {
                                 setSelectedWorld(world);
                                 setIsDatapacksOpen(true);
                               }}
                             >
-                              {t("worlds.datapacks")}
-                            </DropdownItem>
-                            <DropdownItem
-                              key="rename"
-                              variant="flat"
-                              startContent={<Edit size={20} />}
-                              onPress={() => {
+                              <Package />
+                              <span>{t("worlds.datapacks")}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={disabledKeys.has("rename")}
+                              onSelect={() => {
                                 setEditingIndex(index);
                                 setEditValue(world.name);
                               }}
                             >
-                              {t("common.rename")}
-                            </DropdownItem>
-                            <DropdownItem
-                              key="copySeed"
-                              variant="flat"
-                              startContent={<Copy size={20} />}
-                              onPress={async () => {
+                              <Edit />
+                              <span>{t("common.rename")}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={disabledKeys.has("copySeed")}
+                              onSelect={async () => {
                                 await api.clipboard.writeText(world.seed);
-                                addToast({ title: t("common.copied") });
+                                toast(t("common.copied"));
                               }}
                             >
-                              {t("worlds.copySeed")}
-                            </DropdownItem>
-                            <DropdownItem
-                              key="resetIcon"
-                              variant="flat"
-                              startContent={<ImageOff size={20} />}
-                              onPress={async () => {
+                              <Copy />
+                              <span>{t("worlds.copySeed")}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={disabledKeys.has("resetIcon")}
+                              onSelect={async () => {
                                 try {
                                   await api.fs.rimraf(
                                     await api.path.join(world.path, "icon.png"),
@@ -389,55 +405,47 @@ export function WorldList({
                                         : w,
                                     ),
                                   );
-                                  addToast({
-                                    title: t("worlds.iconReseted"),
-                                    color: "success",
-                                  });
+                                  toast.success(t("worlds.iconReseted"));
                                 } catch (err) {
                                   console.error(err);
-                                  addToast({
-                                    title: t("common.error") || "Error",
-                                    color: "danger",
-                                  });
+                                  toast.error(t("worlds.iconResetError"));
                                 }
                               }}
                             >
-                              {t("worlds.resetIcon")}
-                            </DropdownItem>
-                            <DropdownItem
-                              key="openFolder"
-                              variant="flat"
-                              startContent={<Folder size={20} />}
-                              onPress={async () =>
+                              <ImageOff />
+                              <span>{t("worlds.resetIcon")}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={disabledKeys.has("openFolder")}
+                              onSelect={async () =>
                                 await api.shell.openPath(world.path)
                               }
                             >
-                              {t("worlds.openFolder")}
-                            </DropdownItem>
-                            <DropdownItem
-                              key="delete"
-                              className="text-danger"
-                              variant="flat"
-                              color="danger"
-                              startContent={<Trash size={20} />}
-                              onPress={() => {
+                              <Folder />
+                              <span>{t("worlds.openFolder")}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              disabled={disabledKeys.has("delete")}
+                              onSelect={() => {
                                 setSelectedWorld(world);
                                 setIsConfirmationOpen(true);
                               }}
                             >
-                              {t("common.delete")}
-                            </DropdownItem>
-                          </DropdownMenu>
-                        </Dropdown>
+                              <Trash />
+                              <span>{t("common.delete")}</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </div>
-                </CardBody>
+                </CardContent>
               </Card>
             );
           })}
         </div>
-      </ScrollShadow>
+      </ScrollArea>
 
       {isDatapacksOpen && version && selectedWorld && (
         <Datapacks

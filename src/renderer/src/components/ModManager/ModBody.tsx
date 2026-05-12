@@ -1,4 +1,3 @@
-import { Link } from "@heroui/react";
 import parse, {
   domToReact,
   DOMNode,
@@ -37,16 +36,15 @@ const ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
   img: new Set(["src", "alt", "width", "height"]),
 };
 
-function isSafeExternalUrl(value: string, mode: "link" | "image"): boolean {
-  if (!value) return false;
+function normalizeExternalUrl(value: string, baseUrl?: string): string | null {
+  if (!value) return null;
 
   try {
-    const url = new URL(value);
-    if (!["http:", "https:"].includes(url.protocol)) return false;
-    if (mode === "image" && url.username) return false;
-    return true;
+    const url = baseUrl ? new URL(value, baseUrl) : new URL(value);
+    if (!["http:", "https:"].includes(url.protocol)) return null;
+    return url.toString();
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -64,9 +62,9 @@ function unwrapNode(node: Element) {
   node.remove();
 }
 
-function sanitizeNode(node: Node) {
+function sanitizeNode(node: Node, baseUrl?: string) {
   if (!(node instanceof Element)) {
-    node.childNodes.forEach((child) => sanitizeNode(child));
+    node.childNodes.forEach((child) => sanitizeNode(child, baseUrl));
     return;
   }
 
@@ -85,21 +83,22 @@ function sanitizeNode(node: Node) {
       continue;
     }
 
-    if (attrName === "href" && !isSafeExternalUrl(attr.value, "link")) {
-      node.removeAttribute(attr.name);
-      continue;
-    }
+    if (attrName === "href" || attrName === "src") {
+      const normalized = normalizeExternalUrl(attr.value, baseUrl);
+      if (!normalized) {
+        node.removeAttribute(attr.name);
+        continue;
+      }
 
-    if (attrName === "src" && !isSafeExternalUrl(attr.value, "image")) {
-      node.removeAttribute(attr.name);
+      node.setAttribute(attr.name, normalized);
       continue;
     }
   }
 
-  node.childNodes.forEach((child) => sanitizeNode(child));
+  node.childNodes.forEach((child) => sanitizeNode(child, baseUrl));
 }
 
-function sanitizeHtml(html: string): string {
+function sanitizeHtml(html: string, baseUrl?: string): string {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
 
@@ -109,12 +108,12 @@ function sanitizeHtml(html: string): string {
       node.remove();
     });
 
-  doc.body.childNodes.forEach((child) => sanitizeNode(child));
+  doc.body.childNodes.forEach((child) => sanitizeNode(child, baseUrl));
 
   return doc.body.innerHTML;
 }
 
-export const ModBody = ({ body }: { body: string }) => {
+export const ModBody = ({ body, baseUrl }: { body: string; baseUrl?: string }) => {
   const [content, setContent] = useState("");
 
   useEffect(() => {
@@ -122,7 +121,7 @@ export const ModBody = ({ body }: { body: string }) => {
 
     Promise.resolve(marked.parse(body))
       .then((html) => {
-        if (!cancelled) setContent(sanitizeHtml(html));
+        if (!cancelled) setContent(sanitizeHtml(html, baseUrl));
       })
       .catch(() => {
         if (!cancelled) setContent("");
@@ -131,7 +130,7 @@ export const ModBody = ({ body }: { body: string }) => {
     return () => {
       cancelled = true;
     };
-  }, [body]);
+  }, [body, baseUrl]);
 
   const transformNode = (domNode: DOMNode): JSX.Element | void => {
     if (domNode.type === "tag") {
@@ -139,7 +138,7 @@ export const ModBody = ({ body }: { body: string }) => {
 
       if (["h1", "h2", "h3", "h4", "h5", "h6"].includes(node.name)) {
         return (
-          <p>
+          <p className="mt-4 first:mt-0 text-sm font-semibold text-foreground">
             {domToReact(node.children as DOMNode[], { replace: transformNode })}
           </p>
         );
@@ -155,7 +154,7 @@ export const ModBody = ({ body }: { body: string }) => {
 
       if (node.name === "p") {
         return (
-          <p>
+          <p className="my-2 text-muted-foreground">
             {domToReact(node.children as DOMNode[], { replace: transformNode })}
           </p>
         );
@@ -165,15 +164,19 @@ export const ModBody = ({ body }: { body: string }) => {
         const href = node.attribs?.href || "";
 
         return (
-          <Link
-            href="#"
-            onPress={async () => {
+          <a
+            href={href}
+            className="font-medium text-primary underline underline-offset-4 transition-colors hover:text-primary/80"
+            rel="noreferrer"
+            onClick={async (event) => {
+              event.preventDefault();
+              event.stopPropagation();
               if (!href) return;
               await api.shell.openExternal(href);
             }}
           >
             {domToReact(node.children as DOMNode[], { replace: transformNode })}
-          </Link>
+          </a>
         );
       }
 
@@ -190,13 +193,11 @@ export const ModBody = ({ body }: { body: string }) => {
             width={w}
             height={h}
             loading="lazy"
+            className="mx-auto my-3 block max-h-[24rem] max-w-full rounded-lg border border-border bg-muted/30 object-contain shadow-sm"
             style={{
-              display: "block",
-              margin: "2px auto",
               maxWidth: "100%",
               width: w ? `${w}px` : "auto",
               height: "auto",
-              objectFit: "contain",
             }}
           />
         );
@@ -205,7 +206,7 @@ export const ModBody = ({ body }: { body: string }) => {
   };
 
   return (
-    <div className="break-all">
+    <div className="min-w-0 max-w-full overflow-hidden break-words text-sm leading-relaxed [overflow-wrap:anywhere] [&_*]:max-w-full [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_li]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:bg-muted/50 [&_pre]:p-3 [&_pre]:whitespace-pre-wrap [&_ul]:list-disc [&_ul]:pl-5">
       {parse(content, { replace: transformNode })}
     </div>
   );

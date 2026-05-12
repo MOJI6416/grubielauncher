@@ -1,12 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 const api = window.api;
 
 import { FaDiscord, FaMicrosoft } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
-import { CircleAlert, User, UserMinus, UserPlus, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Loader2,
+  User,
+  UserMinus,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { TbSquareLetterE } from "react-icons/tb";
-import AccountInfo from "./Account/AccountInfo";
 import { IUser } from "@/types/IUser";
 import { useAtom } from "jotai";
 import {
@@ -19,20 +26,18 @@ import {
   pathsAtom,
   selectedVersionAtom,
 } from "@renderer/stores/atoms";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
-  addToast,
-  Alert,
-  Avatar,
-  Button,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalHeader,
-  Select,
-  SelectItem,
-  Spinner,
-} from "@heroui/react";
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { jwtDecode } from "jwt-decode";
 import {
@@ -44,15 +49,90 @@ import { IAuthResponse } from "@/types/Auth";
 import { Confirmation } from "./Modals/Confirmation";
 import { MiniSkinWidget } from "./MiniSkinWidget";
 import { ensureAccountSession } from "@renderer/utilities/accountSession";
+import { Alert, AlertTitle } from "@/components/ui/alert";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { LazyDialogFallback } from "./LazyDialogFallback";
+import {
+  lazyWithPreload,
+  preload,
+  schedulePreload,
+} from "@renderer/utilities/lazyPreload";
+
+const loadAccountInfo = () => import("./Account/AccountInfo");
+const LazyAccountInfo = lazyWithPreload(loadAccountInfo);
+
+function accountInitials(nickname: string) {
+  return nickname.slice(0, 2).toUpperCase();
+}
+
+function ProviderIcon({
+  type,
+  size = 18,
+}: {
+  type: ILocalAccount["type"];
+  size?: number;
+}) {
+  if (type == "microsoft") return <FaMicrosoft size={size} />;
+  if (type == "elyby") return <TbSquareLetterE size={size} />;
+  if (type == "discord") return <FaDiscord size={size} />;
+  return <User size={size} />;
+}
+
+function providerLabel(
+  type: ILocalAccount["type"],
+  t: ReturnType<typeof useTranslation>["t"],
+) {
+  if (type === "microsoft") return t("accounts.microsoft");
+  if (type === "elyby") return t("accounts.elyby");
+  if (type === "discord") return "Discord";
+  return t("accounts.plainAccount").replace(/\s*\(.+?\)\s*/g, "");
+}
+
+function getAccountSubject(account: Pick<ILocalAccount, "accessToken">) {
+  if (!account.accessToken) return null;
+
+  try {
+    return jwtDecode<IAuth>(account.accessToken).sub || null;
+  } catch {
+    return null;
+  }
+}
+
+function waitForNextFrame() {
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+}
+
+function AccountAvatar({
+  account,
+  size,
+  className,
+}: {
+  account: ILocalAccount;
+  size?: "default" | "sm" | "lg";
+  className?: string;
+}) {
+  return (
+    <Avatar className={className} size={size}>
+      <AvatarImage src={account.image || ""} alt={account.nickname} />
+      <AvatarFallback>{accountInitials(account.nickname)}</AvatarFallback>
+    </Avatar>
+  );
+}
 
 export function Accounts() {
   const [modalSelectIsOpen, setIsOpenModalSelect] = useState(false);
   const [modalAddIsOpen, setIsOpenModalAdd] = useState(false);
+  const [modalPlainIsOpen, setIsOpenModalPlain] = useState(false);
   const [paths] = useAtom(pathsAtom);
   const [nickname, setNickname] = useState("");
-  const [isPlain, setIsPlain] = useState(false);
   const [isSigning, setIsSigning] = useState(false);
   const [signType, setSignType] = useState<"microsoft" | "elyby" | "discord">();
+  const [authStage, setAuthStage] = useState<"idle" | "waiting" | "exchanging">(
+    "idle",
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState<"avatar" | "skin" | "user">();
   const [accountInfo, setAccountInfo] = useState(false);
@@ -75,6 +155,13 @@ export function Accounts() {
     accountsRef.current = accountsSafe;
   }, [accountsSafe]);
 
+  useEffect(() => {
+    if (!selectedAccount || selectedAccount.type === "plain" || !isNetwork) {
+      return;
+    }
+    return schedulePreload([LazyAccountInfo.preload], 1200);
+  }, [selectedAccount, isNetwork]);
+
   const getAccountKey = useCallback(
     (a: ILocalAccount) => `${a.type}_${a.nickname}`,
     [],
@@ -93,12 +180,23 @@ export function Accounts() {
     setIsOpenModalAdd(false);
   }, []);
 
+  const closeModalPlain = useCallback(() => {
+    setNickname("");
+    setIsOpenModalPlain(false);
+  }, []);
+
   const openModalAdd = useCallback(() => {
     authSessionRef.current++;
     setIsSigning(false);
     setSignType(undefined);
-    setIsPlain(false);
+    setAuthStage("idle");
     setIsOpenModalAdd(true);
+  }, []);
+
+  const openModalPlain = useCallback(() => {
+    setNickname("");
+    setIsOpenModalAdd(false);
+    setIsOpenModalPlain(true);
   }, []);
 
   const oauth = useCallback(
@@ -120,24 +218,29 @@ export function Accounts() {
         if (!authUser) throw new Error();
 
         const current = accountsRef.current;
-        const exists = current.some(
-          (a) => a.nickname === authUser!.nickname && a.type === provider,
-        );
-        if (exists) {
-          setIsSigning(false);
-          setSignType(undefined);
-          addToast({ color: "warning", title: t("accounts.exists") });
-          return;
-        }
+        const authSubject = getAccountSubject(authUser);
+        const existingIndex = current.findIndex((account) => {
+          if (account.type !== provider) return false;
+          const accountSubject = getAccountSubject(account);
+          return authSubject
+            ? accountSubject === authSubject
+            : account.nickname === authUser!.nickname;
+        });
 
         const account: ILocalAccount = {
           ...authUser,
           type: provider,
           image: authUser.image || "",
-          friends: [],
+          friends:
+            existingIndex >= 0 ? current[existingIndex].friends || [] : [],
         };
 
-        const nextAccounts = [...current, account];
+        const nextAccounts =
+          existingIndex >= 0
+            ? current.map((item, index) =>
+                index === existingIndex ? account : item,
+              )
+            : [...current, account];
 
         setAccounts(nextAccounts);
         await api.accounts.save(nextAccounts, getAccountKey(account));
@@ -145,16 +248,21 @@ export function Accounts() {
         setSelectedAccount(account);
         closeModalSelect();
         closeModalAdd();
+        closeModalPlain();
 
         setIsSigning(false);
         setSignType(undefined);
+        setAuthStage("idle");
 
-        addToast({ color: "success", title: t("accounts.added") });
+        toast.success(
+          existingIndex >= 0 ? t("accountInfo.updated") : t("accounts.added"),
+        );
       } catch (err) {
         if (authSessionRef.current !== sessionId) return;
         setIsSigning(false);
         setSignType(undefined);
-        addToast({ color: "danger", title: t("accounts.failedLogIn") });
+        setAuthStage("idle");
+        toast.error(t("accounts.failedLogIn"));
       }
     },
     [
@@ -164,6 +272,7 @@ export function Accounts() {
       t,
       closeModalSelect,
       closeModalAdd,
+      closeModalPlain,
       getAccountKey,
     ],
   );
@@ -192,7 +301,7 @@ export function Accounts() {
       (a) => a.nickname === nick && a.type === "plain",
     );
     if (exists) {
-      addToast({ color: "warning", title: t("accounts.exists") });
+      toast.warning(t("accounts.exists"));
       return;
     }
 
@@ -211,7 +320,8 @@ export function Accounts() {
     setSelectedAccount(account);
     closeModalSelect();
     closeModalAdd();
-    addToast({ color: "success", title: t("accounts.added") });
+    closeModalPlain();
+    toast.success(t("accounts.added"));
   }, [
     nickname,
     paths.launcher,
@@ -220,6 +330,7 @@ export function Accounts() {
     t,
     closeModalSelect,
     closeModalAdd,
+    closeModalPlain,
     getAccountKey,
   ]);
 
@@ -274,7 +385,7 @@ export function Accounts() {
       nextSelected ? getAccountKey(nextSelected) : null,
     );
 
-    addToast({ color: "success", title: t("accounts.deleted") });
+    toast.success(t("accounts.deleted"));
   }, [
     paths.launcher,
     selectedAccount,
@@ -286,8 +397,6 @@ export function Accounts() {
   ]);
 
   async function Auth(type: "microsoft" | "elyby" | "discord") {
-    setIsPlain(false);
-
     const state = `${type}:${crypto.randomUUID()}`;
     let authUrl = "";
     if (type === "microsoft")
@@ -301,6 +410,7 @@ export function Accounts() {
 
     setSignType(type);
     setIsSigning(true);
+    setAuthStage("waiting");
     const waitForOAuth = api.auth.startServer(state);
 
     try {
@@ -308,112 +418,144 @@ export function Accounts() {
       const { provider, code } = await waitForOAuth;
 
       if (authSessionRef.current !== sessionId) return;
+      setAuthStage("exchanging");
+      closeModalSelect();
+      await waitForNextFrame();
       await oauth(provider, code, sessionId);
     } catch {
       if (authSessionRef.current !== sessionId) return;
       setIsSigning(false);
       setSignType(undefined);
-      addToast({ color: "danger", title: t("accounts.failedLogIn") });
+      setAuthStage("idle");
+      toast.error(t("accounts.failedLogIn"));
     }
   }
 
   const selectedKey = selectedAccount
     ? `${selectedAccount.type}_${selectedAccount.nickname}`
     : "";
+  const trimmedNickname = nickname.trim();
+  const isPlainNicknameInvalid =
+    trimmedNickname === "" ||
+    !!accountsSafe.find(
+      (a) => a.nickname == trimmedNickname && a.type == "plain",
+    ) ||
+    trimmedNickname.length < 3 ||
+    trimmedNickname.length > 16;
+  const showNicknameError = trimmedNickname !== "" && isPlainNicknameInvalid;
 
   return (
     <>
-      <div className="flex space-x-4 items-center min-w-0">
+      <div className="flex min-w-0 items-center gap-2">
         {selectedAccount ? (
           <>
-            <div
-              className={`flex items-center space-x-2 min-w-0 ${
-                selectedAccount.type != "plain" && isNetwork
-                  ? "cursor-pointer"
-                  : ""
-              }`}
-              onClick={async (event) => {
-                const target = event.target as HTMLElement | null;
-                if (target?.closest("[data-account-click-ignore='true']")) {
-                  return;
-                }
-
-                if (
-                  isLoading ||
-                  selectedAccount.type == "plain" ||
-                  !isNetwork ||
-                  !authData ||
-                  !selectedAccount.accessToken
-                )
-                  return;
-
-                setIsLoading(true);
-                setLoadingType("user");
-
-                try {
-                  const accountForRequest = authData
-                    ? (
-                        await ensureAccountSession({
-                          accounts: accountsSafe,
-                          authData,
-                          selectedAccount,
-                          setAccounts,
-                          setSelectedAccount,
-                        })
-                      ).account
-                    : selectedAccount;
-
-                  const user = await api.backend.getUser(
-                    accountForRequest.accessToken || "",
-                    authData.sub,
-                  );
-                  if (user) {
-                    setUser(user);
-                    setAccountInfo(true);
+            <div className="flex min-w-0 items-center gap-2 rounded-lg border bg-card px-1.5 py-1">
+              <button
+                type="button"
+                className={cn(
+                  "flex min-w-0 items-center gap-2 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  selectedAccount.type != "plain" && isNetwork
+                    ? "cursor-pointer"
+                    : "cursor-default",
+                )}
+                onClick={async (event) => {
+                  const target = event.target as HTMLElement | null;
+                  if (target?.closest("[data-account-click-ignore='true']")) {
                     return;
                   }
-                  throw new Error();
-                } catch (err) {
-                  addToast({ color: "danger", title: t("accountInfo.error") });
-                } finally {
-                  setIsLoading(false);
-                  setLoadingType(undefined);
-                }
-              }}
-            >
-              <Avatar
-                className="flex-shrink-0"
-                src={selectedAccount.image}
-                name={selectedAccount.nickname}
-              />
-              <p className="text-xl font-semibold truncate min-w-0 flex-grow">
-                {selectedAccount.nickname}
-              </p>
+
+                  if (
+                    isLoading ||
+                    selectedAccount.type == "plain" ||
+                    !isNetwork ||
+                    !authData ||
+                    !selectedAccount.accessToken
+                  )
+                    return;
+
+                  setIsLoading(true);
+                  setLoadingType("user");
+
+                  try {
+                    const accountForRequest = authData
+                      ? (
+                          await ensureAccountSession({
+                            accounts: accountsSafe,
+                            authData,
+                            selectedAccount,
+                            setAccounts,
+                            setSelectedAccount,
+                          })
+                        ).account
+                      : selectedAccount;
+
+                    const user = await api.backend.getUser(
+                      accountForRequest.accessToken || "",
+                      authData.sub,
+                    );
+                    if (user) {
+                      setUser(user);
+                      setAccountInfo(true);
+                      return;
+                    }
+                    throw new Error();
+                  } catch (err) {
+                    toast.error(t("accountInfo.error"));
+                  } finally {
+                    setIsLoading(false);
+                    setLoadingType(undefined);
+                  }
+                }}
+                onMouseEnter={() => preload(LazyAccountInfo.preload)}
+                onFocus={() => preload(LazyAccountInfo.preload)}
+              >
+                <AccountAvatar
+                  account={selectedAccount}
+                  className="h-9 w-9 flex-shrink-0"
+                />
+                <div className="grid min-w-0 gap-0.5 py-0.5">
+                  <p className="truncate text-sm font-medium leading-5">
+                    {selectedAccount.nickname}
+                  </p>
+                  <div className="flex min-w-0 items-center gap-1.5 text-xs leading-4 text-muted-foreground">
+                    <ProviderIcon type={selectedAccount.type} size={14} />
+                    <span className="truncate">
+                      {providerLabel(selectedAccount.type, t)}
+                    </span>
+                  </div>
+                </div>
+              </button>
               <MiniSkinWidget />
-              {isLoading && loadingType == "user" && <Spinner size="sm" />}
+              {isLoading && loadingType == "user" && (
+                <Loader2 className="size-4 animate-spin" />
+              )}
             </div>
 
             <Button
-              variant="flat"
-              isDisabled={isRunning}
-              startContent={<User className="flex-shrink-0" size={22} />}
-              onPress={openModalSelect}
+              variant="secondary"
+              size="sm"
+              disabled={isRunning}
+              onClick={openModalSelect}
             >
+              <ChevronDown className="flex-shrink-0" size={18} />
               {t("accounts.accounts")}
             </Button>
           </>
         ) : (
           <>
-            <Alert color="warning" title={t("accounts.notSelected")} />
+            <Alert className="border-[var(--warning)]/40">
+              <AlertTitle>{t("accounts.notSelected")}</AlertTitle>
+            </Alert>
             <div>
               <Button
-                variant="flat"
+                variant="secondary"
+                size="sm"
                 className="animate-pulse"
-                startContent={<User size={22} />}
-                onPress={
+                onClick={
                   accountsSafe.length != 0 ? openModalSelect : openModalAdd
                 }
               >
+                <User size={18} />
                 {t("accounts.select")}
               </Button>
             </div>
@@ -421,294 +563,321 @@ export function Accounts() {
         )}
       </div>
 
-      <Modal isOpen={modalSelectIsOpen} onClose={closeModalSelect} size="sm">
-        <ModalContent>
-          <ModalHeader>{t("accounts.accountSelection")}</ModalHeader>
-
-          <ModalBody>
-            <div className="flex flex-col space-y-4">
-              <Select
-                placeholder={t("accounts.selectAccount")}
-                isDisabled={accountsSafe.length == 0}
-                selectedKeys={selectedKey ? new Set([selectedKey]) : new Set()}
-                renderValue={(opts) => {
-                  return opts.map((option) => {
-                    const account = accountsSafe.find(
-                      (a) => `${a.type}_${a.nickname}` == option.key,
-                    );
-                    if (!account)
-                      return <p key={String(option.key)}>Undefined user</p>;
-
-                    return (
-                      <div
-                        className="flex space-x-1 items-center"
-                        key={String(option.key)}
-                      >
-                        {" "}
-                        {/* Изменено: key */}
-                        <Avatar
-                          src={account.image}
-                          size="sm"
-                          name={account.nickname}
-                        />
-                        <p>{account.nickname}</p>
-                        {account.type == "microsoft" ? (
-                          <FaMicrosoft size={22} />
-                        ) : account.type == "elyby" ? (
-                          <TbSquareLetterE size={22} />
-                        ) : account.type == "discord" ? (
-                          <FaDiscord size={22} />
-                        ) : (
-                          <User size={22} />
-                        )}
-                      </div>
-                    );
-                  });
-                }}
-                onChange={async (event) => {
-                  const value = event.target.value;
-                  if (!value) return;
-                  await selectAccount(value);
-                }}
-              >
-                {accountsSafe.map((account) => (
-                  <SelectItem key={`${account.type}_${account.nickname}`}>
-                    <div className="flex space-x-1 items-center">
-                      <Avatar
-                        src={account.image}
-                        size="sm"
-                        name={account.nickname}
-                      />
-                      <p>{account.nickname}</p>
-                      {account.type == "microsoft" ? (
-                        <FaMicrosoft size={22} />
-                      ) : account.type == "elyby" ? (
-                        <TbSquareLetterE size={22} />
-                      ) : account.type == "discord" ? (
-                        <FaDiscord size={22} />
-                      ) : (
-                        <User size={22} />
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </Select>
-
-              <div className="flex gap-2">
-                {selectedAccount ? (
-                  <Button
-                    color="danger"
-                    variant="flat"
-                    isDisabled={consoles.consoles.some(
-                      (c) => c.status == "running",
-                    )}
-                    startContent={<UserMinus size={22} />}
-                    onPress={() => setIsConfirmationOpen(true)}
-                  >
-                    {t("accounts.delete")}
-                  </Button>
-                ) : null}
-
-                <Button
-                  variant="flat"
-                  startContent={<UserPlus size={22} />}
-                  onPress={openModalAdd}
-                >
-                  {t("common.add")}
-                </Button>
-              </div>
-            </div>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
-
-      <Modal
-        size="md"
-        isOpen={modalAddIsOpen}
-        onClose={() => {
-          if (!isSigning) closeModalAdd();
+      <Dialog
+        open={modalSelectIsOpen}
+        onOpenChange={(open) => {
+          if (!open) closeModalSelect();
         }}
       >
-        <ModalContent>
-          <ModalHeader>{t("accounts.addingAccount")}</ModalHeader>
-          <ModalBody>
-            <div className="flex flex-col space-y-4">
-              <div className="flex flex-col space-y-1">
-                <p>{t("accounts.type")}:</p>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("accounts.accountSelection")}</DialogTitle>
+          </DialogHeader>
 
-                <div className="flex flex-col space-y-2">
-                  <div className="flex space-x-2 items-center">
-                    <Button
-                      variant="flat"
-                      startContent={<User size={22} />}
-                      isDisabled={isPlain || isSigning}
-                      onPress={() => setIsPlain(true)}
-                    >
-                      {t("accounts.plainAccount")}
-                    </Button>
-
-                    <Button
-                      variant="flat"
-                      color={
-                        isSigning && signType == "discord"
-                          ? "danger"
-                          : undefined
-                      }
-                      isDisabled={
-                        (isSigning && signType != "discord") || !isNetwork
-                      }
-                      startContent={
-                        isSigning && signType == "discord" ? (
-                          <X size={22} />
-                        ) : (
-                          <FaDiscord size={22} />
-                        )
-                      }
-                      onPress={async () => {
-                        if (isSigning) {
-                          authSessionRef.current++;
-                          setIsSigning(false);
-                          setSignType(undefined);
-                          addToast({
-                            color: "success",
-                            title: t("accounts.cancelled"),
-                          });
-                          return;
-                        }
-                        await Auth("discord");
-                      }}
-                    >
-                      {isSigning && signType == "discord"
-                        ? t("common.cancel")
-                        : "Discord"}
-                    </Button>
+          <div className="grid gap-4">
+            <ScrollArea className="max-h-72 rounded-lg border bg-card">
+              <div className="grid gap-2 p-2">
+                {accountsSafe.length === 0 ? (
+                  <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                    {t("accounts.notSelected")}
                   </div>
-
-                  <div className="flex space-x-2 items-center">
-                    <Button
-                      variant="flat"
-                      color={
-                        isSigning && signType == "microsoft"
-                          ? "danger"
-                          : undefined
-                      }
-                      startContent={
-                        isSigning && signType == "microsoft" ? (
-                          <X size={22} />
-                        ) : (
-                          <FaMicrosoft size={22} />
-                        )
-                      }
-                      isDisabled={
-                        (isSigning && signType != "microsoft") || !isNetwork
-                      }
-                      onPress={async () => {
-                        if (isSigning) {
-                          authSessionRef.current++;
-                          setIsSigning(false);
-                          setSignType(undefined);
-                          addToast({
-                            color: "success",
-                            title: t("accounts.cancelled"),
-                          });
-                          return;
-                        }
-                        await Auth("microsoft");
-                      }}
-                    >
-                      {isSigning && signType == "microsoft"
-                        ? t("common.cancel")
-                        : t("accounts.microsoft")}
-                    </Button>
-
-                    <Button
-                      variant="flat"
-                      color={
-                        isSigning && signType == "elyby" ? "danger" : undefined
-                      }
-                      startContent={
-                        isSigning && signType == "elyby" ? (
-                          <X size={22} />
-                        ) : (
-                          <TbSquareLetterE size={22} />
-                        )
-                      }
-                      isDisabled={
-                        (isSigning && signType != "elyby") || !isNetwork
-                      }
-                      onPress={async () => {
-                        if (isSigning) {
-                          authSessionRef.current++;
-                          setIsSigning(false);
-                          setSignType(undefined);
-                          addToast({
-                            color: "success",
-                            title: t("accounts.cancelled"),
-                          });
-                          return;
-                        }
-                        await Auth("elyby");
-                      }}
-                    >
-                      {isSigning && signType == "elyby"
-                        ? t("common.cancel")
-                        : t("accounts.elyby")}
-                    </Button>
-                  </div>
-                </div>
+                ) : (
+                  accountsSafe.map((account) => {
+                    const key = getAccountKey(account);
+                    const isSelected = key === selectedKey;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        className={cn(
+                          "flex min-w-0 items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          isSelected && "border-primary bg-accent",
+                        )}
+                        onClick={async () => {
+                          await selectAccount(key);
+                        }}
+                      >
+                        <AccountAvatar
+                          account={account}
+                          className="h-10 w-10 shrink-0"
+                        />
+                        <div className="grid min-w-0 flex-1 gap-0.5">
+                          <p className="truncate text-sm font-medium">
+                            {account.nickname}
+                          </p>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <ProviderIcon type={account.type} size={14} />
+                            <span>{providerLabel(account.type, t)}</span>
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <Check className="size-4 shrink-0 text-primary" />
+                        )}
+                      </button>
+                    );
+                  })
+                )}
               </div>
+            </ScrollArea>
 
-              {isPlain ? (
-                <div className="flex items-center gap-2 ">
-                  <Input
-                    label={t("accounts.nickname")}
-                    placeholder={"Notch"}
-                    className="w-full"
-                    value={nickname}
-                    onChange={(event) => setNickname(event.currentTarget.value)}
-                    startContent={
-                      nickname == "" ||
-                      !!accountsSafe.find(
-                        (a) => a.nickname == nickname && a.type == "plain",
-                      ) ||
-                      nickname.length < 3 ||
-                      nickname.length > 16 ? (
-                        <CircleAlert color="orange" size={22} />
-                      ) : undefined
-                    }
-                  />
-
-                  <Button
-                    variant="flat"
-                    isIconOnly
-                    isDisabled={
-                      nickname.trim() === "" ||
-                      !!accountsSafe.find(
-                        (a) =>
-                          a.nickname == nickname.trim() && a.type == "plain",
-                      ) ||
-                      nickname.trim().length < 3 ||
-                      nickname.trim().length > 16
-                    }
-                    onPress={async () => await addPlainAccount()}
-                  >
-                    <UserPlus size={22} />
-                  </Button>
-                </div>
+            <DialogFooter className="gap-2 sm:justify-between">
+              {selectedAccount ? (
+                <Button
+                  variant="destructive"
+                  disabled={consoles.consoles.some(
+                    (c) => c.status == "running",
+                  )}
+                  onClick={() => setIsConfirmationOpen(true)}
+                >
+                  <UserMinus className="size-4" />
+                  {t("accounts.delete")}
+                </Button>
               ) : null}
+
+              <Button variant="secondary" onClick={openModalAdd}>
+                <UserPlus className="size-4" />
+                {t("common.add")}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={modalAddIsOpen}
+        onOpenChange={(open) => {
+          if (!open && !isSigning) closeModalAdd();
+        }}
+      >
+        <DialogContent
+          className="sm:max-w-lg"
+          onEscapeKeyDown={(event) => {
+            if (isSigning) event.preventDefault();
+          }}
+          onPointerDownOutside={(event) => {
+            if (isSigning) event.preventDefault();
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>{t("accounts.addingAccount")}</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button
+                variant="outline"
+                className="h-auto justify-start gap-3 bg-card p-3 text-left hover:bg-accent"
+                disabled={isSigning}
+                onClick={openModalPlain}
+              >
+                <span className="flex size-9 items-center justify-center rounded-md border bg-muted/50 text-foreground">
+                  <User size={20} />
+                </span>
+                <span>{providerLabel("plain", t)}</span>
+              </Button>
+
+              <Button
+                variant={
+                  isSigning && signType == "discord" && authStage === "waiting"
+                    ? "destructive"
+                    : "outline"
+                }
+                className="h-auto justify-start gap-3 bg-card p-3 text-left hover:bg-accent"
+                disabled={
+                  (isSigning && signType != "discord") ||
+                  authStage === "exchanging" ||
+                  !isNetwork
+                }
+                onClick={async () => {
+                  if (isSigning && authStage === "waiting") {
+                    authSessionRef.current++;
+                    setIsSigning(false);
+                    setSignType(undefined);
+                    setAuthStage("idle");
+                    toast.success(t("accounts.cancelled"));
+                    return;
+                  }
+                  await Auth("discord");
+                }}
+              >
+                <span className="flex size-9 items-center justify-center rounded-md border bg-muted/50 text-foreground">
+                  {isSigning &&
+                  signType == "discord" &&
+                  authStage === "exchanging" ? (
+                    <Loader2 className="size-5 animate-spin" />
+                  ) : isSigning &&
+                    signType == "discord" &&
+                    authStage === "waiting" ? (
+                    <X size={20} />
+                  ) : (
+                    <FaDiscord size={20} />
+                  )}
+                </span>
+                <span>
+                  {isSigning && signType == "discord" && authStage === "waiting"
+                    ? t("common.cancel")
+                    : "Discord"}
+                </span>
+              </Button>
+
+              <Button
+                variant={
+                  isSigning &&
+                  signType == "microsoft" &&
+                  authStage === "waiting"
+                    ? "destructive"
+                    : "outline"
+                }
+                className="h-auto justify-start gap-3 bg-card p-3 text-left hover:bg-accent"
+                disabled={
+                  (isSigning && signType != "microsoft") ||
+                  authStage === "exchanging" ||
+                  !isNetwork
+                }
+                onClick={async () => {
+                  if (isSigning && authStage === "waiting") {
+                    authSessionRef.current++;
+                    setIsSigning(false);
+                    setSignType(undefined);
+                    setAuthStage("idle");
+                    toast.success(t("accounts.cancelled"));
+                    return;
+                  }
+                  await Auth("microsoft");
+                }}
+              >
+                <span className="flex size-9 items-center justify-center rounded-md border bg-muted/50 text-foreground">
+                  {isSigning &&
+                  signType == "microsoft" &&
+                  authStage === "exchanging" ? (
+                    <Loader2 className="size-5 animate-spin" />
+                  ) : isSigning &&
+                    signType == "microsoft" &&
+                    authStage === "waiting" ? (
+                    <X size={20} />
+                  ) : (
+                    <FaMicrosoft size={20} />
+                  )}
+                </span>
+                <span>
+                  {isSigning &&
+                  signType == "microsoft" &&
+                  authStage === "waiting"
+                    ? t("common.cancel")
+                    : t("accounts.microsoft")}
+                </span>
+              </Button>
+
+              <Button
+                variant={
+                  isSigning && signType == "elyby" && authStage === "waiting"
+                    ? "destructive"
+                    : "outline"
+                }
+                className="h-auto justify-start gap-3 bg-card p-3 text-left hover:bg-accent"
+                disabled={
+                  (isSigning && signType != "elyby") ||
+                  authStage === "exchanging" ||
+                  !isNetwork
+                }
+                onClick={async () => {
+                  if (isSigning && authStage === "waiting") {
+                    authSessionRef.current++;
+                    setIsSigning(false);
+                    setSignType(undefined);
+                    setAuthStage("idle");
+                    toast.success(t("accounts.cancelled"));
+                    return;
+                  }
+                  await Auth("elyby");
+                }}
+              >
+                <span className="flex size-9 items-center justify-center rounded-md border bg-muted/50 text-foreground">
+                  {isSigning &&
+                  signType == "elyby" &&
+                  authStage === "exchanging" ? (
+                    <Loader2 className="size-5 animate-spin" />
+                  ) : isSigning &&
+                    signType == "elyby" &&
+                    authStage === "waiting" ? (
+                    <X size={20} />
+                  ) : (
+                    <TbSquareLetterE size={20} />
+                  )}
+                </span>
+                <span>
+                  {isSigning && signType == "elyby" && authStage === "waiting"
+                    ? t("common.cancel")
+                    : t("accounts.elyby")}
+                </span>
+              </Button>
             </div>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={modalPlainIsOpen}
+        onOpenChange={(open) => {
+          if (!open) closeModalPlain();
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{providerLabel("plain", t)}</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="plain-account-nickname">
+                {t("accounts.nickname")}
+              </Label>
+              <Input
+                id="plain-account-nickname"
+                placeholder="Notch"
+                aria-invalid={showNicknameError}
+                value={nickname}
+                autoFocus
+                onChange={(event) => setNickname(event.currentTarget.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !isPlainNicknameInvalid) {
+                    void addPlainAccount();
+                  }
+                }}
+              />
+              {showNicknameError && (
+                <p className="text-xs leading-5 text-destructive">
+                  {t("accounts.invalidNickname")}
+                </p>
+              )}
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button variant="secondary" onClick={closeModalPlain}>
+                {t("common.cancel")}
+              </Button>
+              <Button
+                disabled={isPlainNicknameInvalid}
+                onClick={async () => await addPlainAccount()}
+              >
+                <UserPlus size={18} />
+                {t("common.add")}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {accountInfo && selectedAccount && user && (
-        <AccountInfo
-          onClose={() => {
-            setAccountInfo(false);
-          }}
-          user={user}
-          isOwner={true}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="wide" />}>
+          <LazyAccountInfo
+            onClose={() => {
+              setAccountInfo(false);
+            }}
+            user={user}
+            isOwner={true}
+          />
+        </Suspense>
       )}
 
       {isConfirmationOpen && selectedAccount && (

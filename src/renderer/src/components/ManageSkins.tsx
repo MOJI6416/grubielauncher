@@ -1,30 +1,66 @@
-import { ISkinEntry, SkinsData } from "@/types/SkinManager";
+﻿import { ISkinEntry, SkinsData } from "@/types/SkinManager";
 import {
-  Button,
-  Card,
-  CardBody,
-  Image,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ScrollShadow,
-  Select,
-  SelectItem,
-  Spinner,
-  Switch,
-  Tooltip,
-} from "@heroui/react";
-import { accountAtom, authDataAtom, pathsAtom } from "@renderer/stores/atoms";
+  accountAtom,
+  authDataAtom,
+  internetAtom,
+  networkAtom,
+  pathsAtom,
+} from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
-import { FilePlus2, Link, Mars, Trash, User, Venus } from "lucide-react";
+import {
+  Check,
+  FilePlus2,
+  Link,
+  Loader2,
+  Mars,
+  Trash,
+  User,
+  Venus,
+} from "lucide-react";
 import { useEffect, useMemo, useState, useCallback, memo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import ReactSkinview3d from "react-skinview3d";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { canOpenSkinManagerForAccount } from "@renderer/utilities/connectivity";
 
 const api = window.api;
+const NO_CAPE_VALUE = "__none";
 
 const ScrollingText = memo(({ text }: { text: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -88,7 +124,12 @@ const SkinCard = memo(
     isLoading,
     actionLoading,
     onSelectSkin,
-    onOpenContextMenu,
+    onRenameSkin,
+    onDeleteSkin,
+    isRenameDisabled,
+    isDeleteDisabled,
+    renameLabel,
+    deleteLabel,
   }: {
     skin: ISkinEntry;
     isSelected: boolean;
@@ -96,43 +137,96 @@ const SkinCard = memo(
     isLoading: boolean;
     actionLoading: string | null;
     onSelectSkin: (id: string) => void;
-    onOpenContextMenu: (skinId: string, x: number, y: number) => void;
+    onRenameSkin: (id: string) => void;
+    onDeleteSkin: (id: string) => void;
+    isRenameDisabled: boolean;
+    isDeleteDisabled: boolean;
+    renameLabel: string;
+    deleteLabel: string;
   }) => {
-    const handleRightClick = useCallback((e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onOpenContextMenu(skin.id, e.clientX, e.clientY);
-    }, [onOpenContextMenu, skin.id]);
-
     const handlePress = useCallback(() => {
       onSelectSkin(skin.id);
     }, [onSelectSkin, skin.id]);
 
     return (
-      <div data-skin-card="true">
-        <Card
-          data-skin-card="true"
-          isDisabled={isLoading || actionLoading !== null}
-          isPressable
-          onPress={handlePress}
-          onContextMenu={handleRightClick}
-          className={`w-28 overflow-hidden border ${isActive ? "border-success-200" : isSelected ? "border-primary-200" : "border-white/10"}`}
+      <ContextMenu>
+        <ContextMenuTrigger
+          asChild
+          disabled={isLoading || actionLoading !== null}
         >
-          <CardBody>
-            <div className="flex flex-col items-center gap-2 overflow-hidden">
-              <Image
-                src={skin.character || skin.url}
-                width={64}
-                height={128}
-                loading="lazy"
-              />
-              <div className="w-full text-xs">
-                <ScrollingText text={skin.name} />
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-      </div>
+          <div data-skin-card="true">
+            <Card
+              data-skin-card="true"
+              role="button"
+              tabIndex={isLoading || actionLoading !== null ? -1 : 0}
+              aria-disabled={isLoading || actionLoading !== null}
+              onClick={() => {
+                if (isLoading || actionLoading !== null) return;
+                handlePress();
+              }}
+              onKeyDown={(event) => {
+                if (isLoading || actionLoading !== null) return;
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                handlePress();
+              }}
+              className={cn(
+                "relative w-full cursor-pointer gap-0 overflow-hidden border bg-card py-0 transition-all focus-visible:ring-2 focus-visible:ring-ring/50",
+                isSelected &&
+                  "border-primary bg-primary/10 ring-2 ring-primary/60",
+                !isSelected &&
+                  isActive &&
+                  "border-[var(--success)] ring-2 ring-[var(--success)]",
+                !isSelected && !isActive && "border-border",
+                !isLoading &&
+                  actionLoading === null &&
+                  "hover:-translate-y-0.5 hover:border-primary/50 hover:bg-accent/35 hover:shadow-sm",
+                (isLoading || actionLoading !== null) &&
+                  "cursor-not-allowed opacity-60",
+              )}
+            >
+              {isSelected && (
+                <span className="absolute top-2 left-2 z-10 flex size-5 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+                  <Check className="size-3" />
+                </span>
+              )}
+              {isActive && (
+                <span className="absolute top-2 right-2 z-10 size-2.5 rounded-full bg-[var(--success)] ring-2 ring-background" />
+              )}
+              <CardContent className="p-3">
+                <div className="flex flex-col items-center gap-2 overflow-hidden">
+                  <img
+                    src={skin.character || skin.url}
+                    width={64}
+                    height={128}
+                    loading="lazy"
+                    alt={skin.name}
+                    className="h-28 w-14 object-contain"
+                  />
+                  <div className="w-full text-xs">
+                    <ScrollingText text={skin.name} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem
+            disabled={isRenameDisabled}
+            onSelect={() => onRenameSkin(skin.id)}
+          >
+            {renameLabel}
+          </ContextMenuItem>
+          <ContextMenuItem
+            variant="destructive"
+            disabled={isDeleteDisabled}
+            onSelect={() => onDeleteSkin(skin.id)}
+          >
+            {deleteLabel}
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     );
   },
 );
@@ -145,20 +239,34 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     "apply" | "byFile" | "reset" | "byLink" | "byPlayer" | null
   >(null);
   const [skinsData, setSkinsData] = useState<SkinsData | null>(null);
-  const [contextMenu, setContextMenu] = useState<{
-    skinId: string;
-    x: number;
-    y: number;
-  } | null>(null);
   const [inputValue, setInputValue] = useState("");
+  const [renameValue, setRenameValue] = useState("");
   const [skinType, setSkinType] = useState<"skin" | "cape">("skin");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [renameDialogSkinId, setRenameDialogSkinId] = useState<string | null>(
+    null,
+  );
 
   const [paths] = useAtom(pathsAtom);
   const [selectedAccount] = useAtom(accountAtom);
   const [authData] = useAtom(authDataAtom);
+  const [isInternetOnline] = useAtom(internetAtom);
+  const [isBackendOnline] = useAtom(networkAtom);
 
   const { t } = useTranslation();
   const isMicrosoftAccount = selectedAccount?.type === "microsoft";
+  const isRemoteSkinServiceAvailable = canOpenSkinManagerForAccount(
+    selectedAccount?.type,
+    { isInternetOnline, isBackendOnline },
+  );
+
+  useEffect(() => {
+    if (!selectedAccount) return;
+    if (selectedAccount.type !== "discord" && selectedAccount.type !== "microsoft") {
+      return;
+    }
+    if (!isBackendOnline) onClose();
+  }, [isBackendOnline, onClose, selectedAccount]);
 
   useEffect(() => {
     const loadSkins = async () => {
@@ -203,6 +311,18 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     return skinsData.skins.skins.find((s) => s.id === skinsData.selectedSkin);
   }, [skinsData]);
 
+  useEffect(() => {
+    setRenameValue(selectedSkinEntry?.name ?? "");
+  }, [selectedSkinEntry?.id, selectedSkinEntry?.name]);
+
+  const renameDialogSkin = useMemo(() => {
+    if (!skinsData || !renameDialogSkinId) return null;
+    return (
+      skinsData.skins.skins.find((skin) => skin.id === renameDialogSkinId) ??
+      null
+    );
+  }, [renameDialogSkinId, skinsData]);
+
   const refreshSkins = useCallback(async () => {
     if (!selectedAccount || !authData) return;
     const accessToken =
@@ -238,15 +358,26 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     [authData, selectedAccount, refreshSkins],
   );
 
-  const handleChangeModel = useCallback(async () => {
-    if (!authData || !selectedAccount || !selectedSkinEntry) return;
-    const newModel = selectedSkinEntry.model === "classic" ? "slim" : "classic";
-    await api.skins.changeModel(authData.uuid, selectedAccount.type, newModel);
-    await refreshSkins();
-  }, [authData, selectedAccount, selectedSkinEntry, refreshSkins]);
+  const handleChangeModel = useCallback(
+    async (model?: "classic" | "slim") => {
+      if (!authData || !selectedAccount || !selectedSkinEntry) return;
+      const newModel =
+        model ?? (selectedSkinEntry.model === "classic" ? "slim" : "classic");
+      if (newModel === selectedSkinEntry.model) return;
+
+      await api.skins.changeModel(
+        authData.uuid,
+        selectedAccount.type,
+        newModel,
+      );
+      await refreshSkins();
+    },
+    [authData, selectedAccount, selectedSkinEntry, refreshSkins],
+  );
 
   const handleApply = useCallback(async () => {
     if (!authData || !selectedAccount || !selectedSkinEntry) return;
+    if (!isRemoteSkinServiceAvailable) return;
     setActionLoading("apply");
     await api.skins.uploadSkin(
       authData.uuid,
@@ -255,7 +386,13 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     );
     await refreshSkins();
     setActionLoading(null);
-  }, [authData, selectedAccount, selectedSkinEntry, refreshSkins]);
+  }, [
+    authData,
+    selectedAccount,
+    selectedSkinEntry,
+    isRemoteSkinServiceAvailable,
+    refreshSkins,
+  ]);
 
   const handleDeleteSkin = useCallback(
     async (skinId: string, type: "skin" | "cape") => {
@@ -273,16 +410,18 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
 
   const handleReset = useCallback(async () => {
     if (!authData || !selectedAccount) return;
+    if (!isRemoteSkinServiceAvailable) return;
     setActionLoading("reset");
     await api.skins.resetSkin(authData.uuid, selectedAccount.type);
     await refreshSkins();
     setActionLoading(null);
-  }, [authData, selectedAccount, refreshSkins]);
+  }, [authData, selectedAccount, isRemoteSkinServiceAvailable, refreshSkins]);
 
   const handleImportByUrl = useCallback(async () => {
     if (!authData || !selectedAccount || !inputValue.trim()) {
       return;
     }
+    if (!isInternetOnline) return;
     setActionLoading("byLink");
     try {
       await api.skins.importByUrl(
@@ -297,12 +436,20 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     } finally {
       setActionLoading(null);
     }
-  }, [authData, selectedAccount, inputValue, skinType, refreshSkins]);
+  }, [
+    authData,
+    selectedAccount,
+    inputValue,
+    skinType,
+    isInternetOnline,
+    refreshSkins,
+  ]);
 
   const handleImportByNickname = useCallback(async () => {
     if (!authData || !selectedAccount || !inputValue.trim()) {
       return;
     }
+    if (!isInternetOnline) return;
     setActionLoading("byPlayer");
     try {
       await api.skins.importByNickname(
@@ -316,7 +463,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     } finally {
       setActionLoading(null);
     }
-  }, [authData, selectedAccount, inputValue, refreshSkins]);
+  }, [authData, selectedAccount, inputValue, isInternetOnline, refreshSkins]);
 
   const handleImportByFile = useCallback(async () => {
     if (!authData || !selectedAccount) {
@@ -341,16 +488,18 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
   }, [authData, selectedAccount, skinType, refreshSkins]);
 
   const handleRename = useCallback(
-    async (skinId: string) => {
-      if (!authData || !selectedAccount || !inputValue.trim()) return;
+    async (skinId: string, value = inputValue) => {
+      const nextName = value.trim();
+      if (!authData || !selectedAccount || !nextName) return;
       await api.skins.renameSkin(
         authData.uuid,
         selectedAccount?.type,
         skinId,
-        inputValue.trim(),
+        nextName,
       );
       await refreshSkins();
       setInputValue("");
+      setRenameValue(nextName);
     },
     [authData, selectedAccount, inputValue, refreshSkins],
   );
@@ -362,222 +511,112 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     [],
   );
 
-  const handleSkinTypeToggle = useCallback(() => {
-    setSkinType((prev) => (prev === "skin" ? "cape" : "skin"));
-    setInputValue("");
-  }, []);
-
-  const closeContextMenu = useCallback(() => {
-    setContextMenu(null);
-  }, []);
-
-  const handleOpenContextMenu = useCallback(
-    (skinId: string, x: number, y: number) => {
-      if (isLoading || actionLoading !== null) return;
-      setContextMenu({ skinId, x, y });
+  const handleOpenRenameDialog = useCallback(
+    (skinId: string) => {
+      const skin = skinsData?.skins.skins.find((item) => item.id === skinId);
+      if (!skin) return;
+      setRenameValue(skin.name);
+      setRenameDialogSkinId(skinId);
     },
-    [actionLoading, isLoading],
+    [skinsData],
   );
 
-  useEffect(() => {
-    if (!contextMenu) return undefined;
+  const handleSubmitRename = useCallback(async () => {
+    if (!renameDialogSkin) return;
+    await handleRename(renameDialogSkin.id, renameValue);
+    setRenameDialogSkinId(null);
+  }, [handleRename, renameDialogSkin, renameValue]);
 
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest("[data-skin-context-menu='true']")) return;
-      setContextMenu(null);
-    };
+  const isSkinRenameDisabled = useCallback(
+    () => actionLoading !== null,
+    [actionLoading],
+  );
 
-    const handleGlobalContextMenu = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest("[data-skin-card='true']")) return;
-      setContextMenu(null);
-    };
+  const isRenameSubmitDisabled = useMemo(() => {
+    const nextName = renameValue.trim();
+    if (!renameDialogSkin || !nextName || actionLoading !== null) return true;
+    if (nextName === renameDialogSkin.name) return true;
+    return (
+      skinsData?.skins.skins.some(
+        (item) => item.name === nextName && item.id !== renameDialogSkin.id,
+      ) ?? true
+    );
+  }, [actionLoading, renameDialogSkin, renameValue, skinsData]);
 
-    const handleScroll = () => setContextMenu(null);
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("contextmenu", handleGlobalContextMenu);
-    document.addEventListener("scroll", handleScroll, true);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("contextmenu", handleGlobalContextMenu);
-      document.removeEventListener("scroll", handleScroll, true);
-    };
-  }, [contextMenu]);
-
-  const selectedContextSkin = useMemo(() => {
-    if (!skinsData || !contextMenu) return null;
-    return skinsData.skins.skins.find((skin) => skin.id === contextMenu.skinId) || null;
-  }, [contextMenu, skinsData]);
-
-  const isRenameDisabled = useMemo(() => {
-    if (!selectedContextSkin) return true;
-    const nextName = inputValue.trim();
-    if (!nextName) return true;
-    return skinsData?.skins.skins.some(
-      (skin) => skin.name === nextName && skin.id !== selectedContextSkin.id,
-    ) ?? true;
-  }, [inputValue, selectedContextSkin, skinsData]);
-
-  const isDeleteDisabled = useMemo(() => {
-    if (!selectedContextSkin) return true;
-    return selectedContextSkin.id === skinsData?.activeSkin;
-  }, [selectedContextSkin, skinsData]);
-
-  const handleCapeChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      handleSetCape(e.target.value || undefined);
-    },
-    [handleSetCape],
+  const isSkinDeleteDisabled = useCallback(
+    (skin: ISkinEntry) => skin.id === skinsData?.activeSkin,
+    [skinsData],
   );
 
   return (
-    <Modal
-      size="4xl"
-      isOpen={true}
-      onClose={onClose}
-      isDismissable={!isLoading && !actionLoading}
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !isLoading && !actionLoading) onClose();
+      }}
     >
-      <ModalContent
+      <DialogContent
         data-account-click-ignore="true"
+        className="max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-[1030px]"
+        onPointerDownOutside={(event) => {
+          if (
+            isLoading ||
+            actionLoading ||
+            isAddDialogOpen ||
+            renameDialogSkinId
+          ) {
+            event.preventDefault();
+          }
+        }}
+        onEscapeKeyDown={(event) => {
+          if (
+            isLoading ||
+            actionLoading ||
+            isAddDialogOpen ||
+            renameDialogSkinId
+          ) {
+            event.preventDefault();
+          }
+        }}
         onClick={(event) => event.stopPropagation()}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <ModalHeader>{t("manageSkins.title")}</ModalHeader>
-        <ModalBody>
-          <div className="flex items-center space-x-2 justify-between min-h-[375px] max-h-[375px]">
-            {isLoading ||
-            !skinsData ||
-            !selectedAccount ||
-            !selectedAccount?.accessToken ? (
-              <div className="h-full w-full flex items-center justify-center">
-                <Spinner />
-              </div>
-            ) : (
-              <>
-                <div className="h-full flex flex-col space-y-2 items-center">
-                  <ReactSkinview3d
-                    skinUrl={selectedSkinEntry?.url || "steve"}
-                    capeUrl={selectedCape?.url}
-                    height={300}
-                    width={220}
-                    options={{ preserveDrawingBuffer: true }}
-                  />
+        <DialogHeader>
+          <DialogTitle>{t("manageSkins.title")}</DialogTitle>
+        </DialogHeader>
 
-                  <div className="flex items-center gap-1 w-56">
-                    <div className="flex-1 w-full min-w-0">
-                      <Select
-                        className="w-full"
-                        isDisabled={
-                          actionLoading !== null || skinsData.capes.length === 0
-                        }
-                        selectedKeys={selectedCape?.id ? [selectedCape.id] : []}
-                        onChange={handleCapeChange}
-                        label={t("manageSkins.capes")}
-                        placeholder={t("manageSkins.noCape")}
-                        renderValue={(items) => {
-                          const cape = skinsData.capes.find(
-                            (c) => c.id === items[0]?.key,
-                          );
-                          if (!cape) return <p>{t("manageSkins.noCape")}</p>;
-                          return (
-                            <div className="flex items-center space-x-2 max-w-full">
-                              <div className="flex-shrink-0">
-                                <Image
-                                  src={cape.cape || cape.url}
-                                  className="h-8 w-auto rounded-none flex-shrink-0"
-                                  loading="lazy"
-                                />
-                              </div>
-                              <p className="truncate max-w-28">{cape.alias}</p>
-                            </div>
-                          );
-                        }}
-                      >
-                        {skinsData.capes.map((cape) => (
-                          <SelectItem key={cape.id}>
-                            <div className="flex items-center space-x-2 max-w-full">
-                              <div className="flex-shrink-0">
-                                <Image
-                                  src={cape.cape || cape.url}
-                                  className="h-10 w-auto rounded-none flex-shrink-0"
-                                  loading="lazy"
-                                />
-                              </div>
-                              <p className="truncate max-w-28">{cape.alias}</p>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </Select>
-                    </div>
-
-                    {selectedAccount.type === "discord" && (
-                      <Tooltip
-                        delay={200}
-                        content={t("manageSkins.deleteCape")}
-                      >
-                        <Button
-                          variant="flat"
-                          color="danger"
-                          isIconOnly
-                          isDisabled={
-                            actionLoading !== null ||
-                            !selectedCape ||
-                            selectedCape.id === skinsData.activeCape
-                          }
-                          onPress={() =>
-                            selectedCape &&
-                            handleDeleteSkin(selectedCape.id, "cape")
-                          }
-                        >
-                          <Trash size={22} />
-                        </Button>
-                      </Tooltip>
-                    )}
-
-                    <Tooltip
-                      delay={500}
-                      content={
-                        selectedSkinEntry?.model === "slim"
-                          ? t("manageSkins.slimModel")
-                          : t("manageSkins.classicModel")
-                      }
-                    >
-                      <Button
-                        variant="flat"
-                        isIconOnly
-                        onPress={handleChangeModel}
-                      >
-                        {selectedSkinEntry?.model === "classic" ? (
-                          <Mars size={20} />
-                        ) : (
-                          <Venus size={20} />
-                        )}
-                      </Button>
-                    </Tooltip>
+        <div className="grid h-[500px] max-h-[calc(100vh-9rem)] min-h-0 gap-4 md:grid-cols-[340px_340px_290px] md:justify-center">
+          {isLoading ||
+          !skinsData ||
+          !selectedAccount ||
+          !selectedAccount?.accessToken ? (
+            <div className="col-span-full flex h-full w-full items-center justify-center">
+              <Loader2 className="size-4 animate-spin" />
+            </div>
+          ) : (
+            <>
+              <div className="flex min-h-0 min-w-0 flex-col gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">
+                      {t("manageSkins.skins")}
+                    </p>
+                    <Badge variant="secondary" className="tabular-nums">
+                      {skinsData.skins.skins.length}
+                    </Badge>
                   </div>
-
                   <Button
-                    variant="flat"
-                    color="primary"
-                    className="w-full"
-                    isDisabled={
-                      skinsData.activeSkin === skinsData.selectedSkin &&
-                      selectedSkinEntry?.model === skinsData.activeModel &&
-                      selectedCape?.id === skinsData.activeCape
-                    }
-                    isLoading={actionLoading === "apply"}
-                    onPress={handleApply}
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setIsAddDialogOpen(true)}
+                    disabled={actionLoading !== null}
                   >
-                    {t("manageSkins.apply")}
+                    <FilePlus2 className="size-4" />
+                    {t("common.add")}
                   </Button>
                 </div>
-
-                <div className="h-full flex flex-col space-y-2">
-                  <p>{t("manageSkins.skins")}</p>
-                  <ScrollShadow className="grid grid-cols-5 gap-2 max-h-[375px] min-h-[375px] overflow-y-auto pr-1">
+                <ScrollArea className="h-full min-h-0 flex-1 rounded-xl border bg-card">
+                  <div className="grid grid-cols-3 gap-2 p-3">
                     {skinsData.skins.skins.map((skin) => {
                       const isSelected = skin.id === skinsData.selectedSkin;
                       const isActive = skin.id === skinsData.activeSkin;
@@ -590,122 +629,387 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
                           isLoading={isLoading}
                           actionLoading={actionLoading}
                           onSelectSkin={handleSelectSkin}
-                          onOpenContextMenu={handleOpenContextMenu}
+                          onRenameSkin={handleOpenRenameDialog}
+                          onDeleteSkin={(skinId) =>
+                            handleDeleteSkin(skinId, "skin")
+                          }
+                          isRenameDisabled={isSkinRenameDisabled()}
+                          isDeleteDisabled={isSkinDeleteDisabled(skin)}
+                          renameLabel={t("manageSkins.rename")}
+                          deleteLabel={t("manageSkins.deleteSkin")}
                         />
                       );
                     })}
-                  </ScrollShadow>
-                </div>
-              </>
-            )}
-          </div>
-        </ModalBody>
-
-        {!isLoading && skinsData && selectedAccount && (
-          <ModalFooter>
-            {selectedAccount.type === "discord" && (
-              <div className="flex items-center space-x-2">
-                <p>{t("manageSkins.skin")}</p>
-                <Switch
-                  size="sm"
-                  isSelected={skinType === "cape"}
-                  onChange={handleSkinTypeToggle}
-                />
-                <p>{t("manageSkins.cape")}</p>
+                  </div>
+                </ScrollArea>
               </div>
-            )}
 
-            <Input
-              className="w-40"
-              value={inputValue}
-              onChange={handleInputChange}
-            />
+              <Card className="min-w-0 gap-0 overflow-hidden py-0">
+                <CardContent className="grid h-full min-h-0 p-3">
+                  <div className="flex h-full min-h-0 items-center justify-center overflow-hidden rounded-xl border bg-muted/30 p-1">
+                    <ReactSkinview3d
+                      skinUrl={selectedSkinEntry?.url || "steve"}
+                      capeUrl={selectedCape?.url}
+                      height={380}
+                      width={270}
+                      options={{ preserveDrawingBuffer: true }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Tooltip delay={500} content={t("manageSkins.importByNick")}>
-              <Button
-                variant="flat"
-                isIconOnly
-                isLoading={actionLoading === "byPlayer"}
-                isDisabled={
-                  actionLoading !== null ||
-                  skinType === "cape" ||
-                  inputValue.trim() === ""
-                }
-                onPress={handleImportByNickname}
-              >
-                <User size={22} />
-              </Button>
-            </Tooltip>
+              <div className="grid min-h-0 min-w-0 content-start gap-3 overflow-y-auto pr-1">
+                <Card className="gap-0 py-0">
+                  <CardContent className="grid gap-3 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium">
+                        {t("manageSkins.settings")}
+                      </p>
+                      {skinsData.activeSkin === skinsData.selectedSkin ? (
+                        <Badge variant="secondary">
+                          <Check className="size-3" />
+                          {t("manageSkins.active")}
+                        </Badge>
+                      ) : actionLoading ? (
+                        <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                      ) : null}
+                    </div>
 
-            <Tooltip delay={500} content={t("manageSkins.importByLink")}>
-              <Button
-                variant="flat"
-                isIconOnly
-                isLoading={actionLoading === "byLink"}
-                isDisabled={actionLoading !== null || inputValue.trim() === ""}
-                onPress={handleImportByUrl}
-              >
-                <Link size={22} />
-              </Button>
-            </Tooltip>
+                    <div className="min-w-0 rounded-lg border bg-card px-3 py-2">
+                      <ScrollingText
+                        text={
+                          selectedSkinEntry?.name ??
+                          t("manageSkins.selectedSkin")
+                        }
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {selectedSkinEntry?.model === "slim"
+                          ? t("manageSkins.slim")
+                          : t("manageSkins.classic")}
+                      </p>
+                    </div>
 
-            <Tooltip delay={500} content={t("manageSkins.importByFile")}>
-              <Button
-                variant="flat"
-                isIconOnly
-                isLoading={actionLoading === "byFile"}
-                isDisabled={actionLoading !== null}
-                onPress={handleImportByFile}
-              >
-                <FilePlus2 size={22} />
-              </Button>
-            </Tooltip>
+                    <div className="grid gap-2">
+                      <Label className="text-xs text-muted-foreground">
+                        {t("manageSkins.model")}
+                      </Label>
+                      <RadioGroup
+                        className="grid gap-2"
+                        value={selectedSkinEntry?.model ?? "classic"}
+                        onValueChange={(value) =>
+                          handleChangeModel(value as "classic" | "slim")
+                        }
+                      >
+                        <Label
+                          htmlFor="skin-model-classic"
+                          className="flex cursor-pointer items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm transition-colors hover:bg-accent has-[[data-state=checked]]:border-primary"
+                        >
+                          <RadioGroupItem
+                            id="skin-model-classic"
+                            value="classic"
+                          />
+                          <Mars className="size-4 text-muted-foreground" />
+                          {t("manageSkins.classicModel")}
+                        </Label>
+                        <Label
+                          htmlFor="skin-model-slim"
+                          className="flex cursor-pointer items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm transition-colors hover:bg-accent has-[[data-state=checked]]:border-primary"
+                        >
+                          <RadioGroupItem id="skin-model-slim" value="slim" />
+                          <Venus className="size-4 text-muted-foreground" />
+                          {t("manageSkins.slimModel")}
+                        </Label>
+                      </RadioGroup>
+                    </div>
 
-            {isMicrosoftAccount && (
-              <Button
-                variant="flat"
-                isDisabled={actionLoading !== null}
-                isLoading={actionLoading === "reset"}
-                onPress={handleReset}
-              >
-                {t("manageSkins.reset")}
-              </Button>
-            )}
-          </ModalFooter>
+                    <div className="grid gap-2">
+                      <Label className="text-xs text-muted-foreground">
+                        {t("manageSkins.cape")}
+                      </Label>
+                      <div className="flex gap-2">
+                        <Select
+                          value={selectedCape?.id ?? NO_CAPE_VALUE}
+                          onValueChange={(value) =>
+                            handleSetCape(
+                              value === NO_CAPE_VALUE ? undefined : value,
+                            )
+                          }
+                          disabled={actionLoading !== null}
+                        >
+                          <SelectTrigger className="w-0 min-w-0 flex-1 [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:truncate">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NO_CAPE_VALUE}>
+                              {t("manageSkins.noCape")}
+                            </SelectItem>
+                            {skinsData.capes.map((cape) => (
+                              <SelectItem key={cape.id} value={cape.id}>
+                                <span className="flex min-w-0 items-center gap-2">
+                                  <img
+                                    src={cape.cape || cape.url}
+                                    className="h-8 w-auto shrink-0 object-contain"
+                                    loading="lazy"
+                                    alt=""
+                                  />
+                                  <span className="max-w-52 truncate">
+                                    {cape.alias}
+                                  </span>
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        {selectedAccount.type === "discord" && (
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            disabled={
+                              actionLoading !== null ||
+                              !selectedCape ||
+                              selectedCape.id === skinsData.activeCape
+                            }
+                            onClick={() =>
+                              selectedCape &&
+                              handleDeleteSkin(selectedCape.id, "cape")
+                            }
+                          >
+                            <Trash className="size-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <Button
+                      disabled={
+                        actionLoading !== null ||
+                        !isRemoteSkinServiceAvailable ||
+                        (skinsData.activeSkin === skinsData.selectedSkin &&
+                          selectedSkinEntry?.model === skinsData.activeModel &&
+                          selectedCape?.id === skinsData.activeCape)
+                      }
+                      onClick={handleApply}
+                    >
+                      {actionLoading === "apply" && (
+                        <Loader2 className="size-4 animate-spin" />
+                      )}
+                      {t("manageSkins.apply")}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="gap-0 border-destructive/25 py-0">
+                  <CardContent className="grid gap-2 p-3">
+                    <Button
+                      variant="destructive"
+                      disabled={
+                        actionLoading !== null ||
+                        !selectedSkinEntry ||
+                        isSkinDeleteDisabled(selectedSkinEntry)
+                      }
+                      onClick={() =>
+                        selectedSkinEntry &&
+                        handleDeleteSkin(selectedSkinEntry.id, "skin")
+                      }
+                    >
+                      <Trash className="size-4" />
+                      {t("manageSkins.deleteSkin")}
+                    </Button>
+
+                    {isMicrosoftAccount && (
+                      <Button
+                        variant="secondary"
+                        disabled={
+                          actionLoading !== null ||
+                          !isRemoteSkinServiceAvailable
+                        }
+                        onClick={handleReset}
+                      >
+                        {actionLoading === "reset" && (
+                          <Loader2 className="size-4 animate-spin" />
+                        )}
+                        {t("manageSkins.reset")}
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+        </div>
+
+        {skinsData && selectedAccount && (
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogContent
+              data-account-click-ignore="true"
+              className="sm:max-w-md"
+              onClick={(event) => event.stopPropagation()}
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <DialogHeader>
+                <DialogTitle>
+                  {skinType === "cape"
+                    ? t("manageSkins.addCape")
+                    : t("manageSkins.addSkin")}
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="grid gap-4">
+                {selectedAccount.type === "discord" && (
+                  <RadioGroup
+                    className="grid gap-2"
+                    value={skinType}
+                    onValueChange={(value) => {
+                      setSkinType(value as "skin" | "cape");
+                      setInputValue("");
+                    }}
+                  >
+                    <Label
+                      htmlFor="import-type-skin"
+                      className="flex cursor-pointer items-center gap-2 rounded-lg border bg-card px-3 py-3 text-sm transition-colors hover:bg-accent has-[[data-state=checked]]:border-primary"
+                    >
+                      <RadioGroupItem id="import-type-skin" value="skin" />
+                      {t("manageSkins.skin")}
+                    </Label>
+                    <Label
+                      htmlFor="import-type-cape"
+                      className="flex cursor-pointer items-center gap-2 rounded-lg border bg-card px-3 py-3 text-sm transition-colors hover:bg-accent has-[[data-state=checked]]:border-primary"
+                    >
+                      <RadioGroupItem id="import-type-cape" value="cape" />
+                      {t("manageSkins.cape")}
+                    </Label>
+                  </RadioGroup>
+                )}
+
+                <div className="grid gap-2">
+                  <Label>
+                    {skinType === "cape"
+                      ? t("manageSkins.link")
+                      : t("manageSkins.nickOrLink")}
+                  </Label>
+                  <Input
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    disabled={actionLoading !== null}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
+                  disabled={actionLoading !== null}
+                >
+                  {t("common.cancel")}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button disabled={actionLoading !== null}>
+                      {actionLoading === "byFile" ||
+                      actionLoading === "byLink" ||
+                      actionLoading === "byPlayer" ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <FilePlus2 className="size-4" />
+                      )}
+                      {t("manageSkins.import")}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>
+                      {t("manageSkins.import")}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      disabled={
+                        actionLoading !== null ||
+                        !isInternetOnline ||
+                        skinType === "cape" ||
+                        inputValue.trim() === ""
+                      }
+                      onSelect={handleImportByNickname}
+                    >
+                      <User className="size-4" />
+                      {t("manageSkins.importByNick")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={
+                        actionLoading !== null ||
+                        !isInternetOnline ||
+                        inputValue.trim() === ""
+                      }
+                      onSelect={handleImportByUrl}
+                    >
+                      <Link className="size-4" />
+                      {t("manageSkins.importByLink")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={actionLoading !== null}
+                      onSelect={handleImportByFile}
+                    >
+                      <FilePlus2 className="size-4" />
+                      {t("manageSkins.importByFile")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         )}
 
-        {contextMenu && selectedContextSkin && (
-          <div
+        <Dialog
+          open={renameDialogSkinId !== null}
+          onOpenChange={(open) => {
+            if (!open) setRenameDialogSkinId(null);
+          }}
+        >
+          <DialogContent
             data-account-click-ignore="true"
-            data-skin-context-menu="true"
-            className="fixed z-50 bg-content1 rounded-medium shadow-large py-1 min-w-[160px]"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
-            onClick={(e) => e.stopPropagation()}
-            onContextMenu={(e) => e.preventDefault()}
+            className="sm:max-w-sm"
+            onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
           >
-            <button
-              className="block w-full text-left px-4 py-2 text-small border bg-black/20 border-white/10 backdrop-blur-sm hover:bg-default-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={() => {
-                closeContextMenu();
-                handleRename(selectedContextSkin.id);
-              }}
-              disabled={isRenameDisabled}
-            >
-              {t("manageSkins.rename")}
-            </button>
-            <button
-              className="block w-full text-left px-4 py-2 text-small border bg-black/20 border-white/10 backdrop-blur-sm text-danger hover:bg-danger-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={() => {
-                closeContextMenu();
-                handleDeleteSkin(selectedContextSkin.id, "skin");
-              }}
-              disabled={isDeleteDisabled}
-            >
-              {t("manageSkins.deleteSkin")}
-            </button>
-          </div>
-        )}
-      </ModalContent>
-    </Modal>
+            <DialogHeader>
+              <DialogTitle>{t("manageSkins.rename")}</DialogTitle>
+              <DialogDescription>
+                {renameDialogSkin?.name ?? t("manageSkins.selectedSkin")}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-2">
+              <Label>{t("manageSkins.rename")}</Label>
+              <Input
+                value={renameValue}
+                onChange={(event) => setRenameValue(event.target.value)}
+                disabled={actionLoading !== null}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !isRenameSubmitDisabled) {
+                    void handleSubmitRename();
+                  }
+                }}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                disabled={actionLoading !== null}
+                onClick={() => setRenameDialogSkinId(null)}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                disabled={isRenameSubmitDisabled}
+                onClick={() => void handleSubmitRename()}
+              >
+                {t("common.save")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </DialogContent>
+    </Dialog>
   );
 }

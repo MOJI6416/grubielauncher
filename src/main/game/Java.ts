@@ -49,10 +49,11 @@ export class Java {
     this.platform = getOS()
   }
 
-  async init() {
+  async init(signal?: AbortSignal) {
     if (!this.platform) return
 
     await this.ensureAppReady()
+    this.throwIfAborted(signal)
 
     const installedJavaRoot = await this.findInstalledJavaRoot()
     if (installedJavaRoot) {
@@ -60,22 +61,29 @@ export class Java {
       return
     }
 
-    const asset = await this.resolveJavaAsset()
+    const asset = await this.resolveJavaAsset(signal)
     if (!asset) return
 
     this.setJavaPaths(this.getExpectedJavaRoot(asset))
   }
 
-  async install() {
+  private throwIfAborted(signal?: AbortSignal) {
+    if (signal?.aborted) throw new Error('AbortError')
+  }
+
+  async install(signal?: AbortSignal) {
     if (!this.platform) return
 
-    await this.init()
+    this.throwIfAborted(signal)
+    await this.init(signal)
+    this.throwIfAborted(signal)
 
     if (this.javaPath && (await fs.pathExists(this.javaPath))) return
     if (this.javaServerPath && (await fs.pathExists(this.javaServerPath))) return
 
-    const asset = await this.resolveJavaAsset()
+    const asset = await this.resolveJavaAsset(signal)
     if (!asset) return
+    this.throwIfAborted(signal)
 
     const javaBaseDir = this.getJavaBaseDir()
     await fs.ensureDir(javaBaseDir)
@@ -84,17 +92,21 @@ export class Java {
 
     const downloader = new Downloader()
 
-    await downloader.downloadFiles([
-      {
-        url: asset.url,
-        destination: path.join(javaBaseDir, asset.fileName),
-        checksum: asset.checksum,
-        checksumType: asset.checksumType,
-        size: asset.size,
-        group: 'java',
-        options: { extract: true }
-      }
-    ])
+    await downloader.downloadFiles(
+      [
+        {
+          url: asset.url,
+          destination: path.join(javaBaseDir, asset.fileName),
+          checksum: asset.checksum,
+          checksumType: asset.checksumType,
+          size: asset.size,
+          group: 'java',
+          options: { extract: true }
+        }
+      ],
+      signal
+    )
+    this.throwIfAborted(signal)
 
     const installedJavaRoot = await this.findInstalledJavaRoot()
     if (installedJavaRoot) {
@@ -102,13 +114,14 @@ export class Java {
     }
   }
 
-  private async resolveJavaAsset(): Promise<IJavaAsset | null> {
+  private async resolveJavaAsset(signal?: AbortSignal): Promise<IJavaAsset | null> {
     if (this.resolvedAsset) return this.resolvedAsset
 
     const cachedAsset = await this.readCachedAsset()
 
     try {
-      const asset = await this.fetchJavaAsset()
+      this.throwIfAborted(signal)
+      const asset = await this.fetchJavaAsset(signal)
       this.resolvedAsset = asset
       await this.writeCachedAsset(asset)
       return asset
@@ -126,7 +139,7 @@ export class Java {
     }
   }
 
-  private async fetchJavaAsset(): Promise<IJavaAsset> {
+  private async fetchJavaAsset(signal?: AbortSignal): Promise<IJavaAsset> {
     const apiOs = this.getAdoptiumOs()
     const apiArch = this.getAdoptiumArch()
 
@@ -138,6 +151,7 @@ export class Java {
       const response = await axios.get<IAdoptiumRelease[]>(
         `${Java.apiUrl}/${this.majorVersion}/hotspot`,
         {
+          signal,
           timeout: 30000,
           params: {
             architecture: apiArch,

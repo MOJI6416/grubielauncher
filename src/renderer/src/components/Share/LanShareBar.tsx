@@ -4,37 +4,69 @@ import {
   shareStateAtom,
 } from "@renderer/stores/atoms";
 import {
+  getShareErrorText,
   getSharePhaseColor,
   getSharePhaseDescription,
-  getShareErrorText,
   getSharePhaseText,
 } from "@renderer/utilities/share";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
-  addToast,
-  Alert,
-  Button,
-  ButtonGroup,
   Card,
-  CardBody,
-  Chip,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalHeader,
-} from "@heroui/react";
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAtom } from "jotai";
-import { Copy, Globe, RefreshCcw, Shield, Square, Wifi } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Copy,
+  Globe,
+  Loader2,
+  LockKeyhole,
+  RefreshCcw,
+  Shield,
+  Square,
+  Users,
+  Wifi,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ShareStatePhase, ShareVisibility } from "@/types/Share";
+import { toast } from "sonner";
 
 const api = window.api;
+
 const BUSY_PHASES: ShareStatePhase[] = [
   "share_starting",
   "tunnel_connecting",
   "pending",
   "reconnecting",
 ];
+
+function statusVariant(color: string) {
+  if (color === "danger") return "destructive";
+  if (color === "default") return "outline";
+  return "secondary";
+}
+
+function statusDotClassName(color: string) {
+  if (color === "success") return "bg-emerald-500";
+  if (color === "warning") return "bg-yellow-500";
+  if (color === "danger") return "bg-destructive";
+  return "bg-muted-foreground";
+}
 
 export function LanShareModal({
   isOpen,
@@ -81,6 +113,11 @@ export function LanShareModal({
     ? `${shareState.target.versionName} [${shareState.target.instance}]`
     : null;
   const targetPort = shareState.target?.localPort;
+  const targetText = targetLabel
+    ? `${targetLabel}${
+        typeof targetPort === "number" ? `, 127.0.0.1:${targetPort}` : ""
+      }`
+    : t("share.waitForLan");
   const errorText = getShareErrorText(t, shareState.lastError);
   const statusColor = getSharePhaseColor(shareState.phase);
   const statusDescription = getSharePhaseDescription(t, shareState.phase);
@@ -94,10 +131,7 @@ export function LanShareModal({
     if (!shareState.publicAddress) return;
 
     await api.clipboard.writeText(shareState.publicAddress);
-    addToast({
-      title: t("common.copied"),
-      color: "success",
-    });
+    toast.success(t("common.copied"));
   };
 
   const handleStart = async () => {
@@ -105,7 +139,10 @@ export function LanShareModal({
 
     setLoadingAction("start");
     try {
-      await api.share.startShare(selectedVisibility);
+      const result = await api.share.startShare(selectedVisibility);
+      if (!result.ok) {
+        toast.error(getShareErrorText(t, result.error));
+      }
     } finally {
       setLoadingAction(null);
     }
@@ -116,20 +153,28 @@ export function LanShareModal({
 
     setLoadingAction("stop");
     try {
-      await api.share.stopShare();
+      const result = await api.share.stopShare();
+      if (!result.ok) {
+        toast.error(getShareErrorText(t, result.error));
+      }
     } finally {
       setLoadingAction(null);
     }
   };
 
   const handleVisibilityChange = async (visibility: ShareVisibility) => {
+    const previousVisibility = selectedVisibility;
     setSelectedVisibility(visibility);
 
     if (!shareState.sessionId) return;
 
     setLoadingAction("visibility");
     try {
-      await api.share.updateShareVisibility(visibility);
+      const result = await api.share.updateShareVisibility(visibility);
+      if (!result.ok) {
+        setSelectedVisibility(previousVisibility);
+        toast.error(getShareErrorText(t, result.error));
+      }
     } finally {
       setLoadingAction(null);
     }
@@ -146,9 +191,9 @@ export function LanShareModal({
           ) : (
             <Wifi size={18} />
           ),
-        isLoading: true,
-        isDisabled: true,
-        onPress: handleStart,
+        loading: true,
+        disabled: true,
+        onClick: handleStart,
       };
     }
 
@@ -157,19 +202,19 @@ export function LanShareModal({
         label: t("share.stop"),
         color: "danger" as const,
         icon: <Square size={18} />,
-        isLoading: loadingAction === "stop",
-        isDisabled: loadingAction !== null,
-        onPress: handleStop,
+        loading: loadingAction === "stop",
+        disabled: loadingAction !== null,
+        onClick: handleStop,
       };
     }
 
     return {
       label: t("share.start"),
-      color: "secondary" as const,
+      color: "default" as const,
       icon: <Wifi size={18} />,
-      isLoading: loadingAction === "start",
-      isDisabled: isPlainShareBlocked || !canStart || loadingAction !== null,
-      onPress: handleStart,
+      loading: loadingAction === "start",
+      disabled: isPlainShareBlocked || !canStart || loadingAction !== null,
+      onClick: handleStart,
     };
   }, [
     canStart,
@@ -188,161 +233,216 @@ export function LanShareModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="xl">
-      <ModalContent>
-        <ModalHeader>{t("share.title")}</ModalHeader>
-        <ModalBody className="pb-4">
-          <div className="flex flex-col gap-4">
-            <section className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Chip color={statusColor} variant="flat">
-                  {getSharePhaseText(t, shareState.phase)}
-                </Chip>
-                {shareState.isAuthenticated && (
-                  <Chip color="success" variant="dot">
-                    {t("share.authenticated")}
-                  </Chip>
-                )}
-                {shareState.isDegraded && (
-                  <Chip color="warning" variant="flat">
-                    {t("share.degraded")}
-                  </Chip>
-                )}
-                {sharePeers.length > 0 && (
-                  <Chip color="secondary" variant="flat">
-                    {t("share.peers", { count: sharePeers.length })}
-                  </Chip>
-                )}
-                {shareState.phase === "online" && shareState.publicAddress && (
-                  <Chip variant="dot" color="success">
-                    {shareState.visibility === "public"
-                      ? t("share.publicOnline")
-                      : t("share.friendsOnline")}
-                  </Chip>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="border-b px-5 py-4 pr-12">
+          <DialogTitle>{t("share.title")}</DialogTitle>
+        </DialogHeader>
+
+        <div className="grid gap-4 p-5">
+          <Card className="gap-0 p-0 shadow-none">
+            <CardContent className="flex min-h-[5.75rem] min-w-0 items-start gap-3 p-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">
+                {shareState.phase === "online" ? (
+                  <CheckCircle2 className="size-5 text-emerald-500" />
+                ) : isBusyPhase ? (
+                  <Loader2 className="size-5 animate-spin" />
+                ) : (
+                  <Wifi className="size-5" />
                 )}
               </div>
 
-              <p className="text-sm text-default-500">{statusDescription}</p>
-            </section>
+              <div className="grid min-w-0 flex-1 gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5 overflow-hidden">
+                  <Badge
+                    variant={statusVariant(statusColor)}
+                    className="min-w-0 max-w-full gap-1.5"
+                  >
+                    <span
+                      className={`size-1.5 shrink-0 rounded-full ${statusDotClassName(
+                        statusColor,
+                      )}`}
+                    />
+                    <span className="min-w-0 truncate">
+                      {getSharePhaseText(t, shareState.phase)}
+                    </span>
+                  </Badge>
 
-            <Card>
-              <CardBody className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1">
-                  <p className="text-xs font-medium uppercase tracking-wide text-default-400">
-                    {t("share.world")}
-                  </p>
-                  {targetLabel ? (
-                    <p className="text-sm text-default-700">
-                      {targetLabel}
-                      {typeof targetPort === "number"
-                        ? `, 127.0.0.1:${targetPort}`
-                        : ""}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-default-500">
-                      {t("share.waitForLan")}
-                    </p>
+                  {shareState.isAuthenticated && (
+                    <Badge
+                      variant="secondary"
+                      className="min-w-0 max-w-full gap-1.5"
+                    >
+                      <CheckCircle2 className="size-3.5 shrink-0" />
+                      <span className="min-w-0 truncate">
+                        {t("share.authenticated")}
+                      </span>
+                    </Badge>
+                  )}
+
+                  {shareState.isDegraded && (
+                    <Badge
+                      variant="secondary"
+                      className="min-w-0 max-w-full gap-1.5"
+                    >
+                      <AlertCircle className="size-3.5 shrink-0" />
+                      <span className="min-w-0 truncate">
+                        {t("share.degraded")}
+                      </span>
+                    </Badge>
+                  )}
+
+                  {sharePeers.length > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="min-w-0 max-w-full gap-1.5"
+                    >
+                      <Users className="size-3.5 shrink-0" />
+                      <span className="min-w-0 truncate">
+                        {t("share.peers", { count: sharePeers.length })}
+                      </span>
+                    </Badge>
                   )}
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <p className="text-xs font-medium uppercase tracking-wide text-default-400">
-                    {t("share.address")}
-                  </p>
-                  <p className="break-all text-sm text-default-700">
-                    {shareState.publicAddress || t("share.addressPending")}
-                  </p>
-                </div>
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardBody className="flex flex-col gap-3">
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium text-default-700">
-                    {t("share.visibility")}
-                  </p>
-                  <p className="text-sm text-default-500">
-                    {visibilityDescription}
-                  </p>
-                </div>
-
-                <ButtonGroup className="w-full">
-                  <Button
-                    className="flex-1"
-                    color={
-                      selectedVisibility === "public" ? "primary" : "default"
-                    }
-                    variant="flat"
-                    isDisabled={
-                      isPlainShareBlocked ||
-                      loadingAction !== null ||
-                      isBusyPhase
-                    }
-                    startContent={<Globe size={18} />}
-                    onPress={() => void handleVisibilityChange("public")}
-                  >
-                    {t("share.public")}
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    color={
-                      selectedVisibility === "friends" ? "primary" : "default"
-                    }
-                    variant="flat"
-                    isDisabled={
-                      isPlainShareBlocked ||
-                      loadingAction !== null ||
-                      isBusyPhase
-                    }
-                    startContent={<Shield size={18} />}
-                    onPress={() => void handleVisibilityChange("friends")}
-                  >
-                    {t("share.friends")}
-                  </Button>
-                </ButtonGroup>
-              </CardBody>
-            </Card>
-
-            {errorText && shareState.phase !== "idle" && (
-              <Alert
-                color={shareState.phase === "conflict" ? "warning" : "danger"}
-                title={errorText}
-              />
-            )}
-
-            {isPlainShareBlocked && (
-              <Alert color="warning" title={t("share.plainAccountDisabled")} />
-            )}
-
-            <section className="flex gap-2">
-              {shareState.publicAddress && (
-                <Button
-                  variant="flat"
-                  startContent={<Copy size={18} />}
-                  isDisabled={loadingAction !== null}
-                  onPress={() => void handleCopy()}
-                >
-                  {t("share.copyAddress")}
-                </Button>
-              )}
-
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  variant="flat"
-                  color={primaryAction.color}
-                  isLoading={primaryAction.isLoading}
-                  isDisabled={primaryAction.isDisabled}
-                  startContent={primaryAction.icon}
-                  onPress={() => void primaryAction.onPress()}
-                >
-                  {primaryAction.label}
-                </Button>
+                <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+                  {statusDescription}
+                </p>
               </div>
-            </section>
-          </div>
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+            </CardContent>
+          </Card>
+
+          <Card className="gap-0 py-0 shadow-none">
+            <CardContent className="grid min-h-[7.25rem] gap-4 p-4">
+              <div className="grid gap-1.5">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Wifi className="size-4 text-muted-foreground" />
+                  {t("share.world")}
+                </div>
+                <p className="min-w-0 truncate text-sm text-muted-foreground">
+                  {targetText}
+                </p>
+              </div>
+
+              <div className="grid gap-1.5">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Globe className="size-4 text-muted-foreground" />
+                  {t("share.address")}
+                </div>
+                {shareState.publicAddress ? (
+                  <p className="min-w-0 truncate text-sm text-muted-foreground">
+                    {shareState.publicAddress}
+                  </p>
+                ) : (
+                  <p className="min-w-0 truncate text-sm text-muted-foreground">
+                    {t("share.addressPending")}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="gap-0 py-0 shadow-none">
+            <CardHeader className="gap-1.5 px-4 pt-4 pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <LockKeyhole className="size-4 text-muted-foreground" />
+                {t("share.visibility")}
+              </CardTitle>
+              <CardDescription className="line-clamp-2 min-h-10">
+                {visibilityDescription}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <ButtonGroup className="w-full [&>*]:flex-1">
+                <Button
+                  className="flex-1"
+                  variant={
+                    selectedVisibility === "public" ? "default" : "secondary"
+                  }
+                  disabled={
+                    isPlainShareBlocked || loadingAction !== null || isBusyPhase
+                  }
+                  onClick={() => void handleVisibilityChange("public")}
+                >
+                  <Globe size={18} />
+                  {t("share.public")}
+                </Button>
+                <Button
+                  className="flex-1"
+                  variant={
+                    selectedVisibility === "friends" ? "default" : "secondary"
+                  }
+                  disabled={
+                    isPlainShareBlocked || loadingAction !== null || isBusyPhase
+                  }
+                  onClick={() => void handleVisibilityChange("friends")}
+                >
+                  <Shield size={18} />
+                  {t("share.friends")}
+                </Button>
+              </ButtonGroup>
+            </CardContent>
+          </Card>
+
+          {errorText && shareState.phase !== "idle" && (
+            <Alert
+              variant={shareState.phase === "conflict" ? "default" : "destructive"}
+            >
+              <AlertCircle />
+              <AlertTitle>{errorText}</AlertTitle>
+            </Alert>
+          )}
+
+          {isPlainShareBlocked && (
+            <Alert>
+              <AlertCircle />
+              <AlertTitle>{t("share.plainAccountDisabled")}</AlertTitle>
+              <AlertDescription>{t("share.waitForLan")}</AlertDescription>
+            </Alert>
+          )}
+        </div>
+
+        <DialogFooter className="mx-0 mb-0 min-w-0 rounded-none bg-muted/25 px-5 py-4 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          {shareState.publicAddress ? (
+            <Button
+              className="min-w-0 justify-start"
+              variant="secondary"
+              disabled={loadingAction !== null}
+              onClick={() => void handleCopy()}
+            >
+              <Copy className="shrink-0" size={18} />
+              <span className="min-w-0 truncate">{t("share.copyAddress")}</span>
+            </Button>
+          ) : (
+            <span className="hidden sm:block" />
+          )}
+
+          <Button
+            className="min-w-0 max-w-full"
+            variant={
+              primaryAction.color === "danger"
+                ? "destructive"
+                : primaryAction.color === "secondary"
+                  ? "secondary"
+                  : "default"
+            }
+            disabled={primaryAction.disabled}
+            onClick={() => void primaryAction.onClick()}
+          >
+            {primaryAction.loading ? (
+              <Loader2 className="shrink-0 animate-spin" size={18} />
+            ) : (
+              primaryAction.icon
+            )}
+            <span className="min-w-0 truncate">{primaryAction.label}</span>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,68 +1,34 @@
 import {
-  Alert,
-  Button,
-  Card,
-  CardBody,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-} from "@heroui/react";
-import { ILocalProject, ProjectType, Provider } from "@/types/ModManager";
-import { ExternalLink, Eye } from "lucide-react";
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import {
+  CheckCircle2,
+  ExternalLink,
+  Eye,
+  ShieldAlert,
+  TriangleAlert,
+} from "lucide-react";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  applyBlockedModFilePaths,
+  checkBlockedMods,
+  type IBlockedMod,
+} from "@renderer/utilities/blockedMods";
+
+export { applyBlockedModFilePaths, checkBlockedMods };
+export type { IBlockedMod };
 
 const api = window.api;
-
-export interface IBlockedMod {
-  projectId: string;
-  fileName: string;
-  hash: string;
-  url: string;
-  filePath?: string;
-}
-
-export async function checkBlockedMods(
-  mods: ILocalProject[],
-  versionPath?: string,
-) {
-  if (mods.length === 0) return [];
-
-  const blockedMods: IBlockedMod[] = [];
-
-  for (const mod of mods) {
-    if (mod.provider !== Provider.CURSEFORGE) continue;
-    const file = mod.version?.files[0];
-    if (!file?.url) continue;
-
-    if (!file.url.startsWith("blocked::")) continue;
-
-    if (versionPath) {
-      let folderName = await api.modManager.ptToFolder(mod.projectType);
-      if (mod.projectType === ProjectType.WORLD) {
-        folderName = await api.path.join("storage", "worlds");
-      }
-      const filePath = await api.path.join(
-        versionPath,
-        folderName,
-        file.filename,
-      );
-      const isExists = await api.fs.pathExists(filePath);
-      if (isExists) continue;
-    }
-
-    blockedMods.push({
-      fileName: file.filename,
-      hash: file.sha1,
-      url: file.url.replace("blocked::", ""),
-      projectId: mod.id,
-    });
-  }
-
-  return blockedMods;
-}
 
 export function BlockedMods({
   onClose,
@@ -72,7 +38,6 @@ export function BlockedMods({
   mods: IBlockedMod[];
 }) {
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>(mods);
-  const [downloadsPath, setDownloadsPath] = useState<string>("");
   const [viewMode, setViewMode] = useState<"all" | "notInstalled">(
     "notInstalled",
   );
@@ -86,36 +51,39 @@ export function BlockedMods({
     async (downloadsPath: string) => {
       try {
         const files = await api.fs.readdir(downloadsPath);
-        const blockedNames = new Set(blockedMods.map((mod) => mod.fileName));
-        const updates: IBlockedMod[] = [];
+        const availableFiles = new Set(files);
 
-        for (const file of files) {
-          if (!blockedNames.has(file)) continue;
+        const nextMods = await Promise.all(
+          blockedMods.map(async (mod) => {
+            if (availableFiles.has(mod.fileName)) {
+              const filePath = await api.path.join(downloadsPath, mod.fileName);
+              const hash = await api.fs.sha1(filePath);
 
-          const filePath = await api.path.join(downloadsPath, file);
-          const blockedMod = blockedMods.find((mod) => mod.fileName === file);
-          if (!blockedMod) continue;
+              if (hash === mod.hash) {
+                return mod.filePath === filePath ? mod : { ...mod, filePath };
+              }
+            }
 
-          const hash = await api.fs.sha1(filePath);
+            if (mod.filePath) {
+              const isExists = await api.fs.pathExists(mod.filePath);
+              if (!isExists) return { ...mod, filePath: undefined };
+            }
 
-          if (hash === blockedMod.hash && blockedMod.filePath !== filePath) {
-            blockedMod.filePath = filePath;
-            updates.push(blockedMod);
-          }
-        }
+            return mod;
+          }),
+        );
 
-        for (const mod of blockedMods.filter((mod) => mod.filePath)) {
-          if (!mod.filePath) continue;
+        const hasChanges = nextMods.some((mod, index) => {
+          const prev = blockedMods[index];
+          return (
+            mod.filePath !== prev.filePath ||
+            mod.fileName !== prev.fileName ||
+            mod.hash !== prev.hash
+          );
+        });
 
-          const isExists = await api.fs.pathExists(mod.filePath);
-          if (!isExists && mod.filePath) {
-            mod.filePath = undefined;
-            updates.push(mod);
-          }
-        }
-
-        if (updates.length > 0 && isMountedRef.current) {
-          setBlockedMods((prev) => [...prev]);
+        if (hasChanges && isMountedRef.current) {
+          setBlockedMods(nextMods);
         }
       } catch (error) {
         console.error("Error checking downloaded files:", error);
@@ -129,8 +97,6 @@ export function BlockedMods({
 
     api.other.getPath("downloads").then((path: string) => {
       if (!isMountedRef.current) return;
-
-      setDownloadsPath(path);
 
       intervalRef.current = setInterval(() => {
         checkDownloadedFiles(path);
@@ -164,6 +130,8 @@ export function BlockedMods({
     return blockedMods.filter((mod) => !!mod.filePath).length;
   }, [blockedMods]);
 
+  const missingCount = blockedMods.length - installedCount;
+
   const handleToggleView = useCallback(() => {
     setViewMode((prev) => (prev === "all" ? "notInstalled" : "all"));
   }, []);
@@ -185,84 +153,133 @@ export function BlockedMods({
   }, [onClose]);
 
   return (
-    <Modal
-      isOpen={true}
-      size="xl"
-      isDismissable={false}
-      isKeyboardDismissDisabled={true}
-      onClose={handleClose}
-    >
-      <ModalContent>
-        <ModalHeader>{t("blockedMods.title")}</ModalHeader>
-        <ModalBody>
-          <div className="flex flex-col space-y-2">
-            <Alert color="warning" title={t("blockedMods.description")} />
-            <div className="flex flex-col space-y-1">
-              <div className="flex items-center space-x-2">
-                <p>
-                  {t("blockedMods.files")} ({blockedMods.length})
+    <Dialog open>
+      <DialogContent
+        className="overflow-hidden p-0 sm:max-w-lg"
+        showCloseButton={false}
+        onClick={(event) => event.stopPropagation()}
+        onEscapeKeyDown={(event) => event.preventDefault()}
+        onInteractOutside={(event) => event.preventDefault()}
+      >
+        <DialogHeader className="px-5 pt-5">
+          <DialogTitle>{t("blockedMods.title")}</DialogTitle>
+        </DialogHeader>
+
+        <div className="grid gap-4 px-5 pb-5">
+          <Alert className="border-border/70 bg-muted/20 text-muted-foreground">
+            <ShieldAlert />
+            <AlertDescription>{t("blockedMods.description")}</AlertDescription>
+          </Alert>
+
+          <section className="grid gap-3 rounded-xl border bg-card p-3 text-card-foreground">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <p className="text-sm font-medium leading-none">
+                  {t("blockedMods.files")}
                 </p>
+                <Badge variant="outline" className="tabular-nums">
+                  {installedCount}/{blockedMods.length}
+                </Badge>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  variant="flat"
+                  variant="outline"
                   size="sm"
-                  isIconOnly
-                  isDisabled={installedCount === 0}
-                  color={viewMode === "notInstalled" ? "warning" : undefined}
-                  onPress={handleToggleView}
+                  disabled={installedCount === 0}
+                  onClick={handleToggleView}
                 >
-                  <Eye size={22} />
+                  <Eye />
+                  {viewMode === "all"
+                    ? t("blockedMods.showMissing")
+                    : t("blockedMods.showAll")}
                 </Button>
               </div>
-              <div className="max-h-[215px] overflow-auto pr-1">
+            </div>
+
+            <ScrollArea className="max-h-[18rem] rounded-xl border bg-background/40">
+              <div className="grid gap-2 p-2">
                 {filteredMods.map((mod) => (
-                  <Card key={`${mod.projectId}-${mod.fileName}`} className="mb-2">
-                    <CardBody>
-                      <div className="flex justify-between space-x-2 items-center">
-                        <div className="flex flex-col">
+                  <Card
+                    key={`${mod.projectId}-${mod.fileName}`}
+                    className="gap-0 py-0 shadow-none"
+                  >
+                    <CardContent className="flex items-center gap-3 p-3">
+                      <div className="grid min-w-0 flex-1 gap-1">
+                        <div className="flex min-w-0 items-center gap-2">
+                          {mod.filePath ? (
+                            <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <TriangleAlert className="size-4 shrink-0 text-destructive" />
+                          )}
                           <p
-                            className={`text-sm font-semibold ${mod.filePath ? "text-success" : "text-warning"}`}
+                            className="min-w-0 truncate text-sm font-medium"
+                            title={mod.fileName}
                           >
                             {mod.fileName}
                           </p>
-                          <p className="text-xs text-gray-400">{mod.hash}</p>
+                          {mod.filePath ? (
+                            <span
+                              className="size-2.5 shrink-0 rounded-full bg-emerald-500"
+                              aria-label={t("blockedMods.ready")}
+                              title={t("blockedMods.ready")}
+                            />
+                          ) : (
+                            <span
+                              className="size-2.5 shrink-0 rounded-full bg-destructive"
+                              aria-label={t("blockedMods.missing")}
+                              title={t("blockedMods.missing")}
+                            />
+                          )}
                         </div>
-                        {!mod.filePath && (
-                          <Button
-                            size="sm"
-                            variant="flat"
-                            isIconOnly
-                            className="text-xs"
-                            onPress={async () => {
-                              try {
-                                await api.shell.openExternal(mod.url);
-                              } catch (error) {
-                                console.error("Error opening URL:", error);
-                              }
-                            }}
-                          >
-                            <ExternalLink size={20} />
-                          </Button>
-                        )}
                       </div>
-                    </CardBody>
+
+                      {!mod.filePath && (
+                        <Button
+                          size="icon-sm"
+                          variant="secondary"
+                          className="shrink-0"
+                          aria-label={t("game.download")}
+                          title={t("game.download")}
+                          onClick={async () => {
+                            try {
+                              await api.shell.openExternal(mod.url);
+                            } catch (error) {
+                              console.error("Error opening URL:", error);
+                            }
+                          }}
+                        >
+                          <ExternalLink />
+                        </Button>
+                      )}
+                    </CardContent>
                   </Card>
                 ))}
+
+                {filteredMods.length === 0 && (
+                  <div className="flex h-24 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+                    {t("blockedMods.empty")}
+                  </div>
+                )}
               </div>
-            </div>
-            <p className="text-primary-500 text-sm font-semibold">
-              {t("blockedMods.watchedFolder")}: {downloadsPath}
-            </p>
-          </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="flat" onPress={handleOpenAll}>
+            </ScrollArea>
+          </section>
+        </div>
+
+        <DialogFooter className="m-0 border-t bg-muted/25 px-5 py-4">
+          <Button
+            variant="outline"
+            onClick={handleOpenAll}
+            disabled={missingCount === 0}
+          >
+            <ExternalLink />
             {t("blockedMods.openAll")}
           </Button>
-          <Button variant="flat" color="danger" onPress={handleClose}>
+          <Button variant="destructive" onClick={handleClose}>
             {t("common.close")}
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -4,11 +4,12 @@ import { IServerConf } from "@/types/Server";
 import { atom } from "jotai";
 import { Socket } from "socket.io-client";
 import { IAuth, ILocalAccount } from "@/types/Account";
-import { TSettings } from "@/types/Settings";
+import { DEFAULT_SETTINGS, TSettings } from "@/types/Settings";
 import { IServer } from "@/types/ServersList";
 import { IConsoles } from "@/types/Console";
 import { Version } from "@renderer/classes/Version";
 import { SharePeerInfo, ShareState } from "@/types/Share";
+import { IUpdateStatus } from "@/types/IFriend";
 
 export const pathsAtom = atom<{
   launcher: string;
@@ -24,16 +25,13 @@ export const selectedVersionAtom = atom<Version>();
 export const accountAtom = atom<ILocalAccount>();
 export const authDataAtom = atom<IAuth | null>(null);
 
-export const settingsAtom = atom<TSettings>({
-  xmx: 2048,
-  lang: "en",
-  devMode: false,
-  downloadLimit: 6,
-});
+export const settingsAtom = atom<TSettings>(DEFAULT_SETTINGS);
 
 export const versionsAtom = atom<Version[]>([]);
 export const accountsAtom = atom<ILocalAccount[]>([]);
-export const networkAtom = atom(true);
+export const internetAtom = atom(true);
+export const backendOnlineAtom = atom(true);
+export const networkAtom = backendOnlineAtom;
 export const serverAtom = atom<IServerConf>();
 export const versionServersAtom = atom<IServer[]>([]);
 export const isRunningAtom = atom(false);
@@ -45,6 +43,12 @@ export const isDownloadedVersionAtom = atom<boolean>(false);
 export const isOwnerVersionAtom = atom<boolean>(false);
 export const consolesAtom = atom<IConsoles>({ consoles: [] });
 export const isFriendsConnectedAtom = atom<boolean>(false);
+export const ownPresenceAtom = atom<Required<IUpdateStatus>>({
+  versionName: "",
+  versionCode: "",
+  serverAddress: "",
+});
+export const pendingFriendChatAtom = atom<string | null>(null);
 
 export const shareStateAtom = atom<ShareState>({
   phase: "idle",

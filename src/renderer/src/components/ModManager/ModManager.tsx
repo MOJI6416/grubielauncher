@@ -19,6 +19,9 @@ import SVG from "react-inlinesvg";
 import { useTranslation } from "react-i18next";
 import {
   CircleAlert,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Download,
   Earth,
   FileBox,
@@ -32,6 +35,8 @@ import {
   Info,
   Languages,
   ListRestart,
+  Loader2,
+  X,
 } from "lucide-react";
 import { useAtom } from "jotai";
 import {
@@ -43,29 +48,59 @@ import {
   serverAtom,
   settingsAtom,
 } from "@renderer/stores/atoms";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  addToast,
   Alert,
-  Button,
-  Chip,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalHeader,
-  Select,
-  SelectItem,
-  SelectSection,
-  Spinner,
-  Switch,
-  Tooltip,
-  Image,
-  Card,
-  CardBody,
-  ScrollShadow,
+  AlertTitle,
+} from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
   Pagination,
-  Progress,
-} from "@heroui/react";
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+} from "@/components/ui/pagination";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { BlockedMods, IBlockedMod } from "../Modals/BlockedMods";
 import { ModBody } from "./ModBody";
 import GalleryCarousel from "./Gallery";
@@ -75,6 +110,7 @@ import { ModToggleButton } from "./ModToggleButton";
 import { getProjectTypes } from "@renderer/utilities/mod";
 import { ALPModal } from "./AddLocalProjectsModal";
 import { UPModal } from "./UpdateProjectsModal";
+import { toast } from "sonner";
 
 const api = window.api;
 
@@ -92,6 +128,107 @@ enum LoadingType {
 }
 
 const PAGE_LIMIT = 20;
+
+function LoadingIcon({ className = "" }: { className?: string }) {
+  return <Loader2 className={`animate-spin ${className}`} size={18} />;
+}
+
+function getPageItems(
+  current: number,
+  total: number,
+): (number | "ellipsis-left" | "ellipsis-right")[] {
+  if (total <= 9) {
+    return Array.from({ length: total }, (_, index) => index + 1);
+  }
+
+  const pages = new Set<number>([1, total]);
+  for (let page = current - 2; page <= current + 2; page++) {
+    if (page > 1 && page < total) pages.add(page);
+  }
+
+  const sorted = [...pages].sort((a, b) => a - b);
+  const result: (number | "ellipsis-left" | "ellipsis-right")[] = [];
+
+  sorted.forEach((page, index) => {
+    const previous = sorted[index - 1];
+    if (previous && page - previous > 1) {
+      result.push(previous === 1 ? "ellipsis-left" : "ellipsis-right");
+    }
+    result.push(page);
+  });
+
+  return result;
+}
+
+function providerBadgeVariant(provider: Provider) {
+  if (provider == Provider.OTHER) return "outline" as const;
+  return "secondary" as const;
+}
+
+function dependencyBadgeVariant(type: DependencyType) {
+  return type == DependencyType.INCOMPATIBLE ? "destructive" : "secondary";
+}
+
+function getProjectDetailBody(project: IProject) {
+  return (project.body || project.description || "").trim();
+}
+
+function getProjectGallery(project: IProject) {
+  return Array.isArray(project.gallery)
+    ? project.gallery.filter((image) => !!image?.url)
+    : [];
+}
+
+function hasProjectDetails(project: IProject) {
+  return (
+    getProjectDetailBody(project).length > 0 ||
+    getProjectGallery(project).length > 0
+  );
+}
+
+function shouldShowProjectDetailsPane(project: IProject | null) {
+  if (!project) return false;
+  return project.provider != Provider.LOCAL || hasProjectDetails(project);
+}
+
+function ProjectDetailsPane({
+  project,
+  notFoundTitle,
+}: {
+  project: IProject;
+  notFoundTitle: string;
+}) {
+  const detailBody = getProjectDetailBody(project);
+  const gallery = getProjectGallery(project);
+
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card/80">
+      {gallery.length > 0 && (
+        <div className="shrink-0 border-b border-border p-3">
+          <GalleryCarousel gallery={gallery} />
+        </div>
+      )}
+
+      <ScrollArea className="min-h-0 min-w-0 flex-1">
+        <div className="min-w-0 p-4">
+          {detailBody ? (
+            <ModBody
+              key={`${project.provider}-${project.id}-${detailBody.length}`}
+              body={detailBody}
+              baseUrl={project.url}
+            />
+          ) : (
+            <Empty className="min-h-40 border">
+              <EmptyHeader>
+                <EmptyTitle>{notFoundTitle}</EmptyTitle>
+              </EmptyHeader>
+            </Empty>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
 
 async function asyncPool<T, R>(
   poolLimit: number,
@@ -185,6 +322,7 @@ export function ModManager({
     useState<number>(0);
   const [updateMods, setUpdateMods] = useState<IUpdateProject[]>([]);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isLocalDropActive, setIsLocalDropActive] = useState(false);
 
   const { t } = useTranslation();
 
@@ -566,7 +704,7 @@ export function ModManager({
       }
 
       if (localProjects.length == 0) {
-        addToast({ title: t("modManager.invalidMod"), color: "warning" });
+        toast.warning(t("modManager.invalidMod"));
       } else {
         setAddingLocalProjects(localProjects);
       }
@@ -579,462 +717,512 @@ export function ModManager({
     [projectType, mods, t],
   );
 
+  const pickLocalMods = async () => {
+    clearDebounce();
+    const filePaths = await api.other.openFileDialog(
+      false,
+      [{ name: "Mods", extensions: ["jar", "zip"] }],
+      true,
+    );
+    if (!filePaths || filePaths.length == 0) return;
+    await readLocalMods(filePaths);
+  };
+
+  const dropLocalMods = async (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsLocalDropActive(false);
+
+    if (isLoading && loadingType == LoadingType.CHECK_LOCAL_MOD) return;
+
+    const paths = [...event.dataTransfer.files]
+      .map((file) => api.other.getPathForFile(file))
+      .filter((path) => /\.(jar|zip)$/i.test(path));
+
+    if (paths.length == 0) {
+      toast.warning(t("modManager.invalidMod"));
+      return;
+    }
+
+    await readLocalMods(paths);
+  };
+
+  const runSearch = async (queryValue: string, nextOffset = 0) => {
+    clearDebounce();
+    setOffset(nextOffset);
+
+    await search({
+      version,
+      loader,
+      query: queryValue,
+      provider,
+      projectType,
+      sort,
+      filter,
+      isLocal,
+      offset: nextOffset,
+    });
+  };
+
+  const isSearchLoading = isLoading && loadingType == LoadingType.SEARCH;
+  const isSearchInputDisabled = isLoading && loadingType != LoadingType.SEARCH;
+
   return (
-    <>
-      <Modal
-        size="full"
-        isOpen={true}
-        onClose={() => {
-          if (isLoading) return;
-          onClose();
+    <TooltipProvider delayDuration={500}>
+      <Dialog
+        open={true}
+        onOpenChange={(open) => {
+          if (!open && !isLoading) onClose();
         }}
       >
-        <ModalContent className="h-full w-full">
-          <ModalHeader>{t("modManager.title")}</ModalHeader>
+        <DialogContent
+          className="grid h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-0 sm:max-w-none"
+          onPointerDownOutside={(event) => {
+            if (isLoading) event.preventDefault();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (isLoading) event.preventDefault();
+          }}
+        >
+          <DialogHeader className="border-b py-4 pr-12 pl-5">
+            <DialogTitle>{t("modManager.title")}</DialogTitle>
+          </DialogHeader>
 
-          <ModalBody className="flex flex-1 min-h-0 w-full">
+          <div className="flex min-h-0 w-full px-5 pb-5">
             <>
               <div className="flex flex-col space-y-2 h-full w-full">
-                <div className="flex items-center gap-2 justify-between">
+                <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border bg-card/70 p-2">
                   <div className="flex items-center gap-2">
                     {!isLocal && (
-                      <Tooltip
-                        delay={1000}
-                        isDisabled={
-                          provider != Provider.CURSEFORGE &&
-                          provider != Provider.MODRINTH
-                        }
-                        content={
-                          provider == Provider.CURSEFORGE
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            disabled={isLoading}
+                            onClick={async () => {
+                              clearDebounce();
+                              const newProvider =
+                                provider == Provider.CURSEFORGE
+                                  ? Provider.MODRINTH
+                                  : provider == Provider.MODRINTH
+                                    ? !isModpacks
+                                      ? Provider.LOCAL
+                                      : Provider.CURSEFORGE
+                                    : Provider.CURSEFORGE;
+
+                              setProvider(newProvider);
+                              setLocal(false);
+                              setSearchData(undefined);
+                              setOffset(0);
+                              setFilter([]);
+
+                              let pts: ProjectType[] = [];
+                              if (!isModpacks) {
+                                pts = getProjectTypes(
+                                  loader || "vanilla",
+                                  server,
+                                  newProvider,
+                                );
+                              } else {
+                                pts = [...projectTypes];
+                              }
+
+                              const nextProjectType = pts.includes(projectType)
+                                ? projectType
+                                : pts[0];
+                              setProjectTypes(pts);
+                              setProjectType(nextProjectType);
+
+                              const sorts =
+                                await api.modManager.getSort(newProvider);
+                              setSortValues(sorts);
+                              const nextSort = sorts?.[0] ?? "";
+                              setSort(nextSort);
+
+                              await getFilters(newProvider, nextProjectType);
+
+                              await search({
+                                version,
+                                loader,
+                                query: searchQuery,
+                                provider: newProvider,
+                                projectType: nextProjectType,
+                                sort: nextSort,
+                                filter: [],
+                                isLocal: false,
+                                offset: 0,
+                              });
+                            }}
+                          >
+                            {provider == Provider.CURSEFORGE ? (
+                              <SiCurseforge size={20} />
+                            ) : provider == Provider.MODRINTH ? (
+                              <SiModrinth size={20} />
+                            ) : (
+                              <FileBox size={20} />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {provider == Provider.CURSEFORGE
                             ? "CurseForge"
-                            : "Modrinth"
-                        }
-                        color={
-                          provider == Provider.CURSEFORGE
-                            ? "warning"
                             : provider == Provider.MODRINTH
-                              ? "success"
-                              : "default"
-                        }
-                      >
-                        <Button
-                          variant="flat"
-                          isIconOnly
-                          color={
-                            provider == Provider.CURSEFORGE
-                              ? "warning"
-                              : provider == Provider.MODRINTH
-                                ? "success"
-                                : "default"
-                          }
-                          isDisabled={isLoading}
-                          onPress={async () => {
+                              ? "Modrinth"
+                              : t("modManager.local")}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+
+                    {!isModpacks && (
+                      <div className="w-40 min-w-40">
+                        <Select
+                          name="projectType"
+                          disabled={isLoading}
+                          value={projectType}
+                          onValueChange={async (value: ProjectType) => {
                             clearDebounce();
-                            const newProvider =
-                              provider == Provider.CURSEFORGE
-                                ? Provider.MODRINTH
-                                : provider == Provider.MODRINTH
-                                  ? !isModpacks
-                                    ? Provider.LOCAL
-                                    : Provider.CURSEFORGE
-                                  : Provider.CURSEFORGE;
+                            if (!value) return;
 
-                            setProvider(newProvider);
-                            setSearchData(undefined);
+                            setProjectType(value);
                             setOffset(0);
-                            setFilter([]);
 
-                            let pts: ProjectType[] = [];
-                            if (!isModpacks) {
-                              pts = getProjectTypes(
-                                loader || "vanilla",
-                                server,
-                                newProvider,
-                              );
-                            } else {
-                              pts = [...projectTypes];
-                            }
-
-                            const nextProjectType = pts.includes(projectType)
-                              ? projectType
-                              : pts[0];
-                            setProjectTypes(pts);
-                            setProjectType(nextProjectType);
-
-                            const sorts =
-                              await api.modManager.getSort(newProvider);
-                            setSortValues(sorts);
-                            const nextSort = sorts?.[0] ?? "";
-                            setSort(nextSort);
-
-                            await getFilters(newProvider, nextProjectType);
+                            if (!isLocal) await getFilters(provider, value);
 
                             await search({
                               version,
                               loader,
                               query: searchQuery,
-                              provider: newProvider,
-                              projectType: nextProjectType,
-                              sort: nextSort,
-                              filter: [],
+                              provider,
+                              projectType: value,
+                              sort,
+                              filter,
                               isLocal,
                               offset: 0,
                             });
                           }}
                         >
-                          {provider == Provider.CURSEFORGE ? (
-                            <SiCurseforge size={22} />
-                          ) : provider == Provider.MODRINTH ? (
-                            <SiModrinth size={22} />
-                          ) : (
-                            <FileBox size={22} />
-                          )}
-                        </Button>
-                      </Tooltip>
-                    )}
-
-                    {!isModpacks && (
-                      <Select
-                        size="sm"
-                        label={t("modManager.type")}
-                        isDisabled={isLoading}
-                        selectedKeys={[projectType]}
-                        className="w-40 min-w-40"
-                        onChange={async (event) => {
-                          clearDebounce();
-                          const value = event.target.value as ProjectType;
-                          if (!value) return;
-
-                          setProjectType(value);
-                          setOffset(0);
-
-                          if (!isLocal) await getFilters(provider, value);
-
-                          await search({
-                            version,
-                            loader,
-                            query: searchQuery,
-                            provider,
-                            projectType: value,
-                            sort,
-                            filter,
-                            isLocal,
-                            offset: 0,
-                          });
-                        }}
-                      >
-                        {projectTypes.map((type) => (
-                          <SelectItem key={type}>
-                            {t("modManager.projectTypes." + type)}
-                          </SelectItem>
-                        ))}
-                      </Select>
+                          <SelectTrigger
+                            size="sm"
+                            className="w-full"
+                            aria-label={t("modManager.type")}
+                          >
+                            <SelectValue placeholder={t("modManager.type")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {projectTypes.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {t("modManager.projectTypes." + type)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     )}
                   </div>
 
                   {isModpacks && (
                     <>
-                      <Select
-                        label={t("versions.version")}
-                        size="sm"
-                        className="w-28 min-w-28"
-                        startContent={
-                          isLoading &&
-                          loadingType == LoadingType.GAME_VERSIONS ? (
-                            <Spinner size="sm" />
-                          ) : (
-                            ""
-                          )
-                        }
-                        isDisabled={isLoading}
-                        selectedKeys={[version?.id || ""]}
-                        onChange={async (event) => {
-                          clearDebounce();
-                          const ver = versions.find(
-                            (v) => v.id == event.target.value,
-                          );
-                          setVersion(ver);
-                          setOffset(0);
+                      <div className="w-28 min-w-28">
+                        <Select
+                          name="version"
+                          disabled={isLoading}
+                          value={version?.id || ""}
+                          onValueChange={async (value) => {
+                            clearDebounce();
+                            const ver = versions.find((v) => v.id == value);
+                            setVersion(ver);
+                            setOffset(0);
 
-                          await search({
-                            loader,
-                            version: ver,
-                            query: searchQuery,
-                            provider,
-                            projectType,
-                            sort,
-                            filter,
-                            isLocal,
-                            offset: 0,
-                          });
-                        }}
-                      >
-                        {versions.map((v) => (
-                          <SelectItem key={v.id}>{v.id}</SelectItem>
-                        ))}
-                      </Select>
-
-                      <Select
-                        label={t("versions.loader")}
-                        size="sm"
-                        className="w-36 min-w-36"
-                        isDisabled={isLoading}
-                        renderValue={(items) =>
-                          items.map((item) => (
-                            <LoaderLabel
-                              key={String(item.key)}
-                              loader={String(item.key)}
-                              className="max-w-full"
-                            />
-                          ))
-                        }
-                        selectedKeys={loader ? [loader] : []}
-                        onChange={async (event) => {
-                          clearDebounce();
-                          const l = event.target.value as Loader;
-                          setLoader(l);
-                          setOffset(0);
-
-                          await search({
-                            version,
-                            loader: l,
-                            query: searchQuery,
-                            provider,
-                            projectType,
-                            sort,
-                            filter,
-                            isLocal,
-                            offset: 0,
-                          });
-                        }}
-                      >
-                        <SelectItem key="forge" textValue="Forge">
-                          <LoaderLabel loader="forge" />
-                        </SelectItem>
-                        <SelectItem key="neoforge" textValue="NeoForge">
-                          <LoaderLabel loader="neoforge" />
-                        </SelectItem>
-                        <SelectItem key="fabric" textValue="Fabric">
-                          <LoaderLabel loader="fabric" />
-                        </SelectItem>
-                        <SelectItem key="quilt" textValue="Quilt">
-                          <LoaderLabel loader="quilt" />
-                        </SelectItem>
-                      </Select>
-                    </>
-                  )}
-
-                  {(provider != Provider.LOCAL || isLocal) && (
-                    <Input
-                      isDisabled={isLoading}
-                      baseRef={searchRef}
-                      startContent={<Search size={22} />}
-                      value={searchQuery}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setSearchQuery(value);
-
-                        clearDebounce();
-                        searchDebounceRef.current = setTimeout(async () => {
-                          setOffset(0);
-                          await search({
-                            version,
-                            loader,
-                            query: value,
-                            provider,
-                            projectType,
-                            sort,
-                            filter,
-                            isLocal,
-                            offset: 0,
-                          });
-                        }, 800);
-                      }}
-                    />
-                  )}
-
-                  {isLocal && (
-                    <>
-                      {isLocal && !isDownloadedVersion && isOwnerVersion && (
-                        <div>
-                          <Button
-                            variant="flat"
-                            isLoading={
-                              isLoading &&
-                              loadingType == LoadingType.CHECK_AVAILABLE_UPDATE
-                            }
-                            onPress={async () => {
-                              try {
-                                clearDebounce();
-                                setLoading(true);
-                                setLoadingType(
-                                  LoadingType.CHECK_AVAILABLE_UPDATE,
-                                );
-
-                                const canBeUpdated = await getAvailableUpdate();
-                                setUpdateMods(canBeUpdated);
-                                setIsUpdateModalOpen(true);
-
-                                if (canBeUpdated.length > 0) {
-                                  addToast({
-                                    color: "success",
-                                    title: t("modManager.availableUpdates", {
-                                      count: canBeUpdated.length,
-                                    }),
-                                  });
-                                } else {
-                                  addToast({
-                                    color: "warning",
-                                    title: t("modManager.noAvailableUpdates"),
-                                  });
-                                }
-                              } finally {
-                                setLoading(false);
-                                setLoadingType(null);
-                              }
-                            }}
+                            await search({
+                              loader,
+                              version: ver,
+                              query: searchQuery,
+                              provider,
+                              projectType,
+                              sort,
+                              filter,
+                              isLocal,
+                              offset: 0,
+                            });
+                          }}
+                        >
+                          <SelectTrigger
+                            size="sm"
+                            className="w-full"
+                            aria-label={t("versions.version")}
                           >
-                            {t("modManager.checkUpdates")}
-                          </Button>
-                        </div>
-                      )}
+                            {isLoading &&
+                              loadingType == LoadingType.GAME_VERSIONS && (
+                                <LoadingIcon className="mr-1" />
+                              )}
+                            <SelectValue placeholder={t("versions.version")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {versions.map((v) => (
+                              <SelectItem key={v.id} value={v.id}>
+                                {v.id}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                      <div className="flex items-center gap-1">
-                        <PanelTopOpen size={22} />
-                        <p>
-                          {
-                            mods.filter((m) => m.projectType == projectType)
-                              .length
-                          }
-                        </p>
+                      <div className="w-36 min-w-36">
+                        <Select
+                          name="loader"
+                          disabled={isLoading}
+                          value={loader || ""}
+                          onValueChange={async (value: Loader) => {
+                            clearDebounce();
+                            const l = value as Loader;
+                            setLoader(l);
+                            setOffset(0);
+
+                            await search({
+                              version,
+                              loader: l,
+                              query: searchQuery,
+                              provider,
+                              projectType,
+                              sort,
+                              filter,
+                              isLocal,
+                              offset: 0,
+                            });
+                          }}
+                        >
+                          <SelectTrigger
+                            size="sm"
+                            className="w-full"
+                            aria-label={t("versions.loader")}
+                          >
+                            <SelectValue placeholder={t("versions.loader")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="forge">
+                              <LoaderLabel loader="forge" />
+                            </SelectItem>
+                            <SelectItem value="neoforge">
+                              <LoaderLabel loader="neoforge" />
+                            </SelectItem>
+                            <SelectItem value="fabric">
+                              <LoaderLabel loader="fabric" />
+                            </SelectItem>
+                            <SelectItem value="quilt">
+                              <LoaderLabel loader="quilt" />
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </>
                   )}
 
+                  {(provider != Provider.LOCAL || isLocal) && (
+                    <div ref={searchRef} className="relative min-w-48 flex-1">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        disabled={isSearchInputDisabled}
+                        className="pr-16 pl-9"
+                        placeholder={t("browser.search")}
+                        value={searchQuery}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setSearchQuery(value);
+
+                          clearDebounce();
+                          searchDebounceRef.current = setTimeout(async () => {
+                            await runSearch(value, 0);
+                          }, 500);
+                        }}
+                        onKeyDown={async (event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            await runSearch(searchQuery, 0);
+                          }
+
+                          if (event.key === "Escape" && searchQuery) {
+                            event.preventDefault();
+                            setSearchQuery("");
+                            await runSearch("", 0);
+                          }
+                        }}
+                      />
+                      <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+                        {isSearchLoading && (
+                          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                        )}
+
+                        {searchQuery && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="size-6 text-muted-foreground hover:text-foreground"
+                            disabled={isSearchInputDisabled}
+                            onClick={async () => {
+                              setSearchQuery("");
+                              await runSearch("", 0);
+                            }}
+                          >
+                            <X className="size-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {!isLocal && provider != Provider.LOCAL && (
                     <>
-                      <Select
-                        label={t("modManager.sort")}
-                        size="sm"
-                        className="min-w-48 w-48"
-                        isDisabled={isLoading}
-                        selectedKeys={[sort]}
-                        onChange={async (event) => {
-                          clearDebounce();
-                          const value = event.target.value;
-                          if (!value) return;
-                          setSort(value);
-                          setOffset(0);
+                      <div className="min-w-48 w-48">
+                        <Select
+                          name="sort"
+                          disabled={isLoading}
+                          value={sort}
+                          onValueChange={async (value) => {
+                            clearDebounce();
+                            if (!value) return;
+                            setSort(value);
+                            setOffset(0);
 
-                          await search({
-                            version,
-                            loader,
-                            query: searchQuery,
-                            provider,
-                            projectType,
-                            sort: value,
-                            filter,
-                            isLocal,
-                            offset: 0,
-                          });
-                        }}
-                      >
-                        {sortValues.map((s) => (
-                          <SelectItem key={s}>
-                            {t("modManager.sorts." + s)}
-                          </SelectItem>
-                        ))}
-                      </Select>
+                            await search({
+                              version,
+                              loader,
+                              query: searchQuery,
+                              provider,
+                              projectType,
+                              sort: value,
+                              filter,
+                              isLocal,
+                              offset: 0,
+                            });
+                          }}
+                        >
+                          <SelectTrigger
+                            size="sm"
+                            className="w-full"
+                            aria-label={t("modManager.sort")}
+                          >
+                            <SelectValue placeholder={t("modManager.sort")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sortValues.map((s) => (
+                              <SelectItem key={s} value={s}>
+                                {t("modManager.sorts." + s)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                      <Select
-                        label={t("modManager.filter")}
-                        size="sm"
-                        className="min-w-40 w-40"
-                        isDisabled={isLoading}
-                        selectionMode="multiple"
-                        startContent={
-                          isLoading && loadingType == LoadingType.FILTER ? (
-                            <Spinner size="sm" />
-                          ) : undefined
-                        }
-                        selectedKeys={filter}
-                        onChange={async (event) => {
-                          clearDebounce();
-                          const values = event.target.value
-                            .split(",")
-                            .filter(Boolean);
-                          setFilter(values);
-                          setOffset(0);
+                      <div className="min-w-44 w-44">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="h-8 w-full justify-between overflow-hidden px-3"
+                              disabled={isLoading}
+                            >
+                              {isLoading &&
+                                loadingType == LoadingType.FILTER && (
+                                  <LoadingIcon />
+                                )}
+                              <span className="min-w-0 flex-1 truncate text-left">
+                                {filter.length
+                                  ? filter
+                                      .map((f) => filterLabelMap.get(f) ?? f)
+                                      .join(", ")
+                                  : t("modManager.filter")}
+                              </span>
+                              <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            className="max-h-80 w-72"
+                            align="end"
+                          >
+                            {filters.map((group, index) => (
+                              <div key={index}>
+                                {index > 0 && <DropdownMenuSeparator />}
+                                <DropdownMenuLabel>
+                                  {group.title}
+                                </DropdownMenuLabel>
+                                {group.items.map((f) => {
+                                  const key =
+                                    provider === Provider.CURSEFORGE
+                                      ? (f.id ?? f.name)
+                                      : f.name;
+                                  const label =
+                                    provider === Provider.CURSEFORGE
+                                      ? f.name
+                                      : f.name.charAt(0).toUpperCase() +
+                                        f.name.slice(1);
 
-                          await search({
-                            version,
-                            loader,
-                            query: searchQuery,
-                            provider,
-                            projectType,
-                            sort,
-                            filter: values,
-                            isLocal,
-                            offset: 0,
-                          });
-                        }}
-                        renderValue={() => {
-                          const labels = filter
-                            .filter((f) => f !== "")
-                            .map((f) => filterLabelMap.get(f) ?? f);
-                          return <p>{labels.join(", ")}</p>;
-                        }}
-                      >
-                        {filters.map((group, index) => (
-                          <SelectSection key={index} title={group.title}>
-                            {group.items.map((f) => {
-                              const key =
-                                provider === Provider.CURSEFORGE
-                                  ? (f.id ?? f.name)
-                                  : f.name;
-                              const label =
-                                provider === Provider.CURSEFORGE
-                                  ? f.name
-                                  : f.name.charAt(0).toUpperCase() +
-                                    f.name.slice(1);
+                                  return (
+                                    <DropdownMenuCheckboxItem
+                                      key={key}
+                                      checked={filter.includes(key)}
+                                      onSelect={(event) =>
+                                        event.preventDefault()
+                                      }
+                                      onCheckedChange={async (checked) => {
+                                        clearDebounce();
+                                        const values =
+                                          checked === true
+                                            ? [...filter, key]
+                                            : filter.filter((v) => v !== key);
+                                        setFilter(values);
+                                        setOffset(0);
 
-                              return (
-                                <SelectItem key={key}>
-                                  <div className="flex items-center gap-2">
-                                    {f.icon?.includes("svg") ? (
-                                      <SVG
-                                        src={f.icon || ""}
-                                        width={16}
-                                        height={16}
-                                        title={f.name}
-                                      />
-                                    ) : (
-                                      <Image
-                                        src={f.icon || ""}
-                                        width={16}
-                                        height={16}
-                                        className="min-h-4 min-w-4"
-                                        alt=""
-                                      />
-                                    )}
-
-                                    <p className="text-xs">{label}</p>
-                                  </div>
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectSection>
-                        ))}
-                      </Select>
+                                        await search({
+                                          version,
+                                          loader,
+                                          query: searchQuery,
+                                          provider,
+                                          projectType,
+                                          sort,
+                                          filter: values,
+                                          isLocal,
+                                          offset: 0,
+                                        });
+                                      }}
+                                    >
+                                      {f.icon?.includes("svg") ? (
+                                        <SVG
+                                          src={f.icon || ""}
+                                          width={16}
+                                          height={16}
+                                          title={f.name}
+                                        />
+                                      ) : f.icon ? (
+                                        <img
+                                          src={f.icon || ""}
+                                          width={16}
+                                          height={16}
+                                          className="size-4 shrink-0 object-cover"
+                                          alt=""
+                                        />
+                                      ) : null}
+                                      <span className="truncate text-xs">
+                                        {label}
+                                      </span>
+                                    </DropdownMenuCheckboxItem>
+                                  );
+                                })}
+                              </div>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </>
                   )}
 
                   {(provider != Provider.LOCAL || isLocal) && (
                     <Button
-                      variant="flat"
-                      isIconOnly
-                      isDisabled={isLoading}
-                      onPress={async () => {
+                      variant="secondary"
+                      size="icon"
+                      disabled={isLoading}
+                      onClick={async () => {
                         clearDebounce();
                         setSearchQuery("");
                         setSort(defaultSort);
@@ -1059,133 +1247,218 @@ export function ModManager({
                         });
                       }}
                     >
-                      <ListRestart size={22} />
+                      <ListRestart className="size-4" />
                     </Button>
                   )}
 
                   {!isDownloadedVersion && isOwnerVersion && !isModpacks && (
-                    <Switch
-                      startContent={<Globe size={22} />}
-                      size="lg"
-                      endContent={<PackageCheck size={22} />}
-                      isDisabled={isLoading}
-                      isSelected={isLocal}
-                      onChange={async (event) => {
-                        clearDebounce();
-                        const checked = event.target.checked;
+                    <div className="ml-auto flex shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5">
+                      <Globe className="size-4 text-muted-foreground" />
+                      <Switch
+                        disabled={isLoading}
+                        checked={isLocal}
+                        onCheckedChange={async (checked) => {
+                          clearDebounce();
+                          const nextChecked = checked === true;
 
-                        setLocal(checked);
-                        setSearchQuery("");
-                        setSort(defaultSort);
-                        setFilter([]);
-                        setOffset(0);
+                          setLocal(nextChecked);
+                          setSearchQuery("");
+                          setSort(defaultSort);
+                          setFilter([]);
+                          setOffset(0);
 
-                        if (!checked) await getFilters(provider, projectType);
+                          if (!nextChecked)
+                            await getFilters(provider, projectType);
 
-                        await search({
-                          version,
-                          loader,
-                          query: "",
-                          provider,
-                          projectType,
-                          sort: defaultSort,
-                          filter: [],
-                          isLocal: checked,
-                          offset: 0,
-                        });
-                      }}
-                    />
+                          await search({
+                            version,
+                            loader,
+                            query: "",
+                            provider,
+                            projectType,
+                            sort: defaultSort,
+                            filter: [],
+                            isLocal: nextChecked,
+                            offset: 0,
+                          });
+                        }}
+                      />
+                      <PackageCheck className="size-4 text-muted-foreground" />
+                    </div>
                   )}
                 </div>
 
-                {!isLocal && provider == Provider.LOCAL ? (
-                  <>
-                    <span>
-                      <Alert
-                        variant="bordered"
-                        title={t("modManager.selectLocals")}
-                      />
-                    </span>
+                {isLocal && (
+                  <div className="flex items-center justify-between gap-3 rounded-xl border bg-card/70 px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="tabular-nums">
+                          {mods.filter((m) => m.projectType == projectType).length}
+                        </Badge>
+                        <p className="truncate text-sm font-medium">
+                          {t("modManager.local")}
+                        </p>
+                      </div>
+                    </div>
 
-                    {readingLocalModsProgress > 0 && (
-                      <Progress size="sm" value={readingLocalModsProgress} />
+                    {!isDownloadedVersion && isOwnerVersion && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="shrink-0"
+                        disabled={isLoading}
+                        onClick={async () => {
+                          try {
+                            clearDebounce();
+                            setLoading(true);
+                            setLoadingType(LoadingType.CHECK_AVAILABLE_UPDATE);
+
+                            const canBeUpdated = await getAvailableUpdate();
+                            setUpdateMods(canBeUpdated);
+                            setIsUpdateModalOpen(true);
+
+                            if (canBeUpdated.length > 0) {
+                              toast.success(
+                                t("modManager.availableUpdates", {
+                                  count: canBeUpdated.length,
+                                }),
+                              );
+                            } else {
+                              toast.warning(t("modManager.noAvailableUpdates"));
+                            }
+                          } finally {
+                            setLoading(false);
+                            setLoadingType(null);
+                          }
+                        }}
+                      >
+                        {isLoading &&
+                        loadingType == LoadingType.CHECK_AVAILABLE_UPDATE ? (
+                          <LoadingIcon />
+                        ) : (
+                          <PanelTopOpen className="size-4" />
+                        )}
+                        {t("modManager.checkUpdates")}
+                      </Button>
                     )}
+                  </div>
+                )}
 
-                    <Button
-                      variant="flat"
-                      color="primary"
-                      startContent={<FileBox size={22} />}
-                      isLoading={
-                        isLoading && loadingType == LoadingType.CHECK_LOCAL_MOD
-                      }
-                      onPress={async () => {
-                        clearDebounce();
-                        const filePaths = await api.other.openFileDialog(
-                          false,
-                          [{ name: "Mods", extensions: ["jar", "zip"] }],
-                          true,
-                        );
-                        if (!filePaths || filePaths.length == 0) return;
-                        await readLocalMods(filePaths);
-                      }}
-                    >
-                      {t("common.choose")}
-                    </Button>
-                  </>
+                {!isLocal && provider == Provider.LOCAL ? (
+                  <Empty
+                    className={`flex-1 rounded-xl border border-dashed bg-muted/20 transition-colors ${
+                      isLocalDropActive
+                        ? "border-primary bg-primary/10"
+                        : "border-border"
+                    }`}
+                    onDragEnter={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setIsLocalDropActive(true);
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      event.dataTransfer.dropEffect = "copy";
+                      setIsLocalDropActive(true);
+                    }}
+                    onDragLeave={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+                      setIsLocalDropActive(false);
+                    }}
+                    onDrop={dropLocalMods}
+                  >
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <FileBox />
+                      </EmptyMedia>
+                      <EmptyTitle>{t("modManager.selectLocals")}</EmptyTitle>
+                      <EmptyDescription>
+                        .jar / .zip
+                      </EmptyDescription>
+                    </EmptyHeader>
+
+                    <EmptyContent>
+                      {readingLocalModsProgress > 0 && (
+                        <Progress value={readingLocalModsProgress} className="w-64" />
+                      )}
+
+                      <Button
+                        disabled={
+                          isLoading && loadingType == LoadingType.CHECK_LOCAL_MOD
+                        }
+                        onClick={pickLocalMods}
+                      >
+                        {isLoading &&
+                        loadingType == LoadingType.CHECK_LOCAL_MOD ? (
+                          <LoadingIcon />
+                        ) : (
+                          <FileBox className="size-4" />
+                        )}
+                        {t("common.choose")}
+                      </Button>
+                    </EmptyContent>
+                  </Empty>
                 ) : isLoading &&
                   (loadingType == LoadingType.SEARCH ||
                     loadingType == LoadingType.FILTER ||
                     loadingType == LoadingType.GAME_VERSIONS) ? (
                   <div className="flex justify-center items-center flex-1 min-h-0">
-                    <Spinner size="sm" label={t("common.searching")} />
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <LoadingIcon />
+                      {t("common.searching")}
+                    </div>
                   </div>
                 ) : browser.length > 0 ? (
                   <div className="flex-1 min-h-0">
-                    <ScrollShadow className="h-full">
+                    <ScrollArea className="h-full pr-3">
                       {browser.map((item, index) => {
                         const isInstalled =
                           installedById.get(item.id) ??
                           installedByTitle.get(item.title.toLowerCase());
 
                         return (
-                          <Card key={index} className="mb-2 mr-2">
-                            <CardBody>
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  {item.iconUrl && (
-                                    <Image
-                                      src={item.iconUrl}
-                                      alt={item.title}
-                                      width={64}
-                                      height={64}
-                                      className="rounded-md min-w-16 min-h-16 shrink-0"
-                                      loading="lazy"
-                                    />
-                                  )}
-                                  <div className="flex flex-col gap-1">
-                                    <p>{item.title}</p>
+                          <Card
+                            key={index}
+                            className="mb-2 mr-2 min-w-0 overflow-hidden py-0 shadow-none transition-colors hover:bg-accent/25"
+                          >
+                            <CardContent className="min-w-0 overflow-hidden p-3">
+                              <div className="flex min-w-0 items-center justify-between gap-2 overflow-hidden">
+                                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                                  <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/30 text-muted-foreground">
+                                    {item.iconUrl ? (
+                                      <img
+                                        src={item.iconUrl}
+                                        alt={item.title}
+                                        width={56}
+                                        height={56}
+                                        className="h-full w-full object-cover"
+                                        loading="lazy"
+                                      />
+                                    ) : (
+                                      <FileBox className="size-5" />
+                                    )}
+                                  </div>
+                                  <div className="flex min-w-0 flex-1 flex-col gap-1 overflow-hidden">
+                                    <p
+                                      className="truncate font-medium text-foreground"
+                                      title={item.title}
+                                    >
+                                      {item.title}
+                                    </p>
                                     {item.description && (
-                                      <p className="text-xs text-gray-400">
+                                      <p className="line-clamp-2 min-w-0 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
                                         {item.description}
                                       </p>
                                     )}
 
                                     {isInstalled ? (
-                                      <Chip
-                                        variant="flat"
-                                        size="sm"
-                                        color={
-                                          isInstalled.provider ==
-                                          Provider.CURSEFORGE
-                                            ? "warning"
-                                            : isInstalled.provider ==
-                                                Provider.MODRINTH
-                                              ? "success"
-                                              : isInstalled.provider ==
-                                                  Provider.LOCAL
-                                                ? "primary"
-                                                : "default"
-                                        }
+                                      <Badge
+                                        variant={providerBadgeVariant(
+                                          isInstalled.provider,
+                                        )}
                                       >
                                         <div className="flex items-center gap-2">
                                           {isInstalled.provider ==
@@ -1218,36 +1491,33 @@ export function ModManager({
                                             </p>
                                           )}
                                         </div>
-                                      </Chip>
+                                      </Badge>
                                     ) : undefined}
                                   </div>
                                 </div>
 
-                                <div className="flex items-center gap-1">
+                                <div className="flex shrink-0 items-center gap-1">
                                   {item.provider != Provider.OTHER &&
                                   !isDownloadedVersion &&
                                   isOwnerVersion ? (
                                     <Button
-                                      isIconOnly
-                                      variant="flat"
-                                      isDisabled={isLoading}
-                                      isLoading={
-                                        isLoading &&
-                                        loadingType == LoadingType.INFO &&
-                                        proccessKey == index
-                                      }
-                                      onPress={async () => {
+                                      size="icon-lg"
+                                      variant="secondary"
+                                      className="shrink-0"
+                                      disabled={isLoading}
+                                      onClick={async () => {
                                         clearDebounce();
                                         setLoading(true);
                                         setLoadingType(LoadingType.INFO);
                                         setProccessKey(index);
 
-                                        const base = (isInstalled
-                                          ? isInstalled
-                                          : item) as unknown as IProject;
+                                        const base = item as IProject;
 
-                                        let body = "";
-                                        let gallery: IProject["gallery"] = [];
+                                        let detailProject = base;
+                                        let body =
+                                          base.body || base.description || "";
+                                        let gallery: IProject["gallery"] =
+                                          (base as IProject).gallery || [];
                                         const vers: ModManagerVersion[] = [];
 
                                         if (base.provider != Provider.LOCAL) {
@@ -1305,10 +1575,9 @@ export function ModManager({
                                           setLoading(false);
                                           setLoadingType(null);
                                           setProccessKey(-1);
-                                          addToast({
-                                            color: "danger",
-                                            title: t("modManager.notFoundMod"),
-                                          });
+                                          toast.error(
+                                            t("modManager.notFoundMod"),
+                                          );
                                           return;
                                         }
 
@@ -1322,14 +1591,28 @@ export function ModManager({
                                           currentIndex = idx == -1 ? 0 : idx;
                                         } else {
                                           setInstalledProject(null);
+                                        }
+
+                                        if (base.provider != Provider.LOCAL) {
                                           const projectInfo =
                                             await api.modManager.getProject(
                                               base.provider,
                                               base.id,
                                             );
                                           if (projectInfo) {
-                                            body = projectInfo.body;
-                                            gallery = projectInfo.gallery;
+                                            detailProject = {
+                                              ...base,
+                                              ...projectInfo,
+                                            };
+                                            body =
+                                              projectInfo.body ||
+                                              body ||
+                                              projectInfo.description ||
+                                              "";
+                                            gallery =
+                                              projectInfo.gallery?.length > 0
+                                                ? projectInfo.gallery
+                                                : gallery;
                                           }
                                         }
 
@@ -1363,7 +1646,7 @@ export function ModManager({
                                         }
 
                                         setProject({
-                                          ...base,
+                                          ...detailProject,
                                           versions: vers,
                                           body,
                                           gallery,
@@ -1372,7 +1655,9 @@ export function ModManager({
                                         setIsAvailableUpdate(currentIndex != 0);
                                         setDependency(
                                           isInstalled
-                                            ? getLocalDependencies(base.title)
+                                            ? getLocalDependencies(
+                                                isInstalled.title,
+                                              )
                                             : [],
                                         );
 
@@ -1382,29 +1667,33 @@ export function ModManager({
                                         setInfoModalOpen(true);
                                       }}
                                     >
-                                      {isInstalled ? (
-                                        <Settings size={22} />
+                                      {isLoading &&
+                                      loadingType == LoadingType.INFO &&
+                                      proccessKey == index ? (
+                                        <LoadingIcon />
+                                      ) : isInstalled ? (
+                                        <Settings className="size-4" />
                                       ) : (
-                                        <Info size={22} />
+                                        <Info className="size-4" />
                                       )}
                                     </Button>
                                   ) : (
                                     item.url && (
                                       <Button
-                                        variant="flat"
-                                        isIconOnly
-                                        onPress={() =>
+                                        variant="secondary"
+                                        size="icon"
+                                        onClick={() =>
                                           api.shell.openExternal(item.url)
                                         }
                                       >
                                         {item.provider ==
                                         Provider.CURSEFORGE ? (
-                                          <SiCurseforge size={22} />
+                                          <SiCurseforge className="size-4" />
                                         ) : item.provider ==
                                           Provider.MODRINTH ? (
-                                          <SiModrinth size={22} />
+                                          <SiModrinth className="size-4" />
                                         ) : (
-                                          <Earth size={22} />
+                                          <Earth className="size-4" />
                                         )}
                                       </Button>
                                     )
@@ -1426,11 +1715,10 @@ export function ModManager({
                                         )}
 
                                         <Button
-                                          color="danger"
-                                          variant="flat"
-                                          isIconOnly
-                                          isDisabled={isLoading}
-                                          onPress={async () => {
+                                          variant="destructive"
+                                          size="icon"
+                                          disabled={isLoading}
+                                          onClick={async () => {
                                             let newMods = [...mods];
                                             const idx = newMods.findIndex(
                                               (p) => p.id == item.id,
@@ -1450,72 +1738,139 @@ export function ModManager({
                                             }
 
                                             setInstalledProject(null);
-                                            addToast({
-                                              color: "success",
-                                              title: t("modManager.deleted"),
-                                            });
+                                            toast.success(
+                                              t("modManager.deleted"),
+                                            );
                                           }}
                                         >
-                                          <Trash size={22} />
+                                          <Trash className="size-4" />
                                         </Button>
                                       </>
                                     )}
                                 </div>
                               </div>
-                            </CardBody>
+                            </CardContent>
                           </Card>
                         );
                       })}
-                    </ScrollShadow>
+                    </ScrollArea>
                   </div>
                 ) : (
                   <div className="flex-1 min-h-0">
-                    <Alert title={t("common.notFound")} />
+                    <Empty className="h-full min-h-72 border border-dashed bg-muted/20">
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                          <Search />
+                        </EmptyMedia>
+                        <EmptyTitle>{t("common.notFound")}</EmptyTitle>
+                      </EmptyHeader>
+                    </Empty>
                   </div>
                 )}
 
-                {searchData &&
-                  searchData.total > 0 &&
-                  loadingType != LoadingType.FILTER &&
-                  loadingType != LoadingType.GAME_VERSIONS && (
-                    <div className="mx-auto">
-                      <Pagination
-                        showControls
-                        siblings={1}
-                        initialPage={1}
-                        isDisabled={
-                          isLoading && loadingType == LoadingType.SEARCH
-                        }
-                        page={Math.floor(offset / searchData.limit) + 1}
-                        total={Math.ceil(searchData.total / searchData.limit)}
-                        onChange={async (page) => {
-                          clearDebounce();
-                          const newOffset = (page - 1) * searchData.limit;
-                          setOffset(newOffset);
+                <div className="flex h-10 shrink-0 items-center justify-center pt-1">
+                  {searchData &&
+                    searchData.total > 0 &&
+                    loadingType != LoadingType.FILTER &&
+                    loadingType != LoadingType.GAME_VERSIONS && (
+                      <Pagination className="w-auto">
+                        <PaginationContent className="gap-1">
+                          {(() => {
+                            const currentPage =
+                              Math.floor(offset / searchData.limit) + 1;
+                            const totalPages = Math.ceil(
+                              searchData.total / searchData.limit,
+                            );
+                            const disabled =
+                              isLoading && loadingType == LoadingType.SEARCH;
+                            const goToPage = async (page: number) => {
+                              if (
+                                disabled ||
+                                page < 1 ||
+                                page > totalPages ||
+                                page == currentPage
+                              )
+                                return;
 
-                          await search({
-                            version,
-                            loader,
-                            query: searchQuery,
-                            provider,
-                            projectType,
-                            sort,
-                            filter,
-                            isLocal,
-                            offset: newOffset,
-                          });
-                        }}
-                      />
-                    </div>
-                  )}
+                              clearDebounce();
+                              const newOffset = (page - 1) * searchData.limit;
+                              setOffset(newOffset);
+
+                              await search({
+                                version,
+                                loader,
+                                query: searchQuery,
+                                provider,
+                                projectType,
+                                sort,
+                                filter,
+                                isLocal,
+                                offset: newOffset,
+                              });
+                            };
+
+                            return (
+                              <>
+                                <PaginationItem>
+                                  <PaginationLink
+                                    href="#"
+                                    size="icon"
+                                    aria-label="Previous page"
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      void goToPage(currentPage - 1);
+                                    }}
+                                  >
+                                    <ChevronLeft className="size-4" />
+                                  </PaginationLink>
+                                </PaginationItem>
+                                {getPageItems(currentPage, totalPages).map(
+                                  (page) =>
+                                    typeof page === "number" ? (
+                                      <PaginationItem key={page}>
+                                        <PaginationLink
+                                          href="#"
+                                          isActive={page == currentPage}
+                                          onClick={(event) => {
+                                            event.preventDefault();
+                                            void goToPage(page);
+                                          }}
+                                        >
+                                          {page}
+                                        </PaginationLink>
+                                      </PaginationItem>
+                                    ) : (
+                                      <PaginationItem key={page}>
+                                        <PaginationEllipsis />
+                                      </PaginationItem>
+                                    ),
+                                )}
+                                <PaginationItem>
+                                  <PaginationLink
+                                    href="#"
+                                    size="icon"
+                                    aria-label="Next page"
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      void goToPage(currentPage + 1);
+                                    }}
+                                  >
+                                    <ChevronRight className="size-4" />
+                                  </PaginationLink>
+                                </PaginationItem>
+                              </>
+                            );
+                          })()}
+                        </PaginationContent>
+                      </Pagination>
+                    )}
+                </div>
               </div>
 
-              <Modal
-                size={project?.body == "" ? "md" : "5xl"}
-                isDismissable={false}
-                isKeyboardDismissDisabled={true}
-                isOpen={isInfoModalOpen}
-                onClose={() => {
+              <Dialog
+                open={isInfoModalOpen}
+                onOpenChange={(open) => {
+                  if (open) return;
                   if (isLoading) return;
 
                   const stack = prevProjectsRef.current;
@@ -1551,759 +1906,859 @@ export function ModManager({
                   );
                 }}
               >
-                <ModalContent className="h-[min(44rem,calc(100vh-8rem))] max-h-[calc(100vh-8rem)]">
-                  <ModalHeader className="shrink-0">
-                    {t("common.installation")}
-                  </ModalHeader>
+                <DialogContent
+                  className={`grid h-[min(48rem,calc(100vh-4rem))] max-h-[calc(100vh-4rem)] ${
+                    shouldShowProjectDetailsPane(project)
+                      ? "w-[min(92rem,calc(100vw-2rem))] sm:max-w-[min(92rem,calc(100vw-2rem))]"
+                      : "w-[min(36rem,calc(100vw-2rem))] sm:max-w-[min(36rem,calc(100vw-2rem))]"
+                  } max-w-none grid-rows-[auto_minmax(0,1fr)] overflow-hidden`}
+                  onPointerDownOutside={(event) => {
+                    if (isLoading) event.preventDefault();
+                  }}
+                  onEscapeKeyDown={(event) => {
+                    if (isLoading) event.preventDefault();
+                  }}
+                >
+                  <DialogHeader className="shrink-0">
+                    <DialogTitle>{t("common.installation")}</DialogTitle>
+                  </DialogHeader>
 
-                  <ModalBody className="min-h-0 overflow-hidden">
+                  <div className="min-h-0 overflow-hidden">
                     {project ? (
-                      <div className="flex h-full min-h-0 justify-between gap-4 overflow-hidden">
-                        <div
-                          className={`flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto pr-1 ${project.body != "" ? "w-4/12" : "flex-1"}`}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            {project.iconUrl && (
-                              <Image
-                                src={project.iconUrl || ""}
-                                alt={project.title}
-                                width={64}
-                                height={64}
-                                className="min-w-16 min-h-16 rounded-md"
-                              />
-                            )}
-                            <div className="flex flex-col gap-1 min-w-0">
-                              <p className="break-words">{project.title}</p>
-                              <Tooltip
-                                className="min-w-0"
-                                size="sm"
-                                delay={500}
-                                content={
-                                  <p className="truncate min-w-0">
-                                    {project.description}
-                                  </p>
-                                }
-                              >
-                                {project.description && (
-                                  <p className="text-xs text-gray-400 truncate flex-grow max-w-96">
-                                    {project.description}
-                                  </p>
-                                )}
-                              </Tooltip>
-                            </div>
-                          </div>
+                      <div
+                        key={`${project.provider}-${project.id}`}
+                        className={
+                          shouldShowProjectDetailsPane(project)
+                            ? "grid h-full min-h-0 min-w-0 grid-cols-[22rem_minmax(0,1fr)] gap-4 overflow-hidden"
+                            : "flex h-full min-h-0 min-w-0 overflow-hidden"
+                        }
+                      >
+                        {(() => {
+                          const showDetailsPane =
+                            shouldShowProjectDetailsPane(project);
 
-                          <div className="flex items-center gap-2">
-                            {project.url && (
-                              <Button
-                                variant="flat"
-                                startContent={
-                                  project.provider == Provider.CURSEFORGE ? (
-                                    <SiCurseforge size={22} />
-                                  ) : project.provider == Provider.MODRINTH ? (
-                                    <SiModrinth size={22} />
-                                  ) : (
-                                    <Globe size={22} />
-                                  )
-                                }
-                                onPress={async () => {
-                                  await api.shell.openExternal(project.url);
-                                }}
-                              >
-                                {t("modManager.goToWebsite")}
-                              </Button>
-                            )}
-
-                            {settings.lang != "en" &&
-                              account?.type != "plain" && (
-                                <Button
-                                  variant="flat"
-                                  isIconOnly
-                                  isLoading={
-                                    isLoading &&
-                                    loadingType == LoadingType.TRANSLATE
-                                  }
-                                  onPress={async () => {
-                                    setLoading(true);
-                                    setLoadingType(LoadingType.TRANSLATE);
-
-                                    const [
-                                      translatedDescription,
-                                      translatedBody,
-                                    ] = await Promise.all([
-                                      project.description
-                                        ? await api.backend.aiComplete(
-                                            account?.accessToken || "",
-                                            `Translate the following text to ${settings.lang}:\n\n${project.description}`,
-                                          )
-                                        : undefined,
-                                      project.body
-                                        ? await api.backend.aiComplete(
-                                            account?.accessToken || "",
-                                            `Translate the following text to ${settings.lang}:\n\n${project.body}`,
-                                          )
-                                        : undefined,
-                                    ]);
-
-                                    setProject({
-                                      ...project,
-                                      description:
-                                        translatedDescription ||
-                                        project.description,
-                                      body: translatedBody || project.body,
-                                    });
-
-                                    setLoading(false);
-                                    setLoadingType(null);
-                                  }}
-                                >
-                                  <Languages size={22} />
-                                </Button>
-                              )}
-                          </div>
-
-                          <div className="flex flex-col gap-2">
-                            {selectVersion && selectVersion.id != "" && (
-                              <Select
-                                size="sm"
-                                label={t("versions.version")}
-                                className="max-w-80"
-                                isDisabled={
-                                  isLoading ||
-                                  project.provider == Provider.LOCAL
-                                }
-                                selectedKeys={[selectVersion?.id || ""]}
-                                startContent={
-                                  isAvailableUpdate && (
-                                    <Tooltip
-                                      content={t("modManager.availableUpdate")}
-                                    >
-                                      <CircleAlert
-                                        size={20}
-                                        className="min-w-5 min-h-5 text-warning"
+                          return (
+                            <>
+                              <div className="flex min-h-0 min-w-0 flex-col gap-4 overflow-hidden pr-1">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/30 text-muted-foreground">
+                                    {project.iconUrl ? (
+                                      <img
+                                        src={project.iconUrl || ""}
+                                        alt={project.title}
+                                        width={64}
+                                        height={64}
+                                        className="h-full w-full object-cover"
                                       />
-                                    </Tooltip>
-                                  )
-                                }
-                                onChange={async (event) => {
-                                  const value = event.target.value;
-                                  if (!value) return;
+                                    ) : (
+                                      <FileBox className="size-6" />
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col gap-1 min-w-0">
+                                    <p className="break-words [overflow-wrap:anywhere]">
+                                      {project.title}
+                                    </p>
+                                    {project.description && (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <p className="line-clamp-3 min-w-0 cursor-help break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                                            {project.description}
+                                          </p>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-h-64 max-w-sm overflow-y-auto">
+                                          <p className="break-words text-xs leading-relaxed [overflow-wrap:anywhere]">
+                                            {project.description}
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                  </div>
+                                </div>
 
-                                  const idx = project.versions.findIndex(
-                                    (v) => v.id == value,
-                                  );
-                                  const safeIdx = idx == -1 ? 0 : idx;
-                                  setIsAvailableUpdate(safeIdx != 0);
-
-                                  const v = project.versions[safeIdx];
-                                  if (!v) return;
-
-                                  setLoading(true);
-                                  setLoadingType(LoadingType.NEW_VERSION);
-
-                                  let next = {
-                                    ...v,
-                                    dependencies: v.dependencies ?? [],
-                                  };
-
-                                  if (
-                                    !isModpacks &&
-                                    next.dependencies.length > 0 &&
-                                    next.dependencies.filter((d) => d.project)
-                                      .length == 0
-                                  ) {
-                                    const deps =
-                                      await api.modManager.getDependencies(
-                                        project.provider,
-                                        project.id,
-                                        next.dependencies,
-                                      );
-                                    next = { ...next, dependencies: deps };
-                                  }
-
-                                  setSelectVersion(next);
-
-                                  setLoading(false);
-                                  setLoadingType(null);
-                                }}
-                              >
-                                {project.versions.map((v) => (
-                                  <SelectItem textValue={v.name} key={v.id}>
-                                    <p>{v.name}</p>
-                                  </SelectItem>
-                                ))}
-                              </Select>
-                            )}
-
-                            <div className="flex items-center gap-2">
-                              {!installedProject ? (
-                                <Button
-                                  variant="flat"
-                                  color="success"
-                                  startContent={<Download size={22} />}
-                                  isLoading={
-                                    isLoading &&
-                                    loadingType == LoadingType.INSTALL
-                                  }
-                                  isDisabled={
-                                    isLoading ||
-                                    mods
-                                      .filter(
-                                        (m) => m.provider == Provider.LOCAL,
-                                      )
-                                      .some((m) =>
-                                        m.version?.files.some(
-                                          (f) =>
-                                            f.sha1 ==
-                                            selectVersion?.files[0]?.sha1,
-                                        ),
-                                      )
-                                  }
-                                  onPress={async () => {
-                                    if (!selectVersion) return;
-
-                                    setLoading(true);
-                                    setLoadingType(LoadingType.INSTALL);
-
-                                    if (isModpacks) {
-                                      const temp = await api.path.join(
-                                        paths.launcher,
-                                        "temp",
-                                      );
-
-                                      const file = selectVersion.files[0];
-                                      if (!file) {
-                                        setLoading(false);
-                                        setLoadingType(null);
-                                        return;
-                                      }
-
-                                      const filename = file.filename;
-
-                                      if (file.url.startsWith("blocked::")) {
-                                        setBlockedMods([
-                                          {
-                                            fileName: filename,
-                                            hash: file.sha1,
-                                            url: file.url.replace(
-                                              "blocked::",
-                                              "",
-                                            ),
-                                            projectId: project.id,
-                                          },
-                                        ]);
-                                        setIsBlockedMods(true);
-                                        return;
-                                      }
-
-                                      const modpackPath = await api.path.join(
-                                        temp,
-                                        await api.path.basename(
-                                          filename,
-                                          await api.path.extname(filename),
-                                        ),
-                                      );
-
-                                      await api.file.download(
-                                        [
-                                          {
-                                            destination: await api.path.join(
-                                              temp,
-                                              filename,
-                                            ),
-                                            group: "mods",
-                                            url: file.url,
-                                            sha1: file.sha1,
-                                            size: file.size,
-                                            options: {
-                                              extract: true,
-                                              extractDelete: true,
-                                              extractFolder: modpackPath,
-                                            },
-                                          },
-                                        ],
-                                        settings.downloadLimit,
-                                      );
-
-                                      const modpack =
-                                        await api.modManager.checkModpack(
-                                          modpackPath,
-                                          project,
-                                          selectVersion,
-                                        );
-                                      if (!modpack) {
-                                        addToast({
-                                          color: "danger",
-                                          title: t("modManager.notModpack"),
-                                        });
-                                        setLoading(false);
-                                        setLoadingType(null);
-                                        return;
-                                      }
-
-                                      setModpack(modpack);
-                                      onClose(modpack);
-
-                                      setLoading(false);
-                                      setLoadingType(null);
-                                      return;
-                                    }
-
-                                    const newProject: ILocalProject = {
-                                      title: project.title,
-                                      description: project.description,
-                                      projectType: project.projectType,
-                                      iconUrl: project.iconUrl,
-                                      url: project.url,
-                                      provider: project.provider,
-                                      id: project.id,
-                                      version: {
-                                        id: selectVersion.id,
-                                        files: selectVersion.files.map((f) => ({
-                                          filename: f.filename,
-                                          size: f.size,
-                                          isServer: f.isServer,
-                                          url: f.url,
-                                          sha1: f.sha1,
-                                        })),
-                                        dependencies:
-                                          selectVersion.dependencies.map(
-                                            (d) => ({
-                                              title: d.project?.title || "",
-                                              relationType: d.relationType,
-                                            }),
-                                          ),
-                                      },
-                                    };
-
-                                    setMods([...mods, newProject]);
-                                    setInstalledProject(newProject);
-                                    setDependency(
-                                      getLocalDependencies(newProject.title),
-                                    );
-
-                                    setLoading(false);
-                                    setLoadingType(null);
-
-                                    addToast({
-                                      color: "success",
-                                      title: t("modManager.added"),
-                                    });
-                                  }}
-                                >
-                                  {t("common.install")}
-                                </Button>
-                              ) : (
-                                <>
-                                  <Tooltip
-                                    isDisabled={dependency.length == 0}
-                                    content={
-                                      <div className="flex flex-col gap-1 p-1">
-                                        {t("modManager.addiction")}
-                                        <ScrollShadow className="flex flex-col gap-1 max-h-[180px] pr-1">
-                                          {dependency.map((d, i) => (
-                                            <Chip
-                                              variant="flat"
-                                              size="sm"
-                                              key={i}
-                                              color={
-                                                dependencyDisplay(
-                                                  d.relationType,
-                                                ).color as
-                                                  | "default"
-                                                  | "warning"
-                                                  | "success"
-                                                  | "danger"
-                                                  | "primary"
-                                                  | "secondary"
-                                                  | undefined
-                                              }
-                                            >
-                                              {d.title}
-                                            </Chip>
-                                          ))}
-                                        </ScrollShadow>
-                                      </div>
-                                    }
-                                  >
-                                    <div>
-                                      <Button
-                                        variant="flat"
-                                        color="danger"
-                                        startContent={<Trash size={22} />}
-                                        isDisabled={
-                                          dependency.filter(
-                                            (d) =>
-                                              d.relationType ==
-                                              DependencyType.REQUIRED,
-                                          ).length > 0 || isLoading
-                                        }
-                                        onPress={() => {
-                                          let newMods = [...mods];
-                                          const idx = newMods.findIndex(
-                                            (p) => p.id == project.id,
-                                          );
-                                          if (idx !== -1)
-                                            newMods.splice(idx, 1);
-
-                                          setMods([...newMods]);
-                                          setInstalledProject(null);
-
-                                          addToast({
-                                            color: "success",
-                                            title: t("modManager.deleted"),
-                                          });
-                                        }}
-                                      >
-                                        {t("common.delete")}
-                                      </Button>
-                                    </div>
-                                  </Tooltip>
-
-                                  {project.provider != Provider.LOCAL && (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {project.url && (
                                     <Button
-                                      variant="flat"
-                                      color="primary"
-                                      startContent={
-                                        <CircleArrowDown size={22} />
-                                      }
-                                      isDisabled={
-                                        selectVersion?.id ==
-                                          installedProject.version?.id ||
-                                        isLoading
-                                      }
-                                      onPress={() => {
-                                        if (!selectVersion) return;
-
-                                        let newMods = [...mods];
-
-                                        const updated: ILocalProject = {
-                                          title: project.title,
-                                          description: project.description,
-                                          projectType: project.projectType,
-                                          iconUrl: project.iconUrl,
-                                          url: project.url,
-                                          provider: project.provider,
-                                          id: project.id,
-                                          version: {
-                                            id: selectVersion.id,
-                                            files: selectVersion.files.map(
-                                              (f) => ({
-                                                filename: f.filename,
-                                                size: f.size,
-                                                url: f.url,
-                                                isServer: f.isServer,
-                                                sha1: f.sha1,
-                                              }),
-                                            ),
-                                            dependencies:
-                                              selectVersion.dependencies.map(
-                                                (d) => ({
-                                                  title: d.project?.title || "",
-                                                  relationType: d.relationType,
-                                                }),
-                                              ),
-                                          },
-                                        };
-
-                                        const idx = newMods.findIndex(
-                                          (p) => p.id == project.id,
+                                      variant="secondary"
+                                      onClick={async () => {
+                                        await api.shell.openExternal(
+                                          project.url,
                                         );
-                                        if (idx !== -1)
-                                          newMods.splice(idx, 1, updated);
-
-                                        setMods([...newMods]);
-                                        setInstalledProject(updated);
-
-                                        addToast({
-                                          color: "success",
-                                          title: t("modManager.updated"),
-                                        });
                                       }}
                                     >
-                                      {t("common.update")}
+                                      {project.provider ==
+                                      Provider.CURSEFORGE ? (
+                                        <SiCurseforge size={20} />
+                                      ) : project.provider ==
+                                        Provider.MODRINTH ? (
+                                        <SiModrinth size={20} />
+                                      ) : (
+                                        <Globe size={20} />
+                                      )}
+                                      {t("modManager.goToWebsite")}
                                     </Button>
                                   )}
-                                </>
-                              )}
-                            </div>
-                          </div>
 
-                          {!isModpacks &&
-                            project.provider != Provider.LOCAL && (
-                              <div className="flex flex-col gap-1.5">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-bold">
-                                    {t("modManager.dependencies")}
-                                  </p>
-                                  {isLoading &&
-                                    loadingType == LoadingType.NEW_VERSION && (
-                                      <Spinner size="sm" />
+                                  {settings.lang != "en" &&
+                                    account?.type != "plain" && (
+                                      <Button
+                                        variant="secondary"
+                                        size="icon"
+                                        disabled={
+                                          isLoading &&
+                                          loadingType == LoadingType.TRANSLATE
+                                        }
+                                        onClick={async () => {
+                                          setLoading(true);
+                                          setLoadingType(LoadingType.TRANSLATE);
+
+                                          const [
+                                            translatedDescription,
+                                            translatedBody,
+                                          ] = await Promise.all([
+                                            project.description
+                                              ? await api.backend.aiComplete(
+                                                  account?.accessToken || "",
+                                                  `Translate the following text to ${settings.lang}:\n\n${project.description}`,
+                                                )
+                                              : undefined,
+                                            project.body
+                                              ? await api.backend.aiComplete(
+                                                  account?.accessToken || "",
+                                                  `Translate the following text to ${settings.lang}:\n\n${project.body}`,
+                                                )
+                                              : undefined,
+                                          ]);
+
+                                          setProject({
+                                            ...project,
+                                            description:
+                                              translatedDescription ||
+                                              project.description,
+                                            body:
+                                              translatedBody || project.body,
+                                          });
+
+                                          setLoading(false);
+                                          setLoadingType(null);
+                                        }}
+                                      >
+                                        {isLoading &&
+                                        loadingType == LoadingType.TRANSLATE ? (
+                                          <LoadingIcon />
+                                        ) : (
+                                          <Languages size={20} />
+                                        )}
+                                      </Button>
                                     )}
                                 </div>
 
-                                <ScrollShadow className="flex flex-col space-y-2 max-h-[200px] pr-1">
-                                  {selectVersion?.dependencies &&
-                                    selectVersion.dependencies.length > 0 &&
-                                    loadingType != LoadingType.NEW_VERSION &&
-                                    selectVersion.dependencies.map(
-                                      (d, index) => {
-                                        if (!d.project) return null;
+                                <div className="flex flex-col gap-2">
+                                  {selectVersion && selectVersion.id != "" && (
+                                    <div className="max-w-80">
+                                      <Select
+                                        name="projectVersion"
+                                        disabled={
+                                          isLoading ||
+                                          project.provider == Provider.LOCAL
+                                        }
+                                        value={selectVersion?.id || ""}
+                                        onValueChange={async (value) => {
+                                          if (!value) return;
 
-                                        const depInstalled =
-                                          installedById.get(d.project.id) ??
-                                          installedByTitle.get(
-                                            d.project.title.toLowerCase(),
+                                          const idx =
+                                            project.versions.findIndex(
+                                              (v) => v.id == value,
+                                            );
+                                          const safeIdx = idx == -1 ? 0 : idx;
+                                          setIsAvailableUpdate(safeIdx != 0);
+
+                                          const v = project.versions[safeIdx];
+                                          if (!v) return;
+
+                                          setLoading(true);
+                                          setLoadingType(
+                                            LoadingType.NEW_VERSION,
                                           );
 
-                                        const depType = dependencyDisplay(
-                                          d.relationType,
-                                        );
+                                          let next = {
+                                            ...v,
+                                            dependencies: v.dependencies ?? [],
+                                          };
 
-                                        return (
-                                          <div
-                                            key={index}
-                                            className="flex items-center justify-between gap-2"
-                                          >
-                                            <div className="flex items-center space-x-2 min-w-0">
-                                              <Image
-                                                src={d.project.iconUrl || ""}
-                                                alt={d.project.title}
-                                                width={32}
-                                                height={32}
-                                                className="min-w-8 min-h-8 rounded-md"
-                                              />
-                                              <p className="text-sm truncate flex-grow">
-                                                {d.project.title}
-                                              </p>
-                                            </div>
+                                          if (
+                                            !isModpacks &&
+                                            next.dependencies.length > 0 &&
+                                            next.dependencies.filter(
+                                              (d) => d.project,
+                                            ).length == 0
+                                          ) {
+                                            const deps =
+                                              await api.modManager.getDependencies(
+                                                project.provider,
+                                                project.id,
+                                                next.dependencies,
+                                              );
+                                            next = {
+                                              ...next,
+                                              dependencies: deps,
+                                            };
+                                          }
 
-                                            <div className="flex items-center space-x-1">
-                                              <Chip
-                                                variant="flat"
-                                                size="sm"
-                                                color={
-                                                  depType.color as
-                                                    | "default"
-                                                    | "warning"
-                                                    | "success"
-                                                    | "danger"
-                                                    | "primary"
-                                                    | "secondary"
-                                                    | undefined
+                                          setSelectVersion(next);
+
+                                          setLoading(false);
+                                          setLoadingType(null);
+                                        }}
+                                      >
+                                        <SelectTrigger
+                                          size="sm"
+                                          className={`w-full ${isAvailableUpdate ? "border-[var(--warning)]/60 ring-[var(--warning)]/20" : ""}`}
+                                          aria-label={t("versions.version")}
+                                        >
+                                          <SelectValue
+                                            placeholder={t("versions.version")}
+                                          />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {project.versions.map((v) => (
+                                            <SelectItem value={v.id} key={v.id}>
+                                              <span className="truncate">
+                                                {v.name}
+                                              </span>
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      {isAvailableUpdate && (
+                                        <Alert className="mt-2 border-[var(--warning)]/40 bg-[var(--warning)]/10 px-3 py-2 text-card-foreground">
+                                          <CircleAlert className="text-[var(--warning)]" />
+                                          <AlertTitle className="line-clamp-none min-h-0 text-xs leading-5">
+                                            {t("modManager.availableUpdate")}
+                                            {project.versions[0]?.name
+                                              ? `: ${project.versions[0].name}`
+                                              : ""}
+                                          </AlertTitle>
+                                        </Alert>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {!installedProject ? (
+                                      <Button
+                                        disabled={
+                                          isLoading ||
+                                          mods
+                                            .filter(
+                                              (m) =>
+                                                m.provider == Provider.LOCAL,
+                                            )
+                                            .some((m) =>
+                                              m.version?.files.some(
+                                                (f) =>
+                                                  f.sha1 ==
+                                                  selectVersion?.files[0]?.sha1,
+                                              ),
+                                            )
+                                        }
+                                        onClick={async () => {
+                                          if (!selectVersion) return;
+
+                                          setLoading(true);
+                                          setLoadingType(LoadingType.INSTALL);
+
+                                          if (isModpacks) {
+                                            const temp = await api.path.join(
+                                              paths.launcher,
+                                              "temp",
+                                            );
+
+                                            const file = selectVersion.files[0];
+                                            if (!file) {
+                                              setLoading(false);
+                                              setLoadingType(null);
+                                              return;
+                                            }
+
+                                            const filename = file.filename;
+
+                                            if (
+                                              file.url.startsWith("blocked::")
+                                            ) {
+                                              setBlockedMods([
+                                                {
+                                                  fileName: filename,
+                                                  hash: file.sha1,
+                                                  url: file.url.replace(
+                                                    "blocked::",
+                                                    "",
+                                                  ),
+                                                  projectId: project.id,
+                                                },
+                                              ]);
+                                              setIsBlockedMods(true);
+                                              return;
+                                            }
+
+                                            const modpackPath =
+                                              await api.path.join(
+                                                temp,
+                                                await api.path.basename(
+                                                  filename,
+                                                  await api.path.extname(
+                                                    filename,
+                                                  ),
+                                                ),
+                                              );
+
+                                            await api.file.download(
+                                              [
+                                                {
+                                                  destination:
+                                                    await api.path.join(
+                                                      temp,
+                                                      filename,
+                                                    ),
+                                                  group: "mods",
+                                                  url: file.url,
+                                                  sha1: file.sha1,
+                                                  size: file.size,
+                                                  options: {
+                                                    extract: true,
+                                                    extractDelete: true,
+                                                    extractFolder: modpackPath,
+                                                  },
+                                                },
+                                              ],
+                                              settings.downloadLimit,
+                                            );
+
+                                            const modpack =
+                                              await api.modManager.checkModpack(
+                                                modpackPath,
+                                                project,
+                                                selectVersion,
+                                              );
+                                            if (!modpack) {
+                                              toast.error(
+                                                t("modManager.notModpack"),
+                                              );
+                                              setLoading(false);
+                                              setLoadingType(null);
+                                              return;
+                                            }
+
+                                            setModpack(modpack);
+                                            onClose(modpack);
+
+                                            setLoading(false);
+                                            setLoadingType(null);
+                                            return;
+                                          }
+
+                                          const newProject: ILocalProject = {
+                                            title: project.title,
+                                            description: project.description,
+                                            projectType: project.projectType,
+                                            iconUrl: project.iconUrl,
+                                            url: project.url,
+                                            provider: project.provider,
+                                            id: project.id,
+                                            version: {
+                                              id: selectVersion.id,
+                                              files: selectVersion.files.map(
+                                                (f) => ({
+                                                  filename: f.filename,
+                                                  size: f.size,
+                                                  isServer: f.isServer,
+                                                  url: f.url,
+                                                  sha1: f.sha1,
+                                                }),
+                                              ),
+                                              dependencies:
+                                                selectVersion.dependencies.map(
+                                                  (d) => ({
+                                                    title:
+                                                      d.project?.title || "",
+                                                    relationType:
+                                                      d.relationType,
+                                                  }),
+                                                ),
+                                            },
+                                          };
+
+                                          setMods([...mods, newProject]);
+                                          setInstalledProject(newProject);
+                                          setDependency(
+                                            getLocalDependencies(
+                                              newProject.title,
+                                            ),
+                                          );
+
+                                          setLoading(false);
+                                          setLoadingType(null);
+
+                                          toast.success(t("modManager.added"));
+                                        }}
+                                      >
+                                        {isLoading &&
+                                        loadingType == LoadingType.INSTALL ? (
+                                          <LoadingIcon />
+                                        ) : (
+                                          <Download size={20} />
+                                        )}
+                                        {t("common.install")}
+                                      </Button>
+                                    ) : (
+                                      <>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div>
+                                              <Button
+                                                variant="destructive"
+                                                disabled={
+                                                  dependency.filter(
+                                                    (d) =>
+                                                      d.relationType ==
+                                                      DependencyType.REQUIRED,
+                                                  ).length > 0 || isLoading
                                                 }
+                                                onClick={() => {
+                                                  let newMods = [...mods];
+                                                  const idx = newMods.findIndex(
+                                                    (p) => p.id == project.id,
+                                                  );
+                                                  if (idx !== -1)
+                                                    newMods.splice(idx, 1);
+
+                                                  setMods([...newMods]);
+                                                  setInstalledProject(null);
+
+                                                  toast.success(
+                                                    t("modManager.deleted"),
+                                                  );
+                                                }}
                                               >
-                                                {depType.title}
-                                              </Chip>
-
-                                              {d.relationType !=
-                                                DependencyType.INCOMPATIBLE &&
-                                              d.relationType !=
-                                                DependencyType.EMBEDDED ? (
-                                                <Button
-                                                  size="sm"
-                                                  variant="flat"
-                                                  isIconOnly
-                                                  isDisabled={isLoading}
-                                                  isLoading={
-                                                    isLoading &&
-                                                    loadingType ==
-                                                      LoadingType.DEPENDENCY &&
-                                                    proccessKey == index
-                                                  }
-                                                  onPress={async () => {
-                                                    if (!d.project || !version)
-                                                      return;
-
-                                                    setLoading(true);
-                                                    setLoadingType(
-                                                      LoadingType.DEPENDENCY,
-                                                    );
-                                                    setProccessKey(index);
-
-                                                    let newProj: IProject =
-                                                      d.project;
-                                                    if (depInstalled) {
-                                                      newProj = {
-                                                        ...depInstalled,
-                                                        versions: [],
-                                                        body: "",
-                                                        gallery: [],
-                                                      } as unknown as IProject;
-                                                    }
-
-                                                    const vers =
-                                                      await api.modManager.getVersions(
-                                                        newProj.provider,
-                                                        newProj.id,
-                                                        {
-                                                          loader:
-                                                            projectType ==
-                                                              ProjectType.PLUGIN &&
-                                                            server
-                                                              ? (server.core as unknown as Loader)
-                                                              : loader ||
-                                                                "vanilla",
-                                                          version: version.id,
-                                                          projectType:
-                                                            newProj.projectType,
-                                                          modUrl: newProj.url,
-                                                        },
-                                                      );
-
-                                                    if (!vers.length) {
-                                                      setLoading(false);
-                                                      setLoadingType(null);
-                                                      setProccessKey(-1);
-                                                      addToast({
-                                                        color: "danger",
-                                                        title: t(
-                                                          "modManager.notFoundMod",
-                                                        ),
-                                                      });
-                                                      return;
-                                                    }
-
-                                                    let currentIndex = 0;
-                                                    if (depInstalled) {
-                                                      const idx =
-                                                        vers.findIndex(
-                                                          (v) =>
-                                                            v.id ==
-                                                            depInstalled.version
-                                                              ?.id,
-                                                        );
-                                                      currentIndex =
-                                                        idx == -1 ? 0 : idx;
-                                                    }
-
-                                                    let body = "";
-                                                    let gallery: IProject["gallery"] =
-                                                      [];
-
-                                                    if (!depInstalled) {
-                                                      const info =
-                                                        await api.modManager.getProject(
-                                                          newProj.provider,
-                                                          newProj.id,
-                                                        );
-                                                      if (info) {
-                                                        body = info.body;
-                                                        gallery = info.gallery;
-                                                      }
-                                                    }
-
-                                                    let currentVersion =
-                                                      vers[currentIndex] ??
-                                                      vers[0];
-                                                    if (
-                                                      currentVersion
-                                                        .dependencies?.length >
-                                                      0
-                                                    ) {
-                                                      const deps =
-                                                        await api.modManager.getDependencies(
-                                                          newProj.provider,
-                                                          newProj.id,
-                                                          currentVersion.dependencies,
-                                                        );
-                                                      currentVersion = {
-                                                        ...currentVersion,
-                                                        dependencies: deps,
-                                                      };
-                                                      vers[currentIndex] =
-                                                        currentVersion;
-                                                    }
-
-                                                    if (project)
-                                                      prevProjectsRef.current.push(
-                                                        project,
-                                                      );
-
-                                                    setInstalledProject(
-                                                      depInstalled
-                                                        ? depInstalled
-                                                        : null,
-                                                    );
-                                                    setIsAvailableUpdate(
-                                                      currentIndex != 0,
-                                                    );
-                                                    setProvider(
-                                                      newProj.provider,
-                                                    );
-                                                    setSelectVersion(
-                                                      currentVersion,
-                                                    );
-                                                    setDependency(
-                                                      depInstalled
-                                                        ? getLocalDependencies(
-                                                            newProj.title,
-                                                          )
-                                                        : [],
-                                                    );
-                                                    setProject({
-                                                      ...newProj,
-                                                      versions: vers,
-                                                      body,
-                                                      gallery,
-                                                    });
-
-                                                    setLoading(false);
-                                                    setLoadingType(null);
-                                                    setProccessKey(-1);
-
-                                                    setInfoModalOpen(true);
-                                                  }}
-                                                >
-                                                  {depInstalled ? (
-                                                    <Settings size={22} />
-                                                  ) : (
-                                                    <Download size={22} />
-                                                  )}
-                                                </Button>
-                                              ) : null}
+                                                <Trash size={20} />
+                                                {t("common.delete")}
+                                              </Button>
                                             </div>
-                                          </div>
-                                        );
-                                      },
-                                    )}
+                                          </TooltipTrigger>
+                                          {dependency.length > 0 && (
+                                            <TooltipContent>
+                                              <div className="flex flex-col gap-1 p-1">
+                                                {t("modManager.addiction")}
+                                                <ScrollArea className="max-h-[180px] pr-3">
+                                                  <div className="flex flex-col gap-1">
+                                                    {dependency.map((d, i) => (
+                                                      <Badge
+                                                        variant={dependencyBadgeVariant(
+                                                          d.relationType,
+                                                        )}
+                                                        key={i}
+                                                      >
+                                                        {d.title}
+                                                      </Badge>
+                                                    ))}
+                                                  </div>
+                                                </ScrollArea>
+                                              </div>
+                                            </TooltipContent>
+                                          )}
+                                        </Tooltip>
 
-                                  {!isModpacks &&
-                                    selectVersion?.dependencies.length == 0 &&
-                                    loadingType != LoadingType.NEW_VERSION && (
-                                      <div>
-                                        <Alert
-                                          title={t("modManager.noDependencies")}
-                                        />
+                                        {project.provider != Provider.LOCAL && (
+                                          <Button
+                                            variant="secondary"
+                                            disabled={
+                                              selectVersion?.id ==
+                                                installedProject.version?.id ||
+                                              isLoading
+                                            }
+                                            onClick={() => {
+                                              if (!selectVersion) return;
+
+                                              let newMods = [...mods];
+
+                                              const updated: ILocalProject = {
+                                                title: project.title,
+                                                description:
+                                                  project.description,
+                                                projectType:
+                                                  project.projectType,
+                                                iconUrl: project.iconUrl,
+                                                url: project.url,
+                                                provider: project.provider,
+                                                id: project.id,
+                                                version: {
+                                                  id: selectVersion.id,
+                                                  files:
+                                                    selectVersion.files.map(
+                                                      (f) => ({
+                                                        filename: f.filename,
+                                                        size: f.size,
+                                                        url: f.url,
+                                                        isServer: f.isServer,
+                                                        sha1: f.sha1,
+                                                      }),
+                                                    ),
+                                                  dependencies:
+                                                    selectVersion.dependencies.map(
+                                                      (d) => ({
+                                                        title:
+                                                          d.project?.title ||
+                                                          "",
+                                                        relationType:
+                                                          d.relationType,
+                                                      }),
+                                                    ),
+                                                },
+                                              };
+
+                                              const idx = newMods.findIndex(
+                                                (p) => p.id == project.id,
+                                              );
+                                              if (idx !== -1)
+                                                newMods.splice(idx, 1, updated);
+
+                                              setMods([...newMods]);
+                                              setInstalledProject(updated);
+
+                                              toast.success(
+                                                t("modManager.updated"),
+                                              );
+                                            }}
+                                          >
+                                            <CircleArrowDown size={20} />
+                                            {t("common.update")}
+                                          </Button>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {!isModpacks &&
+                                  project.provider != Provider.LOCAL && (
+                                    <div className="flex min-h-0 flex-1 flex-col gap-1.5">
+                                      <div className="flex shrink-0 items-center gap-2">
+                                        <p className="font-medium">
+                                          {t("modManager.dependencies")}
+                                        </p>
+                                        {isLoading &&
+                                          loadingType ==
+                                            LoadingType.NEW_VERSION && (
+                                            <LoadingIcon />
+                                          )}
                                       </div>
-                                    )}
-                                </ScrollShadow>
-                              </div>
-                            )}
-                        </div>
 
-                        {project.body != "" && (
-                          <div className="flex min-h-0 w-8/12 flex-col gap-2">
-                            <ScrollShadow className="min-h-0 flex-1 pr-1">
-                              <ModBody body={project.body} />
-                            </ScrollShadow>
+                                      <ScrollArea className="min-h-0 flex-1 pr-3">
+                                        <div className="flex min-h-full flex-col gap-2">
+                                          {selectVersion?.dependencies &&
+                                            selectVersion.dependencies.length >
+                                              0 &&
+                                            loadingType !=
+                                              LoadingType.NEW_VERSION &&
+                                            selectVersion.dependencies.map(
+                                              (d, index) => {
+                                                if (!d.project) return null;
 
-                            {project.gallery.length > 0 && (
-                              <div className="shrink-0">
-                                <GalleryCarousel gallery={project.gallery} />
+                                                const depInstalled =
+                                                  installedById.get(
+                                                    d.project.id,
+                                                  ) ??
+                                                  installedByTitle.get(
+                                                    d.project.title.toLowerCase(),
+                                                  );
+
+                                                const depType =
+                                                  dependencyDisplay(
+                                                    d.relationType,
+                                                  );
+
+                                                return (
+                                                  <div
+                                                    key={index}
+                                                    className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-border bg-card/60 p-2"
+                                                  >
+                                                    <div className="flex min-w-0 items-center gap-2">
+                                                      <img
+                                                        src={
+                                                          d.project.iconUrl ||
+                                                          ""
+                                                        }
+                                                        alt={d.project.title}
+                                                        width={32}
+                                                        height={32}
+                                                        className="size-8 shrink-0 rounded object-cover"
+                                                      />
+                                                      <p
+                                                        className="min-w-0 flex-1 truncate text-sm"
+                                                        title={d.project.title}
+                                                      >
+                                                        {d.project.title}
+                                                      </p>
+                                                    </div>
+
+                                                    <div className="flex shrink-0 items-center gap-1">
+                                                      <Badge
+                                                        variant={dependencyBadgeVariant(
+                                                          d.relationType,
+                                                        )}
+                                                        className="max-w-28 justify-center truncate whitespace-nowrap"
+                                                        title={depType.title}
+                                                      >
+                                                        {depType.title}
+                                                      </Badge>
+
+                                                      {d.relationType !=
+                                                        DependencyType.INCOMPATIBLE &&
+                                                      d.relationType !=
+                                                        DependencyType.EMBEDDED ? (
+                                                        <Button
+                                                          size="icon-sm"
+                                                          variant="secondary"
+                                                          disabled={isLoading}
+                                                          onClick={async () => {
+                                                            if (
+                                                              !d.project ||
+                                                              !version
+                                                            )
+                                                              return;
+
+                                                            setLoading(true);
+                                                            setLoadingType(
+                                                              LoadingType.DEPENDENCY,
+                                                            );
+                                                            setProccessKey(
+                                                              index,
+                                                            );
+
+                                                            const newProj: IProject =
+                                                              d.project;
+
+                                                            const vers =
+                                                              await api.modManager.getVersions(
+                                                                newProj.provider,
+                                                                newProj.id,
+                                                                {
+                                                                  loader:
+                                                                    projectType ==
+                                                                      ProjectType.PLUGIN &&
+                                                                    server
+                                                                      ? (server.core as unknown as Loader)
+                                                                      : loader ||
+                                                                        "vanilla",
+                                                                  version:
+                                                                    version.id,
+                                                                  projectType:
+                                                                    newProj.projectType,
+                                                                  modUrl:
+                                                                    newProj.url,
+                                                                },
+                                                              );
+
+                                                            if (!vers.length) {
+                                                              setLoading(false);
+                                                              setLoadingType(
+                                                                null,
+                                                              );
+                                                              setProccessKey(
+                                                                -1,
+                                                              );
+                                                              toast.error(
+                                                                t(
+                                                                  "modManager.notFoundMod",
+                                                                ),
+                                                              );
+                                                              return;
+                                                            }
+
+                                                            let currentIndex = 0;
+                                                            if (depInstalled) {
+                                                              const idx =
+                                                                vers.findIndex(
+                                                                  (v) =>
+                                                                    v.id ==
+                                                                    depInstalled
+                                                                      .version
+                                                                      ?.id,
+                                                                );
+                                                              currentIndex =
+                                                                idx == -1
+                                                                  ? 0
+                                                                  : idx;
+                                                            }
+
+                                                            let detailProject =
+                                                              newProj;
+                                                            let body =
+                                                              newProj.body ||
+                                                              newProj.description ||
+                                                              "";
+                                                            let gallery: IProject["gallery"] =
+                                                              newProj.gallery ||
+                                                              [];
+
+                                                            if (
+                                                              newProj.provider !=
+                                                              Provider.LOCAL
+                                                            ) {
+                                                              const info =
+                                                                await api.modManager.getProject(
+                                                                  newProj.provider,
+                                                                  newProj.id,
+                                                                );
+                                                              if (info) {
+                                                                detailProject =
+                                                                  {
+                                                                    ...newProj,
+                                                                    ...info,
+                                                                  };
+                                                                body =
+                                                                  info.body ||
+                                                                  body ||
+                                                                  info.description ||
+                                                                  "";
+                                                                gallery =
+                                                                  info.gallery
+                                                                    ?.length > 0
+                                                                    ? info.gallery
+                                                                    : gallery;
+                                                              }
+                                                            }
+
+                                                            let currentVersion =
+                                                              vers[
+                                                                currentIndex
+                                                              ] ?? vers[0];
+                                                            if (
+                                                              currentVersion
+                                                                .dependencies
+                                                                ?.length > 0
+                                                            ) {
+                                                              const deps =
+                                                                await api.modManager.getDependencies(
+                                                                  newProj.provider,
+                                                                  newProj.id,
+                                                                  currentVersion.dependencies,
+                                                                );
+                                                              currentVersion = {
+                                                                ...currentVersion,
+                                                                dependencies:
+                                                                  deps,
+                                                              };
+                                                              vers[
+                                                                currentIndex
+                                                              ] =
+                                                                currentVersion;
+                                                            }
+
+                                                            if (project)
+                                                              prevProjectsRef.current.push(
+                                                                project,
+                                                              );
+
+                                                            setInstalledProject(
+                                                              depInstalled
+                                                                ? depInstalled
+                                                                : null,
+                                                            );
+                                                            setIsAvailableUpdate(
+                                                              currentIndex != 0,
+                                                            );
+                                                            setProvider(
+                                                              newProj.provider,
+                                                            );
+                                                            setSelectVersion(
+                                                              currentVersion,
+                                                            );
+                                                            setDependency(
+                                                              depInstalled
+                                                                ? getLocalDependencies(
+                                                                    depInstalled.title,
+                                                                  )
+                                                                : [],
+                                                            );
+                                                            setProject({
+                                                              ...detailProject,
+                                                              versions: vers,
+                                                              body,
+                                                              gallery,
+                                                            });
+
+                                                            setLoading(false);
+                                                            setLoadingType(
+                                                              null,
+                                                            );
+                                                            setProccessKey(-1);
+
+                                                            setInfoModalOpen(
+                                                              true,
+                                                            );
+                                                          }}
+                                                        >
+                                                          {isLoading &&
+                                                          loadingType ==
+                                                            LoadingType.DEPENDENCY &&
+                                                          proccessKey ==
+                                                            index ? (
+                                                            <LoadingIcon />
+                                                          ) : depInstalled ? (
+                                                            <Settings className="size-4" />
+                                                          ) : (
+                                                            <Download className="size-4" />
+                                                          )}
+                                                        </Button>
+                                                      ) : null}
+                                                    </div>
+                                                  </div>
+                                                );
+                                              },
+                                            )}
+
+                                          {!isModpacks &&
+                                            selectVersion?.dependencies
+                                              .length == 0 &&
+                                            loadingType !=
+                                              LoadingType.NEW_VERSION && (
+                                              <Empty className="min-h-full flex-1 rounded-xl border border-dashed bg-muted/20">
+                                                <EmptyHeader>
+                                                  <EmptyMedia variant="icon">
+                                                    <CircleAlert />
+                                                  </EmptyMedia>
+                                                  <EmptyTitle>
+                                                    {t(
+                                                      "modManager.noDependencies",
+                                                    )}
+                                                  </EmptyTitle>
+                                                </EmptyHeader>
+                                              </Empty>
+                                            )}
+                                        </div>
+                                      </ScrollArea>
+                                    </div>
+                                  )}
                               </div>
-                            )}
-                          </div>
-                        )}
+
+                              {showDetailsPane && (
+                                <ProjectDetailsPane
+                                  project={project}
+                                  notFoundTitle={t("common.notFound")}
+                                />
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     ) : undefined}
-                  </ModalBody>
-                </ModalContent>
-              </Modal>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {isBlockedMods && blockedMods.length > 0 && (
         <BlockedMods
@@ -2337,7 +2792,7 @@ export function ModManager({
               selectVersion,
             );
             if (!modpack) {
-              addToast({ color: "danger", title: t("modManager.notModpack") });
+              toast.error(t("modManager.notModpack"));
               setLoading(false);
               setLoadingType(null);
               return;
@@ -2387,10 +2842,9 @@ export function ModManager({
             });
 
             setMods([...mods, ...localProjects]);
-            addToast({
-              color: "success",
-              title: t("modManager.addedMultiple", { count: projects.length }),
-            });
+            toast.success(
+              t("modManager.addedMultiple", { count: projects.length }),
+            );
           }}
         />
       )}
@@ -2420,15 +2874,14 @@ export function ModManager({
             }
 
             setMods([...updateMods]);
-            addToast({
-              color: "success",
-              title: t("modManager.updatedMultiple", {
+            toast.success(
+              t("modManager.updatedMultiple", {
                 count: projects.length,
               }),
-            });
+            );
           }}
         />
       )}
-    </>
+    </TooltipProvider>
   );
 }

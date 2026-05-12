@@ -1,6 +1,6 @@
 import { Version } from "./Version";
 import { IServerConf, ServerCore } from "@/types/Server";
-import { ProjectType } from "@/types/Modrinth";
+import { ProjectType } from "@/types/ModManager";
 import { DownloadItem } from "@/types/Downloader";
 import path from "path";
 import fs from "fs-extra";
@@ -9,7 +9,20 @@ import { rimraf } from "rimraf";
 import { IVersionConf } from "@/types/IVersion";
 import { TSettings } from "@/types/Settings";
 import { projetTypeToFolder } from "../utilities/modManager";
-import { getWorldName } from "../utilities/worlds";
+import { extractWorldArchive, getWorldName } from "../utilities/worlds";
+import {
+  VERSION_INSTALL_CANCELLED,
+  VersionInstallOperation,
+  VersionInstallOptions,
+  VersionInstallProgress,
+  VersionInstallStage,
+} from "@/types/InstallationProgress";
+import { mainWindow } from "../windows/mainWindow";
+import { OPTIONAL_PROJECT_DOWNLOAD_OPTIONS } from "../utilities/downloaderPure";
+
+type ModsRuntimeOptions = VersionInstallOptions & {
+  signal?: AbortSignal;
+};
 
 export class Mods {
   private conf: IVersionConf;
@@ -22,6 +35,8 @@ export class Mods {
   private downloadLimit = 6;
   private downloader: Downloader;
   private initPromise: Promise<void>;
+  private installOperation: VersionInstallOperation = "install";
+  private installAbortSignal: AbortSignal | null = null;
 
   constructor(
     settings: TSettings,
@@ -37,8 +52,92 @@ export class Mods {
     this.initPromise = Promise.resolve(this.version.init()).catch(() => {});
   }
 
-  async check() {
+  public cancelInstall() {
+    this.downloader.cancelDownload();
+  }
+
+  private sendInstallInfo(info: VersionInstallProgress | null) {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.webContents.isDestroyed()) return;
+
+    try {
+      mainWindow.webContents.send("versionInstallProgress", info);
+    } catch {}
+  }
+
+  private sendInstallProgress(
+    stage: VersionInstallStage,
+    progressPercent: number,
+    isIndeterminate = false,
+    details?: string,
+  ) {
+    if (!this.installAbortSignal) return;
+
+    this.sendInstallInfo({
+      versionName: this.conf.name,
+      loaderName: this.conf.loader.name,
+      operation: this.installOperation,
+      stage,
+      progressPercent,
+      isIndeterminate,
+      details,
+    });
+  }
+
+  private throwIfInstallCancelled() {
+    if (this.installAbortSignal?.aborted) {
+      throw new Error(VERSION_INSTALL_CANCELLED);
+    }
+  }
+
+  private isInstallCancelError(error: unknown) {
+    if (this.installAbortSignal?.aborted) return true;
+    if (!(error instanceof Error)) return false;
+
+    return (
+      error.message === VERSION_INSTALL_CANCELLED ||
+      error.message === "AbortError" ||
+      error.name === "AbortError"
+    );
+  }
+
+  private async runWithProgress(
+    options: ModsRuntimeOptions | undefined,
+    action: () => Promise<void>,
+  ) {
+    const previousSignal = this.installAbortSignal;
+    const previousOperation = this.installOperation;
+
+    this.installAbortSignal = options?.signal ?? null;
+    this.installOperation = options?.operation ?? "install";
+
+    try {
+      this.throwIfInstallCancelled();
+      await action();
+      this.throwIfInstallCancelled();
+    } catch (error) {
+      if (this.isInstallCancelError(error)) {
+        throw new Error(VERSION_INSTALL_CANCELLED);
+      }
+
+      throw error;
+    } finally {
+      if (this.installAbortSignal && !options?.keepProgressOpen) {
+        this.sendInstallInfo(null);
+      }
+
+      this.installAbortSignal = previousSignal;
+      this.installOperation = previousOperation;
+    }
+  }
+
+  async check(options?: ModsRuntimeOptions) {
+    await this.runWithProgress(options, () => this.checkInternal());
+  }
+
+  private async checkInternal() {
     await this.initPromise;
+    this.throwIfInstallCancelled();
 
     this.files = [];
 
@@ -47,6 +146,10 @@ export class Mods {
     const downloadFiles: DownloadItem[] = [];
     const worlds: string[] = [];
     const worldZips: string[] = [];
+    const savesPath = path.join(
+      this.version.versionPath,
+      projetTypeToFolder(ProjectType.WORLD),
+    );
 
     for (const mod of this.version.version.loader.mods) {
       if (!mod.version) continue;
@@ -103,14 +206,6 @@ export class Mods {
           group: "mods",
           sha1: file.sha1,
           size: file.size,
-          options:
-            mod.projectType == ProjectType.WORLD
-              ? {
-                  extract: true,
-                  extractFolder: folderPath,
-                  extractDelete: false,
-                }
-              : undefined,
         });
 
         if (
@@ -144,13 +239,24 @@ export class Mods {
       }
     }
 
-    await this.downloader.downloadFiles(downloadFiles);
+    this.sendInstallProgress("mods", 86, true);
+    await this.downloader.downloadFiles(
+      downloadFiles,
+      this.installAbortSignal ?? undefined,
+      OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
+    );
+    this.throwIfInstallCancelled();
 
     for (const zipPath of [...new Set(worldZips)]) {
       if (!(await fs.pathExists(zipPath))) continue;
 
       const worldName = await getWorldName(zipPath);
       if (!worldName) continue;
+
+      const worldPath = path.join(savesPath, worldName);
+      if (!(await fs.pathExists(worldPath))) {
+        await extractWorldArchive(zipPath, savesPath);
+      }
 
       if (!worlds.includes(worldName)) worlds.push(worldName);
 
@@ -164,7 +270,7 @@ export class Mods {
     }
 
     for (const world of worlds) {
-      const worldPath = path.join(this.version.versionPath, "saves", world);
+      const worldPath = path.join(savesPath, world);
       if (await fs.pathExists(worldPath)) {
         const dlFilePath = path.join(worldPath, ".downloaded");
         if (!(await fs.pathExists(dlFilePath)))
@@ -182,14 +288,19 @@ export class Mods {
 
     if (
       this.server &&
-      [ServerCore.BUKKIT, ServerCore.SPIGOT, ServerCore.PAPER].includes(
-        this.server.core,
-      )
+      [
+        ServerCore.BUKKIT,
+        ServerCore.SPIGOT,
+        ServerCore.PAPER,
+        ServerCore.PURPUR,
+      ].includes(this.server.core)
     ) {
       tasks.push(this.comparison(ProjectType.PLUGIN));
     }
 
+    this.sendInstallProgress("mods", 90, true);
     await Promise.all(tasks);
+    this.throwIfInstallCancelled();
   }
 
   private async comparison(projectType: ProjectType) {
@@ -269,25 +380,36 @@ export class Mods {
     await rimraf(deleteFiles);
   }
 
-  async downloadOther() {
+  async downloadOther(options?: ModsRuntimeOptions) {
+    await this.runWithProgress(options, () => this.downloadOtherInternal());
+  }
+
+  private async downloadOtherInternal() {
     await this.initPromise;
+    this.throwIfInstallCancelled();
 
     if (!this.version.version.loader.other) return;
 
     const tempPath = path.join(this.version.versionPath, "temp");
 
     try {
-      await this.downloader.downloadFiles([
-        {
-          destination: path.join(tempPath, "other.zip"),
-          group: "other",
-          url: this.version.version.loader.other.url,
-          options: {
-            extract: true,
-            extractFolder: this.version.versionPath,
+      this.sendInstallProgress("other", 94, true);
+      await this.downloader.downloadFiles(
+        [
+          {
+            destination: path.join(tempPath, "other.zip"),
+            group: "other",
+            url: this.version.version.loader.other.url,
+            options: {
+              extract: true,
+              extractFolder: this.version.versionPath,
+            },
           },
-        },
-      ]);
+        ],
+        this.installAbortSignal ?? undefined,
+        OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
+      );
+      this.throwIfInstallCancelled();
     } finally {
       await rimraf(tempPath).catch(() => {});
     }

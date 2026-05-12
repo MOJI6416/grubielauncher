@@ -4,59 +4,100 @@ import fs from 'fs-extra'
 import { Version } from '../game/Version'
 import { projetTypeToFolder } from './modManager'
 import { Backend } from '../services/Backend'
-import { Provider } from '@/types/ModManager'
+import { ILocalFile, ILocalProject, ProjectType, Provider } from '@/types/ModManager'
+
+function fileUrlToPath(fileUrl: string | undefined) {
+  if (!fileUrl || !fileUrl.startsWith('file://')) return ''
+
+  try {
+    return fileURLToPath(fileUrl)
+  } catch {
+    return ''
+  }
+}
+
+async function resolveLocalFilePath(version: Version, mod: ILocalProject, file: ILocalFile) {
+  const candidates = [
+    file.localPath || '',
+    fileUrlToPath(file.url),
+    path.join(
+      version.versionPath,
+      mod.projectType === ProjectType.WORLD
+        ? path.join('storage', 'worlds')
+        : projetTypeToFolder(mod.projectType),
+      file.filename
+    )
+  ].filter(Boolean)
+
+  for (const candidate of candidates) {
+    if (await fs.pathExists(candidate)) return candidate
+  }
+
+  return ''
+}
 
 export async function uploadMods(at: string, version: Version) {
   const mods = version.version.loader.mods
 
   const uploaded: string[] = []
+  let failed = false
 
   const backend = new Backend(at)
 
+  if (!version.version.shareCode) {
+    return {
+      mods,
+      success: false,
+      uploaded: 0
+    }
+  }
+
   for (const mod of mods) {
     try {
-      if (!mod.version || uploaded.includes(mod.id)) continue
+      if (!mod.version) continue
 
       if (mod.provider != Provider.LOCAL) continue
-      if (!mod.version || !mod.version.files[0]) continue
+      if (mod.projectType === ProjectType.PLUGIN) continue
+      if (!mod.version.files.length) continue
 
-      const file = mod.version.files[0]
-      const fileUrl = file.url
+      for (const file of mod.version.files) {
+        const alreadyRemote =
+          !!file.url &&
+          !file.url.startsWith('file://') &&
+          !file.url.startsWith('blocked::')
 
-      if (!fileUrl || typeof fileUrl !== 'string' || !fileUrl.startsWith('file://')) continue
+        if (alreadyRemote) continue
 
-      const filename = file.filename
+        const modPath = await resolveLocalFilePath(version, mod, file)
+        if (!modPath) {
+          failed = true
+          continue
+        }
 
-      let modPath = ''
-      try {
-        modPath = fileURLToPath(fileUrl)
-      } catch {
-        modPath = ''
+        const url = await backend.uploadFileFromPath(
+          modPath,
+          file.filename,
+          `modpacks/${version.version.shareCode}/${projetTypeToFolder(mod.projectType)}`
+        )
+        if (!url) {
+          failed = true
+          continue
+        }
+
+        file.url = url
+        delete file.localPath
+        uploaded.push(`${mod.id}:${file.filename}:${file.sha1}`)
       }
-
-      if (!modPath) {
-        modPath = path.join(version.versionPath, projetTypeToFolder(mod.projectType), filename)
-      }
-
-      if (!(await fs.pathExists(modPath))) continue
-
-      const url = await backend.uploadFileFromPath(
-        modPath,
-        filename,
-        `modpacks/${version.version.shareCode}/${projetTypeToFolder(mod.projectType)}`
-      )
-      if (!url) continue
-
-      mod.url = url
-      uploaded.push(mod.id)
     } catch (err) {
-      console.log('Error uploading mod:', err)
+      failed = true
+      console.error('Error uploading mod:', err)
       continue
     }
   }
 
   return {
     mods,
-    success: uploaded.length > 0
+    success: !failed,
+    uploaded: uploaded.length
   }
 }

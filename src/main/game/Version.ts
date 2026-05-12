@@ -24,6 +24,61 @@ import { app } from "electron";
 import { runGame, runJar } from "../utilities/game";
 import { Backend } from "../services/Backend";
 import { readJSONFromArchive } from "../utilities/archiver";
+import {
+  VersionInstallOperation,
+  VersionInstallOptions,
+  VersionInstallProgress,
+  VersionInstallStage,
+  VERSION_INSTALL_CANCELLED,
+} from "@/types/InstallationProgress";
+import { mainWindow } from "../windows/mainWindow";
+import {
+  getUnusedInstallResourcePaths,
+  normalizeInstallResourcePath,
+  shouldCleanupCancelledInstall,
+} from "../utilities/installCleanup";
+
+type VersionInstallRuntimeOptions = VersionInstallOptions & {
+  signal?: AbortSignal;
+};
+
+function parseCustomRunArguments(input?: string) {
+  if (!input?.trim()) return [];
+
+  const args: string[] = [];
+  let current = "";
+  let quote: '"' | "'" | null = null;
+
+  for (let index = 0; index < input.length; index++) {
+    const char = input[index];
+    const next = input[index + 1];
+
+    if (char === "\\" && (next === '"' || next === "'")) {
+      current += next;
+      index++;
+      continue;
+    }
+
+    if ((char === '"' || char === "'") && (!quote || quote === char)) {
+      quote = quote === char ? null : char;
+      continue;
+    }
+
+    if (!quote && /\s/.test(char)) {
+      if (current) {
+        args.push(current);
+        current = "";
+      }
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current) args.push(current);
+
+  return args;
+}
 
 export class Version {
   public version: IVersionConf;
@@ -39,6 +94,8 @@ export class Version {
 
   private downloader: Downloader = new Downloader(6);
   private initPromise: Promise<void> | null = null;
+  private installOperation: VersionInstallOperation = "install";
+  private installAbortSignal: AbortSignal | null = null;
 
   constructor(version: IVersionConf) {
     this.version = version;
@@ -82,14 +139,110 @@ export class Version {
     }
   }
 
+  private sendInstallInfo(info: VersionInstallProgress | null) {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.webContents.isDestroyed()) return;
+
+    try {
+      mainWindow.webContents.send("versionInstallProgress", info);
+    } catch {}
+  }
+
+  private sendInstallProgress(
+    stage: VersionInstallStage,
+    progressPercent: number,
+    isIndeterminate = false,
+    details?: string,
+  ) {
+    this.sendInstallInfo({
+      versionName: this.version.name,
+      loaderName: this.version.loader.name,
+      operation: this.installOperation,
+      stage,
+      progressPercent,
+      isIndeterminate,
+      details,
+    });
+  }
+
+  public cancelInstall() {
+    this.downloader.cancelDownload();
+  }
+
+  private throwIfInstallCancelled() {
+    if (this.installAbortSignal?.aborted) {
+      throw new Error(VERSION_INSTALL_CANCELLED);
+    }
+  }
+
+  private isInstallCancelError(error: unknown) {
+    if (this.installAbortSignal?.aborted) return true;
+    if (error instanceof Error) {
+      return (
+        error.message === VERSION_INSTALL_CANCELLED ||
+        error.message === "AbortError" ||
+        error.name === "AbortError"
+      );
+    }
+
+    return false;
+  }
+
+  private async cleanupCancelledInstall(
+    account: ILocalAccount,
+    cleanupOnCancel?: boolean,
+  ) {
+    if (!shouldCleanupCancelledInstall(cleanupOnCancel)) return;
+
+    await this.delete(account, true).catch((error) => {
+      console.error(
+        `[version:install] failed to cleanup cancelled install ${this.versionPath}:`,
+        error,
+      );
+    });
+  }
+
   public async install(
     settings: TSettings,
     account: ILocalAccount,
     items: DownloadItem[] = [],
+    options: VersionInstallRuntimeOptions = {},
   ) {
     await this.ensureInitialized();
+    this.downloader = new Downloader(settings.downloadLimit || 6);
+    this.installOperation = options.operation ?? "install";
+    this.installAbortSignal = options.signal ?? null;
+    this.sendInstallProgress("preparing", 2, true);
 
+    try {
+      this.throwIfInstallCancelled();
+      await this.installInternal(settings, account, items);
+      this.throwIfInstallCancelled();
+      this.sendInstallProgress("done", 100);
+    } catch (error) {
+      if (this.isInstallCancelError(error)) {
+        await this.cleanupCancelledInstall(account, options.cleanupOnCancel);
+        throw new Error(VERSION_INSTALL_CANCELLED);
+      }
+
+      throw error;
+    } finally {
+      if (!options.keepProgressOpen) {
+        this.sendInstallInfo(null);
+      }
+      this.installOperation = "install";
+      this.installAbortSignal = null;
+    }
+  }
+
+  private async installInternal(
+    settings: TSettings,
+    account: ILocalAccount,
+    items: DownloadItem[] = [],
+  ) {
     const downloadItems: DownloadItem[] = [...items];
+    const downloadSignal = this.installAbortSignal ?? undefined;
+    this.throwIfInstallCancelled();
 
     const manifestPath = path.join(
       this.versionPath,
@@ -101,22 +254,34 @@ export class Version {
     if (!isExistsManifest) {
       isNewManifest = true;
 
-      await this.downloader.downloadFiles([
-        {
-          url: this.version.version.url,
-          destination: manifestPath,
-          group: "manifest",
-        },
-      ]);
+      this.sendInstallProgress("manifest", 8, true);
+      await this.downloader.downloadFiles(
+        [
+          {
+            url: this.version.version.url,
+            destination: manifestPath,
+            group: "manifest",
+          },
+        ],
+        downloadSignal,
+      );
     }
 
+    this.throwIfInstallCancelled();
+    this.sendInstallProgress("manifest", 12, false);
     await this.readManifest();
+    this.throwIfInstallCancelled();
 
-    if (!this.manifest) return;
+    if (!this.manifest) {
+      throw new Error(`Failed to read version manifest: ${manifestPath}`);
+    }
 
+    this.sendInstallProgress("java", 18, true);
     const java = new Java(this.manifest.javaVersion.majorVersion);
-    await java.init();
-    await java.install();
+    await java.init(downloadSignal);
+    this.throwIfInstallCancelled();
+    await java.install(downloadSignal);
+    this.throwIfInstallCancelled();
 
     this.javaPath = java.javaPath;
 
@@ -130,6 +295,7 @@ export class Version {
     }
 
     let isDownloadClient = true;
+    this.sendInstallProgress("loader", 28, true);
 
     if (
       ["fabric", "quilt"].includes(this.version.loader.name) &&
@@ -147,8 +313,12 @@ export class Version {
           encoding: "utf-8",
         });
       } else {
+        this.throwIfInstallCancelled();
         const response = await axios.get<IFabricManifest>(
           this.version.loader.version.url,
+          {
+            signal: downloadSignal,
+          },
         );
         await fs.writeJSON(fabricManifestPath, response.data, {
           encoding: "utf-8",
@@ -156,6 +326,7 @@ export class Version {
         });
         fabricManifest = response.data;
       }
+      this.throwIfInstallCancelled();
 
       if (isNewManifest && fabricManifest) {
         this.manifest.mainClass = fabricManifest.mainClass;
@@ -203,140 +374,167 @@ export class Version {
 
       const isExistsInstaller = await fs.pathExists(installerPath);
       if (!isExistsInstaller) {
-        await this.downloader.downloadFiles([
-          {
-            url: this.version.loader.version.url,
-            destination: installerPath,
-            group: this.version.loader.name,
-          },
-        ]);
+        await this.downloader.downloadFiles(
+          [
+            {
+              url: this.version.loader.version.url,
+              destination: installerPath,
+              group: this.version.loader.name,
+            },
+          ],
+          downloadSignal,
+        );
       }
+      this.throwIfInstallCancelled();
 
       if (isNewManifest) {
         const tempPath = path.join(this.versionPath, "temp");
-        await fs.mkdir(tempPath, { recursive: true });
-        await this.writeLauncherProfile();
+        await rimraf(tempPath).catch(() => {});
+        await fs.ensureDir(tempPath);
 
-        let forgeInstalled = false;
         try {
-          await runJar(
-            this.javaPath,
-            ["-jar", installerPath, "--installClient", "."],
-            tempPath,
-          );
-          forgeInstalled = true;
-        } catch {}
+          await this.writeLauncherProfile();
 
-        if (!forgeInstalled) {
-          const installProfile = await readJSONFromArchive<IInstallProfile>(
-            installerPath,
-            "install_profile.json",
-          );
-          if (!installProfile) {
-            await rimraf(tempPath).catch(() => {});
-            throw new Error(
-              "Failed to read install_profile.json from Forge installer.",
+          let forgeInstalled = false;
+          this.sendInstallProgress("installer", 38, true);
+
+          try {
+            const installResult = await runJar(
+              this.javaPath,
+              ["-jar", installerPath, "--installClient", "."],
+              tempPath,
+              downloadSignal,
+            );
+            forgeInstalled = installResult === "done" || installResult === 0;
+          } catch (error) {
+            console.warn(
+              `${this.version.loader.name} installer failed, falling back to install_profile.json:`,
+              error,
             );
           }
 
-          this.manifest.mainClass = installProfile.versionInfo.mainClass;
-          this.manifest.minecraftArguments =
-            installProfile.versionInfo.minecraftArguments;
-
-          for (const lib of installProfile.versionInfo.libraries) {
-            if (!lib.url) lib.url = "https://libraries.minecraft.net/";
-
-            let path = convertMavenCoordinateToJarPath(lib.name);
-
-            if (path.includes("minecraftforge/forge")) {
-              path = path.replace(".jar", `-universal.jar`);
-            }
-
-            const library: IVersionManifest["libraries"][0] = {
-              name: lib.name,
-              downloads: {
-                artifact: {
-                  url: `${lib.url}/${path}`,
-                  path,
-                  size: 0,
-                  sha1: lib.checksums ? lib.checksums[0] : "",
-                },
-              },
-            };
-
-            this.manifest.libraries.push(library);
-          }
-        } else {
-          isDownloadClient = false;
           const versionsPath = path.join(tempPath, "versions");
-
-          await fs.copyFile(
-            path.join(
-              versionsPath,
-              this.version.version.id,
-              `${this.version.version.id}.jar`,
-            ),
-            path.join(this.versionPath, `${this.version.version.id}.jar`),
-          );
-
-          const forgeManifestPath = path.join(
-            this.versionPath,
-            `${this.version.loader.name}.json`,
-          );
+          this.throwIfInstallCancelled();
           const forgeManifestName =
             this.version.loader.name == "forge"
               ? `${this.version.version.id}-forge-${this.version.loader.version.id}`
               : `neoforge-${this.version.loader.version.id}`;
+          const installedForgeManifestPath = forgeInstalled
+            ? await this.findInstalledLoaderManifestPath(
+                versionsPath,
+                forgeManifestName,
+              )
+            : null;
 
-          await fs.copyFile(
-            path.join(
+          this.sendInstallProgress("loader", 48, true);
+          this.throwIfInstallCancelled();
+
+          if (!forgeInstalled || !installedForgeManifestPath) {
+            const installProfile = await readJSONFromArchive<IInstallProfile>(
+              installerPath,
+              "install_profile.json",
+            );
+            if (!installProfile?.versionInfo?.libraries) {
+              throw new Error(
+                "Failed to read install_profile.json from Forge installer.",
+              );
+            }
+
+            this.manifest.mainClass = installProfile.versionInfo.mainClass;
+            this.manifest.minecraftArguments =
+              installProfile.versionInfo.minecraftArguments;
+
+            for (const lib of installProfile.versionInfo.libraries) {
+              if (!lib.url) lib.url = "https://libraries.minecraft.net/";
+
+              let path = convertMavenCoordinateToJarPath(lib.name);
+
+              if (path.includes("minecraftforge/forge")) {
+                path = path.replace(".jar", `-universal.jar`);
+              }
+
+              const library: IVersionManifest["libraries"][0] = {
+                name: lib.name,
+                downloads: {
+                  artifact: {
+                    url: `${lib.url}/${path}`,
+                    path,
+                    size: 0,
+                    sha1: lib.checksums ? lib.checksums[0] : "",
+                  },
+                },
+              };
+
+              this.manifest.libraries.push(library);
+            }
+          } else {
+            const installedClientPath = path.join(
               versionsPath,
-              forgeManifestName,
-              `${forgeManifestName}.json`,
-            ),
-            forgeManifestPath,
-          );
+              this.version.version.id,
+              `${this.version.version.id}.jar`,
+            );
 
-          const tempLibrariesPath = path.join(tempPath, "libraries");
-          await fs.copy(
-            path.join(tempLibrariesPath),
-            path.join(this.minecraftPath, "libraries"),
-            {
-              overwrite: true,
-            },
-          );
-          await fs.remove(tempLibrariesPath);
+            if (await fs.pathExists(installedClientPath)) {
+              await fs.copyFile(
+                installedClientPath,
+                path.join(this.versionPath, `${this.version.version.id}.jar`),
+              );
+              isDownloadClient = false;
+            }
 
-          const forgeManifest: IVersionManifest = await fs.readJSON(
-            forgeManifestPath,
-            "utf-8",
-          );
+            const forgeManifestPath = path.join(
+              this.versionPath,
+              `${this.version.loader.name}.json`,
+            );
 
-          this.manifest.mainClass = forgeManifest.mainClass;
+            await fs.copyFile(installedForgeManifestPath, forgeManifestPath);
 
-          if (forgeManifest.arguments?.jvm && this.manifest.arguments?.jvm)
-            this.manifest.arguments.jvm.push(...forgeManifest.arguments.jvm);
+            const tempLibrariesPath = path.join(tempPath, "libraries");
+            if (await fs.pathExists(tempLibrariesPath)) {
+              await fs.copy(
+                tempLibrariesPath,
+                path.join(this.minecraftPath, "libraries"),
+                {
+                  overwrite: true,
+                },
+              );
+            }
 
-          if (forgeManifest.arguments?.game && this.manifest.arguments?.game)
-            this.manifest.arguments.game.push(...forgeManifest.arguments.game);
+            const forgeManifest: IVersionManifest = await fs.readJSON(
+              forgeManifestPath,
+              "utf-8",
+            );
 
-          if (forgeManifest.minecraftArguments) {
-            this.manifest.minecraftArguments = forgeManifest.minecraftArguments;
+            this.manifest.mainClass = forgeManifest.mainClass;
+
+            if (forgeManifest.arguments?.jvm && this.manifest.arguments?.jvm)
+              this.manifest.arguments.jvm.push(...forgeManifest.arguments.jvm);
+
+            if (forgeManifest.arguments?.game && this.manifest.arguments?.game)
+              this.manifest.arguments.game.push(
+                ...forgeManifest.arguments.game,
+              );
+
+            if (forgeManifest.minecraftArguments) {
+              this.manifest.minecraftArguments =
+                forgeManifest.minecraftArguments;
+            }
+
+            this.manifest.libraries = this.removeDuplicateLibraries(
+              [...forgeManifest.libraries, ...this.manifest.libraries],
+              this.version.loader.name == "forge"
+                ? ["com.google.guava:guava", "com.google.guava:failureaccess"]
+                : [
+                    "org.ow2.asm:asm",
+                    "org.apache.logging.log4j:log4j-slf4j2-impl",
+                  ],
+            );
           }
 
-          this.manifest.libraries = this.removeDuplicateLibraries(
-            [...forgeManifest.libraries, ...this.manifest.libraries],
-            this.version.loader.name == "forge"
-              ? ["com.google.guava:guava", "com.google.guava:failureaccess"]
-              : [
-                  "org.ow2.asm:asm",
-                  "org.apache.logging.log4j:log4j-slf4j2-impl",
-                ],
-          );
+          await this.writeManifest();
+        } finally {
+          await rimraf(tempPath).catch(() => {});
         }
-
-        await this.writeManifest();
-        await rimraf(tempPath).catch(() => {});
       }
     }
 
@@ -356,6 +554,7 @@ export class Version {
     }
 
     if (account.type != "microsoft" && account.type != "plain") {
+      this.throwIfInstallCancelled();
       const backend = new Backend();
       const authlib = await backend.getAuthlib();
       const existsAuthlib = this.manifest.libraries.find(
@@ -398,24 +597,32 @@ export class Version {
       `${assetsIndex.id}.json`,
     );
 
-    await this.downloader.downloadFiles([
-      {
-        url: assetsIndex.url,
-        destination: assetsIndexPath,
-        sha1: assetsIndex.sha1,
-        group: "assets",
-        size: assetsIndex.size,
-      },
-    ]);
+    this.sendInstallProgress("assets", 62, true);
+    await this.downloader.downloadFiles(
+      [
+        {
+          url: assetsIndex.url,
+          destination: assetsIndexPath,
+          sha1: assetsIndex.sha1,
+          group: "assets",
+          size: assetsIndex.size,
+        },
+      ],
+      downloadSignal,
+    );
+    this.throwIfInstallCancelled();
 
     const assets = await this.getAssets();
     downloadItems.push(...assets.downloadItems);
 
-    await this.downloader.downloadFiles(downloadItems);
+    this.sendInstallProgress("files", 78, true);
+    await this.downloader.downloadFiles(downloadItems, downloadSignal);
+    this.throwIfInstallCancelled();
 
     const optionsPath = path.join(this.versionPath, "options.txt");
     const isExistsOptions = await fs.pathExists(optionsPath);
     if (!isExistsOptions) {
+      this.sendInstallProgress("options", 94, false);
       const lang = LANGUAGES.find((l) => l.code == settings.lang);
       if (!lang) return;
 
@@ -531,6 +738,158 @@ export class Version {
     }
 
     return { downloadItems, paths };
+  }
+
+  private normalizeResourcePath(targetPath: string) {
+    return normalizeInstallResourcePath(targetPath);
+  }
+
+  private getAssetIndexPath(manifest: IVersionManifest) {
+    if (!manifest.assetIndex?.id) return null;
+
+    return path.join(
+      this.minecraftPath,
+      "assets",
+      "indexes",
+      `${manifest.assetIndex.id}.json`,
+    );
+  }
+
+  private getLibraryPathsFromManifest(
+    manifest: IVersionManifest,
+    account: ILocalAccount,
+  ) {
+    const platform = getOS();
+    if (!platform) return [];
+
+    const librariesPath = path.join(this.minecraftPath, "libraries");
+    const paths: string[] = [];
+
+    for (const library of manifest.libraries ?? []) {
+      if (
+        library.name.includes("authlib-injector") &&
+        (account.type == "microsoft" || account.type == "plain")
+      )
+        continue;
+
+      let isAllow = true;
+
+      if (library.rules) {
+        for (const rule of library.rules) {
+          if (rule.action == "allow") {
+            if (rule.os && rule.os.name != platform.os) {
+              isAllow = false;
+              break;
+            }
+          } else {
+            if (rule.os && rule.os.name == platform.os) {
+              isAllow = false;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!isAllow || library.natives) continue;
+
+      const artifact = (library as any).downloads?.artifact;
+      if (!artifact?.path) continue;
+
+      paths.push(path.join(librariesPath, artifact.path));
+    }
+
+    return paths;
+  }
+
+  private async getAssetPathsFromManifest(manifest: IVersionManifest) {
+    const assetsIndexPath = this.getAssetIndexPath(manifest);
+    if (!assetsIndexPath) return [];
+
+    const paths = [assetsIndexPath];
+
+    if (!(await fs.pathExists(assetsIndexPath))) {
+      return paths;
+    }
+
+    try {
+      const assets: IAssetIndex = await fs.readJSON(assetsIndexPath, "utf-8");
+
+      for (const value of Object.values(assets.objects ?? {})) {
+        if (!value.hash) continue;
+
+        const subHash = value.hash.substring(0, 2);
+        paths.push(
+          path.join(
+            this.minecraftPath,
+            "assets",
+            "objects",
+            subHash,
+            value.hash,
+          ),
+        );
+      }
+    } catch {}
+
+    return paths;
+  }
+
+  private async getOtherVersionManifestPaths() {
+    const versionsPath = path.join(this.minecraftPath, "versions");
+    const currentPath = this.normalizeResourcePath(this.versionPath);
+    const directories = await fs.readdir(versionsPath).catch(() => []);
+    const manifestPaths: string[] = [];
+
+    for (const directory of directories) {
+      const versionPath = path.join(versionsPath, directory);
+      if (this.normalizeResourcePath(versionPath) === currentPath) continue;
+
+      const stats = await fs.stat(versionPath).catch(() => null);
+      if (!stats?.isDirectory()) continue;
+
+      const files = await fs.readdir(versionPath).catch(() => []);
+      for (const file of files) {
+        if (!file.endsWith(".json") || file === "version.json") continue;
+        manifestPaths.push(path.join(versionPath, file));
+      }
+    }
+
+    return manifestPaths;
+  }
+
+  private async getOtherVersionResourcePaths(account: ILocalAccount) {
+    const resourcePaths = new Set<string>();
+    const manifestPaths = await this.getOtherVersionManifestPaths();
+
+    for (const manifestPath of manifestPaths) {
+      try {
+        const manifest: IVersionManifest = await fs.readJSON(
+          manifestPath,
+          "utf-8",
+        );
+
+        for (const libraryPath of this.getLibraryPathsFromManifest(
+          manifest,
+          account,
+        )) {
+          resourcePaths.add(this.normalizeResourcePath(libraryPath));
+        }
+
+        for (const assetPath of await this.getAssetPathsFromManifest(
+          manifest,
+        )) {
+          resourcePaths.add(this.normalizeResourcePath(assetPath));
+        }
+      } catch {}
+    }
+
+    return resourcePaths;
+  }
+
+  private getUnusedResourcePaths(
+    resourcePaths: string[],
+    usedByOtherVersions: Set<string>,
+  ) {
+    return getUnusedInstallResourcePaths(resourcePaths, usedByOtherVersions);
   }
 
   private removeDuplicateLibraries(
@@ -846,8 +1205,8 @@ export class Version {
     });
 
     if (this.version.runArguments) {
-      jvm.push(...this.version.runArguments.jvm.split(" "));
-      game.push(...this.version.runArguments.game.split(" "));
+      jvm.push(...parseCustomRunArguments(this.version.runArguments.jvm));
+      game.push(...parseCustomRunArguments(this.version.runArguments.game));
     }
 
     return { jvm, game };
@@ -917,7 +1276,7 @@ export class Version {
       quick.single,
       quick.multiplayer,
     );
-    if (!command) return;
+    if (!command) return false;
 
     runGame(
       command[0],
@@ -928,6 +1287,8 @@ export class Version {
       account.accessToken || "",
       quick.multiplayer || this.version.quickServer,
     );
+
+    return true;
   }
 
   private async writeLauncherProfile() {
@@ -952,6 +1313,53 @@ export class Version {
     );
   }
 
+  private async findInstalledLoaderManifestPath(
+    versionsPath: string,
+    expectedName: string,
+  ) {
+    const expectedPath = path.join(
+      versionsPath,
+      expectedName,
+      `${expectedName}.json`,
+    );
+
+    if (await fs.pathExists(expectedPath)) return expectedPath;
+
+    const versionDirs = await fs.readdir(versionsPath).catch(() => []);
+    const loaderName = this.version.loader.name.toLowerCase();
+
+    for (const dirName of versionDirs) {
+      const candidatePath = path.join(versionsPath, dirName, `${dirName}.json`);
+      if (!(await fs.pathExists(candidatePath))) continue;
+      if (dirName.toLowerCase().includes(loaderName)) return candidatePath;
+    }
+
+    for (const dirName of versionDirs) {
+      const candidatePath = path.join(versionsPath, dirName, `${dirName}.json`);
+      if (!(await fs.pathExists(candidatePath))) continue;
+
+      try {
+        const manifest: IVersionManifest = await fs.readJSON(
+          candidatePath,
+          "utf-8",
+        );
+        const libraries = manifest.libraries ?? [];
+        const hasLoaderLibrary = libraries.some((lib) => {
+          const name = lib.name.toLowerCase();
+          return (
+            name.includes("minecraftforge") ||
+            name.includes("neoforged") ||
+            name.includes("neoforge")
+          );
+        });
+
+        if (manifest.mainClass && hasLoaderLibrary) return candidatePath;
+      } catch {}
+    }
+
+    return null;
+  }
+
   public async delete(account: ILocalAccount, isFull: boolean = false) {
     await this.ensureInitialized();
 
@@ -959,8 +1367,23 @@ export class Version {
 
     const libraries = this.getLibraries(account);
     const assets = await this.getAssets();
+    const assetIndexPath = this.manifest
+      ? this.getAssetIndexPath(this.manifest)
+      : null;
+    const usedByOtherVersions =
+      await this.getOtherVersionResourcePaths(account);
+    const removableResources = this.getUnusedResourcePaths(
+      [
+        ...libraries.paths,
+        ...assets.paths,
+        ...(assetIndexPath ? [assetIndexPath] : []),
+      ],
+      usedByOtherVersions,
+    );
 
-    await rimraf([...libraries.paths, ...assets.paths]);
+    if (removableResources.length) {
+      await rimraf(removableResources);
+    }
     await rimraf(this.versionPath);
 
     return true;

@@ -66,8 +66,8 @@ export function registerFsIpc() {
     return true
   })
 
-  handleSafe<boolean>('file:archiveFiles', false, async (_, filesToArchive: string[], zipPath: string) => {
-    await createZipArchive(filesToArchive, zipPath)
+  handleSafe<boolean>('file:archiveFiles', false, async (_, filesToArchive: string[], zipPath: string, basePath?: string) => {
+    await createZipArchive(filesToArchive, zipPath, basePath)
     return true
   })
 

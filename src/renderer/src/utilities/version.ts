@@ -1,98 +1,48 @@
 import { ILocalAccount } from "@/types/Account";
+import { IModpack } from "@/types/Backend";
 import { IVersionConf } from "@/types/IVersion";
 import { IServer } from "@/types/ServersList";
 import { Mods } from "@renderer/classes/Mods";
-import { ILocalProject } from "@/types/ModManager";
 import { TSettings } from "@/types/Settings";
-import { IArguments } from "@/types/IArguments";
 import { Version } from "@renderer/classes/Version";
+import { IArguments } from "@/types/IArguments";
+import { ILocalProject } from "@/types/ModManager";
+import {
+  areOtherFilesEqual,
+  areRunArgumentsEqual,
+  formatShareDiffParts,
+  getShareDiffParts,
+  preserveLocalBlockedPaths,
+} from "./shareSyncPure";
+export {
+  checkVersionName,
+  forbiddenSymbols,
+  isOwner,
+  parseVersionOwner,
+} from "./versionPure";
 
 const api = window.api;
-
-export function isOwner(owner?: string, account?: ILocalAccount) {
-  if (!owner || !account) return false;
-
-  return `${account.type}_${account.nickname}` === owner;
-}
-
-export function parseVersionOwner(owner?: string) {
-  if (!owner) return null;
-
-  const separatorIndex = owner.indexOf("_");
-  if (separatorIndex <= 0 || separatorIndex === owner.length - 1) {
-    return {
-      type: undefined,
-      nickname: owner,
-    };
-  }
-
-  return {
-    type: owner.slice(0, separatorIndex),
-    nickname: owner.slice(separatorIndex + 1),
-  };
-}
-
-export const forbiddenSymbols: string[] = [
-  "\\",
-  "/",
-  ":",
-  "*",
-  "?",
-  '"',
-  "<",
-  ">",
-  "|",
-];
-
-export function checkVersionName(
-  versionName: string,
-  versions: IVersionConf[],
-  selectedVersion?: IVersionConf,
-  isDownloaded?: boolean,
-) {
-  const name = versionName.trim();
-
-  if (name == "" && selectedVersion) return false;
-
-  if (name.length > 32) return false;
-
-  if (
-    !!versions.find(
-      (v) => v.name.toLocaleLowerCase() == name.toLocaleLowerCase(),
-    ) &&
-    (selectedVersion
-      ? name != selectedVersion?.name || (!selectedVersion && isDownloaded)
-      : true)
-  )
-    return false;
-
-  for (let index = 0; index < forbiddenSymbols.length; index++) {
-    const s = forbiddenSymbols[index];
-    if (name.trim().includes(s)) return false;
-  }
-
-  return true;
-}
 
 export async function syncShare(
   version: Version,
   servers: IServer[],
   settings: TSettings,
   at: string,
+  modpackOverride?: IModpack,
 ) {
   if (!version || !version.version.shareCode)
     throw Error("not selected version");
 
-  const modpackData = await api.backend.getModpack(
-    at,
-    version.version.shareCode,
-  );
-  if (!modpackData.data) throw Error("not share version");
+  const modpack =
+    modpackOverride ||
+    (await api.backend.getModpack(at, version.version.shareCode)).data;
+  if (!modpack) throw Error("not share version");
 
-  const modpack = modpackData.data;
-
+  const previousOther = version.version.loader.other;
   let isOther = false;
-  if (modpack.conf.loader.other?.size != version.version.loader.other?.size) {
+  if (
+    !areOtherFilesEqual(modpack.conf.loader.other, version.version.loader.other)
+  ) {
     version.version.loader.other = modpack.conf.loader.other;
     isOther = true;
   }
@@ -104,12 +54,24 @@ export async function syncShare(
     )) ||
     isOther
   ) {
+    const previousMods = version.version.loader.mods;
+
+    preserveLocalBlockedPaths(
+      version.version.loader.mods,
+      modpack.conf.loader.mods,
+    );
     version.version.loader.mods = modpack.conf.loader.mods;
 
-    const versionMods = new Mods(settings, version.version);
+    try {
+      const versionMods = new Mods(settings, version.version);
 
-    await versionMods.check();
-    if (isOther) await versionMods.downloadOther();
+      await versionMods.check();
+      if (isOther) await versionMods.downloadOther();
+    } catch (error) {
+      version.version.loader.mods = previousMods;
+      version.version.loader.other = previousOther;
+      throw error;
+    }
   }
 
   if (!(await api.servers.compare(modpack.conf.servers, servers))) {
@@ -125,17 +87,24 @@ export async function syncShare(
     const logoPath = await api.path.join(version.versionPath, "logo.png");
     version.version.image = modpack.conf.image;
     if (modpack.conf.image) {
-      const newFile = await fetch(modpack.conf.image).then((r) => r.blob());
-      await api.fs.writeFile(
-        logoPath,
-        new Uint8Array(await newFile.arrayBuffer()),
-      );
+      try {
+        const newFile = await fetch(modpack.conf.image).then((r) => r.blob());
+        await api.fs.writeFile(
+          logoPath,
+          new Uint8Array(await newFile.arrayBuffer()),
+        );
+      } catch {}
     } else {
       await api.fs.rimraf(logoPath);
     }
   }
 
-  if (modpack.conf.runArguments != version.version.runArguments) {
+  if (
+    !areRunArgumentsEqual(
+      modpack.conf.runArguments,
+      version.version.runArguments,
+    )
+  ) {
     version.version.runArguments = modpack.conf.runArguments;
   }
 
@@ -171,30 +140,16 @@ export async function checkDiffenceUpdateData(
 
   const isOwner = !version.downloadedVersion && version.shareCode;
 
-  let diff = "";
-
   const modpackData = await api.backend.getModpack(at, version.shareCode);
   if (!modpackData.data) throw Error("not found");
 
   const modpack = modpackData.data;
 
-  if (isOwner && modpack.conf.name != version.name) diff += "name" + ", ";
-
-  if (modpack.conf.image !== logo) diff += "logo" + ", ";
-
-  if (!(await api.modManager.compareMods(modpack.conf.loader.mods, mods)))
-    diff += "mods" + ", ";
-  if (
-    !(await api.servers.compare(modpack.conf.servers, servers)) ||
-    modpack.conf.quickServer != (quickServer || "")
-  )
-    diff += "servers" + ", ";
-
-  if (
-    (modpack.conf?.runArguments?.game || "") != runArguments.game ||
-    (modpack.conf?.runArguments?.jvm || "") != runArguments.jvm
-  )
-    diff += "arguments" + ", ";
+  const modsEqual = await api.modManager.compareMods(
+    modpack.conf.loader.mods,
+    mods,
+  );
+  const serversEqual = await api.servers.compare(modpack.conf.servers, servers);
 
   const optionsPath = await api.path.join(versionPath, "options.txt");
   let options = "";
@@ -202,15 +157,25 @@ export async function checkDiffenceUpdateData(
   if (await api.fs.pathExists(optionsPath))
     options = await api.fs.readFile(optionsPath, "utf-8");
 
-  if (isOwner && modpack.conf.options != options) diff += "options" + ", ";
-
-  if (isOwner) diff += "other" + ", ";
-  else {
-    if (modpack.conf.loader.other?.size != version.loader.other?.size)
-      diff += "other" + ", ";
-  }
-
-  console.log(diff, "diff");
+  const diff = formatShareDiffParts(
+    getShareDiffParts({
+      isOwner: !!isOwner,
+      remoteName: modpack.conf.name,
+      currentName: version.name,
+      remoteImage: modpack.conf.image,
+      currentLogo: logo,
+      modsEqual,
+      serversEqual,
+      remoteQuickServer: modpack.conf.quickServer,
+      currentQuickServer: quickServer,
+      remoteRunArguments: modpack.conf.runArguments,
+      currentRunArguments: runArguments,
+      remoteOptions: modpack.conf.options,
+      currentOptions: options,
+      remoteOther: modpack.conf.loader.other,
+      currentOther: version.loader.other,
+    }),
+  );
 
   return diff;
 }

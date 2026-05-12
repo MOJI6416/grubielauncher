@@ -1,5 +1,11 @@
 import { Loader } from "@/types/Loader";
-import { Select, SelectItem } from "@heroui/react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import fabricIcon from "@renderer/assets/loaders/fabric.svg";
 import forgeIcon from "@renderer/assets/loaders/forge.svg";
 import neoforgeIcon from "@renderer/assets/loaders/neoforge.svg";
@@ -104,12 +110,14 @@ export function Loaders({
   select,
   isLoading,
   isDisabled = false,
+  disabledLoaders = [],
   loader,
   label = "Loader",
 }: {
   select: (loader: Loader) => void;
   isLoading: boolean;
   isDisabled?: boolean;
+  disabledLoaders?: Loader[];
   loader: string;
   label?: string;
 }) {
@@ -117,32 +125,30 @@ export function Loaders({
     loader && loader in loaders ? (loader as Loader) : "vanilla";
 
   return (
-    <Select
-      aria-label={label}
-      className="w-full"
-      disallowEmptySelection
-      isDisabled={isLoading || isDisabled}
-      label={label}
-      onChange={(event) => {
-        const value = event.target.value as Loader;
-        if (value) select(value);
-      }}
-      renderValue={(items) =>
-        items.map((item) => (
-          <LoaderLabel
-            key={String(item.key)}
-            loader={String(item.key)}
-            className="max-w-full"
-          />
-        ))
-      }
-      selectedKeys={[selectedLoader]}
-    >
-      {loaderTabs.map((loaderKey) => (
-        <SelectItem key={loaderKey} textValue={loaders[loaderKey].name}>
-          <LoaderLabel loader={loaderKey} />
-        </SelectItem>
-      ))}
-    </Select>
+    <div className="flex w-full flex-col gap-2">
+      <span className="text-sm font-medium">{label}</span>
+      <Select
+        value={selectedLoader}
+        disabled={isLoading || isDisabled}
+        onValueChange={(value) => {
+          if (value) select(value as Loader);
+        }}
+      >
+        <SelectTrigger aria-label={label} className="w-full">
+          <SelectValue placeholder={label} />
+        </SelectTrigger>
+        <SelectContent>
+          {loaderTabs.map((loaderKey) => (
+            <SelectItem
+              key={loaderKey}
+              value={loaderKey}
+              disabled={disabledLoaders.includes(loaderKey)}
+            >
+              <LoaderLabel loader={loaderKey} />
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

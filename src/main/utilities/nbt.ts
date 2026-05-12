@@ -1,44 +1,60 @@
 import { IServer } from '@/types/ServersList'
-import { deserialize } from '@xmcl/nbt'
-import prismNbt from 'prismarine-nbt'
+import { deserialize, serialize, setPrototypeOf, TagType } from '@xmcl/nbt'
 import fs from 'fs-extra'
+
+const serverInfoSchema = {
+  name: TagType.String,
+  ip: TagType.String,
+  icon: TagType.String,
+  acceptTextures: TagType.Byte
+}
+
+const serversDatSchema = {
+  servers: [serverInfoSchema]
+}
+
+function normalizeAcceptTextures(value: unknown): number | null {
+  return value === 0 || value === 1 ? value : null
+}
 
 export async function writeNBT(servers: IServer[], path: string) {
   try {
-    const tag = prismNbt.comp({
-      servers: prismNbt.list(
-        prismNbt.comp([
-          ...servers.map((s) => {
-            const server: { [key: string]: any } = {
-              name: prismNbt.string(s.name),
-              ip: prismNbt.string(s.ip),
-              icon: prismNbt.string(s.icon || '')
-            }
+    const data = {
+      servers: servers.map((s) => {
+        const server: {
+          name: string
+          ip: string
+          icon: string
+          acceptTextures?: number
+        } = {
+          name: s.name,
+          ip: s.ip,
+          icon: s.icon || ''
+        }
 
-            if (s.acceptTextures !== null) {
-              server.acceptTextures = prismNbt.byte(s.acceptTextures)
-            }
+        const acceptTextures = normalizeAcceptTextures(s.acceptTextures)
+        if (acceptTextures !== null) {
+          server.acceptTextures = acceptTextures
+        }
 
-            return {
-              ...server
-            }
-          })
-        ])
-      )
-    })
+        return server
+      })
+    }
 
-    // @ts-ignore
-    const buffer = prismNbt.writeUncompressed(tag)
-    const u = new Uint8Array(buffer)
+    setPrototypeOf(data, serversDatSchema as any)
 
-    await fs.writeFile(path, u)
+    const buffer = await serialize(data)
+
+    await fs.writeFile(path, buffer)
   } catch (err) {
-    console.log(`Error writing NBT file:`, err)
+    console.error(`Error writing NBT file:`, err)
   }
 }
 
 export async function readNBT(path: string) {
   try {
+    if (!(await fs.pathExists(path))) return []
+
     const fileData = await fs.readFile(path)
     const u = new Uint8Array(fileData)
     const readed: { servers: IServer[] } = await deserialize(u)
@@ -47,10 +63,10 @@ export async function readNBT(path: string) {
       name: s.name,
       ip: s.ip,
       icon: s.icon,
-      acceptTextures: s.acceptTextures ?? null
+      acceptTextures: normalizeAcceptTextures(s.acceptTextures)
     }))
   } catch (err) {
-    console.log(`Error reading NBT file:`, err)
+    console.error(`Error reading NBT file:`, err)
     return []
   }
 }

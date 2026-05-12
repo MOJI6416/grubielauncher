@@ -1,14 +1,15 @@
 import { useMemo, useState } from "react"; // Изменено: добавили useMemo/useState
 import {
-  Alert,
-  Button,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-} from "@heroui/react";
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+import { Alert, AlertTitle } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
 
 export function Confirmation({
   onClose,
@@ -50,37 +51,58 @@ export function Confirmation({
     [activeBtn, buttons],
   );
 
+  const getButtonVariant = (color: (typeof buttons)[number]["color"]) => {
+    if (color === "danger") return "destructive";
+    if (color === "default" || color === "secondary") return "secondary";
+    return "default";
+  };
+
+  const getAlertClassName = (color: (typeof content)[number]["color"]) => {
+    if (color === "danger") return "border-destructive/40 text-destructive";
+    if (color === "warning") return "border-[var(--warning)]/40";
+    if (color === "success") return "border-[var(--success)]/40";
+    return "";
+  };
+
   return (
-    <Modal
-      isOpen={true}
-      onClose={() => {
-        if (isBusy) return;
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (open || isBusy) return;
         onClose();
       }}
-      isDismissable={!isBusy}
-      isKeyboardDismissDisabled={isBusy}
     >
-      <ModalContent>
-        <ModalHeader>{title || t("common.confirmation")}</ModalHeader>
-        <ModalBody>
+      <DialogContent
+        showCloseButton={!isBusy}
+        onEscapeKeyDown={(event) => {
+          if (isBusy) event.preventDefault();
+        }}
+        onInteractOutside={(event) => {
+          if (isBusy) event.preventDefault();
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>{title || t("common.confirmation")}</DialogTitle>
+        </DialogHeader>
+        <div>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               {content.map((c, index) => (
-                <Alert key={index} color={c.color} title={c.text} />
+                <Alert key={index} className={getAlertClassName(c.color)}>
+                  <AlertTitle>{c.text}</AlertTitle>
+                </Alert>
               ))}
             </div>
           </div>
-        </ModalBody>
-        <ModalFooter>
-          <div className="flex items-center gap-2">
+        </div>
+        <DialogFooter>
+          <div className="flex flex-wrap justify-end gap-2">
             {buttons.map((b, index) => (
               <Button
-                color={b.color}
-                variant="flat"
+                variant={getButtonVariant(b.color)}
                 key={index}
-                isLoading={b.loading || activeBtn === index}
-                isDisabled={isBusy && activeBtn !== index}
-                onPress={async () => {
+                disabled={isBusy && activeBtn !== index}
+                onClick={async () => {
                   if (isBusy && activeBtn !== index) return;
                   try {
                     setActiveBtn(index);
@@ -90,12 +112,15 @@ export function Confirmation({
                   }
                 }}
               >
+                {(b.loading || activeBtn === index) && (
+                  <Loader2 className="animate-spin" />
+                )}
                 {b.text}
               </Button>
             ))}
           </div>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

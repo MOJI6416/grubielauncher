@@ -135,9 +135,15 @@ async function terminateProcessTree(
   await waitForExit(child, 2000);
 }
 
-export function runJar(command: string, args: string[], cwd: string) {
+export function runJar(
+  command: string,
+  args: string[],
+  cwd: string,
+  signal?: AbortSignal,
+) {
   return new Promise((resolve, reject) => {
     let settled = false;
+    let successSeen = false;
 
     const settleResolve = (value: any) => {
       if (settled) return;
@@ -158,10 +164,16 @@ export function runJar(command: string, args: string[], cwd: string) {
 
     const jar = spawn(command, args, { cwd });
 
+    const onAbort = () => {
+      void terminateProcessTree(jar).finally(() => {
+        settleReject(new Error("AbortError"));
+      });
+    };
+
     const onStdout = (data: any) => {
       const output = data.toString();
       if (output.includes("Successfully installed client into launcher.")) {
-        settleResolve("done");
+        successSeen = true;
       }
     };
 
@@ -170,7 +182,7 @@ export function runJar(command: string, args: string[], cwd: string) {
     };
 
     const onClose = (code: any) => {
-      settleResolve(code);
+      settleResolve(successSeen ? "done" : code);
     };
 
     const onError = (err: any) => {
@@ -179,11 +191,18 @@ export function runJar(command: string, args: string[], cwd: string) {
 
     function cleanup() {
       try {
+        signal?.removeEventListener("abort", onAbort);
         jar.stdout?.off("data", onStdout);
         jar.stderr?.off("data", onStderr);
         jar.off("close", onClose);
         jar.off("error", onError);
       } catch {}
+    }
+
+    if (signal?.aborted) {
+      onAbort();
+    } else {
+      signal?.addEventListener("abort", onAbort);
     }
 
     jar.stdout?.on("data", onStdout);
@@ -228,7 +247,12 @@ export function installServer(
     };
 
     const onClose = (code: any) => {
-      settleResolve(code);
+      if (code === 0 || code === null) {
+        settleResolve(code);
+        return;
+      }
+
+      settleReject(new Error(`Server installer exited with code ${code}`));
     };
 
     const onError = (err: any) => {
@@ -295,6 +319,7 @@ export function runGame(
 
   let netstatInFlight = false;
   let intervalId: NodeJS.Timeout | null = null;
+  let launchAnnounced = false;
 
   const checkConnection = (): void => {
     const processData = gameProcesses.get(instanceKey);
@@ -350,9 +375,10 @@ export function runGame(
     });
 
     if (
-      message.includes("Setting gameDir") ||
-      message.includes("Setting user")
+      !launchAnnounced &&
+      (message.includes("Setting gameDir") || message.includes("Setting user"))
     ) {
+      launchAnnounced = true;
       safeMinimize();
       safeSend("launch");
     }

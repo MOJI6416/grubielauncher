@@ -1,26 +1,29 @@
 import { IModpack } from "@/types/Backend";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  addToast,
-  Alert,
-  Button,
-  Card,
-  CardBody,
-  Chip,
-  Image,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ScrollShadow,
-} from "@heroui/react";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { accountAtom } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
-import { Download, Share2, SquarePlus, Trash2 } from "lucide-react";
+import {
+  Copy,
+  Download,
+  ImageOff,
+  Loader2,
+  PackagePlus,
+  Trash2,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AddVersion } from "../Modals/Version/AddVersion";
 import { Confirmation } from "../Modals/Confirmation";
+import { toast } from "sonner";
 
 const api = window.api;
 
@@ -59,18 +62,12 @@ export function OwnModpacks({
       );
 
       if (result) {
-        addToast({
-          color: "success",
-          title: t("ownModpacks.deleted"),
-        });
+        toast.success(t("ownModpacks.deleted"));
 
         setModpacks((prev) => prev.filter((m) => m._id !== tempModpack._id));
         setTempModpack(null);
       } else {
-        addToast({
-          color: "danger",
-          title: t("ownModpacks.deleteError"),
-        });
+        toast.error(t("ownModpacks.deleteError"));
       }
     } catch {
     } finally {
@@ -81,102 +78,139 @@ export function OwnModpacks({
 
   return (
     <>
-      <Modal isOpen onClose={() => !isLoading && onClose()}>
-        <ModalContent>
-          <ModalHeader>{t("ownModpacks.title")}</ModalHeader>
-          <ModalBody>
-            <ScrollShadow className="max-h-96 pr-1">
-              {modpacks.length === 0 ? (
-                <Alert variant="bordered" title={t("ownModpacks.noModpacks")} />
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {modpacks.map((modpack) => (
-                    <Card key={modpack._id}>
-                      <CardBody>
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-2 min-w-0">
-                            {modpack.conf.image && (
-                              <Image
-                                src={modpack.conf.image}
-                                width={40}
-                                height={40}
-                                loading="lazy"
-                                className="min-w-10 min-h-10"
-                              />
-                            )}
-                            <p className="truncate text-sm">
-                              {modpack.conf.name}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-4">
-                            <Chip variant="flat" radius="sm">
-                              <div className="flex items-center gap-1">
-                                <Download size={20} />
-                                <p className="text-sm">{modpack.downloads}</p>
-                              </div>
-                            </Chip>
-
-                            <div className="flex items-center gap-1">
-                              <Button
-                                size="sm"
-                                variant="flat"
-                                isIconOnly
-                                onPress={async () => {
-                                  await api.clipboard.writeText(modpack._id);
-                                  addToast({
-                                    title: t("common.copied"),
-                                  });
-                                }}
-                              >
-                                <Share2 size={20} />
-                              </Button>
-
-                              <Button
-                                size="sm"
-                                variant="flat"
-                                color="primary"
-                                isDisabled={isLoading}
-                                isIconOnly
-                                onPress={() => {
-                                  setTempModpack(modpack);
-                                  setIsAddVersion(true);
-                                }}
-                              >
-                                <SquarePlus size={20} />
-                              </Button>
-
-                              <Button
-                                size="sm"
-                                variant="flat"
-                                color="danger"
-                                isDisabled={isLoading}
-                                isIconOnly
-                                onPress={() => {
-                                  setTempModpack(modpack);
-                                  setIsConfirmationOpen(true);
-                                }}
-                              >
-                                <Trash2 size={20} />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </CardBody>
-                    </Card>
-                  ))}
-                </div>
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open && !isLoading) onClose();
+        }}
+      >
+        <DialogContent
+          data-account-click-ignore="true"
+          className="sm:max-w-md"
+          onPointerDownOutside={(event) => {
+            if (isLoading || isAddVersion || isConfirmationOpen) {
+              event.preventDefault();
+            }
+          }}
+          onEscapeKeyDown={(event) => {
+            if (isLoading || isAddVersion || isConfirmationOpen) {
+              event.preventDefault();
+            }
+          }}
+          onClick={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <DialogHeader>
+            <div className="flex min-w-0 items-center gap-2 pr-8">
+              <DialogTitle>{t("ownModpacks.title")}</DialogTitle>
+              {modpacks.length > 0 && (
+                <Badge variant="outline" className="tabular-nums">
+                  {modpacks.length}
+                </Badge>
               )}
-            </ScrollShadow>
-          </ModalBody>
+            </div>
+          </DialogHeader>
 
-          <ModalFooter>
-            <Button variant="flat" onPress={onClose} isDisabled={isLoading}>
-              {t("common.close")}
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          <ScrollArea className="max-h-[420px] pr-2">
+            {modpacks.length === 0 ? (
+              <Card className="border-dashed bg-card/70">
+                <CardContent className="flex min-h-28 items-center justify-center px-6 text-center text-sm text-muted-foreground">
+                  {t("ownModpacks.noModpacks")}
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-2">
+                {modpacks.map((modpack) => (
+                  <Card key={modpack._id} className="gap-0 py-0 shadow-none">
+                    <CardContent className="flex items-center gap-3 p-3">
+                      <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted">
+                        {modpack.conf.image ? (
+                          <img
+                            src={modpack.conf.image}
+                            width={40}
+                            height={40}
+                            loading="lazy"
+                            className="size-full object-cover"
+                            alt={modpack.conf.name}
+                          />
+                        ) : (
+                          <ImageOff className="size-4 text-muted-foreground" />
+                        )}
+                      </div>
+
+                      <div className="grid min-w-0 flex-1 gap-1">
+                        <p
+                          className="truncate text-sm font-medium"
+                          title={modpack.conf.name}
+                        >
+                          {modpack.conf.name}
+                        </p>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Badge variant="outline" className="h-5 gap-1 px-1.5">
+                            <Download className="size-3" />
+                            <span className="tabular-nums">
+                              {modpack.downloads}
+                            </span>
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="icon-sm"
+                          disabled={isLoading}
+                          title={t("ownModpacks.copyId")}
+                          aria-label={t("ownModpacks.copyId")}
+                          onClick={async () => {
+                            await api.clipboard.writeText(modpack._id);
+                            toast(t("common.copied"));
+                          }}
+                        >
+                          <Copy />
+                        </Button>
+
+                        <Button
+                          size="icon-sm"
+                          disabled={isLoading}
+                          title={t("ownModpacks.addToLauncher")}
+                          aria-label={t("ownModpacks.addToLauncher")}
+                          onClick={() => {
+                            setTempModpack(modpack);
+                            setIsAddVersion(true);
+                          }}
+                        >
+                          <PackagePlus />
+                        </Button>
+
+                        <Button
+                          variant="destructive"
+                          size="icon-sm"
+                          disabled={isLoading}
+                          title={t("common.delete")}
+                          aria-label={t("common.delete")}
+                          onClick={() => {
+                            setTempModpack(modpack);
+                            setIsConfirmationOpen(true);
+                          }}
+                        >
+                          {isLoading &&
+                          loadingType === "deleting" &&
+                          tempModpack?._id === modpack._id ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="size-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
 
       {isAddVersion && tempModpack && (
         <AddVersion

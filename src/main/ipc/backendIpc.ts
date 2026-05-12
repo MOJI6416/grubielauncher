@@ -62,8 +62,7 @@ export function registerBackendIpc() {
 
   handleSafe('backend:modpackDownloaded', false, async (_, at: string, shareCode: string) => {
     const backend = new Backend(at)
-    await backend.modpackDownloaded(shareCode)
-    return true
+    return await backend.modpackDownloaded(shareCode)
   })
 
   handleSafe('backend:getNews', [], async () => {

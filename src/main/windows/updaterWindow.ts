@@ -6,11 +6,13 @@ export let updaterWindow: BrowserWindow | null = null
 
 export function createUpdaterWindow() {
   updaterWindow = new BrowserWindow({
-    width: 300,
-    height: 350,
+    width: 280,
+    height: 190,
     resizable: false,
     show: false,
     frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       devTools: is.dev,
