@@ -29,6 +29,16 @@ export interface VersionInstallResult {
   cancelled?: boolean;
 }
 
+export interface VersionInstallSubProgress {
+  kind: "loaderInstaller";
+  progressPercent: number;
+  isIndeterminate?: boolean;
+  titleKey?: string;
+  details?: string;
+  detailsKey?: string;
+  detailsParams?: Record<string, string | number | boolean | null | undefined>;
+}
+
 export interface VersionInstallProgress {
   versionName: string;
   loaderName: Loader;
@@ -37,4 +47,7 @@ export interface VersionInstallProgress {
   progressPercent: number;
   isIndeterminate?: boolean;
   details?: string;
+  detailsKey?: string;
+  detailsParams?: Record<string, string | number | boolean | null | undefined>;
+  subProgress?: VersionInstallSubProgress;
 }

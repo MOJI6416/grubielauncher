@@ -73,6 +73,13 @@ import { IModpack } from "@/types/Backend";
 import { toast } from "sonner";
 import { lazyWithPreload, schedulePreload } from "./utilities/lazyPreload";
 import { LazyDialogFallback } from "./components/LazyDialogFallback";
+import { WhatsNewModal } from "./components/WhatsNewModal";
+import { ILauncherReleaseNote } from "@/types/LauncherRelease";
+import {
+  getWhatsNewDecision,
+  LauncherWhatsNewState,
+  markWhatsNewSeen,
+} from "./utilities/whatsNew";
 
 const api = window.api;
 const MAX_CONSOLE_MESSAGES = 1000;
@@ -172,6 +179,10 @@ function App() {
   const [incomingInvite, setIncomingInvite] = useState<GameInvite | null>(null);
   const [inviteModpack, setInviteModpack] = useState<IModpack | null>(null);
   const [isJoiningInvite, setIsJoiningInvite] = useState(false);
+  const [whatsNew, setWhatsNew] = useState<{
+    version: string;
+    release: ILauncherReleaseNote | null;
+  } | null>(null);
 
   const onlineSocket = useRef<Socket | null>(null);
   const pendingLaunchRef = useRef<RunGameParams | null>(null);
@@ -384,6 +395,116 @@ function App() {
   }, [setPendingFriendChat, setSelectedFriend]);
 
   useEffect(() => {
+    return api.events.onDeepLink(async (payload) => {
+      if (payload.type !== "pack") return;
+
+      try {
+        await LazyAddVersion.preload();
+
+        const account = selectedAccountRef.current;
+        const modpackData = await api.backend.getModpack(
+          account?.accessToken || "",
+          payload.shareCode,
+        );
+
+        if (!modpackData.data) {
+          toast.error(tRef.current("addVersion.fromServer.notFound"));
+          return;
+        }
+
+        setInviteModpack(modpackData.data);
+        setIncomingInvite(null);
+        void api.other.restoreWindow();
+      } catch (error) {
+        console.error(error);
+        toast.error(tRef.current("addVersion.fromServer.notFound"));
+      }
+    });
+  }, [selectedAccountRef, tRef]);
+
+  const getLauncherStatePath = useEventCallback(async (launcherPath: string) => {
+    return await api.path.join(launcherPath, "launcher-state.json");
+  });
+
+  const readLauncherState = useEventCallback(
+    async (launcherPath: string): Promise<LauncherWhatsNewState | null> => {
+      const statePath = await getLauncherStatePath(launcherPath);
+      if (!(await api.fs.pathExists(statePath))) return null;
+
+      try {
+        return await api.fs.readJSON<LauncherWhatsNewState>(
+          statePath,
+          "utf-8",
+        );
+      } catch {
+        return null;
+      }
+    },
+  );
+
+  const writeLauncherState = useEventCallback(
+    async (launcherPath: string, state: LauncherWhatsNewState) => {
+      const statePath = await getLauncherStatePath(launcherPath);
+      await api.fs.writeJSON(statePath, state);
+    },
+  );
+
+  const openWhatsNew = useEventCallback(
+    async (options?: { launcherPath?: string; locale?: string }) => {
+      const launcherPath = options?.launcherPath || pathsRef.current.launcher;
+      if (!launcherPath) return;
+
+      const currentVersion = await api.other.getVersion();
+      if (!currentVersion) return;
+
+      const locale =
+        options?.locale || i18n.resolvedLanguage || i18n.language || "en";
+      const release = await api.backend.getWhatsNew(currentVersion, locale);
+
+      setWhatsNew({
+        version: currentVersion,
+        release,
+      });
+    },
+  );
+
+  const dismissWhatsNew = useEventCallback(async () => {
+    const modal = whatsNew;
+    setWhatsNew(null);
+
+    const launcherPath = pathsRef.current.launcher;
+    if (!launcherPath || !modal?.version) return;
+
+    const state = await readLauncherState(launcherPath);
+    await writeLauncherState(
+      launcherPath,
+      markWhatsNewSeen(modal.version, state),
+    );
+  });
+
+  const checkWhatsNewAfterInit = useEventCallback(
+    async (launcherPath: string, locale: string) => {
+      const currentVersion = await api.other.getVersion();
+      if (!currentVersion) return;
+
+      const state = await readLauncherState(launcherPath);
+      const decision = getWhatsNewDecision(currentVersion, state);
+
+      if (decision.type === "firstLaunch") {
+        await writeLauncherState(
+          launcherPath,
+          markWhatsNewSeen(currentVersion, state),
+        );
+        return;
+      }
+
+      if (decision.shouldShow) {
+        await openWhatsNew({ launcherPath, locale });
+      }
+    },
+  );
+
+  useEffect(() => {
     let cancelled = false;
 
     const init = async () => {
@@ -393,7 +514,13 @@ function App() {
 
         setPaths(p);
 
-        await Promise.all([getSettings(p.launcher), getAccounts()]);
+        const [settingsData] = await Promise.all([
+          getSettings(p.launcher),
+          getAccounts(),
+        ]);
+        if (cancelled) return;
+
+        await checkWhatsNewAfterInit(p.launcher, settingsData.lang);
         if (cancelled) return;
 
         const versionsPath = await api.path.join(p.minecraft, "versions");
@@ -593,6 +720,25 @@ function App() {
       unsubscribeVersionInstallProgress();
     };
   }, [setConsoles, setSelectedVersion, setIsRunning, setOwnPresence]);
+
+  useEffect(() => {
+    if (
+      installProgress?.operation !== "integrity" ||
+      installProgress.stage !== "done"
+    ) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setInstallProgress((current) =>
+        current === installProgress ? null : current,
+      );
+      setDownloader(null);
+      setIsCancellingInstall(false);
+    }, 900);
+
+    return () => window.clearTimeout(timer);
+  }, [installProgress]);
 
   useEffect(() => {
     setIsFriends(false);
@@ -1116,7 +1262,11 @@ function App() {
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden">
       <>
-        <Nav runGame={runGame} setIsFriends={setIsFriends} />
+        <Nav
+          runGame={runGame}
+          setIsFriends={setIsFriends}
+          onOpenWhatsNew={() => openWhatsNew()}
+        />
 
         <main className="min-h-0 flex-1 px-4 py-3">
           <div className="flex h-full min-h-0 gap-4">
@@ -1332,6 +1482,14 @@ function App() {
               modpack={inviteModpack}
             />
           </Suspense>
+        )}
+
+        {whatsNew && (
+          <WhatsNewModal
+            release={whatsNew.release}
+            version={whatsNew.version}
+            onClose={dismissWhatsNew}
+          />
         )}
       </>
     </div>

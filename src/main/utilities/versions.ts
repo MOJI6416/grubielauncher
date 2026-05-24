@@ -7,11 +7,20 @@ import { rimraf } from "rimraf";
 import { extractZip } from "./archiver";
 import { pathToFileURL } from "url";
 
+function findImportedLogoPath(versionPath: string) {
+  for (const filename of ["logo.png", "logo.jpg", "logo.jpeg", "logo.webp"]) {
+    const logoPath = path.join(versionPath, filename);
+    if (fs.existsSync(logoPath)) return logoPath;
+  }
+
+  return "";
+}
+
 export function sanitizeImportedVersionConf(
   conf: IVersionConf,
   versionPath: string,
 ): IVersionConf {
-  const logoPath = path.join(versionPath, "logo.png");
+  const logoPath = findImportedLogoPath(versionPath);
 
   conf.owner = undefined;
   conf.shareCode = undefined;
@@ -25,10 +34,26 @@ export function sanitizeImportedVersionConf(
   }
 
   if (typeof conf.image === "string" && conf.image.startsWith("file://")) {
-    conf.image = fs.existsSync(logoPath) ? pathToFileURL(logoPath).href : "";
+    conf.image = logoPath ? pathToFileURL(logoPath).href : "";
   }
 
   return conf;
+}
+
+function isGrubieVersionConf(value: unknown): value is IVersionConf {
+  if (!value || typeof value !== "object") return false;
+
+  const conf = value as Partial<IVersionConf>;
+  return (
+    typeof conf.name === "string" &&
+    !!conf.version &&
+    typeof conf.version === "object" &&
+    typeof conf.version.id === "string" &&
+    !!conf.loader &&
+    typeof conf.loader === "object" &&
+    typeof conf.loader.name === "string" &&
+    Array.isArray(conf.loader.mods)
+  );
 }
 
 export async function importVersion(
@@ -53,8 +78,9 @@ export async function importVersion(
 
     const confPath = path.join(versionPath, "version.json");
     const hasConf = await fs.pathExists(confPath);
+    const maybeConf = hasConf ? await fs.readJSON(confPath, "utf-8") : null;
 
-    if (!hasConf) {
+    if (!isGrubieVersionConf(maybeConf)) {
       const modpack = await checkModpack(versionPath);
 
       if (!modpack) {
@@ -69,7 +95,7 @@ export async function importVersion(
     }
 
     const conf = sanitizeImportedVersionConf(
-      await fs.readJSON(confPath, "utf-8"),
+      maybeConf,
       versionPath,
     );
 

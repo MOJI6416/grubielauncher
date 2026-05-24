@@ -13,7 +13,15 @@ import {
   IUpdateProject,
 } from "@/types/ModManager";
 import { LoaderLabel } from "../Loaders";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { SiCurseforge, SiModrinth } from "react-icons/si";
 import SVG from "react-inlinesvg";
 import { useTranslation } from "react-i18next";
@@ -191,6 +199,16 @@ function shouldShowProjectDetailsPane(project: IProject | null) {
   return project.provider != Provider.LOCAL || hasProjectDetails(project);
 }
 
+function isSameLocalProject(a: Pick<ILocalProject, "id" | "title">, b: Pick<ILocalProject, "id" | "title">) {
+  return a.id === b.id || a.title.toLowerCase() === b.title.toLowerCase();
+}
+
+function isLocalProjectItem(
+  project: IProject | ILocalProject,
+): project is ILocalProject {
+  return "version" in project;
+}
+
 function ProjectDetailsPane({
   project,
   notFoundTitle,
@@ -267,6 +285,8 @@ export function ModManager({
   setVersion,
   setLoader,
   setModpack,
+  pendingRemovedLocalProjects: controlledPendingRemovedLocalProjects,
+  setPendingRemovedLocalProjects: setControlledPendingRemovedLocalProjects,
 }: {
   mods: ILocalProject[];
   setMods: (mods: ILocalProject[]) => void;
@@ -277,6 +297,8 @@ export function ModManager({
   setVersion: (version: IVersion | undefined) => void;
   setLoader: (loader: Loader | undefined) => void;
   setModpack: (modpack: IModpack) => void;
+  pendingRemovedLocalProjects?: ILocalProject[];
+  setPendingRemovedLocalProjects?: Dispatch<SetStateAction<ILocalProject[]>>;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [browser, setBrowser] = useState<(IProject | ILocalProject)[]>([]);
@@ -323,8 +345,29 @@ export function ModManager({
   const [updateMods, setUpdateMods] = useState<IUpdateProject[]>([]);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isLocalDropActive, setIsLocalDropActive] = useState(false);
+  const [internalPendingRemovedLocalProjects, setInternalPendingRemovedLocalProjects] =
+    useState<ILocalProject[]>([]);
+  const pendingRemovedLocalProjects =
+    controlledPendingRemovedLocalProjects ?? internalPendingRemovedLocalProjects;
+  const setPendingRemovedLocalProjects =
+    setControlledPendingRemovedLocalProjects ??
+    setInternalPendingRemovedLocalProjects;
 
   const { t } = useTranslation();
+
+  const rememberRemovedLocalProject = useCallback((project: ILocalProject) => {
+    setPendingRemovedLocalProjects((prev) =>
+      prev.some((item) => isSameLocalProject(item, project))
+        ? prev
+        : [...prev, project],
+    );
+  }, []);
+
+  const forgetRemovedLocalProject = useCallback((project: ILocalProject) => {
+    setPendingRemovedLocalProjects((prev) =>
+      prev.filter((item) => !isSameLocalProject(item, project)),
+    );
+  }, []);
 
   const defaultSort = useMemo(() => sortValues[0] ?? "", [sortValues]);
 
@@ -471,7 +514,15 @@ export function ModManager({
 
     try {
       if (isLocal) {
-        const items = mods.filter((m) => m.projectType == projectType);
+        const pendingItems = pendingRemovedLocalProjects.filter(
+          (pending) =>
+            pending.projectType == projectType &&
+            !mods.some((mod) => isSameLocalProject(mod, pending)),
+        );
+        const items = [
+          ...mods.filter((m) => m.projectType == projectType),
+          ...pendingItems,
+        ];
 
         let filtered = items;
         const q = query.trim().toLowerCase();
@@ -1418,6 +1469,12 @@ export function ModManager({
                         const isInstalled =
                           installedById.get(item.id) ??
                           installedByTitle.get(item.title.toLowerCase());
+                        const isPendingRemoved =
+                          item.provider == Provider.LOCAL &&
+                          !isInstalled &&
+                          pendingRemovedLocalProjects.some((project) =>
+                            isSameLocalProject(project, item),
+                          );
 
                         return (
                           <Card
@@ -1454,7 +1511,16 @@ export function ModManager({
                                       </p>
                                     )}
 
-                                    {isInstalled ? (
+                                    {isPendingRemoved ? (
+                                      <Badge variant="outline">
+                                        <div className="flex items-center gap-2">
+                                          <Trash className="size-3.5" />
+                                          <p className="text-xs">
+                                            {t("modManager.deleted")}
+                                          </p>
+                                        </div>
+                                      </Badge>
+                                    ) : isInstalled ? (
                                       <Badge
                                         variant={providerBadgeVariant(
                                           isInstalled.provider,
@@ -1497,7 +1563,24 @@ export function ModManager({
                                 </div>
 
                                 <div className="flex shrink-0 items-center gap-1">
-                                  {item.provider != Provider.OTHER &&
+                                  {isPendingRemoved &&
+                                  item.provider == Provider.LOCAL &&
+                                  isLocalProjectItem(item) ? (
+                                    <Button
+                                      size="icon-lg"
+                                      variant="secondary"
+                                      className="shrink-0"
+                                      disabled={isLoading}
+                                      onClick={() => {
+                                        setMods([...mods, item]);
+                                        forgetRemovedLocalProject(item);
+                                        toast.success(t("modManager.added"));
+                                      }}
+                                    >
+                                      <Download className="size-4" />
+                                    </Button>
+                                  ) : item.provider != Provider.OTHER &&
+                                  item.provider != Provider.LOCAL &&
                                   !isDownloadedVersion &&
                                   isOwnerVersion ? (
                                     <Button
@@ -1553,20 +1636,6 @@ export function ModManager({
                                                 isInstalled.version.files[0]
                                                   ?.filename ??
                                                 isInstalled.version.id,
-                                            });
-                                          }
-                                        } else {
-                                          if ("version" in (base as any)) {
-                                            vers.push({
-                                              dependencies: [],
-                                              downloads: -1,
-                                              files: [],
-                                              id:
-                                                (base as any)?.version?.id ||
-                                                "",
-                                              name:
-                                                (base as any)?.version?.id ||
-                                                "",
                                             });
                                           }
                                         }
@@ -1719,6 +1788,16 @@ export function ModManager({
                                           size="icon"
                                           disabled={isLoading}
                                           onClick={async () => {
+                                            if (
+                                              item.provider ==
+                                                Provider.LOCAL &&
+                                              isInstalled
+                                            ) {
+                                              rememberRemovedLocalProject(
+                                                isInstalled,
+                                              );
+                                            }
+
                                             let newMods = [...mods];
                                             const idx = newMods.findIndex(
                                               (p) => p.id == item.id,
@@ -1726,16 +1805,6 @@ export function ModManager({
                                             if (idx !== -1)
                                               newMods.splice(idx, 1);
                                             setMods([...newMods]);
-
-                                            if (
-                                              item.provider == Provider.LOCAL
-                                            ) {
-                                              setBrowser(
-                                                browser.filter(
-                                                  (p) => p.id != item.id,
-                                                ),
-                                              );
-                                            }
 
                                             setInstalledProject(null);
                                             toast.success(
@@ -2273,6 +2342,11 @@ export function ModManager({
                                                   isServer: f.isServer,
                                                   url: f.url,
                                                   sha1: f.sha1,
+                                                  localPath:
+                                                    project.provider ==
+                                                    Provider.LOCAL
+                                                      ? f.localPath
+                                                      : undefined,
                                                 }),
                                               ),
                                               dependencies:
@@ -2288,6 +2362,14 @@ export function ModManager({
                                           };
 
                                           setMods([...mods, newProject]);
+                                          if (
+                                            newProject.provider ==
+                                            Provider.LOCAL
+                                          ) {
+                                            forgetRemovedLocalProject(
+                                              newProject,
+                                            );
+                                          }
                                           setInstalledProject(newProject);
                                           setDependency(
                                             getLocalDependencies(
@@ -2324,6 +2406,15 @@ export function ModManager({
                                                   ).length > 0 || isLoading
                                                 }
                                                 onClick={() => {
+                                                  if (
+                                                    installedProject.provider ==
+                                                    Provider.LOCAL
+                                                  ) {
+                                                    rememberRemovedLocalProject(
+                                                      installedProject,
+                                                    );
+                                                  }
+
                                                   let newMods = [...mods];
                                                   const idx = newMods.findIndex(
                                                     (p) => p.id == project.id,
@@ -2842,6 +2933,14 @@ export function ModManager({
             });
 
             setMods([...mods, ...localProjects]);
+            setPendingRemovedLocalProjects((prev) =>
+              prev.filter(
+                (item) =>
+                  !localProjects.some((project) =>
+                    isSameLocalProject(item, project),
+                  ),
+              ),
+            );
             toast.success(
               t("modManager.addedMultiple", { count: projects.length }),
             );

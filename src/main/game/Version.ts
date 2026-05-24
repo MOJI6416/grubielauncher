@@ -17,6 +17,7 @@ import {
   getFullLangCode,
   getJavaAgent,
   getOS,
+  HTTP_AGENT_JVM_ARGUMENT,
   removeDuplicatesLibraries,
 } from "../utilities/other";
 import { rimraf } from "rimraf";
@@ -37,6 +38,10 @@ import {
   normalizeInstallResourcePath,
   shouldCleanupCancelledInstall,
 } from "../utilities/installCleanup";
+import {
+  createLoaderInstallerProgressState,
+  parseLoaderInstallerProgressLine,
+} from "../utilities/loaderInstallerProgress";
 
 type VersionInstallRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
@@ -153,6 +158,9 @@ export class Version {
     progressPercent: number,
     isIndeterminate = false,
     details?: string,
+    detailsKey?: string,
+    detailsParams?: VersionInstallProgress["detailsParams"],
+    subProgress?: VersionInstallProgress["subProgress"],
   ) {
     this.sendInstallInfo({
       versionName: this.version.name,
@@ -162,6 +170,9 @@ export class Version {
       progressPercent,
       isIndeterminate,
       details,
+      detailsKey,
+      detailsParams,
+      subProgress,
     });
   }
 
@@ -227,7 +238,8 @@ export class Version {
 
       throw error;
     } finally {
-      if (!options.keepProgressOpen) {
+      const wasCancelled = Boolean(this.installAbortSignal?.aborted);
+      if (!options.keepProgressOpen || wasCancelled) {
         this.sendInstallInfo(null);
       }
       this.installOperation = "install";
@@ -396,17 +408,90 @@ export class Version {
           await this.writeLauncherProfile();
 
           let forgeInstalled = false;
-          this.sendInstallProgress("installer", 38, true);
+          const installerProgressState = createLoaderInstallerProgressState(38);
+          const createLoaderInstallerSubProgress = (
+            progressPercent: number,
+            detailsKey: string,
+            detailsParams?: VersionInstallProgress["detailsParams"],
+            isIndeterminate = false,
+          ): VersionInstallProgress["subProgress"] => ({
+            kind: "loaderInstaller",
+            titleKey: "installationProgress.subProgress.loaderInstaller.title",
+            progressPercent: Math.max(
+              0,
+              Math.min(
+                100,
+                Math.round(((progressPercent - 38) / (58 - 38)) * 100),
+              ),
+            ),
+            isIndeterminate,
+            detailsKey,
+            detailsParams,
+          });
+          const handleInstallerOutput = (message: string) => {
+            for (const line of message.split(/\r?\n/)) {
+              const update = parseLoaderInstallerProgressLine(
+                line,
+                installerProgressState,
+                { startPercent: 38, endPercent: 58 },
+              );
+              if (!update) continue;
+
+              this.sendInstallProgress(
+                "installer",
+                update.progressPercent,
+                true,
+                undefined,
+                undefined,
+                undefined,
+                createLoaderInstallerSubProgress(
+                  update.progressPercent,
+                  update.detailsKey,
+                  update.detailsParams,
+                ),
+              );
+            }
+          };
+
+          this.sendInstallProgress(
+            "installer",
+            38,
+            true,
+            undefined,
+            undefined,
+            undefined,
+            createLoaderInstallerSubProgress(
+              38,
+              "installationProgress.installerDetails.starting",
+            ),
+          );
 
           try {
             const installResult = await runJar(
               this.javaPath,
               ["-jar", installerPath, "--installClient", "."],
               tempPath,
-              downloadSignal,
+              {
+                signal: downloadSignal,
+                onOutput: ({ message }) => handleInstallerOutput(message),
+              },
             );
             forgeInstalled = installResult === "done" || installResult === 0;
           } catch (error) {
+            this.sendInstallProgress(
+              "installer",
+              Math.max(42, installerProgressState.progressPercent),
+              true,
+              undefined,
+              undefined,
+              undefined,
+              createLoaderInstallerSubProgress(
+                Math.max(42, installerProgressState.progressPercent),
+                "installationProgress.installerDetails.legacyFallback",
+                undefined,
+                true,
+              ),
+            );
             console.warn(
               `${this.version.loader.name} installer failed, falling back to install_profile.json:`,
               error,
@@ -426,7 +511,7 @@ export class Version {
               )
             : null;
 
-          this.sendInstallProgress("loader", 48, true);
+          this.sendInstallProgress("loader", 58, true);
           this.throwIfInstallCancelled();
 
           if (!forgeInstalled || !installedForgeManifestPath) {
@@ -1067,6 +1152,7 @@ export class Version {
 
     let jvm: string[] = [];
     let game: string[] = [];
+    const httpAgent = HTTP_AGENT_JVM_ARGUMENT;
 
     if (
       account.type &&
@@ -1074,6 +1160,7 @@ export class Version {
       account.type != "plain" &&
       authlib
     ) {
+      jvm.push(httpAgent);
       jvm.push(
         getJavaAgent(
           account.type,
@@ -1108,6 +1195,7 @@ export class Version {
     if (this.manifest.arguments?.jvm)
       for (const arg of this.manifest.arguments.jvm) {
         if (typeof arg === "string") {
+          if (arg === httpAgent && jvm.includes(httpAgent)) continue;
           jvm.push(arg);
           continue;
         }

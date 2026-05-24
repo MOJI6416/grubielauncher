@@ -56,6 +56,50 @@ let activeInstall: {
   version: Version;
 } | null = null;
 
+export async function runVersionInstallWithLock(
+  account: ILocalAccount,
+  settings: TSettings,
+  versionConf: IVersionConf,
+  extraItems?: DownloadItem[],
+  options?: VersionInstallOptions,
+): Promise<VersionInstallResult> {
+  if (activeInstall) {
+    return {
+      success: false,
+      error: "Another version installation is already running.",
+    };
+  }
+
+  const controller = new AbortController();
+  let vm: Version | null = null;
+
+  try {
+    vm = new Version(versionConf);
+    activeInstall = { controller, version: vm };
+    await vm.init();
+    await vm.install(
+      settings,
+      account,
+      extraItems || [],
+      createInstallRuntimeOptions(options, controller.signal),
+    );
+    await vm.save();
+    return { success: true };
+  } catch (error) {
+    const result = createInstallErrorResult(error, controller.signal.aborted);
+
+    if (!result.cancelled) {
+      console.error("[version:install] failed:", error);
+    }
+
+    return result;
+  } finally {
+    if (activeInstall?.controller === controller) {
+      activeInstall = null;
+    }
+  }
+}
+
 export function registerVersionIpc() {
   handleSafe(
     "version:init",
@@ -86,46 +130,14 @@ export function registerVersionIpc() {
       versionConf: IVersionConf,
       extraItems?: DownloadItem[],
       options?: VersionInstallOptions,
-    ): Promise<VersionInstallResult> => {
-      if (activeInstall) {
-        return {
-          success: false,
-          error: "Another version installation is already running.",
-        };
-      }
-
-      const controller = new AbortController();
-      let vm: Version | null = null;
-
-      try {
-        vm = new Version(versionConf);
-        activeInstall = { controller, version: vm };
-        await vm.init();
-        await vm.install(
-          settings,
-          account,
-          extraItems || [],
-          createInstallRuntimeOptions(options, controller.signal),
-        );
-        await vm.save();
-        return { success: true };
-      } catch (error) {
-        const result = createInstallErrorResult(
-          error,
-          controller.signal.aborted,
-        );
-
-        if (!result.cancelled) {
-          console.error("[version:install] failed:", error);
-        }
-
-        return result;
-      } finally {
-        if (activeInstall?.controller === controller) {
-          activeInstall = null;
-        }
-      }
-    },
+    ): Promise<VersionInstallResult> =>
+      runVersionInstallWithLock(
+        account,
+        settings,
+        versionConf,
+        extraItems,
+        options,
+      ),
   );
 
   handleSafe("version:cancelInstall", false, async () => {

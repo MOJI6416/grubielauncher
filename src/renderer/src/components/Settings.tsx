@@ -32,7 +32,13 @@ import { Switch } from "@/components/ui/switch";
 import { LANGUAGES, normalizeSettings } from "@/types/Settings";
 import { toast } from "sonner";
 
-export function Settings({ onClose }: { onClose: () => void }) {
+export function Settings({
+  onClose,
+  onShowWhatsNew,
+}: {
+  onClose: () => void;
+  onShowWhatsNew?: () => void;
+}) {
   const [settings, setSettings] = useAtom(settingsAtom);
   const { t, i18n } = useTranslation();
   const normalizedInitialSettings = normalizeSettings(settings, i18n.language);
@@ -62,12 +68,12 @@ export function Settings({ onClose }: { onClose: () => void }) {
   };
 
   useEffect(() => {
-    const nextSettings = normalizeSettings(settings, i18n.language);
+    const nextSettings = normalizeSettings(settings);
     setXmx(nextSettings.xmx);
     setDevMode(nextSettings.devMode);
     setDownloadLimit(nextSettings.downloadLimit);
     setLang(nextSettings.lang);
-  }, [settings, i18n.language]);
+  }, [settings]);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,8 +119,14 @@ export function Settings({ onClose }: { onClose: () => void }) {
                 <DialogTitle>{t("settings.title")}</DialogTitle>
               </div>
               {version && (
-                <Badge variant="secondary" className="font-mono tabular-nums">
-                  {version}
+                <Badge asChild variant="secondary" className="font-mono tabular-nums">
+                  <button
+                    type="button"
+                    onClick={onShowWhatsNew}
+                    title={t("whatsNew.openCurrent")}
+                  >
+                    {version}
+                  </button>
                 </Badge>
               )}
             </div>
@@ -272,7 +284,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
 
           <DialogFooter>
             <Button
-                disabled={!hasChanges || !settingsPath}
+              disabled={!hasChanges || !settingsPath}
               onClick={async () => {
                 const newSettings = {
                   ...settings,

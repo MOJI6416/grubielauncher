@@ -1,6 +1,8 @@
 export interface IUser {
   _id: string
   uuid: string
+  friendCode?: string
+  friendRequestsEnabled?: boolean
   nickname: string
   platform: 'microsoft' | 'elyby' | 'discord'
   friends: IUser[]
@@ -23,4 +25,8 @@ export interface IUpdateUser {
   image?: string
   lastActive?: Date
   playTime?: number
+}
+
+export interface IFriendSettingsUpdate {
+  friendRequestsEnabled?: boolean
 }

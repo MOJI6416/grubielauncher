@@ -1,6 +1,11 @@
 appId: com.grubielauncher.app
 productName: Grubie Launcher
 
+protocols:
+  - name: Grubie Launcher
+    schemes:
+      - grubielauncher
+
 directories:
   output: dist
   buildResources: build

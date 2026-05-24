@@ -8,8 +8,8 @@ import {
 } from "@/types/IVersion";
 import { IAccountConf, IAuth, ILocalAccount } from "@/types/Account";
 import { IModpack, IModpackUpdate } from "@/types/Backend";
-import { IUpdateUser, IUser } from "@/types/IUser";
-import { INews } from "@/types/News";
+import { IFriendSettingsUpdate, IUpdateUser, IUser } from "@/types/IUser";
+import { INews, ISponsoredNewsAd } from "@/types/News";
 import { IGrubieSkin, SkinsData } from "@/types/SkinManager";
 import { LoaderVersion } from "@/types/VersionsService";
 import { TSettings } from "@/types/Settings";
@@ -57,6 +57,8 @@ import {
   VersionInstallResult,
 } from "@/types/InstallationProgress";
 import { NotificationClickAction } from "@/types/Notification";
+import { LauncherDeepLink } from "@/types/DeepLink";
+import { ILauncherReleaseNote } from "@/types/LauncherRelease";
 
 export type UpdaterStatus =
   | "checking"
@@ -78,6 +80,21 @@ export interface UpdaterStatusPayload {
   version?: string;
   message?: string;
 }
+
+const pendingDeepLinks: LauncherDeepLink[] = [];
+const deepLinkSubscribers = new Set<(payload: LauncherDeepLink) => void>();
+
+ipcRenderer.on(
+  "app:deepLink",
+  (_event: Electron.IpcRendererEvent, payload: LauncherDeepLink) => {
+    if (deepLinkSubscribers.size === 0) {
+      pendingDeepLinks.push(payload);
+      return;
+    }
+
+    deepLinkSubscribers.forEach((callback) => callback(payload));
+  },
+);
 
 export interface IElectronAPI {
   os: {
@@ -246,6 +263,12 @@ export interface IElectronAPI {
       user: IUpdateUser,
     ) => Promise<IUser | null>;
     getUser: (at: string, id: string) => Promise<IUser | null>;
+    resetFriendCode: (at: string, id: string) => Promise<IUser | null>;
+    updateFriendSettings: (
+      at: string,
+      id: string,
+      settings: IFriendSettingsUpdate,
+    ) => Promise<IUser | null>;
     uploadFileFromPath: (
       at: string,
       filePath: string,
@@ -259,6 +282,16 @@ export interface IElectronAPI {
     ) => Promise<void>;
     modpackDownloaded: (at: string, shareCode: string) => Promise<boolean>;
     getNews: () => Promise<INews[]>;
+    getWhatsNew: (
+      version: string,
+      locale: string,
+    ) => Promise<ILauncherReleaseNote | null>;
+    getSponsoredNewsAd: (
+      locale: string,
+      hiddenIds: string[],
+    ) => Promise<ISponsoredNewsAd | null>;
+    recordSponsoredAdImpression: (id: string) => Promise<boolean>;
+    recordSponsoredAdClick: (id: string) => Promise<boolean>;
     login: (
       at: string,
       id: string,
@@ -539,7 +572,6 @@ export interface IElectronAPI {
       callback: (peers: SharePeerInfo[]) => void,
     ) => () => void;
   };
-
   events: {
     onConsoleChangeStatus: (
       callback: (
@@ -566,8 +598,11 @@ export interface IElectronAPI {
     onVersionInstallProgress: (
       callback: (info: VersionInstallProgress | null) => void,
     ) => () => void;
+    onDeepLink: (callback: (payload: LauncherDeepLink) => void) => () => void;
     updater: {
-      onStatus: (callback: (payload: UpdaterStatusPayload) => void) => () => void;
+      onStatus: (
+        callback: (payload: UpdaterStatusPayload) => void,
+      ) => () => void;
       onDownloadProgress: (
         callback: (progress: UpdaterProgress) => void,
       ) => () => void;
@@ -628,8 +663,17 @@ export const api = {
     openPath: (path: string) => ipcRenderer.invoke("shell:openPath", path),
   },
   file: {
-    archiveFiles: (filesToArchive: string[], zipPath: string, basePath?: string) =>
-      ipcRenderer.invoke("file:archiveFiles", filesToArchive, zipPath, basePath),
+    archiveFiles: (
+      filesToArchive: string[],
+      zipPath: string,
+      basePath?: string,
+    ) =>
+      ipcRenderer.invoke(
+        "file:archiveFiles",
+        filesToArchive,
+        zipPath,
+        basePath,
+      ),
     getTotalSizes: (filePaths: string[]) =>
       ipcRenderer.invoke("file:getTotalSizes", filePaths),
     getFile: (filePath: string) => ipcRenderer.invoke("file:getFile", filePath),
@@ -748,6 +792,13 @@ export const api = {
       ipcRenderer.invoke("backend:updateUser", at, id, user),
     getUser: (at: string, id: string) =>
       ipcRenderer.invoke("backend:getUser", at, id),
+    resetFriendCode: (at: string, id: string) =>
+      ipcRenderer.invoke("backend:resetFriendCode", at, id),
+    updateFriendSettings: (
+      at: string,
+      id: string,
+      settings: IFriendSettingsUpdate,
+    ) => ipcRenderer.invoke("backend:updateFriendSettings", at, id, settings),
     uploadFileFromPath: (
       at: string,
       filePath: string,
@@ -766,6 +817,14 @@ export const api = {
     modpackDownloaded: (at: string, shareCode: string) =>
       ipcRenderer.invoke("backend:modpackDownloaded", at, shareCode),
     getNews: () => ipcRenderer.invoke("backend:getNews"),
+    getWhatsNew: (version: string, locale: string) =>
+      ipcRenderer.invoke("backend:getWhatsNew", version, locale),
+    getSponsoredNewsAd: (locale: string, hiddenIds: string[]) =>
+      ipcRenderer.invoke("backend:getSponsoredNewsAd", locale, hiddenIds),
+    recordSponsoredAdImpression: (id: string) =>
+      ipcRenderer.invoke("backend:recordSponsoredAdImpression", id),
+    recordSponsoredAdClick: (id: string) =>
+      ipcRenderer.invoke("backend:recordSponsoredAdClick", id),
     login: (
       at: string,
       id: string,
@@ -824,12 +883,14 @@ export const api = {
       versionConf: IVersionConf,
       server?: IServerConf,
       options?: VersionInstallOptions,
-    ) => ipcRenderer.invoke("mods:check", settings, versionConf, server, options),
+    ) =>
+      ipcRenderer.invoke("mods:check", settings, versionConf, server, options),
     downloadOther: (
       settings: TSettings,
       versionConf: IVersionConf,
       options?: VersionInstallOptions,
-    ) => ipcRenderer.invoke("mods:downloadOther", settings, versionConf, options),
+    ) =>
+      ipcRenderer.invoke("mods:downloadOther", settings, versionConf, options),
     cancelInstall: () => ipcRenderer.invoke("mods:cancelInstall"),
   },
   other: {
@@ -1136,6 +1197,14 @@ export const api = {
       };
       ipcRenderer.on("versionInstallProgress", listener);
       return () => ipcRenderer.off("versionInstallProgress", listener);
+    },
+
+    onDeepLink: (callback: (payload: LauncherDeepLink) => void) => {
+      deepLinkSubscribers.add(callback);
+      pendingDeepLinks.splice(0).forEach((payload) => callback(payload));
+      return () => {
+        deepLinkSubscribers.delete(callback);
+      };
     },
 
     updater: {

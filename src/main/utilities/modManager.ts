@@ -28,6 +28,7 @@ import { ServerCore } from "@/types/Server";
 import { getFilesRecursively, getSha1 } from "./files";
 import { Loader } from "@/types/Loader";
 import { CurseForge } from "../services/CurseForge";
+import { Modrinth } from "../services/Modrinth";
 import path from "path";
 import fs from "fs-extra";
 import toml from "toml";
@@ -37,6 +38,7 @@ import { extractFileFromArchive } from "./archiver";
 import { rimraf } from "rimraf";
 import { randomUUID } from "crypto";
 import { pathToFileURL } from "url";
+import { parseCurseForgeLoaderId } from "@/shared/loaderVersions";
 
 export function dependencyToLocalProject(dependencies: IVersionDependency[]) {
   const newMods: ILocalProject[] = [];
@@ -76,40 +78,30 @@ export async function cfModpackToModpack(
   const files = await CurseForge.getFiles(
     modpack.files.map((file) => file.fileID),
   );
-  const rawLoaderId = modpack.minecraft.modLoaders?.[0]?.id;
-  const loaderId =
-    typeof rawLoaderId === "string" ? rawLoaderId : String(rawLoaderId ?? "");
-
-  const loader = (loaderId.split("-")[0] as Loader) || null;
-  const loaderVersion =
-    loader && loaderId.startsWith(`${loader}-`)
-      ? loaderId.slice(loader.length + 1)
-      : undefined;
+  const { loader, loaderVersion } = parseCurseForgeLoaderId(
+    modpack.minecraft.modLoaders?.[0]?.id,
+  );
 
   const modpackFiles: ILocalProject[] = [];
 
   for (const f of modpack.files) {
+    if (f.required === false) continue;
+
     const mod = mods.find((m) => m.id == f.projectID);
     if (!mod) continue;
 
-    let file = files.find((file) => file.id == f.fileID);
-    if (!file && loader) {
-      const lastFileIndex = mod.latestFilesIndexes.find(
-        (f) =>
-          f.gameVersion == modpack.minecraft.version &&
-          f.modLoader == loaderToCfLoader(loader),
-      );
-
-      if (lastFileIndex == undefined) continue;
-
-      const newFile = await CurseForge.getFile(mod.id, lastFileIndex.fileId);
-
-      if (!newFile) continue;
-
-      file = newFile;
+    let file: IFile | null | undefined = files.find(
+      (file) => file.id == f.fileID,
+    );
+    if (!file) {
+      file = await CurseForge.getFile(mod.id, f.fileID);
     }
 
-    if (!file) continue;
+    if (!file) {
+      throw new Error(
+        `CurseForge file ${f.fileID} for project ${f.projectID} was not found.`,
+      );
+    }
 
     const projectType = ModTypeClassIds[mod.classId || 6] as ProjectType;
 
@@ -143,7 +135,7 @@ export async function cfModpackToModpack(
   return {
     name: modpack.name,
     version: modpack.minecraft.version,
-    loader: loader || undefined,
+    loader,
     loaderVersion,
     mods: modpackFiles,
     folderPath: "",
@@ -586,6 +578,461 @@ function createFallbackProjectFromModrinthFile(
   };
 }
 
+function addModrinthManifestFiles(
+  modpack: IModpack,
+  mrModpack: ModrinthModpack,
+) {
+  for (const file of mrModpack.files) {
+    const downloadUrl = file.downloads[0];
+    if (!downloadUrl) continue;
+
+    const folder = getTopLevelFolder(file.path);
+    const projectType = folderToProjectType(folder);
+    if (!projectType) continue;
+
+    modpack.mods.push(
+      createFallbackProjectFromModrinthFile(file, projectType, downloadUrl),
+    );
+  }
+}
+
+type ForeignModpackProvider = "prism";
+
+interface MultiMcPackComponent {
+  uid?: string;
+  version?: string;
+  cachedName?: string;
+}
+
+interface MultiMcPack {
+  components?: MultiMcPackComponent[];
+}
+
+type PrismIndexFile = {
+  filename?: string;
+  name?: string;
+  side?: string;
+  "x-prismlauncher-version-number"?: string;
+  download?: {
+    hash?: string;
+    "hash-format"?: string;
+    url?: string;
+  };
+  update?: {
+    modrinth?: {
+      "mod-id"?: string;
+      version?: string;
+    };
+    curseforge?: {
+      "project-id"?: string | number;
+      "file-id"?: string | number;
+    };
+  };
+};
+
+function parseKeyValueConfig(content: string): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    const separatorIndex = line.indexOf("=");
+    if (separatorIndex === -1) continue;
+
+    const key = line.slice(0, separatorIndex).trim();
+    const value = line.slice(separatorIndex + 1).trim();
+    if (key) result[key] = value;
+  }
+
+  return result;
+}
+
+function normalizeImportedLoader(value: unknown): Loader | undefined {
+  if (typeof value !== "string") return undefined;
+
+  const normalized = value.toLowerCase().replace(/[_\s-]+/g, "");
+  if (normalized.includes("neoforge")) return "neoforge";
+  if (normalized.includes("forge")) return "forge";
+  if (normalized.includes("fabric")) return "fabric";
+  if (normalized.includes("quilt")) return "quilt";
+  if (normalized.includes("vanilla")) return "vanilla";
+
+  return undefined;
+}
+
+async function findFileInRootOrOneChild(root: string, fileName: string) {
+  const rootCandidate = path.join(root, fileName);
+  if (await fs.pathExists(rootCandidate)) return rootCandidate;
+
+  const entries = await fs.readdir(root, { withFileTypes: true }).catch(() => []);
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+
+    const candidate = path.join(root, entry.name, fileName);
+    if (await fs.pathExists(candidate)) return candidate;
+  }
+
+  return null;
+}
+
+async function findExistingGameRoot(instanceRoot: string) {
+  const candidates = [
+    path.join(instanceRoot, ".minecraft"),
+    path.join(instanceRoot, "minecraft"),
+    instanceRoot,
+  ];
+
+  for (const candidate of candidates) {
+    const hasGameContent = await Promise.all(
+      ["mods", "resourcepacks", "shaderpacks", "datapacks", "config"].map(
+        (folder) => fs.pathExists(path.join(candidate, folder)),
+      ),
+    );
+
+    if (hasGameContent.some(Boolean)) return candidate;
+  }
+
+  return instanceRoot;
+}
+
+async function findPrismIconPath(
+  instanceRoot: string,
+  gameRoot: string,
+  instanceCfg: Record<string, string>,
+) {
+  const candidates = [
+    path.join(gameRoot, "icon.png"),
+    path.join(gameRoot, "icon.jpg"),
+    path.join(gameRoot, "icon.jpeg"),
+    path.join(gameRoot, "icon.webp"),
+  ];
+
+  const iconKey = instanceCfg.iconKey?.trim();
+  if (iconKey && iconKey !== "default") {
+    for (const ext of [".png", ".jpg", ".jpeg", ".webp", ".svg", ""]) {
+      candidates.push(path.join(instanceRoot, `${iconKey}${ext}`));
+    }
+  }
+
+  candidates.push(
+    path.join(instanceRoot, "profileImage"),
+    path.join(instanceRoot, "icon.png"),
+    path.join(instanceRoot, "logo.png"),
+    path.join(instanceRoot, "pack.png"),
+  );
+
+  for (const candidate of candidates) {
+    if (await fs.pathExists(candidate)) {
+      return pathToFileURL(candidate).href;
+    }
+  }
+
+  return undefined;
+}
+
+function toStringId(value: unknown) {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return "";
+}
+
+function getPrismIndexProvider(
+  metadata: PrismIndexFile,
+): { provider: Provider; projectId: string; versionId: string; url: string } {
+  const modrinth = metadata.update?.modrinth;
+  const curseforge = metadata.update?.curseforge;
+
+  if (modrinth) {
+    return {
+      provider: Provider.MODRINTH,
+      projectId: toStringId(modrinth["mod-id"]),
+      versionId: toStringId(modrinth.version),
+      url: metadata.download?.url || "",
+    };
+  }
+
+  if (curseforge) {
+    return {
+      provider: Provider.CURSEFORGE,
+      projectId: toStringId(curseforge["project-id"]),
+      versionId: toStringId(curseforge["file-id"]),
+      url: metadata.download?.url || "",
+    };
+  }
+
+  return {
+    provider: Provider.LOCAL,
+    projectId: "",
+    versionId: "",
+    url: metadata.download?.url || "",
+  };
+}
+
+function uniqueValues(values: string[]) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function chunkArray<T>(items: T[], chunkSize: number) {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += chunkSize) {
+    chunks.push(items.slice(index, index + chunkSize));
+  }
+  return chunks;
+}
+
+function applyProjectMetadata(
+  project: ILocalProject,
+  metadata: IProject,
+): ILocalProject {
+  return {
+    ...project,
+    title: metadata.title || project.title,
+    description: metadata.description || project.description,
+    iconUrl: metadata.iconUrl || project.iconUrl,
+    url: metadata.url || project.url,
+    projectType: metadata.projectType || project.projectType,
+  };
+}
+
+async function enrichPrismIndexedProjects(
+  projects: Map<string, ILocalProject>,
+) {
+  const values = [...projects.values()];
+  const modrinthIds = uniqueValues(
+    values
+      .filter((project) => project.provider === Provider.MODRINTH)
+      .map((project) => project.id),
+  );
+  const curseForgeIds = uniqueValues(
+    values
+      .filter((project) => project.provider === Provider.CURSEFORGE)
+      .map((project) => project.id),
+  );
+
+  const [modrinthProjects, curseForgeMods] = await Promise.all([
+    (async () => {
+      const result: IProject[] = [];
+      for (const chunk of chunkArray(modrinthIds, 100)) {
+        const projects = await Modrinth.getProjects(chunk).catch(() => []);
+        result.push(
+          ...projects.map((project) =>
+            mrProjectToProject(project, project.project_type as ProjectType),
+          ),
+        );
+      }
+      return result;
+    })(),
+    (async () => {
+      const result: IProject[] = [];
+      for (const chunk of chunkArray(curseForgeIds, 100)) {
+        const mods = await CurseForge.getMods(chunk.map(Number)).catch(() => []);
+        result.push(...mods.map(cfModToProject));
+      }
+      return result;
+    })(),
+  ]);
+
+  const metadataByProviderAndId = new Map<string, IProject>();
+  for (const project of [...modrinthProjects, ...curseForgeMods]) {
+    metadataByProviderAndId.set(`${project.provider}:${project.id}`, project);
+  }
+
+  for (const [filename, project] of projects) {
+    const metadata = metadataByProviderAndId.get(
+      `${project.provider}:${project.id}`,
+    );
+    if (!metadata) continue;
+
+    projects.set(filename, applyProjectMetadata(project, metadata));
+  }
+}
+
+async function readPrismModIndexProjects(
+  instanceRoot: string,
+  gameRoot: string,
+) {
+  const indexPath = path.join(gameRoot, "mods", ".index");
+  const result = new Map<string, ILocalProject>();
+
+  if (!(await fs.pathExists(indexPath))) return result;
+
+  const entries = await fs.readdir(indexPath, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".pw.toml")) continue;
+
+    try {
+      const metadata = toml.parse(
+        await fs.readFile(path.join(indexPath, entry.name), "utf-8"),
+      ) as PrismIndexFile;
+      const filename = metadata.filename?.trim();
+      if (!filename) continue;
+
+      const originalPath = path.join(gameRoot, "mods", filename);
+      const copiedPath = path.join(instanceRoot, "overrides", "mods", filename);
+      const localPath = (await fs.pathExists(copiedPath))
+        ? copiedPath
+        : (await fs.pathExists(originalPath))
+          ? originalPath
+          : "";
+      const stats = localPath ? await fs.stat(localPath).catch(() => null) : null;
+      const providerInfo = getPrismIndexProvider(metadata);
+      const downloadHash =
+        metadata.download?.["hash-format"] === "sha1"
+          ? metadata.download?.hash || ""
+          : "";
+      const sha1 = downloadHash || (localPath ? await getSha1(localPath).catch(() => "") : "");
+
+      result.set(filename, {
+        description: "",
+        iconUrl: null,
+        title: metadata.name || filename,
+        projectType: ProjectType.MOD,
+        url: "",
+        provider: providerInfo.provider,
+        id: providerInfo.projectId || filename,
+        version: {
+          id: providerInfo.versionId || metadata["x-prismlauncher-version-number"] || "local",
+          dependencies: [],
+          files: [
+            {
+              filename,
+              size: stats?.size || 0,
+              url: providerInfo.url,
+              localPath: localPath || undefined,
+              sha1,
+              isServer: metadata.side !== "client",
+            },
+          ],
+        },
+      });
+    } catch {
+      continue;
+    }
+  }
+
+  await enrichPrismIndexedProjects(result);
+
+  return result;
+}
+
+async function copyForeignInstanceOverrides(
+  instanceRoot: string,
+  gameRoot: string,
+) {
+  const overridesPath = path.join(instanceRoot, "overrides");
+  if (await fs.pathExists(overridesPath)) return;
+
+  const entriesToCopy = [
+    "mods",
+    "resourcepacks",
+    "shaderpacks",
+    "datapacks",
+    "config",
+    "defaultconfigs",
+    "kubejs",
+    "scripts",
+    "saves",
+    "options.txt",
+    "servers.dat",
+  ];
+
+  let copied = false;
+  for (const entry of entriesToCopy) {
+    const source = path.join(gameRoot, entry);
+    if (!(await fs.pathExists(source))) continue;
+
+    await fs.copy(source, path.join(overridesPath, entry));
+    copied = true;
+  }
+
+  if (!copied) {
+    await fs.ensureDir(overridesPath);
+  }
+}
+
+async function prismModpackToModpack(
+  mmcPackPath: string,
+): Promise<IModpack | null> {
+  const instanceRoot = path.dirname(mmcPackPath);
+  const pack = (await fs.readJSON(mmcPackPath, "utf-8")) as MultiMcPack;
+  const components = Array.isArray(pack.components) ? pack.components : [];
+
+  const minecraftComponent = components.find(
+    (component) => component.uid === "net.minecraft",
+  );
+  const loaderComponent = components.find((component) => {
+    const uid = component.uid?.toLowerCase() || "";
+    return (
+      uid.includes("forge") ||
+      uid.includes("fabric-loader") ||
+      uid.includes("quilt-loader")
+    );
+  });
+
+  const loader = normalizeImportedLoader(loaderComponent?.uid) || "vanilla";
+  const loaderVersion = loader === "vanilla" ? undefined : loaderComponent?.version;
+  const minecraftVersion = minecraftComponent?.version;
+
+  if (!minecraftVersion) return null;
+
+  const instanceCfgPath = path.join(instanceRoot, "instance.cfg");
+  const instanceCfg = (await fs.pathExists(instanceCfgPath))
+    ? parseKeyValueConfig(await fs.readFile(instanceCfgPath, "utf-8"))
+    : {};
+
+  const gameRoot = await findExistingGameRoot(instanceRoot);
+  await copyForeignInstanceOverrides(instanceRoot, gameRoot);
+  const image = await findPrismIconPath(instanceRoot, gameRoot, instanceCfg);
+  const indexedMods = await readPrismModIndexProjects(instanceRoot, gameRoot);
+
+  const baseModpack: IModpack = {
+    name:
+      instanceCfg.name ||
+      instanceCfg.ManagedPackName ||
+      path.basename(instanceRoot),
+    version: minecraftVersion,
+    loader,
+    loaderVersion,
+    mods: [...indexedMods.values()],
+    folderPath: "",
+    image,
+  };
+
+  const flameManifestPath = await findFileInRootOrOneChild(
+    instanceRoot,
+    "manifest.json",
+  );
+  const modrinthManifestPath = await findFileInRootOrOneChild(
+    instanceRoot,
+    "modrinth.index.json",
+  );
+
+  if (indexedMods.size > 0) {
+    return baseModpack;
+  }
+
+  if (flameManifestPath) {
+    try {
+      const flameModpack = await cfModpackToModpack(
+        await fs.readJSON(flameManifestPath, "utf-8"),
+      );
+      baseModpack.mods = flameModpack.mods;
+    } catch {
+      baseModpack.mods = [];
+    }
+  } else if (modrinthManifestPath) {
+    const mrModpack = (await fs.readJSON(
+      modrinthManifestPath,
+      "utf-8",
+    )) as ModrinthModpack;
+    addModrinthManifestFiles(baseModpack, mrModpack);
+    baseModpack.versionId = mrModpack.versionId;
+  }
+
+  return baseModpack;
+}
+
 export async function checkModpack(
   modpackPath: string,
   pack?: IProject,
@@ -597,19 +1044,30 @@ export async function checkModpack(
 
   let confPath = "";
   let provider: Provider | null = null;
+  let foreignProvider: ForeignModpackProvider | null = null;
   try {
-    const cfPath = path.join(modpackPath, "manifest.json");
-    const mrPath = path.join(modpackPath, "modrinth.index.json");
+    const cfPath = await findFileInRootOrOneChild(modpackPath, "manifest.json");
+    const mrPath = await findFileInRootOrOneChild(
+      modpackPath,
+      "modrinth.index.json",
+    );
+    const prismPath = await findFileInRootOrOneChild(
+      modpackPath,
+      "mmc-pack.json",
+    );
 
-    if (await fs.pathExists(cfPath)) {
+    if (prismPath) {
+      confPath = prismPath;
+      foreignProvider = "prism";
+    } else if (cfPath) {
       confPath = cfPath;
       provider = Provider.CURSEFORGE;
-    } else if (await fs.pathExists(mrPath)) {
+    } else if (mrPath) {
       confPath = mrPath;
       provider = Provider.MODRINTH;
     }
 
-    if (!confPath || !provider) {
+    if (!confPath || (!provider && !foreignProvider)) {
       return null;
     }
   } catch {
@@ -735,11 +1193,14 @@ export async function checkModpack(
         },
       });
     }
+  } else if (foreignProvider == "prism") {
+    modpack = await prismModpackToModpack(confPath);
   }
 
   if (!modpack) return null;
 
-  const overridesPath = path.join(modpackPath, "overrides");
+  const contentRoot = confPath ? path.dirname(confPath) : modpackPath;
+  const overridesPath = path.join(contentRoot, "overrides");
   if (await fs.pathExists(overridesPath)) {
     const targetFolders = ["mods", "resourcepacks", "shaderpacks", "datapacks"];
     const files = await getFilesRecursively(overridesPath, null, targetFolders);
@@ -751,6 +1212,12 @@ export async function checkModpack(
 
       const fileName = path.basename(relativeFile);
       if (!fileName) continue;
+
+      const alreadyTracked = modpack.mods.some((mod) =>
+        mod.version?.files.some((file) => file.filename === fileName),
+      );
+      if (alreadyTracked) continue;
+      if (relativeFile.replace(/\\/g, "/").startsWith("mods/.index/")) continue;
 
       const projectType = folderToProjectType(folder);
       if (!projectType) continue;
@@ -787,8 +1254,8 @@ export async function checkModpack(
 
   return {
     ...modpack,
-    folderPath: modpackPath,
-    image: pack?.iconUrl || undefined,
+    folderPath: contentRoot,
+    image: pack?.iconUrl || modpack.image,
   };
 }
 

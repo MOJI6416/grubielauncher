@@ -4,6 +4,8 @@ import { createHash } from "crypto";
 import { app } from "electron";
 import path from "path";
 
+export const HTTP_AGENT_JVM_ARGUMENT = "-Dhttp.agent=Mozilla/5.0";
+
 export function getOS(): {
   os: IOS;
   arch: IArch;

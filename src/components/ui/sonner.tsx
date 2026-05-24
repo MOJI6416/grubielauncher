@@ -47,6 +47,7 @@ function Toaster({
           "--info-text": "var(--popover-foreground)",
           "--info-border": "var(--border)",
           "--border-radius": "var(--radius)",
+          "--width": "min(22rem, calc(100vw - 2rem))",
           fontFamily: "var(--font-sans)",
           zIndex: 100,
           ...style,
@@ -58,7 +59,8 @@ function Toaster({
           ...toastOptions?.classNames,
           toast: cn(
             "border-border bg-popover text-popover-foreground font-sans shadow-lg",
-            "rounded-xl px-4 py-3",
+            "max-w-[calc(100vw-2rem)] rounded-xl px-4 py-3",
+            "[&_[data-content]]:min-w-0 [&_[data-content]]:flex-1",
             toastOptions?.classNames?.toast,
           ),
           title: cn(
@@ -66,7 +68,7 @@ function Toaster({
             toastOptions?.classNames?.title,
           ),
           description: cn(
-            "font-sans text-xs leading-5 text-muted-foreground",
+            "font-sans text-xs leading-5 text-muted-foreground break-words",
             toastOptions?.classNames?.description,
           ),
           icon: cn(
@@ -95,6 +97,7 @@ function Toaster({
           ),
           actionButton: cn(
             "bg-primary text-primary-foreground hover:bg-primary/90",
+            "mt-2 w-full justify-center whitespace-normal text-center sm:mt-0 sm:w-auto sm:shrink-0",
             toastOptions?.classNames?.actionButton,
           ),
           cancelButton: cn(

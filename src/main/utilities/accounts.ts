@@ -1,4 +1,4 @@
-import { IAccountConf, ILocalAccount } from "@/types/Account";
+import { AccountType, IAccountConf, ILocalAccount } from "@/types/Account";
 import { app, safeStorage } from "electron";
 import fs from "fs-extra";
 import path from "path";
@@ -19,6 +19,16 @@ type StoredSecret = {
 
 type StoredSecrets = Record<string, StoredSecret>;
 
+const accountTypes: AccountType[] = ["microsoft", "plain", "elyby", "discord"];
+const persistedAccountKeys = new Set([
+  "nickname",
+  "type",
+  "image",
+  "friends",
+  "accessToken",
+]);
+const persistedFriendKeys = new Set(["id", "isMuted"]);
+
 function getLauncherDir(): string {
   return path.join(app.getPath("appData"), ".grubielauncher");
 }
@@ -36,6 +46,56 @@ function createEmptyConfig(): IAccountConf {
     accounts: [],
     lastPlayed: null,
   };
+}
+
+function normalizeAccountType(value: unknown): AccountType {
+  return accountTypes.includes(value as AccountType)
+    ? (value as AccountType)
+    : "plain";
+}
+
+function normalizeLocalFriends(value: unknown): ILocalAccount["friends"] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter((friend) => typeof friend?.id === "string")
+    .map((friend) => ({
+      id: friend.id,
+      isMuted: friend.isMuted === true,
+    }));
+}
+
+function normalizePersistedAccount(account: any): PersistedAccount {
+  const normalized: PersistedAccount = {
+    nickname: typeof account?.nickname === "string" ? account.nickname : "",
+    type: normalizeAccountType(account?.type),
+    image: typeof account?.image === "string" ? account.image : "",
+    friends: normalizeLocalFriends(account?.friends),
+  };
+
+  if (
+    typeof account?.accessToken === "string" &&
+    account.accessToken.trim() !== ""
+  ) {
+    normalized.accessToken = account.accessToken;
+  }
+
+  return normalized;
+}
+
+function hasLegacyAccountShape(account: any): boolean {
+  if (!account || typeof account !== "object") return true;
+
+  const hasExtraAccountField = Object.keys(account).some(
+    (key) => !persistedAccountKeys.has(key),
+  );
+  const hasExtraFriendField = Array.isArray(account.friends)
+    ? account.friends.some((friend) =>
+        Object.keys(friend ?? {}).some((key) => !persistedFriendKeys.has(key)),
+      )
+    : account.friends !== undefined;
+
+  return hasExtraAccountField || hasExtraFriendField;
 }
 
 export function getAccountKey(account: Pick<ILocalAccount, "type" | "nickname">): string {
@@ -97,7 +157,9 @@ async function readStoredSecrets(): Promise<StoredSecrets> {
 }
 
 function normalizeConfig(data: Partial<PersistedAccountConf> | null | undefined): PersistedAccountConf {
-  const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
+  const accounts = Array.isArray(data?.accounts)
+    ? data.accounts.map(normalizePersistedAccount)
+    : [];
   const lastPlayed = typeof data?.lastPlayed === "string" ? data.lastPlayed : null;
 
   return {
@@ -112,7 +174,9 @@ export async function saveAccountsConfig(config: IAccountConf): Promise<void> {
 
   const nextSecrets: StoredSecrets = {};
   const persistedAccounts: PersistedAccount[] = config.accounts.map((account) => {
-    const { accessToken, ...persisted } = account;
+    const persisted = normalizePersistedAccount(account);
+    delete persisted.accessToken;
+    const { accessToken } = account;
     if (typeof accessToken === "string" && accessToken.trim() !== "") {
       nextSecrets[getAccountKey(account)] = encodeSecret(accessToken);
     }
@@ -133,7 +197,11 @@ export async function readAccountsConfig(): Promise<IAccountConf | null> {
     const exists = await fs.pathExists(accountsPath);
     if (!exists) return null;
 
-    const raw = normalizeConfig(await fs.readJSON(accountsPath, "utf-8"));
+    const data = await fs.readJSON(accountsPath, "utf-8");
+    const hasLegacyShape = Array.isArray(data?.accounts)
+      ? data.accounts.some(hasLegacyAccountShape)
+      : false;
+    const raw = normalizeConfig(data);
     const secrets = await readStoredSecrets();
 
     let shouldMigrate = false;
@@ -156,6 +224,7 @@ export async function readAccountsConfig(): Promise<IAccountConf | null> {
 
     if (
       shouldMigrate ||
+      hasLegacyShape ||
       raw.accounts.some((account) => typeof account.accessToken === "string" && account.accessToken.trim() !== "")
     ) {
       await saveAccountsConfig(config);

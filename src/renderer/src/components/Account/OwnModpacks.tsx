@@ -24,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { AddVersion } from "../Modals/Version/AddVersion";
 import { Confirmation } from "../Modals/Confirmation";
 import { toast } from "sonner";
+import { buildPackShareUrl } from "@renderer/utilities/packShare";
 
 const api = window.api;
 
@@ -163,7 +164,9 @@ export function OwnModpacks({
                           title={t("ownModpacks.copyId")}
                           aria-label={t("ownModpacks.copyId")}
                           onClick={async () => {
-                            await api.clipboard.writeText(modpack._id);
+                            await api.clipboard.writeText(
+                              buildPackShareUrl(modpack._id),
+                            );
                             toast(t("common.copied"));
                           }}
                         >

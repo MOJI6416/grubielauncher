@@ -15,8 +15,11 @@ import { IMessage } from "@/types/IMessage";
 import { ILocalFriend } from "@/types/ILocalFriend";
 import {
   ClipboardCopy,
+  Copy,
   Inbox,
+  KeyRound,
   Loader2,
+  RefreshCw,
   SendHorizontal,
   UserPlus,
   Users,
@@ -51,6 +54,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -75,6 +79,8 @@ import {
   lazyWithPreload,
   schedulePreload,
 } from "@renderer/utilities/lazyPreload";
+import { parsePackShareCode } from "@renderer/utilities/packShare";
+import { uploadChatImage } from "@renderer/utilities/chatUpload";
 
 const api = window.api;
 
@@ -107,8 +113,10 @@ export type LoadingType =
   | "skin"
   | "messages"
   | "messageSend"
+  | "imageUpload"
   | "friendRemove"
   | "chatModpack"
+  | "friendCode"
   | "gameInvite";
 
 type InviteGuideAction = "openShare";
@@ -131,6 +139,9 @@ interface FriendOperationError {
 }
 
 const FRIEND_OPERATION_TIMEOUT_MS = 15000;
+const FRIEND_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const PACK_CODE_PATTERN = /^[a-fA-F0-9]{24}$/;
+const CHAT_IMAGE_FILE_PATTERN = /\.(apng|gif|jpe?g|png|webp)$/i;
 
 function getFriendLastActiveTime(friend: IFriend) {
   const lastActive = new Date(friend.user.lastActive).getTime();
@@ -142,6 +153,48 @@ function getGuideSteps(description: string) {
   if (!matches || matches.length < 2) return [];
 
   return matches.map((step) => step.replace(/^\d+\.\s*/, "").trim());
+}
+
+function normalizeFriendLookup(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  if (/^[a-f0-9]{24}$/i.test(trimmed)) {
+    return trimmed.toLowerCase();
+  }
+
+  const compact = trimmed.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  if (compact.length !== 8) return "";
+  if (![...compact].every((char) => FRIEND_CODE_ALPHABET.includes(char))) {
+    return "";
+  }
+
+  return `${compact.slice(0, 4)}-${compact.slice(4)}`;
+}
+
+function getChatImageFileName(fileName: string) {
+  const safeName = fileName.trim() || "image.png";
+  return `chat_${Date.now()}_${safeName}`;
+}
+
+function isChatImageFile(file: File) {
+  return (
+    file.type.startsWith("image/") || CHAT_IMAGE_FILE_PATTERN.test(file.name)
+  );
+}
+
+function getChatReplyPreview(
+  message: IMessage | null,
+): IMessage["replyTo"] | undefined {
+  if (!message) return undefined;
+  if (!message.id || !message.message?.value) return undefined;
+
+  return {
+    id: message.id,
+    sender: message.sender,
+    type: message.message._type,
+    value: message.message.value,
+  };
 }
 
 export function Friends({
@@ -183,6 +236,9 @@ export function Friends({
   const [isAddVersion, setIsAddVersion] = useState(false);
   const [isSelectVersions, setIsSelectVersions] = useState(false);
   const [inviteGuide, setInviteGuide] = useState<InviteGuide | null>(null);
+  const [friendCodeModal, setFriendCodeModal] = useState(false);
+  const [ownFriendCode, setOwnFriendCode] = useState<string>();
+  const [friendRequestsEnabled, setFriendRequestsEnabled] = useState(true);
 
   const [friendId, setFriendId] = useState("");
   const [friend, setFriend] = useState<IFriend>();
@@ -193,6 +249,10 @@ export function Friends({
   const [chatModpacks, setChatModpacks] = useState<IModpack[]>([]);
   const [failedChatModpacks, setFailedChatModpacks] = useState<Set<string>>(
     new Set(),
+  );
+  const [replyMessage, setReplyMessage] = useState<IMessage | null>(null);
+  const [imageUploadProgress, setImageUploadProgress] = useState<number | null>(
+    null,
   );
   const [loadingIndex, setLoadingIndex] = useState(-1);
   const [tempModpack, setTempModpack] = useState<IModpack>();
@@ -206,6 +266,7 @@ export function Friends({
   const loadingTypeRef = useRef(loadingType);
   const authSubRef = useRef(authData?.sub);
   const messagesStateRef = useRef(messages);
+  const replyMessageRef = useRef<IMessage | null>(replyMessage);
   const chatModpackIdsRef = useRef<Set<string>>(new Set());
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingFriendRequestRef = useRef<string | null>(null);
@@ -227,16 +288,16 @@ export function Friends({
   }, [chatModal]);
 
   useEffect(() => {
-    loadingTypeRef.current = loadingType;
-  }, [loadingType]);
-
-  useEffect(() => {
     authSubRef.current = authData?.sub;
   }, [authData?.sub]);
 
   useEffect(() => {
     messagesStateRef.current = messages;
   }, [messages]);
+
+  useEffect(() => {
+    replyMessageRef.current = replyMessage;
+  }, [replyMessage]);
 
   useEffect(() => {
     chatModpackIdsRef.current = new Set(
@@ -250,25 +311,28 @@ export function Friends({
       loadingTimeoutRef.current = null;
     }
 
+    loadingTypeRef.current = undefined;
     setIsLoading(false);
     setLoadingType(undefined);
   }, []);
 
   const startLoading = useCallback(
-    (type: LoadingType) => {
+    (type: LoadingType, timeoutMs = FRIEND_OPERATION_TIMEOUT_MS) => {
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
       }
 
+      loadingTypeRef.current = type;
       setIsLoading(true);
       setLoadingType(type);
 
       loadingTimeoutRef.current = setTimeout(() => {
+        loadingTypeRef.current = undefined;
         setIsLoading(false);
         setLoadingType(undefined);
         loadingTimeoutRef.current = null;
         toast.warning(t("friends.operationErrors.timeout"));
-      }, FRIEND_OPERATION_TIMEOUT_MS);
+      }, timeoutMs);
     },
     [t],
   );
@@ -476,6 +540,7 @@ export function Friends({
 
     const handleGetMessages = async (data: { messages: IMessage[] }) => {
       setFailedChatModpacks(new Set());
+      setReplyMessage(null);
       setMessages(data.messages);
       stopLoading();
 
@@ -521,12 +586,23 @@ export function Friends({
       }
     };
 
+    const handleDeleteMessage = (data: { messageId: string }) => {
+      setMessages((prev) =>
+        prev.filter((message) => message.id !== data.messageId),
+      );
+      setReplyMessage((current) =>
+        current?.id === data.messageId ? null : current,
+      );
+    };
+
     socket.on("getMessages", handleGetMessages);
     socket.on("sendMessage", handleSendMessage);
+    socket.on("deleteMessage", handleDeleteMessage);
 
     return () => {
       socket.off("getMessages", handleGetMessages);
       socket.off("sendMessage", handleSendMessage);
+      socket.off("deleteMessage", handleDeleteMessage);
     };
   }, [socket, account, stopLoading, focusMessageInput]);
 
@@ -584,7 +660,11 @@ export function Friends({
       const pendingFriendId = pendingFriendRequestRef.current;
       const requestWasCreated =
         !!pendingFriendId &&
-        friendRequests.some((fr) => fr.user._id === pendingFriendId);
+        friendRequests.some(
+          (fr) =>
+            fr.user._id === pendingFriendId ||
+            normalizeFriendLookup(fr.user.friendCode || "") === pendingFriendId,
+        );
 
       if (requestWasCreated) {
         pendingFriendRequestRef.current = null;
@@ -594,15 +674,92 @@ export function Friends({
     }
   }, [friendRequests, loadingType, stopLoading]);
 
-  const handleCopyId = useCallback(async () => {
+  const loadFriendCodeSettings = useCallback(async () => {
+    if (!authData || !account?.accessToken) return null;
+
+    const userData = await api.backend.getUser(
+      account.accessToken,
+      authData.sub,
+    );
+    if (!userData) return null;
+
+    setOwnFriendCode(userData.friendCode);
+    setFriendRequestsEnabled(userData.friendRequestsEnabled !== false);
+    return userData;
+  }, [account?.accessToken, authData]);
+
+  const handleOpenFriendCodeModal = useCallback(() => {
+    setOwnFriendCode(authData?.friendCode);
+    setFriendRequestsEnabled(authData?.friendRequestsEnabled !== false);
+    setFriendCodeModal(true);
+    void loadFriendCodeSettings();
+  }, [
+    authData?.friendCode,
+    authData?.friendRequestsEnabled,
+    loadFriendCodeSettings,
+  ]);
+
+  const handleCopyFriendCode = useCallback(async () => {
     if (!authData) return;
-    await api.clipboard.writeText(authData.sub);
+
+    const userData = ownFriendCode ? null : await loadFriendCodeSettings();
+    const friendCode =
+      ownFriendCode || userData?.friendCode || authData.friendCode;
+
+    if (!friendCode) {
+      toast.error(t("friends.friendCodeUnavailable"));
+      return;
+    }
+
+    await api.clipboard.writeText(friendCode);
     toast(t("common.copied"));
-  }, [authData, t]);
+  }, [authData, loadFriendCodeSettings, ownFriendCode, t]);
+
+  const handleResetFriendCode = useCallback(async () => {
+    if (!authData || !account?.accessToken) return;
+
+    startLoading("friendCode");
+    const userData = await api.backend.resetFriendCode(
+      account.accessToken,
+      authData.sub,
+    );
+    stopLoading();
+
+    if (!userData?.friendCode) {
+      toast.error(t("friends.friendCodeSaveError"));
+      return;
+    }
+
+    setOwnFriendCode(userData.friendCode);
+    setFriendRequestsEnabled(userData.friendRequestsEnabled !== false);
+    toast.success(t("friends.friendCodeReset"));
+  }, [account?.accessToken, authData, startLoading, stopLoading, t]);
+
+  const handleFriendRequestsToggle = useCallback(
+    async (checked: boolean) => {
+      if (!authData || !account?.accessToken) return;
+
+      setFriendRequestsEnabled(checked);
+      const userData = await api.backend.updateFriendSettings(
+        account.accessToken,
+        authData.sub,
+        { friendRequestsEnabled: checked },
+      );
+
+      if (!userData) {
+        setFriendRequestsEnabled(!checked);
+        toast.error(t("friends.friendCodeSaveError"));
+        return;
+      }
+
+      setFriendRequestsEnabled(userData.friendRequestsEnabled !== false);
+    },
+    [account?.accessToken, authData, t],
+  );
 
   const handleSendFriendRequest = useCallback(() => {
     if (!socket || !friendId) return;
-    pendingFriendRequestRef.current = friendId;
+    pendingFriendRequestRef.current = normalizeFriendLookup(friendId);
     startLoading("friendRequest");
     socket.emit("friendRequest", { friendId });
   }, [socket, friendId, startLoading]);
@@ -751,27 +908,114 @@ export function Friends({
     socket.emit("friendRemove", { friendId: friend.user._id });
   }, [socket, friend, startLoading]);
 
+  const sendChatMessage = useCallback(
+    (body: IMessage["message"]) => {
+      if (!authData || !socket || !friend || !body.value.trim()) return false;
+
+      startLoading("messageSend");
+      const replyTo = getChatReplyPreview(replyMessageRef.current);
+
+      const message: IMessage = {
+        sender: authData.sub,
+        message: body,
+        ...(replyTo ? { replyTo } : {}),
+        time: new Date(),
+      };
+
+      socket.emit("sendMessage", {
+        message,
+        recipient: friend.user._id,
+      });
+
+      setReplyMessage(null);
+      focusMessageInput();
+      return true;
+    },
+    [authData, socket, friend, startLoading, focusMessageInput],
+  );
+
   const handleSendMessage = useCallback(() => {
-    if (!authData || !socket || !friend || !messageText.trim()) return;
+    const text = messageText.trim();
+    if (!text) return;
 
-    startLoading("messageSend");
+    const parsedShareCode = parsePackShareCode(text);
+    const isPackShare = PACK_CODE_PATTERN.test(parsedShareCode);
 
-    const message: IMessage = {
-      sender: authData.sub,
-      message: {
-        _type: "text",
-        value: messageText,
-      },
-      time: new Date(),
-    };
-
-    socket.emit("sendMessage", {
-      message,
-      recipient: friend.user._id,
+    sendChatMessage({
+      _type: isPackShare ? "modpack" : "text",
+      value: isPackShare ? parsedShareCode : messageText,
     });
+  }, [messageText, sendChatMessage]);
 
-    focusMessageInput();
-  }, [authData, socket, friend, messageText, startLoading, focusMessageInput]);
+  const sendChatImageUrl = useCallback(
+    (url: string) => {
+      if (
+        !sendChatMessage({
+          _type: "image",
+          value: url,
+        })
+      ) {
+        stopLoading();
+      }
+    },
+    [sendChatMessage, stopLoading],
+  );
+
+  const handleSendChatImageFile = useCallback(
+    async (file: File) => {
+      if (!account?.accessToken || !authData?.sub) return;
+      if (!isChatImageFile(file)) return;
+
+      startLoading("imageUpload", 120000);
+      setImageUploadProgress(0);
+
+      try {
+        const fileName = getChatImageFileName(file.name || "image.png");
+        const url = await uploadChatImage({
+          accessToken: account.accessToken,
+          file,
+          fileName,
+          folder: `chat/${authData.sub}`,
+          onProgress: setImageUploadProgress,
+        });
+
+        setImageUploadProgress(null);
+        sendChatImageUrl(url);
+      } catch {
+        setImageUploadProgress(null);
+        stopLoading();
+        toast.error(t("friends.chatImageUploadError"));
+      }
+    },
+    [
+      account?.accessToken,
+      authData?.sub,
+      sendChatImageUrl,
+      startLoading,
+      stopLoading,
+      t,
+    ],
+  );
+
+  const handleDeleteChatMessage = useCallback(
+    (message: IMessage) => {
+      if (!socket || !friend || !message.id) return;
+
+      socket.emit("deleteMessage", {
+        recipient: friend.user._id,
+        messageId: message.id,
+      });
+    },
+    [socket, friend],
+  );
+
+  const handleReplyToChatMessage = useCallback(
+    (message: IMessage) => {
+      setReplyMessage(message);
+      focusMessageInput();
+    },
+    [focusMessageInput],
+  );
 
   const handleSendModpack = useCallback(
     async (version: Version) => {
@@ -785,23 +1029,12 @@ export function Friends({
         return;
 
       setIsSelectVersions(false);
-      startLoading("messageSend");
-
-      const message: IMessage = {
-        sender: authData.sub,
-        message: {
-          _type: "modpack",
-          value: version.version.shareCode,
-        },
-        time: new Date(),
-      };
-
-      socket.emit("sendMessage", {
-        message,
-        recipient: friend.user._id,
+      sendChatMessage({
+        _type: "modpack",
+        value: version.version.shareCode,
       });
     },
-    [account, socket, authData, friend, startLoading],
+    [account, socket, authData, friend, sendChatMessage],
   );
 
   const showInviteGuide = useCallback(
@@ -975,13 +1208,30 @@ export function Friends({
   );
 
   const isFriendIdInvalid = useMemo(() => {
+    const normalizedFriendId = normalizeFriendLookup(friendId);
+    const currentOwnFriendCode = ownFriendCode || authData?.friendCode;
+    const normalizedOwnFriendCode = currentOwnFriendCode
+      ? normalizeFriendLookup(currentOwnFriendCode)
+      : "";
+
     return (
-      !!friends.find((f) => f?.user?._id === friendId) ||
-      friendId === authData?.sub ||
-      !!friendRequests.find((fr) => fr.user._id === friendId) ||
-      friendId === ""
+      !normalizedFriendId ||
+      !!friends.find(
+        (f) =>
+          f?.user?._id === normalizedFriendId ||
+          normalizeFriendLookup(f?.user?.friendCode || "") ===
+            normalizedFriendId,
+      ) ||
+      normalizedFriendId === authData?.sub ||
+      normalizedFriendId === normalizedOwnFriendCode ||
+      !!friendRequests.find(
+        (fr) =>
+          fr.user._id === normalizedFriendId ||
+          normalizeFriendLookup(fr.user.friendCode || "") ===
+            normalizedFriendId,
+      )
     );
-  }, [friends, friendId, authData, friendRequests]);
+  }, [friends, friendId, authData, ownFriendCode, friendRequests]);
 
   const recipientRequests = useMemo(
     () => friendRequests.filter((fr) => fr.type === "recipient"),
@@ -1035,7 +1285,7 @@ export function Friends({
                   <Button
                     variant="secondary"
                     size="icon"
-                    onClick={handleCopyId}
+                    onClick={handleOpenFriendCodeModal}
                     aria-label={t("friends.copyId")}
                   >
                     <ClipboardCopy className="size-4" />
@@ -1190,6 +1440,76 @@ export function Friends({
       </Card>
 
       <Dialog
+        open={friendCodeModal}
+        onOpenChange={(open) => setFriendCodeModal(open)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("friends.friendCodeTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("friends.friendCodeDescription")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <div className="rounded-xl border bg-card p-4 text-card-foreground">
+              <div className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <KeyRound className="size-4" />
+                {t("friends.friendCode")}
+              </div>
+              <div className="flex min-h-12 items-center justify-center rounded-lg border bg-background px-4">
+                {ownFriendCode || authData?.friendCode ? (
+                  <p className="select-all text-center font-mono text-2xl font-semibold tracking-[0.2em]">
+                    {ownFriendCode || authData?.friendCode}
+                  </p>
+                ) : (
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                )}
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Button variant="secondary" onClick={handleCopyFriendCode}>
+                  <Copy className="size-4" />
+                  {t("common.copy")}
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={isLoading && loadingType === "friendCode"}
+                  onClick={handleResetFriendCode}
+                >
+                  {isLoading && loadingType === "friendCode" ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="size-4" />
+                  )}
+                  {t("friends.resetFriendCode")}
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-xl border bg-card p-4 text-card-foreground">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 space-y-1">
+                  <p className="text-sm font-medium">
+                    {t("friends.friendRequestsEnabledTitle")}
+                  </p>
+                  <p className="text-sm leading-5 text-muted-foreground">
+                    {t("friends.friendRequestsEnabledDescription")}
+                  </p>
+                </div>
+                <Switch
+                  checked={friendRequestsEnabled}
+                  onCheckedChange={(checked) =>
+                    handleFriendRequestsToggle(checked === true)
+                  }
+                  aria-label={t("friends.friendRequestsEnabledTitle")}
+                />
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
         open={addFriend}
         onOpenChange={(open) => {
           if (!open) setAddFriend(false);
@@ -1206,6 +1526,7 @@ export function Friends({
             <Input
               id="friend-id"
               disabled={isLoading}
+              placeholder="ABCD-1234"
               value={friendId}
               onChange={(e) => setFriendId(e.currentTarget.value.trim())}
               onKeyDown={(e) => {
@@ -1310,6 +1631,8 @@ export function Friends({
             isLoading={isLoading}
             loadingType={loadingType}
             loadingIndex={loadingIndex}
+            imageUploadProgress={imageUploadProgress}
+            replyMessage={replyMessage}
             chatModpacks={chatModpacks}
             failedChatModpacks={failedChatModpacks}
             versions={versions}
@@ -1321,9 +1644,14 @@ export function Friends({
               setChatModal(false);
               setSelectedFriend("");
               setFriend(undefined);
+              setReplyMessage(null);
             }}
             onMessageChange={setMessageText}
             onSendMessage={handleSendMessage}
+            onSendImageFile={handleSendChatImageFile}
+            onReplyToMessage={handleReplyToChatMessage}
+            onCancelReply={() => setReplyMessage(null)}
+            onDeleteMessage={handleDeleteChatMessage}
             onOpenVersionSelect={() => setIsSelectVersions(true)}
             onPlayModpack={async (modpack: IModpack, version?: Version) => {
               if (version) {

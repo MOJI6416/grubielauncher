@@ -1,22 +1,22 @@
-import { IServerConf, ServerCore } from '@/types/Server'
-import { Java } from './Java'
-import { IVersionConf } from '@/types/IVersion'
-import { ILocalAccount } from '@/types/Account'
-import path from 'path'
-import { getJavaAgent } from '../utilities/other'
-import { Downloader } from '../utilities/downloader'
-import { rimraf } from 'rimraf'
-import fs from 'fs-extra'
-import { installServer } from '../utilities/game'
-import { Backend } from '../services/Backend'
+import { IServerConf, ServerCore } from "@/types/Server";
+import { Java } from "./Java";
+import { IVersionConf } from "@/types/IVersion";
+import { ILocalAccount } from "@/types/Account";
+import path from "path";
+import { getJavaAgent, HTTP_AGENT_JVM_ARGUMENT } from "../utilities/other";
+import { Downloader } from "../utilities/downloader";
+import { rimraf } from "rimraf";
+import fs from "fs-extra";
+import { installServer } from "../utilities/game";
+import { Backend } from "../services/Backend";
 
 export class ServerGame {
-  private serverPath: string = ''
-  private version: IVersionConf | undefined = undefined
-  private serverConf: IServerConf | null = null
-  private downloadLimit: number = 6
-  private account: ILocalAccount | undefined = undefined
-  private downloader: Downloader
+  private serverPath: string = "";
+  private version: IVersionConf | undefined = undefined;
+  private serverConf: IServerConf | null = null;
+  private downloadLimit: number = 6;
+  private account: ILocalAccount | undefined = undefined;
+  private downloader: Downloader;
 
   constructor(
     account: ILocalAccount | undefined,
@@ -24,143 +24,163 @@ export class ServerGame {
     _versionPath: string,
     serverPath: string,
     conf: IServerConf,
-    version?: IVersionConf
+    version?: IVersionConf,
   ) {
-    this.account = account
-    this.serverPath = serverPath
-    this.version = version
-    this.serverConf = conf
-    this.downloadLimit = downloadLimit
-    this.downloader = new Downloader(this.downloadLimit)
+    this.account = account;
+    this.serverPath = serverPath;
+    this.version = version;
+    this.serverConf = conf;
+    this.downloadLimit = downloadLimit;
+    this.downloader = new Downloader(this.downloadLimit);
   }
 
   async install() {
-    if (!this.serverConf) return
+    if (!this.serverConf) return;
 
-    await fs.ensureDir(this.serverPath)
+    await fs.ensureDir(this.serverPath);
 
-    const java = new Java(this.serverConf.javaMajorVersion)
-    await java.init()
+    const java = new Java(this.serverConf.javaMajorVersion);
+    await java.init();
 
-    if (!java.javaServerPath) throw new Error('Server Java runtime was not found')
+    if (!java.javaServerPath)
+      throw new Error("Server Java runtime was not found");
 
     if (!this.version || !this.account) {
-      throw new Error('Server install requires version and account data')
+      throw new Error("Server install requires version and account data");
     }
 
-    const jar = `${this.serverConf.core}.jar`
-    const jarPath = path.join(this.serverPath, jar)
+    const jar = `${this.serverConf.core}.jar`;
+    const jarPath = path.join(this.serverPath, jar);
 
-    let cwd = this.serverPath
-    const javaCmd =
-      java.javaServerPath.includes(' ') ? `"${java.javaServerPath}"` : java.javaServerPath
+    let cwd = this.serverPath;
+    const javaCmd = java.javaServerPath.includes(" ")
+      ? `"${java.javaServerPath}"`
+      : java.javaServerPath;
 
-    const backend = new Backend()
-    let authlib: any = null
+    const backend = new Backend();
+    let authlib: any = null;
     try {
-      authlib = await backend.getAuthlib()
+      authlib = await backend.getAuthlib();
     } catch {
-      authlib = null
+      authlib = null;
     }
 
-    let javaagent = ''
+    let javaagent = "";
 
-    const params = ['-jar', jarPath]
+    const params = ["-jar", jarPath];
 
     if (this.serverConf.core == ServerCore.QUILT) {
-      params.push(...['install', 'server', this.version.version.id, '--download-server'])
+      params.push(
+        ...["install", "server", this.version.version.id, "--download-server"],
+      );
     } else if (
       this.serverConf.core == ServerCore.FORGE ||
       this.serverConf.core == ServerCore.NEOFORGE
     ) {
-      params.push('--installServer')
+      params.push("--installServer");
     }
 
-    await installServer(java.javaServerPath, params, cwd)
+    await installServer(java.javaServerPath, params, cwd);
 
-    if (this.account.type != 'microsoft' && this.account.type != 'plain' && authlib) {
-      javaagent = `${getJavaAgent(
+    if (
+      this.account.type != "microsoft" &&
+      this.account.type != "plain" &&
+      authlib
+    ) {
+      javaagent = `${HTTP_AGENT_JVM_ARGUMENT} ${getJavaAgent(
         this.account.type,
-        `${path.join('libraries', authlib.path)}`,
-        true
-      )} `
+        `${path.join("libraries", authlib.path)}`,
+        true,
+      )} `;
 
       await this.downloader.downloadFiles([
         {
           url: authlib.url,
-          destination: path.join(this.serverPath, 'libraries', authlib.path),
-          group: 'server',
+          destination: path.join(this.serverPath, "libraries", authlib.path),
+          group: "server",
           sha1: authlib.sha1,
-          size: authlib.size
-        }
-      ])
+          size: authlib.size,
+        },
+      ]);
     }
 
-    const batPath = path.join(this.serverPath, 'run.bat')
-    const shPath = path.join(this.serverPath, 'run.sh')
+    const batPath = path.join(this.serverPath, "run.bat");
+    const shPath = path.join(this.serverPath, "run.sh");
 
-    let isCreateRunFiles = true
+    let isCreateRunFiles = true;
 
     if (this.serverConf.core == ServerCore.QUILT) {
-      await rimraf(jarPath).catch(() => {})
+      await rimraf(jarPath).catch(() => {});
 
-      const quiltLaunchJar = path.join(this.serverPath, 'quilt-server-launch.jar')
-      await fs.rename(quiltLaunchJar, jarPath)
+      const quiltLaunchJar = path.join(
+        this.serverPath,
+        "quilt-server-launch.jar",
+      );
+      await fs.rename(quiltLaunchJar, jarPath);
     } else if (
       this.serverConf.core == ServerCore.FORGE ||
       this.serverConf.core == ServerCore.NEOFORGE
     ) {
-      const version = this.version?.version.id
-      const serverJar = path.join(this.serverPath, `minecraft_server.${version}.jar`)
+      const version = this.version?.version.id;
+      const serverJar = path.join(
+        this.serverPath,
+        `minecraft_server.${version}.jar`,
+      );
 
-      const isExists = await fs.pathExists(serverJar)
+      const isExists = await fs.pathExists(serverJar);
       if (!isExists) {
-        isCreateRunFiles = false
+        isCreateRunFiles = false;
 
-        const batExists = await fs.pathExists(batPath)
-        const shExists = await fs.pathExists(shPath)
+        const batExists = await fs.pathExists(batPath);
+        const shExists = await fs.pathExists(shPath);
 
         if (!batExists || !shExists) {
-          isCreateRunFiles = true
+          isCreateRunFiles = true;
         } else {
-          const batData = await fs.readFile(batPath, 'utf-8')
+          const batData = await fs.readFile(batPath, "utf-8");
           await fs.writeFile(
             batPath,
-            batData.replace(/^java\b/m, javaCmd).replaceAll('%*', 'nogui %*'),
-            'utf-8'
-          )
+            batData.replace(/^java\b/m, javaCmd).replaceAll("%*", "nogui %*"),
+            "utf-8",
+          );
 
-          const shData = await fs.readFile(shPath, 'utf-8')
+          const shData = await fs.readFile(shPath, "utf-8");
           await fs.writeFile(
             shPath,
-            shData.replace(/^java\b/m, javaCmd).replaceAll('"$@"', 'nogui "$@"'),
-            'utf-8'
-          )
+            shData
+              .replace(/^java\b/m, javaCmd)
+              .replaceAll('"$@"', 'nogui "$@"'),
+            "utf-8",
+          );
 
-          const jvmArgs = path.join(this.serverPath, 'user_jvm_args.txt')
-          await fs.writeFile(jvmArgs, `${javaagent}-Xmx${this.serverConf.memory}M`, 'utf-8')
+          const jvmArgs = path.join(this.serverPath, "user_jvm_args.txt");
+          await fs.writeFile(
+            jvmArgs,
+            `${javaagent}-Xmx${this.serverConf.memory}M`,
+            "utf-8",
+          );
         }
       } else {
-        await rimraf(jarPath).catch(() => {})
+        await rimraf(jarPath).catch(() => {});
 
-        await fs.rename(serverJar, jarPath)
+        await fs.rename(serverJar, jarPath);
       }
     }
 
     if (isCreateRunFiles) {
       const batData = `@echo off
 ${javaCmd} ${javaagent} -Xmx${this.serverConf.memory}M -jar ${jar} nogui
-pause`
+pause`;
 
       const shData = `#!/bin/sh
 ${javaCmd} ${javaagent} -Xmx${this.serverConf.memory}M -jar ${jar} nogui
-read -p "Press [Enter] key to continue..."`
+read -p "Press [Enter] key to continue..."`;
 
-      await fs.writeFile(batPath, batData, 'utf-8')
-      await fs.writeFile(shPath, shData, 'utf-8')
-      await fs.chmod(shPath, 0o755).catch(() => {})
+      await fs.writeFile(batPath, batData, "utf-8");
+      await fs.writeFile(shPath, shData, "utf-8");
+      await fs.chmod(shPath, 0o755).catch(() => {});
     }
 
-    return
+    return;
   }
 }

@@ -8,6 +8,7 @@
     "confirmation": "Confirmation",
     "yes": "Yes",
     "no": "No",
+    "ok": "Got it",
     "choose": "Choose",
     "select": "Select",
     "delete": "Delete",
@@ -85,24 +86,14 @@
     "editDescription": "Edit description",
     "desctiption": "Server description",
     "unsavedChanges": "Are you sure you want to close the settings without saving?",
-    "gameModes": [
-      "Survival",
-      "Creative",
-      "Adventure",
-      "Spectator"
-    ],
-    "difficulties": [
-      "Peaceful",
-      "Easy",
-      "Normal",
-      "Hard"
-    ]
+    "gameModes": ["Survival", "Creative", "Adventure", "Spectator"],
+    "difficulties": ["Peaceful", "Easy", "Normal", "Hard"]
   },
   "friends": {
     "title": "Friends",
     "deleted": "Removed from friends",
     "requests": "Requests",
-    "copyId": "Copy your ID",
+    "copyId": "Copy friend code",
     "sendRequest": "Send request",
     "online": "Online",
     "offline": "Offline",
@@ -118,15 +109,25 @@
     "requestSended": "Request sent",
     "noRequests": "No requests",
     "adding": "Adding to friends",
-    "friendId": "Friend ID",
+    "friendId": "Friend code",
     "send": "Send",
     "notFound": "User not found",
+    "friendCodeTitle": "Friend code",
+    "friendCodeDescription": "Share this code with a friend so they can send you a request.",
+    "friendCode": "Your code",
+    "friendCodeUnavailable": "Friend code is not available yet.",
+    "friendCodeReset": "Friend code reset",
+    "friendCodeSaveError": "Failed to update friend code settings.",
+    "resetFriendCode": "Reset code",
+    "friendRequestsEnabledTitle": "Allow friend requests",
+    "friendRequestsEnabledDescription": "When enabled, other users can add you by your friend code.",
     "operationErrors": {
-      "invalid_user": "Check the user ID.",
+      "invalid_user": "Check the friend code.",
       "already_friends": "This user is already your friend.",
       "request_exists": "A request has already been sent or is waiting for a response.",
       "request_not_found": "This request is no longer active.",
       "not_allowed": "You are not allowed to do this.",
+      "friend_requests_disabled": "This user does not accept friend requests.",
       "invalid_message": "The message is empty or invalid.",
       "user_not_found": "User not found.",
       "not_friend": "Add this user as a friend first.",
@@ -145,6 +146,14 @@
     "chat": "Message",
     "chatAttachmentLoadError": "Attachment loading error",
     "chatAttachmentLoading": "Loading attachment",
+    "chatAttach": "Attach",
+    "chatAttachImage": "Image",
+    "chatAttachModpack": "Modpack",
+    "chatDeleteMessage": "Delete message",
+    "chatDropImage": "Drop image to send",
+    "chatImage": "Image",
+    "chatImageUploadError": "Failed to send image",
+    "chatReply": "Reply",
     "invite": "Invite",
     "inviteSent": "Invite sent",
     "openSharePanel": "Open access",
@@ -291,7 +300,9 @@
     },
     "fromFile": {
       "error": "Failed to recognize file",
-      "supportedFormats": "Supported formats: .zip (Grubie or CurseForge build) and .mrpack (Modrinth build)."
+      "supportedLaunchers": "Supported launchers",
+      "loaderVersionMissing": "The modpack manifest does not specify a loader version. Installation is blocked to avoid installing an incompatible version.",
+      "loaderVersionNotFound": "Could not resolve the loader version from the modpack manifest. The launcher will not replace it with the latest version."
     },
     "localModsWarning": "This modpack contains local modifications. Install it only if you trust the modpack author.",
     "invalidName": "Use a unique version name without invalid characters."
@@ -313,11 +324,7 @@
     "copyAddress": "Copy address",
     "moveUp": "Move up",
     "moveDown": "Move down",
-    "resourceSets": [
-      "Ask",
-      "Enabled",
-      "Disabled"
-    ]
+    "resourceSets": ["Ask", "Enabled", "Disabled"]
   },
   "settings": {
     "title": "Settings",
@@ -328,11 +335,7 @@
     "mb": "MB",
     "devMode": "Developer mode",
     "theme": "Theme",
-    "themes": [
-      "Light",
-      "Dark",
-      "System"
-    ],
+    "themes": ["Light", "Dark", "System"],
     "downloadLimit": "Download limit"
   },
   "skinView": {
@@ -342,13 +345,7 @@
     "rotation": "Rotation",
     "speed": "Speed",
     "animation": "Animation",
-    "animations": [
-      "None",
-      "Idle",
-      "Walk",
-      "Run",
-      "Fly"
-    ],
+    "animations": ["None", "Idle", "Walk", "Run", "Fly"],
     "additionally": "Additionally",
     "showName": "Show nickname",
     "setAvatat": "Set as avatar",
@@ -429,6 +426,12 @@
     "starting": "Starting game...",
     "startupError": "Startup error",
     "newsFeed": "News feed",
+    "sponsored": "Ad",
+    "hideAd": "Hide ad",
+    "adHidden": "Ad hidden",
+    "restoreAd": "Restore",
+    "restoreHiddenAds": "Show hidden ads",
+    "hiddenAdsRestored": "Hidden ads are available again",
     "online": "Now online: {{count}}",
     "serverUnavailable": "Server unavailable",
     "internetOnline": "Internet available",
@@ -483,12 +486,7 @@
     "servers": "Servers",
     "refresh": "Refresh",
     "sort": "Sort",
-    "sorts": [
-      "Name",
-      "Downloads",
-      "Update",
-      "New"
-    ],
+    "sorts": ["Name", "Downloads", "Update", "New"],
     "filter": "Filter",
     "search": "Search",
     "tagsTitle": "Tags",
@@ -679,6 +677,16 @@
     "showMissing": "Missing only",
     "empty": "All required files were found."
   },
+  "whatsNew": {
+    "openCurrent": "Show what is new",
+    "fallbackTitle": "Launcher updated to {{version}}",
+    "fallbackSubtitle": "The change list for this version is not available yet.",
+    "offlineSubtitle": "Launcher updated to {{version}}.",
+    "offlineDescription": "The full change list will appear when internet is available or the release is published.",
+    "highlights": "Highlights",
+    "fixes": "Fixed",
+    "discordCta": "More news in Discord"
+  },
   "updater": {
     "launcherUpdate": "Launcher update",
     "checking": "Checking for updates",
@@ -818,21 +826,28 @@
       "other": "Installing additional files",
       "options": "Writing options",
       "done": "Done"
+    },
+    "installerDetails": {
+      "starting": "Starting loader installer",
+      "checkingJava": "Checking Java and installer host",
+      "extractingJson": "Reading installer profile",
+      "checkingClient": "Checking Minecraft client file",
+      "downloadingLibraries": "Preparing loader libraries",
+      "preparingProcessors": "Preparing installer processors",
+      "runningProcessor": "Running processor {{item}}",
+      "patching": "Applying loader patches",
+      "injectingProfile": "Writing loader profile",
+      "completed": "Loader installer completed",
+      "legacyFallback": "Using installer profile fallback"
+    },
+    "subProgress": {
+      "loaderInstaller": {
+        "title": "Installing loader core"
+      }
     }
   },
-  "sizes": [
-    "B",
-    "KB",
-    "MB",
-    "GB",
-    "TB"
-  ],
-  "timeUnits": [
-    "s",
-    "m",
-    "h",
-    "d"
-  ],
+  "sizes": ["B", "KB", "MB", "GB", "TB"],
+  "timeUnits": ["s", "m", "h", "d"],
   "ownModpacks": {
     "title": "My modpacks",
     "noModpacks": "You haven't shared any modpacks",

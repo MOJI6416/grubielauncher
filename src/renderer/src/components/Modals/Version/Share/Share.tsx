@@ -30,6 +30,7 @@ import { ArrowUpFromLine, FolderOpen, Loader2, Trash } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "@renderer/utilities/file";
+import { buildPackShareUrl } from "@renderer/utilities/packShare";
 import { Confirmation } from "../../Confirmation";
 import { toast } from "sonner";
 
@@ -659,7 +660,7 @@ export function Share({
                     await selectedVersion.save();
                     setSelectedVersion(selectedVersion);
                     onPublished?.(shareCode);
-                    await api.clipboard.writeText(shareCode);
+                    await api.clipboard.writeText(buildPackShareUrl(shareCode));
 
                     toast.success(t("versions.published"));
                   } catch {

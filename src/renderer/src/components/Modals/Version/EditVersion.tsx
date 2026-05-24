@@ -78,6 +78,7 @@ import {
   checkVersionName,
   syncShare,
 } from "@renderer/utilities/version";
+import { buildPackShareUrl } from "@renderer/utilities/packShare";
 import { Mods } from "@renderer/classes/Mods";
 import { toast } from "sonner";
 import { LazyDialogFallback } from "@renderer/components/LazyDialogFallback";
@@ -197,6 +198,9 @@ export function EditVersion({
 
   const [versionName, setVersionName] = useState("");
   const [mods, setMods] = useState<ILocalProject[]>([]);
+  const [pendingRemovedLocalMods, setPendingRemovedLocalMods] = useState<
+    ILocalProject[]
+  >([]);
   const [runArguments, setRunArguments] = useState<IArguments>({
     game: "",
     jvm: "",
@@ -270,6 +274,7 @@ export function EditVersion({
       setImage(version.version.image);
       setVersionName(version.version.name);
       setMods(version.version.loader.mods || []);
+      setPendingRemovedLocalMods([]);
       setRunArguments(version.version.runArguments || { game: "", jvm: "" });
       setServers(version.version.version.serverManager ? nbtServers : []);
       setQuickConnectIp(version.version.quickServer);
@@ -671,6 +676,7 @@ export function EditVersion({
     }
 
     await version.save();
+    setPendingRemovedLocalMods([]);
 
     try {
       await api.fs.rimraf(await api.path.join(version.versionPath, "temp"));
@@ -769,7 +775,7 @@ export function EditVersion({
               <DialogTitle>{t("versions.versionSettings")}</DialogTitle>
             </DialogHeader>
 
-            <div className="grid max-h-[calc(90vh-9rem)] gap-4 overflow-y-auto px-5 pb-5">
+            <div className="grid max-h-[calc(90vh-9rem)] gap-4 overflow-y-auto px-5">
               <div className="grid gap-3 rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
                 <div className="flex min-w-0 items-start gap-3">
                   <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border bg-muted/40">
@@ -839,14 +845,16 @@ export function EditVersion({
                               type="button"
                               onClick={async () => {
                                 await api.clipboard.writeText(
-                                  version.version.shareCode || "",
+                                  buildPackShareUrl(
+                                    version.version.shareCode || "",
+                                  ),
                                 );
                                 toast(t("common.copied"));
                               }}
                             >
                               <Share2 />
                               <span className="max-w-64 truncate">
-                                {version.version.shareCode}
+                                /{version.version.shareCode}
                               </span>
                             </button>
                           </Badge>
@@ -1413,6 +1421,8 @@ export function EditVersion({
             setLoader={() => {}}
             setModpack={() => {}}
             setVersion={() => {}}
+            pendingRemovedLocalProjects={pendingRemovedLocalMods}
+            setPendingRemovedLocalProjects={setPendingRemovedLocalMods}
           />
         </Suspense>
       )}

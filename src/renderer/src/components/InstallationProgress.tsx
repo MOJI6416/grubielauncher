@@ -12,7 +12,13 @@ import {
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { formatBytes } from "@renderer/utilities/file";
-import { CheckCircle2, Download, Loader2, PackageCheck } from "lucide-react";
+import {
+  CheckCircle2,
+  Cpu,
+  Download,
+  Loader2,
+  PackageCheck,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export function InstallationProgress({
@@ -67,6 +73,25 @@ export function InstallationProgress({
   };
 
   const stageLabel = t(`installationProgress.stages.${info.stage}`);
+  const detailsText = info.detailsKey
+    ? t(info.detailsKey, {
+        defaultValue: info.details || "",
+        ...(info.detailsParams || {}),
+      })
+    : info.details;
+  const subProgress = info.subProgress;
+  const subProgressTitle = subProgress
+    ? t(
+        subProgress.titleKey ||
+          `installationProgress.subProgress.${subProgress.kind}.title`,
+      )
+    : "";
+  const subProgressDetails = subProgress?.detailsKey
+    ? t(subProgress.detailsKey, {
+        defaultValue: subProgress.details || "",
+        ...(subProgress.detailsParams || {}),
+      })
+    : subProgress?.details;
   const title =
     info.operation === "integrity"
       ? t("installationProgress.integrityTitle")
@@ -78,8 +103,14 @@ export function InstallationProgress({
     downloadInfo?.progressPercent === 0
       ? 100
       : Math.max(0, Math.min(100, downloadInfo?.progressPercent ?? 0));
+  const subProgressValue = subProgress?.isIndeterminate
+    ? 100
+    : Math.max(0, Math.min(100, subProgress?.progressPercent ?? 0));
   const isDone = info.stage === "done";
-  const canCancel = !!onCancel && !isDone && info.operation === "install";
+  const canCancel =
+    !!onCancel &&
+    !isDone &&
+    (info.operation === "install" || info.operation === "integrity");
 
   return (
     <Dialog open>
@@ -144,12 +175,47 @@ export function InstallationProgress({
               }
             />
 
-            {info.details ? (
+            {detailsText ? (
               <p className="mt-2 line-clamp-1 break-words text-xs text-muted-foreground">
-                {info.details}
+                {detailsText}
               </p>
             ) : null}
           </section>
+
+          {subProgress ? (
+            <section className="min-w-0 rounded-lg border bg-muted/15 p-3">
+              <div className="mb-2.5 flex min-w-0 items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                  <Cpu className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 truncate text-sm font-medium">
+                    {subProgressTitle}
+                  </span>
+                </div>
+                <Badge
+                  variant="outline"
+                  className="w-14 shrink-0 justify-center bg-muted/40 tabular-nums"
+                >
+                  {subProgress.progressPercent}%
+                </Badge>
+              </div>
+
+              <Progress
+                value={subProgressValue}
+                max={100}
+                className={
+                  subProgress.isIndeterminate
+                    ? "[&_[data-slot=progress-indicator]]:animate-pulse"
+                    : undefined
+                }
+              />
+
+              {subProgressDetails ? (
+                <p className="mt-2 line-clamp-1 break-words text-xs text-muted-foreground">
+                  {subProgressDetails}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
 
           {downloadInfo ? (
             <section className="min-w-0 rounded-lg border bg-muted/15 p-3">

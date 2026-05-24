@@ -1,12 +1,18 @@
 import { IModpack, IModpackUpdate } from "@/types/Backend";
-import { ICreateUser, IUpdateUser, IUser } from "@/types/IUser";
+import {
+  IFriendSettingsUpdate,
+  ICreateUser,
+  IUpdateUser,
+  IUser,
+} from "@/types/IUser";
 import { BaseService } from "./Base";
-import { INews } from "@/types/News";
+import { INews, ISponsoredNewsAd } from "@/types/News";
 import { IGrubieSkin } from "@/types/SkinManager";
 import FormData from "form-data";
 import fs from "fs-extra";
 import path from "path";
 import { IAuthlib } from "@/types/IAuthlib";
+import { ILauncherReleaseNote } from "@/types/LauncherRelease";
 import {
   ActiveFriendSharesResponse,
   ShareAccessResponse,
@@ -23,7 +29,9 @@ export class Backend extends BaseService {
     super(accessToken);
   }
 
-  private normalizeModpackVersion(version: IModpack["conf"]["version"] | string | any) {
+  private normalizeModpackVersion(
+    version: IModpack["conf"]["version"] | string | any,
+  ) {
     if (typeof version === "string") {
       return {
         id: version,
@@ -185,6 +193,31 @@ export class Backend extends BaseService {
     }
   }
 
+  async resetFriendCode(id: string) {
+    try {
+      const response = await this.api.post<IUser>(
+        `${this.baseUrl}/users/${id}/friend-code/reset`,
+      );
+
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
+  async updateFriendSettings(id: string, settings: IFriendSettingsUpdate) {
+    try {
+      const response = await this.api.patch<IUser>(
+        `${this.baseUrl}/users/${id}/friend-settings`,
+        settings,
+      );
+
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
   async uploadFileFromPath(
     filePath: string,
     fileName?: string,
@@ -244,6 +277,52 @@ export class Backend extends BaseService {
     } catch {
       return [];
     }
+  }
+
+  async getWhatsNew(version: string, locale: string) {
+    try {
+      const response = await this.api.get<ILauncherReleaseNote | null>(
+        `${this.baseUrl}/launcher/releases/whats-new`,
+        {
+          params: {
+            version,
+            locale,
+          },
+        },
+      );
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
+  async getSponsoredNewsAd(locale: string, hiddenIds: string[]) {
+    try {
+      const response = await this.api.get<ISponsoredNewsAd | null>(
+        `${this.baseUrl}/ads/feed`,
+        {
+          params: {
+            locale,
+            hidden: hiddenIds.join(","),
+          },
+        },
+      );
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
+  async recordSponsoredAdImpression(id: string) {
+    try {
+      await this.api.post(`${this.baseUrl}/ads/${id}/impression`);
+    } catch {}
+  }
+
+  async recordSponsoredAdClick(id: string) {
+    try {
+      await this.api.post(`${this.baseUrl}/ads/${id}/click`);
+    } catch {}
   }
 
   async login(

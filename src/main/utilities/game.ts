@@ -1,8 +1,4 @@
-import {
-  ChildProcessWithoutNullStreams,
-  execFile,
-  spawn,
-} from "child_process";
+import { ChildProcessWithoutNullStreams, execFile, spawn } from "child_process";
 import { gameProcesses, gameRuntime } from "./runtime";
 import { mainWindow } from "../windows/mainWindow";
 import { IConsoleMessage } from "@/types/Console";
@@ -135,13 +131,31 @@ async function terminateProcessTree(
   await waitForExit(child, 2000);
 }
 
+export interface RunJarOptions {
+  signal?: AbortSignal;
+  onOutput?: (event: { stream: "stdout" | "stderr"; message: string }) => void;
+}
+
+function normalizeRunJarOptions(
+  optionsOrSignal?: AbortSignal | RunJarOptions,
+): RunJarOptions {
+  if (!optionsOrSignal) return {};
+  if ("aborted" in optionsOrSignal && "addEventListener" in optionsOrSignal) {
+    return { signal: optionsOrSignal };
+  }
+
+  return optionsOrSignal;
+}
+
 export function runJar(
   command: string,
   args: string[],
   cwd: string,
-  signal?: AbortSignal,
+  optionsOrSignal?: AbortSignal | RunJarOptions,
 ) {
   return new Promise((resolve, reject) => {
+    const options = normalizeRunJarOptions(optionsOrSignal);
+    const signal = options.signal;
     let settled = false;
     let successSeen = false;
 
@@ -172,13 +186,16 @@ export function runJar(
 
     const onStdout = (data: any) => {
       const output = data.toString();
+      options.onOutput?.({ stream: "stdout", message: output });
       if (output.includes("Successfully installed client into launcher.")) {
         successSeen = true;
       }
     };
 
     const onStderr = (data: any) => {
-      settleReject(data.toString());
+      const output = data.toString();
+      options.onOutput?.({ stream: "stderr", message: output });
+      settleReject(output);
     };
 
     const onClose = (code: any) => {

@@ -5,6 +5,8 @@ export type AccountType = 'microsoft' | 'plain' | 'elyby' | 'discord'
 export interface IAuth extends DefaultJwtPayload {
   nickname: string
   uuid: string
+  friendCode?: string
+  friendRequestsEnabled?: boolean
   auth: {
     accessToken: string
     refreshToken: string

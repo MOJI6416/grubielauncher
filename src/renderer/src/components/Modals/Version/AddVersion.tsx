@@ -15,7 +15,6 @@ import {
   HardDriveDownload,
   ImageOff,
   ImagePlus,
-  Info,
   Loader2,
   PackageSearch,
   Server,
@@ -25,7 +24,14 @@ import {
   Layers3,
   PencilLine,
 } from "lucide-react";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { loaders, Loaders } from "../../Loaders";
 import { SiCurseforge, SiModrinth } from "react-icons/si";
@@ -80,6 +86,15 @@ import {
   canLoadLoaderData as canLoadLoaderDataForConnectivity,
   loaderRequiresBackend,
 } from "@renderer/utilities/connectivity";
+import {
+  parsePackShareCode,
+  withPackRequestTimeout,
+} from "@renderer/utilities/packShare";
+import { getLocalPathFromFileUrl } from "@renderer/utilities/exportVersion";
+import { resolveImportedLoaderVersion } from "@/shared/loaderVersions";
+import grubieIcon from "@renderer/assets/icon.png";
+import prismIcon from "@renderer/assets/launchers/prism.svg";
+import multimcIcon from "@renderer/assets/launchers/multimc.svg";
 
 const api = window.api;
 
@@ -104,6 +119,91 @@ const LazyServers = lazyWithPreload(loadServers);
 const LazyImageCropper = lazyWithPreload(loadImageCropper);
 const LazyArguments = lazyWithPreload(loadArguments);
 const LazyModManager = lazyWithPreload(loadModManager);
+
+function ImportSourceTile({
+  name,
+  format,
+  children,
+}: {
+  name: string;
+  format: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="grid min-w-0 gap-1 rounded-lg border bg-background/70 p-2 text-center">
+      <div className="mx-auto flex size-8 items-center justify-center rounded-md border bg-muted/35 text-base">
+        {children}
+      </div>
+      <span className="truncate text-xs font-medium leading-4 text-foreground">
+        {name}
+      </span>
+      <span className="text-[10px] uppercase leading-3 text-muted-foreground">
+        {format}
+      </span>
+    </div>
+  );
+}
+
+function getImageExtension(source: string, contentType?: string) {
+  const fromContentType = contentType?.split(";")[0]?.trim().toLowerCase();
+  if (fromContentType === "image/jpeg") return "jpg";
+  if (fromContentType === "image/png") return "png";
+  if (fromContentType === "image/webp") return "webp";
+
+  try {
+    const pathname = source.startsWith("file://")
+      ? new URL(source).pathname
+      : source.split("?")[0];
+    const extension = decodeURIComponent(pathname)
+      .split("/")
+      .pop()
+      ?.split(".")
+      .pop()
+      ?.toLowerCase();
+
+    if (extension && ["png", "jpg", "jpeg", "webp"].includes(extension)) {
+      return extension === "jpeg" ? "jpg" : extension;
+    }
+  } catch {}
+
+  return "png";
+}
+
+function toFileUrl(filePath: string) {
+  const normalized = filePath.replace(/\\/g, "/");
+  const withLeadingSlash = /^[a-zA-Z]:/.test(normalized)
+    ? `/${normalized}`
+    : normalized.startsWith("/")
+      ? normalized
+      : `/${normalized}`;
+
+  return `file://${encodeURI(withLeadingSlash)}?t=${Date.now()}`;
+}
+
+function rewriteImportedLocalPaths(
+  mods: ILocalProject[],
+  importFolderPath: string,
+  newVersionPath: string,
+) {
+  const normalizedImportRoot = importFolderPath.replace(/\\/g, "/");
+  const normalizedOverridesRoot = `${normalizedImportRoot}/overrides`;
+
+  for (const mod of mods) {
+    for (const file of mod.version?.files ?? []) {
+      if (!file.localPath) continue;
+
+      const normalizedLocalPath = file.localPath.replace(/\\/g, "/");
+      if (!normalizedLocalPath.startsWith(normalizedOverridesRoot)) continue;
+
+      const relativePath = normalizedLocalPath
+        .slice(normalizedOverridesRoot.length)
+        .replace(/^\/+/, "");
+      if (!relativePath) continue;
+
+      file.localPath = `${newVersionPath.replace(/\\/g, "/")}/${relativePath}`;
+    }
+  }
+}
 
 export function AddVersion({
   closeModal,
@@ -161,6 +261,9 @@ export function AddVersion({
   const [quickConnectIp, setQuickConnectIp] = useState("");
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>([]);
   const [isBlockedMods, setIsBlockedMods] = useState(false);
+  const [importLoaderVersionError, setImportLoaderVersionError] = useState<
+    "missingRequired" | "notFound" | null
+  >(null);
 
   useEffect(() => {
     return schedulePreload(
@@ -212,6 +315,7 @@ export function AddVersion({
       setSelectVersion(undefined);
       setLoaderVersion(undefined);
       setLoaderVersions([]);
+      setImportLoaderVersionError(null);
 
       if (!importModpack.loader || !importModpack.version) return;
 
@@ -256,11 +360,35 @@ export function AddVersion({
         if (isCancelled) return;
 
         setLoaderVersions(importedLoaderVersions);
-        setLoaderVersion(
-          importedLoaderVersions.find(
-            (v) => v.id == importModpack.loaderVersion,
-          ) || importedLoaderVersions[0],
-        );
+        const loaderResolution = resolveImportedLoaderVersion({
+          loader: importModpack.loader,
+          minecraftVersion: importedVersion.id,
+          requiredLoaderVersion: importModpack.loaderVersion,
+          availableVersions: importedLoaderVersions,
+        });
+
+        if (
+          loaderResolution.status === "matched" ||
+          loaderResolution.status === "synthesized"
+        ) {
+          setImportLoaderVersionError(null);
+          setLoaderVersion(loaderResolution.version);
+          setLoaderVersions(
+            importedLoaderVersions.some(
+              (version) => version.id === loaderResolution.version.id,
+            )
+              ? importedLoaderVersions
+              : [loaderResolution.version, ...importedLoaderVersions],
+          );
+        } else {
+          setLoaderVersion(undefined);
+          setImportLoaderVersionError(
+            loaderResolution.status === "missingRequired"
+              ? "missingRequired"
+              : "notFound",
+          );
+          toast.error(t("addVersion.fromFile.loaderVersionNotFound"));
+        }
       } finally {
         if (!isCancelled) {
           setIsLoading(false);
@@ -454,23 +582,32 @@ export function AddVersion({
     try {
       let newImage: string = image || "";
       if (image && selectedTab != "fromServer") {
-        const filename = "logo.png";
         try {
-          const filePath = await api.path.join(newVersionPath, filename);
-
           if (image.startsWith("file://")) {
-            const file = image.replace("file://", "");
+            const file = getLocalPathFromFileUrl(image);
+            const filename = `logo.${getImageExtension(image)}`;
+            const filePath = await api.path.join(newVersionPath, filename);
             await api.fs.copy(file, filePath);
+            newImage = toFileUrl(filePath);
           } else {
             const response = await axios.get(image, {
               responseType: "arraybuffer",
             });
+            const contentTypeHeader = response.headers["content-type"];
+            const contentType =
+              typeof contentTypeHeader === "string"
+                ? contentTypeHeader
+                : undefined;
 
+            const filename = `logo.${getImageExtension(
+              image,
+              contentType,
+            )}`;
+            const filePath = await api.path.join(newVersionPath, filename);
             const buffer = api.file.fromBuffer(response.data);
             await api.fs.writeFile(filePath, buffer, "binary");
+            newImage = toFileUrl(filePath);
           }
-
-          newImage = `file://${filePath}?t=${new Date().getTime()}`;
         } catch {}
       }
 
@@ -535,10 +672,14 @@ export function AddVersion({
         await api.fs.copy(importData.path, newVersionPath);
         await api.fs.rimraf(importData.path);
       } else if (importModpack) {
-        await api.fs.copy(
-          await api.path.join(importModpack.folderPath, "overrides"),
-          newVersionPath,
+        const overridesPath = await api.path.join(
+          importModpack.folderPath,
+          "overrides",
         );
+        if (await api.fs.pathExists(overridesPath)) {
+          await api.fs.copy(overridesPath, newVersionPath);
+        }
+        rewriteImportedLocalPaths(mods, importModpack.folderPath, newVersionPath);
         await api.fs.rimraf(importModpack.folderPath);
       }
 
@@ -690,6 +831,7 @@ export function AddVersion({
     !!selectVersion &&
     !!loader &&
     (loader != "vanilla" ? !!loaderVersion : true) &&
+    !importLoaderVersionError &&
     isValidVersionName &&
     (!currentManualLoaderRequiresBackend || isBackendOnline);
   const showVersionNameError =
@@ -736,6 +878,7 @@ export function AddVersion({
     setSearchCode("");
     setImportData(undefined);
     setImportModpack(undefined);
+    setImportLoaderVersionError(null);
 
     if (tab == "modpacks") {
       setSelectVersion(undefined);
@@ -743,6 +886,25 @@ export function AddVersion({
       setIsModManager(true);
     } else if (tab == "manually") {
       setVersionName(getVersionName("vanilla", selectVersions[0]?.id || ""));
+    }
+  }
+
+  function handleLoaderSelect(nextLoader: Loader) {
+    if (nextLoader == loader) return;
+
+    setLoader(nextLoader);
+    setSelectVersions([]);
+    setSelectVersion(undefined);
+    setLoaderVersions([]);
+    setLoaderVersion(undefined);
+    setImportLoaderVersionError(null);
+
+    if (selectedTab == "manually" && canLoadLoaderData(nextLoader)) {
+      setIsLoading(true);
+      setLoadingType("versions");
+    } else {
+      setIsLoading(false);
+      setLoadingType(undefined);
     }
   }
 
@@ -783,7 +945,9 @@ export function AddVersion({
             <DialogTitle>{t("versions.addingVersion")}</DialogTitle>
           </DialogHeader>
 
-          <div className="max-h-[calc(90vh-8.5rem)] overflow-y-auto px-5 pb-5">
+          <div
+            className={`max-h-[calc(90vh-8.5rem)] overflow-y-auto px-5 ${selectedTab != "manually" ? "pb-5" : ""}`}
+          >
             <div className="grid gap-4">
               {!hasResolvedPack && (
                 <Tabs
@@ -917,7 +1081,9 @@ export function AddVersion({
                                       if (isVersionNameInput) {
                                         setVersionName(value);
                                       } else if (selectedTab == "fromServer") {
-                                        setSearchCode(value);
+                                        setSearchCode(
+                                          parsePackShareCode(value),
+                                        );
                                       }
                                     }}
                                     disabled={isLoading}
@@ -946,7 +1112,7 @@ export function AddVersion({
                                 disabledLoaders={
                                   isBackendOnline ? [] : ["forge", "neoforge"]
                                 }
-                                select={(loader) => setLoader(loader)}
+                                select={handleLoaderSelect}
                                 isLoading={isLoading}
                                 label={t("versions.loader")}
                                 loader={loader || "vanilla"}
@@ -1055,6 +1221,16 @@ export function AddVersion({
                                     ))}
                                   </SelectContent>
                                 </Select>
+                                {importLoaderVersionError && (
+                                  <p className="text-xs leading-5 text-destructive">
+                                    {t(
+                                      importLoaderVersionError ===
+                                        "missingRequired"
+                                        ? "addVersion.fromFile.loaderVersionMissing"
+                                        : "addVersion.fromFile.loaderVersionNotFound",
+                                    )}
+                                  </p>
+                                )}
                               </div>
                             ) : undefined}
                           </div>
@@ -1066,12 +1242,46 @@ export function AddVersion({
 
                 {selectedTab == "fromFile" && !importData && (
                   <Card className="gap-4 py-4 shadow-none">
-                    <CardContent className="grid gap-3 px-4">
-                      <div className="flex gap-3 rounded-xl border bg-muted/25 p-3 text-sm text-muted-foreground">
-                        <Info className="mt-0.5 size-4 shrink-0" />
-                        <p className="min-w-0 leading-relaxed">
-                          {t("addVersion.fromFile.supportedFormats")}
-                        </p>
+                    <CardContent className="grid gap-4 px-4">
+                      <div className="grid gap-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-medium">
+                            {t("addVersion.fromFile.supportedLaunchers")}
+                          </p>
+                          <span className="shrink-0 rounded-md border bg-muted/30 px-2 py-1 text-[10px] uppercase text-muted-foreground">
+                            .zip / .mrpack
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-5 gap-2">
+                          <ImportSourceTile name="Grubie" format="zip">
+                            <img
+                              src={grubieIcon}
+                              alt=""
+                              className="size-5 object-contain"
+                            />
+                          </ImportSourceTile>
+                          <ImportSourceTile name="CurseForge" format="zip">
+                            <SiCurseforge className="size-5 text-[#f16436]" />
+                          </ImportSourceTile>
+                          <ImportSourceTile name="Modrinth" format="mrpack">
+                            <SiModrinth className="size-5 text-[#1bd96a]" />
+                          </ImportSourceTile>
+                          <ImportSourceTile name="Prism" format="zip">
+                            <img
+                              src={prismIcon}
+                              alt=""
+                              className="size-5 object-contain"
+                            />
+                          </ImportSourceTile>
+                          <ImportSourceTile name="MultiMC" format="zip">
+                            <img
+                              src={multimcIcon}
+                              alt=""
+                              className="size-5 object-contain"
+                            />
+                          </ImportSourceTile>
+                        </div>
                       </div>
                       <Button
                         type="button"
@@ -1161,16 +1371,28 @@ export function AddVersion({
                         setIsLoading(true);
                         setLoadingType("search");
 
-                        const modpackData = await api.backend.getModpack(
-                          account?.accessToken || "",
-                          searchCode.trim(),
-                        );
-                        if (modpackData.data)
-                          await searchVersion(modpackData.data);
-                        else toast.error(t("addVersion.fromServer.notFound"));
+                        const shareCode = parsePackShareCode(searchCode);
+                        if (shareCode !== searchCode.trim()) {
+                          setSearchCode(shareCode);
+                        }
 
-                        setIsLoading(false);
-                        setLoadingType(undefined);
+                        try {
+                          const modpackData = await withPackRequestTimeout(
+                            api.backend.getModpack(
+                              account?.accessToken || "",
+                              shareCode,
+                            ),
+                          );
+
+                          if (modpackData.data)
+                            await searchVersion(modpackData.data);
+                          else toast.error(t("addVersion.fromServer.notFound"));
+                        } catch {
+                          toast.error(t("addVersion.fromServer.notFound"));
+                        } finally {
+                          setIsLoading(false);
+                          setLoadingType(undefined);
+                        }
                       }}
                     >
                       {isLoading && loadingType == "search" ? (

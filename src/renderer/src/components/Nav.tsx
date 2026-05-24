@@ -95,9 +95,11 @@ function ConnectivityBadge({
 export function Nav({
   runGame,
   setIsFriends,
+  onOpenWhatsNew,
 }: {
   runGame: (params: RunGameParams) => Promise<void>;
   setIsFriends: React.Dispatch<React.SetStateAction<boolean>>;
+  onOpenWhatsNew: () => void;
 }) {
   const [selectedVersion, setSelectedVersion] = useAtom(selectedVersionAtom);
   const setServer = useAtom(serverAtom)[1];
@@ -354,7 +356,10 @@ export function Nav({
       </div>
       {isSettingsModal && (
         <Suspense fallback={<LazyDialogFallback variant="form" />}>
-          <LazySettings onClose={() => setOpenSettingsModal(false)} />
+          <LazySettings
+            onClose={() => setOpenSettingsModal(false)}
+            onShowWhatsNew={onOpenWhatsNew}
+          />
         </Suspense>
       )}
       {isAddVersion && (
