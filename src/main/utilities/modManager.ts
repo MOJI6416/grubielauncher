@@ -1302,7 +1302,10 @@ export function folderToProjectType(folder: string): ProjectType | null {
 }
 
 export function compareMods(a: ILocalProject[], b: ILocalProject[]): boolean {
-  if (a.length !== b.length) return false;
+  const comparableA = a.filter((mod) => mod.projectType !== ProjectType.PLUGIN);
+  const comparableB = b.filter((mod) => mod.projectType !== ProjectType.PLUGIN);
+
+  if (comparableA.length !== comparableB.length) return false;
 
   const sig = (m: ILocalProject) => {
     const v = m.version;
@@ -1319,8 +1322,8 @@ export function compareMods(a: ILocalProject[], b: ILocalProject[]): boolean {
     return `${m.id}#${m.provider}#${m.projectType}#${v?.id ?? "null"}#${fileSig}#${depSig}`;
   };
 
-  const as = [...a].map(sig).sort();
-  const bs = [...b].map(sig).sort();
+  const as = [...comparableA].map(sig).sort();
+  const bs = [...comparableB].map(sig).sort();
 
   for (let i = 0; i < as.length; i++) if (as[i] !== bs[i]) return false;
   return true;

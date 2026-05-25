@@ -58,9 +58,23 @@ export function selectShareFolderPath(
   return [
     ...selectedPaths.filter(
       (selectedPath) => !selectedPath.startsWith(`${folderPath}/`),
+    ).filter(
+      (selectedPath) => selectedPath !== folderPath,
     ),
     folderPath,
   ];
+}
+
+export function selectSharePaths(
+  selectedPaths: string[],
+  pathNames: string[],
+  forbiddenPaths: Iterable<string>,
+) {
+  return pathNames.reduce((nextPaths, pathName) => {
+    if (isForbiddenSharePath(pathName, forbiddenPaths)) return nextPaths;
+
+    return selectShareFolderPath(nextPaths, pathName);
+  }, selectedPaths);
 }
 
 export function unselectShareFolderPath(

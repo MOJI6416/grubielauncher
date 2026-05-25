@@ -16,6 +16,7 @@ import {
 import { ILoader } from "@/types/Loader";
 import { SelectPaths } from "@renderer/components/Modals/Version/Share/SelectPaths";
 import { IModpack, IModpackUpdate } from "@/types/Backend";
+import type { UploadFileProgress } from "@/types/Backend";
 import {
   accountAtom,
   authDataAtom,
@@ -27,16 +28,38 @@ import {
 } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
 import { ArrowUpFromLine, FolderOpen, Loader2, Trash } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "@renderer/utilities/file";
 import { buildPackShareUrl } from "@renderer/utilities/packShare";
 import { Confirmation } from "../../Confirmation";
 import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
 
 const api = window.api;
 
 const MAX_OTHER_BYTES = 1_000_000_000;
+
+type SharePublishStage =
+  | "creatingShare"
+  | "uploadingMods"
+  | "preparingArchive"
+  | "archivingOther"
+  | "uploadingOther"
+  | "uploadingLogo"
+  | "publishing"
+  | "saving"
+  | "completed"
+  | "error";
+
+interface SharePublishProgress {
+  stage: SharePublishStage;
+  percent: number;
+  loaded?: number;
+  total?: number;
+  errorCode?: string;
+  statusCode?: number;
+}
 
 export function Share({
   closeModal,
@@ -80,6 +103,32 @@ export function Share({
   const [authData] = useAtom(authDataAtom);
 
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const uploadProgressIdRef = useRef<string | null>(null);
+  const uploadProgressRef = useRef<UploadFileProgress | null>(null);
+  const publishErrorRef = useRef<string | null>(null);
+  const [publishProgress, setPublishProgress] =
+    useState<SharePublishProgress | null>(null);
+
+  useEffect(() => {
+    return api.backend.onUploadFileProgress((progress) => {
+      if (progress.id !== uploadProgressIdRef.current) return;
+      uploadProgressRef.current = progress;
+      setPublishProgress((current) => {
+        if (!current || current.stage !== "uploadingOther") return current;
+        return {
+          ...current,
+          percent: 45 + Math.round(progress.percent * 0.35),
+          loaded: progress.loaded,
+          total: progress.total,
+          statusCode: progress.statusCode,
+          errorCode:
+            progress.status === "error" && progress.statusCode === 413
+              ? "payloadTooLarge"
+              : current.errorCode,
+        };
+      });
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -179,8 +228,50 @@ export function Share({
     totalSize,
   ]);
 
+  function openOtherFilesSelector() {
+    if (!selectedVersion) return;
+
+    if (paths.length === 0) {
+      setPaths(selectedVersion.version.loader.other?.paths || []);
+    }
+    setSelectPathsFolder(selectedVersion.versionPath);
+    setIsOpenSelectPaths(true);
+  }
+
+  function handleSelectedOtherPaths(nextPaths: string[]) {
+    const hadPublishedOther =
+      shareType === "update" &&
+      !!modpack?.conf.loader.other &&
+      ((modpack.conf.loader.other.paths?.length || 0) > 0 ||
+        (modpack.conf.loader.other.size || 0) > 0);
+
+    setPaths(nextPaths);
+    setIsShareOtherFiles(nextPaths.length > 0 || hadPublishedOther);
+    uploadProgressRef.current = null;
+    setPublishProgress(null);
+  }
+
+  function updatePublishProgress(progress: SharePublishProgress | null) {
+    setPublishProgress(progress);
+  }
+
+  function getPublishErrorCode(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message === "payload_too_large") return "payloadTooLarge";
+    if (message === "limit_exceeded") return "limitExceeded";
+    if (message === "upload_failed") return "uploadFailed";
+    return "generic";
+  }
+
+  function getPublishErrorToast(errorCode: string | null) {
+    if (errorCode === "payloadTooLarge") return t("share.uploadPayloadTooLarge");
+    if (errorCode === "limitExceeded") return t("share.limitExceeded");
+    if (errorCode === "uploadFailed") return t("share.uploadFailedDescription");
+    return t("versions.publishError");
+  }
+
   async function updateShare(silentMode = false, shareCode: string) {
-    if (!selectedVersion || !account || !authData) return;
+    if (!selectedVersion || !account || !authData) return false;
 
     const versionPath = selectedVersion.versionPath;
 
@@ -190,8 +281,14 @@ export function Share({
     }
 
     let mods = [...selectedVersion.version.loader.mods];
+    let shouldUpdateLocalMods = false;
+    let shouldUpdateLocalOther = false;
+    let shouldUpdateLocalImage = false;
+    let uploadedOtherUrl: string | null = null;
+    let uploadedImageUrl: string | null = null;
 
     try {
+      publishErrorRef.current = null;
       let options = "";
       if (isShareOptions) {
         const optionsPath = await api.path.join(versionPath, "options.txt");
@@ -206,6 +303,10 @@ export function Share({
         : (selectedVersion.version.build || 0) + 1;
 
       if (isShareMods) {
+        updatePublishProgress({
+          stage: "uploadingMods",
+          percent: 15,
+        });
         const result = await api.version.share.uploadMods(
           account.accessToken!,
           {
@@ -215,6 +316,7 @@ export function Share({
         );
         if (!result.success) throw new Error("local mods upload failed");
         mods = result.mods;
+        shouldUpdateLocalMods = true;
       }
 
       let other: ILoader["other"] | null = null;
@@ -226,13 +328,17 @@ export function Share({
         other = { paths: [], url: "", size: 0 };
 
         if (paths.length > 0) {
+          updatePublishProgress({
+            stage: "preparingArchive",
+            percent: 25,
+          });
           const validPaths = await Promise.all(
             paths.map((p) => api.path.join(versionPath, p)),
           );
 
           const computedTotalSize = await api.file.getTotalSizes(validPaths);
           if (computedTotalSize > MAX_OTHER_BYTES) {
-            throw new Error("limit exceeded");
+            throw new Error("limit_exceeded");
           }
 
           const tmpZipPath = await api.path.join(
@@ -240,29 +346,62 @@ export function Share({
             `other_${shareCode}_${Date.now()}.zip`,
           );
 
+          updatePublishProgress({
+            stage: "archivingOther",
+            percent: 35,
+            total: computedTotalSize,
+          });
           await api.file.archiveFiles(validPaths, tmpZipPath, versionPath);
+
+          const progressId = `other-${shareCode}-${Date.now()}`;
+          uploadProgressIdRef.current = progressId;
+          const initialUploadProgress: UploadFileProgress = {
+            id: progressId,
+            status: "preparing",
+            loaded: 0,
+            total: computedTotalSize,
+            percent: 0,
+          };
+          uploadProgressRef.current = initialUploadProgress;
+          updatePublishProgress({
+            stage: "uploadingOther",
+            percent: 45,
+            loaded: 0,
+            total: computedTotalSize,
+          });
 
           const url = await api.backend.uploadFileFromPath(
             account.accessToken!,
             tmpZipPath,
             undefined,
             `modpacks/${shareCode}`,
+            progressId,
+            true,
           );
 
           await api.fs.rimraf(tmpZipPath);
 
-          if (!url) throw new Error("not uploaded");
+          if (!url) {
+            if (uploadProgressRef.current?.statusCode === 413) {
+              throw new Error("payload_too_large");
+            }
+            throw new Error("upload_failed");
+          }
 
+          uploadedOtherUrl = url;
           other = { paths, url, size: computedTotalSize };
 
         }
 
-        selectedVersion.version.loader.other = other;
-        isUpdateVersionLocal = true;
+        shouldUpdateLocalOther = true;
       }
 
       let updateImage = selectedVersion.version.image;
       if ((isShareImage || silentMode) && selectedVersion.version.image) {
+        updatePublishProgress({
+          stage: "uploadingLogo",
+          percent: 82,
+        });
         const response = await fetch(selectedVersion.version.image);
         const blob = await response.blob();
         const arrayBuffer = await blob.arrayBuffer();
@@ -284,9 +423,9 @@ export function Share({
         await api.fs.rimraf(tmpPath);
 
         if (upload) {
-          selectedVersion.version.image = upload;
           updateImage = upload;
-          isUpdateVersionLocal = true;
+          uploadedImageUrl = upload;
+          shouldUpdateLocalImage = true;
         }
       }
 
@@ -307,6 +446,10 @@ export function Share({
           : null,
       };
 
+      updatePublishProgress({
+        stage: "publishing",
+        percent: 92,
+      });
       const isUpdated = await api.backend.updateModpack(
         account.accessToken!,
         shareCode,
@@ -314,36 +457,74 @@ export function Share({
       );
       if (!isUpdated) throw new Error("not updated");
 
+      if (shouldUpdateLocalMods) selectedVersion.version.loader.mods = mods;
+      if (shouldUpdateLocalOther) {
+        if (other) selectedVersion.version.loader.other = other;
+        else delete selectedVersion.version.loader.other;
+      }
+      if (shouldUpdateLocalImage) selectedVersion.version.image = updateImage;
+
       selectedVersion.version.build = nextBuild;
       isUpdateVersionLocal = true;
 
       if (versionIndex !== -1) {
         versions[versionIndex].version.build = nextBuild;
-        if (isShareOtherFiles) {
+        if (shouldUpdateLocalMods) {
+          versions[versionIndex].version.loader.mods = mods;
+        }
+        if (shouldUpdateLocalOther) {
           if (other) versions[versionIndex].version.loader.other = other;
           else delete versions[versionIndex].version.loader.other;
         }
-        if (isShareImage || silentMode)
+        if (shouldUpdateLocalImage)
           versions[versionIndex].version.image = updateImage;
         setVersions([...versions]);
       }
 
       if (isUpdateVersionLocal) {
+        updatePublishProgress({
+          stage: "saving",
+          percent: 97,
+        });
         await selectedVersion.save();
         setSelectedVersion(selectedVersion);
       }
 
+      updatePublishProgress({
+        stage: "completed",
+        percent: 100,
+      });
       if (!silentMode) {
         toast.success(t("versions.published"));
+        onPublished?.(shareCode);
       }
-    } catch {
+      return true;
+    } catch (error) {
+      const errorCode = getPublishErrorCode(error);
+      publishErrorRef.current = errorCode;
+      updatePublishProgress({
+        stage: "error",
+        percent: 100,
+        errorCode,
+        statusCode: uploadProgressRef.current?.statusCode,
+      });
+      if (uploadedOtherUrl) {
+        await api.backend
+          .deleteFile(account.accessToken!, uploadedOtherUrl)
+          .catch(() => undefined);
+      }
+      if (uploadedImageUrl) {
+        await api.backend
+          .deleteFile(account.accessToken!, uploadedImageUrl)
+          .catch(() => undefined);
+      }
       if (!silentMode) {
-        toast.error(t("versions.publishError"));
+        toast.error(getPublishErrorToast(errorCode));
       }
+      return false;
     } finally {
       setIsLoading(false);
       setLoadingType(undefined);
-      closeModal();
     }
   }
 
@@ -521,14 +702,15 @@ export function Share({
                       <Checkbox
                         disabled={
                           (shareType === "update" &&
-                            !diffenceUpdateData.includes("other")) ||
+                            !diffenceUpdateData.includes("other") &&
+                            !isShareOtherFiles) ||
                           isLoading
                         }
                         checked={isShareOtherFiles}
                         onCheckedChange={(checked) => {
                           const value = checked === true;
                           setIsShareOtherFiles(value);
-                          if (value)
+                          if (value && paths.length === 0)
                             setPaths(
                               selectedVersion?.version.loader.other?.paths ||
                                 [],
@@ -553,12 +735,8 @@ export function Share({
                                 : "outline"
                             }
                             size="icon-sm"
-                            disabled={isLoading || !isShareOtherFiles}
-                            onClick={async () => {
-                              if (!selectedVersion) return;
-                              setSelectPathsFolder(selectedVersion.versionPath);
-                              setIsOpenSelectPaths(true);
-                            }}
+                            disabled={isLoading}
+                            onClick={openOtherFilesSelector}
                           >
                             {isLoading && loadingType === "size" ? (
                               <Loader2 className="size-4 animate-spin" />
@@ -593,8 +771,56 @@ export function Share({
                       )}
                     </Tooltip>
                   </div>
+
                 </div>
               </div>
+
+              {publishProgress && (
+                <div className="mt-3 grid gap-1.5 rounded-lg border bg-card p-3">
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <span className="text-muted-foreground">
+                      {t(`share.publishProgress.${publishProgress.stage}`)}
+                    </span>
+                    {publishProgress.stage === "uploadingOther" &&
+                    typeof publishProgress.loaded === "number" &&
+                    typeof publishProgress.total === "number" ? (
+                      <span className="shrink-0 text-muted-foreground">
+                        {formatBytes(publishProgress.loaded, [
+                          t("sizes.0"),
+                          t("sizes.1"),
+                          t("sizes.2"),
+                          t("sizes.3"),
+                          t("sizes.4"),
+                        ])}
+                        {" / "}
+                        {formatBytes(publishProgress.total, [
+                          t("sizes.0"),
+                          t("sizes.1"),
+                          t("sizes.2"),
+                          t("sizes.3"),
+                          t("sizes.4"),
+                        ])}
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-muted-foreground">
+                        {Math.min(100, Math.max(0, publishProgress.percent))}%
+                      </span>
+                    )}
+                  </div>
+                  <Progress
+                    value={Math.min(100, Math.max(0, publishProgress.percent))}
+                  />
+                  {publishProgress.stage === "error" && (
+                    <p className="text-xs text-destructive">
+                      {t(
+                        `share.publishErrors.${
+                          publishProgress.errorCode || "generic"
+                        }`,
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </TooltipProvider>
 
@@ -614,14 +840,24 @@ export function Share({
                     shareType === "update" &&
                     selectedVersion.version.shareCode
                   ) {
-                    await updateShare(false, selectedVersion.version.shareCode);
-                    closeModal();
+                    const isUpdated = await updateShare(
+                      false,
+                      selectedVersion.version.shareCode,
+                    );
+                    if (isUpdated) closeModal();
                     return;
                   }
 
+                  let createdShareCode: string | null = null;
+                  let isPublished = false;
                   try {
                     setLoadingType("share");
                     setIsLoading(true);
+                    publishErrorRef.current = null;
+                    updatePublishProgress({
+                      stage: "creatingShare",
+                      percent: 5,
+                    });
 
                     const shareCode = await api.backend.shareModpack(
                       account.accessToken!,
@@ -645,8 +881,11 @@ export function Share({
                     );
 
                     if (!shareCode) throw new Error("not share code");
+                    createdShareCode = shareCode;
 
-                    await updateShare(true, shareCode);
+                    const isUpdated = await updateShare(true, shareCode);
+                    if (!isUpdated) throw new Error("not updated");
+                    createdShareCode = null;
 
                     const index = versions.findIndex(
                       (v) => v.version.name === selectedVersion.version.name,
@@ -663,12 +902,19 @@ export function Share({
                     await api.clipboard.writeText(buildPackShareUrl(shareCode));
 
                     toast.success(t("versions.published"));
+                    isPublished = true;
                   } catch {
-                    toast.error(t("versions.publishError"));
+                    if (createdShareCode) {
+                      await api.backend
+                        .deleteModpack(account.accessToken!, createdShareCode)
+                        .catch(() => undefined);
+                    }
+                    const errorCode = publishErrorRef.current || "generic";
+                    toast.error(getPublishErrorToast(errorCode));
                   } finally {
                     setIsLoading(false);
                     setLoadingType(undefined);
-                    closeModal();
+                    if (isPublished) closeModal();
                   }
                 }}
               >
@@ -702,7 +948,7 @@ export function Share({
           loader={selectedVersion.version.loader.name}
           version={selectedVersion.version.version.id}
           onClose={() => setIsOpenSelectPaths(false)}
-          passPaths={(p: string[]) => setPaths(p)}
+          passPaths={handleSelectedOtherPaths}
           pathFolder={
             selectPathsFolder ||
             (globalPaths?.minecraft

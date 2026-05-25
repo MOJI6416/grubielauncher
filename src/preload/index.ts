@@ -7,7 +7,7 @@ import {
   IVersionConf,
 } from "@/types/IVersion";
 import { IAccountConf, IAuth, ILocalAccount } from "@/types/Account";
-import { IModpack, IModpackUpdate } from "@/types/Backend";
+import { IModpack, IModpackUpdate, UploadFileProgress } from "@/types/Backend";
 import { IFriendSettingsUpdate, IUpdateUser, IUser } from "@/types/IUser";
 import { INews, ISponsoredNewsAd } from "@/types/News";
 import { IGrubieSkin, SkinsData } from "@/types/SkinManager";
@@ -274,7 +274,12 @@ export interface IElectronAPI {
       filePath: string,
       fileName?: string,
       folder?: string,
+      progressId?: string,
+      direct?: boolean,
     ) => Promise<string | null>;
+    onUploadFileProgress: (
+      callback: (progress: UploadFileProgress) => void,
+    ) => () => void;
     deleteFile: (
       at: string,
       key: string,
@@ -804,6 +809,8 @@ export const api = {
       filePath: string,
       fileName?: string,
       folder?: string,
+      progressId?: string,
+      direct?: boolean,
     ) =>
       ipcRenderer.invoke(
         "backend:uploadFileFromPath",
@@ -811,7 +818,19 @@ export const api = {
         filePath,
         fileName,
         folder,
+        progressId,
+        direct,
       ),
+    onUploadFileProgress: (callback: (progress: UploadFileProgress) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        progress: UploadFileProgress,
+      ) => {
+        callback(progress);
+      };
+      ipcRenderer.on("backend:uploadFileProgress", listener);
+      return () => ipcRenderer.off("backend:uploadFileProgress", listener);
+    },
     deleteFile: (at: string, key: string, isDirectory?: boolean) =>
       ipcRenderer.invoke("backend:deleteFile", at, key, isDirectory),
     modpackDownloaded: (at: string, shareCode: string) =>

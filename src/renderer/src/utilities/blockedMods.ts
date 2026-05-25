@@ -59,6 +59,13 @@ export function applyBlockedModFilePaths(
   return changed;
 }
 
+export function areBlockedModsReady(blockedMods: IBlockedMod[]) {
+  return (
+    blockedMods.length > 0 &&
+    blockedMods.every((blockedMod) => !!blockedMod.filePath)
+  );
+}
+
 export async function checkBlockedMods(
   mods: ILocalProject[],
   versionPath?: string,

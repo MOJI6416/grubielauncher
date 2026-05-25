@@ -1,4 +1,10 @@
-import { IModpack, IModpackUpdate } from "@/types/Backend";
+import {
+  DirectUploadCompleteResponse,
+  DirectUploadStartResponse,
+  IModpack,
+  IModpackUpdate,
+  UploadFileProgress,
+} from "@/types/Backend";
 import {
   IFriendSettingsUpdate,
   ICreateUser,
@@ -9,6 +15,7 @@ import { BaseService } from "./Base";
 import { INews, ISponsoredNewsAd } from "@/types/News";
 import { IGrubieSkin } from "@/types/SkinManager";
 import FormData from "form-data";
+import axios from "axios";
 import fs from "fs-extra";
 import path from "path";
 import { IAuthlib } from "@/types/IAuthlib";
@@ -222,11 +229,49 @@ export class Backend extends BaseService {
     filePath: string,
     fileName?: string,
     folder?: string,
+    onProgress?: (
+      progress: Omit<UploadFileProgress, "id">,
+    ) => void,
   ): Promise<string | null> {
+    const fileSize = (await fs.stat(filePath).catch(() => null))?.size || 0;
+    let uploadedBytes = 0;
+    let lastProgressEmit = 0;
+
+    const emitProgress = (
+      progress: Partial<Omit<UploadFileProgress, "id">>,
+    ) => {
+      const loaded = progress.loaded ?? uploadedBytes;
+      const total = progress.total ?? fileSize;
+      onProgress?.({
+        status: progress.status ?? "uploading",
+        loaded,
+        total,
+        percent:
+          typeof progress.percent === "number"
+            ? progress.percent
+            : total > 0
+              ? Math.min(100, Math.round((loaded / total) * 100))
+              : 0,
+        statusCode: progress.statusCode,
+        message: progress.message,
+      });
+    };
+
     try {
+      emitProgress({ status: "preparing", loaded: 0, percent: 0 });
+
       const formData = new FormData();
 
       const stream = fs.createReadStream(filePath);
+      stream.on("data", (chunk) => {
+        uploadedBytes += Buffer.isBuffer(chunk)
+          ? chunk.length
+          : Buffer.byteLength(String(chunk));
+        const now = Date.now();
+        if (now - lastProgressEmit < 150 && uploadedBytes < fileSize) return;
+        lastProgressEmit = now;
+        emitProgress({ status: "uploading" });
+      });
 
       formData.append("file", stream, {
         filename: fileName ?? path.basename(filePath),
@@ -240,12 +285,152 @@ export class Backend extends BaseService {
         formData,
         {
           headers: formData.getHeaders(),
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+          timeout: 10 * 60 * 1000,
         },
       );
 
+      emitProgress({
+        status: "completed",
+        loaded: fileSize,
+        total: fileSize,
+        percent: 100,
+      });
+
       return response.data;
     } catch (err) {
-      console.error("Upload error:", err);
+      const statusCode = (err as any)?.response?.status;
+      const message =
+        statusCode === 413
+          ? "payload_too_large"
+          : (err as any)?.message
+            ? String((err as any).message)
+            : "upload_failed";
+      emitProgress({
+        status: "error",
+        statusCode,
+        message,
+      });
+      console.error("Upload error:", {
+        statusCode,
+        code: (err as any)?.code,
+        message,
+      });
+      return null;
+    }
+  }
+
+  async uploadFileFromPathDirect(
+    filePath: string,
+    fileName?: string,
+    folder?: string,
+    onProgress?: (
+      progress: Omit<UploadFileProgress, "id">,
+    ) => void,
+  ): Promise<string | null> {
+    const fileSize = (await fs.stat(filePath).catch(() => null))?.size || 0;
+    const resolvedFileName = fileName ?? path.basename(filePath);
+    let uploadedBytes = 0;
+    let lastProgressEmit = 0;
+    let directUploadStarted = false;
+
+    const emitProgress = (
+      progress: Partial<Omit<UploadFileProgress, "id">>,
+    ) => {
+      const loaded = progress.loaded ?? uploadedBytes;
+      const total = progress.total ?? fileSize;
+      onProgress?.({
+        status: progress.status ?? "uploading",
+        loaded,
+        total,
+        percent:
+          typeof progress.percent === "number"
+            ? progress.percent
+            : total > 0
+              ? Math.min(100, Math.round((loaded / total) * 100))
+              : 0,
+        statusCode: progress.statusCode,
+        message: progress.message,
+      });
+    };
+
+    try {
+      emitProgress({ status: "preparing", loaded: 0, percent: 0 });
+
+      const start = await this.api.post<DirectUploadStartResponse>(
+        `${this.baseUrl}/files/direct-upload/start`,
+        {
+          fileName: resolvedFileName,
+          folder,
+          contentType: "application/octet-stream",
+          size: fileSize,
+        },
+      );
+      directUploadStarted = true;
+
+      const stream = fs.createReadStream(filePath);
+      stream.on("data", (chunk) => {
+        uploadedBytes += Buffer.isBuffer(chunk)
+          ? chunk.length
+          : Buffer.byteLength(String(chunk));
+        const now = Date.now();
+        if (now - lastProgressEmit < 150 && uploadedBytes < fileSize) return;
+        lastProgressEmit = now;
+        emitProgress({ status: "uploading" });
+      });
+
+      await axios.put(start.data.upload_url, stream, {
+        headers: {
+          ...start.data.headers,
+          "Content-Length": fileSize,
+        },
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+        timeout: 10 * 60 * 1000,
+      });
+
+      const complete = await this.api.post<DirectUploadCompleteResponse>(
+        `${this.baseUrl}/files/direct-upload/complete`,
+        {
+          object_key: start.data.object_key,
+        },
+      );
+
+      emitProgress({
+        status: "completed",
+        loaded: fileSize,
+        total: fileSize,
+        percent: 100,
+      });
+
+      return complete.data.file_url || start.data.file_url;
+    } catch (err) {
+      const statusCode = (err as any)?.response?.status;
+      if (!directUploadStarted && (statusCode === 404 || statusCode === 405)) {
+        return await this.uploadFileFromPath(
+          filePath,
+          fileName,
+          folder,
+          onProgress,
+        );
+      }
+      const message =
+        statusCode === 413
+          ? "payload_too_large"
+          : (err as any)?.message
+            ? String((err as any).message)
+            : "direct_upload_failed";
+      emitProgress({
+        status: "error",
+        statusCode,
+        message,
+      });
+      console.error("Direct upload error:", {
+        statusCode,
+        code: (err as any)?.code,
+        message,
+      });
       return null;
     }
   }

@@ -20,12 +20,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  areBlockedModsReady,
   applyBlockedModFilePaths,
   checkBlockedMods,
   type IBlockedMod,
 } from "@renderer/utilities/blockedMods";
 
-export { applyBlockedModFilePaths, checkBlockedMods };
+export { applyBlockedModFilePaths, areBlockedModsReady, checkBlockedMods };
 export type { IBlockedMod };
 
 const api = window.api;

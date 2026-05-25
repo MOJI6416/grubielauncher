@@ -31,6 +31,12 @@ export class LocalProxyManager {
   private transport: LocalProxyTransport | null = null
   private streams = new Map<number, StreamRecord>()
   private peersChangedListener?: (peers: SharePeerInfo[]) => void
+  private streamClosedListener?: (event: {
+    streamId: number
+    reason: string
+    source: 'local_proxy'
+    at: string
+  }) => void
 
   public setLocalPort(localPort: number | null): void {
     this.localPort = localPort
@@ -42,6 +48,17 @@ export class LocalProxyManager {
 
   public onPeersChanged(listener: (peers: SharePeerInfo[]) => void): void {
     this.peersChangedListener = listener
+  }
+
+  public onStreamClosed(
+    listener: (event: {
+      streamId: number
+      reason: string
+      source: 'local_proxy'
+      at: string
+    }) => void,
+  ): void {
+    this.streamClosedListener = listener
   }
 
   public async openStream(message: OpenStreamMessage): Promise<void> {
@@ -136,6 +153,12 @@ export class LocalProxyManager {
 
     this.streams.delete(streamId)
     this.emitPeersChanged()
+    this.streamClosedListener?.({
+      streamId,
+      reason,
+      source: 'local_proxy',
+      at: new Date().toISOString(),
+    })
 
     if (notifyGateway && this.transport?.isWritable()) {
       this.transport.sendControl({

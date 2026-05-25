@@ -18,6 +18,7 @@ export const notSupportedPaths = [
   'logo.jpg',
   'logo.jpeg',
   'logo.webp',
+  'servers.dat',
   'options.txt',
   'version.json',
   'statistics.json',

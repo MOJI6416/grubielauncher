@@ -25,6 +25,7 @@ import {
   networkAtom,
   pathsAtom,
   selectedVersionAtom,
+  shareOwnerAccountKeyAtom,
   shareStateAtom,
   serverAtom,
 } from "@renderer/stores/atoms";
@@ -48,6 +49,7 @@ import {
   canUseInternetFeature,
   getConnectivityProblems,
 } from "@renderer/utilities/connectivity";
+import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 
 const api = window.api;
 
@@ -117,6 +119,7 @@ export function Nav({
   const [consoles] = useAtom(consolesAtom);
   const [isFriendsConnected] = useAtom(isFriendsConnectedAtom);
   const [shareState] = useAtom(shareStateAtom);
+  const [shareOwnerAccountKey] = useAtom(shareOwnerAccountKeyAtom);
   const connectivity = useMemo(
     () => ({ isInternetOnline, isBackendOnline }),
     [isBackendOnline, isInternetOnline],
@@ -143,8 +146,11 @@ export function Nav({
   }, [consoles.consoles]);
 
   const shouldShowShareButton = useMemo(() => {
-    return !["idle", "lan_not_found"].includes(shareState.phase);
-  }, [shareState.phase]);
+    return (
+      !["idle", "lan_not_found"].includes(shareState.phase) &&
+      canCurrentAccountManageShare(shareOwnerAccountKey, selectedAccount)
+    );
+  }, [selectedAccount, shareOwnerAccountKey, shareState.phase]);
 
   useEffect(() => {
     if (!shouldShowShareButton) {

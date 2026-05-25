@@ -37,6 +37,7 @@ import {
   pendingFriendChatAtom,
   selectedFriendAtom,
   selectedVersionAtom,
+  shareOwnerAccountKeyAtom,
   shareStateAtom,
   versionsAtom,
 } from "@renderer/stores/atoms";
@@ -81,6 +82,7 @@ import {
 } from "@renderer/utilities/lazyPreload";
 import { parsePackShareCode } from "@renderer/utilities/packShare";
 import { uploadChatImage } from "@renderer/utilities/chatUpload";
+import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 
 const api = window.api;
 
@@ -216,6 +218,7 @@ export function Friends({
   const [, setSelectedVersion] = useAtom(selectedVersionAtom);
   const [ownPresence] = useAtom(ownPresenceAtom);
   const [shareState] = useAtom(shareStateAtom);
+  const [shareOwnerAccountKey] = useAtom(shareOwnerAccountKeyAtom);
   const [, setIsShareModalOpen] = useAtom(isShareModalOpenAtom);
   const [pendingFriendChat, setPendingFriendChat] = useAtom(
     pendingFriendChatAtom,
@@ -226,6 +229,10 @@ export function Friends({
   const [friends, setFriends] = useState<IFriend[]>([]);
   const [notReads, setNotReads] = useState<string[]>([]);
   const [activeShares, setActiveShares] = useState<ActiveFriendShare[]>([]);
+  const canManageCurrentShare = canCurrentAccountManageShare(
+    shareOwnerAccountKey,
+    account,
+  );
 
   const [isRequests, setIsRequests] = useState(false);
   const [addFriend, setAddFriend] = useState(false);
@@ -1085,6 +1092,7 @@ export function Friends({
       }
 
       if (
+        canManageCurrentShare &&
         shareState.phase === "online" &&
         shareState.slug &&
         shareState.sessionId &&
@@ -1105,6 +1113,7 @@ export function Friends({
       }
 
       if (
+        canManageCurrentShare &&
         [
           "share_starting",
           "tunnel_connecting",
@@ -1120,6 +1129,14 @@ export function Friends({
       }
 
       if (shareState.phase === "lan_ready" || shareState.candidate) {
+        if (!canManageCurrentShare) {
+          showInviteGuide(
+            "friends.inviteGuide.worldLanTitle",
+            "friends.inviteGuide.worldLanDescription",
+          );
+          return;
+        }
+
         showInviteGuide(
           "friends.inviteGuide.worldReadyTitle",
           "friends.inviteGuide.worldReadyDescription",
@@ -1134,6 +1151,7 @@ export function Friends({
       );
     },
     [
+      canManageCurrentShare,
       ownPresence.serverAddress,
       ownPresence.versionCode,
       ownPresence.versionName,

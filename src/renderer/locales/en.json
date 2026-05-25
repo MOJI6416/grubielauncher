@@ -471,7 +471,9 @@
   "selectPaths": {
     "title": "Select paths",
     "loadingFolders": "Loading folders...",
-    "emptyFolder": "Folder is empty"
+    "emptyFolder": "Folder is empty",
+    "selectAll": "Select all",
+    "clearAll": "Clear all"
   },
   "export": {
     "title": "Export build",
@@ -562,6 +564,30 @@
   },
   "share": {
     "limitExceeded": "1 GB limit exceeded",
+    "uploadPreparing": "Preparing archive upload",
+    "uploading": "Uploading archive",
+    "uploadCompleted": "Archive uploaded",
+    "uploadFailed": "Upload failed",
+    "uploadFailedDescription": "The archive could not be uploaded. Try again later.",
+    "uploadPayloadTooLarge": "The archive is too large for the current upload method.",
+    "publishProgress": {
+      "creatingShare": "Creating share",
+      "uploadingMods": "Uploading mods",
+      "preparingArchive": "Preparing archive",
+      "archivingOther": "Creating archive",
+      "uploadingOther": "Uploading archive",
+      "uploadingLogo": "Uploading logo",
+      "publishing": "Publishing changes",
+      "saving": "Saving locally",
+      "completed": "Published",
+      "error": "Publishing failed"
+    },
+    "publishErrors": {
+      "payloadTooLarge": "The archive is too large for the current upload method. Reduce the selected files and try again.",
+      "limitExceeded": "The selected files are larger than the 1 GB launcher limit.",
+      "uploadFailed": "The archive could not be uploaded. Try again later.",
+      "generic": "The build could not be published. Try again later."
+    },
     "title": "Open Access to Your World",
     "authenticated": "Authenticated",
     "degraded": "Degraded",
@@ -587,6 +613,31 @@
     "visibilityDescriptions": {
       "public": "Anyone with the address can connect to your world.",
       "friends": "Only friends can connect through the launcher."
+    },
+    "streamDiagnostic": {
+      "title": "Connection diagnostic",
+      "description": "Last connection stream closed by {{source}}: {{reason}} (stream #{{streamId}}).",
+      "sources": {
+        "gateway": "gateway",
+        "local_proxy": "local game connection"
+      },
+      "reasons": {
+        "local_port_unavailable": "local world port is unavailable",
+        "duplicate_stream": "duplicate connection stream",
+        "gateway_unavailable": "gateway connection is unavailable",
+        "local_socket_error": "local world connection failed",
+        "local_connect_failed": "could not connect to the local world",
+        "open_stream_send_failed": "gateway could not open the stream",
+        "open_timeout": "connection timed out",
+        "host_disconnected": "host disconnected from gateway",
+        "peer_write_failed": "remote player connection failed",
+        "ticket_consume_failed": "join ticket could not be accepted",
+        "stream_panic": "stream failed unexpectedly",
+        "gateway_send_failed": "gateway send failed",
+        "peer_eof": "remote player disconnected",
+        "peer_read_failed": "remote player read failed",
+        "gateway_closed": "gateway closed the connection"
+      }
     },
     "states": {
       "idle": "Waiting",

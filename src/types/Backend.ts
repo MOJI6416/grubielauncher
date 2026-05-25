@@ -44,3 +44,34 @@ export interface IModpackUpdate {
   image: string | null
   quickServer: string | null
 }
+
+export type UploadFileProgressStatus =
+  | 'preparing'
+  | 'uploading'
+  | 'completed'
+  | 'error'
+
+export interface UploadFileProgress {
+  id: string
+  status: UploadFileProgressStatus
+  loaded: number
+  total: number
+  percent: number
+  statusCode?: number
+  message?: string
+}
+
+export interface DirectUploadStartResponse {
+  object_key: string
+  upload_url: string
+  file_url: string
+  expires_in: number
+  headers: Record<string, string>
+}
+
+export interface DirectUploadCompleteResponse {
+  object_key: string
+  file_url: string
+  size: number
+  content_type?: string
+}

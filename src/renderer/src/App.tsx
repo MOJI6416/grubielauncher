@@ -24,6 +24,7 @@ import {
   ownPresenceAtom,
   pendingFriendChatAtom,
   pathsAtom,
+  shareOwnerAccountKeyAtom,
   sharePeersAtom,
   shareStateAtom,
   selectedFriendAtom,
@@ -80,6 +81,11 @@ import {
   LauncherWhatsNewState,
   markWhatsNewSeen,
 } from "./utilities/whatsNew";
+import {
+  canCurrentAccountManageShare,
+  getShareAccountKey,
+  isShareStateActiveForAccountBinding,
+} from "./utilities/shareAccount";
 
 const api = window.api;
 const MAX_CONSOLE_MESSAGES = 1000;
@@ -167,6 +173,9 @@ function App() {
   const [shareState, setShareState] = useAtom(shareStateAtom);
   const [, setSharePeers] = useAtom(sharePeersAtom);
   const [, setIsShareModalOpen] = useAtom(isShareModalOpenAtom);
+  const [shareOwnerAccountKey, setShareOwnerAccountKey] = useAtom(
+    shareOwnerAccountKeyAtom,
+  );
 
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>([]);
   const [isBlockedMods, setIsBlockedMods] = useState(false);
@@ -318,6 +327,37 @@ function App() {
   }, [setSharePeers, setShareState, tRef]);
 
   useEffect(() => {
+    const isActive = isShareStateActiveForAccountBinding(shareState);
+    if (!isActive) {
+      if (shareOwnerAccountKey) setShareOwnerAccountKey(null);
+      return;
+    }
+
+    if (
+      !shareOwnerAccountKey &&
+      selectedAccount &&
+      selectedAccount.type !== "plain"
+    ) {
+      setShareOwnerAccountKey(getShareAccountKey(selectedAccount));
+    }
+  }, [
+    selectedAccount,
+    setShareOwnerAccountKey,
+    shareOwnerAccountKey,
+    shareState,
+  ]);
+
+  useEffect(() => {
+    if (
+      canCurrentAccountManageShare(shareOwnerAccountKey, selectedAccount)
+    ) {
+      return;
+    }
+
+    setIsShareModalOpen(false);
+  }, [selectedAccount, setIsShareModalOpen, shareOwnerAccountKey]);
+
+  useEffect(() => {
     const previous = previousShareLanDetectionRef.current;
     const candidateKey = shareState.candidate?.key ?? null;
     const isLanDetected =
@@ -340,11 +380,13 @@ function App() {
       return;
     }
 
+    setShareOwnerAccountKey(getShareAccountKey(selectedAccount));
     setIsShareModalOpen(true);
     void api.other.restoreWindow();
   }, [
     selectedAccount,
     setIsShareModalOpen,
+    setShareOwnerAccountKey,
     shareState.candidate?.key,
     shareState.phase,
   ]);

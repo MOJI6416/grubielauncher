@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   applyBlockedModFilePaths,
+  areBlockedModsReady,
   checkBlockedMods,
   isResolvedBlockedModFile,
   type IBlockedMod,
@@ -100,6 +101,17 @@ describe("blocked mods helpers", () => {
 
     expect(changed).toBe(false);
     expect(mods[0].version?.files[0].localPath).toBeUndefined();
+  });
+
+  it("requires every blocked mod to have a selected local file before install continues", () => {
+    expect(areBlockedModsReady([blocked("one.jar", "C:/one.jar")])).toBe(true);
+    expect(
+      areBlockedModsReady([
+        blocked("one.jar", "C:/one.jar"),
+        blocked("two.jar"),
+      ]),
+    ).toBe(false);
+    expect(areBlockedModsReady([])).toBe(false);
   });
 
   it("falls back to the only blocked file when CurseForge filename changed", () => {

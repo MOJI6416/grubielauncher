@@ -28,6 +28,9 @@ export class ShareStateStore extends EventEmitter {
       candidate: this.state.candidate ? { ...this.state.candidate } : null,
       target: this.state.target ? { ...this.state.target } : null,
       lastError: this.state.lastError ? { ...this.state.lastError } : undefined,
+      lastStreamDiagnostic: this.state.lastStreamDiagnostic
+        ? { ...this.state.lastStreamDiagnostic }
+        : undefined,
     }
   }
 

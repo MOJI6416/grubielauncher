@@ -1,3 +1,4 @@
+import type { IpcMainInvokeEvent } from "electron";
 import { Backend } from "../services/Backend";
 import { IFriendSettingsUpdate, IUpdateUser } from "@/types/IUser";
 import { IModpack, IModpackUpdate } from "@/types/Backend";
@@ -83,14 +84,31 @@ export function registerBackendIpc() {
     "backend:uploadFileFromPath",
     null,
     async (
-      _,
+      event: IpcMainInvokeEvent,
       at: string,
       filePath: string,
       fileName?: string,
       folder?: string,
+      progressId?: string,
+      direct = false,
     ) => {
       const backend = new Backend(at);
-      return await backend.uploadFileFromPath(filePath, fileName, folder);
+      const upload = direct
+        ? backend.uploadFileFromPathDirect.bind(backend)
+        : backend.uploadFileFromPath.bind(backend);
+      return await upload(
+        filePath,
+        fileName,
+        folder,
+        progressId
+          ? (progress) => {
+              event.sender.send("backend:uploadFileProgress", {
+                id: progressId,
+                ...progress,
+              });
+            }
+          : undefined,
+      );
     },
   );
 

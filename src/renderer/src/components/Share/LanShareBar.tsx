@@ -1,5 +1,6 @@
 import {
   accountAtom,
+  shareOwnerAccountKeyAtom,
   sharePeersAtom,
   shareStateAtom,
 } from "@renderer/stores/atoms";
@@ -43,8 +44,13 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ShareStatePhase, ShareVisibility } from "@/types/Share";
+import {
+  ShareStatePhase,
+  ShareStreamDiagnostic,
+  ShareVisibility,
+} from "@/types/Share";
 import { toast } from "sonner";
+import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 
 const api = window.api;
 
@@ -54,6 +60,11 @@ const BUSY_PHASES: ShareStatePhase[] = [
   "pending",
   "reconnecting",
 ];
+
+const NORMAL_STREAM_CLOSE_REASONS = new Set([
+  "local_socket_closed",
+  "share_stopped",
+]);
 
 function statusVariant(color: string) {
   if (color === "danger") return "destructive";
@@ -68,6 +79,20 @@ function statusDotClassName(color: string) {
   return "bg-muted-foreground";
 }
 
+function shouldShowStreamDiagnostic(
+  diagnostic: ShareStreamDiagnostic | undefined,
+) {
+  return (
+    !!diagnostic &&
+    !!diagnostic.reason &&
+    !NORMAL_STREAM_CLOSE_REASONS.has(diagnostic.reason)
+  );
+}
+
+function fallbackStreamReason(reason: string) {
+  return reason.replace(/[_-]+/g, " ");
+}
+
 export function LanShareModal({
   isOpen,
   onClose,
@@ -78,6 +103,7 @@ export function LanShareModal({
   const [shareState] = useAtom(shareStateAtom);
   const [sharePeers] = useAtom(sharePeersAtom);
   const [selectedAccount] = useAtom(accountAtom);
+  const [shareOwnerAccountKey] = useAtom(shareOwnerAccountKeyAtom);
   const [selectedVisibility, setSelectedVisibility] =
     useState<ShareVisibility>("friends");
   const [loadingAction, setLoadingAction] = useState<
@@ -119,6 +145,11 @@ export function LanShareModal({
       }`
     : t("share.waitForLan");
   const errorText = getShareErrorText(t, shareState.lastError);
+  const streamDiagnostic = shouldShowStreamDiagnostic(
+    shareState.lastStreamDiagnostic,
+  )
+    ? shareState.lastStreamDiagnostic
+    : undefined;
   const statusColor = getSharePhaseColor(shareState.phase);
   const statusDescription = getSharePhaseDescription(t, shareState.phase);
   const visibilityDescription = t(
@@ -229,6 +260,10 @@ export function LanShareModal({
   ]);
 
   if (!isOpen) {
+    return null;
+  }
+
+  if (!canCurrentAccountManageShare(shareOwnerAccountKey, selectedAccount)) {
     return null;
   }
 
@@ -395,6 +430,29 @@ export function LanShareModal({
             >
               <AlertCircle />
               <AlertTitle>{errorText}</AlertTitle>
+            </Alert>
+          )}
+
+          {streamDiagnostic && (
+            <Alert>
+              <AlertCircle />
+              <AlertTitle>{t("share.streamDiagnostic.title")}</AlertTitle>
+              <AlertDescription className="break-words">
+                {t("share.streamDiagnostic.description", {
+                  reason: t(
+                    `share.streamDiagnostic.reasons.${streamDiagnostic.reason}`,
+                    {
+                      defaultValue: fallbackStreamReason(
+                        streamDiagnostic.reason,
+                      ),
+                    },
+                  ),
+                  source: t(
+                    `share.streamDiagnostic.sources.${streamDiagnostic.source}`,
+                  ),
+                  streamId: streamDiagnostic.streamId,
+                })}
+              </AlertDescription>
             </Alert>
           )}
 

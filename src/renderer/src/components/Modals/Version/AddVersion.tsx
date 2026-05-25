@@ -64,6 +64,7 @@ import { IModpackFile, IVersion, IVersionConf } from "@/types/IVersion";
 import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
 import {
   applyBlockedModFilePaths,
+  areBlockedModsReady,
   BlockedMods,
   checkBlockedMods,
   IBlockedMod,
@@ -635,7 +636,7 @@ export function AddVersion({
         downloadedVersion: isDownloadedVersion,
         shareCode,
         lastUpdate: new Date(),
-        build: 0,
+        build: shareVersion?.build ?? tmpVersion.build ?? 0,
         runArguments: runArguments,
         image: newImage,
         loader: {
@@ -910,7 +911,15 @@ export function AddVersion({
 
   async function handleInstallClick() {
     if (selectedTab != "fromFile" && mods.length > 0) {
-      const blockedMods: IBlockedMod[] = await checkBlockedMods(mods);
+      const newVersionPath = await api.path.join(
+        paths.minecraft,
+        "versions",
+        versionName.trim(),
+      );
+      const blockedMods: IBlockedMod[] = await checkBlockedMods(
+        mods,
+        newVersionPath,
+      );
 
       if (blockedMods.length > 0) {
         setBlockedMods(blockedMods);
@@ -1565,6 +1574,7 @@ export function AddVersion({
           onClose={(bMods) => {
             setBlockedMods(bMods);
             setIsBlockedMods(false);
+            if (!areBlockedModsReady(bMods)) return;
             addVersion(bMods);
           }}
         />

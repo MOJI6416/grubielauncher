@@ -84,6 +84,9 @@ export class LanShareService extends EventEmitter {
       this.peers = peers;
       this.emit("peersChanged", [...peers]);
     });
+    this.proxyManager.onStreamClosed((event) => {
+      this.recordStreamDiagnostic(event);
+    });
 
     this.tunnelClient.on("connected", () => {
       const state = this.stateStore.getState();
@@ -120,6 +123,9 @@ export class LanShareService extends EventEmitter {
       if (code === "tunnel_auth_failed") {
         void this.forceLocalStop("error");
       }
+    });
+    this.tunnelClient.on("streamClosed", (event) => {
+      this.recordStreamDiagnostic(event);
     });
 
     this.tunnelClient.on("protocolError", (error) => {
@@ -236,6 +242,7 @@ export class LanShareService extends EventEmitter {
         isDegraded: false,
         reconnectAttempt: 0,
         lastError: undefined,
+        lastStreamDiagnostic: undefined,
       });
 
       try {
@@ -923,6 +930,17 @@ export class LanShareService extends EventEmitter {
     const phase = state.phase === "reconnecting" ? "reconnecting" : "error";
     this.stateStore.setError(error, phase);
     this.emit("shareError", error);
+  }
+
+  private recordStreamDiagnostic(event: {
+    streamId: number;
+    reason: string;
+    source: "local_proxy" | "gateway";
+    at: string;
+  }): void {
+    this.stateStore.patch({
+      lastStreamDiagnostic: event,
+    });
   }
 
   private getPreferredCandidate(): ShareLanCandidate | null {

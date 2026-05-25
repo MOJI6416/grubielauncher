@@ -469,7 +469,9 @@
   "selectPaths": {
     "title": "Выбор путей",
     "loadingFolders": "Загрузка папок...",
-    "emptyFolder": "Папка пуста"
+    "emptyFolder": "Папка пуста",
+    "selectAll": "Выбрать все",
+    "clearAll": "Убрать все"
   },
   "export": {
     "title": "Экспорт сборки",
@@ -560,6 +562,30 @@
   },
   "share": {
     "limitExceeded": "Превышен лимит в 1 ГБ",
+    "uploadPreparing": "Подготовка загрузки архива",
+    "uploading": "Загрузка архива",
+    "uploadCompleted": "Архив загружен",
+    "uploadFailed": "Загрузка не удалась",
+    "uploadFailedDescription": "Не удалось загрузить архив. Попробуйте позже.",
+    "uploadPayloadTooLarge": "Архив слишком большой для текущего способа загрузки.",
+    "publishProgress": {
+      "creatingShare": "Создание публикации",
+      "uploadingMods": "Загрузка модов",
+      "preparingArchive": "Подготовка архива",
+      "archivingOther": "Создание архива",
+      "uploadingOther": "Загрузка архива",
+      "uploadingLogo": "Загрузка логотипа",
+      "publishing": "Публикация изменений",
+      "saving": "Сохранение локально",
+      "completed": "Опубликовано",
+      "error": "Публикация не удалась"
+    },
+    "publishErrors": {
+      "payloadTooLarge": "Архив слишком большой для текущего способа загрузки. Уменьшите выбранные файлы и попробуйте снова.",
+      "limitExceeded": "Выбранные файлы больше лимита лаунчера в 1 ГБ.",
+      "uploadFailed": "Не удалось загрузить архив. Попробуйте позже.",
+      "generic": "Не удалось опубликовать сборку. Попробуйте позже."
+    },
     "title": "Открыть доступ к миру",
     "authenticated": "Авторизовано",
     "degraded": "Нестабильно",
@@ -585,6 +611,31 @@
     "visibilityDescriptions": {
       "public": "Подключиться сможет любой, у кого есть адрес мира.",
       "friends": "Подключиться смогут только друзья через лаунчер."
+    },
+    "streamDiagnostic": {
+      "title": "Диагностика подключения",
+      "description": "Последний поток подключения закрыт: {{source}}, причина: {{reason}} (#{{streamId}}).",
+      "sources": {
+        "gateway": "шлюз",
+        "local_proxy": "локальное подключение к игре"
+      },
+      "reasons": {
+        "local_port_unavailable": "локальный порт мира недоступен",
+        "duplicate_stream": "дублирующий поток подключения",
+        "gateway_unavailable": "соединение со шлюзом недоступно",
+        "local_socket_error": "ошибка локального подключения к миру",
+        "local_connect_failed": "не удалось подключиться к локальному миру",
+        "open_stream_send_failed": "шлюз не смог открыть поток",
+        "open_timeout": "истекло время подключения",
+        "host_disconnected": "хост отключился от шлюза",
+        "peer_write_failed": "ошибка подключения игрока",
+        "ticket_consume_failed": "не удалось принять билет подключения",
+        "stream_panic": "поток завершился неожиданно",
+        "gateway_send_failed": "шлюз не смог отправить данные",
+        "peer_eof": "игрок отключился",
+        "peer_read_failed": "ошибка чтения данных игрока",
+        "gateway_closed": "шлюз закрыл подключение"
+      }
     },
     "states": {
       "idle": "Ожидание",

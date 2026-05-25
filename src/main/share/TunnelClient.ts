@@ -23,6 +23,12 @@ type TunnelEvents = {
   disconnected: (reason: string) => void
   controlError: (message: ErrorMessage) => void
   protocolError: (error: Error) => void
+  streamClosed: (event: {
+    streamId: number
+    reason: string
+    source: 'gateway'
+    at: string
+  }) => void
 }
 
 export class TunnelClient extends EventEmitter {
@@ -190,6 +196,12 @@ export class TunnelClient extends EventEmitter {
         void this.proxyManager.openStream(message)
         return
       case 'CLOSE_STREAM':
+        this.emit('streamClosed', {
+          streamId: message.streamId,
+          reason: message.reason || 'gateway_closed',
+          source: 'gateway',
+          at: new Date().toISOString(),
+        })
         this.proxyManager.closeStream(
           message.streamId,
           message.reason || 'gateway_closed',

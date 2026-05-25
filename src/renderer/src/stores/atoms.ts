@@ -64,3 +64,4 @@ export const shareStateAtom = atom<ShareState>({
 
 export const sharePeersAtom = atom<SharePeerInfo[]>([]);
 export const isShareModalOpenAtom = atom(false);
+export const shareOwnerAccountKeyAtom = atom<string | null>(null);

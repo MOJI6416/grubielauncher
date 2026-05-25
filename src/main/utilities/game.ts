@@ -4,6 +4,7 @@ import { mainWindow } from "../windows/mainWindow";
 import { IConsoleMessage } from "@/types/Console";
 import netstat from "node-netstat";
 import { rpc } from "../rpc";
+import { parseMinecraftServerConnectionLine } from "./gameConnection";
 
 function safeSend(channel: string, ...args: any[]) {
   if (
@@ -382,6 +383,31 @@ export function runGame(
 
   intervalId = setInterval(checkConnection, 5000);
 
+  const handleServerConnectionMessage = (message: string) => {
+    const connection = parseMinecraftServerConnectionLine(message);
+    if (!connection) return;
+
+    const processData = gameProcesses.get(instanceKey);
+    if (!processData) return;
+
+    processData.serverPort = connection.serverPort;
+    gameRuntime.emitServerConnection({
+      key: instanceKey,
+      versionName,
+      instance,
+      serverAddress: connection.serverAddress,
+      serverPort: connection.serverPort,
+    });
+    safeSend("friendUpdate", {
+      serverAddress: `${connection.serverAddress}:${connection.serverPort}`,
+    });
+    rpc.updateGameServer(
+      versionName,
+      instance,
+      `${connection.serverAddress}:${connection.serverPort}`,
+    );
+  };
+
   javaProcess.stdout?.on("data", async (data) => {
     const message = data.toString();
     gameRuntime.emitStdout({
@@ -400,29 +426,7 @@ export function runGame(
       safeSend("launch");
     }
 
-    const connectMatch = message.match(/Connecting to ([\w.-]+), (\d+)/);
-    if (connectMatch) {
-      const processData = gameProcesses.get(instanceKey);
-      if (processData) {
-        const serverAddress = connectMatch[1];
-        processData.serverPort = parseInt(connectMatch[2], 10);
-        gameRuntime.emitServerConnection({
-          key: instanceKey,
-          versionName,
-          instance,
-          serverAddress,
-          serverPort: processData.serverPort,
-        });
-        safeSend("friendUpdate", {
-          serverAddress: `${serverAddress}:${processData.serverPort}`,
-        });
-        rpc.updateGameServer(
-          versionName,
-          instance,
-          `${serverAddress}:${processData.serverPort}`,
-        );
-      }
-    }
+    handleServerConnectionMessage(message);
 
     const msg: IConsoleMessage = {
       type: "info",
@@ -433,16 +437,19 @@ export function runGame(
   });
 
   javaProcess.stderr?.on("data", (data) => {
+    const message = data.toString();
     gameRuntime.emitStderr({
       key: instanceKey,
       versionName,
       instance,
-      message: data.toString(),
+      message,
     });
+
+    handleServerConnectionMessage(message);
 
     const msg: IConsoleMessage = {
       type: "error",
-      message: data.toString(),
+      message,
       tips: [],
     };
     safeSend("consoleMessage", versionName, instance, msg);

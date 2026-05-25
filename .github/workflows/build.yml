@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build for ${{ matrix.os }}
@@ -16,16 +19,16 @@ jobs:
         include:
           - os: ubuntu-latest
             build_command: npm run build:linux
-          - os: windows-latest
+          - os: windows-2022
             build_command: npm run build:win
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: 'npm'
@@ -42,7 +45,7 @@ jobs:
         run: ${{ matrix.build_command }}
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.os }}-build
           path: dist/

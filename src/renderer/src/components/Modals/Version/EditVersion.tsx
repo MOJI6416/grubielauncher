@@ -502,6 +502,55 @@ export function EditVersion({
     }
   }
 
+  async function openShareManagement() {
+    if (!version || !account || !version.version.shareCode) return;
+
+    try {
+      setIsLoading(true);
+      setLoadingType("check_diff");
+
+      const diff = await checkDiffenceUpdateData(
+        {
+          mods: version.version.loader.mods,
+          runArguments: version.version.runArguments || {
+            game: "",
+            jvm: "",
+          },
+          servers,
+          version: version.version,
+          versionPath: await api.path.join(
+            paths.minecraft,
+            "versions",
+            version.version.name,
+          ),
+          logo: version.version.image || image || "",
+          quickServer: quickConnectIp,
+        },
+        account.accessToken || "",
+      );
+
+      setDiffenceUpdateData(diff);
+      setVersionDiffence(diff ? "new" : "sync");
+
+      const modpackData = await api.backend.getModpack(
+        account.accessToken!,
+        version.version.shareCode,
+      );
+
+      if (!modpackData.data) throw new Error("not found modpack");
+
+      setTempModpack(modpackData.data);
+      setShareType("update");
+      setShareModal(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(t("versions.updateError"), { description: message });
+    } finally {
+      setIsLoading(false);
+      setLoadingType(undefined);
+    }
+  }
+
   async function checkIntegrity(
     resolvedBlockedMods: IBlockedMod[] = blockedMods,
   ) {
@@ -713,6 +762,10 @@ export function EditVersion({
     isBlockedMods ||
     isOpenWorlds;
   const showShareAction = !!version && !version.version.shareCode;
+  const showShareManagementAction =
+    !!version &&
+    !!version.version.shareCode &&
+    !version.version.downloadedVersion;
   const showPublishActions =
     versionDiffence === "new" &&
     !version?.version.downloadedVersion &&
@@ -723,6 +776,7 @@ export function EditVersion({
     !!version && !version.version.downloadedVersion;
   const showRemoteActions =
     showShareAction ||
+    showShareManagementAction ||
     showPublishActions ||
     showSyncAction ||
     showServerManagerAction;
@@ -1137,66 +1191,7 @@ export function EditVersion({
                           !isNetwork ||
                           !isOwnerVersion
                         }
-                        onClick={async () => {
-                          if (!account || !version.version.shareCode) return;
-
-                          try {
-                            setIsLoading(true);
-                            setLoadingType("check_diff");
-
-                            const diff = await checkDiffenceUpdateData(
-                              {
-                                mods: version.version.loader.mods,
-                                runArguments: version.version.runArguments || {
-                                  game: "",
-                                  jvm: "",
-                                },
-                                servers,
-                                version: version.version,
-                                versionPath: await api.path.join(
-                                  paths.minecraft,
-                                  "versions",
-                                  version.version.name,
-                                ),
-                                logo: image || "",
-                                quickServer: quickConnectIp,
-                              },
-                              account.accessToken || "",
-                            );
-
-                            setDiffenceUpdateData(diff);
-
-                            if (!diff) {
-                              setVersionDiffence("sync");
-                              throw new Error("not found diff");
-                            }
-
-                            const modpackData = await api.backend.getModpack(
-                              account.accessToken!,
-                              version.version.shareCode,
-                            );
-
-                            if (!modpackData.data)
-                              throw new Error("not found modpack");
-
-                            setTempModpack(modpackData.data);
-                            setShareType("update");
-                            setShareModal(true);
-                          } catch (error) {
-                            const message =
-                              error instanceof Error
-                                ? error.message
-                                : String(error);
-                            if (message !== "not found diff") {
-                              toast.error(t("versions.updateError"), {
-                                description: message,
-                              });
-                            }
-                          } finally {
-                            setIsLoading(false);
-                            setLoadingType(undefined);
-                          }
-                        }}
+                        onClick={openShareManagement}
                       >
                         {isLoading && loadingType === "check_diff" ? (
                           <Loader2 className="animate-spin" />
@@ -1237,6 +1232,29 @@ export function EditVersion({
                       </Tooltip>
                     </ButtonGroup>
                   )}
+
+                  {version &&
+                    showShareManagementAction &&
+                    !showPublishActions && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={
+                          hasChanges ||
+                          isLoading ||
+                          !isNetwork ||
+                          !isOwnerVersion
+                        }
+                        onClick={openShareManagement}
+                      >
+                        {isLoading && loadingType === "check_diff" ? (
+                          <Loader2 className="animate-spin" />
+                        ) : (
+                          <CloudCog />
+                        )}
+                        {t("versions.shareOptions")}
+                      </Button>
+                    )}
 
                   {version && showSyncAction && (
                     <Tooltip>
@@ -1369,7 +1387,8 @@ export function EditVersion({
             modpack={tempModpack}
             diffenceUpdateData={diffenceUpdateData}
             onPublished={() => {
-              setVersionDiffence("new");
+              setVersionDiffence("sync");
+              setDiffenceUpdateData("");
             }}
           />
         </Suspense>
@@ -1506,7 +1525,7 @@ export function EditVersion({
                       servers,
                       version: version.version,
                       versionPath: version.versionPath,
-                      logo: image || "",
+                      logo: version.version.image || image || "",
                       quickServer: quickConnectIp,
                     },
                     account.accessToken || "",

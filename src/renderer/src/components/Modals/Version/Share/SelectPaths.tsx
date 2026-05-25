@@ -18,6 +18,7 @@ import {
   getShareRelativePath,
   isForbiddenSharePath,
   selectShareFolderPath,
+  selectSharePaths,
   toggleSelectedSharePath,
   unselectShareFolderPath,
 } from "@renderer/utilities/selectPaths";
@@ -77,6 +78,14 @@ export const SelectPaths = ({
   const getRelativePath = useCallback(
     (entryPath: string) => getShareRelativePath(currentPath, entryPath),
     [currentPath],
+  );
+
+  const selectableVisiblePaths = useMemo(
+    () =>
+      visibleEntries
+        .map((entry) => getRelativePath(entry.path))
+        .filter((pathName) => !isForbiddenPath(pathName)),
+    [visibleEntries, getRelativePath, isForbiddenPath],
   );
 
   useEffect(() => {
@@ -174,6 +183,33 @@ export const SelectPaths = ({
               </Button>
             )}
             <span className="truncate">{currentPath || "/"}</span>
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="bg-background/80"
+              disabled={isLoading || selectableVisiblePaths.length === 0}
+              onClick={() => {
+                setPaths((prev) =>
+                  selectSharePaths(prev, selectableVisiblePaths, forbiddenSet),
+                );
+              }}
+            >
+              {t("selectPaths.selectAll")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="bg-background/80"
+              disabled={isLoading || paths.length === 0}
+              onClick={() => setPaths([])}
+            >
+              {t("selectPaths.clearAll")}
+            </Button>
           </div>
 
           <div className="h-80 overflow-auto rounded-lg border bg-card p-1">

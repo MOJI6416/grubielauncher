@@ -27,7 +27,7 @@ vi.mock("../services/Modrinth", () => ({
 
 import { CurseForge } from "../services/CurseForge";
 import { Modrinth } from "../services/Modrinth";
-import { cfModpackToModpack, checkModpack } from "./modManager";
+import { cfModpackToModpack, checkModpack, compareMods } from "./modManager";
 
 const mockedCurseForge = vi.mocked(CurseForge);
 const mockedModrinth = vi.mocked(Modrinth);
@@ -177,6 +177,35 @@ describe("cfModpackToModpack", () => {
     expect(result.mods).toHaveLength(1);
     expect(result.mods[0].id).toBe("101");
     expect(result.mods[0].version?.id).toBe("201");
+  });
+});
+
+describe("compareMods", () => {
+  it("ignores plugins because plugins are not published with modpacks", () => {
+    const sharedMod = {
+      id: "mod-a",
+      title: "Mod A",
+      provider: Provider.MODRINTH,
+      projectType: ProjectType.MOD,
+      version: {
+        id: "version-a",
+        dependencies: [],
+        files: [{ filename: "mod-a.jar", sha1: "sha1-a", size: 100 }],
+      },
+    } as any;
+    const localPlugin = {
+      id: "plugin-a",
+      title: "Plugin A",
+      provider: Provider.LOCAL,
+      projectType: ProjectType.PLUGIN,
+      version: {
+        id: "local",
+        dependencies: [],
+        files: [{ filename: "plugin-a.jar", sha1: "sha1-plugin", size: 10 }],
+      },
+    } as any;
+
+    expect(compareMods([sharedMod, localPlugin], [sharedMod])).toBe(true);
   });
 });
 

@@ -5,6 +5,7 @@ import {
   getShareRelativePath,
   isForbiddenSharePath,
   selectShareFolderPath,
+  selectSharePaths,
   toggleSelectedSharePath,
   unselectShareFolderPath,
 } from "./selectPaths";
@@ -15,6 +16,7 @@ describe("select paths helpers", () => {
 
     expect(isForbiddenSharePath("fabric.jar", forbidden)).toBe(true);
     expect(isForbiddenSharePath("1.21.1.json", forbidden)).toBe(true);
+    expect(isForbiddenSharePath("servers.dat", forbidden)).toBe(true);
     expect(isForbiddenSharePath("server/plugins/example.jar", forbidden)).toBe(
       true,
     );
@@ -30,6 +32,18 @@ describe("select paths helpers", () => {
         forbidden,
       ),
     ).toEqual(["custom/config.toml"]);
+  });
+
+  it("selects only allowed paths in bulk selection", () => {
+    const forbidden = createForbiddenPathSet("1.21.1", "fabric");
+
+    expect(
+      selectSharePaths(
+        ["custom/readme.txt"],
+        ["config", "servers.dat", "logs/latest.log"],
+        forbidden,
+      ),
+    ).toEqual(["custom/readme.txt", "config"]);
   });
 
   it("preserves nested relative paths while browsing folders", () => {

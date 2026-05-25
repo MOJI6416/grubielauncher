@@ -55,6 +55,80 @@ export function areOtherFilesEqual(
   );
 }
 
+export function normalizeShareLogoForCompare(value: string | undefined) {
+  const raw = (value || "").trim();
+  if (!raw) return "";
+
+  try {
+    const url = new URL(raw);
+    url.search = "";
+    url.hash = "";
+    return `${url.protocol}//${url.host}${url.pathname}`.replace(/\/+$/, "");
+  } catch {
+    return raw
+      .split("#")[0]
+      .split("?")[0]
+      .replace(/\\/g, "/")
+      .replace(/\/+$/, "");
+  }
+}
+
+export function areShareLogosEqual(
+  left: string | undefined,
+  right: string | undefined,
+) {
+  return (
+    normalizeShareLogoForCompare(left) === normalizeShareLogoForCompare(right)
+  );
+}
+
+export function getRemoteModpackIdFromUrl(fileUrl: string | undefined) {
+  if (!fileUrl || fileUrl.startsWith("file://") || fileUrl.startsWith("blocked::")) {
+    return null;
+  }
+
+  try {
+    const url = new URL(fileUrl);
+    const parts = url.pathname
+      .split("/")
+      .map((part) => {
+        try {
+          return decodeURIComponent(part);
+        } catch {
+          return part;
+        }
+      })
+      .filter(Boolean);
+    const modpacksIndex = parts.indexOf("modpacks");
+    if (modpacksIndex === -1) return null;
+    return parts[modpacksIndex + 1] || null;
+  } catch {
+    return null;
+  }
+}
+
+export function hasLocalFilesOutsideCurrentShare(
+  mods: ILocalProject[],
+  shareCode: string | undefined,
+) {
+  if (!shareCode) return false;
+
+  return mods.some((mod) =>
+    (mod.version?.files ?? []).some((file) => {
+      const remoteModpackId = getRemoteModpackIdFromUrl(file.url);
+      return !!remoteModpackId && remoteModpackId !== shareCode;
+    }),
+  );
+}
+
+export function shouldReportStaleLocalShareFiles(
+  isOwner: boolean,
+  mods: ILocalProject[],
+  shareCode: string | undefined,
+) {
+  return isOwner && hasLocalFilesOutsideCurrentShare(mods, shareCode);
+}
+
 export type ShareDiffInput = {
   isOwner: boolean;
   remoteName: string;
@@ -80,11 +154,16 @@ export function getShareDiffParts(input: ShareDiffInput) {
     diff.push("name");
   }
 
-  if (input.remoteImage !== input.currentLogo) diff.push("logo");
+  if (
+    input.isOwner &&
+    !areShareLogosEqual(input.remoteImage, input.currentLogo)
+  ) {
+    diff.push("logo");
+  }
   if (!input.modsEqual) diff.push("mods");
   if (
     !input.serversEqual ||
-    input.remoteQuickServer !== (input.currentQuickServer || "")
+    (input.remoteQuickServer || "") !== (input.currentQuickServer || "")
   ) {
     diff.push("servers");
   }
@@ -99,10 +178,7 @@ export function getShareDiffParts(input: ShareDiffInput) {
     diff.push("options");
   }
 
-  if (
-    input.isOwner ||
-    !areOtherFilesEqual(input.remoteOther, input.currentOther)
-  ) {
+  if (!areOtherFilesEqual(input.remoteOther, input.currentOther)) {
     diff.push("other");
   }
 

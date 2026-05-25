@@ -37,6 +37,13 @@ export interface ShareStateError {
   status?: number
 }
 
+export interface ShareStreamDiagnostic {
+  streamId: number
+  reason: string
+  source: 'local_proxy' | 'gateway'
+  at: string
+}
+
 export interface ShareLanCandidate {
   key: string
   versionName: string
@@ -67,6 +74,7 @@ export interface ShareState extends ShareSessionMeta {
   lastAuthOkAt?: string
   lastHeartbeatAt?: string
   lastError?: ShareStateError
+  lastStreamDiagnostic?: ShareStreamDiagnostic
   updatedAt: string
 }
 

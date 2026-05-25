@@ -16,6 +16,42 @@ function fileUrlToPath(fileUrl: string | undefined) {
   }
 }
 
+export function getRemoteModpackId(fileUrl: string | undefined) {
+  if (!fileUrl || fileUrl.startsWith('file://') || fileUrl.startsWith('blocked::')) {
+    return null
+  }
+
+  try {
+    const url = new URL(fileUrl)
+    const parts = url.pathname
+      .split('/')
+      .map((part) => {
+        try {
+          return decodeURIComponent(part)
+        } catch {
+          return part
+        }
+      })
+      .filter(Boolean)
+    const modpacksIndex = parts.indexOf('modpacks')
+    if (modpacksIndex === -1) return null
+    return parts[modpacksIndex + 1] || null
+  } catch {
+    return null
+  }
+}
+
+export function shouldUploadLocalShareFile(file: ILocalFile, shareCode: string) {
+  if (!file.url || file.url.startsWith('file://') || file.url.startsWith('blocked::')) {
+    return true
+  }
+
+  const remoteModpackId = getRemoteModpackId(file.url)
+  if (!remoteModpackId) return false
+
+  return remoteModpackId !== shareCode
+}
+
 async function resolveLocalFilePath(version: Version, mod: ILocalProject, file: ILocalFile) {
   const candidates = [
     file.localPath || '',
@@ -61,12 +97,7 @@ export async function uploadMods(at: string, version: Version) {
       if (!mod.version.files.length) continue
 
       for (const file of mod.version.files) {
-        const alreadyRemote =
-          !!file.url &&
-          !file.url.startsWith('file://') &&
-          !file.url.startsWith('blocked::')
-
-        if (alreadyRemote) continue
+        if (!shouldUploadLocalShareFile(file, version.version.shareCode)) continue
 
         const modPath = await resolveLocalFilePath(version, mod, file)
         if (!modPath) {
@@ -74,7 +105,7 @@ export async function uploadMods(at: string, version: Version) {
           continue
         }
 
-        const url = await backend.uploadFileFromPath(
+        const url = await backend.uploadFileFromPathDirect(
           modPath,
           file.filename,
           `modpacks/${version.version.shareCode}/${projetTypeToFolder(mod.projectType)}`

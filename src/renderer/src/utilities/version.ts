@@ -13,6 +13,7 @@ import {
   formatShareDiffParts,
   getShareDiffParts,
   preserveLocalBlockedPaths,
+  shouldReportStaleLocalShareFiles,
 } from "./shareSyncPure";
 export {
   checkVersionName,
@@ -145,10 +146,14 @@ export async function checkDiffenceUpdateData(
 
   const modpack = modpackData.data;
 
-  const modsEqual = await api.modManager.compareMods(
-    modpack.conf.loader.mods,
+  const hasStaleLocalShareFiles = shouldReportStaleLocalShareFiles(
+    !!isOwner,
     mods,
+    version.shareCode,
   );
+  const modsEqual =
+    (await api.modManager.compareMods(modpack.conf.loader.mods, mods)) &&
+    !hasStaleLocalShareFiles;
   const serversEqual = await api.servers.compare(modpack.conf.servers, servers);
 
   const optionsPath = await api.path.join(versionPath, "options.txt");

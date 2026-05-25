@@ -8,7 +8,7 @@ export function compareServers(servers1: IServer[], servers2: IServer[]) {
   const norm = (s: IServer) => ({
     name: s.name,
     ip: s.ip,
-    acceptTextures: s.acceptTextures ?? null
+    acceptTextures: s.acceptTextures === 1 ? 1 : null
   })
 
   const a = servers1.map(norm)

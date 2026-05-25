@@ -839,11 +839,11 @@ export function ModManager({
             <DialogTitle>{t("modManager.title")}</DialogTitle>
           </DialogHeader>
 
-          <div className="flex min-h-0 w-full px-5 pb-5">
+          <div className="flex min-h-0 min-w-0 w-full overflow-hidden px-5 pb-5">
             <>
-              <div className="flex flex-col space-y-2 h-full w-full">
-                <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border bg-card/70 p-2">
-                  <div className="flex items-center gap-2">
+              <div className="flex h-full min-w-0 w-full flex-col space-y-2 overflow-hidden">
+                <div className="flex min-w-0 flex-wrap items-center gap-2 overflow-hidden rounded-xl border bg-card/70 p-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
                     {!isLocal && (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -1070,7 +1070,10 @@ export function ModManager({
                   )}
 
                   {(provider != Provider.LOCAL || isLocal) && (
-                    <div ref={searchRef} className="relative min-w-48 flex-1">
+                    <div
+                      ref={searchRef}
+                      className="relative min-w-0 flex-1 basis-48"
+                    >
                       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         disabled={isSearchInputDisabled}
@@ -1340,13 +1343,16 @@ export function ModManager({
                 </div>
 
                 {isLocal && (
-                  <div className="flex items-center justify-between gap-3 rounded-xl border bg-card/70 px-3 py-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="tabular-nums">
+                  <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border bg-card/70 px-3 py-2">
+                    <div className="min-w-0 max-w-full">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Badge
+                          variant="secondary"
+                          className="shrink-0 tabular-nums"
+                        >
                           {mods.filter((m) => m.projectType == projectType).length}
                         </Badge>
-                        <p className="truncate text-sm font-medium">
+                        <p className="min-w-0 truncate text-sm font-medium">
                           {t("modManager.local")}
                         </p>
                       </div>
@@ -1356,7 +1362,7 @@ export function ModManager({
                       <Button
                         variant="secondary"
                         size="sm"
-                        className="shrink-0"
+                        className="min-w-0 shrink-0"
                         disabled={isLoading}
                         onClick={async () => {
                           try {
@@ -1389,7 +1395,9 @@ export function ModManager({
                         ) : (
                           <PanelTopOpen className="size-4" />
                         )}
-                        {t("modManager.checkUpdates")}
+                        <span className="min-w-0 truncate">
+                          {t("modManager.checkUpdates")}
+                        </span>
                       </Button>
                     )}
                   </div>
@@ -2048,6 +2056,7 @@ export function ModManager({
                                   {project.url && (
                                     <Button
                                       variant="secondary"
+                                      className="min-w-0 max-w-full"
                                       onClick={async () => {
                                         await api.shell.openExternal(
                                           project.url,
@@ -2063,7 +2072,9 @@ export function ModManager({
                                       ) : (
                                         <Globe size={20} />
                                       )}
-                                      {t("modManager.goToWebsite")}
+                                      <span className="min-w-0 truncate">
+                                        {t("modManager.goToWebsite")}
+                                      </span>
                                     </Button>
                                   )}
 
