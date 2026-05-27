@@ -19,7 +19,10 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import type { SkinViewer } from "skinview3d";
-import { ensureAccountSession } from "@renderer/utilities/accountSession";
+import {
+  ensureAccountSession,
+  isAccountSessionRefreshError,
+} from "@renderer/utilities/accountSession";
 import { toast } from "sonner";
 import {
   lazyWithPreload,
@@ -302,8 +305,14 @@ export function MiniSkinWidget() {
       if (!freshAccount) throw new Error("Account is unavailable");
 
       setIsManageSkinsOpen(true);
-    } catch {
-      toast.error(t("manageSkins.openError"));
+    } catch (err) {
+      toast.error(
+        t(
+          isAccountSessionRefreshError(err)
+            ? "accounts.sessionExpired"
+            : "manageSkins.openError",
+        ),
+      );
     } finally {
       setIsOpeningManager(false);
     }

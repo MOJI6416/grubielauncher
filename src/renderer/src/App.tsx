@@ -66,7 +66,10 @@ import { InstallationProgress } from "./components/InstallationProgress";
 import { DownloadFailuresModal } from "./components/DownloadFailuresModal";
 import { BACKEND_URL } from "@/shared/config";
 import { getShareErrorText } from "./utilities/share";
-import { ensureAccountSession } from "./utilities/accountSession";
+import {
+  ensureAccountSession,
+  isAccountSessionRefreshError,
+} from "./utilities/accountSession";
 import { jwtDecode } from "jwt-decode";
 import { VersionInstallProgress } from "@/types/InstallationProgress";
 import { GameInvite } from "@/types/GameInvite";
@@ -612,7 +615,9 @@ function App() {
           playTime: user.playTime + time,
         });
       } catch (err) {
-        console.error(err);
+        if (!isAccountSessionRefreshError(err)) {
+          console.error(err);
+        }
       }
     };
 
@@ -1202,7 +1207,11 @@ function App() {
       );
     } catch (err) {
       console.error(err);
-      toast.error(tRef.current("app.startupError"));
+      toast.error(
+        isAccountSessionRefreshError(err)
+          ? tRef.current("accounts.sessionExpired")
+          : tRef.current("app.startupError"),
+      );
       setConsoles((prev) => {
         const idx = prev.consoles.findIndex(
           (c) =>

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { checkToken } from '../utilities/jwt'
+import { checkToken, getTokenSubject } from '../utilities/jwt'
 import { BACKEND_URL } from '@/shared/config'
 import { readAccountsConfig, saveAccountsConfig } from '../utilities/accounts'
 
@@ -103,9 +103,20 @@ export class BaseService {
       const accounts = await readAccountsConfig()
       if (!accounts) return
 
+      const oldSubject = getTokenSubject(oldToken)
+      const newSubject = getTokenSubject(token)
       let didUpdate = false
       const nextAccounts = accounts.accounts.map((account) => {
-        if (account.accessToken !== oldToken) return account
+        const accountSubject = getTokenSubject(account.accessToken)
+        const isSameToken = account.accessToken === oldToken
+        const isSameSubject =
+          !!oldSubject &&
+          !!newSubject &&
+          oldSubject === newSubject &&
+          accountSubject === oldSubject
+
+        if (!isSameToken && !isSameSubject) return account
+
         didUpdate = true
         return {
           ...account,

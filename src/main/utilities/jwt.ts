@@ -28,7 +28,7 @@ function isTokenExpired(token: string) {
   }
 }
 
-function getTokenSubject(token?: string) {
+export function getTokenSubject(token?: string) {
   if (!token) return null
 
   try {

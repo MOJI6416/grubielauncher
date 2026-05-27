@@ -56,7 +56,10 @@ import Autoplay from "embla-carousel-autoplay";
 import { formatDate, formatTime } from "@renderer/utilities/date";
 import axios from "axios";
 import { IModpack } from "@/types/Backend";
-import { ensureAccountSession } from "@renderer/utilities/accountSession";
+import {
+  ensureAccountSession,
+  isAccountSessionRefreshError,
+} from "@renderer/utilities/accountSession";
 import { toast } from "sonner";
 import { LazyDialogFallback } from "../LazyDialogFallback";
 import {
@@ -302,7 +305,13 @@ export default function AccountInfo({
     } catch (err) {
       console.error(err);
 
-      toast.error(t("accountInfo.updateError"));
+      toast.error(
+        t(
+          isAccountSessionRefreshError(err)
+            ? "accounts.sessionExpired"
+            : "accountInfo.updateError",
+        ),
+      );
     } finally {
       stopLoading();
     }
@@ -402,8 +411,14 @@ export default function AccountInfo({
       });
 
       setIsManageSkins(true);
-    } catch {
-      toast.error(t("manageSkins.openError"));
+    } catch (err) {
+      toast.error(
+        t(
+          isAccountSessionRefreshError(err)
+            ? "accounts.sessionExpired"
+            : "manageSkins.openError",
+        ),
+      );
     } finally {
       stopLoading();
     }

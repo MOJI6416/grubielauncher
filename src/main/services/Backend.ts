@@ -23,6 +23,7 @@ import { ILauncherReleaseNote } from "@/types/LauncherRelease";
 import {
   ActiveFriendSharesResponse,
   ShareAccessResponse,
+  ShareGatewayTokenResponse,
   ShareHeartbeatResponse,
   ShareJoinTicketResponse,
   ShareStartRequest,
@@ -598,6 +599,14 @@ export class Backend extends BaseService {
     const response = await this.api.post<ShareHeartbeatResponse>(
       `${this.baseUrl}/share/heartbeat`,
       { sessionId },
+    );
+    return response.data;
+  }
+
+  async renewShareGatewayToken(sessionId: string) {
+    const response = await this.api.post<ShareGatewayTokenResponse>(
+      `${this.baseUrl}/share/${sessionId}/gateway-token`,
+      {},
     );
     return response.data;
   }

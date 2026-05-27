@@ -101,6 +101,11 @@ export interface ShareHeartbeatResponse {
   expiresInSec: number
 }
 
+export interface ShareGatewayTokenResponse {
+  gatewayUrl: string
+  gatewayToken: string
+}
+
 export interface ShareAccessResponse {
   ok: true
   visibility: ShareVisibility

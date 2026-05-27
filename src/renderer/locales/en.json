@@ -50,6 +50,7 @@
     "type": "Account type",
     "avatar": "Avatar",
     "cancelled": "Authentication canceled",
+    "sessionExpired": "Your account session has expired. Sign in again.",
     "confirmation": "Are you sure you want to delete the account {{nickname}}?"
   },
   "serverManager": {

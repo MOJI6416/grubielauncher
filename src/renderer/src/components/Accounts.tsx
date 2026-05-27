@@ -48,7 +48,10 @@ import {
 import { IAuthResponse } from "@/types/Auth";
 import { Confirmation } from "./Modals/Confirmation";
 import { MiniSkinWidget } from "./MiniSkinWidget";
-import { ensureAccountSession } from "@renderer/utilities/accountSession";
+import {
+  ensureAccountSession,
+  isAccountSessionRefreshError,
+} from "@renderer/utilities/accountSession";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -500,7 +503,13 @@ export function Accounts() {
                     }
                     throw new Error();
                   } catch (err) {
-                    toast.error(t("accountInfo.error"));
+                    toast.error(
+                      t(
+                        isAccountSessionRefreshError(err)
+                          ? "accounts.sessionExpired"
+                          : "accountInfo.error",
+                      ),
+                    );
                   } finally {
                     setIsLoading(false);
                     setLoadingType(undefined);

@@ -23,12 +23,14 @@ import {
   isValidPublicShareHost,
   isValidShareSlug,
   isValidTicketShareHost,
+  normalizeGatewayUrl,
 } from "./shareProtocol";
 import {
   applyAuthOkState,
   applyTunnelDisconnectedState,
   getReconnectDelay,
   resolveFriendShareConnection,
+  shouldRenewGatewayToken,
 } from "./shareClientLogic";
 import {
   createShareError,
@@ -803,34 +805,85 @@ export class LanShareService extends EventEmitter {
       return;
     }
 
-    if (
-      this.activeGatewayTokenExpMs &&
-      Date.now() >= this.activeGatewayTokenExpMs
-    ) {
-      this.handleShareError(
-        createShareError(
-          "tunnel_auth_failed",
-          "Gateway token expired, restart share is required",
-        ),
-      );
-      return;
-    }
-
     const nextAttempt = state.reconnectAttempt + 1;
     const delay = getReconnectDelay(nextAttempt);
+    const sessionId = state.sessionId;
+    const slug = state.slug;
 
     this.stateStore.patch({
       reconnectAttempt: nextAttempt,
     });
 
     this.reconnectTimer = setTimeout(() => {
-      void this.tunnelClient.connect({
-        gatewayUrl: this.activeGatewayUrl,
-        token: this.activeGatewayToken,
-        sessionId: state.sessionId || "",
-        slug: state.slug || "",
-      });
+      void (async () => {
+        try {
+          await this.ensureFreshGatewayToken(sessionId || "");
+          await this.tunnelClient.connect({
+            gatewayUrl: this.activeGatewayUrl,
+            token: this.activeGatewayToken,
+            sessionId: sessionId || "",
+            slug: slug || "",
+          });
+        } catch (error) {
+          this.handleShareError(
+            toShareStateError(
+              error,
+              "tunnel_auth_failed",
+              "Failed to renew tunnel connection",
+            ),
+          );
+        }
+      })();
     }, delay);
+  }
+
+  private async ensureFreshGatewayToken(sessionId: string): Promise<void> {
+    if (!sessionId || !this.activeHostAccessToken) {
+      throw new ShareServiceError(
+        "not_authenticated",
+        "Host account token is not available",
+      );
+    }
+
+    if (
+      this.activeGatewayToken &&
+      this.activeGatewayUrl &&
+      !shouldRenewGatewayToken(this.activeGatewayTokenExpMs)
+    ) {
+      return;
+    }
+
+    const backend = new Backend(this.activeHostAccessToken);
+    const response = await backend.renewShareGatewayToken(sessionId);
+
+    if (!response.gatewayToken || !this.isValidGatewayUrl(response.gatewayUrl)) {
+      throw new ShareServiceError(
+        "invalid_response",
+        "Share API returned invalid gateway token response",
+      );
+    }
+
+    this.activeGatewayUrl = normalizeGatewayUrl(response.gatewayUrl);
+    this.activeGatewayToken = response.gatewayToken;
+    this.activeGatewayTokenExpMs = this.decodeTokenExpiration(
+      response.gatewayToken,
+    );
+
+    if (!this.activeGatewayTokenExpMs) {
+      throw new ShareServiceError(
+        "invalid_response",
+        "Share API returned gateway token without expiration",
+      );
+    }
+  }
+
+  private isValidGatewayUrl(gatewayUrl: string): boolean {
+    try {
+      const parsed = new URL(normalizeGatewayUrl(gatewayUrl));
+      return parsed.protocol === "ws:" || parsed.protocol === "wss:";
+    } catch {
+      return false;
+    }
   }
 
   private clearReconnectTimer(): void {
