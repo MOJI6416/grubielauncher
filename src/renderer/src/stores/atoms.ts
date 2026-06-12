@@ -27,7 +27,20 @@ export const authDataAtom = atom<IAuth | null>(null);
 
 export const settingsAtom = atom<TSettings>(DEFAULT_SETTINGS);
 
+export interface IErrorLogEntry {
+  id: string;
+  time: number;
+  title: string;
+  details?: string;
+}
+
+export const errorLogAtom = atom<IErrorLogEntry[]>([]);
+export const errorLogSeenAtom = atom(0);
+
 export const versionsAtom = atom<Version[]>([]);
+export const versionsLoadedAtom = atom(false);
+export const addVersionModalAtom = atom(false);
+export const accountsModalAtom = atom(false);
 export const accountsAtom = atom<ILocalAccount[]>([]);
 export const internetAtom = atom(true);
 export const backendOnlineAtom = atom(true);

@@ -10,16 +10,38 @@ directories:
   output: dist
   buildResources: build
 
+# LZMA instead of the default: noticeably smaller installer at the cost of
+# a slower CI build
+compression: maximum
+
+# trims unused Chromium locale files (~50 locales otherwise)
+electronLanguages:
+  - en-US
+  - en-GB
+  - ru
+  - uk
+
 files:
   - '!**/.vscode/*'
   - '!src/*'
+  - '!docs/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,vitest.config.ts}'
+  - '!**/*.{md,map}'
+  - '!**/node_modules/**/{test,tests,__tests__,example,examples,docs,coverage}/**'
 
 asarUnpack:
   - resources/**
+
+# generates app-update.yml inside the build and uploads latest.yml +
+# *.blockmap with `electron-builder --publish` — required for both
+# auto-updates and differential (delta) downloads
+publish:
+  provider: github
+  owner: MOJI6416
+  repo: grubielauncher
 
 win:
   target: nsis
@@ -31,6 +53,9 @@ nsis:
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  # delta updates: electron-updater downloads only changed blocks using the
+  # .blockmap published next to the installer
+  differentialPackage: true
 
 linux:
   target:

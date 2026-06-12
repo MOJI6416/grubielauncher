@@ -26,6 +26,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ServerGame } from "@renderer/classes/ServerGame";
 import { Mods } from "@renderer/classes/Mods";
+import { showErrorToast } from "@renderer/utilities/errorToast";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 const api = window.api;
@@ -47,6 +51,9 @@ export function CreateServer({
 
   const [selectedCore, setSelectedCore] = useState<string | null>(
     serverCores[0]?.core ?? null,
+  );
+  const [memory, setMemory] = useState(() =>
+    selectedVersion?.version.loader.name == "vanilla" ? 2048 : 4096,
   );
 
   const selectedServerCore = useMemo(() => {
@@ -89,7 +96,7 @@ export function CreateServer({
         core: selectedServerCore.core,
         javaMajorVersion:
           selectedVersion.manifest?.javaVersion.majorVersion || 21,
-        memory: selectedVersion.version.loader.name == "vanilla" ? 2048 : 4096,
+        memory,
         downloads: {
           server: selectedServerCore.url,
         },
@@ -144,7 +151,12 @@ export function CreateServer({
     } catch (err) {
       console.error(err);
 
-      toast.error(t("versions.serverInstallError"));
+      const message = err instanceof Error ? err.message : String(err);
+      showErrorToast(
+        t("versions.serverInstallError"),
+        message,
+        t("common.copy"),
+      );
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false);
@@ -212,6 +224,27 @@ export function CreateServer({
               </Select>
             </div>
           ) : undefined}
+
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <Label className="text-sm font-medium text-muted-foreground">
+                {t("settings.memory")}
+              </Label>
+              <Badge variant="secondary" className="tabular-nums">
+                {memory} {t("settings.mb")}
+              </Badge>
+            </div>
+            <Slider
+              step={512}
+              min={1024}
+              max={16384}
+              value={[memory]}
+              disabled={isLoading}
+              onValueChange={([value]) => {
+                if (typeof value == "number") setMemory(value);
+              }}
+            />
+          </div>
         </div>
         <DialogFooter className="m-0 rounded-none border-t bg-muted/25 px-5 py-4">
           <Button disabled={!canInstall || isLoading} onClick={handleInstall}>

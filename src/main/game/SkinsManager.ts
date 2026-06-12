@@ -75,6 +75,8 @@ export class SkinsManager extends BaseService {
   private nickname: string = ''
   private downloader: Downloader
   private legacyCapeIdMap = new Map<string, string>()
+  private storedIndexSkins: StoredSkinEntry[] = []
+  private storedIndexCapes: StoredCapeEntry[] = []
 
   constructor(
     laucnherPath: string,
@@ -371,13 +373,19 @@ export class SkinsManager extends BaseService {
     }
   }
 
-  private async loadSkinsFromIndex() {
+  private async loadSkinsFromIndex(options: { loadCapes?: boolean } = {}) {
     const indexPath = path.join(this.skinsPath, 'index.json')
+    const loadCapes = options.loadCapes ?? true
 
     try {
       const data: StoredSkinsConfig = await fs.readJSON(indexPath, 'utf-8')
+      this.storedIndexSkins = data.skins || []
+      this.storedIndexCapes = data.capes || []
       this.skins.skins = []
-      await this.loadCapesFromIndex(data.capes || [])
+
+      if (loadCapes) {
+        await this.loadCapesFromIndex(this.storedIndexCapes)
+      }
 
       for (const storedSkin of data.skins || []) {
         const skinPath = await this.resolveStoredSkinPath(storedSkin)
@@ -396,6 +404,8 @@ export class SkinsManager extends BaseService {
         }
       }
     } catch {
+      this.storedIndexSkins = []
+      this.storedIndexCapes = []
       this.skins.skins = []
     }
   }
@@ -407,7 +417,7 @@ export class SkinsManager extends BaseService {
     if (this.platform === 'microsoft') {
       this.capes = []
       this.legacyCapeIdMap.clear()
-      await this.loadSkinsFromIndex()
+      await this.loadSkinsFromIndex({ loadCapes: false })
       await this.getMojangSkins()
     } else {
       await this.getLocalCapes()
@@ -440,6 +450,8 @@ export class SkinsManager extends BaseService {
         const mappedCapeId = capeMap.get(skin.capeId)
         if (mappedCapeId) {
           skin.capeId = mappedCapeId
+        } else if (this.platform === 'microsoft') {
+          skin.capeId = undefined
         }
       }
     }
@@ -448,6 +460,8 @@ export class SkinsManager extends BaseService {
       const mappedActiveCapeId = capeMap.get(this.activeCape)
       if (mappedActiveCapeId) {
         this.activeCape = mappedActiveCapeId
+      } else if (this.platform === 'microsoft') {
+        this.activeCape = undefined
       }
     }
   }
@@ -517,7 +531,7 @@ export class SkinsManager extends BaseService {
     }
   }
 
-  private async getMojangSkins() {
+  private async getMojangSkins(options: { throwOnError?: boolean } = {}) {
     try {
       const response = await this.api.get<IMojangProfile>(`${this.skinServiceUrl}/minecraft/profile`, {
         headers: {
@@ -579,10 +593,24 @@ export class SkinsManager extends BaseService {
       await this.saveSkins()
     } catch (error) {
       console.error('Error fetching Mojang skins:', error)
+      if (options.throwOnError) throw error
     }
   }
 
   public async setCapeId(capeId: string | undefined) {
+    if (capeId) {
+      const cape = this.findCapeById(capeId)
+      if (!cape) throw new Error('skin_cape_unavailable')
+
+      if (this.platform === 'microsoft' && !cape.remoteId) {
+        throw new Error('skin_cape_not_available_for_microsoft')
+      }
+
+      if (!(await fs.pathExists(this.getCapeFilePath(cape.hash)))) {
+        throw new Error('skin_cape_file_missing')
+      }
+    }
+
     const skin = this.findSkinById(this.selectedSkin)
     if (skin) skin.capeId = capeId
   }
@@ -643,6 +671,7 @@ export class SkinsManager extends BaseService {
       await this.getMojangSkins()
     } catch (error) {
       console.error('Error resetting skin:', error)
+      throw error
     }
   }
 
@@ -722,9 +751,16 @@ export class SkinsManager extends BaseService {
       const appliedCapeId =
         this.platform === 'microsoft' ? (selectedCape?.remoteId ? selectedCape.id : undefined) : selectedCape?.id
 
+      if (skin.capeId && !selectedCape) {
+        throw new Error('skin_cape_unavailable')
+      }
+
+      if (this.platform === 'microsoft' && selectedCape && !selectedCape.remoteId) {
+        throw new Error('skin_cape_not_available_for_microsoft')
+      }
+
       if (!(await fs.pathExists(skinPath))) {
-        console.error('Skin file does not exist:', skinPath)
-        return
+        throw new Error('skin_file_missing')
       }
 
       const formData = new FormData()
@@ -749,11 +785,13 @@ export class SkinsManager extends BaseService {
       } else {
         if (selectedCape) {
           const capePath = this.getCapeFilePath(selectedCape.hash)
-          if (await fs.pathExists(capePath)) {
-            const capeBuffer = await fs.readFile(capePath)
-            const capeBlob = new Blob([capeBuffer], { type: 'image/png' })
-            formData.append('cape', capeBlob, `${selectedCape.hash}.png`)
+          if (!(await fs.pathExists(capePath))) {
+            throw new Error('skin_cape_file_missing')
           }
+
+          const capeBuffer = await fs.readFile(capePath)
+          const capeBlob = new Blob([capeBuffer], { type: 'image/png' })
+          formData.append('cape', capeBlob, `${selectedCape.hash}.png`)
         }
 
         const response = await this.api.post<IGrubieSkin>(`${this.skinServiceUrl}/skins/upload`, formData, {
@@ -763,6 +801,9 @@ export class SkinsManager extends BaseService {
         })
 
         skin.remoteId = response.data._id
+        if (selectedCape && !response.data.capeUrl) {
+          throw new Error('skin_cape_apply_failed')
+        }
       }
 
       this.selectedSkin = skin.id
@@ -778,32 +819,37 @@ export class SkinsManager extends BaseService {
         } else {
           await this.hideCape()
         }
+
+        await this.getMojangSkins({ throwOnError: true })
+        if (this.activeSkin !== skin.id) {
+          throw new Error('skin_apply_not_confirmed')
+        }
+
+        if ((appliedCapeId || undefined) !== (this.activeCape || undefined)) {
+          throw new Error('skin_cape_apply_not_confirmed')
+        }
       }
     } catch (error) {
       console.error('Error uploading skin:', error)
+      throw error
     }
   }
 
   private async showCape(capeId: string) {
-    try {
-      const cape = this.findCapeById(capeId)
-      if (!cape?.remoteId) {
-        console.error('Cape remote id is missing:', capeId)
-        return
-      }
-
-      await this.api.put(
-        `${this.skinServiceUrl}/minecraft/profile/capes/active`,
-        { capeId: cape.remoteId },
-        {
-          headers: {
-            Authorization: `Bearer ${this.accessToken}`
-          }
-        }
-      )
-    } catch (error) {
-      console.error('Error showing cape:', error)
+    const cape = this.findCapeById(capeId)
+    if (!cape?.remoteId) {
+      throw new Error('skin_cape_remote_id_missing')
     }
+
+    await this.api.put(
+      `${this.skinServiceUrl}/minecraft/profile/capes/active`,
+      { capeId: cape.remoteId },
+      {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`
+        }
+      }
+    )
   }
 
   private async hideCape() {
@@ -813,9 +859,60 @@ export class SkinsManager extends BaseService {
           Authorization: `Bearer ${this.accessToken}`
         }
       })
-    } catch (error) {
-      console.error('Error hiding cape:', error)
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        return
+      }
+
+      throw error
     }
+  }
+
+  private getCapesForSave() {
+    const capesToSave = this.capes.map(({ cape, ...rest }) => ({
+      ...rest,
+      url: toFileUrl(this.getCapeFilePath(rest.hash))
+    }))
+
+    if (this.platform !== 'microsoft') {
+      return capesToSave
+    }
+
+    const keyForCape = (cape: Partial<ICape> | StoredCapeEntry) => cape.remoteId || cape.id || cape.hash
+    const existingKeys = new Set(capesToSave.map(keyForCape).filter(Boolean))
+    const preservedCapes = this.storedIndexCapes.filter((cape) => {
+      const key = keyForCape(cape)
+      if (!key || existingKeys.has(key)) return false
+      existingKeys.add(key)
+      return true
+    })
+
+    return [...capesToSave, ...preservedCapes]
+  }
+
+  private getSkinsForSave() {
+    const storedSkinByIdentity = new Map<string, StoredSkinEntry>()
+
+    for (const storedSkin of this.storedIndexSkins) {
+      for (const key of [storedSkin.id, storedSkin.hash, storedSkin.remoteId].filter(Boolean)) {
+        storedSkinByIdentity.set(key as string, storedSkin)
+      }
+    }
+
+    return this.skins.skins.map(({ character, ...rest }) => {
+      const storedSkin =
+        storedSkinByIdentity.get(rest.id) ||
+        storedSkinByIdentity.get(rest.hash) ||
+        (rest.remoteId ? storedSkinByIdentity.get(rest.remoteId) : undefined)
+      const preserveStoredCape =
+        this.platform === 'microsoft' && !rest.capeId && storedSkin?.capeId ? { capeId: storedSkin.capeId } : {}
+
+      return {
+        ...rest,
+        ...preserveStoredCape,
+        url: toFileUrl(this.getSkinFilePath(rest.hash))
+      }
+    })
   }
 
   public addSkin(skin: ISkinsConfig['skins'][0]) {
@@ -841,15 +938,9 @@ export class SkinsManager extends BaseService {
   }
 
   public async saveSkins() {
-    const skinsToSave = this.skins.skins.map(({ character, ...rest }) => ({
-      ...rest,
-      url: toFileUrl(this.getSkinFilePath(rest.hash))
-    }))
+    const skinsToSave = this.getSkinsForSave()
 
-    const capesToSave = this.capes.map(({ cape, ...rest }) => ({
-      ...rest,
-      url: toFileUrl(this.getCapeFilePath(rest.hash))
-    }))
+    const capesToSave = this.getCapesForSave()
 
     await fs.writeJSON(path.join(this.skinsPath, 'index.json'), { skins: skinsToSave, capes: capesToSave }, { spaces: 2 })
   }

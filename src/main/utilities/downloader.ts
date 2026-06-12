@@ -696,6 +696,11 @@ export class Downloader {
     if (!actualPath) return false;
 
     try {
+      if (size) {
+        const stats = await fs.stat(actualPath);
+        if (stats.size !== size) return false;
+      }
+
       if (checksum) {
         const currentChecksum = await this.getFileHash(
           actualPath,
@@ -703,11 +708,6 @@ export class Downloader {
         );
         if (currentChecksum.toLowerCase() !== checksum.toLowerCase())
           return false;
-      }
-
-      if (size) {
-        const stats = await fs.stat(actualPath);
-        if (stats.size !== size) return false;
       }
 
       return true;

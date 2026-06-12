@@ -4,7 +4,17 @@ const api = window.api;
 
 import { useTranslation } from "react-i18next";
 import ReactCountryFlag from "react-country-flag";
-import { Code2, Download, Languages, MemoryStick, Save } from "lucide-react";
+import {
+  Activity,
+  Code2,
+  Download,
+  HeartPulse,
+  Languages,
+  Loader2,
+  MemoryStick,
+  Save,
+  Volume2,
+} from "lucide-react";
 import { useAtom } from "jotai";
 import { pathsAtom, settingsAtom } from "@renderer/stores/atoms";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +40,9 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { LANGUAGES, normalizeSettings } from "@/types/Settings";
+import { changeAppLanguage } from "@renderer/i18n";
+import { ConnectivityModal } from "./ConnectivityModal";
+import type { ConnectivityCheckResult } from "@/types/Connectivity";
 import { toast } from "sonner";
 
 export function Settings({
@@ -46,10 +59,18 @@ export function Settings({
   const [settingsPath, setSettingsPath] = useState("");
   const [lang, setLang] = useState(() => normalizedInitialSettings.lang);
   const [devMode, setDevMode] = useState(() => normalizedInitialSettings.devMode);
+  const [crashTelemetry, setCrashTelemetry] = useState(
+    () => normalizedInitialSettings.crashTelemetry,
+  );
+  const [sounds, setSounds] = useState(() => normalizedInitialSettings.sounds);
   const [version, setVersion] = useState("");
   const [downloadLimit, setDownloadLimit] = useState(() => normalizedInitialSettings.downloadLimit);
   const [totalMem, setTotalMem] = useState(0);
   const [paths] = useAtom(pathsAtom);
+  const [connectivityResults, setConnectivityResults] = useState<
+    ConnectivityCheckResult[] | null
+  >(null);
+  const [isConnectivityTesting, setIsConnectivityTesting] = useState(false);
   const isMemoryReady = totalMem > 0;
   const maxMemory = totalMem
     ? Math.max(1024, Math.floor(totalMem / (1024 * 1024)))
@@ -59,11 +80,13 @@ export function Settings({
     settings.xmx != xmx ||
     settings.lang != lang ||
     settings.devMode != devMode ||
-    settings.downloadLimit != downloadLimit;
+    settings.downloadLimit != downloadLimit ||
+    settings.crashTelemetry != crashTelemetry ||
+    settings.sounds != sounds;
 
   const closeSettings = () => {
     setLang(settings.lang);
-    i18n.changeLanguage(settings.lang);
+    void changeAppLanguage(settings.lang);
     onClose();
   };
 
@@ -71,6 +94,8 @@ export function Settings({
     const nextSettings = normalizeSettings(settings);
     setXmx(nextSettings.xmx);
     setDevMode(nextSettings.devMode);
+    setCrashTelemetry(nextSettings.crashTelemetry);
+    setSounds(nextSettings.sounds);
     setDownloadLimit(nextSettings.downloadLimit);
     setLang(nextSettings.lang);
   }, [settings]);
@@ -109,7 +134,7 @@ export function Settings({
       >
         <DialogContent
           data-account-click-ignore="true"
-          className="sm:max-w-lg"
+          className="flex max-h-[85vh] flex-col sm:max-w-lg"
           onClick={(event) => event.stopPropagation()}
           onMouseDown={(event) => event.stopPropagation()}
         >
@@ -132,8 +157,13 @@ export function Settings({
             </div>
           </DialogHeader>
 
+          <div className="min-h-0 flex-1 overflow-y-auto rounded-xl">
           <Card className="gap-0 overflow-hidden py-0">
             <CardContent className="p-0">
+              <div className="bg-muted/30 px-4 py-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                {t("settings.sections.game")}
+              </div>
+              <Separator />
               <div className="grid gap-4 p-4">
                 <div className="flex items-start gap-3">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
@@ -165,10 +195,41 @@ export function Settings({
                   </div>
                 </div>
               </div>
-
               <Separator />
+                <div className="flex items-center justify-between gap-4 px-4 py-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
+                      <Download className="size-4 text-muted-foreground" />
+                    </span>
+                    <div className="min-w-0">
+                      <Label
+                        htmlFor="settings-download-limit"
+                        className="text-sm font-medium"
+                      >
+                        {t("settings.downloadLimit")}
+                      </Label>
+                    </div>
+                  </div>
+                  <Input
+                    id="settings-download-limit"
+                    className="w-12 text-right tabular-nums"
+                    type="number"
+                    min={1}
+                    max={16}
+                    value={downloadLimit}
+                    onChange={(event) => {
+                      const nextValue = Number(event.target.value);
+                      if (Number.isNaN(nextValue)) return;
 
-              <div className="grid gap-0">
+                      setDownloadLimit(Math.min(16, Math.max(1, nextValue)));
+                    }}
+                  />
+                </div>
+              <Separator />
+              <div className="bg-muted/30 px-4 py-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                {t("settings.sections.interface")}
+              </div>
+              <Separator />
                 <div className="flex items-center justify-between gap-4 px-4 py-3">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
@@ -186,7 +247,7 @@ export function Settings({
                       if (!value) return;
 
                       setLang(value);
-                      i18n.changeLanguage(value);
+                      void changeAppLanguage(value);
                     }}
                   >
                     <SelectTrigger className="w-42">
@@ -223,41 +284,95 @@ export function Settings({
                     </SelectContent>
                   </Select>
                 </div>
-
-                <Separator />
-
+              <Separator />
                 <div className="flex items-center justify-between gap-4 px-4 py-3">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
-                      <Download className="size-4 text-muted-foreground" />
+                      <Volume2 className="size-4 text-muted-foreground" />
                     </span>
                     <div className="min-w-0">
                       <Label
-                        htmlFor="settings-download-limit"
+                        htmlFor="settings-sounds"
                         className="text-sm font-medium"
                       >
-                        {t("settings.downloadLimit")}
+                        {t("settings.sounds")}
                       </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {t("settings.soundsDescription")}
+                      </p>
                     </div>
                   </div>
-                  <Input
-                    id="settings-download-limit"
-                    className="w-12 text-right tabular-nums"
-                    type="number"
-                    min={1}
-                    max={16}
-                    value={downloadLimit}
-                    onChange={(event) => {
-                      const nextValue = Number(event.target.value);
-                      if (Number.isNaN(nextValue)) return;
-
-                      setDownloadLimit(Math.min(16, Math.max(1, nextValue)));
-                    }}
+                  <Switch
+                    id="settings-sounds"
+                    checked={sounds}
+                    onCheckedChange={setSounds}
                   />
                 </div>
-
-                <Separator />
-
+              <Separator />
+              <div className="bg-muted/30 px-4 py-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                {t("settings.sections.diagnostics")}
+              </div>
+              <Separator />
+                <div className="flex items-center justify-between gap-4 px-4 py-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
+                      <Activity className="size-4 text-muted-foreground" />
+                    </span>
+                    <div className="min-w-0">
+                      <Label className="text-sm font-medium">
+                        {t("settings.connectivity.title")}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {t("settings.connectivity.description")}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isConnectivityTesting}
+                    onClick={async () => {
+                      setIsConnectivityTesting(true);
+                      try {
+                        setConnectivityResults(await api.connectivity.test());
+                      } finally {
+                        setIsConnectivityTesting(false);
+                      }
+                    }}
+                  >
+                    {isConnectivityTesting && (
+                      <Loader2 className="size-4 animate-spin" />
+                    )}
+                    {isConnectivityTesting
+                      ? t("settings.connectivity.running")
+                      : t("settings.connectivity.run")}
+                  </Button>
+                </div>
+              <Separator />
+                <div className="flex items-center justify-between gap-4 px-4 py-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
+                      <HeartPulse className="size-4 text-muted-foreground" />
+                    </span>
+                    <div className="min-w-0">
+                      <Label
+                        htmlFor="settings-crash-telemetry"
+                        className="text-sm font-medium"
+                      >
+                        {t("settings.crashTelemetry")}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {t("settings.crashTelemetryDescription")}
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="settings-crash-telemetry"
+                    checked={crashTelemetry}
+                    onCheckedChange={setCrashTelemetry}
+                  />
+                </div>
+              <Separator />
                 <div className="flex items-center justify-between gap-4 px-4 py-3">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
@@ -270,6 +385,9 @@ export function Settings({
                       >
                         {t("settings.devMode")}
                       </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {t("settings.devModeDescription")}
+                      </p>
                     </div>
                   </div>
                   <Switch
@@ -278,9 +396,9 @@ export function Settings({
                     onCheckedChange={setDevMode}
                   />
                 </div>
-              </div>
             </CardContent>
           </Card>
+          </div>
 
           <DialogFooter>
             <Button
@@ -291,6 +409,8 @@ export function Settings({
                   xmx,
                   lang,
                   devMode,
+                  crashTelemetry,
+                  sounds,
                   downloadLimit,
                 };
 
@@ -306,6 +426,13 @@ export function Settings({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {connectivityResults && (
+        <ConnectivityModal
+          initialResults={connectivityResults}
+          onClose={() => setConnectivityResults(null)}
+        />
+      )}
     </>
   );
 }

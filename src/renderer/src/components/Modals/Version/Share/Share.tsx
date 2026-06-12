@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -86,6 +87,9 @@ export function Share({
   const [isShareOptions, setIsShareOptions] = useState(false);
   const [isShareArguments, setIsShareArguments] = useState(false);
   const [isShareOtherFiles, setIsShareOtherFiles] = useState(false);
+  const [isCatalogPublic, setIsCatalogPublic] = useState(
+    () => modpack?.isPublic !== false,
+  );
 
   const [paths, setPaths] = useState<string[]>([]);
   const [isOpenSelectPaths, setIsOpenSelectPaths] = useState(false);
@@ -444,6 +448,7 @@ export function Share({
         quickServer: isShareServers
           ? selectedVersion.version.quickServer || ""
           : null,
+        isPublic: isCatalogPublic,
       };
 
       updatePublishProgress({
@@ -595,6 +600,22 @@ export function Share({
           </DialogHeader>
           <TooltipProvider>
             <div className="px-6 pb-2">
+              <div className="mb-2 flex items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">
+                    {t("share.catalogPublic")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("share.catalogPublicDescription")}
+                  </p>
+                </div>
+                <Switch
+                  checked={isCatalogPublic}
+                  disabled={isLoading}
+                  onCheckedChange={setIsCatalogPublic}
+                />
+              </div>
+
               <div className="grid gap-0.5 rounded-lg border bg-card p-1.5">
                 {shareType === "update" && (
                   <>
@@ -831,7 +852,10 @@ export function Share({
                   isLoading ||
                   !isNetwork ||
                   totalSize > MAX_OTHER_BYTES ||
-                  (shareType === "update" ? !hasAnyUpdateChanges : false)
+                  (shareType === "update"
+                    ? !hasAnyUpdateChanges &&
+                      isCatalogPublic === (modpack?.isPublic !== false)
+                    : false)
                 }
                 onClick={async () => {
                   if (!selectedVersion || !account || !authData) return;
@@ -862,6 +886,7 @@ export function Share({
                     const shareCode = await api.backend.shareModpack(
                       account.accessToken!,
                       {
+                        isPublic: isCatalogPublic,
                         conf: {
                           ...selectedVersion.version,
                           loader: {

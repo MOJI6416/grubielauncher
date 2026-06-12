@@ -44,16 +44,56 @@ function isGrubieVersionConf(value: unknown): value is IVersionConf {
   if (!value || typeof value !== "object") return false;
 
   const conf = value as Partial<IVersionConf>;
+  const versionOk =
+    typeof (conf.version as unknown) === "string"
+      ? (conf.version as unknown as string).length > 0
+      : !!conf.version &&
+        typeof conf.version === "object" &&
+        typeof conf.version.id === "string";
+
   return (
     typeof conf.name === "string" &&
-    !!conf.version &&
-    typeof conf.version === "object" &&
-    typeof conf.version.id === "string" &&
+    versionOk &&
     !!conf.loader &&
     typeof conf.loader === "object" &&
     typeof conf.loader.name === "string" &&
     Array.isArray(conf.loader.mods)
   );
+}
+
+function normalizeLegacyVersionField(conf: IVersionConf): IVersionConf {
+  if (typeof (conf.version as unknown) === "string") {
+    conf.version = {
+      id: conf.version as unknown as string,
+      type: "release",
+      url: "",
+      serverManager: false,
+    } as IVersionConf["version"];
+  }
+
+  return conf;
+}
+
+async function resolveGrubieConfRoot(
+  versionPath: string,
+): Promise<{ root: string; conf: IVersionConf } | null> {
+  const rootConfPath = path.join(versionPath, "version.json");
+  if (await fs.pathExists(rootConfPath)) {
+    const conf = await fs.readJSON(rootConfPath, "utf-8").catch(() => null);
+    if (isGrubieVersionConf(conf)) return { root: versionPath, conf };
+  }
+
+  const entries = await fs.readdir(versionPath).catch(() => []);
+  for (const entry of entries) {
+    const childRoot = path.join(versionPath, entry);
+    const childConfPath = path.join(childRoot, "version.json");
+    if (!(await fs.pathExists(childConfPath))) continue;
+
+    const conf = await fs.readJSON(childConfPath, "utf-8").catch(() => null);
+    if (isGrubieVersionConf(conf)) return { root: childRoot, conf };
+  }
+
+  return null;
 }
 
 export async function importVersion(
@@ -76,11 +116,9 @@ export async function importVersion(
   try {
     await extractZip(filePath, versionPath);
 
-    const confPath = path.join(versionPath, "version.json");
-    const hasConf = await fs.pathExists(confPath);
-    const maybeConf = hasConf ? await fs.readJSON(confPath, "utf-8") : null;
+    const grubieConf = await resolveGrubieConfRoot(versionPath);
 
-    if (!isGrubieVersionConf(maybeConf)) {
+    if (!grubieConf) {
       const modpack = await checkModpack(versionPath);
 
       if (!modpack) {
@@ -94,14 +132,15 @@ export async function importVersion(
       };
     }
 
+    const effectiveRoot = grubieConf.root;
     const conf = sanitizeImportedVersionConf(
-      maybeConf,
-      versionPath,
+      normalizeLegacyVersionField(grubieConf.conf),
+      effectiveRoot,
     );
 
-    const servers = await readNBT(path.join(versionPath, "servers.dat"));
+    const servers = await readNBT(path.join(effectiveRoot, "servers.dat"));
 
-    const optionsPath = path.join(versionPath, "options.txt");
+    const optionsPath = path.join(effectiveRoot, "options.txt");
     let options = "";
 
     if (await fs.pathExists(optionsPath))
@@ -110,7 +149,7 @@ export async function importVersion(
     return {
       type: "gl",
       gl: {
-        path: versionPath,
+        path: effectiveRoot,
         conf,
         servers,
         options,

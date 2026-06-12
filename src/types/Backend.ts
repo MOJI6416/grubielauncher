@@ -12,6 +12,7 @@ export interface IModpack {
   lastUpdate: Date
   createdAt: Date
   downloads: number
+  isPublic?: boolean
 }
 
 export interface IModpackConf {
@@ -43,6 +44,7 @@ export interface IModpackUpdate {
   other: ILoader['other'] | null
   image: string | null
   quickServer: string | null
+  isPublic?: boolean | null
 }
 
 export type UploadFileProgressStatus =

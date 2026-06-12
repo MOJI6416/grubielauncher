@@ -23,7 +23,7 @@ import {
 import { rimraf } from "rimraf";
 import { app } from "electron";
 import { runGame, runJar } from "../utilities/game";
-import { Backend } from "../services/Backend";
+import { getAuthlibCached } from "../utilities/authlib";
 import { readJSONFromArchive } from "../utilities/archiver";
 import {
   VersionInstallOperation,
@@ -640,8 +640,7 @@ export class Version {
 
     if (account.type != "microsoft" && account.type != "plain") {
       this.throwIfInstallCancelled();
-      const backend = new Backend();
-      const authlib = await backend.getAuthlib();
+      const authlib = await getAuthlibCached();
       const existsAuthlib = this.manifest.libraries.find(
         (lib) => lib.name === authlib?.name,
       );
@@ -1147,8 +1146,9 @@ export class Version {
 
     const launcherPath = path.join(app.getPath("appData"), ".grubielauncher");
 
-    const backend = new Backend();
-    const authlib = await backend.getAuthlib();
+    const needsAuthlib =
+      !!account.type && account.type != "microsoft" && account.type != "plain";
+    const authlib = needsAuthlib ? await getAuthlibCached() : null;
 
     let jvm: string[] = [];
     let game: string[] = [];

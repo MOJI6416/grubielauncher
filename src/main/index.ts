@@ -44,6 +44,26 @@ function openMainWindowOnce() {
   createMainWindow();
 }
 
+function notifyMainWindowUpdateFailed(message: string) {
+  openMainWindowOnce();
+  if (!mainWindow) return;
+
+  const send = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.webContents.isDestroyed()) return;
+    mainWindow.webContents.send("app:updateFailed", { message });
+  };
+
+  if (mainWindow.webContents.isLoading()) {
+    mainWindow.webContents.once("did-finish-load", () => {
+      setTimeout(send, 1500);
+    });
+    return;
+  }
+
+  send();
+}
+
 function registerProtocolClient() {
   if (process.defaultApp && process.argv.length >= 2) {
     app.setAsDefaultProtocolClient(APP_PROTOCOL, process.execPath, [
@@ -181,7 +201,7 @@ if (!gotTheLock) {
     autoUpdater.on("error", (error) => {
       sendUpdaterStatus("error", { message: error.message });
       updaterWindow?.close();
-      openMainWindowOnce();
+      notifyMainWindowUpdateFailed(error.message);
       flushPendingDeepLinks();
     });
 
@@ -190,7 +210,7 @@ if (!gotTheLock) {
       void autoUpdater.checkForUpdates().catch((error) => {
         sendUpdaterStatus("error", { message: error.message });
         updaterWindow?.close();
-        openMainWindowOnce();
+        notifyMainWindowUpdateFailed(error.message);
         flushPendingDeepLinks();
       });
     };

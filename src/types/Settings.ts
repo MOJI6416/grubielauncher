@@ -1,15 +1,25 @@
+export const LANGUAGES = [
+  { code: 'en', label: 'English', country: 'GB' },
+  { code: 'ru', label: 'Русский', country: 'RU' },
+  { code: 'uk', label: 'Українська', country: 'UA' }
+]
+
 export type TSettings = {
   xmx: number
   lang: string
   devMode: boolean
   downloadLimit: number
+  crashTelemetry: boolean
+  sounds: boolean
 }
 
 export const DEFAULT_SETTINGS: TSettings = {
   xmx: 2048,
   lang: 'en',
   devMode: false,
-  downloadLimit: 6
+  downloadLimit: 6,
+  crashTelemetry: true,
+  sounds: true
 }
 
 export function normalizeSettings(
@@ -30,12 +40,11 @@ export function normalizeSettings(
     downloadLimit:
       Number.isFinite(downloadLimit) && downloadLimit >= 1
         ? Math.min(16, Math.max(1, Math.round(downloadLimit)))
-        : DEFAULT_SETTINGS.downloadLimit
+        : DEFAULT_SETTINGS.downloadLimit,
+    crashTelemetry:
+      typeof value?.crashTelemetry === 'boolean'
+        ? value.crashTelemetry
+        : DEFAULT_SETTINGS.crashTelemetry,
+    sounds: typeof value?.sounds === 'boolean' ? value.sounds : DEFAULT_SETTINGS.sounds
   }
 }
-
-export const LANGUAGES = [
-  { code: 'en', label: 'English', country: 'GB' },
-  { code: 'ru', label: 'Русский', country: 'RU' },
-  { code: 'uk', label: 'Українська', country: 'UA' }
-]

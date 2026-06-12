@@ -30,7 +30,6 @@ import {
   applyTunnelDisconnectedState,
   getReconnectDelay,
   resolveFriendShareConnection,
-  shouldRenewGatewayToken,
 } from "./shareClientLogic";
 import {
   createShareError,
@@ -55,6 +54,8 @@ const LAN_PORT_PATTERNS = [
   /Local game hosted on port (\d{2,5})/i,
   /Started serving on (\d{2,5})/i,
 ];
+
+const HEARTBEAT_MAX_CONSECUTIVE_FAILURES = 3;
 
 export class LanShareService extends EventEmitter {
   private readonly stateStore = new ShareStateStore();
@@ -249,13 +250,16 @@ export class LanShareService extends EventEmitter {
 
       try {
         const backend = new Backend(processRecord.accessToken);
-        const mcVersion = await this.readMcVersion(processRecord.versionPath);
+        const versionMeta = await this.readVersionMeta(
+          processRecord.versionPath,
+        );
 
         const response = await backend.startShare({
           localPort: candidate.localPort,
           visibility,
-          mcVersion: mcVersion || undefined,
+          mcVersion: versionMeta.mcVersion || undefined,
           launcherVersion: app.getVersion(),
+          versionShareCode: versionMeta.shareCode || undefined,
         });
 
         if (
@@ -752,22 +756,41 @@ export class LanShareService extends EventEmitter {
       1000,
     );
     const backend = new Backend(this.activeHostAccessToken);
+    let consecutiveFailures = 0;
 
     const beat = async () => {
       try {
-        await backend.heartbeatShare(state.sessionId || "");
+        const response = await backend.heartbeatShare(state.sessionId || "");
+        consecutiveFailures = 0;
+
+        const current = this.stateStore.getState();
         this.stateStore.patch({
           isHeartbeatActive: true,
           lastHeartbeatAt: new Date().toISOString(),
+          ...(current.phase === "error" &&
+          current.isTunnelConnected &&
+          current.isAuthenticated
+            ? { phase: "online" as const, lastError: undefined }
+            : {}),
         });
+
+        if (response?.restored) {
+          await this.tunnelClient.disconnect("live_session_restored", true);
+          void this.handleTunnelDisconnected("live_session_restored");
+        }
       } catch (error) {
+        consecutiveFailures += 1;
+        if (consecutiveFailures < HEARTBEAT_MAX_CONSECUTIVE_FAILURES) {
+          this.stateStore.patch({ isHeartbeatActive: false });
+          return;
+        }
+
         const shareError = toShareStateError(
           error,
           "unknown",
           "Share heartbeat failed",
         );
         this.handleShareError(shareError);
-        this.stopHeartbeat();
       }
     };
 
@@ -832,6 +855,9 @@ export class LanShareService extends EventEmitter {
               "Failed to renew tunnel connection",
             ),
           );
+          if (!this.disposed && this.stateStore.getState().sessionId) {
+            this.scheduleReconnect();
+          }
         }
       })();
     }, delay);
@@ -843,14 +869,6 @@ export class LanShareService extends EventEmitter {
         "not_authenticated",
         "Host account token is not available",
       );
-    }
-
-    if (
-      this.activeGatewayToken &&
-      this.activeGatewayUrl &&
-      !shouldRenewGatewayToken(this.activeGatewayTokenExpMs)
-    ) {
-      return;
     }
 
     const backend = new Backend(this.activeHostAccessToken);
@@ -1060,18 +1078,25 @@ export class LanShareService extends EventEmitter {
     }
   }
 
-  private async readMcVersion(versionPath: string): Promise<string | null> {
+  private async readVersionMeta(versionPath: string): Promise<{
+    mcVersion: string | null;
+    shareCode: string | null;
+  }> {
     try {
       const versionJsonPath = path.join(versionPath, "version.json");
-      if (!(await fs.pathExists(versionJsonPath))) return null;
+      if (!(await fs.pathExists(versionJsonPath)))
+        return { mcVersion: null, shareCode: null };
 
       const versionConf = (await fs.readJSON(
         versionJsonPath,
         "utf-8",
       )) as IVersionConf;
-      return versionConf.version.id || null;
+      return {
+        mcVersion: versionConf.version.id || null,
+        shareCode: versionConf.shareCode || null,
+      };
     } catch {
-      return null;
+      return { mcVersion: null, shareCode: null };
     }
   }
 

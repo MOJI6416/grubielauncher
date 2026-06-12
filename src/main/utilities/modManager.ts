@@ -297,6 +297,7 @@ export function mrVersionToVersion(
 ): IVersion {
   return {
     id: version.id,
+    versionNumber: version.version_number,
     name:
       projectType != ProjectType.MODPACK
         ? version.name
@@ -1103,34 +1104,40 @@ export async function checkModpack(
         },
       );
 
-      if (!searchData.projects.length) return null;
-
       pack = searchData.projects[0];
 
-      if (!pack) return null;
+      if (pack) {
+        const versions = await ModManager.getVersions(
+          Provider.MODRINTH,
+          pack.id,
+          {
+            loader: modpack.loader,
+            version: modpack.version,
+            projectType: ProjectType.MODPACK,
+            modUrl: "",
+          },
+        );
 
-      const versions = await ModManager.getVersions(
-        Provider.MODRINTH,
-        pack.id,
-        {
-          loader: modpack.loader,
-          version: modpack.version,
-          projectType: ProjectType.MODPACK,
-          modUrl: "",
-        },
-      );
-
-      if (!versions.length) return null;
-      selectVersion = versions.find((v) => v.id == modpack?.versionId);
+        const normalize = (value?: string | null) =>
+          (value || "").replace(/^v/i, "").trim();
+        const packVersionId = modpack.versionId;
+        selectVersion = versions.find(
+          (v) =>
+            v.id == packVersionId ||
+            (!!v.versionNumber &&
+              normalize(v.versionNumber) == normalize(packVersionId)),
+        );
+      }
     }
 
-    if (!selectVersion) return null;
-
-    const dependensies = await ModManager.getDependencies(
-      Provider.MODRINTH,
-      pack.id,
-      selectVersion.dependencies,
-    );
+    const dependensies =
+      pack && selectVersion
+        ? await ModManager.getDependencies(
+            Provider.MODRINTH,
+            pack.id,
+            selectVersion.dependencies,
+          )
+        : [];
 
     for (const file of mrModpack.files) {
       const downloadUrl = file.downloads[0];

@@ -27,6 +27,7 @@ import {
   Paperclip,
   Reply,
   SendHorizontal,
+  SmilePlus,
   Trash2,
   X,
 } from "lucide-react";
@@ -41,6 +42,29 @@ import { cn } from "@/lib/utils";
 const api = window.api;
 const LINK_PATTERN = /(https?:\/\/[^\s]+)/gi;
 const IMAGE_FILE_PATTERN = /\.(apng|gif|jpe?g|png|webp)$/i;
+const EMOJI_FONT_STYLE: React.CSSProperties = {
+  fontFamily:
+    '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif',
+  lineHeight: 1,
+};
+const CHAT_REACTION_EMOJIS = [
+  "👍",
+  "👎",
+  "❤️",
+  "😂",
+  "😮",
+  "😢",
+  "🎉",
+  "🔥",
+  "👏",
+  "🙏",
+  "😍",
+  "😭",
+  "🤔",
+  "👀",
+  "💀",
+  "✨",
+];
 
 function isImageFile(file: File) {
   return file.type.startsWith("image/") || IMAGE_FILE_PATTERN.test(file.name);
@@ -69,6 +93,7 @@ interface ChatModalProps {
   onReplyToMessage: (message: IMessage) => void;
   onCancelReply: () => void;
   onDeleteMessage: (message: IMessage) => void;
+  onToggleReaction: (message: IMessage, emoji: string) => void;
   onOpenVersionSelect: () => void;
   onPlayModpack: (modpack: IModpack, version?: Version) => void;
   t: any;
@@ -99,6 +124,7 @@ export function ChatModal({
   onReplyToMessage,
   onCancelReply,
   onDeleteMessage,
+  onToggleReaction,
   onOpenVersionSelect,
   onPlayModpack,
   t,
@@ -119,6 +145,9 @@ export function ChatModal({
   const [highlightedMessageId, setHighlightedMessageId] = React.useState<
     string | null
   >(null);
+  const [reactionPickerMessageId, setReactionPickerMessageId] =
+    React.useState<string | null>(null);
+  const pendingReactionScrollIdRef = React.useRef<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const dragDepthRef = React.useRef(0);
   const scrollTimerRef = React.useRef<number | null>(null);
@@ -152,6 +181,17 @@ export function ChatModal({
       } else {
         messageNodeRefs.current.delete(messageId);
       }
+    },
+    [],
+  );
+
+  const handleReactionPickerWheel = useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const delta = event.deltaY || event.deltaX;
+      event.currentTarget.scrollLeft += delta;
     },
     [],
   );
@@ -229,6 +269,17 @@ export function ChatModal({
       }
     };
   }, [chatModpacks.length, loadingIndex, messages.length, scrollToBottom]);
+
+  useEffect(() => {
+    const messageId = pendingReactionScrollIdRef.current;
+    if (!messageId) return;
+
+    pendingReactionScrollIdRef.current = null;
+    requestAnimationFrame(() => {
+      const node = messageNodeRefs.current.get(messageId);
+      node?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+  }, [messages]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -401,7 +452,7 @@ export function ChatModal({
                   className="h-full min-w-0 overflow-hidden"
                   ref={setMessagesScrollAreaRef}
                 >
-                  <div className="flex min-w-0 flex-col gap-2 pr-3">
+                  <div className="flex min-w-0 flex-col gap-2 pr-3 pb-2">
                     {messages.map((msg, index) => {
                       if (!msg.message) return null;
 
@@ -422,6 +473,10 @@ export function ChatModal({
                       const version = modpack
                         ? versionByShareCode.get(modpack._id)
                         : undefined;
+                      const reactions = (msg.reactions ?? []).filter(
+                        (reaction) =>
+                          reaction.emoji && reaction.users?.length > 0,
+                      );
 
                       return (
                         <div
@@ -432,6 +487,11 @@ export function ChatModal({
                             isOwnMessage && "flex-row-reverse",
                             highlightedMessageId === msg.id && "bg-primary/10",
                           )}
+                          onMouseLeave={() => {
+                            if (reactionPickerMessageId === msg.id) {
+                              setReactionPickerMessageId(null);
+                            }
+                          }}
                         >
                           <Avatar size="sm" className="h-8 w-8">
                             <AvatarImage
@@ -554,6 +614,50 @@ export function ChatModal({
                                 </div>
                               ))}
 
+                            {reactions.length > 0 && (
+                              <div
+                                className={cn(
+                                  "mt-1 flex max-w-full flex-wrap gap-1",
+                                  isOwnMessage
+                                    ? "justify-end"
+                                    : "justify-start",
+                                )}
+                              >
+                                {reactions.map((reaction) => {
+                                  const isSelected = Boolean(
+                                    authData?.sub &&
+                                      reaction.users.includes(authData.sub),
+                                  );
+
+                                  return (
+                                    <button
+                                      key={reaction.emoji}
+                                      type="button"
+                                      disabled={!canUseMessageActions || !msg.id}
+                                      className={cn(
+                                        "flex h-6 items-center gap-1 rounded-md border px-1.5 text-[11px] leading-none transition-colors",
+                                        isSelected
+                                          ? "border-primary/50 bg-primary/15 text-foreground"
+                                          : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                                      )}
+                                      aria-label={t("friends.chatReaction")}
+                                      onClick={() =>
+                                        onToggleReaction(msg, reaction.emoji)
+                                      }
+                                    >
+                                      <span
+                                        className="flex size-3.5 items-center justify-center"
+                                        style={EMOJI_FONT_STYLE}
+                                      >
+                                        {reaction.emoji}
+                                      </span>
+                                      <span>{reaction.users.length}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+
                             <div
                               className={cn(
                                 "relative flex w-fit max-w-full items-center px-1 pt-0.5",
@@ -566,8 +670,12 @@ export function ChatModal({
                               {msg.id && (
                                 <div
                                   className={cn(
-                                    "ml-1 hidden items-center gap-0.5 group-hover/message:flex group-focus-within/message:flex",
+                                    "absolute top-1/2 flex -translate-y-1/2 items-center gap-0.5 opacity-0 transition-opacity hover:opacity-100 group-hover/message:opacity-100 group-focus-within/message:opacity-100",
+                                    isOwnMessage
+                                      ? "right-full mr-1"
+                                      : "left-full ml-1",
                                   )}
+                                  aria-hidden={!canUseMessageActions}
                                 >
                                   <Button
                                     type="button"
@@ -580,6 +688,54 @@ export function ChatModal({
                                   >
                                     <Reply className="size-3" />
                                   </Button>
+                                  <div className="relative">
+                                    <Button
+                                      type="button"
+                                      size="icon-xs"
+                                      variant="ghost"
+                                      className="size-5 rounded-md text-muted-foreground hover:text-foreground"
+                                      disabled={!canUseMessageActions}
+                                      aria-label={t("friends.chatReaction")}
+                                      onClick={() =>
+                                        setReactionPickerMessageId((current) =>
+                                          current === msg.id ? null : msg.id!,
+                                        )
+                                      }
+                                    >
+                                      <SmilePlus className="size-3" />
+                                    </Button>
+
+                                      {reactionPickerMessageId === msg.id && (
+                                        <div
+                                        className={cn(
+                                          "absolute bottom-full z-30 mb-1 flex w-44 gap-1 overflow-x-auto overflow-y-hidden overscroll-contain rounded-xl border bg-popover p-1 text-popover-foreground shadow-xl",
+                                          isOwnMessage ? "right-0" : "left-0",
+                                        )}
+                                        onWheel={handleReactionPickerWheel}
+                                        onWheelCapture={
+                                          handleReactionPickerWheel
+                                        }
+                                      >
+                                        {CHAT_REACTION_EMOJIS.map((emoji) => (
+                                          <button
+                                            key={emoji}
+                                            type="button"
+                                            className="flex size-8 shrink-0 items-center justify-center rounded-md text-base transition-colors hover:bg-accent hover:text-accent-foreground"
+                                            style={EMOJI_FONT_STYLE}
+                                            aria-label={`${t("friends.chatReaction")} ${emoji}`}
+                                            onClick={() => {
+                                              pendingReactionScrollIdRef.current =
+                                                msg.id ?? null;
+                                              onToggleReaction(msg, emoji);
+                                              setReactionPickerMessageId(null);
+                                            }}
+                                          >
+                                            {emoji}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                   {isOwnMessage && (
                                     <Button
                                       type="button"

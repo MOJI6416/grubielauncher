@@ -20,6 +20,7 @@ import {
 import { useEffect, useMemo, useState, useCallback, memo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import ReactSkinview3d from "react-skinview3d";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -352,10 +353,20 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
   const handleSetCape = useCallback(
     async (capeId: string | undefined) => {
       if (!authData || !selectedAccount) return;
-      await api.skins.setCape(authData.uuid, selectedAccount.type, capeId);
-      await refreshSkins();
+      try {
+        const data = await api.skins.setCape(
+          authData.uuid,
+          selectedAccount.type,
+          capeId,
+        );
+        if (!data) throw new Error("Failed to set cape");
+        setSkinsData(data);
+      } catch {
+        toast.error(t("manageSkins.applyError"));
+        await refreshSkins().catch(() => undefined);
+      }
     },
-    [authData, selectedAccount, refreshSkins],
+    [authData, selectedAccount, refreshSkins, t],
   );
 
   const handleChangeModel = useCallback(
@@ -379,19 +390,28 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     if (!authData || !selectedAccount || !selectedSkinEntry) return;
     if (!isRemoteSkinServiceAvailable) return;
     setActionLoading("apply");
-    await api.skins.uploadSkin(
-      authData.uuid,
-      selectedAccount.type,
-      selectedSkinEntry.id,
-    );
-    await refreshSkins();
-    setActionLoading(null);
+    try {
+      const data = await api.skins.uploadSkin(
+        authData.uuid,
+        selectedAccount.type,
+        selectedSkinEntry.id,
+      );
+      if (!data) throw new Error("Failed to apply skin");
+      setSkinsData(data);
+      await refreshSkins();
+    } catch {
+      toast.error(t("manageSkins.applyError"));
+      await refreshSkins().catch(() => undefined);
+    } finally {
+      setActionLoading(null);
+    }
   }, [
     authData,
     selectedAccount,
     selectedSkinEntry,
     isRemoteSkinServiceAvailable,
     refreshSkins,
+    t,
   ]);
 
   const handleDeleteSkin = useCallback(
@@ -412,10 +432,18 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     if (!authData || !selectedAccount) return;
     if (!isRemoteSkinServiceAvailable) return;
     setActionLoading("reset");
-    await api.skins.resetSkin(authData.uuid, selectedAccount.type);
-    await refreshSkins();
-    setActionLoading(null);
-  }, [authData, selectedAccount, isRemoteSkinServiceAvailable, refreshSkins]);
+    try {
+      const data = await api.skins.resetSkin(authData.uuid, selectedAccount.type);
+      if (!data) throw new Error("Failed to reset skin");
+      setSkinsData(data);
+      await refreshSkins();
+    } catch {
+      toast.error(t("manageSkins.applyError"));
+      await refreshSkins().catch(() => undefined);
+    } finally {
+      setActionLoading(null);
+    }
+  }, [authData, selectedAccount, isRemoteSkinServiceAvailable, refreshSkins, t]);
 
   const handleImportByUrl = useCallback(async () => {
     if (!authData || !selectedAccount || !inputValue.trim()) {

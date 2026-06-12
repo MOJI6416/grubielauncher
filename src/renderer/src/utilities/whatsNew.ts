@@ -3,6 +3,7 @@ export interface LauncherWhatsNewState {
     lastSeenVersion?: string;
     updatedAt?: string;
   };
+  onboardingDone?: boolean;
 }
 
 export type WhatsNewDecision =

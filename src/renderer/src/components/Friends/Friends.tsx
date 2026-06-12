@@ -65,12 +65,11 @@ import {
 } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ISkinData } from "@/types/Skin";
-import type { RunGameParams } from "@renderer/App";
+import type { JoinFriendWorldParams, RunGameParams } from "@renderer/App";
 import { Version } from "@renderer/classes/Version";
 import { FriendItem } from "./FriendItem";
 import { FriendRequestItem } from "./FriendRequestItem";
 import { ActiveFriendShare } from "@/types/Share";
-import { getShareErrorText } from "@renderer/utilities/share";
 import { GameInviteResult } from "@/types/GameInvite";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
@@ -136,6 +135,7 @@ interface FriendOperationError {
     | "rejectFriendRequest"
     | "friendRemove"
     | "sendMessage"
+    | "messageReaction"
     | "getMessages";
   code?: string;
 }
@@ -201,8 +201,10 @@ function getChatReplyPreview(
 
 export function Friends({
   runGame,
+  joinFriendWorld,
 }: {
   runGame: (params: RunGameParams) => Promise<void>;
+  joinFriendWorld: (params: JoinFriendWorldParams) => Promise<void>;
 }) {
   const { t } = useTranslation();
 
@@ -602,20 +604,38 @@ export function Friends({
       );
     };
 
+    const handleMessageReaction = (data: {
+      messageId: string;
+      reactions?: IMessage["reactions"];
+    }) => {
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === data.messageId
+            ? {
+                ...message,
+                reactions: data.reactions ?? [],
+              }
+            : message,
+        ),
+      );
+    };
+
     socket.on("getMessages", handleGetMessages);
     socket.on("sendMessage", handleSendMessage);
     socket.on("deleteMessage", handleDeleteMessage);
+    socket.on("messageReaction", handleMessageReaction);
 
     return () => {
       socket.off("getMessages", handleGetMessages);
       socket.off("sendMessage", handleSendMessage);
       socket.off("deleteMessage", handleDeleteMessage);
+      socket.off("messageReaction", handleMessageReaction);
     };
   }, [socket, account, stopLoading, focusMessageInput]);
 
   useEffect(() => {
     messagesRef.current?.scrollTo(0, messagesRef.current.scrollHeight);
-  }, [messages]);
+  }, [messages.length]);
 
   useEffect(() => {
     if (chatModal) focusMessageInput();
@@ -1016,6 +1036,19 @@ export function Friends({
     [socket, friend],
   );
 
+  const handleToggleChatReaction = useCallback(
+    (message: IMessage, emoji: string) => {
+      if (!socket || !friend || !message.id) return;
+
+      socket.emit("messageReaction", {
+        recipient: friend.user._id,
+        messageId: message.id,
+        emoji,
+      });
+    },
+    [socket, friend],
+  );
+
   const handleReplyToChatMessage = useCallback(
     (message: IMessage) => {
       setReplyMessage(message);
@@ -1171,58 +1204,25 @@ export function Friends({
   const handleJoinFriend = useCallback(
     async (
       friend: IFriend | undefined,
-      version: Version | undefined,
+      _version: Version | undefined,
       activeShare: ActiveFriendShare | undefined,
     ) => {
       if (!friend?.isOnline) return;
 
-      if (!friend.versionCode) {
+      const versionCode = activeShare?.versionShareCode || friend.versionCode;
+      if (!versionCode) {
         toast.warning(t("friends.friendBuildNotPublished"));
         return;
       }
 
-      let address = friend?.serverAddress;
-
-      if (activeShare) {
-        const result = await api.share.connectToFriendShare(activeShare.slug);
-        if (!result.ok || !result.data) {
-          toast(getShareErrorText(t, result.error));
-          return;
-        }
-
-        address = result.data.connectHost;
-      }
-
-      if (!address) {
-        toast.warning(t("friends.friendNoJoinTarget"));
-        return;
-      }
-
-      if (version) {
-        setSelectedVersion(version);
-        await runGame({
-          version,
-          quick: {
-            multiplayer: address,
-          },
-        });
-        return;
-      }
-
-      const modpackData = await api.backend.getModpack(
-        account?.accessToken || "",
-        friend.versionCode,
-      );
-
-      if (modpackData.data) {
-        setTempModpack(modpackData.data);
-        setIsAddVersion(true);
-        toast.warning(t("share.installVersionToJoin"));
-      } else {
-        toast.error(t("share.errors.joinShareNotFound"));
-      }
+      await joinFriendWorld({
+        versionCode,
+        hostNickname: friend.user.nickname,
+        slug: activeShare?.slug,
+        address: friend.serverAddress || undefined,
+      });
     },
-    [account, runGame, setSelectedVersion, t],
+    [joinFriendWorld, t],
   );
 
   const isFriendIdInvalid = useMemo(() => {
@@ -1670,6 +1670,7 @@ export function Friends({
             onReplyToMessage={handleReplyToChatMessage}
             onCancelReply={() => setReplyMessage(null)}
             onDeleteMessage={handleDeleteChatMessage}
+            onToggleReaction={handleToggleChatReaction}
             onOpenVersionSelect={() => setIsSelectVersions(true)}
             onPlayModpack={async (modpack: IModpack, version?: Version) => {
               if (version) {

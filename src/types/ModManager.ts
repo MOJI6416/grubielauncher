@@ -91,6 +91,7 @@ export interface ISelectedFilter {
 export interface IVersion {
   id: string;
   name: string;
+  versionNumber?: string;
   dependencies: IVersionDependency[];
   downloads: number;
   files: ILocalFile[];

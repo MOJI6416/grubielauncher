@@ -1,8 +1,14 @@
 import { IPlayerSkin, ISkinData, ITexture } from '@/types/Skin'
 import axios from 'axios'
 import { Backend } from '../services/Backend'
-import { createCanvas, loadImage } from 'canvas'
 import fs from 'fs'
+
+let canvasModulePromise: Promise<typeof import('canvas')> | null = null
+
+function loadCanvasModule() {
+  if (!canvasModulePromise) canvasModulePromise = import('canvas')
+  return canvasModulePromise
+}
 
 interface IMicrosoftProfileTexture {
   id: string
@@ -55,8 +61,6 @@ export async function getSkin(
           }
         }
       } catch {
-        // Fall through to the public sessionserver lookup when the account token
-        // is expired, unavailable, or not a Minecraft Services token.
       }
     }
 
@@ -115,6 +119,7 @@ export async function renderCharacter(skinPath: string, scale = 4): Promise<stri
   }
 
   try {
+    const { createCanvas, loadImage } = await loadCanvasModule()
     const skin = await loadImage(skinPath)
 
     const is64x64 = skin.height === 64
@@ -173,6 +178,7 @@ export async function renderCape(capePath: string, scale = 4): Promise<string> {
   }
 
   try {
+    const { createCanvas, loadImage } = await loadCanvasModule()
     const cape = await loadImage(capePath)
 
     const width = 10 * scale
@@ -196,6 +202,7 @@ export async function detectSkinModel(skinPath: string): Promise<'slim' | 'class
   }
 
   try {
+    const { createCanvas, loadImage } = await loadCanvasModule()
     const img = await loadImage(skinPath)
 
     if (img.width <= 54 || img.height <= 31) {

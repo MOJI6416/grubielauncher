@@ -38,6 +38,11 @@
 - Achievements and internal player statistics.
 - Modpack sharing system: players of your modpack receive updates automatically.
 - Open access to your world over the internet with **public** or **friends-only** access.
+- **One-click “Play together”**: when a friend opens a world, hit Play — the launcher installs and syncs their modpack and connects you automatically.
+- **Crash analytics**: the launcher reads the crash report and explains what went wrong and how to fix it (rules update without a release).
+- **Public modpack catalog** on [grubielauncher.com](https://grubielauncher.com/packs) with an “Open in launcher” button.
+- **Drag & drop import** of .mrpack/.zip packs from CurseForge, Modrinth, Prism and Grubie exports.
+- Built-in **connection test** for launcher and official services (helps diagnose ISP blocks).
 - Create and manage a server directly from the launcher. _Supported server cores: Vanilla, Spigot, Bukkit, Paper, Purpur, Forge, NeoForge, Fabric, Quilt._
 
 # Installation & Launch

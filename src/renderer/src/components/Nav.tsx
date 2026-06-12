@@ -2,6 +2,7 @@ import { Accounts } from "./Accounts";
 import { FaDiscord } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
 import {
+  Bell,
   BookUser,
   Gamepad2,
   ListPlus,
@@ -12,11 +13,15 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
+import { ErrorLog } from "./ErrorLog";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useAtom } from "jotai";
 import {
   accountAtom,
+  addVersionModalAtom,
   consolesAtom,
+  errorLogAtom,
+  errorLogSeenAtom,
   isFriendsConnectedAtom,
   isOwnerVersionAtom,
   isRunningAtom,
@@ -107,7 +112,7 @@ export function Nav({
   const setServer = useAtom(serverAtom)[1];
   const setIsOwnerVersion = useAtom(isOwnerVersionAtom)[1];
   const [selectedAccount] = useAtom(accountAtom);
-  const [isAddVersion, setVersionModal] = useState(false);
+  const [isAddVersion, setVersionModal] = useAtom(addVersionModalAtom);
   const [isSettingsModal, setOpenSettingsModal] = useState(false);
   const [isInternetOnline] = useAtom(internetAtom);
   const [isBackendOnline] = useAtom(networkAtom);
@@ -115,6 +120,10 @@ export function Nav({
   const [isRunning] = useAtom(isRunningAtom);
   const [paths] = useAtom(pathsAtom);
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
+  const [errorLog] = useAtom(errorLogAtom);
+  const [errorLogSeen, setErrorLogSeen] = useAtom(errorLogSeenAtom);
+  const [isErrorLogOpen, setIsErrorLogOpen] = useState(false);
+  const unseenErrors = Math.max(0, errorLog.length - errorLogSeen);
   const [isShareOpen, setIsShareOpen] = useAtom(isShareModalOpenAtom);
   const [consoles] = useAtom(consolesAtom);
   const [isFriendsConnected] = useAtom(isFriendsConnectedAtom);
@@ -214,6 +223,31 @@ export function Nav({
 
             <div className="ml-auto flex min-w-0 shrink-0 items-center gap-3">
               <div className="flex items-center gap-2">
+                {errorLog.length > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="relative size-9"
+                        onClick={() => {
+                          setErrorLogSeen(errorLog.length);
+                          setIsErrorLogOpen(true);
+                        }}
+                        aria-label={t("errorLog.title")}
+                      >
+                        <Bell className="size-4" />
+                        {unseenErrors > 0 && (
+                          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[0.6rem] font-semibold text-white">
+                            {unseenErrors > 9 ? "9+" : unseenErrors}
+                          </span>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("errorLog.title")}</TooltipContent>
+                  </Tooltip>
+                )}
+
                 {consoles.consoles.length > 0 && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -278,10 +312,10 @@ export function Nav({
                   </Button>
                 )}
 
-                {selectedAccount && canUseInternet && (
+                {canUseInternet && (
                   <Button
                     variant="secondary"
-                    disabled={isRunning}
+                    disabled={isRunning || !selectedAccount}
                     size="lg"
                     className="h-10 px-4 text-sm [&_svg]:size-4"
                     onMouseEnter={() => preload(LazyAddVersion.preload)}
@@ -400,6 +434,7 @@ export function Nav({
           />
         </Suspense>
       )}
+      {isErrorLogOpen && <ErrorLog onClose={() => setIsErrorLogOpen(false)} />}
     </>
   );
 }

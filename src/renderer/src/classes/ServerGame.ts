@@ -29,7 +29,7 @@ export class ServerGame {
   }
 
   async install() {
-    await api.server.install(
+    const result = await api.server.install(
       this.account,
       this.downloadLimit,
       this.versionPath,
@@ -37,5 +37,9 @@ export class ServerGame {
       this.conf,
       this.versionConf
     )
+
+    if (!result?.success) {
+      throw new Error(result?.error || 'Server installation failed')
+    }
   }
 }

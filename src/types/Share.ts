@@ -83,6 +83,7 @@ export interface ShareStartRequest {
   visibility: ShareVisibility
   mcVersion?: string
   launcherVersion?: string
+  versionShareCode?: string
 }
 
 export interface ShareStartResponse {
@@ -99,6 +100,7 @@ export interface ShareStartResponse {
 export interface ShareHeartbeatResponse {
   ok: true
   expiresInSec: number
+  restored?: boolean
 }
 
 export interface ShareGatewayTokenResponse {
@@ -129,6 +131,7 @@ export interface ActiveFriendShare {
   slug: string
   visibility: ShareVisibility
   publicAddress: string
+  versionShareCode?: string
   startedAt: string
 }
 

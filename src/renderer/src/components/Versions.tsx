@@ -5,6 +5,7 @@ import {
   MouseEvent,
   Suspense,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -21,6 +22,8 @@ import {
   ChartArea,
   Loader2,
   PackagePlus,
+  Play,
+  Search,
 } from "lucide-react";
 import { VersionStatistics } from "./VersionStatistics";
 import { IVersionStatistics } from "@/types/VersionStatistics";
@@ -28,6 +31,8 @@ import { useAtom } from "jotai";
 import {
   accountAtom,
   accountsAtom,
+  addVersionModalAtom,
+  authDataAtom,
   consolesAtom,
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
@@ -37,12 +42,15 @@ import {
   selectedVersionAtom,
   serverAtom,
   versionsAtom,
+  versionsLoadedAtom,
   versionServersAtom,
 } from "@renderer/stores/atoms";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Empty,
   EmptyHeader,
@@ -131,6 +139,38 @@ function getVersionActivityTime(version: Version) {
   );
 }
 
+function useFlipList() {
+  const itemsRef = useRef(new Map<string, HTMLDivElement>());
+  const lastTopsRef = useRef(new Map<string, number>());
+
+  useLayoutEffect(() => {
+    const nextTops = new Map<string, number>();
+
+    for (const [key, element] of itemsRef.current) {
+      const top = element.offsetTop;
+      nextTops.set(key, top);
+
+      const prevTop = lastTopsRef.current.get(key);
+      if (prevTop != null && prevTop !== top) {
+        element.animate(
+          [
+            { transform: `translateY(${prevTop - top}px)` },
+            { transform: "translateY(0)" },
+          ],
+          { duration: 250, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+        );
+      }
+    }
+
+    lastTopsRef.current = nextTops;
+  });
+
+  return (key: string) => (element: HTMLDivElement | null) => {
+    if (element) itemsRef.current.set(key, element);
+    else itemsRef.current.delete(key);
+  };
+}
+
 export function Versions({
   runGame,
 }: {
@@ -155,13 +195,17 @@ export function Versions({
   const [paths] = useAtom(pathsAtom);
   const { t } = useTranslation();
   const [versions] = useAtom(versionsAtom);
+  const [versionsLoaded] = useAtom(versionsLoadedAtom);
+  const setIsAddVersionOpen = useAtom(addVersionModalAtom)[1];
   const [isNetwork] = useAtom(networkAtom);
   const [accounts] = useAtom(accountsAtom);
+  const [authData] = useAtom(authDataAtom);
   const setIsDownloadedVersion = useAtom(isDownloadedVersionAtom)[1];
   const setIsOwnerVersion = useAtom(isOwnerVersionAtom)[1];
   const [consoles] = useAtom(consolesAtom);
 
   const selectReqIdRef = useRef(0);
+  const flipItemRef = useFlipList();
 
   useEffect(() => {
     if (!selectedVersion) return;
@@ -171,8 +215,13 @@ export function Versions({
     );
   }, [selectedVersion]);
 
+  const [searchQuery, setSearchQuery] = useState("");
+
   const sortedVersions = useMemo(() => {
-    const list = [...(versions || [])];
+    const query = searchQuery.trim().toLowerCase();
+    const list = (versions || []).filter(
+      (vc) => !query || vc.version.name.toLowerCase().includes(query),
+    );
     list.sort((a, b) => {
       const aRunning = consoles.consoles.some(
         (console) =>
@@ -192,7 +241,7 @@ export function Versions({
       return a.version.name.localeCompare(b.version.name);
     });
     return list;
-  }, [consoles.consoles, versions]);
+  }, [consoles.consoles, versions, searchQuery]);
 
   const clearSelectedVersion = () => {
     selectReqIdRef.current++;
@@ -206,10 +255,66 @@ export function Versions({
     setVersionDiffence("sync");
   };
 
+  const selectVersion = async (vc: Version, ownerOk: boolean) => {
+    const reqId = ++selectReqIdRef.current;
+
+    setSelectedVersion(vc);
+    setIsDownloadedVersion(vc.version.downloadedVersion);
+    setIsOwnerVersion(ownerOk);
+
+    try {
+      const serverPath = await api.path.join(vc.versionPath, "server");
+      const serverConf = await api.path.join(serverPath, "conf.json");
+
+      const isExists = await api.fs.pathExists(serverPath);
+      if (reqId !== selectReqIdRef.current) return;
+
+      if (isExists) {
+        const conf: IServerConf = await api.fs.readJSON<IServerConf>(
+          serverConf,
+          "utf-8",
+        );
+        if (reqId !== selectReqIdRef.current) return;
+        setServer(conf);
+      } else {
+        setServer(undefined);
+      }
+
+      const statisticsPath = await api.path.join(
+        vc.versionPath,
+        "statistics.json",
+      );
+      const isStatisticsExists = await api.fs.pathExists(statisticsPath);
+      if (reqId !== selectReqIdRef.current) return;
+      setIsStatistics(isStatisticsExists);
+    } catch {
+      if (reqId !== selectReqIdRef.current) return;
+      setServer(undefined);
+      setIsStatistics(false);
+    }
+  };
+
   return (
     <>
       <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card p-2.5 text-card-foreground shadow-sm">
-        {sortedVersions.length == 0 ? (
+        {((versions?.length ?? 0) >= 6 || searchQuery) && (
+          <div className="relative mb-2 shrink-0">
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              placeholder={t("versions.searchPlaceholder")}
+              className="h-9 pl-8"
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+          </div>
+        )}
+        {!versionsLoaded ? (
+          <div className="flex flex-col gap-2">
+            {[0, 1, 2].map((index) => (
+              <Skeleton key={index} className="h-[4.5rem] w-full rounded-xl" />
+            ))}
+          </div>
+        ) : sortedVersions.length == 0 ? (
           <Empty className="h-full flex-1 border bg-muted/20">
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -217,6 +322,16 @@ export function Versions({
               </EmptyMedia>
               <EmptyTitle>{t("versions.noVersions")}</EmptyTitle>
             </EmptyHeader>
+            {!searchQuery && (
+              <Button
+                className="mt-1"
+                disabled={!account}
+                onClick={() => setIsAddVersionOpen(true)}
+              >
+                <PackagePlus className="size-4" />
+                {t("nav.addVersion")}
+              </Button>
+            )}
           </Empty>
         ) : (
           <ScrollArea className="min-h-0 flex-1 pr-2">
@@ -241,7 +356,10 @@ export function Versions({
                         )
                       : undefined;
 
+                  const itemKey = vc.versionPath || vc.version.name;
+
                   return (
+                    <div key={itemKey} ref={flipItemRef(itemKey)}>
                     <Card
                       className={cn(
                         "group h-[4.5rem] min-h-0 w-full gap-0 overflow-hidden rounded-xl py-0 shadow-none transition-all",
@@ -252,7 +370,6 @@ export function Versions({
                           ? "cursor-pointer"
                           : "cursor-default",
                       )}
-                      key={vc.versionPath || vc.version.name}
                       role={
                         !isRunning && !!account && !isSelected
                           ? "button"
@@ -270,50 +387,7 @@ export function Versions({
                         if (!account || isLoading || isRunning) return;
                         if (isSelected) return;
 
-                        const reqId = ++selectReqIdRef.current;
-
-                        setSelectedVersion(vc);
-                        setIsDownloadedVersion(vc.version.downloadedVersion);
-                        setIsOwnerVersion(ownerOk);
-
-                        try {
-                          const serverPath = await api.path.join(
-                            vc.versionPath,
-                            "server",
-                          );
-                          const serverConf = await api.path.join(
-                            serverPath,
-                            "conf.json",
-                          );
-
-                          const isExists = await api.fs.pathExists(serverPath);
-                          if (reqId !== selectReqIdRef.current) return;
-
-                          if (isExists) {
-                            const conf: IServerConf =
-                              await api.fs.readJSON<IServerConf>(
-                                serverConf,
-                                "utf-8",
-                              );
-                            if (reqId !== selectReqIdRef.current) return;
-                            setServer(conf);
-                          } else {
-                            setServer(undefined);
-                          }
-
-                          const statisticsPath = await api.path.join(
-                            vc.versionPath,
-                            "statistics.json",
-                          );
-                          const isStatisticsExists =
-                            await api.fs.pathExists(statisticsPath);
-                          if (reqId !== selectReqIdRef.current) return;
-                          setIsStatistics(isStatisticsExists);
-                        } catch {
-                          if (reqId !== selectReqIdRef.current) return;
-                          setServer(undefined);
-                          setIsStatistics(false);
-                        }
+                        await selectVersion(vc, ownerOk);
                       }}
                       onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
                         if (event.target !== event.currentTarget) return;
@@ -398,18 +472,58 @@ export function Versions({
                                 >
                                   {vc.version.version.id}
                                 </Badge>
+
+                                {isRunningInstance && (
+                                  <Badge className="border-emerald-600/30 bg-emerald-600/15 text-emerald-500">
+                                    <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" />
+                                    {t("versions.running")}
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>
 
-                          {isSelected && (
-                            <div className="flex shrink-0 items-center gap-1.5">
+                          <div
+                            className={cn(
+                              "shrink-0 items-center gap-1.5",
+                              isSelected ? "flex" : "hidden group-hover:flex",
+                            )}
+                          >
+                            <Button
+                              size="icon-lg"
+                              className="bg-emerald-600 text-white hover:bg-emerald-500"
+                              disabled={!account || isRunning}
+                              title={
+                                isRunningInstance
+                                  ? t("versions.playAnotherInstance")
+                                  : t("nav.play")
+                              }
+                              aria-label={
+                                isRunningInstance
+                                  ? t("versions.playAnotherInstance")
+                                  : t("nav.play")
+                              }
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                if (!isSelected) {
+                                  void selectVersion(vc, ownerOk);
+                                }
+                                void runGame({ version: vc });
+                              }}
+                            >
+                              <Play className="size-4" />
+                            </Button>
+
+                            {isSelected && (
+                              <>
                               {isStatistics && vc.versionPath && (
                                 <Button
                                   variant="outline"
                                   size="icon-lg"
                                   className="bg-background/85 hover:bg-background"
                                   disabled={!ownerOk}
+                                  title={t("versionStatistics.title")}
+                                  aria-label={t("versionStatistics.title")}
                                   onMouseEnter={() =>
                                     preload(LazyEditVersion.preload)
                                   }
@@ -465,6 +579,8 @@ export function Versions({
                                 variant="outline"
                                 size="icon-lg"
                                 className="bg-background/85 hover:bg-background"
+                                title={t("common.openFolder")}
+                                aria-label={t("common.openFolder")}
                                 onClick={async () => {
                                   try {
                                     await api.shell.openPath(vc.versionPath);
@@ -479,7 +595,8 @@ export function Versions({
                                   variant="outline"
                                   size="icon-lg"
                                   className="bg-background/85 hover:bg-background"
-                                  disabled={!ownerOk}
+                                  title={t("versions.serverManager")}
+                                  aria-label={t("versions.serverManager")}
                                   onMouseEnter={() =>
                                     preload(LazyServerControl.preload)
                                   }
@@ -497,6 +614,8 @@ export function Versions({
                                 size="icon-lg"
                                 className="bg-background/85 hover:bg-background"
                                 disabled={isRunning || isRunningInstance}
+                                title={t("settings.title")}
+                                aria-label={t("settings.title")}
                                 onMouseEnter={() =>
                                   preload(LazyEditVersion.preload)
                                 }
@@ -544,6 +663,18 @@ export function Versions({
                                         } else if (modpackData.data) {
                                           const modpack = modpackData.data;
 
+                                          if (
+                                            vc.version.downloadedVersion &&
+                                            authData?.sub &&
+                                            authData.sub ==
+                                              String(modpack.owner?._id ?? "")
+                                          ) {
+                                            vc.version.downloadedVersion =
+                                              false;
+                                            await vc.save();
+                                            setIsDownloadedVersion(false);
+                                          }
+
                                           let status: VersionDiffence = "sync";
 
                                           if (modpack.build) {
@@ -578,6 +709,7 @@ export function Versions({
                                                     "",
                                                 },
                                                 account?.accessToken || "",
+                                                modpack,
                                               );
 
                                             if (diff) {
@@ -607,11 +739,13 @@ export function Versions({
                                   <Settings className="size-4" />
                                 )}
                               </Button>
-                            </div>
-                          )}
+                              </>
+                            )}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
+                    </div>
                   );
                 })}
               </div>

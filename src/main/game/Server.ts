@@ -9,6 +9,15 @@ import { rimraf } from "rimraf";
 import fs from "fs-extra";
 import { installServer } from "../utilities/game";
 import { Backend } from "../services/Backend";
+import { mainWindow } from "../windows/mainWindow";
+import {
+  VersionInstallProgress,
+  VersionInstallStage,
+} from "@/types/InstallationProgress";
+import {
+  createLoaderInstallerProgressState,
+  parseLoaderInstallerProgressLine,
+} from "../utilities/loaderInstallerProgress";
 
 export class ServerGame {
   private serverPath: string = "";
@@ -34,23 +43,92 @@ export class ServerGame {
     this.downloader = new Downloader(this.downloadLimit);
   }
 
+  private sendInstallProgress(
+    stage: VersionInstallStage,
+    progressPercent: number,
+    subProgress?: VersionInstallProgress["subProgress"],
+  ) {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.webContents.isDestroyed()) return;
+
+    const info: VersionInstallProgress | null =
+      stage === "done"
+        ? null
+        : {
+            versionName: this.version?.name || this.serverConf?.core || "",
+            loaderName: this.version?.loader.name || "vanilla",
+            operation: "server",
+            stage,
+            progressPercent,
+            isIndeterminate: true,
+            subProgress,
+          };
+
+    try {
+      mainWindow.webContents.send("versionInstallProgress", info);
+    } catch {}
+  }
+
   async install() {
     if (!this.serverConf) return;
 
     await fs.ensureDir(this.serverPath);
 
+    try {
+      await this.installInternal();
+    } finally {
+      this.sendInstallProgress("done", 100);
+    }
+  }
+
+  private async installInternal() {
+    if (!this.serverConf) return;
+
+    this.sendInstallProgress("preparing", 5);
+
     const java = new Java(this.serverConf.javaMajorVersion);
     await java.init();
+    this.sendInstallProgress("java", 15);
+    await java.install();
 
-    if (!java.javaServerPath)
-      throw new Error("Server Java runtime was not found");
+    if (
+      !java.javaServerPath ||
+      !(await fs.pathExists(java.javaServerPath))
+    )
+      throw new Error(
+        `Java ${this.serverConf.javaMajorVersion} runtime for the server could not be installed`,
+      );
 
     if (!this.version || !this.account) {
       throw new Error("Server install requires version and account data");
     }
 
-    const jar = `${this.serverConf.core}.jar`;
+    let jar = `${this.serverConf.core}.jar`;
     const jarPath = path.join(this.serverPath, jar);
+
+    this.sendInstallProgress("files", 35);
+    const jarStats = await fs.stat(jarPath).catch(() => null);
+    if (!jarStats || jarStats.size === 0) {
+      const coreUrl = this.serverConf.downloads?.server;
+      if (!coreUrl) {
+        throw new Error(
+          "Server core jar is missing and no download URL is available",
+        );
+      }
+
+      await this.downloader.downloadFiles([
+        {
+          url: coreUrl,
+          destination: jarPath,
+          group: "server",
+        },
+      ]);
+
+      const downloadedStats = await fs.stat(jarPath).catch(() => null);
+      if (!downloadedStats || downloadedStats.size === 0) {
+        throw new Error(`Failed to download server core: ${coreUrl}`);
+      }
+    }
 
     let cwd = this.serverPath;
     const javaCmd = java.javaServerPath.includes(" ")
@@ -80,7 +158,42 @@ export class ServerGame {
       params.push("--installServer");
     }
 
-    await installServer(java.javaServerPath, params, cwd);
+    this.sendInstallProgress("installer", 55);
+
+    const installerProgressState = createLoaderInstallerProgressState(55);
+    const handleInstallerOutput = (message: string) => {
+      for (const line of message.split(/\r?\n/)) {
+        const update = parseLoaderInstallerProgressLine(
+          line,
+          installerProgressState,
+          { startPercent: 55, endPercent: 78 },
+        );
+        if (!update) continue;
+
+        this.sendInstallProgress("installer", update.progressPercent, {
+          kind: "loaderInstaller",
+          titleKey: "installationProgress.subProgress.loaderInstaller.title",
+          progressPercent: Math.max(
+            0,
+            Math.min(
+              100,
+              Math.round(((update.progressPercent - 55) / (78 - 55)) * 100),
+            ),
+          ),
+          isIndeterminate: false,
+          detailsKey: update.detailsKey,
+          detailsParams: update.detailsParams,
+        });
+      }
+    };
+
+    await installServer(
+      java.javaServerPath,
+      params,
+      cwd,
+      handleInstallerOutput,
+    );
+    this.sendInstallProgress("loader", 80);
 
     if (
       this.account.type != "microsoft" &&
@@ -110,12 +223,18 @@ export class ServerGame {
     let isCreateRunFiles = true;
 
     if (this.serverConf.core == ServerCore.QUILT) {
-      await rimraf(jarPath).catch(() => {});
-
       const quiltLaunchJar = path.join(
         this.serverPath,
         "quilt-server-launch.jar",
       );
+
+      if (!(await fs.pathExists(quiltLaunchJar))) {
+        throw new Error(
+          "Quilt installer did not create quilt-server-launch.jar — the installer likely failed",
+        );
+      }
+
+      await rimraf(jarPath).catch(() => {});
       await fs.rename(quiltLaunchJar, jarPath);
     } else if (
       this.serverConf.core == ServerCore.FORGE ||
@@ -135,7 +254,9 @@ export class ServerGame {
         const shExists = await fs.pathExists(shPath);
 
         if (!batExists || !shExists) {
-          isCreateRunFiles = true;
+          throw new Error(
+            `${this.serverConf.core} installer did not create run scripts — check access to maven.minecraftforge.net and libraries.minecraft.net`,
+          );
         } else {
           const batData = await fs.readFile(batPath, "utf-8");
           await fs.writeFile(
@@ -161,9 +282,22 @@ export class ServerGame {
           );
         }
       } else {
-        await rimraf(jarPath).catch(() => {});
+        const core = this.serverConf.core;
+        const files = await fs.readdir(this.serverPath);
+        const universalJar =
+          files.find((file) => /^forge-.+-universal\.jar$/i.test(file)) ??
+          files.find(
+            (file) => file.startsWith(`${core}-`) && file.endsWith(".jar"),
+          );
 
-        await fs.rename(serverJar, jarPath);
+        if (!universalJar) {
+          throw new Error(
+            `${core} installer did not create a universal server jar — the installer likely failed`,
+          );
+        }
+
+        await rimraf(jarPath).catch(() => {});
+        jar = universalJar;
       }
     }
 

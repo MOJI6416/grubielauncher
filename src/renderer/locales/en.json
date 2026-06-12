@@ -87,8 +87,18 @@
     "editDescription": "Edit description",
     "desctiption": "Server description",
     "unsavedChanges": "Are you sure you want to close the settings without saving?",
-    "gameModes": ["Survival", "Creative", "Adventure", "Spectator"],
-    "difficulties": ["Peaceful", "Easy", "Normal", "Hard"]
+    "gameModes": [
+      "Survival",
+      "Creative",
+      "Adventure",
+      "Spectator"
+    ],
+    "difficulties": [
+      "Peaceful",
+      "Easy",
+      "Normal",
+      "Hard"
+    ]
   },
   "friends": {
     "title": "Friends",
@@ -154,6 +164,7 @@
     "chatDropImage": "Drop image to send",
     "chatImage": "Image",
     "chatImageUploadError": "Failed to send image",
+    "chatReaction": "Reaction",
     "chatReply": "Reply",
     "invite": "Invite",
     "inviteSent": "Invite sent",
@@ -192,6 +203,19 @@
       "recipient_offline": "You can invite only friends who are online.",
       "not_joinable": "Join a server or open your world for friends first.",
       "unknown": "Failed to send invite."
+    },
+    "worldOpened": "{{nickname}} opened a world — you can join!",
+    "joinFlow": {
+      "playAction": "Play",
+      "connecting": "Connecting to {{nickname}}’s world…",
+      "installFirst": "Installing your friend’s build first — the join will continue automatically afterwards",
+      "syncing": "Updating the build to the host’s version…",
+      "blockedMods": "The build was updated, but some mods must be downloaded manually. Press “Play” again afterwards.",
+      "launching": "Launching the game — you will join {{nickname}}’s world automatically",
+      "addedToServers": "The world was pinned to the top of your server list — open Multiplayer and select it",
+      "serverEntryName": "{{nickname}}’s world",
+      "openFriends": "Friends",
+      "alreadyRunning": "The game is already running — the world was pinned to your server list, open Multiplayer"
     }
   },
   "rpc": {
@@ -306,7 +330,11 @@
       "loaderVersionNotFound": "Could not resolve the loader version from the modpack manifest. The launcher will not replace it with the latest version."
     },
     "localModsWarning": "This modpack contains local modifications. Install it only if you trust the modpack author.",
-    "invalidName": "Use a unique version name without invalid characters."
+    "invalidName": "Use a unique version name without invalid characters.",
+    "dropTitle": "Drop to import the build",
+    "dropDescription": "Supports .mrpack and .zip (GrubieLauncher, CurseForge, Modrinth, Prism)",
+    "dropUnsupported": "This file does not look like a modpack — .mrpack or .zip expected",
+    "dropNoAccount": "Select an account first, then drop the build again"
   },
   "servers": {
     "title": "Servers",
@@ -325,7 +353,11 @@
     "copyAddress": "Copy address",
     "moveUp": "Move up",
     "moveDown": "Move down",
-    "resourceSets": ["Ask", "Enabled", "Disabled"]
+    "resourceSets": [
+      "Ask",
+      "Enabled",
+      "Disabled"
+    ]
   },
   "settings": {
     "title": "Settings",
@@ -336,8 +368,35 @@
     "mb": "MB",
     "devMode": "Developer mode",
     "theme": "Theme",
-    "themes": ["Light", "Dark", "System"],
-    "downloadLimit": "Download limit"
+    "themes": [
+      "Light",
+      "Dark",
+      "System"
+    ],
+    "downloadLimit": "Download limit",
+    "connectivity": {
+      "title": "Connection test",
+      "description": "Tests access to launcher servers and official resources",
+      "run": "Run test",
+      "running": "Testing…",
+      "reachable": "Reachable",
+      "unreachable": "Unreachable",
+      "allOk": "All resources are reachable",
+      "someFail": "Some resources are unreachable. Your ISP may be blocking them — try changing DNS (e.g. 1.1.1.1) or using a VPN.",
+      "groups": {
+        "grubie": "GrubieLauncher servers",
+        "minecraft": "Minecraft servers",
+        "mods": "Mods",
+        "loaders": "Mod loaders",
+        "java": "Java"
+      }
+    },
+    "crashTelemetry": "Anonymous crash statistics",
+    "crashTelemetryDescription": "Sends only the diagnosis code — helps improve the hints",
+    "sounds": "Notification sounds",
+    "soundsDescription": "Install finished, game crash and friend invites",
+    "sections": { "game": "Game", "interface": "Interface", "diagnostics": "Diagnostics" },
+    "devModeDescription": "Run-command copying and extra debugging tools"
   },
   "skinView": {
     "title": "Skin preview",
@@ -346,7 +405,13 @@
     "rotation": "Rotation",
     "speed": "Speed",
     "animation": "Animation",
-    "animations": ["None", "Idle", "Walk", "Run", "Fly"],
+    "animations": [
+      "None",
+      "Idle",
+      "Walk",
+      "Run",
+      "Fly"
+    ],
     "additionally": "Additionally",
     "showName": "Show nickname",
     "setAvatat": "Set as avatar",
@@ -421,7 +486,15 @@
     "publicModpack": "Public build",
     "updateLogo": "Update logo",
     "selectTags": "Select tags",
-    "versionShareDel": "Delete build from server"
+    "versionShareDel": "Delete build from server",
+    "searchPlaceholder": "Search builds…",
+    "sections": {
+      "content": "Build management",
+      "tools": "Tools",
+      "publishing": "Publishing & server"
+    },
+    "playAnotherInstance": "Launch another instance",
+    "running": "Running"
   },
   "app": {
     "starting": "Starting game...",
@@ -438,7 +511,8 @@
     "internetOnline": "Internet available",
     "internetUnavailable": "No internet connection",
     "backendOnline": "Server available",
-    "backendUnavailable": "Server unavailable"
+    "backendUnavailable": "Server unavailable",
+    "updateFailed": "Launcher update failed — you are on an old version"
   },
   "game": {
     "download": "Download"
@@ -489,7 +563,12 @@
     "servers": "Servers",
     "refresh": "Refresh",
     "sort": "Sort",
-    "sorts": ["Name", "Downloads", "Update", "New"],
+    "sorts": [
+      "Name",
+      "Downloads",
+      "Update",
+      "New"
+    ],
     "filter": "Filter",
     "search": "Search",
     "tagsTitle": "Tags",
@@ -570,7 +649,7 @@
     "uploadCompleted": "Archive uploaded",
     "uploadFailed": "Upload failed",
     "uploadFailedDescription": "The archive could not be uploaded. Try again later.",
-    "uploadPayloadTooLarge": "The archive is too large for the current upload method.",
+    "uploadPayloadTooLarge": "The selected files are too large to publish.",
     "publishProgress": {
       "creatingShare": "Creating share",
       "uploadingMods": "Uploading mods",
@@ -584,7 +663,7 @@
       "error": "Publishing failed"
     },
     "publishErrors": {
-      "payloadTooLarge": "The archive is too large for the current upload method. Reduce the selected files and try again.",
+      "payloadTooLarge": "The selected files are too large to publish. Remove some files and try again.",
       "limitExceeded": "The selected files are larger than the 1 GB launcher limit.",
       "uploadFailed": "The archive could not be uploaded. Try again later.",
       "generic": "The build could not be published. Try again later."
@@ -683,7 +762,9 @@
       "joinShareNotFound": "Your friend's available world was not found.",
       "invalidResponse": "Server returned an invalid response.",
       "unknown": "Could not open access to the world."
-    }
+    },
+    "catalogPublic": "Show in the site catalog",
+    "catalogPublicDescription": "Anyone can discover the build. The share link works either way."
   },
   "manageSkins": {
     "reset": "Reset skin",
@@ -714,6 +795,7 @@
     "link": "Link",
     "addSkin": "Add skin",
     "addCape": "Add cape",
+    "applyError": "Could not apply the skin or cape.",
     "openError": "Failed to open skin manager"
   },
   "blockedMods": {
@@ -896,10 +978,22 @@
       "loaderInstaller": {
         "title": "Installing loader core"
       }
-    }
+    },
+    "serverTitle": "Installing server"
   },
-  "sizes": ["B", "KB", "MB", "GB", "TB"],
-  "timeUnits": ["s", "m", "h", "d"],
+  "sizes": [
+    "B",
+    "KB",
+    "MB",
+    "GB",
+    "TB"
+  ],
+  "timeUnits": [
+    "s",
+    "m",
+    "h",
+    "d"
+  ],
   "ownModpacks": {
     "title": "My modpacks",
     "noModpacks": "You haven't shared any modpacks",
@@ -909,5 +1003,25 @@
     "downloads": "Downloads",
     "copyId": "Copy ID",
     "addToLauncher": "Add to launcher"
+  },
+  "errorLog": {
+    "title": "Error log",
+    "empty": "No errors",
+    "clear": "Clear"
+  },
+  "crash": {
+    "title": "Game crashed: {{version}}",
+    "culprits": "Likely culprit",
+    "openReport": "Open report"
+  },
+  "onboarding": {
+    "title": "Welcome to Grubie Launcher!",
+    "description": "Two steps and you are in the game.",
+    "stepAccount": "Add an account",
+    "stepAccountDescription": "Microsoft, Ely.by, Discord or an offline nickname",
+    "stepVersion": "Install your first build",
+    "stepVersionDescription": "A ready modpack, vanilla Minecraft or a file import",
+    "go": "Go",
+    "skip": "Skip"
   }
 }

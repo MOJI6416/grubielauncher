@@ -16,9 +16,12 @@ import { compareServers } from '../utilities/serverList'
 import { handleSafe } from '../utilities/ipc'
 
 export function registerServerIpc() {
-  handleSafe<boolean, [ILocalAccount | undefined, number, string, string, IServerConf, IVersionConf?]>(
+  handleSafe<
+    { success: boolean; error?: string },
+    [ILocalAccount | undefined, number, string, string, IServerConf, IVersionConf?]
+  >(
     'server:install',
-    false,
+    { success: false, error: 'Server installation failed.' },
     async (_, account, downloadLimit, versionPath, serverPath, conf, versionConf) => {
       const installer = new ServerGame(
         account,
@@ -28,8 +31,17 @@ export function registerServerIpc() {
         conf,
         versionConf
       )
-      await installer.install()
-      return true
+
+      try {
+        await installer.install()
+        return { success: true }
+      } catch (error) {
+        console.error('[server:install] failed:', error)
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error)
+        }
+      }
     }
   )
 

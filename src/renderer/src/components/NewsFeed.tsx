@@ -52,7 +52,9 @@ export function NewsFeed() {
         window.localStorage.getItem(HIDDEN_SPONSORED_ADS_KEY),
       ),
   );
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(
+    () => localStorage.getItem("newsFeedVisible") !== "false",
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   const { t, i18n } = useTranslation();
@@ -220,7 +222,12 @@ export function NewsFeed() {
                 size="icon"
                 variant="secondary"
                 disabled={isLoading}
-                onClick={() => setIsVisible((v) => !v)}
+                onClick={() =>
+                  setIsVisible((v) => {
+                    localStorage.setItem("newsFeedVisible", String(!v));
+                    return !v;
+                  })
+                }
                 aria-label={isVisible ? "Hide news" : "Show news"}
               >
                 {!isVisible ? (

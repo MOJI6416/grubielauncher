@@ -1,3 +1,8 @@
+export interface IMessageReaction {
+  emoji: string;
+  users: string[];
+}
+
 export interface IMessage {
   id?: string;
   message: {
@@ -10,6 +15,7 @@ export interface IMessage {
     type: "text" | "modpack" | "image";
     value: string;
   };
+  reactions?: IMessageReaction[];
   sender: string;
   time: Date;
 }

@@ -1,4 +1,5 @@
 import { ChildProcessWithoutNullStreams, execFile, spawn } from "child_process";
+import { analyzeGameCrash } from "./crashAnalyzer";
 import { gameProcesses, gameRuntime } from "./runtime";
 import { mainWindow } from "../windows/mainWindow";
 import { IConsoleMessage } from "@/types/Console";
@@ -196,7 +197,6 @@ export function runJar(
     const onStderr = (data: any) => {
       const output = data.toString();
       options.onOutput?.({ stream: "stderr", message: output });
-      settleReject(output);
     };
 
     const onClose = (code: any) => {
@@ -234,6 +234,7 @@ export function installServer(
   command: string,
   args: string[],
   serverPath: string,
+  onOutput?: (message: string) => void,
 ) {
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -259,6 +260,7 @@ export function installServer(
 
     const onStdout = (data: any) => {
       const output = data.toString();
+      onOutput?.(output);
       if (output.includes("EULA")) {
         settleResolve("done");
       }
@@ -383,6 +385,40 @@ export function runGame(
 
   intervalId = setInterval(checkConnection, 5000);
 
+  const CONSOLE_FLUSH_MS = 100;
+  const pendingConsoleMessages: IConsoleMessage[] = [];
+  let consoleFlushTimer: NodeJS.Timeout | null = null;
+
+  const flushConsoleMessages = () => {
+    if (consoleFlushTimer) {
+      clearTimeout(consoleFlushTimer);
+      consoleFlushTimer = null;
+    }
+    if (pendingConsoleMessages.length === 0) return;
+
+    const batch = pendingConsoleMessages.splice(0);
+    const merged: IConsoleMessage[] = [];
+    for (const msg of batch) {
+      const last = merged[merged.length - 1];
+      if (last && last.type === msg.type) {
+        last.message += msg.message;
+      } else {
+        merged.push({ ...msg, tips: [...msg.tips] });
+      }
+    }
+
+    for (const msg of merged) {
+      safeSend("consoleMessage", versionName, instance, msg);
+    }
+  };
+
+  const queueConsoleMessage = (msg: IConsoleMessage) => {
+    pendingConsoleMessages.push(msg);
+    if (!consoleFlushTimer) {
+      consoleFlushTimer = setTimeout(flushConsoleMessages, CONSOLE_FLUSH_MS);
+    }
+  };
+
   const handleServerConnectionMessage = (message: string) => {
     const connection = parseMinecraftServerConnectionLine(message);
     if (!connection) return;
@@ -428,12 +464,11 @@ export function runGame(
 
     handleServerConnectionMessage(message);
 
-    const msg: IConsoleMessage = {
+    queueConsoleMessage({
       type: "info",
       message,
       tips: [],
-    };
-    safeSend("consoleMessage", versionName, instance, msg);
+    });
   });
 
   javaProcess.stderr?.on("data", (data) => {
@@ -447,16 +482,16 @@ export function runGame(
 
     handleServerConnectionMessage(message);
 
-    const msg: IConsoleMessage = {
+    queueConsoleMessage({
       type: "error",
       message,
       tips: [],
-    };
-    safeSend("consoleMessage", versionName, instance, msg);
+    });
   });
 
   javaProcess.on("error", (err) => {
     if (intervalId) clearInterval(intervalId);
+    flushConsoleMessages();
 
     gameRuntime.unregister(versionName, instance);
     gameRuntime.emitClose({
@@ -488,6 +523,8 @@ export function runGame(
   });
 
   javaProcess.on("close", (c, signal) => {
+    flushConsoleMessages();
+
     let code = typeof c === "number" ? c : 0;
     if (signal == "SIGTERM") code = 0;
 
@@ -504,6 +541,13 @@ export function runGame(
       safeSend("consoleChangeStatus", versionName, instance, "error");
       msg.type = "error";
       msg.tips.push("checkIntegrity");
+
+      void analyzeGameCrash(versionPath, code)
+        .then((analysis) => {
+          if (!analysis) return;
+          safeSend("crashAnalysis", versionName, instance, analysis);
+        })
+        .catch(() => {});
     }
 
     safeSend("consoleMessage", versionName, instance, msg);

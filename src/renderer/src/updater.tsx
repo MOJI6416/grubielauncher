@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
 
 import icon from "./assets/icon.png";
-import "./i18n";
+import { changeAppLanguage } from "./i18n";
 import { LANGUAGES, normalizeSettings, TSettings } from "@/types/Settings";
 import { Progress } from "@/components/ui/progress";
 
@@ -80,7 +80,7 @@ const App = () => {
         }
       }
 
-      await i18n.changeLanguage(
+      await changeAppLanguage(
         normalizeSettings(data, lang?.code || i18n.language).lang,
       );
     }

@@ -31,6 +31,9 @@ type TunnelEvents = {
   }) => void
 }
 
+const LIVENESS_TIMEOUT_MS = 40_000
+const LIVENESS_CHECK_INTERVAL_MS = 5_000
+
 export class TunnelClient extends EventEmitter {
   private ws: WebSocket | null = null
   private readonly proxyManager: LocalProxyManager
@@ -39,6 +42,8 @@ export class TunnelClient extends EventEmitter {
   private expectedSessionId = ''
   private expectedSlug = ''
   private shouldIgnoreClose = false
+  private lastActivityAtMs = 0
+  private livenessTimer: NodeJS.Timeout | null = null
 
   constructor(proxyManager: LocalProxyManager) {
     super()
@@ -73,10 +78,18 @@ export class TunnelClient extends EventEmitter {
     ws.addEventListener('message', this.handleMessage)
     ws.addEventListener('error', this.handleError)
     ws.addEventListener('close', this.handleClose)
+
+    this.lastActivityAtMs = Date.now()
+    this.livenessTimer = setInterval(this.checkLiveness, LIVENESS_CHECK_INTERVAL_MS)
   }
 
   public async disconnect(reason = 'manual_disconnect', silent = false): Promise<void> {
     this.shouldIgnoreClose = silent
+
+    if (this.livenessTimer) {
+      clearInterval(this.livenessTimer)
+      this.livenessTimer = null
+    }
 
     if (!this.ws) return
 
@@ -113,7 +126,16 @@ export class TunnelClient extends EventEmitter {
     return super.off(eventName, listener)
   }
 
+  private readonly checkLiveness = () => {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
+    if (Date.now() - this.lastActivityAtMs <= LIVENESS_TIMEOUT_MS) return
+
+    void this.disconnect('liveness_timeout', true)
+    this.emit('disconnected', 'liveness_timeout')
+  }
+
   private readonly handleOpen = () => {
+    this.lastActivityAtMs = Date.now()
     this.emit('connected')
 
     const authMessage: AuthMessage = {
@@ -125,6 +147,8 @@ export class TunnelClient extends EventEmitter {
   }
 
   private readonly handleMessage = async (event: MessageEvent) => {
+    this.lastActivityAtMs = Date.now()
+
     try {
       if (typeof event.data === 'string') {
         const controlMessage = parseTunnelControlMessage(event.data)

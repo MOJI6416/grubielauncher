@@ -11,6 +11,8 @@ import {
 import { Downloader } from '../utilities/downloader'
 import { mainWindow } from '../windows/mainWindow'
 import { getLauncherPaths } from '../utilities/other'
+import { runConnectivityTests } from '../utilities/connectivityTest'
+import { ConnectivityCheckResult } from '@/types/Connectivity'
 import { rpc } from '../rpc'
 import { RpcRendererContext } from '@/types/Rpc'
 import { NotificationClickAction } from '@/types/Notification'
@@ -167,5 +169,15 @@ export function registerOtherIpc() {
 
   handleSafe<void>('other:restoreWindow', undefined, () => {
     restoreMainWindow()
+  })
+
+  handleSafe<ConnectivityCheckResult[]>('connectivity:test', [], async (event) => {
+    return await runConnectivityTests((result) => {
+      try {
+        if (!event.sender.isDestroyed()) {
+          event.sender.send('connectivity:result', result)
+        }
+      } catch {}
+    })
   })
 }

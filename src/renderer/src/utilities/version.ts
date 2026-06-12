@@ -1,5 +1,6 @@
 import { ILocalAccount } from "@/types/Account";
 import { IModpack } from "@/types/Backend";
+import { IServerConf } from "@/types/Server";
 import { IVersionConf } from "@/types/IVersion";
 import { IServer } from "@/types/ServersList";
 import { Mods } from "@renderer/classes/Mods";
@@ -63,8 +64,22 @@ export async function syncShare(
     );
     version.version.loader.mods = modpack.conf.loader.mods;
 
+    let serverConf: IServerConf | undefined;
     try {
-      const versionMods = new Mods(settings, version.version);
+      const serverConfPath = await api.path.join(
+        version.versionPath,
+        "server",
+        "conf.json",
+      );
+      if (await api.fs.pathExists(serverConfPath)) {
+        serverConf = await api.fs.readJSON(serverConfPath, "utf-8");
+      }
+    } catch {
+      serverConf = undefined;
+    }
+
+    try {
+      const versionMods = new Mods(settings, version.version, serverConf);
 
       await versionMods.check();
       if (isOther) await versionMods.downloadOther();
@@ -136,15 +151,16 @@ export async function checkDiffenceUpdateData(
     quickServer: string | undefined;
   },
   at: string,
+  modpackOverride?: IModpack,
 ) {
   if (!version.shareCode) return "";
 
   const isOwner = !version.downloadedVersion && version.shareCode;
 
-  const modpackData = await api.backend.getModpack(at, version.shareCode);
-  if (!modpackData.data) throw Error("not found");
-
-  const modpack = modpackData.data;
+  const modpack =
+    modpackOverride ||
+    (await api.backend.getModpack(at, version.shareCode)).data;
+  if (!modpack) throw Error("not found");
 
   const hasStaleLocalShareFiles = shouldReportStaleLocalShareFiles(
     !!isOwner,
@@ -195,39 +211,38 @@ export async function readVerions(
     "versions",
   );
   const directories = await api.fs.getDirectories(versionsPath);
-  const versions: Version[] = [];
 
-  for (let index = 0; index < directories.length; index++) {
-    const directory = directories[index];
+  const results = await Promise.all(
+    directories.map(async (directory) => {
+      const confPath = await api.path.join(
+        versionsPath,
+        directory,
+        "version.json",
+      );
 
-    const confPath = await api.path.join(
-      versionsPath,
-      directory,
-      "version.json",
-    );
+      if (!(await api.fs.pathExists(confPath))) return null;
 
-    if (!(await api.fs.pathExists(confPath))) continue;
+      const conf: IVersionConf = await api.fs.readJSON(confPath, "utf-8");
+      if (conf.name != directory) conf.name = directory;
 
-    const conf: IVersionConf = await api.fs.readJSON(confPath, "utf-8");
-    if (conf.name != directory) conf.name = directory;
+      const version = new Version(conf);
 
-    const version = new Version(conf);
+      await version.init();
 
-    await version.init();
+      if (!version.manifest) return null;
 
-    if (!version.manifest) continue;
+      let isUpdated = false;
 
-    let isUpdated = false;
+      if (!conf.owner && account) {
+        version.version.owner = `${account.type}_${account.nickname}`;
+        isUpdated = true;
+      }
 
-    if (!conf.owner && account) {
-      version.version.owner = `${account.type}_${account.nickname}`;
-      isUpdated = true;
-    }
+      if (isUpdated) await version.save();
 
-    if (isUpdated) await version.save();
+      return version;
+    }),
+  );
 
-    versions.push(version);
-  }
-
-  return versions;
+  return results.filter((version): version is Version => version !== null);
 }

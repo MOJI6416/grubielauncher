@@ -58,13 +58,8 @@ export class Java {
     const installedJavaRoot = await this.findInstalledJavaRoot()
     if (installedJavaRoot) {
       this.setJavaPaths(installedJavaRoot)
-      return
     }
 
-    const asset = await this.resolveJavaAsset(signal)
-    if (!asset) return
-
-    this.setJavaPaths(this.getExpectedJavaRoot(asset))
   }
 
   private throwIfAborted(signal?: AbortSignal) {
@@ -301,14 +296,6 @@ export class Java {
 
   private getJavaRoot(releaseName: string): string {
     return path.join(this.getJavaBaseDir(), releaseName)
-  }
-
-  private getExpectedJavaRoot(asset: IJavaAsset): string {
-    if (asset.imageType === 'jre') {
-      return this.getJavaRoot(`${asset.id}-jre`)
-    }
-
-    return this.getJavaRoot(asset.id)
   }
 
   private getCachePath(): string | null {

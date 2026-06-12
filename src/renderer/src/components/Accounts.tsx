@@ -19,6 +19,7 @@ import { useAtom } from "jotai";
 import {
   accountAtom,
   accountsAtom,
+  accountsModalAtom,
   authDataAtom,
   consolesAtom,
   isRunningAtom,
@@ -126,7 +127,7 @@ function AccountAvatar({
 }
 
 export function Accounts() {
-  const [modalSelectIsOpen, setIsOpenModalSelect] = useState(false);
+  const [modalSelectIsOpen, setIsOpenModalSelect] = useAtom(accountsModalAtom);
   const [modalAddIsOpen, setIsOpenModalAdd] = useState(false);
   const [modalPlainIsOpen, setIsOpenModalPlain] = useState(false);
   const [paths] = useAtom(pathsAtom);

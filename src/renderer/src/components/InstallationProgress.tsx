@@ -95,7 +95,9 @@ export function InstallationProgress({
   const title =
     info.operation === "integrity"
       ? t("installationProgress.integrityTitle")
-      : t("installationProgress.title");
+      : info.operation === "server"
+        ? t("installationProgress.serverTitle")
+        : t("installationProgress.title");
   const installProgressValue = info.isIndeterminate
     ? 100
     : Math.max(0, Math.min(100, info.progressPercent));

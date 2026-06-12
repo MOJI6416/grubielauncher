@@ -20,7 +20,7 @@ const Background: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       <main
         className="
-          relative z-10 container mx-auto max-w-7xl flex-grow
+          relative z-10 w-full flex-grow
           min-h-[calc(100vh_-_64px_-_108px)] mb-12
           max-md:min-h-0 max-md:mb-0
         "

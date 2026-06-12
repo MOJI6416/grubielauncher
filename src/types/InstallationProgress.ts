@@ -2,7 +2,7 @@ import { Loader } from "./Loader";
 
 export const VERSION_INSTALL_CANCELLED = "VERSION_INSTALL_CANCELLED";
 
-export type VersionInstallOperation = "install" | "integrity";
+export type VersionInstallOperation = "install" | "integrity" | "server";
 
 export type VersionInstallStage =
   | "preparing"

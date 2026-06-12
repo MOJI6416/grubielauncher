@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Versions } from "./components/Versions";
 import { Nav } from "./components/Nav";
 import { useTranslation } from "react-i18next";
+import { changeAppLanguage } from "./i18n";
 import { io, Socket } from "socket.io-client";
 import { Loader2 } from "lucide-react";
 import type { IFriendRequest } from "./components/Friends/Friends";
@@ -31,6 +32,7 @@ import {
   selectedVersionAtom,
   settingsAtom,
   versionsAtom,
+  versionsLoadedAtom,
 } from "./stores/atoms";
 import { Confirmation } from "./components/Modals/Confirmation";
 import { Button } from "@/components/ui/button";
@@ -60,12 +62,15 @@ import {
   readVerions,
   syncShare,
 } from "./utilities/version";
+import { supportsQuickPlayMultiplayer } from "./utilities/versionPure";
 import { Mods } from "./classes/Mods";
 import { DownloaderFailuresInfo, DownloaderInfo } from "@/types/Downloader";
 import { InstallationProgress } from "./components/InstallationProgress";
 import { DownloadFailuresModal } from "./components/DownloadFailuresModal";
 import { BACKEND_URL } from "@/shared/config";
 import { getShareErrorText } from "./utilities/share";
+import { recordError, showErrorToast } from "./utilities/errorToast";
+import { playSound } from "./utilities/sounds";
 import {
   ensureAccountSession,
   isAccountSessionRefreshError,
@@ -78,12 +83,16 @@ import { toast } from "sonner";
 import { lazyWithPreload, schedulePreload } from "./utilities/lazyPreload";
 import { LazyDialogFallback } from "./components/LazyDialogFallback";
 import { WhatsNewModal } from "./components/WhatsNewModal";
+import { Onboarding } from "./components/Onboarding";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
 import {
   getWhatsNewDecision,
-  LauncherWhatsNewState,
   markWhatsNewSeen,
 } from "./utilities/whatsNew";
+import {
+  readLauncherState,
+  writeLauncherState,
+} from "./utilities/launcherState";
 import {
   canCurrentAccountManageShare,
   getShareAccountKey,
@@ -118,6 +127,13 @@ export interface RunGameParams {
     single?: string;
     multiplayer?: string;
   };
+}
+
+export interface JoinFriendWorldParams {
+  versionCode: string;
+  hostNickname: string;
+  slug?: string;
+  address?: string;
 }
 
 function useLatestRef<T>(value: T) {
@@ -173,6 +189,7 @@ function App() {
   const [authData] = useAtom(authDataAtom);
   const [consoles, setConsoles] = useAtom(consolesAtom);
   const [versions, setVersions] = useAtom(versionsAtom);
+  const setVersionsLoaded = useAtom(versionsLoadedAtom)[1];
   const [shareState, setShareState] = useAtom(shareStateAtom);
   const [, setSharePeers] = useAtom(sharePeersAtom);
   const [, setIsShareModalOpen] = useAtom(isShareModalOpenAtom);
@@ -188,6 +205,12 @@ function App() {
   const [installProgress, setInstallProgress] =
     useState<VersionInstallProgress | null>(null);
   const [isCancellingInstall, setIsCancellingInstall] = useState(false);
+  const isCancellingInstallRef = useLatestRef(isCancellingInstall);
+  const installTrackRef = useRef<{
+    startedAt: number;
+    doneSeen: boolean;
+    percent: number;
+  } | null>(null);
   const [incomingInvite, setIncomingInvite] = useState<GameInvite | null>(null);
   const [inviteModpack, setInviteModpack] = useState<IModpack | null>(null);
   const [isJoiningInvite, setIsJoiningInvite] = useState(false);
@@ -198,6 +221,12 @@ function App() {
 
   const onlineSocket = useRef<Socket | null>(null);
   const pendingLaunchRef = useRef<RunGameParams | null>(null);
+  const pendingJoinRef = useRef<JoinFriendWorldParams | null>(null);
+  const [dropImportPath, setDropImportPath] = useState<string | null>(null);
+  const [isFileDragOver, setIsFileDragOver] = useState(false);
+  const dragCounterRef = useRef(0);
+  const isJoiningWorldRef = useRef(false);
+  const knownShareSessionsRef = useRef<Set<string> | null>(null);
   const previousShareLanDetectionRef = useRef<{
     phase: string;
     candidateKey: string | null;
@@ -424,6 +453,67 @@ function App() {
   ]);
 
   useEffect(() => {
+    const hasFiles = (event: DragEvent) =>
+      Array.from(event.dataTransfer?.types || []).includes("Files");
+
+    const onDragEnter = (event: DragEvent) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      dragCounterRef.current += 1;
+      setIsFileDragOver(true);
+    };
+
+    const onDragOver = (event: DragEvent) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+    };
+
+    const onDragLeave = (event: DragEvent) => {
+      if (!hasFiles(event)) return;
+      dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+      if (dragCounterRef.current === 0) setIsFileDragOver(false);
+    };
+
+    const onDrop = (event: DragEvent) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      dragCounterRef.current = 0;
+      setIsFileDragOver(false);
+
+      const file = event.dataTransfer?.files?.[0];
+      if (!file) return;
+
+      const name = file.name.toLowerCase();
+      if (!name.endsWith(".zip") && !name.endsWith(".mrpack")) {
+        toast.warning(tRef.current("addVersion.dropUnsupported"));
+        return;
+      }
+
+      if (!selectedAccountRef.current) {
+        toast.warning(tRef.current("addVersion.dropNoAccount"));
+        return;
+      }
+
+      const filePath = api.other.getPathForFile(file);
+      if (!filePath) return;
+
+      setDropImportPath(filePath);
+    };
+
+    window.addEventListener("dragenter", onDragEnter);
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("dragleave", onDragLeave);
+    window.addEventListener("drop", onDrop);
+
+    return () => {
+      window.removeEventListener("dragenter", onDragEnter);
+      window.removeEventListener("dragover", onDragOver);
+      window.removeEventListener("dragleave", onDragLeave);
+      window.removeEventListener("drop", onDrop);
+    };
+  }, []);
+
+  useEffect(() => {
     return api.other.onNotificationClick((action) => {
       if (action.type === "game_invite") {
         void api.other.restoreWindow();
@@ -466,33 +556,6 @@ function App() {
       }
     });
   }, [selectedAccountRef, tRef]);
-
-  const getLauncherStatePath = useEventCallback(async (launcherPath: string) => {
-    return await api.path.join(launcherPath, "launcher-state.json");
-  });
-
-  const readLauncherState = useEventCallback(
-    async (launcherPath: string): Promise<LauncherWhatsNewState | null> => {
-      const statePath = await getLauncherStatePath(launcherPath);
-      if (!(await api.fs.pathExists(statePath))) return null;
-
-      try {
-        return await api.fs.readJSON<LauncherWhatsNewState>(
-          statePath,
-          "utf-8",
-        );
-      } catch {
-        return null;
-      }
-    },
-  );
-
-  const writeLauncherState = useEventCallback(
-    async (launcherPath: string, state: LauncherWhatsNewState) => {
-      const statePath = await getLauncherStatePath(launcherPath);
-      await api.fs.writeJSON(statePath, state);
-    },
-  );
 
   const openWhatsNew = useEventCallback(
     async (options?: { launcherPath?: string; locale?: string }) => {
@@ -565,18 +628,32 @@ function App() {
         ]);
         if (cancelled) return;
 
-        await checkWhatsNewAfterInit(p.launcher, settingsData.lang);
-        if (cancelled) return;
-
         const versionsPath = await api.path.join(p.minecraft, "versions");
 
         if (await api.fs.pathExists(versionsPath)) {
           const acc = selectedAccountRef.current ?? null;
           const v = await readVerions(p.launcher, acc);
-          if (!cancelled) setVersions(v);
+          if (!cancelled) {
+            setVersions(v);
+
+            const lastPlayed = [...v].sort(
+              (a, b) =>
+                new Date(b.version.lastLaunch || 0).getTime() -
+                new Date(a.version.lastLaunch || 0).getTime(),
+            )[0];
+            if (lastPlayed && !selectedVersionRef.current) {
+              setSelectedVersion(lastPlayed);
+            }
+          }
         } else {
           await api.fs.ensure(versionsPath);
         }
+
+        if (!cancelled) setVersionsLoaded(true);
+
+        if (cancelled) return;
+
+        await checkWhatsNewAfterInit(p.launcher, settingsData.lang);
       } catch (err) {
         console.error("Init error:", err);
       }
@@ -730,6 +807,50 @@ function App() {
       setIsRunning(false);
     });
 
+    const unsubscribeUpdateFailed = api.events.onUpdateFailed((payload) => {
+      playSound("error");
+      toast.error(tRef.current("app.updateFailed"), {
+        description: payload?.message || "",
+        duration: 12000,
+      });
+    });
+
+    const unsubscribeCrashAnalysis = api.events.onCrashAnalysis(
+      (versionName, _instance, analysis) => {
+        const lang = (i18n.resolvedLanguage ||
+          i18n.language ||
+          "en") as keyof typeof analysis.messages;
+        const message = analysis.messages[lang] || analysis.messages.en;
+        const details = [
+          message,
+          analysis.culprits.length > 0
+            ? `${tRef.current("crash.culprits")}: ${analysis.culprits.join(", ")}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        const title = tRef.current("crash.title", { version: versionName });
+        recordError(title, details);
+
+        playSound("error");
+        toast.error(title, {
+          description: details,
+          duration: 15000,
+          ...(analysis.reportPath
+            ? {
+                action: {
+                  label: tRef.current("crash.openReport"),
+                  onClick: () => {
+                    void api.shell.openPath(analysis.reportPath!);
+                  },
+                },
+              }
+            : {}),
+        });
+      },
+    );
+
     const unsubscribeFriendUpdate = api.events.onFriendUpdate((data) => {
       setOwnPresence((prev) => applyPresenceUpdate(prev, data));
       friendSocketRef.current?.emit("friendUpdate", { ...data });
@@ -749,9 +870,29 @@ function App() {
       api.events.onVersionInstallProgress((info) => {
         if (info?.stage === "preparing") {
           setIsCancellingInstall(false);
+          installTrackRef.current = {
+            startedAt: Date.now(),
+            doneSeen: false,
+            percent: 0,
+          };
+        }
+        if (info && installTrackRef.current) {
+          installTrackRef.current.percent = info.progressPercent;
+          if (info.stage === "done") installTrackRef.current.doneSeen = true;
         }
         if (!info) {
           setIsCancellingInstall(false);
+          const track = installTrackRef.current;
+          installTrackRef.current = null;
+          if (
+            track &&
+            track.doneSeen &&
+            track.percent >= 90 &&
+            !isCancellingInstallRef.current &&
+            Date.now() - track.startedAt > 15000
+          ) {
+            playSound("success");
+          }
         }
         setInstallProgress(info);
       });
@@ -761,6 +902,8 @@ function App() {
       unsubscribeConsoleMessage();
       unsubscribeConsoleClear();
       unsubscribeLaunch();
+      unsubscribeUpdateFailed();
+      unsubscribeCrashAnalysis();
       unsubscribeFriendUpdate();
       unsubscribeDownloaderInfo();
       unsubscribeDownloaderFailures();
@@ -816,7 +959,18 @@ function App() {
     setFriendSocket(socketIo);
     setLocalFriends(acc.friends || []);
 
+    knownShareSessionsRef.current = null;
+    const handleSharePresence = () => void checkFriendShares();
+    socketIo.on("connect", handleSharePresence);
+    socketIo.on("friendUpdate", handleSharePresence);
+    const shareWatchInterval = setInterval(() => {
+      void checkFriendShares();
+    }, 90_000);
+
     return () => {
+      clearInterval(shareWatchInterval);
+      socketIo.off("connect", handleSharePresence);
+      socketIo.off("friendUpdate", handleSharePresence);
       socketIo.disconnect();
       setIsFriendsConnected(false);
       setFriendSocket(undefined);
@@ -991,7 +1145,7 @@ function App() {
     }
 
     setSettings(data);
-    i18n.changeLanguage(data.lang);
+    await changeAppLanguage(data.lang);
     return data;
   }
 
@@ -1128,6 +1282,7 @@ function App() {
               quickServer: launchVersion.version.quickServer || "",
             },
             account.accessToken || "",
+            modpackData.data,
           );
 
           if (diff) {
@@ -1207,11 +1362,15 @@ function App() {
       );
     } catch (err) {
       console.error(err);
-      toast.error(
-        isAccountSessionRefreshError(err)
-          ? tRef.current("accounts.sessionExpired")
-          : tRef.current("app.startupError"),
-      );
+      if (isAccountSessionRefreshError(err)) {
+        toast.error(tRef.current("accounts.sessionExpired"));
+      } else {
+        showErrorToast(
+          tRef.current("app.startupError"),
+          err instanceof Error ? err.message : String(err),
+          tRef.current("common.copy"),
+        );
+      }
       setConsoles((prev) => {
         const idx = prev.consoles.findIndex(
           (c) =>
@@ -1230,54 +1389,243 @@ function App() {
     }
   });
 
+  const joinFriendWorld = useEventCallback(
+    async (params: JoinFriendWorldParams) => {
+      if (isJoiningWorldRef.current) return;
+
+      const account = selectedAccountRef.current;
+      const s0 = settingsRef.current;
+      const t0 = tRef.current;
+
+      if (!params.versionCode) {
+        toast.warning(t0("friends.friendBuildNotPublished"));
+        return;
+      }
+
+      isJoiningWorldRef.current = true;
+      const toastId = toast.loading(
+        t0("friends.joinFlow.connecting", { nickname: params.hostNickname }),
+      );
+
+      try {
+        let version = versionsRef.current.find(
+          (v) => v.version.shareCode === params.versionCode,
+        );
+
+        const modpackData = await api.backend.getModpack(
+          account?.accessToken || "",
+          params.versionCode,
+        );
+
+        if (!version) {
+          if (!modpackData.data) {
+            toast.error(t0("share.errors.joinShareNotFound"), { id: toastId });
+            return;
+          }
+
+          pendingJoinRef.current = params;
+          setInviteModpack(modpackData.data);
+          toast.info(t0("friends.joinFlow.installFirst"), { id: toastId });
+          return;
+        }
+
+        if (
+          version.version.downloadedVersion &&
+          modpackData.data &&
+          (modpackData.data.build ?? 0) > (version.version.build ?? 0)
+        ) {
+          toast.loading(t0("friends.joinFlow.syncing"), { id: toastId });
+
+          let serversLocal: IServer[] = [];
+          try {
+            serversLocal = await api.servers.read(
+              await api.path.join(version.versionPath, "servers.dat"),
+            );
+          } catch {
+            serversLocal = [];
+          }
+
+          version = await syncShare(
+            version,
+            serversLocal,
+            s0,
+            account?.accessToken || "",
+            modpackData.data,
+          );
+
+          const bMods = await checkBlockedMods(
+            version.version.loader.mods,
+            version.versionPath,
+          );
+          if (bMods.length > 0) {
+            setBlockedMods(bMods);
+            setIsBlockedMods(true);
+            toast.warning(t0("friends.joinFlow.blockedMods"), { id: toastId });
+            return;
+          }
+        }
+
+        let address = params.address;
+        if (params.slug) {
+          const result = await api.share.connectToFriendShare(params.slug);
+          if (!result.ok || !result.data) {
+            toast.error(getShareErrorText(t0, result.error), { id: toastId });
+            return;
+          }
+
+          address = result.data.connectHost;
+        }
+
+        if (!address) {
+          toast.error(t0("friends.friendNoJoinTarget"), { id: toastId });
+          return;
+        }
+
+        setSelectedVersion(version);
+
+        const quickPlaySupported =
+          version.isQuickPlayMultiplayer ||
+          supportsQuickPlayMultiplayer(version.version.version.id);
+        const isInstanceRunning = consolesRef.current.consoles.some(
+          (gameConsole) =>
+            gameConsole.versionName === version.version.name &&
+            gameConsole.status === "running",
+        );
+
+        const writeServerEntry = async () => {
+          const serversPath = await api.path.join(
+            version!.versionPath,
+            "servers.dat",
+          );
+          let serversLocal: IServer[] = [];
+          try {
+            serversLocal = await api.servers.read(serversPath);
+          } catch {
+            serversLocal = [];
+          }
+
+          const entryName = t0("friends.joinFlow.serverEntryName", {
+            nickname: params.hostNickname,
+          });
+          const nextServers: IServer[] = [
+            { name: entryName, ip: address!, acceptTextures: null },
+            ...serversLocal.filter(
+              (server) =>
+                server.ip !== address &&
+                server.name !== entryName &&
+                !(params.slug && server.ip.includes(params.slug)),
+            ),
+          ];
+          await api.servers.write(nextServers, serversPath);
+        };
+
+        if (isInstanceRunning) {
+          await writeServerEntry();
+          toast.success(t0("friends.joinFlow.alreadyRunning"), {
+            id: toastId,
+            duration: 10000,
+          });
+          return;
+        }
+
+        if (quickPlaySupported) {
+          toast.success(
+            t0("friends.joinFlow.launching", {
+              nickname: params.hostNickname,
+            }),
+            { id: toastId },
+          );
+          await runGame({
+            version,
+            skipUpdate: true,
+            quick: { multiplayer: address },
+          });
+          return;
+        }
+
+        await writeServerEntry();
+
+        toast.success(t0("friends.joinFlow.addedToServers"), {
+          id: toastId,
+          duration: 10000,
+        });
+        await runGame({ version, skipUpdate: true });
+      } catch (error) {
+        console.error("[joinFriendWorld] failed:", error);
+        showErrorToast(
+          tRef.current("app.startupError"),
+          error instanceof Error ? error.message : String(error),
+          tRef.current("common.copy"),
+          toastId,
+        );
+      } finally {
+        isJoiningWorldRef.current = false;
+      }
+    },
+  );
+
+  const checkFriendShares = useEventCallback(async () => {
+    const account = selectedAccountRef.current;
+    if (!account?.accessToken) return;
+
+    const result = await api.share.fetchActiveFriendShares();
+    if (!result.ok || !result.data) return;
+
+    const previous = knownShareSessionsRef.current;
+    knownShareSessionsRef.current = new Set(
+      result.data.map((share) => share.sessionId),
+    );
+
+    if (!previous) return;
+
+    for (const share of result.data) {
+      if (previous.has(share.sessionId)) continue;
+
+      const versionCode = share.versionShareCode;
+      const message = tRef.current("friends.worldOpened", {
+        nickname: share.hostNickname,
+      });
+
+      if (document.hasFocus()) playSound("notify");
+      toast(message, {
+        duration: 15000,
+        action: versionCode
+          ? {
+              label: tRef.current("friends.joinFlow.playAction"),
+              onClick: () => {
+                void joinFriendWorld({
+                  versionCode,
+                  hostNickname: share.hostNickname,
+                  slug: share.slug,
+                });
+              },
+            }
+          : {
+              label: tRef.current("friends.joinFlow.openFriends"),
+              onClick: () => setIsFriends(true),
+            },
+      });
+
+      if (!document.hasFocus()) {
+        void api.other
+          .notify({ title: "Grubie Launcher", body: message })
+          .catch(() => {});
+      }
+    }
+  });
+
   const joinInvite = useEventCallback(async (invite: GameInvite) => {
     if (isJoiningInvite) return;
 
     setIsJoiningInvite(true);
     try {
-      let address =
-        invite.target.type === "server" ? invite.target.address : undefined;
-
-      if (invite.target.type === "world") {
-        const result = await api.share.connectToFriendShare(invite.target.slug);
-        if (!result.ok || !result.data) {
-          toast(getShareErrorText(tRef.current, result.error));
-          return;
-        }
-
-        address = result.data.connectHost;
-      }
-
-      const version = versionsRef.current.find(
-        (v) => v.version.shareCode === invite.versionCode,
-      );
-
-      if (!version) {
-        const account = selectedAccountRef.current;
-        const modpackData = await api.backend.getModpack(
-          account?.accessToken || "",
-          invite.versionCode,
-        );
-
-        if (modpackData.data) {
-          setInviteModpack(modpackData.data);
-          setIncomingInvite(null);
-          toast.warning(tRef.current("friends.gameInviteInstall"));
-        } else {
-          toast.error(tRef.current("share.errors.joinShareNotFound"));
-        }
-        return;
-      }
-
       setIncomingInvite(null);
-      setSelectedVersion(version);
-      await runGame({
-        version,
-        quick: address
-          ? {
-              multiplayer: address,
-            }
-          : undefined,
+      await joinFriendWorld({
+        versionCode: invite.versionCode,
+        hostNickname: invite.sender.nickname,
+        slug: invite.target.type === "world" ? invite.target.slug : undefined,
+        address:
+          invite.target.type === "server" ? invite.target.address : undefined,
       });
     } finally {
       setIsJoiningInvite(false);
@@ -1330,7 +1678,10 @@ function App() {
                   </div>
                 }
               >
-                <LazyFriends runGame={runGame} />
+                <LazyFriends
+                  runGame={runGame}
+                  joinFriendWorld={joinFriendWorld}
+                />
               </Suspense>
             )}
           </div>
@@ -1343,6 +1694,8 @@ function App() {
         >
           <LazyNewsFeed />
         </Suspense>
+
+        <Onboarding />
 
         {isUpdateModal && (
           <Confirmation
@@ -1529,8 +1882,20 @@ function App() {
         {inviteModpack && (
           <Suspense fallback={<LazyDialogFallback variant="wide" />}>
             <LazyAddVersion
-              closeModal={() => setInviteModpack(null)}
+              closeModal={() => {
+                setInviteModpack(null);
+                pendingJoinRef.current = null;
+              }}
               modpack={inviteModpack}
+              successCallback={() => {
+                const pendingJoin = pendingJoinRef.current;
+                pendingJoinRef.current = null;
+                if (!pendingJoin) return;
+
+                setTimeout(() => {
+                  void joinFriendWorld(pendingJoin);
+                }, 400);
+              }}
             />
           </Suspense>
         )}
@@ -1541,6 +1906,28 @@ function App() {
             version={whatsNew.version}
             onClose={dismissWhatsNew}
           />
+        )}
+
+        {isFileDragOver && (
+          <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="rounded-xl border-2 border-dashed border-primary bg-card px-10 py-8 text-center shadow-lg">
+              <p className="text-lg font-semibold">
+                {t("addVersion.dropTitle")}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("addVersion.dropDescription")}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {dropImportPath && (
+          <Suspense fallback={<LazyDialogFallback variant="wide" />}>
+            <LazyAddVersion
+              closeModal={() => setDropImportPath(null)}
+              importFilePath={dropImportPath}
+            />
+          </Suspense>
         )}
       </>
     </div>

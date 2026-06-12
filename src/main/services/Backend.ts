@@ -65,7 +65,10 @@ export class Backend extends BaseService {
     };
   }
 
-  async shareModpack(modpack: { conf: IModpack["conf"] }) {
+  async shareModpack(modpack: {
+    conf: IModpack["conf"];
+    isPublic?: boolean;
+  }) {
     try {
       const normalizedModpack = {
         ...modpack,

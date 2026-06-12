@@ -210,10 +210,12 @@ export function AddVersion({
   closeModal,
   modpack,
   successCallback,
+  importFilePath,
 }: {
   closeModal: () => void;
   modpack?: IModpack;
   successCallback?: () => void;
+  importFilePath?: string;
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState<
@@ -750,6 +752,58 @@ export function AddVersion({
       throw error;
     }
   }
+
+  async function importFromFile(filePath: string) {
+    try {
+      setIsLoading(true);
+      setLoadingType("file");
+
+      const data = await api.version.import(
+        filePath,
+        await api.path.join(paths.launcher, "temp"),
+      );
+
+      const { type, gl, other } = data;
+
+      if (type == "gl" && gl) {
+        const { conf, servers, options } = gl;
+        setVersionName(conf.name);
+        setShareCode(conf.shareCode);
+        setRunArguments(conf.runArguments || { game: "", jvm: "" });
+        setImage(conf.image);
+        setMods(conf.loader.mods);
+        setServers(servers);
+        setOptions(options);
+        setSelectVersion(conf.version);
+        setLoader(conf.loader.name);
+        setLoaderVersion(conf.loader.version);
+        setQuickConnectIp(conf.quickServer || "");
+        setIsDownloadedVersion(true);
+        setIsOwnerVersion(true);
+
+        setImportData({ ...gl });
+      } else if (type == "other" && other) {
+        setSelectedTab("modpacks");
+        setImportModpack(other);
+      } else {
+        throw new Error("import failed");
+      }
+    } catch {
+      setImportData(undefined);
+      toast.error(t("addVersion.fromFile.error"));
+    } finally {
+      setIsLoading(false);
+      setLoadingType(undefined);
+    }
+  }
+
+  useEffect(() => {
+    if (!importFilePath) return;
+
+    setSelectedTab("fromFile");
+    void importFromFile(importFilePath);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [importFilePath]);
 
   async function searchVersion(modpack: IModpack) {
     if (!account) return;
@@ -1297,63 +1351,18 @@ export function AddVersion({
                         className="w-full"
                         disabled={isLoading}
                         onClick={async () => {
-                          try {
-                            setIsLoading(true);
-                            setLoadingType("file");
+                          const filePaths = await api.other.openFileDialog(
+                            false,
+                            [
+                              {
+                                name: "Modpack",
+                                extensions: ["zip", "mrpack"],
+                              },
+                            ],
+                          );
 
-                            const filePaths = await api.other.openFileDialog(
-                              false,
-                              [
-                                {
-                                  name: "Modpack",
-                                  extensions: ["zip", "mrpack"],
-                                },
-                              ],
-                            );
-
-                            if (!filePaths.length) {
-                              setIsLoading(false);
-                              setLoadingType(undefined);
-                              return;
-                            }
-
-                            const data = await api.version.import(
-                              filePaths[0],
-                              await api.path.join(paths.launcher, "temp"),
-                            );
-
-                            const { type, gl, other } = data;
-
-                            if (type == "gl" && gl) {
-                              const { conf, servers, options } = gl;
-                              setVersionName(conf.name);
-                              setShareCode(conf.shareCode);
-                              setRunArguments(
-                                conf.runArguments || { game: "", jvm: "" },
-                              );
-                              setImage(conf.image);
-                              setMods(conf.loader.mods);
-                              setServers(servers);
-                              setOptions(options);
-                              setSelectVersion(conf.version);
-                              setLoader(conf.loader.name);
-                              setLoaderVersion(conf.loader.version);
-                              setQuickConnectIp(conf.quickServer || "");
-                              setIsDownloadedVersion(true);
-                              setIsOwnerVersion(true);
-
-                              setImportData({ ...gl });
-                            } else if (type == "other" && other) {
-                              setSelectedTab("modpacks");
-                              setImportModpack(other);
-                            }
-                          } catch {
-                            setImportData(undefined);
-                            toast.error(t("addVersion.fromFile.error"));
-                          } finally {
-                            setIsLoading(false);
-                            setLoadingType(undefined);
-                          }
+                          if (!filePaths.length) return;
+                          await importFromFile(filePaths[0]);
                         }}
                       >
                         {isLoading && loadingType == "file" ? (

@@ -58,6 +58,8 @@ import {
 } from "@/types/InstallationProgress";
 import { NotificationClickAction } from "@/types/Notification";
 import { LauncherDeepLink } from "@/types/DeepLink";
+import { ConnectivityCheckResult } from "@/types/Connectivity";
+import { CrashAnalysisPayload } from "@/types/CrashAnalysis";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
 
 export type UpdaterStatus =
@@ -249,7 +251,7 @@ export interface IElectronAPI {
     getOwnModpacks: (at: string) => Promise<IModpack[]>;
     shareModpack: (
       at: string,
-      modpack: { conf: IModpack["conf"] },
+      modpack: { conf: IModpack["conf"]; isPublic?: boolean },
     ) => Promise<string>;
     updateModpack: (
       at: string,
@@ -402,6 +404,12 @@ export interface IElectronAPI {
       callback: (action: NotificationClickAction) => void,
     ) => () => void;
   };
+  connectivity: {
+    test: () => Promise<ConnectivityCheckResult[]>;
+    onResult: (
+      callback: (result: ConnectivityCheckResult) => void,
+    ) => () => void;
+  };
   server: {
     install: (
       account: ILocalAccount | undefined,
@@ -410,7 +418,7 @@ export interface IElectronAPI {
       serverPath: string,
       conf: IServerConf,
       versionConf?: IVersionConf,
-    ) => Promise<boolean>;
+    ) => Promise<{ success: boolean; error?: string }>;
     getSettings: (filePath: string) => Promise<IServerSettings>;
     editXmx: (serverPath: string, memory: number) => Promise<void>;
     updateProperties: (
@@ -592,6 +600,16 @@ export interface IElectronAPI {
       callback: (versionName: string, instance: number) => void,
     ) => () => void;
     onLaunch: (callback: () => void) => () => void;
+    onUpdateFailed: (
+      callback: (payload: { message: string }) => void,
+    ) => () => void;
+    onCrashAnalysis: (
+      callback: (
+        versionName: string,
+        instance: number,
+        analysis: CrashAnalysisPayload,
+      ) => void,
+    ) => () => void;
     onFriendUpdate: (callback: (data: any) => void) => () => void;
     removeAllListeners: (channel: string) => void;
     onDownloaderInfo: (
@@ -787,8 +805,10 @@ export const api = {
       ipcRenderer.invoke("backend:getModpack", at, code),
     getOwnModpacks: (at: string) =>
       ipcRenderer.invoke("backend:getOwnModpacks", at),
-    shareModpack: (at: string, modpack: { conf: IModpack["conf"] }) =>
-      ipcRenderer.invoke("backend:shareModpack", at, modpack),
+    shareModpack: (
+      at: string,
+      modpack: { conf: IModpack["conf"]; isPublic?: boolean },
+    ) => ipcRenderer.invoke("backend:shareModpack", at, modpack),
     updateModpack: (at: string, shareCode: string, update: IModpackUpdate) =>
       ipcRenderer.invoke("backend:updateModpack", at, shareCode, update),
     deleteModpack: (at: string, shareCode: string) =>
@@ -937,6 +957,17 @@ export const api = {
       ) => callback(action);
       ipcRenderer.on("other:notificationClick", listener);
       return () => ipcRenderer.off("other:notificationClick", listener);
+    },
+  },
+  connectivity: {
+    test: () => ipcRenderer.invoke("connectivity:test"),
+    onResult: (callback: (result: ConnectivityCheckResult) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        result: ConnectivityCheckResult,
+      ) => callback(result);
+      ipcRenderer.on("connectivity:result", listener);
+      return () => ipcRenderer.off("connectivity:result", listener);
     },
   },
   server: {
@@ -1176,6 +1207,32 @@ export const api = {
       };
       ipcRenderer.on("launch", listener);
       return () => ipcRenderer.off("launch", listener);
+    },
+
+    onUpdateFailed: (callback: (payload: { message: string }) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: { message: string },
+      ) => callback(payload);
+      ipcRenderer.on("app:updateFailed", listener);
+      return () => ipcRenderer.off("app:updateFailed", listener);
+    },
+
+    onCrashAnalysis: (
+      callback: (
+        versionName: string,
+        instance: number,
+        analysis: CrashAnalysisPayload,
+      ) => void,
+    ) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        versionName: string,
+        instance: number,
+        analysis: CrashAnalysisPayload,
+      ) => callback(versionName, instance, analysis);
+      ipcRenderer.on("crashAnalysis", listener);
+      return () => ipcRenderer.off("crashAnalysis", listener);
     },
 
     onFriendUpdate: (callback: (data: any) => void) => {

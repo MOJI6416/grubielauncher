@@ -68,7 +68,8 @@ export function FriendItem({
   t,
 }: FriendItemProps) {
   const hasJoinTarget =
-    !!friend.versionCode && (!!friend.serverAddress || !!activeShare);
+    (!!friend.versionCode || !!activeShare?.versionShareCode) &&
+    (!!friend.serverAddress || !!activeShare);
   const canJoin = friend.isOnline && hasJoinTarget && !isRunning;
   const disabledKeys = useMemo(() => {
     const keys = ["last"] as string[];
@@ -139,6 +140,32 @@ export function FriendItem({
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            {canJoin && (
+              <span
+                role="button"
+                tabIndex={0}
+                aria-label={t("friends.join")}
+                title={t("friends.join")}
+                className="flex h-7 items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 text-xs font-medium text-white transition-colors hover:bg-emerald-500"
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  event.preventDefault();
+                  onJoin();
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  event.stopPropagation();
+                  event.preventDefault();
+                  onJoin();
+                }}
+              >
+                <Gamepad2 size={13} />
+                {t("friends.joinFlow.playAction")}
+              </span>
+            )}
             {local?.isMuted && (
               <Badge
                 variant="outline"
