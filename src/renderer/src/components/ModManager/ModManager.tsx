@@ -6,7 +6,6 @@ import {
   Provider,
   IVersion as ModManagerVersion,
   DependencyType,
-  ILocalDependency,
   IModpack,
   ISearchData,
   IAddedLocalProject,
@@ -44,6 +43,9 @@ import {
   Languages,
   ListRestart,
   Loader2,
+  PackagePlus,
+  Ban,
+  CircleHelp,
   X,
 } from "lucide-react";
 import { useAtom } from "jotai";
@@ -59,10 +61,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Alert,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -115,7 +114,15 @@ import GalleryCarousel from "./Gallery";
 import { Loader } from "@/types/Loader";
 import { IVersion } from "@/types/IVersion";
 import { ModToggleButton } from "./ModToggleButton";
-import { getProjectTypes } from "@renderer/utilities/mod";
+import {
+  buildInstalledIndex,
+  findInstalledProject,
+  getProjectTypes,
+  normalizeProjectTitle,
+  planDeletion,
+  type DeletionPlan,
+  type MatchableProject,
+} from "@renderer/utilities/mod";
 import { ALPModal } from "./AddLocalProjectsModal";
 import { UPModal } from "./UpdateProjectsModal";
 import { toast } from "sonner";
@@ -132,6 +139,7 @@ enum LoadingType {
   CHECK_LOCAL_MOD,
   GAME_VERSIONS,
   INSTALL,
+  QUICK_INSTALL,
   TRANSLATE,
 }
 
@@ -173,8 +181,38 @@ function providerBadgeVariant(provider: Provider) {
   return "secondary" as const;
 }
 
-function dependencyBadgeVariant(type: DependencyType) {
-  return type == DependencyType.INCOMPATIBLE ? "destructive" : "secondary";
+// Distinct colors per dependency type so required / optional / embedded /
+// incompatible are visually distinguishable at a glance (not just by label).
+function dependencyBadgeClassName(type: DependencyType): string {
+  switch (type) {
+    case DependencyType.REQUIRED:
+      return "border-transparent bg-[var(--warning)] text-[var(--warning-foreground)]";
+    case DependencyType.EMBEDDED:
+      return "border-transparent bg-[var(--success)] text-[var(--success-foreground)]";
+    case DependencyType.INCOMPATIBLE:
+      return "border-transparent bg-destructive text-white";
+    case DependencyType.OPTIONAL:
+      return "border-border bg-transparent text-muted-foreground";
+    default:
+      return "border-transparent bg-secondary text-secondary-foreground";
+  }
+}
+
+function DependencyTypeIcon({
+  type,
+  className,
+}: {
+  type: DependencyType;
+  className?: string;
+}) {
+  if (type == DependencyType.REQUIRED)
+    return <CircleAlert className={className} />;
+  if (type == DependencyType.EMBEDDED)
+    return <PackageCheck className={className} />;
+  if (type == DependencyType.INCOMPATIBLE) return <Ban className={className} />;
+  if (type == DependencyType.OPTIONAL)
+    return <CircleHelp className={className} />;
+  return null;
 }
 
 function getProjectDetailBody(project: IProject) {
@@ -199,7 +237,10 @@ function shouldShowProjectDetailsPane(project: IProject | null) {
   return project.provider != Provider.LOCAL || hasProjectDetails(project);
 }
 
-function isSameLocalProject(a: Pick<ILocalProject, "id" | "title">, b: Pick<ILocalProject, "id" | "title">) {
+function isSameLocalProject(
+  a: Pick<ILocalProject, "id" | "title">,
+  b: Pick<ILocalProject, "id" | "title">,
+) {
   return a.id === b.id || a.title.toLowerCase() === b.title.toLowerCase();
 }
 
@@ -321,7 +362,6 @@ export function ModManager({
   const [isLocal, setLocal] = useState(false);
   const prevProjectsRef = useRef<IProject[]>([]);
   const [projectTypes, setProjectTypes] = useState<ProjectType[]>([]);
-  const [dependency, setDependency] = useState<ILocalDependency[]>([]);
   const [isAvailableUpdate, setIsAvailableUpdate] = useState(false);
   const [isDownloadedVersion] = useAtom(isDownloadedVersionAtom);
   const [server] = useAtom(serverAtom);
@@ -345,10 +385,13 @@ export function ModManager({
   const [updateMods, setUpdateMods] = useState<IUpdateProject[]>([]);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isLocalDropActive, setIsLocalDropActive] = useState(false);
-  const [internalPendingRemovedLocalProjects, setInternalPendingRemovedLocalProjects] =
-    useState<ILocalProject[]>([]);
+  const [
+    internalPendingRemovedLocalProjects,
+    setInternalPendingRemovedLocalProjects,
+  ] = useState<ILocalProject[]>([]);
   const pendingRemovedLocalProjects =
-    controlledPendingRemovedLocalProjects ?? internalPendingRemovedLocalProjects;
+    controlledPendingRemovedLocalProjects ??
+    internalPendingRemovedLocalProjects;
   const setPendingRemovedLocalProjects =
     setControlledPendingRemovedLocalProjects ??
     setInternalPendingRemovedLocalProjects;
@@ -371,17 +414,22 @@ export function ModManager({
 
   const defaultSort = useMemo(() => sortValues[0] ?? "", [sortValues]);
 
-  const installedById = useMemo(() => {
-    const m = new Map<string, ILocalProject>();
-    for (const mod of mods) m.set(mod.id, mod);
-    return m;
-  }, [mods]);
+  const installedIndex = useMemo(() => buildInstalledIndex(mods), [mods]);
 
-  const installedByTitle = useMemo(() => {
-    const m = new Map<string, ILocalProject>();
-    for (const mod of mods) m.set(mod.title.toLowerCase(), mod);
-    return m;
-  }, [mods]);
+  const findInstalled = useCallback(
+    (item: MatchableProject) => findInstalledProject(installedIndex, item),
+    [installedIndex],
+  );
+
+  // What deleting the currently opened mod would remove (it + orphaned required
+  // dependencies) and which kept mods, if any, still require it (blockers).
+  const deletionPlan = useMemo<DeletionPlan>(
+    () =>
+      installedProject
+        ? planDeletion(mods, installedProject)
+        : { remove: [], blockers: [] },
+    [mods, installedProject],
+  );
 
   const filterLabelMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -596,23 +644,6 @@ export function ModManager({
     setLoadingType(null);
   }
 
-  function getLocalDependencies(title: string) {
-    const dependencies: ILocalDependency[] = [];
-
-    for (let index = 0; index < mods.length; index++) {
-      const mod = mods[index];
-      const dep = mod.version?.dependencies.find((d) => d.title == title);
-      if (!dep) continue;
-
-      dependencies.push({
-        title: mod.title,
-        relationType: dep.relationType,
-      });
-    }
-
-    return dependencies;
-  }
-
   function dependencyDisplay(relationType: DependencyType) {
     let dependencyType = {
       title: t("modManager.dependencyTypes.0"),
@@ -677,6 +708,136 @@ export function ModManager({
     });
 
     return results.filter(Boolean) as IUpdateProject[];
+  }
+
+  // Installs the latest version of a project plus every missing required
+  // dependency (resolved recursively) without opening the project page.
+  // Not available for modpacks.
+  async function quickInstall(root: IProject, index: number) {
+    if (isModpacks || !version) return;
+
+    clearDebounce();
+    setLoading(true);
+    setLoadingType(LoadingType.QUICK_INSTALL);
+    setProccessKey(index);
+
+    const resolveLoader = (pt: ProjectType): Loader =>
+      pt == ProjectType.PLUGIN && server
+        ? (server.core as unknown as Loader)
+        : loader || "vanilla";
+
+    try {
+      const added: ILocalProject[] = [];
+      // provider:id keys already handled (installed or queued/added in this run).
+      const seenIds = new Set<string>(mods.map((m) => `${m.provider}:${m.id}`));
+      const seenTitles = new Set<string>(
+        mods.map((m) => normalizeProjectTitle(m.title)).filter(Boolean),
+      );
+
+      const isHandled = (project: IProject) => {
+        const title = normalizeProjectTitle(project.title);
+        return (
+          seenIds.has(`${project.provider}:${project.id}`) ||
+          (!!title && seenTitles.has(title)) ||
+          !!findInstalled(project)
+        );
+      };
+
+      const queue: IProject[] = [root];
+      let rootMissingVersion = false;
+
+      while (queue.length) {
+        const project = queue.shift()!;
+        if (isHandled(project)) continue;
+
+        const vers = await api.modManager.getVersions(
+          project.provider,
+          project.id,
+          {
+            loader: resolveLoader(project.projectType),
+            version: version.id,
+            projectType: project.projectType,
+            modUrl: project.url,
+          },
+        );
+
+        const latest = vers[0];
+        if (!latest) {
+          if (project.id == root.id) rootMissingVersion = true;
+          continue;
+        }
+
+        // Resolve dependency projects so the recorded dependencies carry real
+        // titles (the deletion/dependency graph matches by title) and so the
+        // required ones can be queued for installation.
+        const resolvedDeps = latest.dependencies.length
+          ? await api.modManager.getDependencies(
+              project.provider,
+              project.id,
+              latest.dependencies,
+            )
+          : [];
+
+        added.push({
+          title: project.title,
+          description: project.description,
+          projectType: project.projectType,
+          iconUrl: project.iconUrl,
+          url: project.url,
+          provider: project.provider,
+          id: project.id,
+          version: {
+            id: latest.id,
+            files: latest.files.map((f) => ({
+              filename: f.filename,
+              size: f.size,
+              isServer: f.isServer,
+              url: f.url,
+              sha1: f.sha1,
+            })),
+            dependencies: resolvedDeps.map((d) => ({
+              title: d.project?.title || "",
+              relationType: d.relationType,
+            })),
+          },
+        });
+
+        const title = normalizeProjectTitle(project.title);
+        seenIds.add(`${project.provider}:${project.id}`);
+        if (title) seenTitles.add(title);
+
+        for (const dep of resolvedDeps) {
+          if (
+            dep.relationType == DependencyType.REQUIRED &&
+            dep.project &&
+            !isHandled(dep.project)
+          ) {
+            queue.push(dep.project);
+          }
+        }
+      }
+
+      if (added.length == 0) {
+        if (rootMissingVersion) toast.error(t("modManager.notFoundMod"));
+        else toast.warning(t("modManager.alreadyInstalled"));
+        return;
+      }
+
+      setMods([...mods, ...added]);
+
+      const depCount = added.length - 1;
+      if (depCount > 0) {
+        toast.success(t("modManager.quickInstalled", { count: depCount }));
+      } else {
+        toast.success(t("modManager.added"));
+      }
+    } catch {
+      toast.error(t("modManager.notFoundMod"));
+    } finally {
+      setLoading(false);
+      setLoadingType(null);
+      setProccessKey(-1);
+    }
   }
 
   const readLocalMods = useCallback(
@@ -1350,7 +1511,10 @@ export function ModManager({
                           variant="secondary"
                           className="shrink-0 tabular-nums"
                         >
-                          {mods.filter((m) => m.projectType == projectType).length}
+                          {
+                            mods.filter((m) => m.projectType == projectType)
+                              .length
+                          }
                         </Badge>
                         <p className="min-w-0 truncate text-sm font-medium">
                           {t("modManager.local")}
@@ -1424,7 +1588,12 @@ export function ModManager({
                     onDragLeave={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
-                      if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+                      if (
+                        event.currentTarget.contains(
+                          event.relatedTarget as Node,
+                        )
+                      )
+                        return;
                       setIsLocalDropActive(false);
                     }}
                     onDrop={dropLocalMods}
@@ -1434,19 +1603,21 @@ export function ModManager({
                         <FileBox />
                       </EmptyMedia>
                       <EmptyTitle>{t("modManager.selectLocals")}</EmptyTitle>
-                      <EmptyDescription>
-                        .jar / .zip
-                      </EmptyDescription>
+                      <EmptyDescription>.jar / .zip</EmptyDescription>
                     </EmptyHeader>
 
                     <EmptyContent>
                       {readingLocalModsProgress > 0 && (
-                        <Progress value={readingLocalModsProgress} className="w-64" />
+                        <Progress
+                          value={readingLocalModsProgress}
+                          className="w-64"
+                        />
                       )}
 
                       <Button
                         disabled={
-                          isLoading && loadingType == LoadingType.CHECK_LOCAL_MOD
+                          isLoading &&
+                          loadingType == LoadingType.CHECK_LOCAL_MOD
                         }
                         onClick={pickLocalMods}
                       >
@@ -1474,9 +1645,7 @@ export function ModManager({
                   <div className="flex-1 min-h-0">
                     <ScrollArea className="h-full pr-3">
                       {browser.map((item, index) => {
-                        const isInstalled =
-                          installedById.get(item.id) ??
-                          installedByTitle.get(item.title.toLowerCase());
+                        const isInstalled = findInstalled(item);
                         const isPendingRemoved =
                           item.provider == Provider.LOCAL &&
                           !isInstalled &&
@@ -1588,172 +1757,195 @@ export function ModManager({
                                       <Download className="size-4" />
                                     </Button>
                                   ) : item.provider != Provider.OTHER &&
-                                  item.provider != Provider.LOCAL &&
-                                  !isDownloadedVersion &&
-                                  isOwnerVersion ? (
-                                    <Button
-                                      size="icon-lg"
-                                      variant="secondary"
-                                      className="shrink-0"
-                                      disabled={isLoading}
-                                      onClick={async () => {
-                                        clearDebounce();
-                                        setLoading(true);
-                                        setLoadingType(LoadingType.INFO);
-                                        setProccessKey(index);
+                                    item.provider != Provider.LOCAL &&
+                                    !isDownloadedVersion &&
+                                    isOwnerVersion ? (
+                                    <>
+                                      {!isModpacks && !isInstalled && (
+                                        <Button
+                                          size="icon-lg"
+                                          variant="secondary"
+                                          className="shrink-0"
+                                          disabled={isLoading || !version}
+                                          title={t("modManager.quickInstall")}
+                                          onClick={() =>
+                                            quickInstall(
+                                              item as IProject,
+                                              index,
+                                            )
+                                          }
+                                        >
+                                          {isLoading &&
+                                          loadingType ==
+                                            LoadingType.QUICK_INSTALL &&
+                                          proccessKey == index ? (
+                                            <LoadingIcon />
+                                          ) : (
+                                            <PackagePlus className="size-4" />
+                                          )}
+                                        </Button>
+                                      )}
+                                      <Button
+                                        size="icon-lg"
+                                        variant="secondary"
+                                        className="shrink-0"
+                                        disabled={isLoading}
+                                        onClick={async () => {
+                                          clearDebounce();
+                                          setLoading(true);
+                                          setLoadingType(LoadingType.INFO);
+                                          setProccessKey(index);
 
-                                        const base = item as IProject;
+                                          const base = item as IProject;
 
-                                        let detailProject = base;
-                                        let body =
-                                          base.body || base.description || "";
-                                        let gallery: IProject["gallery"] =
-                                          (base as IProject).gallery || [];
-                                        const vers: ModManagerVersion[] = [];
+                                          let detailProject = base;
+                                          let body =
+                                            base.body || base.description || "";
+                                          let gallery: IProject["gallery"] =
+                                            (base as IProject).gallery || [];
+                                          const vers: ModManagerVersion[] = [];
 
-                                        if (base.provider != Provider.LOCAL) {
-                                          const fetched =
-                                            await api.modManager.getVersions(
-                                              base.provider,
-                                              base.id,
-                                              {
-                                                loader:
-                                                  projectType ==
-                                                    ProjectType.PLUGIN && server
-                                                    ? (server.core as unknown as Loader)
-                                                    : loader,
-                                                version: version
-                                                  ? version.id
-                                                  : undefined,
-                                                projectType,
-                                                modUrl: base.url,
-                                              },
+                                          if (base.provider != Provider.LOCAL) {
+                                            const fetched =
+                                              await api.modManager.getVersions(
+                                                base.provider,
+                                                base.id,
+                                                {
+                                                  loader:
+                                                    projectType ==
+                                                      ProjectType.PLUGIN &&
+                                                    server
+                                                      ? (server.core as unknown as Loader)
+                                                      : loader,
+                                                  version: version
+                                                    ? version.id
+                                                    : undefined,
+                                                  projectType,
+                                                  modUrl: base.url,
+                                                },
+                                              );
+                                            vers.push(...fetched);
+
+                                            if (
+                                              !vers.length &&
+                                              isInstalled?.version
+                                            ) {
+                                              vers.push({
+                                                dependencies: [],
+                                                downloads: -1,
+                                                id: isInstalled.version.id,
+                                                files:
+                                                  isInstalled.version.files,
+                                                name:
+                                                  isInstalled.version.files[0]
+                                                    ?.filename ??
+                                                  isInstalled.version.id,
+                                              });
+                                            }
+                                          }
+
+                                          if (!vers.length) {
+                                            setLoading(false);
+                                            setLoadingType(null);
+                                            setProccessKey(-1);
+                                            toast.error(
+                                              t("modManager.notFoundMod"),
                                             );
-                                          vers.push(...fetched);
+                                            return;
+                                          }
+
+                                          let currentIndex = 0;
+                                          if (isInstalled) {
+                                            setInstalledProject(isInstalled);
+                                            const idx = vers.findIndex(
+                                              (v) =>
+                                                v.id == isInstalled.version?.id,
+                                            );
+                                            currentIndex = idx == -1 ? 0 : idx;
+                                          } else {
+                                            setInstalledProject(null);
+                                          }
+
+                                          if (base.provider != Provider.LOCAL) {
+                                            const projectInfo =
+                                              await api.modManager.getProject(
+                                                base.provider,
+                                                base.id,
+                                              );
+                                            if (projectInfo) {
+                                              detailProject = {
+                                                ...base,
+                                                ...projectInfo,
+                                              };
+                                              body =
+                                                projectInfo.body ||
+                                                body ||
+                                                projectInfo.description ||
+                                                "";
+                                              gallery =
+                                                projectInfo.gallery?.length > 0
+                                                  ? projectInfo.gallery
+                                                  : gallery;
+                                            }
+                                          }
+
+                                          let currentVersion =
+                                            vers[currentIndex] ?? vers[0];
+                                          currentVersion = {
+                                            ...currentVersion,
+                                            dependencies:
+                                              currentVersion.dependencies ?? [],
+                                          };
 
                                           if (
-                                            !vers.length &&
-                                            isInstalled?.version
+                                            !isModpacks &&
+                                            currentVersion.dependencies.length >
+                                              0 &&
+                                            currentVersion.dependencies.filter(
+                                              (d) => d.project,
+                                            ).length == 0
                                           ) {
-                                            vers.push({
-                                              dependencies: [],
-                                              downloads: -1,
-                                              id: isInstalled.version.id,
-                                              files: isInstalled.version.files,
-                                              name:
-                                                isInstalled.version.files[0]
-                                                  ?.filename ??
-                                                isInstalled.version.id,
-                                            });
+                                            const deps =
+                                              await api.modManager.getDependencies(
+                                                base.provider,
+                                                base.id,
+                                                currentVersion.dependencies,
+                                              );
+                                            currentVersion = {
+                                              ...currentVersion,
+                                              dependencies: deps,
+                                            };
+                                            vers[currentIndex] = currentVersion;
                                           }
-                                        }
 
-                                        if (!vers.length) {
+                                          setProject({
+                                            ...detailProject,
+                                            versions: vers,
+                                            body,
+                                            gallery,
+                                          });
+                                          setSelectVersion(currentVersion);
+                                          setIsAvailableUpdate(
+                                            currentIndex != 0,
+                                          );
+
                                           setLoading(false);
                                           setLoadingType(null);
                                           setProccessKey(-1);
-                                          toast.error(
-                                            t("modManager.notFoundMod"),
-                                          );
-                                          return;
-                                        }
-
-                                        let currentIndex = 0;
-                                        if (isInstalled) {
-                                          setInstalledProject(isInstalled);
-                                          const idx = vers.findIndex(
-                                            (v) =>
-                                              v.id == isInstalled.version?.id,
-                                          );
-                                          currentIndex = idx == -1 ? 0 : idx;
-                                        } else {
-                                          setInstalledProject(null);
-                                        }
-
-                                        if (base.provider != Provider.LOCAL) {
-                                          const projectInfo =
-                                            await api.modManager.getProject(
-                                              base.provider,
-                                              base.id,
-                                            );
-                                          if (projectInfo) {
-                                            detailProject = {
-                                              ...base,
-                                              ...projectInfo,
-                                            };
-                                            body =
-                                              projectInfo.body ||
-                                              body ||
-                                              projectInfo.description ||
-                                              "";
-                                            gallery =
-                                              projectInfo.gallery?.length > 0
-                                                ? projectInfo.gallery
-                                                : gallery;
-                                          }
-                                        }
-
-                                        let currentVersion =
-                                          vers[currentIndex] ?? vers[0];
-                                        currentVersion = {
-                                          ...currentVersion,
-                                          dependencies:
-                                            currentVersion.dependencies ?? [],
-                                        };
-
-                                        if (
-                                          !isModpacks &&
-                                          currentVersion.dependencies.length >
-                                            0 &&
-                                          currentVersion.dependencies.filter(
-                                            (d) => d.project,
-                                          ).length == 0
-                                        ) {
-                                          const deps =
-                                            await api.modManager.getDependencies(
-                                              base.provider,
-                                              base.id,
-                                              currentVersion.dependencies,
-                                            );
-                                          currentVersion = {
-                                            ...currentVersion,
-                                            dependencies: deps,
-                                          };
-                                          vers[currentIndex] = currentVersion;
-                                        }
-
-                                        setProject({
-                                          ...detailProject,
-                                          versions: vers,
-                                          body,
-                                          gallery,
-                                        });
-                                        setSelectVersion(currentVersion);
-                                        setIsAvailableUpdate(currentIndex != 0);
-                                        setDependency(
-                                          isInstalled
-                                            ? getLocalDependencies(
-                                                isInstalled.title,
-                                              )
-                                            : [],
-                                        );
-
-                                        setLoading(false);
-                                        setLoadingType(null);
-                                        setProccessKey(-1);
-                                        setInfoModalOpen(true);
-                                      }}
-                                    >
-                                      {isLoading &&
-                                      loadingType == LoadingType.INFO &&
-                                      proccessKey == index ? (
-                                        <LoadingIcon />
-                                      ) : isInstalled ? (
-                                        <Settings className="size-4" />
-                                      ) : (
-                                        <Info className="size-4" />
-                                      )}
-                                    </Button>
+                                          setInfoModalOpen(true);
+                                        }}
+                                      >
+                                        {isLoading &&
+                                        loadingType == LoadingType.INFO &&
+                                        proccessKey == index ? (
+                                          <LoadingIcon />
+                                        ) : isInstalled ? (
+                                          <Settings className="size-4" />
+                                        ) : (
+                                          <Info className="size-4" />
+                                        )}
+                                      </Button>
+                                    </>
                                   ) : (
                                     item.url && (
                                       <Button
@@ -1797,8 +1989,7 @@ export function ModManager({
                                           disabled={isLoading}
                                           onClick={async () => {
                                             if (
-                                              item.provider ==
-                                                Provider.LOCAL &&
+                                              item.provider == Provider.LOCAL &&
                                               isInstalled
                                             ) {
                                               rememberRemovedLocalProject(
@@ -1963,7 +2154,7 @@ export function ModManager({
                   const prevProject = stack.pop();
                   if (!prevProject) return;
 
-                  const installed = installedById.get(prevProject.id) ?? null;
+                  const installed = findInstalled(prevProject) ?? null;
                   setInstalledProject(installed);
                   setProvider(prevProject.provider);
                   setProject(prevProject);
@@ -1977,10 +2168,6 @@ export function ModManager({
                   const safeIdx = idx == -1 ? 0 : idx;
                   setIsAvailableUpdate(safeIdx != 0);
                   setSelectVersion(prevProject.versions[safeIdx]);
-
-                  setDependency(
-                    installed ? getLocalDependencies(prevProject.title) : [],
-                  );
                 }}
               >
                 <DialogContent
@@ -2382,11 +2569,6 @@ export function ModManager({
                                             );
                                           }
                                           setInstalledProject(newProject);
-                                          setDependency(
-                                            getLocalDependencies(
-                                              newProject.title,
-                                            ),
-                                          );
 
                                           setLoading(false);
                                           setLoadingType(null);
@@ -2410,34 +2592,50 @@ export function ModManager({
                                               <Button
                                                 variant="destructive"
                                                 disabled={
-                                                  dependency.filter(
-                                                    (d) =>
-                                                      d.relationType ==
-                                                      DependencyType.REQUIRED,
-                                                  ).length > 0 || isLoading
+                                                  deletionPlan.blockers.length >
+                                                    0 || isLoading
                                                 }
                                                 onClick={() => {
-                                                  if (
-                                                    installedProject.provider ==
-                                                    Provider.LOCAL
-                                                  ) {
-                                                    rememberRemovedLocalProject(
-                                                      installedProject,
-                                                    );
+                                                  const removeKeys = new Set(
+                                                    deletionPlan.remove.map(
+                                                      (m) =>
+                                                        `${m.provider}:${m.id}`,
+                                                    ),
+                                                  );
+
+                                                  for (const removed of deletionPlan.remove) {
+                                                    if (
+                                                      removed.provider ==
+                                                      Provider.LOCAL
+                                                    ) {
+                                                      rememberRemovedLocalProject(
+                                                        removed,
+                                                      );
+                                                    }
                                                   }
 
-                                                  let newMods = [...mods];
-                                                  const idx = newMods.findIndex(
-                                                    (p) => p.id == project.id,
+                                                  setMods(
+                                                    mods.filter(
+                                                      (m) =>
+                                                        !removeKeys.has(
+                                                          `${m.provider}:${m.id}`,
+                                                        ),
+                                                    ),
                                                   );
-                                                  if (idx !== -1)
-                                                    newMods.splice(idx, 1);
-
-                                                  setMods([...newMods]);
                                                   setInstalledProject(null);
 
                                                   toast.success(
-                                                    t("modManager.deleted"),
+                                                    deletionPlan.remove.length >
+                                                      1
+                                                      ? t(
+                                                          "modManager.deletedMultiple",
+                                                          {
+                                                            count:
+                                                              deletionPlan
+                                                                .remove.length,
+                                                          },
+                                                        )
+                                                      : t("modManager.deleted"),
                                                   );
                                                 }}
                                               >
@@ -2446,27 +2644,53 @@ export function ModManager({
                                               </Button>
                                             </div>
                                           </TooltipTrigger>
-                                          {dependency.length > 0 && (
+                                          {deletionPlan.blockers.length > 0 ? (
                                             <TooltipContent>
                                               <div className="flex flex-col gap-1 p-1">
-                                                {t("modManager.addiction")}
+                                                {t("modManager.requiredBy")}
                                                 <ScrollArea className="max-h-[180px] pr-3">
                                                   <div className="flex flex-col gap-1">
-                                                    {dependency.map((d, i) => (
-                                                      <Badge
-                                                        variant={dependencyBadgeVariant(
-                                                          d.relationType,
-                                                        )}
-                                                        key={i}
-                                                      >
-                                                        {d.title}
-                                                      </Badge>
-                                                    ))}
+                                                    {deletionPlan.blockers.map(
+                                                      (b, i) => (
+                                                        <Badge
+                                                          className={`gap-1 ${dependencyBadgeClassName(
+                                                            DependencyType.REQUIRED,
+                                                          )}`}
+                                                          key={i}
+                                                        >
+                                                          {b.title}
+                                                        </Badge>
+                                                      ),
+                                                    )}
                                                   </div>
                                                 </ScrollArea>
                                               </div>
                                             </TooltipContent>
-                                          )}
+                                          ) : deletionPlan.remove.length > 1 ? (
+                                            <TooltipContent>
+                                              <div className="flex flex-col gap-1 p-1">
+                                                {t("modManager.alsoRemoves")}
+                                                <ScrollArea className="max-h-[180px] pr-3">
+                                                  <div className="flex flex-col gap-1">
+                                                    {deletionPlan.remove
+                                                      .filter(
+                                                        (m) =>
+                                                          m.id !=
+                                                          installedProject.id,
+                                                      )
+                                                      .map((m, i) => (
+                                                        <Badge
+                                                          variant="secondary"
+                                                          key={i}
+                                                        >
+                                                          {m.title}
+                                                        </Badge>
+                                                      ))}
+                                                  </div>
+                                                </ScrollArea>
+                                              </div>
+                                            </TooltipContent>
+                                          ) : null}
                                         </Tooltip>
 
                                         {project.provider != Provider.LOCAL && (
@@ -2566,12 +2790,7 @@ export function ModManager({
                                                 if (!d.project) return null;
 
                                                 const depInstalled =
-                                                  installedById.get(
-                                                    d.project.id,
-                                                  ) ??
-                                                  installedByTitle.get(
-                                                    d.project.title.toLowerCase(),
-                                                  );
+                                                  findInstalled(d.project);
 
                                                 const depType =
                                                   dependencyDisplay(
@@ -2604,12 +2823,15 @@ export function ModManager({
 
                                                     <div className="flex shrink-0 items-center gap-1">
                                                       <Badge
-                                                        variant={dependencyBadgeVariant(
+                                                        className={`max-w-28 justify-center gap-1 truncate whitespace-nowrap ${dependencyBadgeClassName(
                                                           d.relationType,
-                                                        )}
-                                                        className="max-w-28 justify-center truncate whitespace-nowrap"
+                                                        )}`}
                                                         title={depType.title}
                                                       >
+                                                        <DependencyTypeIcon
+                                                          type={d.relationType}
+                                                          className="size-3 shrink-0"
+                                                        />
                                                         {depType.title}
                                                       </Badge>
 
@@ -2774,13 +2996,6 @@ export function ModManager({
                                                             );
                                                             setSelectVersion(
                                                               currentVersion,
-                                                            );
-                                                            setDependency(
-                                                              depInstalled
-                                                                ? getLocalDependencies(
-                                                                    depInstalled.title,
-                                                                  )
-                                                                : [],
                                                             );
                                                             setProject({
                                                               ...detailProject,

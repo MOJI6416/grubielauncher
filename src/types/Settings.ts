@@ -4,9 +4,14 @@ export const LANGUAGES = [
   { code: 'uk', label: 'Українська', country: 'UA' }
 ]
 
+export type TFont = 'rubik' | 'minecraft'
+
+export const FONTS: TFont[] = ['rubik', 'minecraft']
+
 export type TSettings = {
   xmx: number
   lang: string
+  font: TFont
   devMode: boolean
   downloadLimit: number
   crashTelemetry: boolean
@@ -16,6 +21,7 @@ export type TSettings = {
 export const DEFAULT_SETTINGS: TSettings = {
   xmx: 2048,
   lang: 'en',
+  font: 'rubik',
   devMode: false,
   downloadLimit: 6,
   crashTelemetry: true,
@@ -36,6 +42,7 @@ export function normalizeSettings(
   return {
     xmx: Number.isFinite(xmx) && xmx >= 1024 ? Math.round(xmx) : DEFAULT_SETTINGS.xmx,
     lang,
+    font: FONTS.includes(value?.font as TFont) ? (value!.font as TFont) : DEFAULT_SETTINGS.font,
     devMode: typeof value?.devMode === 'boolean' ? value.devMode : DEFAULT_SETTINGS.devMode,
     downloadLimit:
       Number.isFinite(downloadLimit) && downloadLimit >= 1

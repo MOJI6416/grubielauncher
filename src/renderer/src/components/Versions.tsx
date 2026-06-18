@@ -24,6 +24,7 @@ import {
   PackagePlus,
   Play,
   Search,
+  CloudDownload,
 } from "lucide-react";
 import { VersionStatistics } from "./VersionStatistics";
 import { IVersionStatistics } from "@/types/VersionStatistics";
@@ -205,6 +206,7 @@ export function Versions({
   const [consoles] = useAtom(consolesAtom);
 
   const selectReqIdRef = useRef(0);
+  const hydratedSelectionRef = useRef(false);
   const flipItemRef = useFlipList();
 
   useEffect(() => {
@@ -293,6 +295,22 @@ export function Versions({
       setIsStatistics(false);
     }
   };
+
+  // The version auto-selected on startup is set via the bare atom, so the
+  // owner / downloaded / server / statistics state is never populated. Run the
+  // full selection once so it behaves like a manual pick (editable, etc.).
+  useEffect(() => {
+    if (hydratedSelectionRef.current) return;
+    if (!versionsLoaded || !account || !selectedVersion) return;
+
+    hydratedSelectionRef.current = true;
+    const current =
+      versions.find(
+        (v) => v.version.name === selectedVersion.version.name,
+      ) || selectedVersion;
+    void selectVersion(current, isOwner(current.version.owner, account));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [versionsLoaded, account, selectedVersion, versions]);
 
   return (
     <>
@@ -472,6 +490,16 @@ export function Versions({
                                 >
                                   {vc.version.version.id}
                                 </Badge>
+
+                                {vc.version.downloadedVersion && (
+                                  <Badge
+                                    variant="outline"
+                                    className="shrink-0 rounded-md border-sky-500/30 bg-sky-500/10 px-1.5 text-sky-600 dark:text-sky-400"
+                                    title={t("versions.downloadedLabel")}
+                                  >
+                                    <CloudDownload className="size-3.5" />
+                                  </Badge>
+                                )}
 
                                 {isRunningInstance && (
                                   <Badge className="border-emerald-600/30 bg-emerald-600/15 text-emerald-500">

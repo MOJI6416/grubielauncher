@@ -249,6 +249,9 @@
     "modpackDependency": "Залежність модпаку",
     "added": "Модифікацію додано",
     "deleted": "Модифікацію видалено",
+    "deletedMultiple": "Видалено модифікацій: {{count}}",
+    "requiredBy": "Не можна видалити — потрібна для",
+    "alsoRemoves": "Також видалить невикористані залежності",
     "updated": "Модифікацію оновлено",
     "dependencyTypes": [
       "Невідомо",
@@ -297,6 +300,8 @@
     "enabled": "Модифікація увімкнена",
     "translate": "Перекласти опис",
     "addedMultiple": "Додано {{count}} модифікації",
+    "quickInstall": "Встановити останню версію + залежності",
+    "quickInstalled": "Модифікацію додано з {{count}} залежностями",
     "addingProjects": "Додавання модифікацій",
     "modDuplicate": "Модифікація з такою назвою або ідентифікатором вже встановлена",
     "modInvalid": "Модифікація недійсна або пошкоджена",
@@ -365,6 +370,12 @@
     "memory": "Виділення пам’яті",
     "saved": "Налаштування збережено",
     "language": "Мова інтерфейсу",
+    "font": "Шрифт",
+    "fontDescription": "Шрифт інтерфейсу",
+    "fonts": {
+      "rubik": "Rubik",
+      "minecraft": "Minecraft"
+    },
     "mb": "МБ",
     "devMode": "Режим розробника",
     "theme": "Тема",
@@ -487,6 +498,7 @@
     "selectTags": "Оберіть теги",
     "versionShareDel": "Видалити збірку з сервера",
     "ownerTooltip": "Власник: {{nickname}}",
+    "downloadedLabel": "Завантажена",
     "searchPlaceholder": "Пошук збірок…",
     "sections": {
       "content": "Керування збіркою",

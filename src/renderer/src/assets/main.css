@@ -12,8 +12,22 @@
   src: url("./minecraft.ttf") format("truetype");
 }
 
+@font-face {
+  font-family: "Rubik";
+  src: url("./fonts/Rubik.ttf") format("truetype");
+  font-weight: 300 900;
+  font-display: swap;
+}
+
+:root {
+  --font-system: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "Noto Sans", sans-serif;
+  --font-rubik: "Rubik", var(--font-system);
+  --font-minecraft: "Minecraft", var(--font-system);
+}
+
 @theme inline {
-  --font-sans: "Minecraft", sans-serif;
+  --font-sans: var(--font-rubik);
   --font-heading: var(--font-sans);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -149,7 +163,15 @@
   }
 
   html {
-    @apply font-sans;
+    font-family: var(--font-rubik);
+  }
+
+  html[data-font="rubik"] {
+    font-family: var(--font-rubik);
+  }
+
+  html[data-font="minecraft"] {
+    font-family: var(--font-minecraft);
   }
 
   ::-webkit-scrollbar {

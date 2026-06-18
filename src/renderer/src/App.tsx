@@ -277,6 +277,10 @@ function App() {
   ]);
 
   useEffect(() => {
+    document.documentElement.dataset.font = settings.font;
+  }, [settings.font]);
+
+  useEffect(() => {
     const updateInternetStatus = () => {
       setIsInternetOnline(window.navigator.onLine);
     };

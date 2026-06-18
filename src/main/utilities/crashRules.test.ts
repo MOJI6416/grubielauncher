@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { matchCrashRules, sanitizeCrashRules } from "./crashRules";
+import {
+  extractCrashSignature,
+  matchCrashRules,
+  sanitizeCrashRules,
+} from "./crashRules";
 
 describe("matchCrashRules", () => {
   it("detects out of memory", () => {
@@ -15,6 +19,28 @@ describe("matchCrashRules", () => {
     );
     expect(match?.ruleId).toBe("fabric_missing_dep");
     expect(match?.culprits).toContain("Sodium Extra");
+  });
+
+  it("detects a corrupted jar and names the broken file", () => {
+    const match = matchCrashRules(
+      "Error: Invalid or corrupt jarfile C:\\Users\\me\\.grubielauncher\\mods\\sodium-fabric-0.5.8.jar",
+    );
+    expect(match?.ruleId).toBe("corrupted_files");
+    expect(match?.culprits).toContain("sodium-fabric-0.5.8.jar");
+  });
+
+  it("still detects a missing class as corrupted files", () => {
+    expect(
+      matchCrashRules("java.lang.NoClassDefFoundError: net/foo/Bar")?.ruleId,
+    ).toBe("corrupted_files");
+  });
+
+  it("detects incompatible mods with the culprit mod", () => {
+    const match = matchCrashRules(
+      "net.fabricmc.loader.impl.discovery.ModResolutionException: Mod 'Some Mod' (somemod) is incompatible with mod 'Other'",
+    );
+    expect(match?.ruleId).toBe("mod_resolution");
+    expect(match?.culprits).toContain("Some Mod");
   });
 
   it("detects mixin failures with the culprit mod", () => {
@@ -74,6 +100,33 @@ describe("matchCrashRules", () => {
       "java.lang.OutOfMemoryError while loading class java.lang.ClassNotFoundException",
     );
     expect(match?.ruleId).toBe("out_of_memory");
+  });
+});
+
+describe("extractCrashSignature", () => {
+  it("captures the crash description and exception line", () => {
+    const signature = extractCrashSignature(
+      "Time: 2026-06-17\nDescription: Exception in server tick loop\n\njava.lang.NullPointerException: Cannot invoke method\n\tat net.foo.Bar.tick(Bar.java:42)",
+    );
+    expect(signature).toContain("Exception in server tick loop");
+    expect(signature).toContain("java.lang.NullPointerException");
+  });
+
+  it("strips file paths and the OS username", () => {
+    const signature = extractCrashSignature(
+      "Error: Invalid or corrupt jarfile C:\\Users\\John\\.grubielauncher\\mods\\sodium.jar",
+    );
+    expect(signature).not.toContain("John");
+    expect(signature).not.toContain("Users");
+    expect(signature).toContain("sodium.jar");
+  });
+
+  it("falls back to the exit code when there is no log text", () => {
+    expect(extractCrashSignature("", 134)).toBe("exit code 134");
+  });
+
+  it("returns an empty string when there is nothing to fingerprint", () => {
+    expect(extractCrashSignature("")).toBe("");
   });
 });
 

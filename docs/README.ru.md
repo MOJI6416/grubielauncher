@@ -25,12 +25,19 @@
 <kbd>[<img title="English" alt="English" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Flag_of_the_United_Kingdom_%281-2%29.svg/330px-Flag_of_the_United_Kingdom_%281-2%29.svg.png" width="22">](https://github.com/MOJI6416/grubielauncher/blob/main/README.md)</kbd>
 <kbd>[<img title="Ukraine" alt="Ukraine" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Flag_of_Ukraine.svg/1280px-Flag_of_Ukraine.svg.png" width="22">](https://github.com/MOJI6416/grubielauncher/blob/main/docs/README.uk.md)</kbd>
 
+# Полезные ссылки
+
+- **Веб-сайт:** [grubielauncher.com](https://grubielauncher.com/)
+- **Загрузки / Релизы:** [github.com/MOJI6416/grubielauncher/releases](https://github.com/MOJI6416/grubielauncher/releases)
+- **Политика конфиденциальности:** [grubielauncher.com/privacy](https://grubielauncher.com/privacy)
+- **Политика подписи кода:** [grubielauncher.com/code-signing](https://grubielauncher.com/code-signing)
+
 # Возможности
 
 - Установка и запуск **официальных версий Minecraft**.
 - Поддержка **Forge**, **Fabric**, **NeoForge** и **Quilt**.
 - Автоматическая загрузка Java и зависимостей.
-- Поддержка нескольких аккаунтов: **Microsoft/Mojang**, **Ely.by**, **Discord** и оффлайн.
+- Поддержка аккаунтов **Microsoft/Mojang**, отдельных сторонних провайдеров аутентификации (таких как **Ely.by** и **Discord**) и локальных профилей для разработки или приватного тестирования.
 - Удобное управление версиями, модами и мирами.
 - Интеграция с **CurseForge** и **Modrinth**.
 - Система скинов: Microsoft, Ely.by и **собственные** скины.
@@ -55,3 +62,13 @@ _(Поддерживаемые платформы: Windows, Linux)_
 # Лицензия
 
 Проект распространяется по лицензии **MIT**.
+
+# Политика подписи кода
+
+Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+- Подписанные Windows-артефакты релизов собираются из публичного репозитория исходного кода и официальных тегов релизов.
+- Подписанные артефакты могут включать инсталляторы Windows в формате `.exe` и бинарные файлы приложения, сгенерированные официальным конвейером релизов.
+- **Утверждающий подпись:** Dmytro Burmych / MOJI6416.
+- **Политика конфиденциальности:** [grubielauncher.com/privacy](https://grubielauncher.com/privacy)
+- **Политика подписи кода:** [grubielauncher.com/code-signing](https://grubielauncher.com/code-signing)

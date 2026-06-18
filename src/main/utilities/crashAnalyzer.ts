@@ -4,6 +4,7 @@ import { IVersionConf } from "@/types/IVersion";
 import { TSettings } from "@/types/Settings";
 import {
   BUILT_IN_CRASH_RULES,
+  extractCrashSignature,
   matchCrashRules,
   sanitizeCrashRules,
 } from "./crashRules";
@@ -110,7 +111,15 @@ export async function analyzeGameCrash(
 
   const rules = await getCrashRules();
   const match = matchCrashRules(text || "", rules, exitCode);
-  if (!match) return null;
+
+  // No rule matched, but the game still crashed (this runs only on a non-zero
+  // exit): report it as "unknown" with an anonymous signature so the dashboard
+  // surfaces uncaught crashes and we can see which rules are worth adding.
+  if (!match) {
+    const sample = extractCrashSignature(text || "", exitCode);
+    void reportCrashRuleHit("unknown", versionPath, sample).catch(() => {});
+    return null;
+  }
 
   void reportCrashRuleHit(match.ruleId, versionPath).catch(() => {});
 
@@ -125,6 +134,7 @@ export async function analyzeGameCrash(
 async function reportCrashRuleHit(
   ruleId: string,
   versionPath: string,
+  sample?: string,
 ): Promise<void> {
   try {
     const launcherPath = path.join(app.getPath("appData"), ".grubielauncher");
@@ -145,6 +155,7 @@ async function reportCrashRuleHit(
         mcVersion: versionConf?.version?.id || undefined,
         loaderName: versionConf?.loader?.name || undefined,
         launcherVersion: app.getVersion(),
+        sample: sample || undefined,
       },
       { timeout: 5000 },
     );

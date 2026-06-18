@@ -36,9 +36,9 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
     pattern: "DuplicateModsFoundException|Found duplicate mods",
     culpritPattern: "Mod ID: '([\\w-]+)'",
     messages: {
-      en: "Duplicate mods were found. Remove the older copy from the mods folder.",
-      ru: "Найдены дубликаты модов. Удалите старую копию из папки mods.",
-      uk: "Знайдено дублікати модів. Видаліть стару копію з теки mods.",
+      en: "The same mod is installed twice. Open the mods folder and delete the duplicate/older copy — keep only one.",
+      ru: "Один и тот же мод установлен дважды. Откройте папку mods и удалите дубликат/старую копию — оставьте только одну.",
+      uk: "Один і той самий мод встановлено двічі. Відкрийте теку mods і видаліть дублікат/стару копію — залиште лише одну.",
     },
   },
   {
@@ -47,9 +47,9 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
       "which is missing|Unmet dependency listing|requires (any )?version .* of (mod )?[\\w-]+",
     culpritPattern: "Mod '([^']+)'",
     messages: {
-      en: "A mod is missing a required dependency. Open the mod manager and install it.",
-      ru: "Моду не хватает обязательной зависимости. Откройте мод-менеджер и установите её.",
-      uk: "Моду бракує обов'язкової залежності. Відкрийте мод-менеджер і встановіть її.",
+      en: "A mod needs another mod that isn’t installed (missing dependency). Open the mod manager and install the required dependency, or remove the mod that needs it.",
+      ru: "Моду нужен другой мод, которого нет в сборке (отсутствует зависимость). Откройте мод-менеджер и установите нужную зависимость или удалите мод, которому она требуется.",
+      uk: "Моду потрібен інший мод, якого немає у збірці (відсутня залежність). Відкрийте мод-менеджер і встановіть потрібну залежність або видаліть мод, якому вона потрібна.",
     },
   },
   {
@@ -57,9 +57,9 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
     pattern: "Missing or unsupported mandatory dependencies",
     culpritPattern: "Mod ID: '?([\\w-]+)'?",
     messages: {
-      en: "A mod is missing a required dependency or needs a different mod version.",
-      ru: "Моду не хватает зависимости или требуется другая версия мода.",
-      uk: "Моду бракує залежності або потрібна інша версія мода.",
+      en: "A mod is missing a required dependency or needs a different version of one. Open the mod manager and install/update the dependency for the affected mod.",
+      ru: "Моду не хватает обязательной зависимости или нужна другая её версия. Откройте мод-менеджер и установите/обновите зависимость для затронутого мода.",
+      uk: "Моду бракує обов'язкової залежності або потрібна інша її версія. Відкрийте мод-менеджер і встановіть/оновіть залежність для зачепленого мода.",
     },
   },
   {
@@ -76,10 +76,11 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
   {
     id: "mod_resolution",
     pattern: "ModResolutionException|Incompatible mods found",
+    culpritPattern: "Mod '([^']+)'",
     messages: {
-      en: "The installed mods are incompatible with each other. Check the mod list in the mod manager.",
-      ru: "Установленные моды несовместимы между собой. Проверьте список модов в мод-менеджере.",
-      uk: "Встановлені моди несумісні між собою. Перевірте список модів у мод-менеджері.",
+      en: "Some installed mods can’t work together (incompatible versions or a conflict). Update the affected mods to matching versions, or remove one of them in the mod manager.",
+      ru: "Некоторые установленные моды не могут работать вместе (несовместимые версии или конфликт). Обновите затронутые моды до совместимых версий или удалите один из них в мод-менеджере.",
+      uk: "Деякі встановлені моди не можуть працювати разом (несумісні версії або конфлікт). Оновіть зачеплені моди до сумісних версій або видаліть один із них у мод-менеджері.",
     },
   },
   {
@@ -174,11 +175,12 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
   {
     id: "corrupted_files",
     pattern:
-      "NoClassDefFoundError|ClassNotFoundException|zip END header not found",
+      "Invalid or corrupt jarfile|error in opening zip file|Unexpected end of ZLIB input stream|zip END header not found|zip file is empty|Could not find or load main class|NoClassDefFoundError|ClassNotFoundException",
+    culpritPattern: "(?:corrupt jarfile|opening zip file)\\s+\\S*?([^\\s/\\\\:]+\\.jar)",
     messages: {
-      en: "Game or mod files look corrupted. Run “Check integrity” in the version settings.",
-      ru: "Файлы игры или модов повреждены. Запустите «Проверку целостности» в настройках сборки.",
-      uk: "Файли гри або модів пошкоджені. Запустіть «Перевірку цілісності» в налаштуваннях збірки.",
+      en: "A game or mod file is damaged and won’t open (corrupted .jar/archive). If a file is named below, delete and re-download that mod; otherwise run “Check integrity” in the version settings to restore game files.",
+      ru: "Файл игры или мода повреждён и не открывается (битый .jar/архив). Если файл указан ниже — удалите и скачайте этот мод заново; иначе запустите «Проверку целостности» в настройках сборки, чтобы восстановить файлы игры.",
+      uk: "Файл гри або мода пошкоджений і не відкривається (битий .jar/архів). Якщо файл указано нижче — видаліть і завантажте цей мод заново; інакше запустіть «Перевірку цілісності» в налаштуваннях збірки, щоб відновити файли гри.",
     },
   },
   {
@@ -255,6 +257,43 @@ function extractCulprits(rule: CrashRule, text: string): string[] {
   } catch {}
 
   return [...culprits];
+}
+
+// Strips directory paths (which can contain the OS username) down to plain
+// file names, so a signature stays anonymous while keeping the useful basename.
+function sanitizeSignature(line: string): string {
+  return line
+    .replace(/[A-Za-z]:\\[^\s"']+/g, (match) => match.split(/[\\/]/).pop() || match)
+    .replace(/\/(?:[^\s"'/]+\/)+([^\s"'/]+)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Builds a short, anonymous fingerprint of an unrecognized crash so the
+// dashboard can group "unknown" hits and we can see which rules to add.
+export function extractCrashSignature(text: string, exitCode?: number): string {
+  const parts: string[] = [];
+
+  if (text) {
+    const description = text.match(/^\s*Description:\s*(.+)$/m);
+    if (description?.[1]) parts.push(description[1].trim());
+
+    // First line that looks like the actual cause: an exception/error class or
+    // a known fatal phrase. The "Description:" line is skipped — already taken.
+    const relevant =
+      /[\w.$]*(?:Exception|Error)\b|invalid or corrupt|could not (?:find|load)|error in opening zip|unexpected end of|no space left|caused by|failed to|fatal/i;
+    const errorLine = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line && !/^Description:/i.test(line) && relevant.test(line));
+    if (errorLine && !parts.includes(errorLine)) parts.push(errorLine);
+  }
+
+  if (parts.length === 0 && typeof exitCode === "number") {
+    parts.push(`exit code ${exitCode}`);
+  }
+
+  return sanitizeSignature(parts.join(" | ")).slice(0, 200);
 }
 
 export function matchCrashRules(

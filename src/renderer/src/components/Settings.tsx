@@ -13,6 +13,7 @@ import {
   Loader2,
   MemoryStick,
   Save,
+  Type,
   Volume2,
 } from "lucide-react";
 import { useAtom } from "jotai";
@@ -39,7 +40,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { LANGUAGES, normalizeSettings } from "@/types/Settings";
+import { FONTS, LANGUAGES, normalizeSettings } from "@/types/Settings";
 import { changeAppLanguage } from "@renderer/i18n";
 import { ConnectivityModal } from "./ConnectivityModal";
 import type { ConnectivityCheckResult } from "@/types/Connectivity";
@@ -58,6 +59,7 @@ export function Settings({
   const [xmx, setXmx] = useState(() => normalizedInitialSettings.xmx);
   const [settingsPath, setSettingsPath] = useState("");
   const [lang, setLang] = useState(() => normalizedInitialSettings.lang);
+  const [font, setFont] = useState(() => normalizedInitialSettings.font);
   const [devMode, setDevMode] = useState(() => normalizedInitialSettings.devMode);
   const [crashTelemetry, setCrashTelemetry] = useState(
     () => normalizedInitialSettings.crashTelemetry,
@@ -79,6 +81,7 @@ export function Settings({
   const hasChanges =
     settings.xmx != xmx ||
     settings.lang != lang ||
+    settings.font != font ||
     settings.devMode != devMode ||
     settings.downloadLimit != downloadLimit ||
     settings.crashTelemetry != crashTelemetry ||
@@ -87,6 +90,8 @@ export function Settings({
   const closeSettings = () => {
     setLang(settings.lang);
     void changeAppLanguage(settings.lang);
+    setFont(settings.font);
+    document.documentElement.dataset.font = settings.font;
     onClose();
   };
 
@@ -98,6 +103,7 @@ export function Settings({
     setSounds(nextSettings.sounds);
     setDownloadLimit(nextSettings.downloadLimit);
     setLang(nextSettings.lang);
+    setFont(nextSettings.font);
   }, [settings]);
 
   useEffect(() => {
@@ -288,6 +294,42 @@ export function Settings({
                 <div className="flex items-center justify-between gap-4 px-4 py-3">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
+                      <Type className="size-4 text-muted-foreground" />
+                    </span>
+                    <div className="min-w-0">
+                      <Label className="text-sm font-medium">
+                        {t("settings.font")}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {t("settings.fontDescription")}
+                      </p>
+                    </div>
+                  </div>
+                  <Select
+                    value={font}
+                    onValueChange={(value) => {
+                      if (!value) return;
+
+                      setFont(value as (typeof FONTS)[number]);
+                      document.documentElement.dataset.font = value;
+                    }}
+                  >
+                    <SelectTrigger className="w-42">
+                      <SelectValue placeholder={t("settings.font")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FONTS.map((f) => (
+                        <SelectItem key={f} value={f}>
+                          {t(`settings.fonts.${f}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              <Separator />
+                <div className="flex items-center justify-between gap-4 px-4 py-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
                       <Volume2 className="size-4 text-muted-foreground" />
                     </span>
                     <div className="min-w-0">
@@ -408,6 +450,7 @@ export function Settings({
                   ...settings,
                   xmx,
                   lang,
+                  font,
                   devMode,
                   crashTelemetry,
                   sounds,
