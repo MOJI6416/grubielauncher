@@ -1,9 +1,9 @@
 name: Release Launcher
 
+# Запуск вручную: Actions -> Release Launcher -> Run workflow.
+# Версия релиза берётся из package.json, тег создаёт electron-builder.
 on:
-  push:
-    tags:
-      - "*.*.*"
+  workflow_dispatch:
 
 permissions:
   contents: write
