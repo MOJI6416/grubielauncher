@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { FONTS, LANGUAGES, normalizeSettings } from "@/types/Settings";
@@ -141,6 +142,7 @@ export function Settings({
         <DialogContent
           data-account-click-ignore="true"
           className="flex max-h-[85vh] flex-col sm:max-w-lg"
+          onOpenAutoFocus={(event) => event.preventDefault()}
           onClick={(event) => event.stopPropagation()}
           onMouseDown={(event) => event.stopPropagation()}
         >
@@ -149,7 +151,7 @@ export function Settings({
               <div className="grid gap-1">
                 <DialogTitle>{t("settings.title")}</DialogTitle>
               </div>
-              {version && (
+              {version ? (
                 <Badge asChild variant="secondary" className="font-mono tabular-nums">
                   <button
                     type="button"
@@ -159,6 +161,8 @@ export function Settings({
                     {version}
                   </button>
                 </Badge>
+              ) : (
+                <Skeleton className="h-6 w-16 rounded-full" />
               )}
             </div>
           </DialogHeader>

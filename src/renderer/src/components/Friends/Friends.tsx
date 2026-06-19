@@ -21,6 +21,7 @@ import {
   Loader2,
   RefreshCw,
   SendHorizontal,
+  TriangleAlert,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -75,6 +76,7 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { toast } from "sonner";
 import { LazyDialogFallback } from "../LazyDialogFallback";
+import { LazyAddVersion } from "../LazyAddVersion";
 import {
   lazyWithPreload,
   schedulePreload,
@@ -88,16 +90,11 @@ const api = window.api;
 const loadSkinView = () =>
   import("../SkinView").then((module) => ({ default: module.SkinView }));
 const loadAccountInfo = () => import("../Account/AccountInfo");
-const loadAddVersion = () =>
-  import("../Modals/Version/AddVersion").then((module) => ({
-    default: module.AddVersion,
-  }));
 const loadChatModal = () =>
   import("./ChatModal").then((module) => ({ default: module.ChatModal }));
 
 const LazySkinView = lazyWithPreload(loadSkinView);
 const LazyAccountInfo = lazyWithPreload(loadAccountInfo);
-const LazyAddVersion = lazyWithPreload(loadAddVersion);
 const LazyChatModal = lazyWithPreload(loadChatModal);
 
 export interface IFriendRequest {
@@ -279,6 +276,7 @@ export function Friends({
   const chatModpackIdsRef = useRef<Set<string>>(new Set());
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingFriendRequestRef = useRef<string | null>(null);
+  const chatOpenRequestRef = useRef(0);
 
   useEffect(() => {
     friendsRef.current = friends;
@@ -479,6 +477,7 @@ export function Friends({
       stopLoading();
 
       if (error.operation === "getMessages") {
+        chatOpenRequestRef.current += 1;
         setChatModal(false);
         setSelectedFriend("");
         setFriend(undefined);
@@ -834,16 +833,29 @@ export function Friends({
 
       startLoading("messages");
       setSelectedFriend(friendId);
-      setChatModal(true);
 
       const index = notReads.indexOf(friendId);
       if (index !== -1) {
         setNotReads((prev) => prev.filter((id) => id !== friendId));
       }
 
+      const openRequest = ++chatOpenRequestRef.current;
+      void LazyChatModal.preload()
+        .then(() => {
+          if (chatOpenRequestRef.current === openRequest) {
+            setChatModal(true);
+          }
+        })
+        .catch(() => {
+          if (chatOpenRequestRef.current !== openRequest) return;
+
+          stopLoading();
+          toast.warning(t("friends.operationErrors.unknown"));
+        });
+
       socket.emit("getMessages", { friendId });
     },
-    [socket, notReads, startLoading, setSelectedFriend],
+    [socket, notReads, startLoading, setSelectedFriend, stopLoading, t],
   );
 
   useEffect(() => {
@@ -1641,7 +1653,7 @@ export function Friends({
       )}
 
       {friend && socket && chatModal && (
-        <Suspense fallback={<LazyDialogFallback variant="form" />}>
+        <Suspense fallback={<LazyDialogFallback variant="chat" />}>
           <LazyChatModal
             friend={friend}
             messages={messages}
@@ -1709,7 +1721,8 @@ export function Friends({
             <DialogHeader>
               <DialogTitle>{t("common.confirmation")}</DialogTitle>
             </DialogHeader>
-            <Alert className="border-[var(--warning)]/40">
+            <Alert variant="warning">
+              <TriangleAlert />
               <AlertTitle>
                 {`${t("friends.deleteAlert")} ${friend.user.nickname}?`}
               </AlertTitle>

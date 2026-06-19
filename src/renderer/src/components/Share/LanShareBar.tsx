@@ -426,7 +426,7 @@ export function LanShareModal({
 
           {errorText && shareState.phase !== "idle" && (
             <Alert
-              variant={shareState.phase === "conflict" ? "default" : "destructive"}
+              variant={shareState.phase === "conflict" ? "warning" : "destructive"}
             >
               <AlertCircle />
               <AlertTitle>{errorText}</AlertTitle>
@@ -434,7 +434,7 @@ export function LanShareModal({
           )}
 
           {streamDiagnostic && (
-            <Alert>
+            <Alert variant="info">
               <AlertCircle />
               <AlertTitle>{t("share.streamDiagnostic.title")}</AlertTitle>
               <AlertDescription className="break-words">
@@ -457,7 +457,7 @@ export function LanShareModal({
           )}
 
           {isPlainShareBlocked && (
-            <Alert>
+            <Alert variant="info">
               <AlertCircle />
               <AlertTitle>{t("share.plainAccountDisabled")}</AlertTitle>
               <AlertDescription>{t("share.waitForLan")}</AlertDescription>

@@ -9,14 +9,52 @@ export default function GalleryCarousel({
 }: {
   gallery: IProject["gallery"];
 }) {
-  const [thumbEmblaRef, thumbEmblaApi] = useEmblaCarousel({
-    dragFree: true,
-    containScroll: "trimSnaps",
-  });
-
+  const stripRef = useRef<HTMLDivElement | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const lastWheelAtRef = useRef(0);
+
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+
+    let target = el.scrollLeft;
+    let raf: number | null = null;
+
+    const step = () => {
+      const diff = target - el.scrollLeft;
+      if (Math.abs(diff) < 0.5) {
+        el.scrollLeft = target;
+        raf = null;
+        return;
+      }
+      el.scrollLeft += diff * 0.18;
+      raf = requestAnimationFrame(step);
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth) return;
+
+      const delta =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+          ? event.deltaX
+          : event.deltaY;
+      if (delta === 0) return;
+
+      event.preventDefault();
+
+      const max = el.scrollWidth - el.clientWidth;
+      const base = raf === null ? el.scrollLeft : target;
+      target = Math.max(0, Math.min(max, base + delta));
+
+      if (raf === null) raf = requestAnimationFrame(step);
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      if (raf !== null) cancelAnimationFrame(raf);
+    };
+  }, []);
 
   if (!gallery?.length) return null;
 
@@ -25,25 +63,13 @@ export default function GalleryCarousel({
     setModalOpen(true);
   };
 
-  const handleThumbWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    if (!thumbEmblaApi || gallery.length < 2) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const now = Date.now();
-    if (now - lastWheelAtRef.current < 180) return;
-    lastWheelAtRef.current = now;
-
-    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-    if (delta > 0) thumbEmblaApi.scrollNext();
-    else if (delta < 0) thumbEmblaApi.scrollPrev();
-  };
-
   return (
     <>
-      <div className="overflow-hidden" ref={thumbEmblaRef} onWheel={handleThumbWheel}>
-        <div className="flex gap-2 items-center">
+      <div
+        ref={stripRef}
+        className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        <div className="flex w-max gap-2 items-center">
           {gallery.map((image, idx) => (
             <div
               key={idx}

@@ -163,7 +163,6 @@ describe("planDeletion", () => {
     const c = modWithDeps("c", "Other", [{ title: "Lib" }]);
     const plan = planDeletion([a, b, c], a);
 
-    // Lib is still required by "Other", so it is not removed.
     expect(titles(plan.remove)).toEqual(["Top"]);
     expect(plan.blockers).toEqual([]);
   });

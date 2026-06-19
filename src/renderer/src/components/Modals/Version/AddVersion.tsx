@@ -49,13 +49,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { VirtualizedSelect } from "@/components/ui/virtualized-select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -74,6 +68,7 @@ import axios from "axios";
 import { Loader } from "@/types/Loader";
 import { IServer } from "@/types/ServersList";
 import { LoaderVersion } from "@/types/VersionsService";
+import { FormErrorMessage } from "@/components/ui/form-error-message";
 import { checkVersionName } from "@renderer/utilities/version";
 import { Version } from "@renderer/classes/Version";
 import { Mods } from "@renderer/classes/Mods";
@@ -250,7 +245,6 @@ export function AddVersion({
   const [options, setOptions] = useState("");
   const [shareCode, setShareCode] = useState<string>();
   const [shareVersion, setShareVersion] = useState<IVersionConf>();
-  const [isValidVersionName, setIsValidVersionName] = useState(false);
   const [isOwnerVersion, setIsOwnerVersion] = useAtom(isOwnerVersionAtom);
   const [settings] = useAtom(settingsAtom);
   const [selectedTab, setSelectedTab] = useState<
@@ -526,20 +520,16 @@ export function AddVersion({
     selectedTab,
   ]);
 
-  useEffect(() => {
-    if (!versionName) {
-      setIsValidVersionName(false);
-      return;
-    }
+  const isValidVersionName = useMemo(() => {
+    if (versionName.trim() == "") return false;
 
-    const result = checkVersionName(
+    return checkVersionName(
       versionName,
       versions.map((v) => v.version),
       undefined,
       isDownloadedVersion,
     );
-    setIsValidVersionName(result);
-  }, [versionName]);
+  }, [isDownloadedVersion, versionName, versions]);
 
   async function addVersion(resolvedBlockedMods: IBlockedMod[] = blockedMods) {
     let isClosed = false;
@@ -877,7 +867,29 @@ export function AddVersion({
     : loaderVersion
       ? [loaderVersion]
       : [];
+  const versionOptions = useMemo(
+    () =>
+      (selectVersions.length
+        ? selectVersions
+        : selectVersion
+          ? [selectVersion]
+          : []
+      ).map((v) => ({ value: v.id, label: v.id })),
+    [selectVersions, selectVersion],
+  );
+  const loaderVersionOptions = useMemo(
+    () =>
+      (loaderVersions.length
+        ? loaderVersions
+        : loaderVersion
+          ? [loaderVersion]
+          : []
+      ).map((v) => ({ value: v.id, label: v.id })),
+    [loaderVersions, loaderVersion],
+  );
   const currentLoader = loader || "vanilla";
+  const isLoadingVersionData =
+    isLoading && (loadingType == "versions" || loadingType == "loaders");
   const currentManualLoaderRequiresBackend =
     selectedTab == "manually" && loaderRequiresBackend(currentLoader);
   const canInstall =
@@ -891,6 +903,7 @@ export function AddVersion({
     (!currentManualLoaderRequiresBackend || isBackendOnline);
   const showVersionNameError =
     isVersionNameInput && versionName.trim() != "" && !isValidVersionName;
+  const versionNameErrorId = "add-version-name-error";
   const hasResolvedPack = !!shareVersion || !!importData || !!importModpack;
   const hasVersionActions =
     loadingType != "install" &&
@@ -1123,11 +1136,16 @@ export function AddVersion({
                                   ? t("versions.name")
                                   : t("addVersion.fromServer.shareCode")}
                               </Label>
-                              <div className="grid min-w-0 flex-1 gap-1">
+                              <div className="grid min-w-0 flex-1">
                                 <div className="relative">
                                   <Input
                                     id="add-version-primary-input"
                                     aria-invalid={showVersionNameError}
+                                    aria-describedby={
+                                      showVersionNameError
+                                        ? versionNameErrorId
+                                        : undefined
+                                    }
                                     placeholder={
                                       isVersionNameInput
                                         ? t("versions.namePlaceholder")
@@ -1152,11 +1170,12 @@ export function AddVersion({
                                     disabled={isLoading}
                                   />
                                 </div>
-                                {showVersionNameError && (
-                                  <p className="text-xs leading-5 text-destructive">
-                                    {t("addVersion.invalidName")}
-                                  </p>
-                                )}
+                                <FormErrorMessage
+                                  show={showVersionNameError}
+                                  id={versionNameErrorId}
+                                >
+                                  {t("addVersion.invalidName")}
+                                </FormErrorMessage>
                               </div>
                             </div>
                           )}
@@ -1185,13 +1204,17 @@ export function AddVersion({
                             <div className="grid min-w-0 gap-2">
                               <div className="flex h-5 items-center gap-2">
                                 <Label>{t("versions.version")}</Label>
-                                {isLoading && loadingType == "versions" && (
+                                {isLoadingVersionData && (
                                   <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
                                 )}
                               </div>
                               <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                                <Select
+                                <VirtualizedSelect
                                   value={selectVersion?.id || ""}
+                                  options={versionOptions}
+                                  placeholder={t("versions.version")}
+                                  searchPlaceholder={t("common.search")}
+                                  emptyText={t("common.notFound")}
                                   disabled={
                                     isLoading ||
                                     !canLoadLoaderData(currentLoader) ||
@@ -1204,20 +1227,7 @@ export function AddVersion({
                                     );
                                     if (version) setSelectVersion(version);
                                   }}
-                                >
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue
-                                      placeholder={t("versions.version")}
-                                    />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {versionSelectItems.map((v) => (
-                                      <SelectItem key={v.id} value={v.id}>
-                                        {v.id}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                />
 
                                 {loader == "vanilla" &&
                                 selectVersions.length != 0 &&
@@ -1249,51 +1259,42 @@ export function AddVersion({
                               <div className="grid min-w-0 gap-2">
                                 <div className="flex h-5 items-center gap-2">
                                   <Label>{t("versions.loaderVersion")}</Label>
-                                  {isLoading &&
-                                    (loadingType == "loaders" ||
-                                      loadingType == "versions") && (
-                                      <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
-                                    )}
+                                  {isLoadingVersionData && (
+                                    <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+                                  )}
                                 </div>
-                                <Select
-                                  value={loaderVersion?.id || ""}
-                                  disabled={
-                                    isLoading ||
-                                    !canLoadLoaderData(currentLoader) ||
-                                    isDownloadedVersion ||
-                                    loaderVersionSelectItems.length == 0
-                                  }
-                                  onValueChange={(value) => {
-                                    const version =
-                                      loaderVersionSelectItems.find(
-                                        (v) => v.id == value,
-                                      );
-                                    if (version) setLoaderVersion(version);
-                                  }}
-                                >
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue
-                                      placeholder={t("versions.loaderVersion")}
-                                    />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {loaderVersionSelectItems.map((v) => (
-                                      <SelectItem key={v.id} value={v.id}>
-                                        {v.id}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                {importLoaderVersionError && (
-                                  <p className="text-xs leading-5 text-destructive">
+                                <div className="grid min-w-0">
+                                  <VirtualizedSelect
+                                    value={loaderVersion?.id || ""}
+                                    options={loaderVersionOptions}
+                                    placeholder={t("versions.loaderVersion")}
+                                    searchPlaceholder={t("common.search")}
+                                    emptyText={t("common.notFound")}
+                                    disabled={
+                                      isLoading ||
+                                      !canLoadLoaderData(currentLoader) ||
+                                      isDownloadedVersion ||
+                                      loaderVersionSelectItems.length == 0
+                                    }
+                                    onValueChange={(value) => {
+                                      const version =
+                                        loaderVersionSelectItems.find(
+                                          (v) => v.id == value,
+                                        );
+                                      if (version) setLoaderVersion(version);
+                                    }}
+                                  />
+                                  <FormErrorMessage
+                                    show={!!importLoaderVersionError}
+                                  >
                                     {t(
                                       importLoaderVersionError ===
                                         "missingRequired"
                                         ? "addVersion.fromFile.loaderVersionMissing"
                                         : "addVersion.fromFile.loaderVersionNotFound",
                                     )}
-                                  </p>
-                                )}
+                                  </FormErrorMessage>
+                                </div>
                               </div>
                             ) : undefined}
                           </div>
@@ -1471,8 +1472,8 @@ export function AddVersion({
                       )}
 
                       {isPresenceOfLocalMods && (
-                        <Alert className="border-border/70 bg-muted/20 text-muted-foreground">
-                          <CircleAlert className="text-muted-foreground" />
+                        <Alert variant="info">
+                          <CircleAlert />
                           <AlertDescription>
                             {t("addVersion.localModsWarning")}
                           </AlertDescription>

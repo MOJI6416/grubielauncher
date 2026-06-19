@@ -298,6 +298,8 @@ export async function closeGame(versionName: string, instance: number) {
   const javaProcess = gameProcesses.get(instanceKey);
   if (!javaProcess) return;
 
+  javaProcess.killedByUser = true;
+
   await terminateProcessTree(javaProcess.process);
 }
 
@@ -525,12 +527,15 @@ export function runGame(
   javaProcess.on("close", (c, signal) => {
     flushConsoleMessages();
 
+    const killedByUser =
+      gameProcesses.get(instanceKey)?.killedByUser === true;
+
     let code = typeof c === "number" ? c : 0;
-    if (signal == "SIGTERM") code = 0;
+    if (signal == "SIGTERM" || killedByUser) code = 0;
 
     const msg: IConsoleMessage = {
       type: "info",
-      message: `Game closed with code ${code}`,
+      message: killedByUser ? `Game stopped` : `Game closed with code ${code}`,
       tips: [],
     };
 

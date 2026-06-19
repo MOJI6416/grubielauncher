@@ -36,6 +36,7 @@ import { buildPackShareUrl } from "@renderer/utilities/packShare";
 import { Confirmation } from "../../Confirmation";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { FormErrorMessage } from "@/components/ui/form-error-message";
 
 const api = window.api;
 
@@ -828,18 +829,21 @@ export function Share({
                       </span>
                     )}
                   </div>
-                  <Progress
-                    value={Math.min(100, Math.max(0, publishProgress.percent))}
-                  />
-                  {publishProgress.stage === "error" && (
-                    <p className="text-xs text-destructive">
+                  <div className="grid min-w-0">
+                    <Progress
+                      value={Math.min(
+                        100,
+                        Math.max(0, publishProgress.percent),
+                      )}
+                    />
+                    <FormErrorMessage show={publishProgress.stage === "error"}>
                       {t(
                         `share.publishErrors.${
                           publishProgress.errorCode || "generic"
                         }`,
                       )}
-                    </p>
-                  )}
+                    </FormErrorMessage>
+                  </div>
                 </div>
               )}
             </div>

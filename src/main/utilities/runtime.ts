@@ -8,6 +8,7 @@ export interface GameProcessRecord {
   versionPath: string;
   serverPort: number | null;
   accessToken: string;
+  killedByUser?: boolean;
 }
 
 export interface GameStdoutEvent {

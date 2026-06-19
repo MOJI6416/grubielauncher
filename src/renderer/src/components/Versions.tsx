@@ -296,9 +296,6 @@ export function Versions({
     }
   };
 
-  // The version auto-selected on startup is set via the bare atom, so the
-  // owner / downloaded / server / statistics state is never populated. Run the
-  // full selection once so it behaves like a manual pick (editable, etc.).
   useEffect(() => {
     if (hydratedSelectionRef.current) return;
     if (!versionsLoaded || !account || !selectedVersion) return;
@@ -329,7 +326,7 @@ export function Versions({
         {!versionsLoaded ? (
           <div className="flex flex-col gap-2">
             {[0, 1, 2].map((index) => (
-              <Skeleton key={index} className="h-[4.5rem] w-full rounded-xl" />
+              <Skeleton key={index} className="h-20 w-full rounded-xl" />
             ))}
           </div>
         ) : sortedVersions.length == 0 ? (
@@ -380,7 +377,7 @@ export function Versions({
                     <div key={itemKey} ref={flipItemRef(itemKey)}>
                     <Card
                       className={cn(
-                        "group h-[4.5rem] min-h-0 w-full gap-0 overflow-hidden rounded-xl py-0 shadow-none transition-all",
+                        "group h-20 min-h-0 w-full gap-0 overflow-hidden rounded-xl py-0 shadow-none transition-all",
                         isSelected
                           ? "border-primary bg-accent shadow-sm ring-1 ring-primary/20"
                           : "bg-card hover:border-primary/30 hover:bg-accent/55",
@@ -424,20 +421,20 @@ export function Versions({
                         clearSelectedVersion();
                       }}
                     >
-                      <CardContent className="h-full p-2.5">
+                      <CardContent className="h-full p-3">
                         <div className="grid h-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-                          <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex min-w-0 items-center gap-3.5">
                             <div className="relative shrink-0">
                               {vc.version.image ? (
                                 <img
                                   src={vc.version.image}
-                                  width={48}
-                                  height={48}
-                                  className="size-12 rounded-lg border bg-muted object-cover"
+                                  width={52}
+                                  height={52}
+                                  className="size-[52px] rounded-xl border bg-muted object-cover"
                                   alt={vc.version.name}
                                 />
                               ) : (
-                                <div className="flex size-12 items-center justify-center rounded-lg border bg-muted text-sm text-muted-foreground">
+                                <div className="flex size-[52px] items-center justify-center rounded-xl border bg-muted text-base text-muted-foreground">
                                   {vc.version.name.slice(0, 2).toUpperCase()}
                                 </div>
                               )}
@@ -473,19 +470,23 @@ export function Versions({
                               )}
                             </div>
 
-                            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                              <p className="truncate text-sm font-medium text-foreground">
+                            <div className="flex min-w-0 flex-1 flex-col gap-2">
+                              <p className="truncate text-base leading-tight font-medium text-foreground">
                                 {vc.version.name}
                               </p>
                               <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-                                <LoaderLabel
-                                  loader={vc.version.loader.name}
-                                  className="max-w-24 shrink-0"
-                                  textClassName="whitespace-nowrap"
-                                />
                                 <Badge
                                   variant="outline"
-                                  className="max-w-32 truncate rounded-md font-normal"
+                                  className="max-w-28 shrink-0 rounded-md border-border bg-background font-normal"
+                                >
+                                  <LoaderLabel
+                                    loader={vc.version.loader.name}
+                                    textClassName="whitespace-nowrap"
+                                  />
+                                </Badge>
+                                <Badge
+                                  variant="outline"
+                                  className="max-w-32 truncate rounded-md border-border bg-background font-normal"
                                   title={vc.version.version.id}
                                 >
                                   {vc.version.version.id}

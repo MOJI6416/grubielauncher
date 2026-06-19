@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, FileWarning } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -43,12 +44,12 @@ export function DownloadFailuresModal({
         </DialogHeader>
 
         <div className="grid gap-3 px-5">
-          <div className="flex min-w-0 items-start gap-3 rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-2.5 text-sm text-muted-foreground">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
-            <p className="min-w-0 leading-6">
+          <Alert variant="destructive">
+            <AlertTriangle />
+            <AlertDescription>
               {t("downloadFailures.description")}
-            </p>
-          </div>
+            </AlertDescription>
+          </Alert>
 
           <ScrollArea className="max-h-[320px] pr-3">
             <div className="grid gap-2">

@@ -4,7 +4,8 @@ import parse, {
   Element as HtmlElement,
 } from "html-react-parser";
 import { marked } from "marked";
-import { JSX, useEffect, useState } from "react";
+import { JSX, useCallback, useEffect, useMemo, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const api = window.api;
 
@@ -114,25 +115,33 @@ function sanitizeHtml(html: string, baseUrl?: string): string {
 }
 
 export const ModBody = ({ body, baseUrl }: { body: string; baseUrl?: string }) => {
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setContent(null);
 
-    Promise.resolve(marked.parse(body))
-      .then((html) => {
-        if (!cancelled) setContent(sanitizeHtml(html, baseUrl));
-      })
-      .catch(() => {
-        if (!cancelled) setContent("");
+    let raf = requestAnimationFrame(() => {
+      raf = requestAnimationFrame(() => {
+        if (cancelled) return;
+
+        Promise.resolve(marked.parse(body))
+          .then((html) => {
+            if (!cancelled) setContent(sanitizeHtml(html, baseUrl));
+          })
+          .catch(() => {
+            if (!cancelled) setContent("");
+          });
       });
+    });
 
     return () => {
       cancelled = true;
+      cancelAnimationFrame(raf);
     };
   }, [body, baseUrl]);
 
-  const transformNode = (domNode: DOMNode): JSX.Element | void => {
+  const transformNode = useCallback((domNode: DOMNode): JSX.Element | void => {
     if (domNode.type === "tag") {
       const node = domNode as HtmlElement;
 
@@ -203,11 +212,27 @@ export const ModBody = ({ body, baseUrl }: { body: string; baseUrl?: string }) =
         );
       }
     }
-  };
+  }, []);
+
+  const rendered = useMemo(
+    () => (content ? parse(content, { replace: transformNode }) : null),
+    [content, transformNode],
+  );
 
   return (
     <div className="min-w-0 max-w-full overflow-hidden break-words text-sm leading-relaxed [overflow-wrap:anywhere] [&_*]:max-w-full [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_li]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:bg-muted/50 [&_pre]:p-3 [&_pre]:whitespace-pre-wrap [&_ul]:list-disc [&_ul]:pl-5">
-      {parse(content, { replace: transformNode })}
+      {content === null ? (
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      ) : (
+        rendered
+      )}
     </div>
   );
 };

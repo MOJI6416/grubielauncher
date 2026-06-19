@@ -3,7 +3,15 @@ import { ImageCropper } from "../ImageCropper";
 import { ServerSettings } from "./Settings";
 import { ProjectType } from "@/types/ModManager";
 import { useTranslation } from "react-i18next";
-import { Cpu, Folder, ImagePlus, Settings, Trash, X } from "lucide-react";
+import {
+  Cpu,
+  Folder,
+  ImagePlus,
+  Settings,
+  Trash,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { useAtom } from "jotai";
 import { selectedVersionAtom, serverAtom } from "@renderer/stores/atoms";
 import { Button } from "@/components/ui/button";
@@ -321,7 +329,8 @@ export function ServerControl({
       )}
     </>
   ) : (
-    <Alert className="border-[var(--warning)]/40">
+    <Alert variant="warning">
+      <TriangleAlert />
       <AlertTitle>{t("serverManager.configNotFound")}</AlertTitle>
     </Alert>
   );

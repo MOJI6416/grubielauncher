@@ -132,38 +132,38 @@ export async function renderCharacter(skinPath: string, scale = 4): Promise<stri
 
     ctx.imageSmoothingEnabled = false
 
-    ctx.drawImage(skin, 8, 8, 8, 8, 4 * scale, 0 * scale, 8 * scale, 8 * scale) // face
+    ctx.drawImage(skin, 8, 8, 8, 8, 4 * scale, 0 * scale, 8 * scale, 8 * scale)
     if (is64x64) {
-      ctx.drawImage(skin, 40, 8, 8, 8, 4 * scale, 0 * scale, 8 * scale, 8 * scale) // head overlay
+      ctx.drawImage(skin, 40, 8, 8, 8, 4 * scale, 0 * scale, 8 * scale, 8 * scale)
     }
 
-    ctx.drawImage(skin, 20, 20, 8, 12, 4 * scale, 8 * scale, 8 * scale, 12 * scale) // body
+    ctx.drawImage(skin, 20, 20, 8, 12, 4 * scale, 8 * scale, 8 * scale, 12 * scale)
     if (is64x64) {
-      ctx.drawImage(skin, 20, 36, 8, 12, 4 * scale, 8 * scale, 8 * scale, 12 * scale) // body overlay
+      ctx.drawImage(skin, 20, 36, 8, 12, 4 * scale, 8 * scale, 8 * scale, 12 * scale)
     }
 
     ctx.drawImage(skin, 4, 20, 4, 12, 4 * scale, 20 * scale, 4 * scale, 12 * scale)
     if (is64x64) {
-      ctx.drawImage(skin, 4, 36, 4, 12, 4 * scale, 20 * scale, 4 * scale, 12 * scale) // overlay
+      ctx.drawImage(skin, 4, 36, 4, 12, 4 * scale, 20 * scale, 4 * scale, 12 * scale)
     }
 
     if (is64x64) {
-      ctx.drawImage(skin, 4, 20, 4, 12, 8 * scale, 20 * scale, 4 * scale, 12 * scale) // right leg
-      ctx.drawImage(skin, 4, 36, 4, 12, 8 * scale, 20 * scale, 4 * scale, 12 * scale) // overlay
+      ctx.drawImage(skin, 4, 20, 4, 12, 8 * scale, 20 * scale, 4 * scale, 12 * scale)
+      ctx.drawImage(skin, 4, 36, 4, 12, 8 * scale, 20 * scale, 4 * scale, 12 * scale)
     } else {
-      ctx.drawImage(skin, 4, 20, 4, 12, 8 * scale, 20 * scale, 4 * scale, 12 * scale) // mirrored left leg
+      ctx.drawImage(skin, 4, 20, 4, 12, 8 * scale, 20 * scale, 4 * scale, 12 * scale)
     }
 
     ctx.drawImage(skin, 44, 20, 4, 12, 0 * scale, 8 * scale, 4 * scale, 12 * scale)
     if (is64x64) {
-      ctx.drawImage(skin, 44, 36, 4, 12, 0 * scale, 8 * scale, 4 * scale, 12 * scale) // overlay
+      ctx.drawImage(skin, 44, 36, 4, 12, 0 * scale, 8 * scale, 4 * scale, 12 * scale)
     }
 
     if (is64x64) {
-      ctx.drawImage(skin, 36, 52, 4, 12, 12 * scale, 8 * scale, 4 * scale, 12 * scale) // right arm
-      ctx.drawImage(skin, 52, 52, 4, 12, 12 * scale, 8 * scale, 4 * scale, 12 * scale) // overlay
+      ctx.drawImage(skin, 36, 52, 4, 12, 12 * scale, 8 * scale, 4 * scale, 12 * scale)
+      ctx.drawImage(skin, 52, 52, 4, 12, 12 * scale, 8 * scale, 4 * scale, 12 * scale)
     } else {
-      ctx.drawImage(skin, 44, 20, 4, 12, 12 * scale, 8 * scale, 4 * scale, 12 * scale) // mirrored left arm
+      ctx.drawImage(skin, 44, 20, 4, 12, 12 * scale, 8 * scale, 4 * scale, 12 * scale)
     }
 
     return canvas.toDataURL('image/png')

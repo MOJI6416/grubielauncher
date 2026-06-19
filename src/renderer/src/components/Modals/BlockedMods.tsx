@@ -167,7 +167,7 @@ export function BlockedMods({
         </DialogHeader>
 
         <div className="grid gap-4 px-5 pb-5">
-          <Alert className="border-border/70 bg-muted/20 text-muted-foreground">
+          <Alert variant="info">
             <ShieldAlert />
             <AlertDescription>{t("blockedMods.description")}</AlertDescription>
           </Alert>

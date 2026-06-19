@@ -259,8 +259,6 @@ function extractCulprits(rule: CrashRule, text: string): string[] {
   return [...culprits];
 }
 
-// Strips directory paths (which can contain the OS username) down to plain
-// file names, so a signature stays anonymous while keeping the useful basename.
 function sanitizeSignature(line: string): string {
   return line
     .replace(/[A-Za-z]:\\[^\s"']+/g, (match) => match.split(/[\\/]/).pop() || match)
@@ -269,8 +267,6 @@ function sanitizeSignature(line: string): string {
     .trim();
 }
 
-// Builds a short, anonymous fingerprint of an unrecognized crash so the
-// dashboard can group "unknown" hits and we can see which rules to add.
 export function extractCrashSignature(text: string, exitCode?: number): string {
   const parts: string[] = [];
 
@@ -278,8 +274,6 @@ export function extractCrashSignature(text: string, exitCode?: number): string {
     const description = text.match(/^\s*Description:\s*(.+)$/m);
     if (description?.[1]) parts.push(description[1].trim());
 
-    // First line that looks like the actual cause: an exception/error class or
-    // a known fatal phrase. The "Description:" line is skipped — already taken.
     const relevant =
       /[\w.$]*(?:Exception|Error)\b|invalid or corrupt|could not (?:find|load)|error in opening zip|unexpected end of|no space left|caused by|failed to|fatal/i;
     const errorLine = text

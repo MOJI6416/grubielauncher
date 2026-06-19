@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormErrorMessage } from "@/components/ui/form-error-message";
 import { Input } from "@/components/ui/input";
 import { LoaderLabel } from "@renderer/components/Loaders";
 import { Version } from "@renderer/classes/Version";
@@ -48,6 +49,7 @@ export function VersionHeaderCard({
   onRemoveLogo: () => void;
 }) {
   const { t } = useTranslation();
+  const versionNameErrorId = "edit-version-name-error";
 
   return (
     <div className="grid gap-3 rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
@@ -68,19 +70,18 @@ export function VersionHeaderCard({
 
         <div className="grid min-w-0 flex-1 gap-2">
           {editName ? (
-            <div className="grid gap-1.5">
+            <div className="grid">
               <Input
                 aria-invalid={!isNameValid}
+                aria-describedby={!isNameValid ? versionNameErrorId : undefined}
                 placeholder={t("versions.namePlaceholder")}
                 value={versionName}
                 onChange={(event) => onNameChange(event.currentTarget.value)}
                 disabled={isLoading}
               />
-              {!isNameValid && (
-                <p className="text-xs leading-5 text-destructive">
-                  {t("addVersion.invalidName")}
-                </p>
-              )}
+              <FormErrorMessage show={!isNameValid} id={versionNameErrorId}>
+                {t("addVersion.invalidName")}
+              </FormErrorMessage>
             </div>
           ) : (
             <p className="truncate text-xl font-semibold">{versionName}</p>

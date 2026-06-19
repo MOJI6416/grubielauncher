@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"; // Изменено: добавили useMemo/useState
+import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertTitle } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react";
+import { CircleCheck, CircleX, Info, Loader2, TriangleAlert } from "lucide-react";
 
 export function Confirmation({
   onClose,
@@ -57,11 +57,18 @@ export function Confirmation({
     return "default";
   };
 
-  const getAlertClassName = (color: (typeof content)[number]["color"]) => {
-    if (color === "danger") return "border-destructive/40 text-destructive";
-    if (color === "warning") return "border-[var(--warning)]/40";
-    if (color === "success") return "border-[var(--success)]/40";
-    return "";
+  const getAlertVariant = (color: (typeof content)[number]["color"]) => {
+    if (color === "danger") return "destructive" as const;
+    if (color === "warning") return "warning" as const;
+    if (color === "success") return "success" as const;
+    return "info" as const;
+  };
+
+  const getAlertIcon = (color: (typeof content)[number]["color"]) => {
+    if (color === "danger") return <CircleX />;
+    if (color === "warning") return <TriangleAlert />;
+    if (color === "success") return <CircleCheck />;
+    return <Info />;
   };
 
   return (
@@ -88,7 +95,8 @@ export function Confirmation({
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               {content.map((c, index) => (
-                <Alert key={index} className={getAlertClassName(c.color)}>
+                <Alert key={index} variant={getAlertVariant(c.color)}>
+                  {getAlertIcon(c.color)}
                   <AlertTitle>{c.text}</AlertTitle>
                 </Alert>
               ))}

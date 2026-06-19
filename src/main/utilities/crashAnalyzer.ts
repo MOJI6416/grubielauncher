@@ -112,9 +112,6 @@ export async function analyzeGameCrash(
   const rules = await getCrashRules();
   const match = matchCrashRules(text || "", rules, exitCode);
 
-  // No rule matched, but the game still crashed (this runs only on a non-zero
-  // exit): report it as "unknown" with an anonymous signature so the dashboard
-  // surfaces uncaught crashes and we can see which rules are worth adding.
   if (!match) {
     const sample = extractCrashSignature(text || "", exitCode);
     void reportCrashRuleHit("unknown", versionPath, sample).catch(() => {});

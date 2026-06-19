@@ -47,19 +47,13 @@ export function getProjectTypes(
   return projectTypes;
 }
 
-/**
- * Normalizes a project title so the same mod published under slightly different
- * names (across providers, with loader suffixes, punctuation, etc.) collapses to
- * the same key. Examples that should all map to "justenoughitems":
- *   "Just Enough Items", "Just Enough Items (JEI)", "Just Enough Items [Fabric]".
- */
 export function normalizeProjectTitle(title: string): string {
   return (title || "")
     .toLowerCase()
     .normalize("NFKD")
-    .replace(/\([^)]*\)/g, " ") // drop "(...)" segments e.g. "(JEI)"
-    .replace(/\[[^\]]*\]/g, " ") // drop "[...]" segments e.g. "[Forge]"
-    .replace(/[^a-z0-9]+/g, ""); // keep only alphanumerics (also strips diacritics)
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\[[^\]]*\]/g, " ")
+    .replace(/[^a-z0-9]+/g, "");
 }
 
 export interface InstalledIndex {
@@ -69,10 +63,6 @@ export interface InstalledIndex {
   bySha1: Map<string, ILocalProject>;
 }
 
-/**
- * Pre-computes lookup maps for the installed mods so matching a search result
- * against the installed list is O(1) per candidate instead of O(installed).
- */
 export function buildInstalledIndex(mods: ILocalProject[]): InstalledIndex {
   const byProviderId = new Map<string, ILocalProject>();
   const byId = new Map<string, ILocalProject>();
@@ -101,11 +91,6 @@ export interface MatchableProject {
   version?: { files?: { sha1?: string }[] } | null;
 }
 
-/**
- * Finds the already-installed project that matches a search result. Matching is
- * attempted, strongest first, by: provider+id, id (cross-provider safety net),
- * any shared file sha1, and finally the normalized title.
- */
 export function findInstalledProject(
   index: InstalledIndex,
   item: MatchableProject,
@@ -137,29 +122,10 @@ export function findInstalledProject(
 }
 
 export interface DeletionPlan {
-  // Every mod that will be removed, including the target and the required
-  // dependencies that become orphaned by removing it.
   remove: ILocalProject[];
-  // Mods that are kept but still require something in `remove` — these block the
-  // deletion. While this is non-empty the deletion must not proceed.
   blockers: ILocalProject[];
 }
 
-/**
- * Plans the deletion of a mod, taking the required-dependency graph into account.
- *
- * Removing a mod also removes its required dependencies that nothing else needs
- * anymore (orphan cleanup). Dependency edges are matched by normalized title, so
- * naming differences between providers do not break the graph.
- *
- * Because mutually-dependent mods (A requires B, B requires A) are pulled into the
- * removal set together, deleting either one is possible — this avoids the deadlock
- * where two mods each list the other as a required dependency and neither could be
- * removed.
- *
- * The deletion is only safe when `blockers` is empty: a non-empty `blockers` means
- * a mod the user is keeping still requires one of the mods scheduled for removal.
- */
 export function planDeletion(
   mods: ILocalProject[],
   target: ILocalProject,
@@ -167,14 +133,12 @@ export function planDeletion(
   const keyOf = (mod: ILocalProject) => `${mod.provider}:${mod.id}`;
   const norm = (value: string) => normalizeProjectTitle(value);
 
-  // normalized title -> installed mod (first wins)
   const byTitle = new Map<string, ILocalProject>();
   for (const mod of mods) {
     const key = norm(mod.title);
     if (key && !byTitle.has(key)) byTitle.set(key, mod);
   }
 
-  // normalized title -> mods that list it as a REQUIRED dependency
   const requiredBy = new Map<string, ILocalProject[]>();
   for (const mod of mods) {
     for (const dep of mod.version?.dependencies ?? []) {
@@ -190,8 +154,6 @@ export function planDeletion(
   const removeKeys = new Set<string>([keyOf(target)]);
   const remove: ILocalProject[] = [target];
 
-  // Grow the removal set downwards with required dependencies that are not needed
-  // by anything outside the set. Iterates to a fixpoint, cycle-safe via removeKeys.
   let changed = true;
   while (changed) {
     changed = false;

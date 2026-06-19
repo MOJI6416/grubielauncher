@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Save } from "lucide-react";
+import { Save, TriangleAlert } from "lucide-react";
 import { IArguments } from "@/types/IArguments";
 import { useAtom } from "jotai";
 import {
@@ -61,7 +61,8 @@ export function Arguments({
 
         <div className="grid gap-4 px-5 pb-5">
           {canEdit && (
-            <Alert className="border-[var(--warning)]/40">
+            <Alert variant="warning">
+              <TriangleAlert />
               <AlertTitle>{t("arguments.alert")}</AlertTitle>
             </Alert>
           )}

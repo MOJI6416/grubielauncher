@@ -26,74 +26,106 @@ export class VersionsService extends BaseService {
     timeout: 30000
   })
 
-  public static async getVersions(loader: Loader, snapshots = false) {
-    try {
-      let versions: IVersion[] = []
-      if (loader == 'vanilla') {
-        versions = await VersionsService.getVersionsVanilla(snapshots)
-      } else if (loader == 'forge') {
-        versions = await VersionsService.getVersionsForge()
-      } else if (loader == 'neoforge') {
-        versions = await VersionsService.getVersionsNeoForge()
-      } else if (loader == 'fabric') {
-        versions = await VersionsService.getVersionsFabric()
-      } else if (loader == 'quilt') {
-        versions = await VersionsService.getVersionsQuilt()
-      }
+  private static readonly CACHE_TTL = 10 * 60 * 1000
 
-      return versions
-    } catch {
-      return []
+  private static cache = new Map<string, { expires: number; value: Promise<unknown> }>()
+
+  private static async cached<T>(key: string, producer: () => Promise<T>): Promise<T> {
+    const now = Date.now()
+    const entry = VersionsService.cache.get(key)
+    if (entry && entry.expires > now) {
+      return entry.value as Promise<T>
     }
+
+    const value = producer()
+    VersionsService.cache.set(key, { expires: now + VersionsService.CACHE_TTL, value })
+
+    try {
+      const resolved = await value
+      if (Array.isArray(resolved) && resolved.length == 0) {
+        VersionsService.cache.delete(key)
+      }
+      return resolved
+    } catch (error) {
+      VersionsService.cache.delete(key)
+      throw error
+    }
+  }
+
+  public static async getVersions(loader: Loader, snapshots = false) {
+    return VersionsService.cached(`versions:${loader}:${snapshots}`, async () => {
+      try {
+        let versions: IVersion[] = []
+        if (loader == 'vanilla') {
+          versions = await VersionsService.getVersionsVanilla(snapshots)
+        } else if (loader == 'forge') {
+          versions = await VersionsService.getVersionsForge()
+        } else if (loader == 'neoforge') {
+          versions = await VersionsService.getVersionsNeoForge()
+        } else if (loader == 'fabric') {
+          versions = await VersionsService.getVersionsFabric()
+        } else if (loader == 'quilt') {
+          versions = await VersionsService.getVersionsQuilt()
+        }
+
+        return versions
+      } catch {
+        return []
+      }
+    })
   }
 
   public static async getLoaderVersions(loader: Loader, versionId: string) {
-    try {
-      let versions: LoaderVersion[] = []
-      if (loader == 'forge') {
-        versions = await VersionsService.getLoadersForge(versionId)
-      } else if (loader == 'neoforge') {
-        versions = await VersionsService.getLoadersNeoForge(versionId)
-      } else if (loader == 'fabric') {
-        versions = await VersionsService.getLoadersFabric(versionId)
-      } else if (loader == 'quilt') {
-        versions = await VersionsService.getLoadersQuilt(versionId)
-      }
+    return VersionsService.cached(`loaders:${loader}:${versionId}`, async () => {
+      try {
+        let versions: LoaderVersion[] = []
+        if (loader == 'forge') {
+          versions = await VersionsService.getLoadersForge(versionId)
+        } else if (loader == 'neoforge') {
+          versions = await VersionsService.getLoadersNeoForge(versionId)
+        } else if (loader == 'fabric') {
+          versions = await VersionsService.getLoadersFabric(versionId)
+        } else if (loader == 'quilt') {
+          versions = await VersionsService.getLoadersQuilt(versionId)
+        }
 
-      return versions
-    } catch {
-      return []
-    }
+        return versions
+      } catch {
+        return []
+      }
+    })
   }
 
   private static async getVersionsVanilla(snapshots: boolean = false): Promise<IVersion[]> {
-    try {
-      const response = await this.api.get('https://piston-meta.mojang.com/mc/game/version_manifest_v2.json')
+    return VersionsService.cached(`vanilla:${snapshots}`, async () => {
+      try {
+        const response = await this.api.get('https://piston-meta.mojang.com/mc/game/version_manifest_v2.json')
 
-      const versionsManifest: IVersionsManifest = response.data
+        const versionsManifest: IVersionsManifest = response.data
 
-      const versions: IVersion[] = []
+        const versions: IVersion[] = []
 
-      let serverMangaer = true
+        let serverMangaer = true
 
-      for (let index = 0; index < versionsManifest.versions.length; index++) {
-        const version = versionsManifest.versions[index]
+        for (let index = 0; index < versionsManifest.versions.length; index++) {
+          const version = versionsManifest.versions[index]
 
-        if (version.type != 'release' && !snapshots) continue
+          if (version.type != 'release' && !snapshots) continue
 
-        version.serverManager = serverMangaer
+          version.serverManager = serverMangaer
 
-        versions.push(version)
+          versions.push(version)
 
-        if (version.id == '1.8.0') {
-          serverMangaer = false
+          if (version.id == '1.8.0') {
+            serverMangaer = false
+          }
         }
-      }
 
-      return versions
-    } catch {
-      return []
-    }
+        return versions
+      } catch {
+        return []
+      }
+    })
   }
 
   private static async getVersionsForge(): Promise<IVersion[]> {

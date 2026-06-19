@@ -9,7 +9,7 @@ import { IVersionStatistics } from "@/types/VersionStatistics";
 import { useTranslation } from "react-i18next";
 import { formatDate, formatTime } from "@renderer/utilities/date";
 import { Alert, AlertTitle } from "@/components/ui/alert";
-import { CalendarClock, Clock3, Rocket } from "lucide-react";
+import { CalendarClock, CircleAlert, Clock3, Rocket } from "lucide-react";
 import type { ReactNode } from "react";
 
 export function VersionStatistics({
@@ -29,7 +29,8 @@ export function VersionStatistics({
 
         <div className="min-w-0">
           {!statistics && (
-            <Alert>
+            <Alert variant="destructive">
+              <CircleAlert />
               <AlertTitle>{t("versionStatistics.error")}</AlertTitle>
             </Alert>
           )}

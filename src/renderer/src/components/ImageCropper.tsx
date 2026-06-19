@@ -72,7 +72,7 @@ export function ImageCropper({
               cropBoxResizable={false}
               background={false}
               responsive={false}
-              checkOrientation={false} // https://github.com/fengyuanchen/cropperjs/issues/671
+              checkOrientation={false}
               guides={true}
               dragMode="move"
               rotatable={true}

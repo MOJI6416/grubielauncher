@@ -30,14 +30,13 @@
 - **Веб-сайт:** [grubielauncher.com](https://grubielauncher.com/)
 - **Загрузки / Релизы:** [github.com/MOJI6416/grubielauncher/releases](https://github.com/MOJI6416/grubielauncher/releases)
 - **Политика конфиденциальности:** [grubielauncher.com/privacy](https://grubielauncher.com/privacy)
-- **Политика подписи кода:** [grubielauncher.com/code-signing](https://grubielauncher.com/code-signing)
 
 # Возможности
 
 - Установка и запуск **официальных версий Minecraft**.
 - Поддержка **Forge**, **Fabric**, **NeoForge** и **Quilt**.
 - Автоматическая загрузка Java и зависимостей.
-- Поддержка аккаунтов **Microsoft/Mojang**, отдельных сторонних провайдеров аутентификации (таких как **Ely.by** и **Discord**) и локальных профилей для разработки или приватного тестирования.
+- Поддержка нескольких аккаунтов: **Microsoft/Mojang**, **Ely.by**, **Discord** и оффлайн.
 - Удобное управление версиями, модами и мирами.
 - Интеграция с **CurseForge** и **Modrinth**.
 - Система скинов: Microsoft, Ely.by и **собственные** скины.
@@ -62,13 +61,3 @@ _(Поддерживаемые платформы: Windows, Linux)_
 # Лицензия
 
 Проект распространяется по лицензии **MIT**.
-
-# Политика подписи кода
-
-Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
-
-- Подписанные Windows-артефакты релизов собираются из публичного репозитория исходного кода и официальных тегов релизов.
-- Подписанные артефакты могут включать инсталляторы Windows в формате `.exe` и бинарные файлы приложения, сгенерированные официальным конвейером релизов.
-- **Утверждающий подпись:** Dmytro Burmych / MOJI6416.
-- **Политика конфиденциальности:** [grubielauncher.com/privacy](https://grubielauncher.com/privacy)
-- **Политика подписи кода:** [grubielauncher.com/code-signing](https://grubielauncher.com/code-signing)

@@ -80,8 +80,13 @@ import { VersionInstallProgress } from "@/types/InstallationProgress";
 import { GameInvite } from "@/types/GameInvite";
 import { IModpack } from "@/types/Backend";
 import { toast } from "sonner";
-import { lazyWithPreload, schedulePreload } from "./utilities/lazyPreload";
+import {
+  lazyWithPreload,
+  preload,
+  schedulePreload,
+} from "./utilities/lazyPreload";
 import { LazyDialogFallback } from "./components/LazyDialogFallback";
+import { LazyAddVersion } from "./components/LazyAddVersion";
 import { WhatsNewModal } from "./components/WhatsNewModal";
 import { Onboarding } from "./components/Onboarding";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
@@ -106,17 +111,12 @@ const loadFriends = () =>
   import("./components/Friends/Friends").then((module) => ({
     default: module.Friends,
   }));
-const loadAddVersion = () =>
-  import("./components/Modals/Version/AddVersion").then((module) => ({
-    default: module.AddVersion,
-  }));
 const loadNewsFeed = () =>
   import("./components/NewsFeed").then((module) => ({
     default: module.NewsFeed,
   }));
 
 const LazyFriends = lazyWithPreload(loadFriends);
-const LazyAddVersion = lazyWithPreload(loadAddVersion);
 const LazyNewsFeed = lazyWithPreload(loadNewsFeed);
 
 export interface RunGameParams {
@@ -253,10 +253,23 @@ function App() {
   const serversRef = useLatestRef(servers);
 
   useEffect(() => {
-    return schedulePreload(
-      [LazyNewsFeed.preload, LazyFriends.preload, LazyAddVersion.preload],
+    const addVersionPreload = window.setTimeout(() => {
+      preload(LazyAddVersion.preload);
+    }, 0);
+
+    const cancelScheduledPreload = schedulePreload(
+      [
+        LazyNewsFeed.preload,
+        LazyFriends.preload,
+        () => api.versions.getList("vanilla", false),
+      ],
       900,
     );
+
+    return () => {
+      window.clearTimeout(addVersionPreload);
+      cancelScheduledPreload();
+    };
   }, []);
 
   useEffect(() => {

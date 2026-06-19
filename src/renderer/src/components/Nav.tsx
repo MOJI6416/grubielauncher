@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { ErrorLog } from "./ErrorLog";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { Settings } from "./Settings";
 import { useAtom } from "jotai";
 import {
   accountAtom,
@@ -44,6 +45,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { RunGameParams } from "@renderer/App";
 import { LazyDialogFallback } from "./LazyDialogFallback";
+import { LazyAddVersion } from "./LazyAddVersion";
 import {
   lazyWithPreload,
   preload,
@@ -58,12 +60,15 @@ import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 
 const api = window.api;
 
-const loadSettings = () =>
-  import("./Settings").then((module) => ({ default: module.Settings }));
-const loadAddVersion = () =>
-  import("./Modals/Version/AddVersion").then((module) => ({
-    default: module.AddVersion,
-  }));
+let versionsPrefetched = false;
+const prefetchVersionData = () => {
+  if (versionsPrefetched) return;
+  versionsPrefetched = true;
+  void api.versions.getList("vanilla", false).catch(() => {
+    versionsPrefetched = false;
+  });
+};
+
 const loadConsole = () =>
   import("./Console").then((module) => ({ default: module.Console }));
 const loadLanShareModal = () =>
@@ -71,8 +76,6 @@ const loadLanShareModal = () =>
     default: module.LanShareModal,
   }));
 
-const LazySettings = lazyWithPreload(loadSettings);
-const LazyAddVersion = lazyWithPreload(loadAddVersion);
 const LazyConsole = lazyWithPreload(loadConsole);
 const LazyLanShareModal = lazyWithPreload(loadLanShareModal);
 
@@ -166,13 +169,6 @@ export function Nav({
       setIsShareOpen(false);
     }
   }, [shouldShowShareButton]);
-
-  useEffect(() => {
-    return schedulePreload(
-      [LazySettings.preload, LazyAddVersion.preload],
-      1200,
-    );
-  }, []);
 
   useEffect(() => {
     if (!selectedVersion) return;
@@ -318,8 +314,14 @@ export function Nav({
                     disabled={isRunning || !selectedAccount}
                     size="lg"
                     className="h-10 px-4 text-sm [&_svg]:size-4"
-                    onMouseEnter={() => preload(LazyAddVersion.preload)}
-                    onFocus={() => preload(LazyAddVersion.preload)}
+                    onMouseEnter={() => {
+                      preload(LazyAddVersion.preload);
+                      prefetchVersionData();
+                    }}
+                    onFocus={() => {
+                      preload(LazyAddVersion.preload);
+                      prefetchVersionData();
+                    }}
                     onClick={() => {
                       setSelectedVersion(undefined);
                       setServer(undefined);
@@ -360,8 +362,6 @@ export function Nav({
                   variant="secondary"
                   disabled={isRunning}
                   className="h-10 px-4 text-sm [&_svg]:size-4"
-                  onMouseEnter={() => preload(LazySettings.preload)}
-                  onFocus={() => preload(LazySettings.preload)}
                   onClick={() => setOpenSettingsModal(true)}
                 >
                   <LSettings />
@@ -389,18 +389,15 @@ export function Nav({
                   <TooltipContent>Discord</TooltipContent>
                 </Tooltip>
               </div>
-
             </div>
           </div>
         </TooltipProvider>
       </div>
       {isSettingsModal && (
-        <Suspense fallback={<LazyDialogFallback variant="form" />}>
-          <LazySettings
-            onClose={() => setOpenSettingsModal(false)}
-            onShowWhatsNew={onOpenWhatsNew}
-          />
-        </Suspense>
+        <Settings
+          onClose={() => setOpenSettingsModal(false)}
+          onShowWhatsNew={onOpenWhatsNew}
+        />
       )}
       {isAddVersion && (
         <Suspense fallback={<LazyDialogFallback variant="wide" />}>

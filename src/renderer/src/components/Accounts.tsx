@@ -8,6 +8,7 @@ import {
   Check,
   ChevronDown,
   Loader2,
+  TriangleAlert,
   User,
   UserMinus,
   UserPlus,
@@ -39,6 +40,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { FormErrorMessage } from "@/components/ui/form-error-message";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { jwtDecode } from "jwt-decode";
 import {
@@ -447,6 +449,7 @@ export function Accounts() {
     trimmedNickname.length < 3 ||
     trimmedNickname.length > 16;
   const showNicknameError = trimmedNickname !== "" && isPlainNicknameInvalid;
+  const nicknameErrorId = "plain-account-nickname-error";
 
   return (
     <>
@@ -553,7 +556,8 @@ export function Accounts() {
           </>
         ) : (
           <>
-            <Alert className="border-[var(--warning)]/40">
+            <Alert variant="warning">
+              <TriangleAlert />
               <AlertTitle>{t("accounts.notSelected")}</AlertTitle>
             </Alert>
             <div>
@@ -842,24 +846,27 @@ export function Accounts() {
               <Label htmlFor="plain-account-nickname">
                 {t("accounts.nickname")}
               </Label>
-              <Input
-                id="plain-account-nickname"
-                placeholder="Notch"
-                aria-invalid={showNicknameError}
-                value={nickname}
-                autoFocus
-                onChange={(event) => setNickname(event.currentTarget.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !isPlainNicknameInvalid) {
-                    void addPlainAccount();
+              <div className="grid min-w-0">
+                <Input
+                  id="plain-account-nickname"
+                  placeholder="Notch"
+                  aria-invalid={showNicknameError}
+                  aria-describedby={
+                    showNicknameError ? nicknameErrorId : undefined
                   }
-                }}
-              />
-              {showNicknameError && (
-                <p className="text-xs leading-5 text-destructive">
+                  value={nickname}
+                  autoFocus
+                  onChange={(event) => setNickname(event.currentTarget.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !isPlainNicknameInvalid) {
+                      void addPlainAccount();
+                    }
+                  }}
+                />
+                <FormErrorMessage show={showNicknameError} id={nicknameErrorId}>
                   {t("accounts.invalidNickname")}
-                </p>
-              )}
+                </FormErrorMessage>
+              </div>
             </div>
 
             <DialogFooter className="gap-2">

@@ -101,6 +101,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { VirtualizedSelect } from "@/components/ui/virtualized-select";
 import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
@@ -181,8 +182,6 @@ function providerBadgeVariant(provider: Provider) {
   return "secondary" as const;
 }
 
-// Distinct colors per dependency type so required / optional / embedded /
-// incompatible are visually distinguishable at a glance (not just by label).
 function dependencyBadgeClassName(type: DependencyType): string {
   switch (type) {
     case DependencyType.REQUIRED:
@@ -421,8 +420,6 @@ export function ModManager({
     [installedIndex],
   );
 
-  // What deleting the currently opened mod would remove (it + orphaned required
-  // dependencies) and which kept mods, if any, still require it (blockers).
   const deletionPlan = useMemo<DeletionPlan>(
     () =>
       installedProject
@@ -445,6 +442,9 @@ export function ModManager({
 
   const requestIdRef = useRef(0);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const translationCacheRef = useRef<
+    Map<string, { description?: string | null; body?: string | null }>
+  >(new Map());
   const clearDebounce = () => {
     if (searchDebounceRef.current) {
       clearTimeout(searchDebounceRef.current);
@@ -710,9 +710,6 @@ export function ModManager({
     return results.filter(Boolean) as IUpdateProject[];
   }
 
-  // Installs the latest version of a project plus every missing required
-  // dependency (resolved recursively) without opening the project page.
-  // Not available for modpacks.
   async function quickInstall(root: IProject, index: number) {
     if (isModpacks || !version) return;
 
@@ -728,7 +725,6 @@ export function ModManager({
 
     try {
       const added: ILocalProject[] = [];
-      // provider:id keys already handled (installed or queued/added in this run).
       const seenIds = new Set<string>(mods.map((m) => `${m.provider}:${m.id}`));
       const seenTitles = new Set<string>(
         mods.map((m) => normalizeProjectTitle(m.title)).filter(Boolean),
@@ -767,9 +763,6 @@ export function ModManager({
           continue;
         }
 
-        // Resolve dependency projects so the recorded dependencies carry real
-        // titles (the deletion/dependency graph matches by title) and so the
-        // required ones can be queued for installation.
         const resolvedDeps = latest.dependencies.length
           ? await api.modManager.getDependencies(
               project.provider,
@@ -1136,10 +1129,18 @@ export function ModManager({
                   {isModpacks && (
                     <>
                       <div className="w-28 min-w-28">
-                        <Select
-                          name="version"
+                        <VirtualizedSelect
+                          size="sm"
+                          aria-label={t("versions.version")}
                           disabled={isLoading}
                           value={version?.id || ""}
+                          placeholder={t("versions.version")}
+                          searchPlaceholder={t("common.search")}
+                          emptyText={t("common.notFound")}
+                          options={versions.map((v) => ({
+                            value: v.id,
+                            label: v.id,
+                          }))}
                           onValueChange={async (value) => {
                             clearDebounce();
                             const ver = versions.find((v) => v.id == value);
@@ -1158,26 +1159,7 @@ export function ModManager({
                               offset: 0,
                             });
                           }}
-                        >
-                          <SelectTrigger
-                            size="sm"
-                            className="w-full"
-                            aria-label={t("versions.version")}
-                          >
-                            {isLoading &&
-                              loadingType == LoadingType.GAME_VERSIONS && (
-                                <LoadingIcon className="mr-1" />
-                              )}
-                            <SelectValue placeholder={t("versions.version")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {versions.map((v) => (
-                              <SelectItem key={v.id} value={v.id}>
-                                {v.id}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        />
                       </div>
 
                       <div className="w-36 min-w-36">
@@ -2275,6 +2257,23 @@ export function ModManager({
                                           loadingType == LoadingType.TRANSLATE
                                         }
                                         onClick={async () => {
+                                          const cacheKey = `${project.provider}-${project.id}-${settings.lang}`;
+                                          const cached =
+                                            translationCacheRef.current.get(
+                                              cacheKey,
+                                            );
+
+                                          if (cached) {
+                                            setProject({
+                                              ...project,
+                                              description:
+                                                cached.description ||
+                                                project.description,
+                                              body: cached.body || project.body,
+                                            });
+                                            return;
+                                          }
+
                                           setLoading(true);
                                           setLoadingType(LoadingType.TRANSLATE);
 
@@ -2283,18 +2282,26 @@ export function ModManager({
                                             translatedBody,
                                           ] = await Promise.all([
                                             project.description
-                                              ? await api.backend.aiComplete(
+                                              ? api.backend.aiComplete(
                                                   account?.accessToken || "",
                                                   `Translate the following text to ${settings.lang}:\n\n${project.description}`,
                                                 )
                                               : undefined,
                                             project.body
-                                              ? await api.backend.aiComplete(
+                                              ? api.backend.aiComplete(
                                                   account?.accessToken || "",
                                                   `Translate the following text to ${settings.lang}:\n\n${project.body}`,
                                                 )
                                               : undefined,
                                           ]);
+
+                                          translationCacheRef.current.set(
+                                            cacheKey,
+                                            {
+                                              description: translatedDescription,
+                                              body: translatedBody,
+                                            },
+                                          );
 
                                           setProject({
                                             ...project,
@@ -2322,13 +2329,26 @@ export function ModManager({
                                 <div className="flex flex-col gap-2">
                                   {selectVersion && selectVersion.id != "" && (
                                     <div className="max-w-80">
-                                      <Select
-                                        name="projectVersion"
+                                      <VirtualizedSelect
+                                        size="sm"
+                                        aria-label={t("versions.version")}
+                                        className={
+                                          isAvailableUpdate
+                                            ? "border-[var(--warning)]/60 ring-[var(--warning)]/20"
+                                            : ""
+                                        }
                                         disabled={
                                           isLoading ||
                                           project.provider == Provider.LOCAL
                                         }
                                         value={selectVersion?.id || ""}
+                                        placeholder={t("versions.version")}
+                                        searchPlaceholder={t("common.search")}
+                                        emptyText={t("common.notFound")}
+                                        options={project.versions.map((v) => ({
+                                          value: v.id,
+                                          label: v.name,
+                                        }))}
                                         onValueChange={async (value) => {
                                           if (!value) return;
 
@@ -2376,29 +2396,13 @@ export function ModManager({
                                           setLoading(false);
                                           setLoadingType(null);
                                         }}
-                                      >
-                                        <SelectTrigger
-                                          size="sm"
-                                          className={`w-full ${isAvailableUpdate ? "border-[var(--warning)]/60 ring-[var(--warning)]/20" : ""}`}
-                                          aria-label={t("versions.version")}
-                                        >
-                                          <SelectValue
-                                            placeholder={t("versions.version")}
-                                          />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {project.versions.map((v) => (
-                                            <SelectItem value={v.id} key={v.id}>
-                                              <span className="truncate">
-                                                {v.name}
-                                              </span>
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
+                                      />
                                       {isAvailableUpdate && (
-                                        <Alert className="mt-2 border-[var(--warning)]/40 bg-[var(--warning)]/10 px-3 py-2 text-card-foreground">
-                                          <CircleAlert className="text-[var(--warning)]" />
+                                        <Alert
+                                          variant="warning"
+                                          className="mt-2 px-3 py-2"
+                                        >
+                                          <CircleAlert />
                                           <AlertTitle className="line-clamp-none min-h-0 text-xs leading-5">
                                             {t("modManager.availableUpdate")}
                                             {project.versions[0]?.name
