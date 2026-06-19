@@ -3,7 +3,7 @@ name: Release Launcher
 on:
   push:
     tags:
-      - "v*"
+      - "*.*.*"
 
 permissions:
   contents: write
