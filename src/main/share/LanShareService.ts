@@ -53,6 +53,9 @@ type ShareEvents = {
 const LAN_PORT_PATTERNS = [
   /Local game hosted on port (\d{2,5})/i,
   /Started serving on (\d{2,5})/i,
+  /Published LAN server on port (\d{2,5})/i,
+  /open to LAN\. The port number is (\d{2,5})/i,
+  /Multiplayer game is now hosted on port (\d{2,5})/i,
 ];
 
 const HEARTBEAT_MAX_CONSECUTIVE_FAILURES = 3;
@@ -874,7 +877,10 @@ export class LanShareService extends EventEmitter {
     const backend = new Backend(this.activeHostAccessToken);
     const response = await backend.renewShareGatewayToken(sessionId);
 
-    if (!response.gatewayToken || !this.isValidGatewayUrl(response.gatewayUrl)) {
+    if (
+      !response.gatewayToken ||
+      !this.isValidGatewayUrl(response.gatewayUrl)
+    ) {
       throw new ShareServiceError(
         "invalid_response",
         "Share API returned invalid gateway token response",

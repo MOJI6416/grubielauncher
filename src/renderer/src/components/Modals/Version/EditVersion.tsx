@@ -600,7 +600,7 @@ export function EditVersion({
           handleRequestClose();
         }}
       >
-        <DialogContent
+        <DialogContent aria-describedby={undefined}
           className="max-h-[90vh] overflow-hidden p-0 sm:max-w-2xl"
           onClick={(event) => event.stopPropagation()}
           onEscapeKeyDown={(event) => {

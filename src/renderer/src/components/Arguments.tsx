@@ -51,7 +51,7 @@ export function Arguments({
         if (!open) onClose();
       }}
     >
-      <DialogContent
+      <DialogContent aria-describedby={undefined}
         className="overflow-hidden p-0 sm:max-w-2xl"
         onClick={(event) => event.stopPropagation()}
       >

@@ -151,7 +151,7 @@ export function Servers({
           closeModal();
         }}
       >
-        <DialogContent
+        <DialogContent aria-describedby={undefined}
           className="min-w-0 overflow-hidden p-0 sm:max-w-md"
           onPointerDownOutside={preventOuterPortalInteraction}
           onFocusOutside={preventOuterPortalInteraction}

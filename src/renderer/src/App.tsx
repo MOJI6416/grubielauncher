@@ -7,7 +7,6 @@ import { io, Socket } from "socket.io-client";
 import { Loader2 } from "lucide-react";
 import type { IFriendRequest } from "./components/Friends/Friends";
 import { IUser } from "../../types/IUser";
-import { IVersionStatistics } from "../../types/VersionStatistics";
 import { useAtom } from "jotai";
 import {
   accountAtom,
@@ -90,10 +89,7 @@ import { LazyAddVersion } from "./components/LazyAddVersion";
 import { WhatsNewModal } from "./components/WhatsNewModal";
 import { Onboarding } from "./components/Onboarding";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
-import {
-  getWhatsNewDecision,
-  markWhatsNewSeen,
-} from "./utilities/whatsNew";
+import { getWhatsNewDecision, markWhatsNewSeen } from "./utilities/whatsNew";
 import {
   readLauncherState,
   writeLauncherState,
@@ -397,9 +393,7 @@ function App() {
   ]);
 
   useEffect(() => {
-    if (
-      canCurrentAccountManageShare(shareOwnerAccountKey, selectedAccount)
-    ) {
+    if (canCurrentAccountManageShare(shareOwnerAccountKey, selectedAccount)) {
       return;
     }
 
@@ -473,26 +467,29 @@ function App() {
     const hasFiles = (event: DragEvent) =>
       Array.from(event.dataTransfer?.types || []).includes("Files");
 
+    const isInsideDialog = (event: DragEvent) =>
+      !!(event.target as HTMLElement | null)?.closest?.('[role="dialog"]');
+
     const onDragEnter = (event: DragEvent) => {
-      if (!hasFiles(event)) return;
+      if (!hasFiles(event) || isInsideDialog(event)) return;
       event.preventDefault();
       dragCounterRef.current += 1;
       setIsFileDragOver(true);
     };
 
     const onDragOver = (event: DragEvent) => {
-      if (!hasFiles(event)) return;
+      if (!hasFiles(event) || isInsideDialog(event)) return;
       event.preventDefault();
     };
 
     const onDragLeave = (event: DragEvent) => {
-      if (!hasFiles(event)) return;
+      if (!hasFiles(event) || isInsideDialog(event)) return;
       dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
       if (dragCounterRef.current === 0) setIsFileDragOver(false);
     };
 
     const onDrop = (event: DragEvent) => {
-      if (!hasFiles(event)) return;
+      if (!hasFiles(event) || isInsideDialog(event)) return;
       event.preventDefault();
       dragCounterRef.current = 0;
       setIsFileDragOver(false);
@@ -683,50 +680,66 @@ function App() {
     };
   }, [setPaths, setVersions]);
 
-  useEffect(() => {
-    const updatePlayingTime = async (time: number) => {
-      try {
-        let a = selectedAccountRef.current;
-        const ad = authDataRef.current;
-        if (!ad || !a || !a.accessToken) return;
+  const playtimeSyncInFlightRef = useRef(false);
 
-        if (a.type !== "plain") {
-          const refreshed = await ensureAccountSession({
-            accounts: accountsRef.current,
-            authData: ad,
-            selectedAccount: a,
-            setAccounts,
-            setSelectedAccount,
-          });
+  const flushPlaytimeSyncQueue = useCallback(async () => {
+    if (playtimeSyncInFlightRef.current) return;
+    playtimeSyncInFlightRef.current = true;
+    try {
+      const ad = authDataRef.current;
+      let a = selectedAccountRef.current;
+      if (!ad?.sub || !a || !a.accessToken) return;
 
-          a = refreshed.account;
-        }
+      const queue = await api.statistics.getSyncQueue();
+      const mine = queue.filter((e) => e.sub === ad.sub && e.seconds > 0);
+      if (mine.length === 0) return;
 
-        const user = await api.backend.getUser(a.accessToken || "", ad.sub);
-        if (!user) return;
-
-        await api.backend.updateUser(a.accessToken || "", user._id, {
-          playTime: user.playTime + time,
+      if (a.type !== "plain") {
+        const refreshed = await ensureAccountSession({
+          accounts: accountsRef.current,
+          authData: ad,
+          selectedAccount: a,
+          setAccounts,
+          setSelectedAccount,
         });
-      } catch (err) {
-        if (!isAccountSessionRefreshError(err)) {
-          console.error(err);
-        }
+
+        a = refreshed.account;
       }
-    };
+
+      const user = await api.backend.getUser(a.accessToken || "", ad.sub);
+      if (!user) return;
+
+      const totalSeconds = mine.reduce((sum, e) => sum + e.seconds, 0);
+      await api.backend.updateUser(a.accessToken || "", user._id, {
+        playTime: user.playTime + totalSeconds,
+      });
+      await api.statistics.resolveSyncEntries(mine.map((e) => e.id));
+    } catch (err) {
+      if (!isAccountSessionRefreshError(err)) {
+        console.error(err);
+      }
+    } finally {
+      playtimeSyncInFlightRef.current = false;
+    }
+  }, [
+    accountsRef,
+    authDataRef,
+    selectedAccountRef,
+    setAccounts,
+    setSelectedAccount,
+  ]);
+
+  useEffect(() => {
+    void flushPlaytimeSyncQueue();
+  }, [authData, selectedAccount, flushPlaytimeSyncQueue]);
+
+  useEffect(() => {
+    const unsubscribePlaytimeRecorded = api.events.onPlaytimeRecorded(() => {
+      void flushPlaytimeSyncQueue();
+    });
 
     const unsubscribeConsoleStatus = api.events.onConsoleChangeStatus(
       async (versionName, instance, status) => {
-        const current = consolesRef.current.consoles.find(
-          (c) => c.versionName === versionName && c.instance === instance,
-        );
-        const startTimeForCalc = current?.startTime ?? 0;
-        const isTerminalStatus = status === "stopped" || status === "error";
-        const shouldCountSession =
-          isTerminalStatus &&
-          current?.status === "running" &&
-          !!startTimeForCalc;
-
         setConsoles((prev) => {
           const idx = prev.consoles.findIndex(
             (c) => c.versionName === versionName && c.instance === instance,
@@ -737,46 +750,6 @@ function App() {
           next[idx] = { ...next[idx], status };
           return { consoles: next };
         });
-
-        if (!shouldCountSession) return;
-
-        const time = Date.now() - startTimeForCalc;
-        const playTime = Math.floor(time / 1000);
-
-        await updatePlayingTime(playTime);
-
-        if (current?.trackStatistics) {
-          const v = versionsRef.current.find(
-            (vv) => vv.version.name == versionName,
-          );
-          if (!v) return;
-
-          const statPath = await api.path.join(
-            v.versionPath,
-            "statistics.json",
-          );
-          const statIsExists = await api.fs.pathExists(statPath);
-
-          let statData: IVersionStatistics = {
-            lastLaunched: new Date(),
-            launches: 1,
-            playTime,
-          };
-
-          if (statIsExists) {
-            const existed: IVersionStatistics = await api.fs.readJSON(
-              statPath,
-              "utf-8",
-            );
-            statData = {
-              lastLaunched: new Date(),
-              launches: (existed.launches || 0) + 1,
-              playTime: (existed.playTime || 0) + playTime,
-            };
-          }
-
-          await api.fs.writeJSON(statPath, statData);
-        }
       },
     );
 
@@ -915,6 +888,7 @@ function App() {
       });
 
     return () => {
+      unsubscribePlaytimeRecorded();
       unsubscribeConsoleStatus();
       unsubscribeConsoleMessage();
       unsubscribeConsoleClear();
@@ -926,7 +900,13 @@ function App() {
       unsubscribeDownloaderFailures();
       unsubscribeVersionInstallProgress();
     };
-  }, [setConsoles, setSelectedVersion, setIsRunning, setOwnPresence]);
+  }, [
+    setConsoles,
+    setSelectedVersion,
+    setIsRunning,
+    setOwnPresence,
+    flushPlaytimeSyncQueue,
+  ]);
 
   useEffect(() => {
     if (
@@ -1314,6 +1294,19 @@ function App() {
             return;
           }
         }
+      }
+
+      const authlibResult = await launchVersion.ensureAuthlib(account);
+      if (!authlibResult.ok) {
+        toast.error(
+          tRef.current(
+            authlibResult.reason === "download_failed"
+              ? "app.authlibDownloadFailed"
+              : "app.authlibUnavailable",
+          ),
+        );
+        setIsRunning(false);
+        return;
       }
 
       setIsRunning(true);

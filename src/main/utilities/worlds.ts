@@ -1,4 +1,8 @@
-import { IWorld, IWorldStatistics } from "@/types/World";
+import {
+  IWorld,
+  IWorldStatistics,
+  IWorldStatsAggregate,
+} from "@/types/World";
 import { generateOfflineUUID, toUUID } from "./other";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { jwtDecode } from "jwt-decode";
@@ -29,14 +33,28 @@ function getAccountUuid(account: ILocalAccount): string {
   return toUUID(generateOfflineUUID(account.nickname));
 }
 
+async function resolveStatsFile(
+  worldPath: string,
+  accountUUID: string,
+): Promise<string | null> {
+  const candidates = [
+    path.join(worldPath, "players", "stats", `${accountUUID}.json`),
+    path.join(worldPath, "stats", `${accountUUID}.json`),
+  ];
+  for (const candidate of candidates) {
+    if (await fs.pathExists(candidate)) return candidate;
+  }
+  return null;
+}
+
 export async function loadStatistics(
   worldPath: string,
   account: ILocalAccount,
 ): Promise<IWorldStatistics | null> {
   const accountUUID = getAccountUuid(account);
 
-  const statisticsPath = path.join(worldPath, "stats", `${accountUUID}.json`);
-  if (!(await fs.pathExists(statisticsPath))) return null;
+  const statisticsPath = await resolveStatsFile(worldPath, accountUUID);
+  if (!statisticsPath) return null;
 
   try {
     const stats: IWorldStatistics = await fs.readJSON(statisticsPath);
@@ -233,6 +251,80 @@ export async function writeWorldName(
     console.error("Error changing world name:", err);
     return null;
   }
+}
+
+function toFiniteNumber(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function sumCategory(category: Record<string, number> | undefined): number {
+  if (!category) return 0;
+  let total = 0;
+  for (const value of Object.values(category)) total += toFiniteNumber(value);
+  return total;
+}
+
+function sumDistance(custom: Record<string, number> | undefined): number {
+  if (!custom) return 0;
+  let total = 0;
+  for (const [key, value] of Object.entries(custom)) {
+    if (key.endsWith("_one_cm")) total += toFiniteNumber(value);
+  }
+  return total;
+}
+
+export async function loadVersionWorldStatistics(
+  versionPath: string,
+  account: ILocalAccount,
+): Promise<IWorldStatsAggregate> {
+  const aggregate: IWorldStatsAggregate = {
+    worlds: 0,
+    playTimeTicks: 0,
+    deaths: 0,
+    mobKills: 0,
+    distanceCm: 0,
+    blocksMined: 0,
+    jumps: 0,
+  };
+
+  const accountUUID = getAccountUuid(account);
+  const savesPath = path.join(versionPath, "saves");
+
+  let entries: string[] = [];
+  try {
+    if (!(await fs.pathExists(savesPath))) return aggregate;
+    entries = await fs.readdir(savesPath);
+  } catch {
+    return aggregate;
+  }
+
+  for (const entry of entries) {
+    const statsFile = await resolveStatsFile(
+      path.join(savesPath, entry),
+      accountUUID,
+    );
+    if (!statsFile) continue;
+    let data: IWorldStatistics | null = null;
+    try {
+      data = await fs.readJSON(statsFile);
+    } catch {
+      continue;
+    }
+    if (!data?.stats) continue;
+
+    const custom = data.stats["minecraft:custom"];
+    const mined = data.stats["minecraft:mined"];
+
+    aggregate.worlds += 1;
+    aggregate.playTimeTicks += toFiniteNumber(custom?.["minecraft:play_time"]);
+    aggregate.deaths += toFiniteNumber(custom?.["minecraft:deaths"]);
+    aggregate.mobKills += toFiniteNumber(custom?.["minecraft:mob_kills"]);
+    aggregate.jumps += toFiniteNumber(custom?.["minecraft:jump"]);
+    aggregate.distanceCm += sumDistance(custom);
+    aggregate.blocksMined += sumCategory(mined);
+  }
+
+  return aggregate;
 }
 
 function getArchiveEntryPath(entry: any) {

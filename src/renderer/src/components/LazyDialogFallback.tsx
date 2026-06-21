@@ -29,7 +29,7 @@ export function LazyDialogFallback({
 }) {
   return (
     <Dialog open>
-      <DialogContent
+      <DialogContent aria-describedby={undefined}
         showCloseButton={false}
         className={cn(
           "flex max-h-[calc(100vh-2rem)] items-center justify-center overflow-hidden",

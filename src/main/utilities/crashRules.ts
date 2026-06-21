@@ -259,6 +259,12 @@ function extractCulprits(rule: CrashRule, text: string): string[] {
   return [...culprits];
 }
 
+function stripLogPrefix(line: string): string {
+  return line.replace(/^(?:\[[^\]]*\]\s*)+:?\s*/, "");
+}
+
+const NON_FATAL_LOG_LINE = /Error rendering overlay|could not find refmap file/i;
+
 function sanitizeSignature(line: string): string {
   return line
     .replace(/[A-Za-z]:\\[^\s"']+/g, (match) => match.split(/[\\/]/).pop() || match)
@@ -278,8 +284,14 @@ export function extractCrashSignature(text: string, exitCode?: number): string {
       /[\w.$]*(?:Exception|Error)\b|invalid or corrupt|could not (?:find|load)|error in opening zip|unexpected end of|no space left|caused by|failed to|fatal/i;
     const errorLine = text
       .split(/\r?\n/)
-      .map((line) => line.trim())
-      .find((line) => line && !/^Description:/i.test(line) && relevant.test(line));
+      .map((line) => stripLogPrefix(line.trim()))
+      .find(
+        (line) =>
+          line &&
+          !/^Description:/i.test(line) &&
+          relevant.test(line) &&
+          !NON_FATAL_LOG_LINE.test(line),
+      );
     if (errorLine && !parts.includes(errorLine)) parts.push(errorLine);
   }
 

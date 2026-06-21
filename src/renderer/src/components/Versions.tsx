@@ -27,7 +27,8 @@ import {
   CloudDownload,
 } from "lucide-react";
 import { VersionStatistics } from "./VersionStatistics";
-import { IVersionStatistics } from "@/types/VersionStatistics";
+import { IVersionSession, IVersionStatistics } from "@/types/VersionStatistics";
+import { IWorldStatsAggregate } from "@/types/World";
 import { useAtom } from "jotai";
 import {
   accountAtom,
@@ -188,9 +189,15 @@ export function Versions({
   const [isServerManager, setIsServerManager] = useState(false);
   const [server, setServer] = useAtom(serverAtom);
   const [account] = useAtom(accountAtom);
-  const [isStatistics, setIsStatistics] = useState(false);
+  const [versionFlags, setVersionFlags] = useState<
+    Record<string, { hasStatistics: boolean; hasServer: boolean }>
+  >({});
   const [statisticsOpen, setStatisticsOpen] = useState(false);
   const [statistics, setStatistics] = useState<IVersionStatistics | null>(null);
+  const [sessions, setSessions] = useState<IVersionSession[]>([]);
+  const [worldStats, setWorldStats] = useState<IWorldStatsAggregate | null>(
+    null,
+  );
   const [isRunning] = useAtom(isRunningAtom);
   const [selectedVersion, setSelectedVersion] = useAtom(selectedVersionAtom);
   const [paths] = useAtom(pathsAtom);
@@ -216,6 +223,36 @@ export function Versions({
       300,
     );
   }, [selectedVersion]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      const entries = await Promise.all(
+        (versions || []).map(async (vc) => {
+          const key = vc.versionPath || vc.version.name;
+          try {
+            const [statisticsPath, serverPath] = await Promise.all([
+              api.path.join(vc.versionPath, "statistics.json"),
+              api.path.join(vc.versionPath, "server"),
+            ]);
+            const [hasStatistics, hasServer] = await Promise.all([
+              api.fs.pathExists(statisticsPath),
+              api.fs.pathExists(serverPath),
+            ]);
+            return [key, { hasStatistics, hasServer }] as const;
+          } catch {
+            return [key, { hasStatistics: false, hasServer: false }] as const;
+          }
+        }),
+      );
+      if (!cancelled) setVersionFlags(Object.fromEntries(entries));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [versions]);
 
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -251,9 +288,10 @@ export function Versions({
     setIsDownloadedVersion(false);
     setIsOwnerVersion(false);
     setServer(undefined);
-    setIsStatistics(false);
     setStatisticsOpen(false);
     setStatistics(null);
+    setSessions([]);
+    setWorldStats(null);
     setVersionDiffence("sync");
   };
 
@@ -288,11 +326,23 @@ export function Versions({
       );
       const isStatisticsExists = await api.fs.pathExists(statisticsPath);
       if (reqId !== selectReqIdRef.current) return;
-      setIsStatistics(isStatisticsExists);
+      setVersionFlags((prev) => ({
+        ...prev,
+        [vc.versionPath || vc.version.name]: {
+          hasStatistics: isStatisticsExists,
+          hasServer: isExists,
+        },
+      }));
     } catch {
       if (reqId !== selectReqIdRef.current) return;
       setServer(undefined);
-      setIsStatistics(false);
+      setVersionFlags((prev) => ({
+        ...prev,
+        [vc.versionPath || vc.version.name]: {
+          hasStatistics: false,
+          hasServer: false,
+        },
+      }));
     }
   };
 
@@ -545,7 +595,8 @@ export function Versions({
 
                             {isSelected && (
                               <>
-                              {isStatistics && vc.versionPath && (
+                              {versionFlags[itemKey]?.hasStatistics &&
+                                vc.versionPath && (
                                 <Button
                                   variant="outline"
                                   size="icon-lg"
@@ -579,12 +630,59 @@ export function Versions({
                                           "utf-8",
                                         );
 
+                                      const sessionsPath =
+                                        await api.path.join(
+                                          vc.versionPath,
+                                          "sessions.json",
+                                        );
+                                      let loadedSessions: IVersionSession[] =
+                                        [];
+                                      try {
+                                        if (
+                                          await api.fs.pathExists(sessionsPath)
+                                        ) {
+                                          loadedSessions =
+                                            await api.fs.readJSON<
+                                              IVersionSession[]
+                                            >(sessionsPath, "utf-8");
+                                        }
+                                      } catch {
+                                        loadedSessions = [];
+                                      }
+
+                                      let loadedWorldStats: IWorldStatsAggregate | null =
+                                        null;
+                                      if (account) {
+                                        try {
+                                          loadedWorldStats =
+                                            await api.worlds.loadVersionStatistics(
+                                              vc.versionPath,
+                                              account,
+                                            );
+                                        } catch {
+                                          loadedWorldStats = null;
+                                        }
+                                      }
+
                                       setStatistics(data);
+                                      setSessions(
+                                        Array.isArray(loadedSessions)
+                                          ? loadedSessions
+                                          : [],
+                                      );
+                                      setWorldStats(loadedWorldStats);
                                       setStatisticsOpen(true);
                                     } catch {
                                       try {
                                         await api.fs.rimraf(filePath);
-                                        setIsStatistics(false);
+                                        setVersionFlags((prev) => ({
+                                          ...prev,
+                                          [itemKey]: {
+                                            hasStatistics: false,
+                                            hasServer:
+                                              prev[itemKey]?.hasServer ?? false,
+                                          },
+                                        }));
                                       } catch {}
                                       toast.error(t("versionStatistics.error"));
                                     } finally {
@@ -619,7 +717,7 @@ export function Versions({
                                 <Folder className="size-4" />
                               </Button>
 
-                              {server && (
+                              {versionFlags[itemKey]?.hasServer && (
                                 <Button
                                   variant="outline"
                                   size="icon-lg"
@@ -807,8 +905,12 @@ export function Versions({
           onClose={() => {
             setStatisticsOpen(false);
             setStatistics(null);
+            setSessions([]);
+            setWorldStats(null);
           }}
           statistics={statistics}
+          sessions={sessions}
+          worldStats={worldStats}
         />
       )}
 

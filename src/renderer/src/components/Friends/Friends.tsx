@@ -1545,7 +1545,7 @@ export function Friends({
           if (!open) setAddFriend(false);
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent aria-describedby={undefined} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("friends.adding")}</DialogTitle>
           </DialogHeader>
@@ -1710,6 +1710,7 @@ export function Friends({
           }}
         >
           <DialogContent
+            aria-describedby={undefined}
             className="sm:max-w-sm"
             onEscapeKeyDown={(event) => {
               if (isLoading) event.preventDefault();
@@ -1776,7 +1777,7 @@ export function Friends({
             if (!open) setIsSelectVersions(false);
           }}
         >
-          <DialogContent className="sm:max-w-sm">
+          <DialogContent aria-describedby={undefined} className="sm:max-w-sm">
             <DialogHeader>
               <DialogTitle>{t("friends.shareBuildTitle")}</DialogTitle>
             </DialogHeader>

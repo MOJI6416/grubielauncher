@@ -494,6 +494,7 @@ export default function AccountInfo({
         }}
       >
         <DialogContent
+          aria-describedby={undefined}
           className="sm:max-w-2xl"
           onPointerDownOutside={(event) => {
             if (isLoading) event.preventDefault();

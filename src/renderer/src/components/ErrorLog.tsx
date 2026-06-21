@@ -41,7 +41,7 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
         if (!open) onClose();
       }}
     >
-      <DialogContent className="p-0 sm:max-w-lg">
+      <DialogContent aria-describedby={undefined} className="p-0 sm:max-w-lg">
         <DialogHeader className="px-5 pt-5">
           <DialogTitle>{t("errorLog.title")}</DialogTitle>
         </DialogHeader>

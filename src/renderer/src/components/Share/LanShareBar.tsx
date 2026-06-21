@@ -274,14 +274,14 @@ export function LanShareModal({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-lg">
+      <DialogContent aria-describedby={undefined} className="gap-0 overflow-hidden p-0 sm:max-w-lg">
         <DialogHeader className="border-b px-5 py-4 pr-12">
           <DialogTitle>{t("share.title")}</DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 p-5">
           <Card className="gap-0 p-0 shadow-none">
-            <CardContent className="flex min-h-[5.75rem] min-w-0 items-start gap-3 p-4">
+            <CardContent className="flex min-w-0 items-start gap-3 p-4">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">
                 {shareState.phase === "online" ? (
                   <CheckCircle2 className="size-5 text-emerald-500" />
@@ -345,7 +345,7 @@ export function LanShareModal({
                   )}
                 </div>
 
-                <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+                <p className="line-clamp-2 text-sm leading-5 text-muted-foreground">
                   {statusDescription}
                 </p>
               </div>
@@ -388,7 +388,7 @@ export function LanShareModal({
                 <LockKeyhole className="size-4 text-muted-foreground" />
                 {t("share.visibility")}
               </CardTitle>
-              <CardDescription className="line-clamp-2 min-h-10">
+              <CardDescription className="line-clamp-2">
                 {visibilityDescription}
               </CardDescription>
             </CardHeader>
@@ -465,10 +465,10 @@ export function LanShareModal({
           )}
         </div>
 
-        <DialogFooter className="mx-0 mb-0 min-w-0 rounded-none bg-muted/25 px-5 py-4 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+        <DialogFooter className="mx-0 mb-0 min-w-0 rounded-none bg-muted/25 px-5 py-4 sm:items-center sm:justify-end">
           {shareState.publicAddress ? (
             <Button
-              className="min-w-0 justify-start"
+              className="min-w-0"
               variant="secondary"
               disabled={loadingAction !== null}
               onClick={() => void handleCopy()}

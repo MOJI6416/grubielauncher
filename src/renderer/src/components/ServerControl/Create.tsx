@@ -184,7 +184,7 @@ export function CreateServer({
         if (!open && !isLoading) close();
       }}
     >
-      <DialogContent
+      <DialogContent aria-describedby={undefined}
         className="overflow-hidden p-0 sm:max-w-xs"
         onPointerDownOutside={(event) => {
           if (isLoading) event.preventDefault();

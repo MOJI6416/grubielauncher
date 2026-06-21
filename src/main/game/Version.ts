@@ -24,6 +24,7 @@ import { rimraf } from "rimraf";
 import { app } from "electron";
 import { runGame, runJar } from "../utilities/game";
 import { getAuthlibCached } from "../utilities/authlib";
+import { AuthlibEnsureResult } from "@/types/IAuthlib";
 import { readJSONFromArchive } from "../utilities/archiver";
 import {
   VersionInstallOperation,
@@ -1344,6 +1345,65 @@ export class Version {
     return command.filter((arg) => arg != "");
   }
 
+  public async ensureAuthlib(
+    account: ILocalAccount,
+  ): Promise<AuthlibEnsureResult> {
+    if (account.type == "microsoft" || account.type == "plain")
+      return { ok: true };
+
+    await this.ensureInitialized();
+    if (!this.manifest) return { ok: true };
+
+    const authlib = await getAuthlibCached();
+    if (!authlib) return { ok: false, reason: "unavailable" };
+
+    const existsAuthlib = this.manifest.libraries.some(
+      (lib) => lib.name === authlib.name,
+    );
+
+    if (!existsAuthlib) {
+      this.manifest.libraries.push({
+        name: authlib.name,
+        downloads: {
+          artifact: {
+            url: authlib.url,
+            path: authlib.path,
+            size: authlib.size,
+            sha1: authlib.sha1,
+          },
+        },
+      });
+
+      await this.writeManifest();
+    }
+
+    const authlibPath = path.join(
+      this.minecraftPath,
+      "libraries",
+      authlib.path,
+    );
+
+    if (await fs.pathExists(authlibPath)) return { ok: true };
+
+    try {
+      await this.downloader.downloadFiles([
+        {
+          url: authlib.url,
+          destination: authlibPath,
+          sha1: authlib.sha1,
+          size: authlib.size,
+          group: "libraries",
+          options: { silent: true },
+        },
+      ]);
+    } catch (error) {
+      console.error("[version:run] failed to download authlib-injector:", error);
+      return { ok: false, reason: "download_failed" };
+    }
+
+    return { ok: true };
+  }
+
   public async run(
     account: ILocalAccount,
     settings: TSettings,
@@ -1355,6 +1415,7 @@ export class Version {
     },
   ) {
     await this.ensureInitialized();
+    if (!(await this.ensureAuthlib(account)).ok) return false;
 
     const command = await this.getRunCommand(
       account,
@@ -1366,6 +1427,10 @@ export class Version {
     );
     if (!command) return false;
 
+    const trackStatistics =
+      !!this.version.owner &&
+      `${account.type}_${account.nickname}` === this.version.owner;
+
     runGame(
       command[0],
       command.slice(1),
@@ -1374,6 +1439,11 @@ export class Version {
       instance,
       account.accessToken || "",
       quick.multiplayer || this.version.quickServer,
+      {
+        trackStatistics,
+        accountSub: authData?.sub ?? null,
+        accountLabel: account.nickname,
+      },
     );
 
     return true;

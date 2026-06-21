@@ -7,7 +7,7 @@ import {
   networkAtom,
 } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
-import { Loader2 } from "lucide-react";
+import { Loader2, Shirt } from "lucide-react";
 import {
   lazy,
   Suspense,
@@ -341,6 +341,8 @@ export function MiniSkinWidget() {
 
   if (!isVisible || !selectedAccount) return null;
 
+  const hasNoSkin = canLoadRemoteSkin && !isLoading && !preview?.skin;
+
   return (
     <>
       <button
@@ -348,6 +350,7 @@ export function MiniSkinWidget() {
         data-account-click-ignore="true"
         type="button"
         aria-label={t("manageSkins.title")}
+        title={hasNoSkin ? t("manageSkins.noSkinSet") : t("manageSkins.title")}
         className={`relative -ml-1 flex h-[36px] w-[22px] flex-shrink-0 items-center justify-center overflow-hidden bg-transparent p-0 transition duration-200 ${
           isLoading || isOpeningManager
             ? "cursor-progress opacity-60"
@@ -395,6 +398,10 @@ export function MiniSkinWidget() {
               }}
             />
           </Suspense>
+        ) : hasNoSkin ? (
+          <div className="flex h-[32px] w-[20px] items-center justify-center rounded-md border border-dashed border-primary/60 bg-muted/40 text-primary/70">
+            <Shirt className="size-3" />
+          </div>
         ) : (
           <div className="flex h-[32px] w-[20px] items-center justify-center rounded-md border bg-muted/60 text-[10px] font-semibold text-muted-foreground">
             {isLoading ? (

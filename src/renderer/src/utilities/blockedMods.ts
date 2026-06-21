@@ -8,6 +8,51 @@ export interface IBlockedMod {
   filePath?: string;
 }
 
+const WATCHED_FOLDERS_KEY = "blockedMods.watchedFolders";
+
+function normalizeFolder(folder: string) {
+  return folder.replace(/[\\/]+$/, "").toLowerCase();
+}
+
+export function loadWatchedFolders(): string[] {
+  try {
+    const raw = localStorage.getItem(WATCHED_FOLDERS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (folder): folder is string =>
+        typeof folder === "string" && folder.trim().length > 0,
+    );
+  } catch {
+    return [];
+  }
+}
+
+export function saveWatchedFolders(folders: string[]) {
+  try {
+    localStorage.setItem(WATCHED_FOLDERS_KEY, JSON.stringify(folders));
+  } catch {}
+}
+
+export function areSameFolder(a: string, b: string) {
+  return normalizeFolder(a) === normalizeFolder(b);
+}
+
+export function dedupeFolders(folders: string[]) {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const folder of folders) {
+    const key = normalizeFolder(folder);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(folder);
+  }
+
+  return result;
+}
+
 type BlockedModFileLike = {
   url?: string;
   localPath?: string;

@@ -85,7 +85,7 @@ export function OwnModpacks({
           if (!open && !isLoading) onClose();
         }}
       >
-        <DialogContent
+        <DialogContent aria-describedby={undefined}
           data-account-click-ignore="true"
           className="sm:max-w-md"
           onPointerDownOutside={(event) => {

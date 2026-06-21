@@ -11,6 +11,7 @@ import {
   IAddedLocalProject,
   IUpdateProject,
 } from "@/types/ModManager";
+import { DownloaderInfo } from "@/types/Downloader";
 import { LoaderLabel } from "../Loaders";
 import {
   type Dispatch,
@@ -126,6 +127,7 @@ import {
 } from "@renderer/utilities/mod";
 import { ALPModal } from "./AddLocalProjectsModal";
 import { UPModal } from "./UpdateProjectsModal";
+import { formatBytes } from "@renderer/utilities/file";
 import { toast } from "sonner";
 
 const api = window.api;
@@ -371,6 +373,8 @@ export function ModManager({
   const [offset, setOffset] = useState(0);
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>([]);
   const [isBlockedMods, setIsBlockedMods] = useState(false);
+  const [downloadInfo, setDownloadInfo] = useState<DownloaderInfo | null>(null);
+  const [isExtractingModpack, setIsExtractingModpack] = useState(false);
   const [paths] = useAtom(pathsAtom);
   const [selectedVersion] = useAtom(selectedVersionAtom);
   const settings = useAtom(settingsAtom)[0];
@@ -396,6 +400,26 @@ export function ModManager({
     setInternalPendingRemovedLocalProjects;
 
   const { t } = useTranslation();
+
+  const sizes = useMemo(
+    () => [
+      t("sizes.0"),
+      t("sizes.1"),
+      t("sizes.2"),
+      t("sizes.3"),
+      t("sizes.4"),
+    ],
+    [t],
+  );
+
+  useEffect(() => {
+    const unsubscribe = api.events.onDownloaderInfo((info) => {
+      setDownloadInfo(info);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const rememberRemovedLocalProject = useCallback((project: ILocalProject) => {
     setPendingRemovedLocalProjects((prev) =>
@@ -980,7 +1004,7 @@ export function ModManager({
           if (!open && !isLoading) onClose();
         }}
       >
-        <DialogContent
+        <DialogContent aria-describedby={undefined}
           className="grid h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-0 sm:max-w-none"
           onPointerDownOutside={(event) => {
             if (isLoading) event.preventDefault();
@@ -2005,7 +2029,7 @@ export function ModManager({
                       })}
                     </ScrollArea>
                   </div>
-                ) : (
+                ) : searchData && searchData.total === 0 ? (
                   <div className="flex-1 min-h-0">
                     <Empty className="h-full min-h-72 border border-dashed bg-muted/20">
                       <EmptyHeader>
@@ -2015,6 +2039,13 @@ export function ModManager({
                         <EmptyTitle>{t("common.notFound")}</EmptyTitle>
                       </EmptyHeader>
                     </Empty>
+                  </div>
+                ) : (
+                  <div className="flex justify-center items-center flex-1 min-h-0">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <LoadingIcon />
+                      {t("common.searching")}
+                    </div>
                   </div>
                 )}
 
@@ -2152,7 +2183,7 @@ export function ModManager({
                   setSelectVersion(prevProject.versions[safeIdx]);
                 }}
               >
-                <DialogContent
+                <DialogContent aria-describedby={undefined}
                   className={`grid h-[min(48rem,calc(100vh-4rem))] max-h-[calc(100vh-4rem)] ${
                     shouldShowProjectDetailsPane(project)
                       ? "w-[min(92rem,calc(100vw-2rem))] sm:max-w-[min(92rem,calc(100vw-2rem))]"
@@ -2298,7 +2329,8 @@ export function ModManager({
                                           translationCacheRef.current.set(
                                             cacheKey,
                                             {
-                                              description: translatedDescription,
+                                              description:
+                                                translatedDescription,
                                               body: translatedBody,
                                             },
                                           );
@@ -2482,27 +2514,35 @@ export function ModManager({
                                                 ),
                                               );
 
+                                            const archivePath =
+                                              await api.path.join(
+                                                temp,
+                                                filename,
+                                              );
+
                                             await api.file.download(
                                               [
                                                 {
-                                                  destination:
-                                                    await api.path.join(
-                                                      temp,
-                                                      filename,
-                                                    ),
+                                                  destination: archivePath,
                                                   group: "mods",
                                                   url: file.url,
                                                   sha1: file.sha1,
                                                   size: file.size,
-                                                  options: {
-                                                    extract: true,
-                                                    extractDelete: true,
-                                                    extractFolder: modpackPath,
-                                                  },
                                                 },
                                               ],
                                               settings.downloadLimit,
                                             );
+
+                                            setIsExtractingModpack(true);
+                                            try {
+                                              await api.fs.extractZip(
+                                                archivePath,
+                                                modpackPath,
+                                              );
+                                              await api.fs.rimraf(archivePath);
+                                            } finally {
+                                              setIsExtractingModpack(false);
+                                            }
 
                                             const modpack =
                                               await api.modManager.checkModpack(
@@ -2766,6 +2806,81 @@ export function ModManager({
                                       </>
                                     )}
                                   </div>
+
+                                  {isModpacks &&
+                                    isLoading &&
+                                    loadingType == LoadingType.INSTALL &&
+                                    (isExtractingModpack || downloadInfo) && (
+                                      <div className="rounded-lg border bg-muted/15 p-3">
+                                        <div className="mb-2 flex items-center justify-between gap-2">
+                                          <div className="flex min-w-0 items-center gap-2">
+                                            {isExtractingModpack ? (
+                                              <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
+                                            ) : (
+                                              <Download className="size-4 shrink-0 text-muted-foreground" />
+                                            )}
+                                            <span className="truncate text-sm font-medium">
+                                              {isExtractingModpack
+                                                ? t("modManager.extracting")
+                                                : t("downloadProgress.title")}
+                                            </span>
+                                          </div>
+                                          {!isExtractingModpack &&
+                                            downloadInfo && (
+                                              <Badge
+                                                variant="outline"
+                                                className="w-14 shrink-0 justify-center bg-muted/40 tabular-nums"
+                                              >
+                                                {downloadInfo.progressPercent}%
+                                              </Badge>
+                                            )}
+                                        </div>
+
+                                        <Progress
+                                          value={
+                                            isExtractingModpack
+                                              ? 100
+                                              : Math.max(
+                                                  0,
+                                                  Math.min(
+                                                    100,
+                                                    downloadInfo?.progressPercent ??
+                                                      0,
+                                                  ),
+                                                )
+                                          }
+                                          max={100}
+                                          className={
+                                            isExtractingModpack
+                                              ? "[&_[data-slot=progress-indicator]]:animate-pulse"
+                                              : undefined
+                                          }
+                                        />
+
+                                        {!isExtractingModpack &&
+                                          downloadInfo &&
+                                          downloadInfo.totalBytes > 0 && (
+                                            <p className="mt-2 truncate text-xs tabular-nums text-muted-foreground">
+                                              {formatBytes(
+                                                downloadInfo.downloadedBytes,
+                                                sizes,
+                                              )}{" "}
+                                              /{" "}
+                                              {formatBytes(
+                                                downloadInfo.totalBytes,
+                                                sizes,
+                                              )}
+                                              {downloadInfo.downloadSpeed &&
+                                              downloadInfo.downloadSpeed > 0
+                                                ? ` · ${formatBytes(
+                                                    downloadInfo.downloadSpeed,
+                                                    sizes,
+                                                  )}/${t("timeUnits.0")}`
+                                                : ""}
+                                            </p>
+                                          )}
+                                      </div>
+                                    )}
                                 </div>
 
                                 {!isModpacks &&
@@ -2817,12 +2932,22 @@ export function ModManager({
                                                         height={32}
                                                         className="size-8 shrink-0 rounded object-cover"
                                                       />
-                                                      <p
-                                                        className="min-w-0 flex-1 truncate text-sm"
-                                                        title={d.project.title}
-                                                      >
-                                                        {d.project.title}
-                                                      </p>
+                                                      <div className="flex min-w-0 flex-col">
+                                                        <p
+                                                          className="truncate text-sm"
+                                                          title={d.project.title}
+                                                        >
+                                                          {d.project.title}
+                                                        </p>
+                                                        {depInstalled && (
+                                                          <span className="flex items-center gap-1 text-xs font-medium text-[var(--success)]">
+                                                            <PackageCheck className="size-3 shrink-0" />
+                                                            {t(
+                                                              "modManager.installed",
+                                                            )}
+                                                          </span>
+                                                        )}
+                                                      </div>
                                                     </div>
 
                                                     <div className="flex shrink-0 items-center gap-1">

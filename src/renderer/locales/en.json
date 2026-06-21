@@ -52,7 +52,13 @@
     "avatar": "Avatar",
     "cancelled": "Authentication canceled",
     "sessionExpired": "Your account session has expired. Sign in again.",
-    "confirmation": "Are you sure you want to delete the account {{nickname}}?"
+    "confirmation": "Are you sure you want to delete the account {{nickname}}?",
+    "providerFeature": {
+      "plain": "Offline",
+      "discord": "Own skin system",
+      "microsoft": "Official skin",
+      "elyby": "ely.by skins"
+    }
   },
   "serverManager": {
     "logoEdited": "Logo edited",
@@ -88,18 +94,8 @@
     "editDescription": "Edit description",
     "desctiption": "Server description",
     "unsavedChanges": "Are you sure you want to close the settings without saving?",
-    "gameModes": [
-      "Survival",
-      "Creative",
-      "Adventure",
-      "Spectator"
-    ],
-    "difficulties": [
-      "Peaceful",
-      "Easy",
-      "Normal",
-      "Hard"
-    ]
+    "gameModes": ["Survival", "Creative", "Adventure", "Spectator"],
+    "difficulties": ["Peaceful", "Easy", "Normal", "Hard"]
   },
   "friends": {
     "title": "Friends",
@@ -297,6 +293,7 @@
     "readingMod": "Reading mod",
     "selectLocals": "Select local mods",
     "notModpack": "Failed to recognize modpack",
+    "extracting": "Unpacking...",
     "disabled": "Mods are disabled",
     "enabled": "Mods are enabled",
     "translate": "Translate description",
@@ -359,11 +356,7 @@
     "copyAddress": "Copy address",
     "moveUp": "Move up",
     "moveDown": "Move down",
-    "resourceSets": [
-      "Ask",
-      "Enabled",
-      "Disabled"
-    ]
+    "resourceSets": ["Ask", "Enabled", "Disabled"]
   },
   "settings": {
     "title": "Settings",
@@ -380,11 +373,7 @@
     "mb": "MB",
     "devMode": "Developer mode",
     "theme": "Theme",
-    "themes": [
-      "Light",
-      "Dark",
-      "System"
-    ],
+    "themes": ["Light", "Dark", "System"],
     "downloadLimit": "Download limit",
     "connectivity": {
       "title": "Connection test",
@@ -407,7 +396,11 @@
     "crashTelemetryDescription": "Sends only the diagnosis code — helps improve the hints",
     "sounds": "Notification sounds",
     "soundsDescription": "Install finished, game crash and friend invites",
-    "sections": { "game": "Game", "interface": "Interface", "diagnostics": "Diagnostics" },
+    "sections": {
+      "game": "Game",
+      "interface": "Interface",
+      "diagnostics": "Diagnostics"
+    },
     "devModeDescription": "Run-command copying and extra debugging tools"
   },
   "skinView": {
@@ -417,13 +410,7 @@
     "rotation": "Rotation",
     "speed": "Speed",
     "animation": "Animation",
-    "animations": [
-      "None",
-      "Idle",
-      "Walk",
-      "Run",
-      "Fly"
-    ],
+    "animations": ["None", "Idle", "Walk", "Run", "Fly"],
     "additionally": "Additionally",
     "showName": "Show nickname",
     "setAvatat": "Set as avatar",
@@ -512,6 +499,8 @@
   "app": {
     "starting": "Starting game...",
     "startupError": "Startup error",
+    "authlibUnavailable": "Couldn't load the authentication component. Connect to the internet and try again.",
+    "authlibDownloadFailed": "Failed to download the authentication component. Check your connection and try again.",
     "newsFeed": "News feed",
     "sponsored": "Ad",
     "hideAd": "Hide ad",
@@ -535,6 +524,22 @@
     "playTime": "Playtime",
     "launches": "Number of launches",
     "lastLaunch": "Last launch",
+    "firstLaunch": "First launch",
+    "avgSession": "Avg. session",
+    "longestSession": "Longest session",
+    "crashes": "Crashes",
+    "recentSessions": "Recent sessions",
+    "noSessions": "No sessions yet",
+    "crashed": "Crashed",
+    "recovered": "Recovered",
+    "inGame": "In game",
+    "inGameTime": "In-world time",
+    "deaths": "Deaths",
+    "mobKills": "Mobs killed",
+    "distance": "Distance",
+    "blocksMined": "Blocks mined",
+    "jumps": "Jumps",
+    "km": "km",
     "error": "Statistics loading error",
     "hours": "hr."
   },
@@ -576,12 +581,7 @@
     "servers": "Servers",
     "refresh": "Refresh",
     "sort": "Sort",
-    "sorts": [
-      "Name",
-      "Downloads",
-      "Update",
-      "New"
-    ],
+    "sorts": ["Name", "Downloads", "Update", "New"],
     "filter": "Filter",
     "search": "Search",
     "tagsTitle": "Tags",
@@ -777,7 +777,8 @@
       "unknown": "Could not open access to the world."
     },
     "catalogPublic": "Show in the site catalog",
-    "catalogPublicDescription": "Anyone can discover the build. The share link works either way."
+    "catalogPublicDescription": "Anyone can discover the build. The share link works either way.",
+    "downloadedOtherFilesHint": "This build has downloaded mods or a modpack, which often come with already configured config files — open the additional files selector and pick all directory files so they get published too."
   },
   "manageSkins": {
     "reset": "Reset skin",
@@ -786,6 +787,7 @@
     "importByNick": "Import by nickname",
     "title": "Manage skins",
     "noSkins": "No skins",
+    "noSkinSet": "No skin set — click to add",
     "selectedSkin": "Selected skin",
     "skins": "Skins",
     "capes": "Capes",
@@ -814,7 +816,14 @@
   "blockedMods": {
     "title": "Blocked mods found",
     "description": "These files are not available for third-party launchers. You will need to download them manually.",
-    "watchedFolder": "Watched folder",
+    "watchedFolders": "Watched folders",
+    "addFolder": "Add folder",
+    "removeFolder": "Stop watching this folder",
+    "defaultFolder": "Default folder (always watched)",
+    "dropHint": "Tip: drag downloaded files straight into this window.",
+    "dropOverlay": "Drop files to add them",
+    "dropNoMatch": "None of the dropped files match the required mods.",
+    "dropPartial": "Some dropped files didn't match the required mods.",
     "openAll": "Open all",
     "files": "Files",
     "foundCount": "{{installed}} of {{total}} found in Downloads",
@@ -994,19 +1003,8 @@
     },
     "serverTitle": "Installing server"
   },
-  "sizes": [
-    "B",
-    "KB",
-    "MB",
-    "GB",
-    "TB"
-  ],
-  "timeUnits": [
-    "s",
-    "m",
-    "h",
-    "d"
-  ],
+  "sizes": ["B", "KB", "MB", "GB", "TB"],
+  "timeUnits": ["s", "m", "h", "d"],
   "ownModpacks": {
     "title": "My modpacks",
     "noModpacks": "You haven't shared any modpacks",

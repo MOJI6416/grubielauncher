@@ -13,3 +13,4 @@ export { registerVersionIpc } from "./versionIpc";
 export { registerModManagerIpc } from "./modManagerIpc";
 export { registerOsIpc } from "./osIpc";
 export { registerWorldIpc } from "./worldIpc";
+export { registerStatisticsIpc } from "./statisticsIpc";

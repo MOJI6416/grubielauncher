@@ -167,7 +167,7 @@ export function Export({
         if (!open && !isLoading) onClose();
       }}
     >
-      <DialogContent
+      <DialogContent aria-describedby={undefined}
         className="overflow-hidden p-0 sm:max-w-md"
         onPointerDownOutside={(event) => {
           if (isLoading) event.preventDefault();

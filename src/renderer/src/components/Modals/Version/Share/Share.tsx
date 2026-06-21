@@ -587,7 +587,7 @@ export function Share({
           if (!open && !isLoading) closeModal();
         }}
       >
-        <DialogContent
+        <DialogContent aria-describedby={undefined}
           className="overflow-hidden p-0 sm:max-w-md"
           onPointerDownOutside={(event) => {
             if (isLoading) event.preventDefault();
@@ -794,6 +794,12 @@ export function Share({
                     </Tooltip>
                   </div>
 
+                  {(selectedVersion?.version.downloadedVersion ||
+                    (selectedVersion?.version.loader.mods.length ?? 0) > 0) && (
+                    <p className="text-xs text-muted-foreground">
+                      {t("share.downloadedOtherFilesHint")}
+                    </p>
+                  )}
                 </div>
               </div>
 

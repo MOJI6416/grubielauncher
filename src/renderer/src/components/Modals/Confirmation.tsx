@@ -57,6 +57,9 @@ export function Confirmation({
     return "default";
   };
 
+  const isAlert = (color: (typeof content)[number]["color"]) =>
+    color === "danger" || color === "warning" || color === "success";
+
   const getAlertVariant = (color: (typeof content)[number]["color"]) => {
     if (color === "danger") return "destructive" as const;
     if (color === "warning") return "warning" as const;
@@ -80,6 +83,7 @@ export function Confirmation({
       }}
     >
       <DialogContent
+        aria-describedby={undefined}
         showCloseButton={!isBusy}
         onEscapeKeyDown={(event) => {
           if (isBusy) event.preventDefault();
@@ -91,42 +95,42 @@ export function Confirmation({
         <DialogHeader>
           <DialogTitle>{title || t("common.confirmation")}</DialogTitle>
         </DialogHeader>
-        <div>
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              {content.map((c, index) => (
-                <Alert key={index} variant={getAlertVariant(c.color)}>
-                  {getAlertIcon(c.color)}
-                  <AlertTitle>{c.text}</AlertTitle>
-                </Alert>
-              ))}
-            </div>
-          </div>
+        <div className="flex flex-col gap-2">
+          {content.map((c, index) =>
+            isAlert(c.color) ? (
+              <Alert key={index} variant={getAlertVariant(c.color)}>
+                {getAlertIcon(c.color)}
+                <AlertTitle>{c.text}</AlertTitle>
+              </Alert>
+            ) : (
+              <p key={index} className="text-sm text-muted-foreground">
+                {c.text}
+              </p>
+            ),
+          )}
         </div>
         <DialogFooter>
-          <div className="flex flex-wrap justify-end gap-2">
-            {buttons.map((b, index) => (
-              <Button
-                variant={getButtonVariant(b.color)}
-                key={index}
-                disabled={isBusy && activeBtn !== index}
-                onClick={async () => {
-                  if (isBusy && activeBtn !== index) return;
-                  try {
-                    setActiveBtn(index);
-                    await b.onClick();
-                  } finally {
-                    setActiveBtn(null);
-                  }
-                }}
-              >
-                {(b.loading || activeBtn === index) && (
-                  <Loader2 className="animate-spin" />
-                )}
-                {b.text}
-              </Button>
-            ))}
-          </div>
+          {buttons.map((b, index) => (
+            <Button
+              variant={getButtonVariant(b.color)}
+              key={index}
+              disabled={isBusy && activeBtn !== index}
+              onClick={async () => {
+                if (isBusy && activeBtn !== index) return;
+                try {
+                  setActiveBtn(index);
+                  await b.onClick();
+                } finally {
+                  setActiveBtn(null);
+                }
+              }}
+            >
+              {(b.loading || activeBtn === index) && (
+                <Loader2 className="animate-spin" />
+              )}
+              {b.text}
+            </Button>
+          ))}
         </DialogFooter>
       </DialogContent>
     </Dialog>

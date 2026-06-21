@@ -70,7 +70,7 @@ export function UPModal({
         if (!open && !isLoading) onClose()
       }}
     >
-      <DialogContent
+      <DialogContent aria-describedby={undefined}
         className="flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden p-0 sm:max-w-xl"
         onPointerDownOutside={(event) => {
           if (isLoading) event.preventDefault()

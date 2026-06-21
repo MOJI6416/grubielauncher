@@ -69,6 +69,10 @@ export class Version {
     }
   }
 
+  async ensureAuthlib(account: ILocalAccount) {
+    return await api.version.ensureAuthlib(account, this.version);
+  }
+
   async getRunCommand(
     account: ILocalAccount,
     settings: TSettings,

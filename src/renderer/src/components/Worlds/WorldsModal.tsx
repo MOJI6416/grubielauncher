@@ -92,7 +92,7 @@ export function Worlds({
         if (!open && !isLoading) onClose();
       }}
     >
-      <DialogContent
+      <DialogContent aria-describedby={undefined}
         onPointerDownOutside={(event) => {
           if (isLoading) event.preventDefault();
         }}

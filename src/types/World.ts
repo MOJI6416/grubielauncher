@@ -10,9 +10,15 @@ export interface IWorld {
 }
 
 export interface IWorldStatistics {
-  stats: {
-    'minecraft:custom': {
-      'minecraft:play_time': number
-    }
-  }
+  stats: Record<string, Record<string, number>>
+}
+
+export interface IWorldStatsAggregate {
+  worlds: number
+  playTimeTicks: number
+  deaths: number
+  mobKills: number
+  distanceCm: number
+  blocksMined: number
+  jumps: number
 }

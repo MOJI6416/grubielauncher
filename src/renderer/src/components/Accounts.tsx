@@ -1,17 +1,28 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 const api = window.api;
 
 import { FaDiscord, FaMicrosoft } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
 import {
+  BadgeCheck,
   Check,
   ChevronDown,
   Loader2,
+  Palette,
+  Shirt,
   TriangleAlert,
   User,
   UserMinus,
   UserPlus,
+  WifiOff,
   X,
 } from "lucide-react";
 import { TbSquareLetterE } from "react-icons/tb";
@@ -29,6 +40,7 @@ import {
   selectedVersionAtom,
 } from "@renderer/stores/atoms";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -93,6 +105,31 @@ function providerLabel(
   if (type === "elyby") return t("accounts.elyby");
   if (type === "discord") return "Discord";
   return t("accounts.plainAccount").replace(/\s*\(.+?\)\s*/g, "");
+}
+
+function ProviderText({
+  title,
+  icon,
+  feature,
+  highlight,
+}: {
+  title: string;
+  icon: ReactNode;
+  feature: string;
+  highlight?: boolean;
+}) {
+  return (
+    <span className="grid gap-1.5">
+      <span className="font-medium leading-tight">{title}</span>
+      <Badge
+        variant={highlight ? "default" : "outline"}
+        className="h-auto justify-start whitespace-normal text-left font-normal leading-tight"
+      >
+        {icon}
+        {feature}
+      </Badge>
+    </span>
+  );
 }
 
 function getAccountSubject(account: Pick<ILocalAccount, "accessToken">) {
@@ -583,7 +620,7 @@ export function Accounts() {
           if (!open) closeModalSelect();
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent aria-describedby={undefined} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("accounts.accountSelection")}</DialogTitle>
           </DialogHeader>
@@ -664,6 +701,7 @@ export function Accounts() {
         }}
       >
         <DialogContent
+          aria-describedby={undefined}
           className="sm:max-w-lg"
           onEscapeKeyDown={(event) => {
             if (isSigning) event.preventDefault();
@@ -680,14 +718,18 @@ export function Accounts() {
             <div className="grid gap-2 sm:grid-cols-2">
               <Button
                 variant="outline"
-                className="h-auto justify-start gap-3 bg-card p-3 text-left hover:bg-accent"
+                className="h-auto items-start justify-start gap-3 whitespace-normal bg-card p-3 text-left hover:bg-accent"
                 disabled={isSigning}
                 onClick={openModalPlain}
               >
-                <span className="flex size-9 items-center justify-center rounded-md border bg-muted/50 text-foreground">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-muted/50 text-foreground">
                   <User size={20} />
                 </span>
-                <span>{providerLabel("plain", t)}</span>
+                <ProviderText
+                  title={providerLabel("plain", t)}
+                  icon={<WifiOff />}
+                  feature={t("accounts.providerFeature.plain")}
+                />
               </Button>
 
               <Button
@@ -696,7 +738,7 @@ export function Accounts() {
                     ? "destructive"
                     : "outline"
                 }
-                className="h-auto justify-start gap-3 bg-card p-3 text-left hover:bg-accent"
+                className="h-auto items-start justify-start gap-3 whitespace-normal bg-card p-3 text-left hover:bg-accent"
                 disabled={
                   (isSigning && signType != "discord") ||
                   authStage === "exchanging" ||
@@ -714,7 +756,7 @@ export function Accounts() {
                   await Auth("discord");
                 }}
               >
-                <span className="flex size-9 items-center justify-center rounded-md border bg-muted/50 text-foreground">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-muted/50 text-foreground">
                   {isSigning &&
                   signType == "discord" &&
                   authStage === "exchanging" ? (
@@ -727,11 +769,18 @@ export function Accounts() {
                     <FaDiscord size={20} />
                   )}
                 </span>
-                <span>
-                  {isSigning && signType == "discord" && authStage === "waiting"
-                    ? t("common.cancel")
-                    : "Discord"}
-                </span>
+                <ProviderText
+                  title={
+                    isSigning &&
+                    signType == "discord" &&
+                    authStage === "waiting"
+                      ? t("common.cancel")
+                      : "Discord"
+                  }
+                  icon={<Palette />}
+                  feature={t("accounts.providerFeature.discord")}
+                  highlight
+                />
               </Button>
 
               <Button
@@ -742,7 +791,7 @@ export function Accounts() {
                     ? "destructive"
                     : "outline"
                 }
-                className="h-auto justify-start gap-3 bg-card p-3 text-left hover:bg-accent"
+                className="h-auto items-start justify-start gap-3 whitespace-normal bg-card p-3 text-left hover:bg-accent"
                 disabled={
                   (isSigning && signType != "microsoft") ||
                   authStage === "exchanging" ||
@@ -760,7 +809,7 @@ export function Accounts() {
                   await Auth("microsoft");
                 }}
               >
-                <span className="flex size-9 items-center justify-center rounded-md border bg-muted/50 text-foreground">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-muted/50 text-foreground">
                   {isSigning &&
                   signType == "microsoft" &&
                   authStage === "exchanging" ? (
@@ -773,13 +822,17 @@ export function Accounts() {
                     <FaMicrosoft size={20} />
                   )}
                 </span>
-                <span>
-                  {isSigning &&
-                  signType == "microsoft" &&
-                  authStage === "waiting"
-                    ? t("common.cancel")
-                    : t("accounts.microsoft")}
-                </span>
+                <ProviderText
+                  title={
+                    isSigning &&
+                    signType == "microsoft" &&
+                    authStage === "waiting"
+                      ? t("common.cancel")
+                      : t("accounts.microsoft")
+                  }
+                  icon={<BadgeCheck />}
+                  feature={t("accounts.providerFeature.microsoft")}
+                />
               </Button>
 
               <Button
@@ -788,7 +841,7 @@ export function Accounts() {
                     ? "destructive"
                     : "outline"
                 }
-                className="h-auto justify-start gap-3 bg-card p-3 text-left hover:bg-accent"
+                className="h-auto items-start justify-start gap-3 whitespace-normal bg-card p-3 text-left hover:bg-accent"
                 disabled={
                   (isSigning && signType != "elyby") ||
                   authStage === "exchanging" ||
@@ -806,7 +859,7 @@ export function Accounts() {
                   await Auth("elyby");
                 }}
               >
-                <span className="flex size-9 items-center justify-center rounded-md border bg-muted/50 text-foreground">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-muted/50 text-foreground">
                   {isSigning &&
                   signType == "elyby" &&
                   authStage === "exchanging" ? (
@@ -819,11 +872,15 @@ export function Accounts() {
                     <TbSquareLetterE size={20} />
                   )}
                 </span>
-                <span>
-                  {isSigning && signType == "elyby" && authStage === "waiting"
-                    ? t("common.cancel")
-                    : t("accounts.elyby")}
-                </span>
+                <ProviderText
+                  title={
+                    isSigning && signType == "elyby" && authStage === "waiting"
+                      ? t("common.cancel")
+                      : t("accounts.elyby")
+                  }
+                  icon={<Shirt />}
+                  feature={t("accounts.providerFeature.elyby")}
+                />
               </Button>
             </div>
           </div>
@@ -836,7 +893,7 @@ export function Accounts() {
           if (!open) closeModalPlain();
         }}
       >
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent aria-describedby={undefined} className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>{providerLabel("plain", t)}</DialogTitle>
           </DialogHeader>

@@ -139,7 +139,7 @@ export function Settings({
           }
         }}
       >
-        <DialogContent
+        <DialogContent aria-describedby={undefined}
           data-account-click-ignore="true"
           className="flex max-h-[85vh] flex-col sm:max-w-lg"
           onOpenAutoFocus={(event) => event.preventDefault()}

@@ -584,6 +584,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
       }}
     >
       <DialogContent
+        aria-describedby={undefined}
         data-account-click-ignore="true"
         className="max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-[1030px]"
         onPointerDownOutside={(event) => {
@@ -870,6 +871,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
         {skinsData && selectedAccount && (
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogContent
+              aria-describedby={undefined}
               data-account-click-ignore="true"
               className="sm:max-w-md"
               onClick={(event) => event.stopPropagation()}

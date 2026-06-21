@@ -1,4 +1,5 @@
 import { IAuth, ILocalAccount } from "@/types/Account";
+import { AuthlibEnsureResult } from "@/types/IAuthlib";
 import {
   IImportModpack,
   IVersionClassData,
@@ -170,6 +171,20 @@ export function registerVersionIpc() {
         quick?.single,
         quick?.multiplayer,
       );
+    },
+  );
+
+  handleSafe(
+    "version:ensureAuthlib",
+    { ok: false, reason: "unavailable" } as AuthlibEnsureResult,
+    async (
+      _,
+      account: ILocalAccount,
+      versionConf: IVersionConf,
+    ): Promise<AuthlibEnsureResult> => {
+      const vm = new Version(versionConf);
+      await vm.init();
+      return await vm.ensureAuthlib(account);
     },
   );
 

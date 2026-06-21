@@ -121,6 +121,25 @@ describe("extractCrashSignature", () => {
     expect(signature).toContain("sodium.jar");
   });
 
+  it("ignores the ERROR level tag and non-fatal lines, keeping the real exception", () => {
+    const log = [
+      `[20.06.2026 22:26:46.917] [Render thread/ERROR] [net.minecraftforge.client.gui.overlay.ForgeGui/]: Error rendering overlay 'create:goggle_info'`,
+      `[20.06.2026 15:27:07.183] [pool-4-thread-1/WARN] [org.sinytra.connector.transformer.RefmapRemapper/]: Refmap remapper could not find refmap file aaa_particles-fabric-refmap.json`,
+      `[20.06.2026 14:10:02.231] [main/ERROR] [mixin/]: Mixin config gamemenuremovegfarb-common.mixins.json does not specify "minVersion" property`,
+      `[20.06.2026 15:32:09.206] [Render thread/ERROR]: Reported exception thrown! java.lang.NullPointerException: tick`,
+    ].join("\n");
+    const signature = extractCrashSignature(log);
+    expect(signature).toContain("java.lang.NullPointerException");
+    expect(signature).not.toContain("Error rendering overlay");
+    expect(signature).not.toContain("minVersion");
+    expect(signature).not.toContain("refmap");
+  });
+
+  it("falls back to the exit code when the tail has only non-fatal warnings", () => {
+    const log = `[14:10:02] [main/ERROR] [mixin/]: Mixin config foo.mixins.json does not specify "minVersion" property`;
+    expect(extractCrashSignature(log, 1)).toBe("exit code 1");
+  });
+
   it("falls back to the exit code when there is no log text", () => {
     expect(extractCrashSignature("", 134)).toBe("exit code 134");
   });

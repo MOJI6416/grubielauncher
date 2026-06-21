@@ -91,7 +91,7 @@ export function SkinView({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent aria-describedby={undefined} className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t("skinView.title")}</DialogTitle>
         </DialogHeader>

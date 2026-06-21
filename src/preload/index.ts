@@ -38,8 +38,12 @@ import {
   ILocalProject,
 } from "@/types/ModManager";
 import { ISkinData } from "@/types/Skin";
-import { IWorld, IWorldStatistics } from "@/types/World";
-import { IAuthlib } from "@/types/IAuthlib";
+import {
+  IWorld,
+  IWorldStatistics,
+  IWorldStatsAggregate,
+} from "@/types/World";
+import { IAuthlib, AuthlibEnsureResult } from "@/types/IAuthlib";
 import { IAuthResponse, IRefreshTokenResponse } from "@/types/Auth";
 import {
   ActiveFriendShare,
@@ -61,6 +65,7 @@ import { LauncherDeepLink } from "@/types/DeepLink";
 import { ConnectivityCheckResult } from "@/types/Connectivity";
 import { CrashAnalysisPayload } from "@/types/CrashAnalysis";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
+import { IPlaytimeSyncEntry } from "@/types/VersionStatistics";
 
 export type UpdaterStatus =
   | "checking"
@@ -179,6 +184,10 @@ export interface IElectronAPI {
       options?: VersionInstallOptions,
     ) => Promise<VersionInstallResult>;
     cancelInstall: () => Promise<boolean>;
+    ensureAuthlib: (
+      account: ILocalAccount,
+      versionConf: IVersionConf,
+    ) => Promise<AuthlibEnsureResult>;
     getRunCommand: (
       account: ILocalAccount,
       settings: TSettings,
@@ -543,11 +552,19 @@ export interface IElectronAPI {
       worldPath: string,
       account: ILocalAccount,
     ) => Promise<IWorldStatistics | undefined>;
+    loadVersionStatistics: (
+      versionPath: string,
+      account: ILocalAccount,
+    ) => Promise<IWorldStatsAggregate>;
     readWorld: (
       worldPath: string,
       account: ILocalAccount,
     ) => Promise<IWorld | null>;
     writeName: (worldPath: string, newName: string) => Promise<string | null>;
+  };
+  statistics: {
+    getSyncQueue: () => Promise<IPlaytimeSyncEntry[]>;
+    resolveSyncEntries: (ids: string[]) => Promise<boolean>;
   };
   rpc: {
     syncContext: (context: RpcRendererContext) => Promise<void>;
@@ -611,6 +628,7 @@ export interface IElectronAPI {
       ) => void,
     ) => () => void;
     onFriendUpdate: (callback: (data: any) => void) => () => void;
+    onPlaytimeRecorded: (callback: () => void) => () => void;
     removeAllListeners: (channel: string) => void;
     onDownloaderInfo: (
       callback: (info: DownloaderInfo | null) => void,
@@ -736,6 +754,8 @@ export const api = {
         options,
       ),
     cancelInstall: () => ipcRenderer.invoke("version:cancelInstall"),
+    ensureAuthlib: (account: ILocalAccount, versionConf: IVersionConf) =>
+      ipcRenderer.invoke("version:ensureAuthlib", account, versionConf),
     getRunCommand: (
       account: ILocalAccount,
       settings: TSettings,
@@ -1116,10 +1136,17 @@ export const api = {
   worlds: {
     loadStatistics: (worldPath: string, account: ILocalAccount) =>
       ipcRenderer.invoke("worlds:loadStatistics", worldPath, account),
+    loadVersionStatistics: (versionPath: string, account: ILocalAccount) =>
+      ipcRenderer.invoke("worlds:loadVersionStatistics", versionPath, account),
     readWorld: (worldPath: string, account: ILocalAccount) =>
       ipcRenderer.invoke("worlds:readWorld", worldPath, account),
     writeName: (worldPath: string, newName: string) =>
       ipcRenderer.invoke("worlds:writeName", worldPath, newName),
+  },
+  statistics: {
+    getSyncQueue: () => ipcRenderer.invoke("statistics:getSyncQueue"),
+    resolveSyncEntries: (ids: string[]) =>
+      ipcRenderer.invoke("statistics:resolveSyncEntries", ids),
   },
   rpc: {
     syncContext: (context: RpcRendererContext) =>
@@ -1241,6 +1268,12 @@ export const api = {
       };
       ipcRenderer.on("friendUpdate", listener);
       return () => ipcRenderer.off("friendUpdate", listener);
+    },
+
+    onPlaytimeRecorded: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on("playtimeRecorded", listener);
+      return () => ipcRenderer.off("playtimeRecorded", listener);
     },
 
     removeAllListeners: (channel: string) => {

@@ -6,6 +6,14 @@ import { IConsoleMessage } from "@/types/Console";
 import netstat from "node-netstat";
 import { rpc } from "../rpc";
 import { parseMinecraftServerConnectionLine } from "./gameConnection";
+import { classifyConsoleStream } from "./consoleLog";
+import {
+  beginSession,
+  endSession,
+  markSessionReady,
+  setSessionServer,
+  type SessionContext,
+} from "./statistics";
 
 function safeSend(channel: string, ...args: any[]) {
   if (
@@ -311,6 +319,10 @@ export function runGame(
   instance: number,
   accessToken: string,
   serverAddress?: string,
+  stats?: Pick<
+    SessionContext,
+    "trackStatistics" | "accountSub" | "accountLabel"
+  >,
 ) {
   const instanceKey = `${versionName}-${instance}`;
 
@@ -338,6 +350,17 @@ export function runGame(
     versionName,
     instance,
   });
+
+  if (stats) {
+    beginSession({
+      versionName,
+      versionPath,
+      instance,
+      trackStatistics: stats.trackStatistics,
+      accountSub: stats.accountSub,
+      accountLabel: stats.accountLabel,
+    });
+  }
 
   let netstatInFlight = false;
   let intervalId: NodeJS.Timeout | null = null;
@@ -429,6 +452,11 @@ export function runGame(
     if (!processData) return;
 
     processData.serverPort = connection.serverPort;
+    setSessionServer(
+      versionName,
+      instance,
+      `${connection.serverAddress}:${connection.serverPort}`,
+    );
     gameRuntime.emitServerConnection({
       key: instanceKey,
       versionName,
@@ -460,6 +488,7 @@ export function runGame(
       (message.includes("Setting gameDir") || message.includes("Setting user"))
     ) {
       launchAnnounced = true;
+      markSessionReady(versionName, instance);
       safeMinimize();
       safeSend("launch");
     }
@@ -467,7 +496,7 @@ export function runGame(
     handleServerConnectionMessage(message);
 
     queueConsoleMessage({
-      type: "info",
+      type: classifyConsoleStream(message, "stdout"),
       message,
       tips: [],
     });
@@ -485,7 +514,7 @@ export function runGame(
     handleServerConnectionMessage(message);
 
     queueConsoleMessage({
-      type: "error",
+      type: classifyConsoleStream(message, "stderr"),
       message,
       tips: [],
     });
@@ -494,6 +523,10 @@ export function runGame(
   javaProcess.on("error", (err) => {
     if (intervalId) clearInterval(intervalId);
     flushConsoleMessages();
+
+    void endSession(versionName, instance, 1).finally(() =>
+      safeSend("playtimeRecorded"),
+    );
 
     gameRuntime.unregister(versionName, instance);
     gameRuntime.emitClose({
@@ -532,6 +565,10 @@ export function runGame(
 
     let code = typeof c === "number" ? c : 0;
     if (signal == "SIGTERM" || killedByUser) code = 0;
+
+    void endSession(versionName, instance, code).finally(() =>
+      safeSend("playtimeRecorded"),
+    );
 
     const msg: IConsoleMessage = {
       type: "info",

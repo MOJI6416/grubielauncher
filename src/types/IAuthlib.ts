@@ -6,3 +6,7 @@ export interface IAuthlib {
   path: string
   version: string
 }
+
+export type AuthlibEnsureResult =
+  | { ok: true }
+  | { ok: false; reason: 'unavailable' | 'download_failed' }

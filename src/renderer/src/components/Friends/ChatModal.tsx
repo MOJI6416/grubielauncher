@@ -408,7 +408,7 @@ export function ChatModal({
           if (!open) onClose();
         }}
       >
-        <DialogContent
+        <DialogContent aria-describedby={undefined}
           className="max-h-[calc(100vh-2rem)] min-w-0 overflow-hidden p-0 sm:max-w-lg"
           onDragEnter={handleDragEnter}
           onDragOver={handleDragOver}
@@ -873,7 +873,7 @@ export function ChatModal({
           if (!open) setPreviewImage(null);
         }}
       >
-        <DialogContent className="h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] overflow-hidden p-2 sm:max-w-[calc(100vw-2rem)]">
+        <DialogContent aria-describedby={undefined} className="h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] overflow-hidden p-2 sm:max-w-[calc(100vw-2rem)]">
           <DialogHeader className="sr-only">
             <DialogTitle>{t("friends.chatImage")}</DialogTitle>
           </DialogHeader>

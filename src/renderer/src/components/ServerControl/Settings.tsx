@@ -311,7 +311,7 @@ export function ServerSettings({
           handleClose();
         }}
       >
-        <DialogContent
+        <DialogContent aria-describedby={undefined}
           className="min-w-0 overflow-hidden p-0 sm:max-w-2xl"
           onInteractOutside={(event) => {
             const target = event.target;
@@ -659,7 +659,7 @@ export function ServerSettings({
           if (!nextOpen) setIsWarnModal(false);
         }}
       >
-        <DialogContent className="overflow-hidden p-0 sm:max-w-sm">
+        <DialogContent aria-describedby={undefined} className="overflow-hidden p-0 sm:max-w-sm">
           <DialogHeader className="border-b py-4 pr-12 pl-5">
             <DialogTitle>{t("common.confirmation")}</DialogTitle>
           </DialogHeader>

@@ -248,7 +248,7 @@ export function Datapacks({
         if (!open) onClose();
       }}
     >
-      <DialogContent
+      <DialogContent aria-describedby={undefined}
         className="overflow-hidden p-0 sm:max-w-md"
         onInteractOutside={(event) => {
           const target = event.target;

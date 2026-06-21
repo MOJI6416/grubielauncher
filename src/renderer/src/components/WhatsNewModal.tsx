@@ -42,7 +42,7 @@ export function WhatsNewModal({
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="grid max-h-[calc(100vh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-lg">
+      <DialogContent aria-describedby={undefined} className="grid max-h-[calc(100vh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-lg">
         <DialogHeader className="border-b bg-muted/20 px-5 py-4 pr-12">
           <div className="flex items-start gap-3 pr-8">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-primary text-primary-foreground shadow-sm">
