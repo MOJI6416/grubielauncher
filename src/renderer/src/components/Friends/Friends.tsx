@@ -5,6 +5,7 @@ import {
   useState,
   useCallback,
   useMemo,
+  type ReactNode,
 } from "react";
 import { IUser } from "@/types/IUser";
 import { FaDiscord, FaMicrosoft } from "react-icons/fa";
@@ -31,6 +32,7 @@ import {
   authDataAtom,
   friendRequestsAtom,
   friendSocketAtom,
+  friendsAtom,
   isShareModalOpenAtom,
   isRunningAtom,
   localFriendsAtom,
@@ -147,6 +149,28 @@ function getFriendLastActiveTime(friend: IFriend) {
   return Number.isNaN(lastActive) ? 0 : lastActive;
 }
 
+function FriendSection({
+  label,
+  friends,
+  renderFriend,
+}: {
+  label: string;
+  friends: IFriend[];
+  renderFriend: (friend: IFriend) => ReactNode;
+}) {
+  if (friends.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="flex items-center gap-1.5 px-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+        <span className="tabular-nums opacity-70">{friends.length}</span>
+      </p>
+      {friends.map((friend) => renderFriend(friend))}
+    </div>
+  );
+}
+
 function getGuideSteps(description: string) {
   const matches = description.match(/\d+\.\s.*?(?=\s\d+\.|$)/g);
   if (!matches || matches.length < 2) return [];
@@ -225,7 +249,7 @@ export function Friends({
 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState<LoadingType>();
-  const [friends, setFriends] = useState<IFriend[]>([]);
+  const [friends, setFriends] = useAtom(friendsAtom);
   const [notReads, setNotReads] = useState<string[]>([]);
   const [activeShares, setActiveShares] = useState<ActiveFriendShare[]>([]);
   const canManageCurrentShare = canCurrentAccountManageShare(
@@ -1278,26 +1302,82 @@ export function Friends({
     [versions],
   );
 
-  const sortedFriends = useMemo(() => {
-    return [...friends].sort((a, b) => {
-      if (a.isOnline !== b.isOnline) {
-        return a.isOnline ? -1 : 1;
-      }
+  const groupedFriends = useMemo(() => {
+    const isPlaying = (f: IFriend) =>
+      f.isOnline &&
+      Boolean(
+        f.versionName || f.serverAddress || activeShareByHost.get(f.user._id),
+      );
 
-      const lastActiveDiff =
-        getFriendLastActiveTime(b) - getFriendLastActiveTime(a);
-      if (lastActiveDiff !== 0) {
-        return lastActiveDiff;
-      }
+    const byActivity = (a: IFriend, b: IFriend) => {
+      const diff = getFriendLastActiveTime(b) - getFriendLastActiveTime(a);
+      return diff !== 0
+        ? diff
+        : a.user.nickname.localeCompare(b.user.nickname);
+    };
 
-      return a.user.nickname.localeCompare(b.user.nickname);
-    });
-  }, [friends]);
+    const playing: IFriend[] = [];
+    const online: IFriend[] = [];
+    const offline: IFriend[] = [];
+
+    for (const f of friends) {
+      if (isPlaying(f)) playing.push(f);
+      else if (f.isOnline) online.push(f);
+      else offline.push(f);
+    }
+
+    playing.sort(byActivity);
+    online.sort(byActivity);
+    offline.sort(byActivity);
+
+    return { playing, online, offline, total: friends.length };
+  }, [friends, activeShareByHost]);
 
   const inviteGuideSteps = useMemo(
     () => (inviteGuide ? getGuideSteps(inviteGuide.description) : []),
     [inviteGuide],
   );
+
+  const renderFriend = (f: IFriend) => {
+    const version = f.versionCode
+      ? versions.find((v) => v.version.shareCode === f.versionCode)
+      : undefined;
+    const activeShare = activeShareByHost.get(f.user._id);
+    const isNotRead = notReads.includes(f.user._id);
+    const localIndex = localFriends.findIndex((lf) => lf.id === f.user._id);
+    const local = localIndex !== -1 ? localFriends[localIndex] : undefined;
+
+    return (
+      <FriendItem
+        key={f.user._id}
+        friend={f}
+        activeShare={activeShare}
+        isNotRead={isNotRead}
+        local={local}
+        isRunning={isRunning}
+        onSelect={() => {
+          setSelectedFriend(f.user._id);
+          setFriend(f);
+        }}
+        onJoin={() => handleJoinFriend(f, version, activeShare)}
+        onInvite={() => handleInviteFriend(f)}
+        onViewAccount={() => handleViewAccount(f.user._id)}
+        onOpenChat={() => {
+          setFriend(f);
+          handleOpenChat(f.user._id);
+        }}
+        onViewSkin={() => handleViewSkin(f)}
+        isViewSkinDisabled={f.user.platform === "microsoft" && !f.user.uuid}
+        onToggleMute={() => handleToggleMute(f, local, localIndex)}
+        onRemove={() => {
+          setSelectedFriend(f.user._id);
+          setFriend(f);
+          setFriendRemoveModal(true);
+        }}
+        t={t}
+      />
+    );
+  };
 
   return (
     <TooltipProvider delayDuration={1000}>
@@ -1373,63 +1453,31 @@ export function Friends({
           ) : (
             <ScrollArea className="min-h-0 flex-1">
               <div className="flex h-full min-h-full flex-col gap-2">
+                {!socket?.connected ? (
+                  <Empty className="min-h-full border">
+                    <EmptyHeader>
+                      <EmptyTitle>{t("friends.disconnected")}</EmptyTitle>
+                    </EmptyHeader>
+                  </Empty>
+                ) : null}
                 {!isRequests && socket?.connected ? (
-                  sortedFriends.length > 0 ? (
-                    <div className="flex flex-col gap-1.5 pr-2">
-                      {sortedFriends.map((f) => {
-                        const version = f.versionCode
-                          ? versions.find(
-                              (v) => v.version.shareCode === f.versionCode,
-                            )
-                          : undefined;
-                        const activeShare = activeShareByHost.get(f.user._id);
-
-                        const isNotRead = notReads.includes(f.user._id);
-                        const localIndex = localFriends.findIndex(
-                          (lf) => lf.id === f.user._id,
-                        );
-                        const local =
-                          localIndex !== -1
-                            ? localFriends[localIndex]
-                            : undefined;
-
-                        return (
-                          <FriendItem
-                            key={f.user._id}
-                            friend={f}
-                            activeShare={activeShare}
-                            isNotRead={isNotRead}
-                            local={local}
-                            isRunning={isRunning}
-                            onSelect={() => {
-                              setSelectedFriend(f.user._id);
-                              setFriend(f);
-                            }}
-                            onJoin={() =>
-                              handleJoinFriend(f, version, activeShare)
-                            }
-                            onInvite={() => handleInviteFriend(f)}
-                            onViewAccount={() => handleViewAccount(f.user._id)}
-                            onOpenChat={() => {
-                              setFriend(f);
-                              handleOpenChat(f.user._id);
-                            }}
-                            onViewSkin={() => handleViewSkin(f)}
-                            isViewSkinDisabled={
-                              f.user.platform === "microsoft" && !f.user.uuid
-                            }
-                            onToggleMute={() =>
-                              handleToggleMute(f, local, localIndex)
-                            }
-                            onRemove={() => {
-                              setSelectedFriend(f.user._id);
-                              setFriend(f);
-                              setFriendRemoveModal(true);
-                            }}
-                            t={t}
-                          />
-                        );
-                      })}
+                  groupedFriends.total > 0 ? (
+                    <div className="flex flex-col gap-3 pr-2">
+                      <FriendSection
+                        label={t("friends.playing")}
+                        friends={groupedFriends.playing}
+                        renderFriend={renderFriend}
+                      />
+                      <FriendSection
+                        label={t("friends.online")}
+                        friends={groupedFriends.online}
+                        renderFriend={renderFriend}
+                      />
+                      <FriendSection
+                        label={t("friends.offline")}
+                        friends={groupedFriends.offline}
+                        renderFriend={renderFriend}
+                      />
                     </div>
                   ) : (
                     <Empty className="min-h-full border">

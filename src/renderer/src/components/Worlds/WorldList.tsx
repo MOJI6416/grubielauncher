@@ -1,6 +1,5 @@
 import { IWorld } from "@/types/World";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -14,6 +13,7 @@ import { RunGameParams } from "@renderer/App";
 import { accountAtom, selectedVersionAtom } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
 import {
+  BarChart3,
   Clock,
   Copy,
   Edit,
@@ -23,11 +23,15 @@ import {
   Gamepad2,
   ImageOff,
   Package,
+  Skull,
+  Swords,
   Trash,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Datapacks } from "./Datapacks";
+import { WorldStats } from "./WorldStats";
+import { worldDisplayStats } from "@renderer/utilities/worldStats";
 import { ILocalProject, ProjectType } from "@/types/ModManager";
 import { formatTime } from "@renderer/utilities/date";
 import { useTranslation } from "react-i18next";
@@ -67,8 +71,11 @@ export function WorldList({
     }[]
   >([]);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [statsWorld, setStatsWorld] = useState<IWorld | null>(null);
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const nf = (value: number) =>
+    new Intl.NumberFormat(i18n.resolvedLanguage || i18n.language).format(value);
 
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -169,10 +176,7 @@ export function WorldList({
         <div className="flex min-w-0 flex-col gap-2 pr-3">
           {worlds.map((world, index) => {
             const isEditing = editingIndex === index;
-            const playTicks =
-              world.statistics?.stats?.["minecraft:custom"]?.[
-                "minecraft:play_time"
-              ];
+            const ws = worldDisplayStats(world.statistics);
 
             const disabledKeys = new Set<string>();
             if (!canPlay) disabledKeys.add("play");
@@ -239,27 +243,31 @@ export function WorldList({
                               {world.folderName}
                             </p>
                           )}
+                          {ws.hasData && (
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span className="inline-flex items-center gap-1">
+                                <Clock className="size-3 shrink-0" />
+                                {formatTime(Math.floor(ws.playTimeTicks / 20), {
+                                  h: t("time.h"),
+                                  m: t("time.m"),
+                                  s: t("time.s"),
+                                })}
+                              </span>
+                              <span className="inline-flex items-center gap-1">
+                                <Skull className="size-3 shrink-0" />
+                                {nf(ws.deaths)}
+                              </span>
+                              <span className="inline-flex items-center gap-1">
+                                <Swords className="size-3 shrink-0" />
+                                {nf(ws.mobKills)}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2">
-                      {typeof playTicks === "number" && !isEditing && (
-                        <Badge
-                          variant="secondary"
-                          className="hidden max-w-28 gap-1 font-normal md:inline-flex"
-                        >
-                          <Clock className="size-3 shrink-0 text-muted-foreground" />
-                          <span className="truncate">
-                            {formatTime((playTicks * 50) / 1000, {
-                              h: t("time.h"),
-                              m: t("time.m"),
-                              s: t("time.s"),
-                            })}
-                          </span>
-                        </Badge>
-                      )}
-
                       <div className="flex items-center gap-1.5">
                         {isEditing && (
                           <>
@@ -346,6 +354,13 @@ export function WorldList({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              disabled={!ws.hasData}
+                              onSelect={() => setStatsWorld(world)}
+                            >
+                              <BarChart3 />
+                              <span>{t("worldStats.title")}</span>
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               disabled={disabledKeys.has("play")}
                               onSelect={() => {
@@ -446,6 +461,10 @@ export function WorldList({
           })}
         </div>
       </ScrollArea>
+
+      {statsWorld && (
+        <WorldStats world={statsWorld} onClose={() => setStatsWorld(null)} />
+      )}
 
       {isDatapacksOpen && version && selectedWorld && (
         <Datapacks

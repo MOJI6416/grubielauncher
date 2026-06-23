@@ -89,6 +89,16 @@ export function createMainWindow(): void {
     fullscreenable: true,
     resizable: true,
     ...(process.platform === 'linux' ? { icon } : {}),
+    ...(process.platform === 'win32'
+      ? {
+          titleBarStyle: 'hidden' as const,
+          titleBarOverlay: {
+            color: '#0a0a0a',
+            symbolColor: '#a1a1a1',
+            height: 36
+          }
+        }
+      : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       devTools: is.dev,
@@ -125,6 +135,24 @@ export function createMainWindow(): void {
     }
     return { action: 'deny' }
   })
+
+  const blockExternalNavigation = (event: Electron.Event, url: string): void => {
+    const devUrl = process.env['ELECTRON_RENDERER_URL']
+    const isAllowed =
+      url.startsWith('file://') || (!!devUrl && url.startsWith(devUrl))
+    if (isAllowed) return
+
+    event.preventDefault()
+    try {
+      const parsed = new URL(url)
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        void shell.openExternal(url)
+      }
+    } catch {}
+  }
+
+  mainWindow.webContents.on('will-navigate', blockExternalNavigation)
+  mainWindow.webContents.on('will-redirect', blockExternalNavigation)
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])

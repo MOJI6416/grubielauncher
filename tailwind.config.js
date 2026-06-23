@@ -3,7 +3,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Minecraft', 'sans-serif']
+        sans: ['Rubik', 'sans-serif']
       }
     }
   },

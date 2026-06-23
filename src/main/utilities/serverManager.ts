@@ -48,6 +48,8 @@ export async function updateServerProperty(
   let updatedLines = [...lines]
 
   function update(property: string, value: string | number | boolean) {
+    const safeValue =
+      typeof value === 'string' ? value.replace(/[\r\n]+/g, ' ') : value
     let updated = false
 
     updatedLines = updatedLines.map((line) => {
@@ -61,14 +63,14 @@ export async function updateServerProperty(
 
       if (currentKey === property) {
         updated = true
-        return `${currentKey}=${value}`
+        return `${currentKey}=${safeValue}`
       }
 
       return line
     })
 
     if (!updated) {
-      updatedLines.push(`${property}=${value}`)
+      updatedLines.push(`${property}=${safeValue}`)
     }
   }
 

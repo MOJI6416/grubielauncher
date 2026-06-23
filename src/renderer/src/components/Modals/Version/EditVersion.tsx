@@ -3,6 +3,7 @@ import {
   accountAtom,
   authDataAtom,
   consolesAtom,
+  installActiveAtom,
   internetAtom,
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
@@ -19,6 +20,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { IArguments } from "@/types/IArguments";
 import { useTranslation } from "react-i18next";
 import {
+  Boxes,
   CloudCog,
   CloudDownload,
   CopyCheck,
@@ -26,6 +28,7 @@ import {
   Earth,
   Folder,
   FolderArchive,
+  Globe,
   Loader2,
   Save,
   ScanLine,
@@ -34,6 +37,7 @@ import {
   Share2,
   SquareTerminal,
   Trash,
+  Wrench,
 } from "lucide-react";
 import { SiCurseforge, SiModrinth } from "react-icons/si";
 import { VersionDiffence } from "@renderer/components/Versions";
@@ -185,6 +189,7 @@ export function EditVersion({
   const [isServerCreate, setIsServerCreate] = useState(false);
 
   const [isInternetOnline] = useAtom(internetAtom);
+  const [isInstallActive] = useAtom(installActiveAtom);
   const [isDownloadedVersion] = useAtom(isDownloadedVersionAtom);
   const [isOwnerVersion] = useAtom(isOwnerVersionAtom);
 
@@ -594,7 +599,7 @@ export function EditVersion({
   return (
     <>
       <Dialog
-        open
+        open={!(isLoading && isInstallActive)}
         onOpenChange={(open) => {
           if (open) return;
           handleRequestClose();
@@ -643,11 +648,12 @@ export function EditVersion({
                 }}
               />
 
-              <div className="grid gap-1.5">
-                <p className="px-1 text-xs font-medium text-muted-foreground">
+              <div className="rounded-xl border bg-card">
+                <div className="flex items-center gap-2 rounded-t-xl border-b bg-muted/30 px-3 py-2 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
+                  <Boxes className="size-3.5" />
                   {t("versions.sections.content")}
-                </p>
-                <div className="grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-2">
+                </div>
+                <div className="grid gap-2 p-3 sm:grid-cols-2">
                 <Button
                   type="button"
                   variant="secondary"
@@ -747,11 +753,12 @@ export function EditVersion({
               </div>
 
               {showRemoteActions && (
-                <div className="grid gap-1.5">
-                <p className="px-1 text-xs font-medium text-muted-foreground">
-                  {t("versions.sections.publishing")}
-                </p>
-                <div className="grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-2">
+                <div className="rounded-xl border bg-card">
+                  <div className="flex items-center gap-2 rounded-t-xl border-b bg-muted/30 px-3 py-2 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
+                    <Globe className="size-3.5" />
+                    {t("versions.sections.publishing")}
+                  </div>
+                  <div className="grid gap-2 p-3 sm:grid-cols-2">
                   {version && showShareAction && (
                     <Button
                       type="button"
@@ -925,11 +932,12 @@ export function EditVersion({
                 </div>
               )}
 
-              <div className="grid gap-1.5">
-                <p className="px-1 text-xs font-medium text-muted-foreground">
+              <div className="rounded-xl border bg-card">
+                <div className="flex items-center gap-2 rounded-t-xl border-b bg-muted/30 px-3 py-2 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
+                  <Wrench className="size-3.5" />
                   {t("versions.sections.tools")}
-                </p>
-                <div className="grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-2">
+                </div>
+                <div className="grid gap-2 p-3 sm:grid-cols-2">
                 <Button
                   type="button"
                   variant="secondary"

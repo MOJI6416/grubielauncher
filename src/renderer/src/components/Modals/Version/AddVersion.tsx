@@ -1,6 +1,7 @@
 import {
   accountAtom,
   authDataAtom,
+  installActiveAtom,
   internetAtom,
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
@@ -276,6 +277,7 @@ export function AddVersion({
   const [authData] = useAtom(authDataAtom);
   const [isInternetOnline] = useAtom(internetAtom);
   const [isBackendOnline] = useAtom(networkAtom);
+  const [isInstallActive] = useAtom(installActiveAtom);
 
   const isPresenceOfLocalMods = useMemo(() => {
     return mods.some((mod) => mod.provider == Provider.LOCAL);
@@ -1001,7 +1003,7 @@ export function AddVersion({
   return (
     <>
       <Dialog
-        open
+        open={!(isLoading && isInstallActive)}
         onOpenChange={(open) => {
           if (open || isLoading || hasNestedDialog) return;
           closeWithImportCleanup();

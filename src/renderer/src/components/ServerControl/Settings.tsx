@@ -353,7 +353,7 @@ export function ServerSettings({
                 </SettingsSection>
 
                 <SettingsSection
-                  title="Подключение"
+                  title={t("serverSettings.sections.connection")}
                   icon={<Network className="size-4" />}
                 >
                   <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_7rem]">
@@ -400,7 +400,7 @@ export function ServerSettings({
                 </SettingsSection>
 
                 <SettingsSection
-                  title="Игра"
+                  title={t("serverSettings.sections.game")}
                   icon={<Gamepad2 className="size-4" />}
                 >
                   <div className="grid gap-3 sm:grid-cols-3">
@@ -477,7 +477,7 @@ export function ServerSettings({
                 </SettingsSection>
 
                 <SettingsSection
-                  title="Правила"
+                  title={t("serverSettings.sections.rules")}
                   icon={<Shield className="size-4" />}
                 >
                   <div className="grid gap-2 sm:grid-cols-2">

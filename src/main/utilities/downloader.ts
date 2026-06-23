@@ -2,6 +2,7 @@ import axios from "axios";
 import fs from "fs-extra";
 import AdmZip from "adm-zip";
 import path from "path";
+import { fileURLToPath } from "url";
 import crypto from "crypto";
 import pLimit from "p-limit";
 import {
@@ -17,6 +18,28 @@ import {
   shouldReportDownloadFailures,
   shouldThrowDownloadFailures,
 } from "./downloaderPure";
+
+let downloadsPaused = false;
+let pauseWaiters: Array<() => void> = [];
+
+export function pauseDownloads(): void {
+  downloadsPaused = true;
+}
+
+export function resumeDownloads(): void {
+  downloadsPaused = false;
+  const waiters = pauseWaiters;
+  pauseWaiters = [];
+  for (const release of waiters) release();
+}
+
+async function awaitWhilePaused(isAborted: () => boolean): Promise<void> {
+  while (downloadsPaused && !isAborted()) {
+    await new Promise<void>((resolve) => {
+      pauseWaiters.push(resolve);
+    });
+  }
+}
 
 export interface DownloaderInfo {
   totalItems: number;
@@ -57,6 +80,7 @@ export class Downloader {
       this.abortController.abort();
       this.abortController = null;
     }
+    resumeDownloads();
   };
 
   downloadFiles = async (
@@ -123,6 +147,11 @@ export class Downloader {
             : ("sha1" as const);
 
           return this.limit(async () => {
+            await awaitWhilePaused(
+              () =>
+                Boolean(signal?.aborted) ||
+                Boolean(this.abortController?.signal.aborted),
+            );
             const fileStartTime = Date.now();
 
             try {
@@ -194,6 +223,21 @@ export class Downloader {
                 );
               });
               throwIfAborted();
+
+              if (expectedChecksum) {
+                const actualChecksum = await this.getFileHash(
+                  destination,
+                  expectedChecksumType,
+                );
+                if (
+                  actualChecksum.toLowerCase() !== expectedChecksum.toLowerCase()
+                ) {
+                  await fs.remove(destination).catch(() => {});
+                  throw new Error(
+                    `Checksum mismatch for ${fileName} (expected ${expectedChecksumType})`,
+                  );
+                }
+              }
 
               if (item.options?.extract) {
                 await this.extractFile(
@@ -461,7 +505,7 @@ export class Downloader {
     }
 
     if (url.startsWith("file://")) {
-      const localFilePath = url.slice(7);
+      const localFilePath = fileURLToPath(url);
       this.ensureDirectoryExists(destination);
       const stats = await fs.stat(localFilePath);
       await fs.copy(localFilePath, destination, { overwrite: true });

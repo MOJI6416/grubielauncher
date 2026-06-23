@@ -7,7 +7,7 @@ import { BACKEND_URL } from '@/shared/config'
 
 export interface IVersionsManifest {
   latest: {
-    realese: string
+    release: string
     snapshot: string
   }
   versions: IVersion[]
@@ -105,19 +105,19 @@ export class VersionsService extends BaseService {
 
         const versions: IVersion[] = []
 
-        let serverMangaer = true
+        let serverManager = true
 
         for (let index = 0; index < versionsManifest.versions.length; index++) {
           const version = versionsManifest.versions[index]
 
           if (version.type != 'release' && !snapshots) continue
 
-          version.serverManager = serverMangaer
+          version.serverManager = serverManager
 
           versions.push(version)
 
-          if (version.id == '1.8.0') {
-            serverMangaer = false
+          if (version.id == '1.8') {
+            serverManager = false
           }
         }
 

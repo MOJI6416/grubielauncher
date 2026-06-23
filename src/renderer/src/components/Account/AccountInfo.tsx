@@ -11,6 +11,7 @@ import {
   Save,
   Settings2,
   Shirt,
+  Sparkles,
   Users,
 } from "lucide-react";
 import {
@@ -20,6 +21,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import { useAtom } from "jotai";
 import {
@@ -32,7 +34,6 @@ import {
 } from "@renderer/stores/atoms";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -48,9 +49,14 @@ import {
 } from "@/components/ui/tooltip";
 import { ILocalAccount } from "@/types/Account";
 import { ISkinData } from "@/types/Skin";
-import pt100 from "@renderer/assets/achievements/pt100.png";
-import pt500 from "@renderer/assets/achievements/pt500.png";
-import pt1000 from "@renderer/assets/achievements/pt1000.png";
+import {
+  IAchievementDef,
+  getAchievementDef,
+  levelFromPoints,
+  levelTier,
+  pointsForAchievements,
+} from "@renderer/utilities/achievements";
+import type { LucideIcon } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 import { formatDate, formatTime } from "@renderer/utilities/date";
@@ -95,17 +101,35 @@ const LazyOwnModpacks = lazyWithPreload(loadOwnModpacks);
 
 type LoadingType = "skin" | "save" | "manageSkins" | "ownModpacks" | null;
 
-const ACH_ICON: Record<string, string> = {
-  pt100,
-  pt500,
-  pt1000,
-};
-
 function ProviderIcon({ platform }: { platform: IUser["platform"] }) {
   if (platform === "microsoft") return <FaMicrosoft className="size-4" />;
   if (platform === "elyby") return <TbSquareLetterE className="size-4" />;
   if (platform === "discord") return <FaDiscord className="size-4" />;
   return null;
+}
+
+function ProfileStat({
+  icon: Icon,
+  label,
+  value,
+  title,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: ReactNode;
+  title?: string;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-lg border bg-card p-3">
+      <Icon className="size-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0">
+        <p className="truncate text-xs text-muted-foreground">{label}</p>
+        <p className="truncate text-sm font-medium tabular-nums" title={title}>
+          {value}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default function AccountInfo({
@@ -118,6 +142,18 @@ export default function AccountInfo({
   isOwner: boolean;
 }) {
   const { t } = useTranslation();
+
+  const points = pointsForAchievements(user.achievements);
+  const level = levelFromPoints(points);
+  const tier = levelTier(level);
+  const earnedDefs = useMemo(
+    () =>
+      user.achievements
+        .map((id) => getAchievementDef(id))
+        .filter((def): def is IAchievementDef => Boolean(def))
+        .sort((a, b) => b.points - a.points),
+    [user.achievements],
+  );
 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState<LoadingType>(null);
@@ -495,7 +531,7 @@ export default function AccountInfo({
       >
         <DialogContent
           aria-describedby={undefined}
-          className="sm:max-w-2xl"
+          className={isOwner ? "sm:max-w-2xl" : "sm:max-w-lg"}
           onPointerDownOutside={(event) => {
             if (isLoading) event.preventDefault();
           }}
@@ -509,31 +545,34 @@ export default function AccountInfo({
 
           <TooltipProvider>
             <div className="grid gap-5">
-              <div className="grid min-w-0 gap-4 rounded-xl border bg-muted/25 p-4 sm:grid-cols-[auto_minmax(0,1fr)]">
-                <button
-                  type="button"
-                  className="group relative size-20 shrink-0 rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none"
-                  disabled={!isOwner || isLoading}
-                  onMouseEnter={() => preload(LazyImageCropper.preload)}
-                  onFocus={() => preload(LazyImageCropper.preload)}
-                  onClick={handleChooseAvatar}
-                  aria-label={t("accountInfo.changeAvatar")}
-                >
-                  <Avatar size="lg" className="h-20 w-20 border shadow-sm">
-                    <AvatarImage src={image ?? ""} alt={user.nickname} />
-                    <AvatarFallback className="text-lg">
-                      {user.nickname.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {isOwner && (
-                    <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/45 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
-                      {t("common.edit")}
-                    </span>
-                  )}
-                </button>
+              <div className="grid min-w-0 gap-4 rounded-xl border bg-muted/25 p-4">
+                <div className="flex min-w-0 items-center gap-4">
+                  <button
+                    type="button"
+                    className="group relative size-20 shrink-0 rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none"
+                    disabled={!isOwner || isLoading}
+                    onMouseEnter={() => preload(LazyImageCropper.preload)}
+                    onFocus={() => preload(LazyImageCropper.preload)}
+                    onClick={handleChooseAvatar}
+                    aria-label={t("accountInfo.changeAvatar")}
+                  >
+                    <Avatar
+                      size="lg"
+                      className={`h-20 w-20 border shadow-sm ring-offset-2 ring-offset-background ${tier.ringClass}`}
+                    >
+                      <AvatarImage src={image ?? ""} alt={user.nickname} />
+                      <AvatarFallback className="text-lg">
+                        {user.nickname.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isOwner && (
+                      <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/45 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+                        {t("common.edit")}
+                      </span>
+                    )}
+                  </button>
 
-                <div className="flex min-w-0 flex-col justify-center gap-3">
-                  <div className="min-w-0">
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <div className="flex min-w-0 items-center gap-2">
                       <h2 className="truncate text-2xl font-semibold leading-tight">
                         {user.nickname}
@@ -551,60 +590,48 @@ export default function AccountInfo({
                           {user.platform}
                         </TooltipContent>
                       </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+                            <Sparkles className="size-3" />
+                            {level}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {t("achievements.level")} {level} · {points}{" "}
+                          {t("achievements.points")}
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
-                  </div>
-
-                  <div className="grid gap-2 sm:grid-cols-[1.25fr_0.8fr_1fr]">
-                    <Card className="gap-0 py-0">
-                      <CardContent className="flex min-w-0 items-center gap-2 p-3">
-                        <Calendar className="size-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0">
-                          <p className="truncate text-xs text-muted-foreground">
-                            {t("accountInfo.registered")}
-                          </p>
-                          <p
-                            className="truncate text-xs font-medium tabular-nums"
-                            title={formatDate(new Date(user.createdAt))}
-                          >
-                            {formatDate(new Date(user.createdAt))}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="gap-0 py-0">
-                      <CardContent className="flex items-center gap-2 p-3">
-                        <Users className="size-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0">
-                          <p className="truncate text-xs text-muted-foreground">
-                            {t("accountInfo.friends")}
-                          </p>
-                          <p className="truncate text-sm font-medium">
-                            {user.friends.length}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="gap-0 py-0">
-                      <CardContent className="flex items-center gap-2 p-3">
-                        <Clock className="size-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0">
-                          <p className="truncate text-xs text-muted-foreground">
-                            {t("accountInfo.playTime")}
-                          </p>
-                          <p className="truncate text-sm font-medium">
-                            {formatTime(user.playTime, {
-                              h: t("time.h"),
-                              m: t("time.m"),
-                              s: t("time.s"),
-                            })}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {t(`achievements.tiers.${tier.key}`)}
+                    </p>
                   </div>
                 </div>
+
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <ProfileStat
+                  icon={Calendar}
+                  label={t("accountInfo.registered")}
+                  value={formatDate(new Date(user.createdAt))}
+                  title={formatDate(new Date(user.createdAt))}
+                />
+                <ProfileStat
+                  icon={Clock}
+                  label={t("accountInfo.playTime")}
+                  value={formatTime(user.playTime, {
+                    h: t("time.h"),
+                    m: t("time.m"),
+                    s: t("time.s"),
+                  })}
+                />
+                <ProfileStat
+                  icon={Users}
+                  label={t("accountInfo.friends")}
+                  value={user.friends.length}
+                />
               </div>
 
               {(user.achievements.length > 0 || isOwner) && (
@@ -631,35 +658,28 @@ export default function AccountInfo({
                     )}
                   </div>
 
-                  {user.achievements.length > 0 ? (
+                  {earnedDefs.length > 0 ? (
                     <div
                       className="overflow-hidden rounded-xl border bg-muted/20 p-3"
                       ref={emblaRef}
                     >
                       <div className="-ml-2 flex">
-                        {user.achievements.map((achievement, i) => {
-                          const src = ACH_ICON[achievement] ?? "";
-                          if (!src) return null;
+                        {earnedDefs.map((def, i) => {
+                          const Icon = def.icon;
+                          const name = t(`achievements.items.${def.id}.name`);
 
                           return (
                             <div
                               className="min-w-0 flex-[0_0_4.5rem] pl-2 select-none"
-                              key={`${achievement}-${i}`}
+                              key={`${def.id}-${i}`}
                             >
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <div className="flex size-16 items-center justify-center rounded-lg border bg-card p-2 shadow-xs">
-                                    <img
-                                      className="max-h-full max-w-full object-contain"
-                                      draggable={false}
-                                      src={src}
-                                      alt={t(`achievements.${achievement}`)}
-                                    />
+                                  <div className="flex size-16 items-center justify-center rounded-lg border bg-card p-2 text-primary shadow-xs">
+                                    <Icon className="size-7" />
                                   </div>
                                 </TooltipTrigger>
-                                <TooltipContent>
-                                  {t(`achievements.${achievement}`)}
-                                </TooltipContent>
+                                <TooltipContent>{name}</TooltipContent>
                               </Tooltip>
                             </div>
                           );

@@ -42,6 +42,10 @@ export function VersionStatistics({
   const crashes =
     statistics?.crashes ?? sessions.filter((s) => s.crashed).length;
 
+  const crashRate = launches > 0 ? Math.round((crashes / launches) * 100) : 0;
+  const daily = computeDailyPlaytime(sessions, 14);
+  const hasSessions = sessions.length > 0;
+
   const recentSessions = [...sessions].slice(-8).reverse();
   const maxDuration = recentSessions.reduce(
     (max, s) => Math.max(max, s.durationSec || 0),
@@ -103,6 +107,10 @@ export function VersionStatistics({
                           : undefined
                       }
                     />
+                    <BandStat
+                      label={t("versionStatistics.crashRate")}
+                      value={`${crashRate}%`}
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -121,6 +129,15 @@ export function VersionStatistics({
                   value={formatNumber(crashes)}
                 />
               </div>
+
+              {hasSessions && (
+                <div className="min-w-0">
+                  <p className="mb-2 text-sm font-medium text-muted-foreground">
+                    {t("versionStatistics.dailyPlaytime")}
+                  </p>
+                  <PlaytimeChart days={daily} timeLabels={timeLabels} />
+                </div>
+              )}
 
               {hasWorldStats && worldStats && (
                 <div className="min-w-0">
@@ -252,6 +269,79 @@ function StatTile({ label, value }: { label: string; value: ReactNode }) {
       </div>
       <div className="mt-0.5 truncate text-lg font-semibold tabular-nums">
         {value}
+      </div>
+    </div>
+  );
+}
+
+type DayBucket = { key: string; date: Date; seconds: number };
+
+function computeDailyPlaytime(
+  sessions: IVersionSession[],
+  days: number,
+): DayBucket[] {
+  const dayKey = (d: Date) =>
+    `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const buckets: DayBucket[] = [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    buckets.push({ key: dayKey(date), date, seconds: 0 });
+  }
+
+  const byKey = new Map(buckets.map((bucket) => [bucket.key, bucket]));
+  for (const session of sessions) {
+    const ended = new Date(session.endedAt);
+    if (Number.isNaN(ended.getTime())) continue;
+    ended.setHours(0, 0, 0, 0);
+    const bucket = byKey.get(dayKey(ended));
+    if (bucket) bucket.seconds += session.durationSec || 0;
+  }
+
+  return buckets;
+}
+
+function PlaytimeChart({
+  days,
+  timeLabels,
+}: {
+  days: DayBucket[];
+  timeLabels: { h: string; m: string; s: string };
+}) {
+  const maxDay = Math.max(1, ...days.map((day) => day.seconds));
+
+  return (
+    <div className="rounded-xl border bg-muted/20 p-3">
+      <div className="flex h-24 items-end gap-1">
+        {days.map((day) => {
+          const pct =
+            day.seconds > 0
+              ? Math.max(6, Math.round((day.seconds / maxDay) * 100))
+              : 0;
+          return (
+            <div
+              key={day.key}
+              className="flex h-full flex-1 items-end"
+              title={`${formatDate(day.date)} · ${formatTime(
+                day.seconds,
+                timeLabels,
+              )}`}
+            >
+              <div
+                className="w-full rounded-t bg-primary/85 transition-[height]"
+                style={{ height: `${pct}%` }}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground">
+        <span>{formatDay(days[0].date)}</span>
+        <span>{formatDay(days[days.length - 1].date)}</span>
       </div>
     </div>
   );

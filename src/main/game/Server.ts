@@ -18,6 +18,10 @@ import {
   createLoaderInstallerProgressState,
   parseLoaderInstallerProgressLine,
 } from "../utilities/loaderInstallerProgress";
+import {
+  assertSafeFileSegment,
+  validateServerMemory,
+} from "./serverScriptSafety";
 
 export class ServerGame {
   private serverPath: string = "";
@@ -81,8 +85,15 @@ export class ServerGame {
     }
   }
 
+  private getValidatedMemory(): number {
+    return validateServerMemory(this.serverConf?.memory);
+  }
+
   private async installInternal() {
     if (!this.serverConf) return;
+
+    const memory = this.getValidatedMemory();
+    assertSafeFileSegment(this.serverConf.core, "server core");
 
     this.sendInstallProgress("preparing", 5);
 
@@ -240,7 +251,10 @@ export class ServerGame {
       this.serverConf.core == ServerCore.FORGE ||
       this.serverConf.core == ServerCore.NEOFORGE
     ) {
-      const version = this.version?.version.id;
+      const version = assertSafeFileSegment(
+        this.version?.version.id ?? "",
+        "version id",
+      );
       const serverJar = path.join(
         this.serverPath,
         `minecraft_server.${version}.jar`,
@@ -277,7 +291,7 @@ export class ServerGame {
           const jvmArgs = path.join(this.serverPath, "user_jvm_args.txt");
           await fs.writeFile(
             jvmArgs,
-            `${javaagent}-Xmx${this.serverConf.memory}M`,
+            `${javaagent}-Xmx${memory}M`,
             "utf-8",
           );
         }
@@ -302,12 +316,13 @@ export class ServerGame {
     }
 
     if (isCreateRunFiles) {
+      assertSafeFileSegment(jar, "server jar");
       const batData = `@echo off
-${javaCmd} ${javaagent} -Xmx${this.serverConf.memory}M -jar ${jar} nogui
+${javaCmd} ${javaagent} -Xmx${memory}M -jar ${jar} nogui
 pause`;
 
       const shData = `#!/bin/sh
-${javaCmd} ${javaagent} -Xmx${this.serverConf.memory}M -jar ${jar} nogui
+${javaCmd} ${javaagent} -Xmx${memory}M -jar ${jar} nogui
 read -p "Press [Enter] key to continue..."`;
 
       await fs.writeFile(batPath, batData, "utf-8");

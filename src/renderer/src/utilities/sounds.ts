@@ -3,6 +3,7 @@ import { settingsAtom } from "@renderer/stores/atoms";
 import successUrl from "../assets/sounds/success.ogg";
 import notifyUrl from "../assets/sounds/notify.ogg";
 import errorUrl from "../assets/sounds/error.ogg";
+import achievementUrl from "../assets/sounds/achievement.mp3";
 
 export type SoundKind = "success" | "notify" | "error";
 
@@ -26,6 +27,21 @@ export function playSound(kind: SoundKind) {
   lastPlayedAt.set(kind, now);
 
   const audio = new Audio(SOUND_URLS[kind]);
+  audio.volume = SOUND_VOLUME;
+  void audio.play().catch(() => {});
+}
+
+let achievementLastPlayedAt = 0;
+
+export function playAchievementSound() {
+  const settings = getDefaultStore().get(settingsAtom);
+  if (!settings.sounds) return;
+
+  const now = Date.now();
+  if (now - achievementLastPlayedAt < SOUND_COOLDOWN_MS) return;
+  achievementLastPlayedAt = now;
+
+  const audio = new Audio(achievementUrl);
   audio.volume = SOUND_VOLUME;
   void audio.play().catch(() => {});
 }

@@ -3,6 +3,7 @@ import { IServerConf, ServerCore } from "@/types/Server";
 import { ProjectType } from "@/types/ModManager";
 import { DownloadItem } from "@/types/Downloader";
 import path from "path";
+import { pathToFileURL } from "url";
 import fs from "fs-extra";
 import { Downloader } from "../utilities/downloader";
 import { rimraf } from "rimraf";
@@ -35,6 +36,7 @@ export class Mods {
   private downloadLimit = 6;
   private downloader: Downloader;
   private initPromise: Promise<void>;
+  private initFailed = false;
   private installOperation: VersionInstallOperation = "install";
   private installAbortSignal: AbortSignal | null = null;
 
@@ -49,7 +51,9 @@ export class Mods {
     this.downloader = new Downloader(this.downloadLimit);
 
     this.version = new Version(this.conf);
-    this.initPromise = Promise.resolve(this.version.init()).catch(() => {});
+    this.initPromise = Promise.resolve(this.version.init()).catch(() => {
+      this.initFailed = true;
+    });
   }
 
   public cancelInstall() {
@@ -139,6 +143,12 @@ export class Mods {
     await this.initPromise;
     this.throwIfInstallCancelled();
 
+    if (this.initFailed || !this.version.versionPath) {
+      throw new Error(
+        "Mods sync aborted: version initialization failed",
+      );
+    }
+
     this.files = [];
 
     const storagePath = path.join(this.version.versionPath, "storage");
@@ -202,7 +212,7 @@ export class Mods {
 
         downloadFiles.push({
           destination: filepath,
-          url: file.localPath ? `file://${file.localPath}` : file.url,
+          url: file.localPath ? pathToFileURL(file.localPath).href : file.url,
           group: "mods",
           sha1: file.sha1,
           size: file.size,
@@ -229,7 +239,7 @@ export class Mods {
           downloadFiles.push({
             destination: fileServerPath,
             url: (await fs.pathExists(filepath))
-              ? `file://${filepath}`
+              ? pathToFileURL(filepath).href
               : file.url,
             group: "mods",
             sha1: file.sha1,

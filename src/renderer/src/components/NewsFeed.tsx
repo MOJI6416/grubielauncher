@@ -53,7 +53,7 @@ export function NewsFeed() {
       ),
   );
   const [isVisible, setIsVisible] = useState(
-    () => localStorage.getItem("newsFeedVisible") !== "false",
+    () => localStorage.getItem("newsFeedVisible") === "true",
   );
   const [isLoading, setIsLoading] = useState(false);
 
@@ -301,7 +301,7 @@ export function NewsFeed() {
                           {feedItem.type === "news" ? (
                             <button
                               type="button"
-                              className="group flex h-28 w-full cursor-pointer flex-col overflow-hidden rounded-lg border bg-muted/30 text-left outline-none transition-all hover:border-primary/40 hover:bg-muted/50 hover:shadow-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                              className="group relative block h-24 w-full cursor-pointer overflow-hidden rounded-lg border text-left outline-none transition-all hover:border-primary/40 hover:shadow-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                               onClick={async () => {
                                 try {
                                   await api.shell.openExternal(
@@ -310,29 +310,34 @@ export function NewsFeed() {
                                 } catch {}
                               }}
                             >
-                              <div className="relative h-20 overflow-hidden bg-muted">
-                                <img
-                                  src={feedItem.item.image}
-                                  alt={
-                                    feedItem.item.imageAltText ||
-                                    feedItem.item.title
-                                  }
-                                  className="h-full w-full object-cover select-none transition-transform duration-300 group-hover:scale-105"
-                                  loading="lazy"
-                                  draggable={false}
-                                />
-                              </div>
-                              <div className="flex min-h-0 flex-1 items-center px-2.5 py-1.5">
-                                <p className="truncate text-xs font-medium leading-4 text-foreground select-none">
+                              <img
+                                src={feedItem.item.image}
+                                alt={
+                                  feedItem.item.imageAltText ||
+                                  feedItem.item.title
+                                }
+                                className="absolute inset-0 h-full w-full object-cover select-none transition-transform duration-300 group-hover:scale-105"
+                                loading="lazy"
+                                draggable={false}
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+                              <ExternalLink className="absolute right-2 top-2 size-3.5 text-white/80 opacity-0 transition-opacity group-hover:opacity-100" />
+                              <div className="absolute inset-x-0 bottom-0 p-2.5">
+                                {feedItem.item.author && (
+                                  <p className="truncate text-[10px] font-medium tracking-wide text-white/70 uppercase select-none">
+                                    {feedItem.item.author}
+                                  </p>
+                                )}
+                                <p className="line-clamp-2 text-xs font-medium leading-4 text-white select-none">
                                   {feedItem.item.title}
                                 </p>
                               </div>
                             </button>
                           ) : (
-                            <div className="group relative h-28 overflow-hidden rounded-lg border bg-muted/30 transition-all hover:border-primary/40 hover:bg-muted/50 hover:shadow-sm">
+                            <div className="group relative h-24 overflow-hidden rounded-lg border transition-all hover:border-primary/40 hover:shadow-sm">
                               <button
                                 type="button"
-                                className="flex h-full w-full cursor-pointer flex-col text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                                className="block h-full w-full cursor-pointer text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                                 onClick={async () => {
                                   try {
                                     await api.backend.recordSponsoredAdClick(
@@ -344,29 +349,28 @@ export function NewsFeed() {
                                   } catch {}
                                 }}
                               >
-                                <div className="relative h-16 overflow-hidden bg-muted">
-                                  {feedItem.item.image ? (
-                                    <img
-                                      src={feedItem.item.image}
-                                      alt={feedItem.item.title}
-                                      className="h-full w-full object-cover select-none transition-transform duration-300 group-hover:scale-105"
-                                      loading="lazy"
-                                      draggable={false}
-                                    />
-                                  ) : (
-                                    <div className="flex h-full items-center justify-center">
-                                      <Newspaper className="size-5 text-muted-foreground" />
-                                    </div>
-                                  )}
-                                  <Badge className="absolute left-2 top-2 h-4 px-1.5 text-[10px]">
-                                    {t("app.sponsored")}
-                                  </Badge>
-                                </div>
-                                <div className="grid min-h-0 flex-1 gap-0.5 px-2.5 py-1.5">
-                                  <p className="truncate text-xs font-medium leading-4 text-foreground select-none">
+                                {feedItem.item.image ? (
+                                  <img
+                                    src={feedItem.item.image}
+                                    alt={feedItem.item.title}
+                                    className="absolute inset-0 h-full w-full object-cover select-none transition-transform duration-300 group-hover:scale-105"
+                                    loading="lazy"
+                                    draggable={false}
+                                  />
+                                ) : (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                                    <Newspaper className="size-6 text-muted-foreground" />
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+                                <Badge className="absolute left-2 top-2 h-4 px-1.5 text-[10px]">
+                                  {t("app.sponsored")}
+                                </Badge>
+                                <div className="absolute inset-x-0 bottom-0 p-2.5">
+                                  <p className="line-clamp-1 text-xs font-medium leading-4 text-white select-none">
                                     {feedItem.item.title}
                                   </p>
-                                  <p className="flex items-center gap-1 truncate text-[10px] leading-3 text-muted-foreground select-none">
+                                  <p className="flex items-center gap-1 truncate text-[10px] leading-3 text-white/70 select-none">
                                     <span className="truncate">
                                       {feedItem.item.cta}
                                     </span>
@@ -396,7 +400,7 @@ export function NewsFeed() {
                           key={n}
                           className="min-w-0 shrink-0 grow-0 basis-full sm:basis-[calc((100%-0.5rem)/2)] lg:basis-[calc((100%-2rem)/5)]"
                         >
-                          <Skeleton className="h-28 w-full rounded-lg" />
+                          <Skeleton className="h-24 w-full rounded-lg" />
                         </div>
                       ))}
                 </div>

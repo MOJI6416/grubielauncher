@@ -67,6 +67,13 @@ describe("version pure helpers", () => {
     expect(checkVersionName("Bad/Name", [])).toBe(false);
     expect(checkVersionName("a".repeat(33), [])).toBe(false);
   });
+
+  it("rejects path-traversal dot names (BUG-5)", () => {
+    expect(checkVersionName(".", [])).toBe(false);
+    expect(checkVersionName("..", [])).toBe(false);
+    expect(checkVersionName("...", [])).toBe(false);
+    expect(checkVersionName("my..pack", [])).toBe(true);
+  });
 });
 
 describe("supportsQuickPlayMultiplayer", () => {

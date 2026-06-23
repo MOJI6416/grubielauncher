@@ -1,4 +1,4 @@
-import { app } from "electron";
+import { app, session } from "electron";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import { autoUpdater } from "electron-updater";
 import * as ipcHandlers from "./ipc";
@@ -22,6 +22,29 @@ let isAppShutdownInProgress = false;
 let appShutdownTimeout: NodeJS.Timeout | null = null;
 const pendingDeepLinks: LauncherDeepLink[] = [];
 void gotTheLock;
+
+function setupContentSecurityPolicy() {
+  if (is.dev) return;
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        "Content-Security-Policy": [
+          [
+            "default-src 'self'",
+            "script-src 'self'",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data: blob: https: http:",
+            "media-src 'self' data: blob:",
+            "font-src 'self' data:",
+            "connect-src 'self' https: http: ws: wss:",
+          ].join("; "),
+        ],
+      },
+    });
+  });
+}
 
 function sendUpdaterStatus(
   status:
@@ -145,6 +168,7 @@ if (!gotTheLock) {
 
   app.whenReady().then(async () => {
     electronApp.setAppUserModelId("com.grubielauncher");
+    setupContentSecurityPolicy();
     registerProtocolClient();
 
     const appdata = app.getPath("appData");

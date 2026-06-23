@@ -19,6 +19,8 @@ import { NotificationClickAction } from '@/types/Notification'
 import icon from '../../../resources/icon.png?asset'
 import axios from 'axios'
 import { handleSafe } from '../utilities/ipc'
+import { assertWritablePath, blessUserSelectedPath } from '../utilities/safePath'
+import { isSafeRemoteImageUrl } from '../utilities/safeUrl'
 
 function assertSafeExternalUrl(url: string): string {
   const parsed = new URL(url)
@@ -120,6 +122,12 @@ export function registerOtherIpc() {
       })
 
       if (result.canceled) return []
+
+      const kind = isFolder ? 'folder' : 'file'
+      for (const selectedPath of result.filePaths) {
+        blessUserSelectedPath(selectedPath, kind)
+      }
+
       return result.filePaths
     }
   )
@@ -134,6 +142,7 @@ export function registerOtherIpc() {
   })
 
   handleSafe<void, [string]>('shell:openPath', undefined, async (_, p: string) => {
+    assertWritablePath(p, 'shell:openPath')
     await shell.openPath(p)
   })
 
@@ -147,8 +156,8 @@ export function registerOtherIpc() {
     async (_, options, clickAction) => {
       let image: NativeImage | undefined = undefined
 
-      if (options.icon && options.icon !== '') {
-        const response = await axios.get(options.icon as string, { responseType: 'arraybuffer' })
+      if (isSafeRemoteImageUrl(options.icon)) {
+        const response = await axios.get(options.icon, { responseType: 'arraybuffer' })
         const buffer = await response.data
         image = nativeImage.createFromBuffer(Buffer.from(buffer))
       }
@@ -169,6 +178,20 @@ export function registerOtherIpc() {
 
   handleSafe<void>('other:restoreWindow', undefined, () => {
     restoreMainWindow()
+  })
+
+  handleSafe<void>('window:minimize', undefined, () => {
+    mainWindow?.minimize()
+  })
+
+  handleSafe<void>('window:maximizeToggle', undefined, () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    if (mainWindow.isMaximized()) mainWindow.unmaximize()
+    else mainWindow.maximize()
+  })
+
+  handleSafe<void>('window:close', undefined, () => {
+    mainWindow?.close()
   })
 
   handleSafe<ConnectivityCheckResult[]>('connectivity:test', [], async (event) => {

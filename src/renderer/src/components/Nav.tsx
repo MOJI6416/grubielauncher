@@ -4,9 +4,9 @@ import { useTranslation } from "react-i18next";
 import {
   Bell,
   BookUser,
-  Gamepad2,
   ListPlus,
   Loader2,
+  Play,
   ServerOff,
   SquareChevronRight,
   Settings as LSettings,
@@ -144,6 +144,14 @@ export function Nav({
   const canUseBackend = canUseBackendFeature(connectivity);
   const isPlainShareBlocked =
     selectedAccount?.type === "plain" && !shareState.sessionId;
+  const isFriendsDisabled =
+    !selectedAccount ||
+    !canUseBackend ||
+    selectedAccount.type === "plain" ||
+    !isFriendsConnected;
+  const friendsHint = !canUseBackend
+    ? t("app.backendUnavailable")
+    : t("friends.unavailableHint");
 
   const consoleBtnVariant = useMemo(() => {
     if (consoles.consoles.length > 0) {
@@ -194,7 +202,7 @@ export function Nav({
 
   return (
     <>
-      <div className="w-full px-4 pt-3">
+      <div className="w-full px-4 pt-1.5">
         <TooltipProvider delayDuration={700}>
           <div className="flex min-h-16 w-full items-center gap-4 rounded-xl border border-border bg-card px-4 py-2.5 text-card-foreground shadow-sm">
             <div className="flex min-w-0 shrink items-center gap-3">
@@ -290,11 +298,18 @@ export function Nav({
                   </Tooltip>
                 )}
 
+                {(errorLog.length > 0 ||
+                  consoles.consoles.length > 0 ||
+                  shouldShowShareButton) &&
+                  ((selectedAccount && selectedVersion) || canUseInternet) && (
+                    <div className="mx-0.5 h-8 w-px bg-border" />
+                  )}
+
                 {selectedAccount && selectedVersion && (
                   <Button
                     size="lg"
                     disabled={isRunning}
-                    className="h-10 bg-white px-5 text-sm text-black shadow-sm hover:bg-white/90 [&_svg]:size-4"
+                    className="h-11 px-6 text-base font-semibold shadow-sm shadow-primary/20 [&_svg]:size-5"
                     onClick={async () => {
                       await runGame({ version: selectedVersion });
                     }}
@@ -302,7 +317,7 @@ export function Nav({
                     {isRunning ? (
                       <Loader2 className="animate-spin" />
                     ) : (
-                      <Gamepad2 />
+                      <Play />
                     )}
                     {t("nav.play")}
                   </Button>
@@ -339,22 +354,26 @@ export function Nav({
 
               <div className="flex items-center gap-2">
                 {selectedAccount && (
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    className="h-10 px-4 text-sm [&_svg]:size-4"
-                    disabled={
-                      !canUseBackend ||
-                      selectedAccount.type === "plain" ||
-                      !isFriendsConnected
-                    }
-                    onClick={() => {
-                      setIsFriends((prev) => !prev);
-                    }}
-                  >
-                    <BookUser />
-                    {t("friends.title")}
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="lg"
+                        variant="secondary"
+                        aria-disabled={isFriendsDisabled}
+                        className="h-10 px-4 text-sm [&_svg]:size-4 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+                        onClick={() => {
+                          if (isFriendsDisabled) return;
+                          setIsFriends((prev) => !prev);
+                        }}
+                      >
+                        <BookUser />
+                        {t("friends.title")}
+                      </Button>
+                    </TooltipTrigger>
+                    {isFriendsDisabled && (
+                      <TooltipContent>{friendsHint}</TooltipContent>
+                    )}
+                  </Tooltip>
                 )}
 
                 <Button

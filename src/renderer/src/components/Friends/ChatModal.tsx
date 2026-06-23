@@ -873,7 +873,25 @@ export function ChatModal({
           if (!open) setPreviewImage(null);
         }}
       >
-        <DialogContent aria-describedby={undefined} className="h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] overflow-hidden p-2 sm:max-w-[calc(100vw-2rem)]">
+        {/* Sit below the native window-controls strip (titleBarOverlay) so the
+            preview's own close button never lands under the OS min/max/close.
+            env(titlebar-area-height) is the overlay height on Windows and 0px
+            elsewhere, so other platforms keep the original 1rem inset. */}
+        <DialogContent
+          aria-describedby={undefined}
+          style={{
+            top: "calc(env(titlebar-area-height, 0px) + 1rem)",
+            left: "1rem",
+            right: "1rem",
+            bottom: "1rem",
+            width: "auto",
+            height: "auto",
+            maxWidth: "none",
+            maxHeight: "none",
+            margin: 0,
+          }}
+          className="overflow-hidden p-2"
+        >
           <DialogHeader className="sr-only">
             <DialogTitle>{t("friends.chatImage")}</DialogTitle>
           </DialogHeader>

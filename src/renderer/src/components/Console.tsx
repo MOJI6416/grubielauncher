@@ -27,17 +27,21 @@ import { IConsole } from "@/types/Console";
 import { RunGameParams } from "@renderer/App";
 import { consolesAtom, versionsAtom } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
+import { Input } from "@/components/ui/input";
 import {
   AlertTriangle,
   CheckCircle2,
   Circle,
+  Copy,
   RotateCcw,
+  Search,
   Square,
   Terminal,
   Trash2,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 const api = window.api;
 
@@ -144,6 +148,43 @@ export function Console({
     ? versionsByName.get(selectedConsole.versionName)
     : undefined;
 
+  const [consoleFilter, setConsoleFilter] = useState<
+    "all" | "info" | "error" | "success"
+  >("all");
+  const [consoleSearch, setConsoleSearch] = useState("");
+
+  const typeCounts = useMemo(() => {
+    const msgs = selectedConsole?.messages ?? [];
+    let info = 0;
+    let error = 0;
+    let success = 0;
+    for (const m of msgs) {
+      if (m.type === "error") error += 1;
+      else if (m.type === "success") success += 1;
+      else info += 1;
+    }
+    return { all: msgs.length, info, error, success };
+  }, [selectedConsole]);
+
+  const visibleMessages = useMemo(() => {
+    const msgs = selectedConsole?.messages ?? [];
+    const query = consoleSearch.trim().toLowerCase();
+    return msgs
+      .map((message, index) => ({ message, index }))
+      .filter(({ message }) => {
+        if (consoleFilter !== "all") {
+          const type =
+            message.type === "error" || message.type === "success"
+              ? message.type
+              : "info";
+          if (type !== consoleFilter) return false;
+        }
+        if (query && !message.message.toLowerCase().includes(query))
+          return false;
+        return true;
+      });
+  }, [selectedConsole, consoleFilter, consoleSearch]);
+
   useEffect(() => {
     if (instances.length === 0) {
       setSelectedInstance(null);
@@ -210,6 +251,14 @@ export function Console({
     );
     setConsoles({ consoles: next });
     if (next.length === 0) onClose();
+  }
+
+  async function copyConsoleLogs() {
+    if (!selectedConsole) return;
+    const text = selectedConsole.messages.map((m) => m.message).join("");
+    if (!text) return;
+    await api.clipboard.writeText(text);
+    toast(t("common.copied"));
   }
 
   const selectedStatus = selectedConsole
@@ -349,7 +398,7 @@ export function Console({
               </div>
             </aside>
 
-            <section className="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] bg-card">
+            <section className="flex min-h-0 min-w-0 flex-col bg-card">
               <div className="flex min-w-0 items-center justify-between gap-3 border-b bg-muted/20 px-4 py-3">
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-center gap-2">
@@ -382,6 +431,17 @@ export function Console({
 
                 {selectedConsole && (
                   <div className="flex shrink-0 items-center gap-1.5">
+                    {selectedConsole.messages.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        type="button"
+                        onClick={copyConsoleLogs}
+                      >
+                        <Copy />
+                        {t("common.copy")}
+                      </Button>
+                    )}
                     {selectedConsole.status === "running" ? (
                       <Button
                         size="sm"
@@ -435,7 +495,46 @@ export function Console({
                 )}
               </div>
 
-              <Card className="m-3 min-h-0 overflow-hidden border-border bg-card py-0 shadow-sm">
+              {selectedConsole && selectedConsole.messages.length > 0 && (
+                <div className="flex shrink-0 items-center gap-2 border-b bg-muted/10 px-3 py-2">
+                  <div className="relative min-w-0 flex-1">
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={consoleSearch}
+                      onChange={(e) => setConsoleSearch(e.target.value)}
+                      placeholder={t("console.search")}
+                      className="h-8 pl-8 text-xs"
+                    />
+                  </div>
+                  <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-muted/50 p-0.5">
+                    {(
+                      [
+                        ["all", typeCounts.all],
+                        ["info", typeCounts.info],
+                        ["error", typeCounts.error],
+                        ["success", typeCounts.success],
+                      ] as const
+                    ).map(([key, count]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setConsoleFilter(key)}
+                        className={cn(
+                          "flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                          consoleFilter === key
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {t(`console.filter.${key}`)}
+                        <span className="tabular-nums opacity-70">{count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <Card className="m-3 min-h-0 flex-1 overflow-hidden border-border bg-card py-0 shadow-sm">
                 <CardContent className="h-full min-h-0 p-0">
                   <div
                     ref={viewportRef}
@@ -455,9 +554,13 @@ export function Console({
                           </EmptyDescription>
                         </EmptyHeader>
                       </Empty>
+                    ) : visibleMessages.length === 0 ? (
+                      <div className="flex h-full min-h-56 items-center justify-center text-sm text-muted-foreground">
+                        {t("console.noMatches")}
+                      </div>
                     ) : (
                       <div className="min-w-0 space-y-2">
-                        {selectedConsole.messages.map((message, index) => {
+                        {visibleMessages.map(({ message, index }) => {
                           const text = message.message.length
                             ? message.message
                             : " ";

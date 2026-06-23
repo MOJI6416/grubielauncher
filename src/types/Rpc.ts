@@ -8,4 +8,5 @@ export interface RpcAccountContext {
 export interface RpcRendererContext {
   account: RpcAccountContext | null
   lang: string
+  hideServer: boolean
 }

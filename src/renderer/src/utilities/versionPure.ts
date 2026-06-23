@@ -1,5 +1,6 @@
 import { ILocalAccount } from "@/types/Account";
 import { IVersionConf } from "@/types/IVersion";
+import { FORBIDDEN_VERSION_NAME_SYMBOLS } from "@/shared/versionName";
 
 export function isOwner(owner?: string, account?: ILocalAccount) {
   if (!owner || !account) return false;
@@ -24,17 +25,7 @@ export function parseVersionOwner(owner?: string) {
   };
 }
 
-export const forbiddenSymbols: string[] = [
-  "\\",
-  "/",
-  ":",
-  "*",
-  "?",
-  '"',
-  "<",
-  ">",
-  "|",
-];
+export const forbiddenSymbols: string[] = [...FORBIDDEN_VERSION_NAME_SYMBOLS];
 
 export function checkVersionName(
   versionName: string,
@@ -62,6 +53,8 @@ export function checkVersionName(
     const s = forbiddenSymbols[index];
     if (name.trim().includes(s)) return false;
   }
+
+  if (/^\.+$/.test(name)) return false;
 
   return true;
 }

@@ -215,7 +215,7 @@ export function ServerControl({
 
                   <div className="min-w-0 flex-1">
                     <p className="mb-1 text-xs text-muted-foreground">
-                      Ядро сервера
+                      {t("serverSettings.serverCore")}
                     </p>
                     <div className="flex min-w-0 items-center gap-2">
                       <Badge variant="secondary" className="min-w-0 px-2.5 py-1 text-sm">

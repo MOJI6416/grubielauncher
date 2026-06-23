@@ -7,20 +7,25 @@ import ReactCountryFlag from "react-country-flag";
 import {
   Activity,
   Code2,
+  Cpu,
   Download,
+  EyeOff,
   HeartPulse,
   Languages,
   Loader2,
   MemoryStick,
+  Palette,
   Save,
-  Type,
   Volume2,
+  Wrench,
+  type LucideIcon,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useAtom } from "jotai";
 import { pathsAtom, settingsAtom } from "@renderer/stores/atoms";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -37,11 +42,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { FONTS, LANGUAGES, normalizeSettings } from "@/types/Settings";
+import { LANGUAGES, normalizeSettings } from "@/types/Settings";
 import { changeAppLanguage } from "@renderer/i18n";
 import { ConnectivityModal } from "./ConnectivityModal";
 import type { ConnectivityCheckResult } from "@/types/Connectivity";
@@ -60,12 +64,14 @@ export function Settings({
   const [xmx, setXmx] = useState(() => normalizedInitialSettings.xmx);
   const [settingsPath, setSettingsPath] = useState("");
   const [lang, setLang] = useState(() => normalizedInitialSettings.lang);
-  const [font, setFont] = useState(() => normalizedInitialSettings.font);
   const [devMode, setDevMode] = useState(() => normalizedInitialSettings.devMode);
   const [crashTelemetry, setCrashTelemetry] = useState(
     () => normalizedInitialSettings.crashTelemetry,
   );
   const [sounds, setSounds] = useState(() => normalizedInitialSettings.sounds);
+  const [hideServerInRpc, setHideServerInRpc] = useState(
+    () => normalizedInitialSettings.hideServerInRpc,
+  );
   const [version, setVersion] = useState("");
   const [downloadLimit, setDownloadLimit] = useState(() => normalizedInitialSettings.downloadLimit);
   const [totalMem, setTotalMem] = useState(0);
@@ -74,25 +80,26 @@ export function Settings({
     ConnectivityCheckResult[] | null
   >(null);
   const [isConnectivityTesting, setIsConnectivityTesting] = useState(false);
+  const [isWarnModal, setIsWarnModal] = useState(false);
   const isMemoryReady = totalMem > 0;
   const maxMemory = totalMem
-    ? Math.max(1024, Math.floor(totalMem / (1024 * 1024)))
+    ? Math.max(1024, Math.floor(totalMem / (1024 * 1024)) - 2048)
     : Math.max(32768, xmx);
   const selectedLanguage = LANGUAGES.find((l) => l.code == lang);
   const hasChanges =
     settings.xmx != xmx ||
     settings.lang != lang ||
-    settings.font != font ||
     settings.devMode != devMode ||
     settings.downloadLimit != downloadLimit ||
     settings.crashTelemetry != crashTelemetry ||
-    settings.sounds != sounds;
+    settings.sounds != sounds ||
+    settings.hideServerInRpc != hideServerInRpc;
 
   const closeSettings = () => {
-    setLang(settings.lang);
-    void changeAppLanguage(settings.lang);
-    setFont(settings.font);
-    document.documentElement.dataset.font = settings.font;
+    if (i18n.language !== settings.lang) {
+      setLang(settings.lang);
+      void changeAppLanguage(settings.lang);
+    }
     onClose();
   };
 
@@ -102,9 +109,9 @@ export function Settings({
     setDevMode(nextSettings.devMode);
     setCrashTelemetry(nextSettings.crashTelemetry);
     setSounds(nextSettings.sounds);
+    setHideServerInRpc(nextSettings.hideServerInRpc);
     setDownloadLimit(nextSettings.downloadLimit);
     setLang(nextSettings.lang);
-    setFont(nextSettings.font);
   }, [settings]);
 
   useEffect(() => {
@@ -134,9 +141,12 @@ export function Settings({
       <Dialog
         open={true}
         onOpenChange={(open) => {
-          if (!open) {
-            closeSettings();
+          if (open) return;
+          if (hasChanges) {
+            setIsWarnModal(true);
+            return;
           }
+          closeSettings();
         }}
       >
         <DialogContent aria-describedby={undefined}
@@ -167,62 +177,41 @@ export function Settings({
             </div>
           </DialogHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto rounded-xl">
-          <Card className="gap-0 overflow-hidden py-0">
-            <CardContent className="p-0">
-              <div className="bg-muted/30 px-4 py-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                {t("settings.sections.game")}
-              </div>
-              <Separator />
-              <div className="grid gap-4 p-4">
-                <div className="flex items-start gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
-                    <MemoryStick className="size-4 text-muted-foreground" />
-                  </span>
-                  <div className="min-w-0 flex-1 space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <Label className="text-sm font-medium">
-                          {t("settings.memory")}
-                        </Label>
-                      </div>
-                      <Badge variant="secondary" className="tabular-nums">
-                        {xmx} {t("settings.mb")}
-                      </Badge>
-                    </div>
-                    <Slider
-                      className={isMemoryReady ? undefined : "invisible"}
-                      step={512}
-                      value={[xmx]}
-                      onValueChange={([value]) => {
-                        if (typeof value == "number") {
-                          setXmx(Number(value.toFixed(0)));
-                        }
-                      }}
-                      min={1024}
-                      max={maxMemory}
-                    />
-                  </div>
-                </div>
-              </div>
-              <Separator />
-                <div className="flex items-center justify-between gap-4 px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
-                      <Download className="size-4 text-muted-foreground" />
-                    </span>
-                    <div className="min-w-0">
-                      <Label
-                        htmlFor="settings-download-limit"
-                        className="text-sm font-medium"
-                      >
-                        {t("settings.downloadLimit")}
-                      </Label>
-                    </div>
-                  </div>
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+            <SettingsSection icon={Cpu} title={t("settings.sections.game")}>
+              <SettingRow
+                icon={MemoryStick}
+                title={t("settings.memory")}
+                description={t("settings.memoryDescription")}
+                control={
+                  <Badge variant="secondary" className="tabular-nums">
+                    {xmx} {t("settings.mb")}
+                  </Badge>
+                }
+              >
+                <Slider
+                  className={isMemoryReady ? undefined : "invisible"}
+                  step={512}
+                  value={[xmx]}
+                  onValueChange={([value]) => {
+                    if (typeof value == "number") {
+                      setXmx(Number(value.toFixed(0)));
+                    }
+                  }}
+                  min={1024}
+                  max={maxMemory}
+                />
+              </SettingRow>
+
+              <SettingRow
+                icon={Download}
+                htmlFor="settings-download-limit"
+                title={t("settings.downloadLimit")}
+                description={t("settings.downloadLimitDescription")}
+                control={
                   <Input
                     id="settings-download-limit"
-                    className="w-12 text-right tabular-nums"
+                    className="w-16 text-right tabular-nums"
                     type="number"
                     min={1}
                     max={16}
@@ -234,23 +223,18 @@ export function Settings({
                       setDownloadLimit(Math.min(16, Math.max(1, nextValue)));
                     }}
                   />
-                </div>
-              <Separator />
-              <div className="bg-muted/30 px-4 py-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                {t("settings.sections.interface")}
-              </div>
-              <Separator />
-                <div className="flex items-center justify-between gap-4 px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
-                      <Languages className="size-4 text-muted-foreground" />
-                    </span>
-                    <div className="min-w-0">
-                      <Label className="text-sm font-medium">
-                        {t("settings.language")}
-                      </Label>
-                    </div>
-                  </div>
+                }
+              />
+            </SettingsSection>
+
+            <SettingsSection
+              icon={Palette}
+              title={t("settings.sections.interface")}
+            >
+              <SettingRow
+                icon={Languages}
+                title={t("settings.language")}
+                control={
                   <Select
                     value={lang}
                     onValueChange={(value) => {
@@ -293,86 +277,47 @@ export function Settings({
                       })}
                     </SelectContent>
                   </Select>
-                </div>
-              <Separator />
-                <div className="flex items-center justify-between gap-4 px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
-                      <Type className="size-4 text-muted-foreground" />
-                    </span>
-                    <div className="min-w-0">
-                      <Label className="text-sm font-medium">
-                        {t("settings.font")}
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        {t("settings.fontDescription")}
-                      </p>
-                    </div>
-                  </div>
-                  <Select
-                    value={font}
-                    onValueChange={(value) => {
-                      if (!value) return;
+                }
+              />
 
-                      setFont(value as (typeof FONTS)[number]);
-                      document.documentElement.dataset.font = value;
-                    }}
-                  >
-                    <SelectTrigger className="w-42">
-                      <SelectValue placeholder={t("settings.font")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FONTS.map((f) => (
-                        <SelectItem key={f} value={f}>
-                          {t(`settings.fonts.${f}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              <Separator />
-                <div className="flex items-center justify-between gap-4 px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
-                      <Volume2 className="size-4 text-muted-foreground" />
-                    </span>
-                    <div className="min-w-0">
-                      <Label
-                        htmlFor="settings-sounds"
-                        className="text-sm font-medium"
-                      >
-                        {t("settings.sounds")}
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        {t("settings.soundsDescription")}
-                      </p>
-                    </div>
-                  </div>
+              <SettingRow
+                icon={Volume2}
+                htmlFor="settings-sounds"
+                title={t("settings.sounds")}
+                description={t("settings.soundsDescription")}
+                control={
                   <Switch
                     id="settings-sounds"
                     checked={sounds}
                     onCheckedChange={setSounds}
                   />
-                </div>
-              <Separator />
-              <div className="bg-muted/30 px-4 py-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                {t("settings.sections.diagnostics")}
-              </div>
-              <Separator />
-                <div className="flex items-center justify-between gap-4 px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
-                      <Activity className="size-4 text-muted-foreground" />
-                    </span>
-                    <div className="min-w-0">
-                      <Label className="text-sm font-medium">
-                        {t("settings.connectivity.title")}
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        {t("settings.connectivity.description")}
-                      </p>
-                    </div>
-                  </div>
+                }
+              />
+
+              <SettingRow
+                icon={EyeOff}
+                htmlFor="settings-hide-server-rpc"
+                title={t("settings.hideServerInRpc")}
+                description={t("settings.hideServerInRpcDescription")}
+                control={
+                  <Switch
+                    id="settings-hide-server-rpc"
+                    checked={hideServerInRpc}
+                    onCheckedChange={setHideServerInRpc}
+                  />
+                }
+              />
+            </SettingsSection>
+
+            <SettingsSection
+              icon={Wrench}
+              title={t("settings.sections.diagnostics")}
+            >
+              <SettingRow
+                icon={Activity}
+                title={t("settings.connectivity.title")}
+                description={t("settings.connectivity.description")}
+                control={
                   <Button
                     variant="outline"
                     size="sm"
@@ -393,57 +338,37 @@ export function Settings({
                       ? t("settings.connectivity.running")
                       : t("settings.connectivity.run")}
                   </Button>
-                </div>
-              <Separator />
-                <div className="flex items-center justify-between gap-4 px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
-                      <HeartPulse className="size-4 text-muted-foreground" />
-                    </span>
-                    <div className="min-w-0">
-                      <Label
-                        htmlFor="settings-crash-telemetry"
-                        className="text-sm font-medium"
-                      >
-                        {t("settings.crashTelemetry")}
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        {t("settings.crashTelemetryDescription")}
-                      </p>
-                    </div>
-                  </div>
+                }
+              />
+
+              <SettingRow
+                icon={HeartPulse}
+                htmlFor="settings-crash-telemetry"
+                title={t("settings.crashTelemetry")}
+                description={t("settings.crashTelemetryDescription")}
+                control={
                   <Switch
                     id="settings-crash-telemetry"
                     checked={crashTelemetry}
                     onCheckedChange={setCrashTelemetry}
                   />
-                </div>
-              <Separator />
-                <div className="flex items-center justify-between gap-4 px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
-                      <Code2 className="size-4 text-muted-foreground" />
-                    </span>
-                    <div className="min-w-0">
-                      <Label
-                        htmlFor="settings-dev-mode"
-                        className="text-sm font-medium"
-                      >
-                        {t("settings.devMode")}
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        {t("settings.devModeDescription")}
-                      </p>
-                    </div>
-                  </div>
+                }
+              />
+
+              <SettingRow
+                icon={Code2}
+                htmlFor="settings-dev-mode"
+                title={t("settings.devMode")}
+                description={t("settings.devModeDescription")}
+                control={
                   <Switch
                     id="settings-dev-mode"
                     checked={devMode}
                     onCheckedChange={setDevMode}
                   />
-                </div>
-            </CardContent>
-          </Card>
+                }
+              />
+            </SettingsSection>
           </div>
 
           <DialogFooter>
@@ -454,10 +379,10 @@ export function Settings({
                   ...settings,
                   xmx,
                   lang,
-                  font,
                   devMode,
                   crashTelemetry,
                   sounds,
+                  hideServerInRpc,
                   downloadLimit,
                 };
 
@@ -474,6 +399,33 @@ export function Settings({
         </DialogContent>
       </Dialog>
 
+      {isWarnModal && (
+        <Dialog open onOpenChange={(open) => !open && setIsWarnModal(false)}>
+          <DialogContent aria-describedby={undefined} className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>{t("common.confirmation")}</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              {t("serverSettings.unsavedChanges")}
+            </p>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setIsWarnModal(false)}>
+                {t("common.no")}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setIsWarnModal(false);
+                  closeSettings();
+                }}
+              >
+                {t("common.yes")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {connectivityResults && (
         <ConnectivityModal
           initialResults={connectivityResults}
@@ -481,5 +433,63 @@ export function Settings({
         />
       )}
     </>
+  );
+}
+
+function SettingsSection({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <Card className="gap-0 overflow-hidden py-0">
+      <div className="flex items-center gap-2 border-b bg-muted/30 px-4 py-2.5">
+        <Icon className="size-4 text-muted-foreground" />
+        <span className="text-sm font-medium">{title}</span>
+      </div>
+      <div className="divide-y">{children}</div>
+    </Card>
+  );
+}
+
+function SettingRow({
+  icon: Icon,
+  title,
+  description,
+  htmlFor,
+  control,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  description?: string;
+  htmlFor?: string;
+  control?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted">
+            <Icon className="size-4 text-muted-foreground" />
+          </span>
+          <div className="min-w-0">
+            <Label htmlFor={htmlFor} className="text-sm font-medium">
+              {title}
+            </Label>
+            {description && (
+              <p className="text-xs text-muted-foreground">{description}</p>
+            )}
+          </div>
+        </div>
+        {control && <div className="shrink-0">{control}</div>}
+      </div>
+      {children && <div className="mt-3">{children}</div>}
+    </div>
   );
 }

@@ -43,6 +43,8 @@ import {
   createLoaderInstallerProgressState,
   parseLoaderInstallerProgressLine,
 } from "../utilities/loaderInstallerProgress";
+import { assertSafeVersionName } from "@/shared/versionName";
+import { assertTrustedDownloadUrl } from "../utilities/trustedHosts";
 
 type VersionInstallRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
@@ -120,6 +122,8 @@ export class Version {
   }
 
   public async init() {
+    assertSafeVersionName(this.version.name);
+
     this.launcherPath = path.join(app.getPath("appData"), ".grubielauncher");
     this.minecraftPath = path.join(this.launcherPath, "minecraft");
     this.versionPath = path.join(
@@ -267,6 +271,11 @@ export class Version {
     if (!isExistsManifest) {
       isNewManifest = true;
 
+      assertTrustedDownloadUrl(
+        this.version.version.url,
+        "version manifest url",
+      );
+
       this.sendInstallProgress("manifest", 8, true);
       await this.downloader.downloadFiles(
         [
@@ -327,6 +336,10 @@ export class Version {
         });
       } else {
         this.throwIfInstallCancelled();
+        assertTrustedDownloadUrl(
+          this.version.loader.version.url,
+          "loader manifest url",
+        );
         const response = await axios.get<IFabricManifest>(
           this.version.loader.version.url,
           {
@@ -387,6 +400,10 @@ export class Version {
 
       const isExistsInstaller = await fs.pathExists(installerPath);
       if (!isExistsInstaller) {
+        assertTrustedDownloadUrl(
+          this.version.loader.version.url,
+          "loader installer url",
+        );
         await this.downloader.downloadFiles(
           [
             {
@@ -709,9 +726,13 @@ export class Version {
     if (!isExistsOptions) {
       this.sendInstallProgress("options", 94, false);
       const lang = LANGUAGES.find((l) => l.code == settings.lang);
-      if (!lang) return;
-
-      await fs.writeFile(optionsPath, `lang:${getFullLangCode(lang)}`, "utf-8");
+      if (lang) {
+        await fs.writeFile(
+          optionsPath,
+          `lang:${getFullLangCode(lang)}`,
+          "utf-8",
+        );
+      }
     }
   }
 

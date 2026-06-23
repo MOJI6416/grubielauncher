@@ -100,6 +100,7 @@ export class RPC {
   private lastPresenceSignature = ''
   private lang: SupportedRpcLanguage = 'en'
   private account: RpcAccountContext | null = null
+  private hideServer = false
   private launchingGame: LaunchActivity | null = null
   private runningGames = new Map<string, GameActivity>()
   private publicShare: PublicShareActivity | null = null
@@ -147,6 +148,7 @@ export class RPC {
   async syncContext(context: RpcRendererContext) {
     this.lang = normalizeLanguage(context.lang)
     this.account = context.account
+    this.hideServer = context.hideServer === true
     await this.queuePresenceSync()
   }
 
@@ -406,7 +408,9 @@ export class RPC {
     if (runningGame) {
       const publicAddress =
         this.publicShare?.key === runningGame.key ? this.publicShare.publicAddress : undefined
-      const serverAddress = publicAddress || runningGame.serverAddress
+      const serverAddress = this.hideServer
+        ? undefined
+        : publicAddress || runningGame.serverAddress
 
       activity.details = truncateText(runningGame.versionName) || locale.details.launcher
       activity.state = truncateText(

@@ -95,16 +95,25 @@
     "desctiption": "Server description",
     "unsavedChanges": "Are you sure you want to close the settings without saving?",
     "gameModes": ["Survival", "Creative", "Adventure", "Spectator"],
-    "difficulties": ["Peaceful", "Easy", "Normal", "Hard"]
+    "difficulties": ["Peaceful", "Easy", "Normal", "Hard"],
+    "sections": {
+      "connection": "Connection",
+      "game": "Game",
+      "rules": "Rules"
+    },
+    "serverCore": "Server core"
   },
   "friends": {
     "title": "Friends",
+    "unavailableHint": "Friends need an online account and an active connection",
     "deleted": "Removed from friends",
     "requests": "Requests",
     "copyId": "Copy friend code",
     "sendRequest": "Send request",
     "online": "Online",
+    "playing": "In game",
     "offline": "Offline",
+    "disconnected": "Connection to friends lost",
     "join": "Join",
     "notificationEnabled": "Notifications enabled",
     "notificationDisabled": "Notifications disabled",
@@ -182,7 +191,7 @@
       "noGameTitle": "Start the build first",
       "noGameDescription": "1. Launch the published build you want to play. 2. Join a server or open a single-player world. 3. Invite your friend again.",
       "unpublishedTitle": "Publish this build first",
-      "unpublishedDescription": "Open the build settings and publish/share it. After publishing, launch the build again so your friend can install exactly the same files.",
+      "unpublishedDescription": "1. Exit the game — a running build's settings can't be changed. 2. Open the build settings and use “Share” to publish it. 3. Launch the build again and invite your friend — they'll get exactly the same files.",
       "worldLanTitle": "Open the world for friends",
       "worldLanDescription": "If you are in a single-player world, open Minecraft pause menu, choose Open to LAN, then Start LAN World. After the launcher finds the world, open access for friends and invite again.",
       "worldReadyTitle": "World found",
@@ -284,8 +293,11 @@
     "addiction": "Dependency for",
     "availableUpdate": "Update available",
     "checkUpdates": "Check for updates",
+    "updateAll": "Update all",
+    "checkingUpdates": "Checking for updates…",
     "viewAllMods": "View all mods",
     "installed": "Installed",
+    "install": "Install",
     "local": "Local",
     "dragDrop": "Drag and drop file here",
     "invalidMod": "Invalid mod file",
@@ -356,25 +368,20 @@
     "copyAddress": "Copy address",
     "moveUp": "Move up",
     "moveDown": "Move down",
+    "confirmation": "Delete server {{name}}?",
     "resourceSets": ["Ask", "Enabled", "Disabled"]
   },
   "settings": {
     "title": "Settings",
     "launcherBuild": "Launcher version",
     "memory": "Memory allocation",
+    "memoryDescription": "How much RAM to allocate to Java for the game",
     "saved": "Settings saved",
     "language": "Interface language",
-    "font": "Font",
-    "fontDescription": "Interface typeface",
-    "fonts": {
-      "rubik": "Rubik",
-      "minecraft": "Minecraft"
-    },
     "mb": "MB",
     "devMode": "Developer mode",
-    "theme": "Theme",
-    "themes": ["Light", "Dark", "System"],
     "downloadLimit": "Download limit",
+    "downloadLimitDescription": "How many files to download at the same time",
     "connectivity": {
       "title": "Connection test",
       "description": "Tests access to launcher servers and official resources",
@@ -396,6 +403,8 @@
     "crashTelemetryDescription": "Sends only the diagnosis code — helps improve the hints",
     "sounds": "Notification sounds",
     "soundsDescription": "Install finished, game crash and friend invites",
+    "hideServerInRpc": "Hide server in Discord",
+    "hideServerInRpcDescription": "Don't show the server address in Discord Rich Presence",
     "sections": {
       "game": "Game",
       "interface": "Interface",
@@ -413,7 +422,7 @@
     "animations": ["None", "Idle", "Walk", "Run", "Fly"],
     "additionally": "Additionally",
     "showName": "Show nickname",
-    "setAvatat": "Set as avatar",
+    "setAvatar": "Set as avatar",
     "error": "Skin loading error"
   },
   "versions": {
@@ -488,6 +497,25 @@
     "selectTags": "Select tags",
     "versionShareDel": "Delete build from server",
     "searchPlaceholder": "Search builds…",
+    "viewList": "List",
+    "viewGrid": "Grid",
+    "deselect": "Deselect",
+    "filterAll": "All",
+    "noResults": "Nothing found",
+    "clearFilters": "Clear filters",
+    "sort": {
+      "label": "Sort",
+      "activity": "Recent",
+      "name": "Name",
+      "manual": "Manual"
+    },
+    "tags": {
+      "manage": "Tags",
+      "title": "Tags · {{name}}",
+      "empty": "No tags yet",
+      "add": "Add a tag and press Enter",
+      "remove": "Remove tag"
+    },
     "sections": {
       "content": "Build management",
       "tools": "Tools",
@@ -519,6 +547,18 @@
   "game": {
     "download": "Download"
   },
+  "worldStats": {
+    "title": "World stats",
+    "noData": "No stats for this world yet",
+    "playerKills": "Player kills",
+    "itemsCrafted": "Items crafted",
+    "timesSlept": "Nights slept",
+    "damageDealt": "Damage dealt",
+    "damageTaken": "Damage taken",
+    "topMined": "Top mined blocks",
+    "topKilled": "Top defeated mobs",
+    "seed": "Seed"
+  },
   "versionStatistics": {
     "title": "Statistics",
     "playTime": "Playtime",
@@ -528,6 +568,8 @@
     "avgSession": "Avg. session",
     "longestSession": "Longest session",
     "crashes": "Crashes",
+    "crashRate": "Crash rate",
+    "dailyPlaytime": "Playtime by day",
     "recentSessions": "Recent sessions",
     "noSessions": "No sessions yet",
     "crashed": "Crashed",
@@ -889,6 +931,14 @@
     "messages": "messages",
     "noInstances": "No instances",
     "noMessages": "No logs",
+    "search": "Search logs",
+    "noMatches": "No matching lines",
+    "filter": {
+      "all": "All",
+      "info": "Info",
+      "error": "Errors",
+      "success": "Success"
+    },
     "noMessagesDescription": "Messages will appear after the game starts.",
     "stop": "Stop",
     "restart": "Restart",
@@ -929,9 +979,88 @@
     "title": "Achievements",
     "showAll": "Show all",
     "noAchievements": "No achievements",
-    "pt100": "Playtime 100 hours",
-    "pt500": "Playtime 500 hours",
-    "pt1000": "Playtime 1000 hours"
+    "search": "Search achievements",
+    "loading": "Reading world data…",
+    "empty": "Nothing here yet",
+    "level": "Level",
+    "points": "Points",
+    "unlocked": "Unlocked",
+    "toNextLevel": "To level {{level}}",
+    "unlockedToast": "Achievement unlocked: {{name}}",
+    "publicLeaderboard": "Global leaderboard",
+    "publicLeaderboardDesc": "Show me on the public leaderboard on the site",
+    "filter": {
+      "all": "All",
+      "unlocked": "Unlocked",
+      "locked": "Locked"
+    },
+    "categories": {
+      "exploration": "Exploration",
+      "mining": "Mining",
+      "combat": "Combat",
+      "survival": "Survival",
+      "craft": "Crafting",
+      "playtime": "Playtime"
+    },
+    "rarity": {
+      "common": "Common",
+      "rare": "Rare",
+      "epic": "Epic",
+      "legendary": "Legendary"
+    },
+    "tiers": {
+      "t0": "Novice",
+      "t1": "Seeker",
+      "t2": "Veteran",
+      "t3": "Master",
+      "t4": "Legend"
+    },
+    "unit": {
+      "km": "km"
+    },
+    "items": {
+      "explore_10km": { "name": "First Steps", "desc": "Travel {{goal}} km in total" },
+      "explore_100km": { "name": "Wayfarer", "desc": "Travel {{goal}} km in total" },
+      "explore_1000km": { "name": "Globetrotter", "desc": "Travel {{goal}} km in total" },
+      "elytra_50km": { "name": "Sky Sailor", "desc": "Fly {{goal}} km with an elytra" },
+      "worlds_5": { "name": "Multiverse", "desc": "Play across {{goal}} different worlds" },
+      "worlds_25": { "name": "World Collector", "desc": "Play across {{goal}} different worlds" },
+      "mine_1k": { "name": "Pebble Pusher", "desc": "Mine {{goal}} blocks" },
+      "mine_25k": { "name": "Excavator", "desc": "Mine {{goal}} blocks" },
+      "mine_150k": { "name": "Deep Digger", "desc": "Mine {{goal}} blocks" },
+      "diamonds_64": { "name": "Diamonds!", "desc": "Mine {{goal}} diamond ore" },
+      "diamonds_512": { "name": "Diamond Hoarder", "desc": "Mine {{goal}} diamond ore" },
+      "debris_16": { "name": "Netherite", "desc": "Mine {{goal}} ancient debris" },
+      "kills_250": { "name": "Monster Hunter", "desc": "Defeat {{goal}} mobs" },
+      "kills_2500": { "name": "Slayer", "desc": "Defeat {{goal}} mobs" },
+      "kills_25000": { "name": "Doom Bringer", "desc": "Defeat {{goal}} mobs" },
+      "dragon": { "name": "Dragonslayer", "desc": "Defeat the Ender Dragon" },
+      "wither_1": { "name": "Wither's Bane", "desc": "Defeat the Wither" },
+      "wither_10": { "name": "Wither Hunter", "desc": "Defeat the Wither {{goal}} times" },
+      "warden": { "name": "Into the Dark", "desc": "Defeat the Warden" },
+      "ingame_10h": { "name": "Settling In", "desc": "Spend {{goal}} hours in your worlds" },
+      "ingame_100h": { "name": "Homesteader", "desc": "Spend {{goal}} hours in your worlds" },
+      "ingame_500h": { "name": "Veteran", "desc": "Spend {{goal}} hours in your worlds" },
+      "jumps_25k": { "name": "Jumping Jack", "desc": "Jump {{goal}} times" },
+      "sleep_50": { "name": "Sleepyhead", "desc": "Sleep {{goal}} nights" },
+      "deaths_100": { "name": "Born to Lose", "desc": "Die {{goal}} times" },
+      "craft_1k": { "name": "Tinkerer", "desc": "Craft {{goal}} items" },
+      "craft_10k": { "name": "Master Crafter", "desc": "Craft {{goal}} items" },
+      "enchant_50": { "name": "Arcane Touch", "desc": "Enchant {{goal}} items" },
+      "trade_100": { "name": "Regular Customer", "desc": "Trade with villagers {{goal}} times" },
+      "trade_1000": { "name": "Tycoon", "desc": "Trade with villagers {{goal}} times" },
+      "breed_50": { "name": "Rancher", "desc": "Breed {{goal}} animals" },
+      "fish_100": { "name": "Angler", "desc": "Catch {{goal}} fish" },
+      "raid_1": { "name": "Hero of the Village", "desc": "Win a raid" },
+      "pt100": { "name": "100 Hours", "desc": "Play for {{goal}} hours in the launcher" },
+      "pt500": { "name": "500 Hours", "desc": "Play for {{goal}} hours in the launcher" },
+      "pt1000": { "name": "1000 Hours", "desc": "Play for {{goal}} hours in the launcher" }
+    }
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "you": "(you)",
+    "empty": "Add friends to compare points"
   },
   "downloadProgress": {
     "title": "Downloading",
@@ -1001,7 +1130,12 @@
         "title": "Installing loader core"
       }
     },
-    "serverTitle": "Installing server"
+    "serverTitle": "Installing server",
+    "minimize": "Minimize",
+    "expand": "Expand",
+    "pause": "Pause",
+    "resume": "Resume",
+    "paused": "Paused"
   },
   "sizes": ["B", "KB", "MB", "GB", "TB"],
   "timeUnits": ["s", "m", "h", "d"],

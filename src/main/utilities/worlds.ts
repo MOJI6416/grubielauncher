@@ -3,6 +3,8 @@ import {
   IWorldStatistics,
   IWorldStatsAggregate,
 } from "@/types/World";
+import { IAchievementStats, EMPTY_ACHIEVEMENT_STATS } from "@/types/Achievements";
+import { app } from "electron";
 import { generateOfflineUUID, toUUID } from "./other";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { jwtDecode } from "jwt-decode";
@@ -181,6 +183,30 @@ export async function readWorld(
       );
     }
 
+    if (!seed) {
+      try {
+        const wgsPath = path.join(
+          worldPath,
+          "data",
+          "minecraft",
+          "world_gen_settings.dat",
+        );
+        if (await fs.pathExists(wgsPath)) {
+          const wgsRaw = await fs.readFile(wgsPath);
+          const wgsNbt: any = await deserialize(
+            zlib.gunzipSync(new Uint8Array(wgsRaw)),
+          );
+          seed = getWorldSeed(wgsNbt);
+        }
+      } catch (err) {
+        console.warn(
+          "Failed to read world_gen_settings.dat:",
+          worldPath,
+          err,
+        );
+      }
+    }
+
     let icon: string | undefined;
     if (await fs.pathExists(iconPath)) {
       icon = pathToFileURL(iconPath).href;
@@ -325,6 +351,99 @@ export async function loadVersionWorldStatistics(
   }
 
   return aggregate;
+}
+
+function statValue(
+  category: Record<string, number> | undefined,
+  key: string,
+): number {
+  return toFiniteNumber(category?.[`minecraft:${key}`]);
+}
+
+function accumulateWorldStats(
+  acc: IAchievementStats,
+  data: IWorldStatistics,
+): void {
+  const custom = data.stats["minecraft:custom"];
+  const mined = data.stats["minecraft:mined"];
+  const crafted = data.stats["minecraft:crafted"];
+  const killed = data.stats["minecraft:killed"];
+
+  acc.worlds += 1;
+  acc.playTimeTicks += statValue(custom, "play_time");
+  acc.deaths += statValue(custom, "deaths");
+  acc.mobKills += statValue(custom, "mob_kills");
+  acc.jumps += statValue(custom, "jump");
+  acc.distanceCm += sumDistance(custom);
+  acc.elytraCm += statValue(custom, "aviate_one_cm");
+  acc.fishCaught += statValue(custom, "fish_caught");
+  acc.animalsBred += statValue(custom, "animals_bred");
+  acc.itemsEnchanted += statValue(custom, "enchant_item");
+  acc.villagerTrades += statValue(custom, "traded_with_villager");
+  acc.timesSlept += statValue(custom, "sleep_in_bed");
+  acc.raidsWon += statValue(custom, "raid_win");
+
+  acc.blocksMined += sumCategory(mined);
+  acc.diamondsMined +=
+    statValue(mined, "diamond_ore") + statValue(mined, "deepslate_diamond_ore");
+  acc.ancientDebrisMined += statValue(mined, "ancient_debris");
+
+  acc.itemsCrafted += sumCategory(crafted);
+
+  acc.enderDragonKills += statValue(killed, "ender_dragon");
+  acc.witherKills += statValue(killed, "wither");
+  acc.wardenKills += statValue(killed, "warden");
+}
+
+export async function loadGlobalAchievementStats(
+  account: ILocalAccount,
+): Promise<IAchievementStats> {
+  const stats: IAchievementStats = { ...EMPTY_ACHIEVEMENT_STATS };
+  const accountUUID = getAccountUuid(account);
+
+  const versionsPath = path.join(
+    app.getPath("appData"),
+    ".grubielauncher",
+    "minecraft",
+    "versions",
+  );
+
+  let versions: string[] = [];
+  try {
+    if (!(await fs.pathExists(versionsPath))) return stats;
+    versions = await fs.readdir(versionsPath);
+  } catch {
+    return stats;
+  }
+
+  for (const version of versions) {
+    const savesPath = path.join(versionsPath, version, "saves");
+
+    let worldEntries: string[] = [];
+    try {
+      if (!(await fs.pathExists(savesPath))) continue;
+      worldEntries = await fs.readdir(savesPath);
+    } catch {
+      continue;
+    }
+
+    for (const world of worldEntries) {
+      const statsFile = await resolveStatsFile(
+        path.join(savesPath, world),
+        accountUUID,
+      );
+      if (!statsFile) continue;
+
+      try {
+        const data: IWorldStatistics = await fs.readJSON(statsFile);
+        if (data?.stats) accumulateWorldStats(stats, data);
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  return stats;
 }
 
 function getArchiveEntryPath(entry: any) {

@@ -4,6 +4,7 @@ import { rimraf } from 'rimraf'
 import { getDirectories, getSha1, getTotalSizes } from '../utilities/files'
 import { createZipArchive, extractZip } from '../utilities/archiver'
 import { handleSafe } from '../utilities/ipc'
+import { assertWritablePath } from '../utilities/safePath'
 
 type DirEntry = { path: string; type: 'folder' | 'file' }
 
@@ -62,11 +63,14 @@ export function registerFsIpc() {
   })
 
   handleSafe<boolean>('fs:rimraf', false, async (_, targetPath: string | string[]) => {
+    const targets = Array.isArray(targetPath) ? targetPath : [targetPath]
+    targets.forEach((target) => assertWritablePath(target, 'fs:rimraf'))
     await rimraf(targetPath)
     return true
   })
 
   handleSafe<boolean>('file:archiveFiles', false, async (_, filesToArchive: string[], zipPath: string, basePath?: string) => {
+    assertWritablePath(zipPath, 'file:archiveFiles')
     await createZipArchive(filesToArchive, zipPath, basePath)
     return true
   })
@@ -76,16 +80,19 @@ export function registerFsIpc() {
   })
 
   handleSafe<boolean>('fs:ensure', false, async (_, dirPath: string) => {
+    assertWritablePath(dirPath, 'fs:ensure')
     await fs.ensureDir(dirPath)
     return true
   })
 
   handleSafe<boolean>('fs:copy', false, async (_, srcPath: string, destPath: string) => {
+    assertWritablePath(destPath, 'fs:copy')
     await fs.copy(srcPath, destPath, { overwrite: true })
     return true
   })
 
   handleSafe<boolean>('fs:writeFile', false, async (_, filePath: string, data: any, encoding: BufferEncoding = 'utf-8') => {
+    assertWritablePath(filePath, 'fs:writeFile')
     await fs.writeFile(filePath, data, { encoding })
     return true
   })
@@ -99,6 +106,8 @@ export function registerFsIpc() {
   })
 
   handleSafe<boolean>('fs:move', false, async (_, srcPath: string, destPath: string) => {
+    assertWritablePath(srcPath, 'fs:move')
+    assertWritablePath(destPath, 'fs:move')
     await fs.move(srcPath, destPath, { overwrite: true })
     return true
   })
@@ -108,16 +117,20 @@ export function registerFsIpc() {
   })
 
   handleSafe<boolean>('fs:extractZip', false, async (_, zipPath: string, destination: string) => {
+    assertWritablePath(destination, 'fs:extractZip')
     await extractZip(zipPath, destination)
     return true
   })
 
   handleSafe<boolean>('fs:rename', false, async (_, oldPath: string, newPath: string) => {
+    assertWritablePath(oldPath, 'fs:rename')
+    assertWritablePath(newPath, 'fs:rename')
     await fs.rename(oldPath, newPath)
     return true
   })
 
   handleSafe<boolean>('fs:writeJSON', false, async (_, filePath: string, data: any) => {
+    assertWritablePath(filePath, 'fs:writeJSON')
     await fs.writeJSON(filePath, data, { encoding: 'utf-8', spaces: 2 })
     return true
   })

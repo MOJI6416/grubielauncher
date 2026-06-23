@@ -20,8 +20,10 @@ import {
   Gamepad2,
   Mail,
   Mailbox,
+  Play,
   Send,
   Shirt,
+  Sparkles,
   User,
   UserMinus,
   Volume,
@@ -30,6 +32,10 @@ import {
 import { getPlatformIcon } from "./Friends";
 import { IFriend } from "@/types/IFriend";
 import { formatDate } from "@renderer/utilities/date";
+import {
+  levelFromPoints,
+  pointsForAchievements,
+} from "@renderer/utilities/achievements";
 import { ActiveFriendShare } from "@/types/Share";
 
 interface FriendItemProps {
@@ -67,6 +73,9 @@ export function FriendItem({
   onRemove,
   t,
 }: FriendItemProps) {
+  const level = levelFromPoints(
+    pointsForAchievements(friend.user.achievements ?? []),
+  );
   const hasJoinTarget =
     (!!friend.versionCode || !!activeShare?.versionShareCode) &&
     (!!friend.serverAddress || !!activeShare);
@@ -115,6 +124,15 @@ export function FriendItem({
               <span className="shrink-0 text-muted-foreground">
                 {getPlatformIcon(friend.user.platform)}
               </span>
+              {level >= 2 && (
+                <span
+                  className="inline-flex shrink-0 items-center gap-0.5 rounded border border-primary/30 bg-primary/10 px-1 text-[10px] font-medium leading-4 text-primary"
+                  title={`${t("achievements.level")} ${level}`}
+                >
+                  <Sparkles className="size-2.5" />
+                  {level}
+                </span>
+              )}
             </div>
 
             {friend.isOnline && friend.versionName && (
@@ -146,7 +164,7 @@ export function FriendItem({
                 tabIndex={0}
                 aria-label={t("friends.join")}
                 title={t("friends.join")}
-                className="flex h-7 items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 text-xs font-medium text-white transition-colors hover:bg-emerald-500"
+                className="flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/80"
                 onPointerDown={(event) => {
                   event.stopPropagation();
                 }}
@@ -162,8 +180,34 @@ export function FriendItem({
                   onJoin();
                 }}
               >
-                <Gamepad2 size={13} />
+                <Play size={13} />
                 {t("friends.joinFlow.playAction")}
+              </span>
+            )}
+            {!canJoin && friend.isOnline && isRunning && (
+              <span
+                role="button"
+                tabIndex={0}
+                aria-label={t("friends.invite")}
+                title={t("friends.invite")}
+                className="flex h-7 items-center gap-1.5 rounded-md bg-secondary px-2.5 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  event.preventDefault();
+                  onInvite();
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  event.stopPropagation();
+                  event.preventDefault();
+                  onInvite();
+                }}
+              >
+                <Send size={13} />
+                {t("friends.invite")}
               </span>
             )}
             {local?.isMuted && (

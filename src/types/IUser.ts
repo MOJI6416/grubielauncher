@@ -11,6 +11,7 @@ export interface IUser {
   createdAt: Date
   playTime: number
   achievements: string[]
+  publicLeaderboard?: boolean
 }
 
 export interface ICreateUser {
@@ -25,6 +26,8 @@ export interface IUpdateUser {
   image?: string
   lastActive?: Date
   playTime?: number
+  achievements?: string[]
+  publicLeaderboard?: boolean
 }
 
 export interface IFriendSettingsUpdate {

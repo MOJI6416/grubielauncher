@@ -17,7 +17,10 @@ import {
   Cpu,
   Download,
   Loader2,
+  Minimize2,
   PackageCheck,
+  Pause,
+  Play,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -26,11 +29,17 @@ export function InstallationProgress({
   downloadInfo,
   onCancel,
   isCancelling = false,
+  onMinimize,
+  isPaused = false,
+  onTogglePause,
 }: {
   info: VersionInstallProgress;
   downloadInfo: DownloaderInfo | null;
   onCancel?: () => void;
   isCancelling?: boolean;
+  onMinimize?: () => void;
+  isPaused?: boolean;
+  onTogglePause?: () => void;
 }) {
   const { t } = useTranslation();
 
@@ -128,6 +137,8 @@ export function InstallationProgress({
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/20 text-muted-foreground">
               {isDone ? (
                 <CheckCircle2 className="size-4" />
+              ) : isPaused ? (
+                <Pause className="size-4" />
               ) : (
                 <PackageCheck className="size-4" />
               )}
@@ -143,6 +154,12 @@ export function InstallationProgress({
                 {info.versionName}
               </DialogDescription>
             </div>
+            {isPaused && !isDone ? (
+              <Badge variant="secondary" className="mt-0.5 shrink-0 gap-1">
+                <Pause className="size-3" />
+                {t("installationProgress.paused")}
+              </Badge>
+            ) : null}
           </div>
         </DialogHeader>
 
@@ -308,19 +325,57 @@ export function InstallationProgress({
           ) : null}
         </div>
 
-        {canCancel ? (
-          <DialogFooter className="m-0 rounded-none border-t bg-muted/25 px-5 py-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isCancelling}
-            >
-              {isCancelling ? (
-                <Loader2 className="size-4 animate-spin" />
+        {!isDone && (onMinimize || canCancel) ? (
+          <DialogFooter className="m-0 flex-row items-center justify-between gap-2 rounded-none border-t bg-muted/25 px-5 py-4">
+            {onMinimize ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={onMinimize}
+              >
+                <Minimize2 className="size-4" />
+                {t("installationProgress.minimize")}
+              </Button>
+            ) : (
+              <span />
+            )}
+
+            <div className="flex items-center gap-2">
+              {canCancel && onTogglePause ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={onTogglePause}
+                  disabled={isCancelling}
+                >
+                  {isPaused ? (
+                    <Play className="size-4" />
+                  ) : (
+                    <Pause className="size-4" />
+                  )}
+                  {isPaused
+                    ? t("installationProgress.resume")
+                    : t("installationProgress.pause")}
+                </Button>
               ) : null}
-              {t("common.cancel")}
-            </Button>
+
+              {canCancel ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onCancel}
+                  disabled={isCancelling}
+                >
+                  {isCancelling ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : null}
+                  {t("common.cancel")}
+                </Button>
+              ) : null}
+            </div>
           </DialogFooter>
         ) : null}
       </DialogContent>

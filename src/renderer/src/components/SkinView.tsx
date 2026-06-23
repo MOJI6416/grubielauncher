@@ -1,6 +1,5 @@
 import { ISkinData } from "@/types/Skin";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReactSkinview3d from "react-skinview3d";
 import {
@@ -21,8 +20,30 @@ import {
   SkinViewer,
   WalkingAnimation,
 } from "skinview3d";
+import minecraftFontUrl from "skinview3d/assets/minecraft.woff2";
+import { Loader2 } from "lucide-react";
 
 type Animation = "null" | "idle" | "walk" | "run" | "fly";
+
+let minecraftFontPromise: Promise<void> | null = null;
+function ensureMinecraftFont(): Promise<void> {
+  if (typeof document === "undefined" || !("fonts" in document)) {
+    return Promise.resolve();
+  }
+  if (!minecraftFontPromise) {
+    const face = new FontFace(
+      "Minecraft",
+      `url(${minecraftFontUrl}) format("woff2")`,
+    );
+    document.fonts.add(face);
+    minecraftFontPromise = face
+      .load()
+      .then(() => undefined)
+      .catch(() => undefined);
+  }
+  return minecraftFontPromise;
+}
+void ensureMinecraftFont();
 
 export function SkinView({
   skinData,
@@ -41,9 +62,26 @@ export function SkinView({
   const [isAutoRotating, setIsAutoRotating] = useState(false);
   const [rotateSpeed, setRotateSpeed] = useState(1);
   const [isNameTag, setIsNameTag] = useState(true);
+  const [isFontReady, setIsFontReady] = useState(
+    () =>
+      typeof document !== "undefined" &&
+      "fonts" in document &&
+      document.fonts.check("16px Minecraft"),
+  );
   const viewerRef = useRef<SkinViewer>(null);
 
   const { t } = useTranslation();
+
+  useEffect(() => {
+    if (isFontReady) return;
+    let cancelled = false;
+    void ensureMinecraftFont().finally(() => {
+      if (!cancelled) setIsFontReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isFontReady]);
 
   function setAnimation(animation: Animation) {
     if (!viewerRef.current) return;
@@ -98,22 +136,28 @@ export function SkinView({
 
         <div className="grid gap-4 md:grid-cols-[240px_1fr]">
           <div className="flex justify-center rounded-xl border bg-card p-3 shadow-xs">
-            <ReactSkinview3d
-              skinUrl={skinData.skin}
-              capeUrl={skinData.cape}
-              height={340}
-              width={210}
-              options={{
-                nameTag: nickname,
-                zoom: 0.75,
-                preserveDrawingBuffer: true,
-              }}
-              onReady={({ viewer }) => {
-                viewerRef.current = viewer;
-                viewer.autoRotate = isAutoRotating;
-                viewer.autoRotateSpeed = rotateSpeed;
-              }}
-            />
+            {isFontReady ? (
+              <ReactSkinview3d
+                skinUrl={skinData.skin}
+                capeUrl={skinData.cape}
+                height={340}
+                width={210}
+                options={{
+                  nameTag: nickname,
+                  zoom: 0.75,
+                  preserveDrawingBuffer: true,
+                }}
+                onReady={({ viewer }) => {
+                  viewerRef.current = viewer;
+                  viewer.autoRotate = isAutoRotating;
+                  viewer.autoRotateSpeed = rotateSpeed;
+                }}
+              />
+            ) : (
+              <div className="flex h-[340px] w-[210px] items-center justify-center">
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+              </div>
+            )}
           </div>
 
           <div className="grid content-start gap-3">
@@ -134,7 +178,11 @@ export function SkinView({
                 />
               </div>
 
-              <div className="mt-4 grid gap-2">
+              <div
+                className={`mt-4 grid gap-2 ${
+                  isAutoRotating ? "" : "opacity-50"
+                }`}
+              >
                 <div className="flex items-center justify-between gap-3">
                   <Label
                     className="text-xs text-muted-foreground"
@@ -153,6 +201,7 @@ export function SkinView({
                   step={1}
                   value={[rotateSpeed]}
                   onValueChange={setSpeed}
+                  disabled={!isAutoRotating}
                 />
               </div>
             </section>
@@ -196,23 +245,22 @@ export function SkinView({
                 {t("skinView.additionally")}
               </h3>
 
-              <div className="flex items-center gap-3">
-                <Checkbox
+              <div className="flex items-center justify-between gap-3">
+                <Label className="text-sm" htmlFor="skin-view-show-name">
+                  {t("skinView.showName")}
+                </Label>
+                <Switch
                   id="skin-view-show-name"
                   checked={isNameTag}
                   onCheckedChange={(checked) => {
                     if (!viewerRef.current) return;
-                    const isChecked = checked === true;
 
-                    setIsNameTag(isChecked);
-                    viewerRef.current.nameTag = isChecked
+                    setIsNameTag(checked);
+                    viewerRef.current.nameTag = checked
                       ? nickname || null
                       : null;
                   }}
                 />
-                <Label className="text-sm" htmlFor="skin-view-show-name">
-                  {t("skinView.showName")}
-                </Label>
               </div>
 
               {isOwner ? (
@@ -227,7 +275,7 @@ export function SkinView({
                     setScreenshotFile(iconUrl);
                   }}
                 >
-                  {t("skinView.setAvatat")}
+                  {t("skinView.setAvatar")}
                 </Button>
               ) : undefined}
             </section>

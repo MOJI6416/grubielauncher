@@ -1,13 +1,14 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Versions } from "./components/Versions";
 import { Nav } from "./components/Nav";
+import { Titlebar } from "./components/Titlebar";
 import { useTranslation } from "react-i18next";
 import { changeAppLanguage } from "./i18n";
 import { io, Socket } from "socket.io-client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trophy } from "lucide-react";
 import type { IFriendRequest } from "./components/Friends/Friends";
 import { IUser } from "../../types/IUser";
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import {
   accountAtom,
   accountsAtom,
@@ -15,9 +16,11 @@ import {
   consolesAtom,
   friendRequestsAtom,
   friendSocketAtom,
+  friendsAtom,
   isFriendsConnectedAtom,
   isRunningAtom,
   isShareModalOpenAtom,
+  installActiveAtom,
   internetAtom,
   localFriendsAtom,
   networkAtom,
@@ -45,7 +48,8 @@ import {
 } from "@/components/ui/dialog";
 import { LANGUAGES, normalizeSettings, TSettings } from "@/types/Settings";
 import { IAccountConf, IAuth } from "@/types/Account";
-import { IUpdateStatus } from "@/types/IFriend";
+import { IFriend, IUpdateStatus } from "@/types/IFriend";
+import { evaluateAchievements } from "@renderer/utilities/achievements";
 import { IServer } from "@/types/ServersList";
 import { IConsole } from "@/types/Console";
 import {
@@ -65,11 +69,12 @@ import { supportsQuickPlayMultiplayer } from "./utilities/versionPure";
 import { Mods } from "./classes/Mods";
 import { DownloaderFailuresInfo, DownloaderInfo } from "@/types/Downloader";
 import { InstallationProgress } from "./components/InstallationProgress";
+import { InstallationMiniBar } from "./components/InstallationMiniBar";
 import { DownloadFailuresModal } from "./components/DownloadFailuresModal";
 import { BACKEND_URL } from "@/shared/config";
 import { getShareErrorText } from "./utilities/share";
 import { recordError, showErrorToast } from "./utilities/errorToast";
-import { playSound } from "./utilities/sounds";
+import { playSound, playAchievementSound } from "./utilities/sounds";
 import {
   ensureAccountSession,
   isAccountSessionRefreshError,
@@ -163,6 +168,7 @@ function App() {
   const [isFriends, setIsFriends] = useState(false);
 
   const [friendSocket, setFriendSocket] = useAtom(friendSocketAtom);
+  const setFriends = useSetAtom(friendsAtom);
   const [_, setFriendRequests] = useAtom(friendRequestsAtom);
   const [selectedFriend, setSelectedFriend] = useAtom(selectedFriendAtom);
   const [localFriends, setLocalFriends] = useAtom(localFriendsAtom);
@@ -202,6 +208,10 @@ function App() {
     useState<VersionInstallProgress | null>(null);
   const [isCancellingInstall, setIsCancellingInstall] = useState(false);
   const isCancellingInstallRef = useLatestRef(isCancellingInstall);
+  const [isInstallMinimized, setIsInstallMinimized] = useState(false);
+  const setInstallActive = useAtom(installActiveAtom)[1];
+  const [isInstallPaused, setIsInstallPaused] = useState(false);
+  const isInstallPausedRef = useLatestRef(isInstallPaused);
   const installTrackRef = useRef<{
     startedAt: number;
     doneSeen: boolean;
@@ -277,17 +287,15 @@ function App() {
           }
         : null,
       lang: i18n.resolvedLanguage || i18n.language || "en",
+      hideServer: settings.hideServerInRpc,
     });
   }, [
     i18n.language,
     i18n.resolvedLanguage,
     selectedAccount?.nickname,
     selectedAccount?.type,
+    settings.hideServerInRpc,
   ]);
-
-  useEffect(() => {
-    document.documentElement.dataset.font = settings.font;
-  }, [settings.font]);
 
   useEffect(() => {
     const updateInternetStatus = () => {
@@ -710,8 +718,38 @@ function App() {
       if (!user) return;
 
       const totalSeconds = mine.reduce((sum, e) => sum + e.seconds, 0);
+      const newPlayTime = user.playTime + totalSeconds;
+
+      let earnedAchievements: string[] | undefined;
+      try {
+        const stats = await api.worlds.loadAchievementStats(a);
+        const unlocked = evaluateAchievements(
+          stats,
+          newPlayTime,
+          user.achievements,
+        )
+          .filter((p) => p.unlocked)
+          .map((p) => p.def.id);
+        const newlyEarned = unlocked.filter(
+          (id) => !user.achievements.includes(id),
+        );
+        if (newlyEarned.length > 0) {
+          earnedAchievements = unlocked;
+          for (const id of newlyEarned) {
+            toast.success(
+              t("achievements.unlockedToast", {
+                name: t(`achievements.items.${id}.name`),
+              }),
+              { icon: <Trophy className="size-4 text-primary" /> },
+            );
+          }
+          playAchievementSound();
+        }
+      } catch {}
+
       await api.backend.updateUser(a.accessToken || "", user._id, {
-        playTime: user.playTime + totalSeconds,
+        playTime: newPlayTime,
+        ...(earnedAchievements ? { achievements: earnedAchievements } : {}),
       });
       await api.statistics.resolveSyncEntries(mine.map((e) => e.id));
     } catch (err) {
@@ -928,6 +966,14 @@ function App() {
   }, [installProgress]);
 
   useEffect(() => {
+    setInstallActive(Boolean(installProgress));
+    if (!installProgress) {
+      setIsInstallMinimized(false);
+      setIsInstallPaused(false);
+    }
+  }, [installProgress, setInstallActive]);
+
+  useEffect(() => {
     setIsFriends(false);
 
     const ad = authData;
@@ -958,7 +1004,12 @@ function App() {
 
     knownShareSessionsRef.current = null;
     const handleSharePresence = () => void checkFriendShares();
+    const requestFriends = () => socketIo.emit("getFriends");
+    const handleFriendsList = (data: { friends: IFriend[] }) =>
+      setFriends(Array.isArray(data?.friends) ? data.friends : []);
     socketIo.on("connect", handleSharePresence);
+    socketIo.on("connect", requestFriends);
+    socketIo.on("friends", handleFriendsList);
     socketIo.on("friendUpdate", handleSharePresence);
     const shareWatchInterval = setInterval(() => {
       void checkFriendShares();
@@ -967,6 +1018,8 @@ function App() {
     return () => {
       clearInterval(shareWatchInterval);
       socketIo.off("connect", handleSharePresence);
+      socketIo.off("connect", requestFriends);
+      socketIo.off("friends", handleFriendsList);
       socketIo.off("friendUpdate", handleSharePresence);
       socketIo.disconnect();
       setIsFriendsConnected(false);
@@ -976,6 +1029,7 @@ function App() {
     authData?.sub,
     selectedAccount?.accessToken,
     setFriendSocket,
+    setFriends,
     setLocalFriends,
     setIsFriendsConnected,
     setOwnPresence,
@@ -1137,7 +1191,7 @@ function App() {
     }
 
     const data = normalizeSettings(rawData, l?.code || i18n.language);
-    if (JSON.stringify(rawData) !== JSON.stringify(data)) {
+    if (rawData === null) {
       await api.fs.writeJSON(settingsConfPath, data);
     }
 
@@ -1668,9 +1722,22 @@ function App() {
     }
   });
 
+  const toggleInstallPause = useEventCallback(async () => {
+    const next = !isInstallPausedRef.current;
+    setIsInstallPaused(next);
+    try {
+      if (next) await api.version.pauseInstall();
+      else await api.version.resumeInstall();
+    } catch (error) {
+      console.error(error);
+      setIsInstallPaused(!next);
+    }
+  });
+
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden">
       <>
+        <Titlebar />
         <Nav
           runGame={runGame}
           setIsFriends={setIsFriends}
@@ -1699,7 +1766,7 @@ function App() {
 
         <Suspense
           fallback={
-            <div className="mx-4 mb-3 h-[8.25rem] rounded-xl border bg-card" />
+            <div className="mx-4 mb-3 h-[6.75rem] rounded-xl border bg-card" />
           }
         >
           <LazyNewsFeed />
@@ -1832,12 +1899,27 @@ function App() {
         )}
 
         {installProgress ? (
-          <InstallationProgress
-            info={installProgress}
-            downloadInfo={downloder}
-            onCancel={cancelVersionInstall}
-            isCancelling={isCancellingInstall}
-          />
+          isInstallMinimized ? (
+            <InstallationMiniBar
+              info={installProgress}
+              downloadInfo={downloder}
+              isPaused={isInstallPaused}
+              isCancelling={isCancellingInstall}
+              onExpand={() => setIsInstallMinimized(false)}
+              onTogglePause={toggleInstallPause}
+              onCancel={cancelVersionInstall}
+            />
+          ) : (
+            <InstallationProgress
+              info={installProgress}
+              downloadInfo={downloder}
+              onCancel={cancelVersionInstall}
+              isCancelling={isCancellingInstall}
+              onMinimize={() => setIsInstallMinimized(true)}
+              isPaused={isInstallPaused}
+              onTogglePause={toggleInstallPause}
+            />
+          )
         ) : null}
 
         {downloadFailures && (

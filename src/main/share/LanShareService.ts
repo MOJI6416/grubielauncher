@@ -43,6 +43,7 @@ import fs from "fs-extra";
 import { jwtDecode } from "jwt-decode";
 import path from "path";
 import net from "net";
+import netstat from "node-netstat";
 
 type ShareEvents = {
   stateChanged: (state: ShareState) => void;
@@ -663,6 +664,11 @@ export class LanShareService extends EventEmitter {
     const isReachable = await this.verifyLocalPort(port);
     if (!isReachable) return;
 
+    const gamePid = gameProcesses.get(event.key)?.process.pid;
+    if (gamePid && !(await this.verifyPortOwnedByProcess(port, gamePid))) {
+      return;
+    }
+
     const existing = this.candidates.get(event.key);
     const nextCandidate: ShareLanCandidate = {
       key: event.key,
@@ -1071,6 +1077,31 @@ export class LanShareService extends EventEmitter {
       socket.once("connect", () => finish(true));
       socket.once("timeout", () => finish(false));
       socket.once("error", () => finish(false));
+    });
+  }
+
+  private verifyPortOwnedByProcess(port: number, pid: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      const owners = new Set<number>();
+
+      try {
+        netstat(
+          { filter: { local: { port }, protocol: "tcp" }, limit: 100 },
+          (item: { state?: string; pid?: number }) => {
+            const state = String(item?.state || "").toUpperCase();
+            if (state && !state.includes("LISTEN")) return;
+            if (typeof item?.pid === "number" && item.pid > 0) {
+              owners.add(item.pid);
+            }
+          },
+        );
+      } catch {
+        // ignore — handled by the fail-open path below
+      }
+
+      setTimeout(() => {
+        resolve(owners.size === 0 ? true : owners.has(pid));
+      }, 1200);
     });
   }
 

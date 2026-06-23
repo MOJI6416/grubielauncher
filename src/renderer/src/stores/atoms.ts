@@ -9,7 +9,7 @@ import { IServer } from "@/types/ServersList";
 import { IConsoles } from "@/types/Console";
 import { Version } from "@renderer/classes/Version";
 import { SharePeerInfo, ShareState } from "@/types/Share";
-import { IUpdateStatus } from "@/types/IFriend";
+import { IFriend, IUpdateStatus } from "@/types/IFriend";
 
 export const pathsAtom = atom<{
   launcher: string;
@@ -40,6 +40,7 @@ export const errorLogSeenAtom = atom(0);
 export const versionsAtom = atom<Version[]>([]);
 export const versionsLoadedAtom = atom(false);
 export const addVersionModalAtom = atom(false);
+export const installActiveAtom = atom(false);
 export const accountsModalAtom = atom(false);
 export const accountsAtom = atom<ILocalAccount[]>([]);
 export const internetAtom = atom(true);
@@ -51,6 +52,7 @@ export const isRunningAtom = atom(false);
 export const localFriendsAtom = atom<ILocalFriend[]>([]);
 export const friendSocketAtom = atom<Socket>();
 export const friendRequestsAtom = atom<IFriendRequest[]>([]);
+export const friendsAtom = atom<IFriend[]>([]);
 export const selectedFriendAtom = atom<string>();
 export const isDownloadedVersionAtom = atom<boolean>(false);
 export const isOwnerVersionAtom = atom<boolean>(false);

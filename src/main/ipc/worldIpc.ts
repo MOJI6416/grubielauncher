@@ -1,5 +1,6 @@
 import { ILocalAccount } from '@/types/Account'
 import {
+  loadGlobalAchievementStats,
   loadStatistics,
   loadVersionWorldStatistics,
   readWorld,
@@ -19,6 +20,10 @@ export function registerWorldIpc() {
       return await loadVersionWorldStatistics(versionPath, account)
     },
   )
+
+  handleSafe('worlds:loadAchievementStats', null, async (_, account: ILocalAccount) => {
+    return await loadGlobalAchievementStats(account)
+  })
 
   handleSafe('worlds:readWorld', null, async (_, worldPath: string, account: ILocalAccount) => {
     return await readWorld(worldPath, account)

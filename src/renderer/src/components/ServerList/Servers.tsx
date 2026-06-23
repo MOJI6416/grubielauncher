@@ -49,6 +49,7 @@ import { useTranslation } from "react-i18next";
 import { CreateServer } from "./CreateServer";
 import { RunGameParams } from "@renderer/App";
 import { toast } from "sonner";
+import { Confirmation } from "../Modals/Confirmation";
 
 const api = window.api;
 
@@ -76,6 +77,7 @@ export function Servers({
   const [isCreatingServer, setIsCreatingServer] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const ignoreNextOuterCloseRef = useRef(false);
 
   const canManage = !isDownloadedVersion && isOwnerVersion && !isAdding;
@@ -526,17 +528,9 @@ export function Servers({
                                               disabled={disabledKeys.has(
                                                 "delete",
                                               )}
-                                              onSelect={() => {
-                                                setServers((prev) =>
-                                                  prev.filter(
-                                                    (_, i) => i !== index,
-                                                  ),
-                                                );
-
-                                                toast.success(
-                                                  t("servers.deleted"),
-                                                );
-                                              }}
+                                              onSelect={() =>
+                                                setDeleteIndex(index)
+                                              }
                                             >
                                               <Trash />
                                               <span>{t("common.delete")}</span>
@@ -560,6 +554,37 @@ export function Servers({
           )}
         </DialogContent>
       </Dialog>
+
+      {deleteIndex !== null && servers[deleteIndex] && (
+        <Confirmation
+          content={[
+            {
+              text: t("servers.confirmation", {
+                name: servers[deleteIndex].name,
+              }),
+              color: "warning",
+            },
+          ]}
+          buttons={[
+            {
+              text: t("common.yes"),
+              color: "danger",
+              onClick: () => {
+                const idx = deleteIndex;
+                setServers((prev) => prev.filter((_, i) => i !== idx));
+                setDeleteIndex(null);
+                toast.success(t("servers.deleted"));
+              },
+            },
+            {
+              text: t("common.no"),
+              color: "default",
+              onClick: () => setDeleteIndex(null),
+            },
+          ]}
+          onClose={() => setDeleteIndex(null)}
+        />
+      )}
     </>
   );
 }

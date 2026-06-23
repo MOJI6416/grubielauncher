@@ -267,15 +267,6 @@ export class Backend extends BaseService {
       const formData = new FormData();
 
       const stream = fs.createReadStream(filePath);
-      stream.on("data", (chunk) => {
-        uploadedBytes += Buffer.isBuffer(chunk)
-          ? chunk.length
-          : Buffer.byteLength(String(chunk));
-        const now = Date.now();
-        if (now - lastProgressEmit < 150 && uploadedBytes < fileSize) return;
-        lastProgressEmit = now;
-        emitProgress({ status: "uploading" });
-      });
 
       formData.append("file", stream, {
         filename: fileName ?? path.basename(filePath),
@@ -292,6 +283,21 @@ export class Backend extends BaseService {
           maxBodyLength: Infinity,
           maxContentLength: Infinity,
           timeout: 10 * 60 * 1000,
+          onUploadProgress: (event) => {
+            uploadedBytes = event.loaded;
+            const now = Date.now();
+            if (
+              now - lastProgressEmit < 150 &&
+              (!event.total || event.loaded < event.total)
+            )
+              return;
+            lastProgressEmit = now;
+            emitProgress({
+              status: "uploading",
+              loaded: event.loaded,
+              total: event.total ?? fileSize,
+            });
+          },
         },
       );
 
@@ -374,15 +380,6 @@ export class Backend extends BaseService {
       directUploadStarted = true;
 
       const stream = fs.createReadStream(filePath);
-      stream.on("data", (chunk) => {
-        uploadedBytes += Buffer.isBuffer(chunk)
-          ? chunk.length
-          : Buffer.byteLength(String(chunk));
-        const now = Date.now();
-        if (now - lastProgressEmit < 150 && uploadedBytes < fileSize) return;
-        lastProgressEmit = now;
-        emitProgress({ status: "uploading" });
-      });
 
       await axios.put(start.data.upload_url, stream, {
         headers: {
@@ -392,6 +389,21 @@ export class Backend extends BaseService {
         maxBodyLength: Infinity,
         maxContentLength: Infinity,
         timeout: 10 * 60 * 1000,
+        onUploadProgress: (event) => {
+          uploadedBytes = event.loaded;
+          const now = Date.now();
+          if (
+            now - lastProgressEmit < 150 &&
+            (!event.total || event.loaded < event.total)
+          )
+            return;
+          lastProgressEmit = now;
+          emitProgress({
+            status: "uploading",
+            loaded: event.loaded,
+            total: event.total ?? fileSize,
+          });
+        },
       });
 
       const complete = await this.api.post<DirectUploadCompleteResponse>(

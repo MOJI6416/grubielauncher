@@ -43,6 +43,7 @@ import {
   IWorldStatistics,
   IWorldStatsAggregate,
 } from "@/types/World";
+import { IAchievementStats } from "@/types/Achievements";
 import { IAuthlib, AuthlibEnsureResult } from "@/types/IAuthlib";
 import { IAuthResponse, IRefreshTokenResponse } from "@/types/Auth";
 import {
@@ -104,6 +105,12 @@ ipcRenderer.on(
 );
 
 export interface IElectronAPI {
+  platform: string;
+  window: {
+    minimize: () => Promise<void>;
+    maximizeToggle: () => Promise<void>;
+    close: () => Promise<void>;
+  };
   os: {
     totalmem: () => Promise<number>;
   };
@@ -184,6 +191,8 @@ export interface IElectronAPI {
       options?: VersionInstallOptions,
     ) => Promise<VersionInstallResult>;
     cancelInstall: () => Promise<boolean>;
+    pauseInstall: () => Promise<boolean>;
+    resumeInstall: () => Promise<boolean>;
     ensureAuthlib: (
       account: ILocalAccount,
       versionConf: IVersionConf,
@@ -333,23 +342,6 @@ export interface IElectronAPI {
     ) => Promise<LoaderVersion[]>;
   };
   game: {
-    runJar: (
-      command: string,
-      args: string[],
-      cwd: string,
-    ) => Promise<number | string>;
-    installServer: (
-      command: string,
-      args: string[],
-      serverPath: string,
-    ) => Promise<string | number>;
-    runGame: (
-      versionName: string,
-      instance: number,
-      command: string,
-      args: string[],
-      cwd: string,
-    ) => Promise<void>;
     closeGame: (versionName: string, instance: number) => Promise<void>;
   };
   java: {
@@ -556,6 +548,9 @@ export interface IElectronAPI {
       versionPath: string,
       account: ILocalAccount,
     ) => Promise<IWorldStatsAggregate>;
+    loadAchievementStats: (
+      account: ILocalAccount,
+    ) => Promise<IAchievementStats>;
     readWorld: (
       worldPath: string,
       account: ILocalAccount,
@@ -652,6 +647,12 @@ export interface IElectronAPI {
 }
 
 export const api = {
+  platform: process.platform,
+  window: {
+    minimize: () => ipcRenderer.invoke("window:minimize"),
+    maximizeToggle: () => ipcRenderer.invoke("window:maximizeToggle"),
+    close: () => ipcRenderer.invoke("window:close"),
+  },
   os: {
     totalmem: () => ipcRenderer.invoke("os:totalmem"),
   },
@@ -754,6 +755,8 @@ export const api = {
         options,
       ),
     cancelInstall: () => ipcRenderer.invoke("version:cancelInstall"),
+    pauseInstall: () => ipcRenderer.invoke("version:pauseInstall"),
+    resumeInstall: () => ipcRenderer.invoke("version:resumeInstall"),
     ensureAuthlib: (account: ILocalAccount, versionConf: IVersionConf) =>
       ipcRenderer.invoke("version:ensureAuthlib", account, versionConf),
     getRunCommand: (
@@ -908,25 +911,6 @@ export const api = {
     ) => ipcRenderer.invoke("versions:getLoaderVersions", loader, versionId),
   },
   game: {
-    runJar: (command: string, args: string[], cwd: string) =>
-      ipcRenderer.invoke("game:runJar", command, args, cwd),
-    installServer: (command: string, args: string[], serverPath: string) =>
-      ipcRenderer.invoke("game:installServer", command, args, serverPath),
-    runGame: (
-      versionName: string,
-      instance: number,
-      command: string,
-      args: string[],
-      cwd: string,
-    ) =>
-      ipcRenderer.invoke(
-        "game:runGame",
-        versionName,
-        instance,
-        command,
-        args,
-        cwd,
-      ),
     closeGame: (versionName: string, instance: number) =>
       ipcRenderer.invoke("game:closeGame", versionName, instance),
   },
@@ -1138,6 +1122,8 @@ export const api = {
       ipcRenderer.invoke("worlds:loadStatistics", worldPath, account),
     loadVersionStatistics: (versionPath: string, account: ILocalAccount) =>
       ipcRenderer.invoke("worlds:loadVersionStatistics", versionPath, account),
+    loadAchievementStats: (account: ILocalAccount) =>
+      ipcRenderer.invoke("worlds:loadAchievementStats", account),
     readWorld: (worldPath: string, account: ILocalAccount) =>
       ipcRenderer.invoke("worlds:readWorld", worldPath, account),
     writeName: (worldPath: string, newName: string) =>
@@ -1342,23 +1328,13 @@ export const api = {
 };
 
 
-export const electron = {
-  ipcRenderer,
-  process: {
-    arch: process.arch,
-  },
-};
-
 if (process.contextIsolated) {
   try {
-    contextBridge.exposeInMainWorld("electron", electron);
     contextBridge.exposeInMainWorld("api", api);
   } catch (error) {
-    console.error(`Error exposing electron api to main world: ${error}`);
+    console.error(`Error exposing api to main world: ${error}`);
   }
 } else {
-  // @ts-ignore (define in dts)
-  window.electron = electron;
   // @ts-ignore (define in dts)
   window.api = api;
 }

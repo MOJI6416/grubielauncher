@@ -11,6 +11,7 @@ import { DownloadItem } from "@/types/Downloader";
 import { importVersion } from "../utilities/versions";
 import { uploadMods } from "../utilities/share";
 import { handleSafe } from "../utilities/ipc";
+import { pauseDownloads, resumeDownloads } from "../utilities/downloader";
 import { ILocalProject } from "@/types/ModManager";
 import {
   VersionInstallOptions,
@@ -70,6 +71,8 @@ export async function runVersionInstallWithLock(
       error: "Another version installation is already running.",
     };
   }
+
+  resumeDownloads();
 
   const controller = new AbortController();
   let vm: Version | null = null;
@@ -146,6 +149,18 @@ export function registerVersionIpc() {
 
     activeInstall.controller.abort();
     activeInstall.version.cancelInstall();
+    return true;
+  });
+
+  handleSafe("version:pauseInstall", false, async () => {
+    if (!activeInstall) return false;
+    pauseDownloads();
+    return true;
+  });
+
+  handleSafe("version:resumeInstall", false, async () => {
+    if (!activeInstall) return false;
+    resumeDownloads();
     return true;
   });
 

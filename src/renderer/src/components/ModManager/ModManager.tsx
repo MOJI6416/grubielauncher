@@ -179,11 +179,6 @@ function getPageItems(
   return result;
 }
 
-function providerBadgeVariant(provider: Provider) {
-  if (provider == Provider.OTHER) return "outline" as const;
-  return "secondary" as const;
-}
-
 function dependencyBadgeClassName(type: DependencyType): string {
   switch (type) {
     case DependencyType.REQUIRED:
@@ -387,6 +382,7 @@ export function ModManager({
     useState<number>(0);
   const [updateMods, setUpdateMods] = useState<IUpdateProject[]>([]);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isAutoCheckingUpdates, setIsAutoCheckingUpdates] = useState(false);
   const [isLocalDropActive, setIsLocalDropActive] = useState(false);
   const [
     internalPendingRemovedLocalProjects,
@@ -734,6 +730,35 @@ export function ModManager({
     return results.filter(Boolean) as IUpdateProject[];
   }
 
+  useEffect(() => {
+    if (!isLocal || isDownloadedVersion || !isOwnerVersion || !version) {
+      return;
+    }
+    const hasRemote = mods.some(
+      (m) => m.projectType == projectType && m.provider != Provider.LOCAL,
+    );
+    if (!hasRemote) {
+      setUpdateMods([]);
+      return;
+    }
+
+    let cancelled = false;
+    setIsAutoCheckingUpdates(true);
+    getAvailableUpdate()
+      .then((res) => {
+        if (!cancelled) setUpdateMods(res);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setIsAutoCheckingUpdates(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLocal, projectType, version?.id]);
+
   async function quickInstall(root: IProject, index: number) {
     if (isModpacks || !version) return;
 
@@ -993,6 +1018,46 @@ export function ModManager({
     });
   };
 
+  const selectProvider = async (newProvider: Provider) => {
+    if (newProvider === provider) return;
+    clearDebounce();
+    setProvider(newProvider);
+    setLocal(false);
+    setSearchData(undefined);
+    setOffset(0);
+    setFilter([]);
+
+    let pts: ProjectType[] = [];
+    if (!isModpacks) {
+      pts = getProjectTypes(loader || "vanilla", server, newProvider);
+    } else {
+      pts = [...projectTypes];
+    }
+
+    const nextProjectType = pts.includes(projectType) ? projectType : pts[0];
+    setProjectTypes(pts);
+    setProjectType(nextProjectType);
+
+    const sorts = await api.modManager.getSort(newProvider);
+    setSortValues(sorts);
+    const nextSort = sorts?.[0] ?? "";
+    setSort(nextSort);
+
+    await getFilters(newProvider, nextProjectType);
+
+    await search({
+      version,
+      loader,
+      query: searchQuery,
+      provider: newProvider,
+      projectType: nextProjectType,
+      sort: nextSort,
+      filter: [],
+      isLocal: false,
+      offset: 0,
+    });
+  };
+
   const isSearchLoading = isLoading && loadingType == LoadingType.SEARCH;
   const isSearchInputDisabled = isLoading && loadingType != LoadingType.SEARCH;
 
@@ -1004,8 +1069,23 @@ export function ModManager({
           if (!open && !isLoading) onClose();
         }}
       >
+        {/* Sit below the native window-controls strip (titleBarOverlay) so the
+            panel's own close button never lands under the OS min/max/close.
+            env(titlebar-area-height) is the overlay height on Windows and 0px
+            elsewhere, so other platforms keep the original 1rem inset. */}
         <DialogContent aria-describedby={undefined}
-          className="grid h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-0 sm:max-w-none"
+          style={{
+            top: "calc(env(titlebar-area-height, 0px) + 1rem)",
+            left: "1rem",
+            right: "1rem",
+            bottom: "1rem",
+            width: "auto",
+            height: "auto",
+            maxWidth: "none",
+            maxHeight: "none",
+            margin: 0,
+          }}
+          className="grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-0"
           onPointerDownOutside={(event) => {
             if (isLoading) event.preventDefault();
           }}
@@ -1023,84 +1103,74 @@ export function ModManager({
                 <div className="flex min-w-0 flex-wrap items-center gap-2 overflow-hidden rounded-xl border bg-card/70 p-2">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     {!isLocal && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="secondary"
-                            size="icon"
-                            disabled={isLoading}
-                            onClick={async () => {
-                              clearDebounce();
-                              const newProvider =
+                      <div className="flex shrink-0 items-center gap-0.5 rounded-lg border bg-background/40 p-0.5">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant={
                                 provider == Provider.CURSEFORGE
-                                  ? Provider.MODRINTH
-                                  : provider == Provider.MODRINTH
-                                    ? !isModpacks
-                                      ? Provider.LOCAL
-                                      : Provider.CURSEFORGE
-                                    : Provider.CURSEFORGE;
-
-                              setProvider(newProvider);
-                              setLocal(false);
-                              setSearchData(undefined);
-                              setOffset(0);
-                              setFilter([]);
-
-                              let pts: ProjectType[] = [];
-                              if (!isModpacks) {
-                                pts = getProjectTypes(
-                                  loader || "vanilla",
-                                  server,
-                                  newProvider,
-                                );
-                              } else {
-                                pts = [...projectTypes];
+                                  ? "secondary"
+                                  : "ghost"
                               }
-
-                              const nextProjectType = pts.includes(projectType)
-                                ? projectType
-                                : pts[0];
-                              setProjectTypes(pts);
-                              setProjectType(nextProjectType);
-
-                              const sorts =
-                                await api.modManager.getSort(newProvider);
-                              setSortValues(sorts);
-                              const nextSort = sorts?.[0] ?? "";
-                              setSort(nextSort);
-
-                              await getFilters(newProvider, nextProjectType);
-
-                              await search({
-                                version,
-                                loader,
-                                query: searchQuery,
-                                provider: newProvider,
-                                projectType: nextProjectType,
-                                sort: nextSort,
-                                filter: [],
-                                isLocal: false,
-                                offset: 0,
-                              });
-                            }}
-                          >
-                            {provider == Provider.CURSEFORGE ? (
-                              <SiCurseforge size={20} />
-                            ) : provider == Provider.MODRINTH ? (
-                              <SiModrinth size={20} />
-                            ) : (
-                              <FileBox size={20} />
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {provider == Provider.CURSEFORGE
-                            ? "CurseForge"
-                            : provider == Provider.MODRINTH
-                              ? "Modrinth"
-                              : t("modManager.local")}
-                        </TooltipContent>
-                      </Tooltip>
+                              className="size-7"
+                              disabled={isLoading}
+                              onClick={() =>
+                                selectProvider(Provider.CURSEFORGE)
+                              }
+                              aria-label="CurseForge"
+                            >
+                              <SiCurseforge className="size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>CurseForge</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant={
+                                provider == Provider.MODRINTH
+                                  ? "secondary"
+                                  : "ghost"
+                              }
+                              className="size-7"
+                              disabled={isLoading}
+                              onClick={() => selectProvider(Provider.MODRINTH)}
+                              aria-label="Modrinth"
+                            >
+                              <SiModrinth className="size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Modrinth</TooltipContent>
+                        </Tooltip>
+                        {!isModpacks && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant={
+                                  provider == Provider.LOCAL
+                                    ? "secondary"
+                                    : "ghost"
+                                }
+                                className="size-7"
+                                disabled={isLoading}
+                                onClick={() => selectProvider(Provider.LOCAL)}
+                                aria-label={t("modManager.local")}
+                              >
+                                <FileBox className="size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {t("modManager.local")}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                     )}
 
                     {!isModpacks && (
@@ -1528,48 +1598,71 @@ export function ModManager({
                       </div>
                     </div>
 
-                    {!isDownloadedVersion && isOwnerVersion && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="min-w-0 shrink-0"
-                        disabled={isLoading}
-                        onClick={async () => {
-                          try {
-                            clearDebounce();
-                            setLoading(true);
-                            setLoadingType(LoadingType.CHECK_AVAILABLE_UPDATE);
-
-                            const canBeUpdated = await getAvailableUpdate();
-                            setUpdateMods(canBeUpdated);
-                            setIsUpdateModalOpen(true);
-
-                            if (canBeUpdated.length > 0) {
-                              toast.success(
-                                t("modManager.availableUpdates", {
-                                  count: canBeUpdated.length,
-                                }),
-                              );
-                            } else {
-                              toast.warning(t("modManager.noAvailableUpdates"));
-                            }
-                          } finally {
-                            setLoading(false);
-                            setLoadingType(null);
-                          }
-                        }}
-                      >
-                        {isLoading &&
-                        loadingType == LoadingType.CHECK_AVAILABLE_UPDATE ? (
+                    {!isDownloadedVersion &&
+                      isOwnerVersion &&
+                      (isAutoCheckingUpdates ? (
+                        <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
                           <LoadingIcon />
-                        ) : (
-                          <PanelTopOpen className="size-4" />
-                        )}
-                        <span className="min-w-0 truncate">
-                          {t("modManager.checkUpdates")}
-                        </span>
-                      </Button>
-                    )}
+                          {t("modManager.checkingUpdates")}
+                        </div>
+                      ) : updateMods.length > 0 ? (
+                        <Button
+                          size="sm"
+                          className="min-w-0 shrink-0 border-transparent bg-[var(--warning)] text-[var(--warning-foreground)] hover:bg-[var(--warning)]/90"
+                          disabled={isLoading}
+                          onClick={() => setIsUpdateModalOpen(true)}
+                        >
+                          <CircleArrowDown className="size-4" />
+                          <span className="min-w-0 truncate">
+                            {t("modManager.updateAll")} ({updateMods.length})
+                          </span>
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="min-w-0 shrink-0"
+                          disabled={isLoading}
+                          onClick={async () => {
+                            try {
+                              clearDebounce();
+                              setLoading(true);
+                              setLoadingType(
+                                LoadingType.CHECK_AVAILABLE_UPDATE,
+                              );
+
+                              const canBeUpdated = await getAvailableUpdate();
+                              setUpdateMods(canBeUpdated);
+
+                              if (canBeUpdated.length > 0) {
+                                setIsUpdateModalOpen(true);
+                                toast.success(
+                                  t("modManager.availableUpdates", {
+                                    count: canBeUpdated.length,
+                                  }),
+                                );
+                              } else {
+                                toast.warning(
+                                  t("modManager.noAvailableUpdates"),
+                                );
+                              }
+                            } finally {
+                              setLoading(false);
+                              setLoadingType(null);
+                            }
+                          }}
+                        >
+                          {isLoading &&
+                          loadingType == LoadingType.CHECK_AVAILABLE_UPDATE ? (
+                            <LoadingIcon />
+                          ) : (
+                            <PanelTopOpen className="size-4" />
+                          )}
+                          <span className="min-w-0 truncate">
+                            {t("modManager.checkUpdates")}
+                          </span>
+                        </Button>
+                      ))}
                   </div>
                 )}
 
@@ -1661,8 +1754,12 @@ export function ModManager({
 
                         return (
                           <Card
-                            key={index}
-                            className="mb-2 mr-2 min-w-0 overflow-hidden py-0 shadow-none transition-colors hover:bg-accent/25"
+                            key={`${item.provider}-${item.id}`}
+                            className={`mb-2 mr-2 min-w-0 overflow-hidden py-0 shadow-none transition-colors ${
+                              isInstalled && !isPendingRemoved && !isLocal
+                                ? "border-primary/40 bg-primary/5 hover:bg-primary/10"
+                                : "hover:bg-accent/25"
+                            }`}
                           >
                             <CardContent className="min-w-0 overflow-hidden p-3">
                               <div className="flex min-w-0 items-center justify-between gap-2 overflow-hidden">
@@ -1682,12 +1779,20 @@ export function ModManager({
                                     )}
                                   </div>
                                   <div className="flex min-w-0 flex-1 flex-col gap-1 overflow-hidden">
-                                    <p
-                                      className="truncate font-medium text-foreground"
-                                      title={item.title}
-                                    >
-                                      {item.title}
-                                    </p>
+                                    <div className="flex min-w-0 items-center gap-2">
+                                      <p
+                                        className="truncate font-medium text-foreground"
+                                        title={item.title}
+                                      >
+                                        {item.title}
+                                      </p>
+                                      {isInstalled && !isPendingRemoved && !isLocal && (
+                                        <Badge className="h-5 shrink-0 gap-1 border-transparent bg-[var(--success)] px-1.5 text-[0.65rem] font-medium text-[var(--success-foreground)]">
+                                          <PackageCheck className="size-2.5" />
+                                          {t("modManager.installed")}
+                                        </Badge>
+                                      )}
+                                    </div>
                                     {item.description && (
                                       <p className="line-clamp-2 min-w-0 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
                                         {item.description}
@@ -1695,53 +1800,40 @@ export function ModManager({
                                     )}
 
                                     {isPendingRemoved ? (
-                                      <Badge variant="outline">
-                                        <div className="flex items-center gap-2">
-                                          <Trash className="size-3.5" />
-                                          <p className="text-xs">
-                                            {t("modManager.deleted")}
-                                          </p>
-                                        </div>
-                                      </Badge>
-                                    ) : isInstalled ? (
                                       <Badge
-                                        variant={providerBadgeVariant(
-                                          isInstalled.provider,
-                                        )}
+                                        variant="outline"
+                                        className="w-fit gap-1.5"
                                       >
-                                        <div className="flex items-center gap-2">
-                                          {isInstalled.provider ==
-                                          Provider.CURSEFORGE ? (
-                                            <>
-                                              <SiCurseforge size={16} />
-                                              <p className="text-xs">
-                                                CurseForge
-                                              </p>
-                                            </>
-                                          ) : isInstalled.provider ==
-                                            Provider.MODRINTH ? (
-                                            <>
-                                              <SiModrinth size={16} />
-                                              <p className="text-xs">
-                                                Modrinth
-                                              </p>
-                                            </>
-                                          ) : isInstalled.provider ==
-                                            Provider.LOCAL ? (
-                                            <>
-                                              <FileBox size={16} />
-                                              <p className="text-xs">
-                                                {t("modManager.local")}
-                                              </p>
-                                            </>
-                                          ) : (
-                                            <p className="text-xs">
-                                              {t("modManager.other")}
-                                            </p>
-                                          )}
-                                        </div>
+                                        <Trash className="size-3.5" />
+                                        {t("modManager.deleted")}
                                       </Badge>
-                                    ) : undefined}
+                                    ) : isLocal ? (
+                                      <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                                        {item.provider ==
+                                        Provider.CURSEFORGE ? (
+                                          <>
+                                            <SiCurseforge className="size-3.5 shrink-0" />
+                                            CurseForge
+                                          </>
+                                        ) : item.provider ==
+                                          Provider.MODRINTH ? (
+                                          <>
+                                            <SiModrinth className="size-3.5 shrink-0" />
+                                            Modrinth
+                                          </>
+                                        ) : item.provider == Provider.LOCAL ? (
+                                          <>
+                                            <FileBox className="size-3.5 shrink-0" />
+                                            {t("modManager.local")}
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Globe className="size-3.5 shrink-0" />
+                                            {t("modManager.other")}
+                                          </>
+                                        )}
+                                      </div>
+                                    ) : null}
                                   </div>
                                 </div>
 
@@ -1769,8 +1861,6 @@ export function ModManager({
                                     <>
                                       {!isModpacks && !isInstalled && (
                                         <Button
-                                          size="icon-lg"
-                                          variant="secondary"
                                           className="shrink-0"
                                           disabled={isLoading || !version}
                                           title={t("modManager.quickInstall")}
@@ -1789,6 +1879,7 @@ export function ModManager({
                                           ) : (
                                             <PackagePlus className="size-4" />
                                           )}
+                                          {t("modManager.install")}
                                         </Button>
                                       )}
                                       <Button
