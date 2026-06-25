@@ -187,18 +187,26 @@ function ModalGallery({
         event.stopPropagation();
       }}
     >
+      {/* Offset the top controls below the native window-controls strip
+          (titleBarOverlay) so this close button never lands under the OS
+          min/max/close. env() is 0px on platforms without Window Controls
+          Overlay, so they keep the original top-4 inset. */}
       <Button
         type="button"
         variant="secondary"
         size="icon"
         onClick={onClose}
-        className="absolute top-4 right-4"
+        className="absolute right-4"
+        style={{ top: "calc(env(titlebar-area-height, 0px) + 1rem)" }}
         aria-label="Close"
       >
         <X className="size-4" />
       </Button>
 
-      <div className="absolute top-4 left-4 rounded-lg border border-white/10 bg-black/40 px-3 py-1.5 text-sm text-white select-none">
+      <div
+        className="absolute left-4 rounded-lg border border-white/10 bg-black/40 px-3 py-1.5 text-sm text-white select-none"
+        style={{ top: "calc(env(titlebar-area-height, 0px) + 1rem)" }}
+      >
         {current + 1}/{gallery.length}
       </div>
 

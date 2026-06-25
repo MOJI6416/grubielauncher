@@ -10,19 +10,24 @@ import {
   Cpu,
   Download,
   EyeOff,
+  Gauge,
   HeartPulse,
+  Info,
   Languages,
   Loader2,
   MemoryStick,
   Palette,
   Save,
+  TriangleAlert,
   Volume2,
   Wrench,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useAtom } from "jotai";
 import { pathsAtom, settingsAtom } from "@renderer/stores/atoms";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -62,6 +67,12 @@ export function Settings({
   const { t, i18n } = useTranslation();
   const normalizedInitialSettings = normalizeSettings(settings, i18n.language);
   const [xmx, setXmx] = useState(() => normalizedInitialSettings.xmx);
+  const [optimizedJvm, setOptimizedJvm] = useState(
+    () => normalizedInitialSettings.optimizedJvm,
+  );
+  const [highPriority, setHighPriority] = useState(
+    () => normalizedInitialSettings.highPriority,
+  );
   const [settingsPath, setSettingsPath] = useState("");
   const [lang, setLang] = useState(() => normalizedInitialSettings.lang);
   const [devMode, setDevMode] = useState(() => normalizedInitialSettings.devMode);
@@ -85,9 +96,15 @@ export function Settings({
   const maxMemory = totalMem
     ? Math.max(1024, Math.floor(totalMem / (1024 * 1024)) - 2048)
     : Math.max(32768, xmx);
+  const totalMemMb = totalMem ? Math.floor(totalMem / (1024 * 1024)) : 0;
+  const systemHeadroomMb = totalMemMb ? totalMemMb - xmx : 0;
+  const isMemoryTight =
+    optimizedJvm && isMemoryReady && systemHeadroomMb < 3072;
   const selectedLanguage = LANGUAGES.find((l) => l.code == lang);
   const hasChanges =
     settings.xmx != xmx ||
+    settings.optimizedJvm != optimizedJvm ||
+    settings.highPriority != highPriority ||
     settings.lang != lang ||
     settings.devMode != devMode ||
     settings.downloadLimit != downloadLimit ||
@@ -106,6 +123,8 @@ export function Settings({
   useEffect(() => {
     const nextSettings = normalizeSettings(settings);
     setXmx(nextSettings.xmx);
+    setOptimizedJvm(nextSettings.optimizedJvm);
+    setHighPriority(nextSettings.highPriority);
     setDevMode(nextSettings.devMode);
     setCrashTelemetry(nextSettings.crashTelemetry);
     setSounds(nextSettings.sounds);
@@ -201,7 +220,40 @@ export function Settings({
                   min={1024}
                   max={maxMemory}
                 />
+
+                {optimizedJvm && isMemoryReady && (
+                  <Alert
+                    variant={isMemoryTight ? "warning" : "info"}
+                    className="mt-3"
+                  >
+                    {isMemoryTight ? <TriangleAlert /> : <Info />}
+                    <AlertTitle>
+                      {t("settings.memoryPrealloc", { mb: xmx })}
+                    </AlertTitle>
+                    {isMemoryTight && (
+                      <AlertDescription>
+                        {t("settings.memoryPreallocTight", {
+                          free: Math.max(0, systemHeadroomMb),
+                        })}
+                      </AlertDescription>
+                    )}
+                  </Alert>
+                )}
               </SettingRow>
+
+              <SettingRow
+                icon={Zap}
+                htmlFor="settings-optimized-jvm"
+                title={t("settings.optimizedJvm")}
+                description={t("settings.optimizedJvmDescription")}
+                control={
+                  <Switch
+                    id="settings-optimized-jvm"
+                    checked={optimizedJvm}
+                    onCheckedChange={setOptimizedJvm}
+                  />
+                }
+              />
 
               <SettingRow
                 icon={Download}
@@ -222,6 +274,20 @@ export function Settings({
 
                       setDownloadLimit(Math.min(16, Math.max(1, nextValue)));
                     }}
+                  />
+                }
+              />
+
+              <SettingRow
+                icon={Gauge}
+                htmlFor="settings-high-priority"
+                title={t("settings.highPriority")}
+                description={t("settings.highPriorityDescription")}
+                control={
+                  <Switch
+                    id="settings-high-priority"
+                    checked={highPriority}
+                    onCheckedChange={setHighPriority}
                   />
                 }
               />
@@ -378,6 +444,8 @@ export function Settings({
                 const newSettings = {
                   ...settings,
                   xmx,
+                  optimizedJvm,
+                  highPriority,
                   lang,
                   devMode,
                   crashTelemetry,

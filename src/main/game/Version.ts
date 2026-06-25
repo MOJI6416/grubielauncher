@@ -88,6 +88,35 @@ function parseCustomRunArguments(input?: string) {
   return args;
 }
 
+const OPTIMIZED_GC_FLAGS = [
+  "-XX:+UseG1GC",
+  "-XX:+ParallelRefProcEnabled",
+  "-XX:MaxGCPauseMillis=200",
+  "-XX:+UnlockExperimentalVMOptions",
+  "-XX:+DisableExplicitGC",
+  "-XX:+AlwaysPreTouch",
+  "-XX:G1NewSizePercent=30",
+  "-XX:G1MaxNewSizePercent=40",
+  "-XX:G1HeapRegionSize=8M",
+  "-XX:G1ReservePercent=20",
+  "-XX:G1HeapWastePercent=5",
+  "-XX:G1MixedGCCountTarget=4",
+  "-XX:InitiatingHeapOccupancyPercent=15",
+  "-XX:G1MixedGCLiveThresholdPercent=90",
+  "-XX:G1RSetUpdatingPauseTimePercent=5",
+  "-XX:SurvivorRatio=32",
+  "-XX:+PerfDisableSharedMem",
+  "-XX:MaxTenuringThreshold=1",
+];
+
+function buildMemoryArguments(settings: TSettings): string[] {
+  if (settings.optimizedJvm) {
+    return [`-Xms${settings.xmx}M`, `-Xmx${settings.xmx}M`, ...OPTIMIZED_GC_FLAGS];
+  }
+
+  return ["-Xms1G", `-Xmx${settings.xmx}M`];
+}
+
 export class Version {
   public version: IVersionConf;
   public manifest: IVersionManifest | undefined;
@@ -1205,7 +1234,7 @@ export class Version {
         ],
       );
 
-    jvm.push(...["-Xms1G", `-Xmx${settings.xmx}M`]);
+    jvm.push(...buildMemoryArguments(settings));
 
     if (this.manifest.minecraftArguments) {
       jvm.push(
@@ -1465,6 +1494,7 @@ export class Version {
         accountSub: authData?.sub ?? null,
         accountLabel: account.nickname,
       },
+      settings.highPriority,
     );
 
     return true;

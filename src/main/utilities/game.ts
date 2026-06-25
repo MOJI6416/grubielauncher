@@ -1,4 +1,5 @@
 import { ChildProcessWithoutNullStreams, execFile, spawn } from "child_process";
+import os from "os";
 import { analyzeGameCrash } from "./crashAnalyzer";
 import { gameProcesses, gameRuntime } from "./runtime";
 import { mainWindow } from "../windows/mainWindow";
@@ -323,6 +324,7 @@ export function runGame(
     SessionContext,
     "trackStatistics" | "accountSub" | "accountLabel"
   >,
+  highPriority: boolean = false,
 ) {
   const instanceKey = `${versionName}-${instance}`;
 
@@ -334,6 +336,16 @@ export function runGame(
   });
 
   javaProcess.once("spawn", () => {
+    if (highPriority && javaProcess.pid) {
+      try {
+        os.setPriority(
+          javaProcess.pid,
+          os.constants.priority.PRIORITY_ABOVE_NORMAL,
+        );
+      } catch (error) {
+        console.warn("Failed to raise game process priority:", error);
+      }
+    }
     rpc.setGamePlaying({ versionName, instance, serverAddress });
   });
 

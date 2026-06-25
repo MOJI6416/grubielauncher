@@ -36,11 +36,11 @@ import {
 } from "@renderer/utilities/connectivity";
 
 const api = window.api;
-const loadReactSkinview3d = () => import("react-skinview3d");
+const loadSkinCanvas = () => import("./SkinCanvas");
 const loadManageSkins = () =>
   import("./ManageSkins").then((module) => ({ default: module.ManageSkins }));
 
-const ReactSkinview3d = lazy(loadReactSkinview3d);
+const SkinCanvas = lazy(loadSkinCanvas);
 const LazyManageSkins = lazyWithPreload(loadManageSkins);
 
 function clamp(value: number, min: number, max: number) {
@@ -375,7 +375,7 @@ export function MiniSkinWidget() {
               </div>
             }
           >
-            <ReactSkinview3d
+            <SkinCanvas
               key={`${preview.skin}-${preview.cape || ""}`}
               className="h-[36px] w-[22px]"
               skinUrl={preview.skin}

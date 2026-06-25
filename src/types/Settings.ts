@@ -6,6 +6,8 @@ export const LANGUAGES = [
 
 export type TSettings = {
   xmx: number
+  optimizedJvm: boolean
+  highPriority: boolean
   lang: string
   devMode: boolean
   downloadLimit: number
@@ -16,6 +18,8 @@ export type TSettings = {
 
 export const DEFAULT_SETTINGS: TSettings = {
   xmx: 2048,
+  optimizedJvm: true,
+  highPriority: false,
   lang: 'en',
   devMode: false,
   downloadLimit: 6,
@@ -37,6 +41,14 @@ export function normalizeSettings(
 
   return {
     xmx: Number.isFinite(xmx) && xmx >= 1024 ? Math.round(xmx) : DEFAULT_SETTINGS.xmx,
+    optimizedJvm:
+      typeof value?.optimizedJvm === 'boolean'
+        ? value.optimizedJvm
+        : DEFAULT_SETTINGS.optimizedJvm,
+    highPriority:
+      typeof value?.highPriority === 'boolean'
+        ? value.highPriority
+        : DEFAULT_SETTINGS.highPriority,
     lang,
     devMode: typeof value?.devMode === 'boolean' ? value.devMode : DEFAULT_SETTINGS.devMode,
     downloadLimit:

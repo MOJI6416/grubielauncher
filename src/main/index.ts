@@ -15,6 +15,12 @@ import { LauncherDeepLink } from "@/types/DeepLink";
 import path from "path";
 import fs from "fs-extra";
 
+app.commandLine.appendSwitch(
+  "disable-features",
+  "SpareRendererForSitePerProcess",
+);
+app.commandLine.appendSwitch("js-flags", "--max-old-space-size=1024");
+
 const gotTheLock = app.requestSingleInstanceLock();
 const APP_PROTOCOL = "grubielauncher";
 const APP_SHUTDOWN_TIMEOUT_MS = 5000;

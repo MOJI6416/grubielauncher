@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState, useCallback, memo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import ReactSkinview3d from "react-skinview3d";
+import SkinCanvas from "./SkinCanvas";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -676,12 +676,11 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
               <Card className="min-w-0 gap-0 overflow-hidden py-0">
                 <CardContent className="grid h-full min-h-0 p-3">
                   <div className="flex h-full min-h-0 items-center justify-center overflow-hidden rounded-xl border bg-muted/30 p-1">
-                    <ReactSkinview3d
+                    <SkinCanvas
                       skinUrl={selectedSkinEntry?.url || "steve"}
                       capeUrl={selectedCape?.url}
                       height={380}
                       width={270}
-                      options={{ preserveDrawingBuffer: true }}
                     />
                   </div>
                 </CardContent>

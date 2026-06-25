@@ -12,7 +12,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import ReactSkinview3d from "react-skinview3d";
+import SkinCanvas from "./SkinCanvas";
 import {
   FlyingAnimation,
   IdleAnimation,
@@ -137,7 +137,7 @@ export function SkinView({
         <div className="grid gap-4 md:grid-cols-[240px_1fr]">
           <div className="flex justify-center rounded-xl border bg-card p-3 shadow-xs">
             {isFontReady ? (
-              <ReactSkinview3d
+              <SkinCanvas
                 skinUrl={skinData.skin}
                 capeUrl={skinData.cape}
                 height={340}
