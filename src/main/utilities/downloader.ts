@@ -18,6 +18,8 @@ import {
   shouldReportDownloadFailures,
   shouldThrowDownloadFailures,
 } from "./downloaderPure";
+import { resolveDownloadCandidates } from "./mirrors";
+import { getDownloadSource, getMojangReachable } from "./mirrorState";
 
 let downloadsPaused = false;
 let pauseWaiters: Array<() => void> = [];
@@ -230,7 +232,8 @@ export class Downloader {
                   expectedChecksumType,
                 );
                 if (
-                  actualChecksum.toLowerCase() !== expectedChecksum.toLowerCase()
+                  actualChecksum.toLowerCase() !==
+                  expectedChecksum.toLowerCase()
                 ) {
                   await fs.remove(destination).catch(() => {});
                   throw new Error(
@@ -497,15 +500,15 @@ export class Downloader {
     maxRetries = 3,
     onProgress?: () => void,
   ): Promise<void> => {
-    const { url, destination } = item;
+    const { url: originalUrl, destination } = item;
 
-    if (!url) return;
-    if (url.startsWith("blocked::")) {
+    if (!originalUrl) return;
+    if (originalUrl.startsWith("blocked::")) {
       throw new Error("Manual download required");
     }
 
-    if (url.startsWith("file://")) {
-      const localFilePath = fileURLToPath(url);
+    if (originalUrl.startsWith("file://")) {
+      const localFilePath = fileURLToPath(originalUrl);
       this.ensureDirectoryExists(destination);
       const stats = await fs.stat(localFilePath);
       await fs.copy(localFilePath, destination, { overwrite: true });
@@ -516,187 +519,216 @@ export class Downloader {
       return;
     }
 
-    let attempts = 0;
-    let lastError: Error | null = null;
+    const candidates = resolveDownloadCandidates(
+      originalUrl,
+      getDownloadSource(),
+      getMojangReachable(),
+    );
+    let candidateError: Error | null = null;
 
-    let countedExistingBytes = 0;
-    let addedToTotalBytes = 0;
+    for (
+      let candidateIndex = 0;
+      candidateIndex < candidates.length;
+      candidateIndex++
+    ) {
+      const url = candidates[candidateIndex];
 
-    while (attempts < maxRetries) {
-      let writer: fs.WriteStream | null = null;
-      let downloadedChunksBytes = 0;
-      let fileSizeFromServer = 0;
-      let startByte = 0;
+      let attempts = 0;
+      let lastError: Error | null = null;
+
+      let countedExistingBytes = 0;
+      let addedToTotalBytes = 0;
 
       try {
-        if (fs.pathExistsSync(destination) && attempts > 0) {
-          const stats = await fs.stat(destination);
-          startByte = stats.size;
-          writer = fs.createWriteStream(destination, { flags: "a" });
-        } else {
-          startByte = 0;
-          writer = fs.createWriteStream(destination);
-        }
-
-        if (startByte > countedExistingBytes) {
-          this.downloadedBytes += startByte - countedExistingBytes;
-          countedExistingBytes = startByte;
-        }
-
-        const makeRequest = async (rangeStart: number) => {
-          const headers: Record<string, string> = {};
-          if (rangeStart > 0) {
-            headers["Range"] = `bytes=${rangeStart}-`;
-          }
-
-          return axios.get(url, {
-            responseType: "stream",
-            timeout: 30000,
-            headers,
-            signal: this.abortController?.signal,
-          });
-        };
-
-        let response = await makeRequest(startByte);
-
-        if (startByte > 0 && response.status !== 206) {
-          try {
-            response.data.destroy();
-          } catch {}
+        while (attempts < maxRetries) {
+          let writer: fs.WriteStream | null = null;
+          let downloadedChunksBytes = 0;
+          let fileSizeFromServer = 0;
+          let startByte = 0;
 
           try {
-            writer.destroy();
-          } catch {}
+            if (fs.pathExistsSync(destination) && attempts > 0) {
+              const stats = await fs.stat(destination);
+              startByte = stats.size;
+              writer = fs.createWriteStream(destination, { flags: "a" });
+            } else {
+              startByte = 0;
+              writer = fs.createWriteStream(destination);
+            }
 
-          await fs.truncate(destination, 0);
-          this.downloadedBytes -= countedExistingBytes;
-          countedExistingBytes = 0;
+            if (startByte > countedExistingBytes) {
+              this.downloadedBytes += startByte - countedExistingBytes;
+              countedExistingBytes = startByte;
+            }
 
-          startByte = 0;
-          writer = fs.createWriteStream(destination);
+            const makeRequest = async (rangeStart: number) => {
+              const headers: Record<string, string> = {};
+              if (rangeStart > 0) {
+                headers["Range"] = `bytes=${rangeStart}-`;
+              }
 
-          response = await makeRequest(0);
-        }
+              return axios.get(url, {
+                responseType: "stream",
+                timeout: 30000,
+                headers,
+                signal: this.abortController?.signal,
+              });
+            };
 
-        const contentLength = response.headers["content-length"];
-        fileSizeFromServer =
-          typeof contentLength === "string" || typeof contentLength === "number"
-            ? parseInt(String(contentLength), 10)
-            : 0;
+            let response = await makeRequest(startByte);
 
-        if (!item.size && fileSizeFromServer > 0) {
-          const totalForThisFile =
-            response.status === 206
-              ? startByte + fileSizeFromServer
-              : fileSizeFromServer;
-          if (totalForThisFile > addedToTotalBytes) {
-            this.totalBytes += totalForThisFile - addedToTotalBytes;
-            addedToTotalBytes = totalForThisFile;
-          }
-        }
-
-        let lastProgressUpdate = Date.now();
-        const PROGRESS_UPDATE_INTERVAL = 100;
-
-        const signal = this.abortController?.signal;
-
-        await new Promise<void>((resolve, reject) => {
-          const cleanup = () => {
-            if (signal && onAbort) {
+            if (startByte > 0 && response.status !== 206) {
               try {
-                signal.removeEventListener("abort", onAbort);
+                response.data.destroy();
+              } catch {}
+
+              try {
+                writer.destroy();
+              } catch {}
+
+              await fs.truncate(destination, 0);
+              this.downloadedBytes -= countedExistingBytes;
+              countedExistingBytes = 0;
+
+              startByte = 0;
+              writer = fs.createWriteStream(destination);
+
+              response = await makeRequest(0);
+            }
+
+            const contentLength = response.headers["content-length"];
+            fileSizeFromServer =
+              typeof contentLength === "string" ||
+              typeof contentLength === "number"
+                ? parseInt(String(contentLength), 10)
+                : 0;
+
+            if (!item.size && fileSizeFromServer > 0) {
+              const totalForThisFile =
+                response.status === 206
+                  ? startByte + fileSizeFromServer
+                  : fileSizeFromServer;
+              if (totalForThisFile > addedToTotalBytes) {
+                this.totalBytes += totalForThisFile - addedToTotalBytes;
+                addedToTotalBytes = totalForThisFile;
+              }
+            }
+
+            let lastProgressUpdate = Date.now();
+            const PROGRESS_UPDATE_INTERVAL = 100;
+
+            const signal = this.abortController?.signal;
+
+            await new Promise<void>((resolve, reject) => {
+              const cleanup = () => {
+                if (signal && onAbort) {
+                  try {
+                    signal.removeEventListener("abort", onAbort);
+                  } catch {}
+                }
+              };
+
+              const onAbort = () => {
+                try {
+                  response.data.destroy();
+                } catch {}
+                try {
+                  writer?.destroy();
+                } catch {}
+                cleanup();
+                reject(new Error("AbortError"));
+              };
+
+              if (signal) {
+                try {
+                  signal.addEventListener("abort", onAbort);
+                } catch {}
+              }
+
+              response.data.on("data", (chunk: Buffer) => {
+                downloadedChunksBytes += chunk.length;
+                this.downloadedBytes += chunk.length;
+
+                const now = Date.now();
+                if (
+                  onProgress &&
+                  now - lastProgressUpdate >= PROGRESS_UPDATE_INTERVAL
+                ) {
+                  onProgress();
+                  lastProgressUpdate = now;
+                }
+              });
+
+              response.data.pipe(writer!);
+              writer!.on("finish", () => {
+                cleanup();
+                resolve();
+              });
+              writer!.on("error", (e) => {
+                cleanup();
+                reject(e);
+              });
+              response.data.on("error", (e: any) => {
+                cleanup();
+                reject(e);
+              });
+            });
+
+            return;
+          } catch (error) {
+            lastError = error as Error;
+
+            if (axios.isCancel(error) || lastError.message === "AbortError") {
+              throw lastError;
+            }
+
+            attempts++;
+
+            this.downloadedBytes -= downloadedChunksBytes;
+
+            if (writer) {
+              try {
+                writer.destroy();
               } catch {}
             }
-          };
 
-          const onAbort = () => {
-            try {
-              response.data.destroy();
-            } catch {}
-            try {
-              writer?.destroy();
-            } catch {}
-            cleanup();
-            reject(new Error("AbortError"));
-          };
+            if (attempts >= maxRetries) {
+              if (fs.pathExistsSync(destination)) {
+                try {
+                  await fs.remove(destination);
+                } catch (e) {
+                  console.error(
+                    `Failed to remove corrupted file ${destination}:`,
+                    e,
+                  );
+                }
+              }
 
-          if (signal) {
-            try {
-              signal.addEventListener("abort", onAbort);
-            } catch {}
-          }
+              if (!item.size && addedToTotalBytes > 0) {
+                this.totalBytes -= addedToTotalBytes;
+              }
 
-          response.data.on("data", (chunk: Buffer) => {
-            downloadedChunksBytes += chunk.length;
-            this.downloadedBytes += chunk.length;
-
-            const now = Date.now();
-            if (
-              onProgress &&
-              now - lastProgressUpdate >= PROGRESS_UPDATE_INTERVAL
-            ) {
-              onProgress();
-              lastProgressUpdate = now;
+              throw lastError;
             }
-          });
 
-          response.data.pipe(writer!);
-          writer!.on("finish", () => {
-            cleanup();
-            resolve();
-          });
-          writer!.on("error", (e) => {
-            cleanup();
-            reject(e);
-          });
-          response.data.on("error", (e: any) => {
-            cleanup();
-            reject(e);
-          });
-        });
-
+            await new Promise((resolve) =>
+              setTimeout(resolve, Math.pow(2, attempts) * 1000),
+            );
+          }
+        }
         return;
       } catch (error) {
-        lastError = error as Error;
-
-        if (axios.isCancel(error) || lastError.message === "AbortError") {
-          throw lastError;
+        if (
+          isDownloadAbortError(error) ||
+          this.abortController?.signal.aborted
+        ) {
+          throw error;
         }
-
-        attempts++;
-
-        this.downloadedBytes -= downloadedChunksBytes;
-
-        if (writer) {
-          try {
-            writer.destroy();
-          } catch {}
-        }
-
-        if (attempts >= maxRetries) {
-          if (fs.pathExistsSync(destination)) {
-            try {
-              await fs.remove(destination);
-            } catch (e) {
-              console.error(
-                `Failed to remove corrupted file ${destination}:`,
-                e,
-              );
-            }
-          }
-
-          if (!item.size && addedToTotalBytes > 0) {
-            this.totalBytes -= addedToTotalBytes;
-          }
-
-          throw lastError;
-        }
-
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, attempts) * 1000),
-        );
+        candidateError = error as Error;
       }
     }
+
+    throw candidateError ?? new Error(`Failed to download ${originalUrl}`);
   };
 
   private sortByGroup = (items: DownloadItem[]): DownloadItem[][] => {

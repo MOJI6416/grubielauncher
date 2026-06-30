@@ -10,6 +10,7 @@ import { IConsoles } from "@/types/Console";
 import { Version } from "@renderer/classes/Version";
 import { SharePeerInfo, ShareState } from "@/types/Share";
 import { IFriend, IUpdateStatus } from "@/types/IFriend";
+import { loadManualOrder } from "@renderer/utilities/versionOrganize";
 
 export const pathsAtom = atom<{
   launcher: string;
@@ -39,9 +40,11 @@ export const errorLogSeenAtom = atom(0);
 
 export const versionsAtom = atom<Version[]>([]);
 export const versionsLoadedAtom = atom(false);
+export const manualOrderAtom = atom<string[]>(loadManualOrder());
 export const addVersionModalAtom = atom(false);
 export const installActiveAtom = atom(false);
 export const accountsModalAtom = atom(false);
+export const storageModalAtom = atom(false);
 export const accountsAtom = atom<ILocalAccount[]>([]);
 export const internetAtom = atom(true);
 export const backendOnlineAtom = atom(true);

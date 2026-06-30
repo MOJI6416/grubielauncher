@@ -1,9 +1,11 @@
-import axios from 'axios'
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { BaseService } from './Base'
 import { Loader } from '@/types/Loader'
 import { IVersion } from '@/types/IVersion'
 import { LoaderVersion } from '@/types/VersionsService'
 import { BACKEND_URL } from '@/shared/config'
+import { resolveDownloadCandidates } from '../utilities/mirrors'
+import { getDownloadSource, getMojangReachable } from '../utilities/mirrorState'
 
 export interface IVersionsManifest {
   latest: {
@@ -25,6 +27,28 @@ export class VersionsService extends BaseService {
   private static api = axios.create({
     timeout: 30000
   })
+
+  private static async mirroredGet<T>(
+    url: string,
+    config?: AxiosRequestConfig
+  ): Promise<AxiosResponse<T>> {
+    const candidates = resolveDownloadCandidates(
+      url,
+      getDownloadSource(),
+      getMojangReachable()
+    )
+
+    let lastError: unknown
+    for (const candidate of candidates) {
+      try {
+        return await VersionsService.api.get<T>(candidate, config)
+      } catch (error) {
+        lastError = error
+      }
+    }
+
+    throw lastError
+  }
 
   private static readonly CACHE_TTL = 10 * 60 * 1000
 
@@ -99,7 +123,9 @@ export class VersionsService extends BaseService {
   private static async getVersionsVanilla(snapshots: boolean = false): Promise<IVersion[]> {
     return VersionsService.cached(`vanilla:${snapshots}`, async () => {
       try {
-        const response = await this.api.get('https://piston-meta.mojang.com/mc/game/version_manifest_v2.json')
+        const response = await this.mirroredGet<IVersionsManifest>(
+          'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json'
+        )
 
         const versionsManifest: IVersionsManifest = response.data
 
@@ -217,7 +243,7 @@ export class VersionsService extends BaseService {
 
   private static async getVersionsFabric(): Promise<IVersion[]> {
     try {
-      const response = await this.api.get<{ version: string; stable: boolean }[]>(
+      const response = await this.mirroredGet<{ version: string; stable: boolean }[]>(
         'https://meta.fabricmc.net/v2/versions/game'
       )
 
@@ -246,7 +272,7 @@ export class VersionsService extends BaseService {
         loader: { version: string; stable: boolean }
       }
 
-      const response = await this.api.get<FabricLoaderForGame[]>(
+      const response = await this.mirroredGet<FabricLoaderForGame[]>(
         `https://meta.fabricmc.net/v2/versions/loader/${version}`
       )
 
@@ -264,7 +290,7 @@ export class VersionsService extends BaseService {
 
   private static async getVersionsQuilt(): Promise<IVersion[]> {
     try {
-      const response = await this.api.get<{ version: string; stable: boolean }[]>(
+      const response = await this.mirroredGet<{ version: string; stable: boolean }[]>(
         'https://meta.quiltmc.org/v3/versions/game'
       )
 
@@ -293,7 +319,7 @@ export class VersionsService extends BaseService {
         loader: { version: string }
       }
 
-      const response = await this.api.get<QuiltLoaderForGame[]>(
+      const response = await this.mirroredGet<QuiltLoaderForGame[]>(
         `https://meta.quiltmc.org/v3/versions/loader/${version}`
       )
 

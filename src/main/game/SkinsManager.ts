@@ -675,6 +675,24 @@ export class SkinsManager extends BaseService {
     }
   }
 
+  public async regenerateSkin() {
+    try {
+      await this.api.post(
+        `${this.skinServiceUrl}/skins/generate`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`
+          }
+        }
+      )
+      await this.getGrubieSkin()
+    } catch (error) {
+      console.error('Error regenerating skin:', error)
+      throw error
+    }
+  }
+
   public async importByUrl(url: string, type: 'skin' | 'cape' = 'skin') {
     try {
       const extractedId = extractIdFromUrl(url) || undefined

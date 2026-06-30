@@ -26,6 +26,7 @@ import {
 } from "@/types/Modrinth";
 import { ServerCore } from "@/types/Server";
 import { getFilesRecursively, getSha1 } from "./files";
+import { getLauncherPaths } from "./other";
 import { Loader } from "@/types/Loader";
 import { CurseForge } from "../services/CurseForge";
 import { Modrinth } from "../services/Modrinth";
@@ -387,8 +388,8 @@ export async function checkLocalMod(
     if (!fileName) return null;
 
     tempPath = path.join(
-      app.getPath("temp"),
-      "grubie-mod-meta",
+      getLauncherPaths().cache,
+      "mod-meta",
       `${Date.now()}-${randomUUID()}-${fileName}`,
     );
     await fs.mkdir(tempPath, { recursive: true });

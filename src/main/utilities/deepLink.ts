@@ -12,20 +12,42 @@ export function parseLauncherDeepLink(rawUrl: string): LauncherDeepLink | null {
   }
 
   if (url.protocol !== "grubielauncher:") return null;
-  if (url.hostname !== "pack") return null;
 
-  let shareCode: string;
-  try {
-    shareCode = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
-  } catch {
-    return null;
+  if (url.hostname === "pack") {
+    let shareCode: string;
+    try {
+      shareCode = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+    } catch {
+      return null;
+    }
+    if (!PACK_CODE_PATTERN.test(shareCode)) return null;
+
+    return {
+      type: "pack",
+      shareCode,
+    };
   }
-  if (!PACK_CODE_PATTERN.test(shareCode)) return null;
 
-  return {
-    type: "pack",
-    shareCode,
-  };
+  if (url.hostname === "launch") {
+    let versionName: string;
+    try {
+      versionName = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+    } catch {
+      return null;
+    }
+    if (!versionName) return null;
+
+    const instanceRaw = url.searchParams.get("instance");
+    const instance = instanceRaw ? Number.parseInt(instanceRaw, 10) : 0;
+
+    return {
+      type: "launch",
+      versionName,
+      instance: Number.isInteger(instance) && instance >= 0 ? instance : 0,
+    };
+  }
+
+  return null;
 }
 
 export function extractLauncherDeepLink(

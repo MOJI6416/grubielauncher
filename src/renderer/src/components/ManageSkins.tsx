@@ -13,6 +13,7 @@ import {
   Link,
   Loader2,
   Mars,
+  Sparkles,
   Trash,
   User,
   Venus,
@@ -237,7 +238,7 @@ SkinCard.displayName = "SkinCard";
 export function ManageSkins({ onClose }: { onClose: () => void }) {
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<
-    "apply" | "byFile" | "reset" | "byLink" | "byPlayer" | null
+    "apply" | "byFile" | "reset" | "regenerate" | "byLink" | "byPlayer" | null
   >(null);
   const [skinsData, setSkinsData] = useState<SkinsData | null>(null);
   const [inputValue, setInputValue] = useState("");
@@ -435,6 +436,26 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     try {
       const data = await api.skins.resetSkin(authData.uuid, selectedAccount.type);
       if (!data) throw new Error("Failed to reset skin");
+      setSkinsData(data);
+      await refreshSkins();
+    } catch {
+      toast.error(t("manageSkins.applyError"));
+      await refreshSkins().catch(() => undefined);
+    } finally {
+      setActionLoading(null);
+    }
+  }, [authData, selectedAccount, isRemoteSkinServiceAvailable, refreshSkins, t]);
+
+  const handleRegenerate = useCallback(async () => {
+    if (!authData || !selectedAccount) return;
+    if (!isRemoteSkinServiceAvailable) return;
+    setActionLoading("regenerate");
+    try {
+      const data = await api.skins.regenerateSkin(
+        authData.uuid,
+        selectedAccount.type,
+      );
+      if (!data) throw new Error("Failed to regenerate skin");
       setSkinsData(data);
       await refreshSkins();
     } catch {
@@ -858,6 +879,24 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
                           <Loader2 className="size-4 animate-spin" />
                         )}
                         {t("manageSkins.reset")}
+                      </Button>
+                    )}
+
+                    {selectedAccount.type === "discord" && (
+                      <Button
+                        variant="secondary"
+                        disabled={
+                          actionLoading !== null ||
+                          !isRemoteSkinServiceAvailable
+                        }
+                        onClick={handleRegenerate}
+                      >
+                        {actionLoading === "regenerate" ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="size-4" />
+                        )}
+                        {t("manageSkins.regenerate")}
                       </Button>
                     )}
                   </CardContent>

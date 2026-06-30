@@ -117,6 +117,8 @@ export function getLauncherPaths() {
     minecraft: path.join(launcher, "minecraft"),
     java: path.join(launcher, "java"),
     skins: path.join(launcher, "skins"),
+    cache: path.join(launcher, "cache"),
+    shortcuts: path.join(launcher, "shortcuts"),
   };
 }
 

@@ -191,7 +191,7 @@ function App() {
   const [authData] = useAtom(authDataAtom);
   const [consoles, setConsoles] = useAtom(consolesAtom);
   const [versions, setVersions] = useAtom(versionsAtom);
-  const setVersionsLoaded = useAtom(versionsLoadedAtom)[1];
+  const [versionsLoaded, setVersionsLoaded] = useAtom(versionsLoadedAtom);
   const [shareState, setShareState] = useAtom(shareStateAtom);
   const [, setSharePeers] = useAtom(sharePeersAtom);
   const [, setIsShareModalOpen] = useAtom(isShareModalOpenAtom);
@@ -227,6 +227,10 @@ function App() {
 
   const onlineSocket = useRef<Socket | null>(null);
   const pendingLaunchRef = useRef<RunGameParams | null>(null);
+  const pendingDeepLaunchRef = useRef<{
+    versionName: string;
+    instance: number;
+  } | null>(null);
   const pendingJoinRef = useRef<JoinFriendWorldParams | null>(null);
   const [dropImportPath, setDropImportPath] = useState<string | null>(null);
   const [isFileDragOver, setIsFileDragOver] = useState(false);
@@ -553,6 +557,16 @@ function App() {
 
   useEffect(() => {
     return api.events.onDeepLink(async (payload) => {
+      if (payload.type === "launch") {
+        void api.other.restoreWindow();
+        pendingDeepLaunchRef.current = {
+          versionName: payload.versionName,
+          instance: payload.instance,
+        };
+        tryDeepLaunch();
+        return;
+      }
+
       if (payload.type !== "pack") return;
 
       try {
@@ -578,6 +592,30 @@ function App() {
       }
     });
   }, [selectedAccountRef, tRef]);
+
+  const tryDeepLaunch = useEventCallback(() => {
+    const pending = pendingDeepLaunchRef.current;
+    if (!pending) return;
+
+    const version = versionsRef.current.find(
+      (v) => v.version.name === pending.versionName,
+    );
+
+    if (version) {
+      pendingDeepLaunchRef.current = null;
+      void runGame({ version, instance: pending.instance });
+      return;
+    }
+
+    if (versionsLoaded) {
+      pendingDeepLaunchRef.current = null;
+      toast.error(tRef.current("versions.launchNotFound"));
+    }
+  });
+
+  useEffect(() => {
+    tryDeepLaunch();
+  }, [versions, versionsLoaded, tryDeepLaunch]);
 
   const openWhatsNew = useEventCallback(
     async (options?: { launcherPath?: string; locale?: string }) => {

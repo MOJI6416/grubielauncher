@@ -12,7 +12,7 @@ import { IFriendSettingsUpdate, IUpdateUser, IUser } from "@/types/IUser";
 import { INews, ISponsoredNewsAd } from "@/types/News";
 import { IGrubieSkin, SkinsData } from "@/types/SkinManager";
 import { LoaderVersion } from "@/types/VersionsService";
-import { TSettings } from "@/types/Settings";
+import { DownloadSource, TSettings } from "@/types/Settings";
 import {
   IServerConf,
   IServerOption,
@@ -67,6 +67,11 @@ import { ConnectivityCheckResult } from "@/types/Connectivity";
 import { CrashAnalysisPayload } from "@/types/CrashAnalysis";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
 import { IPlaytimeSyncEntry } from "@/types/VersionStatistics";
+import {
+  StorageBreakdown,
+  StorageCleanupKind,
+  StorageClearResult,
+} from "@/types/Storage";
 
 export type UpdaterStatus =
   | "checking"
@@ -113,6 +118,11 @@ export interface IElectronAPI {
   };
   os: {
     totalmem: () => Promise<number>;
+  };
+  storage: {
+    getBreakdown: () => Promise<StorageBreakdown>;
+    clearCache: () => Promise<StorageClearResult>;
+    cleanup: (kind: StorageCleanupKind) => Promise<StorageClearResult>;
   };
   path: {
     join: (...args: string[]) => Promise<string>;
@@ -411,6 +421,19 @@ export interface IElectronAPI {
       callback: (result: ConnectivityCheckResult) => void,
     ) => () => void;
   };
+  mirror: {
+    setSource: (source: DownloadSource) => Promise<void>;
+  };
+  shortcut: {
+    create: (
+      versionName: string,
+      instance?: number,
+      imageSource?: string,
+    ) => Promise<{ success: boolean; error?: string }>;
+  };
+  image: {
+    bytes: (source: string) => Promise<string | null>;
+  };
   server: {
     install: (
       account: ILocalAccount | undefined,
@@ -462,6 +485,10 @@ export interface IElectronAPI {
       type: "skin" | "cape",
     ) => Promise<SkinsData | null>;
     resetSkin: (userId: string, platform: string) => Promise<SkinsData | null>;
+    regenerateSkin: (
+      userId: string,
+      platform: string,
+    ) => Promise<SkinsData | null>;
     importByUrl: (
       userId: string,
       platform: string,
@@ -655,6 +682,12 @@ export const api = {
   },
   os: {
     totalmem: () => ipcRenderer.invoke("os:totalmem"),
+  },
+  storage: {
+    getBreakdown: () => ipcRenderer.invoke("storage:getBreakdown"),
+    clearCache: () => ipcRenderer.invoke("storage:clearCache"),
+    cleanup: (kind: StorageCleanupKind) =>
+      ipcRenderer.invoke("storage:cleanup", kind),
   },
   path: {
     join: (...args: string[]) => ipcRenderer.invoke("path:join", ...args),
@@ -974,6 +1007,18 @@ export const api = {
       return () => ipcRenderer.off("connectivity:result", listener);
     },
   },
+  mirror: {
+    setSource: (source: DownloadSource) =>
+      ipcRenderer.invoke("mirror:setSource", source),
+  },
+  shortcut: {
+    create: (versionName: string, instance?: number, imageSource?: string) =>
+      ipcRenderer.invoke("shortcut:create", versionName, instance, imageSource),
+  },
+  image: {
+    bytes: (source: string) =>
+      ipcRenderer.invoke("image:bytes", source),
+  },
   server: {
     install: (
       account: ILocalAccount | undefined,
@@ -1034,6 +1079,8 @@ export const api = {
     ) => ipcRenderer.invoke("skins:deleteSkin", userId, platform, skinId, type),
     resetSkin: (userId: string, platform: string) =>
       ipcRenderer.invoke("skins:resetSkin", userId, platform),
+    regenerateSkin: (userId: string, platform: string) =>
+      ipcRenderer.invoke("skins:regenerateSkin", userId, platform),
     importByUrl: (
       userId: string,
       platform: string,

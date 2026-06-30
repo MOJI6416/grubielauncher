@@ -47,6 +47,7 @@ import {
   isOwnerVersionAtom,
   isRunningAtom,
   networkAtom,
+  manualOrderAtom,
   pathsAtom,
   selectedVersionAtom,
   serverAtom,
@@ -75,7 +76,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  loadManualOrder,
   loadVersionTags,
   saveManualOrder,
   saveVersionTags,
@@ -301,9 +301,7 @@ export function Versions({
     const saved = localStorage.getItem("grubie:versionsSort");
     return saved === "name" || saved === "manual" ? saved : "activity";
   });
-  const [manualOrder, setManualOrder] = useState<string[]>(() =>
-    loadManualOrder(),
-  );
+  const [manualOrder, setManualOrder] = useAtom(manualOrderAtom);
   const dragKeyRef = useRef<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<{
     kind: "loader" | "tag";

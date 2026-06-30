@@ -31,3 +31,26 @@ export function saveManualOrder(order: string[]): void {
     localStorage.setItem(ORDER_KEY, JSON.stringify(order));
   } catch {}
 }
+
+export function renameVersionOrganizeKey(
+  oldKey: string,
+  newKey: string,
+): string[] {
+  const order = loadManualOrder();
+  if (!oldKey || !newKey || oldKey === newKey) return order;
+
+  const idx = order.indexOf(oldKey);
+  if (idx !== -1) {
+    order[idx] = newKey;
+    saveManualOrder(order);
+  }
+
+  const tags = loadVersionTags();
+  if (oldKey in tags) {
+    tags[newKey] = tags[oldKey];
+    delete tags[oldKey];
+    saveVersionTags(tags);
+  }
+
+  return order;
+}

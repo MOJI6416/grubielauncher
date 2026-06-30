@@ -141,6 +141,18 @@ export function registerSkinsIpc() {
     }
   )
 
+  handleSafe<SkinsData | null, [string, string]>(
+    'skins:regenerateSkin',
+    null,
+    async (_, userId, platform) => {
+      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      if (!manager) return null
+
+      await manager.regenerateSkin()
+      return manager.getData()
+    }
+  )
+
   handleSafe<
     SkinsData | null,
     [string, string, string, 'skin' | 'cape']

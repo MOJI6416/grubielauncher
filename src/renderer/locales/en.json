@@ -388,6 +388,13 @@
     "devMode": "Developer mode",
     "downloadLimit": "Download limit",
     "downloadLimitDescription": "How many files to download at the same time",
+    "downloadSource": "Download source",
+    "downloadSourceDescription": "Where to fetch Minecraft files: auto (mirror when blocked), official or mirror",
+    "downloadSourceOptions": {
+      "auto": "Auto",
+      "official": "Official",
+      "mirror": "Mirror"
+    },
     "connectivity": {
       "title": "Connection test",
       "description": "Tests access to launcher servers and official resources",
@@ -400,9 +407,18 @@
       "groups": {
         "grubie": "GrubieLauncher servers",
         "minecraft": "Minecraft servers",
+        "mirror": "Download mirror",
         "mods": "Mods",
         "loaders": "Mod loaders",
         "java": "Java"
+      },
+      "downloads": {
+        "ok": "Minecraft downloads will work",
+        "okMirror": "Downloads will go through the mirror",
+        "viaMirror": "Mojang is unreachable — downloads will go through the mirror",
+        "officialDown": "The official source is unreachable. Switch to \"Auto\" or \"Mirror\".",
+        "mirrorDown": "The mirror is unreachable. Switch to \"Auto\" or \"Official\".",
+        "fail": "Downloads are unavailable: neither the official servers nor the mirror respond. Change DNS (1.1.1.1) or use a VPN."
       }
     },
     "crashTelemetry": "Anonymous crash statistics",
@@ -414,7 +430,47 @@
     "sections": {
       "game": "Game",
       "interface": "Interface",
-      "diagnostics": "Diagnostics"
+      "diagnostics": "Diagnostics",
+      "storage": "Storage"
+    },
+    "storage": {
+      "totalLabel": "Total used",
+      "refresh": "Refresh",
+      "openFolder": "Open folder",
+      "empty": "Nothing installed yet",
+      "byVersion": "By version",
+      "byVersionHint": "shared files excluded",
+      "showMore": "Show {{count}} more",
+      "showLess": "Show less",
+      "manage": "Storage manager",
+      "manageDescription": "What Grubie uses and cache cleanup",
+      "open": "Open",
+      "clearCache": "Clear cache",
+      "cleared": "Freed ~{{size}}",
+      "cleanupJava": "Delete unused Java",
+      "cleanupLibraries": "Orphaned libraries",
+      "cleanupJavaConfirmTitle": "Delete unused Java?",
+      "cleanupJavaConfirmBody": "This removes Java runtimes that no installed version needs, plus older duplicates. If one is needed later, the launcher re-downloads it on launch.",
+      "cleanupLibrariesConfirmTitle": "Delete orphaned libraries?",
+      "cleanupLibrariesConfirmBody": "This removes files under libraries/ not referenced by any installed version. Available only when all version manifests are readable; if it misjudges, a version may need reinstalling.",
+      "clearCacheConfirmTitle": "Clear cache?",
+      "clearCacheConfirmBody": "This removes the app cache, temporary files and install leftovers. Your accounts, settings and installed versions are untouched — images and files re-download when needed.",
+      "categories": {
+        "versions": "Versions and instances",
+        "libraries": "Libraries",
+        "assets": "Assets",
+        "java": "Java",
+        "appData": "App cache",
+        "other": "Other"
+      },
+      "categoriesDesc": {
+        "versions": "Games, mods, worlds, screenshots",
+        "libraries": "Shared across all versions",
+        "assets": "Textures, sounds, languages · shared",
+        "java": "Java runtimes",
+        "appData": "Image and engine cache (Chromium)",
+        "other": "Settings, accounts, logs, shortcuts"
+      }
     },
     "devModeDescription": "Run-command copying and extra debugging tools"
   },
@@ -436,6 +492,10 @@
     "published": "Version published",
     "noVersions": "You haven't added any versions",
     "servers": "Servers",
+    "createShortcut": "Create shortcut",
+    "shortcutCreated": "Shortcut created on the desktop",
+    "shortcutFailed": "Couldn't create the shortcut",
+    "launchNotFound": "Version to launch not found",
     "versionSettings": "Version settings",
     "addingVersion": "Adding version",
     "name": "Name",
@@ -830,6 +890,7 @@
   },
   "manageSkins": {
     "reset": "Reset skin",
+    "regenerate": "Generate from avatar",
     "importByLink": "Import by link",
     "importByFile": "Import from file",
     "importByNick": "Import by nickname",

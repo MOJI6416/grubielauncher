@@ -4,6 +4,8 @@ export const LANGUAGES = [
   { code: 'uk', label: 'Українська', country: 'UA' }
 ]
 
+export type DownloadSource = 'auto' | 'official' | 'mirror'
+
 export type TSettings = {
   xmx: number
   optimizedJvm: boolean
@@ -11,6 +13,7 @@ export type TSettings = {
   lang: string
   devMode: boolean
   downloadLimit: number
+  downloadSource: DownloadSource
   crashTelemetry: boolean
   sounds: boolean
   hideServerInRpc: boolean
@@ -23,6 +26,7 @@ export const DEFAULT_SETTINGS: TSettings = {
   lang: 'en',
   devMode: false,
   downloadLimit: 6,
+  downloadSource: 'auto',
   crashTelemetry: true,
   sounds: true,
   hideServerInRpc: false
@@ -34,6 +38,12 @@ export function normalizeSettings(
 ): TSettings {
   const xmx = Number(value?.xmx)
   const downloadLimit = Number(value?.downloadLimit)
+  const downloadSource: DownloadSource =
+    value?.downloadSource === 'official' ||
+    value?.downloadSource === 'mirror' ||
+    value?.downloadSource === 'auto'
+      ? value.downloadSource
+      : DEFAULT_SETTINGS.downloadSource
   const lang =
     typeof value?.lang === 'string' && value.lang.trim()
       ? value.lang
@@ -55,6 +65,7 @@ export function normalizeSettings(
       Number.isFinite(downloadLimit) && downloadLimit >= 1
         ? Math.min(16, Math.max(1, Math.round(downloadLimit)))
         : DEFAULT_SETTINGS.downloadLimit,
+    downloadSource,
     crashTelemetry:
       typeof value?.crashTelemetry === 'boolean'
         ? value.crashTelemetry

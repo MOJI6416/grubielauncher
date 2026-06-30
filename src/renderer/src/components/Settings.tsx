@@ -11,6 +11,8 @@ import {
   Download,
   EyeOff,
   Gauge,
+  Globe,
+  HardDrive,
   HeartPulse,
   Info,
   Languages,
@@ -26,7 +28,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useAtom } from "jotai";
-import { pathsAtom, settingsAtom } from "@renderer/stores/atoms";
+import { pathsAtom, settingsAtom, storageModalAtom } from "@renderer/stores/atoms";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -85,8 +87,12 @@ export function Settings({
   );
   const [version, setVersion] = useState("");
   const [downloadLimit, setDownloadLimit] = useState(() => normalizedInitialSettings.downloadLimit);
+  const [downloadSource, setDownloadSource] = useState(
+    () => normalizedInitialSettings.downloadSource,
+  );
   const [totalMem, setTotalMem] = useState(0);
   const [paths] = useAtom(pathsAtom);
+  const [, setStorageModal] = useAtom(storageModalAtom);
   const [connectivityResults, setConnectivityResults] = useState<
     ConnectivityCheckResult[] | null
   >(null);
@@ -108,6 +114,7 @@ export function Settings({
     settings.lang != lang ||
     settings.devMode != devMode ||
     settings.downloadLimit != downloadLimit ||
+    settings.downloadSource != downloadSource ||
     settings.crashTelemetry != crashTelemetry ||
     settings.sounds != sounds ||
     settings.hideServerInRpc != hideServerInRpc;
@@ -130,6 +137,7 @@ export function Settings({
     setSounds(nextSettings.sounds);
     setHideServerInRpc(nextSettings.hideServerInRpc);
     setDownloadLimit(nextSettings.downloadLimit);
+    setDownloadSource(nextSettings.downloadSource);
     setLang(nextSettings.lang);
   }, [settings]);
 
@@ -408,6 +416,35 @@ export function Settings({
               />
 
               <SettingRow
+                icon={Globe}
+                title={t("settings.downloadSource")}
+                description={t("settings.downloadSourceDescription")}
+                control={
+                  <Select
+                    value={downloadSource}
+                    onValueChange={(value) => {
+                      if (value) setDownloadSource(value as typeof downloadSource);
+                    }}
+                  >
+                    <SelectTrigger className="w-36">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">
+                        {t("settings.downloadSourceOptions.auto")}
+                      </SelectItem>
+                      <SelectItem value="official">
+                        {t("settings.downloadSourceOptions.official")}
+                      </SelectItem>
+                      <SelectItem value="mirror">
+                        {t("settings.downloadSourceOptions.mirror")}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                }
+              />
+
+              <SettingRow
                 icon={HeartPulse}
                 htmlFor="settings-crash-telemetry"
                 title={t("settings.crashTelemetry")}
@@ -435,6 +472,26 @@ export function Settings({
                 }
               />
             </SettingsSection>
+
+            <SettingsSection
+              icon={HardDrive}
+              title={t("settings.sections.storage")}
+            >
+              <SettingRow
+                icon={HardDrive}
+                title={t("settings.storage.manage")}
+                description={t("settings.storage.manageDescription")}
+                control={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setStorageModal(true)}
+                  >
+                    {t("settings.storage.open")}
+                  </Button>
+                }
+              />
+            </SettingsSection>
           </div>
 
           <DialogFooter>
@@ -452,11 +509,13 @@ export function Settings({
                   sounds,
                   hideServerInRpc,
                   downloadLimit,
+                  downloadSource,
                 };
 
                 await api.fs.writeJSON(settingsPath, newSettings);
 
                 setSettings(newSettings);
+                await api.mirror.setSource(downloadSource);
                 toast.success(t("settings.saved"));
               }}
             >
@@ -497,6 +556,7 @@ export function Settings({
       {connectivityResults && (
         <ConnectivityModal
           initialResults={connectivityResults}
+          downloadSource={downloadSource}
           onClose={() => setConnectivityResults(null)}
         />
       )}

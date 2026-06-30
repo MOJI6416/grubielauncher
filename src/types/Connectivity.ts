@@ -1,6 +1,7 @@
 export type ConnectivityGroup =
   | 'grubie'
   | 'minecraft'
+  | 'mirror'
   | 'mods'
   | 'loaders'
   | 'java'

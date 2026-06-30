@@ -7,6 +7,7 @@ import {
   internetAtom,
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
+  manualOrderAtom,
   networkAtom,
   pathsAtom,
   selectedVersionAtom,
@@ -37,6 +38,7 @@ import {
   Share2,
   SquareTerminal,
   Trash,
+  Rocket,
   Wrench,
 } from "lucide-react";
 import { SiCurseforge, SiModrinth } from "react-icons/si";
@@ -71,6 +73,7 @@ import {
   checkDiffenceUpdateData,
   checkVersionName,
 } from "@renderer/utilities/version";
+import { renameVersionOrganizeKey } from "@renderer/utilities/versionOrganize";
 import { Mods } from "@renderer/classes/Mods";
 import { toast } from "sonner";
 import { LazyDialogFallback } from "@renderer/components/LazyDialogFallback";
@@ -192,6 +195,7 @@ export function EditVersion({
   const [isInstallActive] = useAtom(installActiveAtom);
   const [isDownloadedVersion] = useAtom(isDownloadedVersionAtom);
   const [isOwnerVersion] = useAtom(isOwnerVersionAtom);
+  const setManualOrder = useAtom(manualOrderAtom)[1];
 
   const { t } = useTranslation();
 
@@ -416,8 +420,40 @@ export function EditVersion({
         version.version.name = newName;
         await version.init();
 
+        const img = version.version.image;
+        if (img && img.startsWith("file://")) {
+          const newVersionPath = version.versionPath;
+          const variants: [string, string][] = [
+            [oldPath, newVersionPath],
+            [oldPath.replace(/\\/g, "/"), newVersionPath.replace(/\\/g, "/")],
+            [
+              encodeURI(oldPath.replace(/\\/g, "/")),
+              encodeURI(newVersionPath.replace(/\\/g, "/")),
+            ],
+          ];
+          const match = variants.find(([from]) => from && img.includes(from));
+          if (match) {
+            const repointed = img.replace(match[0], match[1]);
+            version.version.image = repointed;
+            setImage(repointed);
+          }
+        }
+
+        setManualOrder(
+          renameVersionOrganizeKey(
+            oldPath || oldName,
+            version.versionPath || newName,
+          ),
+        );
+
         isShare = true;
       } catch {
+        if (isRename) {
+          version.version.name = oldName;
+          await api.fs.rename(newPath, oldPath).catch(() => {});
+          await version.init().catch(() => {});
+        }
+
         toast.error(t("versions.renameError"));
 
         setIsLoading(false);
@@ -457,6 +493,13 @@ export function EditVersion({
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+
+      if (isRename) {
+        version.version.name = await api.path.basename(oldPath);
+        await api.fs.rename(version.versionPath, oldPath).catch(() => {});
+        await version.init().catch(() => {});
+      }
+
       toast.error(t("versions.updateError"), { description: message });
       setIsLoading(false);
       setLoadingType(undefined);
@@ -488,21 +531,13 @@ export function EditVersion({
       isShare = true;
     }
 
-    if (
-      !isDownloadedVersion &&
-      (isLogoChanged || (isRename && isOwnerVersion))
-    ) {
+    if (!isDownloadedVersion && isLogoChanged) {
       const filename = "logo.png";
       const filePath = await api.path.join(version.versionPath, filename);
 
       let fileUrl = "";
       if (image) {
-        let img = image;
-        if (isRename && !isDownloadedVersion && isOwnerVersion) {
-          img = img.replace(oldPath, version.versionPath);
-        }
-
-        const newFile = await fetch(img).then((r) => r.blob());
+        const newFile = await fetch(image).then((r) => r.blob());
         await api.fs.writeFile(
           filePath,
           new Uint8Array(await newFile.arrayBuffer()),
@@ -722,6 +757,52 @@ export function EditVersion({
                 >
                   <Folder />
                   {t("common.openFolder")}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!version || isLoading}
+                  onClick={async () => {
+                    if (!version) return;
+
+                    let icon: string | undefined = version.version.image;
+                    try {
+                      const base64 = await api.image.bytes(version.version.image);
+                      if (base64) {
+                        const bytes = Uint8Array.from(atob(base64), (c) =>
+                          c.charCodeAt(0),
+                        );
+                        const bitmap = await createImageBitmap(
+                          new Blob([bytes]),
+                        );
+                        const canvas = document.createElement("canvas");
+                        canvas.width = 256;
+                        canvas.height = 256;
+                        const ctx = canvas.getContext("2d");
+                        if (ctx) {
+                          ctx.drawImage(bitmap, 0, 0, 256, 256);
+                          icon = canvas.toDataURL("image/png");
+                        }
+                      }
+                    } catch {
+                      /* fall back to the raw image / launcher icon */
+                    }
+
+                    const res = await api.shortcut.create(
+                      version.version.name,
+                      0,
+                      icon,
+                    );
+                    if (res.success) {
+                      toast.success(t("versions.shortcutCreated"));
+                    } else {
+                      toast.error(t("versions.shortcutFailed"));
+                    }
+                  }}
+                >
+                  <Rocket />
+                  {t("versions.createShortcut")}
                 </Button>
 
                 <Button

@@ -10,11 +10,8 @@ directories:
   output: dist
   buildResources: build
 
-# LZMA instead of the default: noticeably smaller installer at the cost of
-# a slower CI build
 compression: maximum
 
-# trims unused Chromium locale files (~50 locales otherwise)
 electronLanguages:
   - en-US
   - en-GB
@@ -35,14 +32,10 @@ files:
 asarUnpack:
   - resources/**
 
-# generates app-update.yml inside the build and uploads latest.yml +
-# *.blockmap with `electron-builder --publish` — required for both
-# auto-updates and differential (delta) downloads
 publish:
   provider: github
   owner: MOJI6416
   repo: grubielauncher
-  # теги релизов без префикса v (1.7.6, а не v1.7.6) — как в истории проекта
   vPrefixedTagName: false
 
 win:
@@ -55,8 +48,6 @@ nsis:
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
-  # delta updates: electron-updater downloads only changed blocks using the
-  # .blockmap published next to the installer
   differentialPackage: true
 
 linux:

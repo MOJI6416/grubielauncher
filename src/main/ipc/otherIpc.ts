@@ -13,6 +13,11 @@ import { mainWindow } from '../windows/mainWindow'
 import { getLauncherPaths } from '../utilities/other'
 import { runConnectivityTests } from '../utilities/connectivityTest'
 import { ConnectivityCheckResult } from '@/types/Connectivity'
+import {
+  setDownloadSource,
+  updateMojangReachableFromConnectivity
+} from '../utilities/mirrorState'
+import { DownloadSource } from '@/types/Settings'
 import { rpc } from '../rpc'
 import { RpcRendererContext } from '@/types/Rpc'
 import { NotificationClickAction } from '@/types/Notification'
@@ -21,6 +26,7 @@ import axios from 'axios'
 import { handleSafe } from '../utilities/ipc'
 import { assertWritablePath, blessUserSelectedPath } from '../utilities/safePath'
 import { isSafeRemoteImageUrl } from '../utilities/safeUrl'
+import { createInstanceShortcut, getImageBase64 } from '../utilities/shortcut'
 
 function assertSafeExternalUrl(url: string): string {
   const parsed = new URL(url)
@@ -136,7 +142,9 @@ export function registerOtherIpc() {
     launcher: '',
     minecraft: '',
     java: '',
-    skins: ''
+    skins: '',
+    cache: '',
+    shortcuts: ''
   }, async () => {
     return await getLauncherPaths()
   })
@@ -195,12 +203,35 @@ export function registerOtherIpc() {
   })
 
   handleSafe<ConnectivityCheckResult[]>('connectivity:test', [], async (event) => {
-    return await runConnectivityTests((result) => {
+    const results = await runConnectivityTests((result) => {
       try {
         if (!event.sender.isDestroyed()) {
           event.sender.send('connectivity:result', result)
         }
       } catch {}
     })
+
+    updateMojangReachableFromConnectivity(results)
+    return results
   })
+
+  handleSafe<void, [DownloadSource]>('mirror:setSource', undefined, async (_, source) => {
+    setDownloadSource(source)
+  })
+
+  handleSafe<{ success: boolean; error?: string }, [string, number?, string?]>(
+    'shortcut:create',
+    { success: false },
+    async (_, versionName: string, instance = 0, imageSource?: string) => {
+      return await createInstanceShortcut(versionName, instance, imageSource)
+    }
+  )
+
+  handleSafe<string | null, [string]>(
+    'image:bytes',
+    null,
+    async (_, source: string) => {
+      return await getImageBase64(source)
+    }
+  )
 }

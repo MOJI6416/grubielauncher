@@ -1,4 +1,10 @@
-export type LauncherDeepLink = {
-  type: "pack";
-  shareCode: string;
-};
+export type LauncherDeepLink =
+  | {
+      type: "pack";
+      shareCode: string;
+    }
+  | {
+      type: "launch";
+      versionName: string;
+      instance: number;
+    };

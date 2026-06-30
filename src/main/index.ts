@@ -11,6 +11,7 @@ import {
   extractLauncherDeepLink,
   parseLauncherDeepLink,
 } from "./utilities/deepLink";
+import { initMirrorState } from "./utilities/mirrorState";
 import { LauncherDeepLink } from "@/types/DeepLink";
 import path from "path";
 import fs from "fs-extra";
@@ -180,6 +181,8 @@ if (!gotTheLock) {
     const appdata = app.getPath("appData");
     const launcherPath = path.join(appdata, ".grubielauncher");
     await fs.ensureDir(launcherPath);
+
+    void initMirrorState(launcherPath);
 
     app.on("browser-window-created", (_, window) => {
       optimizer.watchWindowShortcuts(window);

@@ -16,6 +16,7 @@ import {
 import { ErrorLog } from "./ErrorLog";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Settings } from "./Settings";
+import { StorageManagerModal } from "./StorageManagerModal";
 import { useAtom } from "jotai";
 import {
   accountAtom,
@@ -34,6 +35,7 @@ import {
   shareOwnerAccountKeyAtom,
   shareStateAtom,
   serverAtom,
+  storageModalAtom,
 } from "@renderer/stores/atoms";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -117,6 +119,7 @@ export function Nav({
   const [selectedAccount] = useAtom(accountAtom);
   const [isAddVersion, setVersionModal] = useAtom(addVersionModalAtom);
   const [isSettingsModal, setOpenSettingsModal] = useState(false);
+  const [isStorageModal, setStorageModal] = useAtom(storageModalAtom);
   const [isInternetOnline] = useAtom(internetAtom);
   const [isBackendOnline] = useAtom(networkAtom);
   const { t } = useTranslation();
@@ -417,6 +420,9 @@ export function Nav({
           onClose={() => setOpenSettingsModal(false)}
           onShowWhatsNew={onOpenWhatsNew}
         />
+      )}
+      {isStorageModal && (
+        <StorageManagerModal onClose={() => setStorageModal(false)} />
       )}
       {isAddVersion && (
         <Suspense fallback={<LazyDialogFallback variant="wide" />}>

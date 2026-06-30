@@ -15,12 +15,15 @@ import type {
   ConnectivityCheckResult,
   ConnectivityGroup,
 } from "@/types/Connectivity";
+import type { DownloadSource } from "@/types/Settings";
+import { getDownloadVerdict } from "@renderer/utilities/connectivityVerdict";
 
 const api = window.api;
 
 const CONNECTIVITY_GROUPS: ConnectivityGroup[] = [
   "grubie",
   "minecraft",
+  "mirror",
   "mods",
   "loaders",
   "java",
@@ -28,9 +31,11 @@ const CONNECTIVITY_GROUPS: ConnectivityGroup[] = [
 
 export function ConnectivityModal({
   initialResults,
+  downloadSource,
   onClose,
 }: {
   initialResults: ConnectivityCheckResult[];
+  downloadSource: DownloadSource;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -47,7 +52,7 @@ export function ConnectivityModal({
     }
   };
 
-  const allOk = results.length > 0 && results.every((result) => result.ok);
+  const verdict = getDownloadVerdict(results, downloadSource);
 
   return (
     <Dialog
@@ -66,17 +71,23 @@ export function ConnectivityModal({
 
         <div className="flex min-h-0 flex-1 flex-col px-5">
           {results.length > 0 && (
-            <p
-              className={
-                allOk
-                  ? "mb-2 shrink-0 text-sm text-emerald-500"
-                  : "mb-2 shrink-0 text-sm text-destructive"
-              }
-            >
-              {allOk
-                ? t("settings.connectivity.allOk")
-                : t("settings.connectivity.someFail")}
-            </p>
+            <div className="mb-2 shrink-0 space-y-1">
+              <p className="text-xs text-muted-foreground">
+                {t("settings.downloadSource")}:{" "}
+                <span className="font-medium text-foreground">
+                  {t(`settings.downloadSourceOptions.${downloadSource}`)}
+                </span>
+              </p>
+              <p
+                className={
+                  verdict.downloadsOk
+                    ? "text-sm text-emerald-500"
+                    : "text-sm text-destructive"
+                }
+              >
+                {t(`settings.connectivity.downloads.${verdict.messageKey}`)}
+              </p>
+            </div>
           )}
 
           <div className="min-h-0 flex-1 overflow-y-auto">

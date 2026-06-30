@@ -12,6 +12,7 @@ interface HttpCheck {
   group: ConnectivityGroup
   kind: 'http'
   url: string
+  okStatus?: (status: number) => boolean
 }
 
 interface TcpCheck {
@@ -91,6 +92,22 @@ const CHECKS: ConnectivityCheck[] = [
     url: 'https://sessionserver.mojang.com/'
   },
   {
+    id: 'mirror_health',
+    name: 'GrubieLauncher Mirror',
+    group: 'mirror',
+    kind: 'http',
+    url: 'https://mirror.grubielauncher.com/healthz',
+    okStatus: (status) => status >= 200 && status < 400
+  },
+  {
+    id: 'mirror_manifest',
+    name: 'Mirror → Mojang Meta',
+    group: 'mirror',
+    kind: 'http',
+    url: 'https://mirror.grubielauncher.com/piston-meta/mc/game/version_manifest_v2.json',
+    okStatus: (status) => status >= 200 && status < 400
+  },
+  {
     id: 'modrinth_api',
     name: 'Modrinth API',
     group: 'mods',
@@ -164,13 +181,16 @@ async function runHttpCheck(check: HttpCheck): Promise<ConnectivityCheckResult> 
       response.data?.destroy?.()
     } catch {}
 
+    const ok = check.okStatus ? check.okStatus(response.status) : true
+
     return {
       id: check.id,
       name: check.name,
       group: check.group,
       target: check.url,
-      ok: true,
-      latencyMs: Date.now() - startedAt
+      ok,
+      latencyMs: ok ? Date.now() - startedAt : null,
+      error: ok ? undefined : `HTTP ${response.status}`
     }
   } catch (error) {
     return {
