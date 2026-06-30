@@ -10,11 +10,14 @@ import { cn } from "@/lib/utils";
 export interface VirtualizedSelectOption {
   value: string;
   label: string;
+  secondaryLabel?: string;
+  badge?: { label: string; className?: string };
 }
 
 const ROW_HEIGHT = 32;
 const MAX_VISIBLE_ROWS = 8;
 const ROW_HORIZONTAL_SPACE = 6 + 32 + 8 + 8;
+const BADGE_SPACE = 56;
 const SCROLL_EASING = 0.18;
 
 let measureCanvas: HTMLCanvasElement | null = null;
@@ -30,10 +33,42 @@ function getMaxLabelWidth(
   context.font = font;
   let max = 0;
   for (const option of options) {
-    const width = context.measureText(option.label).width;
+    let text = option.label;
+    if (option.secondaryLabel) text += `    ${option.secondaryLabel}`;
+    let width = context.measureText(text).width;
+    if (option.badge) width += BADGE_SPACE;
     if (width > max) max = width;
   }
   return max;
+}
+
+function OptionContent({
+  option,
+  showSecondary = true,
+}: {
+  option: VirtualizedSelectOption;
+  showSecondary?: boolean;
+}) {
+  return (
+    <>
+      {option.badge && (
+        <span
+          className={cn(
+            "shrink-0 rounded px-1.5 py-0.5 text-[0.65rem] leading-none font-medium",
+            option.badge.className,
+          )}
+        >
+          {option.badge.label}
+        </span>
+      )}
+      <span className="truncate">{option.label}</span>
+      {showSecondary && option.secondaryLabel && (
+        <span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground tabular-nums">
+          {option.secondaryLabel}
+        </span>
+      )}
+    </>
+  );
 }
 
 interface RowData {
@@ -58,13 +93,17 @@ function Row({ index, style, data }: ListChildComponentProps<RowData>) {
         tabIndex={-1}
         onClick={() => data.onSelect(option.value)}
         onMouseMove={() => data.onActivate(index)}
-        title={option.label}
+        title={
+          option.secondaryLabel
+            ? `${option.label} · ${option.secondaryLabel}`
+            : option.label
+        }
         className={cn(
-          "relative flex h-full w-full cursor-default items-center rounded-md py-1 pr-8 pl-1.5 text-sm outline-none select-none",
+          "relative flex h-full w-full cursor-default items-center gap-2 rounded-md py-1 pr-8 pl-1.5 text-sm outline-none select-none",
           isActive && "bg-accent text-accent-foreground",
         )}
       >
-        <span className="truncate">{option.label}</span>
+        <OptionContent option={option} />
         {isSelected && (
           <span className="absolute right-2 flex size-4 items-center justify-center">
             <CheckIcon className="size-4" />
@@ -269,15 +308,16 @@ export function VirtualizedSelect({
           className,
         )}
       >
-        <span
-          className={cn(
-            "block min-w-0 truncate text-left",
-            !selectedOption && "text-muted-foreground",
-          )}
-        >
-          {selectedOption?.label ?? placeholder}
-        </span>
-        <ChevronDownIcon className="size-4 text-muted-foreground" />
+        {selectedOption ? (
+          <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
+            <OptionContent option={selectedOption} showSecondary={false} />
+          </span>
+        ) : (
+          <span className="block min-w-0 flex-1 truncate text-left text-muted-foreground">
+            {placeholder}
+          </span>
+        )}
+        <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Content

@@ -10,6 +10,7 @@ import {
   ISearchData,
   IAddedLocalProject,
   IUpdateProject,
+  VersionReleaseType,
 } from "@/types/ModManager";
 import { DownloaderInfo } from "@/types/Downloader";
 import { LoaderLabel } from "../Loaders";
@@ -26,6 +27,7 @@ import { SiCurseforge, SiModrinth } from "react-icons/si";
 import SVG from "react-inlinesvg";
 import { useTranslation } from "react-i18next";
 import {
+  Boxes,
   CircleAlert,
   ChevronDown,
   ChevronLeft,
@@ -47,6 +49,11 @@ import {
   PackagePlus,
   Ban,
   CircleHelp,
+  Heart,
+  History,
+  Calendar,
+  ScrollText,
+  FileText,
   X,
 } from "lucide-react";
 import { useAtom } from "jotai";
@@ -95,6 +102,12 @@ import {
 } from "@/components/ui/pagination";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -211,6 +224,50 @@ function DependencyTypeIcon({
   return null;
 }
 
+function formatCompactNumber(
+  value: number | undefined | null,
+  lang: string,
+): string | null {
+  if (value == null || !Number.isFinite(value) || value < 0) return null;
+  try {
+    return new Intl.NumberFormat(lang || "en", {
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function formatDate(
+  value: string | undefined | null,
+  lang: string,
+): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  try {
+    return new Intl.DateTimeFormat(lang || "en", { dateStyle: "medium" }).format(
+      date,
+    );
+  } catch {
+    return date.toLocaleDateString();
+  }
+}
+
+function releaseTypeBadgeClassName(type: VersionReleaseType): string {
+  switch (type) {
+    case "release":
+      return "border-transparent bg-[var(--success)] text-[var(--success-foreground)]";
+    case "beta":
+      return "border-transparent bg-[var(--warning)] text-[var(--warning-foreground)]";
+    case "alpha":
+      return "border-transparent bg-destructive text-white";
+    default:
+      return "border-border bg-transparent text-muted-foreground";
+  }
+}
+
 function getProjectDetailBody(project: IProject) {
   return (project.body || project.description || "").trim();
 }
@@ -228,8 +285,12 @@ function hasProjectDetails(project: IProject) {
   );
 }
 
-function shouldShowProjectDetailsPane(project: IProject | null) {
+function shouldShowProjectDetailsPane(
+  project: IProject | null,
+  changelog?: string | null,
+) {
   if (!project) return false;
+  if (changelog && changelog.trim().length > 0) return true;
   return project.provider != Provider.LOCAL || hasProjectDetails(project);
 }
 
@@ -249,15 +310,22 @@ function isLocalProjectItem(
 function ProjectDetailsPane({
   project,
   notFoundTitle,
+  changelog,
+  descriptionLabel,
+  changelogLabel,
 }: {
   project: IProject;
   notFoundTitle: string;
+  changelog?: string;
+  descriptionLabel: string;
+  changelogLabel: string;
 }) {
   const detailBody = getProjectDetailBody(project);
   const gallery = getProjectGallery(project);
+  const changelogText = changelog?.trim() || "";
 
-  return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card/80">
+  const descriptionView = (
+    <>
       {gallery.length > 0 && (
         <div className="shrink-0 border-b border-border p-3">
           <GalleryCarousel gallery={gallery} />
@@ -281,7 +349,55 @@ function ProjectDetailsPane({
           )}
         </div>
       </ScrollArea>
-    </div>
+    </>
+  );
+
+  if (!changelogText) {
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card/80">
+        {descriptionView}
+      </div>
+    );
+  }
+
+  return (
+    <Tabs
+      defaultValue="description"
+      className="min-h-0 min-w-0 flex-1 gap-0 overflow-hidden rounded-xl border border-border bg-card/80"
+    >
+      <TabsList className="mx-3 mt-3 grid h-8 w-fit shrink-0 grid-cols-2">
+        <TabsTrigger value="description" className="gap-1.5 px-3 text-xs">
+          <FileText className="size-3.5" />
+          {descriptionLabel}
+        </TabsTrigger>
+        <TabsTrigger value="changelog" className="gap-1.5 px-3 text-xs">
+          <ScrollText className="size-3.5" />
+          {changelogLabel}
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent
+        value="description"
+        className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+      >
+        {descriptionView}
+      </TabsContent>
+
+      <TabsContent
+        value="changelog"
+        className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+      >
+        <ScrollArea className="min-h-0 min-w-0 flex-1">
+          <div className="min-w-0 p-4">
+            <ModBody
+              key={`changelog-${project.provider}-${project.id}-${changelogText.length}`}
+              body={changelogText}
+              baseUrl={project.url}
+            />
+          </div>
+        </ScrollArea>
+      </TabsContent>
+    </Tabs>
   );
 }
 
@@ -1094,7 +1210,10 @@ export function ModManager({
           }}
         >
           <DialogHeader className="border-b py-4 pr-12 pl-5">
-            <DialogTitle>{t("modManager.title")}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Boxes className="size-5" />
+              {t("modManager.title")}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="flex min-h-0 min-w-0 w-full overflow-hidden px-5 pb-5">
@@ -1799,6 +1918,57 @@ export function ModManager({
                                       </p>
                                     )}
 
+                                    {!isLocal &&
+                                      item.provider != Provider.LOCAL &&
+                                      (() => {
+                                        const stats = (item as IProject).stats;
+                                        if (!stats) return null;
+                                        const lang = settings.lang || "en";
+                                        const downloads = formatCompactNumber(
+                                          stats.downloads,
+                                          lang,
+                                        );
+                                        const likes =
+                                          item.provider == Provider.MODRINTH &&
+                                          stats.follows
+                                            ? formatCompactNumber(
+                                                stats.follows,
+                                                lang,
+                                              )
+                                            : null;
+                                        if (!downloads && !likes) return null;
+                                        return (
+                                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                            {downloads && (
+                                              <span
+                                                className="inline-flex items-center gap-1"
+                                                title={t(
+                                                  "modManager.statsDownloads",
+                                                )}
+                                              >
+                                                <Download className="size-3.5 shrink-0" />
+                                                <span className="tabular-nums">
+                                                  {downloads}
+                                                </span>
+                                              </span>
+                                            )}
+                                            {likes && (
+                                              <span
+                                                className="inline-flex items-center gap-1"
+                                                title={t(
+                                                  "modManager.statsLikes",
+                                                )}
+                                              >
+                                                <Heart className="size-3.5 shrink-0" />
+                                                <span className="tabular-nums">
+                                                  {likes}
+                                                </span>
+                                              </span>
+                                            )}
+                                          </div>
+                                        );
+                                      })()}
+
                                     {isPendingRemoved ? (
                                       <Badge
                                         variant="outline"
@@ -2276,7 +2446,7 @@ export function ModManager({
               >
                 <DialogContent aria-describedby={undefined}
                   className={`grid h-[min(48rem,calc(100vh-4rem))] max-h-[calc(100vh-4rem)] ${
-                    shouldShowProjectDetailsPane(project)
+                    shouldShowProjectDetailsPane(project, selectVersion?.changelog)
                       ? "w-[min(92rem,calc(100vw-2rem))] sm:max-w-[min(92rem,calc(100vw-2rem))]"
                       : "w-[min(36rem,calc(100vw-2rem))] sm:max-w-[min(36rem,calc(100vw-2rem))]"
                   } max-w-none grid-rows-[auto_minmax(0,1fr)] overflow-hidden`}
@@ -2296,14 +2466,14 @@ export function ModManager({
                       <div
                         key={`${project.provider}-${project.id}`}
                         className={
-                          shouldShowProjectDetailsPane(project)
+                          shouldShowProjectDetailsPane(project, selectVersion?.changelog)
                             ? "grid h-full min-h-0 min-w-0 grid-cols-[22rem_minmax(0,1fr)] gap-4 overflow-hidden"
                             : "flex h-full min-h-0 min-w-0 overflow-hidden"
                         }
                       >
                         {(() => {
                           const showDetailsPane =
-                            shouldShowProjectDetailsPane(project);
+                            shouldShowProjectDetailsPane(project, selectVersion?.changelog);
 
                           return (
                             <>
@@ -2379,20 +2549,52 @@ export function ModManager({
                                           loadingType == LoadingType.TRANSLATE
                                         }
                                         onClick={async () => {
-                                          const cacheKey = `${project.provider}-${project.id}-${settings.lang}`;
-                                          const cached =
-                                            translationCacheRef.current.get(
-                                              cacheKey,
-                                            );
+                                          const lang = settings.lang;
+                                          const token =
+                                            account?.accessToken || "";
+                                          const translatePrompt = (
+                                            text: string,
+                                          ) =>
+                                            `Translate the following text to ${lang}, keep markdown formatting:\n\n${text}`;
 
-                                          if (cached) {
-                                            setProject({
-                                              ...project,
-                                              description:
-                                                cached.description ||
-                                                project.description,
-                                              body: cached.body || project.body,
-                                            });
+                                          const descKey = `${project.provider}-${project.id}-${lang}`;
+                                          const changelogKey = selectVersion?.id
+                                            ? `${project.provider}-${project.id}-${selectVersion.id}-changelog-${lang}`
+                                            : null;
+
+                                          const cachedDesc =
+                                            translationCacheRef.current.get(
+                                              descKey,
+                                            );
+                                          const cachedChangelog = changelogKey
+                                            ? translationCacheRef.current.get(
+                                                changelogKey,
+                                              )
+                                            : undefined;
+
+                                          const needDesc = !cachedDesc;
+                                          const needChangelog =
+                                            !!selectVersion?.changelog &&
+                                            !cachedChangelog;
+
+                                          if (!needDesc && !needChangelog) {
+                                            if (cachedDesc)
+                                              setProject({
+                                                ...project,
+                                                description:
+                                                  cachedDesc.description ||
+                                                  project.description,
+                                                body:
+                                                  cachedDesc.body ||
+                                                  project.body,
+                                              });
+                                            if (cachedChangelog && selectVersion)
+                                              setSelectVersion({
+                                                ...selectVersion,
+                                                changelog:
+                                                  cachedChangelog.body ||
+                                                  selectVersion.changelog,
+                                              });
                                             return;
                                           }
 
@@ -2402,38 +2604,87 @@ export function ModManager({
                                           const [
                                             translatedDescription,
                                             translatedBody,
+                                            translatedChangelog,
                                           ] = await Promise.all([
-                                            project.description
+                                            needDesc && project.description
                                               ? api.backend.aiComplete(
-                                                  account?.accessToken || "",
-                                                  `Translate the following text to ${settings.lang}:\n\n${project.description}`,
+                                                  token,
+                                                  translatePrompt(
+                                                    project.description,
+                                                  ),
                                                 )
                                               : undefined,
-                                            project.body
+                                            needDesc && project.body
                                               ? api.backend.aiComplete(
-                                                  account?.accessToken || "",
-                                                  `Translate the following text to ${settings.lang}:\n\n${project.body}`,
+                                                  token,
+                                                  translatePrompt(project.body),
+                                                )
+                                              : undefined,
+                                            needChangelog &&
+                                            selectVersion?.changelog
+                                              ? api.backend.aiComplete(
+                                                  token,
+                                                  translatePrompt(
+                                                    selectVersion.changelog,
+                                                  ),
                                                 )
                                               : undefined,
                                           ]);
 
-                                          translationCacheRef.current.set(
-                                            cacheKey,
-                                            {
+                                          if (needDesc) {
+                                            translationCacheRef.current.set(
+                                              descKey,
+                                              {
+                                                description:
+                                                  translatedDescription,
+                                                body: translatedBody,
+                                              },
+                                            );
+                                            setProject({
+                                              ...project,
                                               description:
-                                                translatedDescription,
-                                              body: translatedBody,
-                                            },
-                                          );
+                                                translatedDescription ||
+                                                project.description,
+                                              body:
+                                                translatedBody || project.body,
+                                            });
+                                          } else if (cachedDesc) {
+                                            setProject({
+                                              ...project,
+                                              description:
+                                                cachedDesc.description ||
+                                                project.description,
+                                              body:
+                                                cachedDesc.body || project.body,
+                                            });
+                                          }
 
-                                          setProject({
-                                            ...project,
-                                            description:
-                                              translatedDescription ||
-                                              project.description,
-                                            body:
-                                              translatedBody || project.body,
-                                          });
+                                          if (
+                                            needChangelog &&
+                                            changelogKey &&
+                                            selectVersion
+                                          ) {
+                                            translationCacheRef.current.set(
+                                              changelogKey,
+                                              { body: translatedChangelog },
+                                            );
+                                            setSelectVersion({
+                                              ...selectVersion,
+                                              changelog:
+                                                translatedChangelog ||
+                                                selectVersion.changelog,
+                                            });
+                                          } else if (
+                                            cachedChangelog &&
+                                            selectVersion
+                                          ) {
+                                            setSelectVersion({
+                                              ...selectVersion,
+                                              changelog:
+                                                cachedChangelog.body ||
+                                                selectVersion.changelog,
+                                            });
+                                          }
 
                                           setLoading(false);
                                           setLoadingType(null);
@@ -2448,6 +2699,86 @@ export function ModManager({
                                       </Button>
                                     )}
                                 </div>
+
+                                {project.stats &&
+                                  (() => {
+                                    const lang = settings.lang || "en";
+                                    const downloads = formatCompactNumber(
+                                      project.stats.downloads,
+                                      lang,
+                                    );
+                                    const likes =
+                                      project.provider == Provider.MODRINTH &&
+                                      project.stats.follows
+                                        ? formatCompactNumber(
+                                            project.stats.follows,
+                                            lang,
+                                          )
+                                        : null;
+                                    const updated = formatDate(
+                                      project.stats.dateModified,
+                                      lang,
+                                    );
+                                    const created = formatDate(
+                                      project.stats.dateCreated,
+                                      lang,
+                                    );
+
+                                    if (
+                                      !downloads &&
+                                      !likes &&
+                                      !updated &&
+                                      !created
+                                    )
+                                      return null;
+
+                                    return (
+                                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+                                        {downloads && (
+                                          <span
+                                            className="inline-flex items-center gap-1"
+                                            title={t(
+                                              "modManager.statsDownloads",
+                                            )}
+                                          >
+                                            <Download className="size-3.5 shrink-0" />
+                                            <span className="tabular-nums">
+                                              {downloads}
+                                            </span>
+                                          </span>
+                                        )}
+                                        {likes && (
+                                          <span
+                                            className="inline-flex items-center gap-1"
+                                            title={t("modManager.statsLikes")}
+                                          >
+                                            <Heart className="size-3.5 shrink-0" />
+                                            <span className="tabular-nums">
+                                              {likes}
+                                            </span>
+                                          </span>
+                                        )}
+                                        {updated && (
+                                          <span
+                                            className="inline-flex items-center gap-1"
+                                            title={t("modManager.statsUpdated")}
+                                          >
+                                            <History className="size-3.5 shrink-0" />
+                                            {updated}
+                                          </span>
+                                        )}
+                                        {created && (
+                                          <span
+                                            className="inline-flex items-center gap-1"
+                                            title={t("modManager.statsCreated")}
+                                          >
+                                            <Calendar className="size-3.5 shrink-0" />
+                                            {created}
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
 
                                 <div className="flex flex-col gap-2">
                                   {selectVersion && selectVersion.id != "" && (
@@ -2471,6 +2802,23 @@ export function ModManager({
                                         options={project.versions.map((v) => ({
                                           value: v.id,
                                           label: v.name,
+                                          badge: v.releaseType
+                                            ? {
+                                                label: t(
+                                                  "modManager.releaseTypes." +
+                                                    v.releaseType,
+                                                ),
+                                                className:
+                                                  releaseTypeBadgeClassName(
+                                                    v.releaseType,
+                                                  ),
+                                              }
+                                            : undefined,
+                                          secondaryLabel:
+                                            formatDate(
+                                              v.datePublished,
+                                              settings.lang || "en",
+                                            ) ?? undefined,
                                         }))}
                                         onValueChange={async (value) => {
                                           if (!value) return;
@@ -3282,6 +3630,9 @@ export function ModManager({
                                 <ProjectDetailsPane
                                   project={project}
                                   notFoundTitle={t("common.notFound")}
+                                  changelog={selectVersion?.changelog}
+                                  descriptionLabel={t("common.description")}
+                                  changelogLabel={t("modManager.changelog")}
                                 />
                               )}
                             </>

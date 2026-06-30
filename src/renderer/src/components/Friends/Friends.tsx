@@ -22,6 +22,7 @@ import {
   Loader2,
   RefreshCw,
   SendHorizontal,
+  Share2,
   TriangleAlert,
   UserPlus,
   Users,
@@ -1523,7 +1524,10 @@ export function Friends({
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t("friends.friendCodeTitle")}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="size-5" />
+              {t("friends.friendCodeTitle")}
+            </DialogTitle>
             <DialogDescription>
               {t("friends.friendCodeDescription")}
             </DialogDescription>
@@ -1595,7 +1599,10 @@ export function Friends({
       >
         <DialogContent aria-describedby={undefined} className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t("friends.adding")}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="size-5" />
+              {t("friends.adding")}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 rounded-lg border bg-muted/30 p-3">
             <label className="text-sm font-medium" htmlFor="friend-id">
@@ -1827,7 +1834,10 @@ export function Friends({
         >
           <DialogContent aria-describedby={undefined} className="sm:max-w-sm">
             <DialogHeader>
-              <DialogTitle>{t("friends.shareBuildTitle")}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Share2 className="size-5" />
+                {t("friends.shareBuildTitle")}
+              </DialogTitle>
             </DialogHeader>
             <div>
               {shareableVersions.length === 0 ? (

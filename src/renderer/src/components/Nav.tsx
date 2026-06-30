@@ -20,8 +20,10 @@ import { StorageManagerModal } from "./StorageManagerModal";
 import { useAtom } from "jotai";
 import {
   accountAtom,
+  addVersionImportPathAtom,
   addVersionModalAtom,
   consolesAtom,
+  fileDragOverAtom,
   errorLogAtom,
   errorLogSeenAtom,
   isFriendsConnectedAtom,
@@ -118,6 +120,10 @@ export function Nav({
   const setIsOwnerVersion = useAtom(isOwnerVersionAtom)[1];
   const [selectedAccount] = useAtom(accountAtom);
   const [isAddVersion, setVersionModal] = useAtom(addVersionModalAtom);
+  const [isFileDragOver] = useAtom(fileDragOverAtom);
+  const [addVersionImportPath, setAddVersionImportPath] = useAtom(
+    addVersionImportPathAtom,
+  );
   const [isSettingsModal, setOpenSettingsModal] = useState(false);
   const [isStorageModal, setStorageModal] = useAtom(storageModalAtom);
   const [isInternetOnline] = useAtom(internetAtom);
@@ -427,8 +433,11 @@ export function Nav({
       {isAddVersion && (
         <Suspense fallback={<LazyDialogFallback variant="wide" />}>
           <LazyAddVersion
+            dragHidden={isFileDragOver}
+            importFilePath={addVersionImportPath ?? undefined}
             closeModal={async () => {
               setVersionModal(false);
+              setAddVersionImportPath(null);
               try {
                 if (paths.launcher) {
                   await api.fs.rimraf(

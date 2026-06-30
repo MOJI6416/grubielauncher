@@ -329,7 +329,10 @@ export function BlockedMods({
         onDrop={handleDrop}
       >
         <DialogHeader className="px-5 pt-5">
-          <DialogTitle>{t("blockedMods.title")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <ShieldAlert className="size-5" />
+            {t("blockedMods.title")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid min-h-0 gap-4 overflow-y-auto px-5 pb-5">

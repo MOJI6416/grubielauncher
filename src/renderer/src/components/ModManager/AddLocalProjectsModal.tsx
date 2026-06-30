@@ -100,8 +100,11 @@ export function ALPModal({
       >
         <DialogHeader className="border-b py-4 pr-12 pl-5">
           <div className="flex min-w-0 items-center justify-between gap-3">
-            <DialogTitle className="truncate leading-6">
-              {t("modManager.addingProjects")}
+            <DialogTitle className="flex min-w-0 items-center gap-2 leading-6">
+              <FileBox className="size-5 shrink-0" />
+              <span className="truncate">
+                {t("modManager.addingProjects")}
+              </span>
             </DialogTitle>
             <Badge variant="secondary" className="shrink-0 tabular-nums">
               {selectedCount}/{validCount}

@@ -7,6 +7,7 @@ import {
   Cpu,
   Folder,
   ImagePlus,
+  ServerCog,
   Settings,
   Trash,
   TriangleAlert,
@@ -180,7 +181,10 @@ export function ServerControl({
           }}
         >
           <DialogHeader className="px-5 pt-5">
-            <DialogTitle>{t("versions.serverManager")}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <ServerCog className="size-5" />
+              {t("versions.serverManager")}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 px-5 pb-5">
             <Card className="gap-0 overflow-hidden py-0 shadow-none">

@@ -28,7 +28,7 @@ import {
   versionServersAtom,
 } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
-import { ArrowUpFromLine, FolderOpen, Loader2, Trash } from "lucide-react";
+import { ArrowUpFromLine, FolderOpen, Loader2, Share2, Trash } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "@renderer/utilities/file";
@@ -597,7 +597,10 @@ export function Share({
           }}
         >
           <DialogHeader className="px-6 pt-6">
-            <DialogTitle>{t("versions.shareOptions")}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="size-5" />
+              {t("versions.shareOptions")}
+            </DialogTitle>
           </DialogHeader>
           <TooltipProvider>
             <div className="px-6 pb-2">

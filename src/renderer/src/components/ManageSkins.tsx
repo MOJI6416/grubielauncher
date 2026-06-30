@@ -9,14 +9,19 @@ import {
 import { useAtom } from "jotai";
 import {
   Check,
+  FileImage,
   FilePlus2,
+  Image as ImageIcon,
   Link,
   Loader2,
   Mars,
+  Shirt,
   Sparkles,
   Trash,
+  Upload,
   User,
   Venus,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState, useCallback, memo, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -39,14 +44,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -58,8 +55,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { canOpenSkinManagerForAccount } from "@renderer/utilities/connectivity";
+import { toFileUrl } from "@renderer/utilities/exportVersion";
 
 const api = window.api;
 const NO_CAPE_VALUE = "__none";
@@ -245,6 +249,14 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
   const [renameValue, setRenameValue] = useState("");
   const [skinType, setSkinType] = useState<"skin" | "cape">("skin");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [addSource, setAddSource] = useState<"file" | "link" | "nick">("file");
+  const [pickedFile, setPickedFile] = useState<{
+    path: string;
+    name: string;
+  } | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [debouncedInput, setDebouncedInput] = useState("");
+  const dragCounterRef = useRef(0);
   const [renameDialogSkinId, setRenameDialogSkinId] = useState<string | null>(
     null,
   );
@@ -316,6 +328,11 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     setRenameValue(selectedSkinEntry?.name ?? "");
   }, [selectedSkinEntry?.id, selectedSkinEntry?.name]);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedInput(inputValue.trim()), 400);
+    return () => clearTimeout(id);
+  }, [inputValue]);
 
   const renameDialogSkin = useMemo(() => {
     if (!skinsData || !renameDialogSkinId) return null;
@@ -466,75 +483,110 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     }
   }, [authData, selectedAccount, isRemoteSkinServiceAvailable, refreshSkins, t]);
 
-  const handleImportByUrl = useCallback(async () => {
-    if (!authData || !selectedAccount || !inputValue.trim()) {
+  const closeAddDialog = useCallback(() => {
+    setIsAddDialogOpen(false);
+    setInputValue("");
+    setPickedFile(null);
+    setAddSource("file");
+  }, []);
+
+  const handlePickFile = useCallback(async () => {
+    const filePaths = await api.other.openFileDialog(false, [
+      { name: "Skins", extensions: ["png"] },
+    ]);
+    if (!filePaths?.length) return;
+    const filePath = filePaths[0];
+    setPickedFile({
+      path: filePath,
+      name: filePath.split(/[\\/]/).pop() || filePath,
+    });
+  }, []);
+
+  const handleDropFile = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragCounterRef.current = 0;
+    setIsDragOver(false);
+    const file = Array.from(event.dataTransfer.files).find((item) =>
+      item.name.toLowerCase().endsWith(".png"),
+    );
+    if (!file) return;
+    const filePath = api.other.getPathForFile(file);
+    if (!filePath) return;
+    setPickedFile({ path: filePath, name: file.name });
+  }, []);
+
+  const handleImport = useCallback(async () => {
+    if (!authData || !selectedAccount) return;
+
+    if (addSource === "file") {
+      if (!pickedFile) return;
+      setActionLoading("byFile");
+      try {
+        await api.skins.importByFile(
+          authData.uuid,
+          selectedAccount.type,
+          pickedFile.path,
+          skinType,
+        );
+        await refreshSkins();
+        closeAddDialog();
+      } catch {
+        toast.error(t("manageSkins.importError"));
+      } finally {
+        setActionLoading(null);
+      }
       return;
     }
-    if (!isInternetOnline) return;
+
+    const value = inputValue.trim();
+    if (!value || !isInternetOnline) return;
+
+    if (addSource === "nick") {
+      setActionLoading("byPlayer");
+      try {
+        await api.skins.importByNickname(
+          authData.uuid,
+          selectedAccount.type,
+          value,
+        );
+        await refreshSkins();
+        closeAddDialog();
+      } catch {
+        toast.error(t("manageSkins.importError"));
+      } finally {
+        setActionLoading(null);
+      }
+      return;
+    }
+
     setActionLoading("byLink");
     try {
       await api.skins.importByUrl(
         authData.uuid,
         selectedAccount.type,
-        inputValue.trim(),
+        value,
         skinType,
       );
       await refreshSkins();
-      setInputValue("");
+      closeAddDialog();
     } catch {
+      toast.error(t("manageSkins.importError"));
     } finally {
       setActionLoading(null);
     }
   }, [
     authData,
     selectedAccount,
-    inputValue,
+    addSource,
+    pickedFile,
     skinType,
+    inputValue,
     isInternetOnline,
     refreshSkins,
+    closeAddDialog,
+    t,
   ]);
-
-  const handleImportByNickname = useCallback(async () => {
-    if (!authData || !selectedAccount || !inputValue.trim()) {
-      return;
-    }
-    if (!isInternetOnline) return;
-    setActionLoading("byPlayer");
-    try {
-      await api.skins.importByNickname(
-        authData.uuid,
-        selectedAccount.type,
-        inputValue.trim(),
-      );
-      await refreshSkins();
-      setInputValue("");
-    } catch {
-    } finally {
-      setActionLoading(null);
-    }
-  }, [authData, selectedAccount, inputValue, isInternetOnline, refreshSkins]);
-
-  const handleImportByFile = useCallback(async () => {
-    if (!authData || !selectedAccount) {
-      return;
-    }
-    setActionLoading("byFile");
-    const filePaths = await api.other.openFileDialog(false, [
-      { name: "Skins", extensions: ["png"] },
-    ]);
-    if (!filePaths?.length) {
-      setActionLoading(null);
-      return;
-    }
-    await api.skins.importByFile(
-      authData.uuid,
-      selectedAccount?.type,
-      filePaths[0],
-      skinType,
-    );
-    await refreshSkins();
-    setActionLoading(null);
-  }, [authData, selectedAccount, skinType, refreshSkins]);
 
   const handleRename = useCallback(
     async (skinId: string, value = inputValue) => {
@@ -597,6 +649,20 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     [skinsData],
   );
 
+  const addPreviewUrl = useMemo(() => {
+    if (addSource === "file")
+      return pickedFile ? toFileUrl(pickedFile.path) : null;
+    if (addSource === "link") return debouncedInput || null;
+    return null;
+  }, [addSource, pickedFile, debouncedInput]);
+
+  const isImportDisabled = useMemo(() => {
+    if (actionLoading !== null) return true;
+    if (addSource === "file") return !pickedFile;
+    if (!inputValue.trim()) return true;
+    return !isInternetOnline;
+  }, [actionLoading, addSource, pickedFile, inputValue, isInternetOnline]);
+
   return (
     <Dialog
       open
@@ -632,7 +698,10 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
         onMouseDown={(event) => event.stopPropagation()}
       >
         <DialogHeader>
-          <DialogTitle>{t("manageSkins.title")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Shirt className="size-5" />
+            {t("manageSkins.title")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid h-[500px] max-h-[calc(100vh-9rem)] min-h-0 gap-4 md:grid-cols-[340px_340px_290px] md:justify-center">
@@ -907,121 +976,241 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
         </div>
 
         {skinsData && selectedAccount && (
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <Dialog
+            open={isAddDialogOpen}
+            onOpenChange={(open) => {
+              if (open) setIsAddDialogOpen(true);
+              else closeAddDialog();
+            }}
+          >
             <DialogContent
               aria-describedby={undefined}
               data-account-click-ignore="true"
-              className="sm:max-w-md"
+              className="sm:max-w-xl"
               onClick={(event) => event.stopPropagation()}
               onMouseDown={(event) => event.stopPropagation()}
             >
               <DialogHeader>
-                <DialogTitle>
-                  {skinType === "cape"
-                    ? t("manageSkins.addCape")
-                    : t("manageSkins.addSkin")}
+                <DialogTitle className="flex items-center justify-between gap-3 pr-6">
+                  <span className="flex items-center gap-2">
+                    <FilePlus2 className="size-5" />
+                    {skinType === "cape"
+                      ? t("manageSkins.addCape")
+                      : t("manageSkins.addSkin")}
+                  </span>
+                  {selectedAccount.type === "discord" && (
+                    <Tabs
+                      value={skinType}
+                      onValueChange={(value) => {
+                        setSkinType(value as "skin" | "cape");
+                        setInputValue("");
+                        setPickedFile(null);
+                        if (value === "cape" && addSource === "nick") {
+                          setAddSource("file");
+                        }
+                      }}
+                    >
+                      <TabsList>
+                        <TabsTrigger value="skin">
+                          {t("manageSkins.skin")}
+                        </TabsTrigger>
+                        <TabsTrigger value="cape">
+                          {t("manageSkins.cape")}
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  )}
                 </DialogTitle>
               </DialogHeader>
 
-              <div className="grid gap-4">
-                {selectedAccount.type === "discord" && (
-                  <RadioGroup
-                    className="grid gap-2"
-                    value={skinType}
-                    onValueChange={(value) => {
-                      setSkinType(value as "skin" | "cape");
-                      setInputValue("");
-                    }}
-                  >
-                    <Label
-                      htmlFor="import-type-skin"
-                      className="flex cursor-pointer items-center gap-2 rounded-lg border bg-card px-3 py-3 text-sm transition-colors hover:bg-accent has-[[data-state=checked]]:border-primary"
-                    >
-                      <RadioGroupItem id="import-type-skin" value="skin" />
-                      {t("manageSkins.skin")}
-                    </Label>
-                    <Label
-                      htmlFor="import-type-cape"
-                      className="flex cursor-pointer items-center gap-2 rounded-lg border bg-card px-3 py-3 text-sm transition-colors hover:bg-accent has-[[data-state=checked]]:border-primary"
-                    >
-                      <RadioGroupItem id="import-type-cape" value="cape" />
-                      {t("manageSkins.cape")}
-                    </Label>
-                  </RadioGroup>
-                )}
+              <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_180px]">
+                <Tabs
+                  className="min-w-0"
+                  value={addSource}
+                  onValueChange={(value) =>
+                    setAddSource(value as "file" | "link" | "nick")
+                  }
+                >
+                  <TabsList variant="line" className="w-full justify-start">
+                    <TabsTrigger value="file">
+                      <FileImage className="size-4" />
+                      {t("manageSkins.file")}
+                    </TabsTrigger>
+                    <TabsTrigger value="link">
+                      <Link className="size-4" />
+                      {t("manageSkins.link")}
+                    </TabsTrigger>
+                    {skinType === "skin" && (
+                      <TabsTrigger value="nick">
+                        <User className="size-4" />
+                        {t("manageSkins.nickname")}
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
 
-                <div className="grid gap-2">
-                  <Label>
-                    {skinType === "cape"
-                      ? t("manageSkins.link")
-                      : t("manageSkins.nickOrLink")}
-                  </Label>
-                  <Input
-                    value={inputValue}
-                    onChange={handleInputChange}
-                    disabled={actionLoading !== null}
-                  />
+                  <TabsContent value="file" className="mt-3">
+                    <button
+                      type="button"
+                      onClick={handlePickFile}
+                      disabled={actionLoading !== null}
+                      onDragEnter={(event) => {
+                        if (
+                          !Array.from(event.dataTransfer.types).includes(
+                            "Files",
+                          )
+                        )
+                          return;
+                        event.preventDefault();
+                        event.stopPropagation();
+                        dragCounterRef.current += 1;
+                        setIsDragOver(true);
+                      }}
+                      onDragOver={(event) => {
+                        if (
+                          !Array.from(event.dataTransfer.types).includes(
+                            "Files",
+                          )
+                        )
+                          return;
+                        event.preventDefault();
+                        event.stopPropagation();
+                        event.dataTransfer.dropEffect = "copy";
+                      }}
+                      onDragLeave={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        dragCounterRef.current = Math.max(
+                          0,
+                          dragCounterRef.current - 1,
+                        );
+                        if (dragCounterRef.current === 0) setIsDragOver(false);
+                      }}
+                      onDrop={handleDropFile}
+                      className={cn(
+                        "flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed bg-card px-4 py-8 text-center transition-colors hover:border-primary/50 hover:bg-accent/30",
+                        isDragOver && "border-primary bg-primary/10",
+                        actionLoading !== null &&
+                          "pointer-events-none opacity-60",
+                      )}
+                    >
+                      <Upload className="size-7 text-primary" />
+                      <span className="text-sm font-medium">
+                        {t("manageSkins.dropPng")}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {t("manageSkins.dropPngHint")}
+                      </span>
+                    </button>
+                    {pickedFile && (
+                      <div className="mt-2 flex items-center gap-2 rounded-lg border bg-card px-2.5 py-1.5">
+                        <FileImage className="size-4 shrink-0 text-primary" />
+                        <span
+                          className="min-w-0 flex-1 truncate text-xs"
+                          title={pickedFile.name}
+                        >
+                          {pickedFile.name}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={t("common.cancel")}
+                          className="shrink-0 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+                          onClick={() => setPickedFile(null)}
+                          disabled={actionLoading !== null}
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="link" className="mt-3 grid content-start gap-1.5">
+                    <Label>{t("manageSkins.link")}</Label>
+                    <Input
+                      value={inputValue}
+                      onChange={handleInputChange}
+                      disabled={actionLoading !== null}
+                      placeholder="https://…/skin.png"
+                    />
+                  </TabsContent>
+
+                  {skinType === "skin" && (
+                    <TabsContent value="nick" className="mt-3 grid content-start gap-1.5">
+                      <Label>{t("manageSkins.nickname")}</Label>
+                      <Input
+                        value={inputValue}
+                        onChange={handleInputChange}
+                        disabled={actionLoading !== null}
+                        placeholder="Notch"
+                      />
+                    </TabsContent>
+                  )}
+                </Tabs>
+
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <span className="text-xs text-muted-foreground">
+                    {t("manageSkins.preview")}
+                  </span>
+                  <div className="flex min-h-[200px] flex-1 items-center justify-center overflow-hidden rounded-xl border bg-muted/30 p-2">
+                    {addSource === "nick" ? (
+                      <div className="flex flex-col items-center gap-2 px-2 text-center">
+                        <User className="size-9 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">
+                          {t("manageSkins.nickNoPreview")}
+                        </span>
+                      </div>
+                    ) : addPreviewUrl ? (
+                      skinType === "cape" ? (
+                        selectedSkinEntry?.url ? (
+                          <SkinCanvas
+                            skinUrl={selectedSkinEntry.url}
+                            capeUrl={addPreviewUrl}
+                            width={150}
+                            height={200}
+                          />
+                        ) : (
+                          <img
+                            src={addPreviewUrl}
+                            alt=""
+                            className="h-full max-h-[200px] w-auto object-contain"
+                          />
+                        )
+                      ) : (
+                        <SkinCanvas
+                          skinUrl={addPreviewUrl}
+                          width={150}
+                          height={200}
+                        />
+                      )
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 px-2 text-center">
+                        <ImageIcon className="size-9 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">
+                          {t("manageSkins.previewHint")}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <DialogFooter>
                 <Button
                   variant="outline"
-                  onClick={() => setIsAddDialogOpen(false)}
+                  onClick={closeAddDialog}
                   disabled={actionLoading !== null}
                 >
                   {t("common.cancel")}
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button disabled={actionLoading !== null}>
-                      {actionLoading === "byFile" ||
-                      actionLoading === "byLink" ||
-                      actionLoading === "byPlayer" ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <FilePlus2 className="size-4" />
-                      )}
-                      {t("manageSkins.import")}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>
-                      {t("manageSkins.import")}
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      disabled={
-                        actionLoading !== null ||
-                        !isInternetOnline ||
-                        skinType === "cape" ||
-                        inputValue.trim() === ""
-                      }
-                      onSelect={handleImportByNickname}
-                    >
-                      <User className="size-4" />
-                      {t("manageSkins.importByNick")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={
-                        actionLoading !== null ||
-                        !isInternetOnline ||
-                        inputValue.trim() === ""
-                      }
-                      onSelect={handleImportByUrl}
-                    >
-                      <Link className="size-4" />
-                      {t("manageSkins.importByLink")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={actionLoading !== null}
-                      onSelect={handleImportByFile}
-                    >
-                      <FilePlus2 className="size-4" />
-                      {t("manageSkins.importByFile")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button onClick={handleImport} disabled={isImportDisabled}>
+                  {actionLoading === "byFile" ||
+                  actionLoading === "byLink" ||
+                  actionLoading === "byPlayer" ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Upload className="size-4" />
+                  )}
+                  {t("manageSkins.import")}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

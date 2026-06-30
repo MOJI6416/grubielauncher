@@ -1,6 +1,6 @@
 import { useAtom } from "jotai";
 import { useTranslation } from "react-i18next";
-import { Copy, Trash2 } from "lucide-react";
+import { Copy, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { errorLogAtom } from "@renderer/stores/atoms";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,10 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
     >
       <DialogContent aria-describedby={undefined} className="p-0 sm:max-w-lg">
         <DialogHeader className="px-5 pt-5">
-          <DialogTitle>{t("errorLog.title")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <TriangleAlert className="size-5" />
+            {t("errorLog.title")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="px-5">

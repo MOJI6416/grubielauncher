@@ -7,7 +7,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, ChevronRight, File, Folder, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronRight,
+  File,
+  Folder,
+  FolderTree,
+  Loader2,
+} from "lucide-react";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader } from "@/types/Loader";
@@ -166,7 +173,10 @@ export const SelectPaths = ({
         }}
       >
         <DialogHeader className="px-6 pt-6">
-          <DialogTitle>{t("selectPaths.title")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <FolderTree className="size-5" />
+            {t("selectPaths.title")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-2 px-6 pb-3">

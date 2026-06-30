@@ -264,7 +264,10 @@ export function Datapacks({
         }}
       >
         <DialogHeader className="border-b py-4 pr-12 pl-5">
-          <DialogTitle>{t("worlds.datapacks")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Package className="size-5" />
+            {t("worlds.datapacks")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 px-5 pb-4">

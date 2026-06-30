@@ -177,7 +177,10 @@ export function Export({
         }}
       >
         <DialogHeader className="px-5 pt-5">
-          <DialogTitle>{t("export.title")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <FolderArchive className="size-5" />
+            {t("export.title")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 px-5 pb-5">

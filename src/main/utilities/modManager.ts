@@ -9,10 +9,12 @@ import {
   IVersionDependency,
   ProjectType,
   Provider,
+  VersionReleaseType,
 } from "@/types/ModManager";
 import {
   IModpack as CurseForgeModpack,
   FileRelationType,
+  FileReleaseType,
   IFile,
   IMod,
   ModLoaderType,
@@ -126,7 +128,7 @@ export async function cfModpackToModpack(
               file.downloadUrl ||
               `blocked::${mod.links.websiteUrl}/download/${file.id}`,
             sha1: file.hashes.find((h) => h.algo == 1)?.value || "",
-            isServer: file.isServerPack ?? true,
+            isServer: true,
           },
         ],
       },
@@ -203,6 +205,12 @@ export function cfModToProject(mod: IMod): IProject {
     gallery: mod.screenshots.map((s) => ({
       ...s,
     })),
+    stats: {
+      downloads: mod.downloadCount,
+      follows: mod.thumbsUpCount,
+      dateCreated: mod.dateCreated,
+      dateModified: mod.dateModified,
+    },
   };
 }
 
@@ -236,6 +244,8 @@ export function mrProjectToProject(
     }
   }
 
+  const raw = project as any;
+
   return {
     url: `https://modrinth.com/${(project as any).project_type}/${(project as any).slug}`,
     description: (project as any).description,
@@ -249,6 +259,12 @@ export function mrProjectToProject(
     versions: [],
     body,
     gallery,
+    stats: {
+      downloads: raw.downloads,
+      follows: raw.follows ?? raw.followers,
+      dateCreated: raw.date_created ?? raw.published,
+      dateModified: raw.date_modified ?? raw.updated,
+    },
   };
 }
 
@@ -278,17 +294,29 @@ export function cfFileToVersion(
       })
       .filter((d) => d !== undefined) as IVersionDependency[],
     downloads: file.downloadCount,
+    releaseType: cfReleaseTypeToReleaseType(file.releaseType),
+    datePublished: file.fileDate,
+    gameVersions: (file.gameVersions || []).filter((v) => /^\d/.test(v)),
     files: [
       {
         filename:
           projectType != ProjectType.WORLD ? file.fileName : file.fileName,
         size: file.fileLength,
         url: file.downloadUrl || `blocked::${modUrl}/download/${file.id}`,
-        isServer: file.isServerPack ?? true,
+        isServer: true,
         sha1: file.hashes.find((h) => h.algo == 1)?.value || "",
       },
     ],
   };
+}
+
+function cfReleaseTypeToReleaseType(
+  releaseType: FileReleaseType | undefined,
+): VersionReleaseType | undefined {
+  if (releaseType == FileReleaseType.Release) return "release";
+  if (releaseType == FileReleaseType.Beta) return "beta";
+  if (releaseType == FileReleaseType.Alpha) return "alpha";
+  return undefined;
 }
 
 export function mrVersionToVersion(
@@ -315,6 +343,10 @@ export function mrVersionToVersion(
       })
       .filter((d) => d !== undefined) as IVersionDependency[],
     downloads: version.downloads,
+    releaseType: version.version_type as VersionReleaseType,
+    datePublished: version.date_published,
+    gameVersions: version.game_versions,
+    changelog: version.changelog || undefined,
     files: version.files
       .filter((f) => (version.files.length > 1 ? f.primary : true))
       .map((f) => ({

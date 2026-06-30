@@ -22,6 +22,7 @@ import {
   User,
   UserMinus,
   UserPlus,
+  Users,
   WifiOff,
   X,
 } from "lucide-react";
@@ -622,7 +623,10 @@ export function Accounts() {
       >
         <DialogContent aria-describedby={undefined} className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t("accounts.accountSelection")}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="size-5" />
+              {t("accounts.accountSelection")}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4">
@@ -711,7 +715,10 @@ export function Accounts() {
           }}
         >
           <DialogHeader>
-            <DialogTitle>{t("accounts.addingAccount")}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="size-5" />
+              {t("accounts.addingAccount")}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4">
@@ -895,7 +902,10 @@ export function Accounts() {
       >
         <DialogContent aria-describedby={undefined} className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{providerLabel("plain", t)}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="size-5" />
+              {providerLabel("plain", t)}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4">

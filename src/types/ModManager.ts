@@ -39,6 +39,14 @@ export interface IProject {
     description: string;
   }[];
   body: string;
+  stats?: IProjectStats;
+}
+
+export interface IProjectStats {
+  downloads?: number;
+  follows?: number;
+  dateCreated?: string;
+  dateModified?: string;
 }
 
 export interface ILocalProject {
@@ -95,7 +103,13 @@ export interface IVersion {
   dependencies: IVersionDependency[];
   downloads: number;
   files: ILocalFile[];
+  releaseType?: VersionReleaseType;
+  datePublished?: string;
+  gameVersions?: string[];
+  changelog?: string;
 }
+
+export type VersionReleaseType = "release" | "beta" | "alpha";
 
 export interface IVersionDependency {
   projectId: string;

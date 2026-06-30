@@ -12,8 +12,11 @@ import { useAtom, useSetAtom } from "jotai";
 import {
   accountAtom,
   accountsAtom,
+  addVersionImportPathAtom,
+  addVersionModalAtom,
   authDataAtom,
   consolesAtom,
+  fileDragOverAtom,
   friendRequestsAtom,
   friendSocketAtom,
   friendsAtom,
@@ -209,7 +212,7 @@ function App() {
   const [isCancellingInstall, setIsCancellingInstall] = useState(false);
   const isCancellingInstallRef = useLatestRef(isCancellingInstall);
   const [isInstallMinimized, setIsInstallMinimized] = useState(false);
-  const setInstallActive = useAtom(installActiveAtom)[1];
+  const [installActive, setInstallActive] = useAtom(installActiveAtom);
   const [isInstallPaused, setIsInstallPaused] = useState(false);
   const isInstallPausedRef = useLatestRef(isInstallPaused);
   const installTrackRef = useRef<{
@@ -233,8 +236,10 @@ function App() {
   } | null>(null);
   const pendingJoinRef = useRef<JoinFriendWorldParams | null>(null);
   const [dropImportPath, setDropImportPath] = useState<string | null>(null);
-  const [isFileDragOver, setIsFileDragOver] = useState(false);
-  const dragCounterRef = useRef(0);
+  const [isFileDragOver, setIsFileDragOver] = useAtom(fileDragOverAtom);
+  const setAddVersionImportPath = useAtom(addVersionImportPathAtom)[1];
+  const isAddVersionOpen = useAtom(addVersionModalAtom)[0];
+  const dragContextRef = useRef<"main" | "addVersion" | "blocked" | null>(null);
   const isJoiningWorldRef = useRef(false);
   const knownShareSessionsRef = useRef<Set<string> | null>(null);
   const previousShareLanDetectionRef = useRef<{
@@ -249,6 +254,8 @@ function App() {
   const { t, i18n } = useTranslation();
 
   const tRef = useLatestRef(t);
+  const isAddVersionOpenRef = useLatestRef(isAddVersionOpen);
+  const installActiveRef = useLatestRef(installActive);
   const selectedAccountRef = useLatestRef(selectedAccount);
   const settingsRef = useLatestRef(settings);
   const pathsRef = useLatestRef(paths);
@@ -479,32 +486,63 @@ function App() {
     const hasFiles = (event: DragEvent) =>
       Array.from(event.dataTransfer?.types || []).includes("Files");
 
-    const isInsideDialog = (event: DragEvent) =>
-      !!(event.target as HTMLElement | null)?.closest?.('[role="dialog"]');
+    const resolveDragContext = (): "main" | "addVersion" | "blocked" => {
+      if (installActiveRef.current) return "blocked";
+      const dialogs = document.querySelectorAll('[role="dialog"]');
+      const addVersionDialogs = document.querySelectorAll(
+        "[data-add-version-dialog]",
+      );
+      if (dialogs.length > addVersionDialogs.length) return "blocked";
+      if (addVersionDialogs.length > 0 || isAddVersionOpenRef.current)
+        return "addVersion";
+      return "main";
+    };
+
+    const endDrag = () => {
+      dragContextRef.current = null;
+      setIsFileDragOver(false);
+    };
+
+    const ensureContext = () => {
+      if (dragContextRef.current === null) {
+        dragContextRef.current = resolveDragContext();
+      }
+      return dragContextRef.current;
+    };
 
     const onDragEnter = (event: DragEvent) => {
-      if (!hasFiles(event) || isInsideDialog(event)) return;
+      if (!hasFiles(event)) return;
+      if (ensureContext() === "blocked") return;
       event.preventDefault();
-      dragCounterRef.current += 1;
       setIsFileDragOver(true);
     };
 
     const onDragOver = (event: DragEvent) => {
-      if (!hasFiles(event) || isInsideDialog(event)) return;
+      if (!hasFiles(event)) return;
       event.preventDefault();
+      if (ensureContext() === "blocked") return;
+      setIsFileDragOver(true);
     };
 
     const onDragLeave = (event: DragEvent) => {
-      if (!hasFiles(event) || isInsideDialog(event)) return;
-      dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
-      if (dragCounterRef.current === 0) setIsFileDragOver(false);
+      if (!hasFiles(event)) return;
+      if (
+        event.clientX <= 0 ||
+        event.clientY <= 0 ||
+        event.clientX >= window.innerWidth ||
+        event.clientY >= window.innerHeight
+      ) {
+        endDrag();
+      }
     };
 
     const onDrop = (event: DragEvent) => {
-      if (!hasFiles(event) || isInsideDialog(event)) return;
+      if (!hasFiles(event)) return;
       event.preventDefault();
-      dragCounterRef.current = 0;
-      setIsFileDragOver(false);
+      const context = dragContextRef.current;
+      endDrag();
+
+      if (context === "blocked" || context === null) return;
 
       const file = event.dataTransfer?.files?.[0];
       if (!file) return;
@@ -523,7 +561,11 @@ function App() {
       const filePath = api.other.getPathForFile(file);
       if (!filePath) return;
 
-      setDropImportPath(filePath);
+      if (context === "addVersion" && isAddVersionOpenRef.current) {
+        setAddVersionImportPath(filePath);
+      } else {
+        setDropImportPath(filePath);
+      }
     };
 
     window.addEventListener("dragenter", onDragEnter);
@@ -537,6 +579,7 @@ function App() {
       window.removeEventListener("dragleave", onDragLeave);
       window.removeEventListener("drop", onDrop);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -2012,6 +2055,7 @@ function App() {
         {inviteModpack && (
           <Suspense fallback={<LazyDialogFallback variant="wide" />}>
             <LazyAddVersion
+              dragHidden={isFileDragOver}
               closeModal={() => {
                 setInviteModpack(null);
                 pendingJoinRef.current = null;
@@ -2039,7 +2083,7 @@ function App() {
         )}
 
         {isFileDragOver && (
-          <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center bg-background/80 backdrop-blur-sm">
             <div className="rounded-xl border-2 border-dashed border-primary bg-card px-10 py-8 text-center shadow-lg">
               <p className="text-lg font-semibold">
                 {t("addVersion.dropTitle")}
@@ -2054,6 +2098,7 @@ function App() {
         {dropImportPath && (
           <Suspense fallback={<LazyDialogFallback variant="wide" />}>
             <LazyAddVersion
+              dragHidden={isFileDragOver}
               closeModal={() => setDropImportPath(null)}
               importFilePath={dropImportPath}
             />

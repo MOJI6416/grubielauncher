@@ -21,7 +21,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { FolderOpen, Loader2 } from "lucide-react";
+import { Earth, FolderOpen, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ILocalProject } from "@/types/ModManager";
 
@@ -114,7 +114,10 @@ export function Worlds({
         className="overflow-hidden p-0 sm:max-w-md"
       >
         <DialogHeader className="border-b py-4 pr-12 pl-5">
-          <DialogTitle>{t("worlds.title")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Earth className="size-5" />
+            {t("worlds.title")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="min-w-0 px-5 pb-4">

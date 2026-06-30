@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2, Loader2, RefreshCw, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, Wifi, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -63,7 +63,10 @@ export function ConnectivityModal({
     >
       <DialogContent className="flex max-h-[85vh] flex-col p-0 sm:max-w-xl">
         <DialogHeader className="px-5 pt-5">
-          <DialogTitle>{t("settings.connectivity.title")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Wifi className="size-5" />
+            {t("settings.connectivity.title")}
+          </DialogTitle>
           <DialogDescription>
             {t("settings.connectivity.description")}
           </DialogDescription>

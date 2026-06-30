@@ -13,7 +13,7 @@ import { IWorldStatsAggregate } from "@/types/World";
 import { useTranslation } from "react-i18next";
 import { formatDate, formatDay, formatTime } from "@renderer/utilities/date";
 import { Alert, AlertTitle } from "@/components/ui/alert";
-import { CircleAlert, Clock3 } from "lucide-react";
+import { ChartArea, CircleAlert, Clock3 } from "lucide-react";
 import type { ReactNode } from "react";
 
 export function VersionStatistics({
@@ -59,7 +59,10 @@ export function VersionStatistics({
         className="overflow-hidden sm:max-w-[520px]"
       >
         <DialogHeader>
-          <DialogTitle>{t("versionStatistics.title")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <ChartArea className="size-5" />
+            {t("versionStatistics.title")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="-mr-1 min-w-0 max-h-[calc(100vh-8rem)] overflow-y-auto pr-1">

@@ -51,22 +51,35 @@ export function VersionHeaderCard({
   const { t } = useTranslation();
   const versionNameErrorId = "edit-version-name-error";
 
+  const logoInner = image ? (
+    <img src={image} alt="logo" className="h-full w-full object-cover" />
+  ) : (
+    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+      <ImagePlus className="size-5" />
+    </div>
+  );
+
   return (
     <div className="grid gap-3 rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
       <div className="flex min-w-0 items-start gap-3">
-        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border bg-muted/40">
-          {image ? (
-            <img
-              src={image}
-              alt="logo"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+        {canEditLogo ? (
+          <button
+            type="button"
+            className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border bg-muted/40 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none"
+            disabled={isLoading}
+            onClick={onPickLogo}
+            aria-label={t("versions.changeLogo")}
+          >
+            {logoInner}
+            <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100">
               <ImagePlus className="size-5" />
-            </div>
-          )}
-        </div>
+            </span>
+          </button>
+        ) : (
+          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border bg-muted/40">
+            {logoInner}
+          </div>
+        )}
 
         <div className="grid min-w-0 flex-1 gap-2">
           {editName ? (
@@ -154,30 +167,16 @@ export function VersionHeaderCard({
             </Button>
           )}
 
-          {canEditLogo && (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                disabled={isLoading}
-                onClick={onPickLogo}
-              >
-                <ImagePlus />
-              </Button>
-
-              {image && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  disabled={isLoading}
-                  onClick={onRemoveLogo}
-                >
-                  <ImageMinus />
-                </Button>
-              )}
-            </>
+          {canEditLogo && image && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              disabled={isLoading}
+              onClick={onRemoveLogo}
+            >
+              <ImageMinus />
+            </Button>
           )}
         </div>
       </div>

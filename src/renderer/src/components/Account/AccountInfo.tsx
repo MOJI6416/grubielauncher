@@ -12,6 +12,7 @@ import {
   Settings2,
   Shirt,
   Sparkles,
+  UserRound,
   Users,
 } from "lucide-react";
 import {
@@ -540,7 +541,10 @@ export default function AccountInfo({
           }}
         >
           <DialogHeader>
-            <DialogTitle>{t("accountInfo.title")}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <UserRound className="size-5" />
+              {t("accountInfo.title")}
+            </DialogTitle>
           </DialogHeader>
 
           <TooltipProvider>
@@ -566,7 +570,7 @@ export default function AccountInfo({
                       </AvatarFallback>
                     </Avatar>
                     {isOwner && (
-                      <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/45 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/55 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
                         {t("common.edit")}
                       </span>
                     )}

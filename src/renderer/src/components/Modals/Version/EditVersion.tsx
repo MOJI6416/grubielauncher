@@ -35,6 +35,7 @@ import {
   ScanLine,
   Server,
   ServerCog,
+  Settings,
   Share2,
   SquareTerminal,
   Trash,
@@ -74,7 +75,12 @@ import {
   checkVersionName,
 } from "@renderer/utilities/version";
 import { renameVersionOrganizeKey } from "@renderer/utilities/versionOrganize";
+import {
+  getLocalPathFromFileUrl,
+  toFileUrl,
+} from "@renderer/utilities/exportVersion";
 import { Mods } from "@renderer/classes/Mods";
+import axios from "axios";
 import { toast } from "sonner";
 import { LazyDialogFallback } from "@renderer/components/LazyDialogFallback";
 import {
@@ -532,27 +538,34 @@ export function EditVersion({
     }
 
     if (!isDownloadedVersion && isLogoChanged) {
-      const filename = "logo.png";
-      const filePath = await api.path.join(version.versionPath, filename);
+      try {
+        const filename = "logo.png";
+        const filePath = await api.path.join(version.versionPath, filename);
 
-      let fileUrl = "";
-      if (image) {
-        const newFile = await fetch(image).then((r) => r.blob());
-        await api.fs.writeFile(
-          filePath,
-          new Uint8Array(await newFile.arrayBuffer()),
-          "binary",
-        );
+        let fileUrl = "";
+        if (image) {
+          if (image.startsWith("file://")) {
+            await api.fs.copy(getLocalPathFromFileUrl(image), filePath);
+          } else {
+            const response = await axios.get(image, {
+              responseType: "arraybuffer",
+            });
+            const buffer = api.file.fromBuffer(response.data);
+            await api.fs.writeFile(filePath, buffer, "binary");
+          }
 
-        fileUrl = `file://${filePath}?t=${new Date().getTime()}`;
+          fileUrl = toFileUrl(filePath);
+          setImage(fileUrl);
+        } else {
+          await api.fs.rimraf(filePath);
+        }
 
-        setImage(fileUrl);
-      } else {
-        await api.fs.rimraf(filePath);
+        version.version.image = fileUrl;
+        isShare = true;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        toast.error(t("versions.updateError"), { description: message });
       }
-
-      version.version.image = fileUrl;
-      isShare = true;
     }
 
     if (quickConnectIp !== version.version.quickServer) {
@@ -652,7 +665,10 @@ export function EditVersion({
         >
           <TooltipProvider delayDuration={300}>
             <DialogHeader className="px-5 pt-5">
-              <DialogTitle>{t("versions.versionSettings")}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Settings className="size-5" />
+                {t("versions.versionSettings")}
+              </DialogTitle>
             </DialogHeader>
 
             <div className="grid max-h-[calc(90vh-9rem)] gap-4 overflow-y-auto px-5">

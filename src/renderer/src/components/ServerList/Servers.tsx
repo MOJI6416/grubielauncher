@@ -38,6 +38,7 @@ import {
   PackageMinus,
   PackageSearch,
   Plus,
+  Server,
   Trash,
   X,
   Zap,
@@ -170,7 +171,10 @@ export function Servers({
             <>
               <DialogHeader className="border-b py-4 pr-12 pl-5">
                 <div className="flex items-center justify-between gap-3">
-                  <DialogTitle>{t("servers.title")}</DialogTitle>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Server className="size-5" />
+                    {t("servers.title")}
+                  </DialogTitle>
                   {!isDownloadedVersion && isOwnerVersion && (
                     <Button
                       size="sm"

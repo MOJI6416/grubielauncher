@@ -1431,8 +1431,11 @@ export function Versions({
         >
           <DialogContent className="sm:max-w-sm">
             <DialogHeader>
-              <DialogTitle className="truncate">
-                {t("versions.tags.title", { name: tagsEditor.name })}
+              <DialogTitle className="flex min-w-0 items-center gap-2">
+                <Tag className="size-5 shrink-0" />
+                <span className="truncate">
+                  {t("versions.tags.title", { name: tagsEditor.name })}
+                </span>
               </DialogTitle>
             </DialogHeader>
 

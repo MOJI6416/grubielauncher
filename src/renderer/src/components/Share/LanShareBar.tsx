@@ -276,7 +276,10 @@ export function LanShareModal({
     >
       <DialogContent aria-describedby={undefined} className="gap-0 overflow-hidden p-0 sm:max-w-lg">
         <DialogHeader className="border-b px-5 py-4 pr-12">
-          <DialogTitle>{t("share.title")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Wifi className="size-5" />
+            {t("share.title")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 p-5">

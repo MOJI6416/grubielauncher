@@ -17,6 +17,7 @@ import {
   ImageOff,
   ImagePlus,
   Loader2,
+  PackagePlus,
   PackageSearch,
   Server,
   SquareTerminal,
@@ -87,7 +88,10 @@ import {
   parsePackShareCode,
   withPackRequestTimeout,
 } from "@renderer/utilities/packShare";
-import { getLocalPathFromFileUrl } from "@renderer/utilities/exportVersion";
+import {
+  getLocalPathFromFileUrl,
+  toFileUrl,
+} from "@renderer/utilities/exportVersion";
 import { resolveImportedLoaderVersion } from "@/shared/loaderVersions";
 import grubieIcon from "@renderer/assets/icon.png";
 import prismIcon from "@renderer/assets/launchers/prism.svg";
@@ -166,17 +170,6 @@ function getImageExtension(source: string, contentType?: string) {
   return "png";
 }
 
-function toFileUrl(filePath: string) {
-  const normalized = filePath.replace(/\\/g, "/");
-  const withLeadingSlash = /^[a-zA-Z]:/.test(normalized)
-    ? `/${normalized}`
-    : normalized.startsWith("/")
-      ? normalized
-      : `/${normalized}`;
-
-  return `file://${encodeURI(withLeadingSlash)}?t=${Date.now()}`;
-}
-
 function rewriteImportedLocalPaths(
   mods: ILocalProject[],
   importFolderPath: string,
@@ -207,11 +200,13 @@ export function AddVersion({
   modpack,
   successCallback,
   importFilePath,
+  dragHidden,
 }: {
   closeModal: () => void;
   modpack?: IModpack;
   successCallback?: () => void;
   importFilePath?: string;
+  dragHidden?: boolean;
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState<
@@ -1003,13 +998,14 @@ export function AddVersion({
   return (
     <>
       <Dialog
-        open={!(isLoading && isInstallActive)}
+        open={!(isLoading && isInstallActive) && !dragHidden}
         onOpenChange={(open) => {
           if (open || isLoading || hasNestedDialog) return;
           closeWithImportCleanup();
         }}
       >
         <DialogContent
+          data-add-version-dialog="true"
           className="max-h-[90vh] overflow-hidden p-0 sm:max-w-lg"
           onClick={(event) => event.stopPropagation()}
           onEscapeKeyDown={(event) => {
@@ -1020,7 +1016,10 @@ export function AddVersion({
           }}
         >
           <DialogHeader className="px-5 pt-5">
-            <DialogTitle>{t("versions.addingVersion")}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <PackagePlus className="size-5" />
+              {t("versions.addingVersion")}
+            </DialogTitle>
           </DialogHeader>
 
           <div
@@ -1098,7 +1097,7 @@ export function AddVersion({
                                   <button
                                     type="button"
                                     disabled={isLoading}
-                                    className="absolute inset-0 flex items-center justify-center bg-black/65 px-1 text-[10px] text-white opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-0"
+                                    className="absolute inset-0 flex items-center justify-center bg-black/55 px-1 text-[10px] text-white opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-0"
                                     onClick={() => setImage("")}
                                   >
                                     {t("common.delete")}

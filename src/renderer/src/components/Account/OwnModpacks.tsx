@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { accountAtom } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
 import {
+  Boxes,
   Copy,
   Download,
   ImageOff,
@@ -103,7 +104,10 @@ export function OwnModpacks({
         >
           <DialogHeader>
             <div className="flex min-w-0 items-center gap-2 pr-8">
-              <DialogTitle>{t("ownModpacks.title")}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2 pr-0">
+                <Boxes className="size-5" />
+                {t("ownModpacks.title")}
+              </DialogTitle>
               {modpacks.length > 0 && (
                 <Badge variant="outline" className="tabular-nums">
                   {modpacks.length}

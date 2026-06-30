@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Save, TriangleAlert } from "lucide-react";
+import { Save, SquareTerminal, TriangleAlert } from "lucide-react";
 import { IArguments } from "@/types/IArguments";
 import { useAtom } from "jotai";
 import {
@@ -56,7 +56,10 @@ export function Arguments({
         onClick={(event) => event.stopPropagation()}
       >
         <DialogHeader className="px-5 pt-5">
-          <DialogTitle>{t("arguments.title")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <SquareTerminal className="size-5" />
+            {t("arguments.title")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 px-5 pb-5">

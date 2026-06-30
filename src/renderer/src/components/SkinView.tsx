@@ -21,7 +21,7 @@ import {
   WalkingAnimation,
 } from "skinview3d";
 import minecraftFontUrl from "skinview3d/assets/minecraft.woff2";
-import { Loader2 } from "lucide-react";
+import { Loader2, Shirt } from "lucide-react";
 
 type Animation = "null" | "idle" | "walk" | "run" | "fly";
 
@@ -131,7 +131,10 @@ export function SkinView({
     >
       <DialogContent aria-describedby={undefined} className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{t("skinView.title")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Shirt className="size-5" />
+            {t("skinView.title")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 md:grid-cols-[240px_1fr]">

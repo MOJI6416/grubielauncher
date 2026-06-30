@@ -84,6 +84,7 @@ export interface IFile {
   isAvailable: boolean
   displayName: string
   fileName: string
+  releaseType: FileReleaseType
   hashes: IFileHash[]
   fileDate: string
   fileLength: number

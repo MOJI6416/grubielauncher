@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Compass, FileBox, Loader2 } from 'lucide-react'
+import { Compass, FileBox, Loader2, RefreshCw } from 'lucide-react'
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -80,7 +80,10 @@ export function UPModal({
         }}
       >
         <DialogHeader className="border-b py-4 pr-12 pl-5">
-          <DialogTitle>{t('modManager.updatingMods')}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <RefreshCw className="size-5" />
+            {t('modManager.updatingMods')}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="min-h-0 px-5 py-4">

@@ -23,6 +23,17 @@ export function getLocalPathFromFileUrl(url?: string) {
   }
 }
 
+export function toFileUrl(filePath: string) {
+  const normalized = filePath.replace(/\\/g, "/");
+  const withLeadingSlash = /^[a-zA-Z]:/.test(normalized)
+    ? `/${normalized}`
+    : normalized.startsWith("/")
+      ? normalized
+      : `/${normalized}`;
+
+  return `file://${encodeURI(withLeadingSlash)}?t=${Date.now()}`;
+}
+
 export function sanitizeExportVersion(version: IVersionConf): IVersionConf {
   return {
     ...version,

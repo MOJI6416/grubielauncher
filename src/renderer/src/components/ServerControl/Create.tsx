@@ -21,7 +21,7 @@ import {
   settingsAtom,
 } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
-import { HardDriveDownload, Loader2 } from "lucide-react";
+import { HardDriveDownload, Loader2, ServerCog } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ServerGame } from "@renderer/classes/ServerGame";
@@ -194,7 +194,10 @@ export function CreateServer({
         }}
       >
         <DialogHeader className="px-5 pt-5">
-          <DialogTitle>{t("versions.createingServer")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <ServerCog className="size-5" />
+            {t("versions.createingServer")}
+          </DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 px-5 pb-5">
           {serverCores.length ? (

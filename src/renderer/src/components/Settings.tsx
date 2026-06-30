@@ -20,6 +20,7 @@ import {
   MemoryStick,
   Palette,
   Save,
+  Settings as SettingsIcon,
   TriangleAlert,
   Volume2,
   Wrench,
@@ -186,7 +187,10 @@ export function Settings({
           <DialogHeader>
             <div className="flex items-start justify-between gap-4 pr-8">
               <div className="grid gap-1">
-                <DialogTitle>{t("settings.title")}</DialogTitle>
+                <DialogTitle className="flex items-center gap-2">
+                  <SettingsIcon className="size-5" />
+                  {t("settings.title")}
+                </DialogTitle>
               </div>
               {version ? (
                 <Badge asChild variant="secondary" className="font-mono tabular-nums">

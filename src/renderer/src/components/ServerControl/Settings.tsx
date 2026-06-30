@@ -53,7 +53,7 @@ function SettingsSection({
 }) {
   return (
     <Card className="gap-0 py-0 shadow-none">
-      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b px-4 py-3">
+      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b px-4 py-3 [.border-b]:pb-3">
         <div className="flex min-w-0 items-center gap-2">
           <span className="text-muted-foreground">{icon}</span>
           <p className="truncate text-sm font-medium">{title}</p>
@@ -324,7 +324,10 @@ export function ServerSettings({
           }}
         >
             <DialogHeader className="px-5 pt-5">
-              <DialogTitle>{t("settings.title")}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <SlidersHorizontal className="size-5" />
+                {t("settings.title")}
+              </DialogTitle>
             </DialogHeader>
 
             <ScrollArea className="max-h-[min(70vh,620px)]">

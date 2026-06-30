@@ -36,6 +36,7 @@ import {
   RotateCcw,
   Search,
   Square,
+  SquareChevronRight,
   Terminal,
   Trash2,
 } from "lucide-react";
@@ -269,7 +270,10 @@ export function Console({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="grid h-[min(40rem,calc(100vh-4rem))] w-[min(64rem,calc(100vw-2rem))] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:max-w-none">
         <DialogHeader className="border-b px-5 py-4 pr-12">
-          <DialogTitle>{t("console.title")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <SquareChevronRight className="size-5" />
+            {t("console.title")}
+          </DialogTitle>
           <DialogDescription className="sr-only">
             {t("console.title")}
           </DialogDescription>
