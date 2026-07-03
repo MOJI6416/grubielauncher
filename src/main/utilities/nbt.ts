@@ -6,14 +6,15 @@ const serverInfoSchema = {
   name: TagType.String,
   ip: TagType.String,
   icon: TagType.String,
-  acceptTextures: TagType.Byte
+  acceptTextures: TagType.Byte,
+  hidden: TagType.Byte
 }
 
 const serversDatSchema = {
   servers: [serverInfoSchema]
 }
 
-function normalizeAcceptTextures(value: unknown): number | null {
+function normalizeByteFlag(value: unknown): number | null {
   return value === 0 || value === 1 ? value : null
 }
 
@@ -26,15 +27,21 @@ export async function writeNBT(servers: IServer[], path: string) {
           ip: string
           icon: string
           acceptTextures?: number
+          hidden?: number
         } = {
           name: s.name,
           ip: s.ip,
           icon: s.icon || ''
         }
 
-        const acceptTextures = normalizeAcceptTextures(s.acceptTextures)
+        const acceptTextures = normalizeByteFlag(s.acceptTextures)
         if (acceptTextures !== null) {
           server.acceptTextures = acceptTextures
+        }
+
+        const hidden = normalizeByteFlag(s.hidden)
+        if (hidden !== null) {
+          server.hidden = hidden
         }
 
         return server
@@ -63,7 +70,8 @@ export async function readNBT(path: string) {
       name: s.name,
       ip: s.ip,
       icon: s.icon,
-      acceptTextures: normalizeAcceptTextures(s.acceptTextures)
+      acceptTextures: normalizeByteFlag(s.acceptTextures),
+      hidden: normalizeByteFlag(s.hidden)
     }))
   } catch (err) {
     console.error(`Error reading NBT file:`, err)

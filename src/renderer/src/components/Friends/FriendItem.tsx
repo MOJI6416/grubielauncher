@@ -18,6 +18,7 @@ import {
   CalendarClock,
   Earth,
   Gamepad2,
+  Headphones,
   Mail,
   Mailbox,
   Play,
@@ -47,6 +48,7 @@ interface FriendItemProps {
   onSelect: () => void;
   onJoin: () => void;
   onInvite: () => void;
+  onInviteToVoice?: () => void;
   onViewAccount: () => void;
   onOpenChat: () => void;
   onViewSkin: () => void;
@@ -65,6 +67,7 @@ export function FriendItem({
   onSelect,
   onJoin,
   onInvite,
+  onInviteToVoice,
   onViewAccount,
   onOpenChat,
   onViewSkin,
@@ -190,7 +193,7 @@ export function FriendItem({
                 tabIndex={0}
                 aria-label={t("friends.invite")}
                 title={t("friends.invite")}
-                className="flex h-7 items-center gap-1.5 rounded-md bg-secondary px-2.5 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
+                className="flex h-7 items-center gap-1.5 rounded-md border bg-background/70 px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
                 onPointerDown={(event) => {
                   event.stopPropagation();
                 }}
@@ -261,6 +264,16 @@ export function FriendItem({
           <Send size={18} />
           {t("friends.invite")}
         </DropdownMenuItem>
+
+        {onInviteToVoice && (
+          <DropdownMenuItem
+            disabled={!friend.isOnline}
+            onSelect={onInviteToVoice}
+          >
+            <Headphones size={18} />
+            {t("groups.inviteToVoice")}
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuItem onSelect={onViewAccount}>
           <User size={18} />

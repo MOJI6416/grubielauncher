@@ -8,7 +8,7 @@ import { io, Socket } from "socket.io-client";
 import { Loader2, Trophy } from "lucide-react";
 import type { IFriendRequest } from "./components/Friends/Friends";
 import { IUser } from "../../types/IUser";
-import { useAtom, useSetAtom } from "jotai";
+import { getDefaultStore, useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   accountAtom,
   accountsAtom,
@@ -20,7 +20,14 @@ import {
   friendRequestsAtom,
   friendSocketAtom,
   friendsAtom,
+  groupInvitesAtom,
+  groupUnreadsAtom,
+  groupsAtom,
+  saveGroupUnreads,
   isFriendsConnectedAtom,
+  mutedGroupsAtom,
+  openGroupChatIdAtom,
+  voiceCallAtom,
   isRunningAtom,
   isShareModalOpenAtom,
   installActiveAtom,
@@ -52,6 +59,20 @@ import {
 import { LANGUAGES, normalizeSettings, TSettings } from "@/types/Settings";
 import { IAccountConf, IAuth } from "@/types/Account";
 import { IFriend, IUpdateStatus } from "@/types/IFriend";
+import {
+  IGroup,
+  IGroupInvite,
+  INITIAL_VOICE_CALL,
+  IVoiceCallPeer,
+  IVoiceTokenResponse,
+} from "@/types/Voice";
+import { voiceConnect } from "./utilities/voiceClient";
+import { groupJoinErrorKey } from "./utilities/groupJoin";
+import {
+  startCallSound,
+  stopCallSound,
+} from "./utilities/voiceCallSounds";
+import { VoiceCallOverlay } from "./components/Voice/VoiceCallOverlay";
 import { evaluateAchievements } from "@renderer/utilities/achievements";
 import { IServer } from "@/types/ServersList";
 import { IConsole } from "@/types/Console";
@@ -70,10 +91,8 @@ import {
 } from "./utilities/version";
 import { supportsQuickPlayMultiplayer } from "./utilities/versionPure";
 import { Mods } from "./classes/Mods";
-import { DownloaderFailuresInfo, DownloaderInfo } from "@/types/Downloader";
-import { InstallationProgress } from "./components/InstallationProgress";
-import { InstallationMiniBar } from "./components/InstallationMiniBar";
-import { DownloadFailuresModal } from "./components/DownloadFailuresModal";
+import { InstallationCenter } from "./components/InstallationCenter";
+import { VoiceCallBar } from "./components/Voice/VoiceCallBar";
 import { BACKEND_URL } from "@/shared/config";
 import { getShareErrorText } from "./utilities/share";
 import { recordError, showErrorToast } from "./utilities/errorToast";
@@ -83,7 +102,6 @@ import {
   isAccountSessionRefreshError,
 } from "./utilities/accountSession";
 import { jwtDecode } from "jwt-decode";
-import { VersionInstallProgress } from "@/types/InstallationProgress";
 import { GameInvite } from "@/types/GameInvite";
 import { IModpack } from "@/types/Backend";
 import { toast } from "sonner";
@@ -102,6 +120,7 @@ import {
   readLauncherState,
   writeLauncherState,
 } from "./utilities/launcherState";
+import { refreshActiveFriendShares } from "./utilities/friendShares";
 import {
   canCurrentAccountManageShare,
   getShareAccountKey,
@@ -172,6 +191,15 @@ function App() {
 
   const [friendSocket, setFriendSocket] = useAtom(friendSocketAtom);
   const setFriends = useSetAtom(friendsAtom);
+  const setGroups = useSetAtom(groupsAtom);
+  const setGroupInvites = useSetAtom(groupInvitesAtom);
+  const setGroupUnreads = useSetAtom(groupUnreadsAtom);
+  const openGroupChatId = useAtomValue(openGroupChatIdAtom);
+  const openGroupChatIdRef = useLatestRef(openGroupChatId);
+  const [voiceCall, setVoiceCall] = useAtom(voiceCallAtom);
+  const voiceCallRef = useLatestRef(voiceCall);
+  const mutedGroups = useAtomValue(mutedGroupsAtom);
+  const mutedGroupsRef = useLatestRef(mutedGroups);
   const [_, setFriendRequests] = useAtom(friendRequestsAtom);
   const [selectedFriend, setSelectedFriend] = useAtom(selectedFriendAtom);
   const [localFriends, setLocalFriends] = useAtom(localFriendsAtom);
@@ -192,7 +220,7 @@ function App() {
   const [isUpdateModal, setIsUpdateModal] = useState(false);
   const [servers, setServers] = useState<IServer[]>([]);
   const [authData] = useAtom(authDataAtom);
-  const [consoles, setConsoles] = useAtom(consolesAtom);
+  const setConsoles = useSetAtom(consolesAtom);
   const [versions, setVersions] = useAtom(versionsAtom);
   const [versionsLoaded, setVersionsLoaded] = useAtom(versionsLoadedAtom);
   const [shareState, setShareState] = useAtom(shareStateAtom);
@@ -204,22 +232,7 @@ function App() {
 
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>([]);
   const [isBlockedMods, setIsBlockedMods] = useState(false);
-  const [downloder, setDownloader] = useState<DownloaderInfo | null>(null);
-  const [downloadFailures, setDownloadFailures] =
-    useState<DownloaderFailuresInfo | null>(null);
-  const [installProgress, setInstallProgress] =
-    useState<VersionInstallProgress | null>(null);
-  const [isCancellingInstall, setIsCancellingInstall] = useState(false);
-  const isCancellingInstallRef = useLatestRef(isCancellingInstall);
-  const [isInstallMinimized, setIsInstallMinimized] = useState(false);
-  const [installActive, setInstallActive] = useAtom(installActiveAtom);
-  const [isInstallPaused, setIsInstallPaused] = useState(false);
-  const isInstallPausedRef = useLatestRef(isInstallPaused);
-  const installTrackRef = useRef<{
-    startedAt: number;
-    doneSeen: boolean;
-    percent: number;
-  } | null>(null);
+  const installActive = useAtomValue(installActiveAtom);
   const [incomingInvite, setIncomingInvite] = useState<GameInvite | null>(null);
   const [inviteModpack, setInviteModpack] = useState<IModpack | null>(null);
   const [isJoiningInvite, setIsJoiningInvite] = useState(false);
@@ -262,12 +275,51 @@ function App() {
   const selectedVersionRef = useLatestRef(selectedVersion);
   const accountsRef = useLatestRef(accounts);
   const authDataRef = useLatestRef(authData);
-  const consolesRef = useLatestRef(consoles);
   const versionsRef = useLatestRef(versions);
   const friendSocketRef = useLatestRef(friendSocket);
   const selectedFriendRef = useLatestRef(selectedFriend);
   const localFriendsRef = useLatestRef(localFriends);
   const serversRef = useLatestRef(servers);
+
+  useEffect(() => {
+    if (!settings?.devMode) return;
+
+    const describe = (value: unknown): string => {
+      if (value instanceof Error) return value.message;
+      try {
+        return typeof value === "string" ? value : JSON.stringify(value);
+      } catch {
+        return String(value);
+      }
+    };
+
+    const onError = (event: ErrorEvent) => {
+      toast.error(`[devMode] ${event.message}`, { duration: 12000 });
+    };
+    const onRejection = (event: PromiseRejectionEvent) => {
+      toast.error(`[devMode] ${describe(event.reason).slice(0, 300)}`, {
+        duration: 12000,
+      });
+    };
+
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, [settings?.devMode]);
+
+  const loadGroups = useCallback(async () => {
+    const token = selectedAccountRef.current?.accessToken;
+    if (!token) {
+      setGroups([]);
+      return;
+    }
+
+    const groups = await api.backend.groupsList(token);
+    if (groups) setGroups(groups);
+  }, [setGroups, selectedAccountRef]);
 
   useEffect(() => {
     const addVersionPreload = window.setTimeout(() => {
@@ -610,6 +662,27 @@ function App() {
         return;
       }
 
+      if (payload.type === "groupJoin") {
+        void api.other.restoreWindow();
+        const token = selectedAccountRef.current?.accessToken;
+        if (!token) {
+          toast.error(tRef.current("groups.codeNotFound"));
+          return;
+        }
+
+        const group = await api.backend.groupJoinByCode(token, payload.code);
+        if (!group || typeof group === "string") {
+          toast.error(tRef.current(groupJoinErrorKey(group ?? null)));
+          return;
+        }
+
+        toast.success(
+          tRef.current("groups.joined", { group: group.name }),
+        );
+        void loadGroups();
+        return;
+      }
+
       if (payload.type !== "pack") return;
 
       try {
@@ -634,7 +707,7 @@ function App() {
         toast.error(tRef.current("addVersion.fromServer.notFound"));
       }
     });
-  }, [selectedAccountRef, tRef]);
+  }, [loadGroups, selectedAccountRef, tRef]);
 
   const tryDeepLaunch = useEventCallback(() => {
     const pending = pendingDeepLaunchRef.current;
@@ -965,47 +1038,6 @@ function App() {
       friendSocketRef.current?.emit("friendUpdate", { ...data });
     });
 
-    const unsubscribeDownloaderInfo = api.events.onDownloaderInfo((info) => {
-      setDownloader(info);
-    });
-
-    const unsubscribeDownloaderFailures = api.events.onDownloaderFailures(
-      (info) => {
-        setDownloadFailures(info);
-      },
-    );
-
-    const unsubscribeVersionInstallProgress =
-      api.events.onVersionInstallProgress((info) => {
-        if (info?.stage === "preparing") {
-          setIsCancellingInstall(false);
-          installTrackRef.current = {
-            startedAt: Date.now(),
-            doneSeen: false,
-            percent: 0,
-          };
-        }
-        if (info && installTrackRef.current) {
-          installTrackRef.current.percent = info.progressPercent;
-          if (info.stage === "done") installTrackRef.current.doneSeen = true;
-        }
-        if (!info) {
-          setIsCancellingInstall(false);
-          const track = installTrackRef.current;
-          installTrackRef.current = null;
-          if (
-            track &&
-            track.doneSeen &&
-            track.percent >= 90 &&
-            !isCancellingInstallRef.current &&
-            Date.now() - track.startedAt > 15000
-          ) {
-            playSound("success");
-          }
-        }
-        setInstallProgress(info);
-      });
-
     return () => {
       unsubscribePlaytimeRecorded();
       unsubscribeConsoleStatus();
@@ -1015,9 +1047,6 @@ function App() {
       unsubscribeUpdateFailed();
       unsubscribeCrashAnalysis();
       unsubscribeFriendUpdate();
-      unsubscribeDownloaderInfo();
-      unsubscribeDownloaderFailures();
-      unsubscribeVersionInstallProgress();
     };
   }, [
     setConsoles,
@@ -1026,33 +1055,6 @@ function App() {
     setOwnPresence,
     flushPlaytimeSyncQueue,
   ]);
-
-  useEffect(() => {
-    if (
-      installProgress?.operation !== "integrity" ||
-      installProgress.stage !== "done"
-    ) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setInstallProgress((current) =>
-        current === installProgress ? null : current,
-      );
-      setDownloader(null);
-      setIsCancellingInstall(false);
-    }, 900);
-
-    return () => window.clearTimeout(timer);
-  }, [installProgress]);
-
-  useEffect(() => {
-    setInstallActive(Boolean(installProgress));
-    if (!installProgress) {
-      setIsInstallMinimized(false);
-      setIsInstallPaused(false);
-    }
-  }, [installProgress, setInstallActive]);
 
   useEffect(() => {
     setIsFriends(false);
@@ -1064,6 +1066,8 @@ function App() {
       friendSocketRef.current?.disconnect();
       setFriendSocket(undefined);
       setIsFriendsConnected(false);
+      setGroups([]);
+      setGroupInvites([]);
       setOwnPresence({
         versionName: "",
         versionCode: "",
@@ -1086,10 +1090,15 @@ function App() {
     knownShareSessionsRef.current = null;
     const handleSharePresence = () => void checkFriendShares();
     const requestFriends = () => socketIo.emit("getFriends");
+    const requestGroups = () => {
+      socketIo.emit("getGroupInvites");
+      void loadGroups();
+    };
     const handleFriendsList = (data: { friends: IFriend[] }) =>
       setFriends(Array.isArray(data?.friends) ? data.friends : []);
     socketIo.on("connect", handleSharePresence);
     socketIo.on("connect", requestFriends);
+    socketIo.on("connect", requestGroups);
     socketIo.on("friends", handleFriendsList);
     socketIo.on("friendUpdate", handleSharePresence);
     const shareWatchInterval = setInterval(() => {
@@ -1100,6 +1109,7 @@ function App() {
       clearInterval(shareWatchInterval);
       socketIo.off("connect", handleSharePresence);
       socketIo.off("connect", requestFriends);
+      socketIo.off("connect", requestGroups);
       socketIo.off("friends", handleFriendsList);
       socketIo.off("friendUpdate", handleSharePresence);
       socketIo.disconnect();
@@ -1111,6 +1121,8 @@ function App() {
     selectedAccount?.accessToken,
     setFriendSocket,
     setFriends,
+    setGroups,
+    setGroupInvites,
     setLocalFriends,
     setIsFriendsConnected,
     setOwnPresence,
@@ -1196,10 +1208,10 @@ function App() {
     };
 
     const onGameInvite = async (invite: GameInvite) => {
-      setIncomingInvite(invite);
-
       const lf = localFriendsRef.current.find((x) => x.id == invite.sender._id);
       if (lf?.isMuted) return;
+
+      setIncomingInvite(invite);
 
       const notificationBody =
         invite.target.type === "server"
@@ -1224,6 +1236,279 @@ function App() {
       });
     };
 
+    const onGroupsUpdated = () => {
+      void loadGroups();
+    };
+
+    const onGroupVoiceCount = (data: {
+      groupId: string;
+      count: number;
+      participants?: string[];
+    }) => {
+      if (typeof data?.groupId !== "string") return;
+      setGroups((prev) =>
+        prev.map((group) =>
+          group._id === data.groupId
+            ? {
+                ...group,
+                participantCount: data.count || 0,
+                voiceParticipants: Array.isArray(data.participants)
+                  ? data.participants
+                  : [],
+              }
+            : group,
+        ),
+      );
+    };
+
+    const onGroupInvites = (data: { invites: IGroupInvite[] }) => {
+      setGroupInvites(Array.isArray(data?.invites) ? data.invites : []);
+    };
+
+    const onGroupInviteReceived = async (invite: IGroupInvite) => {
+      setGroupInvites((prev) =>
+        prev.some((item) => item._id === invite._id)
+          ? prev
+          : [...prev, invite],
+      );
+
+      const lf = localFriendsRef.current.find(
+        (x) => x.id == invite.inviter._id,
+      );
+      if (lf?.isMuted) return;
+
+      const description = tRef.current("groupInvite.body", {
+        nickname: invite.inviter.nickname,
+        group: invite.group.name,
+      });
+
+      toast(tRef.current("groupInvite.title"), {
+        description,
+        duration: 15000,
+        action: {
+          label: tRef.current("groupInvite.accept"),
+          onClick: () => {
+            friendSocket.emit("acceptGroupInvite", { inviteId: invite._id });
+          },
+        },
+      });
+
+      const options: Electron.NotificationConstructorOptions = {
+        title: tRef.current("groupInvite.title"),
+        body: description,
+        icon: invite.inviter.image || "",
+      };
+      await api.other.notify(options);
+    };
+
+    const onGroupInviteResolved = (data: {
+      inviteId: string;
+      accepted: boolean;
+      code?: string;
+      group?: IGroup;
+    }) => {
+      setGroupInvites((prev) =>
+        prev.filter((item) => item._id !== data.inviteId),
+      );
+
+      if (data.accepted && data.group) {
+        toast.success(
+          tRef.current("groupInvite.joined", { group: data.group.name }),
+        );
+        void loadGroups();
+      } else if (data.code === "banned") {
+        toast.error(tRef.current("groups.bannedToast"));
+      } else if (data.code === "group_full") {
+        toast.error(tRef.current("groups.fullToast"));
+      }
+    };
+
+    const onGroupMessage = (data: {
+      groupId?: string;
+      message?: { sender?: string };
+    }) => {
+      const groupId = typeof data?.groupId === "string" ? data.groupId : "";
+      if (!groupId) return;
+      if (data.message?.sender === authDataRef.current?.sub) return;
+      if (data.message?.sender === "system") return;
+      if (openGroupChatIdRef.current === groupId) return;
+      if (mutedGroupsRef.current.includes(groupId)) return;
+
+      setGroupUnreads((prev) => {
+        const next = { ...prev, [groupId]: (prev[groupId] || 0) + 1 };
+        saveGroupUnreads(next);
+        return next;
+      });
+      playSound("notify");
+    };
+
+    const onGroupVoicePinged = (data: {
+      sender?: IVoiceCallPeer;
+      group?: { _id: string; name: string };
+    }) => {
+      const sender = data?.sender;
+      const group = data?.group;
+      if (!sender?._id || !group?._id) return;
+
+      const lf = localFriendsRef.current.find((x) => x.id == sender._id);
+      if (lf?.isMuted) return;
+      if (mutedGroupsRef.current.includes(group._id)) return;
+
+      toast(tRef.current("groups.voicePingTitle"), {
+        description: tRef.current("groups.voicePingBody", {
+          nickname: sender.nickname,
+          group: group.name,
+        }),
+        duration: 15000,
+        action: {
+          label: tRef.current("groups.voicePingJoin"),
+          onClick: () => {
+            void (async () => {
+              const token = selectedAccountRef.current?.accessToken;
+              if (!token) return;
+              const grant = await api.backend.groupJoinVoice(
+                token,
+                group._id,
+              );
+              if (!grant) {
+                toast.error(tRef.current("groups.joinError"));
+                return;
+              }
+              try {
+                await voiceConnect(grant, {
+                  roomId: group._id,
+                  roomName: group.name,
+                  isRoomOwner: false,
+                });
+              } catch {
+                toast.error(tRef.current("groups.joinError"));
+              }
+            })();
+          },
+        },
+      });
+      playSound("notify");
+    };
+
+    const onVoiceCallIncoming = async (data: {
+      callId: string;
+      caller: IVoiceCallPeer;
+    }) => {
+      if (!data?.callId || !data?.caller) return;
+
+      const lf = localFriendsRef.current.find(
+        (x) => x.id == data.caller._id,
+      );
+      if (lf?.isMuted) {
+        friendSocket.emit("voiceCallDecline", { callId: data.callId });
+        return;
+      }
+
+      setVoiceCall({
+        status: "incoming",
+        callId: data.callId,
+        peer: data.caller,
+      });
+      startCallSound("incoming");
+
+      await api.other.notify({
+        title: tRef.current("voiceCall.notificationTitle"),
+        body: `${data.caller.nickname} ${tRef.current("voiceCall.notificationBody")}`,
+        icon: data.caller.image || "",
+      });
+    };
+
+    const onVoiceCallRinging = (data: {
+      callId: string;
+      recipient: IVoiceCallPeer;
+    }) => {
+      if (!data?.callId || !data?.recipient) return;
+      setVoiceCall({
+        status: "outgoing",
+        callId: data.callId,
+        peer: data.recipient,
+      });
+      startCallSound("outgoing");
+    };
+
+    const onVoiceCallAccepted = async (data: {
+      callId: string;
+      room: string;
+      grant: IVoiceTokenResponse;
+      peer: IVoiceCallPeer;
+    }) => {
+      stopCallSound();
+      setVoiceCall(INITIAL_VOICE_CALL);
+
+      try {
+        await voiceConnect(data.grant, {
+          roomId: data.room,
+          roomName: data.peer?.nickname || "",
+          isRoomOwner: false,
+        });
+      } catch {
+        toast.error(tRef.current("voiceCall.error"));
+      }
+    };
+
+    const onVoiceCallEnded = (data: { callId: string; reason?: string }) => {
+      const current = voiceCallRef.current;
+      if (current.status === "idle" || current.callId !== data?.callId) {
+        return;
+      }
+
+      stopCallSound();
+      setVoiceCall(INITIAL_VOICE_CALL);
+
+      const nickname = current.peer?.nickname || "";
+      if (current.status === "outgoing") {
+        if (data.reason === "declined") {
+          toast(tRef.current("voiceCall.declined", { nickname }));
+        } else if (data.reason === "timeout") {
+          toast(tRef.current("voiceCall.noAnswer", { nickname }));
+        } else if (data.reason === "error") {
+          toast.error(tRef.current("voiceCall.error"));
+        }
+      } else {
+        if (data.reason === "cancelled") {
+          toast(tRef.current("voiceCall.cancelledByPeer", { nickname }));
+        } else if (data.reason === "timeout") {
+          toast(tRef.current("voiceCall.missed", { nickname }));
+        } else if (data.reason === "error") {
+          toast.error(tRef.current("voiceCall.error"));
+        }
+      }
+    };
+
+    const onVoiceCallError = (data: { code?: string }) => {
+      stopCallSound();
+      setVoiceCall(INITIAL_VOICE_CALL);
+
+      if (data?.code === "busy") {
+        toast.error(tRef.current("voiceCall.busy"));
+      } else if (data?.code === "recipient_offline") {
+        toast.error(tRef.current("voiceCall.offline"));
+      } else if (data?.code === "too_soon") {
+        toast.warning(tRef.current("voiceCall.tooSoon"));
+      } else if (data?.code === "rate_limited") {
+        toast.warning(tRef.current("voiceCall.rateLimited"));
+      } else {
+        toast.error(tRef.current("voiceCall.error"));
+      }
+    };
+
+    const onGroupInviteResult = (result: { ok: boolean; code?: string }) => {
+      if (result.ok) {
+        toast.success(tRef.current("groups.inviteSent"));
+      } else if (result.code === "invite_exists") {
+        toast.info(tRef.current("groups.inviteExists"));
+      } else if (result.code === "already_member") {
+        toast.info(tRef.current("groups.alreadyMember"));
+      } else {
+        toast.error(tRef.current("groups.actionError"));
+      }
+    };
+
     const onConnect = () => {
       setIsFriendsConnected(true);
     };
@@ -1231,6 +1516,8 @@ function App() {
     const onDisconnect = () => {
       setIsFriends(false);
       setIsFriendsConnected(false);
+      stopCallSound();
+      setVoiceCall(INITIAL_VOICE_CALL);
     };
 
     const onConnectError = () => {
@@ -1241,6 +1528,19 @@ function App() {
     friendSocket.on("friendRequestRemove", onFriendRequestRemove);
     friendSocket.on("messageNotification", onMessageNotification);
     friendSocket.on("gameInvite", onGameInvite);
+    friendSocket.on("groupsUpdated", onGroupsUpdated);
+    friendSocket.on("groupVoiceCount", onGroupVoiceCount);
+    friendSocket.on("groupInvites", onGroupInvites);
+    friendSocket.on("groupInviteReceived", onGroupInviteReceived);
+    friendSocket.on("groupInviteResolved", onGroupInviteResolved);
+    friendSocket.on("groupInviteResult", onGroupInviteResult);
+    friendSocket.on("groupMessage", onGroupMessage);
+    friendSocket.on("groupVoicePinged", onGroupVoicePinged);
+    friendSocket.on("voiceCallIncoming", onVoiceCallIncoming);
+    friendSocket.on("voiceCallRinging", onVoiceCallRinging);
+    friendSocket.on("voiceCallAccepted", onVoiceCallAccepted);
+    friendSocket.on("voiceCallEnded", onVoiceCallEnded);
+    friendSocket.on("voiceCallError", onVoiceCallError);
     friendSocket.on("connect", onConnect);
     friendSocket.on("disconnect", onDisconnect);
     friendSocket.on("connect_error", onConnectError);
@@ -1250,11 +1550,36 @@ function App() {
       friendSocket.off("friendRequestRemove", onFriendRequestRemove);
       friendSocket.off("messageNotification", onMessageNotification);
       friendSocket.off("gameInvite", onGameInvite);
+      friendSocket.off("groupsUpdated", onGroupsUpdated);
+      friendSocket.off("groupVoiceCount", onGroupVoiceCount);
+      friendSocket.off("groupInvites", onGroupInvites);
+      friendSocket.off("groupInviteReceived", onGroupInviteReceived);
+      friendSocket.off("groupInviteResolved", onGroupInviteResolved);
+      friendSocket.off("groupInviteResult", onGroupInviteResult);
+      friendSocket.off("groupMessage", onGroupMessage);
+      friendSocket.off("groupVoicePinged", onGroupVoicePinged);
+      friendSocket.off("voiceCallIncoming", onVoiceCallIncoming);
+      friendSocket.off("voiceCallRinging", onVoiceCallRinging);
+      friendSocket.off("voiceCallAccepted", onVoiceCallAccepted);
+      friendSocket.off("voiceCallEnded", onVoiceCallEnded);
+      friendSocket.off("voiceCallError", onVoiceCallError);
       friendSocket.off("connect", onConnect);
+      stopCallSound();
       friendSocket.off("disconnect", onDisconnect);
       friendSocket.off("connect_error", onConnectError);
     };
-  }, [friendSocket, setFriendRequests, setIsFriendsConnected]);
+  }, [
+    friendSocket,
+    loadGroups,
+    setFriendRequests,
+    setGroupInvites,
+    setGroupUnreads,
+    setGroups,
+    setIsFriendsConnected,
+    setVoiceCall,
+    voiceCallRef,
+    mutedGroupsRef,
+  ]);
 
   async function getSettings(launcherPath: string) {
     const systemLocate: string = await api.other.getLocale();
@@ -1338,7 +1663,7 @@ function App() {
 
     let _instance = instance ?? 0;
     if (instance === undefined) {
-      const maxInst = consolesRef.current.consoles
+      const maxInst = getDefaultStore().get(consolesAtom).consoles
         .filter(
           (c) =>
             c.versionName == launchVersion.version.name &&
@@ -1631,11 +1956,13 @@ function App() {
         const quickPlaySupported =
           version.isQuickPlayMultiplayer ||
           supportsQuickPlayMultiplayer(version.version.version.id);
-        const isInstanceRunning = consolesRef.current.consoles.some(
-          (gameConsole) =>
-            gameConsole.versionName === version.version.name &&
-            gameConsole.status === "running",
-        );
+        const isInstanceRunning = getDefaultStore()
+          .get(consolesAtom)
+          .consoles.some(
+            (gameConsole) =>
+              gameConsole.versionName === version.version.name &&
+              gameConsole.status === "running",
+          );
 
         const writeServerEntry = async () => {
           const serversPath = await api.path.join(
@@ -1713,17 +2040,17 @@ function App() {
     const account = selectedAccountRef.current;
     if (!account?.accessToken) return;
 
-    const result = await api.share.fetchActiveFriendShares();
-    if (!result.ok || !result.data) return;
+    const shares = await refreshActiveFriendShares();
+    if (!shares) return;
 
     const previous = knownShareSessionsRef.current;
     knownShareSessionsRef.current = new Set(
-      result.data.map((share) => share.sessionId),
+      shares.map((share) => share.sessionId),
     );
 
     if (!previous) return;
 
-    for (const share of result.data) {
+    for (const share of shares) {
       if (previous.has(share.sessionId)) continue;
 
       const versionCode = share.versionShareCode;
@@ -1789,31 +2116,6 @@ function App() {
           version: incomingInvite.versionName,
         })
     : "";
-
-  const cancelVersionInstall = useEventCallback(async () => {
-    setIsCancellingInstall(true);
-    try {
-      await Promise.all([
-        api.version.cancelInstall(),
-        api.mods.cancelInstall(),
-      ]);
-    } catch (error) {
-      console.error(error);
-      setIsCancellingInstall(false);
-    }
-  });
-
-  const toggleInstallPause = useEventCallback(async () => {
-    const next = !isInstallPausedRef.current;
-    setIsInstallPaused(next);
-    try {
-      if (next) await api.version.pauseInstall();
-      else await api.version.resumeInstall();
-    } catch (error) {
-      console.error(error);
-      setIsInstallPaused(!next);
-    }
-  });
 
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden">
@@ -1979,36 +2281,10 @@ function App() {
           />
         )}
 
-        {installProgress ? (
-          isInstallMinimized ? (
-            <InstallationMiniBar
-              info={installProgress}
-              downloadInfo={downloder}
-              isPaused={isInstallPaused}
-              isCancelling={isCancellingInstall}
-              onExpand={() => setIsInstallMinimized(false)}
-              onTogglePause={toggleInstallPause}
-              onCancel={cancelVersionInstall}
-            />
-          ) : (
-            <InstallationProgress
-              info={installProgress}
-              downloadInfo={downloder}
-              onCancel={cancelVersionInstall}
-              isCancelling={isCancellingInstall}
-              onMinimize={() => setIsInstallMinimized(true)}
-              isPaused={isInstallPaused}
-              onTogglePause={toggleInstallPause}
-            />
-          )
-        ) : null}
+        <InstallationCenter />
 
-        {downloadFailures && (
-          <DownloadFailuresModal
-            info={downloadFailures}
-            onClose={() => setDownloadFailures(null)}
-          />
-        )}
+        <VoiceCallBar />
+        <VoiceCallOverlay />
 
         {incomingInvite && (
           <Dialog

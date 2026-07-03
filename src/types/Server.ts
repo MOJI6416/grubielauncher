@@ -66,12 +66,14 @@ export interface IPaperBuild {
 export interface IFablicLoader {
   loader: {
     version: string
+    stable?: boolean
   }
 }
 
 export interface IFabricInstaller {
   version: string
   url: string
+  stable?: boolean
 }
 
 export interface IPurpurVersion {

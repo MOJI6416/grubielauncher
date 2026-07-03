@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAtom } from "jotai";
 import {
+  AlertTriangle,
   AppWindow,
   Boxes,
   Coffee,
@@ -28,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { pathsAtom } from "@renderer/stores/atoms";
+import { isRunningAtom, pathsAtom } from "@renderer/stores/atoms";
 import { formatBytes } from "@renderer/utilities/file";
 import type { StorageBreakdown, StorageCategoryId } from "@/types/Storage";
 
@@ -53,8 +54,10 @@ const VERSION_LIMIT = 6;
 export function StoragePanel() {
   const { t } = useTranslation();
   const [paths] = useAtom(pathsAtom);
+  const [isRunning] = useAtom(isRunningAtom);
   const [data, setData] = useState<StorageBreakdown | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [busyAction, setBusyAction] = useState<CleanupAction | null>(null);
   const [pendingAction, setPendingAction] = useState<CleanupAction | null>(null);
   const [showAllVersions, setShowAllVersions] = useState(false);
@@ -72,7 +75,15 @@ export function StoragePanel() {
     setLoading(true);
     try {
       const result = await api.storage.getBreakdown();
-      if (mounted.current) setData(result);
+      if (mounted.current) {
+        setData(result.failed ? null : result);
+        setError(!!result.failed);
+      }
+    } catch {
+      if (mounted.current) {
+        setData(null);
+        setError(true);
+      }
     } finally {
       if (mounted.current) setLoading(false);
     }
@@ -91,6 +102,7 @@ export function StoragePanel() {
   const reclaimable = data?.reclaimable ?? 0;
   const cleanup = data?.cleanup;
   const busy = busyAction !== null;
+  const locked = isRunning;
 
   const openFolder = () => {
     if (rootPath) void api.shell.openPath(rootPath);
@@ -104,10 +116,20 @@ export function StoragePanel() {
         action === "cache"
           ? await api.storage.clearCache()
           : await api.storage.cleanup(action);
-      toast.success(
-        t("settings.storage.cleared", { size: formatBytes(res.freed, sizes) }),
-      );
+      if (res.blocked) {
+        toast.error(t("settings.storage.busy"));
+      } else if (res.failed) {
+        toast.error(t("settings.storage.actionFailed"));
+      } else {
+        toast.success(
+          t("settings.storage.cleared", {
+            size: formatBytes(res.freed, sizes),
+          }),
+        );
+      }
       await load();
+    } catch {
+      if (mounted.current) toast.error(t("settings.storage.actionFailed"));
     } finally {
       if (mounted.current) setBusyAction(null);
     }
@@ -125,7 +147,7 @@ export function StoragePanel() {
       size="sm"
       className="w-full justify-start"
       onClick={() => setPendingAction(action)}
-      disabled={busy}
+      disabled={busy || locked}
     >
       {busyAction === action ? (
         <Loader2 className="size-4 animate-spin" />
@@ -181,7 +203,7 @@ export function StoragePanel() {
             <Skeleton className="mt-1.5 h-8 w-28" />
           ) : (
             <p className="text-2xl font-semibold tabular-nums">
-              {formatBytes(total, sizes)}
+              {error ? "—" : formatBytes(total, sizes)}
             </p>
           )}
         </div>
@@ -214,7 +236,7 @@ export function StoragePanel() {
 
       {loading ? (
         <Skeleton className="h-2.5 w-full rounded-full" />
-      ) : (
+      ) : error ? null : (
         <div className="flex h-2.5 w-full gap-px overflow-hidden rounded-full bg-muted">
           {categories.map((c) => (
             <span
@@ -235,6 +257,13 @@ export function StoragePanel() {
               <Skeleton className="h-4 w-14" />
             </div>
           ))}
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center gap-2 py-4 text-center">
+          <AlertTriangle className="size-5 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            {t("settings.storage.loadError")}
+          </p>
         </div>
       ) : total === 0 ? (
         <p className="py-2 text-center text-sm text-muted-foreground">
@@ -323,6 +352,11 @@ export function StoragePanel() {
 
       {!loading && total > 0 && (
         <div className="space-y-2 border-t pt-3">
+          {locked && (
+            <p className="text-xs text-muted-foreground">
+              {t("settings.storage.busy")}
+            </p>
+          )}
           {reclaimable > 0 &&
             cleanupButton(
               "cache",

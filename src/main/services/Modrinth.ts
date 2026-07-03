@@ -125,7 +125,8 @@ export class Modrinth {
       if (
         loader &&
         project_type !== ProjectType.RESOURCEPACK &&
-        project_type !== ProjectType.SHADER
+        project_type !== ProjectType.SHADER &&
+        project_type !== ProjectType.DATAPACK
       )
         params.append('loaders', JSON.stringify([loader]))
 

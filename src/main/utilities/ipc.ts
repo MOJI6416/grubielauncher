@@ -1,5 +1,23 @@
 import { ipcMain, IpcMainInvokeEvent } from 'electron'
 
+function describeIpcError(err: unknown): unknown {
+    if (err && typeof err === 'object') {
+        const anyErr = err as any
+        if (anyErr.isAxiosError) {
+            return {
+                message: anyErr.message,
+                status: anyErr.response?.status,
+                method: anyErr.config?.method,
+                url: anyErr.config?.url
+            }
+        }
+        if (anyErr instanceof Error) {
+            return `${anyErr.name}: ${anyErr.message}`
+        }
+    }
+    return err
+}
+
 type Handler<TResult, TArgs extends any[]> = (
     event: IpcMainInvokeEvent,
     ...args: TArgs
@@ -36,7 +54,7 @@ export function handleSafe<TResult, TArgs extends any[] = any[]>(
         try {
             return await handler(event, ...args)
         } catch (err) {
-            console.error(`[IPC] ${channel} error:`, err)
+            console.error(`[IPC] ${channel} error:`, describeIpcError(err))
             if (typeof fallback === 'function') return (fallback as any)(...args)
             return fallback
         }

@@ -27,7 +27,12 @@ vi.mock("../services/Modrinth", () => ({
 
 import { CurseForge } from "../services/CurseForge";
 import { Modrinth } from "../services/Modrinth";
-import { cfModpackToModpack, checkModpack, compareMods } from "./modManager";
+import {
+  cfModpackToModpack,
+  checkModpack,
+  classIdToProjectType,
+  compareMods,
+} from "./modManager";
 
 const mockedCurseForge = vi.mocked(CurseForge);
 const mockedModrinth = vi.mocked(Modrinth);
@@ -596,5 +601,23 @@ describe("checkModpack Prism/MultiMC imports", () => {
     await expect(
       fs.pathExists(path.join(instanceRoot, "overrides", "mods", "file-200.jar")),
     ).resolves.toBe(true);
+  });
+});
+
+describe("classIdToProjectType", () => {
+  it("maps known CurseForge class ids to project types", () => {
+    expect(classIdToProjectType(6)).toBe(ProjectType.MOD);
+    expect(classIdToProjectType(12)).toBe(ProjectType.RESOURCEPACK);
+    expect(classIdToProjectType(6552)).toBe(ProjectType.SHADER);
+    expect(classIdToProjectType(4471)).toBe(ProjectType.MODPACK);
+    expect(classIdToProjectType(5)).toBe(ProjectType.PLUGIN);
+    expect(classIdToProjectType(17)).toBe(ProjectType.WORLD);
+    expect(classIdToProjectType(6945)).toBe(ProjectType.DATAPACK);
+  });
+
+  it("returns null for unknown or missing class ids", () => {
+    expect(classIdToProjectType(4546)).toBeNull();
+    expect(classIdToProjectType(undefined)).toBeNull();
+    expect(classIdToProjectType(null)).toBeNull();
   });
 });

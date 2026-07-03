@@ -7,13 +7,15 @@ import { readNBT } from './nbt'
 
 export async function replaceXmxParameter(serverPath: string, memory: string) {
   function replace(data: string, memory: string): string {
-    return data.replace(/-Xmx\d+[MG]/, `-Xmx${memory}`)
+    return data
+      .replace(/-Xmx\d+[MG]/g, `-Xmx${memory}`)
+      .replace(/-Xms\d+[MG]/g, `-Xms${memory}`)
   }
 
   async function edit(filePath: string, memory: string) {
     if (await fs.pathExists(filePath)) {
       let data = await fs.readFile(filePath, 'utf-8')
-      if (data.includes('-Xmx')) {
+      if (data.includes('-Xmx') || data.includes('-Xms')) {
         data = replace(data, memory)
         await fs.writeFile(filePath, data, 'utf-8')
       }

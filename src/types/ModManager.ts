@@ -5,6 +5,7 @@ export interface ISearchData {
   limit: number;
   offset: number;
   total: number;
+  error?: boolean;
 }
 
 export enum ProjectType {

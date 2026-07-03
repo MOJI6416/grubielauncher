@@ -15,25 +15,34 @@ import { useTranslation } from "react-i18next";
 import { IMessage } from "@/types/IMessage";
 import { ILocalFriend } from "@/types/ILocalFriend";
 import {
+  Check,
   ClipboardCopy,
   Copy,
   Inbox,
   KeyRound,
   Loader2,
+  MessagesSquare,
+  Plus,
   RefreshCw,
   SendHorizontal,
   Share2,
   TriangleAlert,
   UserPlus,
   Users,
+  X,
 } from "lucide-react";
 import {
   accountAtom,
   accountsAtom,
   authDataAtom,
+  activeFriendSharesAtom,
   friendRequestsAtom,
   friendSocketAtom,
   friendsAtom,
+  groupInvitesAtom,
+  groupsAtom,
+  voiceCallAtom,
+  voiceSessionAtom,
   isShareModalOpenAtom,
   isRunningAtom,
   localFriendsAtom,
@@ -45,7 +54,11 @@ import {
   shareStateAtom,
   versionsAtom,
 } from "@renderer/stores/atoms";
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
+import {
+  clearActiveFriendShares,
+  refreshActiveFriendShares,
+} from "@renderer/utilities/friendShares";
 import { IModpack } from "@/types/Backend";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,9 +97,14 @@ import {
   lazyWithPreload,
   schedulePreload,
 } from "@renderer/utilities/lazyPreload";
-import { parsePackShareCode } from "@renderer/utilities/packShare";
+import {
+  parseGroupJoinCode,
+  parsePackShareCode,
+} from "@renderer/utilities/packShare";
 import { uploadChatImage } from "@renderer/utilities/chatUpload";
+import { groupJoinErrorKey } from "@renderer/utilities/groupJoin";
 import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
+import { GroupsTab } from "../Voice/GroupsTab";
 
 const api = window.api;
 
@@ -252,13 +270,15 @@ export function Friends({
   const [loadingType, setLoadingType] = useState<LoadingType>();
   const [friends, setFriends] = useAtom(friendsAtom);
   const [notReads, setNotReads] = useState<string[]>([]);
-  const [activeShares, setActiveShares] = useState<ActiveFriendShare[]>([]);
+  const activeShares = useAtomValue(activeFriendSharesAtom);
   const canManageCurrentShare = canCurrentAccountManageShare(
     shareOwnerAccountKey,
     account,
   );
 
-  const [isRequests, setIsRequests] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "friends" | "requests" | "groups"
+  >("friends");
   const [addFriend, setAddFriend] = useState(false);
   const [skinModal, setSkinModal] = useState(false);
   const [chatModal, setChatModal] = useState(false);
@@ -287,6 +307,13 @@ export function Friends({
   );
   const [loadingIndex, setLoadingIndex] = useState(-1);
   const [tempModpack, setTempModpack] = useState<IModpack>();
+  const [myGroups] = useAtom(groupsAtom);
+  const [groupInvites] = useAtom(groupInvitesAtom);
+  const [isGroupInvitePicker, setIsGroupInvitePicker] = useState(false);
+  const [voiceSession] = useAtom(voiceSessionAtom);
+  const [voiceCall] = useAtom(voiceCallAtom);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [isJoinGroupOpen, setIsJoinGroupOpen] = useState(false);
 
   const messagesRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
@@ -391,17 +418,11 @@ export function Friends({
 
   const loadActiveShares = useCallback(async () => {
     if (!account?.accessToken) {
-      setActiveShares([]);
+      clearActiveFriendShares();
       return;
     }
 
-    const result = await api.share.fetchActiveFriendShares();
-
-    if (result.ok && result.data) {
-      setActiveShares(result.data);
-    } else {
-      setActiveShares([]);
-    }
+    await refreshActiveFriendShares();
   }, [account?.accessToken]);
 
   const saveLocalFriends = useCallback(
@@ -481,8 +502,6 @@ export function Friends({
         };
         return newFriends;
       });
-
-      void loadActiveShares();
     };
 
     const handleGameInviteResult = (result: GameInviteResult) => {
@@ -529,14 +548,7 @@ export function Friends({
       socket.off("gameInviteResult", handleGameInviteResult);
       socket.off("friendOperationError", handleFriendOperationError);
     };
-  }, [
-    socket,
-    saveLocalFriends,
-    stopLoading,
-    t,
-    setSelectedFriend,
-    loadActiveShares,
-  ]);
+  }, [socket, saveLocalFriends, stopLoading, t, setSelectedFriend]);
 
   useEffect(() => {
     if (!socket || !account) return;
@@ -691,17 +703,11 @@ export function Friends({
 
   useEffect(() => {
     if (!account?.accessToken) {
-      setActiveShares([]);
+      clearActiveFriendShares();
       return;
     }
 
     void loadActiveShares();
-
-    const interval = setInterval(() => {
-      void loadActiveShares();
-    }, 15000);
-
-    return () => clearInterval(interval);
   }, [account?.accessToken, loadActiveShares]);
 
   useEffect(() => {
@@ -1002,14 +1008,27 @@ export function Friends({
     const text = messageText.trim();
     if (!text) return;
 
+    const groupJoinCode = parseGroupJoinCode(text);
+    if (groupJoinCode) {
+      sendChatMessage({
+        _type: "groupInvite",
+        value: JSON.stringify({
+          code: groupJoinCode,
+          name: myGroups.find((g) => g.code === groupJoinCode)?.name ?? "",
+        }),
+      });
+      return;
+    }
+
     const parsedShareCode = parsePackShareCode(text);
-    const isPackShare = PACK_CODE_PATTERN.test(parsedShareCode);
+    const isPackShare =
+      parsedShareCode !== text && PACK_CODE_PATTERN.test(parsedShareCode);
 
     sendChatMessage({
       _type: isPackShare ? "modpack" : "text",
       value: isPackShare ? parsedShareCode : messageText,
     });
-  }, [messageText, sendChatMessage]);
+  }, [messageText, myGroups, sendChatMessage]);
 
   const sendChatImageUrl = useCallback(
     (url: string) => {
@@ -1347,6 +1366,14 @@ export function Friends({
     const isNotRead = notReads.includes(f.user._id);
     const localIndex = localFriends.findIndex((lf) => lf.id === f.user._id);
     const local = localIndex !== -1 ? localFriends[localIndex] : undefined;
+    const voiceGroup =
+      voiceSession.state !== "disconnected"
+        ? myGroups.find((group) => group._id === voiceSession.roomId)
+        : undefined;
+    const isAlreadyInVoiceGroup = Boolean(
+      voiceGroup &&
+        voiceGroup.members.some((member) => member._id === f.user._id),
+    );
 
     return (
       <FriendItem
@@ -1362,6 +1389,24 @@ export function Friends({
         }}
         onJoin={() => handleJoinFriend(f, version, activeShare)}
         onInvite={() => handleInviteFriend(f)}
+        onInviteToVoice={
+          voiceGroup
+            ? () => {
+                if (isAlreadyInVoiceGroup) {
+                  socket?.emit("groupVoicePing", {
+                    recipientId: f.user._id,
+                    groupId: voiceGroup._id,
+                  });
+                  toast.success(t("groups.voicePingSent"));
+                } else {
+                  socket?.emit("groupInvite", {
+                    recipientId: f.user._id,
+                    groupId: voiceGroup._id,
+                  });
+                }
+              }
+            : undefined
+        }
         onViewAccount={() => handleViewAccount(f.user._id)}
         onOpenChat={() => {
           setFriend(f);
@@ -1391,55 +1436,112 @@ export function Friends({
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    onClick={handleOpenFriendCodeModal}
-                    aria-label={t("friends.copyId")}
-                  >
-                    <ClipboardCopy className="size-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t("friends.copyId")}</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    onClick={() => {
-                      setFriendId("");
-                      setFriend(undefined);
-                      setAddFriend(true);
-                    }}
-                    aria-label={t("friends.sendRequest")}
-                  >
-                    <UserPlus className="size-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t("friends.sendRequest")}</TooltipContent>
-              </Tooltip>
+              {activeTab === "friends" && (
+                <>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        onClick={handleOpenFriendCodeModal}
+                        aria-label={t("friends.copyId")}
+                      >
+                        <ClipboardCopy className="size-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("friends.copyId")}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        onClick={() => {
+                          setFriendId("");
+                          setFriend(undefined);
+                          setAddFriend(true);
+                        }}
+                        aria-label={t("friends.sendRequest")}
+                      >
+                        <UserPlus className="size-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("friends.sendRequest")}</TooltipContent>
+                  </Tooltip>
+                </>
+              )}
+
+              {activeTab === "groups" && (
+                <>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        onClick={() => setIsCreateGroupOpen(true)}
+                        aria-label={t("groups.create")}
+                      >
+                        <Plus className="size-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("groups.create")}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        onClick={() => setIsJoinGroupOpen(true)}
+                        aria-label={t("groups.joinByCode")}
+                      >
+                        <KeyRound className="size-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("groups.joinByCode")}</TooltipContent>
+                  </Tooltip>
+                </>
+              )}
+
+              {activeTab === "requests" && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={handleOpenFriendCodeModal}
+                      aria-label={t("friends.copyId")}
+                    >
+                      <ClipboardCopy className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t("friends.copyId")}</TooltipContent>
+                </Tooltip>
+              )}
             </div>
           </div>
 
           <Tabs
-            value={isRequests ? "requests" : "friends"}
-            onValueChange={(value) => setIsRequests(value === "requests")}
+            value={activeTab}
+            onValueChange={(value) =>
+              setActiveTab(value as "friends" | "requests" | "groups")
+            }
             className="gap-0"
           >
-            <TabsList className="grid h-8 w-full grid-cols-2">
+            <TabsList className="grid h-8 w-full grid-cols-3">
               <TabsTrigger value="friends" className="gap-1.5 text-xs">
                 <Users className="size-3.5" />
                 {t("friends.title")}
               </TabsTrigger>
-              <TabsTrigger value="requests" className="gap-1.5 text-xs">
+              <TabsTrigger value="groups" className="gap-1.5 text-xs">
+                <MessagesSquare className="size-3.5" />
+                {t("groups.tab")}
+              </TabsTrigger>
+              <TabsTrigger value="requests" className="relative gap-1.5 text-xs">
                 <Inbox className="size-3.5" />
                 {t("friends.requests")}
-                {recipientRequests.length > 0 && (
-                  <Badge className="ml-0.5 border-transparent bg-primary px-1.5 py-0 text-primary-foreground shadow-none">
-                    {recipientRequests.length}
+                {recipientRequests.length + groupInvites.length > 0 && (
+                  <Badge className="absolute -right-1 -top-1.5 flex h-4 min-w-4 items-center justify-center border-transparent bg-primary px-1 py-0 text-[10px] leading-none text-primary-foreground shadow-none">
+                    {recipientRequests.length + groupInvites.length}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -1461,7 +1563,25 @@ export function Friends({
                     </EmptyHeader>
                   </Empty>
                 ) : null}
-                {!isRequests && socket?.connected ? (
+                {activeTab === "groups" && socket?.connected ? (
+                  <GroupsTab
+                    onPlayModpack={async (modpack, version) => {
+                      if (version) {
+                        setSelectedVersion(version);
+                        await runGame({ version });
+                      } else {
+                        setTempModpack(modpack);
+                        setIsAddVersion(true);
+                      }
+                    }}
+                    createOpen={isCreateGroupOpen}
+                    joinOpen={isJoinGroupOpen}
+                    onCreateOpenChange={setIsCreateGroupOpen}
+                    onJoinOpenChange={setIsJoinGroupOpen}
+                  />
+                ) : undefined}
+
+                {activeTab === "friends" && socket?.connected ? (
                   groupedFriends.total > 0 ? (
                     <div className="flex flex-col gap-3 pr-2">
                       <FriendSection
@@ -1489,9 +1609,64 @@ export function Friends({
                   )
                 ) : undefined}
 
-                {isRequests && socket?.connected ? (
-                  friendRequests.length > 0 ? (
+                {activeTab === "requests" && socket?.connected ? (
+                  friendRequests.length + groupInvites.length > 0 ? (
                     <div className="flex flex-col gap-1.5 pr-2">
+                      {groupInvites.length > 0 && (
+                        <>
+                          <p className="px-1 text-xs font-medium text-muted-foreground">
+                            {t("groups.invites")}
+                          </p>
+                          {groupInvites.map((invite) => (
+                            <div
+                              key={invite._id}
+                              className="flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/5 px-2 py-1.5"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm">
+                                  {invite.group.name}
+                                </p>
+                                <p className="truncate text-xs text-muted-foreground">
+                                  {t("groups.invitedBy", {
+                                    nickname: invite.inviter.nickname,
+                                  })}
+                                </p>
+                              </div>
+                              <Button
+                                size="icon"
+                                variant="secondary"
+                                className="size-7 shrink-0"
+                                onClick={() =>
+                                  socket?.emit("acceptGroupInvite", {
+                                    inviteId: invite._id,
+                                  })
+                                }
+                                aria-label={t("groups.accept")}
+                              >
+                                <Check className="size-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="destructive"
+                                className="size-7 shrink-0"
+                                onClick={() =>
+                                  socket?.emit("declineGroupInvite", {
+                                    inviteId: invite._id,
+                                  })
+                                }
+                                aria-label={t("groups.decline")}
+                              >
+                                <X className="size-3.5" />
+                              </Button>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                      {friendRequests.length > 0 && (
+                        <p className="px-1 pt-1 text-xs font-medium text-muted-foreground">
+                          {t("friends.friendRequestsSection")}
+                        </p>
+                      )}
                       {friendRequests.map((fr) => (
                         <FriendRequestItem
                           key={fr.requestId}
@@ -1749,9 +1924,71 @@ export function Friends({
                 setIsAddVersion(true);
               }
             }}
+            onSendGroupInvite={
+              myGroups.length > 0
+                ? () => setIsGroupInvitePicker(true)
+                : undefined
+            }
+            onAcceptGroupInvite={async (code) => {
+              const token = account?.accessToken;
+              if (!token) return;
+              const joined = await api.backend.groupJoinByCode(token, code);
+              if (!joined || typeof joined === "string") {
+                toast.error(t(groupJoinErrorKey(joined ?? null)));
+              } else {
+                toast.success(t("groups.joined", { group: joined.name }));
+              }
+            }}
+            onStartCall={() => {
+              if (!socket || !friend) return;
+              socket.emit("voiceCallRequest", {
+                recipientId: friend.user._id,
+              });
+            }}
+            callDisabled={
+              voiceCall.status !== "idle" ||
+              (voiceSession.state !== "disconnected" &&
+                authData?.sub != null &&
+                voiceSession.roomId ===
+                  `dm_${[authData.sub, friend.user._id].sort().join("_")}`)
+            }
             t={t}
           />
         </Suspense>
+      )}
+
+      {isGroupInvitePicker && (
+        <Dialog
+          open
+          onOpenChange={(open) => !open && setIsGroupInvitePicker(false)}
+        >
+          <DialogContent aria-describedby={undefined} className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>{t("friends.chatGroupInvite")}</DialogTitle>
+            </DialogHeader>
+            <div className="flex max-h-72 flex-col gap-1.5 overflow-y-auto">
+              {myGroups.map((group) => (
+                <Button
+                  key={group._id}
+                  variant="outline"
+                  className="justify-start"
+                  onClick={() => {
+                    sendChatMessage({
+                      _type: "groupInvite",
+                      value: JSON.stringify({
+                        code: group.code,
+                        name: group.name,
+                      }),
+                    });
+                    setIsGroupInvitePicker(false);
+                  }}
+                >
+                  {group.name}
+                </Button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {friend && socket && friendRemoveModal && (

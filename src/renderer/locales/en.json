@@ -150,6 +150,7 @@
       "user_not_found": "User not found.",
       "not_friend": "Add this user as a friend first.",
       "timeout": "The server did not respond. Try again.",
+      "rate_limited": "You are doing that too fast. Please slow down.",
       "unknown": "Failed to complete the action."
     },
     "newRequest": "New friend request",
@@ -167,6 +168,19 @@
     "chatAttach": "Attach",
     "chatAttachImage": "Image",
     "chatAttachModpack": "Modpack",
+    "chatGroupInvite": "Group invitation",
+    "chatGroupInviteJoin": "Join",
+    "chatExternalLinkTitle": "External link",
+    "chatExternalLinkWarning": "You are about to open an external link. Only open links you trust.",
+    "chatExternalLinkOpen": "Open",
+    "friendRequestsSection": "Friend requests",
+    "chatSystem": {
+      "joined": "{{nickname}} joined the group",
+      "left": "{{nickname}} left the group",
+      "kicked": "{{nickname}} was kicked from the group",
+      "banned": "{{nickname}} was banned from the group",
+      "owner": "{{nickname}} is now the group owner"
+    },
     "chatDeleteMessage": "Delete message",
     "chatDropImage": "Drop image to send",
     "chatImage": "Image",
@@ -225,25 +239,6 @@
       "alreadyRunning": "The game is already running — the world was pinned to your server list, open Multiplayer"
     }
   },
-  "rpc": {
-    "playing": "Playing",
-    "buttons": {
-      "download": "Download",
-      "discord": "Discord"
-    },
-    "details": {
-      "launcher": "Grubie Launcher",
-      "downloading": "Downloading files"
-    },
-    "states": {
-      "idle": "In launcher",
-      "launching": "Launching Minecraft",
-      "playing": "Playing Minecraft",
-      "playingServer": "Server: {{server}}",
-      "downloading": "{{progress}}% downloaded",
-      "downloadingFile": "{{progress}}% - {{file}}"
-    }
-  },
   "modManager": {
     "title": "Mod Manager",
     "type": "Type",
@@ -268,6 +263,7 @@
       "Incompatible"
     ],
     "notFoundMod": "Mod not found",
+    "searchFailed": "Search failed. Check your connection and try again",
     "noDependencies": "No dependencies",
     "projectTypes": {
       "mod": "Mods",
@@ -382,6 +378,107 @@
     "confirmation": "Delete server {{name}}?",
     "resourceSets": ["Ask", "Enabled", "Disabled"]
   },
+  "voice": {
+    "micUnavailable": "Microphone unavailable — you joined in listen-only mode",
+    "noiseSuppressionFailed": "Noise suppression failed and has been turned off",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "volume": "Volume",
+    "connected": "In call",
+    "connecting": "Connecting…",
+    "reconnecting": "Reconnecting…",
+    "you": "(you)",
+    "disconnect": "Disconnect",
+    "kick": "Kick from group",
+    "mute": "Mute microphone",
+    "unmute": "Unmute microphone",
+    "deafen": "Deafen",
+    "undeafen": "Undeafen",
+    "microphone": "Microphone",
+    "speakers": "Audio output"
+  },
+  "groups": {
+    "tab": "Groups",
+    "create": "Create group",
+    "createPlaceholder": "Group name",
+    "codePlaceholder": "Group code",
+    "joinByCode": "Join by code",
+    "noGroups": "No groups yet. Create one or join by code.",
+    "join": "Join voice",
+    "inCall": "in voice: {{n}}",
+    "copyCode": "Copy code",
+    "codeCopied": "Code copied",
+    "rename": "Rename",
+    "renameTitle": "Rename group",
+    "resetCode": "Reset code",
+    "codeReset": "Code updated",
+    "delete": "Delete group",
+    "deleteConfirm": "The group \"{{name}}\" will be deleted for all members.",
+    "leave": "Leave group",
+    "invite": "Invite",
+    "inviteTitle": "Invite to \"{{group}}\"",
+    "invitePlaceholder": "Choose a friend",
+    "inviteSent": "Invite sent",
+    "inviteExists": "Invite already sent",
+    "alreadyMember": "This player is already in the group",
+    "noInvitableFriends": "All your friends are already in the group",
+    "offline": "(offline)",
+    "invites": "Group invitations",
+    "inviteToVoice": "Invite to group voice",
+    "voicePingSent": "Voice invite sent",
+    "voicePingTitle": "Voice call-in",
+    "voicePingBody": "{{nickname}} is calling you into the voice of \"{{group}}\"",
+    "voicePingJoin": "Join",
+    "invitedBy": "Invited by {{nickname}}",
+    "accept": "Accept",
+    "decline": "Decline",
+    "joined": "You joined the group \"{{group}}\"",
+    "codeNotFound": "No group found with this code",
+    "joinError": "Failed to join voice",
+    "actionError": "Action failed",
+    "chat": "Group chat",
+    "copyLink": "Copy invite link",
+    "linkCopied": "Link copied",
+    "members": "Members",
+    "membersTitle": "Members of \"{{group}}\"",
+    "ban": "Ban",
+    "bannedSection": "Banned",
+    "unban": "Unban",
+    "bannedToast": "You are banned from this group",
+    "fullToast": "This group is full",
+    "rateLimitedToast": "Too many attempts. Try again in a minute",
+    "muteNotifications": "Mute notifications",
+    "unmuteNotifications": "Unmute notifications",
+    "transferOwner": "Transfer ownership",
+    "transferConfirm": "Transfer ownership of \"{{group}}\" to {{nickname}}? You will remain a regular member.",
+    "inviteToGame": "Invite to game",
+    "gameInvitesSent": "Game invites sent"
+  },
+  "voiceCall": {
+    "start": "Call",
+    "incoming": "Incoming call…",
+    "outgoing": "Calling…",
+    "accept": "Accept",
+    "decline": "Decline",
+    "cancel": "Cancel",
+    "declined": "{{nickname}} declined the call",
+    "noAnswer": "{{nickname}} is not answering",
+    "missed": "Missed call from {{nickname}}",
+    "cancelledByPeer": "{{nickname}} cancelled the call",
+    "busy": "Line is busy — there is already an active call",
+    "offline": "This player is offline",
+    "error": "Call failed",
+    "tooSoon": "Please wait a moment before calling this player again",
+    "rateLimited": "Too many calls. Please slow down.",
+    "notificationTitle": "Incoming call",
+    "notificationBody": "is calling you"
+  },
+  "groupInvite": {
+    "title": "Group invitation",
+    "body": "{{nickname}} invites you to the group \"{{group}}\"",
+    "accept": "Accept",
+    "joined": "You joined the group \"{{group}}\""
+  },
   "settings": {
     "title": "Settings",
     "launcherBuild": "Launcher version",
@@ -441,9 +538,24 @@
     "sections": {
       "game": "Game",
       "interface": "Interface",
+      "voice": "Voice chat",
       "diagnostics": "Diagnostics",
       "storage": "Storage"
     },
+    "voicePanel": "Voice settings",
+    "voicePanelDescription": "Devices, microphone check, push-to-talk and noise suppression",
+    "voicePanelOpen": "Open",
+    "voicePtt": "Push-to-talk",
+    "voicePttDescription": "The microphone is only active while the selected key is held — works even over the game",
+    "voicePttKeyNone": "No key selected",
+    "voicePttCapture": "Change",
+    "voicePttCapturing": "Press a key…",
+    "voiceNoiseSuppression": "Noise suppression (RNNoise)",
+    "voiceNoiseSuppressionDescription": "Additionally removes background noise (keyboard, fans) on top of the built-in suppression",
+    "voiceDevices": "Audio devices",
+    "voiceMicTestStart": "Test",
+    "voiceMicTestStop": "Stop",
+    "voiceMicTestError": "Could not access the microphone",
     "storage": {
       "totalLabel": "Total used",
       "refresh": "Refresh",
@@ -458,6 +570,9 @@
       "open": "Open",
       "clearCache": "Clear cache",
       "cleared": "Freed ~{{size}}",
+      "busy": "Cleanup is unavailable while an install or game is running",
+      "actionFailed": "Cleanup failed",
+      "loadError": "Couldn't load storage data",
       "cleanupJava": "Delete unused Java",
       "cleanupLibraries": "Orphaned libraries",
       "cleanupJavaConfirmTitle": "Delete unused Java?",
@@ -677,9 +792,61 @@
   },
   "arguments": {
     "title": "Launch arguments",
+    "subtitle": "Added on top of the memory and flags from Settings",
     "jvm": "JVM arguments",
     "game": "Game arguments",
-    "alert": "Changing arguments may cause the game to malfunction"
+    "alert": "Changing arguments may cause the game to malfunction",
+    "presets": "Presets:",
+    "rawMode": "Text mode",
+    "addPlaceholder": "Add a flag and press Enter",
+    "empty": "No arguments set",
+    "preview": "Effective command",
+    "previewNoteJvm": "Memory and garbage collector come from Settings",
+    "previewNoteGame": "The launcher fills in login, UUID, and paths",
+    "fromSettings": "From Settings:",
+    "optimizedOn": "optimized: G1GC, {{n}} flags",
+    "optimizedOff": "standard garbage collector",
+    "optimizedHint": "The optimized G1GC set from Settings is added automatically. See the full list in the effective command.",
+    "diag": {
+      "malformed": "{{flag}} looks like it has a syntax error",
+      "duplicate": "{{flag}} is already added — the last one wins",
+      "gcConflict": "Multiple garbage collectors selected — keep only one",
+      "memoryOverride": "{{flag}} overrides the memory from Settings (currently {{mb}} MB)",
+      "wrongTabGame": "{{flag}} is a game argument — it belongs on the Game tab",
+      "wrongTabJvm": "{{flag}} is a JVM argument — it belongs on the JVM tab",
+      "managed": "{{flag}} is set by the launcher — remove it",
+      "remove": "Remove",
+      "moveToGame": "Move to Game",
+      "moveToJvm": "Move to JVM"
+    },
+    "catalog": {
+      "utf8": "UTF-8 encoding",
+      "g1gc": "G1 garbage collector",
+      "zgc": "Z collector: sub-1 ms pauses, for 8 GB+",
+      "parallelgc": "Parallel collector, maximum throughput",
+      "unlockExp": "Unlock experimental flags",
+      "gcPause": "Target garbage-collection pause, ms",
+      "fullTrace": "Full stack traces on crashes",
+      "ipv4": "Use IPv4 only",
+      "preTouch": "Reserve all memory at startup",
+      "gcLog": "Log garbage collection",
+      "forgeCerts": "Forge: ignore certificate checks",
+      "lwjglDebug": "LWJGL debug output",
+      "width": "Window width",
+      "height": "Window height",
+      "server": "Auto-connect to server",
+      "port": "Server port",
+      "fullscreen": "Fullscreen mode",
+      "demo": "Demo mode"
+    },
+    "preset": {
+      "utf8": "UTF-8",
+      "fullTrace": "Verbose crashes",
+      "gcLog": "GC logs",
+      "ipv4": "IPv4 only",
+      "window720": "Window 1280×720",
+      "fullscreen": "Fullscreen"
+    }
   },
   "selectPaths": {
     "title": "Select paths",
@@ -1105,42 +1272,150 @@
       "km": "km"
     },
     "items": {
-      "explore_10km": { "name": "First Steps", "desc": "Travel {{goal}} km in total" },
-      "explore_100km": { "name": "Wayfarer", "desc": "Travel {{goal}} km in total" },
-      "explore_1000km": { "name": "Globetrotter", "desc": "Travel {{goal}} km in total" },
-      "elytra_50km": { "name": "Sky Sailor", "desc": "Fly {{goal}} km with an elytra" },
-      "worlds_5": { "name": "Multiverse", "desc": "Play across {{goal}} different worlds" },
-      "worlds_25": { "name": "World Collector", "desc": "Play across {{goal}} different worlds" },
-      "mine_1k": { "name": "Pebble Pusher", "desc": "Mine {{goal}} blocks" },
-      "mine_25k": { "name": "Excavator", "desc": "Mine {{goal}} blocks" },
-      "mine_150k": { "name": "Deep Digger", "desc": "Mine {{goal}} blocks" },
-      "diamonds_64": { "name": "Diamonds!", "desc": "Mine {{goal}} diamond ore" },
-      "diamonds_512": { "name": "Diamond Hoarder", "desc": "Mine {{goal}} diamond ore" },
-      "debris_16": { "name": "Netherite", "desc": "Mine {{goal}} ancient debris" },
-      "kills_250": { "name": "Monster Hunter", "desc": "Defeat {{goal}} mobs" },
-      "kills_2500": { "name": "Slayer", "desc": "Defeat {{goal}} mobs" },
-      "kills_25000": { "name": "Doom Bringer", "desc": "Defeat {{goal}} mobs" },
-      "dragon": { "name": "Dragonslayer", "desc": "Defeat the Ender Dragon" },
-      "wither_1": { "name": "Wither's Bane", "desc": "Defeat the Wither" },
-      "wither_10": { "name": "Wither Hunter", "desc": "Defeat the Wither {{goal}} times" },
-      "warden": { "name": "Into the Dark", "desc": "Defeat the Warden" },
-      "ingame_10h": { "name": "Settling In", "desc": "Spend {{goal}} hours in your worlds" },
-      "ingame_100h": { "name": "Homesteader", "desc": "Spend {{goal}} hours in your worlds" },
-      "ingame_500h": { "name": "Veteran", "desc": "Spend {{goal}} hours in your worlds" },
-      "jumps_25k": { "name": "Jumping Jack", "desc": "Jump {{goal}} times" },
-      "sleep_50": { "name": "Sleepyhead", "desc": "Sleep {{goal}} nights" },
-      "deaths_100": { "name": "Born to Lose", "desc": "Die {{goal}} times" },
-      "craft_1k": { "name": "Tinkerer", "desc": "Craft {{goal}} items" },
-      "craft_10k": { "name": "Master Crafter", "desc": "Craft {{goal}} items" },
-      "enchant_50": { "name": "Arcane Touch", "desc": "Enchant {{goal}} items" },
-      "trade_100": { "name": "Regular Customer", "desc": "Trade with villagers {{goal}} times" },
-      "trade_1000": { "name": "Tycoon", "desc": "Trade with villagers {{goal}} times" },
-      "breed_50": { "name": "Rancher", "desc": "Breed {{goal}} animals" },
-      "fish_100": { "name": "Angler", "desc": "Catch {{goal}} fish" },
-      "raid_1": { "name": "Hero of the Village", "desc": "Win a raid" },
-      "pt100": { "name": "100 Hours", "desc": "Play for {{goal}} hours in the launcher" },
-      "pt500": { "name": "500 Hours", "desc": "Play for {{goal}} hours in the launcher" },
-      "pt1000": { "name": "1000 Hours", "desc": "Play for {{goal}} hours in the launcher" }
+      "explore_10km": {
+        "name": "First Steps",
+        "desc": "Travel {{goal}} km in total"
+      },
+      "explore_100km": {
+        "name": "Wayfarer",
+        "desc": "Travel {{goal}} km in total"
+      },
+      "explore_1000km": {
+        "name": "Globetrotter",
+        "desc": "Travel {{goal}} km in total"
+      },
+      "elytra_50km": {
+        "name": "Sky Sailor",
+        "desc": "Fly {{goal}} km with an elytra"
+      },
+      "worlds_5": {
+        "name": "Multiverse",
+        "desc": "Play across {{goal}} different worlds"
+      },
+      "worlds_25": {
+        "name": "World Collector",
+        "desc": "Play across {{goal}} different worlds"
+      },
+      "mine_1k": {
+        "name": "Pebble Pusher",
+        "desc": "Mine {{goal}} blocks"
+      },
+      "mine_25k": {
+        "name": "Excavator",
+        "desc": "Mine {{goal}} blocks"
+      },
+      "mine_150k": {
+        "name": "Deep Digger",
+        "desc": "Mine {{goal}} blocks"
+      },
+      "diamonds_64": {
+        "name": "Diamonds!",
+        "desc": "Mine {{goal}} diamond ore"
+      },
+      "diamonds_512": {
+        "name": "Diamond Hoarder",
+        "desc": "Mine {{goal}} diamond ore"
+      },
+      "debris_16": {
+        "name": "Netherite",
+        "desc": "Mine {{goal}} ancient debris"
+      },
+      "kills_250": {
+        "name": "Monster Hunter",
+        "desc": "Defeat {{goal}} mobs"
+      },
+      "kills_2500": {
+        "name": "Slayer",
+        "desc": "Defeat {{goal}} mobs"
+      },
+      "kills_25000": {
+        "name": "Doom Bringer",
+        "desc": "Defeat {{goal}} mobs"
+      },
+      "dragon": {
+        "name": "Dragonslayer",
+        "desc": "Defeat the Ender Dragon"
+      },
+      "wither_1": {
+        "name": "Wither's Bane",
+        "desc": "Defeat the Wither"
+      },
+      "wither_10": {
+        "name": "Wither Hunter",
+        "desc": "Defeat the Wither {{goal}} times"
+      },
+      "warden": {
+        "name": "Into the Dark",
+        "desc": "Defeat the Warden"
+      },
+      "ingame_10h": {
+        "name": "Settling In",
+        "desc": "Spend {{goal}} hours in your worlds"
+      },
+      "ingame_100h": {
+        "name": "Homesteader",
+        "desc": "Spend {{goal}} hours in your worlds"
+      },
+      "ingame_500h": {
+        "name": "Veteran",
+        "desc": "Spend {{goal}} hours in your worlds"
+      },
+      "jumps_25k": {
+        "name": "Jumping Jack",
+        "desc": "Jump {{goal}} times"
+      },
+      "sleep_50": {
+        "name": "Sleepyhead",
+        "desc": "Sleep {{goal}} nights"
+      },
+      "deaths_100": {
+        "name": "Born to Lose",
+        "desc": "Die {{goal}} times"
+      },
+      "craft_1k": {
+        "name": "Tinkerer",
+        "desc": "Craft {{goal}} items"
+      },
+      "craft_10k": {
+        "name": "Master Crafter",
+        "desc": "Craft {{goal}} items"
+      },
+      "enchant_50": {
+        "name": "Arcane Touch",
+        "desc": "Enchant {{goal}} items"
+      },
+      "trade_100": {
+        "name": "Regular Customer",
+        "desc": "Trade with villagers {{goal}} times"
+      },
+      "trade_1000": {
+        "name": "Tycoon",
+        "desc": "Trade with villagers {{goal}} times"
+      },
+      "breed_50": {
+        "name": "Rancher",
+        "desc": "Breed {{goal}} animals"
+      },
+      "fish_100": {
+        "name": "Angler",
+        "desc": "Catch {{goal}} fish"
+      },
+      "raid_1": {
+        "name": "Hero of the Village",
+        "desc": "Win a raid"
+      },
+      "pt100": {
+        "name": "100 Hours",
+        "desc": "Play for {{goal}} hours in the launcher"
+      },
+      "pt500": {
+        "name": "500 Hours",
+        "desc": "Play for {{goal}} hours in the launcher"
+      },
+      "pt1000": {
+        "name": "1000 Hours",
+        "desc": "Play for {{goal}} hours in the launcher"
+      }
     }
   },
   "leaderboard": {

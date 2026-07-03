@@ -8,18 +8,48 @@ import {
   VersionInstallOptions,
   VersionInstallResult,
 } from '@/types/InstallationProgress'
+import {
+  cancelActiveInstallOperation,
+  tryBeginInstallOperation,
+} from './installLock'
 
 const fallbackModsResult: VersionInstallResult = {
   success: false,
   error: 'Mods operation failed.'
 }
 
-let activeModsInstall:
-  | {
-      controller: AbortController
-      mods: Mods
+async function runModsOperation(
+  mods: Mods,
+  action: (mods: Mods, signal: AbortSignal) => Promise<void>
+): Promise<VersionInstallResult> {
+  const lock = tryBeginInstallOperation(() => mods.cancelInstall())
+  if (!lock) {
+    return {
+      success: false,
+      error: 'Another installation operation is already running.'
     }
-  | null = null
+  }
+
+  try {
+    await action(mods, lock.controller.signal)
+    return { success: true, failures: mods.lastFailures?.failures }
+  } catch (error) {
+    if (
+      lock.controller.signal.aborted ||
+      (error instanceof Error && error.message === VERSION_INSTALL_CANCELLED)
+    ) {
+      return {
+        success: false,
+        cancelled: true,
+        error: VERSION_INSTALL_CANCELLED
+      }
+    }
+
+    throw error
+  } finally {
+    lock.end()
+  }
+}
 
 export function registerModsIpc() {
   handleSafe<VersionInstallResult>(
@@ -32,42 +62,10 @@ export function registerModsIpc() {
       server?: IServerConf,
       options?: VersionInstallOptions
     ) => {
-      if (activeModsInstall) {
-        return {
-          success: false,
-          error: 'Another mods operation is already running.'
-        }
-      }
-
-      const controller = new AbortController()
       const mods = new Mods(settings, versionConf, server)
-
-      activeModsInstall = { controller, mods }
-
-      try {
-        await mods.check({
-          ...options,
-          signal: controller.signal
-        })
-        return { success: true }
-      } catch (error) {
-        if (
-          controller.signal.aborted ||
-          (error instanceof Error && error.message === VERSION_INSTALL_CANCELLED)
-        ) {
-          return {
-            success: false,
-            cancelled: true,
-            error: VERSION_INSTALL_CANCELLED
-          }
-        }
-
-        throw error
-      } finally {
-        if (activeModsInstall?.controller === controller) {
-          activeModsInstall = null
-        }
-      }
+      return runModsOperation(mods, (m, signal) =>
+        m.check({ ...options, signal })
+      )
     }
   )
 
@@ -80,50 +78,14 @@ export function registerModsIpc() {
       versionConf: IVersionConf,
       options?: VersionInstallOptions
     ) => {
-      if (activeModsInstall) {
-        return {
-          success: false,
-          error: 'Another mods operation is already running.'
-        }
-      }
-
-      const controller = new AbortController()
       const mods = new Mods(settings, versionConf)
-
-      activeModsInstall = { controller, mods }
-
-      try {
-        await mods.downloadOther({
-          ...options,
-          signal: controller.signal
-        })
-        return { success: true }
-      } catch (error) {
-        if (
-          controller.signal.aborted ||
-          (error instanceof Error && error.message === VERSION_INSTALL_CANCELLED)
-        ) {
-          return {
-            success: false,
-            cancelled: true,
-            error: VERSION_INSTALL_CANCELLED
-          }
-        }
-
-        throw error
-      } finally {
-        if (activeModsInstall?.controller === controller) {
-          activeModsInstall = null
-        }
-      }
+      return runModsOperation(mods, (m, signal) =>
+        m.downloadOther({ ...options, signal })
+      )
     }
   )
 
   handleSafe('mods:cancelInstall', false, async () => {
-    if (!activeModsInstall) return false
-
-    activeModsInstall.controller.abort()
-    activeModsInstall.mods.cancelInstall()
-    return true
+    return cancelActiveInstallOperation()
   })
 }

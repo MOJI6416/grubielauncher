@@ -3,4 +3,5 @@ export interface IServer {
   ip: string
   icon?: string
   acceptTextures: number | null
+  hidden?: number | null
 }

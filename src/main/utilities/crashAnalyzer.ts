@@ -49,17 +49,20 @@ async function readFileTail(filePath: string): Promise<string | null> {
     if (!stats.isFile()) return null;
 
     const start = Math.max(0, stats.size - MAX_SOURCE_BYTES);
-    const stream = fs.createReadStream(filePath, {
-      start,
-      encoding: "utf-8",
-    });
+    const stream = fs.createReadStream(filePath, { start });
 
-    let content = "";
+    const chunks: Buffer[] = [];
     for await (const chunk of stream) {
-      content += chunk;
+      chunks.push(chunk as Buffer);
     }
 
-    return content;
+    let buffer = Buffer.concat(chunks);
+    if (start > 0) {
+      const newlineIndex = buffer.indexOf(0x0a);
+      if (newlineIndex !== -1) buffer = buffer.subarray(newlineIndex + 1);
+    }
+
+    return buffer.toString("utf-8");
   } catch {
     return null;
   }

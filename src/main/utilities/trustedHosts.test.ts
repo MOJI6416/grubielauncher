@@ -28,6 +28,9 @@ describe("isTrustedDownloadUrl", () => {
     expect(isTrustedDownloadUrl("https://mojang.com.evil.com/x")).toBe(false);
     expect(isTrustedDownloadUrl("https://notmojang.com/x")).toBe(false);
     expect(isTrustedDownloadUrl("file:///etc/passwd")).toBe(false);
+    expect(isTrustedDownloadUrl("http://piston-meta.mojang.com/v1/x.json")).toBe(
+      false,
+    );
     expect(isTrustedDownloadUrl("")).toBe(false);
     expect(isTrustedDownloadUrl(undefined as unknown as string)).toBe(false);
   });

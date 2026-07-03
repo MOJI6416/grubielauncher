@@ -6,6 +6,12 @@ export const LANGUAGES = [
 
 export type DownloadSource = 'auto' | 'official' | 'mirror'
 
+export type VoicePttBind = {
+  type: 'key' | 'mouse'
+  code: number
+  label: string
+}
+
 export type TSettings = {
   xmx: number
   optimizedJvm: boolean
@@ -17,6 +23,9 @@ export type TSettings = {
   crashTelemetry: boolean
   sounds: boolean
   hideServerInRpc: boolean
+  voicePtt: boolean
+  voicePttBind: VoicePttBind | null
+  voiceNoiseSuppression: boolean
 }
 
 export const DEFAULT_SETTINGS: TSettings = {
@@ -29,7 +38,24 @@ export const DEFAULT_SETTINGS: TSettings = {
   downloadSource: 'auto',
   crashTelemetry: true,
   sounds: true,
-  hideServerInRpc: false
+  hideServerInRpc: false,
+  voicePtt: false,
+  voicePttBind: null,
+  voiceNoiseSuppression: false
+}
+
+export function normalizeVoicePttBind(value: unknown): VoicePttBind | null {
+  if (!value || typeof value !== 'object') return null
+
+  const bind = value as Partial<VoicePttBind>
+  if (bind.type !== 'key' && bind.type !== 'mouse') return null
+  if (typeof bind.code !== 'number' || !Number.isFinite(bind.code)) return null
+
+  return {
+    type: bind.type,
+    code: Math.round(bind.code),
+    label: typeof bind.label === 'string' ? bind.label : String(bind.code)
+  }
 }
 
 export function normalizeSettings(
@@ -74,6 +100,13 @@ export function normalizeSettings(
     hideServerInRpc:
       typeof value?.hideServerInRpc === 'boolean'
         ? value.hideServerInRpc
-        : DEFAULT_SETTINGS.hideServerInRpc
+        : DEFAULT_SETTINGS.hideServerInRpc,
+    voicePtt:
+      typeof value?.voicePtt === 'boolean' ? value.voicePtt : DEFAULT_SETTINGS.voicePtt,
+    voicePttBind: normalizeVoicePttBind(value?.voicePttBind),
+    voiceNoiseSuppression:
+      typeof value?.voiceNoiseSuppression === 'boolean'
+        ? value.voiceNoiseSuppression
+        : DEFAULT_SETTINGS.voiceNoiseSuppression
   }
 }

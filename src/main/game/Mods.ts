@@ -6,7 +6,6 @@ import path from "path";
 import { pathToFileURL } from "url";
 import fs from "fs-extra";
 import { Downloader } from "../utilities/downloader";
-import { rimraf } from "rimraf";
 import { IVersionConf } from "@/types/IVersion";
 import { TSettings } from "@/types/Settings";
 import { projetTypeToFolder } from "../utilities/modManager";
@@ -20,6 +19,9 @@ import {
 } from "@/types/InstallationProgress";
 import { mainWindow } from "../windows/mainWindow";
 import { OPTIONAL_PROJECT_DOWNLOAD_OPTIONS } from "../utilities/downloaderPure";
+import { DownloaderFailuresInfo } from "@/types/Downloader";
+
+const TRASH_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 
 type ModsRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
@@ -39,6 +41,7 @@ export class Mods {
   private initFailed = false;
   private installOperation: VersionInstallOperation = "install";
   private installAbortSignal: AbortSignal | null = null;
+  public lastFailures: DownloaderFailuresInfo | null = null;
 
   constructor(
     settings: TSettings,
@@ -250,7 +253,7 @@ export class Mods {
     }
 
     this.sendInstallProgress("mods", 86, true);
-    await this.downloader.downloadFiles(
+    this.lastFailures = await this.downloader.downloadFiles(
       downloadFiles,
       this.installAbortSignal ?? undefined,
       OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
@@ -311,6 +314,53 @@ export class Mods {
     this.sendInstallProgress("mods", 90, true);
     await Promise.all(tasks);
     this.throwIfInstallCancelled();
+    await this.pruneTrash();
+  }
+
+  private getTrashPath() {
+    return path.join(this.version.versionPath, "storage", "trash");
+  }
+
+  private async moveToTrash(files: string[]) {
+    if (files.length === 0) return;
+
+    const trashPath = this.getTrashPath();
+    await fs.ensureDir(trashPath);
+
+    await Promise.all(
+      files.map(async (file) => {
+        const target = path.join(
+          trashPath,
+          `${Date.now()}-${path.basename(file)}`,
+        );
+
+        try {
+          await fs.move(file, target, { overwrite: true });
+        } catch {
+          await fs.remove(file).catch(() => {});
+        }
+      }),
+    );
+  }
+
+  private async pruneTrash() {
+    const trashPath = this.getTrashPath();
+    const entries = await fs.readdir(trashPath).catch(() => [] as string[]);
+
+    for (const entry of entries) {
+      const match = /^(\d{13})-/.exec(entry);
+      const entryPath = path.join(trashPath, entry);
+
+      let createdAt = match ? Number(match[1]) : 0;
+      if (!createdAt) {
+        const stats = await fs.stat(entryPath).catch(() => null);
+        createdAt = stats?.mtimeMs ?? 0;
+      }
+
+      if (Date.now() - createdAt > TRASH_MAX_AGE_MS) {
+        await fs.remove(entryPath).catch(() => {});
+      }
+    }
   }
 
   private async comparison(projectType: ProjectType) {
@@ -387,7 +437,7 @@ export class Mods {
       }
     }
 
-    await rimraf(deleteFiles);
+    await this.moveToTrash(deleteFiles);
   }
 
   async downloadOther(options?: ModsRuntimeOptions) {
@@ -404,7 +454,7 @@ export class Mods {
 
     try {
       this.sendInstallProgress("other", 94, true);
-      await this.downloader.downloadFiles(
+      this.lastFailures = await this.downloader.downloadFiles(
         [
           {
             destination: path.join(tempPath, "other.zip"),
@@ -421,7 +471,7 @@ export class Mods {
       );
       this.throwIfInstallCancelled();
     } finally {
-      await rimraf(tempPath).catch(() => {});
+      await fs.remove(tempPath).catch(() => {});
     }
   }
 }

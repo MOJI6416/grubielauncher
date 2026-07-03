@@ -3,7 +3,11 @@ import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import { autoUpdater } from "electron-updater";
 import * as ipcHandlers from "./ipc";
 import { lanShareService } from "./share";
-import { createMainWindow, mainWindow } from "./windows/mainWindow";
+import {
+  createMainWindow,
+  mainWindow,
+  showMainWindow,
+} from "./windows/mainWindow";
 import { createUpdaterWindow, updaterWindow } from "./windows/updaterWindow";
 import { rpc } from "./rpc";
 import { stopOAuthServer } from "./utilities/authServer";
@@ -12,6 +16,7 @@ import {
   parseLauncherDeepLink,
 } from "./utilities/deepLink";
 import { initMirrorState } from "./utilities/mirrorState";
+import { disposePushToTalk } from "./services/PushToTalk";
 import { LauncherDeepLink } from "@/types/DeepLink";
 import path from "path";
 import fs from "fs-extra";
@@ -40,7 +45,7 @@ function setupContentSecurityPolicy() {
         "Content-Security-Policy": [
           [
             "default-src 'self'",
-            "script-src 'self'",
+            "script-src 'self' blob: 'wasm-unsafe-eval'",
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob: https: http:",
             "media-src 'self' data: blob:",
@@ -76,6 +81,7 @@ function openMainWindowOnce() {
 
 function notifyMainWindowUpdateFailed(message: string) {
   openMainWindowOnce();
+  showMainWindow();
   if (!mainWindow) return;
 
   const send = () => {
@@ -109,7 +115,7 @@ function focusMainWindow() {
   if (!mainWindow) return;
 
   if (mainWindow.isMinimized()) mainWindow.restore();
-  mainWindow.show();
+  showMainWindow();
   mainWindow.focus();
 }
 
@@ -162,10 +168,7 @@ if (!gotTheLock) {
       return;
     }
 
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
-    }
+    focusMainWindow();
   });
 
   app.on("open-url", (event, url) => {
@@ -200,6 +203,7 @@ if (!gotTheLock) {
     }
 
     createUpdaterWindow();
+    createMainWindow({ deferShow: true });
 
     autoUpdater.on("checking-for-update", () => {
       sendUpdaterStatus("checking");
@@ -228,6 +232,7 @@ if (!gotTheLock) {
       sendUpdaterStatus("not-available");
       updaterWindow?.close();
       openMainWindowOnce();
+      showMainWindow();
       flushPendingDeepLinks();
     });
 
@@ -274,6 +279,8 @@ if (!gotTheLock) {
       console.warn("[Shutdown] Cleanup timed out, forcing app exit.");
       app.exit(0);
     }, APP_SHUTDOWN_TIMEOUT_MS);
+
+    disposePushToTalk();
 
     void Promise.allSettled([
       lanShareService.dispose(),

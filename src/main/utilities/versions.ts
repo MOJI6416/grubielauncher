@@ -3,7 +3,6 @@ import { readNBT } from "./nbt";
 import type { IImportModpack, IVersionConf } from "@/types/IVersion";
 import path from "path";
 import fs from "fs-extra";
-import { rimraf } from "rimraf";
 import { extractZip } from "./archiver";
 import { pathToFileURL } from "url";
 
@@ -110,7 +109,7 @@ export async function importVersion(
   const versionPath = path.join(tempPath, versionName);
 
   if (await fs.pathExists(versionPath)) {
-    await rimraf(versionPath).catch(() => {});
+    await fs.remove(versionPath).catch(() => {});
   }
 
   try {
@@ -122,7 +121,7 @@ export async function importVersion(
       const modpack = await checkModpack(versionPath);
 
       if (!modpack) {
-        await rimraf(versionPath).catch(() => {});
+        await fs.remove(versionPath).catch(() => {});
         throw Error("not modpack");
       }
 
@@ -157,7 +156,7 @@ export async function importVersion(
     };
   } catch (err) {
     if (await fs.pathExists(versionPath)) {
-      await rimraf(versionPath).catch(() => {});
+      await fs.remove(versionPath).catch(() => {});
     }
     throw err;
   }

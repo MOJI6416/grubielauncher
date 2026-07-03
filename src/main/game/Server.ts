@@ -5,7 +5,6 @@ import { ILocalAccount } from "@/types/Account";
 import path from "path";
 import { getJavaAgent, HTTP_AGENT_JVM_ARGUMENT } from "../utilities/other";
 import { Downloader } from "../utilities/downloader";
-import { rimraf } from "rimraf";
 import fs from "fs-extra";
 import { installServer } from "../utilities/game";
 import { Backend } from "../services/Backend";
@@ -245,7 +244,7 @@ export class ServerGame {
         );
       }
 
-      await rimraf(jarPath).catch(() => {});
+      await fs.remove(jarPath).catch(() => {});
       await fs.rename(quiltLaunchJar, jarPath);
     } else if (
       this.serverConf.core == ServerCore.FORGE ||
@@ -310,7 +309,7 @@ export class ServerGame {
           );
         }
 
-        await rimraf(jarPath).catch(() => {});
+        await fs.remove(jarPath).catch(() => {});
         jar = universalJar;
       }
     }

@@ -21,6 +21,7 @@ export interface ILocalAccount {
   type: AccountType
   image: string
   friends: ILocalFriend[]
+  id?: string
 }
 
 export interface IAccountConf {

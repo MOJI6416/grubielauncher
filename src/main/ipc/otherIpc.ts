@@ -1,4 +1,5 @@
 import { DownloadItem } from '@/types/Downloader'
+import fs from 'fs-extra'
 import {
   app,
   clipboard,
@@ -27,6 +28,8 @@ import { handleSafe } from '../utilities/ipc'
 import { assertWritablePath, blessUserSelectedPath } from '../utilities/safePath'
 import { isSafeRemoteImageUrl } from '../utilities/safeUrl'
 import { createInstanceShortcut, getImageBase64 } from '../utilities/shortcut'
+
+let activeConnectivityRun: Promise<ConnectivityCheckResult[]> | null = null
 
 function assertSafeExternalUrl(url: string): string {
   const parsed = new URL(url)
@@ -154,6 +157,16 @@ export function registerOtherIpc() {
     await shell.openPath(p)
   })
 
+  handleSafe<boolean, [string]>('shell:trashItem', false, async (_, p: string) => {
+    assertWritablePath(p, 'shell:trashItem')
+    try {
+      await shell.trashItem(p)
+    } catch {
+      await fs.remove(p)
+    }
+    return true
+  })
+
   handleSafe<void, [RpcRendererContext]>('rpc:syncContext', undefined, async (_, context) => {
     await rpc.syncContext(context)
   })
@@ -165,7 +178,11 @@ export function registerOtherIpc() {
       let image: NativeImage | undefined = undefined
 
       if (isSafeRemoteImageUrl(options.icon)) {
-        const response = await axios.get(options.icon, { responseType: 'arraybuffer' })
+        const response = await axios.get(options.icon, {
+          responseType: 'arraybuffer',
+          timeout: 10000,
+          maxContentLength: 5 * 1024 * 1024
+        })
         const buffer = await response.data
         image = nativeImage.createFromBuffer(Buffer.from(buffer))
       }
@@ -203,16 +220,24 @@ export function registerOtherIpc() {
   })
 
   handleSafe<ConnectivityCheckResult[]>('connectivity:test', [], async (event) => {
-    const results = await runConnectivityTests((result) => {
-      try {
-        if (!event.sender.isDestroyed()) {
-          event.sender.send('connectivity:result', result)
-        }
-      } catch {}
+    if (activeConnectivityRun) return await activeConnectivityRun
+
+    activeConnectivityRun = (async () => {
+      const results = await runConnectivityTests((result) => {
+        try {
+          if (!event.sender.isDestroyed()) {
+            event.sender.send('connectivity:result', result)
+          }
+        } catch {}
+      })
+
+      updateMojangReachableFromConnectivity(results)
+      return results
+    })().finally(() => {
+      activeConnectivityRun = null
     })
 
-    updateMojangReachableFromConnectivity(results)
-    return results
+    return await activeConnectivityRun
   })
 
   handleSafe<void, [DownloadSource]>('mirror:setSource', undefined, async (_, source) => {

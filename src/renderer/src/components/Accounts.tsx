@@ -28,13 +28,13 @@ import {
 } from "lucide-react";
 import { TbSquareLetterE } from "react-icons/tb";
 import { IUser } from "@/types/IUser";
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import {
   accountAtom,
   accountsAtom,
   accountsModalAtom,
   authDataAtom,
-  consolesAtom,
+  consolesMetaAtom,
   isRunningAtom,
   networkAtom,
   pathsAtom,
@@ -187,7 +187,7 @@ export function Accounts() {
   const [isNetwork] = useAtom(networkAtom);
   const [isRunning] = useAtom(isRunningAtom);
   const [authData, setAuthData] = useAtom(authDataAtom);
-  const [consoles] = useAtom(consolesAtom);
+  const consoleMetas = useAtomValue(consolesMetaAtom);
   const [, setVersion] = useAtom(selectedVersionAtom);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
 
@@ -679,7 +679,7 @@ export function Accounts() {
               {selectedAccount ? (
                 <Button
                   variant="destructive"
-                  disabled={consoles.consoles.some(
+                  disabled={consoleMetas.some(
                     (c) => c.status == "running",
                   )}
                   onClick={() => setIsConfirmationOpen(true)}

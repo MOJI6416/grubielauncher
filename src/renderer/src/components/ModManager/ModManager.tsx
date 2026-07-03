@@ -141,6 +141,7 @@ import {
 import { ALPModal } from "./AddLocalProjectsModal";
 import { UPModal } from "./UpdateProjectsModal";
 import { formatBytes } from "@renderer/utilities/file";
+import { toFileUrl } from "@renderer/utilities/exportVersion";
 import { toast } from "sonner";
 
 const api = window.api;
@@ -753,6 +754,8 @@ export function ModManager({
         setSearchData(data);
         setBrowser(data.projects);
         setOffset(data.offset ?? offset);
+
+        if (data.error) toast.error(t("modManager.searchFailed"));
       }
     } finally {
       if (reqId === requestIdRef.current) {
@@ -1050,7 +1053,7 @@ export function ModManager({
               filename: info.filename,
               isServer: true,
               size: info.size,
-              url: `file://${info.path}`,
+              url: toFileUrl(info.path),
               sha1: info.sha1,
             },
           ],

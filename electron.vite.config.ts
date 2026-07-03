@@ -15,11 +15,17 @@ export default defineConfig(() => {
       resolve: {
         alias,
       },
+      build: {
+        minify: "esbuild" as const,
+      },
     },
     preload: {
       plugins: [externalizeDepsPlugin()],
       resolve: {
         alias,
+      },
+      build: {
+        minify: "esbuild" as const,
       },
     },
     renderer: {
@@ -28,6 +34,7 @@ export default defineConfig(() => {
       },
       plugins: [react(), tailwindcss()],
       build: {
+        minify: "esbuild" as const,
         rollupOptions: {
           input: {
             main: resolve(__dirname, "src/renderer/index.html"),

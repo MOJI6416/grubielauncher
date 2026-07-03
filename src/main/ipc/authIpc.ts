@@ -15,6 +15,7 @@ let oauthServerPromise:
       provider: 'microsoft' | 'discord' | 'elyby'
     }>
   | null = null
+let oauthServerState: string | null = null
 
 export function registerAuthIpc() {
   const register = <T extends any[]>(
@@ -69,9 +70,13 @@ export function registerAuthIpc() {
       throw new Error('Invalid OAuth state')
     }
 
-    if (!oauthServerPromise) {
+    if (!oauthServerPromise || oauthServerState !== expectedState) {
+      oauthServerState = expectedState
       oauthServerPromise = startOAuthServer(expectedState).finally(() => {
-        oauthServerPromise = null
+        if (oauthServerState === expectedState) {
+          oauthServerPromise = null
+          oauthServerState = null
+        }
       })
     }
     return await oauthServerPromise

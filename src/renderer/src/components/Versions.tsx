@@ -36,13 +36,13 @@ import {
 import { VersionStatistics } from "./VersionStatistics";
 import { IVersionSession, IVersionStatistics } from "@/types/VersionStatistics";
 import { IWorldStatsAggregate } from "@/types/World";
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import {
   accountAtom,
   accountsAtom,
   addVersionModalAtom,
   authDataAtom,
-  consolesAtom,
+  consolesMetaAtom,
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
   isRunningAtom,
@@ -245,7 +245,7 @@ export function Versions({
   const [authData] = useAtom(authDataAtom);
   const setIsDownloadedVersion = useAtom(isDownloadedVersionAtom)[1];
   const setIsOwnerVersion = useAtom(isOwnerVersionAtom)[1];
-  const [consoles] = useAtom(consolesAtom);
+  const consoleMetas = useAtomValue(consolesMetaAtom);
 
   const selectReqIdRef = useRef(0);
   const hydratedSelectionRef = useRef(false);
@@ -372,11 +372,11 @@ export function Versions({
     }
 
     list.sort((a, b) => {
-      const aRunning = consoles.consoles.some(
+      const aRunning = consoleMetas.some(
         (console) =>
           console.versionName == a.version.name && console.status == "running",
       );
-      const bRunning = consoles.consoles.some(
+      const bRunning = consoleMetas.some(
         (console) =>
           console.versionName == b.version.name && console.status == "running",
       );
@@ -395,7 +395,7 @@ export function Versions({
     });
     return list;
   }, [
-    consoles.consoles,
+    consoleMetas,
     versions,
     searchQuery,
     sortBy,
@@ -1029,7 +1029,7 @@ export function Versions({
                 {sortedVersions.map((vc) => {
                   const isSelected =
                     selectedVersion?.version.name === vc.version.name;
-                  const isRunningInstance = consoles.consoles.some(
+                  const isRunningInstance = consoleMetas.some(
                     (c) =>
                       c.versionName == vc.version.name && c.status == "running",
                   );

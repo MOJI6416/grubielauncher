@@ -1,3 +1,4 @@
+import { DownloaderFailureItem } from "./Downloader";
 import { Loader } from "./Loader";
 
 export const VERSION_INSTALL_CANCELLED = "VERSION_INSTALL_CANCELLED";
@@ -27,6 +28,7 @@ export interface VersionInstallResult {
   success: boolean;
   error?: string;
   cancelled?: boolean;
+  failures?: DownloaderFailureItem[];
 }
 
 export interface VersionInstallSubProgress {

@@ -1,5 +1,4 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
-import { BaseService } from './Base'
 import { Loader } from '@/types/Loader'
 import { IVersion } from '@/types/IVersion'
 import { LoaderVersion } from '@/types/VersionsService'
@@ -23,7 +22,7 @@ export interface IFabricQuiltLoader {
   stable?: boolean
 }
 
-export class VersionsService extends BaseService {
+export class VersionsService {
   private static api = axios.create({
     timeout: 30000
   })

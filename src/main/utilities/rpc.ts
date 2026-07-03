@@ -1,6 +1,4 @@
-import en from '@/renderer/locales/en.json'
-import ru from '@/renderer/locales/ru.json'
-import uk from '@/renderer/locales/uk.json'
+import rpcLocaleData from './rpcLocales.json'
 import { DISCORD_CLIENT_ID } from '@/shared/config'
 import { RpcAccountContext, RpcRendererContext } from '@/types/Rpc'
 import { ShareState } from '@/types/Share'
@@ -47,9 +45,9 @@ type PublicShareActivity = {
 }
 
 const rpcLocales: Record<SupportedRpcLanguage, RpcLocale> = {
-  en: en.rpc,
-  ru: ru.rpc,
-  uk: uk.rpc
+  en: rpcLocaleData.en,
+  ru: rpcLocaleData.ru,
+  uk: rpcLocaleData.uk
 }
 
 const MAX_ACTIVITY_TEXT_LENGTH = 128

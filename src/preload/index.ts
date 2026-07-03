@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
+import { createPathUtils } from "./path";
 import { IServer } from "@/types/ServersList";
 import {
   IImportModpack,
@@ -9,10 +10,11 @@ import {
 import { IAccountConf, IAuth, ILocalAccount } from "@/types/Account";
 import { IModpack, IModpackUpdate, UploadFileProgress } from "@/types/Backend";
 import { IFriendSettingsUpdate, IUpdateUser, IUser } from "@/types/IUser";
+import { IGroup, IVoiceTokenResponse } from "@/types/Voice";
 import { INews, ISponsoredNewsAd } from "@/types/News";
 import { IGrubieSkin, SkinsData } from "@/types/SkinManager";
 import { LoaderVersion } from "@/types/VersionsService";
-import { DownloadSource, TSettings } from "@/types/Settings";
+import { DownloadSource, TSettings, VoicePttBind } from "@/types/Settings";
 import {
   IServerConf,
   IServerOption,
@@ -131,6 +133,7 @@ export interface IElectronAPI {
   };
   fs: {
     readFile: (filePath: string, encoding: BufferEncoding) => Promise<string>;
+    readFileBuffer: (target: string) => Promise<Uint8Array | null>;
     rimraf: (targetPath: string) => Promise<boolean>;
     ensure: (dirPath: string) => Promise<boolean>;
     copy: (src: string, dest: string) => Promise<boolean>;
@@ -165,6 +168,7 @@ export interface IElectronAPI {
   shell: {
     openExternal: (url: string) => Promise<void>;
     openPath: (path: string) => Promise<void>;
+    trashItem: (path: string) => Promise<boolean>;
   };
   file: {
     getFile: (filePath: string) => Promise<string>;
@@ -293,6 +297,44 @@ export interface IElectronAPI {
       user: IUpdateUser,
     ) => Promise<IUser | null>;
     getUser: (at: string, id: string) => Promise<IUser | null>;
+    groupsList: (at: string) => Promise<IGroup[] | null>;
+    groupCreate: (at: string, name: string) => Promise<IGroup | null>;
+    groupRename: (
+      at: string,
+      groupId: string,
+      name: string,
+    ) => Promise<IGroup | null>;
+    groupDelete: (at: string, groupId: string) => Promise<boolean>;
+    groupJoinVoice: (
+      at: string,
+      groupId: string,
+    ) => Promise<IVoiceTokenResponse | null>;
+    groupJoinByCode: (
+      at: string,
+      code: string,
+    ) => Promise<IGroup | "banned" | "group_full" | "rate_limited" | null>;
+    groupLeave: (at: string, groupId: string) => Promise<boolean>;
+    groupKickMember: (
+      at: string,
+      groupId: string,
+      memberId: string,
+    ) => Promise<boolean>;
+    groupBanMember: (
+      at: string,
+      groupId: string,
+      memberId: string,
+    ) => Promise<boolean>;
+    groupUnbanMember: (
+      at: string,
+      groupId: string,
+      memberId: string,
+    ) => Promise<boolean>;
+    groupTransferOwner: (
+      at: string,
+      groupId: string,
+      memberId: string,
+    ) => Promise<boolean>;
+    groupResetCode: (at: string, groupId: string) => Promise<IGroup | null>;
     resetFriendCode: (at: string, id: string) => Promise<IUser | null>;
     updateFriendSettings: (
       at: string,
@@ -340,6 +382,15 @@ export interface IElectronAPI {
     discordAuthenticated: (at: string, userId: string) => Promise<boolean>;
     aiComplete: (at: string, prompt: string) => Promise<string | null>;
     getAuthlib: () => Promise<IAuthlib | null>;
+  };
+  voice: {
+    setPtt: (
+      bind: { type: "key" | "mouse"; code: number } | null,
+    ) => Promise<void>;
+    capturePttBind: () => Promise<VoicePttBind | null>;
+    setSessionActive: (active: boolean) => Promise<void>;
+    onPttDown: (callback: () => void) => () => void;
+    onPttUp: (callback: () => void) => () => void;
   };
   versions: {
     getList: (
@@ -673,6 +724,8 @@ export interface IElectronAPI {
   };
 }
 
+const pathUtils = createPathUtils(process.platform === "win32");
+
 export const api = {
   platform: process.platform,
   window: {
@@ -690,14 +743,16 @@ export const api = {
       ipcRenderer.invoke("storage:cleanup", kind),
   },
   path: {
-    join: (...args: string[]) => ipcRenderer.invoke("path:join", ...args),
+    join: (...args: string[]) => pathUtils.join(...args),
     basename: (filePath: string, suffix?: string) =>
-      ipcRenderer.invoke("path:basename", filePath, suffix),
-    extname: (filePath: string) => ipcRenderer.invoke("path:extname", filePath),
+      pathUtils.basename(filePath, suffix),
+    extname: (filePath: string) => pathUtils.extname(filePath),
   },
   fs: {
     readFile: (filePath: string, encoding: BufferEncoding) =>
       ipcRenderer.invoke("fs:readFile", filePath, encoding),
+    readFileBuffer: (target: string) =>
+      ipcRenderer.invoke("fs:readFileBuffer", target),
     rimraf: (targetPath: string) => ipcRenderer.invoke("fs:rimraf", targetPath),
     ensure: (dirPath: string) => ipcRenderer.invoke("fs:ensure", dirPath),
     copy: (src: string, dest: string) =>
@@ -736,6 +791,7 @@ export const api = {
     openExternal: (url: string) =>
       ipcRenderer.invoke("shell:openExternal", url),
     openPath: (path: string) => ipcRenderer.invoke("shell:openPath", path),
+    trashItem: (path: string) => ipcRenderer.invoke("shell:trashItem", path),
   },
   file: {
     archiveFiles: (
@@ -873,6 +929,29 @@ export const api = {
       ipcRenderer.invoke("backend:updateUser", at, id, user),
     getUser: (at: string, id: string) =>
       ipcRenderer.invoke("backend:getUser", at, id),
+    groupsList: (at: string) => ipcRenderer.invoke("backend:groupsList", at),
+    groupCreate: (at: string, name: string) =>
+      ipcRenderer.invoke("backend:groupCreate", at, name),
+    groupRename: (at: string, groupId: string, name: string) =>
+      ipcRenderer.invoke("backend:groupRename", at, groupId, name),
+    groupDelete: (at: string, groupId: string) =>
+      ipcRenderer.invoke("backend:groupDelete", at, groupId),
+    groupJoinVoice: (at: string, groupId: string) =>
+      ipcRenderer.invoke("backend:groupJoinVoice", at, groupId),
+    groupJoinByCode: (at: string, code: string) =>
+      ipcRenderer.invoke("backend:groupJoinByCode", at, code),
+    groupLeave: (at: string, groupId: string) =>
+      ipcRenderer.invoke("backend:groupLeave", at, groupId),
+    groupKickMember: (at: string, groupId: string, memberId: string) =>
+      ipcRenderer.invoke("backend:groupKickMember", at, groupId, memberId),
+    groupBanMember: (at: string, groupId: string, memberId: string) =>
+      ipcRenderer.invoke("backend:groupBanMember", at, groupId, memberId),
+    groupUnbanMember: (at: string, groupId: string, memberId: string) =>
+      ipcRenderer.invoke("backend:groupUnbanMember", at, groupId, memberId),
+    groupTransferOwner: (at: string, groupId: string, memberId: string) =>
+      ipcRenderer.invoke("backend:groupTransferOwner", at, groupId, memberId),
+    groupResetCode: (at: string, groupId: string) =>
+      ipcRenderer.invoke("backend:groupResetCode", at, groupId),
     resetFriendCode: (at: string, id: string) =>
       ipcRenderer.invoke("backend:resetFriendCode", at, id),
     updateFriendSettings: (
@@ -932,6 +1011,23 @@ export const api = {
     aiComplete: (at: string, prompt: string) =>
       ipcRenderer.invoke("backend:aiComplete", at, prompt),
     getAuthlib: () => ipcRenderer.invoke("backend:getAuthlib"),
+  },
+  voice: {
+    setPtt: (bind: { type: "key" | "mouse"; code: number } | null) =>
+      ipcRenderer.invoke("voice:setPtt", bind),
+    capturePttBind: () => ipcRenderer.invoke("voice:capturePttBind"),
+    setSessionActive: (active: boolean) =>
+      ipcRenderer.invoke("voice:setSessionActive", active),
+    onPttDown: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on("voice:pttDown", listener);
+      return () => ipcRenderer.off("voice:pttDown", listener);
+    },
+    onPttUp: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on("voice:pttUp", listener);
+      return () => ipcRenderer.off("voice:pttUp", listener);
+    },
   },
   versions: {
     getList: (

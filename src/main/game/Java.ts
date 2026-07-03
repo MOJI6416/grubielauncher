@@ -1,10 +1,14 @@
 import { IPlatform } from '@/types/OS'
 import axios from 'axios'
+import { execFile } from 'child_process'
 import { app } from 'electron'
 import path from 'path'
 import fs from 'fs-extra'
+import { DownloadItem } from '@/types/Downloader'
 import { Downloader } from '../utilities/downloader'
 import { getOS } from '../utilities/other'
+
+const JAVA_VERIFIED_MARKER = '.grubie-java-verified'
 
 interface IJavaAsset {
   id: string
@@ -67,17 +71,28 @@ export class Java {
   }
 
   async install(signal?: AbortSignal) {
-    if (!this.platform) return
+    const item = await this.prepareInstallItem(signal)
+    if (!item) return
+
+    const downloader = new Downloader()
+    await downloader.downloadFiles([item], signal)
+    this.throwIfAborted(signal)
+
+    await this.finalizeInstall()
+  }
+
+  async prepareInstallItem(signal?: AbortSignal): Promise<DownloadItem | null> {
+    if (!this.platform) return null
 
     this.throwIfAborted(signal)
     await this.init(signal)
     this.throwIfAborted(signal)
 
-    if (this.javaPath && (await fs.pathExists(this.javaPath))) return
-    if (this.javaServerPath && (await fs.pathExists(this.javaServerPath))) return
+    if (this.javaPath && (await fs.pathExists(this.javaPath))) return null
+    if (this.javaServerPath && (await fs.pathExists(this.javaServerPath))) return null
 
     const asset = await this.resolveJavaAsset(signal)
-    if (!asset) return
+    if (!asset) return null
     this.throwIfAborted(signal)
 
     const javaBaseDir = this.getJavaBaseDir()
@@ -85,28 +100,26 @@ export class Java {
 
     this.setJavaPaths(this.getJavaRoot(asset.id))
 
-    const downloader = new Downloader()
-
-    await downloader.downloadFiles(
-      [
-        {
-          url: asset.url,
-          destination: path.join(javaBaseDir, asset.fileName),
-          checksum: asset.checksum,
-          checksumType: asset.checksumType,
-          size: asset.size,
-          group: 'java',
-          options: { extract: true }
-        }
-      ],
-      signal
-    )
-    this.throwIfAborted(signal)
-
-    const installedJavaRoot = await this.findInstalledJavaRoot()
-    if (installedJavaRoot) {
-      this.setJavaPaths(installedJavaRoot)
+    return {
+      url: asset.url,
+      destination: path.join(javaBaseDir, asset.fileName),
+      checksum: asset.checksum,
+      checksumType: asset.checksumType,
+      size: asset.size,
+      group: 'java',
+      options: { extract: true }
     }
+  }
+
+  async finalizeInstall(): Promise<void> {
+    const installedJavaRoot = await this.findInstalledJavaRoot()
+    if (!installedJavaRoot) {
+      throw new Error(
+        `Java ${this.majorVersion} installation failed verification. Try reinstalling.`
+      )
+    }
+
+    this.setJavaPaths(installedJavaRoot)
   }
 
   private async resolveJavaAsset(signal?: AbortSignal): Promise<IJavaAsset | null> {
@@ -252,6 +265,8 @@ export class Java {
       const paths = this.buildJavaPaths(javaRoot)
       if (!(await fs.pathExists(paths.client)) && !(await fs.pathExists(paths.server))) continue
 
+      if (!(await this.isJavaRootHealthy(javaRoot))) continue
+
       candidates.push({ root: javaRoot, mtimeMs: stats.mtimeMs })
     }
 
@@ -259,6 +274,31 @@ export class Java {
 
     candidates.sort((left, right) => right.mtimeMs - left.mtimeMs)
     return candidates[0].root
+  }
+
+  private async isJavaRootHealthy(javaRoot: string): Promise<boolean> {
+    const markerPath = path.join(javaRoot, JAVA_VERIFIED_MARKER)
+    if (await fs.pathExists(markerPath)) return true
+
+    const paths = this.buildJavaPaths(javaRoot)
+    const binary = (await fs.pathExists(paths.server))
+      ? paths.server
+      : (await fs.pathExists(paths.client))
+        ? paths.client
+        : null
+    if (!binary) return false
+
+    const ok = await new Promise<boolean>((resolve) => {
+      execFile(binary, ['-version'], { timeout: 15000 }, (error) => {
+        resolve(!error)
+      })
+    })
+
+    if (ok) {
+      await fs.writeFile(markerPath, '').catch(() => {})
+    }
+
+    return ok
   }
 
   private isJavaDirectoryForMajor(dirName: string): boolean {

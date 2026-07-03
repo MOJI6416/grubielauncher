@@ -1,5 +1,6 @@
 const PACK_SHARE_BASE_URL = "https://grubielauncher.com/pack";
 const PACK_CODE_PATTERN = /^[a-fA-F0-9]{24}$/;
+const GROUP_CODE_PATTERN = /^[a-zA-Z0-9]{4}-?[a-zA-Z0-9]{4}$/;
 
 export function buildPackShareUrl(shareCode: string) {
   return `${PACK_SHARE_BASE_URL}/${encodeURIComponent(shareCode)}`;
@@ -34,6 +35,26 @@ export function parsePackShareCode(input: string) {
   } catch {}
 
   return value;
+}
+
+export function parseGroupJoinCode(input: string): string | null {
+  try {
+    const url = new URL(input.trim());
+    if (url.protocol !== "grubielauncher:" || url.hostname !== "group") {
+      return null;
+    }
+
+    const [action, code] = decodeURIComponent(
+      url.pathname.replace(/^\/+/, ""),
+    ).split("/");
+    if (action !== "join" || !code || !GROUP_CODE_PATTERN.test(code)) {
+      return null;
+    }
+
+    return code;
+  } catch {
+    return null;
+  }
 }
 
 export async function withPackRequestTimeout<T>(

@@ -18,6 +18,7 @@ export function ImageCropper({
   size,
   onClose,
   changeImage,
+  changeImageBlob,
 }: {
   title: string;
   image: string;
@@ -26,7 +27,8 @@ export function ImageCropper({
     height: number;
   };
   onClose: () => void;
-  changeImage: (url: string) => void;
+  changeImage?: (url: string) => void;
+  changeImageBlob?: (blob: Blob) => void | Promise<void>;
 }) {
   const cropperRef = createRef<ReactCropperElement>();
   const { t } = useTranslation();
@@ -44,7 +46,11 @@ export function ImageCropper({
           .toBlob(resolve),
       );
       if (blob) {
-        await changeImage(URL.createObjectURL(blob));
+        if (changeImageBlob) {
+          await changeImageBlob(blob);
+        } else {
+          changeImage?.(URL.createObjectURL(blob));
+        }
         onClose();
       }
     } finally {

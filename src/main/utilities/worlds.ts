@@ -4,8 +4,8 @@ import {
   IWorldStatsAggregate,
 } from "@/types/World";
 import { IAchievementStats, EMPTY_ACHIEVEMENT_STATS } from "@/types/Achievements";
-import { app } from "electron";
-import { generateOfflineUUID, toUUID } from "./other";
+import { getLauncherPaths, toUUID } from "./other";
+import { getOfflineUuidCandidates } from "./offlineUuidMigration";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { jwtDecode } from "jwt-decode";
 import { deserialize, serialize } from "@xmcl/nbt";
@@ -16,7 +16,7 @@ import zip from "adm-zip";
 import { pathToFileURL } from "url";
 import { extractZip } from "./archiver";
 
-function getAccountUuid(account: ILocalAccount): string {
+function getAccountUuids(account: ILocalAccount): string[] {
   if (
     account.accessToken &&
     typeof account.accessToken === "string" &&
@@ -27,35 +27,48 @@ function getAccountUuid(account: ILocalAccount): string {
       const rawUuid: string | undefined = decode?.uuid;
 
       if (typeof rawUuid === "string" && rawUuid) {
-        return rawUuid.includes("-") ? rawUuid : toUUID(rawUuid);
+        return [rawUuid.includes("-") ? rawUuid : toUUID(rawUuid)];
       }
     } catch {}
   }
 
-  return toUUID(generateOfflineUUID(account.nickname));
+  const { legacy, canonical } = getOfflineUuidCandidates(account.nickname);
+  const uuids = [toUUID(canonical)];
+  if (legacy !== canonical) uuids.push(toUUID(legacy));
+
+  return uuids;
 }
 
 async function resolveStatsFile(
   worldPath: string,
-  accountUUID: string,
+  accountUUIDs: string[],
 ): Promise<string | null> {
-  const candidates = [
+  const candidates = accountUUIDs.flatMap((accountUUID) => [
     path.join(worldPath, "players", "stats", `${accountUUID}.json`),
     path.join(worldPath, "stats", `${accountUUID}.json`),
-  ];
+  ]);
+
+  let freshest: { candidate: string; mtimeMs: number } | null = null;
+
   for (const candidate of candidates) {
-    if (await fs.pathExists(candidate)) return candidate;
+    const stats = await fs.stat(candidate).catch(() => null);
+    if (!stats?.isFile()) continue;
+
+    if (!freshest || stats.mtimeMs > freshest.mtimeMs) {
+      freshest = { candidate, mtimeMs: stats.mtimeMs };
+    }
   }
-  return null;
+
+  return freshest?.candidate ?? null;
 }
 
 export async function loadStatistics(
   worldPath: string,
   account: ILocalAccount,
 ): Promise<IWorldStatistics | null> {
-  const accountUUID = getAccountUuid(account);
+  const accountUUIDs = getAccountUuids(account);
 
-  const statisticsPath = await resolveStatsFile(worldPath, accountUUID);
+  const statisticsPath = await resolveStatsFile(worldPath, accountUUIDs);
   if (!statisticsPath) return null;
 
   try {
@@ -141,7 +154,9 @@ function getWorldSeed(nbtData: any): string {
   const seed = stringifyNbtValue(exactSeed);
   if (seed) return seed;
 
-  return stringifyNbtValue(findNbtValueByKey(data, ["seed", "randomseed"]));
+  const genSettings = data?.WorldGenSettings ?? data?.worldGenSettings;
+  const searchRoot = genSettings ?? data;
+  return stringifyNbtValue(findNbtValueByKey(searchRoot, ["seed", "randomseed"]));
 }
 
 export async function readWorld(
@@ -261,7 +276,7 @@ export async function writeWorldName(
 
     await fs.writeFile(levelDatPath, compressed);
 
-    const sanitized = newName.replace(/[^a-zA-Z0-9_\- ]/g, "").trim();
+    const sanitized = sanitizeWorldFolderName(newName);
     const newFolderName = sanitized || path.basename(worldPath);
 
     const newWorldPath = path.join(path.dirname(worldPath), newFolderName);
@@ -294,7 +309,9 @@ function sumDistance(custom: Record<string, number> | undefined): number {
   if (!custom) return 0;
   let total = 0;
   for (const [key, value] of Object.entries(custom)) {
-    if (key.endsWith("_one_cm")) total += toFiniteNumber(value);
+    if (!key.endsWith("_one_cm")) continue;
+    if (key.endsWith("aviate_one_cm") || key.endsWith("fall_one_cm")) continue;
+    total += toFiniteNumber(value);
   }
   return total;
 }
@@ -313,7 +330,7 @@ export async function loadVersionWorldStatistics(
     jumps: 0,
   };
 
-  const accountUUID = getAccountUuid(account);
+  const accountUUIDs = getAccountUuids(account);
   const savesPath = path.join(versionPath, "saves");
 
   let entries: string[] = [];
@@ -327,7 +344,7 @@ export async function loadVersionWorldStatistics(
   for (const entry of entries) {
     const statsFile = await resolveStatsFile(
       path.join(savesPath, entry),
-      accountUUID,
+      accountUUIDs,
     );
     if (!statsFile) continue;
     let data: IWorldStatistics | null = null;
@@ -399,14 +416,9 @@ export async function loadGlobalAchievementStats(
   account: ILocalAccount,
 ): Promise<IAchievementStats> {
   const stats: IAchievementStats = { ...EMPTY_ACHIEVEMENT_STATS };
-  const accountUUID = getAccountUuid(account);
+  const accountUUIDs = getAccountUuids(account);
 
-  const versionsPath = path.join(
-    app.getPath("appData"),
-    ".grubielauncher",
-    "minecraft",
-    "versions",
-  );
+  const versionsPath = path.join(getLauncherPaths().minecraft, "versions");
 
   let versions: string[] = [];
   try {
@@ -430,7 +442,7 @@ export async function loadGlobalAchievementStats(
     for (const world of worldEntries) {
       const statsFile = await resolveStatsFile(
         path.join(savesPath, world),
-        accountUUID,
+        accountUUIDs,
       );
       if (!statsFile) continue;
 

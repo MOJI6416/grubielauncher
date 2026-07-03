@@ -38,8 +38,11 @@ export interface StorageBreakdown {
   reclaimable: number;
   cleanup: StorageCleanup;
   computedAt: number;
+  failed?: boolean;
 }
 
 export interface StorageClearResult {
   freed: number;
+  blocked?: boolean;
+  failed?: boolean;
 }

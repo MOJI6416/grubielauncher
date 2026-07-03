@@ -1,0 +1,59 @@
+{
+  "en": {
+    "playing": "Playing",
+    "buttons": {
+      "download": "Download",
+      "discord": "Discord"
+    },
+    "details": {
+      "launcher": "Grubie Launcher",
+      "downloading": "Downloading files"
+    },
+    "states": {
+      "idle": "In launcher",
+      "launching": "Launching Minecraft",
+      "playing": "Playing Minecraft",
+      "playingServer": "Server: {{server}}",
+      "downloading": "{{progress}}% downloaded",
+      "downloadingFile": "{{progress}}% - {{file}}"
+    }
+  },
+  "ru": {
+    "playing": "Играет в",
+    "buttons": {
+      "download": "Скачать",
+      "discord": "Discord"
+    },
+    "details": {
+      "launcher": "Grubie Launcher",
+      "downloading": "Загружает файлы"
+    },
+    "states": {
+      "idle": "В лаунчере",
+      "launching": "Запускает Minecraft",
+      "playing": "Играет в Minecraft",
+      "playingServer": "Сервер: {{server}}",
+      "downloading": "{{progress}}% загружено",
+      "downloadingFile": "{{progress}}% - {{file}}"
+    }
+  },
+  "uk": {
+    "playing": "Грає в",
+    "buttons": {
+      "download": "Завантажити",
+      "discord": "Discord"
+    },
+    "details": {
+      "launcher": "Grubie Launcher",
+      "downloading": "Завантажує файли"
+    },
+    "states": {
+      "idle": "У лаунчері",
+      "launching": "Запускає Minecraft",
+      "playing": "Грає в Minecraft",
+      "playingServer": "Сервер: {{server}}",
+      "downloading": "{{progress}}% завантажено",
+      "downloadingFile": "{{progress}}% - {{file}}"
+    }
+  }
+}

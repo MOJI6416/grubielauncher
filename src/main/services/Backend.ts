@@ -20,6 +20,7 @@ import fs from "fs-extra";
 import path from "path";
 import { IAuthlib } from "@/types/IAuthlib";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
+import { IGroup, IVoiceTokenResponse } from "@/types/Voice";
 import {
   ActiveFriendSharesResponse,
   ShareAccessResponse,
@@ -69,62 +70,54 @@ export class Backend extends BaseService {
     conf: IModpack["conf"];
     isPublic?: boolean;
   }) {
-    try {
-      const normalizedModpack = {
-        ...modpack,
-        conf: this.normalizeModpackConf(modpack.conf),
-      };
+    const normalizedModpack = {
+      ...modpack,
+      conf: this.normalizeModpackConf(modpack.conf),
+    };
 
-      const filteredMods =
-        normalizedModpack.conf.loader.mods.length > 0
-          ? normalizedModpack.conf.loader.mods.filter(
-              (mod) => mod.projectType !== "plugin",
-            )
-          : normalizedModpack.conf.loader.mods;
+    const filteredMods =
+      normalizedModpack.conf.loader.mods.length > 0
+        ? normalizedModpack.conf.loader.mods.filter(
+            (mod) => mod.projectType !== "plugin",
+          )
+        : normalizedModpack.conf.loader.mods;
 
-      const payload =
-        filteredMods === normalizedModpack.conf.loader.mods
-          ? normalizedModpack
-          : {
-              ...normalizedModpack,
-              conf: {
-                ...normalizedModpack.conf,
-                loader: {
-                  ...normalizedModpack.conf.loader,
-                  mods: filteredMods,
-                },
+    const payload =
+      filteredMods === normalizedModpack.conf.loader.mods
+        ? normalizedModpack
+        : {
+            ...normalizedModpack,
+            conf: {
+              ...normalizedModpack.conf,
+              loader: {
+                ...normalizedModpack.conf.loader,
+                mods: filteredMods,
               },
-            };
+            },
+          };
 
-      const response = await this.api.post<{ shareCode: string }>(
-        `${this.baseUrl}/modpacks`,
-        payload,
-      );
+    const response = await this.api.post<{ shareCode: string }>(
+      `${this.baseUrl}/modpacks`,
+      payload,
+    );
 
-      return response.data.shareCode;
-    } catch (error) {
-      throw error;
-    }
+    return response.data.shareCode;
   }
 
   async updateModpack(shareCode: string, update: IModpackUpdate) {
-    try {
-      const payload: IModpackUpdate =
-        update.mods && update.mods.length > 0
-          ? {
-              ...update,
-              mods: update.mods.filter((mod) => mod.projectType !== "plugin"),
-            }
-          : update;
+    const payload: IModpackUpdate =
+      update.mods && update.mods.length > 0
+        ? {
+            ...update,
+            mods: update.mods.filter((mod) => mod.projectType !== "plugin"),
+          }
+        : update;
 
-      await this.api.patch(`${this.baseUrl}/modpacks/${shareCode}`, {
-        ...payload,
-      });
+    await this.api.patch(`${this.baseUrl}/modpacks/${shareCode}`, {
+      ...payload,
+    });
 
-      return true;
-    } catch (error) {
-      throw error;
-    }
+    return true;
   }
 
   async getModpack(shareCode: string): Promise<{
@@ -197,6 +190,152 @@ export class Backend extends BaseService {
   async getUser(id: string) {
     try {
       const response = await this.api.get<IUser>(`${this.baseUrl}/users/` + id);
+
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
+  async groupsList() {
+    try {
+      const response = await this.api.get<IGroup[]>(`${this.baseUrl}/groups`);
+
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
+  async groupCreate(name: string) {
+    try {
+      const response = await this.api.post<IGroup>(`${this.baseUrl}/groups`, {
+        name,
+      });
+
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
+  async groupRename(groupId: string, name: string) {
+    try {
+      const response = await this.api.patch<IGroup>(
+        `${this.baseUrl}/groups/${groupId}`,
+        { name },
+      );
+
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
+  async groupDelete(groupId: string) {
+    try {
+      await this.api.delete(`${this.baseUrl}/groups/${groupId}`);
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async groupJoinVoice(groupId: string) {
+    try {
+      const response = await this.api.post<IVoiceTokenResponse>(
+        `${this.baseUrl}/groups/${groupId}/join`,
+      );
+
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
+  async groupJoinByCode(
+    code: string,
+  ): Promise<IGroup | "banned" | "group_full" | "rate_limited" | null> {
+    try {
+      const response = await this.api.post<IGroup>(
+        `${this.baseUrl}/groups/join-by-code`,
+        { code },
+      );
+
+      return response.data;
+    } catch (error: any) {
+      const message = error?.response?.data?.message;
+      if (message === "banned") return "banned";
+      if (message === "group_full") return "group_full";
+      if (message === "rate_limited") return "rate_limited";
+      return null;
+    }
+  }
+
+  async groupLeave(groupId: string) {
+    try {
+      await this.api.post(`${this.baseUrl}/groups/${groupId}/leave`);
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async groupKickMember(groupId: string, memberId: string) {
+    try {
+      await this.api.delete(
+        `${this.baseUrl}/groups/${groupId}/members/${memberId}`,
+      );
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async groupBanMember(groupId: string, memberId: string) {
+    try {
+      await this.api.post(
+        `${this.baseUrl}/groups/${groupId}/members/${memberId}/ban`,
+      );
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async groupTransferOwner(groupId: string, memberId: string) {
+    try {
+      await this.api.post(
+        `${this.baseUrl}/groups/${groupId}/owner/${memberId}`,
+      );
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async groupUnbanMember(groupId: string, memberId: string) {
+    try {
+      await this.api.delete(
+        `${this.baseUrl}/groups/${groupId}/bans/${memberId}`,
+      );
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async groupResetCode(groupId: string) {
+    try {
+      const response = await this.api.post<IGroup>(
+        `${this.baseUrl}/groups/${groupId}/code/reset`,
+      );
 
       return response.data;
     } catch {

@@ -1,9 +1,9 @@
-import express, { Request, Response } from "express";
-import { Server } from "http";
+import { createServer, Server, ServerResponse } from "http";
 
 let serverInstance: Server | null = null;
 let pendingReject: ((err: Error) => void) | null = null;
 const OAUTH_TIMEOUT_MS = 2 * 60 * 1000;
+const OAUTH_PORT = 53213;
 
 function parseExpectedState(
   expectedState: string,
@@ -23,6 +23,12 @@ function parseExpectedState(
   }
 
   throw new Error("Invalid OAuth provider.");
+}
+
+function redirect(res: ServerResponse, location: string) {
+  res.statusCode = 302;
+  res.setHeader("Location", location);
+  res.end();
 }
 
 function closeServer(): Promise<void> {
@@ -95,30 +101,40 @@ export function startOAuthServer(expectedState: string): Promise<{
 
       await closeServer();
 
-      const app = express();
       timeoutId = setTimeout(async () => {
         await closeServer();
         safeReject(new Error("OAuth callback timed out."));
       }, OAUTH_TIMEOUT_MS);
 
-      app.get("/callback", async (req: Request, res: Response) => {
-        const codeParam = req.query.code?.toString();
-        const stateParam = req.query.state;
+      const server = createServer(async (req, res) => {
+        let url: URL;
+        try {
+          url = new URL(req.url || "/", `http://localhost:${OAUTH_PORT}`);
+        } catch {
+          res.statusCode = 400;
+          res.end();
+          return;
+        }
 
-        const code = Array.isArray(codeParam)
-          ? codeParam[0]
-          : (codeParam as string | undefined);
-        const state = Array.isArray(stateParam)
-          ? stateParam[0]
-          : (stateParam as string | undefined);
-        const isValidState = state === expectedState;
+        if (url.pathname !== "/callback") {
+          res.statusCode = 404;
+          res.end();
+          return;
+        }
 
-        if (!code || !isValidState) {
-          res.redirect("https://grubielauncher.com/auth/failed");
+        const code = url.searchParams.get("code");
+        const state = url.searchParams.get("state");
+
+        if (state !== expectedState) {
+          res.statusCode = 400;
+          res.end();
+          return;
+        }
+
+        if (!code) {
+          redirect(res, "https://grubielauncher.com/auth/failed");
           await closeServer();
-          return safeReject(
-            new Error("Invalid request. Missing code or OAuth state."),
-          );
+          return safeReject(new Error("Invalid request. Missing code."));
         }
 
         safeResolve({
@@ -126,16 +142,18 @@ export function startOAuthServer(expectedState: string): Promise<{
           provider: expectedProvider,
         });
 
-        res.redirect("https://grubielauncher.com/auth/success");
+        redirect(res, "https://grubielauncher.com/auth/success");
         void closeServer();
       });
 
-      serverInstance = app.listen(53213, "localhost");
+      serverInstance = server;
 
-      serverInstance.on("error", async (err: any) => {
+      server.on("error", async (err: any) => {
         await closeServer();
         safeReject(err instanceof Error ? err : new Error(String(err)));
       });
+
+      server.listen(OAUTH_PORT, "localhost");
     })().catch((err) =>
       safeReject(err instanceof Error ? err : new Error(String(err))),
     );

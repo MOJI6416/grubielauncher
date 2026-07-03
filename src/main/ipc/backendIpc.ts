@@ -62,6 +62,110 @@ export function registerBackendIpc() {
     return await backend.getUser(id);
   });
 
+  handleSafe("backend:groupsList", null, async (_, at: string) => {
+    const backend = new Backend(at);
+    return await backend.groupsList();
+  });
+
+  handleSafe(
+    "backend:groupCreate",
+    null,
+    async (_, at: string, name: string) => {
+      const backend = new Backend(at);
+      return await backend.groupCreate(name);
+    },
+  );
+
+  handleSafe(
+    "backend:groupRename",
+    null,
+    async (_, at: string, groupId: string, name: string) => {
+      const backend = new Backend(at);
+      return await backend.groupRename(groupId, name);
+    },
+  );
+
+  handleSafe(
+    "backend:groupDelete",
+    false,
+    async (_, at: string, groupId: string) => {
+      const backend = new Backend(at);
+      return await backend.groupDelete(groupId);
+    },
+  );
+
+  handleSafe(
+    "backend:groupJoinVoice",
+    null,
+    async (_, at: string, groupId: string) => {
+      const backend = new Backend(at);
+      return await backend.groupJoinVoice(groupId);
+    },
+  );
+
+  handleSafe(
+    "backend:groupJoinByCode",
+    null,
+    async (_, at: string, code: string) => {
+      const backend = new Backend(at);
+      return await backend.groupJoinByCode(code);
+    },
+  );
+
+  handleSafe(
+    "backend:groupLeave",
+    false,
+    async (_, at: string, groupId: string) => {
+      const backend = new Backend(at);
+      return await backend.groupLeave(groupId);
+    },
+  );
+
+  handleSafe(
+    "backend:groupKickMember",
+    false,
+    async (_, at: string, groupId: string, memberId: string) => {
+      const backend = new Backend(at);
+      return await backend.groupKickMember(groupId, memberId);
+    },
+  );
+
+  handleSafe(
+    "backend:groupBanMember",
+    false,
+    async (_, at: string, groupId: string, memberId: string) => {
+      const backend = new Backend(at);
+      return await backend.groupBanMember(groupId, memberId);
+    },
+  );
+
+  handleSafe(
+    "backend:groupUnbanMember",
+    false,
+    async (_, at: string, groupId: string, memberId: string) => {
+      const backend = new Backend(at);
+      return await backend.groupUnbanMember(groupId, memberId);
+    },
+  );
+
+  handleSafe(
+    "backend:groupTransferOwner",
+    false,
+    async (_, at: string, groupId: string, memberId: string) => {
+      const backend = new Backend(at);
+      return await backend.groupTransferOwner(groupId, memberId);
+    },
+  );
+
+  handleSafe(
+    "backend:groupResetCode",
+    null,
+    async (_, at: string, groupId: string) => {
+      const backend = new Backend(at);
+      return await backend.groupResetCode(groupId);
+    },
+  );
+
   handleSafe(
     "backend:resetFriendCode",
     null,

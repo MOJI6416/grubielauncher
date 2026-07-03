@@ -13,6 +13,7 @@ import {
   Gauge,
   Globe,
   HardDrive,
+  Headphones,
   HeartPulse,
   Info,
   Languages,
@@ -21,6 +22,7 @@ import {
   Palette,
   Save,
   Settings as SettingsIcon,
+  Settings2,
   TriangleAlert,
   Volume2,
   Wrench,
@@ -29,7 +31,11 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useAtom } from "jotai";
-import { pathsAtom, settingsAtom, storageModalAtom } from "@renderer/stores/atoms";
+import {
+  pathsAtom,
+  settingsAtom,
+  storageModalAtom,
+} from "@renderer/stores/atoms";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,8 +59,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { LANGUAGES, normalizeSettings } from "@/types/Settings";
+import {
+  LANGUAGES,
+  normalizeSettings,
+  type VoicePttBind,
+} from "@/types/Settings";
 import { changeAppLanguage } from "@renderer/i18n";
+import { VoiceSettingsPanel } from "./Voice/VoiceSettingsPanel";
 import { ConnectivityModal } from "./ConnectivityModal";
 import type { ConnectivityCheckResult } from "@/types/Connectivity";
 import { toast } from "sonner";
@@ -78,7 +89,9 @@ export function Settings({
   );
   const [settingsPath, setSettingsPath] = useState("");
   const [lang, setLang] = useState(() => normalizedInitialSettings.lang);
-  const [devMode, setDevMode] = useState(() => normalizedInitialSettings.devMode);
+  const [devMode, setDevMode] = useState(
+    () => normalizedInitialSettings.devMode,
+  );
   const [crashTelemetry, setCrashTelemetry] = useState(
     () => normalizedInitialSettings.crashTelemetry,
   );
@@ -87,7 +100,9 @@ export function Settings({
     () => normalizedInitialSettings.hideServerInRpc,
   );
   const [version, setVersion] = useState("");
-  const [downloadLimit, setDownloadLimit] = useState(() => normalizedInitialSettings.downloadLimit);
+  const [downloadLimit, setDownloadLimit] = useState(
+    () => normalizedInitialSettings.downloadLimit,
+  );
   const [downloadSource, setDownloadSource] = useState(
     () => normalizedInitialSettings.downloadSource,
   );
@@ -98,6 +113,17 @@ export function Settings({
     ConnectivityCheckResult[] | null
   >(null);
   const [isConnectivityTesting, setIsConnectivityTesting] = useState(false);
+  const [voicePtt, setVoicePtt] = useState(
+    () => normalizedInitialSettings.voicePtt,
+  );
+  const [voicePttBind, setVoicePttBind] = useState<VoicePttBind | null>(
+    () => normalizedInitialSettings.voicePttBind,
+  );
+  const [isCapturingPtt, setIsCapturingPtt] = useState(false);
+  const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
+  const [voiceNoiseSuppression, setVoiceNoiseSuppression] = useState(
+    () => normalizedInitialSettings.voiceNoiseSuppression,
+  );
   const [isWarnModal, setIsWarnModal] = useState(false);
   const isMemoryReady = totalMem > 0;
   const maxMemory = totalMem
@@ -118,7 +144,11 @@ export function Settings({
     settings.downloadSource != downloadSource ||
     settings.crashTelemetry != crashTelemetry ||
     settings.sounds != sounds ||
-    settings.hideServerInRpc != hideServerInRpc;
+    settings.hideServerInRpc != hideServerInRpc ||
+    settings.voicePtt != voicePtt ||
+    (settings.voicePttBind?.type ?? null) != (voicePttBind?.type ?? null) ||
+    (settings.voicePttBind?.code ?? null) != (voicePttBind?.code ?? null) ||
+    settings.voiceNoiseSuppression != voiceNoiseSuppression;
 
   const closeSettings = () => {
     if (i18n.language !== settings.lang) {
@@ -140,7 +170,20 @@ export function Settings({
     setDownloadLimit(nextSettings.downloadLimit);
     setDownloadSource(nextSettings.downloadSource);
     setLang(nextSettings.lang);
+    setVoicePtt(nextSettings.voicePtt);
+    setVoicePttBind(nextSettings.voicePttBind);
+    setVoiceNoiseSuppression(nextSettings.voiceNoiseSuppression);
   }, [settings]);
+
+  const handleCapturePttBind = async () => {
+    setIsCapturingPtt(true);
+    try {
+      const bind = await api.voice.capturePttBind();
+      if (bind) setVoicePttBind(bind);
+    } finally {
+      setIsCapturingPtt(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -177,7 +220,8 @@ export function Settings({
           closeSettings();
         }}
       >
-        <DialogContent aria-describedby={undefined}
+        <DialogContent
+          aria-describedby={undefined}
           data-account-click-ignore="true"
           className="flex max-h-[85vh] flex-col sm:max-w-lg"
           onOpenAutoFocus={(event) => event.preventDefault()}
@@ -193,7 +237,11 @@ export function Settings({
                 </DialogTitle>
               </div>
               {version ? (
-                <Badge asChild variant="secondary" className="font-mono tabular-nums">
+                <Badge
+                  asChild
+                  variant="secondary"
+                  className="font-mono tabular-nums"
+                >
                   <button
                     type="button"
                     onClick={onShowWhatsNew}
@@ -388,6 +436,27 @@ export function Settings({
             </SettingsSection>
 
             <SettingsSection
+              icon={Headphones}
+              title={t("settings.sections.voice")}
+            >
+              <SettingRow
+                icon={Headphones}
+                title={t("settings.voicePanel")}
+                description={t("settings.voicePanelDescription")}
+                control={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsVoicePanelOpen(true)}
+                  >
+                    <Settings2 className="size-4" />
+                    {t("settings.voicePanelOpen")}
+                  </Button>
+                }
+              />
+            </SettingsSection>
+
+            <SettingsSection
               icon={Wrench}
               title={t("settings.sections.diagnostics")}
             >
@@ -427,7 +496,8 @@ export function Settings({
                   <Select
                     value={downloadSource}
                     onValueChange={(value) => {
-                      if (value) setDownloadSource(value as typeof downloadSource);
+                      if (value)
+                        setDownloadSource(value as typeof downloadSource);
                     }}
                   >
                     <SelectTrigger className="w-36">
@@ -514,6 +584,9 @@ export function Settings({
                   hideServerInRpc,
                   downloadLimit,
                   downloadSource,
+                  voicePtt,
+                  voicePttBind,
+                  voiceNoiseSuppression,
                 };
 
                 await api.fs.writeJSON(settingsPath, newSettings);
@@ -529,6 +602,28 @@ export function Settings({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {isVoicePanelOpen && (
+        <Dialog
+          open
+          onOpenChange={(open) => !open && setIsVoicePanelOpen(false)}
+        >
+          <DialogContent aria-describedby={undefined} className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>{t("settings.sections.voice")}</DialogTitle>
+            </DialogHeader>
+            <VoiceSettingsPanel
+              voicePtt={voicePtt}
+              voicePttBind={voicePttBind}
+              voiceNoiseSuppression={voiceNoiseSuppression}
+              isCapturingPtt={isCapturingPtt}
+              onVoicePttChange={setVoicePtt}
+              onCapturePttBind={() => void handleCapturePttBind()}
+              onVoiceNoiseSuppressionChange={setVoiceNoiseSuppression}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
       {isWarnModal && (
         <Dialog open onOpenChange={(open) => !open && setIsWarnModal(false)}>

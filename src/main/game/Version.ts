@@ -4,7 +4,6 @@ import { IAssetIndex } from "@/types/IAssetIndex";
 import { LANGUAGES, TSettings } from "@/types/Settings";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { Java } from "./Java";
-import axios from "axios";
 import { IFabricManifest } from "@/types/IFabricManifest";
 import { IInstallProfile } from "@/types/IInstallProfile";
 import { DownloadItem } from "@/types/Downloader";
@@ -13,14 +12,13 @@ import fs from "fs-extra";
 import { Downloader } from "../utilities/downloader";
 import {
   convertMavenCoordinateToJarPath,
-  generateOfflineUUID,
   getFullLangCode,
   getJavaAgent,
   getOS,
   HTTP_AGENT_JVM_ARGUMENT,
+  matchesOsRules,
   removeDuplicatesLibraries,
 } from "../utilities/other";
-import { rimraf } from "rimraf";
 import { app } from "electron";
 import { runGame, runJar } from "../utilities/game";
 import { getAuthlibCached } from "../utilities/authlib";
@@ -44,7 +42,9 @@ import {
   parseLoaderInstallerProgressLine,
 } from "../utilities/loaderInstallerProgress";
 import { assertSafeVersionName } from "@/shared/versionName";
+import { buildMemoryArguments } from "@/shared/jvmDefaults";
 import { assertTrustedDownloadUrl } from "../utilities/trustedHosts";
+import { resolveOfflineUuid } from "../utilities/offlineUuidMigration";
 
 type VersionInstallRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
@@ -86,35 +86,6 @@ function parseCustomRunArguments(input?: string) {
   if (current) args.push(current);
 
   return args;
-}
-
-const OPTIMIZED_GC_FLAGS = [
-  "-XX:+UseG1GC",
-  "-XX:+ParallelRefProcEnabled",
-  "-XX:MaxGCPauseMillis=200",
-  "-XX:+UnlockExperimentalVMOptions",
-  "-XX:+DisableExplicitGC",
-  "-XX:+AlwaysPreTouch",
-  "-XX:G1NewSizePercent=30",
-  "-XX:G1MaxNewSizePercent=40",
-  "-XX:G1HeapRegionSize=8M",
-  "-XX:G1ReservePercent=20",
-  "-XX:G1HeapWastePercent=5",
-  "-XX:G1MixedGCCountTarget=4",
-  "-XX:InitiatingHeapOccupancyPercent=15",
-  "-XX:G1MixedGCLiveThresholdPercent=90",
-  "-XX:G1RSetUpdatingPauseTimePercent=5",
-  "-XX:SurvivorRatio=32",
-  "-XX:+PerfDisableSharedMem",
-  "-XX:MaxTenuringThreshold=1",
-];
-
-function buildMemoryArguments(settings: TSettings): string[] {
-  if (settings.optimizedJvm) {
-    return [`-Xms${settings.xmx}M`, `-Xmx${settings.xmx}M`, ...OPTIMIZED_GC_FLAGS];
-  }
-
-  return ["-Xms1G", `-Xmx${settings.xmx}M`];
 }
 
 export class Version {
@@ -329,12 +300,28 @@ export class Version {
 
     this.sendInstallProgress("java", 18, true);
     const java = new Java(this.manifest.javaVersion.majorVersion);
-    await java.init(downloadSignal);
-    this.throwIfInstallCancelled();
-    await java.install(downloadSignal);
-    this.throwIfInstallCancelled();
+    const needsJavaBeforeLoader = ["forge", "neoforge"].includes(
+      this.version.loader.name,
+    );
+    let javaFinalizeNeeded = false;
 
-    this.javaPath = java.javaPath;
+    if (needsJavaBeforeLoader) {
+      await java.init(downloadSignal);
+      this.throwIfInstallCancelled();
+      await java.install(downloadSignal);
+      this.throwIfInstallCancelled();
+      this.javaPath = java.javaPath;
+    } else {
+      const javaItem = await java.prepareInstallItem(downloadSignal);
+      this.throwIfInstallCancelled();
+
+      if (javaItem) {
+        downloadItems.push(javaItem);
+        javaFinalizeNeeded = true;
+      } else {
+        this.javaPath = java.javaPath;
+      }
+    }
 
     const agent = "-Dhttp.agent=Mozilla/5.0";
     if (
@@ -369,17 +356,19 @@ export class Version {
           this.version.loader.version.url,
           "loader manifest url",
         );
-        const response = await axios.get<IFabricManifest>(
-          this.version.loader.version.url,
-          {
-            signal: downloadSignal,
-          },
+        await this.downloader.downloadFiles(
+          [
+            {
+              url: this.version.loader.version.url,
+              destination: fabricManifestPath,
+              group: "manifest",
+            },
+          ],
+          downloadSignal,
         );
-        await fs.writeJSON(fabricManifestPath, response.data, {
+        fabricManifest = await fs.readJSON(fabricManifestPath, {
           encoding: "utf-8",
-          spaces: 2,
         });
-        fabricManifest = response.data;
       }
       this.throwIfInstallCancelled();
 
@@ -448,7 +437,7 @@ export class Version {
 
       if (isNewManifest) {
         const tempPath = path.join(this.versionPath, "temp");
-        await rimraf(tempPath).catch(() => {});
+        await fs.remove(tempPath).catch(() => {});
         await fs.ensureDir(tempPath);
 
         try {
@@ -665,7 +654,7 @@ export class Version {
 
           await this.writeManifest();
         } finally {
-          await rimraf(tempPath).catch(() => {});
+          await fs.remove(tempPath).catch(() => {});
         }
       }
     }
@@ -750,6 +739,11 @@ export class Version {
     await this.downloader.downloadFiles(downloadItems, downloadSignal);
     this.throwIfInstallCancelled();
 
+    if (javaFinalizeNeeded) {
+      await java.finalizeInstall();
+      this.javaPath = java.javaPath;
+    }
+
     const optionsPath = path.join(this.versionPath, "options.txt");
     const isExistsOptions = await fs.pathExists(optionsPath);
     if (!isExistsOptions) {
@@ -803,25 +797,7 @@ export class Version {
       )
         continue;
 
-      let isAllow = true;
-
-      if (library.rules) {
-        for (const rule of library.rules) {
-          if (rule.action == "allow") {
-            if (rule.os && rule.os.name != platform?.os) {
-              isAllow = false;
-              break;
-            }
-          } else {
-            if (rule.os && rule.os.name == platform?.os) {
-              isAllow = false;
-              break;
-            }
-          }
-        }
-      }
-
-      if (!isAllow) continue;
+      if (!matchesOsRules(library.rules, platform)) continue;
 
       const natives = library.natives;
       const downloads = (library as any).downloads;
@@ -907,25 +883,7 @@ export class Version {
       )
         continue;
 
-      let isAllow = true;
-
-      if (library.rules) {
-        for (const rule of library.rules) {
-          if (rule.action == "allow") {
-            if (rule.os && rule.os.name != platform.os) {
-              isAllow = false;
-              break;
-            }
-          } else {
-            if (rule.os && rule.os.name == platform.os) {
-              isAllow = false;
-              break;
-            }
-          }
-        }
-      }
-
-      if (!isAllow || library.natives) continue;
+      if (!matchesOsRules(library.rules, platform) || library.natives) continue;
 
       const artifact = (library as any).downloads?.artifact;
       if (!artifact?.path) continue;
@@ -1223,18 +1181,34 @@ export class Version {
     if (this.isQuickPlaySingleplayer && quickSingle)
       game.push(...["--quickPlaySingleplayer", quickSingle]);
 
-    if (
-      this.isQuickPlayMultiplayer &&
-      (quickMultiplayer || this.version.quickServer)
-    )
-      game.push(
-        ...[
-          "--quickPlayMultiplayer",
-          quickMultiplayer || this.version.quickServer || "",
-        ],
-      );
+    const quickServerAddress = quickMultiplayer || this.version.quickServer;
+    if (quickServerAddress) {
+      if (this.isQuickPlayMultiplayer) {
+        game.push("--quickPlayMultiplayer", quickServerAddress);
+      } else if (
+        this.manifest.type !== "old_alpha" &&
+        this.manifest.type !== "old_beta"
+      ) {
+        const separatorIndex = quickServerAddress.lastIndexOf(":");
+        const portCandidate =
+          separatorIndex > 0
+            ? quickServerAddress.slice(separatorIndex + 1)
+            : "";
+        const hasPort = /^\d+$/.test(portCandidate);
+        const host = hasPort
+          ? quickServerAddress.slice(0, separatorIndex)
+          : quickServerAddress;
 
-    jvm.push(...buildMemoryArguments(settings));
+        game.push(
+          "--server",
+          host,
+          "--port",
+          hasPort ? portCandidate : "25565",
+        );
+      }
+    }
+
+    jvm.push(...buildMemoryArguments(settings.xmx, settings.optimizedJvm));
 
     if (this.manifest.minecraftArguments) {
       jvm.push(
@@ -1252,16 +1226,7 @@ export class Version {
         }
 
         if (arg.rules) {
-          let isAllow = true;
-
-          for (const rule of arg.rules) {
-            if (rule.action === "allow" && rule.os?.name != platform?.os) {
-              isAllow = false;
-              break;
-            }
-          }
-
-          if (!isAllow || !arg.value) continue;
+          if (!matchesOsRules(arg.rules, platform) || !arg.value) continue;
 
           if (typeof arg.value == "string") jvm.push(arg.value);
           else jvm.push(...arg.value);
@@ -1275,6 +1240,9 @@ export class Version {
           continue;
         }
       }
+
+    jvm = jvm.filter((arg) => arg !== "");
+    game = game.filter((arg) => arg !== "");
 
     const paths = [
       path.join(this.versionPath, `${this.version.version.id}.jar`),
@@ -1301,7 +1269,7 @@ export class Version {
     });
 
     if (!authData) {
-      const uuid = generateOfflineUUID(account.nickname);
+      const uuid = await resolveOfflineUuid(this.versionPath, account.nickname);
 
       authData = {
         nickname: account.nickname,
@@ -1323,6 +1291,7 @@ export class Version {
       let accessToken = authData.auth.accessToken;
       if (account.type == "discord")
         accessToken = account.accessToken || authData.uuid;
+      if (!accessToken) accessToken = "0";
 
       let accountType = "mojang";
       if (account.type == "microsoft") accountType = "msa";
@@ -1361,7 +1330,7 @@ export class Version {
   ) {
     await this.ensureInitialized();
 
-    if (!this.manifest) return null;
+    if (!this.manifest || !this.javaPath) return null;
 
     const runArguments = await this.getRunArguments(
       account,
@@ -1392,7 +1361,7 @@ export class Version {
       }
     }
 
-    return command.filter((arg) => arg != "");
+    return command;
   }
 
   public async ensureAuthlib(
@@ -1447,7 +1416,10 @@ export class Version {
         },
       ]);
     } catch (error) {
-      console.error("[version:run] failed to download authlib-injector:", error);
+      console.error(
+        "[version:run] failed to download authlib-injector:",
+        error,
+      );
       return { ok: false, reason: "download_failed" };
     }
 
@@ -1572,7 +1544,10 @@ export class Version {
   public async delete(account: ILocalAccount, isFull: boolean = false) {
     await this.ensureInitialized();
 
-    if (!isFull) return await rimraf(this.versionPath);
+    if (!isFull) {
+      await fs.remove(this.versionPath);
+      return true;
+    }
 
     const libraries = this.getLibraries(account);
     const assets = await this.getAssets();
@@ -1591,9 +1566,11 @@ export class Version {
     );
 
     if (removableResources.length) {
-      await rimraf(removableResources);
+      await Promise.all(
+        removableResources.map((resource) => fs.remove(resource)),
+      );
     }
-    await rimraf(this.versionPath);
+    await fs.remove(this.versionPath);
 
     return true;
   }

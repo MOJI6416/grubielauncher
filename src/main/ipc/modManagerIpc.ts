@@ -2,6 +2,7 @@ import { Loader } from '@/types/Loader'
 import {
   ILocalProject,
   IProject,
+  ISearchData,
   IVersion,
   IVersionDependency,
   ProjectType,
@@ -16,11 +17,12 @@ import { handleSafe } from '../utilities/ipc'
 export function registerModManagerIpc() {
   handleSafe(
     'modManager:search',
-    (_query: string, _provider: Provider, _options: any, pagination: { offset: number; limit: number }) => ({
+    (_query: string, _provider: Provider, _options: any, pagination: { offset: number; limit: number }): ISearchData => ({
       projects: [],
       limit: pagination?.limit ?? 0,
       offset: 0,
-      total: 0
+      total: 0,
+      error: true
     }),
     async (
       _,

@@ -77,7 +77,7 @@ export function registerShareIpc() {
     },
   )
 
-  handleSafe<ShareState>('share:getState', lanShareService.getState(), async () => {
+  handleSafe<ShareState>('share:getState', () => lanShareService.getState(), async () => {
     return lanShareService.getState()
   })
 

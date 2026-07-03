@@ -933,7 +933,7 @@ export class SkinsManager extends BaseService {
     })
   }
 
-  public addSkin(skin: ISkinsConfig['skins'][0]) {
+  public async addSkin(skin: ISkinsConfig['skins'][0]) {
     const normalizedSkin = {
       ...skin,
       hash: skin.hash || skin.id
@@ -947,7 +947,7 @@ export class SkinsManager extends BaseService {
       this.skins.skins[existingIndex] = normalizedSkin
     }
 
-    this.saveSkins()
+    await this.saveSkins()
   }
 
   public refreshSession(nickname: string, accessToken: string) {

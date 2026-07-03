@@ -45,7 +45,9 @@ function sumDistance(custom: Record<string, number> | undefined): number {
   if (!custom) return 0;
   let total = 0;
   for (const [key, value] of Object.entries(custom)) {
-    if (key.endsWith("_one_cm")) total += num(value);
+    if (!key.endsWith("_one_cm")) continue;
+    if (key.endsWith("aviate_one_cm") || key.endsWith("fall_one_cm")) continue;
+    total += num(value);
   }
   return total;
 }

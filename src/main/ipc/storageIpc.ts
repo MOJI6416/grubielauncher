@@ -4,11 +4,17 @@ import {
   clearCaches,
   getStorageBreakdown,
 } from "../utilities/storage";
+import { isVersionInstallActive } from "./versionIpc";
+import { gameRuntime } from "../utilities/runtime";
 import type {
   StorageBreakdown,
   StorageCleanupKind,
   StorageClearResult,
 } from "@/types/Storage";
+
+function isLauncherBusy(): boolean {
+  return isVersionInstallActive() || gameRuntime.processes.size > 0;
+}
 
 const EMPTY_BREAKDOWN: StorageBreakdown = {
   total: 0,
@@ -21,6 +27,7 @@ const EMPTY_BREAKDOWN: StorageBreakdown = {
     libraries: { count: 0, size: 0, safe: false },
   },
   computedAt: 0,
+  failed: true,
 };
 
 export function registerStorageIpc() {
@@ -28,14 +35,20 @@ export function registerStorageIpc() {
     return getStorageBreakdown();
   });
 
-  handleSafe<StorageClearResult>("storage:clearCache", { freed: 0 }, () => {
-    return clearCaches();
-  });
+  handleSafe<StorageClearResult>(
+    "storage:clearCache",
+    { freed: 0, failed: true },
+    () => {
+      if (isLauncherBusy()) return { freed: 0, blocked: true };
+      return clearCaches();
+    },
+  );
 
   handleSafe<StorageClearResult>(
     "storage:cleanup",
-    { freed: 0 },
+    { freed: 0, failed: true },
     (_, kind: StorageCleanupKind) => {
+      if (isLauncherBusy()) return { freed: 0, blocked: true };
       return cleanupStorage(kind);
     },
   );

@@ -72,6 +72,9 @@ export class Downloader {
   private fileCompletionTimes: number[] = [];
   private abortController: AbortController | null = null;
   private isSilent = false;
+  private lastInfoSentAt = 0;
+  private pendingInfo: DownloaderInfo | null = null;
+  private infoFlushTimer: NodeJS.Timeout | null = null;
 
   constructor(limit = 6) {
     this.limit = pLimit(limit);
@@ -89,7 +92,7 @@ export class Downloader {
     items: DownloadItem[],
     signal?: AbortSignal,
     options: DownloadFilesOptions = {},
-  ): Promise<void> => {
+  ): Promise<DownloaderFailuresInfo | null> => {
     const shouldThrowOnFailure = shouldThrowDownloadFailures(options);
     this.isSilent =
       items.length > 0 && items.every((item) => item.options?.silent === true);
@@ -97,7 +100,7 @@ export class Downloader {
     if (items.length === 0) {
       this.sendInfo(null);
       this.isSilent = false;
-      return;
+      return null;
     }
 
     this.abortController = new AbortController();
@@ -319,14 +322,13 @@ export class Downloader {
         signal?.aborted,
       )
     ) {
-      this.sendFailures(
-        this.createFailuresInfo(
-          totalItems,
-          completedItems,
-          failedItems,
-          failures,
-        ),
+      const failuresInfo = this.createFailuresInfo(
+        totalItems,
+        completedItems,
+        failedItems,
+        failures,
       );
+      this.sendFailures(failuresInfo);
       this.isSilent = false;
 
       if (shouldThrowOnFailure) {
@@ -338,7 +340,11 @@ export class Downloader {
             .join(", ")}`,
         );
       }
+
+      return failuresInfo;
     }
+
+    return null;
   };
 
   private createFailuresInfo = (
@@ -452,6 +458,46 @@ export class Downloader {
 
   private sendInfo = (info: DownloaderInfo | null) => {
     if (this.isSilent) return;
+
+    if (info === null) {
+      if (this.infoFlushTimer) {
+        clearTimeout(this.infoFlushTimer);
+        this.infoFlushTimer = null;
+      }
+      this.pendingInfo = null;
+      this.lastInfoSentAt = 0;
+      this.postInfo(null);
+      return;
+    }
+
+    const now = Date.now();
+    const elapsed = now - this.lastInfoSentAt;
+    const INFO_INTERVAL_MS = 100;
+
+    if (elapsed >= INFO_INTERVAL_MS) {
+      this.lastInfoSentAt = now;
+      this.postInfo(info);
+      return;
+    }
+
+    this.pendingInfo = info;
+    if (!this.infoFlushTimer) {
+      this.infoFlushTimer = setTimeout(
+        () => {
+          this.infoFlushTimer = null;
+          const pending = this.pendingInfo;
+          this.pendingInfo = null;
+          if (pending) {
+            this.lastInfoSentAt = Date.now();
+            this.postInfo(pending);
+          }
+        },
+        Math.max(0, INFO_INTERVAL_MS - elapsed),
+      );
+    }
+  };
+
+  private postInfo = (info: DownloaderInfo | null) => {
     if (
       !mainWindow ||
       mainWindow.isDestroyed() ||
@@ -616,11 +662,18 @@ export class Downloader {
 
             let lastProgressUpdate = Date.now();
             const PROGRESS_UPDATE_INTERVAL = 100;
+            const IDLE_TIMEOUT_MS = 30000;
 
             const signal = this.abortController?.signal;
 
             await new Promise<void>((resolve, reject) => {
+              let idleTimer: NodeJS.Timeout | null = null;
+
               const cleanup = () => {
+                if (idleTimer) {
+                  clearTimeout(idleTimer);
+                  idleTimer = null;
+                }
                 if (signal && onAbort) {
                   try {
                     signal.removeEventListener("abort", onAbort);
@@ -639,15 +692,32 @@ export class Downloader {
                 reject(new Error("AbortError"));
               };
 
+              const resetIdleTimer = () => {
+                if (idleTimer) clearTimeout(idleTimer);
+                idleTimer = setTimeout(() => {
+                  try {
+                    response.data.destroy();
+                  } catch {}
+                  try {
+                    writer?.destroy();
+                  } catch {}
+                  cleanup();
+                  reject(new Error(`Download stalled: ${url}`));
+                }, IDLE_TIMEOUT_MS);
+              };
+
               if (signal) {
                 try {
                   signal.addEventListener("abort", onAbort);
                 } catch {}
               }
 
+              resetIdleTimer();
+
               response.data.on("data", (chunk: Buffer) => {
                 downloadedChunksBytes += chunk.length;
                 this.downloadedBytes += chunk.length;
+                resetIdleTimer();
 
                 const now = Date.now();
                 if (
@@ -772,10 +842,9 @@ export class Downloader {
     if (!actualPath) return false;
 
     try {
-      if (size) {
-        const stats = await fs.stat(actualPath);
-        if (stats.size !== size) return false;
-      }
+      const stats = await fs.stat(actualPath);
+      if (size && stats.size !== size) return false;
+      if (!size && !checksum && stats.size === 0) return false;
 
       if (checksum) {
         const currentChecksum = await this.getFileHash(

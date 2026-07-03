@@ -41,6 +41,7 @@ import {
 
 const api = window.api;
 const HIDDEN_SPONSORED_ADS_KEY = "grubie:hidden-sponsored-news-ads";
+const reportedSponsoredImpressions = new Set<string>();
 
 export function NewsFeed() {
   const [isNetwork] = useAtom(networkAtom);
@@ -80,7 +81,6 @@ export function NewsFeed() {
 
   const reqIdRef = useRef(0);
   const wheelLockRef = useRef(0);
-  const reportedImpressionsRef = useRef<Set<string>>(new Set());
 
   const feedItems = useMemo(
     () => buildNewsFeedItems(news, sponsoredAd),
@@ -132,9 +132,9 @@ export function NewsFeed() {
 
   useEffect(() => {
     if (!isVisible || !sponsoredAd) return;
-    if (reportedImpressionsRef.current.has(sponsoredAd.id)) return;
+    if (reportedSponsoredImpressions.has(sponsoredAd.id)) return;
 
-    reportedImpressionsRef.current.add(sponsoredAd.id);
+    reportedSponsoredImpressions.add(sponsoredAd.id);
     void api.backend.recordSponsoredAdImpression(sponsoredAd.id);
   }, [isVisible, sponsoredAd]);
 
@@ -289,11 +289,11 @@ export function NewsFeed() {
               >
                 <div className="flex gap-2 pt-3">
                   {feedItems.length > 0
-                    ? feedItems.map((feedItem) => (
+                    ? feedItems.map((feedItem, index) => (
                         <div
                           key={
                             feedItem.type === "news"
-                              ? feedItem.item.url
+                              ? `news-${index}-${feedItem.item.url}`
                               : `sponsored-${feedItem.item.id}`
                           }
                           className="min-w-0 shrink-0 grow-0 basis-full sm:basis-[calc((100%-0.5rem)/2)] lg:basis-[calc((100%-2rem)/5)]"

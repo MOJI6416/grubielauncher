@@ -1,7 +1,67 @@
 import axios from 'axios'
 import { checkToken, getTokenSubject } from '../utilities/jwt'
 import { BACKEND_URL } from '@/shared/config'
-import { readAccountsConfig, saveAccountsConfig } from '../utilities/accounts'
+import { mutateAccountsConfig } from '../utilities/accounts'
+
+const inflightRefreshes = new Map<string, Promise<string | null>>()
+
+async function persistRefreshedToken(token: string, oldToken: string) {
+  try {
+    await mutateAccountsConfig((accounts) => {
+      const oldSubject = getTokenSubject(oldToken)
+      const newSubject = getTokenSubject(token)
+      let didUpdate = false
+      const nextAccounts = accounts.accounts.map((account) => {
+        const accountSubject = getTokenSubject(account.accessToken)
+        const isSameToken = account.accessToken === oldToken
+        const isSameSubject =
+          !!oldSubject &&
+          !!newSubject &&
+          oldSubject === newSubject &&
+          accountSubject === oldSubject
+
+        if (!isSameToken && !isSameSubject) return account
+
+        didUpdate = true
+        return {
+          ...account,
+          accessToken: token
+        }
+      })
+
+      if (!didUpdate) return null
+
+      return {
+        ...accounts,
+        accounts: nextAccounts
+      }
+    })
+  } catch {
+    return
+  }
+}
+
+function refreshAccessToken(oldToken: string): Promise<string | null> {
+  const existing = inflightRefreshes.get(oldToken)
+  if (existing) return existing
+
+  const promise = (async () => {
+    const tokenData = await checkToken(oldToken)
+    if (!tokenData || !tokenData.isValid) return null
+
+    const newToken = tokenData.token || null
+    if (newToken && newToken !== oldToken) {
+      await persistRefreshedToken(newToken, oldToken)
+    }
+
+    return newToken
+  })().finally(() => {
+    inflightRefreshes.delete(oldToken)
+  })
+
+  inflightRefreshes.set(oldToken, promise)
+  return promise
+}
 
 export class BaseService {
   public readonly baseUrl: string = BACKEND_URL
@@ -13,7 +73,6 @@ export class BaseService {
   protected accessToken: string | undefined
 
   private isInitialized = false
-  private refreshPromise: Promise<string | null> | null = null
 
   private init() {
     if (this.isInitialized) return
@@ -51,31 +110,12 @@ export class BaseService {
           config._retry = true
 
           const oldToken = this.accessToken
-
-          if (!this.refreshPromise) {
-            this.refreshPromise = (async () => {
-              const tokenData = await checkToken(oldToken)
-
-              if (!tokenData || !tokenData.isValid) {
-                return null
-              }
-
-              this.accessToken = tokenData.token
-
-              if (this.accessToken && this.accessToken !== oldToken) {
-                await this.saveToken(this.accessToken, oldToken)
-              }
-
-              return this.accessToken || null
-            })().finally(() => {
-              this.refreshPromise = null
-            })
-          }
-
-          const newToken = await this.refreshPromise
+          const newToken = await refreshAccessToken(oldToken)
           if (!newToken) {
             return Promise.reject(err)
           }
+
+          this.accessToken = newToken
 
           config.headers = config.headers ?? {}
           config.headers.Authorization = `Bearer ${newToken}`
@@ -96,42 +136,5 @@ export class BaseService {
   public setAccessToken(accessToken?: string) {
     this.accessToken = accessToken
     this.init()
-  }
-
-  private async saveToken(token: string, oldToken: string) {
-    try {
-      const accounts = await readAccountsConfig()
-      if (!accounts) return
-
-      const oldSubject = getTokenSubject(oldToken)
-      const newSubject = getTokenSubject(token)
-      let didUpdate = false
-      const nextAccounts = accounts.accounts.map((account) => {
-        const accountSubject = getTokenSubject(account.accessToken)
-        const isSameToken = account.accessToken === oldToken
-        const isSameSubject =
-          !!oldSubject &&
-          !!newSubject &&
-          oldSubject === newSubject &&
-          accountSubject === oldSubject
-
-        if (!isSameToken && !isSameSubject) return account
-
-        didUpdate = true
-        return {
-          ...account,
-          accessToken: token
-        }
-      })
-
-      if (!didUpdate) return
-
-      await saveAccountsConfig({
-        ...accounts,
-        accounts: nextAccounts
-      })
-    } catch {
-      return
-    }
   }
 }

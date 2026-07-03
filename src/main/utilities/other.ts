@@ -2,6 +2,7 @@ import { IVersionManifest } from "@/types/IVersionManifest";
 import { IArch, IOS } from "@/types/OS";
 import { createHash } from "crypto";
 import { app } from "electron";
+import os from "os";
 import path from "path";
 
 export const HTTP_AGENT_JVM_ARGUMENT = "-Dhttp.agent=Mozilla/5.0";
@@ -41,6 +42,49 @@ export function getOS(): {
   }
 
   return { os, arch: archName };
+}
+
+export interface IOsRule {
+  action: string;
+  os?: { name?: string; arch?: string; version?: string };
+  features?: Record<string, boolean | undefined>;
+}
+
+export function matchesOsRules(
+  rules: ReadonlyArray<IOsRule> | undefined,
+  platform: { os: IOS; arch: IArch } | null,
+  osRelease: string = os.release(),
+): boolean {
+  if (!rules || rules.length === 0) return true;
+
+  let allowed = false;
+
+  for (const rule of rules) {
+    if (rule.features && Object.keys(rule.features).length > 0) continue;
+
+    let matches = true;
+
+    if (rule.os) {
+      if (rule.os.name && rule.os.name !== platform?.os) matches = false;
+
+      if (matches && rule.os.arch && rule.os.arch !== platform?.arch)
+        matches = false;
+
+      if (matches && rule.os.version) {
+        try {
+          if (!new RegExp(rule.os.version).test(osRelease)) matches = false;
+        } catch {
+          matches = false;
+        }
+      }
+    }
+
+    if (!matches) continue;
+
+    allowed = rule.action === "allow";
+  }
+
+  return allowed;
 }
 
 export function convertMavenCoordinateToJarPath(coordinate: string): string {
@@ -133,4 +177,19 @@ export function generateOfflineUUID(username: string): string {
     hash.substring(16, 20),
     hash.substring(20, 32),
   ].join("");
+}
+
+export function generateCanonicalOfflineUUID(username: string): string {
+  const hash = createHash("md5")
+    .update(`OfflinePlayer:${username}`)
+    .digest("hex");
+  const variantChar = ((parseInt(hash[16], 16) & 0x3) | 0x8).toString(16);
+
+  return (
+    hash.substring(0, 12) +
+    "3" +
+    hash.substring(13, 16) +
+    variantChar +
+    hash.substring(17, 32)
+  );
 }

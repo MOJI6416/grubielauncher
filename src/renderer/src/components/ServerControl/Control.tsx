@@ -73,11 +73,9 @@ export function ServerControl({
     return btoa(binary);
   }
 
-  async function changeImage(url: string) {
+  async function changeImage(blob: Blob) {
     if (!server || !serverPath) return;
 
-    const response = await fetch(url);
-    const blob = await response.blob();
     const arrayBuffer = await blob.arrayBuffer();
     const base64 = arrayBufferToBase64(arrayBuffer);
 
@@ -149,7 +147,7 @@ export function ServerControl({
     setLoadingType(LoadingType.DELETE);
 
     try {
-      await api.fs.rimraf(serverPath);
+      await api.shell.trashItem(serverPath);
 
       toast.success(t("serverManager.deleted"));
 
@@ -300,7 +298,7 @@ export function ServerControl({
             height: 64,
             width: 64,
           }}
-          changeImage={changeImage}
+          changeImageBlob={changeImage}
         />
       )}
 

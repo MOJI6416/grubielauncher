@@ -18,6 +18,10 @@ export class Server {
     timeout: 30000
   })
 
+  private static isStableVersion(version: string | undefined): boolean {
+    return !!version && !/-(?:beta|pre|rc|alpha)/i.test(version)
+  }
+
   private static checkVersion(
     version: string,
     versions: IServerVersion[],
@@ -39,22 +43,27 @@ export class Server {
       const cores: IServerOption[] = []
 
       if (loader == 'vanilla') {
-        try {
-          const response = await this.api.get<IVanillaCores>(`${BACKEND_URL}/server/vanilla.json`)
-          const vanilla = this.checkVersion(version, response.data.vanilla, ServerCore.VANILLA)
+        const [vanillaCores, paper, purpur] = await Promise.all([
+          this.api
+            .get<IVanillaCores>(`${BACKEND_URL}/server/vanilla.json`)
+            .then((response) => response.data)
+            .catch(() => null),
+          this.getPaper(version),
+          this.getPurpur(version)
+        ])
+
+        if (vanillaCores) {
+          const vanilla = this.checkVersion(version, vanillaCores.vanilla, ServerCore.VANILLA)
           if (vanilla) cores.push(vanilla)
 
-          const spigot = this.checkVersion(version, response.data.spigot, ServerCore.SPIGOT)
+          const spigot = this.checkVersion(version, vanillaCores.spigot, ServerCore.SPIGOT)
           if (spigot) cores.push(spigot)
 
-          const bukkit = this.checkVersion(version, response.data.bukkit, ServerCore.BUKKIT)
+          const bukkit = this.checkVersion(version, vanillaCores.bukkit, ServerCore.BUKKIT)
           if (bukkit) cores.push(bukkit)
-        } catch { }
+        }
 
-        const paper = await this.getPaper(version)
         if (paper) cores.push(paper)
-
-        const purpur = await this.getPurpur(version)
         if (purpur) cores.push(purpur)
       } else if (loader == 'fabric') {
         const fabric = await this.getFabric(version)
@@ -108,8 +117,12 @@ export class Server {
         `https://meta.fabricmc.net/v2/versions/installer`
       )
 
-      const loader = loaders.data[0]?.loader?.version
-      const installer = installers.data[0]?.version
+      const loader =
+        loaders.data.find((l) => l.loader?.stable)?.loader?.version ??
+        loaders.data[0]?.loader?.version
+      const installer =
+        installers.data.find((i) => i.stable)?.version ??
+        installers.data[0]?.version
 
       if (!loader || !installer) {
         return null
@@ -129,7 +142,9 @@ export class Server {
         `https://meta.quiltmc.org/v3/versions/loader/` + version
       )
 
-      const loader = loaders.data[0]?.loader?.version
+      const loader =
+        loaders.data.find((l) => this.isStableVersion(l.loader?.version))?.loader
+          ?.version ?? loaders.data[0]?.loader?.version
       if (!loader) {
         return null
       }

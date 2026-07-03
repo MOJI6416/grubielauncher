@@ -1,7 +1,6 @@
 import { app, session } from "electron";
 import fs from "fs-extra";
 import path from "path";
-import { rimraf } from "rimraf";
 import type {
   StorageBreakdown,
   StorageCategory,
@@ -150,24 +149,28 @@ export async function clearCaches(): Promise<StorageClearResult> {
     path.join(versionsPath, n, "temp"),
   );
 
-  const freed =
-    (await sumSizes(getAppCacheDirs())) +
-    (await dirSize(dirs.cache)) +
-    (await sumSizes(versionTemps)) +
-    (await dirSize(legacyTemp));
+  const reclaimPaths = [
+    ...getAppCacheDirs(),
+    dirs.cache,
+    ...versionTemps,
+    legacyTemp,
+  ];
+  const before = await sumSizes(reclaimPaths);
 
-  await rimraf(dirs.cache).catch(() => {});
-  await rimraf(legacyTemp).catch(() => {});
-  for (const temp of versionTemps) await rimraf(temp).catch(() => {});
+  await fs.remove(dirs.cache).catch(() => {});
+  await fs.remove(legacyTemp).catch(() => {});
+  for (const temp of versionTemps) await fs.remove(temp).catch(() => {});
 
   try {
     await session.defaultSession.clearCache();
+    await session.defaultSession.clearCodeCaches({});
     await session.defaultSession.clearStorageData({
       storages: ["cachestorage", "shadercache", "serviceworkers"],
     });
   } catch {}
 
-  return { freed };
+  const after = await sumSizes(reclaimPaths);
+  return { freed: Math.max(0, before - after) };
 }
 
 
@@ -365,8 +368,9 @@ export async function cleanupStorage(
       ? await computeUnusedJava(dirs.java, scan.majors, scan.versionCount > 0)
       : await computeOrphanLibraries(librariesPath, scan);
 
-  const freed = await sumSizes(targets);
-  for (const target of targets) await rimraf(target).catch(() => {});
+  const before = await sumSizes(targets);
+  for (const target of targets) await fs.remove(target).catch(() => {});
+  const after = await sumSizes(targets);
 
-  return { freed };
+  return { freed: Math.max(0, before - after) };
 }

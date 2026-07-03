@@ -377,6 +377,7 @@ export function runGame(
   let netstatInFlight = false;
   let intervalId: NodeJS.Timeout | null = null;
   let launchAnnounced = false;
+  let processFinalized = false;
 
   const checkConnection = (): void => {
     const processData = gameProcesses.get(instanceKey);
@@ -420,7 +421,7 @@ export function runGame(
     }
   };
 
-  intervalId = setInterval(checkConnection, 5000);
+  intervalId = setInterval(checkConnection, 15000);
 
   const CONSOLE_FLUSH_MS = 100;
   const pendingConsoleMessages: IConsoleMessage[] = [];
@@ -533,6 +534,9 @@ export function runGame(
   });
 
   javaProcess.on("error", (err) => {
+    if (processFinalized) return;
+    processFinalized = true;
+
     if (intervalId) clearInterval(intervalId);
     flushConsoleMessages();
 
@@ -570,6 +574,9 @@ export function runGame(
   });
 
   javaProcess.on("close", (c, signal) => {
+    if (processFinalized) return;
+    processFinalized = true;
+
     flushConsoleMessages();
 
     const killedByUser =

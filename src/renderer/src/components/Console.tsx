@@ -23,7 +23,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { IConsole } from "@/types/Console";
+import { IConsole, IConsoleMessage } from "@/types/Console";
 import { RunGameParams } from "@renderer/App";
 import { consolesAtom, versionsAtom } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
@@ -40,7 +40,14 @@ import {
   Terminal,
   Trash2,
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -50,6 +57,52 @@ interface IInstance {
   versionName: string;
   instance: number;
 }
+
+const messageIds = new WeakMap<IConsoleMessage, number>();
+let nextMessageId = 0;
+
+function getMessageId(message: IConsoleMessage): number {
+  let id = messageIds.get(message);
+  if (id === undefined) {
+    id = nextMessageId;
+    nextMessageId += 1;
+    messageIds.set(message, id);
+  }
+  return id;
+}
+
+const ConsoleMessageRow = memo(function ConsoleMessageRow({
+  message,
+  tipsLabel,
+}: {
+  message: IConsoleMessage;
+  tipsLabel: string;
+}) {
+  const text = message.message.length ? message.message : " ";
+  const hasTips = tipsLabel.length > 0;
+
+  return (
+    <Tooltip open={hasTips ? undefined : false}>
+      <TooltipTrigger asChild>
+        <pre
+          style={{ tabSize: 4 }}
+          className={cn(
+            "m-0 min-w-0 max-w-full overflow-hidden whitespace-pre-wrap rounded-md border border-l-2 bg-card px-3 py-2 font-mono text-[0.72rem] leading-relaxed shadow-xs [overflow-wrap:anywhere] [content-visibility:auto] [contain-intrinsic-block-size:auto_2.25rem]",
+            hasTips && "cursor-help",
+            message.type === "info" && "border-l-primary/70 text-foreground",
+            message.type === "error" && "border-l-destructive text-destructive",
+            message.type !== "info" &&
+              message.type !== "error" &&
+              "border-l-primary text-foreground",
+          )}
+        >
+          {text}
+        </pre>
+      </TooltipTrigger>
+      {hasTips && <TooltipContent>{tipsLabel}</TooltipContent>}
+    </Tooltip>
+  );
+});
 
 function getKey(v: string, i: number) {
   return `${v}::${i}`;
@@ -170,20 +223,18 @@ export function Console({
   const visibleMessages = useMemo(() => {
     const msgs = selectedConsole?.messages ?? [];
     const query = consoleSearch.trim().toLowerCase();
-    return msgs
-      .map((message, index) => ({ message, index }))
-      .filter(({ message }) => {
-        if (consoleFilter !== "all") {
-          const type =
-            message.type === "error" || message.type === "success"
-              ? message.type
-              : "info";
-          if (type !== consoleFilter) return false;
-        }
-        if (query && !message.message.toLowerCase().includes(query))
-          return false;
-        return true;
-      });
+    return msgs.filter((message) => {
+      if (consoleFilter !== "all") {
+        const type =
+          message.type === "error" || message.type === "success"
+            ? message.type
+            : "info";
+        if (type !== consoleFilter) return false;
+      }
+      if (query && !message.message.toLowerCase().includes(query))
+        return false;
+      return true;
+    });
   }, [selectedConsole, consoleFilter, consoleSearch]);
 
   useEffect(() => {
@@ -564,45 +615,15 @@ export function Console({
                       </div>
                     ) : (
                       <div className="min-w-0 space-y-2">
-                        {visibleMessages.map(({ message, index }) => {
-                          const text = message.message.length
-                            ? message.message
-                            : " ";
-                          const hasTips = message.tips.length > 0;
-
-                          return (
-                            <Tooltip
-                              key={index}
-                              open={hasTips ? undefined : false}
-                            >
-                              <TooltipTrigger asChild>
-                                <pre
-                                  style={{ tabSize: 4 }}
-                                  className={cn(
-                                    "m-0 min-w-0 max-w-full overflow-hidden whitespace-pre-wrap rounded-md border border-l-2 bg-card px-3 py-2 font-mono text-[0.72rem] leading-relaxed shadow-xs [overflow-wrap:anywhere]",
-                                    hasTips && "cursor-help",
-                                    message.type === "info" &&
-                                      "border-l-primary/70 text-foreground",
-                                    message.type === "error" &&
-                                      "border-l-destructive text-destructive",
-                                    message.type !== "info" &&
-                                      message.type !== "error" &&
-                                      "border-l-primary text-foreground",
-                                  )}
-                                >
-                                  {text}
-                                </pre>
-                              </TooltipTrigger>
-                              {hasTips && (
-                                <TooltipContent>
-                                  {message.tips
-                                    .map((tip) => t("tips." + tip))
-                                    .join(", ")}
-                                </TooltipContent>
-                              )}
-                            </Tooltip>
-                          );
-                        })}
+                        {visibleMessages.map((message) => (
+                          <ConsoleMessageRow
+                            key={getMessageId(message)}
+                            message={message}
+                            tipsLabel={message.tips
+                              .map((tip) => t("tips." + tip))
+                              .join(", ")}
+                          />
+                        ))}
                       </div>
                     )}
                   </div>

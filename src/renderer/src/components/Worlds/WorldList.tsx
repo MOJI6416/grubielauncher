@@ -161,7 +161,7 @@ export function WorldList({
     if (!selectedWorld) return;
 
     try {
-      await api.fs.rimraf(selectedWorld.path);
+      await api.shell.trashItem(selectedWorld.path);
       setWorlds(worlds.filter((w) => w.path !== selectedWorld.path));
 
       toast.success(t("worlds.deleted"));
@@ -185,6 +185,7 @@ export function WorldList({
               disabledKeys.add("resetIcon");
               disabledKeys.add("openFolder");
               disabledKeys.add("delete");
+              disabledKeys.add("datapacks");
             }
             if (world.isDownloaded) {
               disabledKeys.add("rename");
@@ -471,6 +472,13 @@ export function WorldList({
           datapacks={datapacks}
           onClose={() => setIsDatapacksOpen(false)}
           world={selectedWorld}
+          onChange={(next) =>
+            setWorlds(
+              worlds.map((w) =>
+                w.path === selectedWorld.path ? { ...w, datapacks: next } : w,
+              ),
+            )
+          }
         />
       )}
 

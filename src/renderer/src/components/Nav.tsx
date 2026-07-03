@@ -17,12 +17,12 @@ import { ErrorLog } from "./ErrorLog";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Settings } from "./Settings";
 import { StorageManagerModal } from "./StorageManagerModal";
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import {
   accountAtom,
   addVersionImportPathAtom,
   addVersionModalAtom,
-  consolesAtom,
+  consolesMetaAtom,
   fileDragOverAtom,
   errorLogAtom,
   errorLogSeenAtom,
@@ -137,7 +137,7 @@ export function Nav({
   const [isErrorLogOpen, setIsErrorLogOpen] = useState(false);
   const unseenErrors = Math.max(0, errorLog.length - errorLogSeen);
   const [isShareOpen, setIsShareOpen] = useAtom(isShareModalOpenAtom);
-  const [consoles] = useAtom(consolesAtom);
+  const consoleMetas = useAtomValue(consolesMetaAtom);
   const [isFriendsConnected] = useAtom(isFriendsConnectedAtom);
   const [shareState] = useAtom(shareStateAtom);
   const [shareOwnerAccountKey] = useAtom(shareOwnerAccountKeyAtom);
@@ -163,16 +163,16 @@ export function Nav({
     : t("friends.unavailableHint");
 
   const consoleBtnVariant = useMemo(() => {
-    if (consoles.consoles.length > 0) {
-      return consoles.consoles.some((c) => c.status === "error")
+    if (consoleMetas.length > 0) {
+      return consoleMetas.some((c) => c.status === "error")
         ? "destructive"
-        : consoles.consoles.some((c) => c.status === "stopped")
+        : consoleMetas.some((c) => c.status === "stopped")
           ? "secondary"
           : "default";
     }
 
     return "default";
-  }, [consoles.consoles]);
+  }, [consoleMetas]);
 
   const shouldShowShareButton = useMemo(() => {
     return (
@@ -261,7 +261,7 @@ export function Nav({
                   </Tooltip>
                 )}
 
-                {consoles.consoles.length > 0 && (
+                {consoleMetas.length > 0 && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -308,7 +308,7 @@ export function Nav({
                 )}
 
                 {(errorLog.length > 0 ||
-                  consoles.consoles.length > 0 ||
+                  consoleMetas.length > 0 ||
                   shouldShowShareButton) &&
                   ((selectedAccount && selectedVersion) || canUseInternet) && (
                     <div className="mx-0.5 h-8 w-px bg-border" />

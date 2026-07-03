@@ -21,6 +21,11 @@ import {
   createInstallErrorResult,
   createInstallRuntimeOptions,
 } from "./versionInstallOrchestration";
+import {
+  cancelActiveInstallOperation,
+  isInstallOperationActive,
+  tryBeginInstallOperation,
+} from "./installLock";
 
 const fallbackVersionInit: IVersionClassData = {
   version: {} as IVersionConf,
@@ -53,10 +58,9 @@ const fallbackInstall: VersionInstallResult = {
   error: "Installation failed.",
 };
 
-let activeInstall: {
-  controller: AbortController;
-  version: Version;
-} | null = null;
+export function isVersionInstallActive(): boolean {
+  return isInstallOperationActive();
+}
 
 export async function runVersionInstallWithLock(
   account: ILocalAccount,
@@ -65,32 +69,34 @@ export async function runVersionInstallWithLock(
   extraItems?: DownloadItem[],
   options?: VersionInstallOptions,
 ): Promise<VersionInstallResult> {
-  if (activeInstall) {
+  let vm: Version | null = null;
+
+  const lock = tryBeginInstallOperation(() => vm?.cancelInstall());
+  if (!lock) {
     return {
       success: false,
-      error: "Another version installation is already running.",
+      error: "Another installation operation is already running.",
     };
   }
 
   resumeDownloads();
 
-  const controller = new AbortController();
-  let vm: Version | null = null;
-
   try {
     vm = new Version(versionConf);
-    activeInstall = { controller, version: vm };
     await vm.init();
     await vm.install(
       settings,
       account,
       extraItems || [],
-      createInstallRuntimeOptions(options, controller.signal),
+      createInstallRuntimeOptions(options, lock.controller.signal),
     );
     await vm.save();
     return { success: true };
   } catch (error) {
-    const result = createInstallErrorResult(error, controller.signal.aborted);
+    const result = createInstallErrorResult(
+      error,
+      lock.controller.signal.aborted,
+    );
 
     if (!result.cancelled) {
       console.error("[version:install] failed:", error);
@@ -98,9 +104,7 @@ export async function runVersionInstallWithLock(
 
     return result;
   } finally {
-    if (activeInstall?.controller === controller) {
-      activeInstall = null;
-    }
+    lock.end();
   }
 }
 
@@ -145,21 +149,17 @@ export function registerVersionIpc() {
   );
 
   handleSafe("version:cancelInstall", false, async () => {
-    if (!activeInstall) return false;
-
-    activeInstall.controller.abort();
-    activeInstall.version.cancelInstall();
-    return true;
+    return cancelActiveInstallOperation();
   });
 
   handleSafe("version:pauseInstall", false, async () => {
-    if (!activeInstall) return false;
+    if (!isInstallOperationActive()) return false;
     pauseDownloads();
     return true;
   });
 
   handleSafe("version:resumeInstall", false, async () => {
-    if (!activeInstall) return false;
+    if (!isInstallOperationActive()) return false;
     resumeDownloads();
     return true;
   });

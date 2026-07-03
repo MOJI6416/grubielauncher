@@ -1,6 +1,6 @@
 import "./assets/main.css";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
@@ -43,6 +43,7 @@ const App = () => {
   const [version, setVersion] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [progress, setProgress] = useState<UpdaterProgress>(emptyProgress);
+  const realEventRef = useRef(false);
 
   const { t, i18n } = useTranslation();
 
@@ -90,12 +91,14 @@ const App = () => {
 
   useEffect(() => {
     const unsubscribeStatus = api.events.updater.onStatus((payload) => {
+      realEventRef.current = true;
       setStatus(payload.status);
       setVersion(payload.version || "");
       setErrorMessage(payload.message || "");
     });
 
     const unsubscribeProgress = api.events.updater.onDownloadProgress((p) => {
+      realEventRef.current = true;
       setProgress({
         percent: finiteNumber(p.percent),
         bytesPerSecond: finiteNumber(p.bytesPerSecond),
@@ -115,10 +118,12 @@ const App = () => {
     if (!import.meta.env.DEV) return;
 
     const startTimer = window.setTimeout(() => {
+      if (realEventRef.current) return;
       setStatus("downloading");
     }, 700);
 
     const progressTimer = window.setInterval(() => {
+      if (realEventRef.current) return;
       setProgress((current) => {
         const nextPercent = current.percent >= 100 ? 0 : current.percent + 2.5;
 

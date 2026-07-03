@@ -1,7 +1,12 @@
 import React, { useCallback, useEffect, useMemo } from "react";
 import { IModpack } from "@/types/Backend";
 import { IFriend } from "@/types/IFriend";
-import { IMessage } from "@/types/IMessage";
+import {
+  IMessage,
+  parseGroupInviteMessage,
+  parseSystemMessage,
+} from "@/types/IMessage";
+import { Confirmation } from "../Modals/Confirmation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,10 +30,13 @@ import {
   Loader2,
   Package,
   Paperclip,
+  PhoneCall,
   Reply,
   SendHorizontal,
   SmilePlus,
   Trash2,
+  UserPlus,
+  Users,
   X,
 } from "lucide-react";
 import { LoadingType } from "./Friends";
@@ -70,8 +78,30 @@ function isImageFile(file: File) {
   return file.type.startsWith("image/") || IMAGE_FILE_PATTERN.test(file.name);
 }
 
+const TRUSTED_LINK_HOSTS = new Set(["grubielauncher.com"]);
+
+function isTrustedLink(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl);
+    const host = url.hostname.toLowerCase();
+    return (
+      TRUSTED_LINK_HOSTS.has(host) ||
+      [...TRUSTED_LINK_HOSTS].some((trusted) => host.endsWith(`.${trusted}`))
+    );
+  } catch {
+    return false;
+  }
+}
+
 interface ChatModalProps {
-  friend: IFriend;
+  friend?: IFriend;
+  groupTitle?: string;
+  showSenderNames?: boolean;
+  resolveSenderById?: (senderId: string) => SenderView;
+  onSendGroupInvite?: () => void;
+  onAcceptGroupInvite?: (code: string) => void;
+  onStartCall?: () => void;
+  callDisabled?: boolean;
   messages: IMessage[];
   messageText: string;
   isLoading: boolean;
@@ -103,6 +133,13 @@ type SenderView = { nickname: string; image?: string | null };
 
 export function ChatModal({
   friend,
+  groupTitle,
+  showSenderNames,
+  resolveSenderById,
+  onSendGroupInvite,
+  onAcceptGroupInvite,
+  onStartCall,
+  callDisabled,
   messages,
   messageText,
   isLoading,
@@ -141,6 +178,7 @@ export function ChatModal({
   const canUseMessageActions = !isBusy;
   const [authData] = useAtom(authDataAtom);
   const [previewImage, setPreviewImage] = React.useState<string | null>(null);
+  const [pendingLink, setPendingLink] = React.useState<string | null>(null);
   const [isDraggingImage, setIsDraggingImage] = React.useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = React.useState<
     string | null
@@ -215,9 +253,12 @@ export function ChatModal({
     (msg: IMessage): SenderView => {
       if (account && msg.sender === authData?.sub)
         return { nickname: account.nickname, image: account.image };
-      return { nickname: friend.user.nickname, image: friend.user.image };
+      if (resolveSenderById) return resolveSenderById(msg.sender);
+      if (friend)
+        return { nickname: friend.user.nickname, image: friend.user.image };
+      return { nickname: "?", image: null };
     },
-    [account, authData?.sub, friend.user.image, friend.user.nickname],
+    [account, authData?.sub, friend, resolveSenderById],
   );
 
   const scrollToBottom = useCallback(() => {
@@ -309,6 +350,7 @@ export function ChatModal({
 
       if (type === "image") return t("friends.chatImage");
       if (type === "modpack") return t("friends.chatAttachModpack");
+      if (type === "groupInvite") return t("friends.chatGroupInvite");
       return value;
     },
     [t],
@@ -391,7 +433,11 @@ export function ChatModal({
           className="break-all text-primary underline underline-offset-4 hover:text-primary/85"
           onClick={(event) => {
             event.stopPropagation();
-            void api.shell.openExternal(part);
+            if (isTrustedLink(part)) {
+              void api.shell.openExternal(part);
+            } else {
+              setPendingLink(part);
+            }
           }}
         >
           {part}
@@ -420,18 +466,43 @@ export function ChatModal({
         >
           <DialogHeader className="border-b px-4 py-3">
             <DialogTitle className="flex min-w-0 items-center gap-3 leading-7">
-              <Avatar size="sm" className="h-8 w-8">
-                <AvatarImage
-                  src={friend.user.image || ""}
-                  alt={friend.user.nickname}
-                />
-                <AvatarFallback>
-                  {friend.user.nickname.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <span className="min-w-0 truncate leading-7">
-                {t("friends.chatTitle")} {friend.user.nickname}
-              </span>
+              {friend ? (
+                <>
+                  <Avatar size="sm" className="h-8 w-8">
+                    <AvatarImage
+                      src={friend.user.image || ""}
+                      alt={friend.user.nickname}
+                    />
+                    <AvatarFallback>
+                      {friend.user.nickname.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="min-w-0 truncate leading-7">
+                    {t("friends.chatTitle")} {friend.user.nickname}
+                  </span>
+                  {onStartCall && (
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      className="ml-1 size-7 shrink-0"
+                      disabled={!friend.isOnline || callDisabled}
+                      onClick={onStartCall}
+                      aria-label={t("voiceCall.start")}
+                    >
+                      <PhoneCall className="size-3.5" />
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15">
+                    <Users className="size-4 text-primary" />
+                  </span>
+                  <span className="min-w-0 truncate leading-7">
+                    {groupTitle}
+                  </span>
+                </>
+              )}
             </DialogTitle>
           </DialogHeader>
 
@@ -455,6 +526,22 @@ export function ChatModal({
                   <div className="flex min-w-0 flex-col gap-2 pr-3 pb-2">
                     {messages.map((msg, index) => {
                       if (!msg.message) return null;
+
+                      if (msg.message._type === "system") {
+                        const system = parseSystemMessage(msg.message.value);
+                        if (!system) return null;
+
+                        return (
+                          <p
+                            key={msg.id ?? `${msg.time}-${index}`}
+                            className="py-0.5 text-center text-[10px] leading-4 text-muted-foreground"
+                          >
+                            {t(`friends.chatSystem.${system.kind}`, {
+                              nickname: system.nickname,
+                            })}
+                          </p>
+                        );
+                      }
 
                       const sender = resolveSender(msg);
                       const isOwnMessage = Boolean(
@@ -509,6 +596,12 @@ export function ChatModal({
                               isOwnMessage && "items-end",
                             )}
                           >
+                            {showSenderNames && !isOwnMessage && (
+                              <p className="mb-0.5 px-1 text-[10px] font-medium leading-3 text-muted-foreground">
+                                {sender.nickname}
+                              </p>
+                            )}
+
                             {msg.replyTo && (
                               <button
                                 type="button"
@@ -559,6 +652,54 @@ export function ChatModal({
                                 />
                               </button>
                             )}
+
+                            {msg.message._type === "groupInvite" &&
+                              (() => {
+                                const invite = parseGroupInviteMessage(
+                                  msg.message.value,
+                                );
+                                return (
+                                  <div
+                                    className={cn(
+                                      "flex w-fit max-w-full items-center gap-2 rounded-lg border bg-card px-2 py-2 text-xs text-card-foreground",
+                                      isOwnMessage
+                                        ? "border-primary/35"
+                                        : "border-border",
+                                    )}
+                                  >
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/15">
+                                      <Users className="size-4 text-primary" />
+                                    </span>
+
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate">
+                                        {invite?.name ||
+                                          t("friends.chatGroupInvite")}
+                                      </p>
+                                      <p className="truncate text-[10px] text-muted-foreground">
+                                        {t("friends.chatGroupInvite")}
+                                      </p>
+                                    </div>
+
+                                    {invite && onAcceptGroupInvite && (
+                                      <Button
+                                        size="icon-sm"
+                                        variant="outline"
+                                        className="shrink-0 bg-background/80"
+                                        disabled={!canUseMessageActions}
+                                        aria-label={t(
+                                          "friends.chatGroupInviteJoin",
+                                        )}
+                                        onClick={() =>
+                                          onAcceptGroupInvite(invite.code)
+                                        }
+                                      >
+                                        <UserPlus size={20} />
+                                      </Button>
+                                    )}
+                                  </div>
+                                );
+                              })()}
 
                             {isModpackMsg &&
                               (loadingIndex === index ? (
@@ -832,6 +973,15 @@ export function ChatModal({
                       <ImagePlus />
                       {t("friends.chatAttachImage")}
                     </DropdownMenuItem>
+                    {onSendGroupInvite && (
+                      <DropdownMenuItem
+                        disabled={isBusy}
+                        onSelect={onSendGroupInvite}
+                      >
+                        <UserPlus />
+                        {t("friends.chatGroupInvite")}
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -843,6 +993,7 @@ export function ChatModal({
                     className="h-9"
                     value={messageText}
                     disabled={isBusy}
+                    maxLength={4000}
                     onChange={(e) => onMessageChange(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onPaste={handlePaste}
@@ -866,6 +1017,35 @@ export function ChatModal({
           </div>
         </DialogContent>
       </Dialog>
+
+      {pendingLink && (
+        <Confirmation
+          title={t("friends.chatExternalLinkTitle")}
+          onClose={() => setPendingLink(null)}
+          content={[
+            {
+              text: t("friends.chatExternalLinkWarning"),
+              color: "warning",
+            },
+            { text: pendingLink },
+          ]}
+          buttons={[
+            {
+              text: t("common.no"),
+              color: "secondary",
+              onClick: () => setPendingLink(null),
+            },
+            {
+              text: t("friends.chatExternalLinkOpen"),
+              color: "danger",
+              onClick: () => {
+                void api.shell.openExternal(pendingLink);
+                setPendingLink(null);
+              },
+            },
+          ]}
+        />
+      )}
 
       <Dialog
         open={!!previewImage}

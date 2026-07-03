@@ -1,7 +1,18 @@
 import { AccountType, IAccountConf, ILocalAccount } from "@/types/Account";
 import { app, safeStorage } from "electron";
+import { jwtDecode } from "jwt-decode";
 import fs from "fs-extra";
 import path from "path";
+
+function decodeSubject(token?: string): string | null {
+  if (!token) return null;
+  try {
+    const sub = jwtDecode<{ sub?: string }>(token).sub;
+    return typeof sub === "string" && sub.trim() !== "" ? sub : null;
+  } catch {
+    return null;
+  }
+}
 
 type PersistedAccount = Omit<ILocalAccount, "accessToken"> & {
   accessToken?: string;
@@ -26,6 +37,7 @@ const persistedAccountKeys = new Set([
   "image",
   "friends",
   "accessToken",
+  "id",
 ]);
 const persistedFriendKeys = new Set(["id", "isMuted"]);
 
@@ -73,6 +85,10 @@ function normalizePersistedAccount(account: any): PersistedAccount {
     friends: normalizeLocalFriends(account?.friends),
   };
 
+  if (typeof account?.id === "string" && account.id.trim() !== "") {
+    normalized.id = account.id;
+  }
+
   if (
     typeof account?.accessToken === "string" &&
     account.accessToken.trim() !== ""
@@ -102,10 +118,24 @@ export function getAccountKey(account: Pick<ILocalAccount, "type" | "nickname">)
   return `${account.type}_${account.nickname}`;
 }
 
+let accountsWriteChain: Promise<unknown> = Promise.resolve();
+
+function withAccountsLock<T>(fn: () => Promise<T>): Promise<T> {
+  const next = accountsWriteChain.then(fn, fn);
+  accountsWriteChain = next.then(
+    () => undefined,
+    () => undefined,
+  );
+  return next;
+}
+
 async function writeJsonAtomic(filePath: string, data: unknown): Promise<void> {
   const tmpFile = `${filePath}.tmp-${process.pid}-${Date.now()}`;
   try {
-    await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), "utf-8");
+    await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), {
+      encoding: "utf-8",
+      mode: 0o600,
+    });
     await fs.move(tmpFile, filePath, { overwrite: true });
   } catch (error) {
     await fs.remove(tmpFile).catch(() => {});
@@ -168,7 +198,7 @@ function normalizeConfig(data: Partial<PersistedAccountConf> | null | undefined)
   };
 }
 
-export async function saveAccountsConfig(config: IAccountConf): Promise<void> {
+async function writeAccountsConfig(config: IAccountConf): Promise<void> {
   const launcherDir = getLauncherDir();
   await fs.ensureDir(launcherDir);
 
@@ -176,9 +206,14 @@ export async function saveAccountsConfig(config: IAccountConf): Promise<void> {
   const persistedAccounts: PersistedAccount[] = config.accounts.map((account) => {
     const persisted = normalizePersistedAccount(account);
     delete persisted.accessToken;
+
+    const id = decodeSubject(account.accessToken) || account.id || undefined;
+    if (id) persisted.id = id;
+    else delete persisted.id;
+
     const { accessToken } = account;
     if (typeof accessToken === "string" && accessToken.trim() !== "") {
-      nextSecrets[getAccountKey(account)] = encodeSecret(accessToken);
+      nextSecrets[id ?? getAccountKey(account)] = encodeSecret(accessToken);
     }
 
     return persisted;
@@ -191,7 +226,15 @@ export async function saveAccountsConfig(config: IAccountConf): Promise<void> {
   } satisfies PersistedAccountConf);
 }
 
-export async function readAccountsConfig(): Promise<IAccountConf | null> {
+export function saveAccountsConfig(config: IAccountConf): Promise<void> {
+  return withAccountsLock(() => writeAccountsConfig(config));
+}
+
+export function readAccountsConfig(): Promise<IAccountConf | null> {
+  return withAccountsLock(readAccountsConfigInner);
+}
+
+async function readAccountsConfigInner(): Promise<IAccountConf | null> {
   try {
     const accountsPath = getAccountsPath();
     const exists = await fs.pathExists(accountsPath);
@@ -206,15 +249,33 @@ export async function readAccountsConfig(): Promise<IAccountConf | null> {
 
     let shouldMigrate = false;
     const hydratedAccounts = raw.accounts.map((account) => {
-      const accountKey = getAccountKey(account);
-      let accessToken = decodeSecret(secrets[accountKey]);
+      const legacyKey = getAccountKey(account);
+      const idKey = account.id;
 
-      if (!accessToken && typeof account.accessToken === "string" && account.accessToken.trim() !== "") {
+      const idSecret = idKey ? secrets[idKey] : undefined;
+      const legacySecret = secrets[legacyKey];
+
+      let accessToken = decodeSecret(idSecret) ?? decodeSecret(legacySecret);
+
+      if (
+        !accessToken &&
+        typeof account.accessToken === "string" &&
+        account.accessToken.trim() !== ""
+      ) {
         accessToken = account.accessToken;
         shouldMigrate = true;
       }
 
-      return accessToken ? { ...account, accessToken } : { ...account };
+      if (accessToken && !idSecret && legacySecret) shouldMigrate = true;
+
+      const resolvedId = decodeSubject(accessToken) || idKey || undefined;
+      if (resolvedId && resolvedId !== idKey) shouldMigrate = true;
+
+      const hydrated: ILocalAccount = { ...account };
+      if (resolvedId) hydrated.id = resolvedId;
+      if (accessToken) hydrated.accessToken = accessToken;
+
+      return hydrated;
     });
 
     const config: IAccountConf = {
@@ -227,13 +288,26 @@ export async function readAccountsConfig(): Promise<IAccountConf | null> {
       hasLegacyShape ||
       raw.accounts.some((account) => typeof account.accessToken === "string" && account.accessToken.trim() !== "")
     ) {
-      await saveAccountsConfig(config);
+      await writeAccountsConfig(config);
     }
 
     return config;
   } catch {
     return null;
   }
+}
+
+export function mutateAccountsConfig(
+  mutator: (
+    config: IAccountConf,
+  ) => IAccountConf | null | Promise<IAccountConf | null>,
+): Promise<IAccountConf | null> {
+  return withAccountsLock(async () => {
+    const current = (await readAccountsConfigInner()) ?? createEmptyConfig();
+    const next = await mutator(current);
+    if (next) await writeAccountsConfig(next);
+    return next;
+  });
 }
 
 export async function loadAccountsConfig(): Promise<IAccountConf> {

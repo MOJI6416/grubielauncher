@@ -1,6 +1,7 @@
 import { ILocalProject } from "@/types/ModManager";
 import { IWorld } from "@/types/World";
 import { settingsAtom } from "@renderer/stores/atoms";
+import { toFileUrl } from "@renderer/utilities/exportVersion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -43,10 +44,12 @@ export function Datapacks({
   onClose,
   world,
   datapacks,
+  onChange,
 }: {
   onClose: () => void;
   world: IWorld;
   datapacks: DatapackOption[];
+  onChange?: (datapacks: string[]) => void;
 }) {
   const [datapackName, setDatapackName] = useState<string>("");
   const [worldDatapacks, setWorldDatapacks] = useState<string[]>(() => [
@@ -109,7 +112,7 @@ export function Datapacks({
               destination: datapack.path,
               group: "mods",
               url: datapack.file.localPath
-                ? `file://${datapack.file.localPath}`
+                ? toFileUrl(datapack.file.localPath)
                 : datapack.file.url,
               sha1: datapack.file.sha1,
               size: datapack.file.size,
@@ -128,14 +131,11 @@ export function Datapacks({
 
       await api.fs.copy(sourcePath, targetPath);
 
-      setWorldDatapacks((prev) => {
-        if (prev.includes(datapack.filename)) return prev;
-        return [...prev, datapack.filename];
-      });
-
-      if (!world.datapacks.includes(datapack.filename)) {
-        world.datapacks.push(datapack.filename);
-      }
+      const next = worldDatapacks.includes(datapack.filename)
+        ? worldDatapacks
+        : [...worldDatapacks, datapack.filename];
+      setWorldDatapacks(next);
+      onChange?.(next);
 
       return true;
     } catch (err) {
@@ -221,12 +221,9 @@ export function Datapacks({
                   );
                   await api.fs.rimraf(targetPath);
 
-                  setWorldDatapacks((prev) =>
-                    prev.filter((dp) => dp !== fileName),
-                  );
-                  world.datapacks = world.datapacks.filter(
-                    (dp) => dp !== fileName,
-                  );
+                  const next = worldDatapacks.filter((dp) => dp !== fileName);
+                  setWorldDatapacks(next);
+                  onChange?.(next);
                 } catch (err) {
                   console.error(err);
                   toast.error(t("worlds.datapackRemoveError"));

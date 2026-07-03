@@ -71,7 +71,7 @@ export class ModManager {
           }
         )
 
-        if (!curseforge) return data
+        if (!curseforge) return { ...data, error: true }
 
         curseforge.data.forEach((mod) => {
           data.projects.push(cfModToProject(mod))
@@ -98,7 +98,7 @@ export class ModManager {
           }
         )
 
-        if (!modrinth) return data
+        if (!modrinth) return { ...data, error: true }
 
         modrinth.hits.forEach((project) => {
           data.projects.push(mrProjectToProject(project, projectType))
@@ -111,7 +111,7 @@ export class ModManager {
 
       return data
     } catch {
-      return data
+      return { ...data, error: true }
     }
   }
 
@@ -246,7 +246,8 @@ export class ModManager {
 
           if (!mod) continue
 
-          if (dependencies.find((d) => d.project?.title == mod.name)) continue
+          if (dependencies.find((d) => d.projectId == dependency.projectId))
+            continue
 
           dependency.project = cfModToProject(mod)
           dependencies.push(dependency)
@@ -272,7 +273,8 @@ export class ModManager {
 
           if (!project) continue
 
-          if (dependencies.find((d) => d.project?.title == project.title)) continue
+          if (dependencies.find((d) => d.projectId == dependency.projectId))
+            continue
 
           dependency.project = mrProjectToProject(project, project.project_type as ProjectType)
           dependencies.push(dependency)

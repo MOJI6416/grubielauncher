@@ -18,7 +18,7 @@ export function isTrustedDownloadUrl(url: unknown): url is string {
     return false;
   }
 
-  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+  if (parsed.protocol !== "https:") return false;
 
   const host = parsed.hostname.toLowerCase();
   return TRUSTED_DOWNLOAD_HOST_SUFFIXES.some(

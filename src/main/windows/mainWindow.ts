@@ -10,6 +10,25 @@ export let mainWindow: BrowserWindow | null = null
 const MIN_WIDTH = 1280
 const MIN_HEIGHT = 720
 
+let pendingShow = true
+let isReadyToShow = false
+let shouldMaximizeOnShow = false
+
+function presentMainWindow(): void {
+  if (!mainWindow) return
+
+  mainWindow.show()
+  if (shouldMaximizeOnShow) {
+    shouldMaximizeOnShow = false
+    mainWindow.maximize()
+  }
+}
+
+export function showMainWindow(): void {
+  pendingShow = true
+  if (isReadyToShow) presentMainWindow()
+}
+
 interface WindowState {
   width: number
   height: number
@@ -32,8 +51,8 @@ function readWindowState(): WindowState | null {
       return null
     }
 
-    const width = Math.max(MIN_WIDTH, Math.round(state.width))
-    const height = Math.max(MIN_HEIGHT, Math.round(state.height))
+    let width = Math.max(MIN_WIDTH, Math.round(state.width))
+    let height = Math.max(MIN_HEIGHT, Math.round(state.height))
 
     let x: number | undefined
     let y: number | undefined
@@ -52,6 +71,13 @@ function readWindowState(): WindowState | null {
         y = Math.round(state.y)
       }
     }
+
+    const targetArea =
+      x !== undefined && y !== undefined
+        ? screen.getDisplayNearestPoint({ x, y }).workArea
+        : screen.getPrimaryDisplay().workArea
+    width = Math.min(width, targetArea.width)
+    height = Math.min(height, targetArea.height)
 
     return { width, height, x, y, isMaximized: state.isMaximized === true }
   } catch {
@@ -73,8 +99,14 @@ function saveWindowState(window: BrowserWindow): void {
   } catch {}
 }
 
-export function createMainWindow(): void {
+export function createMainWindow(
+  options: { deferShow?: boolean } = {},
+): void {
   const savedState = readWindowState()
+
+  pendingShow = !options.deferShow
+  isReadyToShow = false
+  shouldMaximizeOnShow = savedState?.isMaximized === true
 
   mainWindow = new BrowserWindow({
     minHeight: MIN_HEIGHT,
@@ -119,10 +151,8 @@ export function createMainWindow(): void {
 
   mainWindow.once('ready-to-show', () => {
     void rpc.login()
-    mainWindow?.show()
-    if (savedState?.isMaximized) {
-      mainWindow?.maximize()
-    }
+    isReadyToShow = true
+    if (pendingShow) presentMainWindow()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

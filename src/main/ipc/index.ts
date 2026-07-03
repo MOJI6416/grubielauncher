@@ -15,3 +15,4 @@ export { registerOsIpc } from "./osIpc";
 export { registerWorldIpc } from "./worldIpc";
 export { registerStatisticsIpc } from "./statisticsIpc";
 export { registerStorageIpc } from "./storageIpc";
+export { registerVoiceIpc } from "./voiceIpc";

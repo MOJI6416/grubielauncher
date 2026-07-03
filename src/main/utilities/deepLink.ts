@@ -1,6 +1,7 @@
 import { LauncherDeepLink } from "@/types/DeepLink";
 
 const PACK_CODE_PATTERN = /^[a-fA-F0-9]{24}$/;
+const GROUP_CODE_PATTERN = /^[a-zA-Z0-9]{4}-?[a-zA-Z0-9]{4}$/;
 
 export function parseLauncherDeepLink(rawUrl: string): LauncherDeepLink | null {
   let url: URL;
@@ -25,6 +26,25 @@ export function parseLauncherDeepLink(rawUrl: string): LauncherDeepLink | null {
     return {
       type: "pack",
       shareCode,
+    };
+  }
+
+  if (url.hostname === "group") {
+    let path: string;
+    try {
+      path = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+    } catch {
+      return null;
+    }
+
+    const [action, code] = path.split("/");
+    if (action !== "join" || !code || !GROUP_CODE_PATTERN.test(code)) {
+      return null;
+    }
+
+    return {
+      type: "groupJoin",
+      code,
     };
   }
 

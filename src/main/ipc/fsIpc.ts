@@ -1,6 +1,6 @@
 import fs from 'fs-extra'
 import path from 'path'
-import { rimraf } from 'rimraf'
+import { fileURLToPath } from 'url'
 import { getDirectories, getSha1, getTotalSizes } from '../utilities/files'
 import { createZipArchive, extractZip } from '../utilities/archiver'
 import { handleSafe } from '../utilities/ipc'
@@ -46,26 +46,20 @@ export function registerFsIpc() {
     return await getDirectories(source)
   })
 
-  handleSafe<string>('path:join', '', async (_, ...args: string[]) => {
-    return path.join(...args)
-  })
-
-  handleSafe<string>('path:basename', '', async (_, filePath: string, suffix?: string) => {
-    return path.basename(filePath, suffix)
-  })
-
-  handleSafe<string>('path:extname', '', async (_, filePath: string) => {
-    return path.extname(filePath)
-  })
-
   handleSafe<string>('fs:readFile', '', async (_, filePath: string, encoding: BufferEncoding = 'utf-8') => {
     return await fs.readFile(filePath, encoding)
+  })
+
+  handleSafe<Uint8Array | null>('fs:readFileBuffer', null, async (_, target: string) => {
+    const filePath = target.startsWith('file:') ? fileURLToPath(target) : target
+    const buffer = await fs.readFile(filePath)
+    return new Uint8Array(buffer)
   })
 
   handleSafe<boolean>('fs:rimraf', false, async (_, targetPath: string | string[]) => {
     const targets = Array.isArray(targetPath) ? targetPath : [targetPath]
     targets.forEach((target) => assertWritablePath(target, 'fs:rimraf'))
-    await rimraf(targetPath)
+    await Promise.all(targets.map((target) => fs.remove(target)))
     return true
   })
 

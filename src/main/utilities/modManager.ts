@@ -38,10 +38,32 @@ import toml from "toml";
 import { ModManager } from "../services/ModManager";
 import { app } from "electron";
 import { extractFileFromArchive } from "./archiver";
-import { rimraf } from "rimraf";
 import { randomUUID } from "crypto";
 import { pathToFileURL } from "url";
 import { parseCurseForgeLoaderId } from "@/shared/loaderVersions";
+
+export function classIdToProjectType(
+  classId: number | null | undefined,
+): ProjectType | null {
+  switch (classId) {
+    case ModTypeClassIds.mod:
+      return ProjectType.MOD;
+    case ModTypeClassIds.resourcepack:
+      return ProjectType.RESOURCEPACK;
+    case ModTypeClassIds.shader:
+      return ProjectType.SHADER;
+    case ModTypeClassIds.modpack:
+      return ProjectType.MODPACK;
+    case ModTypeClassIds.plugin:
+      return ProjectType.PLUGIN;
+    case ModTypeClassIds.world:
+      return ProjectType.WORLD;
+    case ModTypeClassIds.datapack:
+      return ProjectType.DATAPACK;
+    default:
+      return null;
+  }
+}
 
 export function dependencyToLocalProject(dependencies: IVersionDependency[]) {
   const newMods: ILocalProject[] = [];
@@ -106,7 +128,13 @@ export async function cfModpackToModpack(
       );
     }
 
-    const projectType = ModTypeClassIds[mod.classId || 6] as ProjectType;
+    const mappedProjectType = classIdToProjectType(mod.classId);
+    if (!mappedProjectType) {
+      console.warn(
+        `[modpack] unknown CurseForge classId ${mod.classId} for ${mod.name}, treating as mod`,
+      );
+    }
+    const projectType = mappedProjectType ?? ProjectType.MOD;
 
     modpackFiles.push({
       description: mod.summary,
@@ -197,7 +225,7 @@ export function cfModToProject(mod: IMod): IProject {
     description: mod.summary,
     iconUrl: mod.logo?.url || "",
     id: mod.id.toString(),
-    projectType: ModTypeClassIds[mod.classId || "mod"] as ProjectType,
+    projectType: classIdToProjectType(mod.classId) ?? ProjectType.MOD,
     title: mod.name,
     provider: Provider.CURSEFORGE,
     versions: [],
@@ -554,7 +582,7 @@ export async function checkLocalMod(
     return null;
   } finally {
     if (tempPath && (await fs.pathExists(tempPath))) {
-      await rimraf(tempPath).catch(() => {});
+      await fs.remove(tempPath).catch(() => {});
     }
   }
 }
@@ -1356,7 +1384,7 @@ export function compareMods(a: ILocalProject[], b: ILocalProject[]): boolean {
         .join("|") ?? "";
     const depSig =
       v?.dependencies
-        ?.map((d: any) => `${d.title}:${d.relationType}`)
+        ?.map((d: any) => `${d.projectId}:${d.relationType}`)
         .sort()
         .join("|") ?? "";
     return `${m.id}#${m.provider}#${m.projectType}#${v?.id ?? "null"}#${fileSig}#${depSig}`;
