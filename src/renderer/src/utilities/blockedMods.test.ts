@@ -30,6 +30,7 @@ function mod(files: Array<Record<string, unknown>>): ILocalProject {
 function blocked(fileName: string, filePath?: string): IBlockedMod {
   return {
     projectId: "curseforge-project",
+    fileId: 123,
     fileName,
     filePath,
     hash: "sha1",
@@ -40,9 +41,11 @@ function blocked(fileName: string, filePath?: string): IBlockedMod {
 function stubBlockedModsApi({
   exists = true,
   sha1 = "sha1",
+  cdnUrl = null,
 }: {
   exists?: boolean;
   sha1?: string;
+  cdnUrl?: string | null;
 } = {}) {
   vi.stubGlobal("window", {
     api: {
@@ -52,6 +55,7 @@ function stubBlockedModsApi({
       },
       modManager: {
         ptToFolder: vi.fn().mockResolvedValue("mods"),
+        resolveCfDownload: vi.fn().mockResolvedValue(cdnUrl),
       },
       path: {
         join: vi.fn(async (...parts: string[]) => parts.join("/")),
@@ -103,7 +107,7 @@ describe("blocked mods helpers", () => {
     expect(mods[0].version?.files[0].localPath).toBeUndefined();
   });
 
-  it("requires every blocked mod to have a selected local file before install continues", () => {
+  it("treats resolved, skipped and substituted mods as ready", () => {
     expect(areBlockedModsReady([blocked("one.jar", "C:/one.jar")])).toBe(true);
     expect(
       areBlockedModsReady([
@@ -112,6 +116,12 @@ describe("blocked mods helpers", () => {
       ]),
     ).toBe(false);
     expect(areBlockedModsReady([])).toBe(false);
+    expect(
+      areBlockedModsReady([{ ...blocked("two.jar"), skipped: true }]),
+    ).toBe(true);
+    expect(
+      areBlockedModsReady([{ ...blocked("two.jar"), substituted: true }]),
+    ).toBe(true);
   });
 
   it("falls back to the only blocked file when CurseForge filename changed", () => {
@@ -200,7 +210,7 @@ describe("blocked mods helpers", () => {
         {
           filename: "blocked.jar",
           sha1: "sha1",
-          url: "blocked::https://curseforge.example/file",
+          url: "blocked::https://curseforge.example/mod/download/555",
           localPath: "C:/Downloads/blocked.jar",
         },
       ]),
@@ -209,14 +219,14 @@ describe("blocked mods helpers", () => {
     await expect(checkBlockedMods(mods)).resolves.toEqual([]);
   });
 
-  it("returns blocked mods when selected localPath is missing", async () => {
-    stubBlockedModsApi({ exists: false, sha1: "sha1" });
+  it("returns blocked mods with a parsed fileId when CDN cannot resolve", async () => {
+    stubBlockedModsApi({ exists: false, cdnUrl: null });
     const mods = [
       mod([
         {
           filename: "blocked.jar",
           sha1: "sha1",
-          url: "blocked::https://curseforge.example/file",
+          url: "blocked::https://curseforge.example/mod/download/555",
           localPath: "C:/Downloads/blocked.jar",
         },
       ]),
@@ -227,31 +237,27 @@ describe("blocked mods helpers", () => {
         fileName: "blocked.jar",
         hash: "sha1",
         projectId: "curseforge-project",
-        url: "https://curseforge.example/file",
+        url: "https://curseforge.example/mod/download/555",
+        fileId: 555,
+        modTitle: "Blocked Mod",
       },
     ]);
   });
 
-  it("returns blocked mods when selected localPath hash mismatches", async () => {
-    stubBlockedModsApi({ exists: true, sha1: "other-sha1" });
+  it("auto-resolves a blocked file via the CurseForge CDN and rewrites its url", async () => {
+    const cdnUrl = "https://edge.forgecdn.net/files/8273/779/mod.jar";
+    stubBlockedModsApi({ exists: false, cdnUrl });
     const mods = [
       mod([
         {
-          filename: "blocked.jar",
+          filename: "mod.jar",
           sha1: "sha1",
-          url: "blocked::https://curseforge.example/file",
-          localPath: "C:/Downloads/blocked.jar",
+          url: "blocked::https://curseforge.example/mod/download/8273779",
         },
       ]),
     ];
 
-    await expect(checkBlockedMods(mods)).resolves.toEqual([
-      {
-        fileName: "blocked.jar",
-        hash: "sha1",
-        projectId: "curseforge-project",
-        url: "https://curseforge.example/file",
-      },
-    ]);
+    await expect(checkBlockedMods(mods)).resolves.toEqual([]);
+    expect(mods[0].version?.files[0].url).toBe(cdnUrl);
   });
 });

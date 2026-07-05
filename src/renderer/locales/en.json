@@ -26,7 +26,8 @@
     "cancel": "Cancel",
     "rename": "Rename",
     "close": "Close",
-    "add": "Add"
+    "add": "Add",
+    "more": "More"
   },
   "network": {
     "connectionRestored": "Internet connection restored",
@@ -343,7 +344,8 @@
     "fromServer": {
       "shareCode": "Build code",
       "find": "Find",
-      "notFound": "Build not found"
+      "notFound": "Build not found",
+      "browsePublic": "No code? Browse public builds"
     },
     "fromFile": {
       "error": "Failed to recognize file",
@@ -622,6 +624,7 @@
     "shortcutCreated": "Shortcut created on the desktop",
     "shortcutFailed": "Couldn't create the shortcut",
     "launchNotFound": "Version to launch not found",
+    "installBusy": "Wait for the current installation to finish",
     "versionSettings": "Version settings",
     "changeLogo": "Change logo",
     "addingVersion": "Adding version",
@@ -663,6 +666,8 @@
     "serverManager": "Server management",
     "createingServer": "Creating server",
     "serverCore": "Server core",
+    "aikarFlags": "Aikar's flags",
+    "aikarFlagsHint": "Optimized JVM flags for better server performance",
     "notFoundServerCore": "No suitable core found",
     "serverInstalled": "Server installed",
     "serverInstallError": "Failed to install server",
@@ -1106,11 +1111,59 @@
     "addSkin": "Add skin",
     "addCape": "Add cape",
     "applyError": "Could not apply the skin or cape.",
-    "openError": "Failed to open skin manager"
+    "tabMine": "My skins",
+    "tabCatalog": "Catalog",
+    "catalogSearch": "Search skins",
+    "catalogAll": "All",
+    "catalogEmpty": "No skins found",
+    "catalogOffline": "Connect to the internet to browse the catalog",
+    "catalogLoadMore": "Show more",
+    "catalogTake": "Add to my skins",
+    "catalogImported": "Skin added to your collection",
+    "source_all": "All",
+    "source_official": "Official",
+    "source_community": "Community",
+    "publish": "Publish",
+    "publishTitle": "Publish to community",
+    "publishNote": "The skin will appear in the community catalog after a moderator approves it.",
+    "publishName": "Public name",
+    "publishPending": "Sent for moderation",
+    "publishDuplicate": "This skin is already in the catalog",
+    "publishLimit": "You have too many skins awaiting moderation",
+    "publishError": "Could not publish the skin",
+    "publishRejected": "This skin was rejected: {{reason}}",
+    "publishRejectedNoReason": "This skin was rejected earlier",
+    "source_mine": "Mine",
+    "statusPending": "In review",
+    "statusApproved": "In catalog",
+    "statusRejected": "Rejected",
+    "myEmpty": "You haven't published any skins yet",
+    "rejectionReason": "Rejection reason",
+    "removeFromGallery": "Remove from gallery",
+    "type_skin": "Skins",
+    "type_cape": "Capes",
+    "type_pack": "Packs",
+    "publishWhat": "What to publish",
+    "publishType_skin": "Skin",
+    "publishType_cape": "Cape",
+    "publishType_pack": "Pack",
+    "tagsLabel": "Tags",
+    "tagsPlaceholder": "Add a tag…",
+    "tagsAll": "All tags",
+    "tagsSearch": "Search tags…",
+    "tagsEmpty": "No tags",
+    "sort_new": "Newest",
+    "sort_downloads": "Popular",
+    "resetFilters": "Reset search and tags",
+    "openError": "Failed to open skin manager",
+    "deepLinkHint": "Open the skin manager and go to the Catalog tab to take this skin",
+    "deepLinkNoAccount": "Select a Microsoft or Discord account to take this skin",
+    "deepLinkPlain": "Offline accounts can't apply catalog skins — sign in with Microsoft or Discord",
+    "deepLinkElyby": "ely.by manages skins on its own site, so catalog skins can't be applied to an ely.by account"
   },
   "blockedMods": {
     "title": "Blocked mods found",
-    "description": "These files are not available for third-party launchers. You will need to download them manually.",
+    "description": "Some files can't be downloaded automatically. Download them manually, replace them from Modrinth, or skip them to continue.",
     "watchedFolders": "Watched folders",
     "addFolder": "Add folder",
     "removeFolder": "Stop watching this folder",
@@ -1126,7 +1179,18 @@
     "ready": "Found",
     "showAll": "Show all",
     "showMissing": "Missing only",
-    "empty": "All required files were found."
+    "empty": "All required files were found.",
+    "skip": "Skip",
+    "skipAll": "Install without missing",
+    "skippedLabel": "Skipped — won't be installed",
+    "undoSkip": "Undo skip",
+    "substitute": "Find on Modrinth",
+    "substitutedLabel": "Replaced from Modrinth",
+    "substituteSuccess": "Replaced with “{{title}}” from Modrinth",
+    "substituteFailed": "No compatible version found on Modrinth",
+    "searchPlaceholder": "Search Modrinth…",
+    "search": "Search",
+    "substituteHint": "Search Modrinth for a replacement of this mod."
   },
   "whatsNew": {
     "openCurrent": "Show what is new",
@@ -1253,7 +1317,8 @@
       "combat": "Combat",
       "survival": "Survival",
       "craft": "Crafting",
-      "playtime": "Playtime"
+      "playtime": "Playtime",
+      "community": "Community"
     },
     "rarity": {
       "common": "Common",
@@ -1415,6 +1480,22 @@
       "pt1000": {
         "name": "1000 Hours",
         "desc": "Play for {{goal}} hours in the launcher"
+      },
+      "skin_first": {
+        "name": "Debut",
+        "desc": "Get your first skin approved to the gallery"
+      },
+      "skin_author_10": {
+        "name": "Skin Maker",
+        "desc": "Have 10 of your skins in the gallery"
+      },
+      "skin_downloads_100": {
+        "name": "Popular",
+        "desc": "One of your skins was taken 100 times"
+      },
+      "skin_downloads_1000": {
+        "name": "Gallery Hit",
+        "desc": "One of your skins was taken 1000 times"
       }
     }
   },

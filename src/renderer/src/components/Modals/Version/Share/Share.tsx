@@ -332,7 +332,15 @@ export function Share({
       if (isShareOtherFiles) {
         other = { paths: [], url: "", size: 0 };
 
-        if (paths.length > 0) {
+        const serverOverridesPath = await api.path.join(
+          versionPath,
+          "storage",
+          "server-overrides",
+        );
+        const hasServerOverrides =
+          await api.fs.pathExists(serverOverridesPath);
+
+        if (paths.length > 0 || hasServerOverrides) {
           updatePublishProgress({
             stage: "preparingArchive",
             percent: 25,
@@ -340,6 +348,7 @@ export function Share({
           const validPaths = await Promise.all(
             paths.map((p) => api.path.join(versionPath, p)),
           );
+          if (hasServerOverrides) validPaths.push(serverOverridesPath);
 
           const computedTotalSize = await api.file.getTotalSizes(validPaths);
           if (computedTotalSize > MAX_OTHER_BYTES) {

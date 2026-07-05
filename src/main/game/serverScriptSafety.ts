@@ -6,6 +6,10 @@ export function assertSafeFileSegment(value: string, label: string): string {
   return value;
 }
 
+export function toArgfilePath(value: string): string {
+  return value.replaceAll("\\", "/");
+}
+
 export function validateServerMemory(value: unknown): number {
   const raw = Number(value);
   if (!Number.isFinite(raw) || raw <= 0) {

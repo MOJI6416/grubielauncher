@@ -19,11 +19,14 @@ import {
 } from "../utilities/loaderInstallerProgress";
 import {
   assertSafeFileSegment,
+  toArgfilePath,
   validateServerMemory,
 } from "./serverScriptSafety";
+import { AIKAR_FLAGS } from "../utilities/serverManager";
 
 export class ServerGame {
   private serverPath: string = "";
+  private versionPath: string = "";
   private version: IVersionConf | undefined = undefined;
   private serverConf: IServerConf | null = null;
   private downloadLimit: number = 6;
@@ -33,17 +36,32 @@ export class ServerGame {
   constructor(
     account: ILocalAccount | undefined,
     downloadLimit: number,
-    _versionPath: string,
+    versionPath: string,
     serverPath: string,
     conf: IServerConf,
     version?: IVersionConf,
   ) {
     this.account = account;
+    this.versionPath = versionPath;
     this.serverPath = serverPath;
     this.version = version;
     this.serverConf = conf;
     this.downloadLimit = downloadLimit;
     this.downloader = new Downloader(this.downloadLimit);
+  }
+
+  private async resolveJavaMajorVersion(): Promise<number> {
+    const fallback = this.serverConf?.javaMajorVersion ?? 21;
+    const mcId = this.version?.version?.id;
+    if (!mcId || !this.versionPath) return fallback;
+    try {
+      const manifest = await fs.readJSON(
+        path.join(this.versionPath, `${mcId}.json`),
+      );
+      const major = manifest?.javaVersion?.majorVersion;
+      if (typeof major === "number" && major > 0) return major;
+    } catch {}
+    return fallback;
   }
 
   private sendInstallProgress(
@@ -72,15 +90,19 @@ export class ServerGame {
     } catch {}
   }
 
-  async install() {
+  async install(options?: { keepProgressOpen?: boolean }) {
     if (!this.serverConf) return;
 
     await fs.ensureDir(this.serverPath);
 
+    let ok = false;
     try {
       await this.installInternal();
+      ok = true;
     } finally {
-      this.sendInstallProgress("done", 100);
+      if (!ok || !options?.keepProgressOpen) {
+        this.sendInstallProgress("done", 100);
+      }
     }
   }
 
@@ -92,11 +114,16 @@ export class ServerGame {
     if (!this.serverConf) return;
 
     const memory = this.getValidatedMemory();
+    const memoryArgs = this.serverConf.aikarFlags
+      ? `-Xms${memory}M -Xmx${memory}M ${AIKAR_FLAGS}`
+      : `-Xmx${memory}M`;
     assertSafeFileSegment(this.serverConf.core, "server core");
 
     this.sendInstallProgress("preparing", 5);
 
-    const java = new Java(this.serverConf.javaMajorVersion);
+    const javaMajorVersion = await this.resolveJavaMajorVersion();
+    this.serverConf.javaMajorVersion = javaMajorVersion;
+    const java = new Java(javaMajorVersion);
     await java.init();
     this.sendInstallProgress("java", 15);
     await java.install();
@@ -106,7 +133,7 @@ export class ServerGame {
       !(await fs.pathExists(java.javaServerPath))
     )
       throw new Error(
-        `Java ${this.serverConf.javaMajorVersion} runtime for the server could not be installed`,
+        `Java ${javaMajorVersion} runtime for the server could not be installed`,
       );
 
     if (!this.version || !this.account) {
@@ -212,7 +239,7 @@ export class ServerGame {
     ) {
       javaagent = `${HTTP_AGENT_JVM_ARGUMENT} ${getJavaAgent(
         this.account.type,
-        `${path.join("libraries", authlib.path)}`,
+        toArgfilePath(path.join("libraries", authlib.path)),
         true,
       )} `;
 
@@ -290,7 +317,7 @@ export class ServerGame {
           const jvmArgs = path.join(this.serverPath, "user_jvm_args.txt");
           await fs.writeFile(
             jvmArgs,
-            `${javaagent}-Xmx${memory}M`,
+            `${javaagent}${memoryArgs}`,
             "utf-8",
           );
         }
@@ -317,11 +344,11 @@ export class ServerGame {
     if (isCreateRunFiles) {
       assertSafeFileSegment(jar, "server jar");
       const batData = `@echo off
-${javaCmd} ${javaagent} -Xmx${memory}M -jar ${jar} nogui
+${javaCmd} ${javaagent} ${memoryArgs} -jar ${jar} nogui
 pause`;
 
       const shData = `#!/bin/sh
-${javaCmd} ${javaagent} -Xmx${memory}M -jar ${jar} nogui
+${javaCmd} ${javaagent} ${memoryArgs} -jar ${jar} nogui
 read -p "Press [Enter] key to continue..."`;
 
       await fs.writeFile(batPath, batData, "utf-8");

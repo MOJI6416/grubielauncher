@@ -31,6 +31,7 @@ export interface IServerConf {
   core: ServerCore
   javaMajorVersion: number
   memory: number
+  aikarFlags?: boolean
   downloads: {
     server: string
   }

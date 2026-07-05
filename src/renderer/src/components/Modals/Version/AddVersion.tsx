@@ -25,6 +25,7 @@ import {
   FolderInput,
   Layers3,
   PencilLine,
+  ExternalLink,
 } from "lucide-react";
 import {
   Suspense,
@@ -38,7 +39,12 @@ import { useTranslation } from "react-i18next";
 import { loaders, Loaders } from "../../Loaders";
 import { SiCurseforge, SiModrinth } from "react-icons/si";
 import { IArguments } from "@/types/IArguments";
-import { ILocalProject, Provider } from "@/types/ModManager";
+import {
+  ILocalProject,
+  IProject,
+  ProjectType,
+  Provider,
+} from "@/types/ModManager";
 import { IModpack } from "@/types/Backend";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -55,7 +61,10 @@ import { VirtualizedSelect } from "@/components/ui/virtualized-select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { IModpack as IImportModpack } from "@/types/ModManager";
+import {
+  IModpack as IImportModpack,
+  IModpackExtraFile,
+} from "@/types/ModManager";
 import { IModpackFile, IVersion, IVersionConf } from "@/types/IVersion";
 import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
 import {
@@ -176,22 +185,68 @@ function rewriteImportedLocalPaths(
   newVersionPath: string,
 ) {
   const normalizedImportRoot = importFolderPath.replace(/\\/g, "/");
-  const normalizedOverridesRoot = `${normalizedImportRoot}/overrides`;
+  const overrideRoots = [
+    `${normalizedImportRoot}/overrides`,
+    `${normalizedImportRoot}/client-overrides`,
+  ];
+  const normalizedNewPath = newVersionPath.replace(/\\/g, "/");
 
   for (const mod of mods) {
     for (const file of mod.version?.files ?? []) {
       if (!file.localPath) continue;
 
       const normalizedLocalPath = file.localPath.replace(/\\/g, "/");
-      if (!normalizedLocalPath.startsWith(normalizedOverridesRoot)) continue;
+      const matchedRoot = overrideRoots.find((root) =>
+        normalizedLocalPath.startsWith(root),
+      );
+      if (!matchedRoot) continue;
 
       const relativePath = normalizedLocalPath
-        .slice(normalizedOverridesRoot.length)
+        .slice(matchedRoot.length)
         .replace(/^\/+/, "");
       if (!relativePath) continue;
 
-      file.localPath = `${newVersionPath.replace(/\\/g, "/")}/${relativePath}`;
+      file.localPath = `${normalizedNewPath}/${relativePath}`;
     }
+  }
+}
+
+async function downloadModpackExtraFiles(
+  extraFiles: IModpackExtraFile[],
+  newVersionPath: string,
+  downloadLimit: number,
+) {
+  const downloads: { url: string; destination: string; group: string }[] = [];
+
+  for (const extra of extraFiles) {
+    const segments = extra.path
+      .split("/")
+      .filter((segment) => segment && segment !== ".");
+    if (segments.length === 0 || segments.includes("..")) continue;
+
+    if (extra.isClient) {
+      downloads.push({
+        url: extra.url,
+        destination: await api.path.join(newVersionPath, ...segments),
+        group: "other",
+      });
+    }
+    if (extra.isServer) {
+      downloads.push({
+        url: extra.url,
+        destination: await api.path.join(
+          newVersionPath,
+          "storage",
+          "server-overrides",
+          ...segments,
+        ),
+        group: "other",
+      });
+    }
+  }
+
+  if (downloads.length > 0) {
+    await api.file.download(downloads, downloadLimit);
   }
 }
 
@@ -550,6 +605,51 @@ export function AddVersion({
     }
   }
 
+  async function substituteFromModrinth(
+    blockedMod: IBlockedMod,
+    project: IProject,
+  ): Promise<boolean> {
+    try {
+      const versions = await api.modManager.getVersions(
+        Provider.MODRINTH,
+        project.id,
+        {
+          version: selectVersion?.id,
+          loader,
+          projectType: ProjectType.MOD,
+          modUrl: project.url,
+        },
+      );
+
+      const version = versions?.[0];
+      if (!version?.files?.length) return false;
+
+      const newMod: ILocalProject = {
+        title: project.title,
+        description: project.description,
+        projectType: ProjectType.MOD,
+        iconUrl: project.iconUrl,
+        url: project.url,
+        provider: Provider.MODRINTH,
+        id: project.id,
+        version: {
+          id: version.id,
+          dependencies: [],
+          files: version.files,
+        },
+      };
+
+      const index = mods.findIndex((m) => m.id === blockedMod.projectId);
+      if (index === -1) mods.push(newMod);
+      else mods[index] = newMod;
+      setMods([...mods]);
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async function addVersionInternal(resolvedBlockedMods: IBlockedMod[]) {
     if (
       !account ||
@@ -589,10 +689,7 @@ export function AddVersion({
                 ? contentTypeHeader
                 : undefined;
 
-            const filename = `logo.${getImageExtension(
-              image,
-              contentType,
-            )}`;
+            const filename = `logo.${getImageExtension(image, contentType)}`;
             const filePath = await api.path.join(newVersionPath, filename);
             const buffer = api.file.fromBuffer(response.data);
             await api.fs.writeFile(filePath, buffer, "binary");
@@ -662,15 +759,40 @@ export function AddVersion({
         await api.fs.copy(importData.path, newVersionPath);
         await api.fs.rimraf(importData.path);
       } else if (importModpack) {
-        const overridesPath = await api.path.join(
-          importModpack.folderPath,
-          "overrides",
-        );
+        const importRoot = importModpack.folderPath;
+
+        const overridesPath = await api.path.join(importRoot, "overrides");
         if (await api.fs.pathExists(overridesPath)) {
           await api.fs.copy(overridesPath, newVersionPath);
         }
-        rewriteImportedLocalPaths(mods, importModpack.folderPath, newVersionPath);
-        await api.fs.rimraf(importModpack.folderPath);
+
+        const clientOverridesPath = await api.path.join(
+          importRoot,
+          "client-overrides",
+        );
+        if (await api.fs.pathExists(clientOverridesPath)) {
+          await api.fs.copy(clientOverridesPath, newVersionPath);
+        }
+
+        const serverOverridesPath = await api.path.join(
+          importRoot,
+          "server-overrides",
+        );
+        if (await api.fs.pathExists(serverOverridesPath)) {
+          await api.fs.copy(
+            serverOverridesPath,
+            await api.path.join(newVersionPath, "storage", "server-overrides"),
+          );
+        }
+
+        await downloadModpackExtraFiles(
+          importModpack.extraFiles ?? [],
+          newVersionPath,
+          settings.downloadLimit,
+        );
+
+        rewriteImportedLocalPaths(mods, importRoot, newVersionPath);
+        await api.fs.rimraf(importRoot);
       }
 
       newVersion = new Version(newVersionConf);
@@ -974,18 +1096,33 @@ export function AddVersion({
   }
 
   async function handleInstallClick() {
+    if (isInstallActive) {
+      toast.error(t("versions.installBusy"));
+      return;
+    }
+
     if (selectedTab != "fromFile" && mods.length > 0) {
-      const newVersionPath = await api.path.join(
-        paths.minecraft,
-        "versions",
-        versionName.trim(),
-      );
-      const blockedMods: IBlockedMod[] = await checkBlockedMods(
-        mods,
-        newVersionPath,
-      );
+      setIsLoading(true);
+      setLoadingType("install");
+
+      let blockedMods: IBlockedMod[] = [];
+      try {
+        const newVersionPath = await api.path.join(
+          paths.minecraft,
+          "versions",
+          versionName.trim(),
+        );
+        blockedMods = await checkBlockedMods(mods, newVersionPath);
+      } catch (error) {
+        console.error("[version:add] blocked mods check failed", error);
+        setIsLoading(false);
+        setLoadingType(undefined);
+        return;
+      }
 
       if (blockedMods.length > 0) {
+        setIsLoading(false);
+        setLoadingType(undefined);
         setBlockedMods(blockedMods);
         setIsBlockedMods(true);
         return;
@@ -1178,6 +1315,22 @@ export function AddVersion({
                                   {t("addVersion.invalidName")}
                                 </FormErrorMessage>
                               </div>
+                              {selectedTab == "fromServer" &&
+                                !isVersionNameInput && (
+                                  <button
+                                    type="button"
+                                    disabled={isLoading}
+                                    className="inline-flex w-fit items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                                    onClick={() => {
+                                      void api.shell.openExternal(
+                                        "https://grubielauncher.com/packs",
+                                      );
+                                    }}
+                                  >
+                                    <ExternalLink className="size-3" />
+                                    {t("addVersion.fromServer.browsePublic")}
+                                  </button>
+                                )}
                             </div>
                           )}
                         </div>
@@ -1582,6 +1735,9 @@ export function AddVersion({
       {isBlockedMods && blockedMods.length && (
         <BlockedMods
           mods={blockedMods}
+          mcVersion={selectVersion?.id}
+          loader={loader}
+          onSubstitute={substituteFromModrinth}
           onClose={(bMods) => {
             setBlockedMods(bMods);
             setIsBlockedMods(false);

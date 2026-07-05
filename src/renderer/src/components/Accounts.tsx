@@ -38,6 +38,7 @@ import {
   isRunningAtom,
   networkAtom,
   pathsAtom,
+  pendingSkinDeepLinkAtom,
   selectedVersionAtom,
 } from "@renderer/stores/atoms";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -205,6 +206,75 @@ export function Accounts() {
     }
     return schedulePreload([LazyAccountInfo.preload], 1200);
   }, [selectedAccount, isNetwork]);
+
+  const openAccountInfo = useCallback(async () => {
+    if (
+      isLoading ||
+      !selectedAccount ||
+      selectedAccount.type === "plain" ||
+      !isNetwork ||
+      !authData ||
+      !selectedAccount.accessToken
+    )
+      return;
+
+    setIsLoading(true);
+    setLoadingType("user");
+    try {
+      const accountForRequest = (
+        await ensureAccountSession({
+          accounts: accountsSafe,
+          authData,
+          selectedAccount,
+          setAccounts,
+          setSelectedAccount,
+        })
+      ).account;
+
+      const nextUser = await api.backend.getUser(
+        accountForRequest.accessToken || "",
+        authData.sub,
+      );
+      if (nextUser) {
+        setUser(nextUser);
+        setAccountInfo(true);
+        return;
+      }
+      throw new Error();
+    } catch (err) {
+      toast.error(
+        t(
+          isAccountSessionRefreshError(err)
+            ? "accounts.sessionExpired"
+            : "accountInfo.error",
+        ),
+      );
+    } finally {
+      setIsLoading(false);
+      setLoadingType(undefined);
+    }
+  }, [
+    isLoading,
+    selectedAccount,
+    isNetwork,
+    authData,
+    accountsSafe,
+    setAccounts,
+    setSelectedAccount,
+    t,
+  ]);
+
+  const pendingSkinDeepLink = useAtomValue(pendingSkinDeepLinkAtom);
+  const handledSkinDeepLinkRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pendingSkinDeepLink) {
+      handledSkinDeepLinkRef.current = null;
+      return;
+    }
+    if (handledSkinDeepLinkRef.current === pendingSkinDeepLink) return;
+    handledSkinDeepLinkRef.current = pendingSkinDeepLink;
+    if (!accountInfo) void openAccountInfo();
+  }, [pendingSkinDeepLink, accountInfo, openAccountInfo]);
 
   const getAccountKey = useCallback(
     (a: ILocalAccount) => `${a.type}_${a.nickname}`,
@@ -508,54 +578,7 @@ export function Accounts() {
                   if (target?.closest("[data-account-click-ignore='true']")) {
                     return;
                   }
-
-                  if (
-                    isLoading ||
-                    selectedAccount.type == "plain" ||
-                    !isNetwork ||
-                    !authData ||
-                    !selectedAccount.accessToken
-                  )
-                    return;
-
-                  setIsLoading(true);
-                  setLoadingType("user");
-
-                  try {
-                    const accountForRequest = authData
-                      ? (
-                          await ensureAccountSession({
-                            accounts: accountsSafe,
-                            authData,
-                            selectedAccount,
-                            setAccounts,
-                            setSelectedAccount,
-                          })
-                        ).account
-                      : selectedAccount;
-
-                    const user = await api.backend.getUser(
-                      accountForRequest.accessToken || "",
-                      authData.sub,
-                    );
-                    if (user) {
-                      setUser(user);
-                      setAccountInfo(true);
-                      return;
-                    }
-                    throw new Error();
-                  } catch (err) {
-                    toast.error(
-                      t(
-                        isAccountSessionRefreshError(err)
-                          ? "accounts.sessionExpired"
-                          : "accountInfo.error",
-                      ),
-                    );
-                  } finally {
-                    setIsLoading(false);
-                    setLoadingType(undefined);
-                  }
+                  await openAccountInfo();
                 }}
                 onMouseEnter={() => preload(LazyAccountInfo.preload)}
                 onFocus={() => preload(LazyAccountInfo.preload)}

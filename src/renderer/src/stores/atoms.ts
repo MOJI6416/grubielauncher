@@ -169,6 +169,7 @@ export const ownPresenceAtom = atom<Required<IUpdateStatus>>({
   serverAddress: "",
 });
 export const pendingFriendChatAtom = atom<string | null>(null);
+export const pendingSkinDeepLinkAtom = atom<string | null>(null);
 
 export const shareStateAtom = atom<ShareState>({
   phase: "idle",

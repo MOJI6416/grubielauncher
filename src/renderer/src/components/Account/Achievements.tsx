@@ -516,11 +516,13 @@ function AchievementCard({
 }) {
   const { def, unlocked, ratio, rarity, value } = item;
   const Icon = def.icon;
+  const isGranted = !!def.granted;
 
-  const current = metricDisplay(value, def.unit);
-  const goal = metricDisplay(def.goal, def.unit);
-  const unitSuffix =
-    def.unit === "km"
+  const current = isGranted ? 0 : metricDisplay(value, def.unit!);
+  const goal = isGranted ? 0 : metricDisplay(def.goal!, def.unit!);
+  const unitSuffix = isGranted
+    ? ""
+    : def.unit === "km"
       ? ` ${t("achievements.unit.km")}`
       : def.unit === "ticksHours" || def.unit === "secondsHours"
         ? ` ${t("time.h")}`
@@ -567,7 +569,7 @@ function AchievementCard({
           </Badge>
         </div>
 
-        {!unlocked && (
+        {!unlocked && !isGranted && (
           <>
             <Progress value={ratio * 100} max={100} className="h-1.5" />
             <p className="text-[11px] tabular-nums text-muted-foreground">

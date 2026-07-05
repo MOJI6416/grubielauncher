@@ -49,7 +49,7 @@ export class ModManager {
 
     try {
       if (provider == 'curseforge') {
-        let cfSortField: ModsSearchSortField | undefined = undefined
+        let cfSortField: ModsSearchSortField = ModsSearchSortField.Popularity
 
         if (sort && sort !== '') {
           const mapped = (ModsSearchSortField as any)[sort]

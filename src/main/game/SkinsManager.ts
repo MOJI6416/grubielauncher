@@ -1,3 +1,4 @@
+import axios from 'axios'
 import path from 'path'
 import { randomUUID } from 'crypto'
 import fs from 'fs-extra'
@@ -851,6 +852,74 @@ export class SkinsManager extends BaseService {
       console.error('Error uploading skin:', error)
       throw error
     }
+  }
+
+  public async publishCommunitySkin(
+    skinId: string,
+    name: string | undefined,
+    backendToken: string,
+    type: 'skin' | 'cape' | 'pack' = 'skin',
+    tags?: string
+  ) {
+    if (typeof FormData === 'undefined' || typeof Blob === 'undefined') {
+      throw new Error('community_publish_unsupported_env')
+    }
+    if (!backendToken) throw new Error('community_publish_no_token')
+
+    const skin = this.findSkinById(skinId)
+    if (!skin) throw new Error('skin_not_found')
+
+    const formData = new FormData()
+    formData.append('type', type)
+    formData.append('variant', skin.model)
+    formData.append('name', (name || skin.name || '').slice(0, 40))
+    if (tags) formData.append('tags', tags)
+
+    if (type === 'skin' || type === 'pack') {
+      const skinPath = this.getSkinFilePath(skin.hash)
+      if (!(await fs.pathExists(skinPath))) {
+        throw new Error('skin_file_missing')
+      }
+      const skinBuffer = await fs.readFile(skinPath)
+      formData.append('file', new Blob([skinBuffer], { type: 'image/png' }), `${skin.hash}.png`)
+    }
+
+    if (type === 'cape' || type === 'pack') {
+      const cape = skin.capeId ? this.findCapeById(skin.capeId) : undefined
+      if (!cape) throw new Error('cape_missing')
+      const capePath = this.getCapeFilePath(cape.hash)
+      if (!(await fs.pathExists(capePath))) {
+        throw new Error('cape_file_missing')
+      }
+      const capeBuffer = await fs.readFile(capePath)
+      formData.append('cape', new Blob([capeBuffer], { type: 'image/png' }), `${cape.hash}.png`)
+    }
+
+    const response = await axios.post<{ status?: string }>(
+      `${BACKEND_URL}/skins/community`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${backendToken}`
+        }
+      }
+    )
+
+    return response.data
+  }
+
+  public async importPack(skinUrl: string, capeUrl: string) {
+    const skin = await this.syncSkinFromUrl(skinUrl, {})
+    if (!skin) throw new Error('pack_skin_failed')
+
+    this.selectedSkin = skin.id
+
+    const cape = await this.syncCapeFromUrl(capeUrl, {})
+    if (cape) {
+      skin.capeId = cape.id
+    }
+
+    await this.saveSkins()
   }
 
   private async showCape(capeId: string) {

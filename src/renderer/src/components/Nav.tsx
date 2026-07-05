@@ -26,6 +26,7 @@ import {
   fileDragOverAtom,
   errorLogAtom,
   errorLogSeenAtom,
+  installActiveAtom,
   isFriendsConnectedAtom,
   isOwnerVersionAtom,
   isRunningAtom,
@@ -120,6 +121,7 @@ export function Nav({
   const setIsOwnerVersion = useAtom(isOwnerVersionAtom)[1];
   const [selectedAccount] = useAtom(accountAtom);
   const [isAddVersion, setVersionModal] = useAtom(addVersionModalAtom);
+  const installActive = useAtomValue(installActiveAtom);
   const [isFileDragOver] = useAtom(fileDragOverAtom);
   const [addVersionImportPath, setAddVersionImportPath] = useAtom(
     addVersionImportPathAtom,
@@ -335,7 +337,7 @@ export function Nav({
                 {canUseInternet && (
                   <Button
                     variant="secondary"
-                    disabled={isRunning || !selectedAccount}
+                    disabled={isRunning || !selectedAccount || installActive}
                     size="lg"
                     className="h-10 px-4 text-sm [&_svg]:size-4"
                     onMouseEnter={() => {

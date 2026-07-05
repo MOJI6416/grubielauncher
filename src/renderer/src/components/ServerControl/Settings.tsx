@@ -104,6 +104,7 @@ export function ServerSettings({
   const [isResourcePack, setIsResourcePack] = useState(false);
   const [totalMem, setTotalMem] = useState(0);
   const [server, setServer] = useState<IServerConf | null>(null);
+  const [aikarFlags, setAikarFlags] = useState(false);
 
   const { t } = useTranslation();
 
@@ -115,6 +116,7 @@ export function ServerSettings({
 
     return (
       memory == server?.memory &&
+      aikarFlags == (server?.aikarFlags ?? false) &&
       !(
         settings &&
         (maxPlayers != settings.maxPlayers ||
@@ -149,6 +151,7 @@ export function ServerSettings({
 
       setServer(serverData);
       setMemory(serverData.memory);
+      setAikarFlags(serverData.aikarFlags ?? false);
 
       const settings = await api.server.getSettings(
         await api.path.join(serverPath, "server.properties"),
@@ -232,6 +235,10 @@ export function ServerSettings({
       await api.server.editXmx(serverPath, memory);
     }
 
+    if ((server?.aikarFlags ?? false) != aikarFlags) {
+      await api.server.setAikar(serverPath, aikarFlags);
+    }
+
     if (settings) {
       if (maxPlayers != settings.maxPlayers) settings.maxPlayers = maxPlayers;
       if (gameMode != settings.gameMode) settings.gameMode = gameMode;
@@ -277,11 +284,13 @@ export function ServerSettings({
     await api.fs.writeJSON(await api.path.join(serverPath, "conf.json"), {
       ...server!,
       memory,
+      aikarFlags,
     });
 
     setServer({
       ...server!,
       memory,
+      aikarFlags,
     });
 
     toast.success(t("settings.saved"));
@@ -353,6 +362,22 @@ export function ServerSettings({
                       }
                     }}
                   />
+
+                  <label className="flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5 text-sm transition-colors hover:bg-accent/55">
+                    <div className="grid min-w-0 gap-0.5">
+                      <span className="truncate">
+                        {t("versions.aikarFlags")}
+                      </span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {t("versions.aikarFlagsHint")}
+                      </span>
+                    </div>
+                    <Switch
+                      className="shrink-0"
+                      checked={aikarFlags}
+                      onCheckedChange={(value) => setAikarFlags(value === true)}
+                    />
+                  </label>
                 </SettingsSection>
 
                 <SettingsSection

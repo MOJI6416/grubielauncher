@@ -102,12 +102,7 @@ import {
 } from "@/components/ui/pagination";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -248,9 +243,9 @@ function formatDate(
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   try {
-    return new Intl.DateTimeFormat(lang || "en", { dateStyle: "medium" }).format(
-      date,
-    );
+    return new Intl.DateTimeFormat(lang || "en", {
+      dateStyle: "medium",
+    }).format(date);
   } catch {
     return date.toLocaleDateString();
   }
@@ -1192,7 +1187,8 @@ export function ModManager({
             panel's own close button never lands under the OS min/max/close.
             env(titlebar-area-height) is the overlay height on Windows and 0px
             elsewhere, so other platforms keep the original 1rem inset. */}
-        <DialogContent aria-describedby={undefined}
+        <DialogContent
+          aria-describedby={undefined}
           style={{
             top: "calc(env(titlebar-area-height, 0px) + 1rem)",
             left: "1rem",
@@ -1908,12 +1904,14 @@ export function ModManager({
                                       >
                                         {item.title}
                                       </p>
-                                      {isInstalled && !isPendingRemoved && !isLocal && (
-                                        <Badge className="h-5 shrink-0 gap-1 border-transparent bg-[var(--success)] px-1.5 text-[0.65rem] font-medium text-[var(--success-foreground)]">
-                                          <PackageCheck className="size-2.5" />
-                                          {t("modManager.installed")}
-                                        </Badge>
-                                      )}
+                                      {isInstalled &&
+                                        !isPendingRemoved &&
+                                        !isLocal && (
+                                          <Badge className="h-5 shrink-0 gap-1 border-transparent bg-[var(--success)] px-1.5 text-[0.65rem] font-medium text-[var(--success-foreground)]">
+                                            <PackageCheck className="size-2.5" />
+                                            {t("modManager.installed")}
+                                          </Badge>
+                                        )}
                                     </div>
                                     {item.description && (
                                       <p className="line-clamp-2 min-w-0 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
@@ -2447,9 +2445,13 @@ export function ModManager({
                   setSelectVersion(prevProject.versions[safeIdx]);
                 }}
               >
-                <DialogContent aria-describedby={undefined}
+                <DialogContent
+                  aria-describedby={undefined}
                   className={`grid h-[min(48rem,calc(100vh-4rem))] max-h-[calc(100vh-4rem)] ${
-                    shouldShowProjectDetailsPane(project, selectVersion?.changelog)
+                    shouldShowProjectDetailsPane(
+                      project,
+                      selectVersion?.changelog,
+                    )
                       ? "w-[min(92rem,calc(100vw-2rem))] sm:max-w-[min(92rem,calc(100vw-2rem))]"
                       : "w-[min(36rem,calc(100vw-2rem))] sm:max-w-[min(36rem,calc(100vw-2rem))]"
                   } max-w-none grid-rows-[auto_minmax(0,1fr)] overflow-hidden`}
@@ -2469,14 +2471,19 @@ export function ModManager({
                       <div
                         key={`${project.provider}-${project.id}`}
                         className={
-                          shouldShowProjectDetailsPane(project, selectVersion?.changelog)
+                          shouldShowProjectDetailsPane(
+                            project,
+                            selectVersion?.changelog,
+                          )
                             ? "grid h-full min-h-0 min-w-0 grid-cols-[22rem_minmax(0,1fr)] gap-4 overflow-hidden"
                             : "flex h-full min-h-0 min-w-0 overflow-hidden"
                         }
                       >
                         {(() => {
-                          const showDetailsPane =
-                            shouldShowProjectDetailsPane(project, selectVersion?.changelog);
+                          const showDetailsPane = shouldShowProjectDetailsPane(
+                            project,
+                            selectVersion?.changelog,
+                          );
 
                           return (
                             <>
@@ -2591,7 +2598,10 @@ export function ModManager({
                                                   cachedDesc.body ||
                                                   project.body,
                                               });
-                                            if (cachedChangelog && selectVersion)
+                                            if (
+                                              cachedChangelog &&
+                                              selectVersion
+                                            )
                                               setSelectVersion({
                                                 ...selectVersion,
                                                 changelog:
@@ -2939,6 +2949,10 @@ export function ModManager({
                                                     "",
                                                   ),
                                                   projectId: project.id,
+                                                  fileId:
+                                                    Number(selectVersion.id) ||
+                                                    0,
+                                                  modTitle: project.title,
                                                 },
                                               ]);
                                               setIsBlockedMods(true);
@@ -3377,7 +3391,9 @@ export function ModManager({
                                                       <div className="flex min-w-0 flex-col">
                                                         <p
                                                           className="truncate text-sm"
-                                                          title={d.project.title}
+                                                          title={
+                                                            d.project.title
+                                                          }
                                                         >
                                                           {d.project.title}
                                                         </p>

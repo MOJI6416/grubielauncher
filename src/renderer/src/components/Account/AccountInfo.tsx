@@ -24,7 +24,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import {
   accountAtom,
   accountsAtom,
@@ -32,6 +32,7 @@ import {
   internetAtom,
   networkAtom,
   pathsAtom,
+  pendingSkinDeepLinkAtom,
 } from "@renderer/stores/atoms";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -259,6 +260,13 @@ export default function AccountInfo({
       isBackendOnline,
     });
   }, [isBackendOnline, isInternetOnline, user.platform]);
+
+  const pendingSkinDeepLink = useAtomValue(pendingSkinDeepLinkAtom);
+  useEffect(() => {
+    if (!pendingSkinDeepLink || !isOwner || !canManageSkins) return;
+    if (user.platform !== "microsoft" && user.platform !== "discord") return;
+    setIsManageSkins(true);
+  }, [pendingSkinDeepLink, isOwner, canManageSkins, user.platform]);
 
   const handleChooseAvatar = useCallback(async () => {
     if (!isOwner || isLoading) return;

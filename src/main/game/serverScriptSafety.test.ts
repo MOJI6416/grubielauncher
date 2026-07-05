@@ -1,8 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
   assertSafeFileSegment,
+  toArgfilePath,
   validateServerMemory,
 } from "./serverScriptSafety";
+
+describe("toArgfilePath", () => {
+  it("converts Windows separators so Java argfiles do not eat them as escapes", () => {
+    expect(
+      toArgfilePath(
+        "libraries\\com\\github\\yushijinhun\\authlib-injector\\1.2.7\\authlib-injector-1.2.7.jar",
+      ),
+    ).toBe(
+      "libraries/com/github/yushijinhun/authlib-injector/1.2.7/authlib-injector-1.2.7.jar",
+    );
+  });
+
+  it("leaves posix paths untouched", () => {
+    expect(toArgfilePath("libraries/com/authlib.jar")).toBe(
+      "libraries/com/authlib.jar",
+    );
+  });
+});
 
 describe("validateServerMemory", () => {
   it("accepts positive integers and floors them", () => {

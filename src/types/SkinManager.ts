@@ -54,3 +54,54 @@ export interface ICape {
   url: string
   cape: string
 }
+
+export type CatalogSkinSource = 'official' | 'community'
+export type CatalogSkinStatus = 'approved' | 'pending' | 'rejected'
+export type CatalogItemType = 'skin' | 'cape' | 'pack'
+
+export interface ICatalogSkin {
+  id: string
+  type: CatalogItemType
+  name: string
+  model: 'slim' | 'classic'
+  tags: string[]
+  source: CatalogSkinSource
+  authorName: string | null
+  skinUrl: string | null
+  capeUrl?: string | null
+  previewUrl?: string | null
+  status?: CatalogSkinStatus
+  rejectionReason?: string | null
+  downloads?: number
+}
+
+export interface MyCommunityResult {
+  items: ICatalogSkin[]
+}
+
+export interface CatalogListResult {
+  items: ICatalogSkin[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface CatalogListParams {
+  search?: string
+  tag?: string
+  source?: CatalogSkinSource
+  type?: CatalogItemType
+  sort?: CatalogSortOption
+  page?: number
+  limit?: number
+}
+
+export type CatalogSortOption = 'new' | 'downloads'
+
+export interface PublishCommunityResult {
+  ok: boolean
+  status?: 'pending' | 'approved'
+  error?: 'duplicate' | 'limit' | 'no_manager' | 'failed'
+  reason?: string | null
+  dupStatus?: CatalogSkinStatus
+}

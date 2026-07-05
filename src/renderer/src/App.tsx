@@ -36,6 +36,7 @@ import {
   networkAtom,
   ownPresenceAtom,
   pendingFriendChatAtom,
+  pendingSkinDeepLinkAtom,
   pathsAtom,
   shareOwnerAccountKeyAtom,
   sharePeersAtom,
@@ -205,6 +206,7 @@ function App() {
   const [localFriends, setLocalFriends] = useAtom(localFriendsAtom);
   const [, setIsFriendsConnected] = useAtom(isFriendsConnectedAtom);
   const [, setPendingFriendChat] = useAtom(pendingFriendChatAtom);
+  const [, setPendingSkinDeepLink] = useAtom(pendingSkinDeepLinkAtom);
   const [ownPresence, setOwnPresence] = useAtom(ownPresenceAtom);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -683,6 +685,21 @@ function App() {
         return;
       }
 
+      if (payload.type === "skin") {
+        void api.other.restoreWindow();
+        const account = selectedAccountRef.current;
+        if (!account) {
+          toast.info(tRef.current("manageSkins.deepLinkNoAccount"));
+        } else if (account.type === "plain") {
+          toast.info(tRef.current("manageSkins.deepLinkPlain"));
+        } else if (account.type === "elyby") {
+          toast.info(tRef.current("manageSkins.deepLinkElyby"));
+        } else {
+          setPendingSkinDeepLink(payload.id);
+        }
+        return;
+      }
+
       if (payload.type !== "pack") return;
 
       try {
@@ -707,7 +724,7 @@ function App() {
         toast.error(tRef.current("addVersion.fromServer.notFound"));
       }
     });
-  }, [loadGroups, selectedAccountRef, tRef]);
+  }, [loadGroups, selectedAccountRef, setPendingSkinDeepLink, tRef]);
 
   const tryDeepLaunch = useEventCallback(() => {
     const pending = pendingDeepLaunchRef.current;
@@ -1645,6 +1662,11 @@ function App() {
 
   const runGame = useEventCallback(async (params: RunGameParams) => {
     const { skipUpdate, version, instance, quick } = params;
+
+    if (installActiveRef.current) {
+      toast.error(tRef.current("versions.installBusy"));
+      return;
+    }
 
     const launchVersion = version || selectedVersionRef.current;
     if (!launchVersion) {

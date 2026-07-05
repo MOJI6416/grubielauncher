@@ -28,14 +28,15 @@ export class ServerGame {
     this.versionConf = versionConf
   }
 
-  async install() {
+  async install(options?: { keepProgressOpen?: boolean }) {
     const result = await api.server.install(
       this.account,
       this.downloadLimit,
       this.versionPath,
       this.serverPath,
       this.conf,
-      this.versionConf
+      this.versionConf,
+      options
     )
 
     if (!result?.success) {

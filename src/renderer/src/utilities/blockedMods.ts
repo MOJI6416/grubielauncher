@@ -1,11 +1,20 @@
-import { ILocalProject, ProjectType, Provider } from "@/types/ModManager";
+import {
+  ILocalFile,
+  ILocalProject,
+  ProjectType,
+  Provider,
+} from "@/types/ModManager";
 
 export interface IBlockedMod {
   projectId: string;
+  fileId: number;
   fileName: string;
   hash: string;
   url: string;
   filePath?: string;
+  skipped?: boolean;
+  substituted?: boolean;
+  modTitle?: string;
 }
 
 const WATCHED_FOLDERS_KEY = "blockedMods.watchedFolders";
@@ -107,7 +116,12 @@ export function applyBlockedModFilePaths(
 export function areBlockedModsReady(blockedMods: IBlockedMod[]) {
   return (
     blockedMods.length > 0 &&
-    blockedMods.every((blockedMod) => !!blockedMod.filePath)
+    blockedMods.every(
+      (blockedMod) =>
+        !!blockedMod.filePath ||
+        blockedMod.skipped === true ||
+        blockedMod.substituted === true,
+    )
   );
 }
 
@@ -118,7 +132,12 @@ export async function checkBlockedMods(
   if (mods.length === 0) return [];
 
   const api = window.api;
-  const blockedMods: IBlockedMod[] = [];
+  const candidates: {
+    mod: ILocalProject;
+    file: ILocalFile;
+    rawUrl: string;
+    fileId: number;
+  }[] = [];
 
   for (const mod of mods) {
     if (mod.provider !== Provider.CURSEFORGE) continue;
@@ -156,14 +175,42 @@ export async function checkBlockedMods(
         }
       }
 
-      blockedMods.push({
-        fileName: file.filename,
-        hash: file.sha1,
-        url: file.url.replace("blocked::", ""),
-        projectId: mod.id,
-      });
+      const rawUrl = file.url.replace("blocked::", "");
+      const fileIdMatch = rawUrl.match(/\/download\/(\d+)/);
+      const parsedFileId = fileIdMatch
+        ? Number(fileIdMatch[1])
+        : Number(mod.version?.id);
+      const fileId =
+        Number.isFinite(parsedFileId) && parsedFileId > 0 ? parsedFileId : 0;
+
+      candidates.push({ mod, file, rawUrl, fileId });
     }
   }
 
-  return blockedMods;
+  const resolved = await Promise.all(
+    candidates.map(async ({ mod, file, rawUrl, fileId }) => {
+      if (fileId > 0) {
+        const cdnUrl = await api.modManager.resolveCfDownload(
+          fileId,
+          file.filename,
+        );
+        if (cdnUrl) {
+          file.url = cdnUrl;
+          return null;
+        }
+      }
+
+      const blockedMod: IBlockedMod = {
+        fileName: file.filename,
+        hash: file.sha1,
+        url: rawUrl,
+        projectId: mod.id,
+        fileId,
+        modTitle: mod.title,
+      };
+      return blockedMod;
+    }),
+  );
+
+  return resolved.filter((mod): mod is IBlockedMod => mod !== null);
 }

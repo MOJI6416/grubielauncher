@@ -14,8 +14,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { IServerConf, IServerOption } from "@/types/Server";
+import { mcVersionToJavaMajor } from "@/shared/javaVersions";
 import {
   accountAtom,
+  installActiveAtom,
   selectedVersionAtom,
   serverAtom,
   settingsAtom,
@@ -48,6 +50,8 @@ export function CreateServer({
   const { t } = useTranslation();
   const [, setServer] = useAtom(serverAtom);
   const [settings] = useAtom(settingsAtom);
+  const [isInstallActive] = useAtom(installActiveAtom);
+  const [progressStarted, setProgressStarted] = useState(false);
 
   const [selectedCore, setSelectedCore] = useState<string | null>(
     serverCores[0]?.core ?? null,
@@ -75,10 +79,15 @@ export function CreateServer({
     };
   }, []);
 
+  useEffect(() => {
+    if (!isLoading) setProgressStarted(false);
+    else if (isInstallActive) setProgressStarted(true);
+  }, [isLoading, isInstallActive]);
+
   const canInstall = !!selectedVersion && !!selectedServerCore && !!account;
 
   const handleInstall = useCallback(async () => {
-    if (isLoading) return;
+    if (isLoading || isInstallActive) return;
     if (!selectedVersion || !selectedServerCore || !account) return;
 
     const versionPath = selectedVersion.versionPath;
@@ -95,7 +104,8 @@ export function CreateServer({
       const conf: IServerConf = {
         core: selectedServerCore.core,
         javaMajorVersion:
-          selectedVersion.manifest?.javaVersion.majorVersion || 21,
+          selectedVersion.manifest?.javaVersion?.majorVersion ??
+          mcVersionToJavaMajor(selectedVersion.version.version.id),
         memory,
         downloads: {
           server: selectedServerCore.url,
@@ -125,7 +135,9 @@ export function CreateServer({
         selectedVersion.version,
       );
 
-      await serverGame.install();
+      const hasMods = selectedVersion.version.loader.mods.length > 0;
+
+      await serverGame.install({ keepProgressOpen: hasMods });
 
       await api.fs.writeJSON(
         await api.path.join(serverPath, "conf.json"),
@@ -140,9 +152,9 @@ export function CreateServer({
         "utf-8",
       );
 
-      if (selectedVersion.version.loader.mods.length > 0) {
+      if (hasMods) {
         const mods = new Mods(settings, selectedVersion.version, conf);
-        await mods.check();
+        await mods.check({ operation: "server" });
       }
 
       toast.success(t("versions.serverInstalled"));
@@ -167,6 +179,7 @@ export function CreateServer({
     if (success) close(true);
   }, [
     isLoading,
+    isInstallActive,
     selectedVersion,
     selectedServerCore,
     account,
@@ -175,11 +188,12 @@ export function CreateServer({
     close,
     t,
     settings,
+    memory,
   ]);
 
   return (
     <Dialog
-      open={true}
+      open={!(isLoading && progressStarted)}
       onOpenChange={(open) => {
         if (!open && !isLoading) close();
       }}
@@ -250,7 +264,10 @@ export function CreateServer({
           </div>
         </div>
         <DialogFooter className="m-0 rounded-none border-t bg-muted/25 px-5 py-4">
-          <Button disabled={!canInstall || isLoading} onClick={handleInstall}>
+          <Button
+            disabled={!canInstall || isLoading || isInstallActive}
+            onClick={handleInstall}
+          >
             {isLoading && loadingType == "install" ? (
               <Loader2 className="size-5 animate-spin" />
             ) : (

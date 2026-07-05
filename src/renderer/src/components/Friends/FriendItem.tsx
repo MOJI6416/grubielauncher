@@ -21,6 +21,7 @@ import {
   Headphones,
   Mail,
   Mailbox,
+  PhoneCall,
   Play,
   Send,
   Shirt,
@@ -49,6 +50,8 @@ interface FriendItemProps {
   onJoin: () => void;
   onInvite: () => void;
   onInviteToVoice?: () => void;
+  onStartCall?: () => void;
+  callDisabled?: boolean;
   onViewAccount: () => void;
   onOpenChat: () => void;
   onViewSkin: () => void;
@@ -68,6 +71,8 @@ export function FriendItem({
   onJoin,
   onInvite,
   onInviteToVoice,
+  onStartCall,
+  callDisabled,
   onViewAccount,
   onOpenChat,
   onViewSkin,
@@ -284,6 +289,16 @@ export function FriendItem({
           <Mail size={18} />
           {t("friends.chat")}
         </DropdownMenuItem>
+
+        {onStartCall && (
+          <DropdownMenuItem
+            disabled={!friend.isOnline || callDisabled}
+            onSelect={onStartCall}
+          >
+            <PhoneCall size={18} />
+            {t("voiceCall.start")}
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuItem disabled={isViewSkinDisabled} onSelect={onViewSkin}>
           <Shirt size={18} />

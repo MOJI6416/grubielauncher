@@ -26,7 +26,8 @@
     "cancel": "Отмена",
     "rename": "Переименовать",
     "close": "Закрыть",
-    "add": "Добавить"
+    "add": "Добавить",
+    "more": "Ещё"
   },
   "network": {
     "connectionRestored": "Подключение к интернету восстановлено",
@@ -343,7 +344,8 @@
     "fromServer": {
       "shareCode": "Код сборки",
       "find": "Найти",
-      "notFound": "Сборка не найдена"
+      "notFound": "Сборка не найдена",
+      "browsePublic": "Нет кода? Смотреть публичные сборки"
     },
     "fromFile": {
       "error": "Не удалось распознать файл",
@@ -622,6 +624,7 @@
     "shortcutCreated": "Ярлык создан на рабочем столе",
     "shortcutFailed": "Не удалось создать ярлык",
     "launchNotFound": "Версия для запуска не найдена",
+    "installBusy": "Дождитесь завершения текущей установки",
     "versionSettings": "Настройки версии",
     "changeLogo": "Изменить логотип",
     "addingVersion": "Добавление версии",
@@ -663,6 +666,8 @@
     "serverManager": "Управление сервером",
     "createingServer": "Создание сервера",
     "serverCore": "Ядро сервера",
+    "aikarFlags": "Флаги Aikar",
+    "aikarFlagsHint": "Оптимизированные флаги JVM для производительности сервера",
     "notFoundServerCore": "Не найдено подходящего ядра",
     "serverInstalled": "Сервер установлен",
     "serverInstallError": "Не удалось установить сервер",
@@ -1106,11 +1111,59 @@
     "addSkin": "Добавить скин",
     "addCape": "Добавить плащ",
     "applyError": "Не удалось применить скин или плащ.",
-    "openError": "Не удалось открыть управление скинами"
+    "tabMine": "Мои скины",
+    "tabCatalog": "Каталог",
+    "catalogSearch": "Поиск скинов",
+    "catalogAll": "Все",
+    "catalogEmpty": "Скины не найдены",
+    "catalogOffline": "Подключитесь к интернету, чтобы открыть каталог",
+    "catalogLoadMore": "Показать ещё",
+    "catalogTake": "Добавить к себе",
+    "catalogImported": "Скин добавлен в вашу коллекцию",
+    "source_all": "Все",
+    "source_official": "Официальные",
+    "source_community": "Сообщество",
+    "publish": "Опубликовать",
+    "publishTitle": "Публикация в сообщество",
+    "publishNote": "Скин появится в каталоге сообщества после проверки модератором.",
+    "publishName": "Публичное название",
+    "publishPending": "Отправлено на модерацию",
+    "publishDuplicate": "Такой скин уже есть в каталоге",
+    "publishLimit": "У вас слишком много скинов на модерации",
+    "publishError": "Не удалось опубликовать скин",
+    "publishRejected": "Этот скин отклонён: {{reason}}",
+    "publishRejectedNoReason": "Этот скин был отклонён ранее",
+    "source_mine": "Мои",
+    "statusPending": "На модерации",
+    "statusApproved": "В каталоге",
+    "statusRejected": "Отклонён",
+    "myEmpty": "Вы ещё не публиковали скины",
+    "rejectionReason": "Причина отказа",
+    "removeFromGallery": "Убрать из галереи",
+    "type_skin": "Скины",
+    "type_cape": "Плащи",
+    "type_pack": "Паки",
+    "publishWhat": "Что опубликовать",
+    "publishType_skin": "Скин",
+    "publishType_cape": "Плащ",
+    "publishType_pack": "Пак",
+    "tagsLabel": "Теги",
+    "tagsPlaceholder": "Добавьте тег…",
+    "tagsAll": "Все теги",
+    "tagsSearch": "Поиск тегов…",
+    "tagsEmpty": "Тегов нет",
+    "sort_new": "Новые",
+    "sort_downloads": "Популярные",
+    "resetFilters": "Сбросить поиск и теги",
+    "openError": "Не удалось открыть управление скинами",
+    "deepLinkHint": "Откройте менеджер скинов и вкладку «Каталог», чтобы забрать этот скин",
+    "deepLinkNoAccount": "Выберите аккаунт Microsoft или Discord, чтобы забрать этот скин",
+    "deepLinkPlain": "Офлайн-аккаунтам нельзя применять скины из каталога — войдите через Microsoft или Discord",
+    "deepLinkElyby": "ely.by управляет скинами на своём сайте, поэтому скины из каталога нельзя применить к аккаунту ely.by"
   },
   "blockedMods": {
     "title": "Найдены заблокированные моды",
-    "description": "Эти файлы не доступны для сторонних лаунчеров. Вам придется скачать их вручную.",
+    "description": "Некоторые файлы нельзя скачать автоматически. Скачайте их вручную, замените модом с Modrinth или пропустите, чтобы продолжить установку.",
     "watchedFolders": "Отслеживаемые папки",
     "addFolder": "Добавить папку",
     "removeFolder": "Перестать отслеживать эту папку",
@@ -1126,7 +1179,18 @@
     "ready": "Найдено",
     "showAll": "Показать все",
     "showMissing": "Только недостающие",
-    "empty": "Все нужные файлы найдены."
+    "empty": "Все нужные файлы найдены.",
+    "skip": "Пропустить",
+    "skipAll": "Установить без недостающих",
+    "skippedLabel": "Пропущен — не будет установлен",
+    "undoSkip": "Вернуть",
+    "substitute": "Найти на Modrinth",
+    "substitutedLabel": "Заменён модом с Modrinth",
+    "substituteSuccess": "Заменён на «{{title}}» с Modrinth",
+    "substituteFailed": "На Modrinth не найдено совместимой версии",
+    "searchPlaceholder": "Поиск на Modrinth…",
+    "search": "Найти",
+    "substituteHint": "Найдите на Modrinth замену для этого мода."
   },
   "whatsNew": {
     "openCurrent": "Показать, что нового",
@@ -1253,7 +1317,8 @@
       "combat": "Сражения",
       "survival": "Выживание",
       "craft": "Крафт",
-      "playtime": "Игровое время"
+      "playtime": "Игровое время",
+      "community": "Сообщество"
     },
     "rarity": {
       "common": "Обычное",
@@ -1415,6 +1480,22 @@
       "pt1000": {
         "name": "1000 часов",
         "desc": "Проведите {{goal}} ч в лаунчере"
+      },
+      "skin_first": {
+        "name": "Дебют",
+        "desc": "Ваш первый скин одобрен в галерею"
+      },
+      "skin_author_10": {
+        "name": "Скинодел",
+        "desc": "10 ваших скинов в галерее"
+      },
+      "skin_downloads_100": {
+        "name": "Популярный",
+        "desc": "Ваш скин взяли 100 раз"
+      },
+      "skin_downloads_1000": {
+        "name": "Хит галереи",
+        "desc": "Ваш скин взяли 1000 раз"
       }
     }
   },

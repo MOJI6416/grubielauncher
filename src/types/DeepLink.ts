@@ -11,4 +11,8 @@ export type LauncherDeepLink =
   | {
       type: "groupJoin";
       code: string;
+    }
+  | {
+      type: "skin";
+      id: string;
     };

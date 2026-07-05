@@ -79,6 +79,7 @@ export interface ILocalFile {
   url: string;
   localPath?: string;
   isServer: boolean;
+  isClient?: boolean;
 }
 
 export interface IFilterGroup {
@@ -135,6 +136,16 @@ export interface IModpack {
   folderPath: string;
   mods: ILocalProject[];
   versionId?: string;
+  extraFiles?: IModpackExtraFile[];
+}
+
+export interface IModpackExtraFile {
+  path: string;
+  url: string;
+  sha1: string;
+  size: number;
+  isClient: boolean;
+  isServer: boolean;
 }
 
 export interface IModPackFile {

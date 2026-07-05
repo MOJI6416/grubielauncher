@@ -32,6 +32,7 @@ import {
   X,
   Tag,
   SearchX,
+  EllipsisVertical,
 } from "lucide-react";
 import { VersionStatistics } from "./VersionStatistics";
 import { IVersionSession, IVersionStatistics } from "@/types/VersionStatistics";
@@ -43,6 +44,7 @@ import {
   addVersionModalAtom,
   authDataAtom,
   consolesMetaAtom,
+  installActiveAtom,
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
   isRunningAtom,
@@ -71,6 +73,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -240,6 +243,7 @@ export function Versions({
   const [versions] = useAtom(versionsAtom);
   const [versionsLoaded] = useAtom(versionsLoadedAtom);
   const setIsAddVersionOpen = useAtom(addVersionModalAtom)[1];
+  const isInstallActive = useAtom(installActiveAtom)[0];
   const [isNetwork] = useAtom(networkAtom);
   const [accounts] = useAtom(accountsAtom);
   const [authData] = useAtom(authDataAtom);
@@ -558,38 +562,268 @@ export function Versions({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [versionsLoaded, account, selectedVersion, versions]);
 
+  const openFolder = async (vc: Version) => {
+    try {
+      await api.shell.openPath(vc.versionPath);
+    } catch {}
+  };
+
+  const openStatistics = async (vc: Version, itemKey: string) => {
+    const filePath = await api.path.join(vc.versionPath, "statistics.json");
+
+    try {
+      const exists = await api.fs.pathExists(filePath);
+      if (!exists) return;
+
+      setIsLoading(true);
+      setLoadingType(LoadingType.STATISTICS);
+
+      const data = await api.fs.readJSON<IVersionStatistics>(filePath, "utf-8");
+
+      const sessionsPath = await api.path.join(vc.versionPath, "sessions.json");
+      let loadedSessions: IVersionSession[] = [];
+      try {
+        if (await api.fs.pathExists(sessionsPath)) {
+          loadedSessions = await api.fs.readJSON<IVersionSession[]>(
+            sessionsPath,
+            "utf-8",
+          );
+        }
+      } catch {
+        loadedSessions = [];
+      }
+
+      let loadedWorldStats: IWorldStatsAggregate | null = null;
+      if (account) {
+        try {
+          loadedWorldStats = await api.worlds.loadVersionStatistics(
+            vc.versionPath,
+            account,
+          );
+        } catch {
+          loadedWorldStats = null;
+        }
+      }
+
+      setStatistics(data);
+      setSessions(Array.isArray(loadedSessions) ? loadedSessions : []);
+      setWorldStats(loadedWorldStats);
+      setStatisticsOpen(true);
+    } catch {
+      try {
+        await api.fs.rimraf(filePath);
+        setVersionFlags((prev) => ({
+          ...prev,
+          [itemKey]: {
+            hasStatistics: false,
+            hasServer: prev[itemKey]?.hasServer ?? false,
+          },
+        }));
+      } catch {}
+      toast.error(t("versionStatistics.error"));
+    } finally {
+      setIsLoading(false);
+      setLoadingType(null);
+    }
+  };
+
+  const openEditVersion = async (vc: Version, ownerOk: boolean) => {
+    setLoadingType(LoadingType.LOAD);
+    setIsLoading(true);
+
+    try {
+      let servers: IServerSM[] = [];
+
+      const serversPath = await api.path.join(vc.versionPath, "servers.dat");
+
+      try {
+        const data = await api.servers.read(serversPath);
+        servers = data;
+        setServers(data);
+      } catch {
+        servers = [];
+        setServers([]);
+      }
+
+      if (vc.version.shareCode && ownerOk && isNetwork) {
+        try {
+          const modpackData = await api.backend.getModpack(
+            account?.accessToken || "",
+            vc.version.shareCode,
+          );
+
+          if (modpackData.status == "not_found") {
+            vc.version.shareCode = undefined;
+            vc.version.downloadedVersion = false;
+            await vc.save();
+          } else if (modpackData.data) {
+            const modpack = modpackData.data;
+
+            if (
+              vc.version.downloadedVersion &&
+              authData?.sub &&
+              authData.sub == String(modpack.owner?._id ?? "")
+            ) {
+              vc.version.downloadedVersion = false;
+              await vc.save();
+              setIsDownloadedVersion(false);
+            }
+
+            let status: VersionDiffence = "sync";
+
+            if (modpack.build) {
+              if (
+                vc.version.downloadedVersion &&
+                modpack.build < vc.version.build
+              ) {
+                status = "new";
+              } else if (modpack.build > vc.version.build) {
+                status = "old";
+              }
+            }
+
+            if (status == "sync") {
+              const diff = await checkDiffenceUpdateData(
+                {
+                  mods: vc.version.loader.mods,
+                  runArguments: vc.version.runArguments || {
+                    game: "",
+                    jvm: "",
+                  },
+                  servers,
+                  version: vc.version,
+                  versionPath: vc.versionPath,
+                  logo: vc.version.image || "",
+                  quickServer: vc.version.quickServer || "",
+                },
+                account?.accessToken || "",
+                modpack,
+              );
+
+              if (diff) {
+                status = !vc.version.downloadedVersion ? "new" : "old";
+              }
+            }
+
+            setVersionDiffence(status);
+          }
+        } catch {}
+      }
+
+      setEditVersion(true);
+    } finally {
+      setLoadingType(null);
+      setIsLoading(false);
+    }
+  };
+
   const cardActions = (
     vc: Version,
     ownerOk: boolean,
     isRunningInstance: boolean,
+    layout: "list" | "grid",
   ) => {
     const isSelected = selectedVersion?.version.name === vc.version.name;
     const itemKey = vc.versionPath || vc.version.name;
+
+    const playButton = (
+      <Button
+        size="icon-lg"
+        disabled={!account || isRunning}
+        title={
+          isRunningInstance ? t("versions.playAnotherInstance") : t("nav.play")
+        }
+        aria-label={
+          isRunningInstance ? t("versions.playAnotherInstance") : t("nav.play")
+        }
+        onClick={(event) => {
+          event.stopPropagation();
+          if (!isSelected) {
+            void selectVersion(vc, ownerOk);
+          }
+          void runGame({ version: vc });
+        }}
+      >
+        <Play className="size-4" />
+      </Button>
+    );
+
+    if (layout === "grid") {
+      return (
+        <div className="flex items-center gap-1 rounded-xl bg-background/70 p-1 shadow-sm ring-1 ring-border/60 backdrop-blur-md">
+          {playButton}
+          {isSelected && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon-lg"
+                disabled={isRunning || isRunningInstance}
+                title={t("settings.title")}
+                aria-label={t("settings.title")}
+                onMouseEnter={() => preload(LazyEditVersion.preload)}
+                onFocus={() => preload(LazyEditVersion.preload)}
+                onClick={() => openEditVersion(vc, ownerOk)}
+              >
+                {isLoading && loadingType == LoadingType.LOAD ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Settings className="size-4" />
+                )}
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-lg"
+                    title={t("common.more")}
+                    aria-label={t("common.more")}
+                  >
+                    <EllipsisVertical className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {versionFlags[itemKey]?.hasStatistics && vc.versionPath && (
+                    <DropdownMenuItem
+                      disabled={!ownerOk}
+                      onSelect={() => void openStatistics(vc, itemKey)}
+                    >
+                      <ChartArea />
+                      <span>{t("versionStatistics.title")}</span>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onSelect={() => void openFolder(vc)}>
+                    <Folder />
+                    <span>{t("common.openFolder")}</span>
+                  </DropdownMenuItem>
+                  {versionFlags[itemKey]?.hasServer && (
+                    <DropdownMenuItem
+                      onMouseEnter={() => preload(LazyServerControl.preload)}
+                      onSelect={() => setIsServerManager(true)}
+                    >
+                      <ServerCog />
+                      <span>{t("versions.serverManager")}</span>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      setTagsEditor({ key: itemKey, name: vc.version.name })
+                    }
+                  >
+                    <Tag />
+                    <span>{t("versions.tags.manage")}</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
+        </div>
+      );
+    }
+
     return (
       <>
-        <Button
-          size="icon-lg"
-          disabled={!account || isRunning}
-          title={
-            isRunningInstance
-              ? t("versions.playAnotherInstance")
-              : t("nav.play")
-          }
-          aria-label={
-            isRunningInstance
-              ? t("versions.playAnotherInstance")
-              : t("nav.play")
-          }
-          onClick={(event) => {
-            event.stopPropagation();
-            if (!isSelected) {
-              void selectVersion(vc, ownerOk);
-            }
-            void runGame({ version: vc });
-          }}
-        >
-          <Play className="size-4" />
-        </Button>
+        {playButton}
 
         {isSelected && (
           <>
@@ -603,75 +837,7 @@ export function Versions({
                 aria-label={t("versionStatistics.title")}
                 onMouseEnter={() => preload(LazyEditVersion.preload)}
                 onFocus={() => preload(LazyEditVersion.preload)}
-                onClick={async () => {
-                  const filePath = await api.path.join(
-                    vc.versionPath,
-                    "statistics.json",
-                  );
-
-                  try {
-                    const exists = await api.fs.pathExists(filePath);
-                    if (!exists) return;
-
-                    setIsLoading(true);
-                    setLoadingType(LoadingType.STATISTICS);
-
-                    const data = await api.fs.readJSON<IVersionStatistics>(
-                      filePath,
-                      "utf-8",
-                    );
-
-                    const sessionsPath = await api.path.join(
-                      vc.versionPath,
-                      "sessions.json",
-                    );
-                    let loadedSessions: IVersionSession[] = [];
-                    try {
-                      if (await api.fs.pathExists(sessionsPath)) {
-                        loadedSessions = await api.fs.readJSON<
-                          IVersionSession[]
-                        >(sessionsPath, "utf-8");
-                      }
-                    } catch {
-                      loadedSessions = [];
-                    }
-
-                    let loadedWorldStats: IWorldStatsAggregate | null = null;
-                    if (account) {
-                      try {
-                        loadedWorldStats =
-                          await api.worlds.loadVersionStatistics(
-                            vc.versionPath,
-                            account,
-                          );
-                      } catch {
-                        loadedWorldStats = null;
-                      }
-                    }
-
-                    setStatistics(data);
-                    setSessions(
-                      Array.isArray(loadedSessions) ? loadedSessions : [],
-                    );
-                    setWorldStats(loadedWorldStats);
-                    setStatisticsOpen(true);
-                  } catch {
-                    try {
-                      await api.fs.rimraf(filePath);
-                      setVersionFlags((prev) => ({
-                        ...prev,
-                        [itemKey]: {
-                          hasStatistics: false,
-                          hasServer: prev[itemKey]?.hasServer ?? false,
-                        },
-                      }));
-                    } catch {}
-                    toast.error(t("versionStatistics.error"));
-                  } finally {
-                    setIsLoading(false);
-                    setLoadingType(null);
-                  }
-                }}
+                onClick={() => openStatistics(vc, itemKey)}
               >
                 {isLoading && loadingType == LoadingType.STATISTICS ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -687,11 +853,7 @@ export function Versions({
               className="bg-background/85 hover:bg-background"
               title={t("common.openFolder")}
               aria-label={t("common.openFolder")}
-              onClick={async () => {
-                try {
-                  await api.shell.openPath(vc.versionPath);
-                } catch {}
-              }}
+              onClick={() => openFolder(vc)}
             >
               <Folder className="size-4" />
             </Button>
@@ -733,100 +895,7 @@ export function Versions({
               aria-label={t("settings.title")}
               onMouseEnter={() => preload(LazyEditVersion.preload)}
               onFocus={() => preload(LazyEditVersion.preload)}
-              onClick={async () => {
-                setLoadingType(LoadingType.LOAD);
-                setIsLoading(true);
-
-                try {
-                  let servers: IServerSM[] = [];
-
-                  const serversPath = await api.path.join(
-                    vc.versionPath,
-                    "servers.dat",
-                  );
-
-                  try {
-                    const data = await api.servers.read(serversPath);
-                    servers = data;
-                    setServers(data);
-                  } catch {
-                    servers = [];
-                    setServers([]);
-                  }
-
-                  if (vc.version.shareCode && ownerOk && isNetwork) {
-                    try {
-                      const modpackData = await api.backend.getModpack(
-                        account?.accessToken || "",
-                        vc.version.shareCode,
-                      );
-
-                      if (modpackData.status == "not_found") {
-                        vc.version.shareCode = undefined;
-                        vc.version.downloadedVersion = false;
-                        await vc.save();
-                      } else if (modpackData.data) {
-                        const modpack = modpackData.data;
-
-                        if (
-                          vc.version.downloadedVersion &&
-                          authData?.sub &&
-                          authData.sub == String(modpack.owner?._id ?? "")
-                        ) {
-                          vc.version.downloadedVersion = false;
-                          await vc.save();
-                          setIsDownloadedVersion(false);
-                        }
-
-                        let status: VersionDiffence = "sync";
-
-                        if (modpack.build) {
-                          if (
-                            vc.version.downloadedVersion &&
-                            modpack.build < vc.version.build
-                          ) {
-                            status = "new";
-                          } else if (modpack.build > vc.version.build) {
-                            status = "old";
-                          }
-                        }
-
-                        if (status == "sync") {
-                          const diff = await checkDiffenceUpdateData(
-                            {
-                              mods: vc.version.loader.mods,
-                              runArguments: vc.version.runArguments || {
-                                game: "",
-                                jvm: "",
-                              },
-                              servers,
-                              version: vc.version,
-                              versionPath: vc.versionPath,
-                              logo: vc.version.image || "",
-                              quickServer: vc.version.quickServer || "",
-                            },
-                            account?.accessToken || "",
-                            modpack,
-                          );
-
-                          if (diff) {
-                            status = !vc.version.downloadedVersion
-                              ? "new"
-                              : "old";
-                          }
-                        }
-
-                        setVersionDiffence(status);
-                      }
-                    } catch {}
-                  }
-
-                  setEditVersion(true);
-                } finally {
-                  setLoadingType(null);
-                  setIsLoading(false);
-                }
-              }}
+              onClick={() => openEditVersion(vc, ownerOk)}
             >
               {isLoading && loadingType == LoadingType.LOAD ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -1008,7 +1077,7 @@ export function Versions({
             ) : (
               <Button
                 className="mt-1"
-                disabled={!account}
+                disabled={!account || isInstallActive}
                 onClick={() => setIsAddVersionOpen(true)}
               >
                 <PackagePlus className="size-4" />
@@ -1169,8 +1238,8 @@ export function Versions({
                                 {t("versions.running")}
                               </div>
                             )}
-                            <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-end gap-1.5 bg-gradient-to-t from-background/80 to-transparent p-2">
-                              {cardActions(vc, ownerOk, isRunningInstance)}
+                            <div className="absolute inset-x-0 bottom-0 flex justify-end p-2">
+                              {cardActions(vc, ownerOk, isRunningInstance, "grid")}
                             </div>
                           </div>
 
@@ -1363,7 +1432,7 @@ export function Versions({
                           </div>
 
                           <div className="flex shrink-0 items-center gap-1.5">
-                            {cardActions(vc, ownerOk, isRunningInstance)}
+                            {cardActions(vc, ownerOk, isRunningInstance, "list")}
                           </div>
                         </div>
                       </CardContent>
@@ -1392,6 +1461,17 @@ export function Versions({
             }}
             vd={versionDiffence}
             runGame={runGame}
+            onServerInstalled={() => {
+              const itemKey =
+                selectedVersion.versionPath || selectedVersion.version.name;
+              setVersionFlags((prev) => ({
+                ...prev,
+                [itemKey]: {
+                  hasStatistics: prev[itemKey]?.hasStatistics ?? false,
+                  hasServer: true,
+                },
+              }));
+            }}
           />
         </Suspense>
       )}
@@ -1414,7 +1494,18 @@ export function Versions({
         <Suspense fallback={<LazyDialogFallback variant="wide" />}>
           <LazyServerControl
             onClose={() => setIsServerManager(false)}
-            onDelete={() => setServer(undefined)}
+            onDelete={() => {
+              setServer(undefined);
+              const itemKey =
+                selectedVersion.versionPath || selectedVersion.version.name;
+              setVersionFlags((prev) => ({
+                ...prev,
+                [itemKey]: {
+                  hasStatistics: prev[itemKey]?.hasStatistics ?? false,
+                  hasServer: false,
+                },
+              }));
+            }}
           />
         </Suspense>
       )}

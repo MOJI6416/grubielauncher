@@ -1407,6 +1407,17 @@ export function Friends({
               }
             : undefined
         }
+        onStartCall={() => {
+          if (!socket) return;
+          socket.emit("voiceCallRequest", { recipientId: f.user._id });
+        }}
+        callDisabled={
+          voiceCall.status !== "idle" ||
+          (voiceSession.state !== "disconnected" &&
+            authData?.sub != null &&
+            voiceSession.roomId ===
+              `dm_${[authData.sub, f.user._id].sort().join("_")}`)
+        }
         onViewAccount={() => handleViewAccount(f.user._id)}
         onOpenChat={() => {
           setFriend(f);

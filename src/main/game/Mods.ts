@@ -8,7 +8,17 @@ import fs from "fs-extra";
 import { Downloader } from "../utilities/downloader";
 import { IVersionConf } from "@/types/IVersion";
 import { TSettings } from "@/types/Settings";
-import { projetTypeToFolder } from "../utilities/modManager";
+import {
+  computeServerModExclusions,
+  getModDescriptor,
+  projetTypeToFolder,
+  ServerModNode,
+} from "../utilities/modManager";
+import { syncServerExtraFiles } from "../utilities/serverManager";
+import {
+  getClientsideModMatcher,
+  getServerSyncDirs,
+} from "../utilities/clientsideMods";
 import { extractWorldArchive, getWorldName } from "../utilities/worlds";
 import {
   VERSION_INSTALL_CANCELLED,
@@ -22,6 +32,23 @@ import { OPTIONAL_PROJECT_DOWNLOAD_OPTIONS } from "../utilities/downloaderPure";
 import { DownloaderFailuresInfo } from "@/types/Downloader";
 
 const TRASH_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+
+const MODDED_SERVER_CORES = [
+  ServerCore.FABRIC,
+  ServerCore.QUILT,
+  ServerCore.FORGE,
+  ServerCore.NEOFORGE,
+];
+
+interface ServerModFile {
+  filename: string;
+  clientPath: string;
+  url: string;
+  sha1: string;
+  size: number;
+  isServerFile: boolean;
+  clientSupported: boolean;
+}
 
 type ModsRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
@@ -147,9 +174,7 @@ export class Mods {
     this.throwIfInstallCancelled();
 
     if (this.initFailed || !this.version.versionPath) {
-      throw new Error(
-        "Mods sync aborted: version initialization failed",
-      );
+      throw new Error("Mods sync aborted: version initialization failed");
     }
 
     this.files = [];
@@ -157,6 +182,7 @@ export class Mods {
     const storagePath = path.join(this.version.versionPath, "storage");
 
     const downloadFiles: DownloadItem[] = [];
+    const serverModFiles: ServerModFile[] = [];
     const worlds: string[] = [];
     const worldZips: string[] = [];
     const savesPath = path.join(
@@ -178,6 +204,8 @@ export class Mods {
       }
 
       for (const file of mod.version.files) {
+        if (file.url?.startsWith("blocked::") && !file.localPath) continue;
+
         let filepath = path.join(folderPath, file.filename);
 
         if (mod.projectType == ProjectType.WORLD) {
@@ -208,45 +236,32 @@ export class Mods {
           }
         }
 
-        this.files.push({
-          filename: file.filename,
-          type: mod.projectType,
-        });
+        const clientSupported = file.isClient !== false;
 
-        downloadFiles.push({
-          destination: filepath,
-          url: file.localPath ? pathToFileURL(file.localPath).href : file.url,
-          group: "mods",
-          sha1: file.sha1,
-          size: file.size,
-        });
-
-        if (
-          this.server &&
-          [
-            ServerCore.FABRIC,
-            ServerCore.QUILT,
-            ServerCore.FORGE,
-            ServerCore.NEOFORGE,
-          ].includes(this.server.core) &&
-          mod.projectType == ProjectType.MOD &&
-          file.isServer
-        ) {
-          const fileServerPath = path.join(
-            this.version.versionPath,
-            "server",
-            folderName,
-            file.filename,
-          );
+        if (clientSupported) {
+          this.files.push({
+            filename: file.filename,
+            type: mod.projectType,
+          });
 
           downloadFiles.push({
-            destination: fileServerPath,
-            url: (await fs.pathExists(filepath))
-              ? pathToFileURL(filepath).href
-              : file.url,
+            destination: filepath,
+            url: file.localPath ? pathToFileURL(file.localPath).href : file.url,
             group: "mods",
             sha1: file.sha1,
             size: file.size,
+          });
+        }
+
+        if (this.isModdedServer() && mod.projectType == ProjectType.MOD) {
+          serverModFiles.push({
+            filename: file.filename,
+            clientPath: filepath,
+            url: file.localPath ? pathToFileURL(file.localPath).href : file.url,
+            sha1: file.sha1,
+            size: file.size,
+            isServerFile: file.isServer,
+            clientSupported,
           });
         }
       }
@@ -259,6 +274,16 @@ export class Mods {
       OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
     );
     this.throwIfInstallCancelled();
+
+    if (this.isModdedServer()) {
+      await this.syncServerMods(serverModFiles);
+      await syncServerExtraFiles(
+        this.version.versionPath,
+        this.getServerPath(),
+        await getServerSyncDirs(),
+      );
+      this.throwIfInstallCancelled();
+    }
 
     for (const zipPath of [...new Set(worldZips)]) {
       if (!(await fs.pathExists(zipPath))) continue;
@@ -315,6 +340,114 @@ export class Mods {
     await Promise.all(tasks);
     this.throwIfInstallCancelled();
     await this.pruneTrash();
+  }
+
+  private isModdedServer(): boolean {
+    return !!this.server && MODDED_SERVER_CORES.includes(this.server.core);
+  }
+
+  private getServerPath() {
+    return path.join(this.version.versionPath, "server");
+  }
+
+  private async syncServerMods(serverModFiles: ServerModFile[]) {
+    const serverModsPath = path.join(this.getServerPath(), "mods");
+
+    const descriptors = new Map<
+      string,
+      Awaited<ReturnType<typeof getModDescriptor>>
+    >();
+    const clientMods = serverModFiles.filter((file) => file.clientSupported);
+    const CHUNK_SIZE = 16;
+    for (let i = 0; i < clientMods.length; i += CHUNK_SIZE) {
+      this.throwIfInstallCancelled();
+      await Promise.all(
+        clientMods.slice(i, i + CHUNK_SIZE).map(async (file) => {
+          if (!(await fs.pathExists(file.clientPath))) return;
+          descriptors.set(
+            file.filename,
+            await getModDescriptor(file.clientPath),
+          );
+        }),
+      );
+    }
+
+    const isClientside = await getClientsideModMatcher();
+
+    const nodes: ServerModNode[] = serverModFiles.map((file) => {
+      const descriptor = descriptors.get(file.filename);
+      let onServer: boolean;
+      if (!file.isServerFile) onServer = false;
+      else if (isClientside(file.filename)) onServer = false;
+      else if (!file.clientSupported) onServer = true;
+      else onServer = (descriptor?.environment ?? "both") !== "client";
+
+      return {
+        key: file.filename,
+        modId: descriptor?.modId ?? null,
+        hardDeps: descriptor?.hardDeps ?? [],
+        onServer,
+      };
+    });
+
+    const excludedKeys = computeServerModExclusions(nodes);
+    const onServerByKey = new Map(
+      nodes.map((node) => [node.key, node.onServer]),
+    );
+
+    const downloads: DownloadItem[] = [];
+    for (const file of serverModFiles) {
+      const destination = path.join(serverModsPath, file.filename);
+      const keep =
+        onServerByKey.get(file.filename) === true &&
+        !excludedKeys.has(file.filename);
+
+      if (!keep) {
+        if (await fs.pathExists(destination))
+          await this.moveToTrash([destination]);
+        continue;
+      }
+
+      if (file.clientSupported && (await fs.pathExists(file.clientPath))) {
+        await fs
+          .copy(file.clientPath, destination, { overwrite: true })
+          .catch(() => {});
+      } else {
+        downloads.push({
+          destination,
+          url: file.url,
+          group: "mods",
+          sha1: file.sha1,
+          size: file.size,
+        });
+      }
+    }
+
+    if (downloads.length > 0) {
+      const serverFailures = await this.downloader.downloadFiles(
+        downloads,
+        this.installAbortSignal ?? undefined,
+        OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
+      );
+
+      if (serverFailures) {
+        this.lastFailures = this.lastFailures
+          ? {
+              totalItems:
+                this.lastFailures.totalItems + serverFailures.totalItems,
+              completedItems:
+                this.lastFailures.completedItems +
+                serverFailures.completedItems,
+              failedItems:
+                this.lastFailures.failedItems + serverFailures.failedItems,
+              failures: [
+                ...this.lastFailures.failures,
+                ...serverFailures.failures,
+              ],
+            }
+          : serverFailures;
+      }
+    }
   }
 
   private getTrashPath() {
@@ -406,15 +539,7 @@ export class Mods {
         continue;
 
       deleteFiles.push(filePath);
-      if (
-        this.server &&
-        [
-          ServerCore.FABRIC,
-          ServerCore.QUILT,
-          ServerCore.FORGE,
-          ServerCore.NEOFORGE,
-        ].includes(this.server.core)
-      ) {
+      if (this.isModdedServer()) {
         const serverFilePath = path.join(
           this.version.versionPath,
           "server",
@@ -470,6 +595,14 @@ export class Mods {
         OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
       );
       this.throwIfInstallCancelled();
+
+      if (this.isModdedServer()) {
+        await syncServerExtraFiles(
+          this.version.versionPath,
+          this.getServerPath(),
+          await getServerSyncDirs(),
+        );
+      }
     } finally {
       await fs.remove(tempPath).catch(() => {});
     }

@@ -12,9 +12,13 @@ import {
   Eye,
   FolderPlus,
   Folder,
+  Loader2,
   Lock,
+  Search,
   ShieldAlert,
+  SkipForward,
   TriangleAlert,
+  Undo2,
   Upload,
   X,
 } from "lucide-react";
@@ -24,7 +28,10 @@ import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { IProject, Provider, ProjectType } from "@/types/ModManager";
+import { Loader } from "@/types/Loader";
 import {
   areBlockedModsReady,
   applyBlockedModFilePaths,
@@ -41,6 +48,14 @@ export type { IBlockedMod };
 
 const api = window.api;
 
+function modKey(mod: IBlockedMod) {
+  return `${mod.projectId}-${mod.fileName}`;
+}
+
+function isHandledMod(mod: IBlockedMod) {
+  return !!mod.filePath || !!mod.skipped || !!mod.substituted;
+}
+
 interface IWatchedFolder {
   path: string;
   removable: boolean;
@@ -49,14 +64,28 @@ interface IWatchedFolder {
 export function BlockedMods({
   onClose,
   mods,
+  mcVersion,
+  loader,
+  onSubstitute,
 }: {
   onClose: (mods: IBlockedMod[]) => void;
   mods: IBlockedMod[];
+  mcVersion?: string;
+  loader?: Loader;
+  onSubstitute?: (
+    blockedMod: IBlockedMod,
+    project: IProject,
+  ) => Promise<boolean>;
 }) {
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>(mods);
   const [viewMode, setViewMode] = useState<"all" | "notInstalled">(
     "notInstalled",
   );
+  const [substituteFor, setSubstituteFor] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<IProject[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [substitutingKey, setSubstitutingKey] = useState<string | null>(null);
   const [downloadsPath, setDownloadsPath] = useState<string | null>(null);
   const [extraFolders, setExtraFolders] = useState<string[]>(() =>
     loadWatchedFolders(),
@@ -167,8 +196,7 @@ export function BlockedMods({
   }, [watchedFolders, scanFolders]);
 
   useEffect(() => {
-    const notInstalledMods = blockedMods.filter((mod) => !mod.filePath);
-    if (notInstalledMods.length === 0) {
+    if (areBlockedModsReady(blockedMods)) {
       onClose(blockedMods);
     }
   }, [blockedMods, onClose]);
@@ -176,12 +204,12 @@ export function BlockedMods({
   const filteredMods = useMemo(() => {
     return blockedMods.filter((mod) => {
       if (viewMode === "all") return true;
-      return !mod.filePath;
+      return !isHandledMod(mod);
     });
   }, [blockedMods, viewMode]);
 
   const installedCount = useMemo(() => {
-    return blockedMods.filter((mod) => !!mod.filePath).length;
+    return blockedMods.filter((mod) => isHandledMod(mod)).length;
   }, [blockedMods]);
 
   const missingCount = blockedMods.length - installedCount;
@@ -189,6 +217,92 @@ export function BlockedMods({
   const handleToggleView = useCallback(() => {
     setViewMode((prev) => (prev === "all" ? "notInstalled" : "all"));
   }, []);
+
+  const handleSkip = useCallback((mod: IBlockedMod) => {
+    setBlockedMods((prev) =>
+      prev.map((m) =>
+        modKey(m) === modKey(mod) ? { ...m, skipped: true } : m,
+      ),
+    );
+  }, []);
+
+  const handleUndoSkip = useCallback((mod: IBlockedMod) => {
+    setBlockedMods((prev) =>
+      prev.map((m) =>
+        modKey(m) === modKey(mod) ? { ...m, skipped: false } : m,
+      ),
+    );
+  }, []);
+
+  const handleSkipAllMissing = useCallback(() => {
+    setBlockedMods((prev) =>
+      prev.map((m) => (isHandledMod(m) ? m : { ...m, skipped: true })),
+    );
+  }, []);
+
+  const handleOpenSubstitute = useCallback((mod: IBlockedMod) => {
+    const key = modKey(mod);
+    setSearchResults([]);
+    setSearchQuery(mod.modTitle || mod.fileName.replace(/\.jar$/i, ""));
+    setSubstituteFor((prev) => (prev === key ? null : key));
+  }, []);
+
+  const handleSearch = useCallback(async () => {
+    const query = searchQuery.trim();
+    if (!query) return;
+
+    setIsSearching(true);
+    try {
+      const data = await api.modManager.search(
+        query,
+        Provider.MODRINTH,
+        {
+          version: mcVersion,
+          loader,
+          projectType: ProjectType.MOD,
+          sort: "",
+          filter: [],
+        },
+        { offset: 0, limit: 10 },
+      );
+      setSearchResults(data.projects ?? []);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [searchQuery, mcVersion, loader]);
+
+  const handlePickSubstitute = useCallback(
+    async (mod: IBlockedMod, project: IProject) => {
+      if (!onSubstitute) return;
+
+      const key = modKey(mod);
+      setSubstitutingKey(key);
+      try {
+        const ok = await onSubstitute(mod, project);
+        if (!ok) {
+          toast.error(t("blockedMods.substituteFailed"));
+          return;
+        }
+
+        setBlockedMods((prev) =>
+          prev.map((m) =>
+            modKey(m) === key ? { ...m, substituted: true, skipped: false } : m,
+          ),
+        );
+        setSubstituteFor(null);
+        toast.success(
+          t("blockedMods.substituteSuccess", { title: project.title }),
+        );
+      } catch {
+        toast.error(t("blockedMods.substituteFailed"));
+      } finally {
+        setSubstitutingKey(null);
+      }
+    },
+    [onSubstitute, t],
+  );
 
   const handleOpenAll = useCallback(async () => {
     const modsToOpen = blockedMods.filter((mod) => !mod.filePath);
@@ -301,7 +415,8 @@ export function BlockedMods({
 
   return (
     <Dialog open>
-      <DialogContent aria-describedby={undefined}
+      <DialogContent
+        aria-describedby={undefined}
         className="grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden p-0 sm:max-w-lg"
         showCloseButton={false}
         onClick={(event) => event.stopPropagation()}
@@ -369,62 +484,192 @@ export function BlockedMods({
 
             <ScrollArea className="max-h-[14rem] rounded-xl border bg-background/40">
               <div className="grid gap-2 p-2">
-                {filteredMods.map((mod) => (
-                  <Card
-                    key={`${mod.projectId}-${mod.fileName}`}
-                    className="gap-0 py-0 shadow-none"
-                  >
-                    <CardContent className="flex items-center gap-3 p-3">
-                      <div className="grid min-w-0 flex-1 gap-1">
-                        <div className="flex min-w-0 items-center gap-2">
-                          {mod.filePath ? (
-                            <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" />
-                          ) : (
-                            <TriangleAlert className="size-4 shrink-0 text-destructive" />
-                          )}
-                          <p
-                            className="min-w-0 truncate text-sm font-medium"
-                            title={mod.fileName}
-                          >
-                            {mod.fileName}
-                          </p>
-                          {mod.filePath ? (
-                            <span
-                              className="size-2.5 shrink-0 rounded-full bg-emerald-500"
-                              aria-label={t("blockedMods.ready")}
-                              title={t("blockedMods.ready")}
-                            />
-                          ) : (
-                            <span
-                              className="size-2.5 shrink-0 rounded-full bg-destructive"
-                              aria-label={t("blockedMods.missing")}
-                              title={t("blockedMods.missing")}
-                            />
-                          )}
-                        </div>
-                      </div>
+                {filteredMods.map((mod) => {
+                  const key = modKey(mod);
+                  const isOpen = substituteFor === key;
+                  const state = mod.filePath
+                    ? "ready"
+                    : mod.substituted
+                      ? "substituted"
+                      : mod.skipped
+                        ? "skipped"
+                        : "missing";
 
-                      {!mod.filePath && (
-                        <Button
-                          size="icon-sm"
-                          variant="secondary"
-                          className="shrink-0"
-                          aria-label={t("game.download")}
-                          title={t("game.download")}
-                          onClick={async () => {
-                            try {
-                              await api.shell.openExternal(mod.url);
-                            } catch (error) {
-                              console.error("Error opening URL:", error);
-                            }
-                          }}
-                        >
-                          <ExternalLink />
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                  return (
+                    <Card key={key} className="gap-0 py-0 shadow-none">
+                      <CardContent className="flex flex-col gap-2 p-3">
+                        <div className="flex items-center gap-3">
+                          <div className="grid min-w-0 flex-1 gap-0.5">
+                            <div className="flex min-w-0 items-center gap-2">
+                              {state === "missing" ? (
+                                <TriangleAlert className="size-4 shrink-0 text-destructive" />
+                              ) : (
+                                <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" />
+                              )}
+                              <p
+                                className="min-w-0 truncate text-sm font-medium"
+                                title={mod.fileName}
+                              >
+                                {mod.fileName}
+                              </p>
+                            </div>
+                            {state === "ready" && (
+                              <span className="text-xs text-emerald-500">
+                                {t("blockedMods.ready")}
+                              </span>
+                            )}
+                            {state === "substituted" && (
+                              <span className="text-xs text-emerald-500">
+                                {t("blockedMods.substitutedLabel")}
+                              </span>
+                            )}
+                            {state === "skipped" && (
+                              <span className="text-xs text-amber-500">
+                                {t("blockedMods.skippedLabel")}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            {state === "missing" && (
+                              <>
+                                <Button
+                                  size="icon-sm"
+                                  variant="secondary"
+                                  aria-label={t("game.download")}
+                                  title={t("game.download")}
+                                  onClick={async () => {
+                                    try {
+                                      await api.shell.openExternal(mod.url);
+                                    } catch (error) {
+                                      console.error(
+                                        "Error opening URL:",
+                                        error,
+                                      );
+                                    }
+                                  }}
+                                >
+                                  <ExternalLink />
+                                </Button>
+                                {onSubstitute && (
+                                  <Button
+                                    size="icon-sm"
+                                    variant={isOpen ? "default" : "secondary"}
+                                    aria-label={t("blockedMods.substitute")}
+                                    title={t("blockedMods.substitute")}
+                                    onClick={() => handleOpenSubstitute(mod)}
+                                  >
+                                    <Search />
+                                  </Button>
+                                )}
+                                <Button
+                                  size="icon-sm"
+                                  variant="ghost"
+                                  aria-label={t("blockedMods.skip")}
+                                  title={t("blockedMods.skip")}
+                                  onClick={() => handleSkip(mod)}
+                                >
+                                  <SkipForward />
+                                </Button>
+                              </>
+                            )}
+                            {state === "skipped" && (
+                              <Button
+                                size="icon-sm"
+                                variant="ghost"
+                                aria-label={t("blockedMods.undoSkip")}
+                                title={t("blockedMods.undoSkip")}
+                                onClick={() => handleUndoSkip(mod)}
+                              >
+                                <Undo2 />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {isOpen && onSubstitute && (
+                          <div className="grid gap-2 rounded-lg border bg-background/40 p-2">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={searchQuery}
+                                onChange={(event) =>
+                                  setSearchQuery(event.target.value)
+                                }
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    void handleSearch();
+                                  }
+                                }}
+                                placeholder={t("blockedMods.searchPlaceholder")}
+                                className="h-8"
+                              />
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="shrink-0"
+                                onClick={() => void handleSearch()}
+                                disabled={isSearching}
+                              >
+                                {isSearching ? (
+                                  <Loader2 className="animate-spin" />
+                                ) : (
+                                  <Search />
+                                )}
+                                {t("blockedMods.search")}
+                              </Button>
+                            </div>
+
+                            {searchResults.length > 0 && (
+                              <div className="grid max-h-40 gap-1 overflow-y-auto">
+                                {searchResults.map((project) => (
+                                  <button
+                                    key={project.id}
+                                    type="button"
+                                    className="flex items-center gap-2 rounded-md border bg-card p-1.5 text-left hover:bg-accent disabled:opacity-60"
+                                    disabled={substitutingKey === key}
+                                    onClick={() =>
+                                      void handlePickSubstitute(mod, project)
+                                    }
+                                  >
+                                    {project.iconUrl ? (
+                                      <img
+                                        src={project.iconUrl}
+                                        alt=""
+                                        className="size-6 shrink-0 rounded"
+                                      />
+                                    ) : (
+                                      <span className="size-6 shrink-0 rounded bg-muted" />
+                                    )}
+                                    <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                                      {project.title}
+                                    </span>
+                                    {substitutingKey === key ? (
+                                      <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
+                                    ) : (
+                                      <Badge
+                                        variant="outline"
+                                        className="shrink-0 text-[10px]"
+                                      >
+                                        Modrinth
+                                      </Badge>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            {!isSearching && searchResults.length === 0 && (
+                              <p className="px-1 text-xs text-muted-foreground">
+                                {t("blockedMods.substituteHint")}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
 
                 {filteredMods.length === 0 && (
                   <div className="flex h-24 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
@@ -495,7 +740,7 @@ export function BlockedMods({
           </section>
         </div>
 
-        <DialogFooter className="m-0 border-t bg-muted/25 px-5 py-4">
+        <DialogFooter className="m-0 flex-wrap border-t bg-muted/25 px-5 py-4">
           <Button
             variant="outline"
             onClick={handleOpenAll}
@@ -503,6 +748,14 @@ export function BlockedMods({
           >
             <ExternalLink />
             {t("blockedMods.openAll")}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleSkipAllMissing}
+            disabled={missingCount === 0}
+          >
+            <SkipForward />
+            {t("blockedMods.skipAll")}
           </Button>
           <Button variant="destructive" onClick={handleClose}>
             {t("common.close")}

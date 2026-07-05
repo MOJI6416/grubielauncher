@@ -1,10 +1,11 @@
-﻿import { ISkinEntry, SkinsData } from "@/types/SkinManager";
+﻿import { ICatalogSkin, ISkinEntry, SkinsData } from "@/types/SkinManager";
 import {
   accountAtom,
   authDataAtom,
   internetAtom,
   networkAtom,
   pathsAtom,
+  pendingSkinDeepLinkAtom,
 } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
 import {
@@ -12,6 +13,7 @@ import {
   FileImage,
   FilePlus2,
   Image as ImageIcon,
+  Globe,
   Link,
   Loader2,
   Mars,
@@ -26,6 +28,8 @@ import {
 import { useEffect, useMemo, useState, useCallback, memo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import SkinCanvas from "./SkinCanvas";
+import { SkinCatalog } from "./SkinCatalog";
+import { TagsInput } from "./TagsInput";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -241,8 +245,16 @@ SkinCard.displayName = "SkinCard";
 
 export function ManageSkins({ onClose }: { onClose: () => void }) {
   const [isLoading, setIsLoading] = useState(true);
+  const [view, setView] = useState<"mine" | "catalog">("mine");
   const [actionLoading, setActionLoading] = useState<
-    "apply" | "byFile" | "reset" | "regenerate" | "byLink" | "byPlayer" | null
+    | "apply"
+    | "byFile"
+    | "reset"
+    | "regenerate"
+    | "byLink"
+    | "byPlayer"
+    | "publish"
+    | null
   >(null);
   const [skinsData, setSkinsData] = useState<SkinsData | null>(null);
   const [inputValue, setInputValue] = useState("");
@@ -260,12 +272,31 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
   const [renameDialogSkinId, setRenameDialogSkinId] = useState<string | null>(
     null,
   );
+  const [publishDialogSkinId, setPublishDialogSkinId] = useState<string | null>(
+    null,
+  );
+  const [publishName, setPublishName] = useState("");
+  const [publishType, setPublishType] = useState<"skin" | "cape" | "pack">(
+    "skin",
+  );
+  const [publishTags, setPublishTags] = useState<string[]>([]);
+  const [deepLinkSkinId, setDeepLinkSkinId] = useState<string | null>(null);
 
   const [paths] = useAtom(pathsAtom);
   const [selectedAccount] = useAtom(accountAtom);
   const [authData] = useAtom(authDataAtom);
   const [isInternetOnline] = useAtom(internetAtom);
   const [isBackendOnline] = useAtom(networkAtom);
+  const [pendingSkinDeepLink, setPendingSkinDeepLink] = useAtom(
+    pendingSkinDeepLinkAtom,
+  );
+
+  useEffect(() => {
+    if (!pendingSkinDeepLink) return;
+    setDeepLinkSkinId(pendingSkinDeepLink);
+    setView("catalog");
+    setPendingSkinDeepLink(null);
+  }, [pendingSkinDeepLink, setPendingSkinDeepLink]);
 
   const { t } = useTranslation();
   const isMicrosoftAccount = selectedAccount?.type === "microsoft";
@@ -325,6 +356,11 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     return skinsData.skins.skins.find((s) => s.id === skinsData.selectedSkin);
   }, [skinsData]);
 
+  const playerSkinUrl = useMemo(() => {
+    if (!skinsData) return undefined;
+    return skinsData.skins.skins.find((s) => s.id === skinsData.activeSkin)?.url;
+  }, [skinsData]);
+
   useEffect(() => {
     setRenameValue(selectedSkinEntry?.name ?? "");
   }, [selectedSkinEntry?.id, selectedSkinEntry?.name]);
@@ -341,6 +377,22 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
       null
     );
   }, [renameDialogSkinId, skinsData]);
+
+  const publishDialogSkin = useMemo(() => {
+    if (!skinsData || !publishDialogSkinId) return null;
+    return (
+      skinsData.skins.skins.find((skin) => skin.id === publishDialogSkinId) ??
+      null
+    );
+  }, [publishDialogSkinId, skinsData]);
+
+  const publishDialogCape = useMemo(() => {
+    if (!skinsData || !publishDialogSkin?.capeId) return null;
+    return (
+      skinsData.capes.find((cape) => cape.id === publishDialogSkin.capeId) ??
+      null
+    );
+  }, [skinsData, publishDialogSkin]);
 
   const refreshSkins = useCallback(async () => {
     if (!selectedAccount || !authData) return;
@@ -366,6 +418,46 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
       await refreshSkins();
     },
     [authData, selectedAccount, refreshSkins],
+  );
+
+  const handleImportFromCatalog = useCallback(
+    async (skin: ICatalogSkin) => {
+      if (!authData || !selectedAccount) return;
+      try {
+        if (skin.type === "cape") {
+          if (!skin.capeUrl) return;
+          await api.skins.importByUrl(
+            authData.uuid,
+            selectedAccount.type,
+            skin.capeUrl,
+            "cape",
+          );
+        } else if (skin.type === "pack") {
+          if (!skin.skinUrl || !skin.capeUrl) return;
+          await api.skins.importPack(
+            authData.uuid,
+            selectedAccount.type,
+            skin.skinUrl,
+            skin.capeUrl,
+          );
+        } else {
+          if (!skin.skinUrl) return;
+          await api.skins.importByUrl(
+            authData.uuid,
+            selectedAccount.type,
+            skin.skinUrl,
+            "skin",
+          );
+        }
+        void api.skins.catalog.download(skin.id).catch(() => undefined);
+        await refreshSkins();
+        setView("mine");
+        toast.success(t("manageSkins.catalogImported"));
+      } catch {
+        toast.error(t("manageSkins.importError"));
+      }
+    },
+    [authData, selectedAccount, refreshSkins, t],
   );
 
   const handleSetCape = useCallback(
@@ -628,6 +720,64 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     setRenameDialogSkinId(null);
   }, [handleRename, renameDialogSkin, renameValue]);
 
+  const handleOpenPublishDialog = useCallback(
+    (skinId: string) => {
+      const skin = skinsData?.skins.skins.find((item) => item.id === skinId);
+      if (!skin) return;
+      setPublishName(skin.name);
+      setPublishType("skin");
+      setPublishTags([]);
+      setPublishDialogSkinId(skinId);
+    },
+    [skinsData],
+  );
+
+  const handlePublish = useCallback(async () => {
+    if (!authData || !selectedAccount || !publishDialogSkinId) return;
+    if (!selectedAccount.accessToken) return;
+    const name = publishName.trim();
+    setActionLoading("publish");
+    try {
+      const result = await api.skins.publishCommunity(
+        authData.uuid,
+        selectedAccount.type,
+        publishDialogSkinId,
+        selectedAccount.accessToken,
+        name || undefined,
+        publishType,
+        publishTags.join(","),
+      );
+      if (result.ok) {
+        toast.success(t("manageSkins.publishPending"));
+        setPublishDialogSkinId(null);
+      } else if (result.error === "duplicate") {
+        if (result.dupStatus === "rejected") {
+          toast.error(
+            result.reason
+              ? t("manageSkins.publishRejected", { reason: result.reason })
+              : t("manageSkins.publishRejectedNoReason"),
+          );
+        } else {
+          toast.error(t("manageSkins.publishDuplicate"));
+        }
+      } else if (result.error === "limit") {
+        toast.error(t("manageSkins.publishLimit"));
+      } else {
+        toast.error(t("manageSkins.publishError"));
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  }, [
+    authData,
+    selectedAccount,
+    publishDialogSkinId,
+    publishName,
+    publishType,
+    publishTags,
+    t,
+  ]);
+
   const isSkinRenameDisabled = useCallback(
     () => actionLoading !== null,
     [actionLoading],
@@ -679,7 +829,8 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
             isLoading ||
             actionLoading ||
             isAddDialogOpen ||
-            renameDialogSkinId
+            renameDialogSkinId ||
+            publishDialogSkinId
           ) {
             event.preventDefault();
           }
@@ -689,7 +840,8 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
             isLoading ||
             actionLoading ||
             isAddDialogOpen ||
-            renameDialogSkinId
+            renameDialogSkinId ||
+            publishDialogSkinId
           ) {
             event.preventDefault();
           }
@@ -698,22 +850,46 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
         onMouseDown={(event) => event.stopPropagation()}
       >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Shirt className="size-5" />
-            {t("manageSkins.title")}
-          </DialogTitle>
+          <div className="flex items-center justify-between gap-3 pr-6">
+            <DialogTitle className="flex items-center gap-2">
+              <Shirt className="size-5" />
+              {t("manageSkins.title")}
+            </DialogTitle>
+            <Tabs
+              value={view}
+              onValueChange={(value) => setView(value as "mine" | "catalog")}
+            >
+              <TabsList>
+                <TabsTrigger value="mine">
+                  {t("manageSkins.tabMine")}
+                </TabsTrigger>
+                <TabsTrigger value="catalog">
+                  {t("manageSkins.tabCatalog")}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </DialogHeader>
 
-        <div className="grid h-[500px] max-h-[calc(100vh-9rem)] min-h-0 gap-4 md:grid-cols-[340px_340px_290px] md:justify-center">
-          {isLoading ||
-          !skinsData ||
-          !selectedAccount ||
-          !selectedAccount?.accessToken ? (
-            <div className="col-span-full flex h-full w-full items-center justify-center">
+        <div className="h-[500px] max-h-[calc(100vh-9rem)] min-h-0">
+          {view === "catalog" ? (
+            <SkinCatalog
+              onImport={handleImportFromCatalog}
+              isOnline={isInternetOnline}
+              disabled={actionLoading !== null}
+              backendToken={selectedAccount?.accessToken}
+              initialSkinId={deepLinkSkinId}
+              playerSkinUrl={playerSkinUrl}
+            />
+          ) : isLoading ||
+            !skinsData ||
+            !selectedAccount ||
+            !selectedAccount?.accessToken ? (
+            <div className="flex h-full w-full items-center justify-center">
               <Loader2 className="size-4 animate-spin" />
             </div>
           ) : (
-            <>
+            <div className="grid h-full min-h-0 gap-4 md:grid-cols-[minmax(0,1fr)_340px_290px]">
               <div className="flex min-h-0 min-w-0 flex-col gap-2">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
@@ -914,6 +1090,25 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
                       )}
                       {t("manageSkins.apply")}
                     </Button>
+
+                    {selectedAccount.type !== "plain" && (
+                      <Button
+                        variant="secondary"
+                        disabled={
+                          actionLoading !== null ||
+                          !isInternetOnline ||
+                          !selectedSkinEntry ||
+                          !selectedAccount.accessToken
+                        }
+                        onClick={() =>
+                          selectedSkinEntry &&
+                          handleOpenPublishDialog(selectedSkinEntry.id)
+                        }
+                      >
+                        <Globe className="size-4" />
+                        {t("manageSkins.publish")}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -971,7 +1166,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
                   </CardContent>
                 </Card>
               </div>
-            </>
+            </div>
           )}
         </div>
 
@@ -1262,6 +1457,111 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
                 onClick={() => void handleSubmitRename()}
               >
                 {t("common.save")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={publishDialogSkinId !== null}
+          onOpenChange={(open) => {
+            if (!open && actionLoading !== "publish") setPublishDialogSkinId(null);
+          }}
+        >
+          <DialogContent
+            data-account-click-ignore="true"
+            className="sm:max-w-sm"
+            onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Globe className="size-5" />
+                {t("manageSkins.publishTitle")}
+              </DialogTitle>
+              <DialogDescription>
+                {t("manageSkins.publishNote")}
+              </DialogDescription>
+            </DialogHeader>
+
+            {publishDialogSkin && (
+              <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+                <div className="flex h-24 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted/30">
+                  <SkinCanvas
+                    skinUrl={publishDialogSkin.url}
+                    capeUrl={publishDialogCape?.url}
+                    height={90}
+                    width={56}
+                  />
+                </div>
+                <div className="grid flex-1 gap-2">
+                  <Label>{t("manageSkins.publishName")}</Label>
+                  <Input
+                    value={publishName}
+                    maxLength={40}
+                    onChange={(event) => setPublishName(event.target.value)}
+                    disabled={actionLoading !== null}
+                  />
+                </div>
+              </div>
+            )}
+
+            {publishDialogCape && (
+              <div className="grid gap-1.5">
+                <Label className="text-xs text-muted-foreground">
+                  {t("manageSkins.publishWhat")}
+                </Label>
+                <div className="flex gap-1.5">
+                  {(["skin", "pack", "cape"] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setPublishType(value)}
+                      disabled={actionLoading !== null}
+                      className={cn(
+                        "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors",
+                        publishType === value
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "text-muted-foreground hover:bg-accent",
+                      )}
+                    >
+                      {t(`manageSkins.publishType_${value}`)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid gap-1.5">
+              <Label className="text-xs text-muted-foreground">
+                {t("manageSkins.tagsLabel")}
+              </Label>
+              <TagsInput
+                value={publishTags}
+                onChange={setPublishTags}
+                disabled={actionLoading !== null}
+                placeholder={t("manageSkins.tagsPlaceholder")}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                disabled={actionLoading !== null}
+                onClick={() => setPublishDialogSkinId(null)}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                disabled={actionLoading !== null || !publishName.trim()}
+                onClick={() => void handlePublish()}
+              >
+                {actionLoading === "publish" ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Globe className="size-4" />
+                )}
+                {t("manageSkins.publish")}
               </Button>
             </DialogFooter>
           </DialogContent>

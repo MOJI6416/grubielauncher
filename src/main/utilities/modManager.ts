@@ -4,6 +4,7 @@ import {
   ILocalFileInfo,
   ILocalProject,
   IModpack,
+  IModpackExtraFile,
   IProject,
   IVersion,
   IVersionDependency,
@@ -35,12 +36,50 @@ import { Modrinth } from "../services/Modrinth";
 import path from "path";
 import fs from "fs-extra";
 import toml from "toml";
+import axios from "axios";
 import { ModManager } from "../services/ModManager";
 import { app } from "electron";
 import { extractFileFromArchive } from "./archiver";
 import { randomUUID } from "crypto";
 import { pathToFileURL } from "url";
 import { parseCurseForgeLoaderId } from "@/shared/loaderVersions";
+
+const FORGE_CDN_HOSTS = [
+  "https://edge.forgecdn.net",
+  "https://mediafilez.forgecdn.net",
+];
+
+export function buildForgeCdnUrls(fileId: number, fileName: string): string[] {
+  if (!Number.isFinite(fileId) || fileId <= 0 || !fileName) return [];
+
+  const dir = Math.floor(fileId / 1000);
+  const sub = fileId % 1000;
+  const encoded = fileName.replace(/ /g, "%20");
+
+  return FORGE_CDN_HOSTS.map(
+    (host) => `${host}/files/${dir}/${sub}/${encoded}`,
+  );
+}
+
+export async function resolveCurseForgeCdnUrl(
+  fileId: number,
+  fileName: string,
+): Promise<string | null> {
+  for (const url of buildForgeCdnUrls(fileId, fileName)) {
+    try {
+      const response = await axios.head(url, {
+        timeout: 6000,
+        maxRedirects: 5,
+        validateStatus: () => true,
+      });
+      if (response.status >= 200 && response.status < 300) return url;
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
 
 export function classIdToProjectType(
   classId: number | null | undefined,
@@ -157,6 +196,7 @@ export async function cfModpackToModpack(
               `blocked::${mod.links.websiteUrl}/download/${file.id}`,
             sha1: file.hashes.find((h) => h.algo == 1)?.value || "",
             isServer: true,
+            isClient: true,
           },
         ],
       },
@@ -597,6 +637,234 @@ async function parseModsToml(filePath: string): Promise<any> {
   }
 }
 
+export type ModEnvironment = "client" | "server" | "both";
+
+function forgeTomlEnvironment(parsed: any): ModEnvironment | null {
+  if (!parsed || typeof parsed !== "object") return null;
+
+  const scopes = [parsed, ...(Array.isArray(parsed.mods) ? parsed.mods : [])];
+  for (const scope of scopes) {
+    if (scope?.clientSideOnly === true) return "client";
+    if (scope?.serverSideOnly === true) return "server";
+  }
+
+  const deps = parsed.dependencies;
+  if (deps && typeof deps === "object") {
+    for (const depList of Object.values(deps)) {
+      if (!Array.isArray(depList)) continue;
+      for (const dep of depList) {
+        if (String(dep?.modId ?? "").toLowerCase() !== "minecraft") continue;
+        const side = String(dep?.side ?? "").toUpperCase();
+        if (side === "CLIENT") return "client";
+        if (side === "SERVER") return "server";
+      }
+    }
+  }
+
+  return "both";
+}
+
+const PROVIDED_MOD_IDS = new Set([
+  "minecraft",
+  "java",
+  "fabricloader",
+  "forge",
+  "neoforge",
+  "quilt_loader",
+  "quilt_base",
+]);
+
+function isProvidedModId(id: string): boolean {
+  return PROVIDED_MOD_IDS.has(id.toLowerCase());
+}
+
+function fabricDepIds(depends: unknown): string[] {
+  if (!depends || typeof depends !== "object") return [];
+  return Object.keys(depends).filter((id) => id && !isProvidedModId(id));
+}
+
+function quiltDepIds(depends: unknown): string[] {
+  if (!Array.isArray(depends)) return [];
+  const ids: string[] = [];
+  for (const dep of depends) {
+    if (dep && typeof dep === "object" && dep.optional === true) continue;
+    const id =
+      typeof dep === "string"
+        ? dep
+        : typeof dep?.id === "string"
+          ? dep.id
+          : null;
+    if (id && !isProvidedModId(id)) ids.push(id);
+  }
+  return ids;
+}
+
+function forgeDepIds(dependencies: unknown): string[] {
+  if (!dependencies || typeof dependencies !== "object") return [];
+  const ids: string[] = [];
+  for (const depList of Object.values(
+    dependencies as Record<string, unknown>,
+  )) {
+    if (!Array.isArray(depList)) continue;
+    for (const dep of depList) {
+      // Forge (mods.toml) marks optional deps with `mandatory=false`; NeoForge
+      // uses `type` = required/optional/incompatible/discouraged. Only hard
+      // ("required") deps count — incompatible deps must never be treated as
+      // dependencies, or the mod gets pruned when its conflict is excluded.
+      if (dep?.mandatory === false) continue;
+      const type = String(dep?.type ?? "").toLowerCase();
+      if (
+        type === "optional" ||
+        type === "incompatible" ||
+        type === "discouraged"
+      ) {
+        continue;
+      }
+      const id = String(dep?.modId ?? "").trim();
+      if (id && !isProvidedModId(id)) ids.push(id);
+    }
+  }
+  return ids;
+}
+
+export interface ModDescriptor {
+  environment: ModEnvironment | null;
+  modId: string | null;
+  hardDeps: string[];
+}
+
+export async function getModDescriptor(
+  jarPath: string,
+): Promise<ModDescriptor> {
+  let tempPath = "";
+  const descriptor: ModDescriptor = {
+    environment: null,
+    modId: null,
+    hardDeps: [],
+  };
+
+  try {
+    tempPath = path.join(
+      getLauncherPaths().cache,
+      "mod-env",
+      `${Date.now()}-${randomUUID()}`,
+    );
+    await fs.mkdir(tempPath, { recursive: true });
+
+    for (const manifest of ["fabric.mod.json", "quilt.mod.json"]) {
+      const extractedPath = await extractFileFromArchive(
+        jarPath,
+        manifest,
+        tempPath,
+      );
+      if (!extractedPath) continue;
+
+      const data = await fs
+        .readJSON(path.join(extractedPath, manifest))
+        .catch(() => null);
+      if (!data) continue;
+
+      if (manifest === "fabric.mod.json") {
+        const env = data.environment;
+        descriptor.environment =
+          env === "client" ? "client" : env === "server" ? "server" : "both";
+        if (typeof data.id === "string") descriptor.modId = data.id;
+        descriptor.hardDeps = fabricDepIds(data.depends);
+      } else {
+        const quilt = data.quilt_loader;
+        const env =
+          quilt?.minecraft?.environment ?? data.minecraft?.environment;
+        descriptor.environment =
+          env === "client"
+            ? "client"
+            : env === "server" || env === "dedicated_server"
+              ? "server"
+              : "both";
+        if (typeof quilt?.id === "string") descriptor.modId = quilt.id;
+        descriptor.hardDeps = quiltDepIds(quilt?.depends);
+      }
+
+      return descriptor;
+    }
+
+    for (const manifest of [
+      "META-INF/neoforge.mods.toml",
+      "META-INF/mods.toml",
+    ]) {
+      const extractedPath = await extractFileFromArchive(
+        jarPath,
+        manifest,
+        tempPath,
+      );
+      if (!extractedPath) continue;
+
+      const parsed = await parseModsToml(
+        path.join(extractedPath, path.basename(manifest)),
+      );
+      if (!parsed) continue;
+
+      descriptor.environment = forgeTomlEnvironment(parsed);
+      if (Array.isArray(parsed.mods) && parsed.mods[0]?.modId) {
+        descriptor.modId = String(parsed.mods[0].modId);
+      }
+      descriptor.hardDeps = forgeDepIds(parsed.dependencies);
+      return descriptor;
+    }
+
+    return descriptor;
+  } catch {
+    return descriptor;
+  } finally {
+    if (tempPath && (await fs.pathExists(tempPath))) {
+      await fs.remove(tempPath).catch(() => {});
+    }
+  }
+}
+
+export async function getModEnvironment(
+  jarPath: string,
+): Promise<ModEnvironment | null> {
+  return (await getModDescriptor(jarPath)).environment;
+}
+
+export interface ServerModNode {
+  key: string;
+  modId: string | null;
+  hardDeps: string[];
+  onServer: boolean;
+}
+
+export function computeServerModExclusions(
+  nodes: ServerModNode[],
+): Set<string> {
+  const excludedIds = new Set<string>();
+  for (const node of nodes) {
+    if (!node.onServer && node.modId) {
+      excludedIds.add(node.modId.toLowerCase());
+    }
+  }
+
+  const excludedKeys = new Set<string>();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const node of nodes) {
+      if (!node.onServer || excludedKeys.has(node.key)) continue;
+
+      const dependsOnExcluded = node.hardDeps.some((dep) =>
+        excludedIds.has(dep.toLowerCase()),
+      );
+      if (dependsOnExcluded) {
+        excludedKeys.add(node.key);
+        if (node.modId) excludedIds.add(node.modId.toLowerCase());
+        changed = true;
+      }
+    }
+  }
+
+  return excludedKeys;
+}
+
 function extractModrinthIds(
   url: string,
 ): { modId: string; versionId: string } | null {
@@ -634,6 +902,7 @@ function createFallbackProjectFromModrinthFile(
           url: downloadUrl,
           sha1: file.hashes.sha1,
           isServer: file.env?.server ? file.env.server !== "unsupported" : true,
+          isClient: file.env?.client ? file.env.client !== "unsupported" : true,
         },
       ],
     },
@@ -727,7 +996,9 @@ async function findFileInRootOrOneChild(root: string, fileName: string) {
   const rootCandidate = path.join(root, fileName);
   if (await fs.pathExists(rootCandidate)) return rootCandidate;
 
-  const entries = await fs.readdir(root, { withFileTypes: true }).catch(() => []);
+  const entries = await fs
+    .readdir(root, { withFileTypes: true })
+    .catch(() => []);
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
 
@@ -799,9 +1070,12 @@ function toStringId(value: unknown) {
   return "";
 }
 
-function getPrismIndexProvider(
-  metadata: PrismIndexFile,
-): { provider: Provider; projectId: string; versionId: string; url: string } {
+function getPrismIndexProvider(metadata: PrismIndexFile): {
+  provider: Provider;
+  projectId: string;
+  versionId: string;
+  url: string;
+} {
   const modrinth = metadata.update?.modrinth;
   const curseforge = metadata.update?.curseforge;
 
@@ -888,7 +1162,9 @@ async function enrichPrismIndexedProjects(
     (async () => {
       const result: IProject[] = [];
       for (const chunk of chunkArray(curseForgeIds, 100)) {
-        const mods = await CurseForge.getMods(chunk.map(Number)).catch(() => []);
+        const mods = await CurseForge.getMods(chunk.map(Number)).catch(
+          () => [],
+        );
         result.push(...mods.map(cfModToProject));
       }
       return result;
@@ -937,13 +1213,17 @@ async function readPrismModIndexProjects(
         : (await fs.pathExists(originalPath))
           ? originalPath
           : "";
-      const stats = localPath ? await fs.stat(localPath).catch(() => null) : null;
+      const stats = localPath
+        ? await fs.stat(localPath).catch(() => null)
+        : null;
       const providerInfo = getPrismIndexProvider(metadata);
       const downloadHash =
         metadata.download?.["hash-format"] === "sha1"
           ? metadata.download?.hash || ""
           : "";
-      const sha1 = downloadHash || (localPath ? await getSha1(localPath).catch(() => "") : "");
+      const sha1 =
+        downloadHash ||
+        (localPath ? await getSha1(localPath).catch(() => "") : "");
 
       result.set(filename, {
         description: "",
@@ -954,7 +1234,10 @@ async function readPrismModIndexProjects(
         provider: providerInfo.provider,
         id: providerInfo.projectId || filename,
         version: {
-          id: providerInfo.versionId || metadata["x-prismlauncher-version-number"] || "local",
+          id:
+            providerInfo.versionId ||
+            metadata["x-prismlauncher-version-number"] ||
+            "local",
           dependencies: [],
           files: [
             {
@@ -1033,7 +1316,8 @@ async function prismModpackToModpack(
   });
 
   const loader = normalizeImportedLoader(loaderComponent?.uid) || "vanilla";
-  const loaderVersion = loader === "vanilla" ? undefined : loaderComponent?.version;
+  const loaderVersion =
+    loader === "vanilla" ? undefined : loaderComponent?.version;
   const minecraftVersion = minecraftComponent?.version;
 
   if (!minecraftVersion) return null;
@@ -1139,6 +1423,7 @@ export async function checkModpack(
   const conf = await fs.readJSON(confPath, "utf-8");
 
   let modpack: IModpack | null = null;
+  const extraFiles: IModpackExtraFile[] = [];
   if (provider == Provider.CURSEFORGE) {
     const cfModpack: CurseForgeModpack = conf;
     modpack = await cfModpackToModpack(cfModpack);
@@ -1206,7 +1491,17 @@ export async function checkModpack(
 
       const folder = getTopLevelFolder(file.path);
       const projectType = folderToProjectType(folder);
-      if (!projectType) continue;
+      if (!projectType) {
+        extraFiles.push({
+          path: file.path,
+          url: downloadUrl,
+          sha1: file.hashes.sha1,
+          size: file.fileSize,
+          isClient: file.env?.client ? file.env.client !== "unsupported" : true,
+          isServer: file.env?.server ? file.env.server !== "unsupported" : true,
+        });
+        continue;
+      }
 
       const ids = extractModrinthIds(downloadUrl);
       if (!ids) {
@@ -1256,6 +1551,9 @@ export async function checkModpack(
               isServer: file.env?.server
                 ? file.env.server !== "unsupported"
                 : true,
+              isClient: file.env?.client
+                ? file.env.client !== "unsupported"
+                : true,
             },
           ],
         },
@@ -1268,63 +1566,89 @@ export async function checkModpack(
   if (!modpack) return null;
 
   const contentRoot = confPath ? path.dirname(confPath) : modpackPath;
-  const overridesPath = path.join(contentRoot, "overrides");
-  if (await fs.pathExists(overridesPath)) {
-    const targetFolders = ["mods", "resourcepacks", "shaderpacks", "datapacks"];
-    const files = await getFilesRecursively(overridesPath, null, targetFolders);
-
-    for (const relativeFile of files) {
-      const folder = getTopLevelFolder(relativeFile);
-
-      if (!targetFolders.includes(folder)) continue;
-
-      const fileName = path.basename(relativeFile);
-      if (!fileName) continue;
-
-      const alreadyTracked = modpack.mods.some((mod) =>
-        mod.version?.files.some((file) => file.filename === fileName),
-      );
-      if (alreadyTracked) continue;
-      if (relativeFile.replace(/\\/g, "/").startsWith("mods/.index/")) continue;
-
-      const projectType = folderToProjectType(folder);
-      if (!projectType) continue;
-
-      const absoluteFilePath = path.join(overridesPath, relativeFile);
-
-      const info = await checkLocalMod(absoluteFilePath);
-
-      modpack.mods.push({
-        description: info?.description || "",
-        iconUrl: info?.icon || "",
-        title: info?.name || fileName,
-        projectType,
-        url: "",
-        provider: Provider.LOCAL,
-        id: info?.id || fileName,
-        version: {
-          id: info?.version || "local",
-          dependencies: [],
-          files: [
-            {
-              filename: fileName,
-              size: info?.size || 0,
-              url: pathToFileURL(absoluteFilePath).href,
-              localPath: absoluteFilePath,
-              sha1: info?.sha1 || "",
-              isServer: true,
-            },
-          ],
-        },
-      });
-    }
-  }
+  await scanOverrideMods(path.join(contentRoot, "overrides"), modpack, false);
+  await scanOverrideMods(
+    path.join(contentRoot, "client-overrides"),
+    modpack,
+    true,
+  );
 
   return {
     ...modpack,
     folderPath: contentRoot,
     image: pack?.iconUrl || modpack.image,
+    extraFiles: extraFiles.length ? extraFiles : modpack.extraFiles,
   };
+}
+
+async function scanOverrideMods(
+  overridesPath: string,
+  modpack: IModpack,
+  clientOnly: boolean,
+) {
+  if (!(await fs.pathExists(overridesPath))) return;
+
+  const targetFolders = ["mods", "resourcepacks", "shaderpacks", "datapacks"];
+  const files = await getFilesRecursively(overridesPath, null, targetFolders);
+
+  for (const relativeFile of files) {
+    const folder = getTopLevelFolder(relativeFile);
+
+    if (!targetFolders.includes(folder)) continue;
+
+    const fileName = path.basename(relativeFile);
+    if (!fileName) continue;
+
+    const alreadyTracked = modpack.mods.some((mod) =>
+      mod.version?.files.some((file) => file.filename === fileName),
+    );
+    if (alreadyTracked) continue;
+    if (relativeFile.replace(/\\/g, "/").startsWith("mods/.index/")) continue;
+
+    const projectType = folderToProjectType(folder);
+    if (!projectType) continue;
+
+    const absoluteFilePath = path.join(overridesPath, relativeFile);
+
+    const info = await checkLocalMod(absoluteFilePath);
+
+    let isServer = true;
+    let isClient = true;
+    if (projectType === ProjectType.MOD) {
+      if (clientOnly) {
+        isServer = false;
+      } else {
+        const environment = await getModEnvironment(absoluteFilePath);
+        isServer = environment !== "client";
+        isClient = environment !== "server";
+      }
+    }
+
+    modpack.mods.push({
+      description: info?.description || "",
+      iconUrl: info?.icon || "",
+      title: info?.name || fileName,
+      projectType,
+      url: "",
+      provider: Provider.LOCAL,
+      id: info?.id || fileName,
+      version: {
+        id: info?.version || "local",
+        dependencies: [],
+        files: [
+          {
+            filename: fileName,
+            size: info?.size || 0,
+            url: pathToFileURL(absoluteFilePath).href,
+            localPath: absoluteFilePath,
+            sha1: info?.sha1 || "",
+            isServer,
+            isClient,
+          },
+        ],
+      },
+    });
+  }
 }
 
 export function projetTypeToFolder(type: ProjectType): string {

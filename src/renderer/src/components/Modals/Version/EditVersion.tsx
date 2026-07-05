@@ -146,10 +146,12 @@ export function EditVersion({
   closeModal,
   vd,
   runGame,
+  onServerInstalled,
 }: {
   closeModal: () => void;
   vd?: VersionDiffence;
   runGame: (params: RunGameParams) => Promise<void>;
+  onServerInstalled?: () => void;
 }) {
   const [account] = useAtom(accountAtom);
   const [version, setVersion] = useAtom(selectedVersionAtom);
@@ -345,7 +347,7 @@ export function EditVersion({
 
   const canSave = useMemo(() => {
     if (!version) return false;
-    if (isLoading) return false;
+    if (isLoading || isInstallActive) return false;
     if (!hasChanges) return false;
     if (!isNameValid) return false;
     if (version.version.owner && account && !isOwnerVersion) {
@@ -355,6 +357,7 @@ export function EditVersion({
   }, [
     version,
     isLoading,
+    isInstallActive,
     hasChanges,
     isNameValid,
     account,
@@ -647,7 +650,7 @@ export function EditVersion({
   return (
     <>
       <Dialog
-        open={!(isLoading && isInstallActive)}
+        open={!(isLoading && isInstallActive) && !isServerCreate}
         onOpenChange={(open) => {
           if (open) return;
           handleRequestClose();
@@ -824,7 +827,7 @@ export function EditVersion({
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={isLoading || !isInternetOnline}
+                  disabled={isLoading || isInstallActive || !isInternetOnline}
                   onClick={async () => {
                     if (!version) return;
 
@@ -1174,7 +1177,10 @@ export function EditVersion({
 
       {isServerCreate && (
         <CreateServer
-          close={() => setIsServerCreate(false)}
+          close={(isSuccess) => {
+            setIsServerCreate(false);
+            if (isSuccess) onServerInstalled?.();
+          }}
           serverCores={serverCores}
         />
       )}

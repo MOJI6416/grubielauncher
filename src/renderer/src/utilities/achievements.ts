@@ -25,6 +25,10 @@ import {
   Swords,
   Timer,
   Coins,
+  Download,
+  Palette,
+  Shirt,
+  Users,
 } from "lucide-react";
 import { IAchievementStats } from "@/types/Achievements";
 
@@ -34,7 +38,8 @@ export type AchievementCategory =
   | "combat"
   | "survival"
   | "craft"
-  | "playtime";
+  | "playtime"
+  | "community";
 
 export type AchievementRarity = "common" | "rare" | "epic" | "legendary";
 
@@ -44,10 +49,11 @@ type MetricUnit = "count" | "km" | "ticksHours" | "secondsHours";
 export interface IAchievementDef {
   id: string;
   category: AchievementCategory;
-  metric: MetricKey;
-  goal: number;
+  metric?: MetricKey;
+  goal?: number;
   points: number;
-  unit: MetricUnit;
+  unit?: MetricUnit;
+  granted?: boolean;
   icon: LucideIcon;
 }
 
@@ -66,6 +72,7 @@ export const CATEGORY_ORDER: AchievementCategory[] = [
   "survival",
   "craft",
   "playtime",
+  "community",
 ];
 
 export const CATEGORY_ICON: Record<AchievementCategory, LucideIcon> = {
@@ -75,6 +82,7 @@ export const CATEGORY_ICON: Record<AchievementCategory, LucideIcon> = {
   survival: HeartCrack,
   craft: Hammer,
   playtime: Hourglass,
+  community: Users,
 };
 
 const KM = 100_000;
@@ -123,6 +131,11 @@ export const ACHIEVEMENTS: IAchievementDef[] = [
   { id: "pt100", category: "playtime", metric: "playTimeSeconds", goal: 100 * HOUR_SECONDS, points: 30, unit: "secondsHours", icon: Clock },
   { id: "pt500", category: "playtime", metric: "playTimeSeconds", goal: 500 * HOUR_SECONDS, points: 60, unit: "secondsHours", icon: Hourglass },
   { id: "pt1000", category: "playtime", metric: "playTimeSeconds", goal: 1000 * HOUR_SECONDS, points: 100, unit: "secondsHours", icon: Timer },
+
+  { id: "skin_first", category: "community", points: 20, granted: true, icon: Shirt },
+  { id: "skin_author_10", category: "community", points: 45, granted: true, icon: Palette },
+  { id: "skin_downloads_100", category: "community", points: 35, granted: true, icon: Download },
+  { id: "skin_downloads_1000", category: "community", points: 80, granted: true, icon: Flame },
 ];
 
 const ACHIEVEMENTS_BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -154,12 +167,22 @@ export function evaluateAchievements(
 ): IAchievementProgress[] {
   const earned = new Set(earnedIds ?? []);
   return ACHIEVEMENTS.map((def) => {
-    const value = metricValue(def.metric, stats, playTimeSeconds);
-    const unlocked = value >= def.goal || earned.has(def.id);
+    if (def.granted) {
+      const unlocked = earned.has(def.id);
+      return {
+        def,
+        value: 0,
+        unlocked,
+        ratio: unlocked ? 1 : 0,
+        rarity: rarityOf(def.points),
+      };
+    }
+    const value = metricValue(def.metric!, stats, playTimeSeconds);
+    const unlocked = value >= def.goal! || earned.has(def.id);
     const ratio = unlocked
       ? 1
-      : def.goal > 0
-        ? Math.min(1, value / def.goal)
+      : def.goal! > 0
+        ? Math.min(1, value / def.goal!)
         : 0;
     return {
       def,

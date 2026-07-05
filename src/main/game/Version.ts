@@ -43,6 +43,7 @@ import {
 } from "../utilities/loaderInstallerProgress";
 import { assertSafeVersionName } from "@/shared/versionName";
 import { buildMemoryArguments } from "@/shared/jvmDefaults";
+import { mcVersionToJavaMajor } from "@/shared/javaVersions";
 import { assertTrustedDownloadUrl } from "../utilities/trustedHosts";
 import { resolveOfflineUuid } from "../utilities/offlineUuidMigration";
 
@@ -142,7 +143,10 @@ export class Version {
     if (isExistsManifest) {
       await this.readManifest();
       if (this.manifest) {
-        const java = new Java(this.manifest.javaVersion.majorVersion);
+        const java = new Java(
+      this.manifest.javaVersion?.majorVersion ??
+        mcVersionToJavaMajor(this.version.version.id),
+    );
         await java.init();
         this.javaPath = java.javaPath;
       }
@@ -299,7 +303,10 @@ export class Version {
     }
 
     this.sendInstallProgress("java", 18, true);
-    const java = new Java(this.manifest.javaVersion.majorVersion);
+    const java = new Java(
+      this.manifest.javaVersion?.majorVersion ??
+        mcVersionToJavaMajor(this.version.version.id),
+    );
     const needsJavaBeforeLoader = ["forge", "neoforge"].includes(
       this.version.loader.name,
     );

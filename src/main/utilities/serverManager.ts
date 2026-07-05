@@ -5,6 +5,86 @@ import { IVersionConf } from '@/types/IVersion'
 import { getLauncherPaths } from './other'
 import { readNBT } from './nbt'
 
+export const AIKAR_FLAGS =
+  '-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 ' +
+  '-XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch ' +
+  '-XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M ' +
+  '-XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 ' +
+  '-XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 ' +
+  '-XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 ' +
+  '-XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 ' +
+  '-Dusing.aikars.flags=https://mcflags.emc.gs -Daikars.new.flags=true'
+
+export async function setServerAikarFlags(serverPath: string, enabled: boolean) {
+  for (const name of ['run.bat', 'run.sh', 'user_jvm_args.txt']) {
+    const filePath = path.join(serverPath, name)
+    if (!(await fs.pathExists(filePath))) continue
+
+    let data = await fs.readFile(filePath, 'utf-8')
+    const hasAikar = data.includes(AIKAR_FLAGS)
+
+    if (enabled && !hasAikar) {
+      data = data.replace(
+        /-Xmx(\d+)([MG])/,
+        (match, size, unit) => `-Xms${size}${unit} ${match} ${AIKAR_FLAGS}`
+      )
+    } else if (!enabled && hasAikar) {
+      data = data.split(` ${AIKAR_FLAGS}`).join('').split(AIKAR_FLAGS).join('')
+      data = data.replace(/-Xms\d+[MG]\s+(?=-Xmx)/, '')
+    } else {
+      continue
+    }
+
+    await fs.writeFile(filePath, data, 'utf-8')
+  }
+}
+
+export const SERVER_PROTECTED_ENTRIES = [
+  'server.properties',
+  'eula.txt',
+  'ops.json',
+  'whitelist.json',
+  'banned-players.json',
+  'banned-ips.json',
+  'usercache.json',
+  'world',
+  'world_nether',
+  'world_the_end',
+  'logs',
+  'crash-reports'
+]
+
+export async function syncServerExtraFiles(
+  versionPath: string,
+  serverPath: string,
+  syncDirs: string[]
+) {
+  if (!(await fs.pathExists(serverPath))) return
+
+  for (const dir of syncDirs) {
+    const source = path.join(versionPath, dir)
+    if (!(await fs.pathExists(source))) continue
+
+    await fs.copy(source, path.join(serverPath, dir), { overwrite: true }).catch(() => {})
+  }
+
+  const serverOverrides = path.join(versionPath, 'storage', 'server-overrides')
+  if (!(await fs.pathExists(serverOverrides))) return
+
+  const entries = await fs.readdir(serverOverrides).catch(() => [] as string[])
+  for (const entry of entries) {
+    const destination = path.join(serverPath, entry)
+
+    if (SERVER_PROTECTED_ENTRIES.includes(entry) && (await fs.pathExists(destination))) {
+      continue
+    }
+
+    await fs
+      .copy(path.join(serverOverrides, entry), destination, { overwrite: true })
+      .catch(() => {})
+  }
+}
+
 export async function replaceXmxParameter(serverPath: string, memory: string) {
   function replace(data: string, memory: string): string {
     return data

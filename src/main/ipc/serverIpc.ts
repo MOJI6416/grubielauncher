@@ -6,6 +6,7 @@ import {
   getServerSettings,
   getServersOfVersions,
   replaceXmxParameter,
+  setServerAikarFlags,
   updateServerProperty
 } from '../utilities/serverManager'
 import { readNBT, writeNBT } from '../utilities/nbt'
@@ -18,11 +19,28 @@ import { handleSafe } from '../utilities/ipc'
 export function registerServerIpc() {
   handleSafe<
     { success: boolean; error?: string },
-    [ILocalAccount | undefined, number, string, string, IServerConf, IVersionConf?]
+    [
+      ILocalAccount | undefined,
+      number,
+      string,
+      string,
+      IServerConf,
+      IVersionConf?,
+      { keepProgressOpen?: boolean }?
+    ]
   >(
     'server:install',
     { success: false, error: 'Server installation failed.' },
-    async (_, account, downloadLimit, versionPath, serverPath, conf, versionConf) => {
+    async (
+      _,
+      account,
+      downloadLimit,
+      versionPath,
+      serverPath,
+      conf,
+      versionConf,
+      options
+    ) => {
       const installer = new ServerGame(
         account,
         downloadLimit,
@@ -33,7 +51,7 @@ export function registerServerIpc() {
       )
 
       try {
-        await installer.install()
+        await installer.install(options)
         return { success: true }
       } catch (error) {
         console.error('[server:install] failed:', error)
@@ -104,6 +122,15 @@ export function registerServerIpc() {
     false,
     async (_, serverPath, memory) => {
       await replaceXmxParameter(serverPath, `${memory}M`)
+      return true
+    }
+  )
+
+  handleSafe<boolean, [string, boolean]>(
+    'server:setAikar',
+    false,
+    async (_, serverPath, enabled) => {
+      await setServerAikarFlags(serverPath, enabled)
       return true
     }
   )

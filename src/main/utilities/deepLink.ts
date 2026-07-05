@@ -67,6 +67,21 @@ export function parseLauncherDeepLink(rawUrl: string): LauncherDeepLink | null {
     };
   }
 
+  if (url.hostname === "skin") {
+    let id: string;
+    try {
+      id = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+    } catch {
+      return null;
+    }
+    if (!PACK_CODE_PATTERN.test(id)) return null;
+
+    return {
+      type: "skin",
+      id,
+    };
+  }
+
   return null;
 }
 

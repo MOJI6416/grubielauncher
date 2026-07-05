@@ -12,7 +12,15 @@ import { IModpack, IModpackUpdate, UploadFileProgress } from "@/types/Backend";
 import { IFriendSettingsUpdate, IUpdateUser, IUser } from "@/types/IUser";
 import { IGroup, IVoiceTokenResponse } from "@/types/Voice";
 import { INews, ISponsoredNewsAd } from "@/types/News";
-import { IGrubieSkin, SkinsData } from "@/types/SkinManager";
+import {
+  CatalogListParams,
+  CatalogListResult,
+  ICatalogSkin,
+  IGrubieSkin,
+  MyCommunityResult,
+  PublishCommunityResult,
+  SkinsData,
+} from "@/types/SkinManager";
 import { LoaderVersion } from "@/types/VersionsService";
 import { DownloadSource, TSettings, VoicePttBind } from "@/types/Settings";
 import {
@@ -493,9 +501,11 @@ export interface IElectronAPI {
       serverPath: string,
       conf: IServerConf,
       versionConf?: IVersionConf,
+      options?: { keepProgressOpen?: boolean },
     ) => Promise<{ success: boolean; error?: string }>;
     getSettings: (filePath: string) => Promise<IServerSettings>;
     editXmx: (serverPath: string, memory: number) => Promise<void>;
+    setAikar: (serverPath: string, enabled: boolean) => Promise<boolean>;
     updateProperties: (
       filePath: string,
       settings: IServerSettings,
@@ -564,6 +574,36 @@ export interface IElectronAPI {
       newName: string,
     ) => Promise<SkinsData | null>;
     clearManager: (userId: string, platform: string) => Promise<boolean>;
+    catalog: {
+      list: (params?: CatalogListParams) => Promise<CatalogListResult>;
+      download: (id: string) => Promise<{ downloads: number } | null>;
+      get: (id: string) => Promise<ICatalogSkin | null>;
+    };
+    publishCommunity: (
+      userId: string,
+      platform: string,
+      skinId: string,
+      backendToken: string,
+      name?: string,
+      type?: "skin" | "cape" | "pack",
+      tags?: string,
+    ) => Promise<PublishCommunityResult>;
+    tags: {
+      suggest: (q?: string, limit?: number) => Promise<string[]>;
+    };
+    importPack: (
+      userId: string,
+      platform: string,
+      skinUrl: string,
+      capeUrl: string,
+    ) => Promise<{ ok: boolean }>;
+    community: {
+      mine: (backendToken: string) => Promise<MyCommunityResult>;
+      delete: (
+        backendToken: string,
+        id: string,
+      ) => Promise<{ ok: boolean }>;
+    };
   };
   modManager: {
     search: (
@@ -612,6 +652,10 @@ export interface IElectronAPI {
       selectVersion?: IVersionModManager,
     ) => Promise<IModpackModManager | null>;
     ptToFolder: (type: ProjectType) => Promise<string>;
+    resolveCfDownload: (
+      fileId: number,
+      fileName: string,
+    ) => Promise<string | null>;
     compareMods: (
       mods1: ILocalProject[],
       mods2: ILocalProject[],
@@ -1123,6 +1167,7 @@ export const api = {
       serverPath: string,
       conf: IServerConf,
       versionConf?: IVersionConf,
+      options?: { keepProgressOpen?: boolean },
     ) =>
       ipcRenderer.invoke(
         "server:install",
@@ -1132,11 +1177,14 @@ export const api = {
         serverPath,
         conf,
         versionConf,
+        options,
       ),
     getSettings: (filePath: string) =>
       ipcRenderer.invoke("server:getSettings", filePath),
     editXmx: (serverPath: string, memory: number) =>
       ipcRenderer.invoke("server:editXmx", serverPath, memory),
+    setAikar: (serverPath: string, enabled: boolean) =>
+      ipcRenderer.invoke("server:setAikar", serverPath, enabled),
     updateProperties: (filePath: string, settings: IServerSettings) =>
       ipcRenderer.invoke("server:updateProperties", filePath, settings),
   },
@@ -1207,6 +1255,55 @@ export const api = {
       ipcRenderer.invoke("skins:renameSkin", userId, platform, skinId, newName),
     clearManager: (userId: string, platform: string) =>
       ipcRenderer.invoke("skins:clearManager", userId, platform),
+    catalog: {
+      list: (params?: CatalogListParams) =>
+        ipcRenderer.invoke("skins:catalogList", params),
+      download: (id: string) =>
+        ipcRenderer.invoke("skins:catalogDownload", id),
+      get: (id: string) => ipcRenderer.invoke("skins:catalogItem", id),
+    },
+    publishCommunity: (
+      userId: string,
+      platform: string,
+      skinId: string,
+      backendToken: string,
+      name?: string,
+      type?: "skin" | "cape" | "pack",
+      tags?: string,
+    ) =>
+      ipcRenderer.invoke(
+        "skins:publishCommunity",
+        userId,
+        platform,
+        skinId,
+        backendToken,
+        name,
+        type,
+        tags,
+      ),
+    tags: {
+      suggest: (q?: string, limit?: number) =>
+        ipcRenderer.invoke("skins:tagsSuggest", q, limit),
+    },
+    importPack: (
+      userId: string,
+      platform: string,
+      skinUrl: string,
+      capeUrl: string,
+    ) =>
+      ipcRenderer.invoke(
+        "skins:importPack",
+        userId,
+        platform,
+        skinUrl,
+        capeUrl,
+      ),
+    community: {
+      mine: (backendToken: string) =>
+        ipcRenderer.invoke("skins:communityMine", backendToken),
+      delete: (backendToken: string, id: string) =>
+        ipcRenderer.invoke("skins:communityDelete", backendToken, id),
+    },
   },
   modManager: {
     search: (
@@ -1257,6 +1354,8 @@ export const api = {
       ),
     ptToFolder: (type: ProjectType) =>
       ipcRenderer.invoke("modManager:ptToFolder", type),
+    resolveCfDownload: (fileId: number, fileName: string) =>
+      ipcRenderer.invoke("modManager:resolveCfDownload", fileId, fileName),
     compareMods: (mods1: ILocalProject[], mods2: ILocalProject[]) =>
       ipcRenderer.invoke("modManager:compareMods", mods1, mods2),
   },
