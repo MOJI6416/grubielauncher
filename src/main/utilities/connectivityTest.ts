@@ -130,10 +130,10 @@ const CHECKS: ConnectivityCheck[] = [
   },
   {
     id: 'curseforge_cdn',
-    name: 'CurseForge CDN',
+    name: 'CurseForge Files CDN',
     group: 'mods',
     kind: 'http',
-    url: 'https://cdn.curseforge.com/'
+    url: 'https://mediafilez.forgecdn.net/'
   },
   {
     id: 'fabric_meta',
@@ -158,10 +158,17 @@ const CHECKS: ConnectivityCheck[] = [
   },
   {
     id: 'adoptium_api',
-    name: 'Adoptium (Java)',
+    name: 'Adoptium API (Java)',
     group: 'java',
     kind: 'http',
     url: 'https://api.adoptium.net/'
+  },
+  {
+    id: 'java_cdn',
+    name: 'GitHub Release CDN (Java)',
+    group: 'java',
+    kind: 'http',
+    url: 'https://release-assets.githubusercontent.com/'
   }
 ]
 

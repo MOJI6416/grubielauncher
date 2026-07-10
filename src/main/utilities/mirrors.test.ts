@@ -23,9 +23,44 @@ describe("toMirrorUrl", () => {
     ).toBe(`${MIRROR_BASE}/meta-fabric/v2/versions/loader/1.20?x=1`);
   });
 
-  it("returns null for unmapped hosts, non-https and junk", () => {
-    expect(toMirrorUrl("https://cdn.modrinth.com/x")).toBeNull();
+  it("maps the Modrinth CDN to the /modrinth/ prefix", () => {
+    expect(
+      toMirrorUrl(
+        "https://cdn.modrinth.com/data/AANobbMI/versions/vf7UgZpC/sodium.jar",
+      ),
+    ).toBe(`${MIRROR_BASE}/modrinth/data/AANobbMI/versions/vf7UgZpC/sodium.jar`);
+  });
+
+  it("maps both CurseForge file hosts to one /forgecdn/ prefix (mediafilez)", () => {
+    const path = "/files/3040/523/jei_1.12.2-4.16.1.301.jar";
+    expect(toMirrorUrl(`https://edge.forgecdn.net${path}`)).toBe(
+      `${MIRROR_BASE}/forgecdn${path}`,
+    );
+    expect(toMirrorUrl(`https://mediafilez.forgecdn.net${path}`)).toBe(
+      `${MIRROR_BASE}/forgecdn${path}`,
+    );
+  });
+
+  it("maps Adoptium Temurin GitHub release assets to the /temurin/ prefix", () => {
+    const asset =
+      "/adoptium/temurin21-binaries/releases/download/jdk-21.0.11%2B10/OpenJDK21U-jre_x64_windows_hotspot_21.0.11_10.zip";
+    expect(toMirrorUrl(`https://github.com${asset}`)).toBe(
+      `${MIRROR_BASE}/temurin${asset}`,
+    );
+  });
+
+  it("only mirrors Adoptium release-download paths on github.com", () => {
     expect(toMirrorUrl("https://github.com/x")).toBeNull();
+    expect(
+      toMirrorUrl("https://github.com/adoptium/temurin21-binaries"),
+    ).toBeNull();
+    expect(
+      toMirrorUrl("https://github.com/someone/mod/releases/download/v1/mod.jar"),
+    ).toBeNull();
+  });
+
+  it("returns null for unmapped hosts, non-https and junk", () => {
+    expect(toMirrorUrl("https://cdn.curseforge.com/x")).toBeNull();
     expect(toMirrorUrl("http://libraries.minecraft.net/x")).toBeNull();
     expect(toMirrorUrl("file:///tmp/x")).toBeNull();
     expect(toMirrorUrl("not a url")).toBeNull();
@@ -37,9 +72,9 @@ describe("resolveDownloadCandidates", () => {
   const mirrorLib = `${MIRROR_BASE}/libraries/a.jar`;
 
   it("returns only the original for hosts we don't mirror", () => {
-    const modrinth = "https://cdn.modrinth.com/x";
-    expect(resolveDownloadCandidates(modrinth, "auto", false)).toEqual([
-      modrinth,
+    const curseforge = "https://cdn.curseforge.com/x";
+    expect(resolveDownloadCandidates(curseforge, "auto", false)).toEqual([
+      curseforge,
     ]);
   });
 
@@ -69,6 +104,21 @@ describe("resolveDownloadCandidates", () => {
     expect(resolveDownloadCandidates(lib, "auto", false)).toEqual([
       mirrorLib,
       lib,
+    ]);
+  });
+
+  it("gives Adoptium Java a mirror fallback instead of a single source", () => {
+    const java =
+      "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.11%2B10/OpenJDK21U-jre_x64_windows_hotspot_21.0.11_10.zip";
+    const mirrorJava =
+      `${MIRROR_BASE}/temurin/adoptium/temurin21-binaries/releases/download/jdk-21.0.11%2B10/OpenJDK21U-jre_x64_windows_hotspot_21.0.11_10.zip`;
+    expect(resolveDownloadCandidates(java, "auto", false)).toEqual([
+      mirrorJava,
+      java,
+    ]);
+    expect(resolveDownloadCandidates(java, "auto", true)).toEqual([
+      java,
+      mirrorJava,
     ]);
   });
 });

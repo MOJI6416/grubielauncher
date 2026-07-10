@@ -29,6 +29,15 @@ import {
   Palette,
   Shirt,
   Users,
+  Package,
+  PackageCheck,
+  Boxes,
+  Rocket,
+  UserPlus,
+  UsersRound,
+  Mic,
+  Headphones,
+  AudioLines,
 } from "lucide-react";
 import { IAchievementStats } from "@/types/Achievements";
 
@@ -136,6 +145,17 @@ export const ACHIEVEMENTS: IAchievementDef[] = [
   { id: "skin_author_10", category: "community", points: 45, granted: true, icon: Palette },
   { id: "skin_downloads_100", category: "community", points: 35, granted: true, icon: Download },
   { id: "skin_downloads_1000", category: "community", points: 80, granted: true, icon: Flame },
+
+  { id: "modpack_first", category: "community", points: 15, granted: true, icon: Package },
+  { id: "modpack_downloads_5", category: "community", points: 20, granted: true, icon: PackageCheck },
+  { id: "modpack_downloads_25", category: "community", points: 35, granted: true, icon: Boxes },
+  { id: "modpack_downloads_100", category: "community", points: 55, granted: true, icon: Rocket },
+  { id: "friends_10", category: "community", points: 20, granted: true, icon: UserPlus },
+  { id: "group_popular", category: "community", points: 30, granted: true, icon: UsersRound },
+
+  { id: "voice_1h", category: "community", points: 15, granted: true, icon: Mic },
+  { id: "voice_10h", category: "community", points: 30, granted: true, icon: Headphones },
+  { id: "voice_50h", category: "community", points: 55, granted: true, icon: AudioLines },
 ];
 
 const ACHIEVEMENTS_BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));

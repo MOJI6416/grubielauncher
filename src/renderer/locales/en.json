@@ -1496,6 +1496,42 @@
       "skin_downloads_1000": {
         "name": "Gallery Hit",
         "desc": "One of your skins was taken 1000 times"
+      },
+      "modpack_first": {
+        "name": "Pack Author",
+        "desc": "Publish your first modpack to the catalog"
+      },
+      "modpack_downloads_5": {
+        "name": "First Downloads",
+        "desc": "Your modpack was downloaded 5 times"
+      },
+      "modpack_downloads_25": {
+        "name": "Gaining Traction",
+        "desc": "Your modpack was downloaded 25 times"
+      },
+      "modpack_downloads_100": {
+        "name": "Crowd Favorite",
+        "desc": "Your modpack was downloaded 100 times"
+      },
+      "friends_10": {
+        "name": "Inner Circle",
+        "desc": "Add 10 friends"
+      },
+      "group_popular": {
+        "name": "Life of the Party",
+        "desc": "Gather 10 members in your group"
+      },
+      "voice_1h": {
+        "name": "First Contact",
+        "desc": "Spend 1 hour in voice chat"
+      },
+      "voice_10h": {
+        "name": "Always On",
+        "desc": "Spend 10 hours in voice chat"
+      },
+      "voice_50h": {
+        "name": "Voice of the Community",
+        "desc": "Spend 50 hours in voice chat"
       }
     }
   },

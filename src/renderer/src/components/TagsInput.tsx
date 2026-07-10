@@ -3,6 +3,8 @@ import { Loader2, X } from "lucide-react";
 
 const api = window.api;
 
+const RESERVED_TAGS = new Set(["official"]);
+
 function normalizeTag(raw: string): string {
   return raw
     .toLowerCase()
@@ -40,7 +42,11 @@ export function TagsInput({
         const data = await api.skins.tags.suggest(input.trim());
         if (cancelled) return;
         setSuggestions(
-          data.filter((entry) => !value.includes(entry)).slice(0, 8),
+          data
+            .filter(
+              (entry) => !value.includes(entry) && !RESERVED_TAGS.has(entry),
+            )
+            .slice(0, 8),
         );
       } finally {
         if (!cancelled) setLoading(false);
@@ -54,7 +60,8 @@ export function TagsInput({
 
   const addTag = (raw: string) => {
     const tag = normalizeTag(raw);
-    if (!tag || value.includes(tag) || value.length >= max) return;
+    if (!tag || RESERVED_TAGS.has(tag) || value.includes(tag) || value.length >= max)
+      return;
     onChange([...value, tag]);
     setInput("");
     inputRef.current?.focus();
