@@ -33,6 +33,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "@renderer/utilities/file";
 import { buildPackShareUrl } from "@renderer/utilities/packShare";
+import { getLocalPathFromFileUrl } from "@renderer/utilities/exportVersion";
 import { Confirmation } from "../../Confirmation";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
@@ -416,16 +417,23 @@ export function Share({
           stage: "uploadingLogo",
           percent: 82,
         });
-        const response = await fetch(selectedVersion.version.image);
-        const blob = await response.blob();
-        const arrayBuffer = await blob.arrayBuffer();
-        const buffer = new Uint8Array(arrayBuffer);
         const tmpPath = await api.path.join(
           await api.other.getPath("temp"),
           `logo_${shareCode}.png`,
         );
 
-        await api.fs.writeFile(tmpPath, buffer);
+        if (selectedVersion.version.image.startsWith("file://")) {
+          await api.fs.copy(
+            getLocalPathFromFileUrl(selectedVersion.version.image),
+            tmpPath,
+          );
+        } else {
+          const response = await fetch(selectedVersion.version.image);
+          const buffer = new Uint8Array(
+            await (await response.blob()).arrayBuffer(),
+          );
+          await api.fs.writeFile(tmpPath, buffer);
+        }
 
         const upload = await api.backend.uploadFileFromPath(
           account.accessToken!,

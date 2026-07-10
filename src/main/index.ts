@@ -50,7 +50,7 @@ function setupContentSecurityPolicy() {
             "img-src 'self' data: blob: https: http:",
             "media-src 'self' data: blob:",
             "font-src 'self' data:",
-            "connect-src 'self' https: http: ws: wss:",
+            "connect-src 'self' blob: https: http: ws: wss:",
           ].join("; "),
         ],
       },
