@@ -4,13 +4,15 @@ import { fileURLToPath } from 'url'
 import { getDirectories, getSha1, getTotalSizes } from '../utilities/files'
 import { createZipArchive, extractZip } from '../utilities/archiver'
 import { handleSafe } from '../utilities/ipc'
-import { assertWritablePath } from '../utilities/safePath'
+import { assertReadablePath, assertWritablePath } from '../utilities/safePath'
+import { writeJsonAtomic } from '../utilities/atomicJson'
 
 type DirEntry = { path: string; type: 'folder' | 'file' }
 
 
 export function registerFsIpc() {
   handleSafe<DirEntry[]>('fs:readdirWithTypes', [], async (_, folderPath: string) => {
+    assertReadablePath(folderPath, 'fs:readdirWithTypes')
     const entries = await fs.readdir(folderPath, { withFileTypes: true })
 
     const result: DirEntry[] = await Promise.all(
@@ -43,15 +45,18 @@ export function registerFsIpc() {
   })
 
   handleSafe<string[]>('fs:getDirectories', [], async (_, source: string) => {
+    assertReadablePath(source, 'fs:getDirectories')
     return await getDirectories(source)
   })
 
   handleSafe<string>('fs:readFile', '', async (_, filePath: string, encoding: BufferEncoding = 'utf-8') => {
+    assertReadablePath(filePath, 'fs:readFile')
     return await fs.readFile(filePath, encoding)
   })
 
   handleSafe<Uint8Array | null>('fs:readFileBuffer', null, async (_, target: string) => {
     const filePath = target.startsWith('file:') ? fileURLToPath(target) : target
+    assertReadablePath(filePath, 'fs:readFileBuffer')
     const buffer = await fs.readFile(filePath)
     return new Uint8Array(buffer)
   })
@@ -80,6 +85,7 @@ export function registerFsIpc() {
   })
 
   handleSafe<boolean>('fs:copy', false, async (_, srcPath: string, destPath: string) => {
+    assertReadablePath(srcPath, 'fs:copy')
     assertWritablePath(destPath, 'fs:copy')
     await fs.copy(srcPath, destPath, { overwrite: true })
     return true
@@ -92,10 +98,12 @@ export function registerFsIpc() {
   })
 
   handleSafe<boolean>('fs:pathExists', false, async (_, targetPath: string) => {
+    assertReadablePath(targetPath, 'fs:pathExists')
     return await fs.pathExists(targetPath)
   })
 
   handleSafe<string>('fs:sha1', '', async (_, filePath: string) => {
+    assertReadablePath(filePath, 'fs:sha1')
     return await getSha1(filePath)
   })
 
@@ -107,10 +115,12 @@ export function registerFsIpc() {
   })
 
   handleSafe<string[]>('fs:readdir', [], async (_, dirPath: string) => {
+    assertReadablePath(dirPath, 'fs:readdir')
     return await fs.readdir(dirPath)
   })
 
   handleSafe<boolean>('fs:extractZip', false, async (_, zipPath: string, destination: string) => {
+    assertReadablePath(zipPath, 'fs:extractZip')
     assertWritablePath(destination, 'fs:extractZip')
     await extractZip(zipPath, destination)
     return true
@@ -125,15 +135,17 @@ export function registerFsIpc() {
 
   handleSafe<boolean>('fs:writeJSON', false, async (_, filePath: string, data: any) => {
     assertWritablePath(filePath, 'fs:writeJSON')
-    await fs.writeJSON(filePath, data, { encoding: 'utf-8', spaces: 2 })
+    await writeJsonAtomic(filePath, data)
     return true
   })
 
   handleSafe<any>('fs:readJSON', null, async (_, filePath: string, encoding?: BufferEncoding) => {
+    assertReadablePath(filePath, 'fs:readJSON')
     return await fs.readJSON(filePath, { encoding })
   })
 
   handleSafe<boolean>('fs:isDirectory', false, async (_, targetPath: string) => {
+    assertReadablePath(targetPath, 'fs:isDirectory')
     const stats = await fs.stat(targetPath)
     return stats.isDirectory()
   })

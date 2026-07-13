@@ -3,12 +3,17 @@ import {
   IWorldStatistics,
   IWorldStatsAggregate,
 } from "@/types/World";
-import { IAchievementStats, EMPTY_ACHIEVEMENT_STATS } from "@/types/Achievements";
+import {
+  IAchievementStats,
+  IAchievementStatsResult,
+  EMPTY_ACHIEVEMENT_STATS,
+} from "@/types/Achievements";
 import { getLauncherPaths, toUUID } from "./other";
 import { getOfflineUuidCandidates } from "./offlineUuidMigration";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { jwtDecode } from "jwt-decode";
 import { deserialize, serialize } from "@xmcl/nbt";
+import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs-extra";
 import zlib from "zlib";
@@ -412,20 +417,58 @@ function accumulateWorldStats(
   acc.wardenKills += statValue(killed, "warden");
 }
 
+const WORLD_ID_MARKER = ".grubie-world-id";
+const WORLD_KEY_PATTERN = /^[a-f0-9-]{32,36}$/;
+
+export async function readWorldKey(worldPath: string): Promise<string | null> {
+  try {
+    const raw = await fs.readFile(
+      path.join(worldPath, WORLD_ID_MARKER),
+      "utf-8",
+    );
+    const id = raw.trim().toLowerCase();
+    return WORLD_KEY_PATTERN.test(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function ensureWorldKey(worldPath: string): Promise<string | null> {
+  const existing = await readWorldKey(worldPath);
+  if (existing) return existing;
+
+  try {
+    const id = randomUUID();
+    await fs.writeFile(path.join(worldPath, WORLD_ID_MARKER), id, "utf-8");
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+export function reduceStatsToAchievementStats(
+  data: IWorldStatistics,
+): IAchievementStats {
+  const stats: IAchievementStats = { ...EMPTY_ACHIEVEMENT_STATS };
+  if (data?.stats) accumulateWorldStats(stats, data);
+  return stats;
+}
+
 export async function loadGlobalAchievementStats(
   account: ILocalAccount,
-): Promise<IAchievementStats> {
+): Promise<IAchievementStatsResult> {
   const stats: IAchievementStats = { ...EMPTY_ACHIEVEMENT_STATS };
+  const worldKeys = new Set<string>();
   const accountUUIDs = getAccountUuids(account);
 
   const versionsPath = path.join(getLauncherPaths().minecraft, "versions");
 
   let versions: string[] = [];
   try {
-    if (!(await fs.pathExists(versionsPath))) return stats;
+    if (!(await fs.pathExists(versionsPath))) return { stats, worldKeys: [] };
     versions = await fs.readdir(versionsPath);
   } catch {
-    return stats;
+    return { stats, worldKeys: [] };
   }
 
   for (const version of versions) {
@@ -440,22 +483,24 @@ export async function loadGlobalAchievementStats(
     }
 
     for (const world of worldEntries) {
-      const statsFile = await resolveStatsFile(
-        path.join(savesPath, world),
-        accountUUIDs,
-      );
+      const worldPath = path.join(savesPath, world);
+      const statsFile = await resolveStatsFile(worldPath, accountUUIDs);
       if (!statsFile) continue;
 
       try {
         const data: IWorldStatistics = await fs.readJSON(statsFile);
-        if (data?.stats) accumulateWorldStats(stats, data);
+        if (data?.stats) {
+          accumulateWorldStats(stats, data);
+          const worldKey = await readWorldKey(worldPath);
+          if (worldKey) worldKeys.add(worldKey);
+        }
       } catch {
         continue;
       }
     }
   }
 
-  return stats;
+  return { stats, worldKeys: [...worldKeys] };
 }
 
 function getArchiveEntryPath(entry: any) {

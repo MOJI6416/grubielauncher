@@ -21,6 +21,34 @@ export interface IAchievementStats {
   wardenKills: number
 }
 
+export interface IAchievementStatsResult {
+  stats: IAchievementStats
+  worldKeys: string[]
+}
+
+export interface IRemoteWorldStats {
+  worldKey: string
+  stats: IAchievementStats
+}
+
+export interface IRemoteWorldStatsResponse {
+  worlds: IRemoteWorldStats[]
+}
+
+export interface IGuestWorldStatsUpload {
+  worldKey: string
+  players: { uuid: string; stats: IAchievementStats }[]
+}
+
+export interface IGuestStatsUploadRequest {
+  worlds: IGuestWorldStatsUpload[]
+}
+
+export interface IGuestStatsUploadResponse {
+  ok: boolean
+  credited: number
+}
+
 export const EMPTY_ACHIEVEMENT_STATS: IAchievementStats = {
   worlds: 0,
   playTimeTicks: 0,
@@ -42,4 +70,15 @@ export const EMPTY_ACHIEVEMENT_STATS: IAchievementStats = {
   enderDragonKills: 0,
   witherKills: 0,
   wardenKills: 0,
+}
+
+export function addAchievementStats(
+  a: IAchievementStats,
+  b: IAchievementStats,
+): IAchievementStats {
+  const result: IAchievementStats = { ...EMPTY_ACHIEVEMENT_STATS }
+  for (const key of Object.keys(result) as (keyof IAchievementStats)[]) {
+    result[key] = (a?.[key] ?? 0) + (b?.[key] ?? 0)
+  }
+  return result
 }

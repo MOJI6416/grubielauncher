@@ -62,6 +62,15 @@ export function registerBackendIpc() {
     return await backend.getUser(id);
   });
 
+  handleSafe(
+    "backend:getRemoteStats",
+    { worlds: [] },
+    async (_, at: string) => {
+      const backend = new Backend(at);
+      return await backend.getRemoteWorldStats();
+    },
+  );
+
   handleSafe("backend:groupsList", null, async (_, at: string) => {
     const backend = new Backend(at);
     return await backend.groupsList();
@@ -291,6 +300,29 @@ export function registerBackendIpc() {
       return await backend.login(id, auth);
     },
   );
+
+  handleSafe(
+    "backend:approveSiteLogin",
+    false,
+    async (_, at: string, requestId: string) => {
+      const backend = new Backend(at);
+      return await backend.approveSiteLogin(requestId);
+    },
+  );
+
+  handleSafe(
+    "backend:discordLink",
+    null,
+    async (_, at: string, code: string) => {
+      const backend = new Backend(at);
+      return await backend.discordLink(code);
+    },
+  );
+
+  handleSafe("backend:discordUnlink", null, async (_, at: string) => {
+    const backend = new Backend(at);
+    return await backend.discordUnlink();
+  });
 
   handleSafe("backend:getSkin", null, async (_, at: string, uuid: string) => {
     const backend = new Backend(at);

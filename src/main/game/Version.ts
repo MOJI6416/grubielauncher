@@ -10,6 +10,7 @@ import { DownloadItem } from "@/types/Downloader";
 import path from "path";
 import fs from "fs-extra";
 import { Downloader } from "../utilities/downloader";
+import { writeJsonAtomic } from "../utilities/atomicJson";
 import {
   convertMavenCoordinateToJarPath,
   getFullLangCode,
@@ -42,6 +43,7 @@ import {
   parseLoaderInstallerProgressLine,
 } from "../utilities/loaderInstallerProgress";
 import { assertSafeVersionName } from "@/shared/versionName";
+import { assertSafeFileSegment } from "./serverScriptSafety";
 import { buildMemoryArguments } from "@/shared/jvmDefaults";
 import { mcVersionToJavaMajor } from "@/shared/javaVersions";
 import { assertTrustedDownloadUrl } from "../utilities/trustedHosts";
@@ -124,6 +126,10 @@ export class Version {
 
   public async init() {
     assertSafeVersionName(this.version.name);
+    assertSafeFileSegment(this.version.version.id, "version id");
+    if (this.version.loader.version?.id) {
+      assertSafeFileSegment(this.version.loader.version.id, "loader version id");
+    }
 
     this.launcherPath = path.join(app.getPath("appData"), ".grubielauncher");
     this.minecraftPath = path.join(this.launcherPath, "minecraft");
@@ -581,11 +587,14 @@ export class Version {
                 path = path.replace(".jar", `-universal.jar`);
               }
 
+              const artifactUrl = `${lib.url}/${path}`;
+              assertTrustedDownloadUrl(artifactUrl, "forge library url");
+
               const library: IVersionManifest["libraries"][0] = {
                 name: lib.name,
                 downloads: {
                   artifact: {
-                    url: `${lib.url}/${path}`,
+                    url: artifactUrl,
                     path,
                     size: 0,
                     sha1: lib.checksums ? lib.checksums[0] : "",
@@ -1093,10 +1102,7 @@ export class Version {
       this.versionPath,
       `${this.version.version.id}.json`,
     );
-    await fs.writeJSON(manifestPath, this.manifest, {
-      encoding: "utf-8",
-      spaces: 2,
-    });
+    await writeJsonAtomic(manifestPath, this.manifest);
   }
 
   private async getAssets() {

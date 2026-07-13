@@ -157,6 +157,8 @@ enum LoadingType {
 
 const PAGE_LIMIT = 20;
 
+const RUNNING_ALLOWED_TYPES = [ProjectType.RESOURCEPACK, ProjectType.SHADER];
+
 function LoadingIcon({ className = "" }: { className?: string }) {
   return <Loader2 className={`animate-spin ${className}`} size={18} />;
 }
@@ -436,6 +438,7 @@ export function ModManager({
   setModpack,
   pendingRemovedLocalProjects: controlledPendingRemovedLocalProjects,
   setPendingRemovedLocalProjects: setControlledPendingRemovedLocalProjects,
+  running = false,
 }: {
   mods: ILocalProject[];
   setMods: (mods: ILocalProject[]) => void;
@@ -448,6 +451,7 @@ export function ModManager({
   setModpack: (modpack: IModpack) => void;
   pendingRemovedLocalProjects?: ILocalProject[];
   setPendingRemovedLocalProjects?: Dispatch<SetStateAction<ILocalProject[]>>;
+  running?: boolean;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [browser, setBrowser] = useState<(IProject | ILocalProject)[]>([]);
@@ -593,6 +597,8 @@ export function ModManager({
         pts = [ProjectType.MODPACK];
       } else {
         pts = getProjectTypes(loader || "vanilla", server, provider);
+        if (running)
+          pts = pts.filter((t) => RUNNING_ALLOWED_TYPES.includes(t));
       }
 
       setProjectTypes(pts);
@@ -1144,6 +1150,7 @@ export function ModManager({
     let pts: ProjectType[] = [];
     if (!isModpacks) {
       pts = getProjectTypes(loader || "vanilla", server, newProvider);
+      if (running) pts = pts.filter((t) => RUNNING_ALLOWED_TYPES.includes(t));
     } else {
       pts = [...projectTypes];
     }

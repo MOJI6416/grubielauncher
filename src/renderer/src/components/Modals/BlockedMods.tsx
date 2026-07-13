@@ -117,6 +117,9 @@ export function BlockedMods({
 
   useEffect(() => {
     watchedFoldersRef.current = watchedFolders;
+    for (const folder of watchedFolders) {
+      api.other.blessPath(folder.path, "folder");
+    }
   }, [watchedFolders]);
 
   useEffect(() => {

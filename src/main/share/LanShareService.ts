@@ -18,7 +18,13 @@ import {
   GameStdoutEvent,
 } from "../utilities/runtime";
 import { getSelectedAccessToken } from "../utilities/accounts";
+import {
+  ensureWorldKey,
+  reduceStatsToAchievementStats,
+} from "../utilities/worlds";
 import { IVersionConf } from "@/types/IVersion";
+import { IWorldStatistics } from "@/types/World";
+import { IGuestWorldStatsUpload } from "@/types/Achievements";
 import {
   isValidPublicShareHost,
   isValidShareSlug,
@@ -70,6 +76,9 @@ export class LanShareService extends EventEmitter {
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private probeTimer: NodeJS.Timeout | null = null;
+  private guestStatsTimer: NodeJS.Timeout | null = null;
+  private guestStatsDisconnectTimer: NodeJS.Timeout | null = null;
+  private guestStatsUploadInFlight = false;
   private operationQueue: Promise<unknown> = Promise.resolve();
 
   private peers: SharePeerInfo[] = [];
@@ -77,6 +86,8 @@ export class LanShareService extends EventEmitter {
   private activeGatewayToken = "";
   private activeGatewayTokenExpMs = 0;
   private activeHostAccessToken = "";
+  private activeVersionPath = "";
+  private shareStartedAtMs = 0;
   private hasAuthenticatedOnce = false;
   private disposed = false;
 
@@ -90,6 +101,7 @@ export class LanShareService extends EventEmitter {
     this.proxyManager.onPeersChanged((peers) => {
       this.peers = peers;
       this.emit("peersChanged", [...peers]);
+      this.scheduleGuestStatsUpload();
     });
     this.proxyManager.onStreamClosed((event) => {
       this.recordStreamDiagnostic(event);
@@ -235,6 +247,8 @@ export class LanShareService extends EventEmitter {
       }
 
       this.activeHostAccessToken = processRecord.accessToken;
+      this.activeVersionPath = processRecord.versionPath;
+      this.shareStartedAtMs = Date.now();
       this.proxyManager.setLocalPort(candidate.localPort);
       this.hasAuthenticatedOnce = false;
 
@@ -336,6 +350,8 @@ export class LanShareService extends EventEmitter {
           ),
         };
       }
+
+      await this.uploadGuestStats();
 
       let stopError: ShareStateError | undefined;
       if (this.activeHostAccessToken) {
@@ -618,6 +634,7 @@ export class LanShareService extends EventEmitter {
 
     const state = this.stateStore.getState();
     if (state.sessionId && this.activeHostAccessToken) {
+      await this.uploadGuestStats();
       try {
         const backend = new Backend(this.activeHostAccessToken);
         await backend.stopShare(state.sessionId);
@@ -808,9 +825,13 @@ export class LanShareService extends EventEmitter {
     this.heartbeatTimer = setInterval(() => {
       void beat();
     }, intervalMs);
+
+    this.startGuestStatsTimer();
   }
 
   private stopHeartbeat(): void {
+    this.stopGuestStatsTimer();
+
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
@@ -997,6 +1018,8 @@ export class LanShareService extends EventEmitter {
     this.activeGatewayUrl = "";
     this.activeGatewayTokenExpMs = 0;
     this.activeHostAccessToken = "";
+    this.activeVersionPath = "";
+    this.shareStartedAtMs = 0;
     this.hasAuthenticatedOnce = false;
 
     const candidate = this.getPreferredCandidate();
@@ -1134,6 +1157,129 @@ export class LanShareService extends EventEmitter {
       };
     } catch {
       return { mcVersion: null, shareCode: null };
+    }
+  }
+
+  private startGuestStatsTimer(): void {
+    this.stopGuestStatsTimer();
+    this.guestStatsTimer = setInterval(() => {
+      void this.uploadGuestStats();
+    }, 180000);
+  }
+
+  private stopGuestStatsTimer(): void {
+    if (this.guestStatsTimer) {
+      clearInterval(this.guestStatsTimer);
+      this.guestStatsTimer = null;
+    }
+    if (this.guestStatsDisconnectTimer) {
+      clearTimeout(this.guestStatsDisconnectTimer);
+      this.guestStatsDisconnectTimer = null;
+    }
+  }
+
+  private scheduleGuestStatsUpload(): void {
+    if (this.guestStatsDisconnectTimer) return;
+    if (!this.stateStore.getState().sessionId) return;
+
+    this.guestStatsDisconnectTimer = setTimeout(() => {
+      this.guestStatsDisconnectTimer = null;
+      void this.uploadGuestStats();
+    }, 5000);
+  }
+
+  private getHostUuidSet(token: string): Set<string> {
+    const uuids = new Set<string>();
+    try {
+      const decoded = jwtDecode<{ uuid?: string }>(token);
+      if (decoded?.uuid) {
+        uuids.add(decoded.uuid.replace(/-/g, "").toLowerCase());
+      }
+    } catch {}
+    return uuids;
+  }
+
+  private async collectWorldGuestStats(
+    worldPath: string,
+    hostUuids: Set<string>,
+  ): Promise<IGuestWorldStatsUpload["players"]> {
+    const players: IGuestWorldStatsUpload["players"] = [];
+    const statsDirs = [
+      path.join(worldPath, "stats"),
+      path.join(worldPath, "players", "stats"),
+    ];
+
+    for (const statsDir of statsDirs) {
+      let files: string[] = [];
+      try {
+        files = await fs.readdir(statsDir);
+      } catch {
+        continue;
+      }
+
+      for (const file of files) {
+        if (!file.toLowerCase().endsWith(".json")) continue;
+
+        const uuid = file.slice(0, -5);
+        if (hostUuids.has(uuid.replace(/-/g, "").toLowerCase())) continue;
+
+        const filePath = path.join(statsDir, file);
+        const fileStat = await fs.stat(filePath).catch(() => null);
+        if (!fileStat?.isFile()) continue;
+        if (fileStat.mtimeMs < this.shareStartedAtMs) continue;
+
+        let data: IWorldStatistics | null = null;
+        try {
+          data = await fs.readJSON(filePath);
+        } catch {
+          continue;
+        }
+        if (!data?.stats) continue;
+
+        players.push({ uuid, stats: reduceStatsToAchievementStats(data) });
+      }
+    }
+
+    return players;
+  }
+
+  private async uploadGuestStats(): Promise<void> {
+    if (this.guestStatsUploadInFlight) return;
+
+    const versionPath = this.activeVersionPath;
+    const token = this.activeHostAccessToken;
+    const sessionId = this.stateStore.getState().sessionId;
+    if (!versionPath || !token || !sessionId) return;
+
+    this.guestStatsUploadInFlight = true;
+    try {
+      const savesPath = path.join(versionPath, "saves");
+      if (!(await fs.pathExists(savesPath))) return;
+
+      const entries = await fs
+        .readdir(savesPath)
+        .catch(() => [] as string[]);
+      const hostUuids = this.getHostUuidSet(token);
+      const worlds: IGuestWorldStatsUpload[] = [];
+
+      for (const entry of entries) {
+        const worldPath = path.join(savesPath, entry);
+        const players = await this.collectWorldGuestStats(worldPath, hostUuids);
+        if (players.length === 0) continue;
+
+        const worldKey = await ensureWorldKey(worldPath);
+        if (!worldKey) continue;
+
+        worlds.push({ worldKey, players });
+      }
+
+      if (worlds.length === 0) return;
+
+      const backend = new Backend(token);
+      await backend.uploadGuestStats(sessionId, { worlds });
+    } catch {
+    } finally {
+      this.guestStatsUploadInFlight = false;
     }
   }
 

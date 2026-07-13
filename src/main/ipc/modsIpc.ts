@@ -85,6 +85,22 @@ export function registerModsIpc() {
     }
   )
 
+  handleSafe<VersionInstallResult>(
+    'mods:syncLive',
+    fallbackModsResult,
+    async (
+      _event,
+      settings: TSettings,
+      versionConf: IVersionConf,
+      options?: VersionInstallOptions
+    ) => {
+      const mods = new Mods(settings, versionConf)
+      return runModsOperation(mods, (m, signal) =>
+        m.syncLive({ ...options, signal })
+      )
+    }
+  )
+
   handleSafe('mods:cancelInstall', false, async () => {
     return cancelActiveInstallOperation()
   })

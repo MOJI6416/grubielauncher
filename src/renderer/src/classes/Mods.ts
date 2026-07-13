@@ -50,4 +50,13 @@ export class Mods {
     )
     this.handleResult(result)
   }
+
+  async syncLive(options?: VersionInstallOptions) {
+    const result = await api.mods.syncLive(
+      this.settings,
+      this.versionConf,
+      options
+    )
+    this.handleResult(result)
+  }
 }

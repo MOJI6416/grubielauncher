@@ -37,7 +37,9 @@ import {
   ownPresenceAtom,
   pendingFriendChatAtom,
   pendingSkinDeepLinkAtom,
+  pendingWebLoginAtom,
   pathsAtom,
+  rpcSkinVersionAtom,
   shareOwnerAccountKeyAtom,
   sharePeersAtom,
   shareStateAtom,
@@ -48,6 +50,7 @@ import {
   versionsLoadedAtom,
 } from "./stores/atoms";
 import { Confirmation } from "./components/Modals/Confirmation";
+import { WebLoginPrompt } from "./components/Modals/WebLoginPrompt";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -69,12 +72,10 @@ import {
 } from "@/types/Voice";
 import { voiceConnect } from "./utilities/voiceClient";
 import { groupJoinErrorKey } from "./utilities/groupJoin";
-import {
-  startCallSound,
-  stopCallSound,
-} from "./utilities/voiceCallSounds";
+import { startCallSound, stopCallSound } from "./utilities/voiceCallSounds";
 import { VoiceCallOverlay } from "./components/Voice/VoiceCallOverlay";
 import { evaluateAchievements } from "@renderer/utilities/achievements";
+import { fetchMergedAchievementStats } from "@renderer/utilities/achievementStats";
 import { IServer } from "@/types/ServersList";
 import { IConsole } from "@/types/Console";
 import {
@@ -93,6 +94,7 @@ import {
 import { supportsQuickPlayMultiplayer } from "./utilities/versionPure";
 import { Mods } from "./classes/Mods";
 import { InstallationCenter } from "./components/InstallationCenter";
+import { ConnectivityBanner } from "./components/ConnectivityBanner";
 import { VoiceCallBar } from "./components/Voice/VoiceCallBar";
 import { BACKEND_URL } from "@/shared/config";
 import { getShareErrorText } from "./utilities/share";
@@ -186,7 +188,7 @@ function applyPresenceUpdate(
 function App() {
   const [selectedAccount, setSelectedAccount] = useAtom(accountAtom);
   const [settings, setSettings] = useAtom(settingsAtom);
-  const setIsRunning = useAtom(isRunningAtom)[1];
+  const setIsRunning = useSetAtom(isRunningAtom);
 
   const [isFriends, setIsFriends] = useState(false);
 
@@ -201,12 +203,13 @@ function App() {
   const voiceCallRef = useLatestRef(voiceCall);
   const mutedGroups = useAtomValue(mutedGroupsAtom);
   const mutedGroupsRef = useLatestRef(mutedGroups);
-  const [_, setFriendRequests] = useAtom(friendRequestsAtom);
+  const setFriendRequests = useSetAtom(friendRequestsAtom);
   const [selectedFriend, setSelectedFriend] = useAtom(selectedFriendAtom);
   const [localFriends, setLocalFriends] = useAtom(localFriendsAtom);
-  const [, setIsFriendsConnected] = useAtom(isFriendsConnectedAtom);
-  const [, setPendingFriendChat] = useAtom(pendingFriendChatAtom);
-  const [, setPendingSkinDeepLink] = useAtom(pendingSkinDeepLinkAtom);
+  const setIsFriendsConnected = useSetAtom(isFriendsConnectedAtom);
+  const setPendingFriendChat = useSetAtom(pendingFriendChatAtom);
+  const setPendingSkinDeepLink = useSetAtom(pendingSkinDeepLinkAtom);
+  const setPendingWebLogin = useSetAtom(pendingWebLoginAtom);
   const [ownPresence, setOwnPresence] = useAtom(ownPresenceAtom);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -215,19 +218,20 @@ function App() {
   );
 
   const [paths, setPaths] = useAtom(pathsAtom);
-  const [, setIsInternetOnline] = useAtom(internetAtom);
-  const [, setIsBackendOnline] = useAtom(networkAtom);
+  const setIsInternetOnline = useSetAtom(internetAtom);
+  const setIsBackendOnline = useSetAtom(networkAtom);
   const [selectedVersion, setSelectedVersion] = useAtom(selectedVersionAtom);
   const [accounts, setAccounts] = useAtom(accountsAtom);
   const [isUpdateModal, setIsUpdateModal] = useState(false);
   const [servers, setServers] = useState<IServer[]>([]);
   const [authData] = useAtom(authDataAtom);
+  const rpcSkinVersion = useAtomValue(rpcSkinVersionAtom);
   const setConsoles = useSetAtom(consolesAtom);
   const [versions, setVersions] = useAtom(versionsAtom);
   const [versionsLoaded, setVersionsLoaded] = useAtom(versionsLoadedAtom);
   const [shareState, setShareState] = useAtom(shareStateAtom);
-  const [, setSharePeers] = useAtom(sharePeersAtom);
-  const [, setIsShareModalOpen] = useAtom(isShareModalOpenAtom);
+  const setSharePeers = useSetAtom(sharePeersAtom);
+  const setIsShareModalOpen = useSetAtom(isShareModalOpenAtom);
   const [shareOwnerAccountKey, setShareOwnerAccountKey] = useAtom(
     shareOwnerAccountKeyAtom,
   );
@@ -252,7 +256,7 @@ function App() {
   const pendingJoinRef = useRef<JoinFriendWorldParams | null>(null);
   const [dropImportPath, setDropImportPath] = useState<string | null>(null);
   const [isFileDragOver, setIsFileDragOver] = useAtom(fileDragOverAtom);
-  const setAddVersionImportPath = useAtom(addVersionImportPathAtom)[1];
+  const setAddVersionImportPath = useSetAtom(addVersionImportPathAtom);
   const isAddVersionOpen = useAtom(addVersionModalAtom)[0];
   const dragContextRef = useRef<"main" | "addVersion" | "blocked" | null>(null);
   const isJoiningWorldRef = useRef(false);
@@ -349,17 +353,21 @@ function App() {
         ? {
             nickname: selectedAccount.nickname,
             type: selectedAccount.type,
+            uuid: authData?.uuid,
           }
         : null,
       lang: i18n.resolvedLanguage || i18n.language || "en",
       hideServer: settings.hideServerInRpc,
+      skinVersion: rpcSkinVersion,
     });
   }, [
     i18n.language,
     i18n.resolvedLanguage,
     selectedAccount?.nickname,
     selectedAccount?.type,
+    authData?.uuid,
     settings.hideServerInRpc,
+    rpcSkinVersion,
   ]);
 
   useEffect(() => {
@@ -678,9 +686,7 @@ function App() {
           return;
         }
 
-        toast.success(
-          tRef.current("groups.joined", { group: group.name }),
-        );
+        toast.success(tRef.current("groups.joined", { group: group.name }));
         void loadGroups();
         return;
       }
@@ -697,6 +703,12 @@ function App() {
         } else {
           setPendingSkinDeepLink(payload.id);
         }
+        return;
+      }
+
+      if (payload.type === "webLogin") {
+        void api.other.restoreWindow();
+        setPendingWebLogin(payload.requestId);
         return;
       }
 
@@ -724,7 +736,13 @@ function App() {
         toast.error(tRef.current("addVersion.fromServer.notFound"));
       }
     });
-  }, [loadGroups, selectedAccountRef, setPendingSkinDeepLink, tRef]);
+  }, [
+    loadGroups,
+    selectedAccountRef,
+    setPendingSkinDeepLink,
+    setPendingWebLogin,
+    tRef,
+  ]);
 
   const tryDeepLaunch = useEventCallback(() => {
     const pending = pendingDeepLaunchRef.current;
@@ -893,7 +911,7 @@ function App() {
 
       let earnedAchievements: string[] | undefined;
       try {
-        const stats = await api.worlds.loadAchievementStats(a);
+        const stats = await fetchMergedAchievementStats(a);
         const unlocked = evaluateAchievements(
           stats,
           newPlayTime,
@@ -1002,7 +1020,6 @@ function App() {
     );
 
     const unsubscribeLaunch = api.events.onLaunch(() => {
-      setSelectedVersion(undefined);
       setIsRunning(false);
     });
 
@@ -1011,6 +1028,14 @@ function App() {
       toast.error(tRef.current("app.updateFailed"), {
         description: payload?.message || "",
         duration: 12000,
+      });
+    });
+
+    const unsubscribeIpcError = api.events.onIpcError((payload) => {
+      playSound("error");
+      toast.error(tRef.current("ipcError.fileOperation"), {
+        description: payload?.message || "",
+        duration: 10000,
       });
     });
 
@@ -1062,6 +1087,7 @@ function App() {
       unsubscribeConsoleClear();
       unsubscribeLaunch();
       unsubscribeUpdateFailed();
+      unsubscribeIpcError();
       unsubscribeCrashAnalysis();
       unsubscribeFriendUpdate();
     };
@@ -1284,9 +1310,7 @@ function App() {
 
     const onGroupInviteReceived = async (invite: IGroupInvite) => {
       setGroupInvites((prev) =>
-        prev.some((item) => item._id === invite._id)
-          ? prev
-          : [...prev, invite],
+        prev.some((item) => item._id === invite._id) ? prev : [...prev, invite],
       );
 
       const lf = localFriendsRef.current.find(
@@ -1383,10 +1407,7 @@ function App() {
             void (async () => {
               const token = selectedAccountRef.current?.accessToken;
               if (!token) return;
-              const grant = await api.backend.groupJoinVoice(
-                token,
-                group._id,
-              );
+              const grant = await api.backend.groupJoinVoice(token, group._id);
               if (!grant) {
                 toast.error(tRef.current("groups.joinError"));
                 return;
@@ -1413,9 +1434,7 @@ function App() {
     }) => {
       if (!data?.callId || !data?.caller) return;
 
-      const lf = localFriendsRef.current.find(
-        (x) => x.id == data.caller._id,
-      );
+      const lf = localFriendsRef.current.find((x) => x.id == data.caller._id);
       if (lf?.isMuted) {
         friendSocket.emit("voiceCallDecline", { callId: data.callId });
         return;
@@ -1685,8 +1704,9 @@ function App() {
 
     let _instance = instance ?? 0;
     if (instance === undefined) {
-      const maxInst = getDefaultStore().get(consolesAtom).consoles
-        .filter(
+      const maxInst = getDefaultStore()
+        .get(consolesAtom)
+        .consoles.filter(
           (c) =>
             c.versionName == launchVersion.version.name &&
             c.status == "running",
@@ -2146,8 +2166,10 @@ function App() {
         <Nav
           runGame={runGame}
           setIsFriends={setIsFriends}
-          onOpenWhatsNew={() => openWhatsNew()}
+          onOpenWhatsNew={openWhatsNew}
         />
+
+        <ConnectivityBanner />
 
         <main className="min-h-0 flex-1 px-4 py-3">
           <div className="flex h-full min-h-0 gap-4">
@@ -2379,6 +2401,8 @@ function App() {
             onClose={dismissWhatsNew}
           />
         )}
+
+        <WebLoginPrompt />
 
         {isFileDragOver && (
           <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center bg-background/80 backdrop-blur-sm">

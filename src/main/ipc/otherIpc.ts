@@ -7,7 +7,8 @@ import {
   NativeImage,
   shell,
   Notification,
-  nativeImage
+  nativeImage,
+  ipcMain
 } from 'electron'
 import { Downloader } from '../utilities/downloader'
 import { mainWindow } from '../windows/mainWindow'
@@ -62,6 +63,13 @@ function sendNotificationClick(action?: NotificationClickAction): void {
 }
 
 export function registerOtherIpc() {
+  ipcMain.on('safepath:bless', (event, target: string, kind: 'file' | 'folder' = 'file') => {
+    if (typeof target === 'string' && target) {
+      blessUserSelectedPath(target, kind === 'folder' ? 'folder' : 'file')
+    }
+    event.returnValue = true
+  })
+
   handleSafe<void, [string]>('shell:openExternal', undefined, async (_, url: string) => {
     await shell.openExternal(assertSafeExternalUrl(url))
   })

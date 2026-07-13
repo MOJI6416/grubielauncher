@@ -105,6 +105,34 @@
     },
     "serverCore": "Server core"
   },
+  "webLogin": {
+    "title": "Sign in to the site",
+    "body": "Allow signing in to grubielauncher.com as {{nickname}}?",
+    "bodyNoName": "Allow signing in to grubielauncher.com?",
+    "hint": "Only approve this if you started it yourself on the website.",
+    "approve": "Allow",
+    "decline": "Decline",
+    "noAccount": "No active account to sign in with.",
+    "approved": "Signed in on the website.",
+    "failed": "Could not sign in on the website."
+  },
+  "donor": {
+    "badge": "Donor"
+  },
+  "socials": {
+    "title": "Socials",
+    "add": "Socials",
+    "edit": "Edit",
+    "link": "Link",
+    "unlink": "Unlink",
+    "linked": "Linked",
+    "discordLinked": "Discord linked",
+    "discordLinkFailed": "Failed to link Discord",
+    "discordUnlinked": "Discord unlinked",
+    "discordUnlinkFailed": "Failed to unlink Discord",
+    "saved": "Socials saved",
+    "saveError": "Failed to save"
+  },
   "friends": {
     "title": "Friends",
     "unavailableHint": "Friends need an online account and an active connection",
@@ -512,6 +540,7 @@
       "running": "Testing…",
       "reachable": "Reachable",
       "unreachable": "Unreachable",
+      "statusPage": "Service status",
       "allOk": "All resources are reachable",
       "someFail": "Some resources are unreachable. Your ISP may be blocking them — try changing DNS (e.g. 1.1.1.1) or using a VPN.",
       "groups": {
@@ -544,6 +573,7 @@
       "diagnostics": "Diagnostics",
       "storage": "Storage"
     },
+    "support": "Support the project",
     "voicePanel": "Voice settings",
     "voicePanelDescription": "Devices, microphone check, push-to-talk and noise suppression",
     "voicePanelOpen": "Open",
@@ -740,6 +770,10 @@
     "internetUnavailable": "No internet connection",
     "backendOnline": "Server available",
     "backendUnavailable": "Server unavailable",
+    "serviceStatus": {
+      "internet": "No internet connection. Check your network and try again.",
+      "backend": "Grubie services are temporarily unavailable."
+    },
     "updateFailed": "Launcher update failed — you are on an old version"
   },
   "game": {
@@ -1070,6 +1104,7 @@
     },
     "catalogPublic": "Show in the site catalog",
     "catalogPublicDescription": "Anyone can discover the build. The share link works either way.",
+    "catalogPublicBanned": "Publishing to the catalog is restricted by an administrator. You can still share the link.",
     "downloadedOtherFilesHint": "This build has downloaded mods or a modpack, which often come with already configured config files — open the additional files selector and pick all directory files so they get published too."
   },
   "manageSkins": {
@@ -1532,6 +1567,10 @@
       "voice_50h": {
         "name": "Voice of the Community",
         "desc": "Spend 50 hours in voice chat"
+      },
+      "donate_first": {
+        "name": "Supporter",
+        "desc": "Support the project with a donation"
       }
     }
   },
@@ -1646,5 +1685,13 @@
     "stepVersionDescription": "A ready modpack, vanilla Minecraft or a file import",
     "go": "Go",
     "skip": "Skip"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "The interface crashed unexpectedly. Reloading usually fixes it.",
+    "reload": "Reload"
+  },
+  "ipcError": {
+    "fileOperation": "File operation failed. Check available disk space and permissions."
   }
 }

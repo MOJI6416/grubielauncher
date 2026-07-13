@@ -3,6 +3,7 @@ import { app, safeStorage } from "electron";
 import { jwtDecode } from "jwt-decode";
 import fs from "fs-extra";
 import path from "path";
+import { writeJsonAtomic } from "./atomicJson";
 
 function decodeSubject(token?: string): string | null {
   if (!token) return null;
@@ -129,20 +130,6 @@ function withAccountsLock<T>(fn: () => Promise<T>): Promise<T> {
   return next;
 }
 
-async function writeJsonAtomic(filePath: string, data: unknown): Promise<void> {
-  const tmpFile = `${filePath}.tmp-${process.pid}-${Date.now()}`;
-  try {
-    await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), {
-      encoding: "utf-8",
-      mode: 0o600,
-    });
-    await fs.move(tmpFile, filePath, { overwrite: true });
-  } catch (error) {
-    await fs.remove(tmpFile).catch(() => {});
-    throw error;
-  }
-}
-
 function encodeSecret(value: string): StoredSecret {
   if (safeStorage.isEncryptionAvailable()) {
     return {
@@ -219,11 +206,15 @@ async function writeAccountsConfig(config: IAccountConf): Promise<void> {
     return persisted;
   });
 
-  await writeJsonAtomic(getAccountSecretsPath(), nextSecrets);
-  await writeJsonAtomic(getAccountsPath(), {
-    accounts: persistedAccounts,
-    lastPlayed: config.lastPlayed ?? null,
-  } satisfies PersistedAccountConf);
+  await writeJsonAtomic(getAccountSecretsPath(), nextSecrets, { mode: 0o600 });
+  await writeJsonAtomic(
+    getAccountsPath(),
+    {
+      accounts: persistedAccounts,
+      lastPlayed: config.lastPlayed ?? null,
+    } satisfies PersistedAccountConf,
+    { mode: 0o600 },
+  );
 }
 
 export function saveAccountsConfig(config: IAccountConf): Promise<void> {

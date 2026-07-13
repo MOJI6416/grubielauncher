@@ -54,6 +54,7 @@ import {
   levelInfo,
   metricDisplay,
 } from "@renderer/utilities/achievements";
+import { fetchMergedAchievementStats } from "@renderer/utilities/achievementStats";
 import { Leaderboard } from "./Leaderboard";
 
 const api = window.api;
@@ -101,7 +102,7 @@ export function Achievements({
       setLoading(true);
       try {
         const data = account
-          ? await api.worlds.loadAchievementStats(account)
+          ? await fetchMergedAchievementStats(account)
           : EMPTY_ACHIEVEMENT_STATS;
         if (!cancelled) setStats(data);
       } catch {

@@ -14,6 +14,11 @@ import {
 import { BaseService } from "./Base";
 import { INews, ISponsoredNewsAd } from "@/types/News";
 import { IGrubieSkin } from "@/types/SkinManager";
+import {
+  IGuestStatsUploadRequest,
+  IGuestStatsUploadResponse,
+  IRemoteWorldStatsResponse,
+} from "@/types/Achievements";
 import FormData from "form-data";
 import axios from "axios";
 import fs from "fs-extra";
@@ -66,10 +71,7 @@ export class Backend extends BaseService {
     };
   }
 
-  async shareModpack(modpack: {
-    conf: IModpack["conf"];
-    isPublic?: boolean;
-  }) {
+  async shareModpack(modpack: { conf: IModpack["conf"]; isPublic?: boolean }) {
     const normalizedModpack = {
       ...modpack,
       conf: this.normalizeModpackConf(modpack.conf),
@@ -372,9 +374,7 @@ export class Backend extends BaseService {
     filePath: string,
     fileName?: string,
     folder?: string,
-    onProgress?: (
-      progress: Omit<UploadFileProgress, "id">,
-    ) => void,
+    onProgress?: (progress: Omit<UploadFileProgress, "id">) => void,
   ): Promise<string | null> {
     const fileSize = (await fs.stat(filePath).catch(() => null))?.size || 0;
     let uploadedBytes = 0;
@@ -474,9 +474,7 @@ export class Backend extends BaseService {
     filePath: string,
     fileName?: string,
     folder?: string,
-    onProgress?: (
-      progress: Omit<UploadFileProgress, "id">,
-    ) => void,
+    onProgress?: (progress: Omit<UploadFileProgress, "id">) => void,
   ): Promise<string | null> {
     const fileSize = (await fs.stat(filePath).catch(() => null))?.size || 0;
     const resolvedFileName = fileName ?? path.basename(filePath);
@@ -688,6 +686,38 @@ export class Backend extends BaseService {
     }
   }
 
+  async approveSiteLogin(requestId: string) {
+    try {
+      await this.api.post(`${this.baseUrl}/site-auth/approve`, { requestId });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async discordLink(code: string) {
+    try {
+      const response = await this.api.post<{
+        discordId: string;
+        username: string;
+      }>(`${this.baseUrl}/auth/discord/link`, { code });
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
+  async discordUnlink() {
+    try {
+      const response = await this.api.post<{
+        discordId: null;
+      }>(`${this.baseUrl}/auth/discord/unlink`, {});
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
   async getSkin(uuid: string) {
     try {
       const response = await this.api.get<IGrubieSkin>(
@@ -794,5 +824,20 @@ export class Backend extends BaseService {
       `${this.baseUrl}/share/friends/active`,
     );
     return response.data.items;
+  }
+
+  async uploadGuestStats(sessionId: string, payload: IGuestStatsUploadRequest) {
+    const response = await this.api.post<IGuestStatsUploadResponse>(
+      `${this.baseUrl}/share/${sessionId}/guest-stats`,
+      payload,
+    );
+    return response.data;
+  }
+
+  async getRemoteWorldStats() {
+    const response = await this.api.get<IRemoteWorldStatsResponse>(
+      `${this.baseUrl}/share/me/remote-stats`,
+    );
+    return response.data;
   }
 }

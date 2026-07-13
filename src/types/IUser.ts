@@ -12,6 +12,14 @@ export interface IUser {
   playTime: number
   achievements: string[]
   publicLeaderboard?: boolean
+  publishBanned?: boolean
+  isDonor?: boolean
+  discordId?: string | null
+  socials?: {
+    telegram?: string | null
+    twitch?: string | null
+    github?: string | null
+  }
 }
 
 export interface ICreateUser {
@@ -28,6 +36,11 @@ export interface IUpdateUser {
   playTime?: number
   achievements?: string[]
   publicLeaderboard?: boolean
+  socials?: {
+    telegram?: string | null
+    twitch?: string | null
+    github?: string | null
+  }
 }
 
 export interface IFriendSettingsUpdate {

@@ -14,7 +14,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import { ErrorLog } from "./ErrorLog";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { memo, Suspense, useEffect, useMemo, useState } from "react";
 import { Settings } from "./Settings";
 import { StorageManagerModal } from "./StorageManagerModal";
 import { useAtom, useAtomValue } from "jotai";
@@ -107,7 +107,7 @@ function ConnectivityBadge({
   );
 }
 
-export function Nav({
+function NavComponent({
   runGame,
   setIsFriends,
   onOpenWhatsNew,
@@ -471,3 +471,5 @@ export function Nav({
     </>
   );
 }
+
+export const Nav = memo(NavComponent);

@@ -38,6 +38,7 @@ import {
   Mic,
   Headphones,
   AudioLines,
+  HandCoins,
 } from "lucide-react";
 import { IAchievementStats } from "@/types/Achievements";
 
@@ -156,6 +157,8 @@ export const ACHIEVEMENTS: IAchievementDef[] = [
   { id: "voice_1h", category: "community", points: 15, granted: true, icon: Mic },
   { id: "voice_10h", category: "community", points: 30, granted: true, icon: Headphones },
   { id: "voice_50h", category: "community", points: 55, granted: true, icon: AudioLines },
+
+  { id: "donate_first", category: "community", points: 25, granted: true, icon: HandCoins },
 ];
 
 const ACHIEVEMENTS_BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));

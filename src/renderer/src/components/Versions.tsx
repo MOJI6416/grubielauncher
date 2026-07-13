@@ -3,6 +3,7 @@ const api = window.api;
 import {
   DragEvent,
   KeyboardEvent,
+  memo,
   MouseEvent,
   Suspense,
   useEffect,
@@ -211,7 +212,7 @@ function useFlipList(orderKey: string) {
   };
 }
 
-export function Versions({
+function VersionsComponent({
   runGame,
 }: {
   runGame: (params: RunGameParams) => Promise<void>;
@@ -757,7 +758,7 @@ export function Versions({
               <Button
                 variant="ghost"
                 size="icon-lg"
-                disabled={isRunning || isRunningInstance}
+                disabled={isRunning && !isRunningInstance}
                 title={t("settings.title")}
                 aria-label={t("settings.title")}
                 onMouseEnter={() => preload(LazyEditVersion.preload)}
@@ -890,7 +891,7 @@ export function Versions({
               variant="outline"
               size="icon-lg"
               className="bg-background/85 hover:bg-background"
-              disabled={isRunning || isRunningInstance}
+              disabled={isRunning && !isRunningInstance}
               title={t("settings.title")}
               aria-label={t("settings.title")}
               onMouseEnter={() => preload(LazyEditVersion.preload)}
@@ -1606,3 +1607,5 @@ export function Versions({
     </>
   );
 }
+
+export const Versions = memo(VersionsComponent);

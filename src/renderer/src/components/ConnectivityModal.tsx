@@ -1,8 +1,16 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2, Loader2, RefreshCw, Wifi, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  Wifi,
+  XCircle,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { STATUS_URL } from "@/shared/config";
 import {
   Dialog,
   DialogContent,
@@ -147,7 +155,15 @@ export function ConnectivityModal({
           </div>
         </div>
 
-        <DialogFooter className="m-0 rounded-none border-t bg-muted/25 px-5 py-4">
+        <DialogFooter className="m-0 flex-row items-center justify-between rounded-none border-t bg-muted/25 px-5 py-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void api.shell.openExternal(STATUS_URL)}
+          >
+            <ExternalLink className="size-4" />
+            {t("settings.connectivity.statusPage")}
+          </Button>
           <Button
             variant="outline"
             disabled={isTesting}

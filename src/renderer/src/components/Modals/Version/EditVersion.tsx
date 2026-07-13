@@ -3,6 +3,7 @@ import {
   accountAtom,
   authDataAtom,
   consolesAtom,
+  consolesMetaAtom,
   installActiveAtom,
   internetAtom,
   isDownloadedVersionAtom,
@@ -16,7 +17,7 @@ import {
   versionsAtom,
   versionServersAtom,
 } from "@renderer/stores/atoms";
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { IArguments } from "@/types/IArguments";
 import { useTranslation } from "react-i18next";
@@ -218,6 +219,17 @@ export function EditVersion({
 
   const [authData] = useAtom(authDataAtom);
   const [, setConsoles] = useAtom(consolesAtom);
+  const consoleMetas = useAtomValue(consolesMetaAtom);
+
+  const isVersionRunning = useMemo(
+    () =>
+      !!version &&
+      consoleMetas.some(
+        (c) =>
+          c.versionName === version.version.name && c.status === "running",
+      ),
+    [consoleMetas, version],
+  );
 
   const [isOpenWorlds, setIsOpenWorlds] = useState(false);
 
@@ -491,7 +503,8 @@ export function EditVersion({
 
         try {
           const versionMods = new Mods(settings, version.version, server);
-          await versionMods.check();
+          if (isVersionRunning) await versionMods.syncLive();
+          else await versionMods.check();
         } catch (error) {
           version.version.loader.mods = previousMods;
           throw error;
@@ -593,7 +606,8 @@ export function EditVersion({
       isShare &&
       version.version.shareCode &&
       !version.version.downloadedVersion &&
-      isNetwork
+      isNetwork &&
+      !isVersionRunning
     ) {
       setIsOpenModalShare(true);
     }
@@ -682,7 +696,7 @@ export function EditVersion({
                 editName={editName}
                 isNameValid={isNameValid}
                 isLoading={isLoading}
-                canRenameVersion={canRenameVersion}
+                canRenameVersion={canRenameVersion && !isVersionRunning}
                 canEditLogo={canEditLogo}
                 onNameChange={setVersionName}
                 onStartRename={() => setEditName(true)}
@@ -737,7 +751,11 @@ export function EditVersion({
                   type="button"
                   variant="secondary"
                   disabled={
-                    !version || isLoading || isCheckingSaves || !hasSaves
+                    !version ||
+                    isLoading ||
+                    isCheckingSaves ||
+                    !hasSaves ||
+                    isVersionRunning
                   }
                   onClick={() => setIsOpenWorlds(true)}
                 >
@@ -827,7 +845,12 @@ export function EditVersion({
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={isLoading || isInstallActive || !isInternetOnline}
+                  disabled={
+                    isLoading ||
+                    isInstallActive ||
+                    !isInternetOnline ||
+                    isVersionRunning
+                  }
                   onClick={async () => {
                     if (!version) return;
 
@@ -852,7 +875,7 @@ export function EditVersion({
                 </div>
               </div>
 
-              {showRemoteActions && (
+              {showRemoteActions && !isVersionRunning && (
                 <div className="rounded-xl border bg-card">
                   <div className="flex items-center gap-2 rounded-t-xl border-b bg-muted/30 px-3 py-2 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
                     <Globe className="size-3.5" />
@@ -1148,6 +1171,7 @@ export function EditVersion({
                 variant="destructive"
                 disabled={
                   isLoading ||
+                  isVersionRunning ||
                   (!!version?.version.owner && account && !isOwnerVersion)
                 }
                 onClick={() => setIsOpenDel(true)}
@@ -1226,6 +1250,7 @@ export function EditVersion({
             setVersion={() => {}}
             pendingRemovedLocalProjects={pendingRemovedLocalMods}
             setPendingRemovedLocalProjects={setPendingRemovedLocalMods}
+            running={isVersionRunning}
           />
         </Suspense>
       )}

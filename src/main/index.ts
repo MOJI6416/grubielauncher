@@ -27,6 +27,14 @@ app.commandLine.appendSwitch(
 );
 app.commandLine.appendSwitch("js-flags", "--max-old-space-size=1024");
 
+process.on("uncaughtException", (error) => {
+  console.error("[uncaughtException]", error);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[unhandledRejection]", reason);
+});
+
 const gotTheLock = app.requestSingleInstanceLock();
 const APP_PROTOCOL = "grubielauncher";
 const APP_SHUTDOWN_TIMEOUT_MS = 5000;

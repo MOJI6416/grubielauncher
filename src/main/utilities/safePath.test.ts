@@ -8,12 +8,15 @@ vi.mock('electron', () => ({
       key === 'appData'
         ? path.resolve('/fake/appdata')
         : path.resolve('/fake/tmp'),
+    getAppPath: () => path.resolve('/fake/app'),
   },
 }))
 
 import {
+  assertReadablePath,
   assertWritablePath,
   blessUserSelectedPath,
+  isReadablePath,
   isWritablePath,
 } from './safePath'
 
@@ -74,5 +77,47 @@ describe('safePath.assertWritablePath', () => {
   it('returns the path when it is allowed', () => {
     const ok = path.join(launcherRoot, 'minecraft', 'options.txt')
     expect(assertWritablePath(ok)).toBe(ok)
+  })
+})
+
+describe('safePath.isReadablePath', () => {
+  it('allows paths inside the launcher directory', () => {
+    expect(
+      isReadablePath(path.join(launcherRoot, 'minecraft', 'versions', 'x', 'x.json')),
+    ).toBe(true)
+  })
+
+  it('allows the app resources directory (bundled wasm/worklet)', () => {
+    expect(
+      isReadablePath(path.resolve('/fake/app/out/renderer/rnnoise.wasm')),
+    ).toBe(true)
+  })
+
+  it('rejects arbitrary system paths', () => {
+    expect(isReadablePath(path.resolve('/etc/passwd'))).toBe(false)
+    expect(isReadablePath(path.resolve('/home/user/.ssh/id_rsa'))).toBe(false)
+  })
+
+  it('rejects traversal and null-byte paths', () => {
+    expect(isReadablePath(path.join(launcherRoot, '..', '..', 'secret'))).toBe(false)
+    expect(isReadablePath(path.join(launcherRoot, 'a\0b'))).toBe(false)
+  })
+
+  it('honors blessed user-selected paths', () => {
+    const picked = path.resolve('/fake/dropzone')
+    expect(isReadablePath(path.join(picked, 'pack.mrpack'))).toBe(false)
+    blessUserSelectedPath(picked, 'folder')
+    expect(isReadablePath(path.join(picked, 'pack.mrpack'))).toBe(true)
+  })
+})
+
+describe('safePath.assertReadablePath', () => {
+  it('throws for paths outside the allowed roots', () => {
+    expect(() => assertReadablePath(path.resolve('/etc/shadow'), 'fs:readFile')).toThrow()
+  })
+
+  it('returns the path when it is allowed', () => {
+    const ok = path.join(launcherRoot, 'settings.json')
+    expect(assertReadablePath(ok)).toBe(ok)
   })
 })

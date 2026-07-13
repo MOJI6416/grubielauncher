@@ -3,6 +3,11 @@ dist
 out
 .DS_Store
 *.log*
+*.pfx
+*.p12
+*.key
+*.pem
+*.cer
 .*
 !.gitignore
 !.github

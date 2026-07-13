@@ -6,8 +6,9 @@ import {
   networkAtom,
   pathsAtom,
   pendingSkinDeepLinkAtom,
+  rpcSkinVersionAtom,
 } from "@renderer/stores/atoms";
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import {
   Check,
   FileImage,
@@ -287,6 +288,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
   const [authData] = useAtom(authDataAtom);
   const [isInternetOnline] = useAtom(internetAtom);
   const [isBackendOnline] = useAtom(networkAtom);
+  const bumpRpcSkinVersion = useSetAtom(rpcSkinVersionAtom);
   const [pendingSkinDeepLink, setPendingSkinDeepLink] = useAtom(
     pendingSkinDeepLinkAtom,
   );
@@ -508,6 +510,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
       );
       if (!data) throw new Error("Failed to apply skin");
       setSkinsData(data);
+      bumpRpcSkinVersion(Date.now());
       await refreshSkins();
     } catch {
       toast.error(t("manageSkins.applyError"));
@@ -521,6 +524,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     selectedSkinEntry,
     isRemoteSkinServiceAvailable,
     refreshSkins,
+    bumpRpcSkinVersion,
     t,
   ]);
 
@@ -546,6 +550,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
       const data = await api.skins.resetSkin(authData.uuid, selectedAccount.type);
       if (!data) throw new Error("Failed to reset skin");
       setSkinsData(data);
+      bumpRpcSkinVersion(Date.now());
       await refreshSkins();
     } catch {
       toast.error(t("manageSkins.applyError"));
@@ -553,7 +558,14 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     } finally {
       setActionLoading(null);
     }
-  }, [authData, selectedAccount, isRemoteSkinServiceAvailable, refreshSkins, t]);
+  }, [
+    authData,
+    selectedAccount,
+    isRemoteSkinServiceAvailable,
+    refreshSkins,
+    bumpRpcSkinVersion,
+    t,
+  ]);
 
   const handleRegenerate = useCallback(async () => {
     if (!authData || !selectedAccount) return;
@@ -566,6 +578,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
       );
       if (!data) throw new Error("Failed to regenerate skin");
       setSkinsData(data);
+      bumpRpcSkinVersion(Date.now());
       await refreshSkins();
     } catch {
       toast.error(t("manageSkins.applyError"));
@@ -573,7 +586,14 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     } finally {
       setActionLoading(null);
     }
-  }, [authData, selectedAccount, isRemoteSkinServiceAvailable, refreshSkins, t]);
+  }, [
+    authData,
+    selectedAccount,
+    isRemoteSkinServiceAvailable,
+    refreshSkins,
+    bumpRpcSkinVersion,
+    t,
+  ]);
 
   const closeAddDialog = useCallback(() => {
     setIsAddDialogOpen(false);

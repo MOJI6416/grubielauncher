@@ -34,6 +34,7 @@ export const pathsAtom = atom<{
 export const selectedVersionAtom = atom<Version>();
 export const accountAtom = atom<ILocalAccount>();
 export const authDataAtom = atom<IAuth | null>(null);
+export const rpcSkinVersionAtom = atom<number>(Date.now());
 
 export const settingsAtom = atom<TSettings>(DEFAULT_SETTINGS);
 
@@ -134,9 +135,8 @@ export function saveGroupUnreads(unreads: Record<string, number>) {
   }
 }
 
-export const groupUnreadsAtom = atom<Record<string, number>>(
-  loadGroupUnreads(),
-);
+export const groupUnreadsAtom =
+  atom<Record<string, number>>(loadGroupUnreads());
 export const openGroupChatIdAtom = atom<string | null>(null);
 export const voiceCallAtom = atom<IVoiceCallState>(INITIAL_VOICE_CALL);
 
@@ -170,6 +170,7 @@ export const ownPresenceAtom = atom<Required<IUpdateStatus>>({
 });
 export const pendingFriendChatAtom = atom<string | null>(null);
 export const pendingSkinDeepLinkAtom = atom<string | null>(null);
+export const pendingWebLoginAtom = atom<string | null>(null);
 
 export const shareStateAtom = atom<ShareState>({
   phase: "idle",

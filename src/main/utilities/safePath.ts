@@ -48,9 +48,33 @@ export function assertWritablePath(target: string, label = 'path'): string {
   return target
 }
 
-export function assertReadablePath(target: string, label = 'path'): string {
+function getReadableRoots(): string[] {
+  const roots = [...getLauncherRoots(), app.getAppPath()]
+  if (typeof process.resourcesPath === 'string' && process.resourcesPath) {
+    roots.push(process.resourcesPath)
+  }
+  return roots
+}
+
+export function isReadablePath(target: unknown): target is string {
   if (typeof target !== 'string' || target === '' || target.includes('\0')) {
-    throw new Error(`Invalid ${label}: ${String(target)}`)
+    return false
+  }
+
+  let resolved: string
+  try {
+    resolved = path.resolve(target)
+  } catch {
+    return false
+  }
+
+  const roots = [...getReadableRoots(), ...blessedRoots]
+  return roots.some((root) => isInside(resolved, root))
+}
+
+export function assertReadablePath(target: string, label = 'path'): string {
+  if (!isReadablePath(target)) {
+    throw new Error(`Refused ${label} outside allowed roots: ${String(target)}`)
   }
   return target
 }

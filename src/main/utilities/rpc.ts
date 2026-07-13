@@ -1,5 +1,5 @@
 import rpcLocaleData from './rpcLocales.json'
-import { DISCORD_CLIENT_ID } from '@/shared/config'
+import { BACKEND_URL, DISCORD_CLIENT_ID } from '@/shared/config'
 import { RpcAccountContext, RpcRendererContext } from '@/types/Rpc'
 import { ShareState } from '@/types/Share'
 import * as DiscordRPC from 'discord-rpc'
@@ -99,6 +99,7 @@ export class RPC {
   private lang: SupportedRpcLanguage = 'en'
   private account: RpcAccountContext | null = null
   private hideServer = false
+  private skinVersion: string | number | undefined = undefined
   private launchingGame: LaunchActivity | null = null
   private runningGames = new Map<string, GameActivity>()
   private publicShare: PublicShareActivity | null = null
@@ -147,6 +148,7 @@ export class RPC {
     this.lang = normalizeLanguage(context.lang)
     this.account = context.account
     this.hideServer = context.hideServer === true
+    this.skinVersion = context.skinVersion
     await this.queuePresenceSync()
   }
 
@@ -376,6 +378,25 @@ export class RPC {
     }
   }
 
+  private buildHeadImageKey(): string | undefined {
+    const account = this.account
+    if (!account) return undefined
+
+    const id =
+      account.type === 'microsoft' || account.type === 'discord'
+        ? account.uuid
+        : account.type === 'elyby'
+          ? account.nickname
+          : undefined
+
+    if (!id) return undefined
+
+    const base = `${BACKEND_URL}/skins/head/${account.type}/${encodeURIComponent(id)}`
+    return this.skinVersion === undefined
+      ? base
+      : `${base}?v=${encodeURIComponent(String(this.skinVersion))}`
+  }
+
   private buildActivity(): DiscordRPC.Presence {
     const locale = rpcLocales[this.lang]
     const activity: DiscordRPC.Presence = {
@@ -398,7 +419,7 @@ export class RPC {
 
     const smallImageText = truncateText(this.account?.nickname)
     if (smallImageText) {
-      activity.smallImageKey = 'steve'
+      activity.smallImageKey = this.buildHeadImageKey() ?? 'steve'
       activity.smallImageText = smallImageText
     }
 

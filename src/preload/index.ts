@@ -48,12 +48,11 @@ import {
   ILocalProject,
 } from "@/types/ModManager";
 import { ISkinData } from "@/types/Skin";
+import { IWorld, IWorldStatistics, IWorldStatsAggregate } from "@/types/World";
 import {
-  IWorld,
-  IWorldStatistics,
-  IWorldStatsAggregate,
-} from "@/types/World";
-import { IAchievementStats } from "@/types/Achievements";
+  IAchievementStatsResult,
+  IRemoteWorldStatsResponse,
+} from "@/types/Achievements";
 import { IAuthlib, AuthlibEnsureResult } from "@/types/IAuthlib";
 import { IAuthResponse, IRefreshTokenResponse } from "@/types/Auth";
 import {
@@ -305,6 +304,7 @@ export interface IElectronAPI {
       user: IUpdateUser,
     ) => Promise<IUser | null>;
     getUser: (at: string, id: string) => Promise<IUser | null>;
+    getRemoteStats: (at: string) => Promise<IRemoteWorldStatsResponse>;
     groupsList: (at: string) => Promise<IGroup[] | null>;
     groupCreate: (at: string, name: string) => Promise<IGroup | null>;
     groupRename: (
@@ -386,6 +386,12 @@ export interface IElectronAPI {
         expiresAt: number;
       },
     ) => Promise<string | null>;
+    approveSiteLogin: (at: string, requestId: string) => Promise<boolean>;
+    discordLink: (
+      at: string,
+      code: string,
+    ) => Promise<{ discordId: string; username: string } | null>;
+    discordUnlink: (at: string) => Promise<{ discordId: null } | null>;
     getSkin: (at: string, uuid: string) => Promise<IGrubieSkin | null>;
     discordAuthenticated: (at: string, userId: string) => Promise<boolean>;
     aiComplete: (at: string, prompt: string) => Promise<string | null>;
@@ -429,6 +435,11 @@ export interface IElectronAPI {
       versionConf: IVersionConf,
       options?: VersionInstallOptions,
     ) => Promise<VersionInstallResult>;
+    syncLive: (
+      settings: TSettings,
+      versionConf: IVersionConf,
+      options?: VersionInstallOptions,
+    ) => Promise<VersionInstallResult>;
     cancelInstall: () => Promise<boolean>;
   };
   other: {
@@ -439,6 +450,7 @@ export interface IElectronAPI {
       multi?: boolean,
     ) => Promise<string[]>;
     getPathForFile: (file: File) => string;
+    blessPath: (path: string, kind?: "file" | "folder") => void;
     getPaths: () => Promise<{
       launcher: string;
       minecraft: string;
@@ -599,10 +611,7 @@ export interface IElectronAPI {
     ) => Promise<{ ok: boolean }>;
     community: {
       mine: (backendToken: string) => Promise<MyCommunityResult>;
-      delete: (
-        backendToken: string,
-        id: string,
-      ) => Promise<{ ok: boolean }>;
+      delete: (backendToken: string, id: string) => Promise<{ ok: boolean }>;
     };
   };
   modManager: {
@@ -672,7 +681,7 @@ export interface IElectronAPI {
     ) => Promise<IWorldStatsAggregate>;
     loadAchievementStats: (
       account: ILocalAccount,
-    ) => Promise<IAchievementStats>;
+    ) => Promise<IAchievementStatsResult>;
     readWorld: (
       worldPath: string,
       account: ILocalAccount,
@@ -736,6 +745,9 @@ export interface IElectronAPI {
     onLaunch: (callback: () => void) => () => void;
     onUpdateFailed: (
       callback: (payload: { message: string }) => void,
+    ) => () => void;
+    onIpcError: (
+      callback: (payload: { channel: string; message: string }) => void,
     ) => () => void;
     onCrashAnalysis: (
       callback: (
@@ -973,6 +985,8 @@ export const api = {
       ipcRenderer.invoke("backend:updateUser", at, id, user),
     getUser: (at: string, id: string) =>
       ipcRenderer.invoke("backend:getUser", at, id),
+    getRemoteStats: (at: string) =>
+      ipcRenderer.invoke("backend:getRemoteStats", at),
     groupsList: (at: string) => ipcRenderer.invoke("backend:groupsList", at),
     groupCreate: (at: string, name: string) =>
       ipcRenderer.invoke("backend:groupCreate", at, name),
@@ -1020,7 +1034,9 @@ export const api = {
         progressId,
         direct,
       ),
-    onUploadFileProgress: (callback: (progress: UploadFileProgress) => void) => {
+    onUploadFileProgress: (
+      callback: (progress: UploadFileProgress) => void,
+    ) => {
       const listener = (
         _event: Electron.IpcRendererEvent,
         progress: UploadFileProgress,
@@ -1048,6 +1064,12 @@ export const api = {
       id: string,
       auth: { accessToken: string; refreshToken: string; expiresAt: number },
     ) => ipcRenderer.invoke("backend:login", at, id, auth),
+    approveSiteLogin: (at: string, requestId: string) =>
+      ipcRenderer.invoke("backend:approveSiteLogin", at, requestId),
+    discordLink: (at: string, code: string) =>
+      ipcRenderer.invoke("backend:discordLink", at, code),
+    discordUnlink: (at: string) =>
+      ipcRenderer.invoke("backend:discordUnlink", at),
     getSkin: (at: string, uuid: string) =>
       ipcRenderer.invoke("backend:getSkin", at, uuid),
     discordAuthenticated: (at: string, userId: string) =>
@@ -1107,6 +1129,12 @@ export const api = {
       options?: VersionInstallOptions,
     ) =>
       ipcRenderer.invoke("mods:downloadOther", settings, versionConf, options),
+    syncLive: (
+      settings: TSettings,
+      versionConf: IVersionConf,
+      options?: VersionInstallOptions,
+    ) =>
+      ipcRenderer.invoke("mods:syncLive", settings, versionConf, options),
     cancelInstall: () => ipcRenderer.invoke("mods:cancelInstall"),
   },
   other: {
@@ -1116,7 +1144,14 @@ export const api = {
       filters?: { name: string; extensions: string[] }[],
       multi?: boolean,
     ) => ipcRenderer.invoke("other:openFileDialog", isFolder, filters, multi),
-    getPathForFile: (file: File) => webUtils.getPathForFile(file),
+    getPathForFile: (file: File) => {
+      const filePath = webUtils.getPathForFile(file);
+      if (filePath) ipcRenderer.sendSync("safepath:bless", filePath);
+      return filePath;
+    },
+    blessPath: (path: string, kind: "file" | "folder" = "folder") => {
+      if (path) ipcRenderer.sendSync("safepath:bless", path, kind);
+    },
     getPaths: () => ipcRenderer.invoke("other:getPaths"),
     getPath: (pathKey: string) => ipcRenderer.invoke("other:getPath", pathKey),
     notify: (
@@ -1156,8 +1191,7 @@ export const api = {
       ipcRenderer.invoke("shortcut:create", versionName, instance, imageSource),
   },
   image: {
-    bytes: (source: string) =>
-      ipcRenderer.invoke("image:bytes", source),
+    bytes: (source: string) => ipcRenderer.invoke("image:bytes", source),
   },
   server: {
     install: (
@@ -1258,8 +1292,7 @@ export const api = {
     catalog: {
       list: (params?: CatalogListParams) =>
         ipcRenderer.invoke("skins:catalogList", params),
-      download: (id: string) =>
-        ipcRenderer.invoke("skins:catalogDownload", id),
+      download: (id: string) => ipcRenderer.invoke("skins:catalogDownload", id),
       get: (id: string) => ipcRenderer.invoke("skins:catalogItem", id),
     },
     publishCommunity: (
@@ -1473,6 +1506,17 @@ export const api = {
       return () => ipcRenderer.off("app:updateFailed", listener);
     },
 
+    onIpcError: (
+      callback: (payload: { channel: string; message: string }) => void,
+    ) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: { channel: string; message: string },
+      ) => callback(payload);
+      ipcRenderer.on("ipc:error", listener);
+      return () => ipcRenderer.off("ipc:error", listener);
+    },
+
     onCrashAnalysis: (
       callback: (
         versionName: string,
@@ -1568,7 +1612,6 @@ export const api = {
     },
   },
 };
-
 
 if (process.contextIsolated) {
   try {

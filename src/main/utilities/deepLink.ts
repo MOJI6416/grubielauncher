@@ -2,6 +2,7 @@ import { LauncherDeepLink } from "@/types/DeepLink";
 
 const PACK_CODE_PATTERN = /^[a-fA-F0-9]{24}$/;
 const GROUP_CODE_PATTERN = /^[a-zA-Z0-9]{4}-?[a-zA-Z0-9]{4}$/;
+const WEB_LOGIN_ID_PATTERN = /^[a-f0-9]{64}$/i;
 
 export function parseLauncherDeepLink(rawUrl: string): LauncherDeepLink | null {
   let url: URL;
@@ -79,6 +80,21 @@ export function parseLauncherDeepLink(rawUrl: string): LauncherDeepLink | null {
     return {
       type: "skin",
       id,
+    };
+  }
+
+  if (url.hostname === "login") {
+    let requestId: string;
+    try {
+      requestId = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+    } catch {
+      return null;
+    }
+    if (!WEB_LOGIN_ID_PATTERN.test(requestId)) return null;
+
+    return {
+      type: "webLogin",
+      requestId,
     };
   }
 

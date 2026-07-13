@@ -14,6 +14,7 @@ import {
   Globe,
   HardDrive,
   Headphones,
+  Heart,
   HeartPulse,
   Info,
   Languages,
@@ -566,9 +567,25 @@ export function Settings({
                 }
               />
             </SettingsSection>
+
           </div>
 
           <DialogFooter>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mr-auto text-muted-foreground"
+              onClick={async () => {
+                try {
+                  await api.shell.openExternal(
+                    `https://grubielauncher.com/${i18n.language}/donate`,
+                  );
+                } catch {}
+              }}
+            >
+              <Heart className="size-4" />
+              {t("settings.support")}
+            </Button>
             <Button
               disabled={!hasChanges || !settingsPath}
               onClick={async () => {

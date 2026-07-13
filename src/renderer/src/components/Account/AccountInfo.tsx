@@ -7,6 +7,7 @@ import {
   Boxes,
   Calendar,
   Clock,
+  Heart,
   Loader2,
   Save,
   Settings2,
@@ -70,6 +71,7 @@ import {
 } from "@renderer/utilities/accountSession";
 import { toast } from "sonner";
 import { LazyDialogFallback } from "../LazyDialogFallback";
+import { ProfileSocials } from "./ProfileSocials";
 import {
   lazyWithPreload,
   preload,
@@ -602,6 +604,19 @@ export default function AccountInfo({
                           {user.platform}
                         </TooltipContent>
                       </Tooltip>
+                      {user.isDonor && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              className="inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-primary shadow-xs"
+                              aria-label={t("donor.badge")}
+                            >
+                              <Heart className="size-4 fill-primary" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>{t("donor.badge")}</TooltipContent>
+                        </Tooltip>
+                      )}
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
@@ -645,6 +660,12 @@ export default function AccountInfo({
                   value={user.friends.length}
                 />
               </div>
+
+              <ProfileSocials
+                user={user}
+                isOwner={isOwner}
+                accessToken={localAccount?.accessToken}
+              />
 
               {(user.achievements.length > 0 || isOwner) && (
                 <div className="grid gap-3">

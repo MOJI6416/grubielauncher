@@ -607,4 +607,54 @@ export class Mods {
       await fs.remove(tempPath).catch(() => {});
     }
   }
+
+  async syncLive(options?: ModsRuntimeOptions) {
+    await this.runWithProgress(options, () => this.syncLiveInternal());
+  }
+
+  private async syncLiveInternal() {
+    await this.initPromise;
+    this.throwIfInstallCancelled();
+
+    if (this.initFailed || !this.version.versionPath) {
+      throw new Error("Live sync aborted: version initialization failed");
+    }
+
+    const downloadFiles: DownloadItem[] = [];
+
+    for (const mod of this.version.version.loader.mods) {
+      if (!mod.version) continue;
+      if (
+        mod.projectType != ProjectType.RESOURCEPACK &&
+        mod.projectType != ProjectType.SHADER
+      )
+        continue;
+
+      const folderPath = path.join(
+        this.version.versionPath,
+        projetTypeToFolder(mod.projectType),
+      );
+
+      for (const file of mod.version.files) {
+        if (file.url?.startsWith("blocked::") && !file.localPath) continue;
+        if (file.isClient === false) continue;
+
+        downloadFiles.push({
+          destination: path.join(folderPath, file.filename),
+          url: file.localPath ? pathToFileURL(file.localPath).href : file.url,
+          group: "mods",
+          sha1: file.sha1,
+          size: file.size,
+        });
+      }
+    }
+
+    this.sendInstallProgress("mods", 90, true);
+    this.lastFailures = await this.downloader.downloadFiles(
+      downloadFiles,
+      this.installAbortSignal ?? undefined,
+      OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
+    );
+    this.throwIfInstallCancelled();
+  }
 }

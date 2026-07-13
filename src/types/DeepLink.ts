@@ -15,4 +15,8 @@ export type LauncherDeepLink =
   | {
       type: "skin";
       id: string;
+    }
+  | {
+      type: "webLogin";
+      requestId: string;
     };

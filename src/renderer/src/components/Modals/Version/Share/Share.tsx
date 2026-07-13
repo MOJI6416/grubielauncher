@@ -92,6 +92,7 @@ export function Share({
   const [isCatalogPublic, setIsCatalogPublic] = useState(
     () => modpack?.isPublic !== false,
   );
+  const [isPublishBanned, setIsPublishBanned] = useState(false);
 
   const [paths, setPaths] = useState<string[]>([]);
   const [isOpenSelectPaths, setIsOpenSelectPaths] = useState(false);
@@ -135,6 +136,23 @@ export function Share({
       });
     });
   }, []);
+
+  useEffect(() => {
+    const token = account?.accessToken;
+    const sub = authData?.sub;
+    if (!token || !sub) return;
+
+    let cancelled = false;
+    api.backend.getUser(token, sub).then((user) => {
+      if (cancelled || !user?.publishBanned) return;
+      setIsPublishBanned(true);
+      setIsCatalogPublic(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [account?.accessToken, authData?.sub]);
 
   useEffect(() => {
     let cancelled = false;
@@ -627,12 +645,14 @@ export function Share({
                     {t("share.catalogPublic")}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {t("share.catalogPublicDescription")}
+                    {isPublishBanned
+                      ? t("share.catalogPublicBanned")
+                      : t("share.catalogPublicDescription")}
                   </p>
                 </div>
                 <Switch
-                  checked={isCatalogPublic}
-                  disabled={isLoading}
+                  checked={isCatalogPublic && !isPublishBanned}
+                  disabled={isLoading || isPublishBanned}
                   onCheckedChange={setIsCatalogPublic}
                 />
               </div>
