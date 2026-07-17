@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import {
   accountAtom,
   authDataAtom,
@@ -12,7 +12,7 @@ import {
   saveMutedGroups,
   shareOwnerAccountKeyAtom,
   shareStateAtom,
-  voiceSessionAtom,
+  voiceSessionMetaAtom,
 } from "@renderer/stores/atoms";
 import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 import { Badge } from "@/components/ui/badge";
@@ -71,10 +71,7 @@ import { IModpack } from "@/types/Backend";
 import { Version } from "@renderer/classes/Version";
 import { Confirmation } from "../Modals/Confirmation";
 import { GroupChatModal } from "./GroupChatModal";
-import {
-  voiceConnect,
-  voiceDisconnect,
-} from "@renderer/utilities/voiceClient";
+import { voiceConnect, voiceDisconnect } from "@renderer/utilities/voiceClient";
 import { groupJoinErrorKey } from "@renderer/utilities/groupJoin";
 
 const api = window.api;
@@ -93,7 +90,7 @@ export function GroupsTab({
   onJoinOpenChange: (open: boolean) => void;
 }) {
   const [account] = useAtom(accountAtom);
-  const [session] = useAtom(voiceSessionAtom);
+  const session = useAtomValue(voiceSessionMetaAtom);
   const [groups] = useAtom(groupsAtom);
   const [friends] = useAtom(friendsAtom);
   const [friendSocket] = useAtom(friendSocketAtom);
@@ -315,9 +312,7 @@ export function GroupsTab({
   const invitableFriends = inviteGroup
     ? friends.filter(
         (friend) =>
-          !inviteGroup.members.some(
-            (member) => member._id === friend.user._id,
-          ),
+          !inviteGroup.members.some((member) => member._id === friend.user._id),
       )
     : [];
 
@@ -473,7 +468,9 @@ export function GroupsTab({
                     </DropdownMenuItem>
 
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => void handleCopyCode(group)}>
+                    <DropdownMenuItem
+                      onClick={() => void handleCopyCode(group)}
+                    >
                       <Copy className="size-3.5" />
                       {t("groups.copyCode")}
                     </DropdownMenuItem>
@@ -666,7 +663,10 @@ export function GroupsTab({
         if (!membersGroup) return null;
 
         return (
-          <Dialog open onOpenChange={(open) => !open && setMembersGroupId(null)}>
+          <Dialog
+            open
+            onOpenChange={(open) => !open && setMembersGroupId(null)}
+          >
             <DialogContent aria-describedby={undefined} className="sm:max-w-sm">
               <DialogHeader>
                 <DialogTitle>

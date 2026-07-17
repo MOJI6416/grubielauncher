@@ -42,12 +42,13 @@ import {
   groupInvitesAtom,
   groupsAtom,
   voiceCallAtom,
-  voiceSessionAtom,
+  voiceSessionMetaAtom,
   isShareModalOpenAtom,
   isRunningAtom,
   localFriendsAtom,
   ownPresenceAtom,
   pendingFriendChatAtom,
+  pendingFriendRequestAtom,
   selectedFriendAtom,
   selectedVersionAtom,
   shareOwnerAccountKeyAtom,
@@ -265,6 +266,9 @@ export function Friends({
   const [pendingFriendChat, setPendingFriendChat] = useAtom(
     pendingFriendChatAtom,
   );
+  const [pendingFriendRequest, setPendingFriendRequest] = useAtom(
+    pendingFriendRequestAtom,
+  );
 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState<LoadingType>();
@@ -276,9 +280,9 @@ export function Friends({
     account,
   );
 
-  const [activeTab, setActiveTab] = useState<
-    "friends" | "requests" | "groups"
-  >("friends");
+  const [activeTab, setActiveTab] = useState<"friends" | "requests" | "groups">(
+    "friends",
+  );
   const [addFriend, setAddFriend] = useState(false);
   const [skinModal, setSkinModal] = useState(false);
   const [chatModal, setChatModal] = useState(false);
@@ -310,7 +314,7 @@ export function Friends({
   const [myGroups] = useAtom(groupsAtom);
   const [groupInvites] = useAtom(groupInvitesAtom);
   const [isGroupInvitePicker, setIsGroupInvitePicker] = useState(false);
-  const [voiceSession] = useAtom(voiceSessionAtom);
+  const voiceSession = useAtomValue(voiceSessionMetaAtom);
   const [voiceCall] = useAtom(voiceCallAtom);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [isJoinGroupOpen, setIsJoinGroupOpen] = useState(false);
@@ -328,6 +332,7 @@ export function Friends({
   const chatModpackIdsRef = useRef<Set<string>>(new Set());
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingFriendRequestRef = useRef<string | null>(null);
+  const sentDeepFriendRef = useRef<{ id: string; at: number } | null>(null);
   const chatOpenRequestRef = useRef(0);
 
   useEffect(() => {
@@ -820,6 +825,20 @@ export function Friends({
     startLoading("friendRequest");
     socket.emit("friendRequest", { friendId });
   }, [socket, friendId, startLoading]);
+
+  useEffect(() => {
+    if (!pendingFriendRequest || !socket) return;
+    const sent = sentDeepFriendRef.current;
+    if (sent && sent.id === pendingFriendRequest && Date.now() - sent.at < 3000) {
+      setPendingFriendRequest(null);
+      return;
+    }
+    sentDeepFriendRef.current = { id: pendingFriendRequest, at: Date.now() };
+    pendingFriendRequestRef.current = pendingFriendRequest;
+    startLoading("friendRequest");
+    socket.emit("friendRequest", { friendId: pendingFriendRequest });
+    setPendingFriendRequest(null);
+  }, [pendingFriendRequest, setPendingFriendRequest, socket, startLoading]);
 
   const handleAcceptRequest = useCallback(
     (requestId: string) => {
@@ -1331,9 +1350,7 @@ export function Friends({
 
     const byActivity = (a: IFriend, b: IFriend) => {
       const diff = getFriendLastActiveTime(b) - getFriendLastActiveTime(a);
-      return diff !== 0
-        ? diff
-        : a.user.nickname.localeCompare(b.user.nickname);
+      return diff !== 0 ? diff : a.user.nickname.localeCompare(b.user.nickname);
     };
 
     const playing: IFriend[] = [];
@@ -1547,7 +1564,10 @@ export function Friends({
                 <MessagesSquare className="size-3.5" />
                 {t("groups.tab")}
               </TabsTrigger>
-              <TabsTrigger value="requests" className="relative gap-1.5 text-xs">
+              <TabsTrigger
+                value="requests"
+                className="relative gap-1.5 text-xs"
+              >
                 <Inbox className="size-3.5" />
                 {t("friends.requests")}
                 {recipientRequests.length + groupInvites.length > 0 && (

@@ -11,7 +11,16 @@ const alias = {
 export default defineConfig(() => {
   return {
     main: {
-      plugins: [externalizeDepsPlugin()],
+      plugins: [
+        externalizeDepsPlugin({
+          include: [
+            "bufferutil",
+            "utf-8-validate",
+            "encoding",
+            "register-scheme",
+          ],
+        }),
+      ],
       resolve: {
         alias,
       },
@@ -32,7 +41,14 @@ export default defineConfig(() => {
       resolve: {
         alias,
       },
-      plugins: [react(), tailwindcss()],
+      plugins: [
+        react({
+          babel: {
+            plugins: [["babel-plugin-react-compiler", {}]],
+          },
+        }),
+        tailwindcss(),
+      ],
       build: {
         minify: "esbuild" as const,
         rollupOptions: {

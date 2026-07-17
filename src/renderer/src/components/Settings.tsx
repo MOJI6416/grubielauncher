@@ -4,6 +4,7 @@ const api = window.api;
 
 import { useTranslation } from "react-i18next";
 import ReactCountryFlag from "react-country-flag";
+import { FaDiscord } from "react-icons/fa";
 import {
   Activity,
   Code2,
@@ -571,21 +572,36 @@ export function Settings({
           </div>
 
           <DialogFooter>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mr-auto text-muted-foreground"
-              onClick={async () => {
-                try {
-                  await api.shell.openExternal(
-                    `https://grubielauncher.com/${i18n.language}/donate`,
-                  );
-                } catch {}
-              }}
-            >
-              <Heart className="size-4" />
-              {t("settings.support")}
-            </Button>
+            <div className="mr-auto flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+                onClick={async () => {
+                  try {
+                    await api.shell.openExternal(
+                      `https://grubielauncher.com/${i18n.language}/donate`,
+                    );
+                  } catch {}
+                }}
+              >
+                <Heart className="size-4" />
+                {t("settings.support")}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+                onClick={async () => {
+                  try {
+                    await api.shell.openExternal("https://discord.gg/URrKha9hk7");
+                  } catch {}
+                }}
+              >
+                <FaDiscord className="size-4" />
+                Discord
+              </Button>
+            </div>
             <Button
               disabled={!hasChanges || !settingsPath}
               onClick={async () => {

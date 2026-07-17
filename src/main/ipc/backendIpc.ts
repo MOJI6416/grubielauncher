@@ -4,6 +4,7 @@ import { IFriendSettingsUpdate, IUpdateUser } from "@/types/IUser";
 import { IModpack, IModpackUpdate } from "@/types/Backend";
 import { VersionsService } from "../services/Versions";
 import { handleSafe } from "../utilities/ipc";
+import { checkBackendHealth } from "../utilities/connectivityTest";
 
 export function registerBackendIpc() {
   handleSafe(
@@ -324,6 +325,29 @@ export function registerBackendIpc() {
     return await backend.discordUnlink();
   });
 
+  handleSafe("backend:telegramLinkStart", null, async (_, at: string) => {
+    const backend = new Backend(at);
+    return await backend.telegramLinkStart();
+  });
+
+  handleSafe(
+    "backend:socialLink",
+    null,
+    async (_, at: string, provider: string, code: string) => {
+      const backend = new Backend(at);
+      return await backend.socialLink(provider, code);
+    },
+  );
+
+  handleSafe(
+    "backend:socialUnlink",
+    null,
+    async (_, at: string, provider: string) => {
+      const backend = new Backend(at);
+      return await backend.socialUnlink(provider);
+    },
+  );
+
   handleSafe("backend:getSkin", null, async (_, at: string, uuid: string) => {
     const backend = new Backend(at);
     return await backend.getSkin(uuid);
@@ -374,5 +398,9 @@ export function registerBackendIpc() {
   handleSafe("backend:getAuthlib", null, async () => {
     const backend = new Backend();
     return await backend.getAuthlib();
+  });
+
+  handleSafe("backend:checkHealth", false, async () => {
+    return await checkBackendHealth();
   });
 }

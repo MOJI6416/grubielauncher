@@ -65,6 +65,8 @@ const LAN_PORT_PATTERNS = [
   /Multiplayer game is now hosted on port (\d{2,5})/i,
 ];
 
+const LAN_PORT_QUICK_TEST = /port|serving/i;
+
 const HEARTBEAT_MAX_CONSECUTIVE_FAILURES = 3;
 
 export class LanShareService extends EventEmitter {
@@ -1069,6 +1071,8 @@ export class LanShareService extends EventEmitter {
   }
 
   private extractLanPort(message: string): number | null {
+    if (!LAN_PORT_QUICK_TEST.test(message)) return null;
+
     for (const pattern of LAN_PORT_PATTERNS) {
       const match = message.match(pattern);
       if (!match?.[1]) continue;
@@ -1103,7 +1107,10 @@ export class LanShareService extends EventEmitter {
     });
   }
 
-  private verifyPortOwnedByProcess(port: number, pid: number): Promise<boolean> {
+  private verifyPortOwnedByProcess(
+    port: number,
+    pid: number,
+  ): Promise<boolean> {
     return new Promise((resolve) => {
       const owners = new Set<number>();
 
@@ -1256,9 +1263,7 @@ export class LanShareService extends EventEmitter {
       const savesPath = path.join(versionPath, "saves");
       if (!(await fs.pathExists(savesPath))) return;
 
-      const entries = await fs
-        .readdir(savesPath)
-        .catch(() => [] as string[]);
+      const entries = await fs.readdir(savesPath).catch(() => [] as string[]);
       const hostUuids = this.getHostUuidSet(token);
       const worlds: IGuestWorldStatsUpload[] = [];
 

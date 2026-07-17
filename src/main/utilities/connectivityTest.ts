@@ -244,6 +244,18 @@ export function getConnectivityCheckCount(): number {
   return CHECKS.length
 }
 
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const response = await axios.get(`${BACKEND_URL}/health`, {
+      timeout: HTTP_TIMEOUT_MS,
+      validateStatus: () => true
+    })
+    return response.status === 200
+  } catch {
+    return false
+  }
+}
+
 export async function runConnectivityTests(
   onResult?: (result: ConnectivityCheckResult) => void
 ): Promise<ConnectivityCheckResult[]> {

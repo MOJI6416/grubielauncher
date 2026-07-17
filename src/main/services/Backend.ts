@@ -718,6 +718,48 @@ export class Backend extends BaseService {
     }
   }
 
+  async telegramLinkStart() {
+    try {
+      const response = await this.api.post<{
+        botUrl: string;
+        expiresAt: string;
+      }>(`${this.baseUrl}/auth/socials/telegram/start`, {});
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
+  async socialLink(provider: string, code: string) {
+    try {
+      const response = await this.api.post<{
+        provider: string;
+        linked: { id: string; username?: string | null; login?: string };
+      }>(
+        `${this.baseUrl}/auth/socials/${encodeURIComponent(provider)}/link`,
+        { code },
+      );
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
+  async socialUnlink(provider: string) {
+    try {
+      const response = await this.api.post<{
+        provider: string;
+        linked: null;
+      }>(
+        `${this.baseUrl}/auth/socials/${encodeURIComponent(provider)}/unlink`,
+        {},
+      );
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
   async getSkin(uuid: string) {
     try {
       const response = await this.api.get<IGrubieSkin>(

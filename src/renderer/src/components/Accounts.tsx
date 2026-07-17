@@ -532,6 +532,13 @@ export function Accounts() {
       const { provider, code } = await waitForOAuth;
 
       if (authSessionRef.current !== sessionId) return;
+      if (
+        provider !== "microsoft" &&
+        provider !== "discord" &&
+        provider !== "elyby"
+      ) {
+        return;
+      }
       setAuthStage("exchanging");
       closeModalSelect();
       await waitForNextFrame();

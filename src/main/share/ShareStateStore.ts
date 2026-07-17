@@ -1,13 +1,13 @@
-import { ShareState, ShareStateError } from '@/types/Share'
-import { EventEmitter } from 'events'
+import { ShareState, ShareStateError } from "@/types/Share";
+import { EventEmitter } from "events";
 
 function nowIso(): string {
-  return new Date().toISOString()
+  return new Date().toISOString();
 }
 
 export function createInitialShareState(): ShareState {
   return {
-    phase: 'idle',
+    phase: "idle",
     candidate: null,
     target: null,
     isTunnelConnected: false,
@@ -16,11 +16,11 @@ export function createInitialShareState(): ShareState {
     isDegraded: false,
     reconnectAttempt: 0,
     updatedAt: nowIso(),
-  }
+  };
 }
 
 export class ShareStateStore extends EventEmitter {
-  private state: ShareState = createInitialShareState()
+  private state: ShareState = createInitialShareState();
 
   public getState(): ShareState {
     return {
@@ -31,17 +31,24 @@ export class ShareStateStore extends EventEmitter {
       lastStreamDiagnostic: this.state.lastStreamDiagnostic
         ? { ...this.state.lastStreamDiagnostic }
         : undefined,
-    }
+    };
   }
 
   public setState(nextState: ShareState): ShareState {
+    const unchanged =
+      JSON.stringify({ ...nextState, updatedAt: "" }) ===
+      JSON.stringify({ ...this.state, updatedAt: "" });
+    if (unchanged) {
+      return this.getState();
+    }
+
     this.state = {
       ...nextState,
       updatedAt: nowIso(),
-    }
-    const snapshot = this.getState()
-    this.emit('change', snapshot)
-    return snapshot
+    };
+    const snapshot = this.getState();
+    this.emit("change", snapshot);
+    return snapshot;
   }
 
   public patch(patch: Partial<ShareState>): ShareState {
@@ -50,21 +57,24 @@ export class ShareStateStore extends EventEmitter {
       ...patch,
       lastError:
         patch.lastError === undefined ? this.state.lastError : patch.lastError,
-    })
+    });
   }
 
   public reset(extra?: Partial<ShareState>): ShareState {
     return this.setState({
       ...createInitialShareState(),
       ...(extra || {}),
-    })
+    });
   }
 
-  public setError(error: ShareStateError, phase: ShareState['phase'] = 'error'): ShareState {
+  public setError(
+    error: ShareStateError,
+    phase: ShareState["phase"] = "error",
+  ): ShareState {
     return this.patch({
       phase,
       lastError: error,
-      isDegraded: phase === 'reconnecting',
-    })
+      isDegraded: phase === "reconnecting",
+    });
   }
 }

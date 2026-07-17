@@ -119,46 +119,54 @@ export function MiniSkinWidget() {
     previewRef.current = preview;
   }, [preview]);
 
-  const loadPreview = useCallback(async (silent = false) => {
-    if (!selectedAccount || selectedAccount.type === "plain") {
-      setPreview(null);
-      return;
-    }
-
-    if (!canLoadRemoteSkin) {
-      setPreview(null);
-      setIsLoading(false);
-      return;
-    }
-
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-
-    if (!silent) setIsLoading(true);
-
-    try {
-      const nextPreview = await api.skin.get(
-        selectedAccount.type,
-        authData?.uuid || "",
-        selectedAccount.nickname,
-        selectedAccount.type === "microsoft"
-          ? authData?.auth.accessToken
-          : selectedAccount.type === "discord"
-            ? selectedAccount.accessToken
-          : undefined,
-      );
-
-      if (requestIdRef.current !== requestId) return;
-      setPreview(nextPreview?.skin ? nextPreview : null);
-    } catch {
-      if (requestIdRef.current !== requestId) return;
-      setPreview(null);
-    } finally {
-      if (requestIdRef.current === requestId) {
-        setIsLoading(false);
+  const loadPreview = useCallback(
+    async (silent = false) => {
+      if (!selectedAccount || selectedAccount.type === "plain") {
+        setPreview(null);
+        return;
       }
-    }
-  }, [authData?.auth.accessToken, authData?.uuid, canLoadRemoteSkin, selectedAccount]);
+
+      if (!canLoadRemoteSkin) {
+        setPreview(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+
+      if (!silent) setIsLoading(true);
+
+      try {
+        const nextPreview = await api.skin.get(
+          selectedAccount.type,
+          authData?.uuid || "",
+          selectedAccount.nickname,
+          selectedAccount.type === "microsoft"
+            ? authData?.auth.accessToken
+            : selectedAccount.type === "discord"
+              ? selectedAccount.accessToken
+              : undefined,
+        );
+
+        if (requestIdRef.current !== requestId) return;
+        setPreview(nextPreview?.skin ? nextPreview : null);
+      } catch {
+        if (requestIdRef.current !== requestId) return;
+        setPreview(null);
+      } finally {
+        if (requestIdRef.current === requestId) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [
+      authData?.auth.accessToken,
+      authData?.uuid,
+      canLoadRemoteSkin,
+      selectedAccount,
+    ],
+  );
 
   useEffect(() => {
     setPreview(null);
@@ -176,10 +184,14 @@ export function MiniSkinWidget() {
   useEffect(() => {
     if (!isVisible) return;
 
-    const interval = window.setInterval(() => {
-      const hasPreview = !!previewRef.current?.skin;
-      void loadPreview(hasPreview);
-    }, preview?.skin ? BACKGROUND_SKIN_REFRESH_MS : MISSING_SKIN_RETRY_MS);
+    const interval = window.setInterval(
+      () => {
+        if (document.hidden) return;
+        const hasPreview = !!previewRef.current?.skin;
+        void loadPreview(hasPreview);
+      },
+      preview?.skin ? BACKGROUND_SKIN_REFRESH_MS : MISSING_SKIN_RETRY_MS,
+    );
 
     return () => window.clearInterval(interval);
   }, [isVisible, loadPreview, preview?.skin]);
@@ -194,6 +206,56 @@ export function MiniSkinWidget() {
     if (!isVisible || !isManageableAccount || !canOpenSkinManager) return;
     return schedulePreload([LazyManageSkins.preload], 2000);
   }, [canOpenSkinManager, isManageableAccount, isVisible]);
+
+  const lookAnimationRef = useRef({ frameId: 0, running: false });
+
+  const stopLookAnimation = useCallback(() => {
+    const state = lookAnimationRef.current;
+    if (!state.running) return;
+    window.cancelAnimationFrame(state.frameId);
+    state.running = false;
+  }, []);
+
+  const ensureLookAnimation = useCallback(() => {
+    const state = lookAnimationRef.current;
+    if (state.running || document.hidden || !viewerRef.current) return;
+
+    state.running = true;
+
+    const animate = () => {
+      const viewer = viewerRef.current;
+      if (!viewer) {
+        state.running = false;
+        return;
+      }
+
+      const current = currentLookRef.current;
+      const target = targetLookRef.current;
+
+      current.x += (target.x - current.x) * 0.12;
+      current.y += (target.y - current.y) * 0.12;
+
+      if (
+        Math.abs(target.x - current.x) < 0.001 &&
+        Math.abs(target.y - current.y) < 0.001
+      ) {
+        current.x = target.x;
+        current.y = target.y;
+        state.running = false;
+      }
+
+      viewer.playerObject.skin.head.rotation.x = current.x;
+      viewer.playerObject.skin.head.rotation.y = current.y;
+      viewer.playerObject.skin.body.rotation.y = current.y * 0.08;
+      viewer.playerObject.rotation.y = BASE_PLAYER_ROTATION_Y;
+
+      if (state.running) {
+        state.frameId = window.requestAnimationFrame(animate);
+      }
+    };
+
+    state.frameId = window.requestAnimationFrame(animate);
+  }, []);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -212,51 +274,37 @@ export function MiniSkinWidget() {
         x: clamp((offsetY / 220) * 0.34, -0.28, 0.2),
         y: clamp((offsetX / 240) * 0.72, -0.7, 0.7),
       };
+      ensureLookAnimation();
     };
 
     const resetLook = () => {
       targetLookRef.current = { x: 0, y: 0 };
+      ensureLookAnimation();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopLookAnimation();
+      } else {
+        ensureLookAnimation();
+      }
     };
 
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseleave", resetLook);
     window.addEventListener("blur", resetLook);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseleave", resetLook);
       window.removeEventListener("blur", resetLook);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      stopLookAnimation();
     };
-  }, [isVisible]);
+  }, [ensureLookAnimation, isVisible, stopLookAnimation]);
 
-  useEffect(() => {
-    let frameId = 0;
-
-    const animate = () => {
-      const viewer = viewerRef.current;
-
-      if (viewer) {
-        const current = currentLookRef.current;
-        const target = targetLookRef.current;
-
-        current.x += (target.x - current.x) * 0.12;
-        current.y += (target.y - current.y) * 0.12;
-
-        viewer.playerObject.skin.head.rotation.x = current.x;
-        viewer.playerObject.skin.head.rotation.y = current.y;
-        viewer.playerObject.skin.body.rotation.y = current.y * 0.08;
-        viewer.playerObject.rotation.y = BASE_PLAYER_ROTATION_Y;
-      }
-
-      frameId = window.requestAnimationFrame(animate);
-    };
-
-    frameId = window.requestAnimationFrame(animate);
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, []);
+  useEffect(() => stopLookAnimation, [stopLookAnimation]);
 
   useEffect(() => {
     currentLookRef.current = { x: 0, y: 0 };

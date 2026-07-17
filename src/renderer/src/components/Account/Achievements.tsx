@@ -15,12 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useTranslation } from "react-i18next";
 import {
   CheckCircle2,
@@ -28,10 +22,9 @@ import {
   Loader2,
   Lock,
   Search,
-  Settings2,
   Trophy,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAtom } from "jotai";
 import {
   accountAtom,
@@ -91,10 +84,6 @@ export function Achievements({
   const [status, setStatus] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [publicLeaderboard, setPublicLeaderboard] = useState(
-    user.publicLeaderboard !== false,
-  );
-  const [togglingLeaderboard, setTogglingLeaderboard] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -177,47 +166,6 @@ export function Achievements({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, progress, account, isBackendOnline]);
-
-  const handleTogglePublicLeaderboard = useCallback(
-    async (checked: boolean) => {
-      if (!account?.accessToken || !isBackendOnline) return;
-      setPublicLeaderboard(checked);
-      setTogglingLeaderboard(true);
-      try {
-        let acc: ILocalAccount = account;
-        if (authData && account.type !== "plain") {
-          const refreshed = await ensureAccountSession({
-            accounts,
-            authData,
-            selectedAccount: account,
-            setAccounts,
-            setSelectedAccount,
-          });
-          acc = refreshed.account;
-        }
-        const updated = await api.backend.updateUser(
-          acc.accessToken || "",
-          user._id,
-          { publicLeaderboard: checked },
-        );
-        if (updated) setPublicLeaderboard(updated.publicLeaderboard !== false);
-      } catch (err) {
-        setPublicLeaderboard(!checked);
-        if (!isAccountSessionRefreshError(err)) console.error(err);
-      } finally {
-        setTogglingLeaderboard(false);
-      }
-    },
-    [
-      account,
-      authData,
-      accounts,
-      isBackendOnline,
-      user._id,
-      setAccounts,
-      setSelectedAccount,
-    ],
-  );
 
   const counts = useMemo(() => {
     const byCategory = new Map<AchievementCategory, number>();
@@ -344,41 +292,10 @@ export function Achievements({
         </div>
 
         <DialogFooter className="sm:justify-between">
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={() => setShowLeaderboard(true)}>
-              <Crown className="size-4" />
-              {t("leaderboard.title")}
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  aria-label={t("achievements.publicLeaderboard")}
-                >
-                  <Settings2 className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-72 p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">
-                      {t("achievements.publicLeaderboard")}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {t("achievements.publicLeaderboardDesc")}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={publicLeaderboard}
-                    onCheckedChange={handleTogglePublicLeaderboard}
-                    disabled={togglingLeaderboard || !isBackendOnline}
-                    aria-label={t("achievements.publicLeaderboard")}
-                  />
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <Button variant="secondary" onClick={() => setShowLeaderboard(true)}>
+            <Crown className="size-4" />
+            {t("leaderboard.title")}
+          </Button>
           <Button variant="secondary" onClick={onClose}>
             {t("common.close")}
           </Button>

@@ -28,6 +28,13 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,vitest.config.ts}'
   - '!**/*.{md,map}'
   - '!**/node_modules/**/{test,tests,__tests__,example,examples,docs,coverage}/**'
+  - '!**/node_modules/**/build/Release/obj/**'
+  - '!**/node_modules/**/build/Release/*.{pdb,ipdb,iobj,exp,lib,ilk,recipe,tlog}'
+  - '!**/node_modules/**/build/*.{vcxproj,filters,sln}'
+  - '!**/node_modules/**/build/config.gypi'
+  - '!**/node_modules/uiohook-napi/{libuiohook,src}/**'
+  - '!**/node_modules/uiohook-napi/binding.gyp'
+  - '!**/node_modules/uiohook-napi/prebuilds/{darwin-arm64,darwin-x64,linux-arm64,linux-loong64,win32-arm64}/**'
 
 asarUnpack:
   - resources/**

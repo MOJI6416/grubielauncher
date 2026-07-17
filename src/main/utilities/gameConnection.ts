@@ -5,8 +5,7 @@ export interface ParsedMinecraftServerConnection {
 
 const CONNECT_WITH_COMMA =
   /\bConnecting to\s+\/?([a-z0-9_.-]+)\s*,\s*(\d{1,5})\b/i;
-const CONNECT_WITH_COLON =
-  /\bConnecting to\s+\/?([a-z0-9_.-]+):(\d{1,5})\b/i;
+const CONNECT_WITH_COLON = /\bConnecting to\s+\/?([a-z0-9_.-]+):(\d{1,5})\b/i;
 const CONNECTED_WITH_COLON =
   /\bConnected to server\s+\/?([a-z0-9_.-]+):(\d{1,5})\b/i;
 const CONNECT_FALLBACK = /\bConnecting to\s+\/?([a-z0-9_.-]+)\b/i;
@@ -44,9 +43,13 @@ function parseMatch(
   };
 }
 
+const CONNECTION_QUICK_TEST = /connect/i;
+
 export function parseMinecraftServerConnectionLine(
   message: string,
 ): ParsedMinecraftServerConnection | null {
+  if (!CONNECTION_QUICK_TEST.test(message)) return null;
+
   return (
     parseMatch(message.match(CONNECT_WITH_COMMA)) ||
     parseMatch(message.match(CONNECT_WITH_COLON)) ||

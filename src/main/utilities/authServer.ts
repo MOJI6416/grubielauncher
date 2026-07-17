@@ -5,9 +5,14 @@ let pendingReject: ((err: Error) => void) | null = null;
 const OAUTH_TIMEOUT_MS = 2 * 60 * 1000;
 const OAUTH_PORT = 53213;
 
-function parseExpectedState(
-  expectedState: string,
-): "microsoft" | "discord" | "elyby" {
+export type OAuthCallbackProvider =
+  | "microsoft"
+  | "discord"
+  | "elyby"
+  | "twitch"
+  | "github";
+
+function parseExpectedState(expectedState: string): OAuthCallbackProvider {
   const [provider, nonce] = expectedState.split(":", 2);
 
   if (!nonce || !/^[a-zA-Z0-9-]{16,}$/.test(nonce)) {
@@ -17,7 +22,9 @@ function parseExpectedState(
   if (
     provider === "microsoft" ||
     provider === "discord" ||
-    provider === "elyby"
+    provider === "elyby" ||
+    provider === "twitch" ||
+    provider === "github"
   ) {
     return provider;
   }
@@ -59,12 +66,12 @@ export async function stopOAuthServer(
 
 export function startOAuthServer(expectedState: string): Promise<{
   code: string;
-  provider: "microsoft" | "discord" | "elyby";
+  provider: OAuthCallbackProvider;
 }> {
   return new Promise((resolve, reject) => {
     let settled = false;
     let timeoutId: NodeJS.Timeout | null = null;
-    let expectedProvider: "microsoft" | "discord" | "elyby";
+    let expectedProvider: OAuthCallbackProvider;
 
     try {
       expectedProvider = parseExpectedState(expectedState);
@@ -75,7 +82,7 @@ export function startOAuthServer(expectedState: string): Promise<{
 
     const safeResolve = (data: {
       code: string;
-      provider: "microsoft" | "discord" | "elyby";
+      provider: OAuthCallbackProvider;
     }) => {
       if (settled) return;
       settled = true;

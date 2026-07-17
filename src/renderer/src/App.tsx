@@ -36,6 +36,7 @@ import {
   networkAtom,
   ownPresenceAtom,
   pendingFriendChatAtom,
+  pendingFriendRequestAtom,
   pendingSkinDeepLinkAtom,
   pendingWebLoginAtom,
   pathsAtom,
@@ -80,10 +81,9 @@ import { IServer } from "@/types/ServersList";
 import { IConsole } from "@/types/Console";
 import {
   applyBlockedModFilePaths,
-  BlockedMods,
   checkBlockedMods,
   IBlockedMod,
-} from "./components/Modals/BlockedMods";
+} from "./utilities/blockedMods";
 import { Version } from "./classes/Version";
 import {
   checkDiffenceUpdateData,
@@ -115,7 +115,6 @@ import {
 } from "./utilities/lazyPreload";
 import { LazyDialogFallback } from "./components/LazyDialogFallback";
 import { LazyAddVersion } from "./components/LazyAddVersion";
-import { WhatsNewModal } from "./components/WhatsNewModal";
 import { Onboarding } from "./components/Onboarding";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
 import { getWhatsNewDecision, markWhatsNewSeen } from "./utilities/whatsNew";
@@ -142,8 +141,19 @@ const loadNewsFeed = () =>
     default: module.NewsFeed,
   }));
 
+const loadBlockedMods = () =>
+  import("./components/Modals/BlockedMods").then((module) => ({
+    default: module.BlockedMods,
+  }));
+const loadWhatsNewModal = () =>
+  import("./components/WhatsNewModal").then((module) => ({
+    default: module.WhatsNewModal,
+  }));
+
 const LazyFriends = lazyWithPreload(loadFriends);
 const LazyNewsFeed = lazyWithPreload(loadNewsFeed);
+const LazyBlockedMods = lazyWithPreload(loadBlockedMods);
+const LazyWhatsNewModal = lazyWithPreload(loadWhatsNewModal);
 
 export interface RunGameParams {
   skipUpdate?: boolean;
@@ -209,6 +219,7 @@ function App() {
   const setIsFriendsConnected = useSetAtom(isFriendsConnectedAtom);
   const setPendingFriendChat = useSetAtom(pendingFriendChatAtom);
   const setPendingSkinDeepLink = useSetAtom(pendingSkinDeepLinkAtom);
+  const setPendingFriendRequest = useSetAtom(pendingFriendRequestAtom);
   const setPendingWebLogin = useSetAtom(pendingWebLoginAtom);
   const [ownPresence, setOwnPresence] = useAtom(ownPresenceAtom);
 
@@ -396,20 +407,35 @@ function App() {
 
     onlineSocket.current = socket;
 
-    const onConnect = () => setIsBackendOnline(true);
-    const onDisconnect = () => setIsBackendOnline(false);
-    const onConnectError = () => setIsBackendOnline(false);
-
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-    socket.on("connect_error", onConnectError);
-
     return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-      socket.off("connect_error", onConnectError);
       socket.disconnect();
       onlineSocket.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let failures = 0;
+
+    const poll = async () => {
+      const healthy = await api.backend.checkHealth();
+      if (cancelled) return;
+      if (healthy) {
+        failures = 0;
+        setIsBackendOnline(true);
+      } else if (++failures >= 2) {
+        setIsBackendOnline(false);
+      }
+    };
+
+    poll();
+    const timer = setInterval(poll, 30000);
+    window.addEventListener("online", poll);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      window.removeEventListener("online", poll);
     };
   }, [setIsBackendOnline]);
 
@@ -712,6 +738,17 @@ function App() {
         return;
       }
 
+      if (payload.type === "friend") {
+        void api.other.restoreWindow();
+        if (!selectedAccountRef.current?.accessToken) {
+          toast.info(tRef.current("friends.deepLinkNoAccount"));
+          return;
+        }
+        setPendingFriendRequest(payload.userId);
+        setIsFriends(true);
+        return;
+      }
+
       if (payload.type !== "pack") return;
 
       try {
@@ -739,6 +776,7 @@ function App() {
   }, [
     loadGroups,
     selectedAccountRef,
+    setPendingFriendRequest,
     setPendingSkinDeepLink,
     setPendingWebLogin,
     tRef,
@@ -1970,6 +2008,7 @@ function App() {
             version.versionPath,
           );
           if (bMods.length > 0) {
+            preload(LazyBlockedMods.preload);
             setBlockedMods(bMods);
             setIsBlockedMods(true);
             toast.warning(t0("friends.joinFlow.blockedMods"), { id: toastId });
@@ -2245,6 +2284,7 @@ function App() {
                       updated.versionPath,
                     );
                     if (bMods.length > 0) {
+                      preload(LazyBlockedMods.preload);
                       setBlockedMods(bMods);
                       setIsBlockedMods(true);
 
@@ -2291,38 +2331,40 @@ function App() {
         )}
 
         {isBlockedMods && blockedMods.length > 0 && (
-          <BlockedMods
-            mods={blockedMods}
-            onClose={async (bMods) => {
-              setIsBlockedMods(false);
+          <Suspense fallback={<LazyDialogFallback variant="form" />}>
+            <LazyBlockedMods
+              mods={blockedMods}
+              onClose={async (bMods) => {
+                setIsBlockedMods(false);
 
-              const sv = selectedVersionRef.current;
-              const s0 = settingsRef.current;
-              if (!sv || !s0) return;
+                const sv = selectedVersionRef.current;
+                const s0 = settingsRef.current;
+                if (!sv || !s0) return;
 
-              const hasBlockedPaths = applyBlockedModFilePaths(
-                sv.version.loader.mods,
-                bMods,
-              );
-              if (hasBlockedPaths) await sv.save();
+                const hasBlockedPaths = applyBlockedModFilePaths(
+                  sv.version.loader.mods,
+                  bMods,
+                );
+                if (hasBlockedPaths) await sv.save();
 
-              const versionMods = new Mods(s0, sv.version);
-              await versionMods.check();
+                const versionMods = new Mods(s0, sv.version);
+                await versionMods.check();
 
-              setIsUpdateModal(false);
-              setIsLoading(false);
-              setLoadingType(undefined);
+                setIsUpdateModal(false);
+                setIsLoading(false);
+                setLoadingType(undefined);
 
-              const pendingLaunch = pendingLaunchRef.current;
-              pendingLaunchRef.current = null;
+                const pendingLaunch = pendingLaunchRef.current;
+                pendingLaunchRef.current = null;
 
-              await runGame({
-                ...pendingLaunch,
-                skipUpdate: true,
-                version: sv,
-              });
-            }}
-          />
+                await runGame({
+                  ...pendingLaunch,
+                  skipUpdate: true,
+                  version: sv,
+                });
+              }}
+            />
+          </Suspense>
         )}
 
         <InstallationCenter />
@@ -2395,11 +2437,13 @@ function App() {
         )}
 
         {whatsNew && (
-          <WhatsNewModal
-            release={whatsNew.release}
-            version={whatsNew.version}
-            onClose={dismissWhatsNew}
-          />
+          <Suspense fallback={<LazyDialogFallback variant="form" />}>
+            <LazyWhatsNewModal
+              release={whatsNew.release}
+              version={whatsNew.version}
+              onClose={dismissWhatsNew}
+            />
+          </Suspense>
         )}
 
         <WebLoginPrompt />

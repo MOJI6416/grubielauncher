@@ -1,8 +1,4 @@
-import {
-  IWorld,
-  IWorldStatistics,
-  IWorldStatsAggregate,
-} from "@/types/World";
+import { IWorld, IWorldStatistics, IWorldStatsAggregate } from "@/types/World";
 import {
   IAchievementStats,
   IAchievementStatsResult,
@@ -17,9 +13,8 @@ import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs-extra";
 import zlib from "zlib";
-import zip from "adm-zip";
 import { pathToFileURL } from "url";
-import { extractZip } from "./archiver";
+import { extractZip, openArchive } from "./archiver";
 
 function getAccountUuids(account: ILocalAccount): string[] {
   if (
@@ -161,7 +156,9 @@ function getWorldSeed(nbtData: any): string {
 
   const genSettings = data?.WorldGenSettings ?? data?.worldGenSettings;
   const searchRoot = genSettings ?? data;
-  return stringifyNbtValue(findNbtValueByKey(searchRoot, ["seed", "randomseed"]));
+  return stringifyNbtValue(
+    findNbtValueByKey(searchRoot, ["seed", "randomseed"]),
+  );
 }
 
 export async function readWorld(
@@ -219,11 +216,7 @@ export async function readWorld(
           seed = getWorldSeed(wgsNbt);
         }
       } catch (err) {
-        console.warn(
-          "Failed to read world_gen_settings.dat:",
-          worldPath,
-          err,
-        );
+        console.warn("Failed to read world_gen_settings.dat:", worldPath, err);
       }
     }
 
@@ -433,7 +426,9 @@ export async function readWorldKey(worldPath: string): Promise<string | null> {
   }
 }
 
-export async function ensureWorldKey(worldPath: string): Promise<string | null> {
+export async function ensureWorldKey(
+  worldPath: string,
+): Promise<string | null> {
   const existing = await readWorldKey(worldPath);
   if (existing) return existing;
 
@@ -512,7 +507,7 @@ function sanitizeWorldFolderName(name: string) {
 }
 
 async function getWorldArchiveInfo(zipPath: string) {
-  const archive = new zip(zipPath);
+  const archive = await openArchive(zipPath);
   const entries = archive.getEntries();
 
   const entryNames = entries

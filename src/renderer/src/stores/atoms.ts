@@ -105,6 +105,11 @@ export const consolesMetaAtom = selectAtom(
 );
 export const isFriendsConnectedAtom = atom<boolean>(false);
 export const voiceSessionAtom = atom<IVoiceSessionState>(INITIAL_VOICE_SESSION);
+export const voiceSessionMetaAtom = selectAtom(
+  voiceSessionAtom,
+  (session) => ({ state: session.state, roomId: session.roomId }),
+  (a, b) => a.state === b.state && a.roomId === b.roomId,
+);
 export const groupsAtom = atom<IGroup[]>([]);
 export const groupInvitesAtom = atom<IGroupInvite[]>([]);
 const GROUP_UNREADS_STORAGE_KEY = "groups.unreads";
@@ -170,6 +175,7 @@ export const ownPresenceAtom = atom<Required<IUpdateStatus>>({
 });
 export const pendingFriendChatAtom = atom<string | null>(null);
 export const pendingSkinDeepLinkAtom = atom<string | null>(null);
+export const pendingFriendRequestAtom = atom<string | null>(null);
 export const pendingWebLoginAtom = atom<string | null>(null);
 
 export const shareStateAtom = atom<ShareState>({

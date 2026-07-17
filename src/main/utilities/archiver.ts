@@ -37,15 +37,70 @@ function getSafeExtractPath(
   return target;
 }
 
+export async function openArchive(zipPath: string) {
+  return new zip(await fs.readFile(zipPath));
+}
+
+export function readEntryData(entry: zip.IZipEntry): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      entry.getDataAsync((data, err) => {
+        if (err) reject(new Error(err));
+        else resolve(data);
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+export async function extractEntries(
+  entries: zip.IZipEntry[],
+  resolveTargetPath: (entryName: string) => string,
+): Promise<void> {
+  const targets = new Map<string, zip.IZipEntry>();
+  const directories: string[] = [];
+
+  for (const entry of entries) {
+    const targetPath = resolveTargetPath(entry.entryName);
+    if (entry.isDirectory) {
+      directories.push(targetPath);
+    } else {
+      targets.set(targetPath, entry);
+    }
+  }
+
+  for (const directory of directories) {
+    await fs.ensureDir(directory);
+  }
+
+  const jobs = [...targets.entries()];
+  let jobIndex = 0;
+  const workerCount = Math.min(8, jobs.length);
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (true) {
+      const current = jobIndex++;
+      if (current >= jobs.length) break;
+
+      const [targetPath, entry] = jobs[current];
+      const data = await readEntryData(entry);
+      await fs.ensureDir(path.dirname(targetPath));
+      await fs.writeFile(targetPath, data);
+    }
+  });
+
+  await Promise.all(workers);
+}
+
 export async function readJSONFromArchive<T>(
   zipPath: string,
   fileName: string,
 ) {
-  const archive = new zip(zipPath);
+  const archive = await openArchive(zipPath);
   const entry = archive.getEntry(fileName);
   if (!entry) return null;
 
-  const text = entry.getData().toString("utf-8");
+  const text = (await readEntryData(entry)).toString("utf-8");
   return JSON.parse(text) as T;
 }
 
@@ -54,7 +109,7 @@ export async function extractFileFromArchive(
   fileName: string,
   destinationPath: string,
 ) {
-  const archive = new zip(zipPath);
+  const archive = await openArchive(zipPath);
   const entry = archive.getEntry(fileName);
   if (!entry) return null;
 
@@ -64,7 +119,7 @@ export async function extractFileFromArchive(
     destinationPath,
     path.basename(entry.entryName || fileName),
   );
-  await fs.writeFile(outFilePath, entry.getData());
+  await fs.writeFile(outFilePath, await readEntryData(entry));
 
   return path.join(destinationPath);
 }
@@ -147,23 +202,11 @@ export async function extractZip(
   zipPath: string,
   destination: string,
 ): Promise<void> {
-  const zipFile = new zip(zipPath);
+  const zipFile = await openArchive(zipPath);
 
   await fs.ensureDir(destination);
 
-  const entries = zipFile.getEntries();
-
-  for (const entry of entries) {
-    const entryName = entry.entryName;
-
-    const targetPath = getSafeExtractPath(destination, entryName);
-
-    if (entry.isDirectory) {
-      await fs.ensureDir(targetPath);
-      continue;
-    }
-
-    await fs.ensureDir(path.dirname(targetPath));
-    await fs.writeFile(targetPath, entry.getData());
-  }
+  await extractEntries(zipFile.getEntries(), (entryName) =>
+    getSafeExtractPath(destination, entryName),
+  );
 }

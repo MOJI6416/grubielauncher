@@ -161,7 +161,9 @@ function isInteractiveTarget(target: EventTarget | null, current: HTMLElement) {
 }
 
 function getTimeValue(value: unknown) {
-  const time = new Date((value as string | number | Date | undefined) || 0).getTime();
+  const time = new Date(
+    (value as string | number | Date | undefined) || 0,
+  ).getTime();
   return Number.isFinite(time) ? time : 0;
 }
 
@@ -371,7 +373,8 @@ function VersionsComponent({
         return i === -1 ? Number.MAX_SAFE_INTEGER : i;
       };
       list.sort(
-        (a, b) => idx(a) - idx(b) || a.version.name.localeCompare(b.version.name),
+        (a, b) =>
+          idx(a) - idx(b) || a.version.name.localeCompare(b.version.name),
       );
       return list;
     }
@@ -556,9 +559,8 @@ function VersionsComponent({
 
     hydratedSelectionRef.current = true;
     const current =
-      versions.find(
-        (v) => v.version.name === selectedVersion.version.name,
-      ) || selectedVersion;
+      versions.find((v) => v.version.name === selectedVersion.version.name) ||
+      selectedVersion;
     void selectVersion(current, isOwner(current.version.owner, account));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [versionsLoaded, account, selectedVersion, versions]);
@@ -1120,15 +1122,15 @@ function VersionsComponent({
                   if (viewMode === "grid") {
                     return (
                       <div
-                      key={itemKey}
-                      ref={flipItemRef(itemKey)}
-                      className={
-                        sortBy === "manual"
-                          ? "cursor-grab active:cursor-grabbing"
-                          : undefined
-                      }
-                      {...dragProps(itemKey)}
-                    >
+                        key={itemKey}
+                        ref={flipItemRef(itemKey)}
+                        className={
+                          sortBy === "manual"
+                            ? "cursor-grab active:cursor-grabbing"
+                            : undefined
+                        }
+                        {...dragProps(itemKey)}
+                      >
                         <Card
                           className={cn(
                             "group relative flex h-44 min-h-0 w-full flex-col gap-0 overflow-hidden rounded-xl py-0 shadow-none transition-all",
@@ -1145,10 +1147,14 @@ function VersionsComponent({
                               : undefined
                           }
                           tabIndex={
-                            !isRunning && !!account && !isSelected ? 0 : undefined
+                            !isRunning && !!account && !isSelected
+                              ? 0
+                              : undefined
                           }
                           aria-selected={isSelected}
-                          onClick={async (event: MouseEvent<HTMLDivElement>) => {
+                          onClick={async (
+                            event: MouseEvent<HTMLDivElement>,
+                          ) => {
                             if (
                               isInteractiveTarget(
                                 event.target,
@@ -1189,11 +1195,15 @@ function VersionsComponent({
                                   src={vc.version.image}
                                   aria-hidden
                                   draggable={false}
+                                  loading="lazy"
+                                  decoding="async"
                                   className="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover opacity-50 blur-2xl select-none"
                                 />
                                 <img
                                   src={vc.version.image}
                                   draggable={false}
+                                  loading="lazy"
+                                  decoding="async"
                                   className="relative size-20 rounded-2xl object-cover shadow-lg ring-1 ring-primary/15 transition-transform duration-300 select-none group-hover:scale-105"
                                   alt={vc.version.name}
                                 />
@@ -1240,7 +1250,12 @@ function VersionsComponent({
                               </div>
                             )}
                             <div className="absolute inset-x-0 bottom-0 flex justify-end p-2">
-                              {cardActions(vc, ownerOk, isRunningInstance, "grid")}
+                              {cardActions(
+                                vc,
+                                ownerOk,
+                                isRunningInstance,
+                                "grid",
+                              )}
                             </div>
                           </div>
 
@@ -1293,151 +1308,165 @@ function VersionsComponent({
                       }
                       {...dragProps(itemKey)}
                     >
-                    <Card
-                      className={cn(
-                        "group h-20 min-h-0 w-full gap-0 overflow-hidden rounded-xl py-0 shadow-none transition-all",
-                        isSelected
-                          ? "border-primary bg-accent shadow-sm ring-1 ring-primary/20"
-                          : "bg-card hover:border-primary/30 hover:bg-accent/55 hover:shadow-md",
-                        !isRunning && !!account && !isSelected
-                          ? "cursor-pointer"
-                          : "cursor-default",
-                      )}
-                      role={
-                        !isRunning && !!account && !isSelected
-                          ? "button"
-                          : undefined
-                      }
-                      tabIndex={
-                        !isRunning && !!account && !isSelected ? 0 : undefined
-                      }
-                      aria-selected={isSelected}
-                      onClick={async (event: MouseEvent<HTMLDivElement>) => {
-                        if (
-                          isInteractiveTarget(event.target, event.currentTarget)
-                        )
-                          return;
-                        if (!account || isLoading || isRunning) return;
-                        if (isSelected) return;
+                      <Card
+                        className={cn(
+                          "group h-20 min-h-0 w-full gap-0 overflow-hidden rounded-xl py-0 shadow-none transition-all",
+                          isSelected
+                            ? "border-primary bg-accent shadow-sm ring-1 ring-primary/20"
+                            : "bg-card hover:border-primary/30 hover:bg-accent/55 hover:shadow-md",
+                          !isRunning && !!account && !isSelected
+                            ? "cursor-pointer"
+                            : "cursor-default",
+                        )}
+                        role={
+                          !isRunning && !!account && !isSelected
+                            ? "button"
+                            : undefined
+                        }
+                        tabIndex={
+                          !isRunning && !!account && !isSelected ? 0 : undefined
+                        }
+                        aria-selected={isSelected}
+                        onClick={async (event: MouseEvent<HTMLDivElement>) => {
+                          if (
+                            isInteractiveTarget(
+                              event.target,
+                              event.currentTarget,
+                            )
+                          )
+                            return;
+                          if (!account || isLoading || isRunning) return;
+                          if (isSelected) return;
 
-                        await selectVersion(vc, ownerOk);
-                      }}
-                      onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
-                        if (event.target !== event.currentTarget) return;
-                        if (event.key !== "Enter" && event.key !== " ") return;
-                        event.preventDefault();
-                        event.currentTarget.click();
-                      }}
-                      onContextMenu={(event: MouseEvent<HTMLDivElement>) => {
-                        if (!isSelected) return;
-                        if (
-                          isInteractiveTarget(event.target, event.currentTarget)
-                        )
-                          return;
+                          await selectVersion(vc, ownerOk);
+                        }}
+                        onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+                          if (event.target !== event.currentTarget) return;
+                          if (event.key !== "Enter" && event.key !== " ")
+                            return;
+                          event.preventDefault();
+                          event.currentTarget.click();
+                        }}
+                        onContextMenu={(event: MouseEvent<HTMLDivElement>) => {
+                          if (!isSelected) return;
+                          if (
+                            isInteractiveTarget(
+                              event.target,
+                              event.currentTarget,
+                            )
+                          )
+                            return;
 
-                        event.preventDefault();
-                        clearSelectedVersion();
-                      }}
-                    >
-                      <CardContent className="h-full p-3">
-                        <div className="grid h-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-                          <div className="flex min-w-0 items-center gap-3.5">
-                            <div className="relative shrink-0">
-                              {vc.version.image ? (
-                                <img
-                                  src={vc.version.image}
-                                  width={52}
-                                  height={52}
-                                  draggable={false}
-                                  className="size-[52px] rounded-xl border bg-muted object-cover select-none"
-                                  alt={vc.version.name}
-                                />
-                              ) : (
-                                <div className="flex size-[52px] items-center justify-center rounded-xl border bg-muted text-base text-muted-foreground">
-                                  {vc.version.name.slice(0, 2).toUpperCase()}
-                                </div>
-                              )}
-                              {!ownerOk && ownerInfo && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button
-                                      type="button"
-                                      className="absolute -right-1 -top-1 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                      aria-label={t("versions.ownerTooltip", {
+                          event.preventDefault();
+                          clearSelectedVersion();
+                        }}
+                      >
+                        <CardContent className="h-full p-3">
+                          <div className="grid h-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                            <div className="flex min-w-0 items-center gap-3.5">
+                              <div className="relative shrink-0">
+                                {vc.version.image ? (
+                                  <img
+                                    src={vc.version.image}
+                                    width={52}
+                                    height={52}
+                                    draggable={false}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="size-[52px] rounded-xl border bg-muted object-cover select-none"
+                                    alt={vc.version.name}
+                                  />
+                                ) : (
+                                  <div className="flex size-[52px] items-center justify-center rounded-xl border bg-muted text-base text-muted-foreground">
+                                    {vc.version.name.slice(0, 2).toUpperCase()}
+                                  </div>
+                                )}
+                                {!ownerOk && ownerInfo && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="absolute -right-1 -top-1 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                        aria-label={t("versions.ownerTooltip", {
+                                          nickname: ownerInfo.nickname,
+                                        })}
+                                      >
+                                        <Avatar className="size-5 border border-border bg-card shadow-sm ring-2 ring-card">
+                                          <AvatarImage
+                                            src={ownerAvatar?.image}
+                                            alt={ownerInfo.nickname}
+                                          />
+                                          <AvatarFallback className="text-[0.55rem]">
+                                            {ownerInfo.nickname
+                                              .slice(0, 2)
+                                              .toUpperCase()}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {t("versions.ownerTooltip", {
                                         nickname: ownerInfo.nickname,
                                       })}
-                                    >
-                                      <Avatar className="size-5 border border-border bg-card shadow-sm ring-2 ring-card">
-                                        <AvatarImage
-                                          src={ownerAvatar?.image}
-                                          alt={ownerInfo.nickname}
-                                        />
-                                        <AvatarFallback className="text-[0.55rem]">
-                                          {ownerInfo.nickname
-                                            .slice(0, 2)
-                                            .toUpperCase()}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {t("versions.ownerTooltip", {
-                                      nickname: ownerInfo.nickname,
-                                    })}
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
-                            </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
 
-                            <div className="flex min-w-0 flex-1 flex-col gap-2">
-                              <p className="truncate text-base leading-tight font-medium text-foreground">
-                                {vc.version.name}
-                              </p>
-                              <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-                                <Badge
-                                  variant="outline"
-                                  className="max-w-28 shrink-0 rounded-md border-border bg-background font-normal"
-                                >
-                                  <LoaderLabel
-                                    loader={vc.version.loader.name}
-                                    textClassName="whitespace-nowrap"
-                                  />
-                                </Badge>
-                                <Badge
-                                  variant="outline"
-                                  className="max-w-32 truncate rounded-md border-border bg-background font-normal"
-                                  title={vc.version.version.id}
-                                >
-                                  {vc.version.version.id}
-                                </Badge>
-
-                                {vc.version.downloadedVersion && (
+                              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                                <p className="truncate text-base leading-tight font-medium text-foreground">
+                                  {vc.version.name}
+                                </p>
+                                <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
                                   <Badge
                                     variant="outline"
-                                    className="shrink-0 rounded-md border-sky-500/30 bg-sky-500/10 px-1.5 text-sky-600 dark:text-sky-400"
-                                    title={t("versions.downloadedLabel")}
+                                    className="max-w-28 shrink-0 rounded-md border-border bg-background font-normal"
                                   >
-                                    <CloudDownload className="size-3.5" />
+                                    <LoaderLabel
+                                      loader={vc.version.loader.name}
+                                      textClassName="whitespace-nowrap"
+                                    />
                                   </Badge>
-                                )}
+                                  <Badge
+                                    variant="outline"
+                                    className="max-w-32 truncate rounded-md border-border bg-background font-normal"
+                                    title={vc.version.version.id}
+                                  >
+                                    {vc.version.version.id}
+                                  </Badge>
 
-                                {isRunningInstance && (
-                                  <Badge className="border-emerald-600/30 bg-emerald-600/15 text-emerald-500">
-                                    <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" />
-                                    {t("versions.running")}
-                                  </Badge>
-                                )}
-                                {renderTagChips(itemKey, 2)}
+                                  {vc.version.downloadedVersion && (
+                                    <Badge
+                                      variant="outline"
+                                      className="shrink-0 rounded-md border-sky-500/30 bg-sky-500/10 px-1.5 text-sky-600 dark:text-sky-400"
+                                      title={t("versions.downloadedLabel")}
+                                    >
+                                      <CloudDownload className="size-3.5" />
+                                    </Badge>
+                                  )}
+
+                                  {isRunningInstance && (
+                                    <Badge className="border-emerald-600/30 bg-emerald-600/15 text-emerald-500">
+                                      <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" />
+                                      {t("versions.running")}
+                                    </Badge>
+                                  )}
+                                  {renderTagChips(itemKey, 2)}
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          <div className="flex shrink-0 items-center gap-1.5">
-                            {cardActions(vc, ownerOk, isRunningInstance, "list")}
+                            <div className="flex shrink-0 items-center gap-1.5">
+                              {cardActions(
+                                vc,
+                                ownerOk,
+                                isRunningInstance,
+                                "list",
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
                     </div>
                   );
                 })}

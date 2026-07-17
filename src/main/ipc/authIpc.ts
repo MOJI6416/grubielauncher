@@ -7,12 +7,15 @@ import {
   refreshElyByToken,
   refreshMicrosoftToken
 } from '../services/Auth'
-import { startOAuthServer } from '../utilities/authServer'
+import {
+  startOAuthServer,
+  type OAuthCallbackProvider,
+} from '../utilities/authServer'
 
 let oauthServerPromise:
   | Promise<{
       code: string
-      provider: 'microsoft' | 'discord' | 'elyby'
+      provider: OAuthCallbackProvider
     }>
   | null = null
 let oauthServerState: string | null = null

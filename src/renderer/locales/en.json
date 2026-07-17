@@ -96,8 +96,18 @@
     "editDescription": "Edit description",
     "desctiption": "Server description",
     "unsavedChanges": "Are you sure you want to close the settings without saving?",
-    "gameModes": ["Survival", "Creative", "Adventure", "Spectator"],
-    "difficulties": ["Peaceful", "Easy", "Normal", "Hard"],
+    "gameModes": [
+      "Survival",
+      "Creative",
+      "Adventure",
+      "Spectator"
+    ],
+    "difficulties": [
+      "Peaceful",
+      "Easy",
+      "Normal",
+      "Hard"
+    ],
     "sections": {
       "connection": "Connection",
       "game": "Game",
@@ -131,7 +141,14 @@
     "discordUnlinked": "Discord unlinked",
     "discordUnlinkFailed": "Failed to unlink Discord",
     "saved": "Socials saved",
-    "saveError": "Failed to save"
+    "saveError": "Failed to save",
+    "providerLinked": "Account linked",
+    "providerLinkFailed": "Failed to link the account",
+    "providerUnlinked": "Account unlinked",
+    "providerUnlinkFailed": "Failed to unlink the account",
+    "manage": "Manage",
+    "manageDescription": "Linked accounts are shown on your profile and on the site. Linking proves account ownership.",
+    "none": "Not linked"
   },
   "friends": {
     "title": "Friends",
@@ -266,7 +283,9 @@
       "serverEntryName": "{{nickname}}’s world",
       "openFriends": "Friends",
       "alreadyRunning": "The game is already running — the world was pinned to your server list, open Multiplayer"
-    }
+    },
+    "deepLinkNoAccount": "Sign in to an account to send a friend request",
+    "cancelRequest": "Cancel request"
   },
   "modManager": {
     "title": "Mod Manager",
@@ -406,7 +425,11 @@
     "moveUp": "Move up",
     "moveDown": "Move down",
     "confirmation": "Delete server {{name}}?",
-    "resourceSets": ["Ask", "Enabled", "Disabled"]
+    "resourceSets": [
+      "Ask",
+      "Enabled",
+      "Disabled"
+    ]
   },
   "voice": {
     "micUnavailable": "Microphone unavailable — you joined in listen-only mode",
@@ -639,7 +662,13 @@
     "rotation": "Rotation",
     "speed": "Speed",
     "animation": "Animation",
-    "animations": ["None", "Idle", "Walk", "Run", "Fly"],
+    "animations": [
+      "None",
+      "Idle",
+      "Walk",
+      "Run",
+      "Fly"
+    ],
     "additionally": "Additionally",
     "showName": "Show nickname",
     "setAvatar": "Set as avatar",
@@ -827,7 +856,12 @@
     "viewAccount": "View account",
     "editingAvatar": "Editing avatar",
     "updated": "Account updated",
-    "updateError": "Account update error"
+    "updateError": "Account update error",
+    "privacy": "Public visibility",
+    "publicLeaderboard": "Global leaderboard",
+    "publicLeaderboardDescription": "Show you on the public leaderboard on the site",
+    "publicProfile": "Public profile",
+    "publicProfileDescription": "Your profile page on the site: achievements, modpacks and skins"
   },
   "arguments": {
     "title": "Launch arguments",
@@ -907,7 +941,12 @@
     "servers": "Servers",
     "refresh": "Refresh",
     "sort": "Sort",
-    "sorts": ["Name", "Downloads", "Update", "New"],
+    "sorts": [
+      "Name",
+      "Downloads",
+      "Update",
+      "New"
+    ],
     "filter": "Filter",
     "search": "Search",
     "tagsTitle": "Tags",
@@ -1339,8 +1378,6 @@
     "unlocked": "Unlocked",
     "toNextLevel": "To level {{level}}",
     "unlockedToast": "Achievement unlocked: {{name}}",
-    "publicLeaderboard": "Global leaderboard",
-    "publicLeaderboardDesc": "Show me on the public leaderboard on the site",
     "filter": {
       "all": "All",
       "unlocked": "Unlocked",
@@ -1654,8 +1691,19 @@
     "resume": "Resume",
     "paused": "Paused"
   },
-  "sizes": ["B", "KB", "MB", "GB", "TB"],
-  "timeUnits": ["s", "m", "h", "d"],
+  "sizes": [
+    "B",
+    "KB",
+    "MB",
+    "GB",
+    "TB"
+  ],
+  "timeUnits": [
+    "s",
+    "m",
+    "h",
+    "d"
+  ],
   "ownModpacks": {
     "title": "My modpacks",
     "noModpacks": "You haven't shared any modpacks",

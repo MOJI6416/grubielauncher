@@ -76,9 +76,25 @@ export function FriendRequestItem({
           </Button>
         </div>
       ) : (
-        <p className="ml-auto shrink-0 text-xs text-muted-foreground">
-          {t("friends.requestSended")}
-        </p>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <p className="text-xs text-muted-foreground">
+            {t("friends.requestSended")}
+          </p>
+          <Button
+            variant="destructive"
+            size="icon-sm"
+            disabled={isLoading}
+            onClick={onReject}
+            aria-label={t("friends.cancelRequest")}
+            title={t("friends.cancelRequest")}
+          >
+            {rejectLoading ? (
+              <Loader2 className="animate-spin" size={18} />
+            ) : (
+              <X size={18} />
+            )}
+          </Button>
+        </div>
       )}
     </div>
   );

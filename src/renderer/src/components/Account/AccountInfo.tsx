@@ -72,6 +72,7 @@ import {
 import { toast } from "sonner";
 import { LazyDialogFallback } from "../LazyDialogFallback";
 import { ProfileSocials } from "./ProfileSocials";
+import { ProfilePrivacy } from "./ProfilePrivacy";
 import {
   lazyWithPreload,
   preload,
@@ -634,6 +635,8 @@ export default function AccountInfo({
                       {t(`achievements.tiers.${tier.key}`)}
                     </p>
                   </div>
+
+                  {isOwner && <ProfilePrivacy user={user} />}
                 </div>
 
               </div>

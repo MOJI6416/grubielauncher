@@ -1,6 +1,5 @@
 import axios from "axios";
 import fs from "fs-extra";
-import AdmZip from "adm-zip";
 import path from "path";
 import { fileURLToPath } from "url";
 import crypto from "crypto";
@@ -20,6 +19,7 @@ import {
 } from "./downloaderPure";
 import { resolveDownloadCandidates } from "./mirrors";
 import { getDownloadSource, getMojangReachable } from "./mirrorState";
+import { extractEntries, openArchive } from "./archiver";
 
 let downloadsPaused = false;
 let pauseWaiters: Array<() => void> = [];
@@ -916,23 +916,13 @@ export class Downloader {
     filePath: string,
     targetPath: string,
   ): Promise<void> => {
-    const zip = new AdmZip(filePath);
-    const entries = zip.getEntries();
+    const zip = await openArchive(filePath);
 
     await fs.ensureDir(targetPath);
 
-    for (const entry of entries) {
-      const entryName = entry.entryName;
-      const outPath = this.getSafeExtractPath(targetPath, entryName);
-
-      if ((entry as any).isDirectory) {
-        await fs.ensureDir(outPath);
-        continue;
-      }
-
-      await fs.ensureDir(path.dirname(outPath));
-      await fs.writeFile(outPath, entry.getData());
-    }
+    await extractEntries(zip.getEntries(), (entryName) =>
+      this.getSafeExtractPath(targetPath, entryName),
+    );
   };
 
   private extractTarSafe = async (

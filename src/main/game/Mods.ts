@@ -520,7 +520,7 @@ export class Mods {
 
       let isDirectory = false;
       try {
-        isDirectory = fs.lstatSync(filePath).isDirectory();
+        isDirectory = (await fs.lstat(filePath)).isDirectory();
       } catch {
         continue;
       }

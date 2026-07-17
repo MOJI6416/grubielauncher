@@ -25,6 +25,19 @@ describe("launcher deep links", () => {
     expect(parseLauncherDeepLink("grubielauncher://pack/bad-code")).toBeNull();
   });
 
+  it("parses friend links and rejects malformed ids", () => {
+    expect(
+      parseLauncherDeepLink(
+        "grubielauncher://friend/507f1f77bcf86cd799439011",
+      ),
+    ).toEqual({
+      type: "friend",
+      userId: "507f1f77bcf86cd799439011",
+    });
+    expect(parseLauncherDeepLink("grubielauncher://friend/nick")).toBeNull();
+    expect(parseLauncherDeepLink("grubielauncher://friend/")).toBeNull();
+  });
+
   it("parses launch links with an instance", () => {
     expect(
       parseLauncherDeepLink("grubielauncher://launch/My%20Pack?instance=2"),

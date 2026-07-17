@@ -1,5 +1,4 @@
 import { Accounts } from "./Accounts";
-import { FaDiscord } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
 import {
   Bell,
@@ -15,7 +14,6 @@ import {
 } from "lucide-react";
 import { ErrorLog } from "./ErrorLog";
 import { memo, Suspense, useEffect, useMemo, useState } from "react";
-import { Settings } from "./Settings";
 import { StorageManagerModal } from "./StorageManagerModal";
 import { useAtom, useAtomValue } from "jotai";
 import {
@@ -80,9 +78,12 @@ const loadLanShareModal = () =>
   import("./Share/LanShareBar").then((module) => ({
     default: module.LanShareModal,
   }));
+const loadSettings = () =>
+  import("./Settings").then((module) => ({ default: module.Settings }));
 
 const LazyConsole = lazyWithPreload(loadConsole);
 const LazyLanShareModal = lazyWithPreload(loadLanShareModal);
+const LazySettings = lazyWithPreload(loadSettings);
 
 function ConnectivityBadge({
   label,
@@ -193,6 +194,10 @@ function NavComponent({
     if (!selectedVersion) return;
     return schedulePreload([LazyConsole.preload], 500);
   }, [selectedVersion]);
+
+  useEffect(() => {
+    return schedulePreload([LazySettings.preload], 2500);
+  }, []);
 
   const shareBtnVariant = useMemo(() => {
     switch (shareState.phase) {
@@ -392,42 +397,26 @@ function NavComponent({
                   variant="secondary"
                   disabled={isRunning}
                   className="h-10 px-4 text-sm [&_svg]:size-4"
+                  onMouseEnter={() => preload(LazySettings.preload)}
+                  onFocus={() => preload(LazySettings.preload)}
                   onClick={() => setOpenSettingsModal(true)}
                 >
                   <LSettings />
                   {t("settings.title")}
                 </Button>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="size-9"
-                      onClick={async () => {
-                        try {
-                          await api.shell.openExternal(
-                            "https://discord.gg/URrKha9hk7",
-                          );
-                        } catch {}
-                      }}
-                      aria-label="Discord"
-                    >
-                      <FaDiscord className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Discord</TooltipContent>
-                </Tooltip>
               </div>
             </div>
           </div>
         </TooltipProvider>
       </div>
       {isSettingsModal && (
-        <Settings
-          onClose={() => setOpenSettingsModal(false)}
-          onShowWhatsNew={onOpenWhatsNew}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="form" />}>
+          <LazySettings
+            onClose={() => setOpenSettingsModal(false)}
+            onShowWhatsNew={onOpenWhatsNew}
+          />
+        </Suspense>
       )}
       {isStorageModal && (
         <StorageManagerModal onClose={() => setStorageModal(false)} />

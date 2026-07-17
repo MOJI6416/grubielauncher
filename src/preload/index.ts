@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { createPathUtils } from "./path";
 import { IServer } from "@/types/ServersList";
@@ -101,6 +102,22 @@ export interface UpdaterStatusPayload {
   status: UpdaterStatus;
   version?: string;
   message?: string;
+}
+
+if (window.location.protocol === "app:") {
+  try {
+    const legacyDump = ipcRenderer.sendSync(
+      "migration:legacyLocalStorage",
+    ) as Record<string, string> | null;
+
+    if (legacyDump) {
+      for (const [key, value] of Object.entries(legacyDump)) {
+        if (window.localStorage.getItem(key) === null) {
+          window.localStorage.setItem(key, String(value));
+        }
+      }
+    }
+  } catch {}
 }
 
 const pendingDeepLinks: LauncherDeepLink[] = [];
@@ -276,7 +293,7 @@ export interface IElectronAPI {
     ) => Promise<IRefreshTokenResponse | null>;
     startServer: (expectedState: string) => Promise<{
       code: string;
-      provider: "microsoft" | "discord" | "elyby";
+      provider: "microsoft" | "discord" | "elyby" | "twitch" | "github";
     }>;
   };
   backend: {
@@ -392,10 +409,26 @@ export interface IElectronAPI {
       code: string,
     ) => Promise<{ discordId: string; username: string } | null>;
     discordUnlink: (at: string) => Promise<{ discordId: null } | null>;
+    telegramLinkStart: (
+      at: string,
+    ) => Promise<{ botUrl: string; expiresAt: string } | null>;
+    socialLink: (
+      at: string,
+      provider: "twitch" | "github",
+      code: string,
+    ) => Promise<{
+      provider: string;
+      linked: { id: string; username?: string | null; login?: string };
+    } | null>;
+    socialUnlink: (
+      at: string,
+      provider: "telegram" | "twitch" | "github",
+    ) => Promise<{ provider: string; linked: null } | null>;
     getSkin: (at: string, uuid: string) => Promise<IGrubieSkin | null>;
     discordAuthenticated: (at: string, userId: string) => Promise<boolean>;
     aiComplete: (at: string, prompt: string) => Promise<string | null>;
     getAuthlib: () => Promise<IAuthlib | null>;
+    checkHealth: () => Promise<boolean>;
   };
   voice: {
     setPtt: (
@@ -1070,6 +1103,12 @@ export const api = {
       ipcRenderer.invoke("backend:discordLink", at, code),
     discordUnlink: (at: string) =>
       ipcRenderer.invoke("backend:discordUnlink", at),
+    telegramLinkStart: (at: string) =>
+      ipcRenderer.invoke("backend:telegramLinkStart", at),
+    socialLink: (at: string, provider: string, code: string) =>
+      ipcRenderer.invoke("backend:socialLink", at, provider, code),
+    socialUnlink: (at: string, provider: string) =>
+      ipcRenderer.invoke("backend:socialUnlink", at, provider),
     getSkin: (at: string, uuid: string) =>
       ipcRenderer.invoke("backend:getSkin", at, uuid),
     discordAuthenticated: (at: string, userId: string) =>
@@ -1077,6 +1116,7 @@ export const api = {
     aiComplete: (at: string, prompt: string) =>
       ipcRenderer.invoke("backend:aiComplete", at, prompt),
     getAuthlib: () => ipcRenderer.invoke("backend:getAuthlib"),
+    checkHealth: () => ipcRenderer.invoke("backend:checkHealth"),
   },
   voice: {
     setPtt: (bind: { type: "key" | "mouse"; code: number } | null) =>
@@ -1133,8 +1173,7 @@ export const api = {
       settings: TSettings,
       versionConf: IVersionConf,
       options?: VersionInstallOptions,
-    ) =>
-      ipcRenderer.invoke("mods:syncLive", settings, versionConf, options),
+    ) => ipcRenderer.invoke("mods:syncLive", settings, versionConf, options),
     cancelInstall: () => ipcRenderer.invoke("mods:cancelInstall"),
   },
   other: {

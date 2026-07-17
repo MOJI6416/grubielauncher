@@ -1,5 +1,11 @@
-import { app, session } from "electron";
+import { app, Menu, net, protocol, session } from "electron";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
+import { pathToFileURL } from "url";
+import {
+  isLegacyLocalStorageDumpRunning,
+  prepareLegacyLocalStorageDump,
+  registerLegacyLocalStorageIpc,
+} from "./utilities/localStorageMigration";
 import { autoUpdater } from "electron-updater";
 import * as ipcHandlers from "./ipc";
 import { lanShareService } from "./share";
@@ -27,6 +33,24 @@ app.commandLine.appendSwitch(
 );
 app.commandLine.appendSwitch("js-flags", "--max-old-space-size=1024");
 
+Menu.setApplicationMenu(null);
+
+const APP_SCHEME = "app";
+const APP_BUNDLE_HOST = "bundle";
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: APP_SCHEME,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      codeCache: true,
+      stream: true,
+    },
+  },
+]);
+
 process.on("uncaughtException", (error) => {
   console.error("[uncaughtException]", error);
 });
@@ -43,25 +67,77 @@ let appShutdownTimeout: NodeJS.Timeout | null = null;
 const pendingDeepLinks: LauncherDeepLink[] = [];
 void gotTheLock;
 
+const CSP_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' blob: 'wasm-unsafe-eval'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https: http:",
+  "media-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self' blob: https: http: ws: wss:",
+].join("; ");
+
+const CDN_CORS_HOST = "cdn.grubielauncher.com";
+
 function setupContentSecurityPolicy() {
   if (is.dev) return;
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        "Content-Security-Policy": [
-          [
-            "default-src 'self'",
-            "script-src 'self' blob: 'wasm-unsafe-eval'",
-            "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: blob: https: http:",
-            "media-src 'self' data: blob:",
-            "font-src 'self' data:",
-            "connect-src 'self' blob: https: http: ws: wss:",
-          ].join("; "),
-        ],
-      },
+    const responseHeaders = {
+      ...details.responseHeaders,
+      "Content-Security-Policy": [CSP_POLICY],
+    };
+
+    try {
+      if (new URL(details.url).hostname === CDN_CORS_HOST) {
+        for (const key of Object.keys(responseHeaders)) {
+          if (key.toLowerCase() === "access-control-allow-origin") {
+            delete responseHeaders[key];
+          }
+        }
+        responseHeaders["Access-Control-Allow-Origin"] = ["*"];
+      }
+    } catch {}
+
+    callback({ responseHeaders });
+  });
+}
+
+function registerAppProtocol() {
+  const rendererRoot = path.resolve(path.join(__dirname, "../renderer"));
+
+  protocol.handle(APP_SCHEME, async (request) => {
+    const url = new URL(request.url);
+    if (request.method !== "GET" || url.host !== APP_BUNDLE_HOST) {
+      return new Response(null, { status: 403 });
+    }
+
+    const pathname = decodeURIComponent(url.pathname);
+    const resolved = path.resolve(
+      path.join(rendererRoot, pathname === "/" ? "index.html" : pathname),
+    );
+
+    if (
+      resolved !== rendererRoot &&
+      !resolved.startsWith(rendererRoot + path.sep)
+    ) {
+      return new Response(null, { status: 403 });
+    }
+
+    const response = await net.fetch(pathToFileURL(resolved).toString(), {
+      bypassCustomProtocolHandlers: true,
+    });
+
+    if (!resolved.toLowerCase().endsWith(".html")) {
+      return response;
+    }
+
+    const headers = new Headers(response.headers);
+    headers.set("Content-Security-Policy", CSP_POLICY);
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
     });
   });
 }
@@ -187,6 +263,7 @@ if (!gotTheLock) {
   app.whenReady().then(async () => {
     electronApp.setAppUserModelId("com.grubielauncher");
     setupContentSecurityPolicy();
+    registerAppProtocol();
     registerProtocolClient();
 
     const appdata = app.getPath("appData");
@@ -200,6 +277,12 @@ if (!gotTheLock) {
     });
 
     Object.values(ipcHandlers).forEach((register) => register());
+    registerLegacyLocalStorageIpc();
+
+    const usesAppProtocol = !(is.dev && process.env["ELECTRON_RENDERER_URL"]);
+    if (usesAppProtocol) {
+      await prepareLegacyLocalStorageDump();
+    }
 
     const initialDeepLink = extractLauncherDeepLink(process.argv);
     if (initialDeepLink) pendingDeepLinks.push(initialDeepLink);
@@ -305,6 +388,8 @@ if (!gotTheLock) {
   });
 
   app.on("window-all-closed", () => {
+    if (isLegacyLocalStorageDumpRunning()) return;
+
     if (process.platform !== "darwin") {
       app.quit();
     }
