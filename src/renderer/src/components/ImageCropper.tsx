@@ -1,5 +1,5 @@
 import { Loader2, Save } from "lucide-react";
-import { createRef, useState } from "react";
+import { createRef, useEffect, useState } from "react";
 import Cropper, { ReactCropperElement } from "react-cropper";
 import { useTranslation } from "react-i18next";
 import "cropperjs/dist/cropper.css";
@@ -11,6 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { getLocalPathFromFileUrl } from "@renderer/utilities/exportVersion";
+
+const api = window.api;
 
 export function ImageCropper({
   title,
@@ -33,6 +36,37 @@ export function ImageCropper({
   const cropperRef = createRef<ReactCropperElement>();
   const { t } = useTranslation();
   const [isSaving, setIsSaving] = useState(false);
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (/^(https?:|data:|blob:)/i.test(image)) {
+      setResolvedSrc(image);
+      return;
+    }
+
+    const localPath = image.startsWith("file://")
+      ? getLocalPathFromFileUrl(image)
+      : image;
+    let active = true;
+    let objectUrl: string | null = null;
+
+    setResolvedSrc(null);
+    void (async () => {
+      const buffer = await api.fs.readFileBuffer(localPath);
+      if (!active) return;
+      if (!buffer) {
+        setResolvedSrc(image);
+        return;
+      }
+      objectUrl = URL.createObjectURL(new Blob([buffer]));
+      setResolvedSrc(objectUrl);
+    })();
+
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [image]);
 
   const getCropData = async () => {
     const cropper = cropperRef.current?.cropper;
@@ -76,7 +110,7 @@ export function ImageCropper({
             style={{ height: 350, width: "100%" }}
             initialAspectRatio={1}
             preview=".img-preview"
-            src={image}
+            src={resolvedSrc ?? undefined}
             viewMode={1}
             minCropBoxHeight={size.height}
             minCropBoxWidth={size.width}

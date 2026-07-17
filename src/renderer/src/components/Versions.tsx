@@ -112,6 +112,7 @@ import {
   preload,
   schedulePreload,
 } from "@renderer/utilities/lazyPreload";
+import { resolveLocalImage } from "@renderer/utilities/localMedia";
 
 const loadEditVersion = () =>
   import("./Modals/Version/EditVersion").then((module) => ({
@@ -1192,7 +1193,7 @@ function VersionsComponent({
                             {vc.version.image ? (
                               <>
                                 <img
-                                  src={vc.version.image}
+                                  src={resolveLocalImage(vc.version.image)}
                                   aria-hidden
                                   draggable={false}
                                   loading="lazy"
@@ -1200,7 +1201,7 @@ function VersionsComponent({
                                   className="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover opacity-50 blur-2xl select-none"
                                 />
                                 <img
-                                  src={vc.version.image}
+                                  src={resolveLocalImage(vc.version.image)}
                                   draggable={false}
                                   loading="lazy"
                                   decoding="async"
@@ -1367,7 +1368,7 @@ function VersionsComponent({
                               <div className="relative shrink-0">
                                 {vc.version.image ? (
                                   <img
-                                    src={vc.version.image}
+                                    src={resolveLocalImage(vc.version.image)}
                                     width={52}
                                     height={52}
                                     draggable={false}

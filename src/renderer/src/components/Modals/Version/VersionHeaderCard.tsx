@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { LoaderLabel } from "@renderer/components/Loaders";
 import { Version } from "@renderer/classes/Version";
 import { buildPackShareUrl } from "@renderer/utilities/packShare";
+import { resolveLocalImage } from "@renderer/utilities/localMedia";
 import { toast } from "sonner";
 
 const api = window.api;
@@ -52,7 +53,11 @@ export function VersionHeaderCard({
   const versionNameErrorId = "edit-version-name-error";
 
   const logoInner = image ? (
-    <img src={image} alt="logo" className="h-full w-full object-cover" />
+    <img
+      src={resolveLocalImage(image)}
+      alt="logo"
+      className="h-full w-full object-cover"
+    />
   ) : (
     <div className="flex h-full w-full items-center justify-center text-muted-foreground">
       <ImagePlus className="size-5" />

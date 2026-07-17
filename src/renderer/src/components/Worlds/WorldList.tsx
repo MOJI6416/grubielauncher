@@ -37,6 +37,7 @@ import { formatTime } from "@renderer/utilities/date";
 import { useTranslation } from "react-i18next";
 import { Confirmation } from "../Modals/Confirmation";
 import { toast } from "sonner";
+import { resolveLocalImage } from "@renderer/utilities/localMedia";
 
 const api = window.api;
 
@@ -205,7 +206,7 @@ export function WorldList({
                       <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/30 text-muted-foreground">
                         {world.icon ? (
                           <img
-                            src={world.icon}
+                            src={resolveLocalImage(world.icon)}
                             alt={`${world.name} icon`}
                             width={44}
                             height={44}

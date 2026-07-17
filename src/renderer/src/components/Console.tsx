@@ -50,6 +50,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { resolveLocalImage } from "@renderer/utilities/localMedia";
 
 const api = window.api;
 
@@ -392,7 +393,7 @@ export function Console({
                             <div className="flex min-w-0 items-center gap-2">
                               {versionItem?.version.image ? (
                                 <img
-                                  src={versionItem.version.image}
+                                  src={resolveLocalImage(versionItem.version.image)}
                                   alt={inst.versionName}
                                   width={32}
                                   height={32}

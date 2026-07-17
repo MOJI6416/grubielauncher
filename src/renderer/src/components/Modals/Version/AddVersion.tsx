@@ -105,6 +105,7 @@ import { resolveImportedLoaderVersion } from "@/shared/loaderVersions";
 import grubieIcon from "@renderer/assets/icon.png";
 import prismIcon from "@renderer/assets/launchers/prism.svg";
 import multimcIcon from "@renderer/assets/launchers/multimc.svg";
+import { resolveLocalImage } from "@renderer/utilities/localMedia";
 
 const api = window.api;
 
@@ -1226,7 +1227,7 @@ export function AddVersion({
                             (image ? (
                               <div className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border bg-muted/40">
                                 <img
-                                  src={image}
+                                  src={resolveLocalImage(image)}
                                   alt={versionName || t("versions.name")}
                                   className="h-full w-full object-cover"
                                 />

@@ -11,6 +11,7 @@ import { FolderOpen, Hash } from "lucide-react";
 import { formatTime } from "@renderer/utilities/date";
 import { worldDisplayStats } from "@renderer/utilities/worldStats";
 import type { ReactNode } from "react";
+import { resolveLocalImage } from "@renderer/utilities/localMedia";
 
 export function WorldStats({
   world,
@@ -40,7 +41,7 @@ export function WorldStats({
             <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/30 text-muted-foreground">
               {world.icon ? (
                 <img
-                  src={world.icon}
+                  src={resolveLocalImage(world.icon)}
                   alt=""
                   className="h-full w-full object-cover"
                 />

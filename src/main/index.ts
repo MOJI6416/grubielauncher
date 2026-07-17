@@ -17,6 +17,7 @@ import {
 import { createUpdaterWindow, updaterWindow } from "./windows/updaterWindow";
 import { rpc } from "./rpc";
 import { stopOAuthServer } from "./utilities/authServer";
+import { isReadablePath } from "./utilities/safePath";
 import {
   extractLauncherDeepLink,
   parseLauncherDeepLink,
@@ -37,6 +38,7 @@ Menu.setApplicationMenu(null);
 
 const APP_SCHEME = "app";
 const APP_BUNDLE_HOST = "bundle";
+const APP_MEDIA_HOST = "media";
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -71,7 +73,7 @@ const CSP_POLICY = [
   "default-src 'self'",
   "script-src 'self' blob: 'wasm-unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https: http:",
+  "img-src 'self' app: data: blob: https: http:",
   "media-src 'self' data: blob:",
   "font-src 'self' data:",
   "connect-src 'self' blob: https: http: ws: wss:",
@@ -108,7 +110,40 @@ function registerAppProtocol() {
 
   protocol.handle(APP_SCHEME, async (request) => {
     const url = new URL(request.url);
-    if (request.method !== "GET" || url.host !== APP_BUNDLE_HOST) {
+    if (request.method !== "GET") {
+      return new Response(null, { status: 403 });
+    }
+
+    // Local images (version logos, world icons, skin library, import
+    // previews). Same allow-list as the fs read IPC: launcher data dir,
+    // temp, app resources and user-picked (blessed) paths.
+    if (url.host === APP_MEDIA_HOST) {
+      const rawPath = url.searchParams.get("p") || "";
+
+      if (!rawPath || !isReadablePath(rawPath)) {
+        return new Response(null, { status: 403 });
+      }
+
+      const resolved = path.resolve(rawPath);
+
+      try {
+        const mediaResponse = await net.fetch(
+          pathToFileURL(resolved).toString(),
+          { bypassCustomProtocolHandlers: true },
+        );
+        const mediaHeaders = new Headers(mediaResponse.headers);
+        mediaHeaders.set("Access-Control-Allow-Origin", "*");
+        return new Response(mediaResponse.body, {
+          status: mediaResponse.status,
+          statusText: mediaResponse.statusText,
+          headers: mediaHeaders,
+        });
+      } catch {
+        return new Response(null, { status: 404 });
+      }
+    }
+
+    if (url.host !== APP_BUNDLE_HOST) {
       return new Response(null, { status: 403 });
     }
 

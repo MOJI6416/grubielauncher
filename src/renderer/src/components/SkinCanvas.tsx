@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { SkinViewer, type SkinViewerOptions } from "skinview3d";
+import { resolveLocalImage } from "@renderer/utilities/localMedia";
 
 type ViewerOptions = Omit<SkinViewerOptions, "canvas" | "width" | "height">;
 
@@ -57,14 +58,14 @@ export default function SkinCanvas({
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
-    if (skinUrl) void viewer.loadSkin(skinUrl);
+    if (skinUrl) void viewer.loadSkin(resolveLocalImage(skinUrl));
     else viewer.resetSkin();
   }, [skinUrl]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
-    if (capeUrl) void viewer.loadCape(capeUrl);
+    if (capeUrl) void viewer.loadCape(resolveLocalImage(capeUrl));
     else viewer.resetCape();
   }, [capeUrl]);
 

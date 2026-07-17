@@ -106,6 +106,7 @@ import { uploadChatImage } from "@renderer/utilities/chatUpload";
 import { groupJoinErrorKey } from "@renderer/utilities/groupJoin";
 import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 import { GroupsTab } from "../Voice/GroupsTab";
+import { resolveLocalImage } from "@renderer/utilities/localMedia";
 
 const api = window.api;
 
@@ -2127,7 +2128,7 @@ export function Friends({
                         <div className="flex w-full min-w-0 items-center gap-3">
                           {version.version.image && (
                             <img
-                              src={version.version.image}
+                              src={resolveLocalImage(version.version.image)}
                               alt={version.version.name}
                               className="size-10 shrink-0 rounded-md object-cover"
                               width={40}

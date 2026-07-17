@@ -69,6 +69,7 @@ import {
 import { cn } from "@/lib/utils";
 import { canOpenSkinManagerForAccount } from "@renderer/utilities/connectivity";
 import { toFileUrl } from "@renderer/utilities/exportVersion";
+import { resolveLocalImage } from "@renderer/utilities/localMedia";
 
 const api = window.api;
 const NO_CAPE_VALUE = "__none";
@@ -207,7 +208,7 @@ const SkinCard = memo(
               <CardContent className="p-3">
                 <div className="flex flex-col items-center gap-2 overflow-hidden">
                   <img
-                    src={skin.character || skin.url}
+                    src={resolveLocalImage(skin.character || skin.url)}
                     width={64}
                     height={128}
                     loading="lazy"
@@ -819,11 +820,38 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     [skinsData],
   );
 
-  const addPreviewUrl = useMemo(() => {
-    if (addSource === "file")
-      return pickedFile ? toFileUrl(pickedFile.path) : null;
-    if (addSource === "link") return debouncedInput || null;
-    return null;
+  const [addPreviewUrl, setAddPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (addSource === "link") {
+      setAddPreviewUrl(debouncedInput || null);
+      return;
+    }
+    if (addSource !== "file" || !pickedFile) {
+      setAddPreviewUrl(null);
+      return;
+    }
+
+    let active = true;
+    let objectUrl: string | null = null;
+
+    void (async () => {
+      const buffer = await api.fs.readFileBuffer(pickedFile.path);
+      if (!active) return;
+      if (!buffer) {
+        setAddPreviewUrl(toFileUrl(pickedFile.path));
+        return;
+      }
+      objectUrl = URL.createObjectURL(
+        new Blob([buffer], { type: "image/png" }),
+      );
+      setAddPreviewUrl(objectUrl);
+    })();
+
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
   }, [addSource, pickedFile, debouncedInput]);
 
   const isImportDisabled = useMemo(() => {
@@ -1061,7 +1089,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
                               <SelectItem key={cape.id} value={cape.id}>
                                 <span className="flex min-w-0 items-center gap-2">
                                   <img
-                                    src={cape.cape || cape.url}
+                                    src={resolveLocalImage(cape.cape || cape.url)}
                                     className="h-8 w-auto shrink-0 object-contain"
                                     loading="lazy"
                                     alt=""
