@@ -121,6 +121,55 @@ describe("token accounts keyed by sub", () => {
     expect(read?.accounts[0].nickname).toBe("NewName");
     expect(read?.accounts[0].accessToken).toBe(renamedToken);
   });
+
+  it("stores provider refresh tokens only in the secret store", async () => {
+    const token = makeJwt({ sub: "discord-1", exp: futureExp });
+    await saveAccountsConfig({
+      accounts: [
+        {
+          nickname: "DiscordUser",
+          type: "discord",
+          image: "",
+          friends: [],
+          accessToken: token,
+          refreshToken: "provider-refresh",
+        },
+      ],
+      lastPlayed: "discord_DiscordUser",
+    });
+
+    const persisted = await fs.readJSON(accountsPath);
+    expect(persisted.accounts[0].refreshToken).toBeUndefined();
+
+    const secrets = await fs.readJSON(secretsPath);
+    expect(secrets["discord-1:refresh"].value).toBe("provider-refresh");
+
+    const read = await readAccountsConfig();
+    expect(read?.accounts[0].refreshToken).toBe("provider-refresh");
+  });
+
+  it("migrates a refresh token out of an old JWT", async () => {
+    const token = makeJwt({
+      sub: "microsoft-legacy",
+      exp: futureExp,
+      auth: { refreshToken: "legacy-refresh" },
+    });
+    await fs.writeJSON(accountsPath, {
+      accounts: [
+        { nickname: "Steve", type: "microsoft", image: "", friends: [] },
+      ],
+      lastPlayed: "microsoft_Steve",
+    });
+    await fs.writeJSON(secretsPath, {
+      microsoft_Steve: { mode: "plain", value: token },
+    });
+
+    const read = await readAccountsConfig();
+    expect(read?.accounts[0].refreshToken).toBe("legacy-refresh");
+
+    const secrets = await fs.readJSON(secretsPath);
+    expect(secrets["microsoft-legacy:refresh"].value).toBe("legacy-refresh");
+  });
 });
 
 describe("legacy type_nickname migration", () => {

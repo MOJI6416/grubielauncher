@@ -110,7 +110,7 @@ async function refreshAccountToken(
   account: ILocalAccount,
   authData: IAuth,
 ): Promise<IRefreshTokenResponse | null> {
-  const refreshToken = authData.auth?.refreshToken;
+  const refreshToken = account.refreshToken;
   if (!refreshToken || !authData.sub) return null;
 
   if (account.type === "microsoft") {
@@ -165,19 +165,18 @@ export async function ensureAccountSession(
   let authDataForRefresh = authData;
 
   const storedSession = await loadStoredSession(selectedAccount, authData);
-  if (
-    storedSession &&
-    storedSession.account.accessToken !== selectedAccount.accessToken
-  ) {
-    if (!shouldRefreshAuth(storedSession.authData)) {
-      setSelectedAccount(storedSession.account);
-      setAccounts(storedSession.accounts);
+  if (storedSession) {
+    if (storedSession.account.accessToken !== selectedAccount.accessToken) {
+      if (!shouldRefreshAuth(storedSession.authData)) {
+        setSelectedAccount(storedSession.account);
+        setAccounts(storedSession.accounts);
 
-      return {
-        account: storedSession.account,
-        accounts: storedSession.accounts,
-        refreshed: true,
-      };
+        return {
+          account: storedSession.account,
+          accounts: storedSession.accounts,
+          refreshed: true,
+        };
+      }
     }
 
     accountForRefresh = storedSession.account;
@@ -215,6 +214,7 @@ export async function ensureAccountSession(
   const nextAccount: ILocalAccount = {
     ...accountForRefresh,
     accessToken: authUser.accessToken,
+    refreshToken: authUser.refreshToken,
   };
 
   const nextAccounts = accountsForRefresh.map((account) =>

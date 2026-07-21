@@ -267,7 +267,7 @@ export async function getServersOfVersions(versions: IVersionConf[]) {
   for (const version of versions) {
     const paths = await getLauncherPaths()
     const versionPath = path.join(paths.minecraft, 'versions', version.name)
-    let serversPath = path.join(versionPath, 'servers.dat')
+    const serversPath = path.join(versionPath, 'servers.dat')
     const isExists = await fs.pathExists(serversPath)
 
     if (!isExists) {

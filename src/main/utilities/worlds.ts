@@ -503,7 +503,14 @@ function getArchiveEntryPath(entry: any) {
 }
 
 function sanitizeWorldFolderName(name: string) {
-  return name.replace(/[<>:"/\\|?*\x00-\x1f]/g, "").trim();
+  const forbidden = '<>:"/\\|?*';
+  return [...name]
+    .filter((character) => {
+      const code = character.charCodeAt(0);
+      return code > 31 && !forbidden.includes(character);
+    })
+    .join("")
+    .trim();
 }
 
 async function getWorldArchiveInfo(zipPath: string) {

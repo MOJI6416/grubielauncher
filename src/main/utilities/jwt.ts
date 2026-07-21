@@ -6,7 +6,7 @@ import {
   refreshElyByToken,
   refreshMicrosoftToken
 } from '../services/Auth'
-import { readAccountsConfig } from './accounts'
+import { readAccountsConfig, saveAccountsConfig } from './accounts'
 
 function isTokenExpired(token: string) {
   try {
@@ -57,7 +57,7 @@ export async function checkToken(token: string) {
   }
 
   const sub = (decoded as any)?.sub
-  let auth = (decoded as any)?.auth
+  const auth = (decoded as any)?.auth
 
   if (!sub || !auth) {
     return null
@@ -80,12 +80,10 @@ export async function checkToken(token: string) {
             isValid: true
           }
         }
-
-        auth = current.decoded?.auth || auth
       }
     }
 
-    const refreshToken = auth?.refreshToken
+    const refreshToken = account?.refreshToken
 
     if (!account || typeof refreshToken !== 'string' || refreshToken.trim() === '') {
       return null
@@ -103,8 +101,12 @@ export async function checkToken(token: string) {
       return null
     }
 
-    const newToken = refreshResult?.accessToken
-    if (!newToken) return null
+    if (!refreshResult?.accessToken) return null
+    const newToken = refreshResult.accessToken
+
+    account.accessToken = newToken
+    account.refreshToken = refreshResult.refreshToken
+    if (accounts) await saveAccountsConfig(accounts)
 
     return {
       token: newToken,

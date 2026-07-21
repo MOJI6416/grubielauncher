@@ -167,7 +167,7 @@ export class ServerGame {
       }
     }
 
-    let cwd = this.serverPath;
+    const cwd = this.serverPath;
     const javaCmd = java.javaServerPath.includes(" ")
       ? `"${java.javaServerPath}"`
       : java.javaServerPath;

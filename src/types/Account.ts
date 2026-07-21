@@ -9,7 +9,6 @@ export interface IAuth extends DefaultJwtPayload {
   friendRequestsEnabled?: boolean
   auth: {
     accessToken: string
-    refreshToken: string
     expiresAt: number
     createdAt: number
   }
@@ -18,6 +17,7 @@ export interface IAuth extends DefaultJwtPayload {
 export interface ILocalAccount {
   nickname: string
   accessToken?: string
+  refreshToken?: string
   type: AccountType
   image: string
   friends: ILocalFriend[]

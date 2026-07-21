@@ -2272,7 +2272,7 @@ export function ModManager({
                                               );
                                             }
 
-                                            let newMods = [...mods];
+                                            const newMods = [...mods];
                                             const idx = newMods.findIndex(
                                               (p) => p.id == item.id,
                                             );
@@ -3211,7 +3211,7 @@ export function ModManager({
                                             onClick={() => {
                                               if (!selectVersion) return;
 
-                                              let newMods = [...mods];
+                                              const newMods = [...mods];
 
                                               const updated: ILocalProject = {
                                                 title: project.title,

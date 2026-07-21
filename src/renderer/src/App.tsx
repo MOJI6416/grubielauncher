@@ -199,6 +199,7 @@ function App() {
   const [selectedAccount, setSelectedAccount] = useAtom(accountAtom);
   const [settings, setSettings] = useAtom(settingsAtom);
   const setIsRunning = useSetAtom(isRunningAtom);
+  const launchInFlightRef = useRef(false);
 
   const [isFriends, setIsFriends] = useState(false);
 
@@ -1758,6 +1759,10 @@ function App() {
     const ad = authDataRef.current;
     let runtimeAuthData = ad;
 
+    if (launchInFlightRef.current) return;
+    launchInFlightRef.current = true;
+    setIsRunning(true);
+
     try {
       if (ad && account.type !== "plain") {
         const refreshed = await ensureAccountSession({
@@ -1849,8 +1854,6 @@ function App() {
         return;
       }
 
-      setIsRunning(true);
-
       launchVersion.version.lastLaunch = new Date();
       const trackStatistics = isOwner(launchVersion.version.owner, account);
 
@@ -1936,6 +1939,8 @@ function App() {
       });
       setSelectedVersion(undefined);
       setIsRunning(false);
+    } finally {
+      launchInFlightRef.current = false;
     }
   });
 

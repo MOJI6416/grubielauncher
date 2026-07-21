@@ -45,6 +45,15 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+
       - name: Build Electron + Vite app
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}

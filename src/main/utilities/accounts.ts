@@ -15,8 +15,22 @@ function decodeSubject(token?: string): string | null {
   }
 }
 
-type PersistedAccount = Omit<ILocalAccount, "accessToken"> & {
+function decodeLegacyRefreshToken(token?: string): string | undefined {
+  if (!token) return undefined;
+  try {
+    const value = jwtDecode<{ auth?: { refreshToken?: unknown } }>(token).auth
+      ?.refreshToken;
+    return typeof value === "string" && value.trim() !== ""
+      ? value
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+type PersistedAccount = Omit<ILocalAccount, "accessToken" | "refreshToken"> & {
   accessToken?: string;
+  refreshToken?: string;
 };
 
 type PersistedAccountConf = {
@@ -38,6 +52,7 @@ const persistedAccountKeys = new Set([
   "image",
   "friends",
   "accessToken",
+  "refreshToken",
   "id",
 ]);
 const persistedFriendKeys = new Set(["id", "isMuted"]);
@@ -97,6 +112,13 @@ function normalizePersistedAccount(account: any): PersistedAccount {
     normalized.accessToken = account.accessToken;
   }
 
+  if (
+    typeof account?.refreshToken === "string" &&
+    account.refreshToken.trim() !== ""
+  ) {
+    normalized.refreshToken = account.refreshToken;
+  }
+
   return normalized;
 }
 
@@ -117,6 +139,10 @@ function hasLegacyAccountShape(account: any): boolean {
 
 export function getAccountKey(account: Pick<ILocalAccount, "type" | "nickname">): string {
   return `${account.type}_${account.nickname}`;
+}
+
+function getRefreshSecretKey(key: string): string {
+  return `${key}:refresh`;
 }
 
 let accountsWriteChain: Promise<unknown> = Promise.resolve();
@@ -193,6 +219,7 @@ async function writeAccountsConfig(config: IAccountConf): Promise<void> {
   const persistedAccounts: PersistedAccount[] = config.accounts.map((account) => {
     const persisted = normalizePersistedAccount(account);
     delete persisted.accessToken;
+    delete persisted.refreshToken;
 
     const id = decodeSubject(account.accessToken) || account.id || undefined;
     if (id) persisted.id = id;
@@ -201,6 +228,12 @@ async function writeAccountsConfig(config: IAccountConf): Promise<void> {
     const { accessToken } = account;
     if (typeof accessToken === "string" && accessToken.trim() !== "") {
       nextSecrets[id ?? getAccountKey(account)] = encodeSecret(accessToken);
+    }
+    const refreshToken =
+      account.refreshToken ?? decodeLegacyRefreshToken(account.accessToken);
+    if (typeof refreshToken === "string" && refreshToken.trim() !== "") {
+      nextSecrets[getRefreshSecretKey(id ?? getAccountKey(account))] =
+        encodeSecret(refreshToken);
     }
 
     return persisted;
@@ -245,8 +278,14 @@ async function readAccountsConfigInner(): Promise<IAccountConf | null> {
 
       const idSecret = idKey ? secrets[idKey] : undefined;
       const legacySecret = secrets[legacyKey];
+      const idRefreshSecret = idKey
+        ? secrets[getRefreshSecretKey(idKey)]
+        : undefined;
+      const legacyRefreshSecret = secrets[getRefreshSecretKey(legacyKey)];
 
       let accessToken = decodeSecret(idSecret) ?? decodeSecret(legacySecret);
+      let refreshToken =
+        decodeSecret(idRefreshSecret) ?? decodeSecret(legacyRefreshSecret);
 
       if (
         !accessToken &&
@@ -259,12 +298,31 @@ async function readAccountsConfigInner(): Promise<IAccountConf | null> {
 
       if (accessToken && !idSecret && legacySecret) shouldMigrate = true;
 
+      if (
+        !refreshToken &&
+        typeof account.refreshToken === "string" &&
+        account.refreshToken.trim() !== ""
+      ) {
+        refreshToken = account.refreshToken;
+        shouldMigrate = true;
+      }
+
+      if (!refreshToken) {
+        refreshToken = decodeLegacyRefreshToken(accessToken);
+        if (refreshToken) shouldMigrate = true;
+      }
+
+      if (refreshToken && !idRefreshSecret && legacyRefreshSecret) {
+        shouldMigrate = true;
+      }
+
       const resolvedId = decodeSubject(accessToken) || idKey || undefined;
       if (resolvedId && resolvedId !== idKey) shouldMigrate = true;
 
       const hydrated: ILocalAccount = { ...account };
       if (resolvedId) hydrated.id = resolvedId;
       if (accessToken) hydrated.accessToken = accessToken;
+      if (refreshToken) hydrated.refreshToken = refreshToken;
 
       return hydrated;
     });
@@ -277,7 +335,16 @@ async function readAccountsConfigInner(): Promise<IAccountConf | null> {
     if (
       shouldMigrate ||
       hasLegacyShape ||
-      raw.accounts.some((account) => typeof account.accessToken === "string" && account.accessToken.trim() !== "")
+      raw.accounts.some(
+        (account) =>
+          typeof account.accessToken === "string" &&
+          account.accessToken.trim() !== "",
+      ) ||
+      raw.accounts.some(
+        (account) =>
+          typeof account.refreshToken === "string" &&
+          account.refreshToken.trim() !== "",
+      )
     ) {
       await writeAccountsConfig(config);
     }

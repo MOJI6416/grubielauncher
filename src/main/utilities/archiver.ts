@@ -3,6 +3,46 @@ import archiver from "archiver";
 import fs from "fs-extra";
 import path from "path";
 
+const MAX_ARCHIVE_BYTES = 512 * 1024 * 1024;
+const MAX_ARCHIVE_ENTRIES = 100_000;
+const MAX_ENTRY_BYTES = 256 * 1024 * 1024;
+const MAX_TOTAL_UNCOMPRESSED_BYTES = 4 * 1024 * 1024 * 1024;
+const MAX_COMPRESSION_RATIO = 200;
+
+function validateEntry(entry: zip.IZipEntry): void {
+  if (entry.isDirectory) return;
+
+  const size = entry.header.size;
+  const compressedSize = entry.header.compressedSize;
+  if (!Number.isSafeInteger(size) || size < 0 || size > MAX_ENTRY_BYTES) {
+    throw new Error(`Zip entry exceeds size limit: "${entry.entryName}"`);
+  }
+
+  if (size > 0 && compressedSize <= 0) {
+    throw new Error(`Invalid compressed zip entry: "${entry.entryName}"`);
+  }
+
+  if (compressedSize > 0 && size / compressedSize > MAX_COMPRESSION_RATIO) {
+    throw new Error(`Suspicious zip compression ratio: "${entry.entryName}"`);
+  }
+}
+
+function validateEntries(entries: zip.IZipEntry[]): void {
+  if (entries.length > MAX_ARCHIVE_ENTRIES) {
+    throw new Error("Zip archive contains too many entries");
+  }
+
+  let totalSize = 0;
+  for (const entry of entries) {
+    validateEntry(entry);
+    if (entry.isDirectory) continue;
+    totalSize += entry.header.size;
+    if (totalSize > MAX_TOTAL_UNCOMPRESSED_BYTES) {
+      throw new Error("Zip archive exceeds uncompressed size limit");
+    }
+  }
+}
+
 function getSafeExtractPath(
   destinationRoot: string,
   entryName: string,
@@ -38,15 +78,25 @@ function getSafeExtractPath(
 }
 
 export async function openArchive(zipPath: string) {
-  return new zip(await fs.readFile(zipPath));
+  const stats = await fs.stat(zipPath);
+  if (!stats.isFile() || stats.size > MAX_ARCHIVE_BYTES) {
+    throw new Error("Zip archive exceeds compressed size limit");
+  }
+
+  const archive = new zip(await fs.readFile(zipPath));
+  validateEntries(archive.getEntries());
+  return archive;
 }
 
 export function readEntryData(entry: zip.IZipEntry): Promise<Buffer> {
+  validateEntry(entry);
   return new Promise((resolve, reject) => {
     try {
       entry.getDataAsync((data, err) => {
         if (err) reject(new Error(err));
-        else resolve(data);
+        else if (data.length > MAX_ENTRY_BYTES || data.length !== entry.header.size) {
+          reject(new Error(`Invalid decompressed zip entry size: "${entry.entryName}"`));
+        } else resolve(data);
       });
     } catch (error) {
       reject(error);
@@ -58,6 +108,7 @@ export async function extractEntries(
   entries: zip.IZipEntry[],
   resolveTargetPath: (entryName: string) => string,
 ): Promise<void> {
+  validateEntries(entries);
   const targets = new Map<string, zip.IZipEntry>();
   const directories: string[] = [];
 
@@ -66,6 +117,9 @@ export async function extractEntries(
     if (entry.isDirectory) {
       directories.push(targetPath);
     } else {
+      if (targets.has(targetPath)) {
+        throw new Error(`Duplicate zip entry target: "${entry.entryName}"`);
+      }
       targets.set(targetPath, entry);
     }
   }
@@ -76,7 +130,8 @@ export async function extractEntries(
 
   const jobs = [...targets.entries()];
   let jobIndex = 0;
-  const workerCount = Math.min(8, jobs.length);
+  // Decompressed entries are Buffers; keep concurrency low to cap peak memory.
+  const workerCount = Math.min(2, jobs.length);
   const workers = Array.from({ length: workerCount }, async () => {
     while (true) {
       const current = jobIndex++;

@@ -494,8 +494,7 @@ export function AddVersion({
           shouldWaitForLoaderVersions = true;
         }
       } finally {
-        if (isCancelled) return;
-        if (!shouldWaitForLoaderVersions) {
+        if (!isCancelled && !shouldWaitForLoaderVersions) {
           setIsLoading(false);
           setLoadingType(undefined);
         }
@@ -555,9 +554,10 @@ export function AddVersion({
         setLoaderVersion(data[0]);
         setLoaderVersions(data);
       } finally {
-        if (isCancelled) return;
-        setIsLoading(false);
-        setLoadingType(undefined);
+        if (!isCancelled) {
+          setIsLoading(false);
+          setLoadingType(undefined);
+        }
       }
     })();
 

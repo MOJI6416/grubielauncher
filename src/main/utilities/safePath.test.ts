@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import path from 'path'
 import { vi } from 'vitest'
+import fs from 'fs-extra'
 
 vi.mock('electron', () => ({
   app: {
@@ -21,6 +22,15 @@ import {
 } from './safePath'
 
 const launcherRoot = path.resolve('/fake/appdata/.grubielauncher')
+const persistedRootsPath = path.resolve('/fake/tmp/allowed-paths.json')
+
+beforeAll(() => {
+  fs.removeSync(persistedRootsPath)
+})
+
+afterAll(() => {
+  fs.removeSync(persistedRootsPath)
+})
 
 describe('safePath.isWritablePath', () => {
   it('allows paths inside the launcher directory', () => {

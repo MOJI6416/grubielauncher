@@ -16,6 +16,18 @@ export class CurseForge {
     timeout: 30000
   })
 
+  // The backend accepts up to 1000 ids and performs the upstream 50-item
+  // batching itself, so avoid dozens of redundant launcher-to-API requests.
+  private static readonly BATCH_LIMIT = 1000
+
+  private static chunk<T>(items: T[], size: number): T[][] {
+    const chunks: T[][] = []
+    for (let index = 0; index < items.length; index += size) {
+      chunks.push(items.slice(index, index + size))
+    }
+    return chunks
+  }
+
   private static logAxiosError(prefix: string, error: unknown) {
     if (axios.isAxiosError(error)) {
       const status = error.response?.status
@@ -125,10 +137,12 @@ export class CurseForge {
 
   static async getFiles(fileIds: number[]): Promise<IFile[]> {
     try {
-      const response = await this.api.post<IFile[]>(`/curseforge/files`, {
-        fileIds
-      })
-      return response.data
+      const responses = await Promise.all(
+        this.chunk(fileIds, this.BATCH_LIMIT).map((batch) =>
+          this.api.post<IFile[]>(`/curseforge/files`, { fileIds: batch })
+        )
+      )
+      return responses.flatMap((response) => response.data)
     } catch (error) {
       this.logAxiosError('Error getting files', error)
       return []
@@ -137,10 +151,12 @@ export class CurseForge {
 
   static async getMods(modIds: number[]): Promise<IMod[]> {
     try {
-      const response = await this.api.post<IMod[]>(`/curseforge/mods`, {
-        modIds
-      })
-      return response.data
+      const responses = await Promise.all(
+        this.chunk(modIds, this.BATCH_LIMIT).map((batch) =>
+          this.api.post<IMod[]>(`/curseforge/mods`, { modIds: batch })
+        )
+      )
+      return responses.flatMap((response) => response.data)
     } catch (error) {
       this.logAxiosError('Error getting mods', error)
       return []

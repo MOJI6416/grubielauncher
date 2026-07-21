@@ -5,6 +5,7 @@ const account: ILocalAccount = {
   nickname: "player",
   type: "discord",
   accessToken: "old-token",
+  refreshToken: "expired-refresh-token",
   image: "",
   friends: [],
 };
@@ -16,7 +17,6 @@ const expiredAuth: IAuth = {
   uuid: "uuid",
   auth: {
     accessToken: "provider-access-token",
-    refreshToken: "expired-refresh-token",
     expiresAt: Date.now() - 60_000,
     createdAt: Date.now() - 120_000,
   },
@@ -48,13 +48,13 @@ describe("ensureAccountSession", () => {
       exp: Math.floor(Date.now() / 1000) + 3600,
       auth: {
         ...expiredAuth.auth,
-        refreshToken: "rotated-refresh-token",
         expiresAt: Date.now() + 3600_000,
       },
     };
     const freshAccount = {
       ...account,
       accessToken: jwt(freshAuth),
+      refreshToken: "rotated-refresh-token",
     };
     const api = {
       auth: {
@@ -127,7 +127,10 @@ describe("ensureAccountSession", () => {
   it("updates and saves the account when provider refresh succeeds", async () => {
     const api = {
       auth: {
-        discordRefresh: vi.fn().mockResolvedValue({ accessToken: "fresh-token" }),
+        discordRefresh: vi.fn().mockResolvedValue({
+          accessToken: "fresh-token",
+          refreshToken: "fresh-refresh-token",
+        }),
       },
       accounts: {
         save: vi.fn().mockResolvedValue(undefined),
@@ -147,6 +150,7 @@ describe("ensureAccountSession", () => {
 
     expect(result.refreshed).toBe(true);
     expect(result.account.accessToken).toBe("fresh-token");
+    expect(result.account.refreshToken).toBe("fresh-refresh-token");
     expect(setSelectedAccount).toHaveBeenCalledWith(
       expect.objectContaining({ accessToken: "fresh-token" }),
     );

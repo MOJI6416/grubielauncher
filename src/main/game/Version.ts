@@ -1291,19 +1291,22 @@ export class Version {
         sub: uuid,
         auth: {
           accessToken: "0",
-          refreshToken: "",
           expiresAt: 0,
           createdAt: 0,
         },
       };
     }
 
+    const activeAuthData = authData;
+
     game = game.map((arg) => {
       if (!this.manifest) return "";
 
-      let accessToken = authData.auth.accessToken;
+      const authData = activeAuthData;
+
+      let accessToken = activeAuthData.auth.accessToken;
       if (account.type == "discord")
-        accessToken = account.accessToken || authData.uuid;
+        accessToken = account.accessToken || activeAuthData.uuid;
       if (!accessToken) accessToken = "0";
 
       let accountType = "mojang";

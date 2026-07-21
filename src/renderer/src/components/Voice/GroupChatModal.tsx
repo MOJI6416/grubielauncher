@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useAtom, useSetAtom } from "jotai";
 import {
   accountAtom,
@@ -29,8 +37,13 @@ import {
 } from "@renderer/utilities/packShare";
 import { uploadChatImage } from "@renderer/utilities/chatUpload";
 import { groupJoinErrorKey } from "@renderer/utilities/groupJoin";
-import { ChatModal } from "../Friends/ChatModal";
 import type { LoadingType } from "../Friends/Friends";
+
+const ChatModal = lazy(() =>
+  import("../Friends/ChatModal").then((module) => ({
+    default: module.ChatModal,
+  })),
+);
 
 const api = window.api;
 const PACK_CODE_PATTERN = /^[a-fA-F0-9]{24}$/;
@@ -364,7 +377,8 @@ export function GroupChatModal({
 
   return (
     <>
-      <ChatModal
+      <Suspense fallback={null}>
+        <ChatModal
         groupTitle={group.name}
         showSenderNames
         resolveSenderById={resolveSenderById}
@@ -397,8 +411,9 @@ export function GroupChatModal({
         }}
         onSendGroupInvite={() => setIsGroupInvitePicker(true)}
         onAcceptGroupInvite={handleAcceptGroupInvite}
-        t={t}
-      />
+          t={t}
+        />
+      </Suspense>
 
       {isVersionSelect && (
         <Dialog open onOpenChange={(open) => !open && setIsVersionSelect(false)}>

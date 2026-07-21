@@ -483,7 +483,6 @@ export interface IElectronAPI {
       multi?: boolean,
     ) => Promise<string[]>;
     getPathForFile: (file: File) => string;
-    blessPath: (path: string, kind?: "file" | "folder") => void;
     getPaths: () => Promise<{
       launcher: string;
       minecraft: string;
@@ -1187,9 +1186,6 @@ export const api = {
       const filePath = webUtils.getPathForFile(file);
       if (filePath) ipcRenderer.sendSync("safepath:bless", filePath);
       return filePath;
-    },
-    blessPath: (path: string, kind: "file" | "folder" = "folder") => {
-      if (path) ipcRenderer.sendSync("safepath:bless", path, kind);
     },
     getPaths: () => ipcRenderer.invoke("other:getPaths"),
     getPath: (pathKey: string) => ipcRenderer.invoke("other:getPath", pathKey),
