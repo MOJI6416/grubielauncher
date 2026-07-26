@@ -2,7 +2,6 @@ import fs from 'fs-extra'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { getDirectories, getSha1, getTotalSizes } from '../utilities/files'
-import { createZipArchive, extractZip } from '../utilities/archiver'
 import { handleSafe } from '../utilities/ipc'
 import { assertReadablePath, assertWritablePath } from '../utilities/safePath'
 import { writeJsonAtomic } from '../utilities/atomicJson'
@@ -70,11 +69,17 @@ export function registerFsIpc() {
 
   handleSafe<boolean>('file:archiveFiles', false, async (_, filesToArchive: string[], zipPath: string, basePath?: string) => {
     assertWritablePath(zipPath, 'file:archiveFiles')
+    if (!Array.isArray(filesToArchive)) return false
+    filesToArchive.forEach((source) => assertReadablePath(source, 'file:archiveFiles'))
+    if (basePath !== undefined) assertReadablePath(basePath, 'file:archiveFiles')
+    const { createZipArchive } = await import('../utilities/archiver')
     await createZipArchive(filesToArchive, zipPath, basePath)
     return true
   })
 
   handleSafe<number>('file:getTotalSizes', 0, async (_, filePaths: string[]) => {
+    if (!Array.isArray(filePaths)) return 0
+    filePaths.forEach((filePath) => assertReadablePath(filePath, 'file:getTotalSizes'))
     return await getTotalSizes(filePaths)
   })
 
@@ -122,6 +127,7 @@ export function registerFsIpc() {
   handleSafe<boolean>('fs:extractZip', false, async (_, zipPath: string, destination: string) => {
     assertReadablePath(zipPath, 'fs:extractZip')
     assertWritablePath(destination, 'fs:extractZip')
+    const { extractZip } = await import('../utilities/archiver')
     await extractZip(zipPath, destination)
     return true
   })

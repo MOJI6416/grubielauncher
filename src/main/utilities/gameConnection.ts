@@ -44,16 +44,30 @@ function parseMatch(
 }
 
 const CONNECTION_QUICK_TEST = /connect/i;
+const LOGGER_SEGMENT = /\[([\w.$]+)\/\]/;
+
+function isVanillaClientLogger(message: string): boolean {
+  const logger = message.match(LOGGER_SEGMENT)?.[1];
+  if (!logger) return true;
+
+  return /^net\.minecraft\b/i.test(logger);
+}
 
 export function parseMinecraftServerConnectionLine(
   message: string,
 ): ParsedMinecraftServerConnection | null {
   if (!CONNECTION_QUICK_TEST.test(message)) return null;
 
-  return (
+  const withExplicitPort =
     parseMatch(message.match(CONNECT_WITH_COMMA)) ||
     parseMatch(message.match(CONNECT_WITH_COLON)) ||
-    parseMatch(message.match(CONNECTED_WITH_COLON)) ||
+    parseMatch(message.match(CONNECTED_WITH_COLON));
+
+  if (withExplicitPort) return withExplicitPort;
+
+  if (!isVanillaClientLogger(message)) return null;
+
+  return (
     parseMatch(message.match(CONNECT_FALLBACK), 25565) ||
     parseMatch(message.match(CONNECTED_FALLBACK), 25565)
   );

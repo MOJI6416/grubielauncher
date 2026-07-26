@@ -6,9 +6,19 @@ import path from 'path'
 import fs from 'fs-extra'
 import { DownloadItem } from '@/types/Downloader'
 import { Downloader } from '../utilities/downloader'
+import { findSystemJava } from './systemJava'
+import { resolveDownloadCandidates } from '../utilities/mirrors'
+import {
+  getDownloadSource,
+  getMojangReachable,
+  isMirrorDisabled
+} from '../utilities/mirrorState'
 import { getOS } from '../utilities/other'
 
 const JAVA_VERIFIED_MARKER = '.grubie-java-verified'
+const JAVA_ASSET_HOSTS = ['github.com', 'objects.githubusercontent.com']
+
+const installedRootCache = new Map<number, { root: string; mtimeMs: number }>()
 
 interface IJavaAsset {
   id: string
@@ -44,6 +54,8 @@ export class Java {
   public majorVersion: number = 21
   public platform: IPlatform | null = null
 
+  public usingSystemJava = false
+
   private resolvedAsset: IJavaAsset | null = null
   private static readonly apiUrl = 'https://api.adoptium.net/v3/assets/latest'
   private static readonly preferredImageTypes: IAdoptiumImageType[] = ['jre', 'jdk']
@@ -64,6 +76,19 @@ export class Java {
       this.setJavaPaths(installedJavaRoot)
     }
 
+  }
+
+  async useSystemJava(): Promise<boolean> {
+    if (!this.platform) return false
+
+    const system = await findSystemJava(this.majorVersion, this.platform)
+    if (!system) return false
+
+    this.javaPath = system.client
+    this.javaServerPath = system.server
+    this.usingSystemJava = true
+
+    return true
   }
 
   private throwIfAborted(signal?: AbortSignal) {
@@ -92,13 +117,17 @@ export class Java {
     if (this.javaServerPath && (await fs.pathExists(this.javaServerPath))) return null
 
     const asset = await this.resolveJavaAsset(signal)
-    if (!asset) return null
+    if (!asset) {
+      if (await this.useSystemJava()) return null
+
+      throw new Error(
+        `Failed to resolve a Java ${this.majorVersion} build for ${this.platform.os}/${this.platform.arch}. Check your internet connection and try again.`
+      )
+    }
     this.throwIfAborted(signal)
 
     const javaBaseDir = this.getJavaBaseDir()
     await fs.ensureDir(javaBaseDir)
-
-    this.setJavaPaths(this.getJavaRoot(asset.id))
 
     return {
       url: asset.url,
@@ -112,6 +141,8 @@ export class Java {
   }
 
   async finalizeInstall(): Promise<void> {
+    installedRootCache.delete(this.majorVersion)
+
     const installedJavaRoot = await this.findInstalledJavaRoot()
     if (!installedJavaRoot) {
       throw new Error(
@@ -120,6 +151,31 @@ export class Java {
     }
 
     this.setJavaPaths(installedJavaRoot)
+  }
+
+  private async requestAdoptiumIndex(
+    urls: string[],
+    signal: AbortSignal | undefined,
+    params: Record<string, string>
+  ) {
+    let lastError: unknown = null
+
+    for (const url of urls) {
+      try {
+        return await axios.get<IAdoptiumRelease[]>(url, {
+          signal,
+          timeout: 30000,
+          params
+        })
+      } catch (error) {
+        this.throwIfAborted(signal)
+        lastError = error
+      }
+    }
+
+    throw lastError instanceof Error
+      ? lastError
+      : new Error('Adoptium release index is unreachable')
   }
 
   private async resolveJavaAsset(signal?: AbortSignal): Promise<IJavaAsset | null> {
@@ -149,48 +205,50 @@ export class Java {
 
   private async fetchJavaAsset(signal?: AbortSignal): Promise<IJavaAsset> {
     const apiOs = this.getAdoptiumOs()
-    const apiArch = this.getAdoptiumArch()
+    const archCandidates = this.getAdoptiumArchCandidates()
 
-    if (!apiOs || !apiArch) {
+    if (!apiOs || archCandidates.length === 0) {
       throw new Error('Unsupported operating system or architecture')
     }
 
-    for (const imageType of Java.preferredImageTypes) {
-      const response = await axios.get<IAdoptiumRelease[]>(
-        `${Java.apiUrl}/${this.majorVersion}/hotspot`,
-        {
-          signal,
-          timeout: 30000,
-          params: {
-            architecture: apiArch,
-            heap_size: 'normal',
-            image_type: imageType,
-            os: apiOs,
-            vendor: 'eclipse'
-          }
+    const indexUrls = resolveDownloadCandidates(
+      `${Java.apiUrl}/${this.majorVersion}/hotspot`,
+      getDownloadSource(),
+      getMojangReachable(),
+      isMirrorDisabled()
+    )
+
+    for (const apiArch of archCandidates) {
+      for (const imageType of Java.preferredImageTypes) {
+        const response = await this.requestAdoptiumIndex(indexUrls, signal, {
+          architecture: apiArch,
+          heap_size: 'normal',
+          image_type: imageType,
+          os: apiOs,
+          vendor: 'eclipse'
+        })
+
+        const release = response.data.find((item) => item.binary?.package?.link)
+        const javaPackage = release?.binary?.package
+
+        if (!release || !javaPackage) {
+          continue
         }
-      )
 
-      const release = response.data.find((item) => item.binary?.package?.link)
-      const javaPackage = release?.binary?.package
-
-      if (!release || !javaPackage) {
-        continue
-      }
-
-      return {
-        id: release.release_name,
-        fileName: javaPackage.name,
-        url: javaPackage.link,
-        size: javaPackage.size,
-        checksum: javaPackage.checksum,
-        imageType,
-        checksumType: 'sha256'
+        return {
+          id: release.release_name,
+          fileName: javaPackage.name,
+          url: javaPackage.link,
+          size: javaPackage.size,
+          checksum: javaPackage.checksum,
+          imageType,
+          checksumType: 'sha256'
+        }
       }
     }
 
     throw new Error(
-      `No Adoptium JRE or JDK package found for Java ${this.majorVersion} on ${apiOs}/${apiArch}`
+      `No Adoptium JRE or JDK package found for Java ${this.majorVersion} on ${apiOs}/${archCandidates.join(', ')}`
     )
   }
 
@@ -210,6 +268,8 @@ export class Java {
       ) {
         return null
       }
+
+      if (!this.isTrustedAssetUrl(cachedAsset.url)) return null
 
       return {
         id: cachedAsset.id,
@@ -241,9 +301,35 @@ export class Java {
     }
   }
 
+  private isTrustedAssetUrl(rawUrl: string): boolean {
+    try {
+      const url = new URL(rawUrl)
+      if (url.protocol !== 'https:') return false
+
+      return JAVA_ASSET_HOSTS.some(
+        (host) => url.hostname === host || url.hostname.endsWith(`.${host}`)
+      )
+    } catch {
+      return false
+    }
+  }
+
   private async findInstalledJavaRoot(): Promise<string | null> {
     const javaBaseDir = this.getJavaBaseDir()
-    if (!(await fs.pathExists(javaBaseDir))) return null
+
+    let baseStats
+    try {
+      baseStats = await fs.stat(javaBaseDir)
+    } catch {
+      installedRootCache.delete(this.majorVersion)
+      return null
+    }
+
+    const cached = installedRootCache.get(this.majorVersion)
+    if (cached && cached.mtimeMs === baseStats.mtimeMs) {
+      if (await fs.pathExists(cached.root)) return cached.root
+      installedRootCache.delete(this.majorVersion)
+    }
 
     const entries = await fs.readdir(javaBaseDir)
     const candidates: { root: string; mtimeMs: number }[] = []
@@ -270,26 +356,34 @@ export class Java {
       candidates.push({ root: javaRoot, mtimeMs: stats.mtimeMs })
     }
 
-    if (candidates.length === 0) return null
+    if (candidates.length === 0) {
+      installedRootCache.delete(this.majorVersion)
+      return null
+    }
 
     candidates.sort((left, right) => right.mtimeMs - left.mtimeMs)
+    installedRootCache.set(this.majorVersion, {
+      root: candidates[0].root,
+      mtimeMs: baseStats.mtimeMs
+    })
+
     return candidates[0].root
   }
 
   private async isJavaRootHealthy(javaRoot: string): Promise<boolean> {
-    const markerPath = path.join(javaRoot, JAVA_VERIFIED_MARKER)
-    if (await fs.pathExists(markerPath)) return true
-
     const paths = this.buildJavaPaths(javaRoot)
-    const binary = (await fs.pathExists(paths.server))
-      ? paths.server
-      : (await fs.pathExists(paths.client))
-        ? paths.client
+    const binary = (await fs.pathExists(paths.client))
+      ? paths.client
+      : (await fs.pathExists(paths.server))
+        ? paths.server
         : null
     if (!binary) return false
 
+    const markerPath = path.join(javaRoot, JAVA_VERIFIED_MARKER)
+    if (await fs.pathExists(markerPath)) return true
+
     const ok = await new Promise<boolean>((resolve) => {
-      execFile(binary, ['-version'], { timeout: 15000 }, (error) => {
+      execFile(binary, ['-version'], { timeout: 15000, windowsHide: true }, (error) => {
         resolve(!error)
       })
     })
@@ -334,10 +428,6 @@ export class Java {
     return path.join(app.getPath('appData'), '.grubielauncher', 'java')
   }
 
-  private getJavaRoot(releaseName: string): string {
-    return path.join(this.getJavaBaseDir(), releaseName)
-  }
-
   private getCachePath(): string | null {
     if (!this.platform) return null
 
@@ -363,16 +453,16 @@ export class Java {
     }
   }
 
-  private getAdoptiumArch(): IAdoptiumArch | null {
-    if (!this.platform) return null
+  private getAdoptiumArchCandidates(): IAdoptiumArch[] {
+    if (!this.platform) return []
 
     switch (this.platform.arch) {
       case 'x64':
-        return 'x64'
+        return ['x64']
       case 'arm64':
-        return 'aarch64'
+        return this.platform.os === 'linux' ? ['aarch64'] : ['aarch64', 'x64']
       default:
-        return null
+        return []
     }
   }
 

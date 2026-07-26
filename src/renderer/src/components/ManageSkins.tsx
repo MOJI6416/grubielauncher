@@ -995,6 +995,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
                       capeUrl={selectedCape?.url}
                       height={380}
                       width={270}
+                      fillContainer
                     />
                   </div>
                 </CardContent>

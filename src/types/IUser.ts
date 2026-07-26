@@ -24,13 +24,6 @@ export interface IUser {
   }
 }
 
-export interface ICreateUser {
-  uuid: string
-  nickname: string
-  platform: 'microsoft' | 'elyby' | 'discord'
-  image?: string
-}
-
 export interface IUpdateUser {
   nickname?: string
   image?: string

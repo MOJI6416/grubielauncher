@@ -229,7 +229,7 @@ export async function readVerions(
 
       await version.init();
 
-      if (!version.manifest) return null;
+      if (!version.hasManifest) return null;
 
       let isUpdated = false;
 

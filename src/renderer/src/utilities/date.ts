@@ -1,19 +1,32 @@
-export function formatDate(date: Date) {
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = String(date.getFullYear()).slice(-2);
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
+import i18n from "@renderer/i18n";
 
-  return `${day}.${month}.${year} ${hours}:${minutes}`;
+function currentLocale(): string {
+  return i18n.resolvedLanguage || i18n.language || "en";
+}
+
+export function formatDate(date: Date) {
+  if (Number.isNaN(date.getTime())) return "";
+
+  try {
+    return new Intl.DateTimeFormat(currentLocale(), {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(date);
+  } catch {
+    return date.toLocaleString();
+  }
 }
 
 export function formatDay(date: Date) {
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = String(date.getFullYear()).slice(-2);
+  if (Number.isNaN(date.getTime())) return "";
 
-  return `${day}.${month}.${year}`;
+  try {
+    return new Intl.DateTimeFormat(currentLocale(), {
+      dateStyle: "short",
+    }).format(date);
+  } catch {
+    return date.toLocaleDateString();
+  }
 }
 
 export function formatTime(

@@ -959,6 +959,7 @@ export function ModManager({
             })),
             dependencies: resolvedDeps.map((d) => ({
               title: d.project?.title || "",
+                  projectId: d.projectId ? String(d.projectId) : undefined,
               relationType: d.relationType,
             })),
           },
@@ -2365,7 +2366,7 @@ export function ModManager({
                                   <PaginationLink
                                     href="#"
                                     size="icon"
-                                    aria-label="Previous page"
+                                    aria-label={t("common.previousPage")}
                                     onClick={(event) => {
                                       event.preventDefault();
                                       void goToPage(currentPage - 1);
@@ -2399,7 +2400,7 @@ export function ModManager({
                                   <PaginationLink
                                     href="#"
                                     size="icon"
-                                    aria-label="Next page"
+                                    aria-label={t("common.nextPage")}
                                     onClick={(event) => {
                                       event.preventDefault();
                                       void goToPage(currentPage + 1);
@@ -3747,6 +3748,7 @@ export function ModManager({
                   })),
                   dependencies: p.versions[0].dependencies.map((d) => ({
                     title: d.project?.title || "",
+                  projectId: d.projectId ? String(d.projectId) : undefined,
                     relationType: d.relationType,
                   })),
                 },
@@ -3788,6 +3790,7 @@ export function ModManager({
               m.version = {
                 dependencies: update.version.dependencies.map((d) => ({
                   title: d.project?.title || "",
+                  projectId: d.projectId ? String(d.projectId) : undefined,
                   relationType: d.relationType,
                 })),
                 files: update.version.files,

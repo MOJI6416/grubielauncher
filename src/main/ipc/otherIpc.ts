@@ -26,7 +26,13 @@ import { NotificationClickAction } from '@/types/Notification'
 import icon from '../../../resources/icon.png?asset'
 import axios from 'axios'
 import { handleSafe } from '../utilities/ipc'
-import { assertWritablePath, blessUserSelectedPath } from '../utilities/safePath'
+import {
+  assertOpenablePath,
+  assertWritablePath,
+  blessUserSelectedPath,
+  isOpenableFileExtension,
+  PathPolicyError
+} from '../utilities/safePath'
 import { isSafeRemoteImageUrl } from '../utilities/safeUrl'
 import { createInstanceShortcut, getImageBase64 } from '../utilities/shortcut'
 
@@ -161,7 +167,15 @@ export function registerOtherIpc() {
   })
 
   handleSafe<void, [string]>('shell:openPath', undefined, async (_, p: string) => {
-    assertWritablePath(p, 'shell:openPath')
+    assertOpenablePath(p, 'shell:openPath')
+
+    const stats = await fs.stat(p)
+    if (!stats.isDirectory()) {
+      if (!stats.isFile() || !isOpenableFileExtension(p)) {
+        throw new PathPolicyError(`Refused shell:openPath for ${String(p)}`)
+      }
+    }
+
     await shell.openPath(p)
   })
 

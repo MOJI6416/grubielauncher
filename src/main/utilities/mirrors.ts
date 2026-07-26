@@ -13,6 +13,7 @@ const HOST_TO_PREFIX: Record<string, string> = {
   "maven.quiltmc.org": "maven-quilt",
   "meta.fabricmc.net": "meta-fabric",
   "meta.quiltmc.org": "meta-quilt",
+  "api.adoptium.net": "adoptium-api",
   "cdn.modrinth.com": "modrinth",
   "edge.forgecdn.net": "forgecdn",
   "mediafilez.forgecdn.net": "forgecdn",
@@ -46,12 +47,14 @@ export function resolveDownloadCandidates(
   rawUrl: string,
   source: DownloadSource,
   mojangReachable: boolean | null,
+  mirrorDisabled = false,
 ): string[] {
   const mirror = toMirrorUrl(rawUrl);
   if (!mirror) return [rawUrl];
 
   if (source === "official") return [rawUrl];
-  if (source === "mirror") return [mirror, rawUrl];
+  if (source === "mirror") return mirrorDisabled ? [rawUrl, mirror] : [mirror, rawUrl];
+  if (mirrorDisabled) return [rawUrl];
 
   return mojangReachable === false ? [mirror, rawUrl] : [rawUrl, mirror];
 }

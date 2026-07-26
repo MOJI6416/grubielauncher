@@ -125,7 +125,16 @@ function maybeStopHook() {
   hookStarted = false;
 }
 
-export function setPttBind(bind: PttInput | null) {
+export function setPttBind(bind: PttInput | null): boolean {
+  const isSameBind =
+    (!bind && !activeBind) ||
+    (!!bind &&
+      !!activeBind &&
+      bind.type === activeBind.type &&
+      bind.code === activeBind.code);
+
+  if (isSameBind) return !bind || hookStarted;
+
   if (isPressed) {
     isPressed = false;
     broadcast("voice:pttUp");
@@ -133,11 +142,12 @@ export function setPttBind(bind: PttInput | null) {
 
   activeBind = bind ? { type: bind.type, code: bind.code } : null;
 
-  if (activeBind) {
-    ensureHook();
-  } else {
+  if (!activeBind) {
     maybeStopHook();
+    return true;
   }
+
+  return ensureHook();
 }
 
 export function capturePttBind(): Promise<VoicePttBind | null> {

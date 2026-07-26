@@ -57,6 +57,7 @@ export function NewsFeed() {
     () => localStorage.getItem("newsFeedVisible") === "true",
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   const { t, i18n } = useTranslation();
 
@@ -102,16 +103,17 @@ export function NewsFeed() {
       ]);
       if (reqIdRef.current !== reqId) return;
 
-      setNews(
-        newsResult.status === "fulfilled" && Array.isArray(newsResult.value)
-          ? newsResult.value
-          : [],
-      );
+      const newsLoaded =
+        newsResult.status === "fulfilled" && Array.isArray(newsResult.value);
+
+      setHasError(!newsLoaded);
+      setNews(newsLoaded ? newsResult.value : []);
       setSponsoredAd(
         sponsoredResult.status === "fulfilled" ? sponsoredResult.value : null,
       );
     } catch {
       if (reqIdRef.current !== reqId) return;
+      setHasError(true);
       setNews([]);
       setSponsoredAd(null);
     } finally {
@@ -122,6 +124,7 @@ export function NewsFeed() {
   useEffect(() => {
     if (!isNetwork) {
       setIsLoading(false);
+      setHasError(true);
       setNews([]);
       setSponsoredAd(null);
       return;
@@ -228,7 +231,7 @@ export function NewsFeed() {
                     return !v;
                   })
                 }
-                aria-label={isVisible ? "Hide news" : "Show news"}
+                aria-label={isVisible ? t("news.toggle.hide") : t("news.toggle.show")}
               >
                 {!isVisible ? (
                   <Eye className="size-4" />
@@ -267,7 +270,7 @@ export function NewsFeed() {
                     variant="secondary"
                     disabled={isLoading}
                     onClick={fetchNews}
-                    aria-label="Refresh news"
+                    aria-label={t("news.refresh")}
                   >
                     {isLoading ? (
                       <Loader2 className="size-4 animate-spin" />
@@ -395,14 +398,35 @@ export function NewsFeed() {
                           )}
                         </div>
                       ))
-                    : [1, 2, 3, 4, 5].map((n) => (
-                        <div
-                          key={n}
-                          className="min-w-0 shrink-0 grow-0 basis-full sm:basis-[calc((100%-0.5rem)/2)] lg:basis-[calc((100%-2rem)/5)]"
-                        >
-                          <Skeleton className="h-24 w-full rounded-lg" />
-                        </div>
-                      ))}
+                    : isLoading
+                      ? [1, 2, 3, 4, 5].map((n) => (
+                          <div
+                            key={n}
+                            className="min-w-0 shrink-0 grow-0 basis-full sm:basis-[calc((100%-0.5rem)/2)] lg:basis-[calc((100%-2rem)/5)]"
+                          >
+                            <Skeleton className="h-24 w-full rounded-lg" />
+                          </div>
+                        ))
+                      : [
+                          <div
+                            key="news-placeholder"
+                            className="flex min-h-24 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-3 text-center"
+                          >
+                            <p className="text-sm text-muted-foreground">
+                              {hasError ? t("news.loadFailed") : t("news.empty")}
+                            </p>
+                            {hasError && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => void fetchNews()}
+                              >
+                                {t("news.retry")}
+                              </Button>
+                            )}
+                          </div>,
+                        ]}
                 </div>
               </div>
             </div>

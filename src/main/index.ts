@@ -73,11 +73,16 @@ void gotTheLock;
 const CSP_POLICY = [
   "default-src 'self'",
   "script-src 'self' blob: 'wasm-unsafe-eval'",
+  "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' app: data: blob: https: http:",
   "media-src 'self' data: blob:",
   "font-src 'self' data:",
   "connect-src 'self' blob: https: http: ws: wss:",
+  "object-src 'none'",
+  "frame-src 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
 ].join("; ");
 
 const CDN_CORS_HOST = "cdn.grubielauncher.com";
@@ -104,6 +109,50 @@ function setupContentSecurityPolicy() {
 
     callback({ responseHeaders });
   });
+}
+
+function isMainWindowContents(contents: Electron.WebContents | null): boolean {
+  if (!contents || !mainWindow || mainWindow.isDestroyed()) return false;
+  return contents === mainWindow.webContents;
+}
+
+function isAudioOnlyMediaRequest(details?: {
+  mediaTypes?: string[];
+  mediaType?: string;
+}): boolean {
+  if (Array.isArray(details?.mediaTypes) && details.mediaTypes.length > 0) {
+    return details.mediaTypes.every((type) => type === "audio");
+  }
+  return details?.mediaType === "audio";
+}
+
+function setupPermissionHandlers() {
+  session.defaultSession.setPermissionRequestHandler(
+    (contents, permission, callback, details) => {
+      const allowed =
+        permission === "media" &&
+        isMainWindowContents(contents) &&
+        isAudioOnlyMediaRequest(details as { mediaTypes?: string[] });
+
+      if (!allowed) {
+        console.warn(`[Permission] denied request: ${permission}`);
+      }
+
+      callback(allowed);
+    },
+  );
+
+  session.defaultSession.setPermissionCheckHandler(
+    (contents, permission, _origin, details) => {
+      return (
+        permission === "media" &&
+        isMainWindowContents(contents) &&
+        isAudioOnlyMediaRequest(details as { mediaType?: string })
+      );
+    },
+  );
+
+  session.defaultSession.setDevicePermissionHandler(() => false);
 }
 
 function registerAppProtocol() {
@@ -299,6 +348,7 @@ if (!gotTheLock) {
   app.whenReady().then(async () => {
     electronApp.setAppUserModelId("com.grubielauncher");
     setupContentSecurityPolicy();
+    setupPermissionHandlers();
     registerAppProtocol();
     registerProtocolClient();
 
@@ -331,6 +381,8 @@ if (!gotTheLock) {
 
     createUpdaterWindow();
     createMainWindow({ deferShow: true });
+
+    autoUpdater.disableDifferentialDownload = true;
 
     autoUpdater.on("checking-for-update", () => {
       sendUpdaterStatus("checking");

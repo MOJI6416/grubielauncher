@@ -19,10 +19,62 @@ import {
 } from "../utilities/loaderInstallerProgress";
 import {
   assertSafeFileSegment,
+  assertSafeRelativePath,
   toArgfilePath,
   validateServerMemory,
 } from "./serverScriptSafety";
 import { AIKAR_FLAGS } from "../utilities/serverManager";
+import { assertTrustedServerCoreUrl } from "../utilities/trustedHosts";
+import { mcVersionToJavaMajor } from "@/shared/javaVersions";
+
+function patchLauncherScript(
+  data: string,
+  javaCmd: string,
+  argsToken: string,
+): string {
+  const javaLine = /^java\b/m;
+  let patched = data;
+
+  if (javaLine.test(patched)) {
+    patched = patched.replace(javaLine, javaCmd);
+  } else if (!patched.includes(javaCmd)) {
+    throw new Error(
+      "Loader run script has an unexpected format, the launcher could not point it at its own Java",
+    );
+  }
+
+  if (!patched.includes(`nogui ${argsToken}`)) {
+    patched = patched.replaceAll(argsToken, `nogui ${argsToken}`);
+  }
+
+  return patched;
+}
+
+async function writeUserJvmArgs(file: string, managed: string): Promise<void> {
+  const managedLine = managed.trim();
+  let preserved: string[] = [];
+
+  try {
+    const existing = await fs.readFile(file, "utf-8");
+    preserved = existing
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(
+        (line) =>
+          line &&
+          line !== managedLine &&
+          !/-Xm[sx]/i.test(line) &&
+          !line.includes("-javaagent:") &&
+          !line.includes(HTTP_AGENT_JVM_ARGUMENT),
+      );
+  } catch {}
+
+  await fs.writeFile(
+    file,
+    [managedLine, ...preserved].filter(Boolean).join("\n"),
+    "utf-8",
+  );
+}
 
 export class ServerGame {
   private serverPath: string = "";
@@ -51,8 +103,10 @@ export class ServerGame {
   }
 
   private async resolveJavaMajorVersion(): Promise<number> {
-    const fallback = this.serverConf?.javaMajorVersion ?? 21;
     const mcId = this.version?.version?.id;
+    const fallback =
+      this.serverConf?.javaMajorVersion ??
+      (mcId ? mcVersionToJavaMajor(mcId) : 21);
     if (!mcId || !this.versionPath) return fallback;
     try {
       const manifest = await fs.readJSON(
@@ -128,10 +182,11 @@ export class ServerGame {
     this.sendInstallProgress("java", 15);
     await java.install();
 
-    if (
-      !java.javaServerPath ||
-      !(await fs.pathExists(java.javaServerPath))
-    )
+    const javaServerResolved =
+      Boolean(java.javaServerPath) &&
+      (java.usingSystemJava || (await fs.pathExists(java.javaServerPath)));
+
+    if (!javaServerResolved)
       throw new Error(
         `Java ${javaMajorVersion} runtime for the server could not be installed`,
       );
@@ -153,6 +208,8 @@ export class ServerGame {
         );
       }
 
+      assertTrustedServerCoreUrl(coreUrl);
+
       await this.downloader.downloadFiles([
         {
           url: coreUrl,
@@ -168,9 +225,8 @@ export class ServerGame {
     }
 
     const cwd = this.serverPath;
-    const javaCmd = java.javaServerPath.includes(" ")
-      ? `"${java.javaServerPath}"`
-      : java.javaServerPath;
+    const javaCmd = `"${java.javaServerPath}"`;
+    const javaCmdSh = `'${java.javaServerPath.replaceAll("'", `'\\''`)}'`;
 
     const backend = new Backend();
     let authlib: any = null;
@@ -183,6 +239,7 @@ export class ServerGame {
     let javaagent = "";
 
     const params = ["-jar", jarPath];
+    let bootstrapsServer = false;
 
     if (this.serverConf.core == ServerCore.QUILT) {
       params.push(
@@ -193,6 +250,9 @@ export class ServerGame {
       this.serverConf.core == ServerCore.NEOFORGE
     ) {
       params.push("--installServer");
+    } else {
+      params.push("nogui");
+      bootstrapsServer = true;
     }
 
     this.sendInstallProgress("installer", 55);
@@ -229,6 +289,7 @@ export class ServerGame {
       params,
       cwd,
       handleInstallerOutput,
+      { resolveOnEulaFile: bootstrapsServer },
     );
     this.sendInstallProgress("loader", 80);
 
@@ -237,16 +298,21 @@ export class ServerGame {
       this.account.type != "plain" &&
       authlib
     ) {
+      const authlibPath = assertSafeRelativePath(
+        authlib.path,
+        "authlib library path",
+      );
+
       javaagent = `${HTTP_AGENT_JVM_ARGUMENT} ${getJavaAgent(
         this.account.type,
-        toArgfilePath(path.join("libraries", authlib.path)),
+        toArgfilePath(path.join("libraries", authlibPath)),
         true,
       )} `;
 
       await this.downloader.downloadFiles([
         {
           url: authlib.url,
-          destination: path.join(this.serverPath, "libraries", authlib.path),
+          destination: path.join(this.serverPath, "libraries", authlibPath),
           group: "server",
           sha1: authlib.sha1,
           size: authlib.size,
@@ -299,27 +365,16 @@ export class ServerGame {
           );
         } else {
           const batData = await fs.readFile(batPath, "utf-8");
-          await fs.writeFile(
-            batPath,
-            batData.replace(/^java\b/m, javaCmd).replaceAll("%*", "nogui %*"),
-            "utf-8",
-          );
+          const patchedBat = patchLauncherScript(batData, javaCmd, "%*");
+          await fs.writeFile(batPath, patchedBat, "utf-8");
 
           const shData = await fs.readFile(shPath, "utf-8");
-          await fs.writeFile(
-            shPath,
-            shData
-              .replace(/^java\b/m, javaCmd)
-              .replaceAll('"$@"', 'nogui "$@"'),
-            "utf-8",
-          );
+          const patchedSh = patchLauncherScript(shData, javaCmdSh, '"$@"');
+          await fs.writeFile(shPath, patchedSh, "utf-8");
+          await fs.chmod(shPath, 0o755).catch(() => {});
 
           const jvmArgs = path.join(this.serverPath, "user_jvm_args.txt");
-          await fs.writeFile(
-            jvmArgs,
-            `${javaagent}${memoryArgs}`,
-            "utf-8",
-          );
+          await writeUserJvmArgs(jvmArgs, `${javaagent}${memoryArgs}`);
         }
       } else {
         const core = this.serverConf.core;
@@ -348,7 +403,7 @@ ${javaCmd} ${javaagent} ${memoryArgs} -jar ${jar} nogui
 pause`;
 
       const shData = `#!/bin/sh
-${javaCmd} ${javaagent} ${memoryArgs} -jar ${jar} nogui
+${javaCmdSh} ${javaagent} ${memoryArgs} -jar ${jar} nogui
 read -p "Press [Enter] key to continue..."`;
 
       await fs.writeFile(batPath, batData, "utf-8");

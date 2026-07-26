@@ -83,6 +83,15 @@ export function MicLevelTest() {
   const [level, setLevel] = useState(0);
   const stopRef = useRef<(() => void) | null>(null);
 
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const stop = useCallback(() => {
     stopRef.current?.();
     stopRef.current = null;
@@ -94,8 +103,14 @@ export function MicLevelTest() {
     const inputId = voiceGetSavedDevice("audioinput");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: inputId ? { deviceId: inputId } : true,
+        audio: inputId ? { deviceId: { ideal: inputId } } : true,
       });
+
+      if (!isMountedRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
       const context = new AudioContext();
       const source = context.createMediaStreamSource(stream);
       const analyser = context.createAnalyser();
@@ -123,7 +138,7 @@ export function MicLevelTest() {
       };
       setIsActive(true);
     } catch {
-      toast.error(t("settings.voiceMicTestError"));
+      if (isMountedRef.current) toast.error(t("settings.voiceMicTestError"));
     }
   }, [t]);
 

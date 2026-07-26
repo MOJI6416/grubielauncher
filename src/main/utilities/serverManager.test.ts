@@ -44,6 +44,47 @@ describe("syncServerExtraFiles", () => {
     ).resolves.toBe(false);
   });
 
+  it("refuses to mirror a protected entry even if the list asks for it", async () => {
+    const versionPath = await makeTempRoot();
+    const serverPath = path.join(versionPath, "server");
+    await fs.ensureDir(serverPath);
+
+    await fs.outputFile(path.join(versionPath, "world", "level.dat"), "client");
+    await fs.outputFile(path.join(serverPath, "world", "level.dat"), "server");
+
+    await syncServerExtraFiles(versionPath, serverPath, ["config", "world"]);
+
+    await expect(
+      fs.readFile(path.join(serverPath, "world", "level.dat"), "utf-8"),
+    ).resolves.toBe("server");
+  });
+
+  it("backs up server-side files before a sync overwrites them", async () => {
+    const versionPath = await makeTempRoot();
+    const serverPath = path.join(versionPath, "server");
+    await fs.ensureDir(serverPath);
+
+    await fs.outputFile(path.join(versionPath, "config", "mod.toml"), "a=2");
+    await fs.outputFile(path.join(serverPath, "config", "mod.toml"), "a=1");
+
+    await syncServerExtraFiles(versionPath, serverPath, ["config"]);
+
+    await expect(
+      fs.readFile(path.join(serverPath, "config", "mod.toml"), "utf-8"),
+    ).resolves.toBe("a=2");
+
+    const backups = await fs.readdir(
+      path.join(serverPath, "storage", "sync-backups"),
+    );
+    expect(backups).toHaveLength(1);
+    await expect(
+      fs.readFile(
+        path.join(serverPath, "storage", "sync-backups", backups[0], "mod.toml"),
+        "utf-8",
+      ),
+    ).resolves.toBe("a=1");
+  });
+
   it("mirrors config-type directories but leaves mods to the mod sync", async () => {
     const versionPath = await makeTempRoot();
     const serverPath = path.join(versionPath, "server");

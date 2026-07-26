@@ -158,7 +158,7 @@ export function FriendItem({
                     (activeShare?.publicAddress.includes(
                       "join.grubielauncher.com",
                     )
-                      ? "Shared World"
+                      ? t("friends.sharedWorld")
                       : activeShare?.publicAddress)}
                 </p>
               </div>

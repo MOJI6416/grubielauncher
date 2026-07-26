@@ -11,6 +11,7 @@ import { DownloadItem } from "@/types/Downloader";
 import { importVersion } from "../utilities/versions";
 import { uploadMods } from "../utilities/share";
 import { handleSafe } from "../utilities/ipc";
+import { assertReadablePath, assertWritablePath } from "../utilities/safePath";
 import { pauseDownloads, resumeDownloads } from "../utilities/downloader";
 import { ILocalProject } from "@/types/ModManager";
 import {
@@ -28,14 +29,13 @@ import {
 } from "./installLock";
 
 const fallbackVersionInit: IVersionClassData = {
-  version: {} as IVersionConf,
+  hasManifest: false,
   launcherPath: "",
   minecraftPath: "",
   versionPath: "",
   javaPath: "",
   isQuickPlayMultiplayer: false,
   isQuickPlaySingleplayer: false,
-  manifest: undefined,
 };
 
 const fallbackImport: IImportModpack = {
@@ -116,14 +116,14 @@ export function registerVersionIpc() {
       const vm = new Version(versionConf);
       await vm.init();
       return {
-        version: vm.version,
+        hasManifest: !!vm.manifest,
+        javaMajorVersion: vm.manifest?.javaVersion?.majorVersion,
         launcherPath: vm.launcherPath,
         minecraftPath: vm.minecraftPath,
         versionPath: vm.versionPath,
         javaPath: vm.javaPath,
         isQuickPlayMultiplayer: vm.isQuickPlayMultiplayer,
         isQuickPlaySingleplayer: vm.isQuickPlaySingleplayer,
-        manifest: vm.manifest,
       };
     },
   );
@@ -248,6 +248,8 @@ export function registerVersionIpc() {
     "version:import",
     fallbackImport,
     async (_, filePath: string, tempPath: string) => {
+      assertReadablePath(filePath, "version:import");
+      assertWritablePath(tempPath, "version:import");
       const version = await importVersion(filePath, tempPath);
       return version;
     },

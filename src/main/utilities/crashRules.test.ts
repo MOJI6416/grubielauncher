@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BUILT_IN_CRASH_RULES,
   extractCrashSignature,
   matchCrashRules,
   sanitizeCrashRules,
@@ -163,5 +164,65 @@ describe("sanitizeCrashRules", () => {
 
   it("returns empty array for non-arrays", () => {
     expect(sanitizeCrashRules({ not: "array" })).toEqual([]);
+  });
+
+  it("validates every regex of a multi-pattern rule", () => {
+    const rules = sanitizeCrashRules([
+      {
+        id: "ok",
+        allPatterns: ["abc", "def"],
+        messages: { en: "e", ru: "r", uk: "u" },
+      },
+      {
+        id: "broken",
+        allPatterns: ["abc", "(["],
+        messages: { en: "e", ru: "r", uk: "u" },
+      },
+      {
+        id: "not-strings",
+        allPatterns: [1],
+        messages: { en: "e", ru: "r", uk: "u" },
+      },
+    ]);
+
+    expect(rules.map((rule) => rule.id)).toEqual(["ok"]);
+  });
+});
+
+describe("multi-pattern crash rules", () => {
+  const rule = {
+    id: "optifine_conflict",
+    allPatterns: ["OptiFine", "MixinApplyError|InvalidMixinException"],
+    messages: { en: "e", ru: "r", uk: "u" },
+  };
+
+  it("requires every pattern to be present", () => {
+    expect(matchCrashRules("OptiFine loaded", [rule])?.ruleId).toBeUndefined();
+    expect(matchCrashRules("MixinApplyError", [rule])?.ruleId).toBeUndefined();
+    expect(
+      matchCrashRules("OptiFine loaded\nMixinApplyError here", [rule])?.ruleId,
+    ).toBe("optifine_conflict");
+  });
+
+  it("matches regardless of the order the patterns appear in", () => {
+    expect(
+      matchCrashRules("InvalidMixinException\n...\nOptiFine", [rule])?.ruleId,
+    ).toBe("optifine_conflict");
+  });
+});
+
+describe("native crash exit codes", () => {
+  it("recognises both signed and unsigned Windows access violations", () => {
+    const nativeRule = BUILT_IN_CRASH_RULES.find(
+      (rule) => rule.id === "native_crash",
+    );
+
+    expect(matchCrashRules("", BUILT_IN_CRASH_RULES, 3221225477)?.ruleId).toBe(
+      "native_crash",
+    );
+    expect(matchCrashRules("", BUILT_IN_CRASH_RULES, -1073741819)?.ruleId).toBe(
+      "native_crash",
+    );
+    expect(nativeRule?.exitCodes).not.toContain(1073740791);
   });
 });

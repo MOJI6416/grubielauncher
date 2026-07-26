@@ -5,8 +5,54 @@ import fs from 'fs'
 import { PNG } from 'pngjs'
 import { blit } from './skinRender'
 
+const MAX_SKIN_FILE_BYTES = 512 * 1024
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+
+export interface PngDimensions {
+  width: number
+  height: number
+}
+
+export function readPngHeader(buffer: Buffer): PngDimensions | null {
+  if (buffer.length < 24) return null
+  if (!buffer.subarray(0, 8).equals(PNG_SIGNATURE)) return null
+  if (buffer.toString('ascii', 12, 16) !== 'IHDR') return null
+
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20)
+  }
+}
+
+export function isSupportedSkinGeometry(size: PngDimensions | null): boolean {
+  if (!size) return false
+  if (size.width === 64 && (size.height === 64 || size.height === 32)) return true
+
+  return size.width === size.height * 2 && size.width % 64 === 0 && size.width <= 1024
+}
+
+export function assertSkinBuffer(buffer: Buffer, label = 'skin'): PngDimensions {
+  if (buffer.length > MAX_SKIN_FILE_BYTES) {
+    throw new Error(`Unsupported ${label}: file is too large`)
+  }
+
+  const size = readPngHeader(buffer)
+  if (!isSupportedSkinGeometry(size)) {
+    throw new Error(`Unsupported ${label}: expected a 64x64 or 64x32 PNG`)
+  }
+
+  return size as PngDimensions
+}
+
 async function readPngFile(filePath: string): Promise<PNG> {
+  const stats = await fs.promises.stat(filePath)
+  if (stats.size > MAX_SKIN_FILE_BYTES) {
+    throw new Error('Unsupported skin: file is too large')
+  }
+
   const buffer = await fs.promises.readFile(filePath)
+  assertSkinBuffer(buffer)
+
   return PNG.sync.read(buffer)
 }
 

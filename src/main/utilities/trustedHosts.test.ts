@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   assertTrustedDownloadUrl,
   isTrustedDownloadUrl,
+  isTrustedServerCoreUrl,
+  normalizeLoaderLibraryUrl,
 } from "./trustedHosts";
 
 describe("isTrustedDownloadUrl", () => {
@@ -42,5 +44,42 @@ describe("assertTrustedDownloadUrl", () => {
     expect(
       assertTrustedDownloadUrl("https://piston-meta.mojang.com/x"),
     ).toContain("mojang");
+  });
+});
+
+describe("normalizeLoaderLibraryUrl", () => {
+  it("upgrades legacy forge maven urls to the current https host", () => {
+    expect(
+      normalizeLoaderLibraryUrl(
+        "http://files.minecraftforge.net/maven//net/minecraftforge/forge/forge.jar",
+      ),
+    ).toBe("https://maven.minecraftforge.net/maven/net/minecraftforge/forge/forge.jar");
+  });
+
+  it("keeps modern urls untouched", () => {
+    const url = "https://libraries.minecraft.net/net/example/lib.jar";
+    expect(normalizeLoaderLibraryUrl(url)).toBe(url);
+  });
+
+  it("makes legacy forge libraries pass the trust check", () => {
+    expect(
+      isTrustedDownloadUrl(
+        normalizeLoaderLibraryUrl("http://files.minecraftforge.net/maven/a.jar"),
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("isTrustedServerCoreUrl", () => {
+  it("allows known server core distributors over https", () => {
+    expect(isTrustedServerCoreUrl("https://api.papermc.io/v2/x.jar")).toBe(true);
+    expect(isTrustedServerCoreUrl("https://piston-data.mojang.com/s.jar")).toBe(
+      true,
+    );
+  });
+
+  it("refuses unknown hosts and plain http", () => {
+    expect(isTrustedServerCoreUrl("https://evil.tld/server.jar")).toBe(false);
+    expect(isTrustedServerCoreUrl("http://api.papermc.io/v2/x.jar")).toBe(false);
   });
 });

@@ -138,13 +138,14 @@ export function SkinView({
         </DialogHeader>
 
         <div className="grid gap-4 md:grid-cols-[240px_1fr]">
-          <div className="flex justify-center rounded-xl border bg-card p-3 shadow-xs">
+          <div className="flex min-h-0 justify-center rounded-xl border bg-card p-3 shadow-xs">
             {isFontReady ? (
               <SkinCanvas
                 skinUrl={skinData.skin}
                 capeUrl={skinData.cape}
                 height={340}
                 width={210}
+                fillContainer
                 options={{
                   nameTag: nickname,
                   zoom: 0.75,

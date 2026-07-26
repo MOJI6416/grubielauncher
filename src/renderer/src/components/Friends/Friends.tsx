@@ -55,7 +55,7 @@ import {
   shareStateAtom,
   versionsAtom,
 } from "@renderer/stores/atoms";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   clearActiveFriendShares,
   refreshActiveFriendShares,
@@ -259,11 +259,11 @@ export function Friends({
   const [friendRequests, setFriendRequests] = useAtom(friendRequestsAtom);
   const [selectedFriend, setSelectedFriend] = useAtom(selectedFriendAtom);
   const [authData] = useAtom(authDataAtom);
-  const [, setSelectedVersion] = useAtom(selectedVersionAtom);
+  const setSelectedVersion = useSetAtom(selectedVersionAtom);
   const [ownPresence] = useAtom(ownPresenceAtom);
   const [shareState] = useAtom(shareStateAtom);
   const [shareOwnerAccountKey] = useAtom(shareOwnerAccountKeyAtom);
-  const [, setIsShareModalOpen] = useAtom(isShareModalOpenAtom);
+  const setIsShareModalOpen = useSetAtom(isShareModalOpenAtom);
   const [pendingFriendChat, setPendingFriendChat] = useAtom(
     pendingFriendChatAtom,
   );
@@ -589,7 +589,15 @@ export function Friends({
       }
     };
 
-    const handleGetMessages = async (data: { messages: IMessage[] }) => {
+    const handleGetMessages = async (data: {
+      friendId?: string;
+      messages: IMessage[];
+    }) => {
+      const openFriendId = selectedFriendRef.current;
+      if (data.friendId && openFriendId && data.friendId !== openFriendId) {
+        return;
+      }
+
       setFailedChatModpacks(new Set());
       setReplyMessage(null);
       setMessages(data.messages);
@@ -966,25 +974,18 @@ export function Friends({
   );
 
   const handleToggleMute = useCallback(
-    async (
-      friend: IFriend,
-      local: ILocalFriend | undefined,
-      localIndex: number,
-    ) => {
-      const newLocalFriends = [...localFriends];
-
-      if (!local) {
-        local = { id: friend.user._id, isMuted: true };
-        newLocalFriends.push(local);
-      } else {
-        local.isMuted = !local.isMuted;
-        newLocalFriends[localIndex] = local;
-      }
+    async (friend: IFriend, local: ILocalFriend | undefined) => {
+      const isMuted = local ? !local.isMuted : true;
+      const newLocalFriends = local
+        ? localFriends.map((entry) =>
+            entry.id === friend.user._id ? { ...entry, isMuted } : entry,
+          )
+        : [...localFriends, { id: friend.user._id, isMuted }];
 
       await saveLocalFriends(newLocalFriends);
 
       toast.success(
-        local.isMuted
+        isMuted
           ? t("friends.notificationDisabled")
           : t("friends.notificationEnabled"),
       );
@@ -1376,14 +1377,30 @@ export function Friends({
     [inviteGuide],
   );
 
+  const versionsByShareCode = useMemo(
+    () =>
+      new Map(
+        versions
+          .filter((v) => v.version.shareCode)
+          .map((v) => [v.version.shareCode as string, v]),
+      ),
+    [versions],
+  );
+
+  const localFriendsById = useMemo(
+    () => new Map(localFriends.map((lf) => [lf.id, lf])),
+    [localFriends],
+  );
+
+  const notReadsSet = useMemo(() => new Set(notReads), [notReads]);
+
   const renderFriend = (f: IFriend) => {
     const version = f.versionCode
-      ? versions.find((v) => v.version.shareCode === f.versionCode)
+      ? versionsByShareCode.get(f.versionCode)
       : undefined;
     const activeShare = activeShareByHost.get(f.user._id);
-    const isNotRead = notReads.includes(f.user._id);
-    const localIndex = localFriends.findIndex((lf) => lf.id === f.user._id);
-    const local = localIndex !== -1 ? localFriends[localIndex] : undefined;
+    const isNotRead = notReadsSet.has(f.user._id);
+    const local = localFriendsById.get(f.user._id);
     const voiceGroup =
       voiceSession.state !== "disconnected"
         ? myGroups.find((group) => group._id === voiceSession.roomId)
@@ -1443,7 +1460,7 @@ export function Friends({
         }}
         onViewSkin={() => handleViewSkin(f)}
         isViewSkinDisabled={f.user.platform === "microsoft" && !f.user.uuid}
-        onToggleMute={() => handleToggleMute(f, local, localIndex)}
+        onToggleMute={() => handleToggleMute(f, local)}
         onRemove={() => {
           setSelectedFriend(f.user._id);
           setFriend(f);

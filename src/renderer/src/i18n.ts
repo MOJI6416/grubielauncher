@@ -17,7 +17,10 @@ i18n.use(initReactI18next).init({
     }
   },
   defaultNS,
-  fallbackLng: 'en'
+  fallbackLng: 'en',
+  interpolation: {
+    escapeValue: false
+  }
 })
 
 export async function changeAppLanguage(lang: string): Promise<void> {

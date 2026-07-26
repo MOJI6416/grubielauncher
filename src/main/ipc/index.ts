@@ -3,7 +3,6 @@ export { registerAuthIpc } from "./authIpc";
 export { registerBackendIpc } from "./backendIpc";
 export { registerFsIpc } from "./fsIpc";
 export { registerGameIpc } from "./gameIpc";
-export { registerJavaIpc } from "./javaIpc";
 export { registerModsIpc } from "./modsIpc";
 export { registerOtherIpc } from "./otherIpc";
 export { registerServerIpc } from "./serverIpc";

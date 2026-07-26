@@ -3,7 +3,6 @@ import { readNBT } from "./nbt";
 import type { IImportModpack, IVersionConf } from "@/types/IVersion";
 import path from "path";
 import fs from "fs-extra";
-import { extractZip } from "./archiver";
 import { pathToFileURL } from "url";
 
 function findImportedLogoPath(versionPath: string) {
@@ -113,6 +112,7 @@ export async function importVersion(
   }
 
   try {
+    const { extractZip } = await import("./archiver");
     await extractZip(filePath, versionPath);
 
     const grubieConf = await resolveGrubieConfRoot(versionPath);

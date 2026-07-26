@@ -15,6 +15,8 @@ import { Loader } from '@/types/Loader'
 import { Server } from '../services/Server'
 import { compareServers } from '../utilities/serverList'
 import { handleSafe } from '../utilities/ipc'
+import { assertReadablePath, assertWritablePath } from '../utilities/safePath'
+import { isPortAvailable } from '../utilities/portCheck'
 
 export function registerServerIpc() {
   handleSafe<
@@ -41,6 +43,9 @@ export function registerServerIpc() {
       versionConf,
       options
     ) => {
+      assertWritablePath(versionPath, 'server:install')
+      assertWritablePath(serverPath, 'server:install')
+
       const installer = new ServerGame(
         account,
         downloadLimit,
@@ -75,6 +80,7 @@ export function registerServerIpc() {
     'servers:write',
     false,
     async (_, data, p) => {
+      assertWritablePath(p, 'servers:write')
       await writeNBT(data, p)
       return true
     }
@@ -113,14 +119,22 @@ export function registerServerIpc() {
       serverPort: 25565
     },
     async (_, filePath) => {
+      assertReadablePath(filePath, 'server:getSettings')
       return await getServerSettings(filePath)
     }
+  )
+
+  handleSafe<boolean, [number]>(
+    'server:isPortAvailable',
+    true,
+    async (_, port: number) => await isPortAvailable(port)
   )
 
   handleSafe<boolean, [string, number]>(
     'server:editXmx',
     false,
     async (_, serverPath, memory) => {
+      assertWritablePath(serverPath, 'server:editXmx')
       await replaceXmxParameter(serverPath, `${memory}M`)
       return true
     }
@@ -130,6 +144,7 @@ export function registerServerIpc() {
     'server:setAikar',
     false,
     async (_, serverPath, enabled) => {
+      assertWritablePath(serverPath, 'server:setAikar')
       await setServerAikarFlags(serverPath, enabled)
       return true
     }
@@ -139,6 +154,7 @@ export function registerServerIpc() {
     'server:updateProperties',
     false,
     async (_, filePath, settings) => {
+      assertWritablePath(filePath, 'server:updateProperties')
       await updateServerProperty(filePath, settings)
       return true
     }
@@ -148,6 +164,7 @@ export function registerServerIpc() {
     'servers:read',
     [],
     async (_, p) => {
+      assertReadablePath(p, 'servers:read')
       return await readNBT(p)
     }
   )

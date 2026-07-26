@@ -52,6 +52,7 @@ const rpcLocales: Record<SupportedRpcLanguage, RpcLocale> = {
 
 const MAX_ACTIVITY_TEXT_LENGTH = 128
 const MAX_RECONNECT_DELAY = 30000
+const MAX_RECONNECT_ATTEMPTS = 8
 
 function normalizeLanguage(lang?: string): SupportedRpcLanguage {
   const normalized = (lang || 'en').toLowerCase().split('-')[0]
@@ -93,6 +94,8 @@ export class RPC {
   private isConnecting = false
   private isDisposed = false
   private reconnectAttempts = 0
+  private headImageRejected = false
+  private reconnectGaveUp = false
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private syncQueue: Promise<void> = Promise.resolve()
   private lastPresenceSignature = ''
@@ -186,7 +189,17 @@ export class RPC {
       serverAddress,
       startedAt: new Date()
     }
+
+    this.resumeReconnects()
     void this.queuePresenceSync()
+  }
+
+  private resumeReconnects() {
+    if (this.isDisposed || this.isReady || !this.reconnectGaveUp) return
+
+    this.reconnectGaveUp = false
+    this.reconnectAttempts = 0
+    this.scheduleReconnect()
   }
 
   setGamePlaying({
@@ -256,6 +269,7 @@ export class RPC {
     client.on('ready', () => {
       this.isReady = true
       this.reconnectAttempts = 0
+      this.reconnectGaveUp = false
       this.lastPresenceSignature = ''
       void this.queuePresenceSync()
     })
@@ -306,6 +320,14 @@ export class RPC {
 
   private scheduleReconnect() {
     if (this.isDisposed || this.reconnectTimer) return
+
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      if (!this.reconnectGaveUp) {
+        this.reconnectGaveUp = true
+        console.warn('Discord RPC unreachable, retries paused until the next launch')
+      }
+      return
+    }
 
     const delay = Math.min(MAX_RECONNECT_DELAY, 1000 * 2 ** this.reconnectAttempts)
     this.reconnectAttempts += 1
@@ -370,11 +392,25 @@ export class RPC {
       this.lastPresenceSignature = signature
     } catch (error) {
       this.lastPresenceSignature = ''
+      if (this.isDisposed) return
 
-      if (!this.isDisposed) {
-        console.warn('Failed to update Discord RPC activity', error)
+      if (!this.isReady) {
+        console.warn('Discord RPC transport lost while updating activity', error)
         this.scheduleReconnect()
+        return
       }
+
+      if (!this.headImageRejected && activity.smallImageKey !== 'steve') {
+        this.headImageRejected = true
+        console.warn(
+          'Discord rejected the presence payload, retrying without the player head',
+          error
+        )
+        void this.queuePresenceSync()
+        return
+      }
+
+      console.warn('Failed to update Discord RPC activity', error)
     }
   }
 
@@ -419,7 +455,9 @@ export class RPC {
 
     const smallImageText = truncateText(this.account?.nickname)
     if (smallImageText) {
-      activity.smallImageKey = this.buildHeadImageKey() ?? 'steve'
+      activity.smallImageKey = this.headImageRejected
+        ? 'steve'
+        : (this.buildHeadImageKey() ?? 'steve')
       activity.smallImageText = smallImageText
     }
 

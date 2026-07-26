@@ -276,7 +276,10 @@ export interface IElectronAPI {
     ) => Promise<boolean>;
   };
   auth: {
-    microsoft: (code: string) => Promise<IAuthResponse | null>;
+    microsoft: (
+      code: string,
+      codeVerifier?: string,
+    ) => Promise<IAuthResponse | null>;
     microsoftRefresh: (
       refreshToken: string,
       id: string,
@@ -433,7 +436,7 @@ export interface IElectronAPI {
   voice: {
     setPtt: (
       bind: { type: "key" | "mouse"; code: number } | null,
-    ) => Promise<void>;
+    ) => Promise<boolean>;
     capturePttBind: () => Promise<VoicePttBind | null>;
     setSessionActive: (active: boolean) => Promise<void>;
     onPttDown: (callback: () => void) => () => void;
@@ -451,10 +454,6 @@ export interface IElectronAPI {
   };
   game: {
     closeGame: (versionName: string, instance: number) => Promise<void>;
-  };
-  java: {
-    getPath: (majorVersion: number) => Promise<string>;
-    install(majorVersion: number): Promise<string>;
   };
   mods: {
     check: (
@@ -549,6 +548,7 @@ export interface IElectronAPI {
     ) => Promise<{ success: boolean; error?: string }>;
     getSettings: (filePath: string) => Promise<IServerSettings>;
     editXmx: (serverPath: string, memory: number) => Promise<void>;
+    isPortAvailable: (port: number) => Promise<boolean>;
     setAikar: (serverPath: string, enabled: boolean) => Promise<boolean>;
     updateProperties: (
       filePath: string,
@@ -988,7 +988,8 @@ export const api = {
       ipcRenderer.invoke("accounts:save", accounts, lastPlayed),
   },
   auth: {
-    microsoft: (code: string) => ipcRenderer.invoke("auth:microsoft", code),
+    microsoft: (code: string, codeVerifier?: string) =>
+      ipcRenderer.invoke("auth:microsoft", code, codeVerifier),
     microsoftRefresh: (refreshToken: string, id: string) =>
       ipcRenderer.invoke("auth:microsoft:refresh", refreshToken, id),
     elyby: (code: string) => ipcRenderer.invoke("auth:elyby", code),
@@ -1148,12 +1149,6 @@ export const api = {
     closeGame: (versionName: string, instance: number) =>
       ipcRenderer.invoke("game:closeGame", versionName, instance),
   },
-  java: {
-    getPath: (majorVersion: number) =>
-      ipcRenderer.invoke("java:getPath", majorVersion),
-    install: (majorVersion: number) =>
-      ipcRenderer.invoke("java:install", majorVersion),
-  },
   mods: {
     check: (
       settings: TSettings,
@@ -1252,6 +1247,8 @@ export const api = {
       ipcRenderer.invoke("server:getSettings", filePath),
     editXmx: (serverPath: string, memory: number) =>
       ipcRenderer.invoke("server:editXmx", serverPath, memory),
+    isPortAvailable: (port: number) =>
+      ipcRenderer.invoke("server:isPortAvailable", port),
     setAikar: (serverPath: string, enabled: boolean) =>
       ipcRenderer.invoke("server:setAikar", serverPath, enabled),
     updateProperties: (filePath: string, settings: IServerSettings) =>

@@ -5,6 +5,7 @@ import { IModpack, IModpackUpdate } from "@/types/Backend";
 import { VersionsService } from "../services/Versions";
 import { handleSafe } from "../utilities/ipc";
 import { checkBackendHealth } from "../utilities/connectivityTest";
+import { assertReadablePath } from "../utilities/safePath";
 
 export function registerBackendIpc() {
   handleSafe(
@@ -206,6 +207,7 @@ export function registerBackendIpc() {
       progressId?: string,
       direct = false,
     ) => {
+      assertReadablePath(filePath, "backend:uploadFileFromPath");
       const backend = new Backend(at);
       const upload = direct
         ? backend.uploadFileFromPathDirect.bind(backend)

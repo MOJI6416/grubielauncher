@@ -32,7 +32,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import {
   pathsAtom,
   settingsAtom,
@@ -71,6 +71,7 @@ import { VoiceSettingsPanel } from "./Voice/VoiceSettingsPanel";
 import { ConnectivityModal } from "./ConnectivityModal";
 import type { ConnectivityCheckResult } from "@/types/Connectivity";
 import { toast } from "sonner";
+import { showErrorToast } from "@renderer/utilities/errorToast";
 
 export function Settings({
   onClose,
@@ -110,7 +111,7 @@ export function Settings({
   );
   const [totalMem, setTotalMem] = useState(0);
   const [paths] = useAtom(pathsAtom);
-  const [, setStorageModal] = useAtom(storageModalAtom);
+  const setStorageModal = useSetAtom(storageModalAtom);
   const [connectivityResults, setConnectivityResults] = useState<
     ConnectivityCheckResult[] | null
   >(null);
@@ -622,7 +623,16 @@ export function Settings({
                   voiceNoiseSuppression,
                 };
 
-                await api.fs.writeJSON(settingsPath, newSettings);
+                try {
+                  await api.fs.writeJSON(settingsPath, newSettings);
+                } catch (error) {
+                  showErrorToast(
+                    t("settings.saveFailed"),
+                    error instanceof Error ? error.message : String(error),
+                    t("common.copy"),
+                  );
+                  return;
+                }
 
                 setSettings(newSettings);
                 await api.mirror.setSource(downloadSource);

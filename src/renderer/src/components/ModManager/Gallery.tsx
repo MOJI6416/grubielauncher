@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import useEmblaCarousel from "embla-carousel-react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export default function GalleryCarousel({
   gallery,
@@ -108,6 +109,7 @@ function ModalGallery({
   startIndex: number;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [current, setCurrent] = useState(startIndex);
   const lastWheelAtRef = useRef(0);
@@ -198,7 +200,7 @@ function ModalGallery({
         onClick={onClose}
         className="absolute right-4"
         style={{ top: "calc(env(titlebar-area-height, 0px) + 1rem)" }}
-        aria-label="Close"
+        aria-label={t("common.close")}
       >
         <X className="size-4" />
       </Button>
@@ -216,7 +218,7 @@ function ModalGallery({
         size="icon"
         onClick={scrollPrev}
         className="absolute left-6"
-        aria-label="Previous"
+        aria-label={t("common.previous")}
       >
         <ChevronLeft className="size-5" />
       </Button>
@@ -227,7 +229,7 @@ function ModalGallery({
         size="icon"
         onClick={scrollNext}
         className="absolute right-6"
-        aria-label="Next"
+        aria-label={t("common.next")}
       >
         <ChevronRight className="size-5" />
       </Button>

@@ -570,7 +570,7 @@ export function ChatModal({
                           key={msg.id ?? `${msg.time}-${index}`}
                           ref={setMessageNodeRef(msg.id)}
                           className={cn(
-                            "flex min-w-0 items-start gap-2 rounded-xl transition-colors",
+                            "flex min-w-0 items-start gap-2 rounded-xl transition-colors [content-visibility:auto] [contain-intrinsic-block-size:auto_3rem]",
                             isOwnMessage && "flex-row-reverse",
                             highlightedMessageId === msg.id && "bg-primary/10",
                           )}

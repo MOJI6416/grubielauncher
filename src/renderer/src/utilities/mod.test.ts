@@ -129,7 +129,11 @@ describe("findInstalledProject", () => {
 function modWithDeps(
   id: string,
   title: string,
-  deps: Array<{ title: string; relationType?: DependencyType }> = [],
+  deps: Array<{
+    title: string;
+    projectId?: string;
+    relationType?: DependencyType;
+  }> = [],
 ): ILocalProject {
   return localMod({
     id,
@@ -139,6 +143,7 @@ function modWithDeps(
       files: [],
       dependencies: deps.map((d) => ({
         title: d.title,
+        projectId: d.projectId,
         relationType: d.relationType ?? DependencyType.REQUIRED,
       })),
     },
@@ -206,5 +211,43 @@ describe("planDeletion", () => {
     const plan = planDeletion([a, b], a);
 
     expect(titles(plan.remove)).toEqual(["Just Enough Items", "Top"]);
+  });
+});
+
+describe("planDeletion without dependency titles", () => {
+  it("still links dependencies when only the project id survives", () => {
+    const lib = modWithDeps("lib-id", "Fabric API");
+    const top = modWithDeps("top-id", "Top", [
+      { title: "", projectId: "lib-id" },
+    ]);
+
+    const plan = planDeletion([top, lib], top);
+
+    expect(titles(plan.remove)).toEqual(["Fabric API", "Top"]);
+  });
+
+  it("warns about dependants resolved by project id", () => {
+    const lib = modWithDeps("lib-id", "Fabric API");
+    const top = modWithDeps("top-id", "Top", [
+      { title: "", projectId: "lib-id" },
+    ]);
+
+    const plan = planDeletion([top, lib], lib);
+
+    expect(titles(plan.blockers)).toEqual(["Top"]);
+  });
+
+  it("keeps a shared dependency that another mod still needs", () => {
+    const lib = modWithDeps("lib-id", "Fabric API");
+    const first = modWithDeps("a", "First", [
+      { title: "", projectId: "lib-id" },
+    ]);
+    const second = modWithDeps("b", "Second", [
+      { title: "", projectId: "lib-id" },
+    ]);
+
+    const plan = planDeletion([first, second, lib], first);
+
+    expect(titles(plan.remove)).toEqual(["First"]);
   });
 });

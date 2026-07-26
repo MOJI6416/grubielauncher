@@ -54,14 +54,39 @@ class GameRuntime extends EventEmitter {
     return `${versionName}-${instance}`;
   }
 
+  public isInstanceBusy(versionName: string, instance: number): boolean {
+    const existing = this.processes.get(this.makeKey(versionName, instance));
+    return Boolean(existing && existing.process.exitCode === null);
+  }
+
+  public nextFreeInstance(versionName: string): number {
+    let instance = 0;
+    while (this.isInstanceBusy(versionName, instance)) instance += 1;
+    return instance;
+  }
+
   public register(record: GameProcessRecord): string {
     const key = this.makeKey(record.versionName, record.instance);
+
+    if (this.isInstanceBusy(record.versionName, record.instance)) {
+      throw new Error(`Game instance ${key} is already running`);
+    }
+
     this.processes.set(key, record);
     return key;
   }
 
-  public unregister(versionName: string, instance: number): void {
-    this.processes.delete(this.makeKey(versionName, instance));
+  public unregister(
+    versionName: string,
+    instance: number,
+    process?: ChildProcessWithoutNullStreams,
+  ): void {
+    const key = this.makeKey(versionName, instance);
+    const existing = this.processes.get(key);
+    if (!existing) return;
+    if (process && existing.process !== process) return;
+
+    this.processes.delete(key);
   }
 
   public get(

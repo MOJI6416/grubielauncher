@@ -54,6 +54,38 @@ export const SERVER_PROTECTED_ENTRIES = [
   'crash-reports'
 ]
 
+const SERVER_SYNC_BACKUP_DIR = 'storage/sync-backups'
+const SERVER_SYNC_BACKUP_TTL_MS = 14 * 24 * 60 * 60 * 1000
+
+function isProtectedServerEntry(entry: string): boolean {
+  return SERVER_PROTECTED_ENTRIES.includes(entry.toLowerCase())
+}
+
+async function backupBeforeOverwrite(serverPath: string, entry: string) {
+  const destination = path.join(serverPath, entry)
+  if (!(await fs.pathExists(destination))) return
+
+  const backupRoot = path.join(serverPath, ...SERVER_SYNC_BACKUP_DIR.split('/'))
+  await fs.ensureDir(backupRoot)
+  await pruneSyncBackups(backupRoot)
+
+  const target = path.join(backupRoot, `${Date.now()}-${entry}`)
+  await fs.copy(destination, target, { overwrite: true }).catch(() => {})
+}
+
+async function pruneSyncBackups(backupRoot: string) {
+  const entries = await fs.readdir(backupRoot).catch(() => [] as string[])
+  const cutoff = Date.now() - SERVER_SYNC_BACKUP_TTL_MS
+
+  for (const entry of entries) {
+    const match = /^(\d{13})-/.exec(entry)
+    if (!match) continue
+    if (Number(match[1]) >= cutoff) continue
+
+    await fs.remove(path.join(backupRoot, entry)).catch(() => {})
+  }
+}
+
 export async function syncServerExtraFiles(
   versionPath: string,
   serverPath: string,
@@ -62,9 +94,12 @@ export async function syncServerExtraFiles(
   if (!(await fs.pathExists(serverPath))) return
 
   for (const dir of syncDirs) {
+    if (isProtectedServerEntry(dir)) continue
+
     const source = path.join(versionPath, dir)
     if (!(await fs.pathExists(source))) continue
 
+    await backupBeforeOverwrite(serverPath, dir)
     await fs.copy(source, path.join(serverPath, dir), { overwrite: true }).catch(() => {})
   }
 
@@ -75,10 +110,11 @@ export async function syncServerExtraFiles(
   for (const entry of entries) {
     const destination = path.join(serverPath, entry)
 
-    if (SERVER_PROTECTED_ENTRIES.includes(entry) && (await fs.pathExists(destination))) {
+    if (isProtectedServerEntry(entry) && (await fs.pathExists(destination))) {
       continue
     }
 
+    await backupBeforeOverwrite(serverPath, entry)
     await fs
       .copy(path.join(serverOverrides, entry), destination, { overwrite: true })
       .catch(() => {})

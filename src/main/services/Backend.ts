@@ -7,7 +7,6 @@ import {
 } from "@/types/Backend";
 import {
   IFriendSettingsUpdate,
-  ICreateUser,
   IUpdateUser,
   IUser,
 } from "@/types/IUser";
@@ -161,18 +160,6 @@ export class Backend extends BaseService {
       return true;
     } catch {
       return false;
-    }
-  }
-
-  async createUser(user: ICreateUser) {
-    try {
-      const response = await this.api.post<IUser>(`${this.baseUrl}/users`, {
-        ...user,
-      });
-
-      return response.data;
-    } catch {
-      return null;
     }
   }
 
@@ -797,6 +784,19 @@ export class Backend extends BaseService {
         },
       );
       return response.data.completion;
+    } catch {
+      return null;
+    }
+  }
+
+  async getGameToken(): Promise<string | null> {
+    try {
+      const response = await this.api.post<{ access_token: string }>(
+        `${this.baseUrl}/auth/game-token`,
+        {},
+      );
+
+      return response.data?.access_token || null;
     } catch {
       return null;
     }

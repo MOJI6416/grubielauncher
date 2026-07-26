@@ -2,7 +2,6 @@ import { IModpack } from './ModManager'
 import { IArguments } from './IArguments'
 import { ILoader } from './Loader'
 import { IServer } from './ServersList'
-import { IVersionManifest } from './IVersionManifest'
 
 export interface IVersion {
   id: string
@@ -40,8 +39,8 @@ export interface IImportModpack {
 }
 
 export interface IVersionClassData {
-  version: IVersionConf
-  manifest?: IVersionManifest
+  hasManifest: boolean
+  javaMajorVersion?: number
   launcherPath: string
   minecraftPath: string
   versionPath: string

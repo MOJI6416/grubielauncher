@@ -34,10 +34,13 @@ async function postOrNull<TResponse>(url: string, data: any, errorPrefix: string
   }
 }
 
-export async function authMicrosoft(code: string): Promise<IAuthResponse | null> {
+export async function authMicrosoft(
+  code: string,
+  codeVerifier?: string
+): Promise<IAuthResponse | null> {
   return postOrNull<IAuthResponse>(
     '/auth/microsoft',
-    { code } as IAuthRequest,
+    { code, ...(codeVerifier ? { codeVerifier } : {}) } as IAuthRequest,
     'Microsoft auth error'
   )
 }

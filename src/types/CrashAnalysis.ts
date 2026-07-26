@@ -7,6 +7,7 @@ export interface CrashRuleMessages {
 export interface CrashRule {
   id: string
   pattern?: string
+  allPatterns?: string[]
   flags?: string
   exitCodes?: number[]
   culpritPattern?: string

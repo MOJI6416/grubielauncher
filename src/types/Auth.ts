@@ -12,6 +12,7 @@ export interface IRefreshTokenResponse {
 
 export interface IAuthRequest {
   code: string
+  codeVerifier?: string
 }
 
 export interface IRefreshTokenRequest {

@@ -455,6 +455,7 @@ export function SkinCatalog({
                   capeUrl={selected.capeUrl ?? undefined}
                   height={320}
                   width={230}
+                  fillContainer
                 />
               ) : (
                 <ImageOff className="size-9 text-muted-foreground" />

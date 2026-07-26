@@ -138,7 +138,7 @@ function NavComponent({
   const [errorLog] = useAtom(errorLogAtom);
   const [errorLogSeen, setErrorLogSeen] = useAtom(errorLogSeenAtom);
   const [isErrorLogOpen, setIsErrorLogOpen] = useState(false);
-  const unseenErrors = Math.max(0, errorLog.length - errorLogSeen);
+  const unseenErrors = errorLog.filter((entry) => entry.time > errorLogSeen).length;
   const [isShareOpen, setIsShareOpen] = useAtom(isShareModalOpenAtom);
   const consoleMetas = useAtomValue(consolesMetaAtom);
   const [isFriendsConnected] = useAtom(isFriendsConnectedAtom);
@@ -251,7 +251,7 @@ function NavComponent({
                         variant="secondary"
                         className="relative size-9"
                         onClick={() => {
-                          setErrorLogSeen(errorLog.length);
+                          setErrorLogSeen(errorLog[0]?.time ?? Date.now());
                           setIsErrorLogOpen(true);
                         }}
                         aria-label={t("errorLog.title")}

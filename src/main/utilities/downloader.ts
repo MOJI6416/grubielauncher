@@ -9,27 +9,52 @@ import {
   DownloaderFailureItem,
   DownloaderFailuresInfo,
 } from "@/types/Downloader";
-import * as tar from "tar";
 import { mainWindow } from "../windows/mainWindow";
 import {
+  canSkipChecksumVerification,
   DownloadFilesOptions,
   isDownloadAbortError,
+  isNonRetryableDownloadError,
   shouldReportDownloadFailures,
   shouldThrowDownloadFailures,
 } from "./downloaderPure";
-import { resolveDownloadCandidates } from "./mirrors";
-import { getDownloadSource, getMojangReachable } from "./mirrorState";
-import { extractEntries, openArchive } from "./archiver";
+import { MIRROR_BASE, resolveDownloadCandidates } from "./mirrors";
+import {
+  getDownloadSource,
+  getMojangReachable,
+  isMirrorDisabled,
+  reportMirrorFailure,
+  reportMirrorSuccess,
+} from "./mirrorState";
+import { getSafeExtractPath } from "./archivePaths";
+import {
+  assertReadablePath,
+  assertWritablePath,
+  isReadablePath,
+  isWritablePath,
+} from "./safePath";
+import { isSafeRemoteUrl } from "./safeUrl";
 
 let downloadsPaused = false;
 let pauseWaiters: Array<() => void> = [];
+const activeStreams = new Set<NodeJS.ReadableStream>();
 
 export function pauseDownloads(): void {
   downloadsPaused = true;
+  for (const stream of activeStreams) {
+    try {
+      stream.pause();
+    } catch {}
+  }
 }
 
 export function resumeDownloads(): void {
   downloadsPaused = false;
+  for (const stream of activeStreams) {
+    try {
+      stream.resume();
+    } catch {}
+  }
   const waiters = pauseWaiters;
   pauseWaiters = [];
   for (const release of waiters) release();
@@ -41,6 +66,14 @@ async function awaitWhilePaused(isAborted: () => boolean): Promise<void> {
       pauseWaiters.push(resolve);
     });
   }
+}
+
+function getExtractMarkerPath(destination: string): string {
+  return `${destination}.extracting`;
+}
+
+function getPartialDownloadPath(destination: string): string {
+  return `${destination}.part`;
 }
 
 export interface DownloaderInfo {
@@ -179,13 +212,20 @@ export class Downloader {
                 return;
               }
 
+              const extractMarkerPath = item.options?.extract
+                ? getExtractMarkerPath(destination)
+                : null;
+              const isExtractPending = extractMarkerPath
+                ? await fs.pathExists(extractMarkerPath)
+                : false;
+
               const fileMatches = await this.fileExistsAndMatches(
                 destination,
                 expectedChecksum,
                 expectedChecksumType,
                 size,
               );
-              if (fileMatches) {
+              if (fileMatches && !isExtractPending) {
                 throwIfAborted();
                 completedItems++;
                 this.downloadedBytes += size;
@@ -203,20 +243,12 @@ export class Downloader {
                 return;
               }
 
-              this.ensureDirectoryExists(destination);
-              throwIfAborted();
+              if (fileMatches) this.downloadedBytes += size;
 
-              this.sendInfo(
-                this.createInfo(
-                  totalItems,
-                  completedItems,
-                  failedItems,
-                  fileName,
-                  groupName,
-                ),
-              );
+              if (!fileMatches) {
+                await this.ensureDirectoryExists(destination);
+                throwIfAborted();
 
-              await this.downloadFile(item, 3, () => {
                 this.sendInfo(
                   this.createInfo(
                     totalItems,
@@ -226,22 +258,44 @@ export class Downloader {
                     groupName,
                   ),
                 );
-              });
-              throwIfAborted();
 
-              if (expectedChecksum) {
-                const actualChecksum = await this.getFileHash(
-                  destination,
-                  expectedChecksumType,
-                );
-                if (
-                  actualChecksum.toLowerCase() !==
-                  expectedChecksum.toLowerCase()
-                ) {
-                  await fs.remove(destination).catch(() => {});
-                  throw new Error(
-                    `Checksum mismatch for ${fileName} (expected ${expectedChecksumType})`,
+                if (extractMarkerPath) {
+                  await fs.outputFile(extractMarkerPath, "");
+                }
+
+                const downloadedPath = await this.downloadFile(item, 3, () => {
+                  this.sendInfo(
+                    this.createInfo(
+                      totalItems,
+                      completedItems,
+                      failedItems,
+                      fileName,
+                      groupName,
+                    ),
                   );
+                });
+                throwIfAborted();
+
+                if (downloadedPath && expectedChecksum) {
+                  const actualChecksum = await this.getFileHash(
+                    downloadedPath,
+                    expectedChecksumType,
+                  );
+                  if (
+                    actualChecksum.toLowerCase() !==
+                    expectedChecksum.toLowerCase()
+                  ) {
+                    await fs.remove(downloadedPath).catch(() => {});
+                    throw new Error(
+                      `Checksum mismatch for ${fileName} (expected ${expectedChecksumType})`,
+                    );
+                  }
+                }
+
+                if (downloadedPath && downloadedPath !== destination) {
+                  await fs.move(downloadedPath, destination, {
+                    overwrite: true,
+                  });
                 }
               }
 
@@ -251,6 +305,10 @@ export class Downloader {
                   item.options.extractFolder || path.dirname(destination),
                   item.options.extractDelete ?? true,
                 );
+              }
+
+              if (extractMarkerPath) {
+                await fs.remove(extractMarkerPath).catch(() => {});
               }
               throwIfAborted();
 
@@ -538,37 +596,57 @@ export class Downloader {
     if (!item.group || typeof item.group !== "string") {
       return false;
     }
-    return true;
+    if (!isWritablePath(item.destination)) {
+      return false;
+    }
+
+    const url = item.url.trim();
+    if (url.startsWith("blocked::")) return true;
+    if (url.startsWith("file://")) {
+      try {
+        return isReadablePath(fileURLToPath(url));
+      } catch {
+        return false;
+      }
+    }
+
+    return isSafeRemoteUrl(url);
   };
 
   private downloadFile = async (
     item: DownloadItem,
     maxRetries = 3,
     onProgress?: () => void,
-  ): Promise<void> => {
+  ): Promise<string | null> => {
     const { url: originalUrl, destination } = item;
 
-    if (!originalUrl) return;
+    if (!originalUrl) return null;
     if (originalUrl.startsWith("blocked::")) {
       throw new Error("Manual download required");
     }
 
     if (originalUrl.startsWith("file://")) {
-      const localFilePath = fileURLToPath(originalUrl);
-      this.ensureDirectoryExists(destination);
+      const localFilePath = assertReadablePath(
+        fileURLToPath(originalUrl),
+        "download source",
+      );
+      assertWritablePath(destination, "download destination");
+      await this.ensureDirectoryExists(destination);
       const stats = await fs.stat(localFilePath);
       await fs.copy(localFilePath, destination, { overwrite: true });
       this.downloadedBytes += stats.size;
       if (!item.size) {
         this.totalBytes += stats.size;
       }
-      return;
+      return destination;
     }
 
+    const partialPath = getPartialDownloadPath(destination);
     const candidates = resolveDownloadCandidates(
       originalUrl,
       getDownloadSource(),
       getMojangReachable(),
+      isMirrorDisabled(),
     );
     let candidateError: Error | null = null;
 
@@ -593,13 +671,13 @@ export class Downloader {
           let startByte = 0;
 
           try {
-            if (fs.pathExistsSync(destination) && attempts > 0) {
-              const stats = await fs.stat(destination);
+            if (fs.pathExistsSync(partialPath) && attempts > 0) {
+              const stats = await fs.stat(partialPath);
               startByte = stats.size;
-              writer = fs.createWriteStream(destination, { flags: "a" });
+              writer = fs.createWriteStream(partialPath, { flags: "a" });
             } else {
               startByte = 0;
-              writer = fs.createWriteStream(destination);
+              writer = fs.createWriteStream(partialPath);
             }
 
             if (startByte > countedExistingBytes) {
@@ -632,12 +710,12 @@ export class Downloader {
                 writer.destroy();
               } catch {}
 
-              await fs.truncate(destination, 0);
+              await fs.truncate(partialPath, 0);
               this.downloadedBytes -= countedExistingBytes;
               countedExistingBytes = 0;
 
               startByte = 0;
-              writer = fs.createWriteStream(destination);
+              writer = fs.createWriteStream(partialPath);
 
               response = await makeRequest(0);
             }
@@ -744,15 +822,24 @@ export class Downloader {
               });
             });
 
-            return;
+            await fs.move(partialPath, destination, { overwrite: true });
+
+            if (url.startsWith(MIRROR_BASE)) reportMirrorSuccess();
+
+            return destination;
           } catch (error) {
             lastError = error as Error;
 
             if (axios.isCancel(error) || lastError.message === "AbortError") {
+              await this.removePartialFile(partialPath);
               throw lastError;
             }
 
-            attempts++;
+            if (isNonRetryableDownloadError(error)) {
+              attempts = maxRetries;
+            } else {
+              attempts++;
+            }
 
             this.downloadedBytes -= downloadedChunksBytes;
 
@@ -763,16 +850,9 @@ export class Downloader {
             }
 
             if (attempts >= maxRetries) {
-              if (fs.pathExistsSync(destination)) {
-                try {
-                  await fs.remove(destination);
-                } catch (e) {
-                  console.error(
-                    `Failed to remove corrupted file ${destination}:`,
-                    e,
-                  );
-                }
-              }
+              await this.removePartialFile(partialPath);
+
+              if (url.startsWith(MIRROR_BASE)) reportMirrorFailure();
 
               if (!item.size && addedToTotalBytes > 0) {
                 this.totalBytes -= addedToTotalBytes;
@@ -786,7 +866,7 @@ export class Downloader {
             );
           }
         }
-        return;
+        return destination;
       } catch (error) {
         if (
           isDownloadAbortError(error) ||
@@ -846,7 +926,14 @@ export class Downloader {
       if (size && stats.size !== size) return false;
       if (!size && !checksum && stats.size === 0) return false;
 
-      if (checksum) {
+      const skipHash = canSkipChecksumVerification(
+        path.basename(actualPath),
+        checksum,
+        checksumType,
+        size,
+      );
+
+      if (checksum && !skipHash) {
         const currentChecksum = await this.getFileHash(
           actualPath,
           checksumType,
@@ -878,50 +965,27 @@ export class Downloader {
     this.directoryCreationCache.add(dir);
   };
 
-  private getSafeExtractPath(
-    destinationRoot: string,
-    entryName: string,
-  ): string {
-    const name = (entryName || "").replace(/\\/g, "/");
+  private removePartialFile = async (partialPath: string): Promise<void> => {
+    if (!fs.pathExistsSync(partialPath)) return;
 
-    if (!name || name === "." || name === "/") {
-      throw new Error(`Invalid archive entry name: "${entryName}"`);
+    try {
+      await fs.remove(partialPath);
+    } catch (e) {
+      console.error(`Failed to remove partial file ${partialPath}:`, e);
     }
-
-    if (
-      name.startsWith("/") ||
-      name.startsWith("\\") ||
-      /^[a-zA-Z]:/.test(name)
-    ) {
-      throw new Error(`Unsafe archive entry path (absolute): "${entryName}"`);
-    }
-
-    const normalized = path.posix.normalize(name);
-
-    if (normalized.startsWith("..") || normalized.includes("/..")) {
-      throw new Error(`Unsafe archive entry path (traversal): "${entryName}"`);
-    }
-
-    const root = path.resolve(destinationRoot);
-    const target = path.resolve(root, normalized);
-
-    if (target !== root && !target.startsWith(root + path.sep)) {
-      throw new Error(`Unsafe archive entry path (escape): "${entryName}"`);
-    }
-
-    return target;
-  }
+  };
 
   private extractZipSafe = async (
     filePath: string,
     targetPath: string,
   ): Promise<void> => {
+    const { extractEntries, openArchive } = await import("./archiver");
     const zip = await openArchive(filePath);
 
     await fs.ensureDir(targetPath);
 
     await extractEntries(zip.getEntries(), (entryName) =>
-      this.getSafeExtractPath(targetPath, entryName),
+      getSafeExtractPath(targetPath, entryName),
     );
   };
 
@@ -931,11 +995,13 @@ export class Downloader {
   ): Promise<void> => {
     await fs.ensureDir(targetPath);
 
+    const tarModule = await import("tar");
+    const tar = (tarModule as unknown as { default?: typeof tarModule }).default ?? tarModule;
     await tar.x({
       file: filePath,
       cwd: targetPath,
       filter: (p: string, entry: any) => {
-        const safePath = this.getSafeExtractPath(targetPath, p);
+        const safePath = getSafeExtractPath(targetPath, p);
 
         const type = entry?.type as string | undefined;
         const linkpath = entry?.linkpath as string | undefined;

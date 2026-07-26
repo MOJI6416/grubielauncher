@@ -6,6 +6,21 @@ export function assertSafeFileSegment(value: string, label: string): string {
   return value;
 }
 
+export function assertSafeRelativePath(value: string, label: string): string {
+  const normalized = typeof value === "string" ? value.replaceAll("\\", "/") : "";
+
+  if (
+    !normalized ||
+    !/^[A-Za-z0-9._/-]+$/.test(normalized) ||
+    normalized.startsWith("/") ||
+    normalized.split("/").some((segment) => segment === "..")
+  ) {
+    throw new Error(`Unsafe ${label}: ${String(value)}`);
+  }
+
+  return normalized;
+}
+
 export function toArgfilePath(value: string): string {
   return value.replaceAll("\\", "/");
 }

@@ -49,6 +49,12 @@ describe("toMirrorUrl", () => {
     );
   });
 
+  it("maps the Adoptium release index so Java installs on a blocked network", () => {
+    expect(
+      toMirrorUrl("https://api.adoptium.net/v3/assets/latest/21/hotspot"),
+    ).toBe(`${MIRROR_BASE}/adoptium-api/v3/assets/latest/21/hotspot`);
+  });
+
   it("only mirrors Adoptium release-download paths on github.com", () => {
     expect(toMirrorUrl("https://github.com/x")).toBeNull();
     expect(
@@ -120,5 +126,20 @@ describe("resolveDownloadCandidates", () => {
       java,
       mirrorJava,
     ]);
+  });
+
+  it("drops a mirror that keeps failing instead of retrying it per file", () => {
+    const asset =
+      "https://resources.download.minecraft.net/00/0011223344556677889900112233445566778899";
+
+    expect(resolveDownloadCandidates(asset, "auto", false, true)).toEqual([
+      asset,
+    ]);
+    expect(resolveDownloadCandidates(asset, "auto", false, false)).toHaveLength(
+      2,
+    );
+    expect(resolveDownloadCandidates(asset, "mirror", null, true)[0]).toBe(
+      asset,
+    );
   });
 });

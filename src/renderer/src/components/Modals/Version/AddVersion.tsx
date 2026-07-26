@@ -11,6 +11,7 @@ import {
   versionsAtom,
 } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
+import { revokePreviousBlobUrl } from "@renderer/utilities/file";
 import {
   CircleAlert,
   HardDriveDownload,
@@ -1692,7 +1693,7 @@ export function AddVersion({
             image={croppedImage}
             size={{ width: 256, height: 256 }}
             changeImage={async (url: string) => {
-              setImage(url);
+              setImage((prev) => revokePreviousBlobUrl(prev, url) ?? "");
             }}
           />
         </Suspense>

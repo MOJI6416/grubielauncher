@@ -39,6 +39,9 @@ async function getCrashRules(): Promise<CrashRule[]> {
 
     return [...remoteRules, ...BUILT_IN_CRASH_RULES];
   } catch {
+    cachedRemoteRules = [];
+    cachedRemoteRulesAt = Date.now();
+
     return BUILT_IN_CRASH_RULES;
   }
 }

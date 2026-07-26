@@ -34,6 +34,8 @@ async function loadLivekit(): Promise<LivekitModule> {
 }
 
 const MAX_PARTICIPANT_VOLUME = 2;
+const DEFAULT_PARTICIPANT_VOLUME = 1;
+const MAX_STORED_VOLUMES = 200;
 
 let room: Room | null = null;
 let micMutedBeforeDeafen = false;
@@ -74,9 +76,12 @@ function isInCall(): boolean {
 }
 
 let noiseProcessorActive = false;
+let pttHookFailureReported = false;
+let noiseSuppressionFailed = false;
 
 async function disableNoiseSuppressionAfterFailure(reason: string) {
   noiseProcessorActive = false;
+  noiseSuppressionFailed = true;
 
   const publication =
     room && livekit
@@ -96,7 +101,9 @@ async function syncNoiseSuppression() {
   if (!room || !livekit || !isInCall()) return;
 
   const enabled = store.get(settingsAtom).voiceNoiseSuppression;
+  if (!enabled) noiseSuppressionFailed = false;
   if (enabled === noiseProcessorActive) return;
+  if (enabled && noiseSuppressionFailed) return;
 
   const publication = room.localParticipant.getTrackPublication(
     livekit.Track.Source.Microphone,
@@ -138,9 +145,22 @@ async function syncPtt() {
   if (!isInCall()) return;
 
   if (pttEnabled && bind) {
-    await api.voice
+    const hookReady = await api.voice
       .setPtt({ type: bind.type, code: bind.code })
-      .catch(() => undefined);
+      .catch(() => false);
+
+    if (!hookReady) {
+      pttEnabled = false;
+      pttPressed = false;
+      await api.voice.setPtt(null).catch(() => undefined);
+
+      if (!pttHookFailureReported) {
+        pttHookFailureReported = true;
+        toast.error(i18n.t("voice.pttUnavailable"), { duration: 8000 });
+      }
+    } else {
+      pttHookFailureReported = false;
+    }
   } else {
     pttPressed = false;
     await api.voice.setPtt(null).catch(() => undefined);
@@ -158,9 +178,17 @@ async function applyMicState() {
     !session.isDeafened &&
     (!pttEnabled || pttPressed);
 
-  await room.localParticipant
-    .setMicrophoneEnabled(shouldEnable)
-    .catch(() => undefined);
+  try {
+    await room.localParticipant.setMicrophoneEnabled(shouldEnable);
+  } catch (error) {
+    console.error("[Voice] Failed to apply microphone state:", error);
+
+    if (shouldEnable && !getSession().isMicMuted) {
+      setSession({ isMicMuted: true });
+      toast.error(i18n.t("voice.micUnavailable"), { duration: 8000 });
+    }
+  }
+
   syncParticipants();
 }
 
@@ -180,9 +208,13 @@ function loadVolumes(): [string, number][] {
 
 function saveVolumes() {
   try {
+    const entries = [...volumes].filter(
+      ([, volume]) => volume !== DEFAULT_PARTICIPANT_VOLUME,
+    );
+
     localStorage.setItem(
       VOLUMES_STORAGE_KEY,
-      JSON.stringify(Object.fromEntries(volumes)),
+      JSON.stringify(Object.fromEntries(entries.slice(-MAX_STORED_VOLUMES))),
     );
   } catch {
     return;
@@ -250,6 +282,8 @@ function removeAudioElements() {
 }
 
 function cleanup() {
+  flushParticipantVolumes();
+
   const previousState = getSession().state;
   if (previousState === "connected" || previousState === "reconnecting") {
     playVoiceSound("leave");
@@ -292,7 +326,7 @@ export async function voiceConnect(
     // Web-audio mixing lets participant volume boost above 100% via gain.
     webAudioMix: true,
     ...(inputDeviceId
-      ? { audioCaptureDefaults: { deviceId: inputDeviceId } }
+      ? { audioCaptureDefaults: { deviceId: { ideal: inputDeviceId } } }
       : {}),
   });
   room = nextRoom;
@@ -358,6 +392,8 @@ export async function voiceConnect(
     .on(RoomEvent.Reconnected, () => {
       setSession({ state: "connected" });
       syncParticipants();
+      void applyMicState();
+      void syncNoiseSuppression();
     })
     .on(RoomEvent.Disconnected, () => {
       if (room !== nextRoom) return;
@@ -406,6 +442,11 @@ export async function voiceSetMicMuted(muted: boolean) {
   }
   if (getSession().isDeafened) {
     micMutedBeforeDeafen = muted;
+
+    if (!muted) {
+      await voiceSetDeafened(false);
+      return;
+    }
   }
   setSession({ isMicMuted: muted });
   await applyMicState();
@@ -428,10 +469,30 @@ export async function voiceSetDeafened(deafened: boolean) {
   await applyMicState();
 }
 
+let saveVolumesTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleSaveVolumes() {
+  if (saveVolumesTimer) clearTimeout(saveVolumesTimer);
+
+  saveVolumesTimer = setTimeout(() => {
+    saveVolumesTimer = null;
+    saveVolumes();
+  }, 300);
+}
+
+export function flushParticipantVolumes() {
+  if (!saveVolumesTimer) return;
+
+  clearTimeout(saveVolumesTimer);
+  saveVolumesTimer = null;
+  saveVolumes();
+}
+
 export function voiceSetParticipantVolume(identity: string, volume: number) {
   const clamped = Math.min(MAX_PARTICIPANT_VOLUME, Math.max(0, volume));
+  volumes.delete(identity);
   volumes.set(identity, clamped);
-  saveVolumes();
+  scheduleSaveVolumes();
   applyTrackVolume(identity);
   syncParticipants();
 }

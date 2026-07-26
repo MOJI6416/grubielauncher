@@ -8,13 +8,13 @@ import { getLauncherPaths, toUUID } from "./other";
 import { getOfflineUuidCandidates } from "./offlineUuidMigration";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { jwtDecode } from "jwt-decode";
-import { deserialize, serialize } from "@xmcl/nbt";
+import { deserialize } from "@xmcl/nbt";
+import { patchNbtString } from "./nbtPatch";
 import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs-extra";
 import zlib from "zlib";
 import { pathToFileURL } from "url";
-import { extractZip, openArchive } from "./archiver";
 
 function getAccountUuids(account: ILocalAccount): string[] {
   if (
@@ -142,6 +142,20 @@ function findNbtValueByKey(source: any, keys: string[]): any {
   return undefined;
 }
 
+function decompressNbt(fileData: Buffer): Buffer {
+  const input = new Uint8Array(fileData);
+
+  try {
+    return Buffer.from(zlib.gunzipSync(input));
+  } catch {}
+
+  try {
+    return Buffer.from(zlib.inflateSync(input));
+  } catch {}
+
+  return Buffer.from(input);
+}
+
 function getWorldSeed(nbtData: any): string {
   const data = nbtData?.Data ?? nbtData?.data ?? nbtData;
 
@@ -179,10 +193,7 @@ export async function readWorld(
 
     try {
       const levelData = await fs.readFile(levelDatPath);
-      const u = new Uint8Array(levelData);
-
-      const decompressed = zlib.gunzipSync(u);
-      const nbtData: any = await deserialize(decompressed);
+      const nbtData: any = await deserialize(decompressNbt(levelData));
 
       if (
         typeof nbtData?.Data?.LevelName === "string" &&
@@ -210,9 +221,7 @@ export async function readWorld(
         );
         if (await fs.pathExists(wgsPath)) {
           const wgsRaw = await fs.readFile(wgsPath);
-          const wgsNbt: any = await deserialize(
-            zlib.gunzipSync(new Uint8Array(wgsRaw)),
-          );
+          const wgsNbt: any = await deserialize(decompressNbt(wgsRaw));
           seed = getWorldSeed(wgsNbt);
         }
       } catch (err) {
@@ -257,22 +266,24 @@ export async function writeWorldName(
   try {
     const levelDatPath = path.join(worldPath, "level.dat");
     const fileData = await fs.readFile(levelDatPath);
-    const u = new Uint8Array(fileData);
 
-    const decompressed = zlib.gunzipSync(u);
-    const nbtData: any = await deserialize(decompressed);
+    const decompressed = decompressNbt(fileData);
+    const patched = patchNbtString(decompressed, "LevelName", newName);
 
-    if (nbtData?.Data) {
-      nbtData.Data.LevelName = newName;
-    } else {
-      console.error("Data section not found in level.dat");
+    if (!patched) {
+      console.error("LevelName tag not found in level.dat");
       return null;
     }
 
-    const modifiedBuffer = await serialize(nbtData);
-    const compressed = zlib.gzipSync(new Uint8Array(modifiedBuffer));
+    await deserialize(patched);
 
-    await fs.writeFile(levelDatPath, compressed);
+    const compressed = zlib.gzipSync(new Uint8Array(patched));
+    const backupPath = path.join(worldPath, "level.dat_grubie.bak");
+    const tempPath = path.join(worldPath, `level.dat.${randomUUID()}.tmp`);
+
+    await fs.copy(levelDatPath, backupPath, { overwrite: true });
+    await fs.writeFile(tempPath, compressed);
+    await fs.move(tempPath, levelDatPath, { overwrite: true });
 
     const sanitized = sanitizeWorldFolderName(newName);
     const newFolderName = sanitized || path.basename(worldPath);
@@ -514,6 +525,7 @@ function sanitizeWorldFolderName(name: string) {
 }
 
 async function getWorldArchiveInfo(zipPath: string) {
+  const { openArchive } = await import("./archiver");
   const archive = await openArchive(zipPath);
   const entries = archive.getEntries();
 
@@ -588,6 +600,7 @@ export async function extractWorldArchive(
     ? savesPath
     : path.join(savesPath, archiveInfo.worldName);
 
+  const { extractZip } = await import("./archiver");
   await extractZip(zipPath, destination);
 
   return path.join(savesPath, archiveInfo.worldName);

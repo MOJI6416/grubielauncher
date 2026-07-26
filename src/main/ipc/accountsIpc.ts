@@ -2,7 +2,8 @@ import { IAccountConf } from "@/types/Account";
 import { ipcMain } from "electron";
 import {
   loadAccountsConfig,
-  saveAccountsConfig,
+  mergeIncomingAccounts,
+  mutateAccountsConfig,
 } from "../utilities/accounts";
 
 export function registerAccountsIpc() {
@@ -27,12 +28,11 @@ export function registerAccountsIpc() {
         throw new Error("Invalid accounts payload");
       }
 
-      const data: IAccountConf = {
-        accounts,
+      await mutateAccountsConfig((current) => ({
+        accounts: mergeIncomingAccounts(current.accounts, accounts),
         lastPlayed,
-      };
+      }));
 
-      await saveAccountsConfig(data);
       return true;
     },
   );

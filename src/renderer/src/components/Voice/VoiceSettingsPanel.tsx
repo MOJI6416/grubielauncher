@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAtom } from "jotai";
 import { settingsAtom } from "@renderer/stores/atoms";
+import { showErrorToast } from "@renderer/utilities/errorToast";
 import { patchSettings } from "@renderer/utilities/persistSettings";
 import { Button } from "@/components/ui/button";
 import {
@@ -116,11 +117,21 @@ export function VoiceSettingsDialog({
   const { t } = useTranslation();
   const [isCapturingPtt, setIsCapturingPtt] = useState(false);
 
+  const savePatch = (patch: Parameters<typeof patchSettings>[0]) => {
+    void patchSettings(patch).catch((error) => {
+      showErrorToast(
+        t("settings.saveFailed"),
+        error instanceof Error ? error.message : String(error),
+        t("common.copy"),
+      );
+    });
+  };
+
   const handleCapturePttBind = async () => {
     setIsCapturingPtt(true);
     try {
       const bind = await api.voice.capturePttBind();
-      if (bind) await patchSettings({ voicePttBind: bind });
+      if (bind) savePatch({ voicePttBind: bind });
     } finally {
       setIsCapturingPtt(false);
     }
@@ -137,10 +148,10 @@ export function VoiceSettingsDialog({
           voicePttBind={settings.voicePttBind}
           voiceNoiseSuppression={settings.voiceNoiseSuppression}
           isCapturingPtt={isCapturingPtt}
-          onVoicePttChange={(value) => void patchSettings({ voicePtt: value })}
+          onVoicePttChange={(value) => savePatch({ voicePtt: value })}
           onCapturePttBind={() => void handleCapturePttBind()}
           onVoiceNoiseSuppressionChange={(value) =>
-            void patchSettings({ voiceNoiseSuppression: value })
+            savePatch({ voiceNoiseSuppression: value })
           }
         />
       </DialogContent>

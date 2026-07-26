@@ -1,4 +1,4 @@
-export function isSafeRemoteImageUrl(url: unknown): url is string {
+export function isSafeRemoteUrl(url: unknown): url is string {
   if (typeof url !== "string" || url === "") return false;
 
   let parsed: URL;
@@ -27,3 +27,8 @@ export function isSafeRemoteImageUrl(url: unknown): url is string {
 
   return true;
 }
+
+export function isSafeRemoteImageUrl(url: unknown): url is string {
+  return isSafeRemoteUrl(url);
+}
+

@@ -1,5 +1,7 @@
 import { ChildProcessWithoutNullStreams, execFile, spawn } from "child_process";
 import os from "os";
+import path from "path";
+import fs from "fs-extra";
 import { analyzeGameCrash } from "./crashAnalyzer";
 import { gameProcesses, gameRuntime } from "./runtime";
 import { mainWindow } from "../windows/mainWindow";
@@ -7,7 +9,7 @@ import { IConsoleMessage } from "@/types/Console";
 import netstat from "node-netstat";
 import { rpc } from "../rpc";
 import { parseMinecraftServerConnectionLine } from "./gameConnection";
-import { classifyConsoleStream } from "./consoleLog";
+import { classifyConsoleStream, createLineReader } from "./consoleLog";
 import {
   beginSession,
   endSession,
@@ -27,6 +29,8 @@ function safeSend(channel: string, ...args: any[]) {
     mainWindow.webContents.send(channel, ...args);
   } catch {}
 }
+
+const SIGNAL_EXIT_BASE = 128;
 
 function safeMinimize() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -78,7 +82,7 @@ function waitForExit(
 
 function execFileSafe(command: string, args: string[]): Promise<void> {
   return new Promise((resolve) => {
-    execFile(command, args, () => resolve());
+    execFile(command, args, { windowsHide: true }, () => resolve());
   });
 }
 
@@ -239,19 +243,49 @@ export function runJar(
   });
 }
 
+const SERVER_INSTALL_TIMEOUT_MS = 15 * 60 * 1000;
+const SERVER_READY_MARKERS = [
+  "EULA",
+  'For help, type "help"',
+  "For help, type 'help'",
+];
+
+export interface InstallServerOptions {
+  signal?: AbortSignal;
+  resolveOnEulaFile?: boolean;
+}
+
 export function installServer(
   command: string,
   args: string[],
   serverPath: string,
   onOutput?: (message: string) => void,
+  options: InstallServerOptions = {},
 ) {
+  const signal = options.signal;
+
   return new Promise((resolve, reject) => {
     let settled = false;
+    let eulaPoll: NodeJS.Timeout | null = null;
+    let timeoutId: NodeJS.Timeout | null = null;
+
+    const stopWatchers = () => {
+      if (eulaPoll) clearInterval(eulaPoll);
+      if (timeoutId) clearTimeout(timeoutId);
+      eulaPoll = null;
+      timeoutId = null;
+    };
 
     const settleResolve = (value: any) => {
       if (settled) return;
       settled = true;
       cleanup();
+
+      if (server.exitCode === null && server.signalCode === null) {
+        void terminateProcessTree(server).finally(() => resolve(value));
+        return;
+      }
+
       resolve(value);
     };
 
@@ -259,10 +293,7 @@ export function installServer(
       if (settled) return;
       settled = true;
       cleanup();
-      reject(err);
-      try {
-        server.kill();
-      } catch {}
+      void terminateProcessTree(server).finally(() => reject(err));
     };
 
     const server = spawn(command, args, { cwd: serverPath });
@@ -270,9 +301,13 @@ export function installServer(
     const onStdout = (data: any) => {
       const output = data.toString();
       onOutput?.(output);
-      if (output.includes("EULA")) {
+      if (SERVER_READY_MARKERS.some((marker) => output.includes(marker))) {
         settleResolve("done");
       }
+    };
+
+    const onStderr = (data: any) => {
+      onOutput?.(data.toString());
     };
 
     const onClose = (code: any) => {
@@ -288,17 +323,40 @@ export function installServer(
       settleReject(err);
     };
 
+    const onAbort = () => settleReject(new Error("AbortError"));
+
     function cleanup() {
+      stopWatchers();
       try {
+        signal?.removeEventListener("abort", onAbort);
         server.stdout?.off("data", onStdout);
+        server.stderr?.off("data", onStderr);
         server.off("close", onClose);
         server.off("error", onError);
       } catch {}
     }
 
+    if (signal?.aborted) {
+      onAbort();
+      return;
+    }
+    signal?.addEventListener("abort", onAbort);
+
     server.stdout?.on("data", onStdout);
+    server.stderr?.on("data", onStderr);
     server.on("close", onClose);
     server.on("error", onError);
+
+    if (options.resolveOnEulaFile) {
+      const eulaPath = path.join(serverPath, "eula.txt");
+      eulaPoll = setInterval(() => {
+        if (fs.existsSync(eulaPath)) settleResolve("done");
+      }, 1000);
+    }
+
+    timeoutId = setTimeout(() => {
+      settleReject(new Error("Server installer timed out"));
+    }, SERVER_INSTALL_TIMEOUT_MS);
   });
 }
 
@@ -326,6 +384,10 @@ export function runGame(
   >,
   highPriority: boolean = false,
 ) {
+  if (gameRuntime.isInstanceBusy(versionName, instance)) {
+    throw new Error(`Game instance ${versionName}-${instance} is already running`);
+  }
+
   const instanceKey = `${versionName}-${instance}`;
 
   safeSend("consoleClear", versionName, instance);
@@ -387,7 +449,28 @@ export function runGame(
     netstatInFlight = true;
 
     try {
-      const connections: any[] = [];
+      let matchingConnections = 0;
+      let ownedByGame = 0;
+      let sawPidInfo = false;
+
+      const finish = () => {
+        try {
+          const stillData = gameProcesses.get(instanceKey);
+          if (!stillData || stillData.serverPort !== processData.serverPort)
+            return;
+
+          const connected = sawPidInfo
+            ? ownedByGame > 0
+            : matchingConnections > 0;
+          if (connected) return;
+
+          safeSend("friendUpdate", { serverAddress: "" });
+          stillData.serverPort = null;
+          rpc.updateGameServer(versionName, instance);
+        } finally {
+          netstatInFlight = false;
+        }
+      };
 
       netstat(
         {
@@ -395,27 +478,19 @@ export function runGame(
             remote: { port: processData.serverPort },
             protocol: "tcp",
           },
+          done: finish,
         },
         (item: any) => {
-          if (item.state == "ESTABLISHED") connections.push(item);
+          if (item.state != "ESTABLISHED") return;
+
+          matchingConnections += 1;
+
+          if (typeof item.pid === "number" && item.pid > 0) {
+            sawPidInfo = true;
+            if (item.pid === javaProcess.pid) ownedByGame += 1;
+          }
         },
       );
-
-      setTimeout(() => {
-        try {
-          const stillData = gameProcesses.get(instanceKey);
-          if (!stillData || stillData.serverPort !== processData.serverPort)
-            return;
-
-          if (connections.length === 0) {
-            safeSend("friendUpdate", { serverAddress: "" });
-            stillData.serverPort = null;
-            rpc.updateGameServer(versionName, instance);
-          }
-        } finally {
-          netstatInFlight = false;
-        }
-      }, 1000);
     } catch {
       netstatInFlight = false;
     }
@@ -487,8 +562,7 @@ export function runGame(
     );
   };
 
-  javaProcess.stdout?.on("data", async (data) => {
-    const message = data.toString();
+  const stdoutReader = createLineReader((message) => {
     gameRuntime.emitStdout({
       key: instanceKey,
       versionName,
@@ -515,8 +589,7 @@ export function runGame(
     });
   });
 
-  javaProcess.stderr?.on("data", (data) => {
-    const message = data.toString();
+  const stderrReader = createLineReader((message) => {
     gameRuntime.emitStderr({
       key: instanceKey,
       versionName,
@@ -533,6 +606,9 @@ export function runGame(
     });
   });
 
+  javaProcess.stdout?.on("data", (data: Buffer) => stdoutReader.push(data));
+  javaProcess.stderr?.on("data", (data: Buffer) => stderrReader.push(data));
+
   javaProcess.on("error", (err) => {
     if (processFinalized) return;
     processFinalized = true;
@@ -544,7 +620,7 @@ export function runGame(
       safeSend("playtimeRecorded"),
     );
 
-    gameRuntime.unregister(versionName, instance);
+    gameRuntime.unregister(versionName, instance, javaProcess);
     gameRuntime.emitClose({
       key: instanceKey,
       versionName,
@@ -577,12 +653,17 @@ export function runGame(
     if (processFinalized) return;
     processFinalized = true;
 
+    stdoutReader.flush();
+    stderrReader.flush();
     flushConsoleMessages();
 
     const killedByUser =
       gameProcesses.get(instanceKey)?.killedByUser === true;
 
     let code = typeof c === "number" ? c : 0;
+    if (c === null && signal && !killedByUser && signal !== "SIGTERM") {
+      code = SIGNAL_EXIT_BASE + (os.constants.signals[signal] ?? 0);
+    }
     if (signal == "SIGTERM" || killedByUser) code = 0;
 
     void endSession(versionName, instance, code).finally(() =>
@@ -615,7 +696,7 @@ export function runGame(
 
     if (intervalId) clearInterval(intervalId);
 
-    gameRuntime.unregister(versionName, instance);
+    gameRuntime.unregister(versionName, instance, javaProcess);
     gameRuntime.emitClose({
       key: instanceKey,
       versionName,

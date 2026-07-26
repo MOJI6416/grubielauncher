@@ -29,9 +29,12 @@ export function registerAuthIpc() {
     ipcMain.handle(channel, handler as any)
   }
 
-  register('auth:microsoft', async (_, code: string) => {
+  register('auth:microsoft', async (_, code: string, codeVerifier?: string) => {
     if (typeof code !== 'string' || !code) throw new Error('Invalid code')
-    const auth = await authMicrosoft(code)
+    if (codeVerifier !== undefined && typeof codeVerifier !== 'string') {
+      throw new Error('Invalid codeVerifier')
+    }
+    const auth = await authMicrosoft(code, codeVerifier)
     return auth
   })
 

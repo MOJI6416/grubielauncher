@@ -22,7 +22,7 @@ import {
   serverAtom,
   settingsAtom,
 } from "@renderer/stores/atoms";
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import { HardDriveDownload, Loader2, ServerCog } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -32,6 +32,7 @@ import { showErrorToast } from "@renderer/utilities/errorToast";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 const api = window.api;
@@ -44,11 +45,12 @@ export function CreateServer({
   serverCores: IServerOption[];
 }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [eulaAccepted, setEulaAccepted] = useState(false);
   const [loadingType, setLoadingType] = useState<"install">();
   const [selectedVersion] = useAtom(selectedVersionAtom);
   const [account] = useAtom(accountAtom);
   const { t } = useTranslation();
-  const [, setServer] = useAtom(serverAtom);
+  const setServer = useSetAtom(serverAtom);
   const [settings] = useAtom(settingsAtom);
   const [isInstallActive] = useAtom(installActiveAtom);
   const [progressStarted, setProgressStarted] = useState(false);
@@ -84,7 +86,8 @@ export function CreateServer({
     else if (isInstallActive) setProgressStarted(true);
   }, [isLoading, isInstallActive]);
 
-  const canInstall = !!selectedVersion && !!selectedServerCore && !!account;
+  const canInstall =
+    !!selectedVersion && !!selectedServerCore && !!account && eulaAccepted;
 
   const handleInstall = useCallback(async () => {
     if (isLoading || isInstallActive) return;
@@ -104,7 +107,7 @@ export function CreateServer({
       const conf: IServerConf = {
         core: selectedServerCore.core,
         javaMajorVersion:
-          selectedVersion.manifest?.javaVersion?.majorVersion ??
+          selectedVersion.javaMajorVersion ??
           mcVersionToJavaMajor(selectedVersion.version.version.id),
         memory,
         downloads: {
@@ -262,6 +265,30 @@ export function CreateServer({
               }}
             />
           </div>
+
+          <label className="flex items-start gap-2.5 text-sm">
+            <Checkbox
+              checked={eulaAccepted}
+              disabled={isLoading}
+              onCheckedChange={(checked) => setEulaAccepted(checked === true)}
+              className="mt-0.5"
+            />
+            <span className="text-muted-foreground">
+              {t("versions.eulaLabel")}{" "}
+              <button
+                type="button"
+                className="text-primary underline underline-offset-2"
+                onClick={(event) => {
+                  event.preventDefault();
+                  void api.shell.openExternal(
+                    "https://www.minecraft.net/eula",
+                  );
+                }}
+              >
+                {t("versions.eulaLink")}
+              </button>
+            </span>
+          </label>
         </div>
         <DialogFooter className="m-0 rounded-none border-t bg-muted/25 px-5 py-4">
           <Button

@@ -1552,7 +1552,7 @@ function VersionsComponent({
           }}
         >
           <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
+            <DialogHeader className="min-w-0">
               <DialogTitle className="flex min-w-0 items-center gap-2">
                 <Tag className="size-5 shrink-0" />
                 <span className="truncate">

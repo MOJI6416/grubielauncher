@@ -69,6 +69,7 @@ export interface ILocalVersion {
 
 export interface ILocalDependency {
   title: string;
+  projectId?: string;
   relationType: DependencyType;
 }
 

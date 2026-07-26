@@ -7,9 +7,9 @@ let powerSaveBlockerId: number | null = null;
 export function registerVoiceIpc() {
   handleSafe(
     "voice:setPtt",
-    undefined,
+    false,
     async (_, bind: { type: "key" | "mouse"; code: number } | null) => {
-      setPttBind(bind);
+      return setPttBind(bind);
     },
   );
 

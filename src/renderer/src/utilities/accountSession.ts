@@ -41,6 +41,10 @@ export function isAccountSessionRefreshError(
   );
 }
 
+function isOffline() {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
+}
+
 function isJwtExpired(authData: IAuth) {
   return typeof authData.exp !== "number" || Date.now() / 1000 >= authData.exp;
 }
@@ -152,7 +156,7 @@ export async function ensureAccountSession(
   }
 
   const shouldRefresh = isJwtExpired(authData) || isProviderExpired(authData);
-  if (!shouldRefresh) {
+  if (!shouldRefresh || isOffline()) {
     return {
       account: selectedAccount,
       accounts,
@@ -205,6 +209,14 @@ export async function ensureAccountSession(
         account: fallbackSession.account,
         accounts: fallbackSession.accounts,
         refreshed: true,
+      };
+    }
+
+    if (isOffline()) {
+      return {
+        account: accountForRefresh,
+        accounts: accountsForRefresh,
+        refreshed: false,
       };
     }
 

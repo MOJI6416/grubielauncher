@@ -101,6 +101,7 @@ export function ServerSettings({
   const [isWarnModal, setIsWarnModal] = useState(false);
   const [serverIp, setServerIp] = useState("");
   const [serverPort, setServerPort] = useState(25565);
+  const [portInUse, setPortInUse] = useState(false);
   const [isResourcePack, setIsResourcePack] = useState(false);
   const [totalMem, setTotalMem] = useState(0);
   const [server, setServer] = useState<IServerConf | null>(null);
@@ -142,6 +143,26 @@ export function ServerSettings({
       )
     );
   }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const handle = setTimeout(() => {
+      void api.server
+        .isPortAvailable(serverPort)
+        .then((available) => {
+          if (!cancelled) setPortInUse(!available);
+        })
+        .catch(() => {
+          if (!cancelled) setPortInUse(false);
+        });
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [serverPort]);
 
   useEffect(() => {
     let cancelled = false;
@@ -413,6 +434,11 @@ export function ServerSettings({
                           )
                         }
                       />
+                      {portInUse ? (
+                        <span className="text-xs text-destructive">
+                          {t("serverSettings.portInUse", { port: serverPort })}
+                        </span>
+                      ) : null}
                     </label>
                   </div>
 

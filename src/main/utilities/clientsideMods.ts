@@ -1,5 +1,6 @@
 import axios from "axios";
 import { BACKEND_URL } from "@/shared/config";
+import { SERVER_PROTECTED_ENTRIES } from "./serverManager";
 
 // Client-only mod detection and the server-copy directory list both come from
 // ServerPackCreator's curated data, served (and periodically refreshed from the
@@ -16,7 +17,12 @@ const DEFAULT_SYNC_DIRS = ["config", "defaultconfigs", "kubejs", "scripts"];
 
 // Never mirror these as extra dirs: mods are synced separately (side-aware) and
 // resource/shader packs are client-only.
-const EXCLUDED_SYNC_DIRS = new Set(["mods", "resourcepacks", "shaderpacks"]);
+const EXCLUDED_SYNC_DIRS = new Set([
+  "mods",
+  "resourcepacks",
+  "shaderpacks",
+  ...SERVER_PROTECTED_ENTRIES,
+]);
 
 let cache: {
   clientside: string[];

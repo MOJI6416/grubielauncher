@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { FaDiscord, FaGithub, FaTelegram, FaTwitch } from "react-icons/fa";
@@ -55,6 +55,14 @@ export function ProfileSocials({
   const [github, setGithub] = useState(user.linkedSocials?.github ?? null);
   const [busy, setBusy] = useState<string | null>(null);
   const [isManageOpen, setManageOpen] = useState(false);
+
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const openExternal = (url: string) => {
     void api.shell.openExternal(url).catch(() => undefined);
@@ -126,7 +134,11 @@ export function ProfileSocials({
         await new Promise((resolve) =>
           setTimeout(resolve, TELEGRAM_POLL_INTERVAL_MS),
         );
+        if (!isMountedRef.current) return;
+
         const fresh = await api.backend.getUser(accessToken, user._id);
+        if (!isMountedRef.current) return;
+
         const linked = fresh?.linkedSocials?.telegram;
         if (linked) {
           setTelegram(linked);
@@ -136,9 +148,9 @@ export function ProfileSocials({
       }
       throw new Error("link timed out");
     } catch {
-      toast.error(t("socials.providerLinkFailed"));
+      if (isMountedRef.current) toast.error(t("socials.providerLinkFailed"));
     } finally {
-      setBusy(null);
+      if (isMountedRef.current) setBusy(null);
     }
   };
 

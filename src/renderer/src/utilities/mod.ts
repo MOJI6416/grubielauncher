@@ -1,6 +1,7 @@
 import { Loader } from "@/types/Loader";
 import {
   DependencyType,
+  ILocalDependency,
   ILocalProject,
   ProjectType,
   Provider,
@@ -134,16 +135,25 @@ export function planDeletion(
   const norm = (value: string) => normalizeProjectTitle(value);
 
   const byTitle = new Map<string, ILocalProject>();
+  const byProjectId = new Map<string, ILocalProject>();
   for (const mod of mods) {
     const key = norm(mod.title);
     if (key && !byTitle.has(key)) byTitle.set(key, mod);
+
+    const id = String(mod.id ?? "");
+    if (id && !byProjectId.has(id)) byProjectId.set(id, mod);
   }
+
+  const resolveDependency = (dep: ILocalDependency) =>
+    (dep.projectId ? byProjectId.get(String(dep.projectId)) : undefined) ??
+    byTitle.get(norm(dep.title));
 
   const requiredBy = new Map<string, ILocalProject[]>();
   for (const mod of mods) {
     for (const dep of mod.version?.dependencies ?? []) {
       if (dep.relationType !== DependencyType.REQUIRED) continue;
-      const key = norm(dep.title);
+      const target = resolveDependency(dep);
+      const key = target ? keyOf(target) : norm(dep.title);
       if (!key) continue;
       const requirers = requiredBy.get(key) ?? [];
       requirers.push(mod);
@@ -161,10 +171,10 @@ export function planDeletion(
       for (const dep of mod.version?.dependencies ?? []) {
         if (dep.relationType !== DependencyType.REQUIRED) continue;
 
-        const depMod = byTitle.get(norm(dep.title));
+        const depMod = resolveDependency(dep);
         if (!depMod || removeKeys.has(keyOf(depMod))) continue;
 
-        const requirers = requiredBy.get(norm(depMod.title)) ?? [];
+        const requirers = requiredBy.get(keyOf(depMod)) ?? [];
         const neededOutside = requirers.some((r) => !removeKeys.has(keyOf(r)));
         if (neededOutside) continue;
 
@@ -178,7 +188,7 @@ export function planDeletion(
   const blockerKeys = new Set<string>();
   const blockers: ILocalProject[] = [];
   for (const mod of remove) {
-    const requirers = requiredBy.get(norm(mod.title)) ?? [];
+    const requirers = requiredBy.get(keyOf(mod)) ?? [];
     for (const requirer of requirers) {
       if (removeKeys.has(keyOf(requirer))) continue;
       if (blockerKeys.has(keyOf(requirer))) continue;

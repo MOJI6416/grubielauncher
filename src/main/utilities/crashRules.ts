@@ -22,8 +22,10 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
   },
   {
     id: "optifine_conflict",
-    pattern:
-      "(?=[\\s\\S]*?OptiFine)(?=[\\s\\S]*?(?:MixinApplyError|InvalidMixinException|Mixin apply for mod|Mixin transformation of))",
+    allPatterns: [
+      "OptiFine",
+      "MixinApplyError|InvalidMixinException|Mixin apply for mod|Mixin transformation of",
+    ],
     flags: "",
     messages: {
       en: "OptiFine conflicts with your mods. Replace it with Sodium/Embeddium from the mod manager, or remove it.",
@@ -185,7 +187,7 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
   },
   {
     id: "native_crash",
-    exitCodes: [-1073740791, -1073741819, 1073740791, 3221226505],
+    exitCodes: [-1073741819, 3221225477, -1073740791, 3221226505],
     messages: {
       en: "The game crashed at the system level. Most often: outdated GPU driver or overlays (Discord, OBS, GeForce Experience). Update the driver and disable overlays.",
       ru: "Игра упала на уровне системы. Чаще всего виноват устаревший видеодрайвер или оверлеи (Discord, OBS, GeForce Experience). Обновите драйвер и отключите оверлеи.",
@@ -205,11 +207,13 @@ function isValidRule(rule: unknown): rule is CrashRule {
   if (!candidate || typeof candidate.id !== "string") return false;
 
   const hasPattern = typeof candidate.pattern === "string";
+  const hasAllPatterns =
+    Array.isArray(candidate.allPatterns) && candidate.allPatterns.length > 0;
   const hasExitCodes =
     Array.isArray(candidate.exitCodes) &&
     candidate.exitCodes.length > 0 &&
     candidate.exitCodes.every((code) => typeof code === "number");
-  if (!hasPattern && !hasExitCodes) return false;
+  if (!hasPattern && !hasAllPatterns && !hasExitCodes) return false;
 
   const messages = candidate.messages as Partial<CrashRuleMessages> | undefined;
   return (
@@ -228,6 +232,13 @@ export function sanitizeCrashRules(rules: unknown): CrashRule[] {
 
     try {
       if (rule.pattern) new RegExp(rule.pattern, rule.flags || "i");
+      if (rule.allPatterns) {
+        if (!Array.isArray(rule.allPatterns)) return false;
+        for (const pattern of rule.allPatterns) {
+          if (typeof pattern !== "string") return false;
+          new RegExp(pattern, rule.flags || "i");
+        }
+      }
       if (rule.culpritPattern) {
         new RegExp(rule.culpritPattern, rule.culpritFlags || "gi");
       }
@@ -269,6 +280,13 @@ function sanitizeSignature(line: string): string {
   return line
     .replace(/[A-Za-z]:\\[^\s"']+/g, (match) => match.split(/[\\/]/).pop() || match)
     .replace(/\/(?:[^\s"'/]+\/)+([^\s"'/]+)/g, "$1")
+    .replace(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g, "<ip>")
+    .replace(/\b(?:[0-9a-f]{1,4}:){2,7}[0-9a-f]{1,4}\b/gi, "<ip>")
+    .replace(/\b(?:[\w-]+\.)+[a-z]{2,}(?=:\d{2,5}\b)/gi, "<host>")
+    .replace(
+      /\b(?:for user|user|username|player|profile)\s+([\w.-]{3,16})/gi,
+      (match, name: string) => match.slice(0, match.length - name.length) + "<user>",
+    )
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -310,9 +328,17 @@ export function matchCrashRules(
   for (const rule of rules) {
     let matched = false;
 
-    if (rule.pattern && text) {
+    const patterns = rule.allPatterns?.length
+      ? rule.allPatterns
+      : rule.pattern
+        ? [rule.pattern]
+        : [];
+
+    if (patterns.length && text) {
       try {
-        matched = new RegExp(rule.pattern, rule.flags ?? "i").test(text);
+        matched = patterns.every((pattern) =>
+          new RegExp(pattern, rule.flags ?? "i").test(text),
+        );
       } catch {
         matched = false;
       }

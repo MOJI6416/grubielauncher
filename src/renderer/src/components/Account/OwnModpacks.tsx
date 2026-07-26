@@ -26,6 +26,7 @@ import { AddVersion } from "../Modals/Version/AddVersion";
 import { Confirmation } from "../Modals/Confirmation";
 import { toast } from "sonner";
 import { buildPackShareUrl } from "@renderer/utilities/packShare";
+import { showErrorToast } from "@renderer/utilities/errorToast";
 
 const api = window.api;
 
@@ -71,7 +72,12 @@ export function OwnModpacks({
       } else {
         toast.error(t("ownModpacks.deleteError"));
       }
-    } catch {
+    } catch (error) {
+      showErrorToast(
+        t("ownModpacks.deleteError"),
+        error instanceof Error ? error.message : String(error),
+        t("common.copy"),
+      );
     } finally {
       setIsLoading(false);
       setLoadingType(null);

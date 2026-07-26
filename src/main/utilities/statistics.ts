@@ -25,6 +25,8 @@ interface ActiveSession extends SessionContext {
   id: string;
   spawnedAt: number;
   readyAt: number | null;
+  spawnedMono: number;
+  readyMono: number | null;
   server?: string;
 }
 
@@ -34,6 +36,8 @@ interface PendingMarker extends ActiveSession {
 
 const SESSIONS_LIMIT = 500;
 const HEARTBEAT_MS = 30_000;
+const MAX_SESSION_SECONDS = 24 * 60 * 60;
+const LAUNCH_LAG_SECONDS = 30;
 
 const activeSessions = new Map<string, ActiveSession>();
 let heartbeatTimer: NodeJS.Timeout | null = null;
@@ -187,6 +191,8 @@ export function beginSession(ctx: SessionContext): string {
     id: randomUUID(),
     spawnedAt: Date.now(),
     readyAt: null,
+    spawnedMono: performance.now(),
+    readyMono: null,
   };
   activeSessions.set(makeKey(ctx.versionName, ctx.instance), session);
   ensureHeartbeat();
@@ -198,6 +204,7 @@ export function markSessionReady(versionName: string, instance: number): void {
   const session = activeSessions.get(makeKey(versionName, instance));
   if (!session || session.readyAt) return;
   session.readyAt = Date.now();
+  session.readyMono = performance.now();
   void writeMarker(session, session.readyAt);
 }
 
@@ -231,9 +238,15 @@ export async function endSession(
   const endedAtMs = Date.now();
   const reached = session.readyAt != null;
   const startMs = session.readyAt ?? session.spawnedAt;
-  const durationSec = reached
-    ? Math.max(0, Math.floor((endedAtMs - startMs) / 1000))
-    : 0;
+
+  const elapsedSec = Math.max(
+    0,
+    Math.floor((performance.now() - (session.readyMono ?? session.spawnedMono)) / 1000),
+  );
+  const rawDurationSec = reached
+    ? elapsedSec
+    : Math.max(0, elapsedSec - LAUNCH_LAG_SECONDS);
+  const durationSec = Math.min(MAX_SESSION_SECONDS, rawDurationSec);
 
   await recordSession(session, {
     id: session.id,
@@ -274,7 +287,10 @@ export async function reconcilePendingSessions(): Promise<void> {
 
     const startMs = marker.readyAt;
     const endMs = Math.max(marker.lastSeen || startMs, startMs);
-    const durationSec = Math.max(0, Math.floor((endMs - startMs) / 1000));
+    const durationSec = Math.min(
+      MAX_SESSION_SECONDS,
+      Math.max(0, Math.floor((endMs - startMs) / 1000)),
+    );
     if (durationSec <= 0) continue;
 
     await recordSession(marker, {

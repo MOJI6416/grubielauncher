@@ -4,8 +4,15 @@ import { randomUUID } from 'crypto'
 import fs from 'fs-extra'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { BaseService } from '../services/Base'
-import { detectSkinModel, getSkin, renderCape, renderCharacter } from '../utilities/skin'
+import {
+  assertSkinBuffer,
+  detectSkinModel,
+  getSkin,
+  renderCape,
+  renderCharacter
+} from '../utilities/skin'
 import { getSha1 } from '../utilities/files'
+import { isSafeRemoteImageUrl } from '../utilities/safeUrl'
 import { Downloader } from '../utilities/downloader'
 import { BACKEND_URL } from '@/shared/config'
 import { ICape, IGrubieSkin, IMojangProfile, ISkinEntry, ISkinsConfig, SkinsData } from '@/types/SkinManager'
@@ -177,16 +184,21 @@ export class SkinsManager extends BaseService {
   private async downloadToTemp(url: string, type: 'skin' | 'cape'): Promise<string> {
     const tempPath = this.createTempFilePath(type)
 
-    await this.downloader.downloadFiles([
-      {
-        destination: tempPath,
-        group: type === 'skin' ? 'skins' : 'capes',
-        url,
-        options: {
-          silent: true
+    try {
+      await this.downloader.downloadFiles([
+        {
+          destination: tempPath,
+          group: type === 'skin' ? 'skins' : 'capes',
+          url,
+          options: {
+            silent: true
+          }
         }
-      }
-    ])
+      ])
+    } catch (error) {
+      await fs.remove(tempPath).catch(() => {})
+      throw error
+    }
 
     return tempPath
   }
@@ -196,6 +208,8 @@ export class SkinsManager extends BaseService {
     options: SkinRegistrationOptions = {}
   ): Promise<ISkinEntry | null> {
     if (!(await fs.pathExists(filePath))) return null
+
+    assertSkinBuffer(await fs.readFile(filePath))
 
     const { hash, filePath: normalizedPath } = await this.normalizeAssetFile(filePath, 'skin')
     const character = await renderCharacter(normalizedPath)
@@ -517,6 +531,11 @@ export class SkinsManager extends BaseService {
       for (const file of capeFiles) {
         if (!file.endsWith('.png')) continue
 
+        if (file.startsWith('.')) {
+          await fs.remove(path.join(capesDir, file)).catch(() => {})
+          continue
+        }
+
         const legacyId = file.replace(/\.png$/i, '')
         const capePath = path.join(capesDir, file)
         const cape = await this.registerCapeFromFile(capePath, {
@@ -696,6 +715,10 @@ export class SkinsManager extends BaseService {
 
   public async importByUrl(url: string, type: 'skin' | 'cape' = 'skin') {
     try {
+      if (!isSafeRemoteImageUrl(url)) {
+        throw new Error('Unsupported skin url')
+      }
+
       const extractedId = extractIdFromUrl(url) || undefined
 
       if (type == 'skin') {

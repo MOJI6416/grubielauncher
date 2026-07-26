@@ -17,7 +17,7 @@ import {
   selectedVersionAtom,
   versionsAtom,
 } from "@renderer/stores/atoms";
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -38,10 +38,10 @@ export function DeleteVersion({
   const [shareDel, setShareDel] = useState(true);
 
   const [account] = useAtom(accountAtom);
-  const [, setVersions] = useAtom(versionsAtom);
+  const setVersions = useSetAtom(versionsAtom);
   const [isNetwork] = useAtom(networkAtom);
   const [authData] = useAtom(authDataAtom);
-  const [, setConsoles] = useAtom(consolesAtom);
+  const setConsoles = useSetAtom(consolesAtom);
 
   const canOfferRemoteDelete = useMemo(() => {
     return !!version?.version.shareCode && !version.version.downloadedVersion;

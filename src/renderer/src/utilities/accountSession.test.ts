@@ -163,3 +163,58 @@ describe("ensureAccountSession", () => {
     );
   });
 });
+
+describe("offline launches", () => {
+  it("keeps the stored session instead of blocking the game without network", async () => {
+    const api = {
+      auth: {
+        discordRefresh: vi.fn(),
+      },
+      accounts: {
+        read: vi.fn(),
+        save: vi.fn(),
+      },
+    };
+    vi.stubGlobal("navigator", { onLine: false });
+
+    const { ensureAccountSession } = await loadAccountSession(api);
+
+    const result = await ensureAccountSession({
+      accounts: [account],
+      authData: expiredAuth,
+      selectedAccount: account,
+      setAccounts: vi.fn(),
+      setSelectedAccount: vi.fn(),
+    });
+
+    expect(result.account.accessToken).toBe("old-token");
+    expect(result.refreshed).toBe(false);
+    expect(api.auth.discordRefresh).not.toHaveBeenCalled();
+  });
+
+  it("still reports a real refresh failure when the network is up", async () => {
+    const api = {
+      auth: {
+        discordRefresh: vi.fn().mockResolvedValue(null),
+      },
+      accounts: {
+        read: vi.fn().mockResolvedValue(null),
+        save: vi.fn(),
+      },
+    };
+    vi.stubGlobal("navigator", { onLine: true });
+
+    const { ensureAccountSession, AccountSessionRefreshError } =
+      await loadAccountSession(api);
+
+    await expect(
+      ensureAccountSession({
+        accounts: [account],
+        authData: expiredAuth,
+        selectedAccount: account,
+        setAccounts: vi.fn(),
+        setSelectedAccount: vi.fn(),
+      }),
+    ).rejects.toBeInstanceOf(AccountSessionRefreshError);
+  });
+});

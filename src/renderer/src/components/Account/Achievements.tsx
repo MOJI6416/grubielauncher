@@ -49,6 +49,7 @@ import {
 } from "@renderer/utilities/achievements";
 import { fetchMergedAchievementStats } from "@renderer/utilities/achievementStats";
 import { Leaderboard } from "./Leaderboard";
+import { showErrorToast } from "@renderer/utilities/errorToast";
 
 const api = window.api;
 
@@ -94,8 +95,15 @@ export function Achievements({
           ? await fetchMergedAchievementStats(account)
           : EMPTY_ACHIEVEMENT_STATS;
         if (!cancelled) setStats(data);
-      } catch {
-        if (!cancelled) setStats(EMPTY_ACHIEVEMENT_STATS);
+      } catch (error) {
+        if (!cancelled) {
+          setStats(EMPTY_ACHIEVEMENT_STATS);
+          showErrorToast(
+            t("achievements.loadError"),
+            error instanceof Error ? error.message : String(error),
+            t("common.copy"),
+          );
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }

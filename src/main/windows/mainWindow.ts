@@ -4,6 +4,7 @@ import icon from "../../../resources/icon.png?asset";
 import { rpc } from "../rpc";
 import { is } from "@electron-toolkit/utils";
 import fs from "fs-extra";
+import { writeJsonAtomic } from "../utilities/atomicJson";
 
 export let mainWindow: BrowserWindow | null = null;
 
@@ -92,7 +93,7 @@ function saveWindowState(window: BrowserWindow): void {
       y: bounds.y,
       isMaximized: window.isMaximized(),
     };
-    fs.writeJSONSync(getWindowStatePath(), state);
+    void writeJsonAtomic(getWindowStatePath(), state).catch(() => {});
   } catch {}
 }
 
@@ -168,9 +169,7 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): void {
   ): void => {
     const devUrl = process.env["ELECTRON_RENDERER_URL"];
     const isAllowed =
-      url.startsWith("file://") ||
-      url.startsWith("app://bundle/") ||
-      (!!devUrl && url.startsWith(devUrl));
+      url.startsWith("app://bundle/") || (!!devUrl && url.startsWith(devUrl));
     if (isAllowed) return;
 
     event.preventDefault();

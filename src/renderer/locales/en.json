@@ -27,7 +27,11 @@
     "rename": "Rename",
     "close": "Close",
     "add": "Add",
-    "more": "More"
+    "more": "More",
+    "previous": "Previous",
+    "next": "Next",
+    "previousPage": "Previous page",
+    "nextPage": "Next page"
   },
   "network": {
     "connectionRestored": "Internet connection restored",
@@ -113,7 +117,8 @@
       "game": "Game",
       "rules": "Rules"
     },
-    "serverCore": "Server core"
+    "serverCore": "Server core",
+    "portInUse": "Port {{port}} is already in use on this machine"
   },
   "webLogin": {
     "title": "Sign in to the site",
@@ -285,7 +290,8 @@
       "alreadyRunning": "The game is already running — the world was pinned to your server list, open Multiplayer"
     },
     "deepLinkNoAccount": "Sign in to an account to send a friend request",
-    "cancelRequest": "Cancel request"
+    "cancelRequest": "Cancel request",
+    "sharedWorld": "Shared world"
   },
   "modManager": {
     "title": "Mod Manager",
@@ -434,6 +440,7 @@
   "voice": {
     "micUnavailable": "Microphone unavailable — you joined in listen-only mode",
     "noiseSuppressionFailed": "Noise suppression failed and has been turned off",
+    "pttUnavailable": "Push-to-talk hotkey is unavailable — the microphone stays open",
     "expand": "Expand",
     "collapse": "Collapse",
     "volume": "Volume",
@@ -544,6 +551,7 @@
     "highPriority": "High game priority",
     "highPriorityDescription": "Run the game process at above-normal priority — can help on busy PCs",
     "saved": "Settings saved",
+    "saveFailed": "Failed to save settings",
     "language": "Interface language",
     "mb": "MB",
     "devMode": "Developer mode",
@@ -779,7 +787,10 @@
       "publishing": "Publishing & server"
     },
     "playAnotherInstance": "Launch another instance",
-    "running": "Running"
+    "running": "Running",
+    "eulaLabel": "I accept the",
+    "eulaRequired": "Accept the Minecraft EULA to install a server",
+    "eulaLink": "Minecraft EULA"
   },
   "app": {
     "starting": "Starting game...",
@@ -1609,7 +1620,8 @@
         "name": "Supporter",
         "desc": "Support the project with a donation"
       }
-    }
+    },
+    "loadError": "Couldn't load achievement data"
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -1712,7 +1724,8 @@
     "confirmation": "Are you sure you want to delete the modpack {{name}}? It will be removed from the server and become unavailable for download",
     "downloads": "Downloads",
     "copyId": "Copy ID",
-    "addToLauncher": "Add to launcher"
+    "addToLauncher": "Add to launcher",
+    "loadError": "Couldn't load your modpacks"
   },
   "errorLog": {
     "title": "Error log",
@@ -1741,5 +1754,15 @@
   },
   "ipcError": {
     "fileOperation": "File operation failed. Check available disk space and permissions."
+  },
+  "news": {
+    "loadFailed": "Could not load the news",
+    "empty": "No news yet",
+    "retry": "Try again",
+    "toggle": {
+      "hide": "Hide news",
+      "show": "Show news"
+    },
+    "refresh": "Refresh news"
   }
 }

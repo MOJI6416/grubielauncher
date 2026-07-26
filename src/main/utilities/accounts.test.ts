@@ -24,6 +24,7 @@ vi.mock("electron", () => ({
 
 import {
   getSelectedAccount,
+  mergeIncomingAccounts,
   readAccountsConfig,
   saveAccountsConfig,
 } from "./accounts";
@@ -192,5 +193,65 @@ describe("legacy type_nickname migration", () => {
 
     const persisted = await fs.readJSON(accountsPath);
     expect(persisted.accounts[0].id).toBe("ely-uuid-7");
+  });
+});
+
+describe("mergeIncomingAccounts", () => {
+  const staleExp = Math.floor(Date.now() / 1000) + 60;
+  const freshExp = Math.floor(Date.now() / 1000) + 3600;
+
+  function account(token: string, refreshToken: string) {
+    return {
+      nickname: "Steve",
+      type: "microsoft" as const,
+      image: "",
+      friends: [],
+      accessToken: token,
+      refreshToken,
+    };
+  }
+
+  it("keeps the token refreshed in main when the renderer sends a stale copy", () => {
+    const stale = makeJwt({ sub: "ms-1", exp: staleExp });
+    const fresh = makeJwt({ sub: "ms-1", exp: freshExp });
+
+    const merged = mergeIncomingAccounts(
+      [account(fresh, "refresh-new")],
+      [account(stale, "refresh-old")],
+    );
+
+    expect(merged[0].accessToken).toBe(fresh);
+    expect(merged[0].refreshToken).toBe("refresh-new");
+  });
+
+  it("accepts a genuinely newer token from the renderer", () => {
+    const stale = makeJwt({ sub: "ms-1", exp: staleExp });
+    const fresh = makeJwt({ sub: "ms-1", exp: freshExp });
+
+    const merged = mergeIncomingAccounts(
+      [account(stale, "refresh-old")],
+      [account(fresh, "refresh-new")],
+    );
+
+    expect(merged[0].accessToken).toBe(fresh);
+    expect(merged[0].refreshToken).toBe("refresh-new");
+  });
+
+  it("does not resurrect accounts the renderer removed", () => {
+    const token = makeJwt({ sub: "ms-1", exp: freshExp });
+
+    expect(mergeIncomingAccounts([account(token, "refresh")], [])).toEqual([]);
+  });
+
+  it("leaves unrelated accounts untouched", () => {
+    const first = makeJwt({ sub: "ms-1", exp: freshExp });
+    const second = makeJwt({ sub: "ms-2", exp: staleExp });
+
+    const merged = mergeIncomingAccounts(
+      [account(first, "refresh-1")],
+      [account(second, "refresh-2")],
+    );
+
+    expect(merged[0].accessToken).toBe(second);
   });
 });

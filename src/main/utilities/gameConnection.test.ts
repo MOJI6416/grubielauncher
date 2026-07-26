@@ -50,3 +50,29 @@ describe("Minecraft server connection parser", () => {
     expect(parseMinecraftServerConnectionLine("OpenGL server warning")).toBeNull();
   });
 });
+
+describe("mod log noise", () => {
+  it("ignores host-only lines logged by a third-party mod", () => {
+    expect(
+      parseMinecraftServerConnectionLine(
+        "[Render thread/INFO] [somemod/]: Connecting to api.example.com",
+      ),
+    ).toBeNull();
+  });
+
+  it("still trusts a mod line that carries an explicit port", () => {
+    expect(
+      parseMinecraftServerConnectionLine(
+        "[Render thread/INFO] [somemod/]: Connecting to mc.example.com, 25565",
+      ),
+    ).toEqual({ serverAddress: "mc.example.com", serverPort: 25565 });
+  });
+
+  it("keeps host-only lines coming from the vanilla client logger", () => {
+    expect(
+      parseMinecraftServerConnectionLine(
+        "[Render thread/INFO] [net.minecraft.client.gui.screens.ConnectScreen/]: Connecting to play.example.org",
+      ),
+    ).toEqual({ serverAddress: "play.example.org", serverPort: 25565 });
+  });
+});

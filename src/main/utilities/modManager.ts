@@ -39,10 +39,15 @@ import toml from "toml";
 import axios from "axios";
 import { ModManager } from "../services/ModManager";
 import { app } from "electron";
-import { extractFileFromArchive } from "./archiver";
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { pathToFileURL } from "url";
 import { parseCurseForgeLoaderId } from "@/shared/loaderVersions";
+import { resolveDownloadCandidates } from "./mirrors";
+import {
+  getDownloadSource,
+  getMojangReachable,
+  isMirrorDisabled,
+} from "./mirrorState";
 
 const FORGE_CDN_HOSTS = [
   "https://edge.forgecdn.net",
@@ -54,7 +59,7 @@ export function buildForgeCdnUrls(fileId: number, fileName: string): string[] {
 
   const dir = Math.floor(fileId / 1000);
   const sub = fileId % 1000;
-  const encoded = fileName.replace(/ /g, "%20");
+  const encoded = encodeURIComponent(fileName);
 
   return FORGE_CDN_HOSTS.map(
     (host) => `${host}/files/${dir}/${sub}/${encoded}`,
@@ -65,7 +70,16 @@ export async function resolveCurseForgeCdnUrl(
   fileId: number,
   fileName: string,
 ): Promise<string | null> {
-  for (const url of buildForgeCdnUrls(fileId, fileName)) {
+  const candidates = buildForgeCdnUrls(fileId, fileName).flatMap((url) =>
+    resolveDownloadCandidates(
+      url,
+      getDownloadSource(),
+      getMojangReachable(),
+      isMirrorDisabled(),
+    ),
+  );
+
+  for (const url of Array.from(new Set(candidates))) {
     try {
       const response = await axios.head(url, {
         timeout: 6000,
@@ -146,13 +160,23 @@ export async function cfModpackToModpack(
     modpack.minecraft.modLoaders?.[0]?.id,
   );
 
+  if (modpack.files.length > 0 && mods.length === 0) {
+    throw new Error(
+      "CurseForge returned no project metadata for this modpack. Try again later.",
+    );
+  }
+
   const modpackFiles: ILocalProject[] = [];
+  const missingProjects: number[] = [];
 
   for (const f of modpack.files) {
     if (f.required === false) continue;
 
     const mod = mods.find((m) => m.id == f.projectID);
-    if (!mod) continue;
+    if (!mod) {
+      missingProjects.push(f.projectID);
+      continue;
+    }
 
     let file: IFile | null | undefined = files.find(
       (file) => file.id == f.fileID,
@@ -201,6 +225,12 @@ export async function cfModpackToModpack(
         ],
       },
     });
+  }
+
+  if (missingProjects.length > 0) {
+    throw new Error(
+      `CurseForge did not return ${missingProjects.length} of ${modpack.files.length} projects for this modpack. Try again later.`,
+    );
   }
 
   return {
@@ -463,15 +493,39 @@ async function getModIcon(
   tempPath: string,
 ): Promise<string | null> {
   try {
-    await extractFileFromArchive(modPath, iconPath, tempPath);
+        const { extractFileFromArchive } = await import("./archiver");
+        await extractFileFromArchive(modPath, iconPath, tempPath);
     const extractPath = path.join(tempPath, path.basename(iconPath));
-    const base = await fs.readFile(extractPath);
-    const base64 = Buffer.from(base).toString("base64");
-    const ext = path.extname(iconPath).substring(1);
-    return `data:image/${ext};base64,${base64}`;
+    const data = await fs.readFile(extractPath);
+
+    return await cacheModIcon(data, path.extname(iconPath));
   } catch {
     return null;
   }
+}
+
+export async function cacheModIcon(
+  data: Buffer,
+  extension: string,
+): Promise<string | null> {
+  const { cache } = getLauncherPaths();
+  if (!cache) return null;
+
+  const ext = extension.toLowerCase() || ".png";
+  const hash = createHash("sha1").update(data).digest("hex");
+  const iconsDir = path.join(cache, "mod-icons");
+  const cachedPath = path.join(iconsDir, `${hash}${ext}`);
+
+  if (!(await fs.pathExists(cachedPath))) {
+    await fs.ensureDir(iconsDir);
+    await fs.writeFile(cachedPath, data);
+  }
+
+  return toModIconUrl(cachedPath);
+}
+
+export function toModIconUrl(filePath: string): string {
+  return `app://media/?p=${encodeURIComponent(filePath)}`;
 }
 
 export async function checkLocalMod(
@@ -590,7 +644,8 @@ export async function checkLocalMod(
 
     for (const parser of parsers) {
       for (const file of parser.files) {
-        const extractedPath = await extractFileFromArchive(
+                const { extractFileFromArchive } = await import("./archiver");
+                const extractedPath = await extractFileFromArchive(
           modPath,
           file,
           tempPath,
@@ -752,7 +807,8 @@ export async function getModDescriptor(
     await fs.mkdir(tempPath, { recursive: true });
 
     for (const manifest of ["fabric.mod.json", "quilt.mod.json"]) {
-      const extractedPath = await extractFileFromArchive(
+            const { extractFileFromArchive } = await import("./archiver");
+            const extractedPath = await extractFileFromArchive(
         jarPath,
         manifest,
         tempPath,
@@ -791,7 +847,8 @@ export async function getModDescriptor(
       "META-INF/neoforge.mods.toml",
       "META-INF/mods.toml",
     ]) {
-      const extractedPath = await extractFileFromArchive(
+            const { extractFileFromArchive } = await import("./archiver");
+            const extractedPath = await extractFileFromArchive(
         jarPath,
         manifest,
         tempPath,
@@ -1719,4 +1776,34 @@ export function compareMods(a: ILocalProject[], b: ILocalProject[]): boolean {
 
   for (let i = 0; i < as.length; i++) if (as[i] !== bs[i]) return false;
   return true;
+}
+
+const DATA_URL_ICON = /^data:image\/([a-z0-9+.-]+);base64,(.+)$/i;
+
+export async function migrateInlineModIcons(
+  mods: ILocalProject[],
+): Promise<boolean> {
+  let changed = false;
+
+  for (const mod of mods) {
+    const match =
+      typeof mod.iconUrl === "string" ? mod.iconUrl.match(DATA_URL_ICON) : null;
+    if (!match) continue;
+
+    try {
+      const extension = match[1].toLowerCase() === "jpeg" ? ".jpg" : `.${match[1].toLowerCase()}`;
+      const cached = await cacheModIcon(
+        Buffer.from(match[2], "base64"),
+        extension,
+      );
+      if (!cached) continue;
+
+      mod.iconUrl = cached;
+      changed = true;
+    } catch {
+      continue;
+    }
+  }
+
+  return changed;
 }

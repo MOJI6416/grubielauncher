@@ -1,4 +1,5 @@
 import { ipcMain, IpcMainInvokeEvent } from 'electron'
+import { PathPolicyError } from './safePath'
 
 const NOTIFY_ON_ERROR_CHANNELS = new Set([
     'fs:writeFile',
@@ -66,6 +67,12 @@ export function handleSafe<TResult, TArgs extends any[] = any[]>(
         try {
             return await handler(event, ...args)
         } catch (err) {
+            if (err instanceof PathPolicyError) {
+                console.error(`[IPC][path-policy] ${channel} refused:`, err.message)
+                if (typeof fallback === 'function') return (fallback as any)(...args)
+                return fallback
+            }
+
             const described = describeIpcError(err)
             console.error(`[IPC] ${channel} error:`, described)
             if (NOTIFY_ON_ERROR_CHANNELS.has(channel) && !event.sender.isDestroyed()) {

@@ -7,6 +7,39 @@ import { ConnectivityCheckResult } from "@/types/Connectivity";
 let downloadSource: DownloadSource = "auto";
 let mojangReachable: boolean | null = null;
 
+const MIRROR_FAILURE_THRESHOLD = 5;
+const MIRROR_COOLDOWN_MS = 5 * 60 * 1000;
+
+let mirrorFailures = 0;
+let mirrorDisabledUntil = 0;
+
+export function isMirrorDisabled(): boolean {
+  if (mirrorDisabledUntil === 0) return false;
+  if (Date.now() >= mirrorDisabledUntil) {
+    mirrorDisabledUntil = 0;
+    mirrorFailures = 0;
+    return false;
+  }
+  return true;
+}
+
+export function reportMirrorFailure(): void {
+  mirrorFailures += 1;
+  if (mirrorFailures >= MIRROR_FAILURE_THRESHOLD) {
+    mirrorDisabledUntil = Date.now() + MIRROR_COOLDOWN_MS;
+  }
+}
+
+export function reportMirrorSuccess(): void {
+  mirrorFailures = 0;
+  mirrorDisabledUntil = 0;
+}
+
+export function resetMirrorCircuitBreaker(): void {
+  mirrorFailures = 0;
+  mirrorDisabledUntil = 0;
+}
+
 export function getDownloadSource(): DownloadSource {
   return downloadSource;
 }

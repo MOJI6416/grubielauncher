@@ -12,6 +12,7 @@ import type {
 } from '@/types/SkinManager'
 import type { ISkinData } from '@/types/Skin'
 import { handleSafe } from '../utilities/ipc'
+import { assertReadablePath, assertWritablePath } from '../utilities/safePath'
 
 const skinsManagers = new Map<string, SkinsManager>()
 const getManagerKey = (platform: string, userId: string) => `${platform}_${userId}`
@@ -40,6 +41,7 @@ export function registerSkinsIpc() {
     'skins:load',
     emptySkinsData,
     async (_, launcherPath, platform, userId, nickname, accessToken) => {
+      assertWritablePath(launcherPath, 'skins:load')
       const key = getManagerKey(platform, userId)
       let manager = skinsManagers.get(key)
 
@@ -194,6 +196,7 @@ export function registerSkinsIpc() {
       const manager = skinsManagers.get(getManagerKey(platform, userId))
       if (!manager) return null
 
+      assertReadablePath(filePath, 'skins:importByFile')
       await manager.importByFile(filePath, type)
       return manager.getData()
     }

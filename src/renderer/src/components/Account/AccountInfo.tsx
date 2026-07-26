@@ -1,4 +1,5 @@
 import { IUser } from "@/types/IUser";
+import { revokePreviousBlobUrl } from "@renderer/utilities/file";
 import { useTranslation } from "react-i18next";
 import { FaDiscord, FaMicrosoft } from "react-icons/fa";
 import { TbSquareLetterE } from "react-icons/tb";
@@ -82,6 +83,7 @@ import {
   canLoadSkinPreviewForProvider,
   canOpenSkinManagerForAccount,
 } from "@renderer/utilities/connectivity";
+import { showErrorToast } from "@renderer/utilities/errorToast";
 
 const api = window.api;
 
@@ -492,7 +494,7 @@ export default function AccountInfo({
   }, []);
 
   const handleAvatarChange = useCallback((value: string | null) => {
-    setImage(value);
+    setImage((prev) => revokePreviousBlobUrl(prev, value));
     setIsAvatarDirty(true);
   }, []);
 
@@ -519,7 +521,12 @@ export default function AccountInfo({
 
       setOwnModpacks(modpacks);
       setIsOwnModpacks(true);
-    } catch {
+    } catch (error) {
+      showErrorToast(
+        t("ownModpacks.loadError"),
+        error instanceof Error ? error.message : String(error),
+        t("common.copy"),
+      );
     } finally {
       stopLoading();
     }

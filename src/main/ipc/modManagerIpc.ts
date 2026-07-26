@@ -18,6 +18,7 @@ import {
   resolveCurseForgeCdnUrl,
 } from "../utilities/modManager";
 import { handleSafe } from "../utilities/ipc";
+import { assertReadablePath } from "../utilities/safePath";
 
 export function registerModManagerIpc() {
   handleSafe(
@@ -110,6 +111,7 @@ export function registerModManagerIpc() {
   );
 
   handleSafe("modManager:checkLocalMod", null, async (_, modPath: string) => {
+    assertReadablePath(modPath, "modManager:checkLocalMod");
     return await checkLocalMod(modPath);
   });
 
@@ -122,6 +124,7 @@ export function registerModManagerIpc() {
       pack?: IProject,
       selectVersion?: IVersion,
     ) => {
+      assertReadablePath(modpackPath, "modManager:checkModpack");
       return await checkModpack(modpackPath, pack, selectVersion);
     },
   );

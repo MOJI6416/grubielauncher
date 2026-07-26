@@ -24,7 +24,6 @@ import { app } from "electron";
 import { runGame, runJar } from "../utilities/game";
 import { getAuthlibCached } from "../utilities/authlib";
 import { AuthlibEnsureResult } from "@/types/IAuthlib";
-import { readJSONFromArchive } from "../utilities/archiver";
 import {
   VersionInstallOperation,
   VersionInstallOptions,
@@ -44,10 +43,15 @@ import {
 } from "../utilities/loaderInstallerProgress";
 import { assertSafeVersionName } from "@/shared/versionName";
 import { assertSafeFileSegment } from "./serverScriptSafety";
+import { Backend } from "../services/Backend";
 import { buildMemoryArguments } from "@/shared/jvmDefaults";
 import { mcVersionToJavaMajor } from "@/shared/javaVersions";
-import { assertTrustedDownloadUrl } from "../utilities/trustedHosts";
+import {
+  assertTrustedDownloadUrl,
+  normalizeLoaderLibraryUrl,
+} from "../utilities/trustedHosts";
 import { resolveOfflineUuid } from "../utilities/offlineUuidMigration";
+import { migrateInlineModIcons } from "../utilities/modManager";
 
 type VersionInstallRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
@@ -564,6 +568,9 @@ export class Version {
           this.throwIfInstallCancelled();
 
           if (!forgeInstalled || !installedForgeManifestPath) {
+            const { readJSONFromArchive } = await import(
+              "../utilities/archiver"
+            );
             const installProfile = await readJSONFromArchive<IInstallProfile>(
               installerPath,
               "install_profile.json",
@@ -587,7 +594,9 @@ export class Version {
                 path = path.replace(".jar", `-universal.jar`);
               }
 
-              const artifactUrl = `${lib.url}/${path}`;
+              const artifactUrl = normalizeLoaderLibraryUrl(
+                `${lib.url}/${path}`,
+              );
               assertTrustedDownloadUrl(artifactUrl, "forge library url");
 
               const library: IVersionManifest["libraries"][0] = {
@@ -777,6 +786,10 @@ export class Version {
 
   public async save() {
     await this.ensureInitialized();
+
+    await migrateInlineModIcons(this.version.loader.mods ?? []).catch(
+      () => false,
+    );
 
     this.versionPath = path.join(
       this.minecraftPath,
@@ -1223,6 +1236,15 @@ export class Version {
 
     jvm.push(...buildMemoryArguments(settings.xmx, settings.optimizedJvm));
 
+    if (process.platform === "win32") {
+      jvm.push(
+        "-Dstdout.encoding=UTF-8",
+        "-Dstderr.encoding=UTF-8",
+        "-Dsun.stdout.encoding=UTF-8",
+        "-Dsun.stderr.encoding=UTF-8",
+      );
+    }
+
     if (this.manifest.minecraftArguments) {
       jvm.push(
         ...["-Djava.library.path=${natives_directory}", "-cp", "${classpath}"],
@@ -1299,6 +1321,11 @@ export class Version {
 
     const activeAuthData = authData;
 
+    let gameToken: string | null = null;
+    if (account.type == "discord" && account.accessToken) {
+      gameToken = await new Backend(account.accessToken).getGameToken();
+    }
+
     game = game.map((arg) => {
       if (!this.manifest) return "";
 
@@ -1306,7 +1333,7 @@ export class Version {
 
       let accessToken = activeAuthData.auth.accessToken;
       if (account.type == "discord")
-        accessToken = account.accessToken || activeAuthData.uuid;
+        accessToken = gameToken || activeAuthData.uuid;
       if (!accessToken) accessToken = "0";
 
       let accountType = "mojang";

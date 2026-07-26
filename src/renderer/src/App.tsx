@@ -78,7 +78,7 @@ import { VoiceCallOverlay } from "./components/Voice/VoiceCallOverlay";
 import { evaluateAchievements } from "@renderer/utilities/achievements";
 import { fetchMergedAchievementStats } from "@renderer/utilities/achievementStats";
 import { IServer } from "@/types/ServersList";
-import { IConsole } from "@/types/Console";
+import { IConsole, IConsoleMessage } from "@/types/Console";
 import {
   applyBlockedModFilePaths,
   checkBlockedMods,
@@ -189,9 +189,14 @@ function applyPresenceUpdate(
   update: IUpdateStatus,
 ): Required<IUpdateStatus> {
   return {
-    versionName: update.versionName ?? previous.versionName,
-    versionCode: update.versionCode ?? previous.versionCode,
-    serverAddress: update.serverAddress ?? previous.serverAddress,
+    versionName:
+      update.versionName === undefined ? previous.versionName : update.versionName,
+    versionCode:
+      update.versionCode === undefined ? previous.versionCode : update.versionCode,
+    serverAddress:
+      update.serverAddress === undefined
+        ? previous.serverAddress
+        : update.serverAddress,
   };
 }
 
@@ -1019,28 +1024,57 @@ function App() {
       },
     );
 
-    const unsubscribeConsoleMessage = api.events.onConsoleMessage(
-      async (versionName, instance, message) => {
-        setConsoles((prev) => {
-          const idx = prev.consoles.findIndex(
-            (c) => c.versionName === versionName && c.instance === instance,
-          );
-          if (idx === -1) return prev;
+    const pendingConsoleMessages = new Map<string, IConsoleMessage[]>();
+    let consoleFlushHandle: number | null = null;
 
-          const next = [...prev.consoles];
+    const flushConsoleMessages = () => {
+      consoleFlushHandle = null;
+      if (pendingConsoleMessages.size === 0) return;
+
+      const batch = new Map(pendingConsoleMessages);
+      pendingConsoleMessages.clear();
+
+      setConsoles((prev) => {
+        let next: typeof prev.consoles | null = null;
+
+        for (const [key, messages] of batch) {
+          const idx = prev.consoles.findIndex(
+            (c) => `${c.instance}:${c.versionName}` === key,
+          );
+          if (idx === -1) continue;
+
+          if (!next) next = [...prev.consoles];
           next[idx] = {
             ...next[idx],
-            messages: [...next[idx].messages, message].slice(
+            messages: [...next[idx].messages, ...messages].slice(
               -MAX_CONSOLE_MESSAGES,
             ),
           };
-          return { consoles: next };
-        });
+        }
+
+        return next ? { consoles: next } : prev;
+      });
+    };
+
+    const unsubscribeConsoleMessage = api.events.onConsoleMessage(
+      async (versionName, instance, message) => {
+        const key = `${instance}:${versionName}`;
+        const queued = pendingConsoleMessages.get(key);
+        if (queued) {
+          queued.push(message);
+        } else {
+          pendingConsoleMessages.set(key, [message]);
+        }
+
+        if (consoleFlushHandle === null) {
+          consoleFlushHandle = requestAnimationFrame(flushConsoleMessages);
+        }
       },
     );
 
     const unsubscribeConsoleClear = api.events.onConsoleClear(
       async (versionName, instance) => {
+        pendingConsoleMessages.delete(`${instance}:${versionName}`);
         setConsoles((prev) => {
           const idx = prev.consoles.findIndex(
             (c) => c.versionName === versionName && c.instance === instance,
@@ -1123,6 +1157,10 @@ function App() {
       unsubscribePlaytimeRecorded();
       unsubscribeConsoleStatus();
       unsubscribeConsoleMessage();
+      if (consoleFlushHandle !== null) {
+        cancelAnimationFrame(consoleFlushHandle);
+        consoleFlushHandle = null;
+      }
       unsubscribeConsoleClear();
       unsubscribeLaunch();
       unsubscribeUpdateFailed();
@@ -1937,7 +1975,6 @@ function App() {
         next[idx] = { ...next[idx], status: "error" };
         return { consoles: next };
       });
-      setSelectedVersion(undefined);
       setIsRunning(false);
     } finally {
       launchInFlightRef.current = false;

@@ -5,6 +5,7 @@ import axios from "axios";
 import { fileURLToPath } from "url";
 import { getLauncherPaths } from "./other";
 import { isSafeRemoteImageUrl } from "./safeUrl";
+import { isReadablePath } from "./safePath";
 
 export interface ShortcutResult {
   success: boolean;
@@ -39,6 +40,7 @@ async function resolveImageBuffer(source: string): Promise<Buffer | null> {
     const filePath = source.startsWith("file://")
       ? fileURLToPath(source)
       : source;
+    if (!isReadablePath(filePath)) return null;
     return await fs.readFile(filePath);
   } catch {
     return null;

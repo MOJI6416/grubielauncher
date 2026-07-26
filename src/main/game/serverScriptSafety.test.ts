@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertSafeFileSegment,
+  assertSafeRelativePath,
   toArgfilePath,
   validateServerMemory,
 } from "./serverScriptSafety";
@@ -55,5 +56,34 @@ describe("assertSafeFileSegment", () => {
     expect(() => assertSafeFileSegment("a/b", "core")).toThrow();
     expect(() => assertSafeFileSegment("", "core")).toThrow();
     expect(() => assertSafeFileSegment("$(rm -rf /)", "core")).toThrow();
+  });
+});
+
+describe("assertSafeRelativePath", () => {
+  it("accepts a normal maven-style library path", () => {
+    expect(
+      assertSafeRelativePath(
+        "com/grubie/authlib/1.0/authlib-1.0.jar",
+        "authlib library path",
+      ),
+    ).toBe("com/grubie/authlib/1.0/authlib-1.0.jar");
+  });
+
+  it("normalizes backslashes coming from the backend", () => {
+    expect(
+      assertSafeRelativePath(String.raw`com\grubie\a.jar`, "path"),
+    ).toBe("com/grubie/a.jar");
+  });
+
+  it("rejects shell metacharacters that would break out of run.bat", () => {
+    expect(() =>
+      assertSafeRelativePath('a.jar" & calc & "', "path"),
+    ).toThrow();
+  });
+
+  it("rejects traversal and absolute paths", () => {
+    expect(() => assertSafeRelativePath("../../evil.jar", "path")).toThrow();
+    expect(() => assertSafeRelativePath("/etc/passwd", "path")).toThrow();
+    expect(() => assertSafeRelativePath("", "path")).toThrow();
   });
 });

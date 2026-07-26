@@ -39,6 +39,7 @@ import {
 } from "./shareClientLogic";
 import {
   createShareError,
+  isUnrecoverableShareError,
   ShareServiceError,
   toShareStateError,
 } from "./errors";
@@ -667,9 +668,12 @@ export class LanShareService extends EventEmitter {
 
     const target = this.stateStore.getState().target;
     if (target?.key === event.key) {
-      void this.forceLocalStop(
-        gameProcesses.size > 0 ? "lan_not_found" : "idle",
-      );
+      void (async () => {
+        await this.uploadGuestStats().catch(() => undefined);
+        await this.forceLocalStop(
+          gameProcesses.size > 0 ? "lan_not_found" : "idle",
+        );
+      })();
       return;
     }
 
@@ -880,13 +884,18 @@ export class LanShareService extends EventEmitter {
             slug: slug || "",
           });
         } catch (error) {
-          this.handleShareError(
-            toShareStateError(
-              error,
-              "tunnel_auth_failed",
-              "Failed to renew tunnel connection",
-            ),
+          const shareError = toShareStateError(
+            error,
+            "tunnel_auth_failed",
+            "Failed to renew tunnel connection",
           );
+          this.handleShareError(shareError);
+
+          if (isUnrecoverableShareError(shareError)) {
+            await this.forceLocalStop("error");
+            return;
+          }
+
           if (!this.disposed && this.stateStore.getState().sessionId) {
             this.scheduleReconnect();
           }

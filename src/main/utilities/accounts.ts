@@ -355,6 +355,63 @@ async function readAccountsConfigInner(): Promise<IAccountConf | null> {
   }
 }
 
+function getTokenExpiry(token?: string): number {
+  if (!token) return -1;
+
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1] || "", "base64url").toString("utf8"),
+    );
+    return typeof payload?.exp === "number" ? payload.exp : -1;
+  } catch {
+    return -1;
+  }
+}
+
+function getAccountSubject(token?: string): string | null {
+  if (!token) return null;
+
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1] || "", "base64url").toString("utf8"),
+    );
+    return typeof payload?.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+// The renderer saves the whole array from its own memory, so a save that raced
+// a background refresh in main used to write the already-rotated token back.
+// Whichever copy carries the later expiry wins.
+export function mergeIncomingAccounts(
+  stored: ILocalAccount[],
+  incoming: ILocalAccount[],
+): ILocalAccount[] {
+  return incoming.map((account) => {
+    const subject = getAccountSubject(account.accessToken);
+    if (!subject) return account;
+
+    const storedAccount = stored.find(
+      (entry) => getAccountSubject(entry.accessToken) === subject,
+    );
+    if (!storedAccount) return account;
+
+    if (
+      getTokenExpiry(storedAccount.accessToken) <=
+      getTokenExpiry(account.accessToken)
+    ) {
+      return account;
+    }
+
+    return {
+      ...account,
+      accessToken: storedAccount.accessToken,
+      refreshToken: storedAccount.refreshToken,
+    };
+  });
+}
+
 export function mutateAccountsConfig(
   mutator: (
     config: IAccountConf,

@@ -6,14 +6,14 @@ import {
   VersionInstallResult,
 } from "@/types/InstallationProgress";
 import { IVersionConf } from "@/types/IVersion";
-import { IVersionManifest } from "@/types/IVersionManifest";
 import { TSettings } from "@/types/Settings";
 
 const api = window.api;
 
 export class Version {
   public version: IVersionConf;
-  public manifest: IVersionManifest | undefined;
+  public hasManifest: boolean = false;
+  public javaMajorVersion: number | undefined;
 
   public launcherPath: string = "";
   public minecraftPath: string = "";
@@ -34,7 +34,8 @@ export class Version {
     this.launcherPath = res.launcherPath;
     this.isQuickPlayMultiplayer = res.isQuickPlayMultiplayer;
     this.isQuickPlaySingleplayer = res.isQuickPlaySingleplayer;
-    this.manifest = res.manifest;
+    this.hasManifest = res.hasManifest;
+    this.javaMajorVersion = res.javaMajorVersion;
   }
 
   async install(

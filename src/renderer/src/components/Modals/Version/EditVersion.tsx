@@ -1,4 +1,5 @@
 import { ILocalProject } from "@/types/ModManager";
+import { revokePreviousBlobUrl } from "@renderer/utilities/file";
 import {
   accountAtom,
   authDataAtom,
@@ -17,7 +18,7 @@ import {
   versionsAtom,
   versionServersAtom,
 } from "@renderer/stores/atoms";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { IArguments } from "@/types/IArguments";
 import { useTranslation } from "react-i18next";
@@ -218,7 +219,7 @@ export function EditVersion({
   >();
 
   const [authData] = useAtom(authDataAtom);
-  const [, setConsoles] = useAtom(consolesAtom);
+  const setConsoles = useSetAtom(consolesAtom);
   const consoleMetas = useAtomValue(consolesMetaAtom);
 
   const isVersionRunning = useMemo(
@@ -1229,7 +1230,7 @@ export function EditVersion({
             image={croppedImage}
             size={{ width: 256, height: 256 }}
             changeImage={async (url: string) => {
-              setImage(url);
+              setImage((prev) => revokePreviousBlobUrl(prev, url) ?? "");
               setIsLogoChanged(true);
             }}
           />

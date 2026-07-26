@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { TbSquareLetterE } from "react-icons/tb";
 import { IUser } from "@/types/IUser";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   accountAtom,
   accountsAtom,
@@ -55,6 +55,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FormErrorMessage } from "@/components/ui/form-error-message";
+import {
+  createCodeChallenge,
+  createCodeVerifier,
+} from "@renderer/utilities/pkce";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { jwtDecode } from "jwt-decode";
 import {
@@ -189,7 +193,7 @@ export function Accounts() {
   const [isRunning] = useAtom(isRunningAtom);
   const [authData, setAuthData] = useAtom(authDataAtom);
   const consoleMetas = useAtomValue(consolesMetaAtom);
-  const [, setVersion] = useAtom(selectedVersionAtom);
+  const setVersion = useSetAtom(selectedVersionAtom);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
 
   const accountsSafe = accounts ?? [];
@@ -318,12 +322,14 @@ export function Accounts() {
       provider: "microsoft" | "elyby" | "discord",
       code: string,
       sessionId: number,
+      codeVerifier?: string,
     ) => {
       try {
         if (!paths.launcher) return;
 
         let authUser: IAuthResponse | null = null;
-        if (provider === "microsoft") authUser = await api.auth.microsoft(code);
+        if (provider === "microsoft")
+          authUser = await api.auth.microsoft(code, codeVerifier);
         else if (provider === "elyby") authUser = await api.auth.elyby(code);
         else authUser = await api.auth.discord(code);
 
@@ -513,9 +519,12 @@ export function Accounts() {
   async function Auth(type: "microsoft" | "elyby" | "discord") {
     const state = `${type}:${crypto.randomUUID()}`;
     let authUrl = "";
-    if (type === "microsoft")
-      authUrl = `https://login.live.com/oauth20_authorize.srf?client_id=${MICROSOFT_CLIENT_ID}&response_type=code&redirect_uri=http://localhost:53213/callback&scope=XboxLive.signin%20offline_access&state=${encodeURIComponent(state)}`;
-    else if (type === "elyby")
+    let codeVerifier: string | undefined;
+    if (type === "microsoft") {
+      codeVerifier = createCodeVerifier();
+      const codeChallenge = await createCodeChallenge(codeVerifier);
+      authUrl = `https://login.live.com/oauth20_authorize.srf?client_id=${MICROSOFT_CLIENT_ID}&response_type=code&redirect_uri=http://localhost:53213/callback&scope=XboxLive.signin%20offline_access&state=${encodeURIComponent(state)}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
+    } else if (type === "elyby")
       authUrl = `https://account.ely.by/oauth2/v1?client_id=${ELYBY_CLIENT_ID}&redirect_uri=http://localhost:53213/callback&response_type=code&scope=offline_access,account_info,minecraft_server_session&state=${encodeURIComponent(state)}`;
     else
       authUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A53213%2Fcallback&scope=identify+guilds.join&state=${encodeURIComponent(state)}`;
@@ -542,7 +551,7 @@ export function Accounts() {
       setAuthStage("exchanging");
       closeModalSelect();
       await waitForNextFrame();
-      await oauth(provider, code, sessionId);
+      await oauth(provider, code, sessionId, codeVerifier);
     } catch {
       if (authSessionRef.current !== sessionId) return;
       setIsSigning(false);

@@ -30,6 +30,8 @@ import { CurseForge } from "../services/CurseForge";
 import { Modrinth } from "../services/Modrinth";
 import {
   buildForgeCdnUrls,
+  cacheModIcon,
+  migrateInlineModIcons,
   cfModpackToModpack,
   checkModpack,
   classIdToProjectType,
@@ -62,6 +64,15 @@ describe("buildForgeCdnUrls", () => {
   it("returns nothing for an invalid file id", () => {
     expect(buildForgeCdnUrls(0, "mod.jar")).toEqual([]);
     expect(buildForgeCdnUrls(NaN, "mod.jar")).toEqual([]);
+  });
+
+  it("encodes characters that would otherwise truncate the url", () => {
+    expect(buildForgeCdnUrls(5118388, "mod#1?beta.jar")[0]).toBe(
+      "https://edge.forgecdn.net/files/5118/388/mod%231%3Fbeta.jar",
+    );
+    expect(buildForgeCdnUrls(5118388, "mod+extra.jar")[0]).toBe(
+      "https://edge.forgecdn.net/files/5118/388/mod%2Bextra.jar",
+    );
   });
 });
 
@@ -1058,5 +1069,55 @@ describe("classIdToProjectType", () => {
     expect(classIdToProjectType(4546)).toBeNull();
     expect(classIdToProjectType(undefined)).toBeNull();
     expect(classIdToProjectType(null)).toBeNull();
+  });
+});
+
+describe("mod icon storage", () => {
+  const pngBytes = Buffer.from(
+    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489",
+    "hex",
+  );
+
+  it("stores an icon on disk and returns a media url instead of a data uri", async () => {
+    const url = await cacheModIcon(pngBytes, ".png");
+
+    expect(url).toMatch(/^app:\/\/media\/\?p=/);
+    expect(url).not.toContain("base64");
+
+    const stored = decodeURIComponent((url as string).split("p=")[1]);
+    expect(await fs.pathExists(stored)).toBe(true);
+    expect(await fs.readFile(stored)).toEqual(pngBytes);
+  });
+
+  it("reuses the same file for identical icons", async () => {
+    const first = await cacheModIcon(pngBytes, ".png");
+    const second = await cacheModIcon(pngBytes, ".png");
+
+    expect(second).toBe(first);
+  });
+
+  it("converts inline base64 icons of existing configs", async () => {
+    const mods = [
+      {
+        id: "a",
+        title: "Inline",
+        iconUrl: `data:image/png;base64,${pngBytes.toString("base64")}`,
+      },
+      { id: "b", title: "Already a url", iconUrl: "app://media/?p=x" },
+      { id: "c", title: "No icon", iconUrl: "" },
+    ] as any;
+
+    const changed = await migrateInlineModIcons(mods);
+
+    expect(changed).toBe(true);
+    expect(mods[0].iconUrl).toMatch(/^app:\/\/media\/\?p=/);
+    expect(mods[1].iconUrl).toBe("app://media/?p=x");
+    expect(mods[2].iconUrl).toBe("");
+  });
+
+  it("does not rewrite a config that has no inline icons", async () => {
+    const mods = [{ id: "a", title: "x", iconUrl: "app://media/?p=y" }] as any;
+
+    expect(await migrateInlineModIcons(mods)).toBe(false);
   });
 });

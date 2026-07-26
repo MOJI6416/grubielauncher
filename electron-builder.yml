@@ -55,7 +55,7 @@ nsis:
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
-  differentialPackage: true
+  differentialPackage: false
 
 linux:
   target:
