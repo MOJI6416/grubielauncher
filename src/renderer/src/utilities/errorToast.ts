@@ -25,19 +25,21 @@ export function showErrorToast(
   details: string | undefined,
   copyLabel: string,
   toastId?: string | number,
+  technical?: string,
 ) {
-  recordError(title, details);
+  const fullDetails = [details, technical].filter(Boolean).join("\n\n");
+  recordError(title, fullDetails || undefined);
 
   toast.error(title, {
     id: toastId,
     description: details || undefined,
     duration: 12000,
-    ...(details
+    ...(fullDetails
       ? {
           action: {
             label: copyLabel,
             onClick: () => {
-              void api.clipboard.writeText(`${title}\n${details}`);
+              void api.clipboard.writeText(`${title}\n${fullDetails}`);
             },
           },
         }

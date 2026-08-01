@@ -4,6 +4,7 @@ import { BookCheck, BookX } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from "sonner";
+import { showFailureToast } from '@renderer/utilities/failures'
 
 const api = window.api
 
@@ -106,8 +107,11 @@ export const ModToggleButton = ({
       setIsEnabled((prev) => !prev)
 
       toast.success(t(isEnabled ? 'modManager.disabled' : 'modManager.enabled'))
-    } catch {
-      toast.error(t('modManager.toggleError'))
+    } catch (error) {
+      showFailureToast(t('modManager.toggleError'), error, {
+        channels: ['fs:rename'],
+        fallbackDescription: t('modManager.toggleErrorHint')
+      })
     } finally {
       setIsToggling(false)
     }

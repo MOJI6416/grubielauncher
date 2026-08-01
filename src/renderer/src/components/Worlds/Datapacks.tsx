@@ -30,6 +30,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
 type DatapackOption = {
@@ -140,7 +141,9 @@ export function Datapacks({
       return true;
     } catch (err) {
       console.error(err);
-      toast.error(t("worlds.datapackAddError"));
+      showFailureToast(t("worlds.datapackAddError"), err, {
+        channels: ["fs:", "file:download"],
+      });
       return false;
     } finally {
       setAddingFilename(null);
@@ -226,7 +229,9 @@ export function Datapacks({
                   onChange?.(next);
                 } catch (err) {
                   console.error(err);
-                  toast.error(t("worlds.datapackRemoveError"));
+                  showFailureToast(t("worlds.datapackRemoveError"), err, {
+                    channels: ["fs:"],
+                  });
                 }
               }}
             >
@@ -245,7 +250,8 @@ export function Datapacks({
         if (!open) onClose();
       }}
     >
-      <DialogContent aria-describedby={undefined}
+      <DialogContent
+        aria-describedby={undefined}
         className="overflow-hidden p-0 sm:max-w-md"
         onInteractOutside={(event) => {
           const target = event.target;
@@ -333,7 +339,9 @@ export function Datapacks({
                   await api.shell.openPath(datapacksPath);
                 } catch (err) {
                   console.error(err);
-                  toast.error(t("worlds.openDatapacksFolderError"));
+                  showFailureToast(t("worlds.openDatapacksFolderError"), err, {
+                    channels: ["fs:", "shell:"],
+                  });
                 }
               }}
             >

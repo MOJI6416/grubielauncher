@@ -68,7 +68,7 @@ function Toaster({
             toastOptions?.classNames?.title,
           ),
           description: cn(
-            "font-sans text-xs leading-5 text-muted-foreground break-words",
+            "font-sans text-xs leading-5 text-muted-foreground break-words whitespace-pre-line",
             toastOptions?.classNames?.description,
           ),
           icon: cn(

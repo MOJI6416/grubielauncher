@@ -29,6 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { Confirmation } from "../Modals/Confirmation";
 import { toast } from "sonner";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 enum LoadingType {
   RUN = "run",
   DELETE = "delete",
@@ -154,7 +155,9 @@ export function ServerControl({
       onDelete();
       onClose();
     } catch (error) {
-      toast.error(t("serverManager.deleteError"));
+      showFailureToast(t("serverManager.deleteError"), error, {
+        fallbackDescription: t("serverManager.deleteErrorHint"),
+      });
     } finally {
       setLoadingType(null);
       setIsLoading(false);
@@ -169,7 +172,8 @@ export function ServerControl({
           if (!open && !isLoading) onClose();
         }}
       >
-        <DialogContent aria-describedby={undefined}
+        <DialogContent
+          aria-describedby={undefined}
           className="overflow-hidden p-0 sm:max-w-xs"
           onPointerDownOutside={(event) => {
             if (isLoading) event.preventDefault();
@@ -220,7 +224,10 @@ export function ServerControl({
                       {t("serverSettings.serverCore")}
                     </p>
                     <div className="flex min-w-0 items-center gap-2">
-                      <Badge variant="secondary" className="min-w-0 px-2.5 py-1 text-sm">
+                      <Badge
+                        variant="secondary"
+                        className="min-w-0 px-2.5 py-1 text-sm"
+                      >
                         <Cpu className="size-3.5" />
                         <span className="truncate">{server.core}</span>
                       </Badge>

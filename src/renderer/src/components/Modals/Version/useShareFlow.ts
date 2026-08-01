@@ -7,6 +7,7 @@ import { TSettings } from "@/types/Settings";
 import { Version } from "@renderer/classes/Version";
 import { ILocalAccount } from "@/types/Account";
 import { VersionDiffence } from "@renderer/components/Versions";
+import { showFailureToast } from "@renderer/utilities/failures";
 import {
   applyBlockedModFilePaths,
   checkBlockedMods,
@@ -118,8 +119,7 @@ export function useShareFlow({
 
       closeModal();
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      toast.error(t("versions.updateError"), { description: message });
+      showFailureToast(t("versions.updateError"), error);
     } finally {
       setLoadingType(undefined);
       setIsLoading(false);
@@ -169,7 +169,14 @@ export function useShareFlow({
       setShareModal(true);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      toast.error(t("versions.updateError"), { description: message });
+      if (message === "not found modpack") {
+        showFailureToast(t("versions.updateError"), undefined, {
+          channels: ["backend:getModpack"],
+          fallbackDescription: t("versions.modpackGoneHint"),
+        });
+      } else {
+        showFailureToast(t("versions.updateError"), error);
+      }
     } finally {
       setIsLoading(false);
       setLoadingType(undefined);

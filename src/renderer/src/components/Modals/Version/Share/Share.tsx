@@ -28,7 +28,13 @@ import {
   versionServersAtom,
 } from "@renderer/stores/atoms";
 import { useAtom } from "jotai";
-import { ArrowUpFromLine, FolderOpen, Loader2, Share2, Trash } from "lucide-react";
+import {
+  ArrowUpFromLine,
+  FolderOpen,
+  Loader2,
+  Share2,
+  Trash,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "@renderer/utilities/file";
@@ -39,6 +45,7 @@ import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { FormErrorMessage } from "@/components/ui/form-error-message";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
 const MAX_OTHER_BYTES = 1_000_000_000;
@@ -288,7 +295,8 @@ export function Share({
   }
 
   function getPublishErrorToast(errorCode: string | null) {
-    if (errorCode === "payloadTooLarge") return t("share.uploadPayloadTooLarge");
+    if (errorCode === "payloadTooLarge")
+      return t("share.uploadPayloadTooLarge");
     if (errorCode === "limitExceeded") return t("share.limitExceeded");
     if (errorCode === "uploadFailed") return t("share.uploadFailedDescription");
     return t("versions.publishError");
@@ -356,8 +364,7 @@ export function Share({
           "storage",
           "server-overrides",
         );
-        const hasServerOverrides =
-          await api.fs.pathExists(serverOverridesPath);
+        const hasServerOverrides = await api.fs.pathExists(serverOverridesPath);
 
         if (paths.length > 0 || hasServerOverrides) {
           updatePublishProgress({
@@ -423,7 +430,6 @@ export function Share({
 
           uploadedOtherUrl = url;
           other = { paths, url, size: computedTotalSize };
-
         }
 
         shouldUpdateLocalOther = true;
@@ -560,7 +566,9 @@ export function Share({
           .catch(() => undefined);
       }
       if (!silentMode) {
-        toast.error(getPublishErrorToast(errorCode));
+        showFailureToast(getPublishErrorToast(errorCode), error, {
+          channels: ["backend:"],
+        });
       }
       return false;
     } finally {
@@ -587,7 +595,9 @@ export function Share({
     );
 
     if (!result) {
-      toast.error(t("ownModpacks.deleteError"));
+      showFailureToast(t("ownModpacks.deleteError"), undefined, {
+        channels: ["backend:deleteModpack"],
+      });
 
       setIsLoading(false);
       setLoadingType(undefined);
@@ -622,7 +632,8 @@ export function Share({
           if (!open && !isLoading) closeModal();
         }}
       >
-        <DialogContent aria-describedby={undefined}
+        <DialogContent
+          aria-describedby={undefined}
           className="overflow-hidden p-0 sm:max-w-md"
           onPointerDownOutside={(event) => {
             if (isLoading) event.preventDefault();
@@ -660,7 +671,7 @@ export function Share({
               <div className="grid gap-0.5 rounded-lg border bg-card p-1.5">
                 {shareType === "update" && (
                   <>
-                  <label className="flex min-h-8 items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent/50">
+                    <label className="flex min-h-8 items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent/50">
                       <Checkbox
                         disabled={
                           !diffenceUpdateData.includes("name") || isLoading
@@ -672,7 +683,7 @@ export function Share({
                       />
                       {t("versions.updateName")}
                     </label>
-                  <label className="flex min-h-8 items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent/50">
+                    <label className="flex min-h-8 items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent/50">
                       <Checkbox
                         disabled={
                           !diffenceUpdateData.includes("logo") || isLoading
@@ -687,7 +698,7 @@ export function Share({
                   </>
                 )}
 
-              <label className="flex min-h-8 items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent/50">
+                <label className="flex min-h-8 items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent/50">
                   <Checkbox
                     disabled={
                       (shareType === "new"
@@ -949,7 +960,7 @@ export function Share({
                             game: "",
                             jvm: "",
                           },
-                          image: selectedVersion.version.image || "",
+                          image: "",
                           quickServer: "",
                         },
                       },
@@ -978,14 +989,16 @@ export function Share({
 
                     toast.success(t("versions.published"));
                     isPublished = true;
-                  } catch {
+                  } catch (error) {
                     if (createdShareCode) {
                       await api.backend
                         .deleteModpack(account.accessToken!, createdShareCode)
                         .catch(() => undefined);
                     }
                     const errorCode = publishErrorRef.current || "generic";
-                    toast.error(getPublishErrorToast(errorCode));
+                    showFailureToast(getPublishErrorToast(errorCode), error, {
+                      channels: ["backend:"],
+                    });
                   } finally {
                     setIsLoading(false);
                     setLoadingType(undefined);

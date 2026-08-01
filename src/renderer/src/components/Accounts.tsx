@@ -82,9 +82,18 @@ import {
   preload,
   schedulePreload,
 } from "@renderer/utilities/lazyPreload";
+import type { FailureSide } from "@/shared/errors";
+import { showErrorToast } from "@renderer/utilities/errorToast";
+import { showFailureToast } from "@renderer/utilities/failures";
 
 const loadAccountInfo = () => import("./Account/AccountInfo");
 const LazyAccountInfo = lazyWithPreload(loadAccountInfo);
+
+const AUTH_SIDES: Record<"microsoft" | "elyby" | "discord", FailureSide> = {
+  microsoft: "microsoft",
+  elyby: "elyby",
+  discord: "discord",
+};
 
 function accountInitials(nickname: string) {
   return nickname.slice(0, 2).toUpperCase();
@@ -246,13 +255,17 @@ export function Accounts() {
       }
       throw new Error();
     } catch (err) {
-      toast.error(
-        t(
-          isAccountSessionRefreshError(err)
-            ? "accounts.sessionExpired"
-            : "accountInfo.error",
-        ),
-      );
+      if (isAccountSessionRefreshError(err)) {
+        showErrorToast(
+          t("accounts.sessionExpired"),
+          t("accounts.sessionExpiredHint"),
+          t("common.copy"),
+        );
+      } else {
+        showFailureToast(t("accountInfo.error"), err, {
+          channels: ["backend:getUser"],
+        });
+      }
     } finally {
       setIsLoading(false);
       setLoadingType(undefined);
@@ -382,7 +395,10 @@ export function Accounts() {
         setIsSigning(false);
         setSignType(undefined);
         setAuthStage("idle");
-        toast.error(t("accounts.failedLogIn"));
+        showFailureToast(t("accounts.failedLogIn"), err, {
+          context: { side: AUTH_SIDES[provider] },
+          fallbackDescription: t("accounts.failedLogInHint"),
+        });
       }
     },
     [
@@ -552,12 +568,15 @@ export function Accounts() {
       closeModalSelect();
       await waitForNextFrame();
       await oauth(provider, code, sessionId, codeVerifier);
-    } catch {
+    } catch (error) {
       if (authSessionRef.current !== sessionId) return;
       setIsSigning(false);
       setSignType(undefined);
       setAuthStage("idle");
-      toast.error(t("accounts.failedLogIn"));
+      showFailureToast(t("accounts.failedLogIn"), error, {
+        context: { side: AUTH_SIDES[type] },
+        fallbackDescription: t("accounts.failedLogInHint"),
+      });
     }
   }
 
@@ -718,9 +737,7 @@ export function Accounts() {
               {selectedAccount ? (
                 <Button
                   variant="destructive"
-                  disabled={consoleMetas.some(
-                    (c) => c.status == "running",
-                  )}
+                  disabled={consoleMetas.some((c) => c.status == "running")}
                   onClick={() => setIsConfirmationOpen(true)}
                 >
                   <UserMinus className="size-4" />

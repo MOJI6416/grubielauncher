@@ -97,8 +97,13 @@ import { InstallationCenter } from "./components/InstallationCenter";
 import { ConnectivityBanner } from "./components/ConnectivityBanner";
 import { VoiceCallBar } from "./components/Voice/VoiceCallBar";
 import { BACKEND_URL } from "@/shared/config";
-import { getShareErrorText } from "./utilities/share";
+import { getShareErrorDetails, getShareErrorText } from "./utilities/share";
 import { recordError, showErrorToast } from "./utilities/errorToast";
+import {
+  pushIpcFailure,
+  reportIpcFailure,
+  showFailureToast,
+} from "./utilities/failures";
 import { playSound, playAchievementSound } from "./utilities/sounds";
 import {
   ensureAccountSession,
@@ -190,9 +195,13 @@ function applyPresenceUpdate(
 ): Required<IUpdateStatus> {
   return {
     versionName:
-      update.versionName === undefined ? previous.versionName : update.versionName,
+      update.versionName === undefined
+        ? previous.versionName
+        : update.versionName,
     versionCode:
-      update.versionCode === undefined ? previous.versionCode : update.versionCode,
+      update.versionCode === undefined
+        ? previous.versionCode
+        : update.versionCode,
     serverAddress:
       update.serverAddress === undefined
         ? previous.serverAddress
@@ -767,7 +776,13 @@ function App() {
         );
 
         if (!modpackData.data) {
-          toast.error(tRef.current("addVersion.fromServer.notFound"));
+          if (
+            !reportIpcFailure(tRef.current("addVersion.fromServer.loadError"), [
+              "backend:getModpack",
+            ])
+          ) {
+            toast.error(tRef.current("addVersion.fromServer.notFound"));
+          }
           return;
         }
 
@@ -776,7 +791,10 @@ function App() {
         void api.other.restoreWindow();
       } catch (error) {
         console.error(error);
-        toast.error(tRef.current("addVersion.fromServer.notFound"));
+        showFailureToast(
+          tRef.current("addVersion.fromServer.loadError"),
+          error,
+        );
       }
     });
   }, [
@@ -1098,17 +1116,19 @@ function App() {
 
     const unsubscribeUpdateFailed = api.events.onUpdateFailed((payload) => {
       playSound("error");
-      toast.error(tRef.current("app.updateFailed"), {
-        description: payload?.message || "",
-        duration: 12000,
+      showFailureToast(tRef.current("app.updateFailed"), payload?.message, {
+        fallbackDescription: payload?.message,
       });
     });
 
     const unsubscribeIpcError = api.events.onIpcError((payload) => {
+      if (payload?.failure) pushIpcFailure(payload.failure);
+      if (!payload?.notify) return;
+
       playSound("error");
-      toast.error(tRef.current("ipcError.fileOperation"), {
-        description: payload?.message || "",
-        duration: 10000,
+      showFailureToast(tRef.current("ipcError.fileOperation"), undefined, {
+        channels: payload.channel ? [payload.channel] : undefined,
+        fallbackDescription: payload?.message,
       });
     });
 
@@ -1486,7 +1506,9 @@ function App() {
               if (!token) return;
               const grant = await api.backend.groupJoinVoice(token, group._id);
               if (!grant) {
-                toast.error(tRef.current("groups.joinError"));
+                showFailureToast(tRef.current("groups.joinError"), undefined, {
+                  channels: ["backend:groupJoinVoice"],
+                });
                 return;
               }
               try {
@@ -1495,8 +1517,10 @@ function App() {
                   roomName: group.name,
                   isRoomOwner: false,
                 });
-              } catch {
-                toast.error(tRef.current("groups.joinError"));
+              } catch (error) {
+                showFailureToast(tRef.current("groups.joinError"), error, {
+                  context: { side: "grubie" },
+                });
               }
             })();
           },
@@ -1559,8 +1583,10 @@ function App() {
           roomName: data.peer?.nickname || "",
           isRoomOwner: false,
         });
-      } catch {
-        toast.error(tRef.current("voiceCall.error"));
+      } catch (error) {
+        showFailureToast(tRef.current("voiceCall.error"), error, {
+          context: { side: "grubie" },
+        });
       }
     };
 
@@ -1606,7 +1632,13 @@ function App() {
       } else if (data?.code === "rate_limited") {
         toast.warning(tRef.current("voiceCall.rateLimited"));
       } else {
-        toast.error(tRef.current("voiceCall.error"));
+        showErrorToast(
+          tRef.current("voiceCall.error"),
+          tRef.current("errors.serverCode", {
+            code: data?.code || "unknown",
+          }),
+          tRef.current("common.copy"),
+        );
       }
     };
 
@@ -1618,7 +1650,13 @@ function App() {
       } else if (result.code === "already_member") {
         toast.info(tRef.current("groups.alreadyMember"));
       } else {
-        toast.error(tRef.current("groups.actionError"));
+        showErrorToast(
+          tRef.current("groups.actionError"),
+          tRef.current("errors.serverCode", {
+            code: result.code || "unknown",
+          }),
+          tRef.current("common.copy"),
+        );
       }
     };
 
@@ -1766,7 +1804,11 @@ function App() {
 
     const launchVersion = version || selectedVersionRef.current;
     if (!launchVersion) {
-      toast.error(tRef.current("app.startupError"));
+      showErrorToast(
+        tRef.current("app.startupNoVersion"),
+        tRef.current("app.startupNoVersionHint"),
+        tRef.current("common.copy"),
+      );
       return;
     }
 
@@ -1775,7 +1817,13 @@ function App() {
     const p0 = pathsRef.current;
 
     if (!a0 || !s0 || !p0?.launcher || !p0?.minecraft) {
-      toast.error(tRef.current("app.startupError"));
+      showErrorToast(
+        tRef.current(!a0 ? "app.startupNoAccount" : "app.startupNoPaths"),
+        tRef.current(
+          !a0 ? "app.startupNoAccountHint" : "app.startupNoPathsHint",
+        ),
+        tRef.current("common.copy"),
+      );
       return;
     }
 
@@ -1954,13 +2002,13 @@ function App() {
     } catch (err) {
       console.error(err);
       if (isAccountSessionRefreshError(err)) {
-        toast.error(tRef.current("accounts.sessionExpired"));
-      } else {
         showErrorToast(
-          tRef.current("app.startupError"),
-          err instanceof Error ? err.message : String(err),
+          tRef.current("accounts.sessionExpired"),
+          tRef.current("accounts.sessionExpiredHint"),
           tRef.current("common.copy"),
         );
+      } else {
+        showFailureToast(tRef.current("app.startupError"), err);
       }
       setConsoles((prev) => {
         const idx = prev.consoles.findIndex(
@@ -2011,7 +2059,17 @@ function App() {
 
         if (!version) {
           if (!modpackData.data) {
-            toast.error(t0("share.errors.joinShareNotFound"), { id: toastId });
+            if (
+              !reportIpcFailure(
+                t0("addVersion.fromServer.loadError"),
+                ["backend:getModpack"],
+                { toastId },
+              )
+            ) {
+              toast.error(t0("share.errors.joinShareNotFound"), {
+                id: toastId,
+              });
+            }
             return;
           }
 
@@ -2062,7 +2120,12 @@ function App() {
         if (params.slug) {
           const result = await api.share.connectToFriendShare(params.slug);
           if (!result.ok || !result.data) {
-            toast.error(getShareErrorText(t0, result.error), { id: toastId });
+            showErrorToast(
+              getShareErrorText(t0, result.error),
+              getShareErrorDetails(t0, result.error),
+              t0("common.copy"),
+              toastId,
+            );
             return;
           }
 
@@ -2147,12 +2210,9 @@ function App() {
         await runGame({ version, skipUpdate: true });
       } catch (error) {
         console.error("[joinFriendWorld] failed:", error);
-        showErrorToast(
-          tRef.current("app.startupError"),
-          error instanceof Error ? error.message : String(error),
-          tRef.current("common.copy"),
+        showFailureToast(tRef.current("friends.joinFlow.failed"), error, {
           toastId,
-        );
+        });
       } finally {
         isJoiningWorldRef.current = false;
       }

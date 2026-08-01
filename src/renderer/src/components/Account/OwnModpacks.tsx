@@ -26,8 +26,8 @@ import { AddVersion } from "../Modals/Version/AddVersion";
 import { Confirmation } from "../Modals/Confirmation";
 import { toast } from "sonner";
 import { buildPackShareUrl } from "@renderer/utilities/packShare";
-import { showErrorToast } from "@renderer/utilities/errorToast";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
 export function OwnModpacks({
@@ -70,14 +70,12 @@ export function OwnModpacks({
         setModpacks((prev) => prev.filter((m) => m._id !== tempModpack._id));
         setTempModpack(null);
       } else {
-        toast.error(t("ownModpacks.deleteError"));
+        showFailureToast(t("ownModpacks.deleteError"), undefined, {
+          channels: ["backend:deleteModpack"],
+        });
       }
     } catch (error) {
-      showErrorToast(
-        t("ownModpacks.deleteError"),
-        error instanceof Error ? error.message : String(error),
-        t("common.copy"),
-      );
+      showFailureToast(t("ownModpacks.deleteError"), error);
     } finally {
       setIsLoading(false);
       setLoadingType(null);
@@ -92,7 +90,8 @@ export function OwnModpacks({
           if (!open && !isLoading) onClose();
         }}
       >
-        <DialogContent aria-describedby={undefined}
+        <DialogContent
+          aria-describedby={undefined}
           data-account-click-ignore="true"
           className="sm:max-w-md"
           onPointerDownOutside={(event) => {

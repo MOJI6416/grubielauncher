@@ -23,6 +23,7 @@
     "searching": "Searching...",
     "search": "Search",
     "notFound": "Nothing found",
+    "retry": "Try again",
     "cancel": "Cancel",
     "rename": "Rename",
     "close": "Close",
@@ -64,7 +65,9 @@
       "discord": "Own skin system",
       "microsoft": "Official skin",
       "elyby": "ely.by skins"
-    }
+    },
+    "sessionExpiredHint": "The account session could not be renewed. Sign in again.",
+    "failedLogInHint": "Sign-in did not complete. Check your connection and try again — the authorization window opens in your browser."
   },
   "serverManager": {
     "logoEdited": "Logo edited",
@@ -73,7 +76,8 @@
     "run": "Run",
     "configNotFound": "Server configuration file not found",
     "deleteError": "Server deletion error",
-    "confirmation": "Are you sure you want to delete the server?"
+    "confirmation": "Are you sure you want to delete the server?",
+    "deleteErrorHint": "The server folder could not be deleted. Stop the server and try again."
   },
   "serverMotd": {
     "preview": "Preview"
@@ -129,7 +133,8 @@
     "decline": "Decline",
     "noAccount": "No active account to sign in with.",
     "approved": "Signed in on the website.",
-    "failed": "Could not sign in on the website."
+    "failed": "Could not sign in on the website.",
+    "failedHint": "The server did not confirm the website sign-in. Try signing in again."
   },
   "donor": {
     "badge": "Donor"
@@ -153,7 +158,8 @@
     "providerUnlinkFailed": "Failed to unlink the account",
     "manage": "Manage",
     "manageDescription": "Linked accounts are shown on your profile and on the site. Linking proves account ownership.",
-    "none": "Not linked"
+    "none": "Not linked",
+    "providerLinkTimeoutHint": "Linking did not finish in time. Make sure you confirmed access in the window that opened."
   },
   "friends": {
     "title": "Friends",
@@ -287,7 +293,8 @@
       "addedToServers": "The world was pinned to the top of your server list — open Multiplayer and select it",
       "serverEntryName": "{{nickname}}’s world",
       "openFriends": "Friends",
-      "alreadyRunning": "The game is already running — the world was pinned to your server list, open Multiplayer"
+      "alreadyRunning": "The game is already running — the world was pinned to your server list, open Multiplayer",
+      "failed": "Could not join your friend's world"
     },
     "deepLinkNoAccount": "Sign in to an account to send a friend request",
     "cancelRequest": "Cancel request",
@@ -318,6 +325,7 @@
     ],
     "notFoundMod": "Mod not found",
     "searchFailed": "Search failed. Check your connection and try again",
+    "searchFailedTitle": "Search unavailable",
     "noDependencies": "No dependencies",
     "projectTypes": {
       "mod": "Mods",
@@ -380,7 +388,10 @@
       "release": "Release",
       "beta": "Beta",
       "alpha": "Alpha"
-    }
+    },
+    "notFoundModHint": "The source returned no mod files. This is usually a temporary CurseForge or Modrinth failure, or network blocking.",
+    "notModpackHint": "The archive does not look like a modpack: there is no manifest inside. Download it again or pick another version.",
+    "toggleErrorHint": "The mod file could not be renamed. Close the game and check whether an antivirus is locking the file."
   },
   "nav": {
     "play": "Play",
@@ -398,13 +409,16 @@
       "shareCode": "Build code",
       "find": "Find",
       "notFound": "Build not found",
-      "browsePublic": "No code? Browse public builds"
+      "browsePublic": "No code? Browse public builds",
+      "loadError": "Could not load the modpack from the server",
+      "timeoutHint": "The server did not respond in time. Check your connection and try again."
     },
     "fromFile": {
       "error": "Failed to recognize file",
       "supportedLaunchers": "Supported launchers",
       "loaderVersionMissing": "The modpack manifest does not specify a loader version. Installation is blocked to avoid installing an incompatible version.",
-      "loaderVersionNotFound": "Could not resolve the loader version from the modpack manifest. The launcher will not replace it with the latest version."
+      "loaderVersionNotFound": "Could not resolve the loader version from the modpack manifest. The launcher will not replace it with the latest version.",
+      "errorUnsupported": "The file was not recognized as a modpack. Supported: .mrpack, CurseForge zip packs and exports from Grubie, Prism or MultiMC."
     },
     "localModsWarning": "This modpack contains local modifications. Install it only if you trust the modpack author.",
     "invalidName": "Use a unique version name without invalid characters.",
@@ -659,9 +673,11 @@
         "java": "Java runtimes",
         "appData": "Image and engine cache (Chromium)",
         "other": "Settings, accounts, logs, shortcuts"
-      }
+      },
+      "actionFailedHint": "Some files could not be deleted: they may be in use by the game or protected by permissions."
     },
-    "devModeDescription": "Run-command copying and extra debugging tools"
+    "devModeDescription": "Run-command copying and extra debugging tools",
+    "voiceMicTestErrorHint": "No access to the microphone. Check Windows permissions and the selected device."
   },
   "skinView": {
     "title": "Skin preview",
@@ -790,7 +806,12 @@
     "running": "Running",
     "eulaLabel": "I accept the",
     "eulaRequired": "Accept the Minecraft EULA to install a server",
-    "eulaLink": "Minecraft EULA"
+    "eulaLink": "Minecraft EULA",
+    "listLoadError": "Could not load the Minecraft version list",
+    "loaderListLoadError": "Could not load the loader version list",
+    "serverCoreLoadError": "Could not load the server core list",
+    "modpackGoneHint": "The modpack is unavailable on the server: it may have been removed, or the service is temporarily down.",
+    "deleteErrorHint": "Version files may be locked by the game or an antivirus. Close the game and try again."
   },
   "app": {
     "starting": "Starting game...",
@@ -814,7 +835,13 @@
       "internet": "No internet connection. Check your network and try again.",
       "backend": "Grubie services are temporarily unavailable."
     },
-    "updateFailed": "Launcher update failed — you are on an old version"
+    "updateFailed": "Launcher update failed — you are on an old version",
+    "startupNoVersion": "No version selected to launch",
+    "startupNoVersionHint": "Pick a version in the list on the left or install a new one.",
+    "startupNoAccount": "No active account",
+    "startupNoAccountHint": "Add or select an account and try again.",
+    "startupNoPaths": "Launcher folders are not configured",
+    "startupNoPathsHint": "Check the launcher and Minecraft paths in the settings."
   },
   "game": {
     "download": "Download"
@@ -855,7 +882,8 @@
     "jumps": "Jumps",
     "km": "km",
     "error": "Statistics loading error",
-    "hours": "hr."
+    "hours": "hr.",
+    "errorHint": "The version statistics file could not be read."
   },
   "accountInfo": {
     "title": "Account information",
@@ -1275,7 +1303,8 @@
     "substituteFailed": "No compatible version found on Modrinth",
     "searchPlaceholder": "Search Modrinth…",
     "search": "Search",
-    "substituteHint": "Search Modrinth for a replacement of this mod."
+    "substituteHint": "Search Modrinth for a replacement of this mod.",
+    "substituteFailedHint": "The replacement could not be downloaded. Check your connection or pick another mod."
   },
   "whatsNew": {
     "openCurrent": "Show what is new",
@@ -1372,7 +1401,9 @@
     "datapackUnavailable": "Datapack file is unavailable",
     "datapackAddError": "Failed to add datapack",
     "datapackRemoveError": "Failed to remove datapack",
-    "openDatapacksFolderError": "Failed to open datapacks folder"
+    "openDatapacksFolderError": "Failed to open datapacks folder",
+    "deletedErrorHint": "The world folder could not be moved to the recycle bin. Close the game and try again.",
+    "renameErrorHint": "The world folder could not be renamed. Close the game and try again."
   },
   "tips": {
     "checkIntegrity": "Check the integrity of game files"
@@ -1764,5 +1795,80 @@
       "show": "Show news"
     },
     "refresh": "Refresh news"
+  },
+  "errors": {
+    "code": "Code",
+    "service": {
+      "network": "Network",
+      "grubie": "Grubie services",
+      "mirror": "Grubie mirror",
+      "curseforge": "CurseForge",
+      "modrinth": "Modrinth",
+      "mojang": "Mojang servers",
+      "loader": "Loader servers",
+      "elyby": "Ely.by",
+      "microsoft": "Microsoft",
+      "discord": "Discord",
+      "disk": "Your disk",
+      "game": "Game",
+      "launcher": "Launcher",
+      "unknown": "Service"
+    },
+    "cause": {
+      "offline": "{{target}} — no internet connection.",
+      "dns": "{{target}} — could not resolve the server address.",
+      "refused": "{{target}} — the server refused the connection.",
+      "timeout": "{{target}} — the server did not respond in time.",
+      "reset": "{{target}} — the connection was dropped.",
+      "tls": "{{target}} — could not establish a secure connection.",
+      "unauthorized": "{{target}} — authorization rejected (401).",
+      "forbidden": "{{target}} — access denied (403).",
+      "notFound": "{{target}} — data not found (404).",
+      "rateLimited": "{{target}} — too many requests (429).",
+      "serverError": "{{target}} — service-side error ({{status}}).",
+      "badRequest": "{{target}} — request rejected ({{status}}).",
+      "conflict": "{{target}} — data conflict (409).",
+      "tooLarge": "{{target}} — the file is too large (413).",
+      "downloadFailed": "{{target}} — some files could not be downloaded.",
+      "checksum": "{{target}} — the downloaded file is corrupted (checksum mismatch).",
+      "archive": "The archive is corrupted or in an unsupported format.",
+      "blockedMod": "The mod author disabled automatic downloads.",
+      "untrusted": "The launcher blocked an untrusted source or path.",
+      "diskFull": "There is no free space left on the disk.",
+      "accessDenied": "No access to the file or folder.",
+      "fileBusy": "The file is locked by another program.",
+      "fileMissing": "The file or folder was not found.",
+      "javaMissing": "No suitable Java version was found.",
+      "cancelled": "The operation was cancelled.",
+      "unknown": "The cause of the error could not be determined."
+    },
+    "hint": {
+      "offline": "Check your internet connection and try again.",
+      "dns": "This is usually DNS, VPN or ISP blocking — not a launcher failure.",
+      "refused": "The connection may be blocked by your ISP, antivirus or firewall.",
+      "timeout": "Your connection may be slow or the service overloaded. Try again.",
+      "reset": "This happens with an unstable connection or ISP traffic filtering.",
+      "tls": "Check the system date and time, HTTPS-scanning antivirus and proxy settings.",
+      "unauthorized": "Sign in to your account again.",
+      "forbidden": "The service denied access: the file may be unavailable in your region or removed by its author.",
+      "notFound": "The data seems to have been removed on the service side.",
+      "rateLimited": "Wait a couple of minutes and try again.",
+      "serverError": "This is a failure on the service side, not on yours — try again later.",
+      "badRequest": "Check the entered data. If it keeps happening, send the code to support.",
+      "conflict": "Refresh the data and try again.",
+      "tooLarge": "Reduce the file size and try again.",
+      "downloadFailed": "Check your connection and retry: missing files will be downloaded again.",
+      "checksum": "The file may have been damaged by an unstable network or a proxy. Download it again.",
+      "archive": "Download the file again — the current archive could not be read.",
+      "blockedMod": "Download the file manually using the link in the blocked mods window.",
+      "untrusted": "This is a launcher safeguard. If the file is legitimate, send the error code to support.",
+      "diskFull": "Free up disk space and try again.",
+      "accessDenied": "Close the programs holding the file, check your antivirus and folder permissions.",
+      "fileBusy": "Close the game or file explorer holding the file and try again.",
+      "fileMissing": "Verify the version files — they may have been deleted manually or by an antivirus.",
+      "javaMissing": "Pick Java in the version settings or let the launcher download it.",
+      "unknown": "Copy the details and attach them to your support request."
+    },
+    "serverCode": "Server response: {{code}}"
   }
 }

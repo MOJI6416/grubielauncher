@@ -94,6 +94,10 @@ import { getEditVersionFlags } from "./editVersionFlags";
 import { useVersionChanges } from "./useVersionChanges";
 import { useShareFlow } from "./useShareFlow";
 import { VersionHeaderCard } from "./VersionHeaderCard";
+import {
+  reportIpcFailure,
+  showFailureToast,
+} from "@renderer/utilities/failures";
 
 const api = window.api;
 
@@ -404,9 +408,7 @@ export function EditVersion({
 
       toast.success(t("versions.integrityOk"));
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-
-      toast.error(t("versions.integrityError"), { description: message });
+      showFailureToast(t("versions.integrityError"), error);
     } finally {
       setIsLoading(false);
       setLoadingType(undefined);
@@ -469,14 +471,14 @@ export function EditVersion({
         );
 
         isShare = true;
-      } catch {
+      } catch (error) {
         if (isRename) {
           version.version.name = oldName;
           await api.fs.rename(newPath, oldPath).catch(() => {});
           await version.init().catch(() => {});
         }
 
-        toast.error(t("versions.renameError"));
+        showFailureToast(t("versions.renameError"), error);
 
         setIsLoading(false);
         setLoadingType(undefined);
@@ -515,15 +517,13 @@ export function EditVersion({
         setBlockedMods([]);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-
       if (isRename) {
         version.version.name = await api.path.basename(oldPath);
         await api.fs.rename(version.versionPath, oldPath).catch(() => {});
         await version.init().catch(() => {});
       }
 
-      toast.error(t("versions.updateError"), { description: message });
+      showFailureToast(t("versions.updateError"), error);
       setIsLoading(false);
       setLoadingType(undefined);
       return;
@@ -580,8 +580,7 @@ export function EditVersion({
         version.version.image = fileUrl;
         isShare = true;
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        toast.error(t("versions.updateError"), { description: message });
+        showFailureToast(t("versions.updateError"), error);
       }
     }
 
@@ -835,7 +834,10 @@ export function EditVersion({
                     if (res.success) {
                       toast.success(t("versions.shortcutCreated"));
                     } else {
-                      toast.error(t("versions.shortcutFailed"));
+                      showFailureToast(t("versions.shortcutFailed"), undefined, {
+                        channels: ["shortcut:create"],
+                        fallbackDescription: res.error,
+                      });
                     }
                   }}
                 >
@@ -1033,7 +1035,13 @@ export function EditVersion({
                         if (!cores.length) {
                           setIsLoading(false);
                           setLoadingType(undefined);
-                          toast.error(t("versions.notFoundServerCore"));
+                          if (
+                            !reportIpcFailure(t("versions.serverCoreLoadError"), [
+                              "servers:get",
+                            ])
+                          ) {
+                            toast.error(t("versions.notFoundServerCore"));
+                          }
                           return;
                         }
 
@@ -1363,9 +1371,7 @@ export function EditVersion({
                   const message =
                     error instanceof Error ? error.message : String(error);
                   if (message !== "not found diff") {
-                    toast.error(t("versions.updateError"), {
-                      description: message,
-                    });
+                    showFailureToast(t("versions.updateError"), error);
                   }
                 } finally {
                   setIsLoading(false);

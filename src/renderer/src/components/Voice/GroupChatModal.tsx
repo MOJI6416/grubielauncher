@@ -38,6 +38,7 @@ import {
 import { uploadChatImage } from "@renderer/utilities/chatUpload";
 import { groupJoinErrorKey } from "@renderer/utilities/groupJoin";
 import type { LoadingType } from "../Friends/Friends";
+import { showFailureToast } from "@renderer/utilities/failures";
 
 const ChatModal = lazy(() =>
   import("../Friends/ChatModal").then((module) => ({
@@ -316,8 +317,10 @@ export function GroupChatModal({
           onProgress: setImageUploadProgress,
         });
         sendChatMessage({ _type: "image", value: url });
-      } catch {
-        toast.error(t("friends.chatImageUploadError"));
+      } catch (error) {
+        showFailureToast(t("friends.chatImageUploadError"), error, {
+          channels: ["backend:"],
+        });
       } finally {
         setIsLoading(false);
         setLoadingType(undefined);

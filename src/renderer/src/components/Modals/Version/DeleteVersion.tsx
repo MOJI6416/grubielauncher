@@ -23,6 +23,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
 export function DeleteVersion({
@@ -107,7 +108,9 @@ export function DeleteVersion({
       close(true);
     } catch (error) {
       console.error(error);
-      toast.error(t("versions.deleteError"));
+      showFailureToast(t("versions.deleteError"), error, {
+        fallbackDescription: t("versions.deleteErrorHint"),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -131,9 +134,7 @@ export function DeleteVersion({
       >
         <DialogHeader>
           <DialogTitle>{t("common.deletion")}</DialogTitle>
-          <DialogDescription>
-            {t("versions.savesInfo")}
-          </DialogDescription>
+          <DialogDescription>{t("versions.savesInfo")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
@@ -156,9 +157,7 @@ export function DeleteVersion({
                 <span className="font-medium leading-none">
                   {t("versions.completeRemoval")}
                 </span>
-                <span
-                  className="text-xs leading-5 text-muted-foreground"
-                >
+                <span className="text-xs leading-5 text-muted-foreground">
                   {t("versions.completeRemovalInfo")}
                 </span>
               </span>

@@ -5,6 +5,7 @@ import {
   shareStateAtom,
 } from "@renderer/stores/atoms";
 import {
+  getShareErrorDetails,
   getShareErrorText,
   getSharePhaseColor,
   getSharePhaseDescription,
@@ -50,6 +51,7 @@ import {
   ShareVisibility,
 } from "@/types/Share";
 import { toast } from "sonner";
+import { showErrorToast } from "@renderer/utilities/errorToast";
 import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 
 const api = window.api;
@@ -172,7 +174,11 @@ export function LanShareModal({
     try {
       const result = await api.share.startShare(selectedVisibility);
       if (!result.ok) {
-        toast.error(getShareErrorText(t, result.error));
+        showErrorToast(
+          getShareErrorText(t, result.error),
+          getShareErrorDetails(t, result.error),
+          t("common.copy"),
+        );
       }
     } finally {
       setLoadingAction(null);
@@ -186,7 +192,11 @@ export function LanShareModal({
     try {
       const result = await api.share.stopShare();
       if (!result.ok) {
-        toast.error(getShareErrorText(t, result.error));
+        showErrorToast(
+          getShareErrorText(t, result.error),
+          getShareErrorDetails(t, result.error),
+          t("common.copy"),
+        );
       }
     } finally {
       setLoadingAction(null);
@@ -204,7 +214,11 @@ export function LanShareModal({
       const result = await api.share.updateShareVisibility(visibility);
       if (!result.ok) {
         setSelectedVisibility(previousVisibility);
-        toast.error(getShareErrorText(t, result.error));
+        showErrorToast(
+          getShareErrorText(t, result.error),
+          getShareErrorDetails(t, result.error),
+          t("common.copy"),
+        );
       }
     } finally {
       setLoadingAction(null);
@@ -274,7 +288,10 @@ export function LanShareModal({
         if (!open) onClose();
       }}
     >
-      <DialogContent aria-describedby={undefined} className="gap-0 overflow-hidden p-0 sm:max-w-lg">
+      <DialogContent
+        aria-describedby={undefined}
+        className="gap-0 overflow-hidden p-0 sm:max-w-lg"
+      >
         <DialogHeader className="border-b px-5 py-4 pr-12">
           <DialogTitle className="flex items-center gap-2">
             <Wifi className="size-5" />
@@ -429,7 +446,9 @@ export function LanShareModal({
 
           {errorText && shareState.phase !== "idle" && (
             <Alert
-              variant={shareState.phase === "conflict" ? "warning" : "destructive"}
+              variant={
+                shareState.phase === "conflict" ? "warning" : "destructive"
+              }
             >
               <AlertCircle />
               <AlertTitle>{errorText}</AlertTitle>

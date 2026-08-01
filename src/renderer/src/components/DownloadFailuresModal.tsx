@@ -13,6 +13,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, FileWarning } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { classifyError } from "@/shared/errors";
+import { describeFailure } from "@renderer/utilities/failures";
 
 export function DownloadFailuresModal({
   info,
@@ -53,29 +55,44 @@ export function DownloadFailuresModal({
 
           <ScrollArea className="max-h-[320px] pr-3">
             <div className="grid gap-2">
-              {info.failures.map((failure, index) => (
-                <article
-                  key={`${failure.destination}-${failure.url}-${index}`}
-                  className="min-w-0 rounded-lg border bg-muted/15 p-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="truncate text-sm font-medium">
-                        {failure.fileName}
-                      </h3>
-                      <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
-                        {failure.error}
-                      </p>
+              {info.failures.map((failure, index) => {
+                const classified = classifyError(failure.error, {
+                  url: failure.url,
+                });
+                const described = describeFailure(classified);
+
+                return (
+                  <article
+                    key={`${failure.destination}-${failure.url}-${index}`}
+                    className="min-w-0 rounded-lg border bg-muted/15 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-sm font-medium">
+                          {failure.fileName}
+                        </h3>
+                        <p className="mt-1 break-words text-xs text-muted-foreground">
+                          {described.reason}
+                        </p>
+                        {described.hint && (
+                          <p className="mt-0.5 break-words text-xs text-muted-foreground">
+                            {described.hint}
+                          </p>
+                        )}
+                        <p className="mt-1 line-clamp-2 break-words text-[11px] text-muted-foreground/70">
+                          {t("errors.code")}: {classified.code} · {failure.error}
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="max-w-28 shrink-0 truncate bg-muted/30"
+                      >
+                        {failure.group}
+                      </Badge>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className="max-w-28 shrink-0 truncate bg-muted/30"
-                    >
-                      {failure.group}
-                    </Badge>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           </ScrollArea>
         </div>

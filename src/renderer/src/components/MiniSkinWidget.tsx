@@ -30,6 +30,8 @@ import {
   schedulePreload,
 } from "@renderer/utilities/lazyPreload";
 import { LazyDialogFallback } from "./LazyDialogFallback";
+import { showErrorToast } from "@renderer/utilities/errorToast";
+import { showFailureToast } from "@renderer/utilities/failures";
 import {
   canLoadSkinPreviewForProvider,
   canOpenSkinManagerForAccount,
@@ -354,13 +356,15 @@ export function MiniSkinWidget() {
 
       setIsManageSkinsOpen(true);
     } catch (err) {
-      toast.error(
-        t(
-          isAccountSessionRefreshError(err)
-            ? "accounts.sessionExpired"
-            : "manageSkins.openError",
-        ),
-      );
+      if (isAccountSessionRefreshError(err)) {
+        showErrorToast(
+          t("accounts.sessionExpired"),
+          t("accounts.sessionExpiredHint"),
+          t("common.copy"),
+        );
+      } else {
+        showFailureToast(t("manageSkins.openError"), err);
+      }
     } finally {
       setIsOpeningManager(false);
     }

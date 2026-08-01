@@ -139,6 +139,7 @@ import { formatBytes } from "@renderer/utilities/file";
 import { toFileUrl } from "@renderer/utilities/exportVersion";
 import { toast } from "sonner";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
 enum LoadingType {
@@ -597,8 +598,7 @@ export function ModManager({
         pts = [ProjectType.MODPACK];
       } else {
         pts = getProjectTypes(loader || "vanilla", server, provider);
-        if (running)
-          pts = pts.filter((t) => RUNNING_ALLOWED_TYPES.includes(t));
+        if (running) pts = pts.filter((t) => RUNNING_ALLOWED_TYPES.includes(t));
       }
 
       setProjectTypes(pts);
@@ -756,7 +756,11 @@ export function ModManager({
         setBrowser(data.projects);
         setOffset(data.offset ?? offset);
 
-        if (data.error) toast.error(t("modManager.searchFailed"));
+        if (data.error) {
+          showFailureToast(t("modManager.searchFailed"), undefined, {
+            channels: ["modManager:search", "service:"],
+          });
+        }
       }
     } finally {
       if (reqId === requestIdRef.current) {
@@ -959,7 +963,7 @@ export function ModManager({
             })),
             dependencies: resolvedDeps.map((d) => ({
               title: d.project?.title || "",
-                  projectId: d.projectId ? String(d.projectId) : undefined,
+              projectId: d.projectId ? String(d.projectId) : undefined,
               relationType: d.relationType,
             })),
           },
@@ -981,8 +985,12 @@ export function ModManager({
       }
 
       if (added.length == 0) {
-        if (rootMissingVersion) toast.error(t("modManager.notFoundMod"));
-        else toast.warning(t("modManager.alreadyInstalled"));
+        if (rootMissingVersion) {
+          showFailureToast(t("modManager.notFoundMod"), undefined, {
+            channels: ["modManager:", "service:"],
+            fallbackDescription: t("modManager.notFoundModHint"),
+          });
+        } else toast.warning(t("modManager.alreadyInstalled"));
         return;
       }
 
@@ -994,8 +1002,11 @@ export function ModManager({
       } else {
         toast.success(t("modManager.added"));
       }
-    } catch {
-      toast.error(t("modManager.notFoundMod"));
+    } catch (error) {
+      showFailureToast(t("modManager.notFoundMod"), error, {
+        channels: ["modManager:", "service:"],
+        fallbackDescription: t("modManager.notFoundModHint"),
+      });
     } finally {
       setLoading(false);
       setLoadingType(null);
@@ -2124,8 +2135,18 @@ export function ModManager({
                                             setLoading(false);
                                             setLoadingType(null);
                                             setProccessKey(-1);
-                                            toast.error(
+                                            showFailureToast(
                                               t("modManager.notFoundMod"),
+                                              undefined,
+                                              {
+                                                channels: [
+                                                  "modManager:getVersions",
+                                                  "service:",
+                                                ],
+                                                fallbackDescription: t(
+                                                  "modManager.notFoundModHint",
+                                                ),
+                                              },
                                             );
                                             return;
                                           }
@@ -2298,6 +2319,32 @@ export function ModManager({
                         );
                       })}
                     </ScrollArea>
+                  </div>
+                ) : searchData?.error ? (
+                  <div className="flex-1 min-h-0">
+                    <Empty className="h-full min-h-72 border border-dashed bg-muted/20">
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                          <CircleAlert />
+                        </EmptyMedia>
+                        <EmptyTitle>
+                          {t("modManager.searchFailedTitle")}
+                        </EmptyTitle>
+                        <EmptyDescription>
+                          {t("modManager.searchFailed")}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                      <EmptyContent>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isLoading}
+                          onClick={() => runSearch(searchQuery, offset)}
+                        >
+                          {t("common.retry")}
+                        </Button>
+                      </EmptyContent>
+                    </Empty>
                   </div>
                 ) : searchData && searchData.total === 0 ? (
                   <div className="flex-1 min-h-0">
@@ -3015,8 +3062,17 @@ export function ModManager({
                                                 selectVersion,
                                               );
                                             if (!modpack) {
-                                              toast.error(
+                                              showFailureToast(
                                                 t("modManager.notModpack"),
+                                                undefined,
+                                                {
+                                                  channels: [
+                                                    "modManager:checkModpack",
+                                                  ],
+                                                  fallbackDescription: t(
+                                                    "modManager.notModpackHint",
+                                                  ),
+                                                },
                                               );
                                               setLoading(false);
                                               setLoadingType(null);
@@ -3485,10 +3541,21 @@ export function ModManager({
                                                               setProccessKey(
                                                                 -1,
                                                               );
-                                                              toast.error(
+                                                              showFailureToast(
                                                                 t(
                                                                   "modManager.notFoundMod",
                                                                 ),
+                                                                undefined,
+                                                                {
+                                                                  channels: [
+                                                                    "modManager:getVersions",
+                                                                    "service:",
+                                                                  ],
+                                                                  fallbackDescription:
+                                                                    t(
+                                                                      "modManager.notFoundModHint",
+                                                                    ),
+                                                                },
                                                               );
                                                               return;
                                                             }
@@ -3707,7 +3774,10 @@ export function ModManager({
               selectVersion,
             );
             if (!modpack) {
-              toast.error(t("modManager.notModpack"));
+              showFailureToast(t("modManager.notModpack"), undefined, {
+                channels: ["modManager:checkModpack"],
+                fallbackDescription: t("modManager.notModpackHint"),
+              });
               setLoading(false);
               setLoadingType(null);
               return;
@@ -3748,7 +3818,7 @@ export function ModManager({
                   })),
                   dependencies: p.versions[0].dependencies.map((d) => ({
                     title: d.project?.title || "",
-                  projectId: d.projectId ? String(d.projectId) : undefined,
+                    projectId: d.projectId ? String(d.projectId) : undefined,
                     relationType: d.relationType,
                   })),
                 },

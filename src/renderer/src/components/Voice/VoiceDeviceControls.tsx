@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -10,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Mic, Square } from "lucide-react";
+import { showFailureToast } from "@renderer/utilities/failures";
 import {
   voiceGetDevices,
   voiceGetSavedDevice,
@@ -137,8 +137,13 @@ export function MicLevelTest() {
         void context.close().catch(() => undefined);
       };
       setIsActive(true);
-    } catch {
-      if (isMountedRef.current) toast.error(t("settings.voiceMicTestError"));
+    } catch (error) {
+      if (isMountedRef.current) {
+        showFailureToast(t("settings.voiceMicTestError"), error, {
+          context: { side: "launcher" },
+          fallbackDescription: t("settings.voiceMicTestErrorHint"),
+        });
+      }
     }
   }, [t]);
 

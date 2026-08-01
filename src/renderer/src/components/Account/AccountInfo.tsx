@@ -85,6 +85,7 @@ import {
 } from "@renderer/utilities/connectivity";
 import { showErrorToast } from "@renderer/utilities/errorToast";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
 const loadSkinView = () =>
@@ -327,15 +328,20 @@ export default function AccountInfo({
       if (!url) throw new Error("Upload failed");
 
       if (accountForRequest.accessToken) {
-        const updatedUser = await api.backend.updateUser(accountForRequest.accessToken, user._id, {
-          image: url,
-        });
+        const updatedUser = await api.backend.updateUser(
+          accountForRequest.accessToken,
+          user._id,
+          {
+            image: url,
+          },
+        );
         if (!updatedUser) throw new Error("User update failed");
       }
 
       const updatedLocalAccount = { ...accountForRequest, image: url };
       const updatedAccounts = accountsForSave.map((a: ILocalAccount) =>
-        a.nickname === accountForRequest.nickname && a.type === accountForRequest.type
+        a.nickname === accountForRequest.nickname &&
+        a.type === accountForRequest.type
           ? { ...a, image: url }
           : a,
       );
@@ -355,13 +361,17 @@ export default function AccountInfo({
     } catch (err) {
       console.error(err);
 
-      toast.error(
-        t(
-          isAccountSessionRefreshError(err)
-            ? "accounts.sessionExpired"
-            : "accountInfo.updateError",
-        ),
-      );
+      if (isAccountSessionRefreshError(err)) {
+        showErrorToast(
+          t("accounts.sessionExpired"),
+          t("accounts.sessionExpiredHint"),
+          t("common.copy"),
+        );
+      } else {
+        showFailureToast(t("accountInfo.updateError"), err, {
+          channels: ["backend:"],
+        });
+      }
     } finally {
       stopLoading();
     }
@@ -406,7 +416,9 @@ export default function AccountInfo({
       );
 
       if (!data) {
-        toast.error(t("skinView.error"));
+        showFailureToast(t("skinView.error"), undefined, {
+          channels: ["skins:"],
+        });
         return;
       }
 
@@ -437,8 +449,8 @@ export default function AccountInfo({
         !isInternetOnline
           ? t("app.internetUnavailable")
           : user.platform === "discord" || user.platform === "microsoft"
-          ? t("app.backendUnavailable")
-          : t("accountInfo.error"),
+            ? t("app.backendUnavailable")
+            : t("accountInfo.error"),
       );
       return;
     }
@@ -462,13 +474,15 @@ export default function AccountInfo({
 
       setIsManageSkins(true);
     } catch (err) {
-      toast.error(
-        t(
-          isAccountSessionRefreshError(err)
-            ? "accounts.sessionExpired"
-            : "manageSkins.openError",
-        ),
-      );
+      if (isAccountSessionRefreshError(err)) {
+        showErrorToast(
+          t("accounts.sessionExpired"),
+          t("accounts.sessionExpiredHint"),
+          t("common.copy"),
+        );
+      } else {
+        showFailureToast(t("manageSkins.openError"), err);
+      }
     } finally {
       stopLoading();
     }
@@ -522,11 +536,9 @@ export default function AccountInfo({
       setOwnModpacks(modpacks);
       setIsOwnModpacks(true);
     } catch (error) {
-      showErrorToast(
-        t("ownModpacks.loadError"),
-        error instanceof Error ? error.message : String(error),
-        t("common.copy"),
-      );
+      showFailureToast(t("ownModpacks.loadError"), error, {
+        channels: ["backend:getOwnModpacks"],
+      });
     } finally {
       stopLoading();
     }
@@ -645,7 +657,6 @@ export default function AccountInfo({
 
                   {isOwner && <ProfilePrivacy user={user} />}
                 </div>
-
               </div>
 
               <div className="grid grid-cols-3 gap-2">
@@ -687,13 +698,13 @@ export default function AccountInfo({
                       </p>
                     </div>
                     {isOwner && (
-                  <Button
-                    variant="secondary"
-                    disabled={isLoading}
-                    onMouseEnter={() => preload(LazyAchievements.preload)}
-                    onFocus={() => preload(LazyAchievements.preload)}
-                    onClick={() => setIsAchievements(true)}
-                    size="sm"
+                      <Button
+                        variant="secondary"
+                        disabled={isLoading}
+                        onMouseEnter={() => preload(LazyAchievements.preload)}
+                        onFocus={() => preload(LazyAchievements.preload)}
+                        onClick={() => setIsAchievements(true)}
+                        size="sm"
                       >
                         <Award className="size-4" />
                         {t("achievements.showAll")}

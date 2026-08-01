@@ -39,6 +39,7 @@ import { Confirmation } from "../Modals/Confirmation";
 import { toast } from "sonner";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
 export function WorldList({
@@ -166,8 +167,10 @@ export function WorldList({
       setWorlds(worlds.filter((w) => w.path !== selectedWorld.path));
 
       toast.success(t("worlds.deleted"));
-    } catch {
-      toast.error(t("worlds.deletedError"));
+    } catch (error) {
+      showFailureToast(t("worlds.deletedError"), error, {
+        fallbackDescription: t("worlds.deletedErrorHint"),
+      });
     }
   }, [selectedWorld, setWorlds, t, worlds]);
 
@@ -293,7 +296,16 @@ export function WorldList({
                                   );
 
                                   if (!result) {
-                                    toast.error(t("worlds.renameError"));
+                                    showFailureToast(
+                                      t("worlds.renameError"),
+                                      undefined,
+                                      {
+                                        channels: ["worlds:writeName", "fs:"],
+                                        fallbackDescription: t(
+                                          "worlds.renameErrorHint",
+                                        ),
+                                      },
+                                    );
                                     return;
                                   }
 
@@ -324,7 +336,15 @@ export function WorldList({
                                   toast.success(t("worlds.renamed"));
                                 } catch (err) {
                                   console.error(err);
-                                  toast.error(t("worlds.renameError"));
+                                  showFailureToast(
+                                    t("worlds.renameError"),
+                                    err,
+                                    {
+                                      fallbackDescription: t(
+                                        "worlds.renameErrorHint",
+                                      ),
+                                    },
+                                  );
                                 }
                               }}
                             >
@@ -425,7 +445,11 @@ export function WorldList({
                                   toast.success(t("worlds.iconReseted"));
                                 } catch (err) {
                                   console.error(err);
-                                  toast.error(t("worlds.iconResetError"));
+                                  showFailureToast(
+                                    t("worlds.iconResetError"),
+                                    err,
+                                    { channels: ["fs:"] },
+                                  );
                                 }
                               }}
                             >

@@ -6,6 +6,7 @@ import {
   IRefreshTokenResponse
 } from '@/types/Auth'
 import axios from 'axios'
+import { reportFailure } from '../utilities/failureBus'
 
 const api = axios.create({
   baseURL: BACKEND_URL,
@@ -13,6 +14,7 @@ const api = axios.create({
 })
 
 function logAxiosError(prefix: string, error: unknown) {
+  reportFailure(error, { channel: 'service:auth' })
   if (axios.isAxiosError(error)) {
     const status = error.response?.status
     const statusText = error.response?.statusText

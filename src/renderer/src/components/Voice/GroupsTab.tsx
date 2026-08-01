@@ -74,6 +74,7 @@ import { GroupChatModal } from "./GroupChatModal";
 import { voiceConnect, voiceDisconnect } from "@renderer/utilities/voiceClient";
 import { groupJoinErrorKey } from "@renderer/utilities/groupJoin";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
 export function GroupsTab({
@@ -147,7 +148,9 @@ export function GroupsTab({
     if (!name) return;
     const group = await api.backend.groupCreate(accessToken, name);
     if (!group) {
-      toast.error(t("groups.actionError"));
+      showFailureToast(t("groups.actionError"), undefined, {
+        channels: ["backend:groupCreate"],
+      });
       return;
     }
     setCreateName("");
@@ -173,7 +176,11 @@ export function GroupsTab({
       group._id,
       memberId,
     );
-    if (!ok) toast.error(t("groups.actionError"));
+    if (!ok) {
+      showFailureToast(t("groups.actionError"), undefined, {
+        channels: ["backend:"],
+      });
+    }
   };
 
   const handleKickMember = async (group: IGroup, memberId: string) => {
@@ -182,7 +189,11 @@ export function GroupsTab({
       group._id,
       memberId,
     );
-    if (!ok) toast.error(t("groups.actionError"));
+    if (!ok) {
+      showFailureToast(t("groups.actionError"), undefined, {
+        channels: ["backend:"],
+      });
+    }
   };
 
   const handleUnban = async (group: IGroup, memberId: string) => {
@@ -191,7 +202,11 @@ export function GroupsTab({
       group._id,
       memberId,
     );
-    if (!ok) toast.error(t("groups.actionError"));
+    if (!ok) {
+      showFailureToast(t("groups.actionError"), undefined, {
+        channels: ["backend:"],
+      });
+    }
   };
 
   const handleTransferOwner = async (group: IGroup, memberId: string) => {
@@ -200,7 +215,11 @@ export function GroupsTab({
       group._id,
       memberId,
     );
-    if (!ok) toast.error(t("groups.actionError"));
+    if (!ok) {
+      showFailureToast(t("groups.actionError"), undefined, {
+        channels: ["backend:"],
+      });
+    }
   };
 
   const toggleMuteGroup = (group: IGroup) => {
@@ -236,7 +255,9 @@ export function GroupsTab({
     try {
       const grant = await api.backend.groupJoinVoice(accessToken, group._id);
       if (!grant) {
-        toast.error(t("groups.joinError"));
+        showFailureToast(t("groups.joinError"), undefined, {
+          channels: ["backend:groupJoinVoice"],
+        });
         return;
       }
       await voiceConnect(grant, {
@@ -244,29 +265,57 @@ export function GroupsTab({
         roomName: group.name,
         isRoomOwner: group.isOwner,
       });
-    } catch {
-      toast.error(t("groups.joinError"));
+    } catch (error) {
+      showFailureToast(t("groups.joinError"), error, {
+        context: { side: "grubie" },
+      });
     } finally {
       setBusyGroupId("");
     }
   };
 
   const handleCopyCode = async (group: IGroup) => {
-    await navigator.clipboard.writeText(group.code);
-    toast.success(t("groups.codeCopied"));
+    try {
+      const copied = await api.clipboard.writeText(group.code);
+      if (!copied) {
+        showFailureToast(t("groups.actionError"), undefined, {
+          channels: ["clipboard:writeText"],
+        });
+        return;
+      }
+      toast.success(t("groups.codeCopied"));
+    } catch (error) {
+      showFailureToast(t("groups.actionError"), error, {
+        channels: ["clipboard:writeText"],
+      });
+    }
   };
 
   const handleCopyInviteLink = async (group: IGroup) => {
-    await navigator.clipboard.writeText(
-      `grubielauncher://group/join/${group.code}`,
-    );
-    toast.success(t("groups.linkCopied"));
+    try {
+      const copied = await api.clipboard.writeText(
+        `grubielauncher://group/join/${group.code}`,
+      );
+      if (!copied) {
+        showFailureToast(t("groups.actionError"), undefined, {
+          channels: ["clipboard:writeText"],
+        });
+        return;
+      }
+      toast.success(t("groups.linkCopied"));
+    } catch (error) {
+      showFailureToast(t("groups.actionError"), error, {
+        channels: ["clipboard:writeText"],
+      });
+    }
   };
 
   const handleResetCode = async (group: IGroup) => {
     const updated = await api.backend.groupResetCode(accessToken, group._id);
     if (!updated) {
-      toast.error(t("groups.actionError"));
+      showFailureToast(t("groups.actionError"), undefined, {
+        channels: ["backend:groupResetCode"],
+      });
       return;
     }
     toast.success(t("groups.codeReset"));
@@ -282,7 +331,11 @@ export function GroupsTab({
       name,
     );
     setRenameGroup(null);
-    if (!updated) toast.error(t("groups.actionError"));
+    if (!updated) {
+      showFailureToast(t("groups.actionError"), undefined, {
+        channels: ["backend:"],
+      });
+    }
   };
 
   const handleDelete = async () => {
@@ -290,13 +343,21 @@ export function GroupsTab({
     if (session.roomId === deleteGroup._id) await voiceDisconnect();
     const ok = await api.backend.groupDelete(accessToken, deleteGroup._id);
     setDeleteGroup(null);
-    if (!ok) toast.error(t("groups.actionError"));
+    if (!ok) {
+      showFailureToast(t("groups.actionError"), undefined, {
+        channels: ["backend:"],
+      });
+    }
   };
 
   const handleLeave = async (group: IGroup) => {
     if (session.roomId === group._id) await voiceDisconnect();
     const ok = await api.backend.groupLeave(accessToken, group._id);
-    if (!ok) toast.error(t("groups.actionError"));
+    if (!ok) {
+      showFailureToast(t("groups.actionError"), undefined, {
+        channels: ["backend:"],
+      });
+    }
   };
 
   const handleSendInvite = () => {

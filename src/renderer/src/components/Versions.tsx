@@ -105,7 +105,6 @@ import {
   parseVersionOwner,
 } from "@renderer/utilities/version";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { LazyDialogFallback } from "./LazyDialogFallback";
 import {
   lazyWithPreload,
@@ -114,6 +113,7 @@ import {
 } from "@renderer/utilities/lazyPreload";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const loadEditVersion = () =>
   import("./Modals/Version/EditVersion").then((module) => ({
     default: module.EditVersion,
@@ -624,7 +624,10 @@ function VersionsComponent({
           },
         }));
       } catch {}
-      toast.error(t("versionStatistics.error"));
+      showFailureToast(t("versionStatistics.error"), undefined, {
+        channels: ["statistics:", "fs:"],
+        fallbackDescription: t("versionStatistics.errorHint"),
+      });
     } finally {
       setIsLoading(false);
       setLoadingType(null);

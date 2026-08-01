@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { accountAtom, pendingWebLoginAtom } from "../../stores/atoms";
 import { Confirmation } from "./Confirmation";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
 export function WebLoginPrompt() {
@@ -27,7 +28,10 @@ export function WebLoginPrompt() {
     if (ok) {
       toast.success(t("webLogin.approved"));
     } else {
-      toast.error(t("webLogin.failed"));
+      showFailureToast(t("webLogin.failed"), undefined, {
+        channels: ["backend:approveSiteLogin"],
+        fallbackDescription: t("webLogin.failedHint"),
+      });
     }
     close();
   };

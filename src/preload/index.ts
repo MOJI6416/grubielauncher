@@ -73,6 +73,7 @@ import {
 } from "@/types/InstallationProgress";
 import { NotificationClickAction } from "@/types/Notification";
 import { LauncherDeepLink } from "@/types/DeepLink";
+import type { FailureInfo } from "@/shared/errors";
 import { ConnectivityCheckResult } from "@/types/Connectivity";
 import { CrashAnalysisPayload } from "@/types/CrashAnalysis";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
@@ -779,7 +780,12 @@ export interface IElectronAPI {
       callback: (payload: { message: string }) => void,
     ) => () => void;
     onIpcError: (
-      callback: (payload: { channel: string; message: string }) => void,
+      callback: (payload: {
+        channel: string;
+        message: string;
+        notify?: boolean;
+        failure?: FailureInfo;
+      }) => void,
     ) => () => void;
     onCrashAnalysis: (
       callback: (
@@ -1539,11 +1545,21 @@ export const api = {
     },
 
     onIpcError: (
-      callback: (payload: { channel: string; message: string }) => void,
+      callback: (payload: {
+        channel: string;
+        message: string;
+        notify?: boolean;
+        failure?: FailureInfo;
+      }) => void,
     ) => {
       const listener = (
         _event: Electron.IpcRendererEvent,
-        payload: { channel: string; message: string },
+        payload: {
+          channel: string;
+          message: string;
+          notify?: boolean;
+          failure?: FailureInfo;
+        },
       ) => callback(payload);
       ipcRenderer.on("ipc:error", listener);
       return () => ipcRenderer.off("ipc:error", listener);

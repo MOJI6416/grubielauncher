@@ -12,6 +12,7 @@ import {
 } from '@/types/Modrinth'
 import { ServerCore } from '@/types/Server'
 import axios from 'axios'
+import { reportFailure } from '../utilities/failureBus'
 
 const URL = 'https://api.modrinth.com/v2'
 
@@ -22,6 +23,7 @@ export class Modrinth {
   })
 
   private static logAxiosError(prefix: string, error: unknown) {
+    reportFailure(error, { channel: 'service:modrinth' })
     if (axios.isAxiosError(error)) {
       const status = error.response?.status
       const statusText = error.response?.statusText

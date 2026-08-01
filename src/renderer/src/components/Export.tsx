@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { showFailureToast } from "@renderer/utilities/failures";
 import {
   EXPORT_EXCLUDED_TOP_LEVEL,
   getLocalPathFromFileUrl,
@@ -152,7 +153,9 @@ export function Export({
       onClose();
       toast.success(t("export.success"));
     } catch (err) {
-      toast.error(t("export.error"));
+      showFailureToast(t("export.error"), err, {
+        channels: ["file:archiveFiles", "fs:"],
+      });
     } finally {
       await api.fs.rimraf(exportTempPath);
 
@@ -167,7 +170,8 @@ export function Export({
         if (!open && !isLoading) onClose();
       }}
     >
-      <DialogContent aria-describedby={undefined}
+      <DialogContent
+        aria-describedby={undefined}
         className="overflow-hidden p-0 sm:max-w-md"
         onPointerDownOutside={(event) => {
           if (isLoading) event.preventDefault();

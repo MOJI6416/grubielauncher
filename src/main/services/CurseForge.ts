@@ -9,6 +9,7 @@ import {
   ModsSearchSortField
 } from '@/types/CurseForge'
 import axios from 'axios'
+import { reportFailure } from '../utilities/failureBus'
 
 export class CurseForge {
   private static api = axios.create({
@@ -29,6 +30,7 @@ export class CurseForge {
   }
 
   private static logAxiosError(prefix: string, error: unknown) {
+    reportFailure(error, { channel: 'service:curseforge' })
     if (axios.isAxiosError(error)) {
       const status = error.response?.status
       const statusText = error.response?.statusText

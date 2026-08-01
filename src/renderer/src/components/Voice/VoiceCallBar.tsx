@@ -33,7 +33,6 @@ import {
   Volume2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import {
   voiceDisconnect,
   voiceSetDeafened,
@@ -42,6 +41,7 @@ import {
 } from "@renderer/utilities/voiceClient";
 import { VoiceSettingsDialog } from "./VoiceSettingsPanel";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 const COLLAPSED_STORAGE_KEY = "voice.barCollapsed";
 
@@ -109,7 +109,11 @@ export function VoiceCallBar() {
       session.roomId,
       identity,
     );
-    if (!ok) toast.error(t("groups.actionError"));
+    if (!ok) {
+      showFailureToast(t("groups.actionError"), undefined, {
+        channels: ["backend:groupKickMember"],
+      });
+    }
   };
 
   const muteButton = (

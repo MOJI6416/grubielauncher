@@ -131,3 +131,19 @@ export function getShareErrorText(
       return error.message || t("share.errors.unknown");
   }
 }
+
+export function getShareErrorDetails(
+  t: TranslateFn,
+  error?: ShareStateError | null,
+) {
+  if (!error) return undefined;
+
+  const parts = [
+    error.code ? t("errors.serverCode", { code: error.code }) : "",
+    error.message && error.message !== getShareErrorText(t, error)
+      ? error.message
+      : "",
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join("\n") : undefined;
+}

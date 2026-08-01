@@ -49,7 +49,7 @@ import {
 } from "@renderer/utilities/achievements";
 import { fetchMergedAchievementStats } from "@renderer/utilities/achievementStats";
 import { Leaderboard } from "./Leaderboard";
-import { showErrorToast } from "@renderer/utilities/errorToast";
+import { showFailureToast } from "@renderer/utilities/failures";
 
 const api = window.api;
 
@@ -98,11 +98,9 @@ export function Achievements({
       } catch (error) {
         if (!cancelled) {
           setStats(EMPTY_ACHIEVEMENT_STATS);
-          showErrorToast(
-            t("achievements.loadError"),
-            error instanceof Error ? error.message : String(error),
-            t("common.copy"),
-          );
+          showFailureToast(t("achievements.loadError"), error, {
+            channels: ["backend:", "statistics:"],
+          });
         }
       } finally {
         if (!cancelled) setLoading(false);

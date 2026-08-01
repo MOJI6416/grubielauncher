@@ -93,7 +93,7 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
                       )}
                     </div>
                     {entry.details && (
-                      <p className="mt-1.5 text-xs break-words text-muted-foreground">
+                      <p className="mt-1.5 text-xs break-words whitespace-pre-line text-muted-foreground">
                         {entry.details}
                       </p>
                     )}

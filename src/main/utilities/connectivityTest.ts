@@ -12,8 +12,12 @@ interface HttpCheck {
   group: ConnectivityGroup
   kind: 'http'
   url: string
-  okStatus?: (status: number) => boolean
+  okStatus: (status: number) => boolean
 }
+
+const isSuccess = (status: number) => status === 200 || status === 206
+
+const isReachable = (status: number) => status > 0 && status < 500
 
 interface TcpCheck {
   id: string
@@ -32,21 +36,24 @@ const CHECKS: ConnectivityCheck[] = [
     name: 'GrubieLauncher API',
     group: 'grubie',
     kind: 'http',
-    url: `${BACKEND_URL}/`
+    url: `${BACKEND_URL}/health`,
+    okStatus: isSuccess
   },
   {
     id: 'grubie_cdn',
     name: 'GrubieLauncher CDN',
     group: 'grubie',
     kind: 'http',
-    url: 'https://cdn.grubielauncher.com/'
+    url: 'https://cdn.grubielauncher.com/robots.txt',
+    okStatus: isSuccess
   },
   {
     id: 'grubie_tunnel',
     name: 'GrubieLauncher Tunnel',
     group: 'grubie',
     kind: 'http',
-    url: 'https://tunnel.grubielauncher.com/healthz'
+    url: 'https://tunnel.grubielauncher.com/healthz',
+    okStatus: isSuccess
   },
   {
     id: 'grubie_join',
@@ -61,35 +68,40 @@ const CHECKS: ConnectivityCheck[] = [
     name: 'Mojang Version Meta',
     group: 'minecraft',
     kind: 'http',
-    url: 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json'
+    url: 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json',
+    okStatus: isSuccess
   },
   {
     id: 'mojang_libraries',
     name: 'Mojang Libraries',
     group: 'minecraft',
     kind: 'http',
-    url: 'https://libraries.minecraft.net/'
+    url: 'https://libraries.minecraft.net/com/mojang/logging/1.1.1/logging-1.1.1.jar',
+    okStatus: isSuccess
   },
   {
     id: 'mojang_resources',
     name: 'Mojang Assets',
     group: 'minecraft',
     kind: 'http',
-    url: 'https://resources.download.minecraft.net/'
+    url: 'https://resources.download.minecraft.net/9d/9dd32387135eefa7ab95996d52a5ca4cec8a3b30',
+    okStatus: isSuccess
   },
   {
     id: 'mojang_services',
     name: 'Minecraft Services',
     group: 'minecraft',
     kind: 'http',
-    url: 'https://api.minecraftservices.com/'
+    url: 'https://api.minecraftservices.com/publickeys',
+    okStatus: isSuccess
   },
   {
     id: 'mojang_session',
     name: 'Mojang Session Server',
     group: 'minecraft',
     kind: 'http',
-    url: 'https://sessionserver.mojang.com/'
+    url: 'https://sessionserver.mojang.com/session/minecraft/profile/069a79f444e94726a5befca90e38aaf5',
+    okStatus: isSuccess
   },
   {
     id: 'mirror_health',
@@ -97,7 +109,7 @@ const CHECKS: ConnectivityCheck[] = [
     group: 'mirror',
     kind: 'http',
     url: 'https://mirror.grubielauncher.com/healthz',
-    okStatus: (status) => status >= 200 && status < 400
+    okStatus: isSuccess
   },
   {
     id: 'mirror_manifest',
@@ -105,70 +117,79 @@ const CHECKS: ConnectivityCheck[] = [
     group: 'mirror',
     kind: 'http',
     url: 'https://mirror.grubielauncher.com/piston-meta/mc/game/version_manifest_v2.json',
-    okStatus: (status) => status >= 200 && status < 400
+    okStatus: isSuccess
   },
   {
     id: 'modrinth_api',
     name: 'Modrinth API',
     group: 'mods',
     kind: 'http',
-    url: 'https://api.modrinth.com/v2/'
+    url: 'https://api.modrinth.com/v2/search?limit=1',
+    okStatus: isSuccess
   },
   {
     id: 'modrinth_cdn',
     name: 'Modrinth CDN',
     group: 'mods',
     kind: 'http',
-    url: 'https://cdn.modrinth.com/'
+    url: 'https://cdn.modrinth.com/data/AANobbMI/versions/mc1.16.3-0.1.0/sodium-fabric-mc1.16.3-0.1.0.jar',
+    okStatus: isSuccess
   },
   {
     id: 'curseforge_proxy',
     name: 'CurseForge API (proxy)',
     group: 'mods',
     kind: 'http',
-    url: `${BACKEND_URL}/curseforge/categories/6`
+    url: `${BACKEND_URL}/curseforge/categories/6`,
+    okStatus: isSuccess
   },
   {
     id: 'curseforge_cdn',
     name: 'CurseForge Files CDN',
     group: 'mods',
     kind: 'http',
-    url: 'https://mediafilez.forgecdn.net/'
+    url: 'https://mediafilez.forgecdn.net/',
+    okStatus: isReachable
   },
   {
     id: 'fabric_meta',
     name: 'Fabric Meta',
     group: 'loaders',
     kind: 'http',
-    url: 'https://meta.fabricmc.net/v2/versions/game'
+    url: 'https://meta.fabricmc.net/v2/versions/game',
+    okStatus: isSuccess
   },
   {
     id: 'quilt_meta',
     name: 'Quilt Meta',
     group: 'loaders',
     kind: 'http',
-    url: 'https://meta.quiltmc.org/v3/versions'
+    url: 'https://meta.quiltmc.org/v3/versions',
+    okStatus: isSuccess
   },
   {
     id: 'forge_maven',
     name: 'Forge Maven',
     group: 'loaders',
     kind: 'http',
-    url: 'https://maven.minecraftforge.net/'
+    url: 'https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml',
+    okStatus: isSuccess
   },
   {
     id: 'adoptium_api',
     name: 'Adoptium API (Java)',
     group: 'java',
     kind: 'http',
-    url: 'https://api.adoptium.net/'
+    url: 'https://api.adoptium.net/v3/info/available_releases',
+    okStatus: isSuccess
   },
   {
     id: 'java_cdn',
     name: 'GitHub Release CDN (Java)',
     group: 'java',
     kind: 'http',
-    url: 'https://release-assets.githubusercontent.com/'
+    url: 'https://release-assets.githubusercontent.com/',
+    okStatus: isReachable
   }
 ]
 
@@ -188,7 +209,7 @@ async function runHttpCheck(check: HttpCheck): Promise<ConnectivityCheckResult> 
       response.data?.destroy?.()
     } catch {}
 
-    const ok = check.okStatus ? check.okStatus(response.status) : true
+    const ok = check.okStatus(response.status)
 
     return {
       id: check.id,

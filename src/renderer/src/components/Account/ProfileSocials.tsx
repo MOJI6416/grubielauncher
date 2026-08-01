@@ -17,6 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { IUser } from "@/types/IUser";
+import { showFailureToast } from "@renderer/utilities/failures";
 import {
   DISCORD_CLIENT_ID,
   GITHUB_CLIENT_ID,
@@ -84,8 +85,10 @@ export function ProfileSocials({
       setDiscordId(result.discordId);
       setDiscordUsername(result.username || null);
       toast.success(t("socials.discordLinked"));
-    } catch {
-      toast.error(t("socials.discordLinkFailed"));
+    } catch (error) {
+      showFailureToast(t("socials.discordLinkFailed"), error, {
+        channels: ["backend:discordLink", "service:auth"],
+      });
     } finally {
       setBusy(null);
     }
@@ -100,8 +103,10 @@ export function ProfileSocials({
       setDiscordId(null);
       setDiscordUsername(null);
       toast.success(t("socials.discordUnlinked"));
-    } catch {
-      toast.error(t("socials.discordUnlinkFailed"));
+    } catch (error) {
+      showFailureToast(t("socials.discordUnlinkFailed"), error, {
+        channels: ["backend:discordUnlink"],
+      });
     } finally {
       setBusy(null);
     }
@@ -147,8 +152,13 @@ export function ProfileSocials({
         }
       }
       throw new Error("link timed out");
-    } catch {
-      if (isMountedRef.current) toast.error(t("socials.providerLinkFailed"));
+    } catch (error) {
+      if (isMountedRef.current) {
+        showFailureToast(t("socials.providerLinkFailed"), error, {
+          channels: ["backend:"],
+          fallbackDescription: t("socials.providerLinkTimeoutHint"),
+        });
+      }
     } finally {
       if (isMountedRef.current) setBusy(null);
     }
@@ -181,8 +191,10 @@ export function ProfileSocials({
       if (!result) throw new Error("link failed");
       applyLinked(provider, result.linked);
       toast.success(t("socials.providerLinked"));
-    } catch {
-      toast.error(t("socials.providerLinkFailed"));
+    } catch (error) {
+      showFailureToast(t("socials.providerLinkFailed"), error, {
+        channels: ["backend:socialLink"],
+      });
     } finally {
       setBusy(null);
     }
@@ -196,8 +208,10 @@ export function ProfileSocials({
       if (!result) throw new Error("unlink failed");
       applyLinked(provider, null);
       toast.success(t("socials.providerUnlinked"));
-    } catch {
-      toast.error(t("socials.providerUnlinkFailed"));
+    } catch (error) {
+      showFailureToast(t("socials.providerUnlinkFailed"), error, {
+        channels: ["backend:socialUnlink"],
+      });
     } finally {
       setBusy(null);
     }
@@ -229,7 +243,11 @@ export function ProfileSocials({
       key: "telegram",
       icon: <FaTelegram className="size-4 shrink-0 text-muted-foreground" />,
       name: "Telegram",
-      handle: telegram ? (telegram.username ? `@${telegram.username}` : t("socials.linked")) : null,
+      handle: telegram
+        ? telegram.username
+          ? `@${telegram.username}`
+          : t("socials.linked")
+        : null,
       url: telegram?.username ? `https://t.me/${telegram.username}` : null,
       configured: true,
       canManage: true,

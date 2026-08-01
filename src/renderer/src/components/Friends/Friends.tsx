@@ -108,6 +108,7 @@ import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 import { GroupsTab } from "../Voice/GroupsTab";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
 const loadSkinView = () =>
@@ -797,7 +798,9 @@ export function Friends({
     stopLoading();
 
     if (!userData?.friendCode) {
-      toast.error(t("friends.friendCodeSaveError"));
+      showFailureToast(t("friends.friendCodeSaveError"), undefined, {
+        channels: ["backend:resetFriendCode"],
+      });
       return;
     }
 
@@ -819,7 +822,9 @@ export function Friends({
 
       if (!userData) {
         setFriendRequestsEnabled(!checked);
-        toast.error(t("friends.friendCodeSaveError"));
+        showFailureToast(t("friends.friendCodeSaveError"), undefined, {
+          channels: ["backend:updateFriendSettings", "backend:"],
+        });
         return;
       }
 
@@ -838,7 +843,11 @@ export function Friends({
   useEffect(() => {
     if (!pendingFriendRequest || !socket) return;
     const sent = sentDeepFriendRef.current;
-    if (sent && sent.id === pendingFriendRequest && Date.now() - sent.at < 3000) {
+    if (
+      sent &&
+      sent.id === pendingFriendRequest &&
+      Date.now() - sent.at < 3000
+    ) {
       setPendingFriendRequest(null);
       return;
     }
@@ -879,8 +888,10 @@ export function Friends({
         } else {
           throw new Error();
         }
-      } catch {
-        toast.error(t("accountInfo.error"));
+      } catch (error) {
+        showFailureToast(t("accountInfo.error"), error, {
+          channels: ["backend:getUser"],
+        });
       }
     },
     [account, t],
@@ -955,7 +966,9 @@ export function Friends({
         );
 
         if (!skinData) {
-          toast.error(t("skinView.error"));
+          showFailureToast(t("skinView.error"), undefined, {
+            channels: ["skin:get", "skins:"],
+          });
           return;
         }
 
@@ -963,9 +976,11 @@ export function Friends({
         setSelectedFriend(friend.user._id);
         setSkinData(skinData);
         setSkinModal(true);
-      } catch {
+      } catch (error) {
         setSkinModal(false);
-        toast.error(t("skinView.error"));
+        showFailureToast(t("skinView.error"), error, {
+          channels: ["skin:get", "skins:"],
+        });
       } finally {
         stopLoading();
       }
@@ -1085,10 +1100,12 @@ export function Friends({
 
         setImageUploadProgress(null);
         sendChatImageUrl(url);
-      } catch {
+      } catch (error) {
         setImageUploadProgress(null);
         stopLoading();
-        toast.error(t("friends.chatImageUploadError"));
+        showFailureToast(t("friends.chatImageUploadError"), error, {
+          channels: ["backend:"],
+        });
       }
     },
     [

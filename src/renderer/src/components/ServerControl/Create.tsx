@@ -28,13 +28,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ServerGame } from "@renderer/classes/ServerGame";
 import { Mods } from "@renderer/classes/Mods";
-import { showErrorToast } from "@renderer/utilities/errorToast";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
 export function CreateServer({
@@ -166,12 +166,7 @@ export function CreateServer({
     } catch (err) {
       console.error(err);
 
-      const message = err instanceof Error ? err.message : String(err);
-      showErrorToast(
-        t("versions.serverInstallError"),
-        message,
-        t("common.copy"),
-      );
+      showFailureToast(t("versions.serverInstallError"), err);
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false);
@@ -201,7 +196,8 @@ export function CreateServer({
         if (!open && !isLoading) close();
       }}
     >
-      <DialogContent aria-describedby={undefined}
+      <DialogContent
+        aria-describedby={undefined}
         className="overflow-hidden p-0 sm:max-w-xs"
         onPointerDownOutside={(event) => {
           if (isLoading) event.preventDefault();
@@ -280,9 +276,7 @@ export function CreateServer({
                 className="text-primary underline underline-offset-2"
                 onClick={(event) => {
                   event.preventDefault();
-                  void api.shell.openExternal(
-                    "https://www.minecraft.net/eula",
-                  );
+                  void api.shell.openExternal("https://www.minecraft.net/eula");
                 }}
               >
                 {t("versions.eulaLink")}

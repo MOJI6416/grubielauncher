@@ -4,7 +4,7 @@ import icon from "../../../resources/icon.png?asset";
 import { rpc } from "../rpc";
 import { is } from "@electron-toolkit/utils";
 import fs from "fs-extra";
-import { writeJsonAtomic } from "../utilities/atomicJson";
+import { writeJsonAtomicSync } from "../utilities/atomicJson";
 
 export let mainWindow: BrowserWindow | null = null;
 
@@ -93,7 +93,7 @@ function saveWindowState(window: BrowserWindow): void {
       y: bounds.y,
       isMaximized: window.isMaximized(),
     };
-    void writeJsonAtomic(getWindowStatePath(), state).catch(() => {});
+    writeJsonAtomicSync(getWindowStatePath(), state);
   } catch {}
 }
 

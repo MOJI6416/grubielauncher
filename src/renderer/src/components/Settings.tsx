@@ -71,8 +71,8 @@ import { VoiceSettingsPanel } from "./Voice/VoiceSettingsPanel";
 import { ConnectivityModal } from "./ConnectivityModal";
 import type { ConnectivityCheckResult } from "@/types/Connectivity";
 import { toast } from "sonner";
-import { showErrorToast } from "@renderer/utilities/errorToast";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 export function Settings({
   onClose,
   onShowWhatsNew,
@@ -569,7 +569,6 @@ export function Settings({
                 }
               />
             </SettingsSection>
-
           </div>
 
           <DialogFooter>
@@ -595,7 +594,9 @@ export function Settings({
                 className="text-muted-foreground"
                 onClick={async () => {
                   try {
-                    await api.shell.openExternal("https://discord.gg/URrKha9hk7");
+                    await api.shell.openExternal(
+                      "https://discord.gg/URrKha9hk7",
+                    );
                   } catch {}
                 }}
               >
@@ -626,11 +627,9 @@ export function Settings({
                 try {
                   await api.fs.writeJSON(settingsPath, newSettings);
                 } catch (error) {
-                  showErrorToast(
-                    t("settings.saveFailed"),
-                    error instanceof Error ? error.message : String(error),
-                    t("common.copy"),
-                  );
+                  showFailureToast(t("settings.saveFailed"), error, {
+                    channels: ["fs:writeJSON"],
+                  });
                   return;
                 }
 

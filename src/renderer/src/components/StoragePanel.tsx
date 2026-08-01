@@ -33,6 +33,7 @@ import { isRunningAtom, pathsAtom } from "@renderer/stores/atoms";
 import { formatBytes } from "@renderer/utilities/file";
 import type { StorageBreakdown, StorageCategoryId } from "@/types/Storage";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
 type CleanupAction = "cache" | "java" | "libraries";
@@ -59,7 +60,9 @@ export function StoragePanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [busyAction, setBusyAction] = useState<CleanupAction | null>(null);
-  const [pendingAction, setPendingAction] = useState<CleanupAction | null>(null);
+  const [pendingAction, setPendingAction] = useState<CleanupAction | null>(
+    null,
+  );
   const [showAllVersions, setShowAllVersions] = useState(false);
   const mounted = useRef(true);
 
@@ -119,7 +122,10 @@ export function StoragePanel() {
       if (res.blocked) {
         toast.error(t("settings.storage.busy"));
       } else if (res.failed) {
-        toast.error(t("settings.storage.actionFailed"));
+        showFailureToast(t("settings.storage.actionFailed"), undefined, {
+          channels: ["storage:", "fs:"],
+          fallbackDescription: t("settings.storage.actionFailedHint"),
+        });
       } else {
         toast.success(
           t("settings.storage.cleared", {
@@ -128,8 +134,13 @@ export function StoragePanel() {
         );
       }
       await load();
-    } catch {
-      if (mounted.current) toast.error(t("settings.storage.actionFailed"));
+    } catch (error) {
+      if (mounted.current) {
+        showFailureToast(t("settings.storage.actionFailed"), error, {
+          channels: ["storage:", "fs:"],
+          fallbackDescription: t("settings.storage.actionFailedHint"),
+        });
+      }
     } finally {
       if (mounted.current) setBusyAction(null);
     }

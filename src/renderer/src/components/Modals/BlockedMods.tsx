@@ -32,6 +32,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { IProject, Provider, ProjectType } from "@/types/ModManager";
 import { Loader } from "@/types/Loader";
+import { showFailureToast } from "@renderer/utilities/failures";
 import {
   areBlockedModsReady,
   applyBlockedModFilePaths,
@@ -282,7 +283,10 @@ export function BlockedMods({
       try {
         const ok = await onSubstitute(mod, project);
         if (!ok) {
-          toast.error(t("blockedMods.substituteFailed"));
+          showFailureToast(t("blockedMods.substituteFailed"), undefined, {
+            channels: ["modManager:", "service:", "file:download"],
+            fallbackDescription: t("blockedMods.substituteFailedHint"),
+          });
           return;
         }
 
@@ -295,8 +299,10 @@ export function BlockedMods({
         toast.success(
           t("blockedMods.substituteSuccess", { title: project.title }),
         );
-      } catch {
-        toast.error(t("blockedMods.substituteFailed"));
+      } catch (error) {
+        showFailureToast(t("blockedMods.substituteFailed"), error, {
+          fallbackDescription: t("blockedMods.substituteFailedHint"),
+        });
       } finally {
         setSubstitutingKey(null);
       }

@@ -60,17 +60,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { canOpenSkinManagerForAccount } from "@renderer/utilities/connectivity";
 import { toFileUrl } from "@renderer/utilities/exportVersion";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 const NO_CAPE_VALUE = "__none";
 
@@ -310,7 +306,10 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     if (!selectedAccount) return;
-    if (selectedAccount.type !== "discord" && selectedAccount.type !== "microsoft") {
+    if (
+      selectedAccount.type !== "discord" &&
+      selectedAccount.type !== "microsoft"
+    ) {
       return;
     }
     if (!isBackendOnline) onClose();
@@ -361,7 +360,8 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
 
   const playerSkinUrl = useMemo(() => {
     if (!skinsData) return undefined;
-    return skinsData.skins.skins.find((s) => s.id === skinsData.activeSkin)?.url;
+    return skinsData.skins.skins.find((s) => s.id === skinsData.activeSkin)
+      ?.url;
   }, [skinsData]);
 
   useEffect(() => {
@@ -456,8 +456,10 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
         await refreshSkins();
         setView("mine");
         toast.success(t("manageSkins.catalogImported"));
-      } catch {
-        toast.error(t("manageSkins.importError"));
+      } catch (error) {
+        showFailureToast(t("manageSkins.importError"), error, {
+          channels: ["skins:"],
+        });
       }
     },
     [authData, selectedAccount, refreshSkins, t],
@@ -474,8 +476,10 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
         );
         if (!data) throw new Error("Failed to set cape");
         setSkinsData(data);
-      } catch {
-        toast.error(t("manageSkins.applyError"));
+      } catch (error) {
+        showFailureToast(t("manageSkins.applyError"), error, {
+          channels: ["skins:"],
+        });
         await refreshSkins().catch(() => undefined);
       }
     },
@@ -513,8 +517,10 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
       setSkinsData(data);
       bumpRpcSkinVersion(Date.now());
       await refreshSkins();
-    } catch {
-      toast.error(t("manageSkins.applyError"));
+    } catch (error) {
+      showFailureToast(t("manageSkins.applyError"), error, {
+        channels: ["skins:"],
+      });
       await refreshSkins().catch(() => undefined);
     } finally {
       setActionLoading(null);
@@ -548,13 +554,18 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     if (!isRemoteSkinServiceAvailable) return;
     setActionLoading("reset");
     try {
-      const data = await api.skins.resetSkin(authData.uuid, selectedAccount.type);
+      const data = await api.skins.resetSkin(
+        authData.uuid,
+        selectedAccount.type,
+      );
       if (!data) throw new Error("Failed to reset skin");
       setSkinsData(data);
       bumpRpcSkinVersion(Date.now());
       await refreshSkins();
-    } catch {
-      toast.error(t("manageSkins.applyError"));
+    } catch (error) {
+      showFailureToast(t("manageSkins.applyError"), error, {
+        channels: ["skins:"],
+      });
       await refreshSkins().catch(() => undefined);
     } finally {
       setActionLoading(null);
@@ -581,8 +592,10 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
       setSkinsData(data);
       bumpRpcSkinVersion(Date.now());
       await refreshSkins();
-    } catch {
-      toast.error(t("manageSkins.applyError"));
+    } catch (error) {
+      showFailureToast(t("manageSkins.applyError"), error, {
+        channels: ["skins:"],
+      });
       await refreshSkins().catch(() => undefined);
     } finally {
       setActionLoading(null);
@@ -644,8 +657,10 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
         );
         await refreshSkins();
         closeAddDialog();
-      } catch {
-        toast.error(t("manageSkins.importError"));
+      } catch (error) {
+        showFailureToast(t("manageSkins.importError"), error, {
+          channels: ["skins:"],
+        });
       } finally {
         setActionLoading(null);
       }
@@ -665,8 +680,10 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
         );
         await refreshSkins();
         closeAddDialog();
-      } catch {
-        toast.error(t("manageSkins.importError"));
+      } catch (error) {
+        showFailureToast(t("manageSkins.importError"), error, {
+          channels: ["skins:"],
+        });
       } finally {
         setActionLoading(null);
       }
@@ -683,8 +700,10 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
       );
       await refreshSkins();
       closeAddDialog();
-    } catch {
-      toast.error(t("manageSkins.importError"));
+    } catch (error) {
+      showFailureToast(t("manageSkins.importError"), error, {
+        channels: ["skins:"],
+      });
     } finally {
       setActionLoading(null);
     }
@@ -784,7 +803,12 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
       } else if (result.error === "limit") {
         toast.error(t("manageSkins.publishLimit"));
       } else {
-        toast.error(t("manageSkins.publishError"));
+        showFailureToast(t("manageSkins.publishError"), undefined, {
+          channels: ["skins:"],
+          fallbackDescription: result.error
+            ? t("errors.serverCode", { code: result.error })
+            : undefined,
+        });
       }
     } finally {
       setActionLoading(null);
@@ -1090,7 +1114,9 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
                               <SelectItem key={cape.id} value={cape.id}>
                                 <span className="flex min-w-0 items-center gap-2">
                                   <img
-                                    src={resolveLocalImage(cape.cape || cape.url)}
+                                    src={resolveLocalImage(
+                                      cape.cape || cape.url,
+                                    )}
                                     className="h-8 w-auto shrink-0 object-contain"
                                     loading="lazy"
                                     alt=""
@@ -1367,7 +1393,10 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
                     )}
                   </TabsContent>
 
-                  <TabsContent value="link" className="mt-3 grid content-start gap-1.5">
+                  <TabsContent
+                    value="link"
+                    className="mt-3 grid content-start gap-1.5"
+                  >
                     <Label>{t("manageSkins.link")}</Label>
                     <Input
                       value={inputValue}
@@ -1378,7 +1407,10 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
                   </TabsContent>
 
                   {skinType === "skin" && (
-                    <TabsContent value="nick" className="mt-3 grid content-start gap-1.5">
+                    <TabsContent
+                      value="nick"
+                      className="mt-3 grid content-start gap-1.5"
+                    >
                       <Label>{t("manageSkins.nickname")}</Label>
                       <Input
                         value={inputValue}
@@ -1514,7 +1546,8 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
         <Dialog
           open={publishDialogSkinId !== null}
           onOpenChange={(open) => {
-            if (!open && actionLoading !== "publish") setPublishDialogSkinId(null);
+            if (!open && actionLoading !== "publish")
+              setPublishDialogSkinId(null);
           }}
         >
           <DialogContent

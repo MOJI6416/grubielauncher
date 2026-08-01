@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useAtom } from "jotai";
 import { settingsAtom } from "@renderer/stores/atoms";
-import { showErrorToast } from "@renderer/utilities/errorToast";
 import { patchSettings } from "@renderer/utilities/persistSettings";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import type { VoicePttBind } from "@/types/Settings";
 import { DeviceSelect, MicLevelTest } from "./VoiceDeviceControls";
 
+import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
 export function VoiceSettingsPanel({
@@ -119,11 +119,9 @@ export function VoiceSettingsDialog({
 
   const savePatch = (patch: Parameters<typeof patchSettings>[0]) => {
     void patchSettings(patch).catch((error) => {
-      showErrorToast(
-        t("settings.saveFailed"),
-        error instanceof Error ? error.message : String(error),
-        t("common.copy"),
-      );
+      showFailureToast(t("settings.saveFailed"), error, {
+        channels: ["settings:", "fs:"],
+      });
     });
   };
 

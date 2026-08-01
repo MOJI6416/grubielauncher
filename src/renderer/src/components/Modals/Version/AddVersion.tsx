@@ -103,6 +103,10 @@ import {
   toFileUrl,
 } from "@renderer/utilities/exportVersion";
 import { resolveImportedLoaderVersion } from "@/shared/loaderVersions";
+import {
+  reportIpcFailure,
+  showFailureToast,
+} from "@renderer/utilities/failures";
 import grubieIcon from "@renderer/assets/icon.png";
 import prismIcon from "@renderer/assets/launchers/prism.svg";
 import multimcIcon from "@renderer/assets/launchers/multimc.svg";
@@ -395,7 +399,13 @@ export function AddVersion({
         );
 
         if (!importedVersion) {
-          toast.error(t("versions.notFound"));
+          if (versionList.length === 0) {
+            showFailureToast(t("versions.listLoadError"), undefined, {
+              channels: ["versions:getList"],
+            });
+          } else {
+            toast.error(t("versions.notFound"));
+          }
           return;
         }
 
@@ -438,7 +448,13 @@ export function AddVersion({
               ? "missingRequired"
               : "notFound",
           );
-          toast.error(t("addVersion.fromFile.loaderVersionNotFound"));
+          if (importedLoaderVersions.length === 0) {
+            showFailureToast(t("versions.loaderListLoadError"), undefined, {
+              channels: ["versions:getLoaderVersions"],
+            });
+          } else {
+            toast.error(t("addVersion.fromFile.loaderVersionNotFound"));
+          }
         }
       } finally {
         if (!isCancelled) {
@@ -598,7 +614,7 @@ export function AddVersion({
         return;
       }
 
-      toast.error(t("versions.installError"), { description: message });
+      showFailureToast(t("versions.installError"), error);
     } finally {
       if (!isClosed) {
         setIsLoading(false);
@@ -899,9 +915,15 @@ export function AddVersion({
       } else {
         throw new Error("import failed");
       }
-    } catch {
+    } catch (error) {
       setImportData(undefined);
-      toast.error(t("addVersion.fromFile.error"));
+      if (
+        !reportIpcFailure(t("addVersion.fromFile.error"), ["version:import"])
+      ) {
+        showFailureToast(t("addVersion.fromFile.error"), error, {
+          fallbackDescription: t("addVersion.fromFile.errorUnsupported"),
+        });
+      }
     } finally {
       setIsLoading(false);
       setLoadingType(undefined);
@@ -1559,11 +1581,26 @@ export function AddVersion({
                             ),
                           );
 
-                          if (modpackData.data)
+                          if (modpackData.data) {
                             await searchVersion(modpackData.data);
-                          else toast.error(t("addVersion.fromServer.notFound"));
-                        } catch {
-                          toast.error(t("addVersion.fromServer.notFound"));
+                          } else if (
+                            !reportIpcFailure(
+                              t("addVersion.fromServer.loadError"),
+                              ["backend:getModpack"],
+                            )
+                          ) {
+                            toast.error(t("addVersion.fromServer.notFound"));
+                          }
+                        } catch (error) {
+                          showFailureToast(
+                            t("addVersion.fromServer.loadError"),
+                            error,
+                            {
+                              fallbackDescription: t(
+                                "addVersion.fromServer.timeoutHint",
+                              ),
+                            },
+                          );
                         } finally {
                           setIsLoading(false);
                           setLoadingType(undefined);

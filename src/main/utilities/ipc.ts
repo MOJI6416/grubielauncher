@@ -1,5 +1,6 @@
 import { ipcMain, IpcMainInvokeEvent } from 'electron'
 import { PathPolicyError } from './safePath'
+import { classifyError } from '@/shared/errors'
 
 const NOTIFY_ON_ERROR_CHANNELS = new Set([
     'fs:writeFile',
@@ -75,9 +76,13 @@ export function handleSafe<TResult, TArgs extends any[] = any[]>(
 
             const described = describeIpcError(err)
             console.error(`[IPC] ${channel} error:`, described)
-            if (NOTIFY_ON_ERROR_CHANNELS.has(channel) && !event.sender.isDestroyed()) {
+            if (!event.sender.isDestroyed()) {
+                const failure = classifyError(err, { channel })
+                console.error(`[IPC] ${channel} classified as ${failure.code}`)
                 event.sender.send('ipc:error', {
                     channel,
+                    notify: NOTIFY_ON_ERROR_CHANNELS.has(channel),
+                    failure,
                     message:
                         typeof described === 'string'
                             ? described
