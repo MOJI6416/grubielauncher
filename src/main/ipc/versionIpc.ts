@@ -47,10 +47,12 @@ const fallbackUploadMods: {
   mods: ILocalProject[];
   success: boolean;
   uploaded: number;
+  failures: string[];
 } = {
   mods: [],
   success: false,
   uploaded: 0,
+  failures: [],
 };
 
 const fallbackInstall: VersionInstallResult = {

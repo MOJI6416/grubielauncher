@@ -22,6 +22,33 @@ describe("classifyError", () => {
     expect(info.code).toBe("GRB-503");
   });
 
+  it("keeps the reason the backend sent with a rejected request", () => {
+    const error = axiosError(
+      409,
+      "https://api.grubielauncher.com/modpacks",
+    ) as any;
+    error.response.data = {
+      statusCode: 409,
+      message: "The modpack already exists",
+    };
+
+    const info = classifyError(error, { channel: "backend:shareModpack" });
+
+    expect(info.code).toBe("GRB-409");
+    expect(info.message).toBe(
+      "Request failed with status code 409: The modpack already exists",
+    );
+  });
+
+  it("ignores an html error page as a reason", () => {
+    const error = axiosError(502, "https://api.grubielauncher.com/modpacks") as any;
+    error.response.data = "<html><body>502 Bad Gateway</body></html>";
+
+    const info = classifyError(error);
+
+    expect(info.message).toBe("Request failed with status code 502");
+  });
+
   it("maps forgecdn 403 to curseforge", () => {
     const info = classifyError(
       axiosError(403, "https://mediafilez.forgecdn.net/files/1/2/mod.jar"),

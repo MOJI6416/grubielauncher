@@ -266,6 +266,7 @@ export interface IElectronAPI {
         mods: ILocalProject[];
         success: boolean;
         uploaded: number;
+        failures: string[];
       }>;
     };
   };

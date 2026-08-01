@@ -69,6 +69,7 @@ interface SharePublishProgress {
   total?: number;
   errorCode?: string;
   statusCode?: number;
+  failedStage?: SharePublishStage;
 }
 
 export function Share({
@@ -120,6 +121,7 @@ export function Share({
   const uploadProgressIdRef = useRef<string | null>(null);
   const uploadProgressRef = useRef<UploadFileProgress | null>(null);
   const publishErrorRef = useRef<string | null>(null);
+  const publishStageRef = useRef<SharePublishStage | null>(null);
   const [publishProgress, setPublishProgress] =
     useState<SharePublishProgress | null>(null);
 
@@ -283,6 +285,9 @@ export function Share({
   }
 
   function updatePublishProgress(progress: SharePublishProgress | null) {
+    if (progress && progress.stage !== "error") {
+      publishStageRef.current = progress.stage;
+    }
     setPublishProgress(progress);
   }
 
@@ -346,7 +351,15 @@ export function Share({
             shareCode,
           },
         );
-        if (!result.success) throw new Error("local mods upload failed");
+        if (!result.success) {
+          throw new Error(
+            `local mods upload failed${
+              result.failures?.length
+                ? `: ${result.failures.slice(0, 3).join("; ")}`
+                : ""
+            }`,
+          );
+        }
         mods = result.mods;
         shouldUpdateLocalMods = true;
       }
@@ -554,6 +567,7 @@ export function Share({
         percent: 100,
         errorCode,
         statusCode: uploadProgressRef.current?.statusCode,
+        failedStage: publishStageRef.current ?? undefined,
       });
       if (uploadedOtherUrl) {
         await api.backend
@@ -899,6 +913,11 @@ export function Share({
                           publishProgress.errorCode || "generic"
                         }`,
                       )}
+                      {publishProgress.failedStage
+                        ? ` (${t(
+                            `share.publishProgress.${publishProgress.failedStage}`,
+                          )})`
+                        : ""}
                     </FormErrorMessage>
                   </div>
                 </div>

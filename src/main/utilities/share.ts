@@ -76,6 +76,7 @@ export async function uploadMods(at: string, version: Version) {
   const mods = version.version.loader.mods
 
   const uploaded: string[] = []
+  const failures: string[] = []
   let failed = false
 
   const backend = new Backend(at)
@@ -84,7 +85,8 @@ export async function uploadMods(at: string, version: Version) {
     return {
       mods,
       success: false,
-      uploaded: 0
+      uploaded: 0,
+      failures: ['missing share code']
     }
   }
 
@@ -102,6 +104,7 @@ export async function uploadMods(at: string, version: Version) {
         const modPath = await resolveLocalFilePath(version, mod, file)
         if (!modPath) {
           failed = true
+          failures.push(`${file.filename}: file not found locally`)
           continue
         }
 
@@ -112,6 +115,7 @@ export async function uploadMods(at: string, version: Version) {
         )
         if (!url) {
           failed = true
+          failures.push(`${file.filename}: upload rejected`)
           continue
         }
 
@@ -121,6 +125,7 @@ export async function uploadMods(at: string, version: Version) {
       }
     } catch (err) {
       failed = true
+      failures.push(`${mod.title || mod.id}: ${(err as Error)?.message || String(err)}`)
       console.error('Error uploading mod:', err)
       continue
     }
@@ -129,6 +134,7 @@ export async function uploadMods(at: string, version: Version) {
   return {
     mods,
     success: !failed,
-    uploaded: uploaded.length
+    uploaded: uploaded.length,
+    failures
   }
 }

@@ -22,6 +22,7 @@ import FormData from "form-data";
 import axios from "axios";
 import fs from "fs-extra";
 import path from "path";
+import { reportFailure } from "../utilities/failureBus";
 import { IAuthlib } from "@/types/IAuthlib";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
 import { IGroup, IVoiceTokenResponse } from "@/types/Voice";
@@ -453,6 +454,7 @@ export class Backend extends BaseService {
         code: (err as any)?.code,
         message,
       });
+      reportFailure(err, { channel: "backend:uploadFile" });
       return null;
     }
   }
@@ -571,6 +573,7 @@ export class Backend extends BaseService {
         code: (err as any)?.code,
         message,
       });
+      reportFailure(err, { channel: "backend:uploadFileDirect" });
       return null;
     }
   }

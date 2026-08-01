@@ -210,6 +210,20 @@ function errorMessage(error: unknown): string {
   return String(error);
 }
 
+function serverMessage(error: unknown): string {
+  const data = (error as Record<string, any> | null)?.response?.data;
+  if (!data) return "";
+
+  const detail = typeof data === "string" ? data : (data.message ?? data.error);
+  const text = Array.isArray(detail)
+    ? detail.join("; ")
+    : typeof detail === "string"
+      ? detail
+      : "";
+
+  return text.startsWith("<") ? "" : text.trim().slice(0, 200);
+}
+
 function statusFromError(error: unknown, message: string): number | undefined {
   const anyError = error as Record<string, any> | null;
   const responseStatus = anyError?.response?.status ?? anyError?.status;
@@ -347,6 +361,10 @@ export function classifyError(
   const codeSuffix =
     status !== undefined && status >= 400 ? String(status) : CAUSE_CODES[cause];
 
+  const detail = serverMessage(error);
+  const detailedMessage =
+    detail && !message.includes(detail) ? `${message}: ${detail}` : message;
+
   return {
     code: `${SIDE_CODES[resolvedSide]}-${codeSuffix}`,
     side: resolvedSide,
@@ -355,7 +373,7 @@ export function classifyError(
     host,
     url: typeof url === "string" ? url : undefined,
     channel: context.channel,
-    message: message.slice(0, 500),
+    message: detailedMessage.slice(0, 500),
     time: Date.now(),
   };
 }
