@@ -11,11 +11,38 @@ import type {
   SkinsData
 } from '@/types/SkinManager'
 import type { ISkinData } from '@/types/Skin'
-import { handleSafe } from '../utilities/ipc'
+import { check, handleSafe } from '../utilities/ipc'
 import { assertReadablePath, assertWritablePath } from '../utilities/safePath'
 
+const SKIN_PLATFORMS = ['microsoft', 'discord', 'elyby'] as const
+type SkinPlatform = (typeof SKIN_PLATFORMS)[number]
+
+const SKINS_PROVIDER_TTL_MS = 5 * 60 * 1000
+
+function toSkinPlatform(value: unknown): SkinPlatform | null {
+  return SKIN_PLATFORMS.includes(value as SkinPlatform) ? (value as SkinPlatform) : null
+}
+
+const isPlatform = check.oneOf(...SKIN_PLATFORMS)
+const isId = check.string(256)
+const isAssetType = check.oneOf('skin', 'cape')
+const isProfileId = check.pattern(/^[A-Za-z0-9_-]{0,64}$/, 64)
+const isProfileNickname = check.pattern(/^[^\s/\\?#%&]{0,32}$/, 32)
+
 const skinsManagers = new Map<string, SkinsManager>()
-const getManagerKey = (platform: string, userId: string) => `${platform}_${userId}`
+const getManagerKey = (platform: SkinPlatform, userId: string) => `${platform}_${userId}`
+
+function getManager(platform: unknown, userId: string): SkinsManager | null {
+  const validPlatform = toSkinPlatform(platform)
+  if (!validPlatform) return null
+
+  return skinsManagers.get(getManagerKey(validPlatform, userId)) ?? null
+}
+
+const backendApi = axios.create({
+  baseURL: BACKEND_URL,
+  timeout: 30000
+})
 
 const emptySkinsData: SkinsData = {
   skins: { skins: [] },
@@ -34,23 +61,33 @@ const emptyCatalog: CatalogListResult = {
 }
 
 export function registerSkinsIpc() {
-  handleSafe<
-    SkinsData,
-    [string, 'microsoft' | 'discord', string, string, string]
-  >(
+  handleSafe<SkinsData, [string, SkinPlatform, string, string, string]>(
     'skins:load',
     emptySkinsData,
+    [check.string(4096), isPlatform, isId, isId, check.string(32768)],
     async (_, launcherPath, platform, userId, nickname, accessToken) => {
+      const validPlatform = toSkinPlatform(platform)
+      if (!validPlatform) return emptySkinsData
+
       assertWritablePath(launcherPath, 'skins:load')
-      const key = getManagerKey(platform, userId)
+      const key = getManagerKey(validPlatform, userId)
       let manager = skinsManagers.get(key)
 
       if (!manager) {
-        manager = new SkinsManager(launcherPath, platform, userId, nickname, accessToken)
+        manager = new SkinsManager(
+          launcherPath,
+          validPlatform,
+          userId,
+          nickname,
+          accessToken
+        )
         await manager.load()
         skinsManagers.set(key, manager)
       } else {
         manager.refreshSession(nickname, accessToken)
+        if (manager.isProviderSyncStale(SKINS_PROVIDER_TTL_MS)) {
+          await manager.syncFromProvider()
+        }
       }
 
       return manager.getData()
@@ -63,8 +100,9 @@ export function registerSkinsIpc() {
   >(
     'skins:selectSkin',
     null,
+    [isId, isPlatform, check.optional(isId)],
     async (_, userId, platform, skinId) => {
-      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      const manager = getManager(platform, userId)
       if (!manager) return null
 
       manager.selectedSkin = skinId
@@ -78,8 +116,9 @@ export function registerSkinsIpc() {
   >(
     'skins:setCape',
     null,
+    [isId, isPlatform, check.optional(isId)],
     async (_, userId, platform, capeId) => {
-      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      const manager = getManager(platform, userId)
       if (!manager) return null
 
       await manager.setCapeId(capeId)
@@ -94,8 +133,9 @@ export function registerSkinsIpc() {
   >(
     'skins:changeModel',
     null,
+    [isId, isPlatform, check.oneOf('classic', 'slim')],
     async (_, userId, platform, model) => {
-      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      const manager = getManager(platform, userId)
       if (!manager) return null
 
       await manager.changeModel(model)
@@ -107,10 +147,13 @@ export function registerSkinsIpc() {
   handleSafe<boolean, [string, string]>(
     'skins:clearManager',
     false,
+    [isId, isPlatform],
     async (_, userId, platform) => {
-      const key = getManagerKey(platform, userId)
-      const manager = skinsManagers.get(key)
-      if (!manager) return false
+      const validPlatform = toSkinPlatform(platform)
+      if (!validPlatform) return false
+
+      const key = getManagerKey(validPlatform, userId)
+      if (!skinsManagers.has(key)) return false
 
       skinsManagers.delete(key)
       return true
@@ -123,8 +166,9 @@ export function registerSkinsIpc() {
   >(
     'skins:uploadSkin',
     null,
+    [isId, isPlatform, isId],
     async (_, userId, platform, skinId) => {
-      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      const manager = getManager(platform, userId)
       if (!manager) return null
 
       await manager.uploadSkin(skinId)
@@ -138,8 +182,9 @@ export function registerSkinsIpc() {
   >(
     'skins:deleteSkin',
     null,
+    [isId, isPlatform, isId, isAssetType],
     async (_, userId, platform, skinId, type) => {
-      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      const manager = getManager(platform, userId)
       if (!manager) return null
 
       await manager.deleteSkin(skinId, type)
@@ -150,8 +195,9 @@ export function registerSkinsIpc() {
   handleSafe<SkinsData | null, [string, string]>(
     'skins:resetSkin',
     null,
+    [isId, isPlatform],
     async (_, userId, platform) => {
-      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      const manager = getManager(platform, userId)
       if (!manager) return null
 
       await manager.resetSkin()
@@ -162,8 +208,9 @@ export function registerSkinsIpc() {
   handleSafe<SkinsData | null, [string, string]>(
     'skins:regenerateSkin',
     null,
+    [isId, isPlatform],
     async (_, userId, platform) => {
-      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      const manager = getManager(platform, userId)
       if (!manager) return null
 
       await manager.regenerateSkin()
@@ -177,8 +224,9 @@ export function registerSkinsIpc() {
   >(
     'skins:importByUrl',
     null,
+    [isId, isPlatform, check.nonEmptyString(2048), isAssetType],
     async (_, userId, platform, url, type) => {
-      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      const manager = getManager(platform, userId)
       if (!manager) return null
 
       await manager.importByUrl(url, type)
@@ -192,8 +240,9 @@ export function registerSkinsIpc() {
   >(
     'skins:importByFile',
     null,
+    [isId, isPlatform, check.nonEmptyString(4096), isAssetType],
     async (_, userId, platform, filePath, type) => {
-      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      const manager = getManager(platform, userId)
       if (!manager) return null
 
       assertReadablePath(filePath, 'skins:importByFile')
@@ -208,8 +257,9 @@ export function registerSkinsIpc() {
   >(
     'skins:importByNickname',
     null,
+    [isId, isPlatform, check.nonEmptyString(64)],
     async (_, userId, platform, nickname) => {
-      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      const manager = getManager(platform, userId)
       if (!manager) return null
 
       await manager.importByNickname(nickname)
@@ -223,8 +273,9 @@ export function registerSkinsIpc() {
   >(
     'skins:renameSkin',
     null,
+    [isId, isPlatform, isId, check.string(256)],
     async (_, userId, platform, skinId, newName) => {
-      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      const manager = getManager(platform, userId)
       if (!manager) return null
 
       await manager.renameSkin(skinId, newName)
@@ -238,6 +289,7 @@ export function registerSkinsIpc() {
   >(
     'skin:get',
     null,
+    [isPlatform, isProfileId, isProfileNickname, check.optional(check.string(32768))],
     async (_, type, uuid, nickname, accessToken) => {
       return await getSkin(type, uuid, nickname, accessToken)
     }
@@ -247,7 +299,7 @@ export function registerSkinsIpc() {
     'skins:catalogList',
     emptyCatalog,
     async (_, params) => {
-      const response = await axios.get<CatalogListResult>(`${BACKEND_URL}/skins/catalog`, {
+      const response = await backendApi.get<CatalogListResult>(`/skins/catalog`, {
         params: {
           search: params?.search || undefined,
           tag: params?.tag || undefined,
@@ -266,7 +318,7 @@ export function registerSkinsIpc() {
     'skins:tagsSuggest',
     [],
     async (_, q, limit) => {
-      const response = await axios.get<string[]>(`${BACKEND_URL}/skins/tags`, {
+      const response = await backendApi.get<string[]>(`/skins/tags`, {
         params: { q: q || undefined, limit: limit || undefined }
       })
       return response.data
@@ -277,9 +329,7 @@ export function registerSkinsIpc() {
     'skins:catalogDownload',
     null,
     async (_, id) => {
-      const response = await axios.post<{ downloads: number }>(
-        `${BACKEND_URL}/skins/${id}/download`
-      )
+      const response = await backendApi.post<{ downloads: number }>(`/skins/${id}/download`)
       return response.data
     }
   )
@@ -289,9 +339,7 @@ export function registerSkinsIpc() {
     null,
     async (_, id) => {
       try {
-        const response = await axios.get<ICatalogSkin>(
-          `${BACKEND_URL}/skins/catalog/${id}`
-        )
+        const response = await backendApi.get<ICatalogSkin>(`/skins/catalog/${id}`)
         return response.data
       } catch {
         return null
@@ -313,8 +361,17 @@ export function registerSkinsIpc() {
   >(
     'skins:publishCommunity',
     { ok: false, error: 'failed' },
+    [
+      isId,
+      isPlatform,
+      isId,
+      check.nonEmptyString(32768),
+      check.optional(check.string(256)),
+      check.optional(check.oneOf('skin', 'cape', 'pack')),
+      check.optional(check.string(512))
+    ],
     async (_, userId, platform, skinId, backendToken, name, type, tags) => {
-      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      const manager = getManager(platform, userId)
       if (!manager) return { ok: false, error: 'no_manager' }
 
       try {
@@ -347,6 +404,15 @@ export function registerSkinsIpc() {
           }
         }
         if (httpStatus === 400) return { ok: false, error: 'limit' }
+
+        const code = error instanceof Error ? error.message : ''
+        if (
+          code === 'community_publish_no_token' ||
+          code === 'community_publish_unsupported_env'
+        ) {
+          return { ok: false, error: code }
+        }
+
         return { ok: false, error: 'failed' }
       }
     }
@@ -356,8 +422,7 @@ export function registerSkinsIpc() {
     'skins:communityMine',
     { items: [] },
     async (_, backendToken) => {
-      const response = await axios.get<MyCommunityResult>(
-        `${BACKEND_URL}/skins/community/mine`,
+      const response = await backendApi.get<MyCommunityResult>(`/skins/community/mine`,
         { headers: { Authorization: `Bearer ${backendToken}` } }
       )
       return response.data
@@ -368,7 +433,7 @@ export function registerSkinsIpc() {
     'skins:communityDelete',
     { ok: false },
     async (_, backendToken, id) => {
-      await axios.delete(`${BACKEND_URL}/skins/community/${id}`, {
+      await backendApi.delete(`/skins/community/${id}`, {
         headers: { Authorization: `Bearer ${backendToken}` }
       })
       return { ok: true }
@@ -378,8 +443,9 @@ export function registerSkinsIpc() {
   handleSafe<{ ok: boolean }, [string, string, string, string]>(
     'skins:importPack',
     { ok: false },
+    [isId, isPlatform, check.nonEmptyString(2048), check.string(2048)],
     async (_, userId, platform, skinUrl, capeUrl) => {
-      const manager = skinsManagers.get(getManagerKey(platform, userId))
+      const manager = getManager(platform, userId)
       if (!manager) return { ok: false }
 
       await manager.importPack(skinUrl, capeUrl)

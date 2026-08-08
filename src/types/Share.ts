@@ -27,6 +27,7 @@ export type ShareErrorCode =
   | 'tunnel_auth_failed'
   | 'tunnel_disconnected'
   | 'tunnel_protocol_error'
+  | 'tunnel_version_unsupported'
   | 'join_share_not_found'
   | 'invalid_response'
   | 'unknown'
@@ -159,4 +160,6 @@ export interface SharePeerInfo {
   peerIp: string
   peerPort: number
   connectedAt: string
+  guestUserId?: string
+  guestUsername?: string
 }

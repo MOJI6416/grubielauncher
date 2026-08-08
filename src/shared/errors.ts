@@ -40,6 +40,8 @@ export type FailureCause =
   | "fileBusy"
   | "fileMissing"
   | "javaMissing"
+  | "pathPolicy"
+  | "invalidArgument"
   | "cancelled"
   | "unknown";
 
@@ -104,6 +106,8 @@ const CAUSE_CODES: Record<FailureCause, string> = {
   fileBusy: "BUSY",
   fileMissing: "MISSING",
   javaMissing: "JAVA",
+  pathPolicy: "PATHPOLICY",
+  invalidArgument: "BADARG",
   cancelled: "CANCELLED",
   unknown: "UNKNOWN",
 };

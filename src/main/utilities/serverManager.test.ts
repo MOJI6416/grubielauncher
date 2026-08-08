@@ -7,12 +7,19 @@ vi.mock("electron", () => ({
   app: {
     getPath: vi.fn(() => process.env.TEMP || "C:\\Temp"),
   },
+  BrowserWindow: {
+    getAllWindows: vi.fn(() => []),
+  },
 }));
 
 import {
   AIKAR_FLAGS,
+  getServerSettings,
+  isServerRunning,
   setServerAikarFlags,
+  setServerRunning,
   syncServerExtraFiles,
+  updateServerProperty,
 } from "./serverManager";
 
 const SYNC_DIRS = ["config", "defaultconfigs", "kubejs", "scripts"];
@@ -142,6 +149,107 @@ describe("syncServerExtraFiles", () => {
     ).resolves.toBe("existing-world");
   });
 
+  it("reports a copy failure instead of swallowing it", async () => {
+    const versionPath = await makeTempRoot();
+    const serverPath = path.join(versionPath, "server");
+    await fs.ensureDir(serverPath);
+
+    await fs.outputFile(path.join(versionPath, "config", "mod.toml"), "a=1");
+    await fs.outputFile(path.join(versionPath, "kubejs", "s.js"), "//");
+
+    const copy = vi
+      .spyOn(fs, "copy")
+      .mockImplementation(async (_source: any, destination: any) => {
+        if (String(destination).endsWith("config")) {
+          throw new Error("EBUSY: resource busy");
+        }
+      });
+
+    try {
+      const result = await syncServerExtraFiles(
+        versionPath,
+        serverPath,
+        SYNC_DIRS,
+      );
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].entry).toBe("config");
+      expect(result.errors[0].message).toContain("EBUSY");
+      expect(result.copied).toContain("kubejs");
+    } finally {
+      copy.mockRestore();
+    }
+  });
+
+  it("reports that the server is running while it syncs", async () => {
+    const versionPath = await makeTempRoot();
+    const serverPath = path.join(versionPath, "server");
+    await fs.ensureDir(serverPath);
+    await fs.outputFile(path.join(versionPath, "config", "mod.toml"), "a=1");
+
+    setServerRunning(serverPath, true);
+    try {
+      const result = await syncServerExtraFiles(
+        versionPath,
+        serverPath,
+        SYNC_DIRS,
+      );
+
+      expect(result.serverRunning).toBe(true);
+      expect(result.copied).toContain("config");
+    } finally {
+      setServerRunning(serverPath, false);
+    }
+
+    expect(await isServerRunning(serverPath)).toBe(false);
+  });
+
+  it("never takes start scripts from server-overrides", async () => {
+    const versionPath = await makeTempRoot();
+    const serverPath = path.join(versionPath, "server");
+    await fs.ensureDir(serverPath);
+
+    const stash = path.join(versionPath, "storage", "server-overrides");
+    await fs.outputFile(path.join(stash, "run.bat"), "evil.exe");
+    await fs.outputFile(path.join(stash, "run.sh"), "evil");
+    await fs.outputFile(path.join(stash, "user_jvm_args.txt"), "-XX:evil");
+
+    await syncServerExtraFiles(versionPath, serverPath, SYNC_DIRS);
+
+    for (const name of ["run.bat", "run.sh", "user_jvm_args.txt"]) {
+      await expect(fs.pathExists(path.join(serverPath, name))).resolves.toBe(
+        false,
+      );
+    }
+  });
+
+  it("never takes the loader libraries from server-overrides", async () => {
+    const versionPath = await makeTempRoot();
+    const serverPath = path.join(versionPath, "server");
+    const argfile = path.join(
+      "libraries",
+      "net",
+      "neoforged",
+      "neoforge",
+      "21.1.235",
+      "win_args.txt",
+    );
+
+    await fs.outputFile(path.join(serverPath, argfile), "-DlibraryDirectory=libraries");
+
+    const stash = path.join(versionPath, "storage", "server-overrides");
+    await fs.outputFile(
+      path.join(stash, argfile),
+      "-javaagent:evil.jar\n-XX:VMOptionsFile=evil.txt",
+    );
+
+    await syncServerExtraFiles(versionPath, serverPath, SYNC_DIRS);
+
+    await expect(
+      fs.readFile(path.join(serverPath, argfile), "utf-8"),
+    ).resolves.toBe("-DlibraryDirectory=libraries");
+  });
+
   it("lays down server-overrides protected files on first install", async () => {
     const versionPath = await makeTempRoot();
     const serverPath = path.join(versionPath, "server");
@@ -207,5 +315,56 @@ describe("setServerAikarFlags", () => {
     expect(
       await fs.readFile(path.join(serverPath, "run.bat"), "utf-8"),
     ).toBe(content);
+  });
+});
+
+describe("server.properties escaping", () => {
+  const baseSettings = {
+    maxPlayers: 20,
+    gameMode: "survival",
+    difficulty: "normal",
+    whitelist: false,
+    onlineMode: true,
+    pvp: true,
+    enableCommandBlock: false,
+    allowFlight: false,
+    spawnAnimals: true,
+    spawnMonsters: true,
+    spawnNpcs: true,
+    allowNether: true,
+    forceGamemode: false,
+    spawnProtection: 16,
+    requireResourcePack: false,
+    resourcePack: "",
+    resourcePackPrompt: "",
+    motd: "",
+    serverIp: "",
+    serverPort: 25565,
+  };
+
+  it("round-trips a backslash in motd instead of eating the next line", async () => {
+    const root = await makeTempRoot();
+    const filePath = path.join(root, "server.properties");
+
+    await updateServerProperty(filePath, {
+      ...baseSettings,
+      motd: String.raw`Welcome to C:\servers\main`,
+    });
+
+    const raw = await fs.readFile(filePath, "utf-8");
+    expect(raw).toContain("motd=Welcome to C:\\\\servers\\\\main");
+    expect(raw.split(/\r?\n/).filter((line) => line.startsWith("motd=")).length).toBe(1);
+
+    const settings = await getServerSettings(filePath);
+    expect(settings.motd).toBe(String.raw`Welcome to C:\servers\main`);
+  });
+
+  it("decodes unicode escapes written by the server itself", async () => {
+    const root = await makeTempRoot();
+    const filePath = path.join(root, "server.properties");
+    await fs.outputFile(filePath, "motd=\\u00A7aGreen\nmax-players=20\n");
+
+    const settings = await getServerSettings(filePath);
+    expect(settings.motd).toBe("\u00A7aGreen");
   });
 });

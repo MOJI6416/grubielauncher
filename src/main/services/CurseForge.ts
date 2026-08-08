@@ -29,6 +29,18 @@ export class CurseForge {
     return chunks
   }
 
+  private static async retryOnce<T>(request: () => Promise<T>): Promise<T> {
+    try {
+      return await request()
+    } catch (error) {
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined
+      if (status !== undefined && status < 500 && status !== 429) throw error
+
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      return await request()
+    }
+  }
+
   private static logAxiosError(prefix: string, error: unknown) {
     reportFailure(error, { channel: 'service:curseforge' })
     if (axios.isAxiosError(error)) {
@@ -141,7 +153,7 @@ export class CurseForge {
     try {
       const responses = await Promise.all(
         this.chunk(fileIds, this.BATCH_LIMIT).map((batch) =>
-          this.api.post<IFile[]>(`/curseforge/files`, { fileIds: batch })
+          this.retryOnce(() => this.api.post<IFile[]>(`/curseforge/files`, { fileIds: batch }))
         )
       )
       return responses.flatMap((response) => response.data)
@@ -155,7 +167,7 @@ export class CurseForge {
     try {
       const responses = await Promise.all(
         this.chunk(modIds, this.BATCH_LIMIT).map((batch) =>
-          this.api.post<IMod[]>(`/curseforge/mods`, { modIds: batch })
+          this.retryOnce(() => this.api.post<IMod[]>(`/curseforge/mods`, { modIds: batch }))
         )
       )
       return responses.flatMap((response) => response.data)

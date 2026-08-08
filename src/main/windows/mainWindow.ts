@@ -11,6 +11,40 @@ export let mainWindow: BrowserWindow | null = null;
 const MIN_WIDTH = 1280;
 const MIN_HEIGHT = 720;
 
+const AUTO_OPEN_HOST_SUFFIXES = [
+  "grubielauncher.com",
+  "modrinth.com",
+  "curseforge.com",
+  "github.com",
+  "discord.com",
+  "discord.gg",
+  "minecraft.net",
+  "mojang.com",
+  "ely.by",
+  "fabricmc.net",
+  "neoforged.net",
+  "minecraftforge.net",
+  "quiltmc.org",
+];
+
+function openIfTrusted(url: string): void {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return;
+
+    const host = parsed.hostname.toLowerCase();
+    const trusted = AUTO_OPEN_HOST_SUFFIXES.some(
+      (suffix) => host === suffix || host.endsWith(`.${suffix}`),
+    );
+    if (!trusted) {
+      console.warn(`[Navigation] blocked auto-open for ${host}`);
+      return;
+    }
+
+    void shell.openExternal(parsed.toString());
+  } catch {}
+}
+
 let pendingShow = true;
 let isReadyToShow = false;
 let shouldMaximizeOnShow = false;
@@ -154,12 +188,7 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): void {
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    try {
-      const url = new URL(details.url);
-      if (url.protocol === "http:" || url.protocol === "https:") {
-        shell.openExternal(details.url);
-      }
-    } catch {}
+    openIfTrusted(details.url);
     return { action: "deny" };
   });
 
@@ -173,12 +202,7 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): void {
     if (isAllowed) return;
 
     event.preventDefault();
-    try {
-      const parsed = new URL(url);
-      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-        void shell.openExternal(url);
-      }
-    } catch {}
+    openIfTrusted(url);
   };
 
   mainWindow.webContents.on("will-navigate", blockExternalNavigation);

@@ -64,3 +64,6 @@ linux:
   maintainer: grubielauncher.com
   category: Utility
   artifactName: ${name}-${version}.${ext}
+  desktop:
+    entry:
+      StartupWMClass: grubie-launcher

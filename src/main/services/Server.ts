@@ -12,6 +12,7 @@ import axios from 'axios'
 import { Loader } from '@/types/Loader'
 import { LoaderVersion } from '@/types/VersionsService'
 import { BACKEND_URL } from '@/shared/config'
+import { isTrustedServerCoreUrl } from '../utilities/trustedHosts'
 
 export class Server {
   private static api = axios.create({
@@ -20,6 +21,14 @@ export class Server {
 
   private static isStableVersion(version: string | undefined): boolean {
     return !!version && !/-(?:beta|pre|rc|alpha)/i.test(version)
+  }
+
+  private static isAllowedOption(option: IServerOption | null): option is IServerOption {
+    if (!option) return false
+    if (isTrustedServerCoreUrl(option.url)) return true
+
+    console.error(`Refused untrusted server core url: ${option.url}`)
+    return false
   }
 
   private static checkVersion(
@@ -54,29 +63,29 @@ export class Server {
 
         if (vanillaCores) {
           const vanilla = this.checkVersion(version, vanillaCores.vanilla, ServerCore.VANILLA)
-          if (vanilla) cores.push(vanilla)
+          if (this.isAllowedOption(vanilla)) cores.push(vanilla)
 
           const spigot = this.checkVersion(version, vanillaCores.spigot, ServerCore.SPIGOT)
-          if (spigot) cores.push(spigot)
+          if (this.isAllowedOption(spigot)) cores.push(spigot)
 
           const bukkit = this.checkVersion(version, vanillaCores.bukkit, ServerCore.BUKKIT)
-          if (bukkit) cores.push(bukkit)
+          if (this.isAllowedOption(bukkit)) cores.push(bukkit)
         }
 
-        if (paper) cores.push(paper)
-        if (purpur) cores.push(purpur)
+        if (this.isAllowedOption(paper)) cores.push(paper)
+        if (this.isAllowedOption(purpur)) cores.push(purpur)
       } else if (loader == 'fabric') {
         const fabric = await this.getFabric(version)
-        if (fabric) return [fabric]
+        if (this.isAllowedOption(fabric)) return [fabric]
       } else if (loader == 'quilt') {
         const quilt = await this.getQuilt(version)
-        if (quilt) return [quilt]
+        if (this.isAllowedOption(quilt)) return [quilt]
       } else if (loader == 'forge') {
         const forge = await this.getForge(version)
-        if (forge) return [forge]
+        if (this.isAllowedOption(forge)) return [forge]
       } else if (loader == 'neoforge') {
         const neoForge = await this.getNeoForge(version)
-        if (neoForge) return [neoForge]
+        if (this.isAllowedOption(neoForge)) return [neoForge]
       }
 
       return cores

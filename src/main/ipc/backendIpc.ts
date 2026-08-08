@@ -3,21 +3,38 @@ import { Backend } from "../services/Backend";
 import { IFriendSettingsUpdate, IUpdateUser } from "@/types/IUser";
 import { IModpack, IModpackUpdate } from "@/types/Backend";
 import { VersionsService } from "../services/Versions";
-import { handleSafe } from "../utilities/ipc";
+import { check, handleSafe } from "../utilities/ipc";
 import { checkBackendHealth } from "../utilities/connectivityTest";
 import { assertReadablePath } from "../utilities/safePath";
+import { AI_PROMPT_MAX_CHARS } from "@/shared/config";
+
+const isToken = check.string(32768);
+const isId = check.nonEmptyString(256);
+const isCode = check.nonEmptyString(512);
+const isName = check.nonEmptyString(256);
+const isPayload = check.object();
+const isPath = check.nonEmptyString(4096);
+const isLocale = check.string(16);
+const isLoader = check.oneOf(
+  "vanilla",
+  "forge",
+  "neoforge",
+  "fabric",
+  "quilt",
+);
 
 export function registerBackendIpc() {
   handleSafe(
     "backend:getModpack",
     { status: "error", data: null as any },
+    [isToken, isCode],
     async (_, at: string, code: string) => {
       const backend = new Backend(at);
       return await backend.getModpack(code);
     },
   );
 
-  handleSafe("backend:getOwnModpacks", [], async (_, at: string) => {
+  handleSafe("backend:getOwnModpacks", [], [isToken], async (_, at: string) => {
     const backend = new Backend(at);
     return await backend.getOwnModpacks();
   });
@@ -25,6 +42,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:shareModpack",
     null,
+    [isToken, isPayload],
     async (_, at: string, modpack: { conf: IModpack["conf"] }) => {
       const backend = new Backend(at);
       return await backend.shareModpack(modpack);
@@ -34,6 +52,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:updateModpack",
     false,
+    [isToken, isCode, isPayload],
     async (_, at: string, shareCode: string, update: IModpackUpdate) => {
       const backend = new Backend(at);
       await backend.updateModpack(shareCode, update);
@@ -44,6 +63,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:deleteModpack",
     false,
+    [isToken, isCode],
     async (_, at: string, shareCode: string) => {
       const backend = new Backend(at);
       return await backend.deleteModpack(shareCode);
@@ -53,27 +73,34 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:updateUser",
     null,
+    [isToken, isId, isPayload],
     async (_, at: string, id: string, user: IUpdateUser) => {
       const backend = new Backend(at);
       return await backend.updateUser(id, user);
     },
   );
 
-  handleSafe("backend:getUser", null, async (_, at: string, id: string) => {
-    const backend = new Backend(at);
-    return await backend.getUser(id);
-  });
+  handleSafe(
+    "backend:getUser",
+    null,
+    [isToken, isId],
+    async (_, at: string, id: string) => {
+      const backend = new Backend(at);
+      return await backend.getUser(id);
+    },
+  );
 
   handleSafe(
     "backend:getRemoteStats",
     { worlds: [] },
+    [isToken],
     async (_, at: string) => {
       const backend = new Backend(at);
       return await backend.getRemoteWorldStats();
     },
   );
 
-  handleSafe("backend:groupsList", null, async (_, at: string) => {
+  handleSafe("backend:groupsList", null, [isToken], async (_, at: string) => {
     const backend = new Backend(at);
     return await backend.groupsList();
   });
@@ -81,6 +108,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:groupCreate",
     null,
+    [isToken, isName],
     async (_, at: string, name: string) => {
       const backend = new Backend(at);
       return await backend.groupCreate(name);
@@ -90,6 +118,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:groupRename",
     null,
+    [isToken, isId, isName],
     async (_, at: string, groupId: string, name: string) => {
       const backend = new Backend(at);
       return await backend.groupRename(groupId, name);
@@ -99,6 +128,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:groupDelete",
     false,
+    [isToken, isId],
     async (_, at: string, groupId: string) => {
       const backend = new Backend(at);
       return await backend.groupDelete(groupId);
@@ -108,6 +138,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:groupJoinVoice",
     null,
+    [isToken, isId],
     async (_, at: string, groupId: string) => {
       const backend = new Backend(at);
       return await backend.groupJoinVoice(groupId);
@@ -117,6 +148,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:groupJoinByCode",
     null,
+    [isToken, isCode],
     async (_, at: string, code: string) => {
       const backend = new Backend(at);
       return await backend.groupJoinByCode(code);
@@ -126,6 +158,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:groupLeave",
     false,
+    [isToken, isId],
     async (_, at: string, groupId: string) => {
       const backend = new Backend(at);
       return await backend.groupLeave(groupId);
@@ -135,6 +168,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:groupKickMember",
     false,
+    [isToken, isId, isId],
     async (_, at: string, groupId: string, memberId: string) => {
       const backend = new Backend(at);
       return await backend.groupKickMember(groupId, memberId);
@@ -144,6 +178,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:groupBanMember",
     false,
+    [isToken, isId, isId],
     async (_, at: string, groupId: string, memberId: string) => {
       const backend = new Backend(at);
       return await backend.groupBanMember(groupId, memberId);
@@ -153,6 +188,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:groupUnbanMember",
     false,
+    [isToken, isId, isId],
     async (_, at: string, groupId: string, memberId: string) => {
       const backend = new Backend(at);
       return await backend.groupUnbanMember(groupId, memberId);
@@ -162,6 +198,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:groupTransferOwner",
     false,
+    [isToken, isId, isId],
     async (_, at: string, groupId: string, memberId: string) => {
       const backend = new Backend(at);
       return await backend.groupTransferOwner(groupId, memberId);
@@ -171,6 +208,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:groupResetCode",
     null,
+    [isToken, isId],
     async (_, at: string, groupId: string) => {
       const backend = new Backend(at);
       return await backend.groupResetCode(groupId);
@@ -180,6 +218,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:resetFriendCode",
     null,
+    [isToken, isId],
     async (_, at: string, id: string) => {
       const backend = new Backend(at);
       return await backend.resetFriendCode(id);
@@ -189,6 +228,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:updateFriendSettings",
     null,
+    [isToken, isId, isPayload],
     async (_, at: string, id: string, settings: IFriendSettingsUpdate) => {
       const backend = new Backend(at);
       return await backend.updateFriendSettings(id, settings);
@@ -198,6 +238,14 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:uploadFileFromPath",
     null,
+    [
+      isToken,
+      isPath,
+      check.optional(check.string(256)),
+      check.optional(check.string(256)),
+      check.optional(check.string(256)),
+      check.optional(check.boolean()),
+    ],
     async (
       event: IpcMainInvokeEvent,
       at: string,
@@ -231,6 +279,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:deleteFile",
     false,
+    [isToken, check.nonEmptyString(1024), check.optional(check.boolean())],
     async (_, at: string, key: string, isDirectory = false) => {
       const backend = new Backend(at);
       await backend.deleteFile(key, isDirectory);
@@ -241,6 +290,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:modpackDownloaded",
     false,
+    [isToken, isCode],
     async (_, at: string, shareCode: string) => {
       const backend = new Backend(at);
       return await backend.modpackDownloaded(shareCode);
@@ -255,6 +305,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:getWhatsNew",
     null,
+    [check.string(64), isLocale],
     async (_, version: string, locale: string) => {
       const backend = new Backend();
       return await backend.getWhatsNew(version, locale);
@@ -264,6 +315,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:getSponsoredNewsAd",
     null,
+    [isLocale, check.optional(check.arrayOf(isId, 1000))],
     async (_, locale: string, hiddenIds: string[]) => {
       const backend = new Backend();
       return await backend.getSponsoredNewsAd(locale, hiddenIds);
@@ -273,6 +325,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:recordSponsoredAdImpression",
     false,
+    [isId],
     async (_, id: string) => {
       const backend = new Backend();
       await backend.recordSponsoredAdImpression(id);
@@ -280,15 +333,21 @@ export function registerBackendIpc() {
     },
   );
 
-  handleSafe("backend:recordSponsoredAdClick", false, async (_, id: string) => {
-    const backend = new Backend();
-    await backend.recordSponsoredAdClick(id);
-    return true;
-  });
+  handleSafe(
+    "backend:recordSponsoredAdClick",
+    false,
+    [isId],
+    async (_, id: string) => {
+      const backend = new Backend();
+      await backend.recordSponsoredAdClick(id);
+      return true;
+    },
+  );
 
   handleSafe(
     "backend:login",
     null,
+    [isToken, isId, isPayload],
     async (
       _,
       at: string,
@@ -307,6 +366,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:approveSiteLogin",
     false,
+    [isToken, isId],
     async (_, at: string, requestId: string) => {
       const backend = new Backend(at);
       return await backend.approveSiteLogin(requestId);
@@ -316,25 +376,37 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:discordLink",
     null,
+    [isToken, isCode],
     async (_, at: string, code: string) => {
       const backend = new Backend(at);
       return await backend.discordLink(code);
     },
   );
 
-  handleSafe("backend:discordUnlink", null, async (_, at: string) => {
-    const backend = new Backend(at);
-    return await backend.discordUnlink();
-  });
+  handleSafe(
+    "backend:discordUnlink",
+    null,
+    [isToken],
+    async (_, at: string) => {
+      const backend = new Backend(at);
+      return await backend.discordUnlink();
+    },
+  );
 
-  handleSafe("backend:telegramLinkStart", null, async (_, at: string) => {
-    const backend = new Backend(at);
-    return await backend.telegramLinkStart();
-  });
+  handleSafe(
+    "backend:telegramLinkStart",
+    null,
+    [isToken],
+    async (_, at: string) => {
+      const backend = new Backend(at);
+      return await backend.telegramLinkStart();
+    },
+  );
 
   handleSafe(
     "backend:socialLink",
     null,
+    [isToken, check.nonEmptyString(32), isCode],
     async (_, at: string, provider: string, code: string) => {
       const backend = new Backend(at);
       return await backend.socialLink(provider, code);
@@ -344,20 +416,27 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:socialUnlink",
     null,
+    [isToken, check.nonEmptyString(32)],
     async (_, at: string, provider: string) => {
       const backend = new Backend(at);
       return await backend.socialUnlink(provider);
     },
   );
 
-  handleSafe("backend:getSkin", null, async (_, at: string, uuid: string) => {
-    const backend = new Backend(at);
-    return await backend.getSkin(uuid);
-  });
+  handleSafe(
+    "backend:getSkin",
+    null,
+    [isToken, isId],
+    async (_, at: string, uuid: string) => {
+      const backend = new Backend(at);
+      return await backend.getSkin(uuid);
+    },
+  );
 
   handleSafe(
     "backend:discordAuthenticated",
     false,
+    [isToken, isId],
     async (_, at: string, userId: string) => {
       const backend = new Backend(at);
       return await backend.discordAuthenticated(userId);
@@ -367,6 +446,7 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:aiComplete",
     null,
+    [isToken, check.nonEmptyString(AI_PROMPT_MAX_CHARS)],
     async (_, at: string, prompt: string) => {
       const backend = new Backend(at);
       return await backend.aiComplete(prompt);
@@ -376,6 +456,7 @@ export function registerBackendIpc() {
   handleSafe(
     "versions:getList",
     [],
+    [isLoader, check.optional(check.boolean())],
     async (
       _,
       loader: "vanilla" | "forge" | "neoforge" | "fabric" | "quilt",
@@ -388,6 +469,7 @@ export function registerBackendIpc() {
   handleSafe(
     "versions:getLoaderVersions",
     [],
+    [isLoader, check.nonEmptyString(64)],
     async (
       _,
       loader: "forge" | "neoforge" | "fabric" | "quilt",

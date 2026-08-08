@@ -46,12 +46,15 @@ describe("install cleanup helpers", () => {
     expect(removable).toEqual([uniqueLibrary, uniqueAsset]);
   });
 
-  it("deduplicates cleanup candidates case-insensitively", () => {
+  it("deduplicates cleanup candidates only where the filesystem is case-insensitive", () => {
     const filePath = path.resolve("minecraft", "libraries", "lib.jar");
+    const shouted = filePath.toUpperCase();
+    const caseInsensitive =
+      process.platform === "win32" || process.platform === "darwin";
 
-    expect(
-      getUnusedInstallResourcePaths([filePath, filePath.toUpperCase()], []),
-    ).toEqual([filePath]);
+    expect(getUnusedInstallResourcePaths([filePath, shouted], [])).toEqual(
+      caseInsensitive ? [filePath] : [filePath, shouted],
+    );
   });
 
   it("accepts already-normalized shared resource paths", () => {

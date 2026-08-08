@@ -1,8 +1,13 @@
-import { useAtom } from "jotai";
+import { useState } from "react";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
-import { Copy, Trash2, TriangleAlert } from "lucide-react";
+import { Copy, Sparkles, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
-import { errorLogAtom } from "@renderer/stores/atoms";
+import {
+  aiCrashOpenKeyAtom,
+  aiCrashesAtom,
+  errorLogAtom,
+} from "@renderer/stores/atoms";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +16,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Empty,
@@ -24,6 +38,9 @@ const api = window.api;
 
 export function ErrorLog({ onClose }: { onClose: () => void }) {
   const [errorLog, setErrorLog] = useAtom(errorLogAtom);
+  const aiCrashes = useAtomValue(aiCrashesAtom);
+  const setAiCrashOpenKey = useSetAtom(aiCrashOpenKeyAtom);
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const { t, i18n } = useTranslation();
 
   const formatTime = (time: number) =>
@@ -97,6 +114,27 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
                         {entry.details}
                       </p>
                     )}
+                    {entry.crashKey && aiCrashes[entry.crashKey] && (
+                      <Button
+                        size="sm"
+                        variant={
+                          aiCrashes[entry.crashKey].analysis
+                            ? "secondary"
+                            : "default"
+                        }
+                        className="mt-2"
+                        onClick={() => {
+                          const key = entry.crashKey!;
+                          onClose();
+                          setTimeout(() => setAiCrashOpenKey(key), 0);
+                        }}
+                      >
+                        <Sparkles className="size-3.5" />
+                        {aiCrashes[entry.crashKey].analysis
+                          ? t("aiCrash.showResult")
+                          : t("aiCrash.analyzeAction")}
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -108,13 +146,40 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
           <Button
             variant="outline"
             disabled={errorLog.length === 0}
-            onClick={() => setErrorLog([])}
+            onClick={() => setIsClearConfirmOpen(true)}
           >
             <Trash2 className="size-4" />
             {t("errorLog.clear")}
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog
+        open={isClearConfirmOpen}
+        onOpenChange={setIsClearConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("errorLog.clear")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("errorLog.clearConfirm")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setErrorLog([]);
+                setIsClearConfirmOpen(false);
+              }}
+            >
+              <Trash2 className="size-4" />
+              {t("errorLog.clear")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

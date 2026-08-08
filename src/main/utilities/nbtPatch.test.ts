@@ -86,4 +86,15 @@ describe("patchNbtString", () => {
     expect(patchNbtString(makeLevelDat("x"), "NoSuchTag", "y")).toBeNull();
     expect(patchNbtString(Buffer.alloc(4), "LevelName", "y")).toBeNull();
   });
+
+  it("refuses to patch when the tag signature appears more than once", () => {
+    const decoy = stringTag("LevelName", "decoy");
+    const ambiguous = Buffer.concat([
+      makeLevelDat("Real world"),
+      decoy,
+    ]);
+
+    expect(patchNbtString(ambiguous, "LevelName", "Renamed")).toBeNull();
+    expect(readNbtString(ambiguous, "LevelName")).toBeNull();
+  });
 });

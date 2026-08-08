@@ -107,9 +107,16 @@ export function showFailureToast(
     channels?: string[];
     toastId?: string | number;
     context?: FailureContext;
-    fallbackDescription?: string;
+    fallbackDescription?:
+      | string
+      | ((info: FailureInfo | null) => string | undefined);
   },
 ): FailureInfo | null {
+  const resolveFallback = (info: FailureInfo | null) =>
+    typeof options?.fallbackDescription === "function"
+      ? options.fallbackDescription(info)
+      : options?.fallbackDescription;
+
   let info = isRealError(error)
     ? classifyError(error, options?.context ?? {})
     : consumeRecentFailure({ channels: options?.channels });
@@ -124,7 +131,7 @@ export function showFailureToast(
   if (!info) {
     showErrorToast(
       title,
-      options?.fallbackDescription,
+      resolveFallback(null),
       i18n.t("common.copy"),
       options?.toastId,
     );
@@ -132,10 +139,8 @@ export function showFailureToast(
   }
 
   const described = describeFailure(info);
-  const text =
-    info.cause === "unknown" && options?.fallbackDescription
-      ? options.fallbackDescription
-      : described.text;
+  const fallback = info.cause === "unknown" ? resolveFallback(info) : undefined;
+  const text = fallback || described.text;
 
   showErrorToast(
     title,

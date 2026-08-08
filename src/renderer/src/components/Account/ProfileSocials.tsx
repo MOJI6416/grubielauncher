@@ -359,14 +359,14 @@ export function ProfileSocials({
                         (row.url ? (
                           <button
                             type="button"
-                            className="inline-flex min-w-0 items-center gap-1 truncate text-green-500 hover:underline"
+                            className="inline-flex min-w-0 items-center gap-1 truncate text-success hover:underline"
                             onClick={() => openExternal(row.url!)}
                           >
                             <Check className="size-3.5 shrink-0" />
                             <span className="truncate">{row.handle}</span>
                           </button>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-green-500">
+                          <span className="inline-flex items-center gap-1 text-success">
                             <Check className="size-3.5" />
                             {row.handle}
                           </span>

@@ -33,12 +33,14 @@ import {
   cacheModIcon,
   migrateInlineModIcons,
   cfModpackToModpack,
+  checkLocalMod,
   checkModpack,
   classIdToProjectType,
   compareMods,
   computeServerModExclusions,
   getModDescriptor,
   getModEnvironment,
+  sortVersionsByDate,
 } from "./modManager";
 
 describe("buildForgeCdnUrls", () => {
@@ -152,6 +154,47 @@ function createFile(id: number, overrides: Record<string, unknown> = {}) {
     ...overrides,
   } as any;
 }
+
+describe("sortVersionsByDate", () => {
+  const version = (id: string, datePublished?: string) =>
+    ({
+      id,
+      name: id,
+      dependencies: [],
+      downloads: 0,
+      files: [],
+      datePublished,
+    }) as any;
+
+  it("puts the newest published version first", () => {
+    const sorted = sortVersionsByDate([
+      version("old", "2024-01-01T00:00:00Z"),
+      version("new", "2025-06-01T00:00:00Z"),
+      version("middle", "2024-09-01T00:00:00Z"),
+    ]);
+
+    expect(sorted.map((v) => v.id)).toEqual(["new", "middle", "old"]);
+  });
+
+  it("keeps the provider order for versions without a date", () => {
+    const sorted = sortVersionsByDate([
+      version("a"),
+      version("b"),
+      version("c"),
+    ]);
+
+    expect(sorted.map((v) => v.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("keeps dated versions ahead of undated ones", () => {
+    const sorted = sortVersionsByDate([
+      version("undated"),
+      version("dated", "2024-01-01T00:00:00Z"),
+    ]);
+
+    expect(sorted.map((v) => v.id)).toEqual(["dated", "undated"]);
+  });
+});
 
 describe("cfModpackToModpack", () => {
   beforeEach(() => {
@@ -267,6 +310,32 @@ describe("compareMods", () => {
     } as any;
 
     expect(compareMods([sharedMod, localPlugin], [sharedMod])).toBe(true);
+  });
+
+  it("treats turning a mod off as a change worth saving", () => {
+    const enabled = {
+      id: "mod-a",
+      title: "Mod A",
+      provider: Provider.MODRINTH,
+      projectType: ProjectType.MOD,
+      version: {
+        id: "version-a",
+        dependencies: [],
+        files: [{ filename: "mod-a.jar", sha1: "sha1-a", size: 100 }],
+      },
+    } as any;
+    const disabled = {
+      ...enabled,
+      version: {
+        ...enabled.version,
+        files: [
+          { filename: "mod-a.jar", sha1: "sha1-a", size: 100, disabled: true },
+        ],
+      },
+    } as any;
+
+    expect(compareMods([enabled], [disabled])).toBe(false);
+    expect(compareMods([disabled], [disabled])).toBe(true);
   });
 });
 
@@ -992,6 +1061,66 @@ describe("getModDescriptor", () => {
     expect(descriptor.hardDeps).not.toContain("jei");
     expect(descriptor.hardDeps).not.toContain("laserio");
     expect(descriptor.hardDeps).not.toContain("minecraft");
+  });
+});
+
+describe("checkLocalMod", () => {
+  it("reads fabric metadata from the jar", async () => {
+    const root = await makeTempRoot();
+    const jar = writeJar(root, "sodium.jar", {
+      "fabric.mod.json": JSON.stringify({
+        id: "sodium",
+        version: "0.5.3",
+        name: "Sodium",
+        description: "Rendering engine",
+      }),
+    });
+
+    const info = await checkLocalMod(jar);
+
+    expect(info).toMatchObject({
+      id: "sodium",
+      name: "Sodium",
+      version: "0.5.3",
+      filename: "sodium.jar",
+      path: jar,
+      icon: null,
+    });
+  });
+
+  it("reuses the cached metadata for an unchanged file", async () => {
+    const root = await makeTempRoot();
+    const jar = writeJar(root, "cached.jar", {
+      "fabric.mod.json": JSON.stringify({ id: "cached", name: "Cached" }),
+    });
+
+    const first = await checkLocalMod(jar);
+    const second = await checkLocalMod(jar);
+
+    expect(first).not.toBeNull();
+    expect(second).toBe(first);
+  });
+
+  it("returns null for a file that is not an archive", async () => {
+    const root = await makeTempRoot();
+    const notJar = path.join(root, "broken.jar");
+    await fs.writeFile(notJar, "definitely not a zip");
+
+    expect(await checkLocalMod(notJar)).toBeNull();
+  });
+
+  it("falls back to the file name for an archive without a manifest", async () => {
+    const root = await makeTempRoot();
+    const jar = writeJar(root, "plain.zip", { "readme.txt": "hello" });
+
+    const info = await checkLocalMod(jar);
+
+    expect(info).toMatchObject({
+      id: "plain.zip",
+      name: "plain.zip",
+      description: "",
+      version: null,
+    });
   });
 });
 

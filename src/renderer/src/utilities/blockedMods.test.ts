@@ -216,7 +216,10 @@ describe("blocked mods helpers", () => {
       ]),
     ];
 
-    await expect(checkBlockedMods(mods)).resolves.toEqual([]);
+    await expect(checkBlockedMods(mods)).resolves.toEqual({
+      blockedMods: [],
+      mods,
+    });
   });
 
   it("returns blocked mods with a parsed fileId when CDN cannot resolve", async () => {
@@ -232,16 +235,19 @@ describe("blocked mods helpers", () => {
       ]),
     ];
 
-    await expect(checkBlockedMods(mods)).resolves.toEqual([
-      {
-        fileName: "blocked.jar",
-        hash: "sha1",
-        projectId: "curseforge-project",
-        url: "https://curseforge.example/mod/download/555",
-        fileId: 555,
-        modTitle: "Blocked Mod",
-      },
-    ]);
+    await expect(checkBlockedMods(mods)).resolves.toEqual({
+      blockedMods: [
+        {
+          fileName: "blocked.jar",
+          hash: "sha1",
+          projectId: "curseforge-project",
+          url: "https://curseforge.example/mod/download/555",
+          fileId: 555,
+          modTitle: "Blocked Mod",
+        },
+      ],
+      mods,
+    });
   });
 
   it("auto-resolves a blocked file via the CurseForge CDN and rewrites its url", async () => {
@@ -257,7 +263,13 @@ describe("blocked mods helpers", () => {
       ]),
     ];
 
-    await expect(checkBlockedMods(mods)).resolves.toEqual([]);
-    expect(mods[0].version?.files[0].url).toBe(cdnUrl);
+    const result = await checkBlockedMods(mods);
+
+    expect(result.blockedMods).toEqual([]);
+    expect(result.mods).not.toBe(mods);
+    expect(result.mods[0].version?.files[0].url).toBe(cdnUrl);
+    expect(mods[0].version?.files[0].url).toBe(
+      "blocked::https://curseforge.example/mod/download/8273779",
+    );
   });
 });

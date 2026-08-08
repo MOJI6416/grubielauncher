@@ -46,6 +46,7 @@
 - Open access to your world over the internet with **public** or **friends-only** access.
 - **One-click “Play together”**: when a friend opens a world, hit Play — the launcher installs and syncs their modpack and connects you automatically.
 - **Crash analytics**: the launcher reads the crash report and explains what went wrong and how to fix it (rules update without a release).
+- **AI crash analysis**: when the cause is not recognised automatically, the launcher can send the crash for AI analysis and reply with the likely cause, the suspected mods and what to try.
 - **Public modpack catalog** on [grubielauncher.com](https://grubielauncher.com/packs) with an “Open in launcher” button.
 - **Drag & drop import** of .mrpack/.zip packs from CurseForge, Modrinth, Prism and Grubie exports.
 - Built-in **connection test** for launcher and official services (helps diagnose ISP blocks).

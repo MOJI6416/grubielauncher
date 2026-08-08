@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const api = window.api;
 
@@ -7,6 +7,7 @@ import ReactCountryFlag from "react-country-flag";
 import { FaDiscord } from "react-icons/fa";
 import {
   Activity,
+  Archive,
   Code2,
   Cpu,
   Download,
@@ -19,12 +20,14 @@ import {
   HeartPulse,
   Info,
   Languages,
+  Layers,
   Loader2,
   MemoryStick,
   Palette,
   Save,
   Settings as SettingsIcon,
   Settings2,
+  Sparkles,
   TriangleAlert,
   Volume2,
   Wrench,
@@ -71,8 +74,16 @@ import { VoiceSettingsPanel } from "./Voice/VoiceSettingsPanel";
 import { ConnectivityModal } from "./ConnectivityModal";
 import type { ConnectivityCheckResult } from "@/types/Connectivity";
 import { toast } from "sonner";
+import { normalizeWorldBackupKeep } from "@/types/WorldBackup";
 
 import { showFailureToast } from "@renderer/utilities/failures";
+import { patchSettings } from "@renderer/utilities/persistSettings";
+
+const WORLD_BACKUP_KEEP_OPTIONS = [1, 3, 5, 10, 20];
+
+const bindKey = (bind: VoicePttBind | null) =>
+  `${bind?.type ?? ""}:${bind?.code ?? ""}`;
+
 export function Settings({
   onClose,
   onShowWhatsNew,
@@ -80,7 +91,7 @@ export function Settings({
   onClose: () => void;
   onShowWhatsNew?: () => void;
 }) {
-  const [settings, setSettings] = useAtom(settingsAtom);
+  const [settings] = useAtom(settingsAtom);
   const { t, i18n } = useTranslation();
   const normalizedInitialSettings = normalizeSettings(settings, i18n.language);
   const [xmx, setXmx] = useState(() => normalizedInitialSettings.xmx);
@@ -97,6 +108,9 @@ export function Settings({
   );
   const [crashTelemetry, setCrashTelemetry] = useState(
     () => normalizedInitialSettings.crashTelemetry,
+  );
+  const [aiLogAnalysis, setAiLogAnalysis] = useState(
+    () => normalizedInitialSettings.aiLogAnalysis,
   );
   const [sounds, setSounds] = useState(() => normalizedInitialSettings.sounds);
   const [hideServerInRpc, setHideServerInRpc] = useState(
@@ -127,6 +141,12 @@ export function Settings({
   const [voiceNoiseSuppression, setVoiceNoiseSuppression] = useState(
     () => normalizedInitialSettings.voiceNoiseSuppression,
   );
+  const [autoWorldBackup, setAutoWorldBackup] = useState(
+    () => normalizedInitialSettings.autoWorldBackup,
+  );
+  const [worldBackupKeep, setWorldBackupKeep] = useState(
+    () => normalizedInitialSettings.worldBackupKeep,
+  );
   const [isWarnModal, setIsWarnModal] = useState(false);
   const isMemoryReady = totalMem > 0;
   const maxMemory = totalMem
@@ -146,12 +166,15 @@ export function Settings({
     settings.downloadLimit != downloadLimit ||
     settings.downloadSource != downloadSource ||
     settings.crashTelemetry != crashTelemetry ||
+    settings.aiLogAnalysis != aiLogAnalysis ||
     settings.sounds != sounds ||
     settings.hideServerInRpc != hideServerInRpc ||
     settings.voicePtt != voicePtt ||
     (settings.voicePttBind?.type ?? null) != (voicePttBind?.type ?? null) ||
     (settings.voicePttBind?.code ?? null) != (voicePttBind?.code ?? null) ||
-    settings.voiceNoiseSuppression != voiceNoiseSuppression;
+    settings.voiceNoiseSuppression != voiceNoiseSuppression ||
+    settings.autoWorldBackup != autoWorldBackup ||
+    settings.worldBackupKeep != worldBackupKeep;
 
   const closeSettings = () => {
     if (i18n.language !== settings.lang) {
@@ -161,21 +184,61 @@ export function Settings({
     onClose();
   };
 
+  const syncedSettingsRef = useRef(normalizedInitialSettings);
+
   useEffect(() => {
     const nextSettings = normalizeSettings(settings);
-    setXmx(nextSettings.xmx);
-    setOptimizedJvm(nextSettings.optimizedJvm);
-    setHighPriority(nextSettings.highPriority);
-    setDevMode(nextSettings.devMode);
-    setCrashTelemetry(nextSettings.crashTelemetry);
-    setSounds(nextSettings.sounds);
-    setHideServerInRpc(nextSettings.hideServerInRpc);
-    setDownloadLimit(nextSettings.downloadLimit);
-    setDownloadSource(nextSettings.downloadSource);
-    setLang(nextSettings.lang);
-    setVoicePtt(nextSettings.voicePtt);
-    setVoicePttBind(nextSettings.voicePttBind);
-    setVoiceNoiseSuppression(nextSettings.voiceNoiseSuppression);
+    const prevSettings = syncedSettingsRef.current;
+    syncedSettingsRef.current = nextSettings;
+
+    const keepDirty =
+      <T,>(previous: T, next: T) =>
+      (current: T): T =>
+        current === previous ? next : current;
+
+    setXmx(keepDirty(prevSettings.xmx, nextSettings.xmx));
+    setOptimizedJvm(
+      keepDirty(prevSettings.optimizedJvm, nextSettings.optimizedJvm),
+    );
+    setHighPriority(
+      keepDirty(prevSettings.highPriority, nextSettings.highPriority),
+    );
+    setDevMode(keepDirty(prevSettings.devMode, nextSettings.devMode));
+    setCrashTelemetry(
+      keepDirty(prevSettings.crashTelemetry, nextSettings.crashTelemetry),
+    );
+    setAiLogAnalysis(
+      keepDirty(prevSettings.aiLogAnalysis, nextSettings.aiLogAnalysis),
+    );
+    setSounds(keepDirty(prevSettings.sounds, nextSettings.sounds));
+    setHideServerInRpc(
+      keepDirty(prevSettings.hideServerInRpc, nextSettings.hideServerInRpc),
+    );
+    setDownloadLimit(
+      keepDirty(prevSettings.downloadLimit, nextSettings.downloadLimit),
+    );
+    setDownloadSource(
+      keepDirty(prevSettings.downloadSource, nextSettings.downloadSource),
+    );
+    setLang(keepDirty(prevSettings.lang, nextSettings.lang));
+    setVoicePtt(keepDirty(prevSettings.voicePtt, nextSettings.voicePtt));
+    setVoicePttBind((current) =>
+      bindKey(current) === bindKey(prevSettings.voicePttBind)
+        ? nextSettings.voicePttBind
+        : current,
+    );
+    setVoiceNoiseSuppression(
+      keepDirty(
+        prevSettings.voiceNoiseSuppression,
+        nextSettings.voiceNoiseSuppression,
+      ),
+    );
+    setAutoWorldBackup(
+      keepDirty(prevSettings.autoWorldBackup, nextSettings.autoWorldBackup),
+    );
+    setWorldBackupKeep(
+      keepDirty(prevSettings.worldBackupKeep, nextSettings.worldBackupKeep),
+    );
   }, [settings]);
 
   const handleCapturePttBind = async () => {
@@ -536,6 +599,20 @@ export function Settings({
               />
 
               <SettingRow
+                icon={Sparkles}
+                htmlFor="settings-ai-log-analysis"
+                title={t("settings.aiLogAnalysis")}
+                description={t("settings.aiLogAnalysisDescription")}
+                control={
+                  <Switch
+                    id="settings-ai-log-analysis"
+                    checked={aiLogAnalysis}
+                    onCheckedChange={setAiLogAnalysis}
+                  />
+                }
+              />
+
+              <SettingRow
                 icon={Code2}
                 htmlFor="settings-dev-mode"
                 title={t("settings.devMode")}
@@ -566,6 +643,46 @@ export function Settings({
                   >
                     {t("settings.storage.open")}
                   </Button>
+                }
+              />
+
+              <SettingRow
+                icon={Archive}
+                htmlFor="settings-auto-world-backup"
+                title={t("settings.autoWorldBackup")}
+                description={t("settings.autoWorldBackupDescription")}
+                control={
+                  <Switch
+                    id="settings-auto-world-backup"
+                    checked={autoWorldBackup}
+                    onCheckedChange={setAutoWorldBackup}
+                  />
+                }
+              />
+
+              <SettingRow
+                icon={Layers}
+                title={t("settings.worldBackupKeep")}
+                description={t("settings.worldBackupKeepDescription")}
+                control={
+                  <Select
+                    value={String(worldBackupKeep)}
+                    onValueChange={(value) =>
+                      setWorldBackupKeep(normalizeWorldBackupKeep(value))
+                    }
+                    disabled={!autoWorldBackup}
+                  >
+                    <SelectTrigger className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WORLD_BACKUP_KEEP_OPTIONS.map((option) => (
+                        <SelectItem key={option} value={String(option)}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 }
               />
             </SettingsSection>
@@ -607,25 +724,25 @@ export function Settings({
             <Button
               disabled={!hasChanges || !settingsPath}
               onClick={async () => {
-                const newSettings = {
-                  ...settings,
-                  xmx,
-                  optimizedJvm,
-                  highPriority,
-                  lang,
-                  devMode,
-                  crashTelemetry,
-                  sounds,
-                  hideServerInRpc,
-                  downloadLimit,
-                  downloadSource,
-                  voicePtt,
-                  voicePttBind,
-                  voiceNoiseSuppression,
-                };
-
                 try {
-                  await api.fs.writeJSON(settingsPath, newSettings);
+                  await patchSettings({
+                    xmx,
+                    optimizedJvm,
+                    highPriority,
+                    lang,
+                    devMode,
+                    crashTelemetry,
+                    aiLogAnalysis,
+                    sounds,
+                    hideServerInRpc,
+                    downloadLimit,
+                    downloadSource,
+                    voicePtt,
+                    voicePttBind,
+                    voiceNoiseSuppression,
+                    autoWorldBackup,
+                    worldBackupKeep,
+                  });
                 } catch (error) {
                   showFailureToast(t("settings.saveFailed"), error, {
                     channels: ["fs:writeJSON"],
@@ -633,7 +750,6 @@ export function Settings({
                   return;
                 }
 
-                setSettings(newSettings);
                 await api.mirror.setSource(downloadSource);
                 toast.success(t("settings.saved"));
               }}
@@ -674,7 +790,7 @@ export function Settings({
               <DialogTitle>{t("common.confirmation")}</DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              {t("serverSettings.unsavedChanges")}
+              {t("common.unsavedChanges")}
             </p>
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setIsWarnModal(false)}>

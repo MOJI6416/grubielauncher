@@ -1,12 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
+import { useTranslation } from "react-i18next";
 import { DownloaderFailuresInfo, DownloaderInfo } from "@/types/Downloader";
 import { VersionInstallProgress } from "@/types/InstallationProgress";
-import { installActiveAtom } from "@renderer/stores/atoms";
+import {
+  accountAtom,
+  installActiveAtom,
+  settingsAtom,
+  versionsAtom,
+} from "@renderer/stores/atoms";
 import { InstallationProgress } from "./InstallationProgress";
 import { InstallationMiniBar } from "./InstallationMiniBar";
 import { DownloadFailuresModal } from "./DownloadFailuresModal";
 import { playSound } from "@renderer/utilities/sounds";
+import { showFailureToast } from "@renderer/utilities/failures";
 
 const api = window.api;
 
@@ -19,7 +26,16 @@ export function InstallationCenter() {
   const [isCancellingInstall, setIsCancellingInstall] = useState(false);
   const [isInstallMinimized, setIsInstallMinimized] = useState(false);
   const [isInstallPaused, setIsInstallPaused] = useState(false);
+  const [failuresVersionName, setFailuresVersionName] = useState<string | null>(
+    null,
+  );
+  const [isRetrying, setIsRetrying] = useState(false);
   const setInstallActive = useSetAtom(installActiveAtom);
+  const versions = useAtomValue(versionsAtom);
+  const account = useAtomValue(accountAtom);
+  const settings = useAtomValue(settingsAtom);
+  const { t } = useTranslation();
+  const failuresSeqRef = useRef(0);
 
   const isCancellingInstallRef = useRef(isCancellingInstall);
   isCancellingInstallRef.current = isCancellingInstall;
@@ -38,7 +54,9 @@ export function InstallationCenter() {
 
     const unsubscribeDownloaderFailures = api.events.onDownloaderFailures(
       (info) => {
+        failuresSeqRef.current++;
         setDownloadFailures(info);
+        setFailuresVersionName(info?.versionName ?? null);
       },
     );
 
@@ -120,6 +138,24 @@ export function InstallationCenter() {
     }
   };
 
+  const retryVersion =
+    versions.find((item) => item.version.name === failuresVersionName) ?? null;
+
+  const retryFailedDownloads = async () => {
+    if (!retryVersion || !account) return;
+
+    const seq = failuresSeqRef.current;
+    setIsRetrying(true);
+    try {
+      await retryVersion.install(account, settings);
+      if (failuresSeqRef.current === seq) setDownloadFailures(null);
+    } catch (error) {
+      showFailureToast(t("versions.installError"), error);
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
   const toggleInstallPause = async () => {
     const next = !isInstallPausedRef.current;
     setIsInstallPaused(next);
@@ -161,6 +197,8 @@ export function InstallationCenter() {
       {downloadFailures && (
         <DownloadFailuresModal
           info={downloadFailures}
+          isRetrying={isRetrying}
+          onRetry={retryVersion && account ? retryFailedDownloads : undefined}
           onClose={() => setDownloadFailures(null)}
         />
       )}

@@ -3,18 +3,27 @@ import {
   IAchievementStats,
   IAchievementStatsResult,
   EMPTY_ACHIEVEMENT_STATS,
+  addAchievementStats,
 } from "@/types/Achievements";
 import { getLauncherPaths, toUUID } from "./other";
 import { getOfflineUuidCandidates } from "./offlineUuidMigration";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { jwtDecode } from "jwt-decode";
 import { deserialize } from "@xmcl/nbt";
-import { patchNbtString } from "./nbtPatch";
+import { patchNbtString, readNbtString } from "./nbtPatch";
 import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs-extra";
 import zlib from "zlib";
+import { promisify } from "util";
 import { pathToFileURL } from "url";
+
+const gunzipAsync = promisify(zlib.gunzip);
+const inflateAsync = promisify(zlib.inflate);
+const gzipAsync = promisify(zlib.gzip);
+const deflateAsync = promisify(zlib.deflate);
+
+type NbtCompression = "gzip" | "deflate" | "none";
 
 function getAccountUuids(account: ILocalAccount): string[] {
   if (
@@ -39,27 +48,33 @@ function getAccountUuids(account: ILocalAccount): string[] {
   return uuids;
 }
 
+type StatsFileRef = { path: string; mtimeMs: number; size: number };
+
 async function resolveStatsFile(
   worldPath: string,
   accountUUIDs: string[],
-): Promise<string | null> {
+): Promise<StatsFileRef | null> {
   const candidates = accountUUIDs.flatMap((accountUUID) => [
     path.join(worldPath, "players", "stats", `${accountUUID}.json`),
     path.join(worldPath, "stats", `${accountUUID}.json`),
   ]);
 
-  let freshest: { candidate: string; mtimeMs: number } | null = null;
+  let freshest: StatsFileRef | null = null;
 
   for (const candidate of candidates) {
     const stats = await fs.stat(candidate).catch(() => null);
     if (!stats?.isFile()) continue;
 
     if (!freshest || stats.mtimeMs > freshest.mtimeMs) {
-      freshest = { candidate, mtimeMs: stats.mtimeMs };
+      freshest = {
+        path: candidate,
+        mtimeMs: stats.mtimeMs,
+        size: stats.size,
+      };
     }
   }
 
-  return freshest?.candidate ?? null;
+  return freshest;
 }
 
 export async function loadStatistics(
@@ -72,7 +87,7 @@ export async function loadStatistics(
   if (!statisticsPath) return null;
 
   try {
-    const stats: IWorldStatistics = await fs.readJSON(statisticsPath);
+    const stats: IWorldStatistics = await fs.readJSON(statisticsPath.path);
     return stats;
   } catch (error) {
     console.error("Failed to load world statistics:", error);
@@ -142,18 +157,42 @@ function findNbtValueByKey(source: any, keys: string[]): any {
   return undefined;
 }
 
-function decompressNbt(fileData: Buffer): Buffer {
+async function decompressNbtFile(
+  fileData: Buffer,
+): Promise<{ data: Buffer; compression: NbtCompression }> {
   const input = new Uint8Array(fileData);
 
   try {
-    return Buffer.from(zlib.gunzipSync(input));
+    return {
+      data: Buffer.from(await gunzipAsync(input)),
+      compression: "gzip",
+    };
   } catch {}
 
   try {
-    return Buffer.from(zlib.inflateSync(input));
+    return {
+      data: Buffer.from(await inflateAsync(input)),
+      compression: "deflate",
+    };
   } catch {}
 
-  return Buffer.from(input);
+  return { data: Buffer.from(input), compression: "none" };
+}
+
+async function decompressNbt(fileData: Buffer): Promise<Buffer> {
+  return (await decompressNbtFile(fileData)).data;
+}
+
+async function compressNbt(
+  data: Buffer,
+  compression: NbtCompression,
+): Promise<Buffer> {
+  const input = new Uint8Array(data);
+
+  if (compression === "none") return Buffer.from(input);
+  if (compression === "deflate") return Buffer.from(await deflateAsync(input));
+
+  return Buffer.from(await gzipAsync(input));
 }
 
 function getWorldSeed(nbtData: any): string {
@@ -175,6 +214,20 @@ function getWorldSeed(nbtData: any): string {
   );
 }
 
+export async function readWorldDisplayName(worldPath: string): Promise<string> {
+  const fallback = path.basename(worldPath);
+
+  try {
+    const levelData = await fs.readFile(path.join(worldPath, "level.dat"));
+    const nbtData: any = await deserialize(await decompressNbt(levelData));
+    const name = nbtData?.Data?.LevelName;
+
+    return typeof name === "string" && name.trim() ? name : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function readWorld(
   worldPath: string,
   account: ILocalAccount,
@@ -193,7 +246,7 @@ export async function readWorld(
 
     try {
       const levelData = await fs.readFile(levelDatPath);
-      const nbtData: any = await deserialize(decompressNbt(levelData));
+      const nbtData: any = await deserialize(await decompressNbt(levelData));
 
       if (
         typeof nbtData?.Data?.LevelName === "string" &&
@@ -221,7 +274,7 @@ export async function readWorld(
         );
         if (await fs.pathExists(wgsPath)) {
           const wgsRaw = await fs.readFile(wgsPath);
-          const wgsNbt: any = await deserialize(decompressNbt(wgsRaw));
+          const wgsNbt: any = await deserialize(await decompressNbt(wgsRaw));
           seed = getWorldSeed(wgsNbt);
         }
       } catch (err) {
@@ -259,6 +312,22 @@ export async function readWorld(
   }
 }
 
+async function isLevelNameWritten(
+  levelDatPath: string,
+  expectedName: string,
+): Promise<boolean> {
+  try {
+    const written = await fs.readFile(levelDatPath);
+    const decompressed = await decompressNbt(written);
+
+    await deserialize(decompressed);
+
+    return readNbtString(decompressed, "LevelName") === expectedName;
+  } catch {
+    return false;
+  }
+}
+
 export async function writeWorldName(
   worldPath: string,
   newName: string,
@@ -267,7 +336,8 @@ export async function writeWorldName(
     const levelDatPath = path.join(worldPath, "level.dat");
     const fileData = await fs.readFile(levelDatPath);
 
-    const decompressed = decompressNbt(fileData);
+    const { data: decompressed, compression } =
+      await decompressNbtFile(fileData);
     const patched = patchNbtString(decompressed, "LevelName", newName);
 
     if (!patched) {
@@ -277,13 +347,21 @@ export async function writeWorldName(
 
     await deserialize(patched);
 
-    const compressed = zlib.gzipSync(new Uint8Array(patched));
+    const compressed = await compressNbt(patched, compression);
     const backupPath = path.join(worldPath, "level.dat_grubie.bak");
     const tempPath = path.join(worldPath, `level.dat.${randomUUID()}.tmp`);
 
     await fs.copy(levelDatPath, backupPath, { overwrite: true });
     await fs.writeFile(tempPath, compressed);
     await fs.move(tempPath, levelDatPath, { overwrite: true });
+
+    if (!(await isLevelNameWritten(levelDatPath, newName))) {
+      console.error("level.dat verification failed, restoring backup");
+      await fs.copy(backupPath, levelDatPath, { overwrite: true });
+      return null;
+    }
+
+    await fs.remove(backupPath).catch(() => {});
 
     const sanitized = sanitizeWorldFolderName(newName);
     const newFolderName = sanitized || path.basename(worldPath);
@@ -358,7 +436,7 @@ export async function loadVersionWorldStatistics(
     if (!statsFile) continue;
     let data: IWorldStatistics | null = null;
     try {
-      data = await fs.readJSON(statsFile);
+      data = await fs.readJSON(statsFile.path);
     } catch {
       continue;
     }
@@ -460,10 +538,67 @@ export function reduceStatsToAchievementStats(
   return stats;
 }
 
+type CachedWorldStats = {
+  mtimeMs: number;
+  size: number;
+  stats: IAchievementStats | null;
+  worldKey: string | null;
+};
+
+const MAX_CACHED_WORLD_STATS = 500;
+const worldStatsCache = new Map<string, CachedWorldStats>();
+
+async function getCachedWorldStats(
+  worldPath: string,
+  statsFile: StatsFileRef,
+): Promise<CachedWorldStats> {
+  const cached = worldStatsCache.get(statsFile.path);
+
+  if (
+    cached &&
+    cached.mtimeMs === statsFile.mtimeMs &&
+    cached.size === statsFile.size
+  ) {
+    if (cached.stats && !cached.worldKey) {
+      cached.worldKey = await readWorldKey(worldPath);
+    }
+
+    worldStatsCache.delete(statsFile.path);
+    worldStatsCache.set(statsFile.path, cached);
+
+    return cached;
+  }
+
+  const entry: CachedWorldStats = {
+    mtimeMs: statsFile.mtimeMs,
+    size: statsFile.size,
+    stats: null,
+    worldKey: null,
+  };
+
+  try {
+    const data: IWorldStatistics = await fs.readJSON(statsFile.path);
+    if (data?.stats) {
+      entry.stats = reduceStatsToAchievementStats(data);
+      entry.worldKey = await readWorldKey(worldPath);
+    }
+  } catch {}
+
+  worldStatsCache.set(statsFile.path, entry);
+
+  while (worldStatsCache.size > MAX_CACHED_WORLD_STATS) {
+    const oldest = worldStatsCache.keys().next().value;
+    if (!oldest) break;
+    worldStatsCache.delete(oldest);
+  }
+
+  return entry;
+}
+
 export async function loadGlobalAchievementStats(
   account: ILocalAccount,
 ): Promise<IAchievementStatsResult> {
-  const stats: IAchievementStats = { ...EMPTY_ACHIEVEMENT_STATS };
+  let stats: IAchievementStats = { ...EMPTY_ACHIEVEMENT_STATS };
   const worldKeys = new Set<string>();
   const accountUUIDs = getAccountUuids(account);
 
@@ -493,16 +628,11 @@ export async function loadGlobalAchievementStats(
       const statsFile = await resolveStatsFile(worldPath, accountUUIDs);
       if (!statsFile) continue;
 
-      try {
-        const data: IWorldStatistics = await fs.readJSON(statsFile);
-        if (data?.stats) {
-          accumulateWorldStats(stats, data);
-          const worldKey = await readWorldKey(worldPath);
-          if (worldKey) worldKeys.add(worldKey);
-        }
-      } catch {
-        continue;
-      }
+      const cached = await getCachedWorldStats(worldPath, statsFile);
+      if (!cached.stats) continue;
+
+      stats = addAchievementStats(stats, cached.stats);
+      if (cached.worldKey) worldKeys.add(cached.worldKey);
     }
   }
 

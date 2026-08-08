@@ -3,13 +3,18 @@ import os from "os";
 import path from "path";
 import fs from "fs-extra";
 import { analyzeGameCrash } from "./crashAnalyzer";
+import { clearConsoleOutput, recordConsoleOutput } from "./consoleBuffer";
 import { gameProcesses, gameRuntime } from "./runtime";
 import { mainWindow } from "../windows/mainWindow";
 import { IConsoleMessage } from "@/types/Console";
-import netstat from "node-netstat";
+import { listTcpConnections } from "./tcpConnections";
 import { rpc } from "../rpc";
 import { parseMinecraftServerConnectionLine } from "./gameConnection";
-import { classifyConsoleStream, createLineReader } from "./consoleLog";
+import {
+  classifyConsoleStream,
+  createLineReader,
+  mergeConsoleMessages,
+} from "./consoleLog";
 import {
   beginSession,
   endSession,
@@ -86,24 +91,52 @@ function execFileSafe(command: string, args: string[]): Promise<void> {
   });
 }
 
-async function getChildProcessIds(pid: number): Promise<number[]> {
-  if (process.platform === "win32") return [];
+function pgrepChildProcessIds(pid: number): Promise<number[] | null> {
+  return new Promise((resolve) => {
+    execFile("pgrep", ["-P", String(pid)], (error, stdout) => {
+      if (error) {
+        resolve((error as { code?: unknown }).code === 1 ? [] : null);
+        return;
+      }
 
-  return await new Promise((resolve) => {
-    execFile("ps", ["-o", "pid=", "--ppid", String(pid)], (error, stdout) => {
+      resolve(
+        stdout
+          .split(/\r?\n/)
+          .map((line) => Number.parseInt(line.trim(), 10))
+          .filter((value) => Number.isInteger(value) && value > 0),
+      );
+    });
+  });
+}
+
+function psChildProcessIds(pid: number): Promise<number[]> {
+  return new Promise((resolve) => {
+    execFile("ps", ["-A", "-o", "pid=,ppid="], (error, stdout) => {
       if (error) {
         resolve([]);
         return;
       }
 
-      const childIds = stdout
-        .split(/\r?\n/)
-        .map((line) => Number.parseInt(line.trim(), 10))
-        .filter((value) => Number.isInteger(value) && value > 0);
+      const childIds: number[] = [];
+      for (const line of stdout.split(/\r?\n/)) {
+        const [childPid, parentPid] = line.trim().split(/\s+/).map(Number);
+        if (parentPid === pid && Number.isInteger(childPid) && childPid > 0) {
+          childIds.push(childPid);
+        }
+      }
 
       resolve(childIds);
     });
   });
+}
+
+async function getChildProcessIds(pid: number): Promise<number[]> {
+  if (process.platform === "win32") return [];
+
+  const byPgrep = await pgrepChildProcessIds(pid);
+  if (byPgrep !== null) return byPgrep;
+
+  return await psChildProcessIds(pid);
 }
 
 async function killUnixProcessTree(
@@ -149,7 +182,10 @@ async function terminateProcessTree(
 export interface RunJarOptions {
   signal?: AbortSignal;
   onOutput?: (event: { stream: "stdout" | "stderr"; message: string }) => void;
+  timeoutMs?: number;
 }
+
+const RUN_JAR_TIMEOUT_MS = 15 * 60 * 1000;
 
 function normalizeRunJarOptions(
   optionsOrSignal?: AbortSignal | RunJarOptions,
@@ -173,6 +209,7 @@ export function runJar(
     const signal = options.signal;
     let settled = false;
     let successSeen = false;
+    let timeoutId: NodeJS.Timeout | null = null;
 
     const settleResolve = (value: any) => {
       if (settled) return;
@@ -199,6 +236,12 @@ export function runJar(
       });
     };
 
+    const onTimeout = () => {
+      void terminateProcessTree(jar).finally(() => {
+        settleReject(new Error("Loader installer timed out"));
+      });
+    };
+
     const onStdout = (data: any) => {
       const output = data.toString();
       options.onOutput?.({ stream: "stdout", message: output });
@@ -221,6 +264,10 @@ export function runJar(
     };
 
     function cleanup() {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
       try {
         signal?.removeEventListener("abort", onAbort);
         jar.stdout?.off("data", onStdout);
@@ -240,6 +287,13 @@ export function runJar(
     jar.stderr?.on("data", onStderr);
     jar.on("close", onClose);
     jar.on("error", onError);
+
+    if (!settled) {
+      timeoutId = setTimeout(
+        onTimeout,
+        options.timeoutMs ?? RUN_JAR_TIMEOUT_MS,
+      );
+    }
   });
 }
 
@@ -301,7 +355,10 @@ export function installServer(
     const onStdout = (data: any) => {
       const output = data.toString();
       onOutput?.(output);
-      if (SERVER_READY_MARKERS.some((marker) => output.includes(marker))) {
+      if (
+        options.resolveOnEulaFile &&
+        SERVER_READY_MARKERS.some((marker) => output.includes(marker))
+      ) {
         settleResolve("done");
       }
     };
@@ -385,12 +442,15 @@ export function runGame(
   highPriority: boolean = false,
 ) {
   if (gameRuntime.isInstanceBusy(versionName, instance)) {
-    throw new Error(`Game instance ${versionName}-${instance} is already running`);
+    throw new Error(
+      `Game instance ${versionName}-${instance} is already running`,
+    );
   }
 
   const instanceKey = `${versionName}-${instance}`;
 
   safeSend("consoleClear", versionName, instance);
+  clearConsoleOutput(versionName, instance);
   rpc.setGameLaunching({ versionName, instance, serverAddress });
 
   const javaProcess = spawn(command, args, {
@@ -448,52 +508,35 @@ export function runGame(
     if (netstatInFlight) return;
     netstatInFlight = true;
 
-    try {
-      let matchingConnections = 0;
-      let ownedByGame = 0;
-      let sawPidInfo = false;
+    const serverPort = processData.serverPort;
 
-      const finish = () => {
-        try {
-          const stillData = gameProcesses.get(instanceKey);
-          if (!stillData || stillData.serverPort !== processData.serverPort)
-            return;
+    listTcpConnections()
+      .then((connections) => {
+        const stillData = gameProcesses.get(instanceKey);
+        if (!stillData || stillData.serverPort !== serverPort) return;
 
-          const connected = sawPidInfo
-            ? ownedByGame > 0
-            : matchingConnections > 0;
-          if (connected) return;
+        const matching = connections.filter(
+          (connection) =>
+            connection.remotePort === serverPort &&
+            connection.state === "ESTABLISHED",
+        );
+        const sawPidInfo = matching.some(
+          (connection) => connection.pid !== null,
+        );
 
-          safeSend("friendUpdate", { serverAddress: "" });
-          stillData.serverPort = null;
-          rpc.updateGameServer(versionName, instance);
-        } finally {
-          netstatInFlight = false;
-        }
-      };
+        const connected = sawPidInfo
+          ? matching.some((connection) => connection.pid === javaProcess.pid)
+          : matching.length > 0;
+        if (connected) return;
 
-      netstat(
-        {
-          filter: {
-            remote: { port: processData.serverPort },
-            protocol: "tcp",
-          },
-          done: finish,
-        },
-        (item: any) => {
-          if (item.state != "ESTABLISHED") return;
-
-          matchingConnections += 1;
-
-          if (typeof item.pid === "number" && item.pid > 0) {
-            sawPidInfo = true;
-            if (item.pid === javaProcess.pid) ownedByGame += 1;
-          }
-        },
-      );
-    } catch {
-      netstatInFlight = false;
-    }
+        safeSend("friendUpdate", { serverAddress: "" });
+        stillData.serverPort = null;
+        rpc.updateGameServer(versionName, instance);
+      })
+      .catch(() => {})
+      .finally(() => {
+        netstatInFlight = false;
+      });
   };
 
   intervalId = setInterval(checkConnection, 15000);
@@ -509,18 +552,10 @@ export function runGame(
     }
     if (pendingConsoleMessages.length === 0) return;
 
-    const batch = pendingConsoleMessages.splice(0);
-    const merged: IConsoleMessage[] = [];
-    for (const msg of batch) {
-      const last = merged[merged.length - 1];
-      if (last && last.type === msg.type) {
-        last.message += msg.message;
-      } else {
-        merged.push({ ...msg, tips: [...msg.tips] });
-      }
-    }
+    const merged = mergeConsoleMessages(pendingConsoleMessages.splice(0));
 
     for (const msg of merged) {
+      recordConsoleOutput(versionName, instance, msg.message);
       safeSend("consoleMessage", versionName, instance, msg);
     }
   };
@@ -609,12 +644,18 @@ export function runGame(
   javaProcess.stdout?.on("data", (data: Buffer) => stdoutReader.push(data));
   javaProcess.stderr?.on("data", (data: Buffer) => stderrReader.push(data));
 
+  const finalizeConsole = () => {
+    stdoutReader.flush();
+    stderrReader.flush();
+    flushConsoleMessages();
+  };
+
   javaProcess.on("error", (err) => {
     if (processFinalized) return;
     processFinalized = true;
 
     if (intervalId) clearInterval(intervalId);
-    flushConsoleMessages();
+    finalizeConsole();
 
     void endSession(versionName, instance, 1).finally(() =>
       safeSend("playtimeRecorded"),
@@ -653,12 +694,9 @@ export function runGame(
     if (processFinalized) return;
     processFinalized = true;
 
-    stdoutReader.flush();
-    stderrReader.flush();
-    flushConsoleMessages();
+    finalizeConsole();
 
-    const killedByUser =
-      gameProcesses.get(instanceKey)?.killedByUser === true;
+    const killedByUser = gameProcesses.get(instanceKey)?.killedByUser === true;
 
     let code = typeof c === "number" ? c : 0;
     if (c === null && signal && !killedByUser && signal !== "SIGTERM") {
@@ -686,7 +724,15 @@ export function runGame(
 
       void analyzeGameCrash(versionPath, code)
         .then((analysis) => {
-          if (!analysis) return;
+          if (!analysis) {
+            safeSend("crashUnresolved", {
+              versionName,
+              instance,
+              versionPath,
+              exitCode: code,
+            });
+            return;
+          }
           safeSend("crashAnalysis", versionName, instance, analysis);
         })
         .catch(() => {});

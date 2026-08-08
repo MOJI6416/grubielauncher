@@ -27,6 +27,8 @@ import { ILocalProject } from "@/types/ModManager";
 
 const api = window.api;
 
+const READ_WORLD_CONCURRENCY = 4;
+
 export function Worlds({
   onClose,
   runGame,
@@ -68,11 +70,23 @@ export function Worlds({
 
         const folders = await api.fs.getDirectories(worldsPath);
 
-        const results = await Promise.all(
-          folders.map(async (folder) => {
-            const worldPath = await api.path.join(worldsPath, folder);
-            return api.worlds.readWorld(worldPath, account);
-          }),
+        const results: (IWorld | null)[] = new Array(folders.length).fill(null);
+        let cursor = 0;
+
+        await Promise.all(
+          Array.from(
+            { length: Math.min(READ_WORLD_CONCURRENCY, folders.length) },
+            async () => {
+              while (cursor < folders.length) {
+                const index = cursor++;
+                const worldPath = await api.path.join(
+                  worldsPath,
+                  folders[index],
+                );
+                results[index] = await api.worlds.readWorld(worldPath, account);
+              }
+            },
+          ),
         );
 
         setWorlds(results.filter(Boolean) as IWorld[]);

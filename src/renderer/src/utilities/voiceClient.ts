@@ -240,6 +240,20 @@ function applyTrackVolume(identity: string) {
   }
 }
 
+function applyTrackSubscriptions() {
+  if (!room || !livekit) return;
+
+  const subscribed = !getSession().isDeafened;
+  const audioKind = livekit.Track.Kind.Audio;
+
+  for (const participant of room.remoteParticipants.values()) {
+    for (const publication of participant.trackPublications.values()) {
+      if (publication.kind !== audioKind) continue;
+      publication.setSubscribed(subscribed);
+    }
+  }
+}
+
 function syncParticipants() {
   if (
     !room ||
@@ -293,6 +307,7 @@ function cleanup() {
   micMutedBeforeDeafen = false;
   pttPressed = false;
   noiseProcessorActive = false;
+  noiseSuppressionFailed = false;
   removeAudioElements();
   void api.voice.setPtt(null).catch(() => undefined);
   void api.voice.setSessionActive(false).catch(() => undefined);
@@ -340,8 +355,13 @@ export async function voiceConnect(
   });
 
   nextRoom
-    .on(RoomEvent.TrackSubscribed, (track: RemoteTrack, _pub, participant) => {
+    .on(RoomEvent.TrackSubscribed, (track: RemoteTrack, publication, participant) => {
       if (track.kind !== Track.Kind.Audio) return;
+      if (getSession().isDeafened) {
+        publication.setSubscribed(false);
+        return;
+      }
+
       const element = track.attach();
       document.body.appendChild(element);
       const existing = audioElements.get(participant.identity) || [];
@@ -465,6 +485,8 @@ export async function voiceSetDeafened(deafened: boolean) {
   for (const identity of audioTracks.keys()) {
     applyTrackVolume(identity);
   }
+
+  applyTrackSubscriptions();
 
   await applyMicState();
 }

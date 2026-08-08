@@ -3,6 +3,7 @@ import { IServerConf, ServerCore } from "@/types/Server";
 import { ProjectType } from "@/types/ModManager";
 import { DownloadItem } from "@/types/Downloader";
 import path from "path";
+import { randomUUID } from "crypto";
 import { pathToFileURL } from "url";
 import fs from "fs-extra";
 import { Downloader } from "../utilities/downloader";
@@ -20,6 +21,7 @@ import {
   getServerSyncDirs,
 } from "../utilities/clientsideMods";
 import { extractWorldArchive, getWorldName } from "../utilities/worlds";
+import { toSafeFileName } from "./serverScriptSafety";
 import {
   VERSION_INSTALL_CANCELLED,
   VersionInstallOperation,
@@ -32,6 +34,7 @@ import { OPTIONAL_PROJECT_DOWNLOAD_OPTIONS } from "../utilities/downloaderPure";
 import { DownloaderFailuresInfo } from "@/types/Downloader";
 
 const TRASH_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+const DISABLED_SUFFIX = ".disabled";
 
 const MODDED_SERVER_CORES = [
   ServerCore.FABRIC,
@@ -48,6 +51,7 @@ interface ServerModFile {
   size: number;
   isServerFile: boolean;
   clientSupported: boolean;
+  disabled: boolean;
 }
 
 type ModsRuntimeOptions = VersionInstallOptions & {
@@ -79,6 +83,7 @@ export class Mods {
     this.server = server;
     this.downloadLimit = settings.downloadLimit;
     this.downloader = new Downloader(this.downloadLimit);
+    this.downloader.versionName = this.conf.name;
 
     this.version = new Version(this.conf);
     this.initPromise = Promise.resolve(this.version.init()).catch(() => {
@@ -204,12 +209,19 @@ export class Mods {
       }
 
       for (const file of mod.version.files) {
-        if (file.url?.startsWith("blocked::") && !file.localPath) continue;
+        const filename = toSafeFileName(file.filename, "mod file name");
 
-        let filepath = path.join(folderPath, file.filename);
+        if (file.url?.startsWith("blocked::") && !file.localPath) {
+          if (file.isClient !== false) {
+            this.files.push({ filename, type: mod.projectType });
+          }
+          continue;
+        }
+
+        let filepath = path.join(folderPath, filename);
 
         if (mod.projectType == ProjectType.WORLD) {
-          filepath = path.join(storagePath, "worlds", file.filename);
+          filepath = path.join(storagePath, "worlds", filename);
 
           worldZips.push(filepath);
 
@@ -237,31 +249,43 @@ export class Mods {
         }
 
         const clientSupported = file.isClient !== false;
+        const disabledPath = `${filepath}${DISABLED_SUFFIX}`;
+        const existsDisabled =
+          clientSupported && (await fs.pathExists(disabledPath));
+        const disabled =
+          clientSupported &&
+          (existsDisabled ||
+            (file.disabled === true && !(await fs.pathExists(filepath))));
 
         if (clientSupported) {
           this.files.push({
-            filename: file.filename,
+            filename,
             type: mod.projectType,
           });
 
-          downloadFiles.push({
-            destination: filepath,
-            url: file.localPath ? pathToFileURL(file.localPath).href : file.url,
-            group: "mods",
-            sha1: file.sha1,
-            size: file.size,
-          });
+          if (!disabled || !existsDisabled) {
+            downloadFiles.push({
+              destination: disabled ? disabledPath : filepath,
+              url: file.localPath
+                ? pathToFileURL(file.localPath).href
+                : file.url,
+              group: "mods",
+              sha1: file.sha1,
+              size: file.size,
+            });
+          }
         }
 
         if (this.isModdedServer() && mod.projectType == ProjectType.MOD) {
           serverModFiles.push({
-            filename: file.filename,
+            filename,
             clientPath: filepath,
             url: file.localPath ? pathToFileURL(file.localPath).href : file.url,
             sha1: file.sha1,
             size: file.size,
             isServerFile: file.isServer,
             clientSupported,
+            disabled,
           });
         }
       }
@@ -363,11 +387,11 @@ export class Mods {
       this.throwIfInstallCancelled();
       await Promise.all(
         clientMods.slice(i, i + CHUNK_SIZE).map(async (file) => {
-          if (!(await fs.pathExists(file.clientPath))) return;
-          descriptors.set(
-            file.filename,
-            await getModDescriptor(file.clientPath),
-          );
+          const descriptorPath = file.disabled
+            ? `${file.clientPath}.disabled`
+            : file.clientPath;
+          if (!(await fs.pathExists(descriptorPath))) return;
+          descriptors.set(file.filename, await getModDescriptor(descriptorPath));
         }),
       );
     }
@@ -378,6 +402,7 @@ export class Mods {
       const descriptor = descriptors.get(file.filename);
       let onServer: boolean;
       if (!file.isServerFile) onServer = false;
+      else if (file.disabled) onServer = false;
       else if (isClientside(file.filename)) onServer = false;
       else if (!file.clientSupported) onServer = true;
       else onServer = (descriptor?.environment ?? "both") !== "client";
@@ -464,7 +489,7 @@ export class Mods {
       files.map(async (file) => {
         const target = path.join(
           trashPath,
-          `${Date.now()}-${path.basename(file)}`,
+          `${Date.now()}-${randomUUID().slice(0, 8)}-${path.basename(file)}`,
         );
 
         try {
@@ -532,9 +557,13 @@ export class Mods {
       )
         continue;
 
+      const enabledName = file.endsWith(DISABLED_SUFFIX)
+        ? file.slice(0, -DISABLED_SUFFIX.length)
+        : file;
+
       if (
         (isDirectory && projectType != ProjectType.WORLD) ||
-        filenames.includes(file.replace(".disabled", ""))
+        filenames.includes(enabledName)
       )
         continue;
 
@@ -544,7 +573,7 @@ export class Mods {
           this.version.versionPath,
           "server",
           folderName,
-          file,
+          enabledName,
         );
         const isServerFileExists = await fs.pathExists(serverFilePath);
         if (isServerFileExists) deleteFiles.push(serverFilePath);
@@ -639,8 +668,15 @@ export class Mods {
         if (file.url?.startsWith("blocked::") && !file.localPath) continue;
         if (file.isClient === false) continue;
 
+        const filepath = path.join(
+          folderPath,
+          toSafeFileName(file.filename, "mod file name"),
+        );
+        if (await fs.pathExists(`${filepath}${DISABLED_SUFFIX}`)) continue;
+        if (file.disabled === true && !(await fs.pathExists(filepath))) continue;
+
         downloadFiles.push({
-          destination: path.join(folderPath, file.filename),
+          destination: filepath,
           url: file.localPath ? pathToFileURL(file.localPath).href : file.url,
           group: "mods",
           sha1: file.sha1,

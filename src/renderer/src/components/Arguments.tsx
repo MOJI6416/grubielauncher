@@ -184,7 +184,7 @@ function ArgEditor({
                   <Badge variant="secondary" className="cursor-default gap-1">
                     <Sparkles className="size-3" />
                     {t("arguments.optimizedOn", {
-                      n: OPTIMIZED_GC_FLAGS.length,
+                      count: OPTIMIZED_GC_FLAGS.length,
                     })}
                   </Badge>
                 </TooltipTrigger>

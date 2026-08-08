@@ -157,7 +157,7 @@ const App = () => {
       case "not-available":
         return t("updater.readyTitle");
       case "error":
-        return errorMessage || t("updater.errorTitle");
+        return t("updater.errorTitle");
       default:
         return t("updater.checking");
     }
@@ -187,10 +187,12 @@ const App = () => {
             value={status === "checking" ? 12 : percent}
             className={status === "checking" ? "animate-pulse" : undefined}
           />
-          <p className="text-xs text-muted-foreground">
-            {status === "checking"
-              ? t("updater.preparing")
-              : t("updater.percent", { percent: percent.toFixed(0) })}
+          <p className="line-clamp-2 text-xs text-muted-foreground">
+            {status === "error"
+              ? errorMessage
+              : status === "checking"
+                ? t("updater.preparing")
+                : t("updater.percent", { percent: percent.toFixed(0) })}
           </p>
         </div>
       </div>

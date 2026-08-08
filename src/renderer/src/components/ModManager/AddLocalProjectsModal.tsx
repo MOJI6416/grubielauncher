@@ -35,11 +35,13 @@ export function ALPModal({
   const { t } = useTranslation();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const initial = new Set(
-      projects.filter((p) => p.status === "valid").map((p) => p.project.id),
+      projects
+        .map((p, index) => (p.status === "valid" ? index : -1))
+        .filter((index) => index !== -1),
     );
     setSelected(initial);
   }, [projects]);
@@ -50,15 +52,15 @@ export function ALPModal({
   const selectedProjects = useMemo(() => {
     if (selected.size === 0) return [];
     return projects
-      .filter((p) => selected.has(p.project.id))
+      .filter((_, index) => selected.has(index))
       .map((p) => p.project);
   }, [projects, selected]);
 
-  const toggle = useCallback((id: string, isSelected: boolean) => {
+  const toggle = useCallback((index: number, isSelected: boolean) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (isSelected) next.add(id);
-      else next.delete(id);
+      if (isSelected) next.add(index);
+      else next.delete(index);
       return next;
     });
   }, []);
@@ -115,12 +117,11 @@ export function ALPModal({
         <ScrollArea className="max-h-[min(28rem,60vh)] px-5 py-4 pr-6">
           <TooltipProvider>
             <div className="flex flex-col gap-2">
-              {projects.map((p) => {
-                const id = p.project.id;
+              {projects.map((p, index) => {
                 const isValid = p.status === "valid";
                 const isDuplicate = p.status === "duplicate";
                 const isInvalid = p.status === "invalid";
-                const inputId = `local-project-${id}`;
+                const inputId = `local-project-${index}`;
 
                 const tooltipText = isDuplicate
                   ? t("modManager.modDuplicate")
@@ -129,7 +130,7 @@ export function ALPModal({
                     : "";
                 return (
                   <Tooltip
-                    key={id}
+                    key={index}
                     open={isValid || tooltipText === "" ? false : undefined}
                   >
                     <TooltipTrigger asChild>
@@ -144,9 +145,9 @@ export function ALPModal({
                           <Checkbox
                             id={inputId}
                             disabled={!isValid || isLoading}
-                            checked={selected.has(id)}
+                            checked={selected.has(index)}
                             onCheckedChange={(checked) =>
-                              toggle(id, checked === true)
+                              toggle(index, checked === true)
                             }
                           />
 

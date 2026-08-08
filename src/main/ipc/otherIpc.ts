@@ -25,24 +25,152 @@ import { RpcRendererContext } from '@/types/Rpc'
 import { NotificationClickAction } from '@/types/Notification'
 import icon from '../../../resources/icon.png?asset'
 import axios from 'axios'
-import { handleSafe } from '../utilities/ipc'
+import path from 'path'
+import { check, handleSafe, IpcArgumentError } from '../utilities/ipc'
 import {
   assertOpenablePath,
   assertWritablePath,
   blessUserSelectedPath,
   isOpenableFileExtension,
-  PathPolicyError
+  listBlessedPaths,
+  PathPolicyError,
+  revokeBlessedPath
 } from '../utilities/safePath'
-import { isSafeRemoteImageUrl } from '../utilities/safeUrl'
+import { BlessedPathInfo } from '@/types/AllowedPath'
+import { isSafeRemoteFetchUrl } from '../utilities/safeUrl'
 import { createInstanceShortcut, getImageBase64 } from '../utilities/shortcut'
+import { assertSafeVersionName } from '@/shared/versionName'
 
 let activeConnectivityRun: Promise<ConnectivityCheckResult[]> | null = null
+
+const MAX_PATH_LENGTH = 4096
+const MAX_DOWNLOAD_ITEMS = 20000
+const MAX_CLIPBOARD_LENGTH = 100000
+const MAX_NOTIFICATION_TEXT_LENGTH = 512
+const MAX_DIALOG_FILTERS = 20
+const APP_PATH_KEYS = new Set([
+  'home',
+  'appData',
+  'userData',
+  'sessionData',
+  'temp',
+  'exe',
+  'module',
+  'desktop',
+  'documents',
+  'downloads',
+  'music',
+  'pictures',
+  'videos',
+  'recent',
+  'logs',
+  'crashDumps'
+])
+const DOWNLOAD_SOURCES: DownloadSource[] = ['auto', 'official', 'mirror']
+
+function toShortText(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value === '') return undefined
+
+  let text = ''
+  for (const char of value.slice(0, MAX_NOTIFICATION_TEXT_LENGTH)) {
+    const code = char.codePointAt(0) ?? 0
+    text += code < 32 || code === 127 ? ' ' : char
+  }
+
+  return text
+}
+
+function sanitizeNotificationOptions(
+  options: Electron.NotificationConstructorOptions
+): Electron.NotificationConstructorOptions {
+  return {
+    title: toShortText(options?.title),
+    subtitle: toShortText(options?.subtitle),
+    body: toShortText(options?.body),
+    silent: options?.silent === true
+  }
+}
+
+function sanitizeDialogFilters(
+  filters: unknown
+): { name: string; extensions: string[] }[] | null {
+  if (!Array.isArray(filters)) return null
+
+  const result = filters
+    .slice(0, MAX_DIALOG_FILTERS)
+    .filter(
+      (filter): filter is { name: string; extensions: string[] } =>
+        !!filter &&
+        typeof filter === 'object' &&
+        typeof (filter as { name?: unknown }).name === 'string' &&
+        Array.isArray((filter as { extensions?: unknown }).extensions)
+    )
+    .map((filter) => ({
+      name: filter.name,
+      extensions: filter.extensions.filter(
+        (extension): extension is string => typeof extension === 'string'
+      )
+    }))
+
+  return result.length > 0 ? result : null
+}
+
+function toSafeDownloadItem(value: unknown): DownloadItem {
+  const item = (value ?? {}) as Partial<DownloadItem>
+  const isText = check.nonEmptyString(MAX_PATH_LENGTH)
+  const refuse = () => {
+    throw new IpcArgumentError('Refused file:download: item is not allowed')
+  }
+
+  if (!isText(item.url) || !isText(item.destination) || !isText(item.group)) refuse()
+  if (item.options !== undefined && !check.object(16)(item.options)) refuse()
+
+  const options = item.options ?? {}
+  const safe: DownloadItem = {
+    url: item.url as string,
+    destination: item.destination as string,
+    group: item.group as string
+  }
+
+  if (isText(item.sha1)) safe.sha1 = item.sha1
+  if (isText(item.checksum)) safe.checksum = item.checksum
+  if (item.checksumType === 'sha1' || item.checksumType === 'sha256') {
+    safe.checksumType = item.checksumType
+  }
+  if (check.number()(item.size)) safe.size = item.size
+
+  if (options.extract === true) {
+    const extractFolder = isText(options.extractFolder)
+      ? (options.extractFolder as string)
+      : path.dirname(safe.destination)
+
+    assertWritablePath(extractFolder, 'file:download extract folder')
+
+    safe.options = {
+      extract: true,
+      extractFolder,
+      extractDelete: options.extractDelete !== false
+    }
+  }
+
+  if (check.number()(options.maxBytes)) {
+    safe.options = { ...safe.options, maxBytes: options.maxBytes }
+  }
+  if (options.silent === true) {
+    safe.options = { ...safe.options, silent: true }
+  }
+
+  return safe
+}
 
 function assertSafeExternalUrl(url: string): string {
   const parsed = new URL(url)
   if (!['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
     throw new Error('Unsupported external URL protocol')
   }
+
+  parsed.username = ''
+  parsed.password = ''
 
   return parsed.toString()
 }
@@ -69,19 +197,32 @@ function sendNotificationClick(action?: NotificationClickAction): void {
 }
 
 export function registerOtherIpc() {
-  ipcMain.on('safepath:bless', (event, target: string, kind: 'file' | 'folder' = 'file') => {
-    if (typeof target === 'string' && target) {
-      blessUserSelectedPath(target, kind === 'folder' ? 'folder' : 'file')
-    }
+  ipcMain.on('safepath:bless', (event, target: unknown) => {
+    event.returnValue = false
+    if (typeof target !== 'string' || !target || target.length > MAX_PATH_LENGTH) return
+    if (target.includes('\0')) return
+    if (!fs.pathExistsSync(target)) return
+
+    blessUserSelectedPath(target, 'file', 'read')
     event.returnValue = true
   })
+
+  handleSafe<BlessedPathInfo[]>('safepath:list', [], () => listBlessedPaths())
+
+  handleSafe<boolean, [string]>(
+    'safepath:revoke',
+    false,
+    [check.nonEmptyString(MAX_PATH_LENGTH)],
+    (_, target) => revokeBlessedPath(target)
+  )
 
   handleSafe<void, [string]>('shell:openExternal', undefined, async (_, url: string) => {
     await shell.openExternal(assertSafeExternalUrl(url))
   })
 
   handleSafe<boolean, [string]>('clipboard:writeText', false, async (_, text: string) => {
-    clipboard.writeText(text)
+    if (typeof text !== 'string') return false
+    clipboard.writeText(text.slice(0, MAX_CLIPBOARD_LENGTH))
     return true
   })
 
@@ -110,13 +251,21 @@ export function registerOtherIpc() {
       | 'crashDumps'
     ]
   >('other:getPath', '', (_, pathKey) => {
+    if (!APP_PATH_KEYS.has(pathKey)) return ''
     return app.getPath(pathKey)
   })
 
-  handleSafe<void, [DownloadItem[], number?]>('file:download', undefined, async (_, items, limit = 6) => {
-    const downloader = new Downloader(limit)
-    await downloader.downloadFiles(items)
-  })
+  handleSafe<void, [DownloadItem[], number?]>(
+    'file:download',
+    undefined,
+    [check.arrayOf(check.object(), MAX_DOWNLOAD_ITEMS), check.optional(check.number())],
+    async (_, items, limit = 6) => {
+      const safeItems = items.map(toSafeDownloadItem)
+      const parallel = Number.isFinite(limit) ? Math.min(16, Math.max(1, Math.trunc(limit))) : 6
+      const downloader = new Downloader(parallel)
+      await downloader.downloadFiles(safeItems)
+    }
+  )
 
   handleSafe<string>('other:getVersion', '', () => {
     return app.getVersion()
@@ -133,22 +282,23 @@ export function registerOtherIpc() {
     ) => {
       if (!mainWindow) return []
 
+      const pickFolder = isFolder === true
       const properties: ('openFile' | 'openDirectory' | 'multiSelections')[] = []
-      if (isFolder) properties.push('openDirectory')
+      if (pickFolder) properties.push('openDirectory')
       else properties.push('openFile')
 
-      if (multi) properties.push('multiSelections')
+      if (multi === true) properties.push('multiSelections')
 
       const result = await dialog.showOpenDialog(mainWindow, {
         properties,
-        filters: !isFolder ? filters : []
+        filters: !pickFolder ? (sanitizeDialogFilters(filters) ?? []) : []
       })
 
       if (result.canceled) return []
 
-      const kind = isFolder ? 'folder' : 'file'
+      const kind = pickFolder ? 'folder' : 'file'
       for (const selectedPath of result.filePaths) {
-        blessUserSelectedPath(selectedPath, kind)
+        blessUserSelectedPath(selectedPath, kind, 'readwrite')
       }
 
       return result.filePaths
@@ -190,6 +340,7 @@ export function registerOtherIpc() {
   })
 
   handleSafe<void, [RpcRendererContext]>('rpc:syncContext', undefined, async (_, context) => {
+    if (!context || typeof context !== 'object' || Array.isArray(context)) return
     await rpc.syncContext(context)
   })
 
@@ -197,10 +348,12 @@ export function registerOtherIpc() {
     'other:notify',
     undefined,
     async (_, options, clickAction) => {
+      if (!options || typeof options !== 'object') return
+
       let image: NativeImage | undefined = undefined
 
-      if (isSafeRemoteImageUrl(options.icon)) {
-        const response = await axios.get(options.icon, {
+      if (await isSafeRemoteFetchUrl(options.icon)) {
+        const response = await axios.get(options.icon as string, {
           responseType: 'arraybuffer',
           timeout: 10000,
           maxContentLength: 5 * 1024 * 1024
@@ -210,7 +363,7 @@ export function registerOtherIpc() {
       }
 
       const notification = new Notification({
-        ...options,
+        ...sanitizeNotificationOptions(options),
         icon: image ? image : icon
       })
 
@@ -263,6 +416,7 @@ export function registerOtherIpc() {
   })
 
   handleSafe<void, [DownloadSource]>('mirror:setSource', undefined, async (_, source) => {
+    if (!DOWNLOAD_SOURCES.includes(source)) return
     setDownloadSource(source)
   })
 
@@ -270,7 +424,14 @@ export function registerOtherIpc() {
     'shortcut:create',
     { success: false },
     async (_, versionName: string, instance = 0, imageSource?: string) => {
-      return await createInstanceShortcut(versionName, instance, imageSource)
+      assertSafeVersionName(versionName)
+      const safeInstance = Number.isFinite(instance) ? Math.max(0, Math.trunc(instance)) : 0
+
+      return await createInstanceShortcut(
+        versionName.trim(),
+        safeInstance,
+        typeof imageSource === 'string' ? imageSource : undefined
+      )
     }
   )
 
@@ -278,6 +439,7 @@ export function registerOtherIpc() {
     'image:bytes',
     null,
     async (_, source: string) => {
+      if (typeof source !== 'string' || !source) return null
       return await getImageBase64(source)
     }
   )

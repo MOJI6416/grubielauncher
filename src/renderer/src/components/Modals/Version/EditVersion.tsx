@@ -230,8 +230,7 @@ export function EditVersion({
     () =>
       !!version &&
       consoleMetas.some(
-        (c) =>
-          c.versionName === version.version.name && c.status === "running",
+        (c) => c.versionName === version.version.name && c.status === "running",
       ),
     [consoleMetas, version],
   );
@@ -384,6 +383,7 @@ export function EditVersion({
 
   async function checkIntegrity(
     resolvedBlockedMods: IBlockedMod[] = blockedMods,
+    resolvedMods: ILocalProject[] = mods,
   ) {
     if (!version || !account) return;
 
@@ -392,11 +392,11 @@ export function EditVersion({
 
     try {
       const hasBlockedPaths = applyBlockedModFilePaths(
-        mods,
+        resolvedMods,
         resolvedBlockedMods,
       );
       if (hasBlockedPaths) {
-        version.version.loader.mods = mods;
+        version.version.loader.mods = resolvedMods;
         await version.save();
         setBlockedMods([]);
       }
@@ -415,7 +415,10 @@ export function EditVersion({
     }
   }
 
-  async function saveVersion(resolvedBlockedMods: IBlockedMod[] = blockedMods) {
+  async function saveVersion(
+    resolvedBlockedMods: IBlockedMod[] = blockedMods,
+    resolvedMods: ILocalProject[] = mods,
+  ) {
     if (!version) return;
 
     let isShare = false;
@@ -492,17 +495,17 @@ export function EditVersion({
 
     try {
       const hasBlockedPaths = applyBlockedModFilePaths(
-        mods,
+        resolvedMods,
         resolvedBlockedMods,
       );
       const hasModsChanged = !(await api.modManager.compareMods(
         version.version.loader.mods || [],
-        mods,
+        resolvedMods,
       ));
 
       if (hasModsChanged || hasBlockedPaths) {
         const previousMods = version.version.loader.mods;
-        version.version.loader.mods = mods;
+        version.version.loader.mods = resolvedMods;
 
         try {
           const versionMods = new Mods(settings, version.version, server);
@@ -670,7 +673,8 @@ export function EditVersion({
           handleRequestClose();
         }}
       >
-        <DialogContent aria-describedby={undefined}
+        <DialogContent
+          aria-describedby={undefined}
           className="max-h-[90vh] overflow-hidden p-0 sm:max-w-2xl"
           onClick={(event) => event.stopPropagation()}
           onEscapeKeyDown={(event) => {
@@ -722,159 +726,165 @@ export function EditVersion({
                   {t("versions.sections.content")}
                 </div>
                 <div className="grid gap-2 p-3 sm:grid-cols-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={!version || isLoading || !isInternetOnline}
-                  onClick={() => setIsModManager((prev) => !prev)}
-                >
-                  <span className="flex items-center gap-1">
-                    <SiCurseforge />
-                    <SiModrinth />
-                  </span>
-                  {t("modManager.title")}
-                </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!version || isLoading || !isInternetOnline}
+                    onClick={() => setIsModManager((prev) => !prev)}
+                  >
+                    <span className="flex items-center gap-1">
+                      <SiCurseforge />
+                      <SiModrinth />
+                    </span>
+                    {t("modManager.title")}
+                  </Button>
 
-                {version?.version.version?.serverManager && (
+                  {version?.version.version?.serverManager && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={!version || isLoading}
+                      onClick={() => setIsServers(true)}
+                    >
+                      <Server />
+                      {t("versions.servers")}
+                    </Button>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={
+                      !version ||
+                      isLoading ||
+                      isCheckingSaves ||
+                      !hasSaves ||
+                      isVersionRunning
+                    }
+                    onClick={() => setIsOpenWorlds(true)}
+                  >
+                    <Earth />
+                    {t("worlds.title")}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={
+                      (version?.version.downloadedVersion &&
+                        runArguments.game === "" &&
+                        runArguments.jvm === "") ||
+                      isLoading
+                    }
+                    onClick={() => setIsOpenArguments(true)}
+                  >
+                    <SquareTerminal />
+                    {t("arguments.title")}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={async () => {
+                      if (!version) return;
+                      await api.shell.openPath(
+                        await api.path.join(
+                          paths.minecraft,
+                          "versions",
+                          version.version.name,
+                        ),
+                      );
+                    }}
+                  >
+                    <Folder />
+                    {t("common.openFolder")}
+                  </Button>
+
                   <Button
                     type="button"
                     variant="secondary"
                     disabled={!version || isLoading}
-                    onClick={() => setIsServers(true)}
-                  >
-                    <Server />
-                    {t("versions.servers")}
-                  </Button>
-                )}
+                    onClick={async () => {
+                      if (!version) return;
 
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={
-                    !version ||
-                    isLoading ||
-                    isCheckingSaves ||
-                    !hasSaves ||
-                    isVersionRunning
-                  }
-                  onClick={() => setIsOpenWorlds(true)}
-                >
-                  <Earth />
-                  {t("worlds.title")}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={
-                    (version?.version.downloadedVersion &&
-                      runArguments.game === "" &&
-                      runArguments.jvm === "") ||
-                    isLoading
-                  }
-                  onClick={() => setIsOpenArguments(true)}
-                >
-                  <SquareTerminal />
-                  {t("arguments.title")}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={async () => {
-                    if (!version) return;
-                    await api.shell.openPath(
-                      await api.path.join(
-                        paths.minecraft,
-                        "versions",
-                        version.version.name,
-                      ),
-                    );
-                  }}
-                >
-                  <Folder />
-                  {t("common.openFolder")}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={!version || isLoading}
-                  onClick={async () => {
-                    if (!version) return;
-
-                    let icon: string | undefined = version.version.image;
-                    try {
-                      const base64 = await api.image.bytes(version.version.image);
-                      if (base64) {
-                        const bytes = Uint8Array.from(atob(base64), (c) =>
-                          c.charCodeAt(0),
+                      let icon: string | undefined = version.version.image;
+                      try {
+                        const base64 = await api.image.bytes(
+                          version.version.image,
                         );
-                        const bitmap = await createImageBitmap(
-                          new Blob([bytes]),
-                        );
-                        const canvas = document.createElement("canvas");
-                        canvas.width = 256;
-                        canvas.height = 256;
-                        const ctx = canvas.getContext("2d");
-                        if (ctx) {
-                          ctx.drawImage(bitmap, 0, 0, 256, 256);
-                          icon = canvas.toDataURL("image/png");
+                        if (base64) {
+                          const bytes = Uint8Array.from(atob(base64), (c) =>
+                            c.charCodeAt(0),
+                          );
+                          const bitmap = await createImageBitmap(
+                            new Blob([bytes]),
+                          );
+                          const canvas = document.createElement("canvas");
+                          canvas.width = 256;
+                          canvas.height = 256;
+                          const ctx = canvas.getContext("2d");
+                          if (ctx) {
+                            ctx.drawImage(bitmap, 0, 0, 256, 256);
+                            icon = canvas.toDataURL("image/png");
+                          }
                         }
+                      } catch {}
+
+                      const res = await api.shortcut.create(
+                        version.version.name,
+                        0,
+                        icon,
+                      );
+                      if (res.success) {
+                        toast.success(t("versions.shortcutCreated"));
+                      } else {
+                        showFailureToast(
+                          t("versions.shortcutFailed"),
+                          undefined,
+                          {
+                            channels: ["shortcut:create"],
+                            fallbackDescription: res.error,
+                          },
+                        );
                       }
-                    } catch {
-                      /* fall back to the raw image / launcher icon */
+                    }}
+                  >
+                    <Rocket />
+                    {t("versions.createShortcut")}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={
+                      isLoading ||
+                      isInstallActive ||
+                      !isInternetOnline ||
+                      isVersionRunning
                     }
+                    onClick={async () => {
+                      if (!version) return;
 
-                    const res = await api.shortcut.create(
-                      version.version.name,
-                      0,
-                      icon,
-                    );
-                    if (res.success) {
-                      toast.success(t("versions.shortcutCreated"));
-                    } else {
-                      showFailureToast(t("versions.shortcutFailed"), undefined, {
-                        channels: ["shortcut:create"],
-                        fallbackDescription: res.error,
-                      });
-                    }
-                  }}
-                >
-                  <Rocket />
-                  {t("versions.createShortcut")}
-                </Button>
+                      const { blockedMods: b, mods: resolvedMods } =
+                        await checkBlockedMods(mods, version.versionPath);
+                      if (resolvedMods !== mods) setMods(resolvedMods);
+                      if (b.length > 0) {
+                        setBlockedMods(b);
+                        setIsBlockedMods(true);
+                        setBlockedCloseType("check");
+                        return;
+                      }
 
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={
-                    isLoading ||
-                    isInstallActive ||
-                    !isInternetOnline ||
-                    isVersionRunning
-                  }
-                  onClick={async () => {
-                    if (!version) return;
-
-                    const b = await checkBlockedMods(mods, version.versionPath);
-                    if (b.length > 0) {
-                      setBlockedMods(b);
-                      setIsBlockedMods(true);
-                      setBlockedCloseType("check");
-                      return;
-                    }
-
-                    await checkIntegrity();
-                  }}
-                >
-                  {isLoading && loadingType === "check" ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    <ScanLine />
-                  )}
-                  {t("versions.checkIntegrity")}
-                </Button>
+                      await checkIntegrity(undefined, resolvedMods);
+                    }}
+                  >
+                    {isLoading && loadingType === "check" ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <ScanLine />
+                    )}
+                    {t("versions.checkIntegrity")}
+                  </Button>
                 </div>
               </div>
 
@@ -885,61 +895,111 @@ export function EditVersion({
                     {t("versions.sections.publishing")}
                   </div>
                   <div className="grid gap-2 p-3 sm:grid-cols-2">
-                  {version && showShareAction && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={
-                        hasChanges ||
-                        isLoading ||
-                        (version?.version.owner &&
-                          account &&
-                          !isOwnerVersion) ||
-                        !isNetwork ||
-                        account?.type === "plain"
-                      }
-                      onClick={async () => {
-                        setShareType("new");
-                        setShareModal(true);
-                      }}
-                    >
-                      <Share2 />
-                      {t("versions.share")}
-                    </Button>
-                  )}
-
-                  {version && showPublishActions && (
-                    <ButtonGroup className="w-full">
+                    {version && showShareAction && (
                       <Button
                         type="button"
-                        className="min-w-0 flex-1"
+                        variant="secondary"
                         disabled={
                           hasChanges ||
                           isLoading ||
+                          (version?.version.owner &&
+                            account &&
+                            !isOwnerVersion) ||
                           !isNetwork ||
-                          !isOwnerVersion
+                          account?.type === "plain"
                         }
-                        onClick={openShareManagement}
+                        onClick={async () => {
+                          setShareType("new");
+                          setShareModal(true);
+                        }}
                       >
-                        {isLoading && loadingType === "check_diff" ? (
-                          <Loader2 className="animate-spin" />
-                        ) : (
-                          <CloudCog />
-                        )}
-                        {t("versions.publish")}
+                        <Share2 />
+                        {t("versions.share")}
                       </Button>
+                    )}
 
+                    {version && showPublishActions && (
+                      <ButtonGroup className="w-full">
+                        <Button
+                          type="button"
+                          className="min-w-0 flex-1"
+                          disabled={
+                            hasChanges ||
+                            isLoading ||
+                            !isNetwork ||
+                            !isOwnerVersion
+                          }
+                          onClick={openShareManagement}
+                        >
+                          {isLoading && loadingType === "check_diff" ? (
+                            <Loader2 className="animate-spin" />
+                          ) : (
+                            <CloudCog />
+                          )}
+                          {t("versions.publish")}
+                        </Button>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              size="icon"
+                              disabled={
+                                hasChanges ||
+                                isLoading ||
+                                !isNetwork ||
+                                !isOwnerVersion
+                              }
+                              onClick={async () => {
+                                if (!account) return;
+                                setLoadingType("sync");
+                                setIsLoading(true);
+                                await sync();
+                              }}
+                            >
+                              {isLoading && loadingType === "sync" ? (
+                                <Loader2 className="animate-spin" />
+                              ) : (
+                                <CloudDownload />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {t("versions.synchronizeDescription")}
+                          </TooltipContent>
+                        </Tooltip>
+                      </ButtonGroup>
+                    )}
+
+                    {version &&
+                      showShareManagementAction &&
+                      !showPublishActions && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          disabled={
+                            hasChanges ||
+                            isLoading ||
+                            !isNetwork ||
+                            !isOwnerVersion
+                          }
+                          onClick={openShareManagement}
+                        >
+                          {isLoading && loadingType === "check_diff" ? (
+                            <Loader2 className="animate-spin" />
+                          ) : (
+                            <CloudCog />
+                          )}
+                          {t("versions.shareOptions")}
+                        </Button>
+                      )}
+
+                    {version && showSyncAction && (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             type="button"
-                            size="icon"
-                            disabled={
-                              hasChanges ||
-                              isLoading ||
-                              !isNetwork ||
-                              !isOwnerVersion
-                            }
+                            disabled={hasChanges || isLoading || !isNetwork}
                             onClick={async () => {
                               if (!account) return;
                               setLoadingType("sync");
@@ -952,115 +1012,66 @@ export function EditVersion({
                             ) : (
                               <CloudDownload />
                             )}
+                            {t("versions.synchronize")}
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
                           {t("versions.synchronizeDescription")}
                         </TooltipContent>
                       </Tooltip>
-                    </ButtonGroup>
-                  )}
+                    )}
 
-                  {version &&
-                    showShareManagementAction &&
-                    !showPublishActions && (
+                    {version && showServerManagerAction && (
                       <Button
                         type="button"
                         variant="secondary"
-                        disabled={
-                          hasChanges ||
-                          isLoading ||
-                          !isNetwork ||
-                          !isOwnerVersion
-                        }
-                        onClick={openShareManagement}
-                      >
-                        {isLoading && loadingType === "check_diff" ? (
-                          <Loader2 className="animate-spin" />
-                        ) : (
-                          <CloudCog />
-                        )}
-                        {t("versions.shareOptions")}
-                      </Button>
-                    )}
+                        disabled={isLoading || (!server && !canFetchServerCore)}
+                        onClick={async () => {
+                          if (!version) return;
 
-                  {version && showSyncAction && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          disabled={hasChanges || isLoading || !isNetwork}
-                          onClick={async () => {
-                            if (!account) return;
-                            setLoadingType("sync");
-                            setIsLoading(true);
-                            await sync();
-                          }}
-                        >
-                          {isLoading && loadingType === "sync" ? (
-                            <Loader2 className="animate-spin" />
-                          ) : (
-                            <CloudDownload />
-                          )}
-                          {t("versions.synchronize")}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {t("versions.synchronizeDescription")}
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
+                          if (server) {
+                            setIsServerManager(true);
+                            return;
+                          }
 
-                  {version && showServerManagerAction && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={isLoading || (!server && !canFetchServerCore)}
-                      onClick={async () => {
-                        if (!version) return;
+                          setLoadingType("server");
+                          setIsLoading(true);
 
-                        if (server) {
-                          setIsServerManager(true);
-                          return;
-                        }
+                          const cores = await api.servers.get(
+                            version.version.version.id,
+                            version.version.loader.name,
+                          );
 
-                        setLoadingType("server");
-                        setIsLoading(true);
+                          if (!cores.length) {
+                            setIsLoading(false);
+                            setLoadingType(undefined);
+                            if (
+                              !reportIpcFailure(
+                                t("versions.serverCoreLoadError"),
+                                ["servers:get"],
+                              )
+                            ) {
+                              toast.error(t("versions.notFoundServerCore"));
+                            }
+                            return;
+                          }
 
-                        const cores = await api.servers.get(
-                          version.version.version.id,
-                          version.version.loader.name,
-                        );
+                          setServerCores(cores);
+                          setIsServerCreate(true);
 
-                        if (!cores.length) {
                           setIsLoading(false);
                           setLoadingType(undefined);
-                          if (
-                            !reportIpcFailure(t("versions.serverCoreLoadError"), [
-                              "servers:get",
-                            ])
-                          ) {
-                            toast.error(t("versions.notFoundServerCore"));
-                          }
-                          return;
-                        }
-
-                        setServerCores(cores);
-                        setIsServerCreate(true);
-
-                        setIsLoading(false);
-                        setLoadingType(undefined);
-                      }}
-                    >
-                      {isLoading && loadingType === "server" ? (
-                        <Loader2 className="animate-spin" />
-                      ) : (
-                        <ServerCog />
-                      )}
-                      {t("versions.serverManager")}
-                    </Button>
-                  )}
-                </div>
+                        }}
+                      >
+                        {isLoading && loadingType === "server" ? (
+                          <Loader2 className="animate-spin" />
+                        ) : (
+                          <ServerCog />
+                        )}
+                        {t("versions.serverManager")}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -1070,81 +1081,81 @@ export function EditVersion({
                   {t("versions.sections.tools")}
                 </div>
                 <div className="grid gap-2 p-3 sm:grid-cols-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={isLoading}
-                  onClick={() => setIsOpenExportModal(true)}
-                >
-                  <FolderArchive />
-                  {t("export.btn")}
-                </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={isLoading}
+                    onClick={() => setIsOpenExportModal(true)}
+                  >
+                    <FolderArchive />
+                    {t("export.btn")}
+                  </Button>
 
-                {settings?.devMode && (
-                  <ButtonGroup className="w-full">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className="min-w-0 flex-1"
-                          disabled={isLoading}
-                          onClick={async () => {
-                            if (!version || !account) return;
-                            const command = await version.getRunCommand(
-                              account,
-                              settings,
-                              authData,
-                            );
-                            if (!command) return;
-                            await api.clipboard.writeText(
-                              formatRunCommandForClipboard(command),
-                            );
-                            toast(t("common.copied"));
-                          }}
-                        >
-                          <CopyCheck />
-                          <span className="truncate">
-                            {t("versions.copyRunComand")}
-                          </span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {t("versions.copyAbsolutePath")}
-                      </TooltipContent>
-                    </Tooltip>
+                  {settings?.devMode && (
+                    <ButtonGroup className="w-full">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="min-w-0 flex-1"
+                            disabled={isLoading}
+                            onClick={async () => {
+                              if (!version || !account) return;
+                              const command = await version.getRunCommand(
+                                account,
+                                settings,
+                                authData,
+                              );
+                              if (!command) return;
+                              await api.clipboard.writeText(
+                                formatRunCommandForClipboard(command),
+                              );
+                              toast(t("common.copied"));
+                            }}
+                          >
+                            <CopyCheck />
+                            <span className="truncate">
+                              {t("versions.copyRunComand")}
+                            </span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {t("versions.copyAbsolutePath")}
+                        </TooltipContent>
+                      </Tooltip>
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="icon"
-                          disabled={isLoading}
-                          onClick={async () => {
-                            if (!version || !account) return;
-                            const command = await version.getRunCommand(
-                              account,
-                              settings,
-                              authData,
-                              true,
-                            );
-                            if (!command) return;
-                            await api.clipboard.writeText(
-                              formatRunCommandForClipboard(command),
-                            );
-                            toast(t("common.copied"));
-                          }}
-                        >
-                          <CopySlash />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {t("versions.copyRelativePath")}
-                      </TooltipContent>
-                    </Tooltip>
-                  </ButtonGroup>
-                )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon"
+                            disabled={isLoading}
+                            onClick={async () => {
+                              if (!version || !account) return;
+                              const command = await version.getRunCommand(
+                                account,
+                                settings,
+                                authData,
+                                true,
+                              );
+                              if (!command) return;
+                              await api.clipboard.writeText(
+                                formatRunCommandForClipboard(command),
+                              );
+                              toast(t("common.copied"));
+                            }}
+                          >
+                            <CopySlash />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {t("versions.copyRelativePath")}
+                        </TooltipContent>
+                      </Tooltip>
+                    </ButtonGroup>
+                  )}
                 </div>
               </div>
             </div>
@@ -1156,7 +1167,9 @@ export function EditVersion({
                 onClick={async () => {
                   if (!version) return;
 
-                  const b = await checkBlockedMods(mods, version.versionPath);
+                  const { blockedMods: b, mods: resolvedMods } =
+                    await checkBlockedMods(mods, version.versionPath);
+                  if (resolvedMods !== mods) setMods(resolvedMods);
                   if (b.length > 0) {
                     setBlockedMods(b);
                     setIsBlockedMods(true);
@@ -1164,7 +1177,7 @@ export function EditVersion({
                     return;
                   }
 
-                  await saveVersion();
+                  await saveVersion(undefined, resolvedMods);
                 }}
               >
                 {isLoading && loadingType === "save" ? (
@@ -1180,6 +1193,7 @@ export function EditVersion({
                 variant="destructive"
                 disabled={
                   isLoading ||
+                  isInstallActive ||
                   isVersionRunning ||
                   (!!version?.version.owner && account && !isOwnerVersion)
                 }

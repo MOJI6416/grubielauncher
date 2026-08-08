@@ -1,6 +1,7 @@
 import path from 'path'
 import { app } from 'electron'
 import fs from 'fs-extra'
+import { AllowedPathAccess, AllowedPathKind, BlessedPathInfo } from '@/types/AllowedPath'
 
 export class PathPolicyError extends Error {
   constructor(message: string) {
@@ -9,17 +10,22 @@ export class PathPolicyError extends Error {
   }
 }
 
-type BlessedKind = 'file' | 'folder'
+type BlessedKind = AllowedPathKind
+type BlessedAccess = AllowedPathAccess
 
 interface BlessedEntry {
   path: string
   kind: BlessedKind
+  access: BlessedAccess
   addedAt: number
+  persist: boolean
 }
 
 const BLESSED_TTL_MS = 30 * 24 * 60 * 60 * 1000
+const BLESSED_RENEW_AFTER_MS = 24 * 60 * 60 * 1000
 const MAX_BLESSED_ENTRIES = 64
 const DOWNLOADS_READABLE_EXTENSIONS = new Set(['.jar', '.zip', '.mrpack', '.litemod'])
+const JAVA_ARCHIVE_NAME = /\.(?:zip|tar|tgz|gz|xz|bz2)(?:\.part)?$/i
 const OPENABLE_FILE_EXTENSIONS = new Set(['.txt', '.log', '.json'])
 
 const blessedEntries = new Map<string, BlessedEntry>()
@@ -32,7 +38,13 @@ function getPersistedRootsPath(): string {
 function normalizeStoredEntry(value: unknown, now: number): BlessedEntry | null {
   if (typeof value === 'string') {
     if (!value || value.includes('\0')) return null
-    return { path: path.resolve(value), kind: 'folder', addedAt: now }
+    return {
+      path: path.resolve(value),
+      kind: 'folder',
+      access: 'readwrite',
+      addedAt: now,
+      persist: true
+    }
   }
 
   if (!value || typeof value !== 'object') return null
@@ -45,10 +57,12 @@ function normalizeStoredEntry(value: unknown, now: number): BlessedEntry | null 
   return {
     path: path.resolve(stored.path),
     kind: stored.kind === 'file' ? 'file' : 'folder',
+    access: stored.access === 'read' ? 'read' : 'readwrite',
     addedAt:
       typeof stored.addedAt === 'number' && Number.isFinite(stored.addedAt)
         ? stored.addedAt
-        : now
+        : now,
+    persist: true
   }
 }
 
@@ -88,8 +102,9 @@ function loadPersistedRoots(): void {
 function persistBlessedRoots(): void {
   try {
     const target = getPersistedRootsPath()
+    const persistable = [...blessedEntries.values()].filter((entry) => entry.persist)
     fs.ensureDirSync(path.dirname(target))
-    fs.writeJsonSync(target, [...blessedEntries.values()], { spaces: 2, mode: 0o600 })
+    fs.writeJsonSync(target, persistable, { spaces: 2, mode: 0o600 })
   } catch {}
 }
 
@@ -106,17 +121,53 @@ function isInside(child: string, root: string): boolean {
   return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel))
 }
 
+function getSystemRoots(): string[] {
+  if (process.platform === 'win32') {
+    return [
+      process.env.SystemRoot,
+      process.env.windir,
+      process.env.ProgramFiles,
+      process.env['ProgramFiles(x86)'],
+      process.env.ProgramData
+    ]
+      .filter((root): root is string => typeof root === 'string' && root !== '')
+      .map((root) => path.resolve(root))
+  }
+
+  return [
+    '/etc',
+    '/usr',
+    '/bin',
+    '/sbin',
+    '/boot',
+    '/dev',
+    '/proc',
+    '/sys',
+    '/var',
+    '/lib',
+    '/opt',
+    '/System',
+    '/Library'
+  ].map((root) => path.resolve(root))
+}
+
 function isBlessableTarget(resolved: string): boolean {
   if (!path.parse(resolved).base) return false
+  if (getSystemRoots().some((root) => isInside(resolved, root))) return false
 
   try {
-    return !isInside(path.resolve(app.getPath('home')), resolved)
+    if (isInside(path.resolve(app.getPath('home')), resolved)) return false
+    return !isInside(path.resolve(app.getPath('userData')), resolved)
   } catch {
     return true
   }
 }
 
-export function blessUserSelectedPath(target: string, kind: BlessedKind): void {
+export function blessUserSelectedPath(
+  target: string,
+  kind: BlessedKind,
+  access: BlessedAccess = 'readwrite'
+): void {
   if (!target || typeof target !== 'string' || target.includes('\0')) return
 
   try {
@@ -124,10 +175,44 @@ export function blessUserSelectedPath(target: string, kind: BlessedKind): void {
     if (!isBlessableTarget(resolved)) return
 
     loadPersistedRoots()
-    blessedEntries.set(resolved, { path: resolved, kind, addedAt: Date.now() })
+    blessedEntries.set(resolved, {
+      path: resolved,
+      kind,
+      access,
+      addedAt: Date.now(),
+      persist: access === 'readwrite'
+    })
     pruneBlessedEntries()
     persistBlessedRoots()
   } catch {}
+}
+
+export function listBlessedPaths(): BlessedPathInfo[] {
+  loadPersistedRoots()
+  pruneBlessedEntries()
+
+  return [...blessedEntries.values()]
+    .map((entry) => ({
+      path: entry.path,
+      kind: entry.kind,
+      access: entry.access,
+      addedAt: entry.addedAt,
+      expiresAt: entry.addedAt + BLESSED_TTL_MS
+    }))
+    .sort((a, b) => b.addedAt - a.addedAt)
+}
+
+export function revokeBlessedPath(target: unknown): boolean {
+  if (!isUsablePathString(target)) return false
+
+  const resolved = resolveOrNull(target)
+  if (!resolved) return false
+
+  loadPersistedRoots()
+  if (!blessedEntries.delete(resolved)) return false
+
+  persistBlessedRoots()
+  return true
 }
 
 function canonicalize(target: string): string | null {
@@ -148,8 +233,20 @@ function canonicalize(target: string): string | null {
   }
 }
 
+const canonicalRootCache = new Map<string, string>()
+
+function canonicalizeRoot(root: string): string | null {
+  const cached = canonicalRootCache.get(root)
+  if (cached) return cached
+
+  const canonical = canonicalize(root)
+  if (canonical && fs.existsSync(root)) canonicalRootCache.set(root, canonical)
+
+  return canonical
+}
+
 function matchesBlessedEntry(canonicalTarget: string, entry: BlessedEntry): boolean {
-  const canonicalEntry = canonicalize(entry.path)
+  const canonicalEntry = canonicalizeRoot(entry.path)
   if (!canonicalEntry) return false
 
   return entry.kind === 'file'
@@ -157,7 +254,19 @@ function matchesBlessedEntry(canonicalTarget: string, entry: BlessedEntry): bool
     : isInside(canonicalTarget, canonicalEntry)
 }
 
-function isAllowedPath(target: string, roots: string[]): boolean {
+function renewBlessedEntry(entry: BlessedEntry): void {
+  const now = Date.now()
+  if (now - entry.addedAt < BLESSED_RENEW_AFTER_MS) return
+
+  entry.addedAt = now
+  if (entry.persist) persistBlessedRoots()
+}
+
+function isAllowedPath(
+  target: string,
+  roots: string[],
+  access: BlessedAccess = 'read'
+): boolean {
   loadPersistedRoots()
   pruneBlessedEntries()
 
@@ -165,14 +274,20 @@ function isAllowedPath(target: string, roots: string[]): boolean {
   if (!canonicalTarget) return false
 
   const insideRoot = roots.some((root) => {
-    const canonicalRoot = canonicalize(root)
+    const canonicalRoot = canonicalizeRoot(root)
     return canonicalRoot ? isInside(canonicalTarget, canonicalRoot) : false
   })
   if (insideRoot) return true
 
-  return [...blessedEntries.values()].some((entry) =>
-    matchesBlessedEntry(canonicalTarget, entry)
-  )
+  for (const entry of blessedEntries.values()) {
+    if (access !== 'read' && entry.access !== 'readwrite') continue
+    if (!matchesBlessedEntry(canonicalTarget, entry)) continue
+
+    renewBlessedEntry(entry)
+    return true
+  }
+
+  return false
 }
 
 function isUsablePathString(target: unknown): target is string {
@@ -187,17 +302,63 @@ function resolveOrNull(target: string): string | null {
   }
 }
 
+function isSamePath(left: string, right: string): boolean {
+  if (process.platform === 'win32' || process.platform === 'darwin') {
+    return left.toLowerCase() === right.toLowerCase()
+  }
+  return left === right
+}
+
+function isProtectedWritePath(resolved: string): boolean {
+  const canonicalTarget = canonicalize(resolved)
+  if (!canonicalTarget) return true
+
+  const persistedRoots = canonicalizeRoot(getPersistedRootsPath())
+  if (persistedRoots && isSamePath(canonicalTarget, persistedRoots)) return true
+
+  const javaRoot = canonicalizeRoot(path.join(getLauncherDataRoot(), 'java'))
+  if (!javaRoot) return false
+  if (!isInside(canonicalTarget, javaRoot)) return false
+
+  if (!isSamePath(path.dirname(canonicalTarget), javaRoot)) return true
+
+  return !JAVA_ARCHIVE_NAME.test(path.basename(canonicalTarget))
+}
+
 export function isWritablePath(target: unknown): target is string {
   if (!isUsablePathString(target)) return false
 
   const resolved = resolveOrNull(target)
   if (!resolved) return false
+  if (isProtectedWritePath(resolved)) return false
 
-  return isAllowedPath(resolved, getLauncherRoots())
+  return isAllowedPath(resolved, getLauncherRoots(), 'readwrite')
 }
 
 export function assertWritablePath(target: string, label = 'path'): string {
   if (!isWritablePath(target)) {
+    throw new PathPolicyError(`Refused ${label} outside allowed roots: ${String(target)}`)
+  }
+  return target
+}
+
+export function isExtractablePath(target: unknown): target is string {
+  if (isWritablePath(target)) return true
+  if (!isUsablePathString(target)) return false
+
+  const resolved = resolveOrNull(target)
+  if (!resolved) return false
+
+  const canonicalTarget = canonicalize(resolved)
+  if (!canonicalTarget) return false
+
+  const javaRoot = canonicalizeRoot(path.join(getLauncherDataRoot(), 'java'))
+
+  return Boolean(javaRoot && isSamePath(canonicalTarget, javaRoot))
+}
+
+export function assertExtractablePath(target: string, label = 'path'): string {
+  if (!isExtractablePath(target)) {
     throw new PathPolicyError(`Refused ${label} outside allowed roots: ${String(target)}`)
   }
   return target

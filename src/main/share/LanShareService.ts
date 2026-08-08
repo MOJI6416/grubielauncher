@@ -26,6 +26,7 @@ import { IVersionConf } from "@/types/IVersion";
 import { IWorldStatistics } from "@/types/World";
 import { IGuestWorldStatsUpload } from "@/types/Achievements";
 import {
+  isValidGatewayUrl,
   isValidPublicShareHost,
   isValidShareSlug,
   isValidTicketShareHost,
@@ -36,6 +37,7 @@ import {
   applyTunnelDisconnectedState,
   getReconnectDelay,
   resolveFriendShareConnection,
+  shouldRenewGatewayToken,
 } from "./shareClientLogic";
 import {
   createShareError,
@@ -50,7 +52,7 @@ import fs from "fs-extra";
 import { jwtDecode } from "jwt-decode";
 import path from "path";
 import net from "net";
-import netstat from "node-netstat";
+import { listTcpConnections } from "../utilities/tcpConnections";
 
 type ShareEvents = {
   stateChanged: (state: ShareState) => void;
@@ -140,9 +142,14 @@ export class LanShareService extends EventEmitter {
       const code =
         message.code === "UNAUTHORIZED"
           ? "tunnel_auth_failed"
-          : "tunnel_protocol_error";
+          : message.code === "UNSUPPORTED_PROTOCOL_VERSION"
+            ? "tunnel_version_unsupported"
+            : "tunnel_protocol_error";
       this.handleShareError(createShareError(code, message.message));
-      if (code === "tunnel_auth_failed") {
+      if (
+        code === "tunnel_auth_failed" ||
+        code === "tunnel_version_unsupported"
+      ) {
         void this.forceLocalStop("error");
       }
     });
@@ -293,6 +300,13 @@ export class LanShareService extends EventEmitter {
           );
         }
 
+        if (!isValidGatewayUrl(response.gatewayUrl)) {
+          throw new ShareServiceError(
+            "invalid_response",
+            "Share API returned untrusted gateway url",
+          );
+        }
+
         this.activeGatewayUrl = response.gatewayUrl;
         this.activeGatewayToken = response.gatewayToken;
         this.activeGatewayTokenExpMs = this.decodeTokenExpiration(
@@ -370,7 +384,7 @@ export class LanShareService extends EventEmitter {
         }
       }
 
-      await this.forceLocalStop(stopError ? "error" : "stopped");
+      await this.forceLocalStop(stopError ? "error" : "stopped", false);
 
       if (stopError) {
         this.handleShareError(stopError);
@@ -466,6 +480,13 @@ export class LanShareService extends EventEmitter {
     slug: string,
   ): Promise<ShareCommandResult<ResolvedFriendShareConnection>> {
     try {
+      if (!isValidShareSlug(slug)) {
+        return {
+          ok: false,
+          error: createShareError("invalid_response", "Share slug is invalid"),
+        };
+      }
+
       const backend = await this.getGuestBackend();
       if (!backend) {
         return {
@@ -512,6 +533,13 @@ export class LanShareService extends EventEmitter {
     slug: string,
   ): Promise<ShareCommandResult<ResolvedFriendShareConnection>> {
     try {
+      if (!isValidShareSlug(slug)) {
+        return {
+          ok: false,
+          error: createShareError("invalid_response", "Share slug is invalid"),
+        };
+      }
+
       const backend = await this.getGuestBackend();
       if (!backend) {
         return {
@@ -801,7 +829,8 @@ export class LanShareService extends EventEmitter {
           lastHeartbeatAt: new Date().toISOString(),
           ...(current.phase === "error" &&
           current.isTunnelConnected &&
-          current.isAuthenticated
+          current.isAuthenticated &&
+          this.tunnelClient.isWritable()
             ? { phase: "online" as const, lastError: undefined }
             : {}),
         });
@@ -809,6 +838,16 @@ export class LanShareService extends EventEmitter {
         if (response?.restored) {
           await this.tunnelClient.disconnect("live_session_restored", true);
           void this.handleTunnelDisconnected("live_session_restored");
+          return;
+        }
+
+        if (
+          this.activeGatewayTokenExpMs > 0 &&
+          shouldRenewGatewayToken(this.activeGatewayTokenExpMs)
+        ) {
+          await this.ensureFreshGatewayToken(state.sessionId || "").catch(
+            () => undefined,
+          );
         }
       } catch (error) {
         consecutiveFailures += 1;
@@ -915,10 +954,7 @@ export class LanShareService extends EventEmitter {
     const backend = new Backend(this.activeHostAccessToken);
     const response = await backend.renewShareGatewayToken(sessionId);
 
-    if (
-      !response.gatewayToken ||
-      !this.isValidGatewayUrl(response.gatewayUrl)
-    ) {
+    if (!response.gatewayToken || !isValidGatewayUrl(response.gatewayUrl)) {
       throw new ShareServiceError(
         "invalid_response",
         "Share API returned invalid gateway token response",
@@ -936,15 +972,6 @@ export class LanShareService extends EventEmitter {
         "invalid_response",
         "Share API returned gateway token without expiration",
       );
-    }
-  }
-
-  private isValidGatewayUrl(gatewayUrl: string): boolean {
-    try {
-      const parsed = new URL(normalizeGatewayUrl(gatewayUrl));
-      return parsed.protocol === "ws:" || parsed.protocol === "wss:";
-    } catch {
-      return false;
     }
   }
 
@@ -1020,7 +1047,13 @@ export class LanShareService extends EventEmitter {
     });
   }
 
-  private async forceLocalStop(phase: ShareState["phase"]): Promise<void> {
+  private async forceLocalStop(
+    phase: ShareState["phase"],
+    notifyBackend = true,
+  ): Promise<void> {
+    const sessionId = this.stateStore.getState().sessionId;
+    const hostAccessToken = this.activeHostAccessToken;
+
     this.stopHeartbeat();
     this.clearReconnectTimer();
     await this.tunnelClient.disconnect("share_stopped", true);
@@ -1040,6 +1073,13 @@ export class LanShareService extends EventEmitter {
       candidate,
       target: candidate,
     });
+
+    if (notifyBackend && sessionId && hostAccessToken) {
+      try {
+        const backend = new Backend(hostAccessToken);
+        await backend.stopShare(sessionId);
+      } catch {}
+    }
   }
 
   private handleShareError(error: ShareStateError): void {
@@ -1116,32 +1156,25 @@ export class LanShareService extends EventEmitter {
     });
   }
 
-  private verifyPortOwnedByProcess(
+  private async verifyPortOwnedByProcess(
     port: number,
     pid: number,
   ): Promise<boolean> {
-    return new Promise((resolve) => {
-      const owners = new Set<number>();
+    const owners = new Set<number>();
 
-      try {
-        netstat(
-          { filter: { local: { port }, protocol: "tcp" }, limit: 100 },
-          (item: { state?: string; pid?: number }) => {
-            const state = String(item?.state || "").toUpperCase();
-            if (state && !state.includes("LISTEN")) return;
-            if (typeof item?.pid === "number" && item.pid > 0) {
-              owners.add(item.pid);
-            }
-          },
-        );
-      } catch {
-        // ignore — handled by the fail-open path below
+    try {
+      const connections = await listTcpConnections();
+
+      for (const connection of connections) {
+        if (connection.localPort !== port) continue;
+        if (connection.state && !connection.state.includes("LISTEN")) continue;
+        if (connection.pid) owners.add(connection.pid);
       }
+    } catch {
+      return true;
+    }
 
-      setTimeout(() => {
-        resolve(owners.size === 0 ? true : owners.has(pid));
-      }, 1200);
-    });
+    return owners.size === 0 ? true : owners.has(pid);
   }
 
   private decodeTokenExpiration(token: string): number {

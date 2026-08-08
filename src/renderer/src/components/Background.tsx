@@ -18,15 +18,7 @@ const Background: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,transparent_0%,rgba(0,0,0,0.5)_72%)]" />
       </div>
 
-      <main
-        className="
-          relative z-10 w-full flex-grow
-          min-h-[calc(100vh_-_64px_-_108px)] mb-12
-          max-md:min-h-0 max-md:mb-0
-        "
-      >
-        {children}
-      </main>
+      <div className="relative z-10 w-full flex-grow">{children}</div>
     </div>
   )
 }

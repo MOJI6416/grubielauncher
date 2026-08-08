@@ -12,6 +12,7 @@ export interface CrashRule {
   exitCodes?: number[]
   culpritPattern?: string
   culpritFlags?: string
+  priority?: number
   messages: CrashRuleMessages
 }
 

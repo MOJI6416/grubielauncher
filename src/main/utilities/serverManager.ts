@@ -1,6 +1,7 @@
-import { IServerSettings } from '@/types/Server'
+import { IServerSettings, ServerSyncNotice } from '@/types/Server'
 import path from 'path'
 import fs from 'fs-extra'
+import { BrowserWindow } from 'electron'
 import { IVersionConf } from '@/types/IVersion'
 import { getLauncherPaths } from './other'
 import { readNBT } from './nbt'
@@ -39,6 +40,13 @@ export async function setServerAikarFlags(serverPath: string, enabled: boolean) 
   }
 }
 
+export const SERVER_LAUNCH_ENTRIES = [
+  'run.bat',
+  'run.sh',
+  'user_jvm_args.txt',
+  'libraries'
+]
+
 export const SERVER_PROTECTED_ENTRIES = [
   'server.properties',
   'eula.txt',
@@ -51,7 +59,8 @@ export const SERVER_PROTECTED_ENTRIES = [
   'world_nether',
   'world_the_end',
   'logs',
-  'crash-reports'
+  'crash-reports',
+  ...SERVER_LAUNCH_ENTRIES
 ]
 
 const SERVER_SYNC_BACKUP_DIR = 'storage/sync-backups'
@@ -59,6 +68,10 @@ const SERVER_SYNC_BACKUP_TTL_MS = 14 * 24 * 60 * 60 * 1000
 
 function isProtectedServerEntry(entry: string): boolean {
   return SERVER_PROTECTED_ENTRIES.includes(entry.toLowerCase())
+}
+
+function isLaunchServerEntry(entry: string): boolean {
+  return SERVER_LAUNCH_ENTRIES.includes(entry.toLowerCase())
 }
 
 async function backupBeforeOverwrite(serverPath: string, entry: string) {
@@ -70,7 +83,7 @@ async function backupBeforeOverwrite(serverPath: string, entry: string) {
   await pruneSyncBackups(backupRoot)
 
   const target = path.join(backupRoot, `${Date.now()}-${entry}`)
-  await fs.copy(destination, target, { overwrite: true }).catch(() => {})
+  await fs.copy(destination, target, { overwrite: true })
 }
 
 async function pruneSyncBackups(backupRoot: string) {
@@ -86,12 +99,74 @@ async function pruneSyncBackups(backupRoot: string) {
   }
 }
 
+const runningServers = new Set<string>()
+
+export function setServerRunning(serverPath: string, running: boolean) {
+  const key = path.resolve(serverPath)
+  if (running) runningServers.add(key)
+  else runningServers.delete(key)
+}
+
+async function isWorldSessionLocked(serverPath: string): Promise<boolean> {
+  const lockPath = path.join(serverPath, 'world', 'session.lock')
+  let descriptor: number | undefined
+
+  try {
+    descriptor = await fs.open(lockPath, 'r+')
+    return false
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code
+    return code === 'EBUSY' || code === 'EPERM' || code === 'EACCES'
+  } finally {
+    if (descriptor !== undefined) await fs.close(descriptor).catch(() => {})
+  }
+}
+
+export async function isServerRunning(serverPath: string): Promise<boolean> {
+  if (runningServers.has(path.resolve(serverPath))) return true
+  return await isWorldSessionLocked(serverPath)
+}
+
+export interface ServerSyncResult {
+  serverRunning: boolean
+  copied: string[]
+  errors: { entry: string; message: string }[]
+}
+
+function broadcastSyncNotice(notice: ServerSyncNotice) {
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (window.isDestroyed() || window.webContents.isDestroyed()) continue
+    window.webContents.send('server:syncNotice', notice)
+  }
+}
+
 export async function syncServerExtraFiles(
   versionPath: string,
   serverPath: string,
   syncDirs: string[]
-) {
-  if (!(await fs.pathExists(serverPath))) return
+): Promise<ServerSyncResult> {
+  const result: ServerSyncResult = {
+    serverRunning: false,
+    copied: [],
+    errors: []
+  }
+
+  if (!(await fs.pathExists(serverPath))) return result
+
+  result.serverRunning = await isServerRunning(serverPath)
+
+  const copyEntry = async (source: string, entry: string) => {
+    try {
+      await backupBeforeOverwrite(serverPath, entry)
+      await fs.copy(source, path.join(serverPath, entry), { overwrite: true })
+      result.copied.push(entry)
+    } catch (error) {
+      result.errors.push({
+        entry,
+        message: error instanceof Error ? error.message : String(error)
+      })
+    }
+  }
 
   for (const dir of syncDirs) {
     if (isProtectedServerEntry(dir)) continue
@@ -99,26 +174,39 @@ export async function syncServerExtraFiles(
     const source = path.join(versionPath, dir)
     if (!(await fs.pathExists(source))) continue
 
-    await backupBeforeOverwrite(serverPath, dir)
-    await fs.copy(source, path.join(serverPath, dir), { overwrite: true }).catch(() => {})
+    await copyEntry(source, dir)
   }
 
   const serverOverrides = path.join(versionPath, 'storage', 'server-overrides')
-  if (!(await fs.pathExists(serverOverrides))) return
+  if (await fs.pathExists(serverOverrides)) {
+    const entries = await fs.readdir(serverOverrides).catch(() => [] as string[])
 
-  const entries = await fs.readdir(serverOverrides).catch(() => [] as string[])
-  for (const entry of entries) {
-    const destination = path.join(serverPath, entry)
+    for (const entry of entries) {
+      if (isLaunchServerEntry(entry)) continue
 
-    if (isProtectedServerEntry(entry) && (await fs.pathExists(destination))) {
-      continue
+      if (
+        isProtectedServerEntry(entry) &&
+        (await fs.pathExists(path.join(serverPath, entry)))
+      ) {
+        continue
+      }
+
+      await copyEntry(path.join(serverOverrides, entry), entry)
     }
-
-    await backupBeforeOverwrite(serverPath, entry)
-    await fs
-      .copy(path.join(serverOverrides, entry), destination, { overwrite: true })
-      .catch(() => {})
   }
+
+  if (result.errors.length > 0) {
+    console.error('[server:syncFiles] could not copy server files:', result.errors)
+    broadcastSyncNotice({
+      level: 'error',
+      entries: result.errors.map((item) => item.entry),
+      reason: result.errors[0].message
+    })
+  } else if (result.serverRunning && result.copied.length > 0) {
+    broadcastSyncNotice({ level: 'info', entries: result.copied })
+  }
+
+  return result
 }
 
 export async function replaceXmxParameter(serverPath: string, memory: string) {
@@ -147,6 +235,22 @@ export async function replaceXmxParameter(serverPath: string, memory: string) {
   await edit(jvmArgs, memory)
 }
 
+function escapePropertyValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/[\r\n]+/g, ' ')
+}
+
+function unescapePropertyValue(value: string): string {
+  return value.replace(/\\(u[0-9a-fA-F]{4}|.)/g, (_, sequence: string) => {
+    if (sequence[0] === 'u') {
+      return String.fromCharCode(Number.parseInt(sequence.slice(1), 16))
+    }
+    if (sequence === 'n') return '\n'
+    if (sequence === 't') return '\t'
+    if (sequence === 'r') return '\r'
+    return sequence
+  })
+}
+
 export async function updateServerProperty(
   filePath: string,
   settings: IServerSettings
@@ -167,7 +271,7 @@ export async function updateServerProperty(
 
   function update(property: string, value: string | number | boolean) {
     const safeValue =
-      typeof value === 'string' ? value.replace(/[\r\n]+/g, ' ') : value
+      typeof value === 'string' ? escapePropertyValue(value) : value
     let updated = false
 
     updatedLines = updatedLines.map((line) => {
@@ -262,7 +366,7 @@ export async function getServerSettings(filePath: string): Promise<IServerSettin
       const currentValue = rest.join('=').trim()
 
       if (currentKey === property) {
-        return currentValue
+        return unescapePropertyValue(currentValue)
       }
     }
 
@@ -300,8 +404,9 @@ export async function getServersOfVersions(versions: IVersionConf[]) {
     path: string
   }[] = []
 
+  const paths = await getLauncherPaths()
+
   for (const version of versions) {
-    const paths = await getLauncherPaths()
     const versionPath = path.join(paths.minecraft, 'versions', version.name)
     const serversPath = path.join(versionPath, 'servers.dat')
     const isExists = await fs.pathExists(serversPath)
@@ -311,7 +416,10 @@ export async function getServersOfVersions(versions: IVersionConf[]) {
       continue
     }
 
-    const serversData = await readNBT(serversPath)
+    const serversData = await readNBT(serversPath).catch((err) => {
+      console.error(`[servers:versions] unreadable servers.dat ${serversPath}:`, err)
+      return []
+    })
     servers.push({ version: version.name, servers: serversData, path: serversPath })
   }
 

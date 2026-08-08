@@ -6,6 +6,23 @@ export function assertSafeFileSegment(value: string, label: string): string {
   return value;
 }
 
+export function toSafeFileName(value: string, label: string): string {
+  const raw = typeof value === "string" ? value : "";
+  const name = (raw.split(/[\\/]+/).pop() ?? "").trim();
+
+  if (
+    !name ||
+    name === "." ||
+    name === ".." ||
+    name.includes("\0") ||
+    /^[A-Za-z]:/.test(name)
+  ) {
+    throw new Error(`Unsafe ${label}: ${String(value)}`);
+  }
+
+  return name;
+}
+
 export function assertSafeRelativePath(value: string, label: string): string {
   const normalized = typeof value === "string" ? value.replaceAll("\\", "/") : "";
 

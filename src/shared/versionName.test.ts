@@ -21,6 +21,13 @@ describe("isSafeVersionName", () => {
     expect(isSafeVersionName(42 as unknown as string)).toBe(false);
   });
 
+  it("rejects control characters (Desktop Entry injection)", () => {
+    expect(isSafeVersionName("pack\nExec=calc")).toBe(false);
+    expect(isSafeVersionName("pack\r\n[Desktop Action x]")).toBe(false);
+    expect(isSafeVersionName("pack\tname")).toBe(false);
+    expect(isSafeVersionName("pack\u007fname")).toBe(false);
+  });
+
   it("rejects Windows reserved names and trailing dot/space", () => {
     expect(isSafeVersionName("CON")).toBe(false);
     expect(isSafeVersionName("con")).toBe(false);

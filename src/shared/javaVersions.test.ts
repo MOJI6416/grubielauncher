@@ -28,4 +28,22 @@ describe("mcVersionToJavaMajor", () => {
     expect(mcVersionToJavaMajor("")).toBe(21);
     expect(mcVersionToJavaMajor("24w14a")).toBe(21);
   });
+
+  it("maps alpha, beta and pre-classic ids to Java 8", () => {
+    expect(mcVersionToJavaMajor("rd-132211")).toBe(8);
+    expect(mcVersionToJavaMajor("c0.30_01c")).toBe(8);
+    expect(mcVersionToJavaMajor("inf-20100618")).toBe(8);
+    expect(mcVersionToJavaMajor("a1.0.17_04")).toBe(8);
+    expect(mcVersionToJavaMajor("b1.7.3")).toBe(8);
+  });
+
+  it("maps snapshots by their release year and week", () => {
+    expect(mcVersionToJavaMajor("16w20a")).toBe(8);
+    expect(mcVersionToJavaMajor("20w14infinite")).toBe(8);
+    expect(mcVersionToJavaMajor("21w18a")).toBe(8);
+    expect(mcVersionToJavaMajor("21w19a")).toBe(17);
+    expect(mcVersionToJavaMajor("22w13a")).toBe(17);
+    expect(mcVersionToJavaMajor("23w51b")).toBe(17);
+    expect(mcVersionToJavaMajor("24w03a")).toBe(21);
+  });
 });

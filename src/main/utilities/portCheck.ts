@@ -25,7 +25,7 @@ export function isPortAvailable(port: number): Promise<boolean> {
     server.once("listening", () => settle(true));
 
     try {
-      server.listen({ port, host: "0.0.0.0", exclusive: true });
+      server.listen({ port, host: "127.0.0.1", exclusive: true });
     } catch {
       settle(false);
     }

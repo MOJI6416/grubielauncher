@@ -6,32 +6,19 @@ import {
   IRefreshTokenResponse
 } from '@/types/Auth'
 import axios from 'axios'
-import { reportFailure } from '../utilities/failureBus'
+import { logAxiosError } from '../utilities/axiosLog'
 
 const api = axios.create({
   baseURL: BACKEND_URL,
   timeout: 30000
 })
 
-function logAxiosError(prefix: string, error: unknown) {
-  reportFailure(error, { channel: 'service:auth' })
-  if (axios.isAxiosError(error)) {
-    const status = error.response?.status
-    const statusText = error.response?.statusText
-    const message = error.message
-    console.error(`${prefix}:`, status ? `HTTP ${status}${statusText ? ` ${statusText}` : ''}` : message)
-    return
-  }
-
-  console.error(`${prefix}:`, error)
-}
-
 async function postOrNull<TResponse>(url: string, data: any, errorPrefix: string): Promise<TResponse | null> {
   try {
     const response = await api.post<TResponse>(url, data)
     return response.data
   } catch (error) {
-    logAxiosError(errorPrefix, error)
+    logAxiosError(errorPrefix, error, 'service:auth')
     return null
   }
 }

@@ -101,7 +101,13 @@ export type CatalogSortOption = 'new' | 'downloads'
 export interface PublishCommunityResult {
   ok: boolean
   status?: 'pending' | 'approved'
-  error?: 'duplicate' | 'limit' | 'no_manager' | 'failed'
+  error?:
+    | 'duplicate'
+    | 'limit'
+    | 'no_manager'
+    | 'failed'
+    | 'community_publish_no_token'
+    | 'community_publish_unsupported_env'
   reason?: string | null
   dupStatus?: CatalogSkinStatus
 }

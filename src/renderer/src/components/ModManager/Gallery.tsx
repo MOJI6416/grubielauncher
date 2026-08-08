@@ -72,19 +72,23 @@ export default function GalleryCarousel({
       >
         <div className="flex w-max gap-2 items-center">
           {gallery.map((image, idx) => (
-            <div
+            <button
               key={idx}
-              className="min-w-[120px] max-w-[120px] cursor-pointer"
+              type="button"
+              aria-label={
+                image.title || image.description || `${idx + 1}/${gallery.length}`
+              }
+              className="min-w-[120px] max-w-[120px] cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
               onClick={() => openModal(idx)}
             >
               <img
                 src={image.url}
-                alt=""
+                alt={image.title || image.description || ""}
                 className="h-20 w-full rounded-lg border border-border bg-muted/30 object-cover select-none transition-opacity hover:opacity-80"
                 loading="lazy"
                 draggable={false}
               />
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -113,6 +117,7 @@ function ModalGallery({
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [current, setCurrent] = useState(startIndex);
   const lastWheelAtRef = useRef(0);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -139,10 +144,36 @@ function ModalGallery({
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    overlayRef.current?.focus();
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowLeft") emblaApi?.scrollPrev();
       if (e.key === "ArrowRight") emblaApi?.scrollNext();
+
+      if (e.key === "Tab") {
+        const overlay = overlayRef.current;
+        if (!overlay) return;
+
+        const focusable = Array.from(
+          overlay.querySelectorAll<HTMLElement>("button"),
+        );
+        if (focusable.length === 0) return;
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+        const isInside = !!active && overlay.contains(active);
+
+        if (e.shiftKey && (!isInside || active === first)) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && (!isInside || active === last)) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -150,6 +181,7 @@ function ModalGallery({
     return () => {
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", onKeyDown);
+      previouslyFocused?.focus?.();
     };
   }, [emblaApi, onClose]);
 
@@ -179,7 +211,11 @@ function ModalGallery({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      ref={overlayRef}
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm focus:outline-none"
       onWheel={handleWheel}
       onPointerDown={(event) => {
         event.stopPropagation();
@@ -246,7 +282,7 @@ function ModalGallery({
             >
               <img
                 src={image.url}
-                alt=""
+                alt={image.title || image.description || ""}
                 className="h-full max-h-full w-full max-w-full rounded-xl border border-white/10 bg-black/40 object-contain shadow-2xl"
                 loading="lazy"
                 draggable={false}

@@ -1,5 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
 import i18n from '../i18n'
+import { reportLauncherError } from '../utilities/clientErrorReport'
+import { recordError } from '../utilities/errorToast'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -18,6 +20,23 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('[ErrorBoundary]', error, info.componentStack)
+
+    try {
+      recordError(
+        i18n.t('errorBoundary.title', { defaultValue: 'Something went wrong' }),
+        [`${error.name}: ${error.message}`, error.stack, info.componentStack]
+          .filter(Boolean)
+          .join('\n')
+      )
+    } catch {}
+
+    try {
+      reportLauncherError(
+        `${error.name}: ${error.message}`,
+        [error.stack, info.componentStack].filter(Boolean).join('\n'),
+        i18n.language
+      )
+    } catch {}
   }
 
   private handleReload = (): void => {

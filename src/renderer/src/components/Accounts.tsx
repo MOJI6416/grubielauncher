@@ -293,8 +293,9 @@ export function Accounts() {
     if (!accountInfo) void openAccountInfo();
   }, [pendingSkinDeepLink, accountInfo, openAccountInfo]);
 
-  const getAccountKey = useCallback(
-    (a: ILocalAccount) => `${a.type}_${a.nickname}`,
+  const getAccountIdentity = useCallback(
+    (a: ILocalAccount) =>
+      a.id || getAccountSubject(a) || `${a.type}_${a.nickname}`,
     [],
   );
 
@@ -376,7 +377,7 @@ export function Accounts() {
             : [...current, account];
 
         setAccounts(nextAccounts);
-        await api.accounts.save(nextAccounts, getAccountKey(account));
+        await api.accounts.save(nextAccounts, getAccountIdentity(account));
 
         setSelectedAccount(account);
         closeModalSelect();
@@ -409,7 +410,6 @@ export function Accounts() {
       closeModalSelect,
       closeModalAdd,
       closeModalPlain,
-      getAccountKey,
     ],
   );
 
@@ -451,7 +451,7 @@ export function Accounts() {
     const nextAccounts = [...current, account];
 
     setAccounts(nextAccounts);
-    await api.accounts.save(nextAccounts, getAccountKey(account));
+    await api.accounts.save(nextAccounts, getAccountIdentity(account));
 
     setSelectedAccount(account);
     closeModalSelect();
@@ -467,13 +467,12 @@ export function Accounts() {
     closeModalSelect,
     closeModalAdd,
     closeModalPlain,
-    getAccountKey,
   ]);
 
   const selectAccount = useCallback(
     async (value: string) => {
       const current = accountsRef.current;
-      const account = current.find((a) => getAccountKey(a) === value);
+      const account = current.find((a) => getAccountIdentity(a) === value);
       if (!account) return;
 
       if (selectedAccount) {
@@ -488,9 +487,15 @@ export function Accounts() {
       setSelectedAccount(account);
       setVersion(undefined);
 
-      await api.accounts.save(current, getAccountKey(account));
+      await api.accounts.save(current, getAccountIdentity(account));
     },
-    [selectedAccount, setSelectedAccount, authData, setVersion, getAccountKey],
+    [
+      selectedAccount,
+      setSelectedAccount,
+      authData,
+      setVersion,
+      getAccountIdentity,
+    ],
   );
 
   const deleteAccount = useCallback(async () => {
@@ -498,10 +503,10 @@ export function Accounts() {
     if (!selectedAccount) return;
 
     const current = accountsRef.current;
-    const keyToRemove = getAccountKey(selectedAccount);
+    const keyToRemove = getAccountIdentity(selectedAccount);
 
     const nextAccounts = current.filter(
-      (a) => getAccountKey(a) !== keyToRemove,
+      (a) => getAccountIdentity(a) !== keyToRemove,
     );
 
     try {
@@ -518,7 +523,7 @@ export function Accounts() {
 
     await api.accounts.save(
       nextAccounts,
-      nextSelected ? getAccountKey(nextSelected) : null,
+      nextSelected ? getAccountIdentity(nextSelected) : null,
     );
 
     toast.success(t("accounts.deleted"));
@@ -529,7 +534,7 @@ export function Accounts() {
     setSelectedAccount,
     t,
     authData,
-    getAccountKey,
+    getAccountIdentity,
   ]);
 
   async function Auth(type: "microsoft" | "elyby" | "discord") {
@@ -541,7 +546,7 @@ export function Accounts() {
       const codeChallenge = await createCodeChallenge(codeVerifier);
       authUrl = `https://login.live.com/oauth20_authorize.srf?client_id=${MICROSOFT_CLIENT_ID}&response_type=code&redirect_uri=http://localhost:53213/callback&scope=XboxLive.signin%20offline_access&state=${encodeURIComponent(state)}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
     } else if (type === "elyby")
-      authUrl = `https://account.ely.by/oauth2/v1?client_id=${ELYBY_CLIENT_ID}&redirect_uri=http://localhost:53213/callback&response_type=code&scope=offline_access,account_info,minecraft_server_session&state=${encodeURIComponent(state)}`;
+      authUrl = `https://account.ely.by/oauth2/v1?client_id=${ELYBY_CLIENT_ID}&redirect_uri=http://localhost:53213/callback&response_type=code&scope=offline_access%20account_info%20minecraft_server_session&state=${encodeURIComponent(state)}`;
     else
       authUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A53213%2Fcallback&scope=identify+guilds.join&state=${encodeURIComponent(state)}`;
 
@@ -581,7 +586,7 @@ export function Accounts() {
   }
 
   const selectedKey = selectedAccount
-    ? `${selectedAccount.type}_${selectedAccount.nickname}`
+    ? getAccountIdentity(selectedAccount)
     : "";
   const trimmedNickname = nickname.trim();
   const isPlainNicknameInvalid =
@@ -696,7 +701,7 @@ export function Accounts() {
                   </div>
                 ) : (
                   accountsSafe.map((account) => {
-                    const key = getAccountKey(account);
+                    const key = getAccountIdentity(account);
                     const isSelected = key === selectedKey;
                     return (
                       <button

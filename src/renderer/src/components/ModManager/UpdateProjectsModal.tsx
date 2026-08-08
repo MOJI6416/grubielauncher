@@ -16,6 +16,10 @@ import { useTranslation } from 'react-i18next'
 
 const api = window.api
 
+function projectKey(item: IUpdateProject) {
+  return `${item.project.provider}:${item.project.id}`
+}
+
 export function UPModal({
   onClose,
   projects,
@@ -31,7 +35,7 @@ export function UPModal({
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    const initial = new Set(projects.map((p) => p.project.id))
+    const initial = new Set(projects.map((p) => projectKey(p)))
     setSelected(initial)
   }, [projects])
 
@@ -39,7 +43,7 @@ export function UPModal({
 
   const selectedProjects = useMemo(() => {
     if (selected.size === 0) return []
-    return projects.filter((p) => selected.has(p.project.id))
+    return projects.filter((p) => selected.has(projectKey(p)))
   }, [projects, selected])
 
   const toggle = useCallback((id: string, isSelected: boolean) => {
@@ -90,11 +94,12 @@ export function UPModal({
           <ScrollArea className="h-[min(24rem,calc(100vh-13rem))] min-h-16 w-full pr-3">
             <div className="flex w-full flex-col gap-2">
               {projects.map((p) => {
-                const isSelected = selected.has(p.project.id)
+                const key = projectKey(p)
+                const isSelected = selected.has(key)
 
                 return (
                   <Card
-                    key={p.project.id}
+                    key={key}
                     className="gap-0 overflow-hidden py-0 shadow-none transition-colors hover:bg-accent/35"
                   >
                     <CardContent className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 p-3">
@@ -102,7 +107,7 @@ export function UPModal({
                         className="cursor-pointer"
                         disabled={isLoading}
                         checked={isSelected}
-                        onCheckedChange={(checked) => toggle(p.project.id, checked === true)}
+                        onCheckedChange={(checked) => toggle(key, checked === true)}
                       />
 
                       <button
@@ -110,7 +115,7 @@ export function UPModal({
                         className="grid min-w-0 cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-60"
                         disabled={isLoading}
                         aria-pressed={isSelected}
-                        onClick={() => toggle(p.project.id, !isSelected)}
+                        onClick={() => toggle(key, !isSelected)}
                       >
                         <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/30 text-muted-foreground">
                           {p.project.iconUrl ? (

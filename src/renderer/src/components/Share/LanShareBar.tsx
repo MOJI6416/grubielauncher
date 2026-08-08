@@ -1,5 +1,6 @@
 import {
   accountAtom,
+  friendsAtom,
   shareOwnerAccountKeyAtom,
   sharePeersAtom,
   shareStateAtom,
@@ -104,6 +105,7 @@ export function LanShareModal({
 }) {
   const [shareState] = useAtom(shareStateAtom);
   const [sharePeers] = useAtom(sharePeersAtom);
+  const [friends] = useAtom(friendsAtom);
   const [selectedAccount] = useAtom(accountAtom);
   const [shareOwnerAccountKey] = useAtom(shareOwnerAccountKeyAtom);
   const [selectedVisibility, setSelectedVisibility] =
@@ -160,8 +162,37 @@ export function LanShareModal({
       : "share.visibilityDescriptions.friends",
   );
 
+  const isPublicAddressUsable =
+    !!shareState.publicAddress && shareState.visibility !== "friends";
+
+  const friendNicknameById = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const friend of friends) {
+      if (friend.user?._id) byId.set(friend.user._id, friend.user.nickname);
+    }
+    return byId;
+  }, [friends]);
+
+  const peerRows = useMemo(() => {
+    return sharePeers.map((peer) => {
+      const accountName = peer.guestUserId
+        ? friendNicknameById.get(peer.guestUserId)
+        : undefined;
+      const gameName = peer.guestUsername;
+
+      return {
+        streamId: peer.streamId,
+        name:
+          accountName ||
+          gameName ||
+          t("share.peerList.unknownGuest"),
+        gameName: gameName && gameName !== accountName ? gameName : undefined,
+      };
+    });
+  }, [friendNicknameById, sharePeers, t]);
+
   const handleCopy = async () => {
-    if (!shareState.publicAddress) return;
+    if (!isPublicAddressUsable || !shareState.publicAddress) return;
 
     await api.clipboard.writeText(shareState.publicAddress);
     toast.success(t("common.copied"));
@@ -389,18 +420,49 @@ export function LanShareModal({
                   <Globe className="size-4 text-muted-foreground" />
                   {t("share.address")}
                 </div>
-                {shareState.publicAddress ? (
+                {isPublicAddressUsable ? (
                   <p className="min-w-0 truncate text-sm text-muted-foreground">
                     {shareState.publicAddress}
                   </p>
                 ) : (
                   <p className="min-w-0 truncate text-sm text-muted-foreground">
-                    {t("share.addressPending")}
+                    {shareState.publicAddress
+                      ? t("share.friendsOnline")
+                      : t("share.addressPending")}
                   </p>
                 )}
               </div>
             </CardContent>
           </Card>
+
+          {peerRows.length > 0 && (
+            <Card className="gap-0 py-0 shadow-none">
+              <CardHeader className="gap-1.5 px-4 pt-4 pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Users className="size-4 text-muted-foreground" />
+                  {t("share.peerList.title")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-2 px-4 pb-4">
+                {peerRows.map((row) => (
+                  <div
+                    key={row.streamId}
+                    className="flex min-w-0 items-center justify-between gap-2"
+                  >
+                    <span className="min-w-0 truncate text-sm">{row.name}</span>
+                    {row.gameName && (
+                      <Badge
+                        variant="outline"
+                        className="min-w-0 max-w-[55%] shrink-0"
+                      >
+                        <span className="min-w-0 truncate">{row.gameName}</span>
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="gap-0 py-0 shadow-none">
             <CardHeader className="gap-1.5 px-4 pt-4 pb-3">
@@ -443,6 +505,18 @@ export function LanShareModal({
               </ButtonGroup>
             </CardContent>
           </Card>
+
+          {selectedVisibility === "public" && (
+            <Alert variant="warning">
+              <AlertCircle />
+              <AlertTitle>
+                {t("share.publicWarning.title")}
+              </AlertTitle>
+              <AlertDescription>
+                {t("share.publicWarning.description")}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {errorText && shareState.phase !== "idle" && (
             <Alert
@@ -488,7 +562,7 @@ export function LanShareModal({
         </div>
 
         <DialogFooter className="mx-0 mb-0 min-w-0 rounded-none bg-muted/25 px-5 py-4 sm:items-center sm:justify-end">
-          {shareState.publicAddress ? (
+          {isPublicAddressUsable ? (
             <Button
               className="min-w-0"
               variant="secondary"

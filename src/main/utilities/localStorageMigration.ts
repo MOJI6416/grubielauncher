@@ -5,8 +5,22 @@ import path from "path";
 const PENDING_FILE = "app-origin-localstorage.json";
 const DONE_FILE = "app-origin-localstorage.done";
 const PROBE_FILE = "legacy-origin-probe.html";
+const PROBE_TIMEOUT_MS = 5000;
 
 let dumpRunning = false;
+let migrationSettled = false;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_resolve, reject) =>
+      setTimeout(
+        () => reject(new Error("Legacy localStorage probe timed out")),
+        timeoutMs,
+      ),
+    ),
+  ]);
+}
 
 export function isLegacyLocalStorageDumpRunning(): boolean {
   return dumpRunning;
@@ -44,10 +58,11 @@ export async function prepareLegacyLocalStorageDump(): Promise<void> {
       },
     });
 
-    await probeWindow.loadFile(probePath);
+    await withTimeout(probeWindow.loadFile(probePath), PROBE_TIMEOUT_MS);
 
-    const raw: unknown = await probeWindow.webContents.executeJavaScript(
-      "JSON.stringify(localStorage)",
+    const raw: unknown = await withTimeout(
+      probeWindow.webContents.executeJavaScript("JSON.stringify(localStorage)"),
+      PROBE_TIMEOUT_MS,
     );
     const dump = JSON.parse(typeof raw === "string" ? raw : "{}") as Record<
       string,
@@ -72,9 +87,15 @@ export async function prepareLegacyLocalStorageDump(): Promise<void> {
 
 export function registerLegacyLocalStorageIpc(): void {
   ipcMain.on("migration:legacyLocalStorage", (event) => {
+    if (migrationSettled) {
+      event.returnValue = null;
+      return;
+    }
+
     try {
       const pendingPath = getPendingPath();
       if (!fs.pathExistsSync(pendingPath)) {
+        migrationSettled = true;
         event.returnValue = null;
         return;
       }
@@ -82,8 +103,10 @@ export function registerLegacyLocalStorageIpc(): void {
       const dump = fs.readJSONSync(pendingPath) as Record<string, string>;
       fs.writeFileSync(getDonePath(), "");
       fs.removeSync(pendingPath);
+      migrationSettled = true;
       event.returnValue = dump;
     } catch {
+      migrationSettled = true;
       event.returnValue = null;
     }
   });

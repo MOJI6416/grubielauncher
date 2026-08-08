@@ -59,6 +59,20 @@ export function checkVersionName(
   return true;
 }
 
+export function sanitizeExtraFileSegments(extraPath: string): string[] | null {
+  const segments = extraPath
+    .split(/[\\/]+/)
+    .filter((segment) => segment && segment !== ".");
+
+  if (
+    segments.length === 0 ||
+    segments.some((segment) => segment === ".." || segment.includes(":"))
+  )
+    return null;
+
+  return segments;
+}
+
 export function supportsQuickPlayMultiplayer(versionId: string): boolean {
   const match = versionId.trim().match(/^(\d+)\.(\d+)/);
   if (!match) return false;

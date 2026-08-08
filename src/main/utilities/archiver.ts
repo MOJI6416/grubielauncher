@@ -12,6 +12,11 @@ const MAX_ENTRY_BYTES = 256 * 1024 * 1024;
 const MAX_TOTAL_UNCOMPRESSED_BYTES = 4 * 1024 * 1024 * 1024;
 const MAX_COMPRESSION_RATIO = 200;
 
+export interface ArchiveLimits {
+  maxArchiveBytes?: number;
+  maxTotalUncompressedBytes?: number;
+}
+
 function validateEntry(entry: zip.IZipEntry): void {
   if (entry.isDirectory) return;
 
@@ -30,31 +35,33 @@ function validateEntry(entry: zip.IZipEntry): void {
   }
 }
 
-function validateEntries(entries: zip.IZipEntry[]): void {
+function validateEntries(entries: zip.IZipEntry[], limits?: ArchiveLimits): void {
   if (entries.length > MAX_ARCHIVE_ENTRIES) {
     throw new Error("Zip archive contains too many entries");
   }
+
+  const maxTotal =
+    limits?.maxTotalUncompressedBytes ?? MAX_TOTAL_UNCOMPRESSED_BYTES;
 
   let totalSize = 0;
   for (const entry of entries) {
     validateEntry(entry);
     if (entry.isDirectory) continue;
     totalSize += entry.header.size;
-    if (totalSize > MAX_TOTAL_UNCOMPRESSED_BYTES) {
+    if (totalSize > maxTotal) {
       throw new Error("Zip archive exceeds uncompressed size limit");
     }
   }
 }
 
-
-export async function openArchive(zipPath: string) {
+export async function openArchive(zipPath: string, limits?: ArchiveLimits) {
   const stats = await fs.stat(zipPath);
-  if (!stats.isFile() || stats.size > MAX_ARCHIVE_BYTES) {
+  if (!stats.isFile() || stats.size > (limits?.maxArchiveBytes ?? MAX_ARCHIVE_BYTES)) {
     throw new Error("Zip archive exceeds compressed size limit");
   }
 
   const archive = new zip(await fs.readFile(zipPath));
-  validateEntries(archive.getEntries());
+  validateEntries(archive.getEntries(), limits);
   return archive;
 }
 
@@ -77,8 +84,9 @@ export function readEntryData(entry: zip.IZipEntry): Promise<Buffer> {
 export async function extractEntries(
   entries: zip.IZipEntry[],
   resolveTargetPath: (entryName: string) => string,
+  limits?: ArchiveLimits,
 ): Promise<void> {
-  validateEntries(entries);
+  validateEntries(entries, limits);
   const targets = new Map<string, zip.IZipEntry>();
   const directories: string[] = [];
 
@@ -174,10 +182,11 @@ export async function createZipArchive(
   files: string[],
   outputPath: string,
   basePath?: string,
+  compressionLevel = 9,
 ): Promise<void> {
   await fs.ensureDir(path.dirname(outputPath));
   const output = fs.createWriteStream(outputPath);
-  const archive = archiver("zip", { zlib: { level: 9 } });
+  const archive = archiver("zip", { zlib: { level: compressionLevel } });
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -226,12 +235,15 @@ export async function createZipArchive(
 export async function extractZip(
   zipPath: string,
   destination: string,
+  limits?: ArchiveLimits,
 ): Promise<void> {
-  const zipFile = await openArchive(zipPath);
+  const zipFile = await openArchive(zipPath, limits);
 
   await fs.ensureDir(destination);
 
-  await extractEntries(zipFile.getEntries(), (entryName) =>
-    getSafeExtractPath(destination, entryName),
+  await extractEntries(
+    zipFile.getEntries(),
+    (entryName) => getSafeExtractPath(destination, entryName),
+    limits,
   );
 }

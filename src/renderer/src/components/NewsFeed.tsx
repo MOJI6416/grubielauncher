@@ -1,12 +1,5 @@
 import { INews, ISponsoredNewsAd } from "@/types/News";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type WheelEvent,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +75,8 @@ export function NewsFeed() {
 
   const reqIdRef = useRef(0);
   const wheelLockRef = useRef(0);
+  const carouselNodeRef = useRef<HTMLDivElement | null>(null);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   const feedItems = useMemo(
     () => buildNewsFeedItems(news, sponsoredAd),
@@ -142,7 +137,7 @@ export function NewsFeed() {
   }, [isVisible, sponsoredAd]);
 
   const handleNewsWheel = useCallback(
-    (event: WheelEvent<HTMLDivElement>) => {
+    (event: WheelEvent) => {
       if (!emblaApi || feedItems.length === 0) return;
 
       const delta =
@@ -163,6 +158,32 @@ export function NewsFeed() {
     },
     [emblaApi, feedItems.length],
   );
+
+  const markImageFailed = useCallback((url?: string) => {
+    if (!url) return;
+    setFailedImages((prev) => {
+      if (prev.has(url)) return prev;
+      const next = new Set(prev);
+      next.add(url);
+      return next;
+    });
+  }, []);
+
+  const setCarouselRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      carouselNodeRef.current = node;
+      emblaRef(node);
+    },
+    [emblaRef],
+  );
+
+  useEffect(() => {
+    const node = carouselNodeRef.current;
+    if (!node) return;
+
+    node.addEventListener("wheel", handleNewsWheel, { passive: false });
+    return () => node.removeEventListener("wheel", handleNewsWheel);
+  }, [handleNewsWheel, isVisible]);
 
   const persistHiddenSponsoredAdIds = useCallback((ids: string[]) => {
     setHiddenSponsoredAdIds(ids);
@@ -231,7 +252,9 @@ export function NewsFeed() {
                     return !v;
                   })
                 }
-                aria-label={isVisible ? t("news.toggle.hide") : t("news.toggle.show")}
+                aria-label={
+                  isVisible ? t("news.toggle.hide") : t("news.toggle.show")
+                }
               >
                 {!isVisible ? (
                   <Eye className="size-4" />
@@ -285,11 +308,7 @@ export function NewsFeed() {
 
           {isVisible && (
             <div className="px-3 pb-3">
-              <div
-                className="overflow-hidden"
-                ref={emblaRef}
-                onWheel={handleNewsWheel}
-              >
+              <div className="overflow-hidden" ref={setCarouselRef}>
                 <div className="flex gap-2 pt-3">
                   {feedItems.length > 0
                     ? feedItems.map((feedItem, index) => (
@@ -313,16 +332,25 @@ export function NewsFeed() {
                                 } catch {}
                               }}
                             >
-                              <img
-                                src={feedItem.item.image}
-                                alt={
-                                  feedItem.item.imageAltText ||
-                                  feedItem.item.title
-                                }
-                                className="absolute inset-0 h-full w-full object-cover select-none transition-transform duration-300 group-hover:scale-105"
-                                loading="lazy"
-                                draggable={false}
-                              />
+                              {failedImages.has(feedItem.item.image) ? (
+                                <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                                  <Newspaper className="size-6 text-muted-foreground" />
+                                </div>
+                              ) : (
+                                <img
+                                  src={feedItem.item.image}
+                                  alt={
+                                    feedItem.item.imageAltText ||
+                                    feedItem.item.title
+                                  }
+                                  className="absolute inset-0 h-full w-full object-cover select-none transition-transform duration-300 group-hover:scale-105"
+                                  loading="lazy"
+                                  draggable={false}
+                                  onError={() =>
+                                    markImageFailed(feedItem.item.image)
+                                  }
+                                />
+                              )}
                               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
                               <ExternalLink className="absolute right-2 top-2 size-3.5 text-white/80 opacity-0 transition-opacity group-hover:opacity-100" />
                               <div className="absolute inset-x-0 bottom-0 p-2.5">
@@ -352,13 +380,17 @@ export function NewsFeed() {
                                   } catch {}
                                 }}
                               >
-                                {feedItem.item.image ? (
+                                {feedItem.item.image &&
+                                !failedImages.has(feedItem.item.image) ? (
                                   <img
                                     src={feedItem.item.image}
                                     alt={feedItem.item.title}
                                     className="absolute inset-0 h-full w-full object-cover select-none transition-transform duration-300 group-hover:scale-105"
                                     loading="lazy"
                                     draggable={false}
+                                    onError={() =>
+                                      markImageFailed(feedItem.item.image)
+                                    }
                                   />
                                 ) : (
                                   <div className="absolute inset-0 flex items-center justify-center bg-muted">
@@ -413,7 +445,9 @@ export function NewsFeed() {
                             className="flex min-h-24 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-3 text-center"
                           >
                             <p className="text-sm text-muted-foreground">
-                              {hasError ? t("news.loadFailed") : t("news.empty")}
+                              {hasError
+                                ? t("news.loadFailed")
+                                : t("news.empty")}
                             </p>
                             {hasError && (
                               <Button

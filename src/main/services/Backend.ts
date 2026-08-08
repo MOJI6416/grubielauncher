@@ -5,11 +5,7 @@ import {
   IModpackUpdate,
   UploadFileProgress,
 } from "@/types/Backend";
-import {
-  IFriendSettingsUpdate,
-  IUpdateUser,
-  IUser,
-} from "@/types/IUser";
+import { IFriendSettingsUpdate, IUpdateUser, IUser } from "@/types/IUser";
 import { BaseService } from "./Base";
 import { INews, ISponsoredNewsAd } from "@/types/News";
 import { IGrubieSkin } from "@/types/SkinManager";
@@ -23,6 +19,12 @@ import axios from "axios";
 import fs from "fs-extra";
 import path from "path";
 import { reportFailure } from "../utilities/failureBus";
+import {
+  IAiAnalysisResult,
+  IAiFeedbackResult,
+  IAiLogAnalysis,
+  IAiLogRequest,
+} from "@/types/AiAnalysis";
 import { IAuthlib } from "@/types/IAuthlib";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
 import { IGroup, IVoiceTokenResponse } from "@/types/Voice";
@@ -725,10 +727,9 @@ export class Backend extends BaseService {
       const response = await this.api.post<{
         provider: string;
         linked: { id: string; username?: string | null; login?: string };
-      }>(
-        `${this.baseUrl}/auth/socials/${encodeURIComponent(provider)}/link`,
-        { code },
-      );
+      }>(`${this.baseUrl}/auth/socials/${encodeURIComponent(provider)}/link`, {
+        code,
+      });
       return response.data;
     } catch {
       return null;
@@ -884,5 +885,54 @@ export class Backend extends BaseService {
       `${this.baseUrl}/share/me/remote-stats`,
     );
     return response.data;
+  }
+
+  async analyzeCrashLog(
+    request: IAiLogRequest,
+    locale: string,
+    launcherVersion: string,
+  ): Promise<IAiAnalysisResult> {
+    try {
+      const response = await this.api.post<IAiLogAnalysis>(
+        `${this.baseUrl}/ai/log-analysis`,
+        {
+          log: request.log,
+          locale,
+          launcherVersion,
+          context: request.context,
+        },
+        { timeout: 120000 },
+      );
+
+      return { ok: true, analysis: response.data };
+    } catch (error) {
+      const status = (error as any)?.response?.status;
+
+      if (status === 401 || status === 403) {
+        return { ok: false, error: { reason: "unauthorized" } };
+      }
+
+      if (status === 429) {
+        return { ok: false, error: { reason: "rateLimited" } };
+      }
+
+      return { ok: false, error: { reason: "unavailable" } };
+    }
+  }
+
+  async sendCrashAnalysisFeedback(
+    analysisId: string,
+    helpful: boolean,
+  ): Promise<IAiFeedbackResult> {
+    try {
+      const response = await this.api.post<{ counted?: boolean }>(
+        `${this.baseUrl}/ai/log-analysis/feedback`,
+        { analysisId, helpful },
+      );
+
+      return { ok: true, counted: response.data?.counted === true };
+    } catch {
+      return { ok: false, counted: false };
+    }
   }
 }

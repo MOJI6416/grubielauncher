@@ -29,6 +29,9 @@ import {
   IServerOption,
   IServerSettings,
   ServerCore,
+  ServerRunResult,
+  ServerRunStatus,
+  ServerSyncNotice,
 } from "@/types/Server";
 import {
   DownloaderFailuresInfo,
@@ -50,6 +53,12 @@ import {
 } from "@/types/ModManager";
 import { ISkinData } from "@/types/Skin";
 import { IWorld, IWorldStatistics, IWorldStatsAggregate } from "@/types/World";
+import {
+  IWorldBackupList,
+  WorldBackupCreateResult,
+  WorldBackupDeleteResult,
+  WorldBackupRestoreResult,
+} from "@/types/WorldBackup";
 import {
   IAchievementStatsResult,
   IRemoteWorldStatsResponse,
@@ -76,6 +85,12 @@ import { LauncherDeepLink } from "@/types/DeepLink";
 import type { FailureInfo } from "@/shared/errors";
 import { ConnectivityCheckResult } from "@/types/Connectivity";
 import { CrashAnalysisPayload } from "@/types/CrashAnalysis";
+import {
+  IAiAnalysisResult,
+  IAiFeedbackResult,
+  IAiLogRequest,
+  ICrashUnresolvedPayload,
+} from "@/types/AiAnalysis";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
 import { IPlaytimeSyncEntry } from "@/types/VersionStatistics";
 import {
@@ -83,6 +98,7 @@ import {
   StorageCleanupKind,
   StorageClearResult,
 } from "@/types/Storage";
+import { BlessedPathInfo } from "@/types/AllowedPath";
 
 export type UpdaterStatus =
   | "checking"
@@ -105,18 +121,24 @@ export interface UpdaterStatusPayload {
   message?: string;
 }
 
+const LEGACY_MIGRATION_MARKER = "grubie:legacyLocalStorageMigrated";
+
 if (window.location.protocol === "app:") {
   try {
-    const legacyDump = ipcRenderer.sendSync(
-      "migration:legacyLocalStorage",
-    ) as Record<string, string> | null;
+    if (window.localStorage.getItem(LEGACY_MIGRATION_MARKER) === null) {
+      const legacyDump = ipcRenderer.sendSync(
+        "migration:legacyLocalStorage",
+      ) as Record<string, string> | null;
 
-    if (legacyDump) {
-      for (const [key, value] of Object.entries(legacyDump)) {
-        if (window.localStorage.getItem(key) === null) {
-          window.localStorage.setItem(key, String(value));
+      if (legacyDump) {
+        for (const [key, value] of Object.entries(legacyDump)) {
+          if (window.localStorage.getItem(key) === null) {
+            window.localStorage.setItem(key, String(value));
+          }
         }
       }
+
+      window.localStorage.setItem(LEGACY_MIGRATION_MARKER, "1");
     }
   } catch {}
 }
@@ -136,6 +158,23 @@ ipcRenderer.on(
   },
 );
 
+const pendingUpdateFailures: { message: string }[] = [];
+const updateFailedSubscribers = new Set<
+  (payload: { message: string }) => void
+>();
+
+ipcRenderer.on(
+  "app:updateFailed",
+  (_event: Electron.IpcRendererEvent, payload: { message: string }) => {
+    if (updateFailedSubscribers.size === 0) {
+      pendingUpdateFailures.push(payload);
+      return;
+    }
+
+    updateFailedSubscribers.forEach((callback) => callback(payload));
+  },
+);
+
 export interface IElectronAPI {
   platform: string;
   window: {
@@ -152,9 +191,9 @@ export interface IElectronAPI {
     cleanup: (kind: StorageCleanupKind) => Promise<StorageClearResult>;
   };
   path: {
-    join: (...args: string[]) => Promise<string>;
-    basename: (filePath: string, suffix?: string) => Promise<string>;
-    extname: (filePath: string) => Promise<string>;
+    join: (...args: string[]) => string;
+    basename: (filePath: string, suffix?: string) => string;
+    extname: (filePath: string) => string;
   };
   fs: {
     readFile: (filePath: string, encoding: BufferEncoding) => Promise<string>;
@@ -171,12 +210,6 @@ export interface IElectronAPI {
     readdirWithTypes: (
       folderPath: string,
     ) => Promise<{ path: string; type: "file" | "folder" }[]>;
-    archiveFiles: (
-      filesToArchive: string[],
-      zipPath: string,
-      basePath?: string,
-    ) => Promise<boolean>;
-    getTotalSizes: (filePaths: string[]) => Promise<number>;
     sha1: (filePath: string) => Promise<string>;
     move: (srcPath: string, destPath: string) => Promise<boolean>;
     readdir: (dirPath: string) => Promise<string[]>;
@@ -196,7 +229,6 @@ export interface IElectronAPI {
     trashItem: (path: string) => Promise<boolean>;
   };
   file: {
-    getFile: (filePath: string) => Promise<string>;
     archiveFiles: (
       filesToArchive: string[],
       zipPath: string,
@@ -519,6 +551,10 @@ export interface IElectronAPI {
       callback: (action: NotificationClickAction) => void,
     ) => () => void;
   };
+  allowedPaths: {
+    list: () => Promise<BlessedPathInfo[]>;
+    revoke: (target: string) => Promise<boolean>;
+  };
   connectivity: {
     test: () => Promise<ConnectivityCheckResult[]>;
     onResult: (
@@ -556,11 +592,24 @@ export interface IElectronAPI {
       filePath: string,
       settings: IServerSettings,
     ) => Promise<void>;
+    start: (serverPath: string) => Promise<ServerRunResult>;
+    stop: (serverPath: string, force?: boolean) => Promise<ServerRunResult>;
+    runStatus: (serverPath: string) => Promise<ServerRunStatus>;
+    onRunState: (
+      callback: (payload: {
+        serverPath: string;
+        state: ServerRunStatus["state"];
+        pid: number | null;
+      }) => void,
+    ) => () => void;
+    onRunOutput: (
+      callback: (payload: { serverPath: string; lines: string[] }) => void,
+    ) => () => void;
   };
   skins: {
     load: (
       launcherPath: string,
-      platform: "microsoft" | "discord",
+      platform: "microsoft" | "discord" | "elyby",
       userId: string,
       nickname: string,
       accessToken: string,
@@ -721,10 +770,42 @@ export interface IElectronAPI {
       account: ILocalAccount,
     ) => Promise<IWorld | null>;
     writeName: (worldPath: string, newName: string) => Promise<string | null>;
+    listBackups: (worldPath: string) => Promise<IWorldBackupList>;
+    countBackups: (versionPath: string) => Promise<Record<string, number>>;
+    createBackup: (
+      worldPath: string,
+      keep: number,
+    ) => Promise<WorldBackupCreateResult>;
+    restoreBackup: (
+      backupId: string,
+      worldPath: string,
+      keep: number,
+    ) => Promise<WorldBackupRestoreResult>;
+    deleteBackup: (backupId: string) => Promise<WorldBackupDeleteResult>;
+    deletePreserved: (targetPath: string) => Promise<WorldBackupDeleteResult>;
   };
   statistics: {
     getSyncQueue: () => Promise<IPlaytimeSyncEntry[]>;
     resolveSyncEntries: (ids: string[]) => Promise<boolean>;
+  };
+  ai: {
+    prepareCrashReport: (
+      versionPath: string,
+      exitCode?: number,
+      nickname?: string,
+      versionName?: string,
+      instance?: number,
+    ) => Promise<IAiLogRequest | null>;
+    analyzeCrash: (
+      accessToken: string,
+      requestId: string,
+      locale: string,
+    ) => Promise<IAiAnalysisResult>;
+    sendFeedback: (
+      accessToken: string,
+      analysisId: string,
+      helpful: boolean,
+    ) => Promise<IAiFeedbackResult>;
   };
   rpc: {
     syncContext: (context: RpcRendererContext) => Promise<void>;
@@ -795,14 +876,19 @@ export interface IElectronAPI {
         analysis: CrashAnalysisPayload,
       ) => void,
     ) => () => void;
+    onCrashUnresolved: (
+      callback: (payload: ICrashUnresolvedPayload) => void,
+    ) => () => void;
     onFriendUpdate: (callback: (data: any) => void) => () => void;
     onPlaytimeRecorded: (callback: () => void) => () => void;
-    removeAllListeners: (channel: string) => void;
     onDownloaderInfo: (
       callback: (info: DownloaderInfo | null) => void,
     ) => () => void;
     onDownloaderFailures: (
       callback: (info: DownloaderFailuresInfo) => void,
+    ) => () => void;
+    onServerSyncNotice: (
+      callback: (notice: ServerSyncNotice) => void,
     ) => () => void;
     onVersionInstallProgress: (
       callback: (info: VersionInstallProgress | null) => void,
@@ -821,7 +907,7 @@ export interface IElectronAPI {
 
 const pathUtils = createPathUtils(process.platform === "win32");
 
-export const api = {
+export const api: IElectronAPI = {
   platform: process.platform,
   window: {
     minimize: () => ipcRenderer.invoke("window:minimize"),
@@ -902,7 +988,6 @@ export const api = {
       ),
     getTotalSizes: (filePaths: string[]) =>
       ipcRenderer.invoke("file:getTotalSizes", filePaths),
-    getFile: (filePath: string) => ipcRenderer.invoke("file:getFile", filePath),
     fromBuffer: (data: ArrayBuffer) => Buffer.from(data).toString("binary"),
     download: (items: DownloadItem[], limit: number) =>
       ipcRenderer.invoke("file:download", items, limit),
@@ -1208,6 +1293,10 @@ export const api = {
       return () => ipcRenderer.off("other:notificationClick", listener);
     },
   },
+  allowedPaths: {
+    list: () => ipcRenderer.invoke("safepath:list"),
+    revoke: (target: string) => ipcRenderer.invoke("safepath:revoke", target),
+  },
   connectivity: {
     test: () => ipcRenderer.invoke("connectivity:test"),
     onResult: (callback: (result: ConnectivityCheckResult) => void) => {
@@ -1260,11 +1349,45 @@ export const api = {
       ipcRenderer.invoke("server:setAikar", serverPath, enabled),
     updateProperties: (filePath: string, settings: IServerSettings) =>
       ipcRenderer.invoke("server:updateProperties", filePath, settings),
+    start: (serverPath: string) =>
+      ipcRenderer.invoke("server:start", serverPath),
+    stop: (serverPath: string, force?: boolean) =>
+      ipcRenderer.invoke("server:stop", serverPath, force),
+    runStatus: (serverPath: string) =>
+      ipcRenderer.invoke("server:runStatus", serverPath),
+    onRunState: (
+      callback: (payload: {
+        serverPath: string;
+        state: ServerRunStatus["state"];
+        pid: number | null;
+      }) => void,
+    ) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: {
+          serverPath: string;
+          state: ServerRunStatus["state"];
+          pid: number | null;
+        },
+      ) => callback(payload);
+      ipcRenderer.on("server:state", listener);
+      return () => ipcRenderer.off("server:state", listener);
+    },
+    onRunOutput: (
+      callback: (payload: { serverPath: string; lines: string[] }) => void,
+    ) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: { serverPath: string; lines: string[] },
+      ) => callback(payload);
+      ipcRenderer.on("server:output", listener);
+      return () => ipcRenderer.off("server:output", listener);
+    },
   },
   skins: {
     load: (
       launcherPath: string,
-      platform: "microsoft" | "discord",
+      platform: "microsoft" | "discord" | "elyby",
       userId: string,
       nickname: string,
       accessToken: string,
@@ -1442,11 +1565,49 @@ export const api = {
       ipcRenderer.invoke("worlds:readWorld", worldPath, account),
     writeName: (worldPath: string, newName: string) =>
       ipcRenderer.invoke("worlds:writeName", worldPath, newName),
+    listBackups: (worldPath: string) =>
+      ipcRenderer.invoke("worlds:listBackups", worldPath),
+    countBackups: (versionPath: string) =>
+      ipcRenderer.invoke("worlds:countBackups", versionPath),
+    createBackup: (worldPath: string, keep: number) =>
+      ipcRenderer.invoke("worlds:createBackup", worldPath, keep),
+    restoreBackup: (backupId: string, worldPath: string, keep: number) =>
+      ipcRenderer.invoke("worlds:restoreBackup", backupId, worldPath, keep),
+    deleteBackup: (backupId: string) =>
+      ipcRenderer.invoke("worlds:deleteBackup", backupId),
+    deletePreserved: (targetPath: string) =>
+      ipcRenderer.invoke("worlds:deletePreserved", targetPath),
   },
   statistics: {
     getSyncQueue: () => ipcRenderer.invoke("statistics:getSyncQueue"),
     resolveSyncEntries: (ids: string[]) =>
       ipcRenderer.invoke("statistics:resolveSyncEntries", ids),
+  },
+  ai: {
+    prepareCrashReport: (
+      versionPath: string,
+      exitCode?: number,
+      nickname?: string,
+      versionName?: string,
+      instance?: number,
+    ) =>
+      ipcRenderer.invoke(
+        "ai:prepareCrashReport",
+        versionPath,
+        exitCode,
+        nickname,
+        versionName,
+        instance,
+      ),
+    analyzeCrash: (accessToken: string, requestId: string, locale: string) =>
+      ipcRenderer.invoke("ai:analyzeCrash", accessToken, requestId, locale),
+    sendFeedback: (accessToken: string, analysisId: string, helpful: boolean) =>
+      ipcRenderer.invoke(
+        "ai:analysisFeedback",
+        accessToken,
+        analysisId,
+        helpful,
+      ),
   },
   rpc: {
     syncContext: (context: RpcRendererContext) =>
@@ -1537,12 +1698,11 @@ export const api = {
     },
 
     onUpdateFailed: (callback: (payload: { message: string }) => void) => {
-      const listener = (
-        _event: Electron.IpcRendererEvent,
-        payload: { message: string },
-      ) => callback(payload);
-      ipcRenderer.on("app:updateFailed", listener);
-      return () => ipcRenderer.off("app:updateFailed", listener);
+      updateFailedSubscribers.add(callback);
+      pendingUpdateFailures.splice(0).forEach((payload) => callback(payload));
+      return () => {
+        updateFailedSubscribers.delete(callback);
+      };
     },
 
     onIpcError: (
@@ -1583,6 +1743,17 @@ export const api = {
       return () => ipcRenderer.off("crashAnalysis", listener);
     },
 
+    onCrashUnresolved: (
+      callback: (payload: ICrashUnresolvedPayload) => void,
+    ) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: ICrashUnresolvedPayload,
+      ) => callback(payload);
+      ipcRenderer.on("crashUnresolved", listener);
+      return () => ipcRenderer.off("crashUnresolved", listener);
+    },
+
     onFriendUpdate: (callback: (data: any) => void) => {
       const listener = (_event, data) => {
         callback(data);
@@ -1595,10 +1766,6 @@ export const api = {
       const listener = () => callback();
       ipcRenderer.on("playtimeRecorded", listener);
       return () => ipcRenderer.off("playtimeRecorded", listener);
-    },
-
-    removeAllListeners: (channel: string) => {
-      ipcRenderer.removeAllListeners(channel);
     },
 
     onDownloaderInfo: (callback: (info: DownloaderInfo | null) => void) => {
@@ -1617,6 +1784,14 @@ export const api = {
       };
       ipcRenderer.on("downloaderFailures", listener);
       return () => ipcRenderer.off("downloaderFailures", listener);
+    },
+
+    onServerSyncNotice: (callback: (notice: ServerSyncNotice) => void) => {
+      const listener = (_event, notice) => {
+        callback(notice);
+      };
+      ipcRenderer.on("server:syncNotice", listener);
+      return () => ipcRenderer.off("server:syncNotice", listener);
     },
 
     onVersionInstallProgress: (

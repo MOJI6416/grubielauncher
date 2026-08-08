@@ -1,4 +1,4 @@
-import { app, Menu, net, protocol, session } from "electron";
+import { app, crashReporter, Menu, net, protocol, session } from "electron";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import { pathToFileURL } from "url";
 import {
@@ -23,7 +23,13 @@ import {
   parseLauncherDeepLink,
 } from "./utilities/deepLink";
 import { initMirrorState } from "./utilities/mirrorState";
+import { MIRROR_BASE } from "./utilities/mirrors";
+import { reportFailure } from "./utilities/failureBus";
+import { gameRuntime } from "./utilities/runtime";
+import { endSession } from "./utilities/statistics";
+import { registerAppImageDesktopEntry } from "./utilities/linuxDesktopEntry";
 import { disposePushToTalk } from "./services/PushToTalk";
+import { initWorldBackupService } from "./services/WorldBackupService";
 import { LauncherDeepLink } from "@/types/DeepLink";
 import path from "path";
 import fs from "fs-extra";
@@ -32,7 +38,13 @@ app.commandLine.appendSwitch(
   "disable-features",
   "SpareRendererForSitePerProcess",
 );
-app.commandLine.appendSwitch("js-flags", "--max-old-space-size=1024");
+
+crashReporter.start({
+  productName: "GrubieLauncher",
+  companyName: "GrubieLauncher",
+  uploadToServer: false,
+  compress: true,
+});
 
 Menu.setApplicationMenu(null);
 
@@ -56,16 +68,28 @@ protocol.registerSchemesAsPrivileged([
 
 process.on("uncaughtException", (error) => {
   console.error("[uncaughtException]", error);
+  try {
+    reportFailure(error, { channel: "main:uncaughtException" });
+  } catch {}
 });
 
 process.on("unhandledRejection", (reason) => {
   console.error("[unhandledRejection]", reason);
+  try {
+    reportFailure(reason, { channel: "main:unhandledRejection" });
+  } catch {}
 });
 
 const gotTheLock = app.requestSingleInstanceLock();
 const APP_PROTOCOL = "grubielauncher";
 const APP_SHUTDOWN_TIMEOUT_MS = 5000;
+const APP_UPDATE_SHUTDOWN_TIMEOUT_MS = 1000;
+const UPDATE_MIRROR_URL = `${MIRROR_BASE}/updates/`;
+const UPDATE_CHECK_TIMEOUT_MS = 20000;
+const UPDATE_STALL_TIMEOUT_MS = 90000;
+const UPDATE_WATCHDOG_TICK_MS = 2500;
 let isAppShutdownInProgress = false;
+let isUpdateInstallPending = false;
 let appShutdownTimeout: NodeJS.Timeout | null = null;
 const pendingDeepLinks: LauncherDeepLink[] = [];
 void gotTheLock;
@@ -78,14 +102,33 @@ const CSP_POLICY = [
   "img-src 'self' app: data: blob: https: http:",
   "media-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self' blob: https: http: ws: wss:",
+  "connect-src 'self' blob: https: wss:",
   "object-src 'none'",
   "frame-src 'none'",
+  "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'none'",
 ].join("; ");
 
+const CSP_REPORT_ONLY_POLICY = "require-trusted-types-for 'script'";
+
 const CDN_CORS_HOST = "cdn.grubielauncher.com";
+
+const APP_MEDIA_TYPES_BY_EXTENSION = new Map<string, string>([
+  [".png", "image/png"],
+  [".jpg", "image/jpeg"],
+  [".jpeg", "image/jpeg"],
+  [".webp", "image/webp"],
+  [".gif", "image/gif"],
+  [".bmp", "image/bmp"],
+  [".avif", "image/avif"],
+  [".ico", "image/x-icon"],
+]);
+
+const APP_MEDIA_ALLOWED_TYPES = new Set([
+  ...APP_MEDIA_TYPES_BY_EXTENSION.values(),
+  "image/vnd.microsoft.icon",
+]);
 
 function setupContentSecurityPolicy() {
   if (is.dev) return;
@@ -94,6 +137,7 @@ function setupContentSecurityPolicy() {
     const responseHeaders = {
       ...details.responseHeaders,
       "Content-Security-Policy": [CSP_POLICY],
+      "Content-Security-Policy-Report-Only": [CSP_REPORT_ONLY_POLICY],
     };
 
     try {
@@ -181,8 +225,23 @@ function registerAppProtocol() {
           pathToFileURL(resolved).toString(),
           { bypassCustomProtocolHandlers: true },
         );
+        const contentType =
+          APP_MEDIA_TYPES_BY_EXTENSION.get(
+            path.extname(resolved).toLowerCase(),
+          ) ??
+          (mediaResponse.headers.get("content-type") || "")
+            .split(";")[0]
+            .trim()
+            .toLowerCase();
+
+        if (!APP_MEDIA_ALLOWED_TYPES.has(contentType)) {
+          return new Response(null, { status: 415 });
+        }
+
         const mediaHeaders = new Headers(mediaResponse.headers);
         mediaHeaders.set("Access-Control-Allow-Origin", "*");
+        mediaHeaders.set("Content-Type", contentType);
+        mediaHeaders.set("X-Content-Type-Options", "nosniff");
         return new Response(mediaResponse.body, {
           status: mediaResponse.status,
           statusText: mediaResponse.statusText,
@@ -219,6 +278,7 @@ function registerAppProtocol() {
 
     const headers = new Headers(response.headers);
     headers.set("Content-Security-Policy", CSP_POLICY);
+    headers.set("Content-Security-Policy-Report-Only", CSP_REPORT_ONLY_POLICY);
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
@@ -260,9 +320,7 @@ function notifyMainWindowUpdateFailed(message: string) {
   };
 
   if (mainWindow.webContents.isLoading()) {
-    mainWindow.webContents.once("did-finish-load", () => {
-      setTimeout(send, 1500);
-    });
+    mainWindow.webContents.once("did-finish-load", send);
     return;
   }
 
@@ -278,6 +336,7 @@ function registerProtocolClient() {
   }
 
   app.setAsDefaultProtocolClient(APP_PROTOCOL);
+  void registerAppImageDesktopEntry(APP_PROTOCOL);
 }
 
 function focusMainWindow() {
@@ -364,6 +423,7 @@ if (!gotTheLock) {
 
     Object.values(ipcHandlers).forEach((register) => register());
     registerLegacyLocalStorageIpc();
+    initWorldBackupService();
 
     const usesAppProtocol = !(is.dev && process.env["ELECTRON_RENDERER_URL"]);
     if (usesAppProtocol) {
@@ -384,15 +444,35 @@ if (!gotTheLock) {
 
     autoUpdater.disableDifferentialDownload = true;
 
+    let updateFlowSettled = false;
+    let mirrorFeedTried = false;
+    let updateWatchdog: NodeJS.Timeout | null = null;
+    let updateStallLimitMs = UPDATE_CHECK_TIMEOUT_MS;
+    let updateActivityAt = Date.now();
+
+    const clearUpdateWatchdog = () => {
+      if (!updateWatchdog) return;
+      clearInterval(updateWatchdog);
+      updateWatchdog = null;
+    };
+
+    const markUpdateActivity = (stallLimitMs?: number) => {
+      updateActivityAt = Date.now();
+      if (stallLimitMs !== undefined) updateStallLimitMs = stallLimitMs;
+    };
+
     autoUpdater.on("checking-for-update", () => {
+      markUpdateActivity();
       sendUpdaterStatus("checking");
     });
 
     autoUpdater.on("update-available", (info) => {
+      markUpdateActivity(UPDATE_STALL_TIMEOUT_MS);
       sendUpdaterStatus("available", { version: info.version });
     });
 
     autoUpdater.on("download-progress", (p) => {
+      markUpdateActivity(UPDATE_STALL_TIMEOUT_MS);
       sendUpdaterStatus("downloading");
       updaterWindow?.webContents.send("updater:downloadProgress", {
         percent: Number(p.percent.toFixed(1)),
@@ -402,38 +482,107 @@ if (!gotTheLock) {
       });
     });
 
-    autoUpdater.on("update-downloaded", () => {
-      sendUpdaterStatus("downloaded");
-      setTimeout(() => autoUpdater.quitAndInstall(), 700);
-    });
+    const continueWithoutUpdate = () => {
+      if (updateFlowSettled) return;
+      updateFlowSettled = true;
+      clearUpdateWatchdog();
 
-    autoUpdater.on("update-not-available", () => {
       sendUpdaterStatus("not-available");
       updaterWindow?.close();
       openMainWindowOnce();
       showMainWindow();
       flushPendingDeepLinks();
-    });
-
-    autoUpdater.on("error", (error) => {
-      sendUpdaterStatus("error", { message: error.message });
-      updaterWindow?.close();
-      notifyMainWindowUpdateFailed(error.message);
-      flushPendingDeepLinks();
-    });
-
-    const checkForUpdates = () => {
-      sendUpdaterStatus("checking");
-      void autoUpdater.checkForUpdates().catch((error) => {
-        sendUpdaterStatus("error", { message: error.message });
-        updaterWindow?.close();
-        notifyMainWindowUpdateFailed(error.message);
-        flushPendingDeepLinks();
-      });
     };
 
-    if (updaterWindow?.webContents.isLoading()) {
-      updaterWindow.webContents.once("did-finish-load", checkForUpdates);
+    const continueWithFailedUpdate = (message: string) => {
+      if (updateFlowSettled) return;
+      updateFlowSettled = true;
+      clearUpdateWatchdog();
+
+      sendUpdaterStatus("error", { message });
+      updaterWindow?.close();
+      notifyMainWindowUpdateFailed(message);
+      flushPendingDeepLinks();
+    };
+
+    autoUpdater.on("update-downloaded", () => {
+      const startedWithoutUpdate = updateFlowSettled;
+      updateFlowSettled = true;
+      clearUpdateWatchdog();
+      if (startedWithoutUpdate) return;
+
+      isUpdateInstallPending = true;
+      sendUpdaterStatus("downloaded");
+      setTimeout(() => autoUpdater.quitAndInstall(), 700);
+    });
+
+    autoUpdater.on("update-not-available", continueWithoutUpdate);
+
+    autoUpdater.on("error", (error) => {
+      if (switchToMirrorFeed()) return;
+      continueWithFailedUpdate(error.message);
+    });
+
+    let updateCheckStarted = false;
+    const checkForUpdates = () => {
+      if (updateFlowSettled || updateCheckStarted) return;
+      updateCheckStarted = true;
+
+      sendUpdaterStatus("checking");
+      void autoUpdater
+        .checkForUpdates()
+        .then((result) => {
+          if (!result) continueWithoutUpdate();
+        })
+        .catch((error) => {
+          if (mirrorFeedTried) return;
+          if (switchToMirrorFeed()) return;
+          continueWithFailedUpdate(
+            error instanceof Error ? error.message : String(error),
+          );
+        });
+    };
+
+    function switchToMirrorFeed(): boolean {
+      if (updateFlowSettled || mirrorFeedTried) return false;
+      mirrorFeedTried = true;
+
+      try {
+        autoUpdater.setFeedURL({
+          provider: "generic",
+          url: UPDATE_MIRROR_URL,
+          channel: "latest",
+        });
+      } catch (error) {
+        console.error("[Updater] Could not switch to the mirror feed:", error);
+        return false;
+      }
+
+      console.warn("[Updater] GitHub feed failed, retrying from the mirror.");
+      updateCheckStarted = false;
+      markUpdateActivity(UPDATE_CHECK_TIMEOUT_MS);
+      checkForUpdates();
+      return true;
+    }
+
+    updateWatchdog = setInterval(() => {
+      if (updateFlowSettled) {
+        clearUpdateWatchdog();
+        return;
+      }
+      if (Date.now() - updateActivityAt < updateStallLimitMs) return;
+
+      console.warn("[Updater] Timed out, starting without update.");
+      continueWithoutUpdate();
+    }, UPDATE_WATCHDOG_TICK_MS);
+
+    const updaterContents = updaterWindow?.webContents;
+    if (updaterContents?.isLoading()) {
+      updaterContents.once("did-finish-load", checkForUpdates);
+      updaterContents.once("did-fail-load", (_event, code, description) => {
+        console.error(`[Updater] Splash failed to load: ${code} ${description}`);
+        checkForUpdates();
+      });
       return;
     }
 
@@ -454,10 +603,15 @@ if (!gotTheLock) {
     isAppShutdownInProgress = true;
     event.preventDefault();
 
-    appShutdownTimeout = setTimeout(() => {
-      console.warn("[Shutdown] Cleanup timed out, forcing app exit.");
-      app.exit(0);
-    }, APP_SHUTDOWN_TIMEOUT_MS);
+    appShutdownTimeout = setTimeout(
+      () => {
+        console.warn("[Shutdown] Cleanup timed out, forcing app exit.");
+        app.exit(0);
+      },
+      isUpdateInstallPending
+        ? APP_UPDATE_SHUTDOWN_TIMEOUT_MS
+        : APP_SHUTDOWN_TIMEOUT_MS,
+    );
 
     disposePushToTalk();
 
@@ -465,6 +619,9 @@ if (!gotTheLock) {
       lanShareService.dispose(),
       rpc.dispose(),
       stopOAuthServer("Application shutdown."),
+      ...[...gameRuntime.processes.values()].map((record) =>
+        endSession(record.versionName, record.instance, 0),
+      ),
     ]).finally(() => {
       if (appShutdownTimeout) {
         clearTimeout(appShutdownTimeout);

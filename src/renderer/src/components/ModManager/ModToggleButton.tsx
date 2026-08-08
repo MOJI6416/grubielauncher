@@ -11,11 +11,13 @@ const api = window.api
 export const ModToggleButton = ({
   mod,
   isLoading,
-  versionPath
+  versionPath,
+  onToggle
 }: {
   mod: ILocalProject
   isLoading: boolean
   versionPath: string
+  onToggle?: (disabled: boolean) => void
 }) => {
   const { t } = useTranslation()
 
@@ -105,6 +107,7 @@ export const ModToggleButton = ({
       await api.fs.rename(from, to)
 
       setIsEnabled((prev) => !prev)
+      onToggle?.(isEnabled)
 
       toast.success(t(isEnabled ? 'modManager.disabled' : 'modManager.enabled'))
     } catch (error) {
@@ -115,7 +118,7 @@ export const ModToggleButton = ({
     } finally {
       setIsToggling(false)
     }
-  }, [isToggleAllowed, filePath, disabledFilePath, isEnabled, t])
+  }, [isToggleAllowed, filePath, disabledFilePath, isEnabled, onToggle, t])
 
   return (
     <Button

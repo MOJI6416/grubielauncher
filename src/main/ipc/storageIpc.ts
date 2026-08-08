@@ -25,6 +25,7 @@ const EMPTY_BREAKDOWN: StorageBreakdown = {
   cleanup: {
     java: { count: 0, size: 0 },
     libraries: { count: 0, size: 0, safe: false },
+    backups: { count: 0, size: 0 },
   },
   computedAt: 0,
   failed: true,

@@ -1,6 +1,6 @@
 import { ShareCommandResult, ShareState, ShareVisibility } from '@/types/Share'
 import { lanShareService } from '../share'
-import { handleSafe } from '../utilities/ipc'
+import { check, handleSafe } from '../utilities/ipc'
 import { mainWindow } from '../windows/mainWindow'
 
 let listenersRegistered = false
@@ -44,6 +44,7 @@ export function registerShareIpc() {
         message: 'Failed to start share',
       },
     },
+    [check.oneOf('public', 'friends')],
     async (_, visibility) => {
       return await lanShareService.startShare(visibility)
     },
@@ -72,6 +73,7 @@ export function registerShareIpc() {
         message: 'Failed to update share visibility',
       },
     },
+    [check.oneOf('public', 'friends')],
     async (_, visibility) => {
       return await lanShareService.updateVisibility(visibility)
     },
@@ -112,6 +114,7 @@ export function registerShareIpc() {
         message: 'Failed to request join ticket',
       },
     },
+    [check.nonEmptyString(128)],
     async (_, slug: string) => {
       return await lanShareService.requestJoinTicket(slug)
     },
@@ -126,6 +129,7 @@ export function registerShareIpc() {
         message: 'Failed to connect to friend share',
       },
     },
+    [check.nonEmptyString(128)],
     async (_, slug: string) => {
       return await lanShareService.connectToFriendShare(slug)
     },

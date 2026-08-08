@@ -92,7 +92,7 @@ export function ConnectivityModal({
               <p
                 className={
                   verdict.downloadsOk
-                    ? "text-sm text-emerald-500"
+                    ? "text-sm text-success"
                     : "text-sm text-destructive"
                 }
               >
@@ -134,7 +134,7 @@ export function ConnectivityModal({
                                     {result.latencyMs} ms
                                   </span>
                                 )}
-                                <CheckCircle2 className="size-4 text-emerald-500" />
+                                <CheckCircle2 className="size-4 text-success" />
                               </>
                             ) : (
                               <>

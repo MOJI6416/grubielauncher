@@ -49,6 +49,12 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function stripCacheBuster(url?: string) {
+  if (!url) return "";
+  const queryIndex = url.indexOf("?");
+  return queryIndex === -1 ? url : url.slice(0, queryIndex);
+}
+
 const BASE_PLAYER_ROTATION_Y = 0.4;
 const MISSING_SKIN_RETRY_MS = 15_000;
 const BACKGROUND_SKIN_REFRESH_MS = 5 * 60_000;
@@ -428,7 +434,7 @@ export function MiniSkinWidget() {
             }
           >
             <SkinCanvas
-              key={`${preview.skin}-${preview.cape || ""}`}
+              key={`${stripCacheBuster(preview.skin)}-${stripCacheBuster(preview.cape)}`}
               className="h-[36px] w-[22px]"
               skinUrl={preview.skin}
               capeUrl={preview.cape}

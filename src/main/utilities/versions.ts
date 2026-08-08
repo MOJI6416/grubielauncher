@@ -137,7 +137,9 @@ export async function importVersion(
       effectiveRoot,
     );
 
-    const servers = await readNBT(path.join(effectiveRoot, "servers.dat"));
+    const servers = await readNBT(
+      path.join(effectiveRoot, "servers.dat"),
+    ).catch(() => []);
 
     const optionsPath = path.join(effectiveRoot, "options.txt");
     let options = "";

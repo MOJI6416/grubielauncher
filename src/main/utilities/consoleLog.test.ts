@@ -3,8 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   classifyConsoleStream,
   createLineReader,
+  mergeConsoleMessages,
   MAX_CONSOLE_LINE_LENGTH,
 } from "./consoleLog";
+import {
+  recordConsoleOutput,
+  getConsoleOutput,
+  clearConsoleOutput,
+} from "./consoleBuffer";
 
 describe("console stream classifier", () => {
   it("treats authlib-injector INFO on stderr as info, not error", () => {
@@ -96,5 +102,59 @@ describe("createLineReader", () => {
 
     expect(lines).toHaveLength(2);
     expect(lines[0]).toHaveLength(MAX_CONSOLE_LINE_LENGTH);
+  });
+});
+
+describe("mergeConsoleMessages", () => {
+  it("keeps batched lines separated by newlines", () => {
+    const merged = mergeConsoleMessages([
+      { type: "info", message: "first", tips: [] },
+      { type: "info", message: "second", tips: [] },
+    ]);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0].message).toBe("first\nsecond");
+  });
+
+  it("starts a new message when the type changes", () => {
+    const merged = mergeConsoleMessages([
+      { type: "info", message: "info line", tips: [] },
+      { type: "error", message: "error line", tips: [] },
+      { type: "error", message: "another error", tips: [] },
+    ]);
+
+    expect(merged.map((message) => message.message)).toEqual([
+      "info line",
+      "error line\nanother error",
+    ]);
+  });
+
+  it("does not mutate the incoming messages", () => {
+    const batch = [
+      { type: "info" as const, message: "a", tips: [] },
+      { type: "info" as const, message: "b", tips: [] },
+    ];
+
+    mergeConsoleMessages(batch);
+
+    expect(batch[0].message).toBe("a");
+  });
+
+  it("lets the crash buffer keep every line of a long batch", () => {
+    clearConsoleOutput("Merged 1.20.1", 0);
+
+    const batch = Array.from({ length: 3 }, (_, index) => ({
+      type: "info" as const,
+      message: `${"y".repeat(1500)} line ${index}`,
+      tips: [],
+    }));
+
+    for (const message of mergeConsoleMessages(batch)) {
+      recordConsoleOutput("Merged 1.20.1", 0, message.message);
+    }
+
+    expect(getConsoleOutput("Merged 1.20.1", 0).split("\n")).toHaveLength(3);
+
+    clearConsoleOutput("Merged 1.20.1", 0);
   });
 });

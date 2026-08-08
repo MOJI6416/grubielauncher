@@ -12,9 +12,12 @@ import {
 import { mainWindow } from "../windows/mainWindow";
 import {
   canSkipChecksumVerification,
+  dedupeDownloadItemsBy,
   DownloadFilesOptions,
   isDownloadAbortError,
+  isEncodedResponse,
   isNonRetryableDownloadError,
+  readRangeValidator,
   shouldReportDownloadFailures,
   shouldThrowDownloadFailures,
 } from "./downloaderPure";
@@ -26,10 +29,12 @@ import {
   reportMirrorFailure,
   reportMirrorSuccess,
 } from "./mirrorState";
-import { getSafeExtractPath } from "./archivePaths";
+import { getSafeExtractPath, getSafeLinkExtractPath } from "./archivePaths";
 import {
+  assertExtractablePath,
   assertReadablePath,
   assertWritablePath,
+  isExtractablePath,
   isReadablePath,
   isWritablePath,
 } from "./safePath";
@@ -72,8 +77,34 @@ function getExtractMarkerPath(destination: string): string {
   return `${destination}.extracting`;
 }
 
+const PART_SUFFIX = ".part";
+const STALE_PART_AGE_MS = 60 * 60 * 1000;
+const sweptPartDirs = new Set<string>();
+
 function getPartialDownloadPath(destination: string): string {
-  return `${destination}.part`;
+  return `${destination}${PART_SUFFIX}`;
+}
+
+async function sweepStalePartFiles(directory: string): Promise<void> {
+  if (sweptPartDirs.has(directory)) return;
+  sweptPartDirs.add(directory);
+
+  try {
+    const entries = await fs.readdir(directory);
+    const now = Date.now();
+
+    await Promise.all(
+      entries
+        .filter((entry) => entry.endsWith(PART_SUFFIX))
+        .map(async (entry) => {
+          const target = path.join(directory, entry);
+          const stats = await fs.stat(target).catch(() => null);
+          if (!stats?.isFile() || now - stats.mtimeMs < STALE_PART_AGE_MS)
+            return;
+          await fs.remove(target).catch(() => {});
+        }),
+    );
+  } catch {}
 }
 
 export interface DownloaderInfo {
@@ -105,9 +136,13 @@ export class Downloader {
   private fileCompletionTimes: number[] = [];
   private abortController: AbortController | null = null;
   private isSilent = false;
+  private verifyChecksums = false;
   private lastInfoSentAt = 0;
   private pendingInfo: DownloaderInfo | null = null;
   private infoFlushTimer: NodeJS.Timeout | null = null;
+
+  onInfo: ((info: DownloaderInfo | null) => void) | null = null;
+  versionName: string | null = null;
 
   constructor(limit = 6) {
     this.limit = pLimit(limit);
@@ -122,11 +157,15 @@ export class Downloader {
   };
 
   downloadFiles = async (
-    items: DownloadItem[],
+    rawItems: DownloadItem[],
     signal?: AbortSignal,
     options: DownloadFilesOptions = {},
   ): Promise<DownloaderFailuresInfo | null> => {
     const shouldThrowOnFailure = shouldThrowDownloadFailures(options);
+    const items = dedupeDownloadItemsBy(rawItems, (destination) =>
+      path.resolve(destination),
+    );
+    this.verifyChecksums = options.verifyChecksums === true;
     this.isSilent =
       items.length > 0 && items.every((item) => item.options?.silent === true);
 
@@ -355,7 +394,12 @@ export class Downloader {
           });
         });
 
-        await Promise.all(promises);
+        const results = await Promise.allSettled(promises);
+        const rejected = results.find(
+          (result): result is PromiseRejectedResult =>
+            result.status === "rejected",
+        );
+        if (rejected) throw rejected.reason;
       }
     } finally {
       signal?.removeEventListener("abort", onAbort);
@@ -415,6 +459,7 @@ export class Downloader {
       totalItems,
       completedItems,
       failedItems,
+      versionName: this.versionName ?? undefined,
       failures: failures.map((failure): DownloaderFailureItem => {
         const destination = failure.item.destination || "";
 
@@ -556,6 +601,10 @@ export class Downloader {
   };
 
   private postInfo = (info: DownloaderInfo | null) => {
+    try {
+      this.onInfo?.(info);
+    } catch {}
+
     if (
       !mainWindow ||
       mainWindow.isDestroyed() ||
@@ -597,6 +646,14 @@ export class Downloader {
       return false;
     }
     if (!isWritablePath(item.destination)) {
+      return false;
+    }
+    if (
+      item.options?.extract &&
+      !isExtractablePath(
+        item.options.extractFolder || path.dirname(item.destination),
+      )
+    ) {
       return false;
     }
 
@@ -662,6 +719,7 @@ export class Downloader {
 
       let countedExistingBytes = 0;
       let addedToTotalBytes = 0;
+      let rangeValidator: string | null = null;
 
       try {
         while (attempts < maxRetries) {
@@ -671,12 +729,25 @@ export class Downloader {
           let startByte = 0;
 
           try {
-            if (fs.pathExistsSync(partialPath) && attempts > 0) {
+            const canResumePartial =
+              rangeValidator !== null ||
+              Boolean(item.checksum) ||
+              Boolean(item.sha1);
+
+            if (
+              fs.pathExistsSync(partialPath) &&
+              attempts > 0 &&
+              canResumePartial
+            ) {
               const stats = await fs.stat(partialPath);
               startByte = stats.size;
               writer = fs.createWriteStream(partialPath, { flags: "a" });
             } else {
               startByte = 0;
+              if (countedExistingBytes > 0) {
+                this.downloadedBytes -= countedExistingBytes;
+                countedExistingBytes = 0;
+              }
               writer = fs.createWriteStream(partialPath);
             }
 
@@ -689,6 +760,7 @@ export class Downloader {
               const headers: Record<string, string> = {};
               if (rangeStart > 0) {
                 headers["Range"] = `bytes=${rangeStart}-`;
+                if (rangeValidator) headers["If-Range"] = rangeValidator;
               }
 
               return axios.get(url, {
@@ -720,12 +792,36 @@ export class Downloader {
               response = await makeRequest(0);
             }
 
+            if (response.status !== 206) {
+              rangeValidator = readRangeValidator(response.headers);
+            }
+
             const contentLength = response.headers["content-length"];
             fileSizeFromServer =
               typeof contentLength === "string" ||
               typeof contentLength === "number"
                 ? parseInt(String(contentLength), 10)
                 : 0;
+
+            const expectedBytes = isEncodedResponse(response.headers)
+              ? 0
+              : Number.isFinite(fileSizeFromServer) && fileSizeFromServer > 0
+                ? startByte + fileSizeFromServer
+                : 0;
+
+            const maxBytes = item.options?.maxBytes ?? 0;
+            if (maxBytes > 0 && expectedBytes > maxBytes) {
+              try {
+                response.data.destroy();
+              } catch {}
+              try {
+                writer.destroy();
+              } catch {}
+
+              throw new Error(
+                `Download too large for ${path.basename(destination)}: ${expectedBytes} > ${maxBytes} bytes`,
+              );
+            }
 
             if (!item.size && fileSizeFromServer > 0) {
               const totalForThisFile =
@@ -743,11 +839,13 @@ export class Downloader {
             const IDLE_TIMEOUT_MS = 30000;
 
             const signal = this.abortController?.signal;
+            const stream = response.data as NodeJS.ReadableStream;
 
             await new Promise<void>((resolve, reject) => {
               let idleTimer: NodeJS.Timeout | null = null;
 
               const cleanup = () => {
+                activeStreams.delete(stream);
                 if (idleTimer) {
                   clearTimeout(idleTimer);
                   idleTimer = null;
@@ -773,6 +871,10 @@ export class Downloader {
               const resetIdleTimer = () => {
                 if (idleTimer) clearTimeout(idleTimer);
                 idleTimer = setTimeout(() => {
+                  if (downloadsPaused) {
+                    resetIdleTimer();
+                    return;
+                  }
                   try {
                     response.data.destroy();
                   } catch {}
@@ -790,12 +892,44 @@ export class Downloader {
                 } catch {}
               }
 
+              activeStreams.add(stream);
+              if (downloadsPaused) {
+                try {
+                  stream.pause();
+                } catch {}
+              }
+
               resetIdleTimer();
 
               response.data.on("data", (chunk: Buffer) => {
                 downloadedChunksBytes += chunk.length;
                 this.downloadedBytes += chunk.length;
                 resetIdleTimer();
+
+                if (
+                  maxBytes > 0 &&
+                  startByte + downloadedChunksBytes > maxBytes
+                ) {
+                  try {
+                    response.data.destroy();
+                  } catch {}
+                  try {
+                    writer?.destroy();
+                  } catch {}
+                  cleanup();
+                  reject(
+                    new Error(
+                      `Download too large for ${path.basename(destination)}: exceeded ${maxBytes} bytes`,
+                    ),
+                  );
+                  return;
+                }
+
+                if (downloadsPaused) {
+                  try {
+                    stream.pause();
+                  } catch {}
+                }
 
                 const now = Date.now();
                 if (
@@ -822,6 +956,13 @@ export class Downloader {
               });
             });
 
+            const receivedBytes = startByte + downloadedChunksBytes;
+            if (expectedBytes > 0 && receivedBytes !== expectedBytes) {
+              throw new Error(
+                `Incomplete download for ${path.basename(destination)}: got ${receivedBytes} of ${expectedBytes} bytes`,
+              );
+            }
+
             await fs.move(partialPath, destination, { overwrite: true });
 
             if (url.startsWith(MIRROR_BASE)) reportMirrorSuccess();
@@ -831,6 +972,7 @@ export class Downloader {
             lastError = error as Error;
 
             if (axios.isCancel(error) || lastError.message === "AbortError") {
+              await this.closeWriter(writer);
               await this.removePartialFile(partialPath);
               throw lastError;
             }
@@ -843,11 +985,7 @@ export class Downloader {
 
             this.downloadedBytes -= downloadedChunksBytes;
 
-            if (writer) {
-              try {
-                writer.destroy();
-              } catch {}
-            }
+            await this.closeWriter(writer);
 
             if (attempts >= maxRetries) {
               await this.removePartialFile(partialPath);
@@ -907,31 +1045,42 @@ export class Downloader {
     });
   };
 
+  private statFile = async (filePath: string): Promise<fs.Stats | null> => {
+    try {
+      return await fs.stat(filePath);
+    } catch {
+      return null;
+    }
+  };
+
   private fileExistsAndMatches = async (
     filePath: string,
     checksum: string,
     checksumType: "sha1" | "sha256",
     size: number,
   ): Promise<boolean> => {
-    const actualPath = fs.pathExistsSync(filePath)
-      ? filePath
-      : fs.pathExistsSync(`${filePath}.disabled`)
-        ? `${filePath}.disabled`
-        : null;
+    let actualPath = filePath;
+    let stats = await this.statFile(filePath);
 
-    if (!actualPath) return false;
+    if (!stats) {
+      actualPath = `${filePath}.disabled`;
+      stats = await this.statFile(actualPath);
+    }
+
+    if (!stats) return false;
 
     try {
-      const stats = await fs.stat(actualPath);
       if (size && stats.size !== size) return false;
       if (!size && !checksum && stats.size === 0) return false;
 
-      const skipHash = canSkipChecksumVerification(
-        path.basename(actualPath),
-        checksum,
-        checksumType,
-        size,
-      );
+      const skipHash =
+        !this.verifyChecksums &&
+        canSkipChecksumVerification(
+          path.basename(actualPath),
+          checksum,
+          checksumType,
+          size,
+        );
 
       if (checksum && !skipHash) {
         const currentChecksum = await this.getFileHash(
@@ -958,11 +1107,25 @@ export class Downloader {
       return;
     }
 
-    if (!fs.pathExistsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+    fs.mkdirSync(dir, { recursive: true });
 
     this.directoryCreationCache.add(dir);
+    void sweepStalePartFiles(dir);
+  };
+
+  private closeWriter = async (
+    writer: fs.WriteStream | null,
+  ): Promise<void> => {
+    if (!writer || writer.closed) return;
+
+    await new Promise<void>((resolve) => {
+      writer.once("close", () => resolve());
+      try {
+        writer.destroy();
+      } catch {
+        resolve();
+      }
+    });
   };
 
   private removePartialFile = async (partialPath: string): Promise<void> => {
@@ -997,36 +1160,41 @@ export class Downloader {
 
     const tarModule = await import("tar");
     const tar = (tarModule as unknown as { default?: typeof tarModule }).default ?? tarModule;
+
+    let unsafeEntry: string | null = null;
+
     await tar.x({
       file: filePath,
       cwd: targetPath,
       filter: (p: string, entry: any) => {
-        const safePath = getSafeExtractPath(targetPath, p);
+        if (unsafeEntry) return false;
 
         const type = entry?.type as string | undefined;
         const linkpath = entry?.linkpath as string | undefined;
 
-        if (type === "Link" || type === "SymbolicLink") {
-          if (!linkpath) return false;
+        try {
+          getSafeExtractPath(targetPath, p);
 
-          const lp = linkpath.replace(/\\/g, "/");
-          if (
-            lp.startsWith("/") ||
-            lp.startsWith("\\") ||
-            /^[a-zA-Z]:/.test(lp)
-          ) {
-            throw new Error(`Unsafe tar linkpath (absolute): "${linkpath}"`);
+          if (type === "Link" || type === "SymbolicLink") {
+            getSafeLinkExtractPath(
+              targetPath,
+              p,
+              linkpath || "",
+              type === "SymbolicLink",
+            );
           }
-
-          const lpn = path.posix.normalize(lp);
-          if (lpn.startsWith("..") || lpn.includes("/..")) {
-            throw new Error(`Unsafe tar linkpath (traversal): "${linkpath}"`);
-          }
+        } catch (error) {
+          unsafeEntry = (error as Error).message;
+          return false;
         }
 
-        return !!safePath;
+        return true;
       },
     });
+
+    if (unsafeEntry) {
+      throw new Error(unsafeEntry);
+    }
   };
 
   private extractFile = async (
@@ -1037,6 +1205,7 @@ export class Downloader {
     const ext = path.extname(filePath).toLowerCase();
 
     try {
+      assertExtractablePath(targetPath, "extract folder");
       await fs.ensureDir(targetPath);
 
       if (ext === ".zip" || ext === ".jar" || ext === ".mrpack") {

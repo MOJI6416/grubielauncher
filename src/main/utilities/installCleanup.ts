@@ -1,7 +1,11 @@
 import path from "path";
 
+const CASE_INSENSITIVE_FS =
+  process.platform === "win32" || process.platform === "darwin";
+
 export function normalizeInstallResourcePath(targetPath: string) {
-  return path.resolve(targetPath).toLowerCase();
+  const resolved = path.resolve(targetPath);
+  return CASE_INSENSITIVE_FS ? resolved.toLowerCase() : resolved;
 }
 
 export function getUnusedInstallResourcePaths(

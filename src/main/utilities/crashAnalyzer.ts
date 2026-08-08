@@ -4,10 +4,17 @@ import { IVersionConf } from "@/types/IVersion";
 import { TSettings } from "@/types/Settings";
 import {
   BUILT_IN_CRASH_RULES,
+  CrashMatch,
+  CrashPattern,
+  crashPatternKey,
+  crashRuleCulpritPattern,
+  crashRulePatterns,
   extractCrashSignature,
-  matchCrashRules,
+  MAX_CULPRITS,
   sanitizeCrashRules,
+  selectCrashRule,
 } from "./crashRules";
+import { runCrashRegexJobs } from "./crashRegexWorker";
 import { app } from "electron";
 import axios from "axios";
 import fs from "fs-extra";
@@ -16,9 +23,12 @@ import path from "path";
 const CRASH_REPORT_MAX_AGE_MS = 10 * 60 * 1000;
 const MAX_SOURCE_BYTES = 256 * 1024;
 const RULES_CACHE_TTL_MS = 60 * 60 * 1000;
+const RULES_INCOMPLETE_RULE_ID = "rules_incomplete";
+const MAX_PATTERN_RUN_ATTEMPTS = 3;
 
 let cachedRemoteRules: CrashRule[] | null = null;
 let cachedRemoteRulesAt = 0;
+const stalledPatterns = new Set<string>();
 
 async function getCrashRules(): Promise<CrashRule[]> {
   if (
@@ -27,6 +37,8 @@ async function getCrashRules(): Promise<CrashRule[]> {
   ) {
     return [...cachedRemoteRules, ...BUILT_IN_CRASH_RULES];
   }
+
+  stalledPatterns.clear();
 
   try {
     const response = await axios.get(`${BACKEND_URL}/crash-rules.json`, {
@@ -46,7 +58,9 @@ async function getCrashRules(): Promise<CrashRule[]> {
   }
 }
 
-async function readFileTail(filePath: string): Promise<string | null> {
+export async function readCrashSource(
+  filePath: string,
+): Promise<string | null> {
   try {
     const stats = await fs.stat(filePath);
     if (!stats.isFile()) return null;
@@ -71,7 +85,7 @@ async function readFileTail(filePath: string): Promise<string | null> {
   }
 }
 
-async function findRecentCrashReport(
+export async function findRecentCrashReport(
   versionPath: string,
 ): Promise<string | null> {
   try {
@@ -100,6 +114,89 @@ async function findRecentCrashReport(
   }
 }
 
+interface CrashRunOutcome {
+  match: CrashMatch | null;
+  complete: boolean;
+}
+
+async function runPatternVerdicts(
+  text: string,
+  patterns: CrashPattern[],
+): Promise<{ table: Map<string, boolean>; complete: boolean }> {
+  const table = new Map<string, boolean>();
+  let pending = patterns;
+  let complete = true;
+
+  for (
+    let attempt = 0;
+    attempt < MAX_PATTERN_RUN_ATTEMPTS && pending.length > 0;
+    attempt += 1
+  ) {
+    const run = await runCrashRegexJobs(text, pending, MAX_CULPRITS);
+
+    pending.forEach((entry, position) => {
+      const value = run.results[position];
+      if (value !== null) {
+        table.set(crashPatternKey(entry.pattern, entry.flags), value === true);
+      }
+    });
+
+    if (run.stalledAt === null) {
+      if (run.results.some((value) => value === null)) complete = false;
+      return { table, complete };
+    }
+
+    const stalled = pending[run.stalledAt];
+    stalledPatterns.add(crashPatternKey(stalled.pattern, stalled.flags));
+    pending = pending.slice(run.stalledAt + 1);
+    complete = false;
+  }
+
+  return { table, complete: complete && pending.length === 0 };
+}
+
+async function matchCrashRulesOffThread(
+  text: string,
+  rules: CrashRule[],
+  exitCode?: number,
+): Promise<CrashRunOutcome> {
+  const all = text ? crashRulePatterns(rules) : [];
+  const patterns = all.filter(
+    (entry) => !stalledPatterns.has(crashPatternKey(entry.pattern, entry.flags)),
+  );
+
+  const { table, complete: ran } = await runPatternVerdicts(text, patterns);
+  const complete = ran && patterns.length === all.length;
+
+  const best = selectCrashRule(
+    rules,
+    (pattern, flags) => table.get(crashPatternKey(pattern, flags)) === true,
+    exitCode,
+  );
+  if (!best) return { match: null, complete };
+
+  let culprits: string[] = [];
+  const culpritPattern = text ? crashRuleCulpritPattern(best) : null;
+  const culpritKey = culpritPattern
+    ? crashPatternKey(culpritPattern.pattern, culpritPattern.flags)
+    : null;
+  if (culpritPattern && culpritKey && !stalledPatterns.has(culpritKey)) {
+    const captured = await runCrashRegexJobs(
+      text,
+      [{ ...culpritPattern, capture: true }],
+      MAX_CULPRITS,
+    );
+    const first = captured.results[0];
+    if (Array.isArray(first)) culprits = first;
+    if (captured.stalledAt !== null) stalledPatterns.add(culpritKey);
+  }
+
+  return {
+    match: { ruleId: best.id, messages: best.messages, culprits },
+    complete,
+  };
+}
+
 export async function analyzeGameCrash(
   versionPath: string,
   exitCode?: number,
@@ -108,23 +205,32 @@ export async function analyzeGameCrash(
 
   let text: string | null = null;
   if (reportPath) {
-    text = await readFileTail(reportPath);
+    text = await readCrashSource(reportPath);
   }
 
   if (!text) {
-    text = await readFileTail(path.join(versionPath, "logs", "latest.log"));
+    text = await readCrashSource(path.join(versionPath, "logs", "latest.log"));
   }
 
   const rules = await getCrashRules();
-  const match = matchCrashRules(text || "", rules, exitCode);
+  const { match, complete } = await matchCrashRulesOffThread(
+    text || "",
+    rules,
+    exitCode,
+  );
 
-  if (!match) {
+  if (!complete) {
+    void reportCrashRuleHit(RULES_INCOMPLETE_RULE_ID, versionPath).catch(
+      () => {},
+    );
+  } else if (match) {
+    void reportCrashRuleHit(match.ruleId, versionPath).catch(() => {});
+  } else {
     const sample = extractCrashSignature(text || "", exitCode);
     void reportCrashRuleHit("unknown", versionPath, sample).catch(() => {});
-    return null;
   }
 
-  void reportCrashRuleHit(match.ruleId, versionPath).catch(() => {});
+  if (!match) return null;
 
   return {
     ruleId: match.ruleId,

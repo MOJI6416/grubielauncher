@@ -1,4 +1,5 @@
 export { registerAccountsIpc } from "./accountsIpc";
+export { registerAiIpc } from "./aiIpc";
 export { registerAuthIpc } from "./authIpc";
 export { registerBackendIpc } from "./backendIpc";
 export { registerFsIpc } from "./fsIpc";

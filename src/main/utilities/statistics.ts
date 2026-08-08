@@ -40,6 +40,8 @@ const MAX_SESSION_SECONDS = 24 * 60 * 60;
 const LAUNCH_LAG_SECONDS = 30;
 
 const activeSessions = new Map<string, ActiveSession>();
+const markerWrites = new Map<string, Promise<void>>();
+const endedSessionIds = new Set<string>();
 let heartbeatTimer: NodeJS.Timeout | null = null;
 
 const writeChains = new Map<string, Promise<unknown>>();
@@ -101,16 +103,19 @@ async function readJSONSafe<T>(file: string, fallback: T): Promise<T> {
   }
 }
 
-async function writeMarker(
-  session: ActiveSession,
-  lastSeen: number,
-): Promise<void> {
-  const marker: PendingMarker = { ...session, lastSeen };
-  try {
-    await atomicWriteJSON(markerPath(session.id), marker);
-  } catch {
-    // marker is best-effort crash-recovery metadata; ignore write failures
-  }
+function writeMarker(session: ActiveSession, lastSeen: number): Promise<void> {
+  const previous = markerWrites.get(session.id) ?? Promise.resolve();
+  const next = previous.then(async () => {
+    if (endedSessionIds.has(session.id)) return;
+
+    const marker: PendingMarker = { ...session, lastSeen };
+    try {
+      await atomicWriteJSON(markerPath(session.id), marker);
+    } catch {}
+  });
+
+  markerWrites.set(session.id, next);
+  return next;
 }
 
 function ensureHeartbeat(): void {
@@ -229,10 +234,16 @@ export async function endSession(
   stopHeartbeatIfIdle();
   if (!session) return;
 
+  endedSessionIds.add(session.id);
+  await markerWrites.get(session.id)?.catch(() => {});
+  markerWrites.delete(session.id);
+
   try {
     await fs.remove(markerPath(session.id));
   } catch {
     // ignore
+  } finally {
+    endedSessionIds.delete(session.id);
   }
 
   const endedAtMs = Date.now();

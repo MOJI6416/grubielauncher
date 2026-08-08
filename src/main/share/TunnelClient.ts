@@ -8,8 +8,10 @@ import {
   PingMessage,
   PongMessage,
   StreamOpenedMessage,
+  SHARE_HANDSHAKE_PROTOCOL_VERSION,
   decodeStreamDataFrame,
   encodeStreamDataFrame,
+  isValidGatewayUrl,
   normalizeGatewayUrl,
   parseTunnelControlMessage,
   toBuffer,
@@ -62,6 +64,13 @@ export class TunnelClient extends EventEmitter {
     sessionId: string
     slug: string
   }): Promise<void> {
+    if (!isValidGatewayUrl(options.gatewayUrl)) {
+      throw new ShareServiceError(
+        'invalid_response',
+        'Refused untrusted share gateway url',
+      )
+    }
+
     await this.disconnect('replaced_connection', true)
 
     this.gatewayUrl = normalizeGatewayUrl(options.gatewayUrl)
@@ -141,6 +150,7 @@ export class TunnelClient extends EventEmitter {
     const authMessage: AuthMessage = {
       type: 'AUTH',
       token: this.token,
+      protocolVersion: SHARE_HANDSHAKE_PROTOCOL_VERSION,
     }
 
     this.sendControl(authMessage)
@@ -169,7 +179,8 @@ export class TunnelClient extends EventEmitter {
       this.proxyManager.handleStreamData(frame.streamId, frame.payload)
     } catch (error) {
       this.emit('protocolError', error instanceof Error ? error : new Error(String(error)))
-      await this.disconnect('protocol_error')
+      await this.disconnect('protocol_error', true)
+      this.emit('disconnected', 'protocol_error')
     }
   }
 

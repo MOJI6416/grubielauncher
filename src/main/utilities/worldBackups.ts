@@ -1,0 +1,1035 @@
+import { shell } from "electron";
+import fs from "fs-extra";
+import path from "path";
+import { randomUUID } from "crypto";
+import {
+  DEFAULT_WORLD_BACKUP_KEEP,
+  IWorldBackup,
+  IWorldBackupList,
+  IWorldBackupsSummary,
+  IWorldPreservedCopy,
+  MAX_BACKUP_WORLD_BYTES,
+  MAX_RESTORE_ARCHIVE_BYTES,
+  normalizeWorldBackupKeep,
+  WorldBackupCreateResult,
+  WorldBackupDeleteResult,
+  WorldBackupErrorCode,
+  WorldBackupRestoreResult,
+  WorldBackupTrigger,
+} from "@/types/WorldBackup";
+import { getLauncherPaths } from "./other";
+import { writeJsonAtomic } from "./atomicJson";
+import { createZipArchive, extractZip } from "./archiver";
+import { readWorldDisplayName } from "./worlds";
+import { gameProcesses } from "./runtime";
+
+const INDEX_FILE_NAME = "index.json";
+const SKIP_STATE_FILE_NAME = "skipped.json";
+const PENDING_RESTORE_FILE_NAME = "pending-restore.json";
+const RESTORE_TEMP_DIR_NAME = "world-restore";
+export const DISPLACED_DIR_NAME = ".grubie-restore";
+const PRESERVED_MARKER_FILE = ".grubie-preserved";
+const BACKUP_ID_PATTERN = /^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
+const EXCLUDED_FILE_NAMES = new Set(["session.lock", ".grubie-preserved"]);
+const PRE_RESTORE_KEEP = 3;
+const BACKUP_COMPRESSION_LEVEL = 6;
+const RESTORE_ARCHIVE_LIMITS = {
+  maxArchiveBytes: MAX_RESTORE_ARCHIVE_BYTES,
+  maxTotalUncompressedBytes: 4 * MAX_BACKUP_WORLD_BYTES,
+};
+
+interface PendingRestore {
+  worldPath: string;
+  displacedPath: string;
+  keepDisplaced: boolean;
+}
+
+interface SkipRecord {
+  reason: WorldBackupErrorCode;
+  sourceSize: number;
+}
+
+let operationQueue: Promise<unknown> = Promise.resolve();
+
+function enqueue<T>(task: () => Promise<T>): Promise<T> {
+  const run = operationQueue.then(task, task);
+  operationQueue = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+export function getBackupsDir(): string {
+  return path.join(getLauncherPaths().launcher, "backups");
+}
+
+function getIndexPath(): string {
+  return path.join(getBackupsDir(), INDEX_FILE_NAME);
+}
+
+function getSkipStatePath(): string {
+  return path.join(getBackupsDir(), SKIP_STATE_FILE_NAME);
+}
+
+function getPendingRestorePath(): string {
+  return path.join(getBackupsDir(), PENDING_RESTORE_FILE_NAME);
+}
+
+export function isValidBackupId(id: unknown): id is string {
+  return typeof id === "string" && BACKUP_ID_PATTERN.test(id);
+}
+
+function getBackupFilePath(id: string): string {
+  return path.join(getBackupsDir(), `${id}.zip`);
+}
+
+function normalizeTrigger(value: unknown): WorldBackupTrigger {
+  return value === "manual" || value === "auto" || value === "preRestore"
+    ? value
+    : "manual";
+}
+
+export function normalizeBackupEntry(value: unknown): IWorldBackup | null {
+  if (!value || typeof value !== "object") return null;
+
+  const entry = value as Partial<IWorldBackup>;
+  if (!isValidBackupId(entry.id)) return null;
+  if (typeof entry.worldFolder !== "string" || !entry.worldFolder) return null;
+  if (typeof entry.versionName !== "string" || !entry.versionName) return null;
+
+  const createdAt = Number(entry.createdAt);
+  const size = Number(entry.size);
+
+  return {
+    id: entry.id,
+    worldName:
+      typeof entry.worldName === "string" && entry.worldName
+        ? entry.worldName
+        : entry.worldFolder,
+    worldFolder: entry.worldFolder,
+    versionName: entry.versionName,
+    createdAt: Number.isFinite(createdAt) && createdAt > 0 ? createdAt : 0,
+    size: Number.isFinite(size) && size >= 0 ? size : 0,
+    trigger: normalizeTrigger(entry.trigger),
+  };
+}
+
+async function readIndex(): Promise<IWorldBackup[]> {
+  const stored = await fs.readJSON(getIndexPath()).catch(() => null);
+  if (!Array.isArray(stored)) return [];
+
+  const seen = new Set<string>();
+  const entries: IWorldBackup[] = [];
+
+  for (const value of stored) {
+    const entry = normalizeBackupEntry(value);
+    if (!entry || seen.has(entry.id)) continue;
+    seen.add(entry.id);
+    entries.push(entry);
+  }
+
+  return entries;
+}
+
+async function writeIndex(entries: IWorldBackup[]): Promise<void> {
+  await fs.ensureDir(getBackupsDir());
+  await writeJsonAtomic(getIndexPath(), entries);
+}
+
+function getWorldKey(versionName: string, worldFolder: string): string {
+  return `${versionName}::${worldFolder}`;
+}
+
+async function readSkipState(): Promise<Record<string, SkipRecord>> {
+  const stored = await fs.readJSON(getSkipStatePath()).catch(() => null);
+  if (!stored || typeof stored !== "object" || Array.isArray(stored)) return {};
+
+  const state: Record<string, SkipRecord> = {};
+
+  for (const [key, value] of Object.entries(stored)) {
+    if (value === "worldTooLarge") {
+      state[key] = { reason: "worldTooLarge", sourceSize: 0 };
+      continue;
+    }
+
+    if (!value || typeof value !== "object") continue;
+
+    const record = value as Partial<SkipRecord>;
+    if (record.reason !== "worldTooLarge") continue;
+
+    const sourceSize = Number(record.sourceSize);
+    state[key] = {
+      reason: "worldTooLarge",
+      sourceSize: Number.isFinite(sourceSize) && sourceSize > 0 ? sourceSize : 0,
+    };
+  }
+
+  return state;
+}
+
+async function setSkipRecord(
+  key: string,
+  record: SkipRecord | null,
+): Promise<void> {
+  const state = await readSkipState();
+
+  if (record === null) {
+    if (!(key in state)) return;
+    delete state[key];
+  } else {
+    const current = state[key];
+    if (current?.reason === record.reason && current.sourceSize === record.sourceSize) {
+      return;
+    }
+    state[key] = record;
+  }
+
+  await fs.ensureDir(getBackupsDir());
+  await writeJsonAtomic(getSkipStatePath(), state);
+}
+
+export function getVersionPathFromWorldPath(worldPath: string): string {
+  return path.dirname(path.dirname(path.resolve(worldPath)));
+}
+
+function sortBackups(entries: IWorldBackup[]): IWorldBackup[] {
+  return entries
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => b.entry.createdAt - a.entry.createdAt || b.index - a.index)
+    .map((item) => item.entry);
+}
+
+function selectBackupsForWorld(
+  entries: IWorldBackup[],
+  versionName: string,
+  worldFolder: string,
+): IWorldBackup[] {
+  return sortBackups(
+    entries.filter(
+      (entry) =>
+        entry.versionName === versionName && entry.worldFolder === worldFolder,
+    ),
+  );
+}
+
+export function selectPrunableBackups(
+  worldBackups: IWorldBackup[],
+  keep: number,
+  protectedIds?: Iterable<string>,
+): IWorldBackup[] {
+  const protectedSet = new Set(protectedIds ?? []);
+  const sorted = sortBackups(worldBackups);
+
+  const automatic = sorted.filter((entry) => entry.trigger === "auto");
+  const safety = sorted.filter((entry) => entry.trigger === "preRestore");
+
+  return [
+    ...automatic.slice(normalizeWorldBackupKeep(keep)),
+    ...safety.slice(1, Math.max(1, safety.length - (PRE_RESTORE_KEEP - 1))),
+  ].filter((entry) => !protectedSet.has(entry.id));
+}
+
+export function shouldAutoBackup(
+  levelDatMtimeMs: number,
+  worldBackups: IWorldBackup[],
+  changedSince = 0,
+): boolean {
+  if (!Number.isFinite(levelDatMtimeMs) || levelDatMtimeMs <= 0) return false;
+
+  const newest = sortBackups(worldBackups)[0];
+  if (!newest) return levelDatMtimeMs >= changedSince;
+
+  return levelDatMtimeMs > newest.createdAt;
+}
+
+async function collectWorldFiles(root: string, out: string[]): Promise<number> {
+  let entries: fs.Dirent[];
+  try {
+    entries = await fs.readdir(root, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+
+  let total = 0;
+
+  for (const entry of entries) {
+    if (EXCLUDED_FILE_NAMES.has(entry.name)) continue;
+
+    const full = path.join(root, entry.name);
+
+    if (entry.isDirectory()) {
+      total += await collectWorldFiles(full, out);
+      if (total > MAX_BACKUP_WORLD_BYTES) return total;
+      continue;
+    }
+
+    if (!entry.isFile()) continue;
+
+    const stats = await fs.stat(full).catch(() => null);
+    if (!stats) continue;
+
+    out.push(full);
+    total += stats.size;
+
+    if (total > MAX_BACKUP_WORLD_BYTES) return total;
+  }
+
+  return total;
+}
+
+export function isVersionRunning(versionPath: string): boolean {
+  const target = path.resolve(versionPath);
+
+  for (const record of gameProcesses.values()) {
+    if (record.process.exitCode !== null) continue;
+    if (path.resolve(record.versionPath) === target) return true;
+  }
+
+  return false;
+}
+
+async function createBackupUnsafe(
+  worldPath: string,
+  trigger: WorldBackupTrigger,
+  keep: number,
+  protectedIds?: Iterable<string>,
+): Promise<WorldBackupCreateResult> {
+  const resolvedWorldPath = path.resolve(worldPath);
+  const worldFolder = path.basename(resolvedWorldPath);
+  const versionPath = getVersionPathFromWorldPath(resolvedWorldPath);
+  const versionName = path.basename(versionPath);
+  const worldKey = getWorldKey(versionName, worldFolder);
+
+  if (isVersionRunning(versionPath)) {
+    return { ok: false, error: "versionRunning" };
+  }
+
+  if (!(await fs.pathExists(path.join(resolvedWorldPath, "level.dat")))) {
+    return { ok: false, error: "worldMissing" };
+  }
+
+  const files: string[] = [];
+  const sourceSize = await collectWorldFiles(resolvedWorldPath, files);
+
+  if (sourceSize > MAX_BACKUP_WORLD_BYTES) {
+    await setSkipRecord(worldKey, { reason: "worldTooLarge", sourceSize });
+    return { ok: false, error: "worldTooLarge" };
+  }
+
+  if (!files.length) return { ok: false, error: "worldMissing" };
+
+  const skipped = (await readSkipState())[worldKey];
+  if (skipped?.sourceSize && sourceSize >= skipped.sourceSize) {
+    return { ok: false, error: "worldTooLarge" };
+  }
+
+  const id = randomUUID();
+  const targetPath = getBackupFilePath(id);
+
+  await fs.ensureDir(getBackupsDir());
+
+  try {
+    await createZipArchive(
+      files,
+      targetPath,
+      path.dirname(resolvedWorldPath),
+      BACKUP_COMPRESSION_LEVEL,
+    );
+  } catch (error) {
+    await fs.remove(targetPath).catch(() => {});
+    throw error;
+  }
+
+  const stats = await fs.stat(targetPath).catch(() => null);
+  if (!stats?.isFile()) {
+    await fs.remove(targetPath).catch(() => {});
+    return { ok: false, error: "failed" };
+  }
+
+  if (stats.size > MAX_RESTORE_ARCHIVE_BYTES) {
+    await fs.remove(targetPath).catch(() => {});
+    await setSkipRecord(worldKey, { reason: "worldTooLarge", sourceSize });
+    return { ok: false, error: "worldTooLarge" };
+  }
+
+  const backup: IWorldBackup = {
+    id,
+    worldName: await readWorldDisplayName(resolvedWorldPath),
+    worldFolder,
+    versionName,
+    createdAt: Date.now(),
+    size: stats.size,
+    trigger,
+  };
+
+  const entries = await readIndex();
+  entries.push(backup);
+
+  const prunable = selectPrunableBackups(
+    selectBackupsForWorld(entries, versionName, worldFolder),
+    keep,
+    [backup.id, ...(protectedIds ?? [])],
+  );
+  const prunedIds = new Set(prunable.map((entry) => entry.id));
+
+  for (const entry of prunable) {
+    await fs.remove(getBackupFilePath(entry.id)).catch(() => {});
+  }
+
+  await writeIndex(entries.filter((entry) => !prunedIds.has(entry.id)));
+  await setSkipRecord(worldKey, null);
+
+  return { ok: true, backup, pruned: prunedIds.size };
+}
+
+export function createWorldBackup(
+  worldPath: string,
+  trigger: WorldBackupTrigger = "manual",
+  keep: number = DEFAULT_WORLD_BACKUP_KEEP,
+): Promise<WorldBackupCreateResult> {
+  return enqueue(async () => {
+    try {
+      return await createBackupUnsafe(worldPath, trigger, keep);
+    } catch (error) {
+      console.error("Failed to create world backup:", error);
+      return { ok: false, error: "failed" } as WorldBackupCreateResult;
+    }
+  });
+}
+
+async function listBackupsForWorld(
+  resolvedWorldPath: string,
+): Promise<IWorldBackup[]> {
+  const versionPath = getVersionPathFromWorldPath(resolvedWorldPath);
+
+  const entries = await readIndex();
+  const worldBackups = selectBackupsForWorld(
+    entries,
+    path.basename(versionPath),
+    path.basename(resolvedWorldPath),
+  );
+
+  const existing: IWorldBackup[] = [];
+  for (const entry of worldBackups) {
+    if (await fs.pathExists(getBackupFilePath(entry.id))) existing.push(entry);
+  }
+
+  return existing;
+}
+
+async function directorySize(target: string): Promise<number> {
+  let entries: fs.Dirent[];
+  try {
+    entries = await fs.readdir(target, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+
+  let total = 0;
+  for (const entry of entries) {
+    const full = path.join(target, entry.name);
+
+    if (entry.isDirectory()) {
+      total += await directorySize(full);
+      continue;
+    }
+
+    const stats = await fs.lstat(full).catch(() => null);
+    if (stats?.isFile()) total += stats.size;
+  }
+
+  return total;
+}
+
+async function readPreservedOwner(copyPath: string): Promise<string | null> {
+  const marker = await fs
+    .readFile(path.join(copyPath, PRESERVED_MARKER_FILE), "utf-8")
+    .catch(() => null);
+
+  const owner = marker?.trim();
+  if (owner) return owner;
+
+  const match = /^(.*)-\d+$/.exec(path.basename(copyPath));
+  return match ? match[1] : null;
+}
+
+function readPreservedStamp(copyPath: string): number {
+  const match = /-(\d+)$/.exec(path.basename(copyPath));
+  const stamp = match ? Number(match[1]) : 0;
+  return Number.isFinite(stamp) && stamp > 0 ? stamp : 0;
+}
+
+async function listPreservedEntries(savesPath: string): Promise<string[]> {
+  const displacedRoot = path.join(savesPath, DISPLACED_DIR_NAME);
+
+  let entries: fs.Dirent[];
+  try {
+    entries = await fs.readdir(displacedRoot, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  return entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(displacedRoot, entry.name));
+}
+
+export async function listPreservedCopies(
+  worldPath: string,
+): Promise<IWorldPreservedCopy[]> {
+  const resolvedWorldPath = path.resolve(worldPath);
+  const worldFolder = path.basename(resolvedWorldPath);
+
+  const copies: IWorldPreservedCopy[] = [];
+
+  for (const full of await listPreservedEntries(
+    path.dirname(resolvedWorldPath),
+  )) {
+    if ((await readPreservedOwner(full)) !== worldFolder) continue;
+
+    copies.push({
+      path: full,
+      createdAt: readPreservedStamp(full),
+      size: await directorySize(full),
+    });
+  }
+
+  return copies.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export function isPreservedCopyPath(target: unknown): target is string {
+  if (typeof target !== "string" || !target) return false;
+
+  const resolved = path.resolve(target);
+  const versionsPath = path.join(getLauncherPaths().minecraft, "versions");
+  const relative = path.relative(versionsPath, resolved);
+
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
+    return false;
+  }
+
+  const parts = relative.split(path.sep);
+  return (
+    parts.length === 4 && parts[1] === "saves" && parts[2] === DISPLACED_DIR_NAME
+  );
+}
+
+export function deletePreservedCopy(
+  targetPath: string,
+): Promise<WorldBackupDeleteResult> {
+  return enqueue(async () => {
+    if (!isPreservedCopyPath(targetPath)) {
+      return { ok: false, error: "backupMissing" } as WorldBackupDeleteResult;
+    }
+
+    try {
+      const resolved = path.resolve(targetPath);
+      if (!(await fs.pathExists(resolved))) {
+        return { ok: false, error: "backupMissing" } as WorldBackupDeleteResult;
+      }
+
+      const trashed = await shell
+        .trashItem(resolved)
+        .then(() => true)
+        .catch(() => false);
+
+      if (!trashed) await fs.remove(resolved);
+      await fs.rmdir(path.dirname(resolved)).catch(() => {});
+
+      return { ok: true } as WorldBackupDeleteResult;
+    } catch (error) {
+      console.error("Failed to delete a preserved world copy:", error);
+      return { ok: false, error: "failed" } as WorldBackupDeleteResult;
+    }
+  });
+}
+
+export async function getPreservedCopiesSize(): Promise<number> {
+  const versionsPath = path.join(getLauncherPaths().minecraft, "versions");
+
+  let versions: fs.Dirent[];
+  try {
+    versions = await fs.readdir(versionsPath, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+
+  let total = 0;
+  for (const version of versions) {
+    if (!version.isDirectory()) continue;
+
+    total += await directorySize(
+      path.join(versionsPath, version.name, "saves", DISPLACED_DIR_NAME),
+    );
+  }
+
+  return total;
+}
+
+export async function getWorldBackupList(
+  worldPath: string,
+): Promise<IWorldBackupList> {
+  const resolvedWorldPath = path.resolve(worldPath);
+  const versionPath = getVersionPathFromWorldPath(resolvedWorldPath);
+  const worldKey = getWorldKey(
+    path.basename(versionPath),
+    path.basename(resolvedWorldPath),
+  );
+
+  const [backups, skipState, preserved] = await Promise.all([
+    listBackupsForWorld(resolvedWorldPath),
+    readSkipState(),
+    listPreservedCopies(resolvedWorldPath),
+  ]);
+
+  return {
+    backups,
+    skipReason: skipState[worldKey]?.reason ?? null,
+    preserved,
+  };
+}
+
+export async function countWorldBackups(
+  versionPath: string,
+): Promise<Record<string, number>> {
+  const versionName = path.basename(path.resolve(versionPath));
+  const entries = await readIndex();
+  const counts: Record<string, number> = {};
+
+  for (const entry of entries) {
+    if (entry.versionName !== versionName) continue;
+    if (!(await fs.pathExists(getBackupFilePath(entry.id)))) continue;
+
+    counts[entry.worldFolder] = (counts[entry.worldFolder] ?? 0) + 1;
+  }
+
+  return counts;
+}
+
+export function pickArchiveRoot(
+  rootHasLevelDat: boolean,
+  directories: string[],
+): string | null {
+  if (rootHasLevelDat) return "";
+  return directories.length === 1 ? directories[0] : null;
+}
+
+async function resolveExtractedWorld(tempDir: string): Promise<string | null> {
+  const rootHasLevelDat = await fs.pathExists(path.join(tempDir, "level.dat"));
+
+  const entries = await fs.readdir(tempDir, { withFileTypes: true });
+  const directories = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
+
+  const root = pickArchiveRoot(rootHasLevelDat, directories);
+  if (root === null) return null;
+
+  const source = root ? path.join(tempDir, root) : tempDir;
+  if (!(await fs.pathExists(path.join(source, "level.dat")))) return null;
+
+  return source;
+}
+
+async function restoreBackupUnsafe(
+  backupId: string,
+  worldPath: string,
+  keep: number,
+): Promise<WorldBackupRestoreResult> {
+  if (!isValidBackupId(backupId)) {
+    return { ok: false, error: "backupMissing" };
+  }
+
+  const resolvedWorldPath = path.resolve(worldPath);
+  const worldFolder = path.basename(resolvedWorldPath);
+  const savesPath = path.dirname(resolvedWorldPath);
+  const versionPath = getVersionPathFromWorldPath(resolvedWorldPath);
+
+  const entries = await readIndex();
+  const backup = entries.find((entry) => entry.id === backupId);
+  if (!backup) return { ok: false, error: "backupMissing" };
+
+  if (
+    backup.worldFolder !== worldFolder ||
+    backup.versionName !== path.basename(versionPath)
+  ) {
+    return { ok: false, error: "backupMissing" };
+  }
+
+  const backupFile = getBackupFilePath(backupId);
+  const backupStats = await fs.stat(backupFile).catch(() => null);
+  if (!backupStats?.isFile()) {
+    return { ok: false, error: "backupMissing" };
+  }
+
+  if (backupStats.size > MAX_RESTORE_ARCHIVE_BYTES) {
+    return { ok: false, error: "backupTooLarge" };
+  }
+
+  if (isVersionRunning(versionPath)) {
+    return { ok: false, error: "versionRunning" };
+  }
+
+  const worldExists = await fs.pathExists(resolvedWorldPath);
+
+  let safetyBackupId: string | null = null;
+  if (worldExists) {
+    const safety = await createBackupUnsafe(
+      resolvedWorldPath,
+      "preRestore",
+      keep,
+      [backupId],
+    ).catch(() => null);
+
+    if (safety?.ok) safetyBackupId = safety.backup.id;
+  }
+
+  const keepDisplaced = worldExists && safetyBackupId === null;
+
+  if (!(await fs.pathExists(backupFile))) {
+    return { ok: false, error: "backupMissing" };
+  }
+
+  const tempRoot = path.join(
+    getLauncherPaths().cache,
+    RESTORE_TEMP_DIR_NAME,
+    randomUUID(),
+  );
+
+  try {
+    await fs.ensureDir(tempRoot);
+    await extractZip(backupFile, tempRoot, RESTORE_ARCHIVE_LIMITS);
+
+    const source = await resolveExtractedWorld(tempRoot);
+    if (!source) return { ok: false, error: "archiveInvalid" };
+
+    const displacedPath = path.join(
+      savesPath,
+      DISPLACED_DIR_NAME,
+      `${worldFolder}-${Date.now()}`,
+    );
+
+    if (worldExists) {
+      await fs.ensureDir(path.dirname(displacedPath));
+      await fs.ensureDir(getBackupsDir());
+      await writeJsonAtomic(getPendingRestorePath(), {
+        worldPath: resolvedWorldPath,
+        displacedPath,
+        keepDisplaced,
+      });
+
+      await fs.move(resolvedWorldPath, displacedPath);
+    }
+
+    try {
+      await fs.move(source, resolvedWorldPath);
+    } catch (error) {
+      if (worldExists) {
+        await fs.remove(resolvedWorldPath).catch(() => {});
+        await fs.move(displacedPath, resolvedWorldPath).catch(() => {});
+        await fs.remove(getPendingRestorePath()).catch(() => {});
+        await fs.rmdir(path.dirname(displacedPath)).catch(() => {});
+      }
+      throw error;
+    }
+
+    if (!worldExists) return { ok: true, safetyBackupId, preservedPath: null };
+
+    await fs.remove(getPendingRestorePath()).catch(() => {});
+
+    if (keepDisplaced) {
+      await fs
+        .writeFile(
+          path.join(displacedPath, PRESERVED_MARKER_FILE),
+          worldFolder,
+          "utf-8",
+        )
+        .catch(() => {});
+
+      return { ok: true, safetyBackupId, preservedPath: displacedPath };
+    }
+
+    const trashed = await shell
+      .trashItem(displacedPath)
+      .then(() => true)
+      .catch(() => false);
+
+    if (!trashed) await fs.remove(displacedPath).catch(() => {});
+    await fs.rmdir(path.dirname(displacedPath)).catch(() => {});
+
+    return { ok: true, safetyBackupId, preservedPath: null };
+  } finally {
+    await fs.remove(tempRoot).catch(() => {});
+  }
+}
+
+export function restoreWorldBackup(
+  backupId: string,
+  worldPath: string,
+  keep: number = DEFAULT_WORLD_BACKUP_KEEP,
+): Promise<WorldBackupRestoreResult> {
+  return enqueue(async () => {
+    try {
+      return await restoreBackupUnsafe(backupId, worldPath, keep);
+    } catch (error) {
+      console.error("Failed to restore world backup:", error);
+      return { ok: false, error: "failed" } as WorldBackupRestoreResult;
+    }
+  });
+}
+
+export function deleteWorldBackup(
+  backupId: string,
+): Promise<WorldBackupDeleteResult> {
+  return enqueue(async () => {
+    if (!isValidBackupId(backupId)) {
+      return { ok: false, error: "backupMissing" } as WorldBackupDeleteResult;
+    }
+
+    try {
+      await fs.remove(getBackupFilePath(backupId));
+
+      const entries = await readIndex();
+      await writeIndex(entries.filter((entry) => entry.id !== backupId));
+
+      return { ok: true } as WorldBackupDeleteResult;
+    } catch (error) {
+      console.error("Failed to delete world backup:", error);
+      return { ok: false, error: "failed" } as WorldBackupDeleteResult;
+    }
+  });
+}
+
+async function listBackupFilesOnDisk(): Promise<Map<string, number>> {
+  const files = new Map<string, number>();
+
+  let entries: fs.Dirent[];
+  try {
+    entries = await fs.readdir(getBackupsDir(), { withFileTypes: true });
+  } catch {
+    return files;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".zip")) continue;
+
+    const id = entry.name.slice(0, -4);
+    if (!isValidBackupId(id)) continue;
+
+    const stats = await fs
+      .stat(path.join(getBackupsDir(), entry.name))
+      .catch(() => null);
+    if (!stats?.isFile()) continue;
+
+    files.set(id, stats.size);
+  }
+
+  return files;
+}
+
+async function collectOrphanPreserved(): Promise<{
+  paths: string[];
+  size: number;
+}> {
+  const versionsPath = path.join(getLauncherPaths().minecraft, "versions");
+
+  let versions: fs.Dirent[];
+  try {
+    versions = await fs.readdir(versionsPath, { withFileTypes: true });
+  } catch {
+    return { paths: [], size: 0 };
+  }
+
+  const paths: string[] = [];
+  let size = 0;
+
+  for (const version of versions) {
+    if (!version.isDirectory()) continue;
+
+    const savesPath = path.join(versionsPath, version.name, "saves");
+
+    for (const full of await listPreservedEntries(savesPath)) {
+      const owner = await readPreservedOwner(full);
+      if (owner && (await fs.pathExists(path.join(savesPath, owner)))) continue;
+
+      size += await directorySize(full);
+      paths.push(full);
+    }
+  }
+
+  return { paths, size };
+}
+
+async function partitionOrphanBackups(): Promise<{
+  orphanIds: string[];
+  orphanPreserved: string[];
+  survivors: IWorldBackup[];
+  size: number;
+  indexChanged: boolean;
+}> {
+  const versionsPath = path.join(getLauncherPaths().minecraft, "versions");
+  const entries = await readIndex();
+  const files = await listBackupFilesOnDisk();
+
+  const orphanIds: string[] = [];
+  const survivors: IWorldBackup[] = [];
+  const indexed = new Set<string>();
+  let size = 0;
+
+  for (const entry of entries) {
+    indexed.add(entry.id);
+
+    if (await fs.pathExists(path.join(versionsPath, entry.versionName))) {
+      survivors.push(entry);
+      continue;
+    }
+
+    size += files.get(entry.id) ?? 0;
+    orphanIds.push(entry.id);
+  }
+
+  for (const [id, fileSize] of files) {
+    if (indexed.has(id)) continue;
+
+    size += fileSize;
+    orphanIds.push(id);
+  }
+
+  const preserved = await collectOrphanPreserved();
+
+  return {
+    orphanIds,
+    orphanPreserved: preserved.paths,
+    survivors,
+    size: size + preserved.size,
+    indexChanged: survivors.length !== entries.length,
+  };
+}
+
+export async function getOrphanBackupsStats(): Promise<IWorldBackupsSummary> {
+  const { orphanIds, orphanPreserved, size } = await partitionOrphanBackups();
+  return { count: orphanIds.length + orphanPreserved.length, size };
+}
+
+export function cleanupOrphanBackups(): Promise<IWorldBackupsSummary> {
+  return enqueue(async () => {
+    const { orphanIds, orphanPreserved, survivors, size, indexChanged } =
+      await partitionOrphanBackups();
+
+    const count = orphanIds.length + orphanPreserved.length;
+    if (!count) return { count: 0, size: 0 };
+
+    for (const id of orphanIds) {
+      await fs.remove(getBackupFilePath(id)).catch(() => {});
+    }
+
+    for (const target of orphanPreserved) {
+      const trashed = await shell
+        .trashItem(target)
+        .then(() => true)
+        .catch(() => false);
+
+      if (!trashed) await fs.remove(target).catch(() => {});
+      await fs.rmdir(path.dirname(target)).catch(() => {});
+    }
+
+    if (indexChanged) await writeIndex(survivors);
+
+    return { count, size };
+  });
+}
+
+export async function runAutoBackupForVersion(
+  versionPath: string,
+  keep: number,
+  changedSince = 0,
+): Promise<number> {
+  const resolvedVersionPath = path.resolve(versionPath);
+  if (isVersionRunning(resolvedVersionPath)) return 0;
+
+  const savesPath = path.join(resolvedVersionPath, "saves");
+  if (!(await fs.pathExists(savesPath))) return 0;
+
+  let folders: fs.Dirent[];
+  try {
+    folders = await fs.readdir(savesPath, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+
+  const versionName = path.basename(resolvedVersionPath);
+  let created = 0;
+
+  for (const folder of folders) {
+    if (!folder.isDirectory()) continue;
+    if (folder.name === DISPLACED_DIR_NAME) continue;
+
+    const worldPath = path.join(savesPath, folder.name);
+    const levelDatStats = await fs
+      .stat(path.join(worldPath, "level.dat"))
+      .catch(() => null);
+
+    if (!levelDatStats?.isFile()) continue;
+
+    const entries = await readIndex();
+    const worldBackups = selectBackupsForWorld(
+      entries,
+      versionName,
+      folder.name,
+    );
+
+    if (!shouldAutoBackup(levelDatStats.mtimeMs, worldBackups, changedSince)) {
+      continue;
+    }
+
+    const result = await createWorldBackup(worldPath, "auto", keep);
+    if (result.ok) created += 1;
+  }
+
+  return created;
+}
+
+export async function recoverPendingRestore(): Promise<void> {
+  try {
+    await fs
+      .remove(path.join(getLauncherPaths().cache, RESTORE_TEMP_DIR_NAME))
+      .catch(() => {});
+
+    const stored = (await fs
+      .readJSON(getPendingRestorePath())
+      .catch(() => null)) as Partial<PendingRestore> | null;
+
+    if (!stored) return;
+
+    const versionsPath = path.join(getLauncherPaths().minecraft, "versions");
+    const isInsideVersions = (target: unknown): target is string => {
+      if (typeof target !== "string" || !target) return false;
+      const relative = path.relative(versionsPath, path.resolve(target));
+      return Boolean(relative) && !relative.startsWith("..") && !path.isAbsolute(relative);
+    };
+
+    const { worldPath, displacedPath } = stored;
+
+    if (!isInsideVersions(worldPath) || !isInsideVersions(displacedPath)) {
+      await fs.remove(getPendingRestorePath()).catch(() => {});
+      return;
+    }
+
+    const worldExists = await fs.pathExists(worldPath);
+    const displacedExists = await fs.pathExists(displacedPath);
+
+    if (displacedExists) {
+      if (!worldExists) {
+        await fs.move(displacedPath, worldPath).catch(() => {});
+      } else if (stored.keepDisplaced !== true) {
+        await fs.remove(displacedPath).catch(() => {});
+      }
+    }
+
+    await fs.remove(getPendingRestorePath()).catch(() => {});
+    await fs.rmdir(path.dirname(displacedPath)).catch(() => {});
+  } catch (error) {
+    console.error("Failed to recover an interrupted world restore:", error);
+  }
+}

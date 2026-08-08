@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { memo, useCallback, useEffect, useMemo } from "react";
 import { IModpack } from "@/types/Backend";
 import { IFriend } from "@/types/IFriend";
 import {
@@ -80,14 +80,26 @@ function isImageFile(file: File) {
 
 const TRUSTED_LINK_HOSTS = new Set(["grubielauncher.com"]);
 
+function isTrustedHost(host: string): boolean {
+  return (
+    TRUSTED_LINK_HOSTS.has(host) ||
+    [...TRUSTED_LINK_HOSTS].some((trusted) => host.endsWith(`.${trusted}`))
+  );
+}
+
 function isTrustedLink(rawUrl: string): boolean {
   try {
+    return isTrustedHost(new URL(rawUrl).hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
+function isTrustedImageUrl(rawUrl: string): boolean {
+  try {
     const url = new URL(rawUrl);
-    const host = url.hostname.toLowerCase();
-    return (
-      TRUSTED_LINK_HOSTS.has(host) ||
-      [...TRUSTED_LINK_HOSTS].some((trusted) => host.endsWith(`.${trusted}`))
-    );
+    if (url.protocol !== "https:") return false;
+    return isTrustedHost(url.hostname.toLowerCase());
   } catch {
     return false;
   }
@@ -131,7 +143,7 @@ interface ChatModalProps {
 
 type SenderView = { nickname: string; image?: string | null };
 
-export function ChatModal({
+function ChatModalComponent({
   friend,
   groupTitle,
   showSenderNames,
@@ -183,8 +195,9 @@ export function ChatModal({
   const [highlightedMessageId, setHighlightedMessageId] = React.useState<
     string | null
   >(null);
-  const [reactionPickerMessageId, setReactionPickerMessageId] =
-    React.useState<string | null>(null);
+  const [reactionPickerMessageId, setReactionPickerMessageId] = React.useState<
+    string | null
+  >(null);
   const pendingReactionScrollIdRef = React.useRef<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const dragDepthRef = React.useRef(0);
@@ -454,7 +467,8 @@ export function ChatModal({
           if (!open) onClose();
         }}
       >
-        <DialogContent aria-describedby={undefined}
+        <DialogContent
+          aria-describedby={undefined}
           className="max-h-[calc(100vh-2rem)] min-w-0 overflow-hidden p-0 sm:max-w-lg"
           onDragEnter={handleDragEnter}
           onDragOver={handleDragOver}
@@ -630,28 +644,46 @@ export function ChatModal({
                               </div>
                             )}
 
-                            {msg.message._type === "image" && (
-                              <button
-                                type="button"
-                                className={cn(
-                                  "w-fit max-w-full overflow-hidden rounded-lg border bg-card p-1 text-card-foreground transition-colors hover:bg-accent",
-                                  isOwnMessage
-                                    ? "border-primary/35"
-                                    : "border-border",
-                                )}
-                                onClick={() =>
-                                  setPreviewImage(msg.message.value)
-                                }
-                              >
-                                <img
-                                  src={msg.message.value}
-                                  className="max-h-56 max-w-full rounded-md object-contain"
-                                  alt={t("friends.chatImage")}
-                                  loading="lazy"
-                                  onLoad={scrollToBottom}
-                                />
-                              </button>
-                            )}
+                            {msg.message._type === "image" &&
+                              (isTrustedImageUrl(msg.message.value) ? (
+                                <button
+                                  type="button"
+                                  className={cn(
+                                    "w-fit max-w-full overflow-hidden rounded-lg border bg-card p-1 text-card-foreground transition-colors hover:bg-accent",
+                                    isOwnMessage
+                                      ? "border-primary/35"
+                                      : "border-border",
+                                  )}
+                                  onClick={() =>
+                                    setPreviewImage(msg.message.value)
+                                  }
+                                >
+                                  <img
+                                    src={msg.message.value}
+                                    className="max-h-56 max-w-full rounded-md object-contain"
+                                    alt={t("friends.chatImage")}
+                                    loading="lazy"
+                                    onLoad={scrollToBottom}
+                                  />
+                                </button>
+                              ) : (
+                                <div
+                                  className={cn(
+                                    "w-fit max-w-full rounded-lg border bg-card px-3 py-2 text-xs leading-5 text-card-foreground",
+                                    isOwnMessage
+                                      ? "border-primary/35"
+                                      : "border-border",
+                                  )}
+                                >
+                                  <p className="mb-1 flex items-center gap-1.5 text-[10px] text-warning">
+                                    <CircleAlert className="size-3 shrink-0" />
+                                    {t("friends.chatImageBlocked")}
+                                  </p>
+                                  <div className="break-all">
+                                    {renderLinkedText(msg.message.value)}
+                                  </div>
+                                </div>
+                              ))}
 
                             {msg.message._type === "groupInvite" &&
                               (() => {
@@ -774,7 +806,9 @@ export function ChatModal({
                                     <button
                                       key={reaction.emoji}
                                       type="button"
-                                      disabled={!canUseMessageActions || !msg.id}
+                                      disabled={
+                                        !canUseMessageActions || !msg.id
+                                      }
                                       className={cn(
                                         "flex h-6 items-center gap-1 rounded-md border px-1.5 text-[11px] leading-none transition-colors",
                                         isSelected
@@ -846,8 +880,8 @@ export function ChatModal({
                                       <SmilePlus className="size-3" />
                                     </Button>
 
-                                      {reactionPickerMessageId === msg.id && (
-                                        <div
+                                    {reactionPickerMessageId === msg.id && (
+                                      <div
                                         className={cn(
                                           "absolute bottom-full z-30 mb-1 flex w-44 gap-1 overflow-x-auto overflow-y-hidden overscroll-contain rounded-xl border bg-popover p-1 text-popover-foreground shadow-xl",
                                           isOwnMessage ? "right-0" : "left-0",
@@ -1089,3 +1123,5 @@ export function ChatModal({
     </>
   );
 }
+
+export const ChatModal = memo(ChatModalComponent);

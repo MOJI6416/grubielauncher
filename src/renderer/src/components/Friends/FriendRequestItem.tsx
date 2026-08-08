@@ -7,6 +7,7 @@ import { Check, Loader2, X } from "lucide-react";
 interface FriendRequestItemProps {
   request: IFriendRequest;
   isLoading: boolean;
+  isPending: boolean;
   loadingType?: LoadingType;
   onAccept: () => void;
   onReject: () => void;
@@ -16,6 +17,7 @@ interface FriendRequestItemProps {
 export function FriendRequestItem({
   request,
   isLoading,
+  isPending,
   loadingType,
   onAccept,
   onReject,
@@ -23,11 +25,11 @@ export function FriendRequestItem({
 }: FriendRequestItemProps) {
   const isRecipient = request.type === "recipient";
   const initials = useMemo(
-    () => request.user.nickname?.[0] ?? "?",
+    () => request.user.nickname?.slice(0, 2).toUpperCase() || "?",
     [request.user.nickname],
   );
-  const acceptLoading = isLoading && loadingType === "accept";
-  const rejectLoading = isLoading && loadingType === "reject";
+  const acceptLoading = isPending && loadingType === "accept";
+  const rejectLoading = isPending && loadingType === "reject";
 
   return (
     <div className="flex w-full min-w-0 items-center gap-2 rounded-lg border bg-card px-2.5 py-2 text-card-foreground shadow-xs">
@@ -78,7 +80,7 @@ export function FriendRequestItem({
       ) : (
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <p className="text-xs text-muted-foreground">
-            {t("friends.requestSended")}
+            {t("friends.requestSent")}
           </p>
           <Button
             variant="destructive"

@@ -20,9 +20,10 @@ import {
   PackagePlus,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AddVersion } from "../Modals/Version/AddVersion";
+import { LazyAddVersion } from "../LazyAddVersion";
+import { LazyDialogFallback } from "../LazyDialogFallback";
 import { Confirmation } from "../Modals/Confirmation";
 import { toast } from "sonner";
 import { buildPackShareUrl } from "@renderer/utilities/packShare";
@@ -225,10 +226,12 @@ export function OwnModpacks({
       </Dialog>
 
       {isAddVersion && tempModpack && (
-        <AddVersion
-          closeModal={() => setIsAddVersion(false)}
-          modpack={tempModpack}
-        />
+        <Suspense fallback={<LazyDialogFallback variant="wide" />}>
+          <LazyAddVersion
+            closeModal={() => setIsAddVersion(false)}
+            modpack={tempModpack}
+          />
+        </Suspense>
       )}
 
       {isConfirmationOpen && tempModpack && (

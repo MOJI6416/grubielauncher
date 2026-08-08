@@ -33,3 +33,25 @@ export function getSafeExtractPath(
 
   return target;
 }
+
+export function getSafeLinkExtractPath(
+  destinationRoot: string,
+  entryName: string,
+  linkpath: string,
+  isSymbolicLink: boolean,
+): string {
+  const link = (linkpath || "").replace(/\\/g, "/");
+
+  if (!link) {
+    throw new Error(`Invalid tar linkpath: "${linkpath}"`);
+  }
+
+  if (link.startsWith("/") || /^[a-zA-Z]:/.test(link)) {
+    throw new Error(`Unsafe tar linkpath (absolute): "${linkpath}"`);
+  }
+
+  const entryDir = path.posix.dirname((entryName || "").replace(/\\/g, "/"));
+  const base = isSymbolicLink && entryDir !== "." ? entryDir : "";
+
+  return getSafeExtractPath(destinationRoot, path.posix.join(base, link));
+}

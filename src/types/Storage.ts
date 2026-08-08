@@ -3,6 +3,7 @@ export type StorageCategoryId =
   | "libraries"
   | "assets"
   | "java"
+  | "backups"
   | "appData"
   | "other";
 
@@ -26,9 +27,10 @@ export interface StorageCleanup {
   libraries: StorageCleanupEntry & {
     safe: boolean;
   };
+  backups: StorageCleanupEntry;
 }
 
-export type StorageCleanupKind = "java" | "libraries";
+export type StorageCleanupKind = "java" | "libraries" | "backups";
 
 export interface StorageBreakdown {
   total: number;

@@ -123,6 +123,10 @@ export function getShareErrorText(
       return t("share.errors.tunnelDisconnected");
     case "tunnel_protocol_error":
       return t("share.errors.tunnelProtocolError");
+    case "tunnel_version_unsupported":
+      return t("share.errors.tunnelVersionUnsupported", {
+        defaultValue: t("share.errors.tunnelProtocolError"),
+      });
     case "join_share_not_found":
       return t("share.errors.joinShareNotFound");
     case "invalid_response":

@@ -2,6 +2,8 @@ import { IServerConf, ServerCore } from "@/types/Server";
 import { Java } from "./Java";
 import { IVersionConf } from "@/types/IVersion";
 import { ILocalAccount } from "@/types/Account";
+import { app } from "electron";
+import { ChildProcess, spawn } from "child_process";
 import path from "path";
 import { getJavaAgent, HTTP_AGENT_JVM_ARGUMENT } from "../utilities/other";
 import { Downloader } from "../utilities/downloader";
@@ -23,9 +25,24 @@ import {
   toArgfilePath,
   validateServerMemory,
 } from "./serverScriptSafety";
-import { AIKAR_FLAGS } from "../utilities/serverManager";
+import {
+  AIKAR_FLAGS,
+  isServerRunning,
+  setServerRunning,
+} from "../utilities/serverManager";
+import {
+  classifyRunArguments,
+  filterRunArguments,
+  isAllowedJvmArgument,
+} from "@/shared/runArguments";
 import { assertTrustedServerCoreUrl } from "../utilities/trustedHosts";
 import { mcVersionToJavaMajor } from "@/shared/javaVersions";
+import { createLineReader } from "../utilities/consoleLog";
+import {
+  ServerRunResult,
+  ServerRunState,
+  ServerRunStatus,
+} from "@/types/Server";
 
 function patchLauncherScript(
   data: string,
@@ -52,21 +69,29 @@ function patchLauncherScript(
 
 async function writeUserJvmArgs(file: string, managed: string): Promise<void> {
   const managedLine = managed.trim();
-  let preserved: string[] = [];
+  const preserved: string[] = [];
 
   try {
     const existing = await fs.readFile(file, "utf-8");
-    preserved = existing
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(
-        (line) =>
-          line &&
-          line !== managedLine &&
-          !/-Xm[sx]/i.test(line) &&
-          !line.includes("-javaagent:") &&
-          !line.includes(HTTP_AGENT_JVM_ARGUMENT),
+
+    for (const rawLine of existing.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line === managedLine) continue;
+      if (/-Xm[sx]/i.test(line)) continue;
+      if (line.includes("-javaagent:")) continue;
+      if (line.includes(HTTP_AGENT_JVM_ARGUMENT)) continue;
+
+      const { safe, rejected } = filterRunArguments(
+        tokenizeRunScriptLine(line, true),
+        "jvm",
       );
+      if (rejected.length > 0) {
+        console.error(
+          `[server] dropped unsafe user_jvm_args.txt arguments: ${rejected.join(" ")}`,
+        );
+      }
+      if (safe.length > 0) preserved.push(safe.join(" "));
+    }
   } catch {}
 
   await fs.writeFile(
@@ -75,6 +100,625 @@ async function writeUserJvmArgs(file: string, managed: string): Promise<void> {
     "utf-8",
   );
 }
+
+const RUN_SCRIPT_MARKERS = ["-jar", "@user_jvm_args.txt", "@libraries"];
+const RUN_SCRIPT_EXECUTABLES = new Set([
+  "java",
+  "javaw",
+  "java.exe",
+  "javaw.exe",
+]);
+const RUN_SCRIPT_ARGFILE =
+  /^@(?:user_jvm_args\.txt|libraries\/[A-Za-z0-9._+-]+(?:\/[A-Za-z0-9._+-]+)*\.txt)$/i;
+const RUN_SCRIPT_JAR = /^[A-Za-z0-9._+-]+\.jar$/;
+const RUN_SCRIPT_NOISE = /^(?:[@#:]|echo\b|pause\b|rem\b|set\b|title\b|cd\b|read\b|exit\b|goto\b|if\b)/i;
+const RUN_SCRIPT_PASSTHROUGH = new Set(["%*", "$@", '"$@"']);
+
+const ARGFILE_VALUE_FLAGS = new Set([
+  "-p",
+  "--module-path",
+  "-cp",
+  "-classpath",
+  "--class-path",
+  "-m",
+  "--module",
+  "--add-opens",
+  "--add-exports",
+  "--add-modules",
+  "--add-reads",
+  "--patch-module",
+  "--upgrade-module-path",
+]);
+const ARGFILE_PATH_FLAGS = new Set([
+  "-p",
+  "--module-path",
+  "-cp",
+  "-classpath",
+  "--class-path",
+]);
+const ARGFILE_PATH_ENTRY = /^[A-Za-z0-9_.+-][A-Za-z0-9_.+/-]*$/;
+const ARGFILE_MAIN_CLASS =
+  /^[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)+$/;
+const ARGFILE_AUTHLIB_AGENT_PREFIX = "-javaagent:";
+const ARGFILE_AUTHLIB_AGENT_BODY =
+  /^libraries\/[A-Za-z0-9._+-]+(?:\/[A-Za-z0-9._+-]+)*\.jar=(?:ely\.by|grubielauncher\.com)$/i;
+
+const SERVER_LOG_LINES = 300;
+const SERVER_OUTPUT_FLUSH_MS = 200;
+const SERVER_GRACEFUL_STOP_MS = 30_000;
+const SERVER_TERMINATE_MS = 10_000;
+const SERVER_QUIT_WAIT_MS = 15_000;
+
+export function tokenizeRunScriptLine(line: string, posix: boolean): string[] {
+  const tokens: string[] = [];
+  let current = "";
+  let started = false;
+  let quote: '"' | "'" | null = null;
+
+  for (let index = 0; index < line.length; index++) {
+    const char = line[index];
+
+    if (quote) {
+      if (char === quote) {
+        quote = null;
+        continue;
+      }
+      current += char;
+      continue;
+    }
+
+    if (posix && char === "\\" && index + 1 < line.length) {
+      current += line[++index];
+      started = true;
+      continue;
+    }
+
+    if (char === '"' || (posix && char === "'")) {
+      quote = char as '"' | "'";
+      started = true;
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      if (current || started) tokens.push(current);
+      current = "";
+      started = false;
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current || started) tokens.push(current);
+  return tokens;
+}
+
+export function isLauncherRunScriptArgfile(arg: string): boolean {
+  const normalized = arg.replace(/\\/g, "/");
+  if (normalized.split("/").includes("..")) return false;
+
+  return RUN_SCRIPT_ARGFILE.test(normalized);
+}
+
+export function isLauncherRunScriptEntryPoint(arg: string): boolean {
+  return arg === "-jar" || arg === "nogui" || RUN_SCRIPT_JAR.test(arg);
+}
+
+function isServerRelativePath(value: string): boolean {
+  if (!value || value.includes("\\")) return false;
+  if (!ARGFILE_PATH_ENTRY.test(value)) return false;
+
+  return !value.split("/").includes("..");
+}
+
+function isServerRelativePathList(value: string): boolean {
+  const entries = value.split(/[;:,]/).filter((entry) => entry !== "");
+
+  return entries.length > 0 && entries.every(isServerRelativePath);
+}
+
+export function isLauncherAuthlibAgent(token: string): boolean {
+  if (!token.startsWith(ARGFILE_AUTHLIB_AGENT_PREFIX)) return false;
+  if (token.split("/").includes("..")) return false;
+
+  return ARGFILE_AUTHLIB_AGENT_BODY.test(
+    token.slice(ARGFILE_AUTHLIB_AGENT_PREFIX.length),
+  );
+}
+
+export function isLoaderManagedJvmArgument(token: string): boolean {
+  if (isLauncherAuthlibAgent(token)) return true;
+
+  if (!token.startsWith("-D")) return false;
+
+  const separator = token.indexOf("=");
+  if (separator === -1) return false;
+  if (!isServerRelativePathList(token.slice(separator + 1))) return false;
+
+  return isAllowedJvmArgument(`${token.slice(0, separator)}=managed`);
+}
+
+export function tokenizeArgfileContent(content: string): string[] {
+  const tokens: string[] = [];
+
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    tokens.push(...tokenizeRunScriptLine(line, true));
+  }
+
+  return tokens;
+}
+
+export function splitArgfileTokens(tokens: string[]): {
+  jvm: string[];
+  program: string[];
+} {
+  for (let index = 0; index < tokens.length; index++) {
+    const token = tokens[index];
+
+    if (ARGFILE_VALUE_FLAGS.has(token)) {
+      index++;
+      continue;
+    }
+    if (token.startsWith("-")) continue;
+    if (!ARGFILE_MAIN_CLASS.test(token)) continue;
+
+    return { jvm: tokens.slice(0, index), program: tokens.slice(index) };
+  }
+
+  return { jvm: tokens, program: [] };
+}
+
+export function filterArgfileTokens(tokens: string[]): {
+  safe: string[];
+  rejected: string[];
+} {
+  const { jvm, program } = splitArgfileTokens(tokens);
+
+  const pairs = new Set<number>();
+  for (let index = 0; index + 1 < jvm.length; index++) {
+    if (!ARGFILE_PATH_FLAGS.has(jvm[index])) continue;
+    if (!isServerRelativePathList(jvm[index + 1])) continue;
+
+    pairs.add(index);
+    pairs.add(index + 1);
+    index++;
+  }
+
+  const allowed = classifyRunArguments(jvm, "jvm", isLoaderManagedJvmArgument);
+  const safe: string[] = [];
+  const rejected: string[] = [];
+
+  jvm.forEach((token, index) => {
+    if (allowed[index] || pairs.has(index)) safe.push(token);
+    else rejected.push(token);
+  });
+
+  const tail = filterRunArguments(program, "game");
+
+  return {
+    safe: [...safe, ...tail.safe],
+    rejected: [...rejected, ...tail.rejected],
+  };
+}
+
+export async function expandServerArgfiles(
+  serverPath: string,
+  args: string[],
+): Promise<string[]> {
+  const expanded: string[] = [];
+
+  for (const arg of args) {
+    if (!arg.startsWith("@")) {
+      expanded.push(arg);
+      continue;
+    }
+
+    if (!isLauncherRunScriptArgfile(arg)) {
+      console.error(`[server] dropped unknown run script argfile: ${arg}`);
+      continue;
+    }
+
+    const argfilePath = path.join(
+      serverPath,
+      ...arg.slice(1).replace(/\\/g, "/").split("/"),
+    );
+
+    let content: string;
+    try {
+      content = await fs.readFile(argfilePath, "utf-8");
+    } catch {
+      console.error(`[server] unreadable run script argfile: ${arg}`);
+      continue;
+    }
+
+    const { safe, rejected } = filterArgfileTokens(
+      tokenizeArgfileContent(content),
+    );
+    if (rejected.length > 0) {
+      console.error(
+        `[server] dropped unsafe arguments from ${arg}: ${rejected.join(" ")}`,
+      );
+    }
+
+    expanded.push(...safe);
+  }
+
+  return expanded;
+}
+
+export function isTrustedServerJavaCommand(
+  command: string,
+  expectedJavaPath: string,
+): boolean {
+  if (!RUN_SCRIPT_EXECUTABLES.has(path.basename(command).toLowerCase())) {
+    return false;
+  }
+
+  if (!path.isAbsolute(command)) return false;
+
+  const managedRoot = path.resolve(
+    app.getPath("appData"),
+    ".grubielauncher",
+    "java",
+  );
+
+  const relative = path.relative(managedRoot, path.resolve(command));
+  const segments = relative ? relative.split(path.sep) : [];
+
+  if (
+    segments.length > 2 &&
+    !relative.startsWith("..") &&
+    !path.isAbsolute(relative) &&
+    segments[segments.length - 2].toLowerCase() === "bin"
+  ) {
+    return true;
+  }
+
+  if (!expectedJavaPath || !path.isAbsolute(expectedJavaPath)) return false;
+
+  const left = path.resolve(command);
+  const right = path.resolve(expectedJavaPath);
+
+  return process.platform === "win32" || process.platform === "darwin"
+    ? left.toLowerCase() === right.toLowerCase()
+    : left === right;
+}
+
+export function parseRunScript(
+  content: string,
+  posix: boolean,
+): { command: string; args: string[] } | null {
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || RUN_SCRIPT_NOISE.test(line)) continue;
+    if (!RUN_SCRIPT_MARKERS.some((marker) => line.includes(marker))) continue;
+
+    const tokens = tokenizeRunScriptLine(line, posix).filter(
+      (token) => !RUN_SCRIPT_PASSTHROUGH.has(token),
+    );
+    const [command, ...args] = tokens;
+    if (!command) continue;
+    if (!RUN_SCRIPT_EXECUTABLES.has(path.basename(command).toLowerCase())) {
+      continue;
+    }
+
+    const { safe, rejected } = filterRunArguments(
+      args,
+      "jvm",
+      (arg) =>
+        isLauncherRunScriptArgfile(arg) ||
+        isLauncherRunScriptEntryPoint(arg) ||
+        isLoaderManagedJvmArgument(arg),
+    );
+    if (rejected.length > 0) {
+      console.error(
+        `[server] dropped unsafe run script arguments: ${rejected.join(" ")}`,
+      );
+    }
+
+    return { command, args: safe };
+  }
+
+  return null;
+}
+
+type RunningServer = {
+  child: ChildProcess;
+  state: ServerRunState;
+  log: string[];
+  pending: string[];
+  flushTimer: NodeJS.Timeout | null;
+  stopTimer: NodeJS.Timeout | null;
+  killTimer: NodeJS.Timeout | null;
+};
+
+const runningServers = new Map<string, RunningServer>();
+
+function broadcast(channel: string, payload: unknown) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.webContents.isDestroyed()) return;
+
+  try {
+    mainWindow.webContents.send(channel, payload);
+  } catch {}
+}
+
+function setState(serverPath: string, entry: RunningServer, state: ServerRunState) {
+  entry.state = state;
+  broadcast("server:state", {
+    serverPath,
+    state,
+    pid: entry.child.pid ?? null,
+  });
+}
+
+function flushOutput(serverPath: string, entry: RunningServer) {
+  entry.flushTimer = null;
+  if (entry.pending.length === 0) return;
+
+  const lines = entry.pending.splice(0);
+  broadcast("server:output", { serverPath, lines });
+}
+
+function pushOutput(serverPath: string, entry: RunningServer, line: string) {
+  const trimmed = line.trimEnd();
+  if (!trimmed) return;
+
+  entry.log.push(trimmed);
+  if (entry.log.length > SERVER_LOG_LINES) {
+    entry.log.splice(0, entry.log.length - SERVER_LOG_LINES);
+  }
+
+  entry.pending.push(trimmed);
+  if (!entry.flushTimer) {
+    entry.flushTimer = setTimeout(
+      () => flushOutput(serverPath, entry),
+      SERVER_OUTPUT_FLUSH_MS,
+    );
+  }
+}
+
+function clearTimers(entry: RunningServer) {
+  if (entry.stopTimer) clearTimeout(entry.stopTimer);
+  if (entry.killTimer) clearTimeout(entry.killTimer);
+  entry.stopTimer = null;
+  entry.killTimer = null;
+}
+
+function forceKill(entry: RunningServer) {
+  const pid = entry.child.pid;
+  if (!pid) return;
+
+  if (process.platform === "win32") {
+    try {
+      spawn("taskkill", ["/pid", String(pid), "/T", "/F"], {
+        windowsHide: true,
+      }).unref();
+    } catch {}
+    return;
+  }
+
+  try {
+    entry.child.kill("SIGKILL");
+  } catch {}
+}
+
+async function resolveServerJavaPath(serverPath: string): Promise<string> {
+  const conf = await fs
+    .readJSON(path.join(serverPath, "conf.json"))
+    .catch(() => null);
+  const major =
+    typeof conf?.javaMajorVersion === "number" && conf.javaMajorVersion > 0
+      ? conf.javaMajorVersion
+      : 21;
+
+  try {
+    const java = new Java(major);
+    await java.init();
+    if (!java.javaServerPath) await java.useSystemJava();
+
+    return java.javaServerPath;
+  } catch {
+    return "";
+  }
+}
+
+export async function startServer(
+  serverPath: string,
+): Promise<ServerRunResult> {
+  const key = path.resolve(serverPath);
+  const existing = runningServers.get(key);
+  if (existing) return { ok: false, error: "server_already_running" };
+  if (await isServerRunning(key)) {
+    return { ok: false, error: "server_already_running" };
+  }
+
+  const posix = process.platform !== "win32";
+  const scriptPath = path.join(key, posix ? "run.sh" : "run.bat");
+
+  if (!(await fs.pathExists(scriptPath))) {
+    return { ok: false, error: "server_run_script_missing" };
+  }
+
+  const parsed = parseRunScript(
+    await fs.readFile(scriptPath, "utf-8"),
+    posix,
+  );
+  if (!parsed) return { ok: false, error: "server_run_script_unreadable" };
+
+  const expectedJava = await resolveServerJavaPath(key);
+  if (!isTrustedServerJavaCommand(parsed.command, expectedJava)) {
+    console.error(
+      `[server] refused run script java command outside the launcher runtime: ${parsed.command}`,
+    );
+    return { ok: false, error: "server_run_script_untrusted" };
+  }
+
+  const args = await expandServerArgfiles(key, parsed.args);
+
+  let child: ChildProcess;
+  try {
+    child = spawn(path.resolve(parsed.command), args, {
+      cwd: key,
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  const entry: RunningServer = {
+    child,
+    state: "starting",
+    log: [],
+    pending: [],
+    flushTimer: null,
+    stopTimer: null,
+    killTimer: null,
+  };
+
+  runningServers.set(key, entry);
+  setServerRunning(key, true);
+  setState(key, entry, "starting");
+
+  const stdoutReader = createLineReader((line) => {
+    pushOutput(key, entry, line);
+    if (entry.state === "starting" && /\bDone \(|For help, type/i.test(line)) {
+      setState(key, entry, "running");
+    }
+  });
+  const stderrReader = createLineReader((line) => pushOutput(key, entry, line));
+
+  child.stdout?.on("data", (chunk: Buffer) => stdoutReader.push(chunk));
+  child.stderr?.on("data", (chunk: Buffer) => stderrReader.push(chunk));
+
+  child.on("error", (error) => {
+    pushOutput(key, entry, `[launcher] ${error.message}`);
+  });
+
+  child.on("close", (code, signal) => {
+    stdoutReader.flush();
+    stderrReader.flush();
+    pushOutput(
+      key,
+      entry,
+      `[launcher] server stopped (code ${code ?? "none"}, signal ${signal ?? "none"})`,
+    );
+
+    clearTimers(entry);
+    if (entry.flushTimer) clearTimeout(entry.flushTimer);
+    entry.flushTimer = null;
+    flushOutput(key, entry);
+
+    runningServers.delete(key);
+    setServerRunning(key, false);
+    broadcast("server:state", { serverPath: key, state: "stopped", pid: null });
+  });
+
+  return { ok: true };
+}
+
+export async function stopServer(
+  serverPath: string,
+  force = false,
+): Promise<ServerRunResult> {
+  const key = path.resolve(serverPath);
+  const entry = runningServers.get(key);
+  if (!entry) {
+    return (await isServerRunning(key))
+      ? { ok: false, error: "server_not_managed" }
+      : { ok: false, error: "server_not_running" };
+  }
+
+  if (force) {
+    clearTimers(entry);
+    setState(key, entry, "stopping");
+    forceKill(entry);
+    return { ok: true };
+  }
+
+  if (entry.state === "stopping") return { ok: true };
+
+  setState(key, entry, "stopping");
+
+  try {
+    entry.child.stdin?.write("stop\n");
+  } catch {}
+
+  entry.stopTimer = setTimeout(() => {
+    try {
+      entry.child.kill();
+    } catch {}
+
+    entry.killTimer = setTimeout(() => forceKill(entry), SERVER_TERMINATE_MS);
+  }, SERVER_GRACEFUL_STOP_MS);
+
+  return { ok: true };
+}
+
+export async function getServerRunStatus(
+  serverPath: string,
+): Promise<ServerRunStatus> {
+  const key = path.resolve(serverPath);
+  const entry = runningServers.get(key);
+
+  if (entry) {
+    return {
+      serverPath: key,
+      state: entry.state,
+      pid: entry.child.pid ?? null,
+      log: [...entry.log],
+    };
+  }
+
+  return {
+    serverPath: key,
+    state: (await isServerRunning(key)) ? "running" : "stopped",
+    pid: null,
+    log: [],
+  };
+}
+
+function waitForServersToExit(timeoutMs: number): Promise<void> {
+  if (runningServers.size === 0) return Promise.resolve();
+
+  return new Promise((resolve) => {
+    const deadline = Date.now() + timeoutMs;
+    const poll = setInterval(() => {
+      if (runningServers.size === 0 || Date.now() >= deadline) {
+        clearInterval(poll);
+        resolve();
+      }
+    }, 250);
+  });
+}
+
+let quitRequested = false;
+
+app.on("before-quit", (event) => {
+  if (runningServers.size === 0) return;
+
+  if (quitRequested) {
+    for (const entry of runningServers.values()) forceKill(entry);
+    return;
+  }
+
+  quitRequested = true;
+  event.preventDefault();
+
+  for (const key of [...runningServers.keys()]) void stopServer(key);
+
+  void waitForServersToExit(SERVER_QUIT_WAIT_MS).then(() => {
+    for (const entry of runningServers.values()) forceKill(entry);
+    app.quit();
+  });
+});
 
 export class ServerGame {
   private serverPath: string = "";
@@ -199,16 +843,16 @@ export class ServerGame {
     const jarPath = path.join(this.serverPath, jar);
 
     this.sendInstallProgress("files", 35);
+    const coreUrl = this.serverConf.downloads?.server;
+    if (coreUrl) assertTrustedServerCoreUrl(coreUrl);
+
     const jarStats = await fs.stat(jarPath).catch(() => null);
     if (!jarStats || jarStats.size === 0) {
-      const coreUrl = this.serverConf.downloads?.server;
       if (!coreUrl) {
         throw new Error(
           "Server core jar is missing and no download URL is available",
         );
       }
-
-      assertTrustedServerCoreUrl(coreUrl);
 
       await this.downloader.downloadFiles([
         {

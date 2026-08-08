@@ -97,6 +97,26 @@ export interface ISpongeVersion {
   }[]
 }
 
+export type ServerRunState = 'stopped' | 'starting' | 'running' | 'stopping'
+
+export interface ServerRunStatus {
+  serverPath: string
+  state: ServerRunState
+  pid: number | null
+  log: string[]
+}
+
+export interface ServerRunResult {
+  ok: boolean
+  error?: string
+}
+
+export interface ServerSyncNotice {
+  level: 'error' | 'info'
+  entries: string[]
+  reason?: string
+}
+
 export interface IServerSettings {
   maxPlayers: number
   gameMode: string

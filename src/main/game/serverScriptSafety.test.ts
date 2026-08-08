@@ -3,6 +3,7 @@ import {
   assertSafeFileSegment,
   assertSafeRelativePath,
   toArgfilePath,
+  toSafeFileName,
   validateServerMemory,
 } from "./serverScriptSafety";
 
@@ -56,6 +57,39 @@ describe("assertSafeFileSegment", () => {
     expect(() => assertSafeFileSegment("a/b", "core")).toThrow();
     expect(() => assertSafeFileSegment("", "core")).toThrow();
     expect(() => assertSafeFileSegment("$(rm -rf /)", "core")).toThrow();
+  });
+});
+
+describe("toSafeFileName", () => {
+  it("keeps ordinary mod file names untouched", () => {
+    expect(toSafeFileName("Mouse Tweaks-2.25 (1.20.1).jar", "mod file")).toBe(
+      "Mouse Tweaks-2.25 (1.20.1).jar",
+    );
+    expect(toSafeFileName("sodium-fabric-0.5.8+mc1.20.1.jar", "mod file")).toBe(
+      "sodium-fabric-0.5.8+mc1.20.1.jar",
+    );
+  });
+
+  it("strips any directory part so traversal cannot escape the folder", () => {
+    expect(
+      toSafeFileName(
+        String.raw`..\..\..\..\java\jdk-21\bin\javaw.exe`,
+        "mod file",
+      ),
+    ).toBe("javaw.exe");
+    expect(toSafeFileName("../../accounts.json", "mod file")).toBe(
+      "accounts.json",
+    );
+    expect(toSafeFileName("mods/nested/x.jar", "mod file")).toBe("x.jar");
+  });
+
+  it("rejects names that cannot be used as a file name", () => {
+    expect(() => toSafeFileName("", "mod file")).toThrow();
+    expect(() => toSafeFileName("..", "mod file")).toThrow();
+    expect(() => toSafeFileName("mods/", "mod file")).toThrow();
+    expect(() => toSafeFileName("a\0b.jar", "mod file")).toThrow();
+    expect(() => toSafeFileName("C:evil.jar", "mod file")).toThrow();
+    expect(() => toSafeFileName(undefined as unknown as string, "mod")).toThrow();
   });
 });
 

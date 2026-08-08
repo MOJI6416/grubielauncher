@@ -10,7 +10,7 @@ import { Version } from "../game/Version";
 import { DownloadItem } from "@/types/Downloader";
 import { importVersion } from "../utilities/versions";
 import { uploadMods } from "../utilities/share";
-import { handleSafe } from "../utilities/ipc";
+import { check, handleSafe } from "../utilities/ipc";
 import { assertReadablePath, assertWritablePath } from "../utilities/safePath";
 import { pauseDownloads, resumeDownloads } from "../utilities/downloader";
 import { ILocalProject } from "@/types/ModManager";
@@ -59,6 +59,11 @@ const fallbackInstall: VersionInstallResult = {
   success: false,
   error: "Installation failed.",
 };
+
+const isPath = check.nonEmptyString(4096);
+const isConf = check.object();
+const isOptionalConf = check.optional(check.object());
+const isDownloadItems = check.optional(check.arrayOf(check.object(), 100000));
 
 export function isVersionInstallActive(): boolean {
   return isInstallOperationActive();
@@ -114,6 +119,7 @@ export function registerVersionIpc() {
   handleSafe(
     "version:init",
     fallbackVersionInit,
+    [isConf],
     async (_, versionConf: IVersionConf): Promise<IVersionClassData> => {
       const vm = new Version(versionConf);
       await vm.init();
@@ -133,6 +139,7 @@ export function registerVersionIpc() {
   handleSafe(
     "version:install",
     fallbackInstall,
+    [isOptionalConf, isConf, isConf, isDownloadItems, isOptionalConf],
     async (
       _,
       account: ILocalAccount,
@@ -169,6 +176,14 @@ export function registerVersionIpc() {
   handleSafe(
     "version:getRunCommand",
     null,
+    [
+      isOptionalConf,
+      isConf,
+      isConf,
+      isOptionalConf,
+      check.boolean(),
+      isOptionalConf,
+    ],
     async (
       _,
       account: ILocalAccount,
@@ -194,6 +209,7 @@ export function registerVersionIpc() {
   handleSafe(
     "version:ensureAuthlib",
     { ok: false, reason: "unavailable" } as AuthlibEnsureResult,
+    [isOptionalConf, isConf],
     async (
       _,
       account: ILocalAccount,
@@ -208,6 +224,14 @@ export function registerVersionIpc() {
   handleSafe(
     "version:run",
     false,
+    [
+      isOptionalConf,
+      isConf,
+      isConf,
+      isOptionalConf,
+      check.integer(),
+      isOptionalConf,
+    ],
     async (
       _,
       account: ILocalAccount,
@@ -226,29 +250,43 @@ export function registerVersionIpc() {
   handleSafe(
     "version:delete",
     false,
+    [isOptionalConf, isConf, check.optional(check.boolean())],
     async (
       _,
       account: ILocalAccount,
       versionConf: IVersionConf,
       isFull: boolean,
     ) => {
+      const lock = tryBeginInstallOperation(() => {});
+      if (!lock) return false;
+
+      try {
+        const vm = new Version(versionConf);
+        await vm.init();
+        await vm.delete(account, isFull);
+        return true;
+      } finally {
+        lock.end();
+      }
+    },
+  );
+
+  handleSafe(
+    "version:save",
+    false,
+    [isConf],
+    async (_, versionConf: IVersionConf) => {
       const vm = new Version(versionConf);
       await vm.init();
-      await vm.delete(account, isFull);
+      await vm.save();
       return true;
     },
   );
 
-  handleSafe("version:save", false, async (_, versionConf: IVersionConf) => {
-    const vm = new Version(versionConf);
-    await vm.init();
-    await vm.save();
-    return true;
-  });
-
   handleSafe(
     "version:import",
     fallbackImport,
+    [isPath, isPath],
     async (_, filePath: string, tempPath: string) => {
       assertReadablePath(filePath, "version:import");
       assertWritablePath(tempPath, "version:import");
@@ -260,6 +298,7 @@ export function registerVersionIpc() {
   handleSafe(
     "share:uploadMods",
     fallbackUploadMods,
+    [check.string(32768), isConf],
     async (_, at: string, versionConf: IVersionConf) => {
       const version = new Version(versionConf);
       await version.init();

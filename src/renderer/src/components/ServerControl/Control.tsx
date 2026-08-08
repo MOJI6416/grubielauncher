@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ImageCropper } from "../ImageCropper";
 import { ServerSettings } from "./Settings";
 import { ProjectType } from "@/types/ModManager";
@@ -7,8 +7,10 @@ import {
   Cpu,
   Folder,
   ImagePlus,
+  Play,
   ServerCog,
   Settings,
+  Square,
   Trash,
   TriangleAlert,
   X,
@@ -25,14 +27,29 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Alert, AlertTitle } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Confirmation } from "../Modals/Confirmation";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import type { ServerRunState } from "@/types/Server";
+import { getServerRuntime } from "./serverRuntime";
 
 import { showFailureToast } from "@renderer/utilities/failures";
 enum LoadingType {
   RUN = "run",
   DELETE = "delete",
+}
+
+const MAX_SERVER_LOG_LINES = 300;
+
+const RUN_ERROR_KEYS: Record<string, string> = {
+  server_run_script_untrusted: "serverManager.runErrorUntrusted",
+  server_not_managed: "serverManager.runErrorNotManaged",
+};
+
+function isSameServerPath(a: string, b: string) {
+  return a.toLowerCase() === b.toLowerCase();
 }
 
 const api = window.api;
@@ -54,8 +71,12 @@ export function ServerControl({
   const [version] = useAtom(selectedVersionAtom);
   const [serverPath, setServerPath] = useState("");
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [runState, setRunState] = useState<ServerRunState>("stopped");
+  const [runLog, setRunLog] = useState<string[]>([]);
 
+  const runtime = useMemo(() => getServerRuntime(), []);
   const logoUrlRef = useRef<string | null>(null);
+  const logEndRef = useRef<HTMLDivElement | null>(null);
 
   const { t } = useTranslation();
 
@@ -143,6 +164,75 @@ export function ServerControl({
     };
   }, [server, version]);
 
+  useEffect(() => {
+    if (!runtime || !serverPath) return;
+
+    let cancelled = false;
+
+    void runtime.runStatus(serverPath).then((status) => {
+      if (cancelled || !status) return;
+      setRunState(status.state);
+      setRunLog(status.log ?? []);
+    });
+
+    const offState = runtime.onRunState((payload) => {
+      if (!isSameServerPath(payload.serverPath, serverPath)) return;
+      setRunState(payload.state);
+    });
+
+    const offOutput = runtime.onRunOutput((payload) => {
+      if (!isSameServerPath(payload.serverPath, serverPath)) return;
+      setRunLog((previous) =>
+        [...previous, ...payload.lines].slice(-MAX_SERVER_LOG_LINES),
+      );
+    });
+
+    return () => {
+      cancelled = true;
+      offState();
+      offOutput();
+    };
+  }, [runtime, serverPath]);
+
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ block: "end" });
+  }, [runLog]);
+
+  const isServerBusy = runState !== "stopped";
+
+  const toggleServer = useCallback(async () => {
+    if (!runtime || !serverPath) return;
+
+    setIsLoading(true);
+    setLoadingType(LoadingType.RUN);
+
+    try {
+      const result =
+        runState === "stopped"
+          ? await runtime.start(serverPath)
+          : await runtime.stop(serverPath);
+
+      if (!result?.ok) {
+        showFailureToast(
+          t("serverManager.runError"),
+          result?.error,
+          {
+            channels: ["server:start", "server:stop"],
+            fallbackDescription:
+              RUN_ERROR_KEYS[result?.error ?? ""] !== undefined
+                ? t(RUN_ERROR_KEYS[result?.error ?? ""])
+                : result?.error,
+          },
+        );
+      }
+    } catch (error) {
+      showFailureToast(t("serverManager.runError"), error);
+    } finally {
+      setLoadingType(null);
+      setIsLoading(false);
+    }
+  }, [runtime, runState, serverPath, t]);
+
   const handleDelete = useCallback(async () => {
     setIsLoading(true);
     setLoadingType(LoadingType.DELETE);
@@ -164,6 +254,15 @@ export function ServerControl({
     }
   }, [serverPath, onClose, onDelete, t]);
 
+  const runStateLabels: Record<ServerRunState, string> = {
+    stopped: t("serverManager.stateStopped"),
+    starting: t("serverManager.stateStarting"),
+    running: t("serverManager.stateRunning"),
+    stopping: t("serverManager.stateStopping"),
+  };
+
+  const showConsole = !!runtime && (isServerBusy || runLog.length > 0);
+
   return server ? (
     <>
       <Dialog
@@ -174,7 +273,10 @@ export function ServerControl({
       >
         <DialogContent
           aria-describedby={undefined}
-          className="overflow-hidden p-0 sm:max-w-xs"
+          className={cn(
+            "overflow-hidden p-0",
+            showConsole ? "sm:max-w-md" : "sm:max-w-xs",
+          )}
           onPointerDownOutside={(event) => {
             if (isLoading) event.preventDefault();
           }}
@@ -223,7 +325,7 @@ export function ServerControl({
                     <p className="mb-1 text-xs text-muted-foreground">
                       {t("serverSettings.serverCore")}
                     </p>
-                    <div className="flex min-w-0 items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <Badge
                         variant="secondary"
                         className="min-w-0 px-2.5 py-1 text-sm"
@@ -231,15 +333,66 @@ export function ServerControl({
                         <Cpu className="size-3.5" />
                         <span className="truncate">{server.core}</span>
                       </Badge>
+                      {runtime && (
+                        <Badge
+                          variant={isServerBusy ? "default" : "outline"}
+                          className="min-w-0 px-2.5 py-1 text-sm"
+                        >
+                          <span
+                            className={cn(
+                              "size-2 shrink-0 rounded-full",
+                              runState === "running"
+                                ? "bg-emerald-500"
+                                : runState === "stopped"
+                                  ? "bg-muted-foreground"
+                                  : "bg-amber-500",
+                            )}
+                          />
+                          <span className="truncate">
+                            {runStateLabels[runState]}
+                          </span>
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
+            {showConsole && (
+              <ScrollArea className="h-40 rounded-lg border bg-muted/30">
+                <div className="p-3 font-mono text-[11px] leading-4 text-muted-foreground">
+                  {runLog.map((line, index) => (
+                    <p key={index} className="whitespace-pre-wrap break-all">
+                      {line}
+                    </p>
+                  ))}
+                  <div ref={logEndRef} />
+                </div>
+              </ScrollArea>
+            )}
+
             <Separator />
 
             <div className="grid gap-2">
+              {runtime && (
+                <Button
+                  variant={isServerBusy ? "secondary" : "default"}
+                  disabled={isLoading || runState === "stopping"}
+                  onClick={async () => {
+                    await toggleServer();
+                  }}
+                >
+                  {isServerBusy ? (
+                    <Square className="size-5" />
+                  ) : (
+                    <Play className="size-5" />
+                  )}
+                  {isServerBusy
+                    ? t("serverManager.stop")
+                    : t("serverManager.start")}
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 disabled={isLoading}
@@ -272,7 +425,7 @@ export function ServerControl({
               </Button>
               <Button
                 variant="destructive"
-                disabled={isLoading}
+                disabled={isLoading || isServerBusy}
                 onClick={() => {
                   setIsConfirmationOpen(true);
                 }}

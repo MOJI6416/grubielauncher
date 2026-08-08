@@ -92,10 +92,9 @@ export function useShareFlow({
         modpack.conf.loader.mods,
         resolvedBlockedMods,
       );
-      const missingBlockedMods = await checkBlockedMods(
-        modpack.conf.loader.mods,
-        version.versionPath,
-      );
+      const { blockedMods: missingBlockedMods, mods: resolvedMods } =
+        await checkBlockedMods(modpack.conf.loader.mods, version.versionPath);
+      modpack.conf.loader.mods = resolvedMods;
 
       if (missingBlockedMods.length > 0) {
         setBlockedMods(missingBlockedMods);

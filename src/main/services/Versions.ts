@@ -4,7 +4,11 @@ import { IVersion } from '@/types/IVersion'
 import { LoaderVersion } from '@/types/VersionsService'
 import { BACKEND_URL } from '@/shared/config'
 import { resolveDownloadCandidates } from '../utilities/mirrors'
-import { getDownloadSource, getMojangReachable } from '../utilities/mirrorState'
+import {
+  getDownloadSource,
+  getMojangReachable,
+  isMirrorDisabled
+} from '../utilities/mirrorState'
 
 export interface IVersionsManifest {
   latest: {
@@ -34,7 +38,8 @@ export class VersionsService {
     const candidates = resolveDownloadCandidates(
       url,
       getDownloadSource(),
-      getMojangReachable()
+      getMojangReachable(),
+      isMirrorDisabled()
     )
 
     let lastError: unknown

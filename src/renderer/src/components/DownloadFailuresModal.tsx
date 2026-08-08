@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, FileWarning } from "lucide-react";
+import { AlertTriangle, FileWarning, Loader2, RotateCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { classifyError } from "@/shared/errors";
 import { describeFailure } from "@renderer/utilities/failures";
@@ -19,9 +19,13 @@ import { describeFailure } from "@renderer/utilities/failures";
 export function DownloadFailuresModal({
   info,
   onClose,
+  onRetry,
+  isRetrying = false,
 }: {
   info: DownloaderFailuresInfo;
   onClose: () => void;
+  onRetry?: () => void;
+  isRetrying?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -98,9 +102,29 @@ export function DownloadFailuresModal({
         </div>
 
         <DialogFooter className="m-0 rounded-none border-t bg-muted/25 px-5 py-4">
-          <Button variant="secondary" className="min-w-24" onClick={onClose}>
+          <Button
+            variant="secondary"
+            className="min-w-24"
+            disabled={isRetrying}
+            onClick={onClose}
+          >
             {t("common.close")}
           </Button>
+
+          {onRetry && (
+            <Button
+              className="min-w-24"
+              disabled={isRetrying}
+              onClick={onRetry}
+            >
+              {isRetrying ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RotateCw className="size-4" />
+              )}
+              {t("common.retry")}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

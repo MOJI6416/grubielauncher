@@ -24,7 +24,9 @@ vi.mock("electron", () => ({
 
 import {
   getSelectedAccount,
+  loadAccountsConfig,
   mergeIncomingAccounts,
+  mutateAccountsConfig,
   readAccountsConfig,
   saveAccountsConfig,
 } from "./accounts";
@@ -193,6 +195,148 @@ describe("legacy type_nickname migration", () => {
 
     const persisted = await fs.readJSON(accountsPath);
     expect(persisted.accounts[0].id).toBe("ely-uuid-7");
+  });
+});
+
+describe("lastPlayed keyed by a stable identity", () => {
+  it("stores the selection by token subject and survives a nickname change", async () => {
+    const token = makeJwt({ sub: "ms-uuid-42", exp: futureExp });
+    const accounts = (nickname: string) => [
+      { nickname: "Notch", type: "plain" as const, image: "", friends: [] },
+      {
+        nickname,
+        type: "microsoft" as const,
+        image: "",
+        friends: [],
+        accessToken: token,
+      },
+    ];
+
+    await saveAccountsConfig({
+      accounts: accounts("OldName"),
+      lastPlayed: "microsoft_OldName",
+    });
+    expect((await fs.readJSON(accountsPath)).lastPlayed).toBe("ms-uuid-42");
+
+    await saveAccountsConfig({
+      accounts: accounts("NewName"),
+      lastPlayed: "ms-uuid-42",
+    });
+
+    expect((await getSelectedAccount())?.nickname).toBe("NewName");
+    expect((await loadAccountsConfig()).lastPlayed).toBe("microsoft_NewName");
+  });
+
+  it("keeps honouring a legacy type_nickname selection on disk", async () => {
+    const token = makeJwt({ sub: "ely-uuid-3", exp: futureExp });
+    await fs.writeJSON(accountsPath, {
+      accounts: [
+        { nickname: "Steve", type: "plain", image: "", friends: [] },
+        { nickname: "Alex", type: "elyby", image: "", friends: [] },
+      ],
+      lastPlayed: "elyby_Alex",
+    });
+    await fs.writeJSON(secretsPath, {
+      elyby_Alex: { mode: "plain", value: token },
+    });
+
+    expect((await getSelectedAccount())?.nickname).toBe("Alex");
+    expect((await fs.readJSON(accountsPath)).lastPlayed).toBe("ely-uuid-3");
+    expect((await loadAccountsConfig()).lastPlayed).toBe("elyby_Alex");
+  });
+
+  it("leaves an account without a token keyed by type_nickname", async () => {
+    await saveAccountsConfig({
+      accounts: [{ nickname: "Notch", type: "plain", image: "", friends: [] }],
+      lastPlayed: "plain_Notch",
+    });
+
+    expect((await fs.readJSON(accountsPath)).lastPlayed).toBe("plain_Notch");
+    expect((await getSelectedAccount())?.nickname).toBe("Notch");
+  });
+});
+
+describe("unreadable store never gets overwritten", () => {
+  const token = makeJwt({ sub: "ms-uuid-keep", exp: futureExp });
+
+  async function seedOneAccount() {
+    await saveAccountsConfig({
+      accounts: [
+        {
+          nickname: "Steve",
+          type: "microsoft",
+          image: "",
+          friends: [],
+          accessToken: token,
+          refreshToken: "provider-refresh",
+        },
+      ],
+      lastPlayed: "microsoft_Steve",
+    });
+  }
+
+  it("treats a missing file as an empty store", async () => {
+    expect(await readAccountsConfig()).toBeNull();
+    expect(await loadAccountsConfig()).toEqual({
+      accounts: [],
+      lastPlayed: null,
+    });
+  });
+
+  it("refuses to save when accounts.json cannot be parsed", async () => {
+    await seedOneAccount();
+    const secretsBefore = await fs.readFile(secretsPath, "utf-8");
+    await fs.writeFile(accountsPath, "{ broken json");
+
+    await expect(readAccountsConfig()).rejects.toThrow();
+    expect(await loadAccountsConfig()).toEqual({
+      accounts: [],
+      lastPlayed: null,
+    });
+
+    await expect(
+      mutateAccountsConfig(() => ({
+        accounts: [
+          { nickname: "Alex", type: "plain", image: "", friends: [] },
+        ],
+        lastPlayed: "plain_Alex",
+      })),
+    ).rejects.toThrow();
+
+    expect(await fs.readFile(accountsPath, "utf-8")).toBe("{ broken json");
+    expect(await fs.readFile(secretsPath, "utf-8")).toBe(secretsBefore);
+  });
+
+  it("refuses to save when the secret store cannot be parsed", async () => {
+    await seedOneAccount();
+    const accountsBefore = await fs.readFile(accountsPath, "utf-8");
+    await fs.writeFile(secretsPath, "not json at all");
+
+    await expect(readAccountsConfig()).rejects.toThrow();
+
+    await expect(
+      mutateAccountsConfig((current) => ({
+        accounts: [
+          ...current.accounts,
+          { nickname: "Alex", type: "plain", image: "", friends: [] },
+        ],
+        lastPlayed: "plain_Alex",
+      })),
+    ).rejects.toThrow();
+
+    expect(await fs.readFile(accountsPath, "utf-8")).toBe(accountsBefore);
+    expect(await fs.readFile(secretsPath, "utf-8")).toBe("not json at all");
+  });
+
+  it("keeps saving once the store is readable again", async () => {
+    await seedOneAccount();
+    await fs.writeFile(accountsPath, "{ broken json");
+    await expect(mutateAccountsConfig((c) => c)).rejects.toThrow();
+
+    await seedOneAccount();
+    const read = await readAccountsConfig();
+    expect(read?.accounts[0].accessToken).toBe(token);
+    expect(read?.accounts[0].refreshToken).toBe("provider-refresh");
   });
 });
 

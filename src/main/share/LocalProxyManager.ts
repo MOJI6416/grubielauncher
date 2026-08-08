@@ -10,6 +10,8 @@ interface StreamRecord {
   streamId: number
   peerIp: string
   peerPort: number
+  guestUserId?: string
+  guestUsername?: string
   socket: net.Socket
   connectedAt: string
   isOpened: boolean
@@ -25,6 +27,7 @@ interface LocalProxyTransport {
 }
 
 const WS_HIGH_WATER_MARK = 512 * 1024
+const LOCAL_HIGH_WATER_MARK = 512 * 1024
 
 export class LocalProxyManager {
   private localPort: number | null = null
@@ -84,6 +87,8 @@ export class LocalProxyManager {
       streamId: message.streamId,
       peerIp: message.peerIp,
       peerPort: message.peerPort,
+      guestUserId: message.guestUserId,
+      guestUsername: message.guestUsername,
       socket,
       connectedAt: new Date().toISOString(),
       isOpened: false,
@@ -97,6 +102,8 @@ export class LocalProxyManager {
     const initialData = this.decodeInitialData(message.initialDataBase64)
 
     socket.once('connect', () => {
+      if (this.streams.get(message.streamId) !== record) return
+
       record.isOpened = true
       if (initialData.length > 0) {
         record.socket.write(initialData)
@@ -109,6 +116,8 @@ export class LocalProxyManager {
     })
 
     socket.on('data', (chunk: Buffer) => {
+      if (this.streams.get(message.streamId) !== record) return
+
       if (!this.transport?.isWritable()) {
         this.closeStream(message.streamId, 'gateway_unavailable')
         return
@@ -124,11 +133,15 @@ export class LocalProxyManager {
     })
 
     socket.on('error', () => {
+      if (this.streams.get(message.streamId) !== record) return
+
       const reason = record.isOpened ? 'local_socket_error' : 'local_connect_failed'
       this.closeStream(message.streamId, reason)
     })
 
     socket.on('close', () => {
+      if (this.streams.get(message.streamId) !== record) return
+
       this.closeStream(message.streamId, record.isOpened ? 'local_socket_closed' : 'local_connect_failed')
     })
   }
@@ -138,6 +151,10 @@ export class LocalProxyManager {
     if (!record || record.isClosing) return
 
     record.socket.write(payload)
+
+    if (record.socket.writableLength > LOCAL_HIGH_WATER_MARK) {
+      this.closeStream(streamId, 'local_socket_overflow')
+    }
   }
 
   public closeStream(streamId: number, reason: string, notifyGateway = true): void {
@@ -184,6 +201,8 @@ export class LocalProxyManager {
         peerIp: record.peerIp,
         peerPort: record.peerPort,
         connectedAt: record.connectedAt,
+        guestUserId: record.guestUserId,
+        guestUsername: record.guestUsername,
       })),
     )
   }
@@ -191,7 +210,7 @@ export class LocalProxyManager {
   private waitForGatewayDrain(record: StreamRecord): void {
     const check = () => {
       if (!this.transport) return
-      if (!this.streams.has(record.streamId)) return
+      if (this.streams.get(record.streamId) !== record) return
 
       if (this.transport.getBufferedAmount() <= WS_HIGH_WATER_MARK / 2) {
         record.gatewayPaused = false

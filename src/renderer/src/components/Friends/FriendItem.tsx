@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { ILocalFriend } from "@/types/ILocalFriend";
 import {
   Avatar,
@@ -61,7 +61,7 @@ interface FriendItemProps {
   t: any;
 }
 
-export function FriendItem({
+function FriendItemComponent({
   friend,
   activeShare,
   isNotRead,
@@ -97,151 +97,126 @@ export function FriendItem({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="group flex w-full min-w-0 items-center gap-2 rounded-lg border bg-card px-2.5 py-2 text-left text-card-foreground shadow-xs transition-all outline-none hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[state=open]:bg-accent data-[state=open]:text-accent-foreground"
-          onClick={onSelect}
-        >
-          <Avatar className="h-8 w-8" size="sm">
-            <AvatarImage
-              src={friend.user.image || ""}
-              alt={friend.user.nickname}
-            />
-            <AvatarFallback>
-              {friend.user.nickname.slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-            <AvatarBadge
-              aria-label={
-                friend.isOnline ? t("friends.online") : t("friends.offline")
-              }
-              title={
-                friend.isOnline ? t("friends.online") : t("friends.offline")
-              }
-              className={
-                friend.isOnline ? "bg-emerald-500" : "bg-muted-foreground"
-              }
-            />
-          </Avatar>
+      <div className="group flex w-full min-w-0 items-center gap-2 rounded-lg border bg-card px-2.5 py-2 text-left text-card-foreground shadow-xs transition-all hover:bg-accent hover:text-accent-foreground has-[[data-state=open]]:bg-accent has-[[data-state=open]]:text-accent-foreground has-[:focus-visible]:border-ring has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 items-center gap-2 text-left outline-none"
+            onClick={onSelect}
+          >
+            <Avatar className="h-8 w-8" size="sm">
+              <AvatarImage
+                src={friend.user.image || ""}
+                alt={friend.user.nickname}
+              />
+              <AvatarFallback>
+                {friend.user.nickname.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+              <AvatarBadge
+                aria-label={
+                  friend.isOnline ? t("friends.online") : t("friends.offline")
+                }
+                title={
+                  friend.isOnline ? t("friends.online") : t("friends.offline")
+                }
+                className={
+                  friend.isOnline ? "bg-success" : "bg-muted-foreground"
+                }
+              />
+            </Avatar>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <div className="flex min-w-0 items-center gap-1.5">
-              <p className="min-w-0 truncate text-sm font-medium">
-                {friend.user.nickname}
-              </p>
-              <span className="shrink-0 text-muted-foreground">
-                {getPlatformIcon(friend.user.platform)}
-              </span>
-              {level >= 2 && (
-                <span
-                  className="inline-flex shrink-0 items-center gap-0.5 rounded border border-primary/30 bg-primary/10 px-1 text-[10px] font-medium leading-4 text-primary"
-                  title={`${t("achievements.level")} ${level}`}
-                >
-                  <Sparkles className="size-2.5" />
-                  {level}
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <p className="min-w-0 truncate text-sm font-medium">
+                  {friend.user.nickname}
+                </p>
+                <span className="shrink-0 text-muted-foreground">
+                  {getPlatformIcon(friend.user.platform)}
                 </span>
+                {level >= 2 && (
+                  <span
+                    className="inline-flex shrink-0 items-center gap-0.5 rounded border border-primary/30 bg-primary/10 px-1 text-[10px] font-medium leading-4 text-primary"
+                    title={`${t("achievements.level")} ${level}`}
+                  >
+                    <Sparkles className="size-2.5" />
+                    {level}
+                  </span>
+                )}
+              </div>
+
+              {friend.isOnline && friend.versionName && (
+                <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+                  <Gamepad2 size={14} className="shrink-0" />
+                  <p className="min-w-0 truncate text-xs">
+                    {friend.versionName}
+                  </p>
+                </div>
+              )}
+
+              {(friend.serverAddress || activeShare) && (
+                <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+                  <Earth size={14} className="shrink-0" />
+                  <p className="min-w-0 truncate text-xs">
+                    {friend.serverAddress ||
+                      (activeShare?.publicAddress.includes(
+                        "join.grubielauncher.com",
+                      )
+                        ? t("friends.sharedWorld")
+                        : activeShare?.publicAddress)}
+                  </p>
+                </div>
               )}
             </div>
+          </button>
+        </DropdownMenuTrigger>
 
-            {friend.isOnline && friend.versionName && (
-              <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-                <Gamepad2 size={14} className="shrink-0" />
-                <p className="min-w-0 truncate text-xs">{friend.versionName}</p>
-              </div>
-            )}
-
-            {(friend.serverAddress || activeShare) && (
-              <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-                <Earth size={14} className="shrink-0" />
-                <p className="min-w-0 truncate text-xs">
-                  {friend.serverAddress ||
-                    (activeShare?.publicAddress.includes(
-                      "join.grubielauncher.com",
-                    )
-                      ? t("friends.sharedWorld")
-                      : activeShare?.publicAddress)}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="ml-auto flex shrink-0 items-center gap-1.5">
-            {canJoin && (
-              <span
-                role="button"
-                tabIndex={0}
-                aria-label={t("friends.join")}
-                title={t("friends.join")}
-                className="flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/80"
-                onPointerDown={(event) => {
-                  event.stopPropagation();
-                }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  event.preventDefault();
-                  onJoin();
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter" && event.key !== " ") return;
-                  event.stopPropagation();
-                  event.preventDefault();
-                  onJoin();
-                }}
-              >
-                <Play size={13} />
-                {t("friends.joinFlow.playAction")}
-              </span>
-            )}
-            {!canJoin && friend.isOnline && isRunning && (
-              <span
-                role="button"
-                tabIndex={0}
-                aria-label={t("friends.invite")}
-                title={t("friends.invite")}
-                className="flex h-7 items-center gap-1.5 rounded-md border bg-background/70 px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
-                onPointerDown={(event) => {
-                  event.stopPropagation();
-                }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  event.preventDefault();
-                  onInvite();
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter" && event.key !== " ") return;
-                  event.stopPropagation();
-                  event.preventDefault();
-                  onInvite();
-                }}
-              >
-                <Send size={13} />
-                {t("friends.invite")}
-              </span>
-            )}
-            {local?.isMuted && (
-              <Badge
-                variant="outline"
-                className="h-6 min-w-6 justify-center px-1.5 text-muted-foreground"
-                aria-label={t("friends.notificationDisabled")}
-                title={t("friends.notificationDisabled")}
-              >
-                <VolumeX size={13} />
-              </Badge>
-            )}
-            {isNotRead && (
-              <Badge
-                variant="outline"
-                className="h-6 min-w-6 justify-center px-1.5 text-muted-foreground"
-                aria-label={t("friends.newMessage")}
-                title={t("friends.newMessage")}
-              >
-                <Mailbox size={13} />
-              </Badge>
-            )}
-          </div>
-        </button>
-      </DropdownMenuTrigger>
-
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {canJoin && (
+            <button
+              type="button"
+              aria-label={t("friends.join")}
+              title={t("friends.join")}
+              className="flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-colors outline-none hover:bg-primary/80"
+              onClick={onJoin}
+            >
+              <Play size={13} />
+              {t("friends.joinFlow.playAction")}
+            </button>
+          )}
+          {!canJoin && friend.isOnline && isRunning && (
+            <button
+              type="button"
+              aria-label={t("friends.invite")}
+              title={t("friends.invite")}
+              className="flex h-7 items-center gap-1.5 rounded-md border bg-background/70 px-2.5 text-xs font-medium text-muted-foreground transition-colors outline-none hover:bg-background hover:text-foreground"
+              onClick={onInvite}
+            >
+              <Send size={13} />
+              {t("friends.invite")}
+            </button>
+          )}
+          {local?.isMuted && (
+            <Badge
+              variant="outline"
+              className="h-6 min-w-6 justify-center px-1.5 text-muted-foreground"
+              aria-label={t("friends.notificationDisabled")}
+              title={t("friends.notificationDisabled")}
+            >
+              <VolumeX size={13} />
+            </Badge>
+          )}
+          {isNotRead && (
+            <Badge
+              variant="outline"
+              className="h-6 min-w-6 justify-center px-1.5 text-muted-foreground"
+              aria-label={t("friends.newMessage")}
+              title={t("friends.newMessage")}
+            >
+              <Mailbox size={13} />
+            </Badge>
+          )}
+        </div>
+      </div>
       <DropdownMenuContent align="start" className="w-60">
         {!friend.isOnline ? (
           <DropdownMenuItem disabled={disabledKeys.includes("last")}>
@@ -320,3 +295,5 @@ export function FriendItem({
     </DropdownMenu>
   );
 }
+
+export const FriendItem = memo(FriendItemComponent);

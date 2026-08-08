@@ -4,6 +4,15 @@ import path from "path";
 
 export let updaterWindow: BrowserWindow | null = null;
 
+function blockUpdaterNavigation(event: Electron.Event, url: string): void {
+  const devUrl = process.env["ELECTRON_RENDERER_URL"];
+  const isAllowed =
+    url.startsWith("app://bundle/") || (!!devUrl && url.startsWith(devUrl));
+  if (isAllowed) return;
+
+  event.preventDefault();
+}
+
 export function createUpdaterWindow() {
   updaterWindow = new BrowserWindow({
     width: 280,
@@ -23,6 +32,10 @@ export function createUpdaterWindow() {
       spellcheck: false,
     },
   });
+
+  updaterWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  updaterWindow.webContents.on("will-navigate", blockUpdaterNavigation);
+  updaterWindow.webContents.on("will-redirect", blockUpdaterNavigation);
 
   updaterWindow.on("closed", () => {
     updaterWindow = null;

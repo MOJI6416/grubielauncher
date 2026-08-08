@@ -20,6 +20,7 @@ import {
   IVoiceSessionState,
 } from "@/types/Voice";
 import { loadManualOrder } from "@renderer/utilities/versionOrganize";
+import { IAiLogAnalysis, ICrashUnresolvedPayload } from "@/types/AiAnalysis";
 
 export const pathsAtom = atom<{
   launcher: string;
@@ -43,7 +44,21 @@ export interface IErrorLogEntry {
   time: number;
   title: string;
   details?: string;
+  crashKey?: string;
 }
+
+export interface IAiCrashEntry {
+  crash: ICrashUnresolvedPayload;
+  analysis: IAiLogAnalysis | null;
+  time: number;
+}
+
+export function aiCrashKey(versionName: string, instance: number) {
+  return `${versionName}#${instance}`;
+}
+
+export const aiCrashesAtom = atom<Record<string, IAiCrashEntry>>({});
+export const aiCrashOpenKeyAtom = atom<string | null>(null);
 
 export const errorLogAtom = atom<IErrorLogEntry[]>([]);
 export const errorLogSeenAtom = atom(0);

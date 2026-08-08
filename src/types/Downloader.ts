@@ -11,6 +11,7 @@ export interface DownloadItem {
     extractFolder?: string;
     extractDelete?: boolean;
     silent?: boolean;
+    maxBytes?: number;
   };
 }
 
@@ -40,4 +41,5 @@ export interface DownloaderFailuresInfo {
   completedItems: number;
   failedItems: number;
   failures: DownloaderFailureItem[];
+  versionName?: string;
 }

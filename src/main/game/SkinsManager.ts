@@ -8,11 +8,14 @@ import {
   assertSkinBuffer,
   detectSkinModel,
   getSkin,
+  MAX_SKIN_FILE_BYTES,
   renderCape,
   renderCharacter
 } from '../utilities/skin'
 import { getSha1 } from '../utilities/files'
-import { isSafeRemoteImageUrl } from '../utilities/safeUrl'
+import { isSafeRemoteFetchUrl, isSafeRemoteImageUrl } from '../utilities/safeUrl'
+import { logAxiosError } from '../utilities/axiosLog'
+import { writeJsonAtomic } from '../utilities/atomicJson'
 import { Downloader } from '../utilities/downloader'
 import { BACKEND_URL } from '@/shared/config'
 import { ICape, IGrubieSkin, IMojangProfile, ISkinEntry, ISkinsConfig, SkinsData } from '@/types/SkinManager'
@@ -61,6 +64,8 @@ type CapeRegistrationOptions = {
   remoteId?: string
 }
 
+export type SkinsPlatform = 'microsoft' | 'discord' | 'elyby'
+
 type StoredSkinEntry = Partial<ISkinEntry> & Pick<ISkinEntry, 'id' | 'model' | 'name' | 'url'>
 type StoredCapeEntry = Partial<ICape> & Pick<ICape, 'id' | 'alias' | 'url'>
 
@@ -78,17 +83,18 @@ export class SkinsManager extends BaseService {
   public activeCape: string | undefined = undefined
   public activeModel: string | undefined = undefined
   private skinServiceUrl: string = 'https://api.minecraftservices.com'
-  private platform: 'microsoft' | 'discord' = 'microsoft'
+  private platform: SkinsPlatform = 'microsoft'
   private userId: string = ''
   private nickname: string = ''
   private downloader: Downloader
   private legacyCapeIdMap = new Map<string, string>()
   private storedIndexSkins: StoredSkinEntry[] = []
   private storedIndexCapes: StoredCapeEntry[] = []
+  private providerSyncedAt = 0
 
   constructor(
     laucnherPath: string,
-    platform: 'microsoft' | 'discord',
+    platform: SkinsPlatform,
     userId: string,
     nickname: string,
     accessToken: string,
@@ -113,9 +119,26 @@ export class SkinsManager extends BaseService {
     this.activeModel = activeModel
     this.downloader = new Downloader(6)
 
-    if (platform == 'discord') {
-      this.platform = 'discord'
+    this.platform = platform
+
+    if (platform === 'discord') {
       this.skinServiceUrl = BACKEND_URL
+    } else if (platform === 'elyby') {
+      this.skinServiceUrl = ''
+    }
+
+    if (this.skinServiceUrl) {
+      this.allowAuthorizedOrigin(this.skinServiceUrl)
+    }
+  }
+
+  private hasRemoteSkinService(): boolean {
+    return this.platform !== 'elyby'
+  }
+
+  private assertRemoteSkinService() {
+    if (!this.hasRemoteSkinService()) {
+      throw new Error('skin_service_not_available_for_account')
     }
   }
 
@@ -191,7 +214,8 @@ export class SkinsManager extends BaseService {
           group: type === 'skin' ? 'skins' : 'capes',
           url,
           options: {
-            silent: true
+            silent: true,
+            maxBytes: MAX_SKIN_FILE_BYTES
           }
         }
       ])
@@ -203,13 +227,22 @@ export class SkinsManager extends BaseService {
     return tempPath
   }
 
+  private async assertAssetFile(filePath: string, label: 'skin' | 'cape') {
+    const stats = await fs.stat(filePath)
+    if (stats.size > MAX_SKIN_FILE_BYTES) {
+      throw new Error(label === 'skin' ? 'skin_file_too_large' : 'cape_file_too_large')
+    }
+
+    assertSkinBuffer(await fs.readFile(filePath), label)
+  }
+
   private async registerSkinFromFile(
     filePath: string,
     options: SkinRegistrationOptions = {}
   ): Promise<ISkinEntry | null> {
     if (!(await fs.pathExists(filePath))) return null
 
-    assertSkinBuffer(await fs.readFile(filePath))
+    await this.assertAssetFile(filePath, 'skin')
 
     const { hash, filePath: normalizedPath } = await this.normalizeAssetFile(filePath, 'skin')
     const character = await renderCharacter(normalizedPath)
@@ -257,6 +290,8 @@ export class SkinsManager extends BaseService {
 
   private async registerCapeFromFile(filePath: string, options: CapeRegistrationOptions = {}): Promise<ICape | null> {
     if (!(await fs.pathExists(filePath))) return null
+
+    await this.assertAssetFile(filePath, 'cape')
 
     const { hash, filePath: normalizedPath } = await this.normalizeAssetFile(filePath, 'cape')
     const capePreview = await renderCape(normalizedPath)
@@ -380,7 +415,7 @@ export class SkinsManager extends BaseService {
       const cape = await this.registerCapeFromFile(capePath, {
         alias: storedCape.alias,
         remoteId: storedCape.remoteId
-      })
+      }).catch(() => null)
 
       if (cape && storedCape.id && storedCape.id !== cape.id) {
         this.legacyCapeIdMap.set(storedCape.id, cape.id)
@@ -437,11 +472,28 @@ export class SkinsManager extends BaseService {
     } else {
       await this.getLocalCapes()
       await this.loadSkinsFromIndex()
+      if (this.hasRemoteSkinService()) await this.getGrubieSkin()
+    }
+
+    await this.checkSkins()
+    await this.saveSkins()
+    this.providerSyncedAt = Date.now()
+  }
+
+  public isProviderSyncStale(ttlMs: number): boolean {
+    return Date.now() - this.providerSyncedAt >= ttlMs
+  }
+
+  public async syncFromProvider() {
+    if (this.platform === 'microsoft') {
+      await this.getMojangSkins()
+    } else if (this.hasRemoteSkinService()) {
       await this.getGrubieSkin()
     }
 
     await this.checkSkins()
     await this.saveSkins()
+    this.providerSyncedAt = Date.now()
   }
 
   private async checkSkins() {
@@ -519,7 +571,7 @@ export class SkinsManager extends BaseService {
 
       await this.saveSkins()
     } catch (error) {
-      console.error('Error fetching Grubie skins:', error)
+      logAxiosError('Error fetching Grubie skins', error, 'skins:load')
     }
   }
 
@@ -540,14 +592,14 @@ export class SkinsManager extends BaseService {
         const capePath = path.join(capesDir, file)
         const cape = await this.registerCapeFromFile(capePath, {
           alias: legacyId
-        })
+        }).catch(() => null)
 
         if (cape && legacyId !== cape.id) {
           this.legacyCapeIdMap.set(legacyId, cape.id)
         }
       }
     } catch (error) {
-      console.error('Error loading local capes:', error)
+      logAxiosError('Error loading local capes', error, 'skins:load')
     }
   }
 
@@ -612,7 +664,7 @@ export class SkinsManager extends BaseService {
 
       await this.saveSkins()
     } catch (error) {
-      console.error('Error fetching Mojang skins:', error)
+      logAxiosError('Error fetching Mojang skins', error, options.throwOnError ? undefined : 'skins:load')
       if (options.throwOnError) throw error
     }
   }
@@ -681,6 +733,8 @@ export class SkinsManager extends BaseService {
   }
 
   public async resetSkin() {
+    this.assertRemoteSkinService()
+
     try {
       await this.api.delete(`${this.skinServiceUrl}/minecraft/profile/skins/active`, {
         headers: {
@@ -690,12 +744,14 @@ export class SkinsManager extends BaseService {
       await this.hideCape()
       await this.getMojangSkins()
     } catch (error) {
-      console.error('Error resetting skin:', error)
+      logAxiosError('Error resetting skin', error)
       throw error
     }
   }
 
   public async regenerateSkin() {
+    this.assertRemoteSkinService()
+
     try {
       await this.api.post(
         `${this.skinServiceUrl}/skins/generate`,
@@ -708,7 +764,7 @@ export class SkinsManager extends BaseService {
       )
       await this.getGrubieSkin()
     } catch (error) {
-      console.error('Error regenerating skin:', error)
+      logAxiosError('Error regenerating skin', error)
       throw error
     }
   }
@@ -716,7 +772,7 @@ export class SkinsManager extends BaseService {
   public async importByUrl(url: string, type: 'skin' | 'cape' = 'skin') {
     try {
       if (!isSafeRemoteImageUrl(url)) {
-        throw new Error('Unsupported skin url')
+        throw new Error(type === 'skin' ? 'skin_url_rejected' : 'cape_url_rejected')
       }
 
       const extractedId = extractIdFromUrl(url) || undefined
@@ -734,7 +790,7 @@ export class SkinsManager extends BaseService {
 
       await this.saveSkins()
     } catch (error) {
-      console.error('Error importing skin by URL:', error)
+      logAxiosError('Error importing skin by URL', error)
       throw error
     }
   }
@@ -758,13 +814,17 @@ export class SkinsManager extends BaseService {
 
       await this.saveSkins()
     } catch (error) {
-      console.error('Error importing skin by file:', error)
+      logAxiosError('Error importing skin by file', error)
+      throw error
     }
   }
 
   public async importByNickname(nickname: string) {
     try {
-      const player = await this.api.get<{ id: string }>(`https://api.mojang.com/users/profiles/minecraft/${nickname}`)
+      const player = await axios.get<{ id: string }>(
+        `https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(nickname)}`,
+        { timeout: 30000 }
+      )
 
       const playerId = player.data.id
       const skins = await getSkin('microsoft', playerId, nickname)
@@ -773,12 +833,14 @@ export class SkinsManager extends BaseService {
       await this.syncSkinFromUrl(skins.skin, { name: nickname })
       await this.saveSkins()
     } catch (error) {
-      console.error('Error importing skin by nickname:', error)
+      logAxiosError('Error importing skin by nickname', error)
       throw error
     }
   }
 
   public async uploadSkin(skinId: string) {
+    this.assertRemoteSkinService()
+
     try {
       if (typeof FormData === 'undefined' || typeof Blob === 'undefined') {
         console.error('FormData/Blob is not available in this environment')
@@ -872,7 +934,7 @@ export class SkinsManager extends BaseService {
         }
       }
     } catch (error) {
-      console.error('Error uploading skin:', error)
+      logAxiosError('Error uploading skin', error)
       throw error
     }
   }
@@ -932,14 +994,24 @@ export class SkinsManager extends BaseService {
   }
 
   public async importPack(skinUrl: string, capeUrl: string) {
+    if (!(await isSafeRemoteFetchUrl(skinUrl))) {
+      throw new Error('pack_skin_url_rejected')
+    }
+
     const skin = await this.syncSkinFromUrl(skinUrl, {})
     if (!skin) throw new Error('pack_skin_failed')
 
     this.selectedSkin = skin.id
 
-    const cape = await this.syncCapeFromUrl(capeUrl, {})
-    if (cape) {
-      skin.capeId = cape.id
+    if (capeUrl) {
+      if (!(await isSafeRemoteFetchUrl(capeUrl))) {
+        throw new Error('pack_cape_url_rejected')
+      }
+
+      const cape = await this.syncCapeFromUrl(capeUrl, {})
+      if (cape) {
+        skin.capeId = cape.id
+      }
     }
 
     await this.saveSkins()
@@ -1052,7 +1124,7 @@ export class SkinsManager extends BaseService {
 
     const capesToSave = this.getCapesForSave()
 
-    await fs.writeJSON(path.join(this.skinsPath, 'index.json'), { skins: skinsToSave, capes: capesToSave }, { spaces: 2 })
+    await writeJsonAtomic(path.join(this.skinsPath, 'index.json'), { skins: skinsToSave, capes: capesToSave })
   }
 
   public async renameSkin(skinId: string, newName: string) {

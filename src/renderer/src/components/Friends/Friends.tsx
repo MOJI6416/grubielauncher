@@ -41,6 +41,7 @@ import {
   friendsAtom,
   groupInvitesAtom,
   groupsAtom,
+  isFriendsConnectedAtom,
   voiceCallAtom,
   voiceSessionMetaAtom,
   isShareModalOpenAtom,
@@ -109,6 +110,7 @@ import { GroupsTab } from "../Voice/GroupsTab";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
 
 import { showFailureToast } from "@renderer/utilities/failures";
+import { useLatestRef } from "@renderer/utilities/useLatestRef";
 const api = window.api;
 
 const loadSkinView = () =>
@@ -146,6 +148,7 @@ type InviteGuideAction = "openShare";
 interface InviteGuide {
   title: string;
   description: string;
+  steps: string[];
   action?: InviteGuideAction;
 }
 
@@ -159,6 +162,26 @@ interface FriendOperationError {
     | "messageReaction"
     | "getMessages";
   code?: string;
+}
+
+type FriendActionName =
+  | "select"
+  | "join"
+  | "invite"
+  | "inviteToVoice"
+  | "startCall"
+  | "viewAccount"
+  | "openChat"
+  | "viewSkin"
+  | "toggleMute"
+  | "remove";
+
+type FriendHandlers = Record<`on${Capitalize<FriendActionName>}`, () => void>;
+
+function useEventCallback<T extends (...args: never[]) => unknown>(fn: T): T {
+  const fnRef = useRef(fn);
+  fnRef.current = fn;
+  return useCallback(((...args: never[]) => fnRef.current(...args)) as T, []);
 }
 
 const FRIEND_OPERATION_TIMEOUT_MS = 15000;
@@ -191,13 +214,6 @@ function FriendSection({
       {friends.map((friend) => renderFriend(friend))}
     </div>
   );
-}
-
-function getGuideSteps(description: string) {
-  const matches = description.match(/\d+\.\s.*?(?=\s\d+\.|$)/g);
-  if (!matches || matches.length < 2) return [];
-
-  return matches.map((step) => step.replace(/^\d+\.\s*/, "").trim());
 }
 
 function normalizeFriendLookup(value: string) {
@@ -257,6 +273,7 @@ export function Friends({
   const [isRunning] = useAtom(isRunningAtom);
   const [localFriends, setLocalFriends] = useAtom(localFriendsAtom);
   const [socket] = useAtom(friendSocketAtom);
+  const isFriendsConnected = useAtomValue(isFriendsConnectedAtom);
   const [friendRequests, setFriendRequests] = useAtom(friendRequestsAtom);
   const [selectedFriend, setSelectedFriend] = useAtom(selectedFriendAtom);
   const [authData] = useAtom(authDataAtom);
@@ -274,6 +291,7 @@ export function Friends({
 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState<LoadingType>();
+  const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
   const [friends, setFriends] = useAtom(friendsAtom);
   const [notReads, setNotReads] = useState<string[]>([]);
   const activeShares = useAtomValue(activeFriendSharesAtom);
@@ -323,53 +341,24 @@ export function Friends({
 
   const messagesRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
-  const friendsRef = useRef(friends);
-  const localFriendsRef = useRef(localFriends);
-  const selectedFriendRef = useRef(selectedFriend);
-  const chatModalRef = useRef(chatModal);
+  const friendsRef = useLatestRef(friends);
+  const localFriendsRef = useLatestRef(localFriends);
+  const selectedFriendRef = useLatestRef(selectedFriend);
+  const chatModalRef = useLatestRef(chatModal);
   const loadingTypeRef = useRef(loadingType);
-  const authSubRef = useRef(authData?.sub);
-  const messagesStateRef = useRef(messages);
-  const replyMessageRef = useRef<IMessage | null>(replyMessage);
-  const chatModpackIdsRef = useRef<Set<string>>(new Set());
+  const authSubRef = useLatestRef(authData?.sub);
+  const messagesStateRef = useLatestRef(messages);
+  const replyMessageRef = useLatestRef<IMessage | null>(replyMessage);
+  const chatModpackIdsRef = useLatestRef(
+    useMemo(
+      () => new Set(chatModpacks.map((modpack) => modpack._id)),
+      [chatModpacks],
+    ),
+  );
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingFriendRequestRef = useRef<string | null>(null);
   const sentDeepFriendRef = useRef<{ id: string; at: number } | null>(null);
   const chatOpenRequestRef = useRef(0);
-
-  useEffect(() => {
-    friendsRef.current = friends;
-  }, [friends]);
-
-  useEffect(() => {
-    localFriendsRef.current = localFriends;
-  }, [localFriends]);
-
-  useEffect(() => {
-    selectedFriendRef.current = selectedFriend;
-  }, [selectedFriend]);
-
-  useEffect(() => {
-    chatModalRef.current = chatModal;
-  }, [chatModal]);
-
-  useEffect(() => {
-    authSubRef.current = authData?.sub;
-  }, [authData?.sub]);
-
-  useEffect(() => {
-    messagesStateRef.current = messages;
-  }, [messages]);
-
-  useEffect(() => {
-    replyMessageRef.current = replyMessage;
-  }, [replyMessage]);
-
-  useEffect(() => {
-    chatModpackIdsRef.current = new Set(
-      chatModpacks.map((modpack) => modpack._id),
-    );
-  }, [chatModpacks]);
 
   const stopLoading = useCallback(() => {
     if (loadingTimeoutRef.current) {
@@ -380,6 +369,7 @@ export function Friends({
     loadingTypeRef.current = undefined;
     setIsLoading(false);
     setLoadingType(undefined);
+    setPendingRequestId(null);
   }, []);
 
   const startLoading = useCallback(
@@ -396,6 +386,7 @@ export function Friends({
         loadingTypeRef.current = undefined;
         setIsLoading(false);
         setLoadingType(undefined);
+        setPendingRequestId(null);
         loadingTimeoutRef.current = null;
         toast.warning(t("friends.operationErrors.timeout"));
       }, timeoutMs);
@@ -479,7 +470,7 @@ export function Friends({
         const nickname = friendsRef.current.find(
           (f) => f.user._id === selectedFriendRef.current,
         )?.user.nickname;
-        toast.success(`${nickname} ${t("friends.deleted")}`);
+        toast.success(t("friends.deleted", { nickname }));
 
         setSelectedFriend("");
         setFriendRemoveModal(false);
@@ -861,6 +852,7 @@ export function Friends({
   const handleAcceptRequest = useCallback(
     (requestId: string) => {
       if (!socket) return;
+      setPendingRequestId(requestId);
       startLoading("accept");
       socket.emit("acceptFriendRequest", { requestId });
     },
@@ -870,6 +862,7 @@ export function Friends({
   const handleRejectRequest = useCallback(
     (requestId: string) => {
       if (!socket) return;
+      setPendingRequestId(requestId);
       startLoading("reject");
       socket.emit("rejectFriendRequest", { requestId });
     },
@@ -1151,6 +1144,53 @@ export function Friends({
     [focusMessageInput],
   );
 
+  const handleCloseChat = useEventCallback(() => {
+    setChatModal(false);
+    setSelectedFriend("");
+    setFriend(undefined);
+    setReplyMessage(null);
+  });
+
+  const handleCancelChatReply = useEventCallback(() => setReplyMessage(null));
+
+  const handleOpenChatVersionSelect = useEventCallback(() =>
+    setIsSelectVersions(true),
+  );
+
+  const handleOpenGroupInvitePicker = useEventCallback(() =>
+    setIsGroupInvitePicker(true),
+  );
+
+  const handleChatPlayModpack = useEventCallback(
+    async (modpack: IModpack, version?: Version) => {
+      if (version) {
+        setSelectedVersion(version);
+        setChatModal(false);
+        await runGame({ version });
+      } else {
+        setTempModpack(modpack);
+        setIsAddVersion(true);
+      }
+    },
+  );
+
+  const handleAcceptChatGroupInvite = useEventCallback(async (code: string) => {
+    const token = account?.accessToken;
+    if (!token) return;
+
+    const joined = await api.backend.groupJoinByCode(token, code);
+    if (!joined || typeof joined === "string") {
+      toast.error(t(groupJoinErrorKey(joined ?? null)));
+    } else {
+      toast.success(t("groups.joined", { group: joined.name }));
+    }
+  });
+
+  const handleStartChatCall = useEventCallback(() => {
+    if (!socket || !friend) return;
+    socket.emit("voiceCallRequest", { recipientId: friend.user._id });
+  });
+
   const handleSendModpack = useCallback(
     async (version: Version) => {
       if (
@@ -1173,9 +1213,15 @@ export function Friends({
 
   const showInviteGuide = useCallback(
     (titleKey: string, descriptionKey: string, action?: InviteGuideAction) => {
+      const steps = t(descriptionKey.replace(/Description$/, "Steps"), {
+        returnObjects: true,
+        defaultValue: [],
+      });
+
       setInviteGuide({
         title: t(titleKey),
         description: t(descriptionKey),
+        steps: Array.isArray(steps) ? (steps as string[]) : [],
         action,
       });
     },
@@ -1389,10 +1435,7 @@ export function Friends({
     return { playing, online, offline, total: friends.length };
   }, [friends, activeShareByHost]);
 
-  const inviteGuideSteps = useMemo(
-    () => (inviteGuide ? getGuideSteps(inviteGuide.description) : []),
-    [inviteGuide],
-  );
+  const inviteGuideSteps = inviteGuide?.steps ?? [];
 
   const versionsByShareCode = useMemo(
     () =>
@@ -1411,82 +1454,153 @@ export function Friends({
 
   const notReadsSet = useMemo(() => new Set(notReads), [notReads]);
 
-  const renderFriend = (f: IFriend) => {
-    const version = f.versionCode
-      ? versionsByShareCode.get(f.versionCode)
-      : undefined;
-    const activeShare = activeShareByHost.get(f.user._id);
-    const isNotRead = notReadsSet.has(f.user._id);
-    const local = localFriendsById.get(f.user._id);
-    const voiceGroup =
+  const voiceGroup = useMemo(
+    () =>
       voiceSession.state !== "disconnected"
         ? myGroups.find((group) => group._id === voiceSession.roomId)
-        : undefined;
-    const isAlreadyInVoiceGroup = Boolean(
-      voiceGroup &&
-        voiceGroup.members.some((member) => member._id === f.user._id),
-    );
+        : undefined,
+    [myGroups, voiceSession.roomId, voiceSession.state],
+  );
 
-    return (
-      <FriendItem
-        key={f.user._id}
-        friend={f}
-        activeShare={activeShare}
-        isNotRead={isNotRead}
-        local={local}
-        isRunning={isRunning}
-        onSelect={() => {
-          setSelectedFriend(f.user._id);
+  const voiceGroupMemberIds = useMemo(
+    () => new Set((voiceGroup?.members ?? []).map((member) => member._id)),
+    [voiceGroup],
+  );
+
+  const runFriendAction = useEventCallback(
+    (action: FriendActionName, friendId: string) => {
+      const f = friends.find((entry) => entry.user._id === friendId);
+      if (!f) return;
+
+      switch (action) {
+        case "select":
+          setSelectedFriend(friendId);
           setFriend(f);
-        }}
-        onJoin={() => handleJoinFriend(f, version, activeShare)}
-        onInvite={() => handleInviteFriend(f)}
-        onInviteToVoice={
-          voiceGroup
-            ? () => {
-                if (isAlreadyInVoiceGroup) {
-                  socket?.emit("groupVoicePing", {
-                    recipientId: f.user._id,
-                    groupId: voiceGroup._id,
-                  });
-                  toast.success(t("groups.voicePingSent"));
-                } else {
-                  socket?.emit("groupInvite", {
-                    recipientId: f.user._id,
-                    groupId: voiceGroup._id,
-                  });
-                }
-              }
-            : undefined
-        }
-        onStartCall={() => {
-          if (!socket) return;
-          socket.emit("voiceCallRequest", { recipientId: f.user._id });
-        }}
-        callDisabled={
-          voiceCall.status !== "idle" ||
-          (voiceSession.state !== "disconnected" &&
-            authData?.sub != null &&
-            voiceSession.roomId ===
-              `dm_${[authData.sub, f.user._id].sort().join("_")}`)
-        }
-        onViewAccount={() => handleViewAccount(f.user._id)}
-        onOpenChat={() => {
+          return;
+        case "join":
+          void handleJoinFriend(
+            f,
+            f.versionCode ? versionsByShareCode.get(f.versionCode) : undefined,
+            activeShareByHost.get(friendId),
+          );
+          return;
+        case "invite":
+          handleInviteFriend(f);
+          return;
+        case "inviteToVoice":
+          if (!voiceGroup) return;
+          if (voiceGroupMemberIds.has(friendId)) {
+            socket?.emit("groupVoicePing", {
+              recipientId: friendId,
+              groupId: voiceGroup._id,
+            });
+            toast.success(t("groups.voicePingSent"));
+          } else {
+            socket?.emit("groupInvite", {
+              recipientId: friendId,
+              groupId: voiceGroup._id,
+            });
+          }
+          return;
+        case "startCall":
+          socket?.emit("voiceCallRequest", { recipientId: friendId });
+          return;
+        case "viewAccount":
+          void handleViewAccount(friendId);
+          return;
+        case "openChat":
           setFriend(f);
-          handleOpenChat(f.user._id);
-        }}
-        onViewSkin={() => handleViewSkin(f)}
-        isViewSkinDisabled={f.user.platform === "microsoft" && !f.user.uuid}
-        onToggleMute={() => handleToggleMute(f, local)}
-        onRemove={() => {
-          setSelectedFriend(f.user._id);
+          handleOpenChat(friendId);
+          return;
+        case "viewSkin":
+          void handleViewSkin(f);
+          return;
+        case "toggleMute":
+          void handleToggleMute(f, localFriendsById.get(friendId));
+          return;
+        case "remove":
+          setSelectedFriend(friendId);
           setFriend(f);
           setFriendRemoveModal(true);
-        }}
-        t={t}
-      />
-    );
-  };
+          return;
+      }
+    },
+  );
+
+  const friendHandlersRef = useRef(new Map<string, FriendHandlers>());
+
+  const getFriendHandlers = useCallback(
+    (friendId: string): FriendHandlers => {
+      const cached = friendHandlersRef.current.get(friendId);
+      if (cached) return cached;
+
+      const handlers: FriendHandlers = {
+        onSelect: () => runFriendAction("select", friendId),
+        onJoin: () => runFriendAction("join", friendId),
+        onInvite: () => runFriendAction("invite", friendId),
+        onInviteToVoice: () => runFriendAction("inviteToVoice", friendId),
+        onStartCall: () => runFriendAction("startCall", friendId),
+        onViewAccount: () => runFriendAction("viewAccount", friendId),
+        onOpenChat: () => runFriendAction("openChat", friendId),
+        onViewSkin: () => runFriendAction("viewSkin", friendId),
+        onToggleMute: () => runFriendAction("toggleMute", friendId),
+        onRemove: () => runFriendAction("remove", friendId),
+      };
+
+      friendHandlersRef.current.set(friendId, handlers);
+      return handlers;
+    },
+    [runFriendAction],
+  );
+
+  const renderFriend = useCallback(
+    (f: IFriend) => {
+      const handlers = getFriendHandlers(f.user._id);
+
+      return (
+        <FriendItem
+          key={f.user._id}
+          friend={f}
+          activeShare={activeShareByHost.get(f.user._id)}
+          isNotRead={notReadsSet.has(f.user._id)}
+          local={localFriendsById.get(f.user._id)}
+          isRunning={isRunning}
+          onSelect={handlers.onSelect}
+          onJoin={handlers.onJoin}
+          onInvite={handlers.onInvite}
+          onInviteToVoice={voiceGroup ? handlers.onInviteToVoice : undefined}
+          onStartCall={handlers.onStartCall}
+          callDisabled={
+            voiceCall.status !== "idle" ||
+            (voiceSession.state !== "disconnected" &&
+              authData?.sub != null &&
+              voiceSession.roomId ===
+                `dm_${[authData.sub, f.user._id].sort().join("_")}`)
+          }
+          onViewAccount={handlers.onViewAccount}
+          onOpenChat={handlers.onOpenChat}
+          onViewSkin={handlers.onViewSkin}
+          isViewSkinDisabled={f.user.platform === "microsoft" && !f.user.uuid}
+          onToggleMute={handlers.onToggleMute}
+          onRemove={handlers.onRemove}
+          t={t}
+        />
+      );
+    },
+    [
+      activeShareByHost,
+      authData?.sub,
+      getFriendHandlers,
+      isRunning,
+      localFriendsById,
+      notReadsSet,
+      t,
+      voiceCall.status,
+      voiceGroup,
+      voiceSession.roomId,
+      voiceSession.state,
+    ],
+  );
 
   return (
     <TooltipProvider delayDuration={1000}>
@@ -1622,14 +1736,14 @@ export function Friends({
           ) : (
             <ScrollArea className="min-h-0 flex-1">
               <div className="flex h-full min-h-full flex-col gap-2">
-                {!socket?.connected ? (
+                {!isFriendsConnected ? (
                   <Empty className="min-h-full border">
                     <EmptyHeader>
                       <EmptyTitle>{t("friends.disconnected")}</EmptyTitle>
                     </EmptyHeader>
                   </Empty>
                 ) : null}
-                {activeTab === "groups" && socket?.connected ? (
+                {activeTab === "groups" && isFriendsConnected ? (
                   <GroupsTab
                     onPlayModpack={async (modpack, version) => {
                       if (version) {
@@ -1647,7 +1761,7 @@ export function Friends({
                   />
                 ) : undefined}
 
-                {activeTab === "friends" && socket?.connected ? (
+                {activeTab === "friends" && isFriendsConnected ? (
                   groupedFriends.total > 0 ? (
                     <div className="flex flex-col gap-3 pr-2">
                       <FriendSection
@@ -1675,7 +1789,7 @@ export function Friends({
                   )
                 ) : undefined}
 
-                {activeTab === "requests" && socket?.connected ? (
+                {activeTab === "requests" && isFriendsConnected ? (
                   friendRequests.length + groupInvites.length > 0 ? (
                     <div className="flex flex-col gap-1.5 pr-2">
                       {groupInvites.length > 0 && (
@@ -1738,6 +1852,7 @@ export function Friends({
                           key={fr.requestId}
                           request={fr}
                           isLoading={isLoading}
+                          isPending={pendingRequestId === fr.requestId}
                           loadingType={loadingType}
                           onAccept={() => handleAcceptRequest(fr.requestId)}
                           onReject={() => handleRejectRequest(fr.requestId)}
@@ -1966,51 +2081,21 @@ export function Friends({
             messagesRef={messagesRef}
             messageInputRef={messageInputRef}
             account={account}
-            onClose={() => {
-              setChatModal(false);
-              setSelectedFriend("");
-              setFriend(undefined);
-              setReplyMessage(null);
-            }}
+            onClose={handleCloseChat}
             onMessageChange={setMessageText}
             onSendMessage={handleSendMessage}
             onSendImageFile={handleSendChatImageFile}
             onReplyToMessage={handleReplyToChatMessage}
-            onCancelReply={() => setReplyMessage(null)}
+            onCancelReply={handleCancelChatReply}
             onDeleteMessage={handleDeleteChatMessage}
             onToggleReaction={handleToggleChatReaction}
-            onOpenVersionSelect={() => setIsSelectVersions(true)}
-            onPlayModpack={async (modpack: IModpack, version?: Version) => {
-              if (version) {
-                setSelectedVersion(version);
-                setChatModal(false);
-                await runGame({ version });
-              } else {
-                setTempModpack(modpack);
-                setIsAddVersion(true);
-              }
-            }}
+            onOpenVersionSelect={handleOpenChatVersionSelect}
+            onPlayModpack={handleChatPlayModpack}
             onSendGroupInvite={
-              myGroups.length > 0
-                ? () => setIsGroupInvitePicker(true)
-                : undefined
+              myGroups.length > 0 ? handleOpenGroupInvitePicker : undefined
             }
-            onAcceptGroupInvite={async (code) => {
-              const token = account?.accessToken;
-              if (!token) return;
-              const joined = await api.backend.groupJoinByCode(token, code);
-              if (!joined || typeof joined === "string") {
-                toast.error(t(groupJoinErrorKey(joined ?? null)));
-              } else {
-                toast.success(t("groups.joined", { group: joined.name }));
-              }
-            }}
-            onStartCall={() => {
-              if (!socket || !friend) return;
-              socket.emit("voiceCallRequest", {
-                recipientId: friend.user._id,
-              });
-            }}
+            onAcceptGroupInvite={handleAcceptChatGroupInvite}
+            onStartCall={handleStartChatCall}
             callDisabled={
               voiceCall.status !== "idle" ||
               (voiceSession.state !== "disconnected" &&

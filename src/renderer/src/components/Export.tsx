@@ -143,10 +143,21 @@ export function Export({
         files.push(await api.path.join(exportTempPath, file));
       }
 
-      const zipPath = await api.path.join(
+      let zipPath = await api.path.join(
         folderPath,
         `${selectedVersion.version.name}.zip`,
       );
+
+      if (await api.fs.pathExists(zipPath)) {
+        const stamp = new Date()
+          .toISOString()
+          .replace(/[:.]/g, "-")
+          .slice(0, 19);
+        zipPath = await api.path.join(
+          folderPath,
+          `${selectedVersion.version.name}_${stamp}.zip`,
+        );
+      }
 
       await api.file.archiveFiles(files, zipPath, exportTempPath);
 

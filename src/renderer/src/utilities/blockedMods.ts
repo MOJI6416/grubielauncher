@@ -125,11 +125,16 @@ export function areBlockedModsReady(blockedMods: IBlockedMod[]) {
   );
 }
 
+export interface ICheckBlockedModsResult {
+  blockedMods: IBlockedMod[];
+  mods: ILocalProject[];
+}
+
 export async function checkBlockedMods(
   mods: ILocalProject[],
   versionPath?: string,
-) {
-  if (mods.length === 0) return [];
+): Promise<ICheckBlockedModsResult> {
+  if (mods.length === 0) return { blockedMods: [], mods };
 
   const api = window.api;
   const candidates: {
@@ -187,6 +192,8 @@ export async function checkBlockedMods(
     }
   }
 
+  const resolvedUrls = new Map<ILocalFile, string>();
+
   const resolved = await Promise.all(
     candidates.map(async ({ mod, file, rawUrl, fileId }) => {
       if (fileId > 0) {
@@ -195,7 +202,7 @@ export async function checkBlockedMods(
           file.filename,
         );
         if (cdnUrl) {
-          file.url = cdnUrl;
+          resolvedUrls.set(file, cdnUrl);
           return null;
         }
       }
@@ -212,5 +219,27 @@ export async function checkBlockedMods(
     }),
   );
 
-  return resolved.filter((mod): mod is IBlockedMod => mod !== null);
+  const blockedMods = resolved.filter(
+    (mod): mod is IBlockedMod => mod !== null,
+  );
+
+  if (resolvedUrls.size === 0) return { blockedMods, mods };
+
+  const nextMods = mods.map((mod) => {
+    const files = mod.version?.files;
+    if (!files?.some((file) => resolvedUrls.has(file))) return mod;
+
+    return {
+      ...mod,
+      version: {
+        ...mod.version!,
+        files: files.map((file) => {
+          const url = resolvedUrls.get(file);
+          return url ? { ...file, url } : file;
+        }),
+      },
+    };
+  });
+
+  return { blockedMods, mods: nextMods };
 }

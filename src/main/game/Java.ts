@@ -19,6 +19,7 @@ const JAVA_VERIFIED_MARKER = '.grubie-java-verified'
 const JAVA_ASSET_HOSTS = ['github.com', 'objects.githubusercontent.com']
 
 const installedRootCache = new Map<number, { root: string; mtimeMs: number }>()
+const javaHealthChecks = new Map<string, Promise<boolean>>()
 
 interface IJavaAsset {
   id: string
@@ -235,6 +236,13 @@ export class Java {
           continue
         }
 
+        if (!this.isTrustedAssetUrl(javaPackage.link)) {
+          console.error(
+            `Refused untrusted Java download url from the Adoptium index: ${javaPackage.link}`
+          )
+          continue
+        }
+
         return {
           id: release.release_name,
           fileName: javaPackage.name,
@@ -371,6 +379,18 @@ export class Java {
   }
 
   private async isJavaRootHealthy(javaRoot: string): Promise<boolean> {
+    const pending = javaHealthChecks.get(javaRoot)
+    if (pending) return pending
+
+    const check = this.probeJavaRootHealth(javaRoot).finally(() => {
+      javaHealthChecks.delete(javaRoot)
+    })
+    javaHealthChecks.set(javaRoot, check)
+
+    return check
+  }
+
+  private async probeJavaRootHealth(javaRoot: string): Promise<boolean> {
     const paths = this.buildJavaPaths(javaRoot)
     const binary = (await fs.pathExists(paths.client))
       ? paths.client

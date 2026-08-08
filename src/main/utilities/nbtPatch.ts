@@ -7,7 +7,12 @@ function findStringTag(buffer: Buffer, tagName: string): number {
   header.writeUInt16BE(name.length, 1);
   name.copy(header, 3);
 
-  return buffer.indexOf(header);
+  const start = buffer.indexOf(header);
+  if (start === -1) return -1;
+
+  if (buffer.indexOf(header, start + 1) !== -1) return -1;
+
+  return start;
 }
 
 export function readNbtString(

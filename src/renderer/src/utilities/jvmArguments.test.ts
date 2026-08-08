@@ -37,6 +37,16 @@ describe("analyzeArgs", () => {
     expect(analyzeArgs("jvm", ["-XX:Foo"], 2048)[0].code).toBe("malformed");
   });
 
+  it("accepts the memory units the launcher actually passes through", () => {
+    for (const token of ["-Xmx1T", "-Xms1T", "-Xmn1T", "-Xss1T"]) {
+      expect(
+        analyzeArgs("jvm", [token], 2048).some(
+          (diagnostic) => diagnostic.code === "malformed",
+        ),
+      ).toBe(false);
+    }
+  });
+
   it("flags duplicate keys on the later token", () => {
     const diags = analyzeArgs("jvm", ["-Dfoo=1", "-Dfoo=2"], 2048);
     expect(diags).toHaveLength(1);
@@ -78,5 +88,60 @@ describe("analyzeArgs", () => {
   it("flags launcher-managed arguments", () => {
     expect(analyzeArgs("jvm", ["-cp"], 2048)[0].code).toBe("managed");
     expect(analyzeArgs("game", ["--username"], 2048)[0].code).toBe("managed");
+  });
+
+  it("flags dangerous jvm arguments", () => {
+    const dangerous = [
+      "-javaagent:evil.jar",
+      "-agentpath:evil.dll",
+      "-agentlib:evil",
+      "-XX:OnOutOfMemoryError=calc",
+      "-XX:OnError=calc",
+      "@argfile",
+    ];
+
+    for (const token of dangerous) {
+      expect(analyzeArgs("jvm", [token], 2048)[0]).toMatchObject({
+        code: "dangerous",
+        severity: "error",
+      });
+    }
+  });
+
+  it("warns about everything the launcher would silently drop", () => {
+    const dropped = [
+      "-Xlog:gc:pwn.txt",
+      "-Xlog:gc",
+      "-Xloggc:pwn.txt",
+      "-XX:VMOptionsFile=opts.txt",
+      "-XX:HeapDumpPath=pwn",
+      "-XX:StartFlightRecording=filename=pwn.jfr",
+      "-Dsun.boot.library.path=payload",
+      "-Djava.library.path=payload",
+    ];
+
+    for (const token of dropped) {
+      expect(analyzeArgs("jvm", [token], 2048)[0]).toMatchObject({
+        code: "dangerous",
+        severity: "error",
+      });
+    }
+
+    for (const token of ["-cp", "-jar", "--module-path"]) {
+      expect(analyzeArgs("jvm", [token], 2048)[0]).toMatchObject({
+        code: "managed",
+        severity: "error",
+      });
+    }
+  });
+
+  it("keeps a module flag and its separate value clean", () => {
+    expect(
+      analyzeArgs(
+        "jvm",
+        ["--add-opens", "java.base/java.lang=ALL-UNNAMED"],
+        2048,
+      ),
+    ).toEqual([]);
   });
 });

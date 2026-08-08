@@ -4,6 +4,7 @@ import {
   checkVersionName,
   isOwner,
   parseVersionOwner,
+  sanitizeExtraFileSegments,
   supportsQuickPlayMultiplayer,
 } from "./versionPure";
 import type { IVersionConf } from "@/types/IVersion";
@@ -73,6 +74,36 @@ describe("version pure helpers", () => {
     expect(checkVersionName("..", [])).toBe(false);
     expect(checkVersionName("...", [])).toBe(false);
     expect(checkVersionName("my..pack", [])).toBe(true);
+  });
+});
+
+describe("sanitizeExtraFileSegments", () => {
+  it("keeps plain relative modpack paths", () => {
+    expect(sanitizeExtraFileSegments("config/mod/settings.json")).toEqual([
+      "config",
+      "mod",
+      "settings.json",
+    ]);
+    expect(sanitizeExtraFileSegments("./config//a.txt")).toEqual([
+      "config",
+      "a.txt",
+    ]);
+  });
+
+  it("rejects traversal through both separators", () => {
+    expect(sanitizeExtraFileSegments("../evil.json")).toBeNull();
+    expect(sanitizeExtraFileSegments("..\\..\\..\\evil.json")).toBeNull();
+    expect(sanitizeExtraFileSegments("config\\..\\..\\evil.json")).toBeNull();
+  });
+
+  it("rejects drive-qualified and empty paths, strips leading separators", () => {
+    expect(sanitizeExtraFileSegments("C:\\Windows\\evil.json")).toBeNull();
+    expect(sanitizeExtraFileSegments("/etc/passwd")).toEqual([
+      "etc",
+      "passwd",
+    ]);
+    expect(sanitizeExtraFileSegments("")).toBeNull();
+    expect(sanitizeExtraFileSegments("./")).toBeNull();
   });
 });
 

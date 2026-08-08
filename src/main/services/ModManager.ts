@@ -19,7 +19,8 @@ import {
   cfModToProject,
   loaderToCfLoader,
   mrProjectToProject,
-  mrVersionToVersion
+  mrVersionToVersion,
+  sortVersionsByDate
 } from '../utilities/modManager'
 
 export class ModManager {
@@ -206,7 +207,7 @@ export class ModManager {
 
         if (!files) return []
 
-        return files.map((f) => cfFileToVersion(f, projectType, modUrl))
+        return sortVersionsByDate(files.map((f) => cfFileToVersion(f, projectType, modUrl)))
       } else if (provider == Provider.MODRINTH) {
         const project = await Modrinth.get(projectId)
 
@@ -218,8 +219,12 @@ export class ModManager {
 
         if (!versions) return []
 
-        return versions.map((v) =>
-          mrVersionToVersion(v, project?.server_side != 'unsupported', projectType)
+        const isClient = projectType != ProjectType.MOD || project?.client_side != 'unsupported'
+
+        return sortVersionsByDate(
+          versions.map((v) =>
+            mrVersionToVersion(v, project?.server_side != 'unsupported', projectType, isClient)
+          )
         )
       }
 
@@ -231,7 +236,7 @@ export class ModManager {
 
   static async getDependencies(
     provider: Provider,
-    projectId: string,
+    _projectId: string,
     deps: IVersionDependency[]
   ): Promise<IVersionDependency[]> {
     try {
@@ -256,7 +261,6 @@ export class ModManager {
         return dependencies
       } else if (provider == Provider.MODRINTH) {
         const data = await Modrinth.getDependencies(
-          projectId,
           deps.map((d) => ({
             project_id: d.projectId,
             version_id: d.versionId,

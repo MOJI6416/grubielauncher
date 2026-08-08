@@ -49,6 +49,7 @@ import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
 const MAX_OTHER_BYTES = 1_000_000_000;
+const MAX_OTHER_ARCHIVE_BYTES = 512 * 1024 * 1024;
 
 type SharePublishStage =
   | "creatingShare"
@@ -405,6 +406,12 @@ export function Share({
             total: computedTotalSize,
           });
           await api.file.archiveFiles(validPaths, tmpZipPath, versionPath);
+
+          const archiveSize = await api.file.getTotalSizes([tmpZipPath]);
+          if (archiveSize > MAX_OTHER_ARCHIVE_BYTES) {
+            await api.fs.rimraf(tmpZipPath);
+            throw new Error("limit_exceeded");
+          }
 
           const progressId = `other-${shareCode}-${Date.now()}`;
           uploadProgressIdRef.current = progressId;

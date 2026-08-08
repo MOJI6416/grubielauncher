@@ -8,6 +8,8 @@ import { TSettings } from "@/types/Settings";
 import { Version } from "@renderer/classes/Version";
 import { IArguments } from "@/types/IArguments";
 import { ILocalProject } from "@/types/ModManager";
+import i18n from "@renderer/i18n";
+import { showFailureToast } from "./failures";
 import {
   areOtherFilesEqual,
   areRunArgumentsEqual,
@@ -21,6 +23,7 @@ export {
   forbiddenSymbols,
   isOwner,
   parseVersionOwner,
+  sanitizeExtraFileSegments,
 } from "./versionPure";
 
 const api = window.api;
@@ -214,33 +217,49 @@ export async function readVerions(
 
   const results = await Promise.all(
     directories.map(async (directory) => {
-      const confPath = await api.path.join(
-        versionsPath,
-        directory,
-        "version.json",
-      );
+      try {
+        const confPath = await api.path.join(
+          versionsPath,
+          directory,
+          "version.json",
+        );
 
-      if (!(await api.fs.pathExists(confPath))) return null;
+        if (!(await api.fs.pathExists(confPath))) return null;
 
-      const conf: IVersionConf = await api.fs.readJSON(confPath, "utf-8");
-      if (conf.name != directory) conf.name = directory;
+        const conf: IVersionConf | null = await api.fs.readJSON(
+          confPath,
+          "utf-8",
+        );
+        if (!conf) throw new Error(`Unreadable version config: ${confPath}`);
 
-      const version = new Version(conf);
+        if (conf.name != directory) conf.name = directory;
 
-      await version.init();
+        const version = new Version(conf);
 
-      if (!version.hasManifest) return null;
+        await version.init();
 
-      let isUpdated = false;
+        if (!version.hasManifest) return null;
 
-      if (!conf.owner && account) {
-        version.version.owner = `${account.type}_${account.nickname}`;
-        isUpdated = true;
+        let isUpdated = false;
+
+        if (!conf.owner && account) {
+          version.version.owner = `${account.type}_${account.nickname}`;
+          isUpdated = true;
+        }
+
+        if (isUpdated) await version.save();
+
+        return version;
+      } catch (error) {
+        console.error(`[versions] failed to read version ${directory}`, error);
+
+        showFailureToast(`${i18n.t("versions.notFound")}: ${directory}`, error, {
+          channels: ["fs:readJSON", "version:init"],
+          toastId: `version-read-${directory}`,
+        });
+
+        return null;
       }
-
-      if (isUpdated) await version.save();
-
-      return version;
     }),
   );
 

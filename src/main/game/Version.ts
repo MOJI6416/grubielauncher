@@ -9,6 +9,7 @@ import { IInstallProfile } from "@/types/IInstallProfile";
 import { DownloadItem } from "@/types/Downloader";
 import path from "path";
 import fs from "fs-extra";
+import pLimit from "p-limit";
 import { Downloader } from "../utilities/downloader";
 import { writeJsonAtomic } from "../utilities/atomicJson";
 import {
@@ -46,6 +47,7 @@ import { assertSafeFileSegment } from "./serverScriptSafety";
 import { Backend } from "../services/Backend";
 import { buildMemoryArguments } from "@/shared/jvmDefaults";
 import { mcVersionToJavaMajor } from "@/shared/javaVersions";
+import { filterRunArguments } from "@/shared/runArguments";
 import {
   assertTrustedDownloadUrl,
   normalizeLoaderLibraryUrl,
@@ -56,6 +58,9 @@ import { migrateInlineModIcons } from "../utilities/modManager";
 type VersionInstallRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
 };
+
+const FILES_STAGE_START_PERCENT = 62;
+const FILES_STAGE_END_PERCENT = 94;
 
 function parseCustomRunArguments(input?: string) {
   if (!input?.trim()) return [];
@@ -240,6 +245,7 @@ export class Version {
   ) {
     await this.ensureInitialized();
     this.downloader = new Downloader(settings.downloadLimit || 6);
+    this.downloader.versionName = this.version.name;
     this.installOperation = options.operation ?? "install";
     this.installAbortSignal = options.signal ?? null;
     this.sendInstallProgress("preparing", 2, true);
@@ -281,9 +287,13 @@ export class Version {
     );
     let isNewManifest = false;
 
-    const isExistsManifest = await fs.pathExists(manifestPath);
-    if (!isExistsManifest) {
+    if (!this.manifest && (await fs.pathExists(manifestPath))) {
+      await this.readManifest();
+    }
+
+    if (!this.manifest) {
       isNewManifest = true;
+      await fs.remove(manifestPath).catch(() => {});
 
       assertTrustedDownloadUrl(
         this.version.version.url,
@@ -362,12 +372,21 @@ export class Version {
       );
       let fabricManifest: IFabricManifest | undefined = undefined;
 
-      const isExistsFabricManifest = await fs.pathExists(fabricManifestPath);
-      if (isExistsFabricManifest) {
-        fabricManifest = await fs.readJSON(fabricManifestPath, {
-          encoding: "utf-8",
-        });
-      } else {
+      if (await fs.pathExists(fabricManifestPath)) {
+        try {
+          fabricManifest = await fs.readJSON(fabricManifestPath, {
+            encoding: "utf-8",
+          });
+        } catch (error) {
+          console.error(
+            `Failed to read loader manifest ${fabricManifestPath}:`,
+            error,
+          );
+          await fs.remove(fabricManifestPath).catch(() => {});
+        }
+      }
+
+      if (!fabricManifest) {
         this.throwIfInstallCancelled();
         assertTrustedDownloadUrl(
           this.version.loader.version.url,
@@ -399,15 +418,21 @@ export class Version {
 
         const fabricLibraries: IVersionManifest["libraries"] = [];
         for (const lib of fabricManifest.libraries) {
-          const baseUrl = lib.url;
+          const baseUrl = lib.url || "https://libraries.minecraft.net/";
 
           const path = convertMavenCoordinateToJarPath(lib.name);
+
+          const artifactUrl = normalizeLoaderLibraryUrl(`${baseUrl}/${path}`);
+          assertTrustedDownloadUrl(
+            artifactUrl,
+            `${this.version.loader.name} library url`,
+          );
 
           const library: IVersionManifest["libraries"][0] = {
             name: lib.name,
             downloads: {
               artifact: {
-                url: `${baseUrl}/${path}`,
+                url: artifactUrl,
                 path,
                 size: lib.size,
                 sha1: lib.sha1,
@@ -760,8 +785,28 @@ export class Version {
     const assets = await this.getAssets();
     downloadItems.push(...assets.downloadItems);
 
-    this.sendInstallProgress("files", 78, true);
-    await this.downloader.downloadFiles(downloadItems, downloadSignal);
+    this.sendInstallProgress("files", FILES_STAGE_START_PERCENT, true);
+    this.downloader.onInfo = (info) => {
+      if (!info) return;
+
+      const percent = Math.max(0, Math.min(100, info.progressPercent));
+      this.sendInstallProgress(
+        "files",
+        FILES_STAGE_START_PERCENT +
+          Math.round(
+            (percent / 100) *
+              (FILES_STAGE_END_PERCENT - FILES_STAGE_START_PERCENT),
+          ),
+      );
+    };
+
+    try {
+      await this.downloader.downloadFiles(downloadItems, downloadSignal, {
+        verifyChecksums: this.installOperation === "integrity",
+      });
+    } finally {
+      this.downloader.onInfo = null;
+    }
     this.throwIfInstallCancelled();
 
     if (javaFinalizeNeeded) {
@@ -796,13 +841,9 @@ export class Version {
       "versions",
       this.version.name,
     );
-    await fs.writeJSON(
+    await writeJsonAtomic(
       path.join(this.versionPath, "version.json"),
       this.version,
-      {
-        encoding: "utf-8",
-        spaces: 2,
-      },
     );
   }
 
@@ -872,7 +913,7 @@ export class Version {
           sha1: classifier.sha1,
           size: classifier.size,
           group: "natives",
-          options: { extract: true },
+          options: { extract: true, extractDelete: false },
         });
       }
     }
@@ -1105,7 +1146,14 @@ export class Version {
           if (rule.action == "allow" && features?.is_quick_play_singleplayer)
             this.isQuickPlaySingleplayer = true;
         }
-    } catch (error) {}
+    } catch (error) {
+      console.error(`Failed to read version manifest ${manifestPath}:`, error);
+
+      if (error instanceof SyntaxError) {
+        this.manifest = undefined;
+        await fs.remove(manifestPath).catch(() => {});
+      }
+    }
   }
 
   private async writeManifest() {
@@ -1356,8 +1404,25 @@ export class Version {
     });
 
     if (this.version.runArguments) {
-      jvm.push(...parseCustomRunArguments(this.version.runArguments.jvm));
-      game.push(...parseCustomRunArguments(this.version.runArguments.game));
+      const customJvm = filterRunArguments(
+        parseCustomRunArguments(this.version.runArguments.jvm),
+        "jvm",
+      );
+      const customGame = filterRunArguments(
+        parseCustomRunArguments(this.version.runArguments.game),
+        "game",
+      );
+
+      const rejected = [...customJvm.rejected, ...customGame.rejected];
+      if (rejected.length) {
+        console.warn(
+          `[version:run] refused unsafe custom arguments for ${this.version.name}:`,
+          rejected,
+        );
+      }
+
+      jvm.push(...customJvm.safe);
+      game.push(...customGame.safe);
     }
 
     return { jvm, game };
@@ -1609,8 +1674,11 @@ export class Version {
     );
 
     if (removableResources.length) {
+      const limit = pLimit(32);
       await Promise.all(
-        removableResources.map((resource) => fs.remove(resource)),
+        removableResources.map((resource) =>
+          limit(() => fs.remove(resource)),
+        ),
       );
     }
     await fs.remove(this.versionPath);

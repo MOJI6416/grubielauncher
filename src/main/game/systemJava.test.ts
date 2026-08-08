@@ -88,15 +88,28 @@ describe("findSystemJava", () => {
     expect(found?.root).toBe(path.resolve("/usr/lib/jvm/temurin-21"));
   });
 
-  it("falls back to PATH when nothing well-known matches", async () => {
+  it("resolves the PATH fallback to an absolute runtime", async () => {
+    const home = path.resolve("/opt/jdk21");
+    pathExists.mockImplementation(async (target: string) =>
+      target.startsWith(home),
+    );
+    readdir.mockResolvedValue([]);
+    respondWith({
+      java: `openjdk version "21.0.5"\n    java.home = ${home}\n`,
+    });
+
+    const found = await findSystemJava(21, linux);
+
+    expect(found?.server).toBe(bin(home));
+    expect(found?.root).toBe(home);
+  });
+
+  it("refuses the PATH fallback when java.home cannot be read", async () => {
     pathExists.mockResolvedValue(false);
     readdir.mockResolvedValue([]);
     respondWith({ java: 'openjdk version "21.0.5"' });
 
-    const found = await findSystemJava(21, linux);
-
-    expect(found?.server).toBe("java");
-    expect(found?.root).toBe("");
+    await expect(findSystemJava(21, linux)).resolves.toBeNull();
   });
 
   it("returns null when no runtime answers", async () => {

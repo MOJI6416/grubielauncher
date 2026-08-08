@@ -4,8 +4,11 @@ import path from "path";
 import axios from "axios";
 import { fileURLToPath } from "url";
 import { getLauncherPaths } from "./other";
-import { isSafeRemoteImageUrl } from "./safeUrl";
+import { isSafeRemoteFetchUrl } from "./safeUrl";
 import { isReadablePath } from "./safePath";
+import { assertSafeVersionName } from "@/shared/versionName";
+
+const MAX_REMOTE_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export interface ShortcutResult {
   success: boolean;
@@ -19,7 +22,17 @@ function buildLaunchDeepLink(versionName: string, instance: number): string {
 }
 
 function sanitizeShortcutName(name: string): string {
-  return name.replace(/[\\/:*?"<>|]/g, "_").trim() || "instance";
+  return toDesktopEntryValue(name).replace(/[\\/:*?"<>|]/g, "_") || "instance";
+}
+
+function toDesktopEntryValue(value: string): string {
+  let result = "";
+  for (const char of value) {
+    const code = char.codePointAt(0) ?? 0;
+    if (code < 32 || code === 127) continue;
+    result += char;
+  }
+  return result.trim();
 }
 
 async function resolveImageBuffer(source: string): Promise<Buffer | null> {
@@ -30,10 +43,11 @@ async function resolveImageBuffer(source: string): Promise<Buffer | null> {
       return Buffer.from(source.slice(comma + 1), "base64");
     }
     if (source.startsWith("http://") || source.startsWith("https://")) {
-      if (!isSafeRemoteImageUrl(source)) return null;
+      if (!(await isSafeRemoteFetchUrl(source))) return null;
       const res = await axios.get(source, {
         responseType: "arraybuffer",
         timeout: 10000,
+        maxContentLength: MAX_REMOTE_IMAGE_BYTES,
       });
       return Buffer.from(res.data);
     }
@@ -108,10 +122,11 @@ async function buildShortcutIcon(
 }
 
 export async function createInstanceShortcut(
-  versionName: string,
+  rawVersionName: string,
   instance: number,
   imageSource?: string,
 ): Promise<ShortcutResult> {
+  const versionName = assertSafeVersionName(rawVersionName);
   const deepLink = buildLaunchDeepLink(versionName, instance);
   const desktop = app.getPath("desktop");
   const fileBase = sanitizeShortcutName(versionName);
@@ -135,7 +150,7 @@ export async function createInstanceShortcut(
     const lines = [
       "[Desktop Entry]",
       "Type=Application",
-      `Name=${versionName}`,
+      `Name=${toDesktopEntryValue(versionName)}`,
       "Comment=GrubieLauncher",
       `Exec="${process.execPath}" "${deepLink}"`,
       "Terminal=false",

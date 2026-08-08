@@ -21,6 +21,7 @@ import {
   isAccountSessionRefreshError,
 } from "@renderer/utilities/accountSession";
 import { useTranslation } from "react-i18next";
+import { showFailureToast } from "@renderer/utilities/failures";
 
 const api = window.api;
 
@@ -67,10 +68,22 @@ export function ProfilePrivacy({ user }: { user: IUser }) {
             ? { publicLeaderboard: checked }
             : { publicProfile: checked },
         );
-        if (updated) setValue(updated[field] !== false);
+        if (updated) {
+          setValue(updated[field] !== false);
+        } else {
+          setValue(!checked);
+          showFailureToast(t("socials.saveError"), undefined, {
+            channels: ["backend:updateUser"],
+          });
+        }
       } catch (err) {
         setValue(!checked);
-        if (!isAccountSessionRefreshError(err)) console.error(err);
+        if (!isAccountSessionRefreshError(err)) {
+          console.error(err);
+          showFailureToast(t("socials.saveError"), err, {
+            channels: ["backend:updateUser"],
+          });
+        }
       } finally {
         setToggling(false);
       }
@@ -82,6 +95,7 @@ export function ProfilePrivacy({ user }: { user: IUser }) {
       isBackendOnline,
       setAccounts,
       setSelectedAccount,
+      t,
       user._id,
     ],
   );

@@ -1,6 +1,24 @@
 import { StringDecoder } from "string_decoder";
+import { IConsoleMessage } from "@/types/Console";
 
 export const MAX_CONSOLE_LINE_LENGTH = 8192;
+
+export function mergeConsoleMessages(
+  batch: IConsoleMessage[],
+): IConsoleMessage[] {
+  const merged: IConsoleMessage[] = [];
+
+  for (const msg of batch) {
+    const last = merged[merged.length - 1];
+    if (last && last.type === msg.type) {
+      last.message += "\n" + msg.message;
+    } else {
+      merged.push({ ...msg, tips: [...msg.tips] });
+    }
+  }
+
+  return merged;
+}
 
 export function createLineReader(onLine: (line: string) => void) {
   const decoder = new StringDecoder("utf8");

@@ -7,19 +7,32 @@ import {
   ICategoryTag,
   ILoaderTag,
   SortValue,
-  IProjectDependencies,
   VersionDependency
 } from '@/types/Modrinth'
 import { ServerCore } from '@/types/Server'
 import axios from 'axios'
+import { app } from 'electron'
 import { reportFailure } from '../utilities/failureBus'
 
 const URL = 'https://api.modrinth.com/v2'
+const CONTACT = 'https://grubielauncher.com'
+
+function buildUserAgent(): string {
+  let version = '0.0.0'
+  try {
+    version = app.getVersion()
+  } catch {}
+
+  return `GrubieLauncher/${version} (${CONTACT})`
+}
 
 export class Modrinth {
   private static api = axios.create({
     baseURL: URL,
-    timeout: 30000
+    timeout: 30000,
+    headers: {
+      'User-Agent': buildUserAgent()
+    }
   })
 
   private static logAxiosError(prefix: string, error: unknown) {
@@ -168,15 +181,22 @@ export class Modrinth {
     }
   }
 
-  static async getDependencies(project_id: string, deps: VersionDependency[]) {
+  static async getDependencies(deps: VersionDependency[]) {
     try {
-      const response = await this.api.get<IProjectDependencies>(`/project/${project_id}/dependencies`)
+      const ids = Array.from(
+        new Set(deps.map((d) => d.project_id).filter((id): id is string => !!id))
+      )
+
+      if (ids.length === 0) return []
+
+      const projects = await this.getProjects(ids)
+      const byId = new Map(projects.map((project) => [project.id, project]))
 
       const dependencies: IProject[] = []
       for (let index = 0; index < deps.length; index++) {
         const dependency = deps[index]
 
-        const project = response.data.projects.find((p) => p.id == dependency.project_id)
+        const project = dependency.project_id ? byId.get(dependency.project_id) : undefined
 
         if (!project) continue
 

@@ -34,6 +34,7 @@ export async function changeAppLanguage(lang: string): Promise<void> {
   }
 
   await i18n.changeLanguage(lang)
+  document.documentElement.lang = i18n.resolvedLanguage ?? lang
 }
 
 export default i18n

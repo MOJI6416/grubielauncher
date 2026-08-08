@@ -1,3 +1,5 @@
+import { classifyRunArguments, isMemoryArgument } from "@/shared/runArguments";
+
 export type ArgKind = "jvm" | "game";
 
 export type ArgSeverity = "error" | "warning";
@@ -9,7 +11,8 @@ export type ArgDiagnosticCode =
   | "memoryOverride"
   | "wrongTabGame"
   | "wrongTabJvm"
-  | "managed";
+  | "managed"
+  | "dangerous";
 
 export interface ArgDiagnostic {
   index: number;
@@ -94,7 +97,16 @@ const GAME_FLAGS = new Set([
   "--quickPlayPath",
 ]);
 
-const MANAGED_JVM = new Set(["-cp", "-classpath", "--class-path", "-jar"]);
+const MANAGED_JVM = new Set([
+  "-cp",
+  "-classpath",
+  "--class-path",
+  "-jar",
+  "-p",
+  "--module-path",
+  "--upgrade-module-path",
+  "--patch-module",
+]);
 
 const MANAGED_GAME = new Set([
   "--username",
@@ -117,7 +129,7 @@ const MEMORY_RE = /^-Xm[xs]/;
 
 function isMalformedJvm(token: string): boolean {
   if (/^-X(mx|ms|mn|ss)/.test(token)) {
-    return !/^-X(?:mx|ms|mn|ss)\d+[kKmMgG]?$/.test(token);
+    return !isMemoryArgument(token);
   }
 
   if (token.startsWith("-XX:")) {
@@ -153,6 +165,7 @@ export function analyzeArgs(
   const diagByIndex = new Map<number, ArgDiagnostic>();
   const gcIndices: number[] = [];
   const firstKey = new Map<string, number>();
+  const allowed = classifyRunArguments(tokens, kind);
 
   tokens.forEach((token, index) => {
     if (GC_RE.test(token)) gcIndices.push(index);
@@ -203,6 +216,11 @@ export function analyzeArgs(
       return;
     }
 
+    if (!allowed[index]) {
+      set(index, "error", "dangerous", { flag: base });
+      return;
+    }
+
     if (gcIndices.length > 1 && gcIndices.includes(index)) {
       set(index, "error", "gcConflict", { flag: token });
       return;
@@ -234,7 +252,6 @@ export const ARG_CATALOG: CatalogEntry[] = [
   { id: "fullTrace", value: "-XX:-OmitStackTraceInFastThrow", kind: "jvm" },
   { id: "ipv4", value: "-Djava.net.preferIPv4Stack=true", kind: "jvm" },
   { id: "preTouch", value: "-XX:+AlwaysPreTouch", kind: "jvm" },
-  { id: "gcLog", value: "-Xlog:gc", kind: "jvm" },
   {
     id: "forgeCerts",
     value: "-Dfml.ignoreInvalidMinecraftCertificates=true",
@@ -252,7 +269,6 @@ export const ARG_CATALOG: CatalogEntry[] = [
 export const ARG_PRESETS: PresetEntry[] = [
   { id: "utf8", kind: "jvm", args: ["-Dfile.encoding=UTF-8"] },
   { id: "fullTrace", kind: "jvm", args: ["-XX:-OmitStackTraceInFastThrow"] },
-  { id: "gcLog", kind: "jvm", args: ["-Xlog:gc"] },
   { id: "ipv4", kind: "jvm", args: ["-Djava.net.preferIPv4Stack=true"] },
   {
     id: "window720",

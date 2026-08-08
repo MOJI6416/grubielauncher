@@ -81,7 +81,10 @@ import { Loader } from "@/types/Loader";
 import { IServer } from "@/types/ServersList";
 import { LoaderVersion } from "@/types/VersionsService";
 import { FormErrorMessage } from "@/components/ui/form-error-message";
-import { checkVersionName } from "@renderer/utilities/version";
+import {
+  checkVersionName,
+  sanitizeExtraFileSegments,
+} from "@renderer/utilities/version";
 import { Version } from "@renderer/classes/Version";
 import { Mods } from "@renderer/classes/Mods";
 import { toast } from "sonner";
@@ -225,10 +228,8 @@ async function downloadModpackExtraFiles(
   const downloads: { url: string; destination: string; group: string }[] = [];
 
   for (const extra of extraFiles) {
-    const segments = extra.path
-      .split("/")
-      .filter((segment) => segment && segment !== ".");
-    if (segments.length === 0 || segments.includes("..")) continue;
+    const segments = sanitizeExtraFileSegments(extra.path);
+    if (!segments) continue;
 
     if (extra.isClient) {
       downloads.push({
@@ -601,11 +602,14 @@ export function AddVersion({
     );
   }, [isDownloadedVersion, versionName, versions]);
 
-  async function addVersion(resolvedBlockedMods: IBlockedMod[] = blockedMods) {
+  async function addVersion(
+    resolvedBlockedMods: IBlockedMod[] = blockedMods,
+    resolvedMods: ILocalProject[] = mods,
+  ) {
     let isClosed = false;
 
     try {
-      isClosed = await addVersionInternal(resolvedBlockedMods);
+      isClosed = await addVersionInternal(resolvedBlockedMods, resolvedMods);
     } catch (error) {
       console.error(error);
       const message = error instanceof Error ? error.message : String(error);
@@ -668,7 +672,10 @@ export function AddVersion({
     }
   }
 
-  async function addVersionInternal(resolvedBlockedMods: IBlockedMod[]) {
+  async function addVersionInternal(
+    resolvedBlockedMods: IBlockedMod[],
+    resolvedMods: ILocalProject[],
+  ) {
     if (
       !account ||
       !selectVersion ||
@@ -745,7 +752,7 @@ export function AddVersion({
         image: newImage,
         loader: {
           name: loader,
-          mods,
+          mods: resolvedMods,
           version: loaderVersion,
           other: tmpVersion.loader?.other || undefined,
         },
@@ -809,7 +816,7 @@ export function AddVersion({
           settings.downloadLimit,
         );
 
-        rewriteImportedLocalPaths(mods, importRoot, newVersionPath);
+        rewriteImportedLocalPaths(resolvedMods, importRoot, newVersionPath);
         await api.fs.rimraf(importRoot);
       }
 
@@ -824,10 +831,10 @@ export function AddVersion({
 
       if (selectedTab != "fromFile") {
         const hasBlockedPaths = applyBlockedModFilePaths(
-          mods,
+          resolvedMods,
           resolvedBlockedMods,
         );
-        if (hasBlockedPaths) newVersion.version.loader.mods = mods;
+        if (hasBlockedPaths) newVersion.version.loader.mods = resolvedMods;
 
         const versionMods = new Mods(settings, newVersionConf);
         await versionMods.check({
@@ -860,7 +867,7 @@ export function AddVersion({
       const message = error instanceof Error ? error.message : String(error);
       if (message !== VERSION_INSTALL_CANCELLED) {
         if (newVersion) {
-          await newVersion.delete(account, true).catch((cleanupError) => {
+          await newVersion.delete(account, false).catch((cleanupError) => {
             console.error(
               "[version:add] failed to cleanup version",
               cleanupError,
@@ -1052,7 +1059,8 @@ export function AddVersion({
     loadingType != "install" &&
     (mods.length > 0 ||
       (servers.length > 0 && !!selectVersion?.serverManager) ||
-      (runArguments.game != "" && runArguments.jvm != "") ||
+      runArguments.game != "" ||
+      runArguments.jvm != "" ||
       isPresenceOfLocalMods);
 
   const cleanupImportedTemp = useCallback(async () => {
@@ -1130,13 +1138,17 @@ export function AddVersion({
       setLoadingType("install");
 
       let blockedMods: IBlockedMod[] = [];
+      let resolvedMods: ILocalProject[] = mods;
       try {
         const newVersionPath = await api.path.join(
           paths.minecraft,
           "versions",
           versionName.trim(),
         );
-        blockedMods = await checkBlockedMods(mods, newVersionPath);
+        const result = await checkBlockedMods(mods, newVersionPath);
+        blockedMods = result.blockedMods;
+        resolvedMods = result.mods;
+        if (resolvedMods !== mods) setMods(resolvedMods);
       } catch (error) {
         console.error("[version:add] blocked mods check failed", error);
         setIsLoading(false);
@@ -1151,6 +1163,9 @@ export function AddVersion({
         setIsBlockedMods(true);
         return;
       }
+
+      addVersion(undefined, resolvedMods);
+      return;
     }
 
     addVersion();
@@ -1651,7 +1666,7 @@ export function AddVersion({
                         ""
                       )}
 
-                      {runArguments.game != "" && runArguments.jvm != "" && (
+                      {(runArguments.game != "" || runArguments.jvm != "") && (
                         <Button
                           type="button"
                           variant="secondary"

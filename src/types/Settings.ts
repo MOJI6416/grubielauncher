@@ -1,3 +1,5 @@
+import { DEFAULT_WORLD_BACKUP_KEEP, normalizeWorldBackupKeep } from './WorldBackup'
+
 export const LANGUAGES = [
   { code: 'en', label: 'English', country: 'GB' },
   { code: 'ru', label: 'Русский', country: 'RU' },
@@ -21,11 +23,14 @@ export type TSettings = {
   downloadLimit: number
   downloadSource: DownloadSource
   crashTelemetry: boolean
+  aiLogAnalysis: boolean
   sounds: boolean
   hideServerInRpc: boolean
   voicePtt: boolean
   voicePttBind: VoicePttBind | null
   voiceNoiseSuppression: boolean
+  autoWorldBackup: boolean
+  worldBackupKeep: number
 }
 
 export const DEFAULT_SETTINGS: TSettings = {
@@ -37,11 +42,14 @@ export const DEFAULT_SETTINGS: TSettings = {
   downloadLimit: 6,
   downloadSource: 'auto',
   crashTelemetry: true,
+  aiLogAnalysis: false,
   sounds: true,
-  hideServerInRpc: false,
+  hideServerInRpc: true,
   voicePtt: false,
   voicePttBind: null,
-  voiceNoiseSuppression: false
+  voiceNoiseSuppression: false,
+  autoWorldBackup: true,
+  worldBackupKeep: DEFAULT_WORLD_BACKUP_KEEP
 }
 
 export function normalizeVoicePttBind(value: unknown): VoicePttBind | null {
@@ -96,6 +104,10 @@ export function normalizeSettings(
       typeof value?.crashTelemetry === 'boolean'
         ? value.crashTelemetry
         : DEFAULT_SETTINGS.crashTelemetry,
+    aiLogAnalysis:
+      typeof value?.aiLogAnalysis === 'boolean'
+        ? value.aiLogAnalysis
+        : DEFAULT_SETTINGS.aiLogAnalysis,
     sounds: typeof value?.sounds === 'boolean' ? value.sounds : DEFAULT_SETTINGS.sounds,
     hideServerInRpc:
       typeof value?.hideServerInRpc === 'boolean'
@@ -107,6 +119,11 @@ export function normalizeSettings(
     voiceNoiseSuppression:
       typeof value?.voiceNoiseSuppression === 'boolean'
         ? value.voiceNoiseSuppression
-        : DEFAULT_SETTINGS.voiceNoiseSuppression
+        : DEFAULT_SETTINGS.voiceNoiseSuppression,
+    autoWorldBackup:
+      typeof value?.autoWorldBackup === 'boolean'
+        ? value.autoWorldBackup
+        : DEFAULT_SETTINGS.autoWorldBackup,
+    worldBackupKeep: normalizeWorldBackupKeep(value?.worldBackupKeep)
   }
 }

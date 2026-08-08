@@ -37,6 +37,7 @@ import path from "path";
 import fs from "fs-extra";
 import toml from "toml";
 import axios from "axios";
+import pLimit from "p-limit";
 import { ModManager } from "../services/ModManager";
 import { app } from "electron";
 import { createHash, randomUUID } from "crypto";
@@ -66,7 +67,29 @@ export function buildForgeCdnUrls(fileId: number, fileName: string): string[] {
   );
 }
 
+const cfCdnUrlCache = new Map<string, Promise<string | null>>();
+const cfCdnResolveLimit = pLimit(6);
+
 export async function resolveCurseForgeCdnUrl(
+  fileId: number,
+  fileName: string,
+): Promise<string | null> {
+  const cacheKey = `${fileId}:${fileName}`;
+  const cached = cfCdnUrlCache.get(cacheKey);
+  if (cached) return cached;
+
+  const pending = cfCdnResolveLimit(() =>
+    headForgeCdnCandidates(fileId, fileName),
+  );
+  cfCdnUrlCache.set(cacheKey, pending);
+
+  const resolved = await pending;
+  if (!resolved) cfCdnUrlCache.delete(cacheKey);
+
+  return resolved;
+}
+
+async function headForgeCdnCandidates(
   fileId: number,
   fileName: string,
 ): Promise<string | null> {
@@ -169,6 +192,33 @@ export async function cfModpackToModpack(
   const modpackFiles: ILocalProject[] = [];
   const missingProjects: number[] = [];
 
+  const filesById = new Map<number, IFile>();
+  for (const file of files) filesById.set(file.id, file);
+
+  const pendingFileIds = new Map<number, number>();
+  for (const f of modpack.files) {
+    if (f.required === false) continue;
+    if (filesById.has(f.fileID) || pendingFileIds.has(f.fileID)) continue;
+    if (!mods.some((m) => m.id == f.projectID)) continue;
+    pendingFileIds.set(f.fileID, f.projectID);
+  }
+
+  if (pendingFileIds.size > 0) {
+    const limit = pLimit(6);
+    const fetched = await Promise.all(
+      [...pendingFileIds].map(([fileId, projectId]) =>
+        limit(async () => ({
+          fileId,
+          file: await CurseForge.getFile(projectId, fileId),
+        })),
+      ),
+    );
+
+    for (const { fileId, file } of fetched) {
+      if (file) filesById.set(fileId, file);
+    }
+  }
+
   for (const f of modpack.files) {
     if (f.required === false) continue;
 
@@ -178,12 +228,7 @@ export async function cfModpackToModpack(
       continue;
     }
 
-    let file: IFile | null | undefined = files.find(
-      (file) => file.id == f.fileID,
-    );
-    if (!file) {
-      file = await CurseForge.getFile(mod.id, f.fileID);
-    }
+    const file: IFile | null | undefined = filesById.get(f.fileID);
 
     if (!file) {
       throw new Error(
@@ -198,13 +243,14 @@ export async function cfModpackToModpack(
       );
     }
     const projectType = mappedProjectType ?? ProjectType.MOD;
+    const websiteUrl = mod.links?.websiteUrl ?? "";
 
     modpackFiles.push({
       description: mod.summary,
       iconUrl: mod.logo?.url || "",
       title: mod.name,
       projectType,
-      url: mod.links.websiteUrl,
+      url: websiteUrl,
       provider: Provider.CURSEFORGE,
       id: mod.id.toString(),
       version: {
@@ -217,7 +263,7 @@ export async function cfModpackToModpack(
             size: file.fileLength,
             url:
               file.downloadUrl ||
-              `blocked::${mod.links.websiteUrl}/download/${file.id}`,
+              `blocked::${websiteUrl}/download/${file.id}`,
             sha1: file.hashes.find((h) => h.algo == 1)?.value || "",
             isServer: true,
             isClient: true,
@@ -291,7 +337,7 @@ export function loaderToCfLoader(loader: Loader | ServerCore): ModLoaderType {
 
 export function cfModToProject(mod: IMod): IProject {
   return {
-    url: mod.links.websiteUrl,
+    url: mod.links?.websiteUrl ?? "",
     description: mod.summary,
     iconUrl: mod.logo?.url || "",
     id: mod.id.toString(),
@@ -300,7 +346,7 @@ export function cfModToProject(mod: IMod): IProject {
     provider: Provider.CURSEFORGE,
     versions: [],
     body: "",
-    gallery: mod.screenshots.map((s) => ({
+    gallery: (mod.screenshots ?? []).map((s) => ({
       ...s,
     })),
     stats: {
@@ -421,6 +467,7 @@ export function mrVersionToVersion(
   version: ModrinthVersion,
   isServer: boolean,
   projectType: ProjectType,
+  isClient: boolean = true,
 ): IVersion {
   return {
     id: version.id,
@@ -451,10 +498,28 @@ export function mrVersionToVersion(
         filename: f.filename,
         size: f.size,
         isServer,
+        isClient,
         url: f.url,
         sha1: f.hashes.sha1,
       })),
   };
+}
+
+export function sortVersionsByDate(versions: IVersion[]): IVersion[] {
+  return versions
+    .map((version, index) => ({ version, index }))
+    .sort((a, b) => {
+      const aTime = Date.parse(a.version.datePublished ?? "");
+      const bTime = Date.parse(b.version.datePublished ?? "");
+      const aValid = Number.isFinite(aTime);
+      const bValid = Number.isFinite(bTime);
+
+      if (aValid && bValid && aTime !== bTime) return bTime - aTime;
+      if (aValid !== bValid) return aValid ? -1 : 1;
+
+      return a.index - b.index;
+    })
+    .map((entry) => entry.version);
 }
 
 export function cfRelationTypeToVersionDependency(
@@ -487,23 +552,6 @@ export function versionDependencyToCfRelationType(
   return null;
 }
 
-async function getModIcon(
-  modPath: string,
-  iconPath: string,
-  tempPath: string,
-): Promise<string | null> {
-  try {
-        const { extractFileFromArchive } = await import("./archiver");
-        await extractFileFromArchive(modPath, iconPath, tempPath);
-    const extractPath = path.join(tempPath, path.basename(iconPath));
-    const data = await fs.readFile(extractPath);
-
-    return await cacheModIcon(data, path.extname(iconPath));
-  } catch {
-    return null;
-  }
-}
-
 export async function cacheModIcon(
   data: Buffer,
   extension: string,
@@ -528,165 +576,170 @@ export function toModIconUrl(filePath: string): string {
   return `app://media/?p=${encodeURIComponent(filePath)}`;
 }
 
+const MOD_META_CACHE_LIMIT = 1000;
+const modMetaCache = new Map<string, ILocalFileInfo>();
+
+function rememberModMeta(key: string, info: ILocalFileInfo) {
+  if (modMetaCache.size >= MOD_META_CACHE_LIMIT) {
+    const oldest = modMetaCache.keys().next().value;
+    if (oldest !== undefined) modMetaCache.delete(oldest);
+  }
+
+  modMetaCache.set(key, info);
+}
+
+async function readLocalModInfo(
+  modPath: string,
+  fileName: string,
+  fileSize: number,
+  sha1: string,
+): Promise<ILocalFileInfo | null> {
+  const fallback: ILocalFileInfo = {
+    description: "",
+    filename: fileName,
+    size: fileSize,
+    id: fileName,
+    name: fileName,
+    path: modPath,
+    url: "",
+    version: null,
+    sha1,
+    icon: null,
+  };
+
+  const { openArchive, readEntryData } = await import("./archiver");
+  const archive = await openArchive(modPath).catch(() => null);
+  if (!archive) return null;
+
+  const readEntry = async (entryName: string): Promise<Buffer | null> => {
+    const entry = archive.getEntry(entryName);
+    if (!entry) return null;
+    return await readEntryData(entry).catch(() => null);
+  };
+
+  const readJsonEntry = async (entryName: string): Promise<any> => {
+    const data = await readEntry(entryName);
+    if (!data) return null;
+
+    try {
+      return JSON.parse(data.toString("utf-8"));
+    } catch {
+      return null;
+    }
+  };
+
+  const readIconEntry = async (
+    entryName: string | undefined | null,
+  ): Promise<string | null> => {
+    if (!entryName) return null;
+    const data = await readEntry(entryName);
+    if (!data) return null;
+
+    return await cacheModIcon(data, path.extname(entryName)).catch(() => null);
+  };
+
+  for (const entryName of ["fabric.mod.json", "quilt.mod.json"]) {
+    const fabricMod: IFabricMod | null = await readJsonEntry(entryName);
+    if (!fabricMod) continue;
+
+    return {
+      ...fabricMod,
+      url: fabricMod.contact?.homepage || "",
+      filename: fileName,
+      size: fileSize,
+      path: modPath,
+      sha1,
+      icon: await readIconEntry(fabricMod.icon),
+    };
+  }
+
+  for (const entryName of [
+    "META-INF/neoforge.mods.toml",
+    "META-INF/mods.toml",
+  ]) {
+    const data = await readEntry(entryName);
+    if (!data) continue;
+
+    const modsToml = parseModsTomlText(data.toString("utf-8"));
+    const mod = modsToml?.mods?.[0];
+    if (!mod) continue;
+
+    return {
+      description: mod.description,
+      filename: fileName,
+      size: fileSize,
+      id: mod.modId,
+      name: mod.displayName,
+      path: modPath,
+      url: mod.displayURL,
+      version: null,
+      sha1,
+      icon: await readIconEntry(mod.logoFile),
+    };
+  }
+
+  const packMcMeta: {
+    pack: { description: { fallback: string } | string };
+  } | null = await readJsonEntry("pack.mcmeta");
+
+  if (packMcMeta?.pack) {
+    const description =
+      typeof packMcMeta.pack.description === "object"
+        ? packMcMeta.pack.description.fallback
+        : packMcMeta.pack.description;
+
+    return {
+      ...fallback,
+      description,
+      icon:
+        (await readIconEntry("logo.png")) ?? (await readIconEntry("pack.png")),
+    };
+  }
+
+  return fallback;
+}
+
 export async function checkLocalMod(
   modPath: string,
 ): Promise<ILocalFileInfo | null> {
-  let tempPath = "";
-
   try {
-    const fileSize = (await fs.stat(modPath)).size;
-    const sha1 = await getSha1(modPath);
-
     const fileName = path.basename(modPath);
-
     if (!fileName) return null;
 
-    tempPath = path.join(
-      getLauncherPaths().cache,
-      "mod-meta",
-      `${Date.now()}-${randomUUID()}-${fileName}`,
+    const stats = await fs.stat(modPath);
+    const cacheKey = `${path.resolve(modPath)}|${stats.mtimeMs}|${stats.size}`;
+
+    const cached = modMetaCache.get(cacheKey);
+    if (cached) return cached;
+
+    const info = await readLocalModInfo(
+      modPath,
+      fileName,
+      stats.size,
+      await getSha1(modPath),
     );
-    await fs.mkdir(tempPath, { recursive: true });
+    if (!info) return null;
 
-    const parsers = [
-      {
-        files: ["fabric.mod.json", "quilt.mod.json"],
-        parse: async (
-          extractedPath: string,
-          foundFile: string,
-        ): Promise<ILocalFileInfo> => {
-          const fabricMod: IFabricMod = await fs.readJSON(
-            path.join(extractedPath, foundFile),
-          );
-          let icon: string | null = null;
-          if (fabricMod.icon) {
-            icon = await getModIcon(modPath, fabricMod.icon, tempPath);
-          }
+    rememberModMeta(cacheKey, info);
 
-          return {
-            ...fabricMod,
-            url: fabricMod.contact?.homepage || "",
-            filename: fileName,
-            size: fileSize,
-            path: modPath,
-            sha1,
-            icon,
-          };
-        },
-      },
-      {
-        files: ["META-INF/neoforge.mods.toml", "META-INF/mods.toml"],
-        parse: async (
-          extractedPath: string,
-          foundFile: string,
-        ): Promise<ILocalFileInfo> => {
-          const modsToml = await parseModsToml(
-            path.join(extractedPath, foundFile),
-          );
-          if (!modsToml) throw new Error("Invalid mods.toml");
-
-          const mod = modsToml.mods[0];
-
-          let icon: string | null = null;
-          if (mod.logoFile) {
-            icon = await getModIcon(modPath, mod.logoFile, tempPath);
-          }
-
-          return {
-            description: mod.description,
-            filename: fileName,
-            size: fileSize,
-            id: mod.modId,
-            name: mod.displayName,
-            path: modPath,
-            url: mod.displayURL,
-            version: null,
-            sha1,
-            icon,
-          };
-        },
-      },
-      {
-        files: ["pack.mcmeta"],
-        parse: async (
-          extractedPath: string,
-          foundFile: string,
-        ): Promise<ILocalFileInfo> => {
-          const packMcMeta: {
-            pack: {
-              description: { fallback: string } | string;
-            };
-          } = await fs.readJSON(path.join(extractedPath, foundFile));
-
-          const description =
-            typeof packMcMeta.pack.description === "object"
-              ? packMcMeta.pack.description.fallback
-              : packMcMeta.pack.description;
-
-          let icon = await getModIcon(modPath, "logo.png", tempPath);
-          if (!icon) icon = await getModIcon(modPath, "pack.png", tempPath);
-
-          return {
-            description,
-            filename: fileName,
-            size: fileSize,
-            id: fileName,
-            name: fileName,
-            path: modPath,
-            url: "",
-            version: null,
-            sha1,
-            icon,
-          };
-        },
-      },
-    ];
-
-    for (const parser of parsers) {
-      for (const file of parser.files) {
-                const { extractFileFromArchive } = await import("./archiver");
-                const extractedPath = await extractFileFromArchive(
-          modPath,
-          file,
-          tempPath,
-        );
-        if (extractedPath) {
-          try {
-            const info = await parser.parse(extractedPath, path.basename(file));
-            return info;
-          } catch {
-            continue;
-          }
-        }
-      }
-    }
-
-    return {
-      description: "",
-      filename: fileName,
-      size: fileSize,
-      id: fileName,
-      name: fileName,
-      path: modPath,
-      url: "",
-      version: null,
-      sha1,
-      icon: null,
-    };
+    return info;
   } catch {
     return null;
-  } finally {
-    if (tempPath && (await fs.pathExists(tempPath))) {
-      await fs.remove(tempPath).catch(() => {});
-    }
+  }
+}
+
+function parseModsTomlText(content: string): any {
+  try {
+    return toml.parse(content);
+  } catch {
+    return null;
   }
 }
 
 async function parseModsToml(filePath: string): Promise<any> {
   try {
     const fileContent = await fs.readFile(filePath, "utf-8");
-    const parsedContent = toml.parse(fileContent);
-    return parsedContent;
+    return parseModsTomlText(fileContent);
   } catch {
     return null;
   }
@@ -788,9 +841,38 @@ export interface ModDescriptor {
   hardDeps: string[];
 }
 
+const MOD_DESCRIPTOR_CACHE_LIMIT = 1000;
+const modDescriptorCache = new Map<string, ModDescriptor>();
+
+function rememberModDescriptor(key: string, descriptor: ModDescriptor) {
+  if (modDescriptorCache.size >= MOD_DESCRIPTOR_CACHE_LIMIT) {
+    const oldest = modDescriptorCache.keys().next().value;
+    if (oldest !== undefined) modDescriptorCache.delete(oldest);
+  }
+
+  modDescriptorCache.set(key, descriptor);
+}
+
 export async function getModDescriptor(
   jarPath: string,
 ): Promise<ModDescriptor> {
+  const stats = await fs.stat(jarPath).catch(() => null);
+  const cacheKey = stats
+    ? `${path.resolve(jarPath)}|${stats.mtimeMs}|${stats.size}`
+    : null;
+
+  if (cacheKey) {
+    const cached = modDescriptorCache.get(cacheKey);
+    if (cached) return { ...cached, hardDeps: [...cached.hardDeps] };
+  }
+
+  const descriptor = await readModDescriptor(jarPath);
+  if (cacheKey) rememberModDescriptor(cacheKey, descriptor);
+
+  return { ...descriptor, hardDeps: [...descriptor.hardDeps] };
+}
+
+async function readModDescriptor(jarPath: string): Promise<ModDescriptor> {
   let tempPath = "";
   const descriptor: ModDescriptor = {
     environment: null,
@@ -1760,7 +1842,10 @@ export function compareMods(a: ILocalProject[], b: ILocalProject[]): boolean {
     const v = m.version;
     const fileSig =
       v?.files
-        ?.map((f) => `${f.filename}:${f.sha1}:${f.size}`)
+        ?.map(
+          (f) =>
+            `${f.filename}:${f.sha1}:${f.size}:${f.disabled === true ? 1 : 0}`,
+        )
         .sort()
         .join("|") ?? "";
     const depSig =

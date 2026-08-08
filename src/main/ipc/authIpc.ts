@@ -9,6 +9,7 @@ import {
 } from '../services/Auth'
 import {
   startOAuthServer,
+  stopOAuthServer,
   type OAuthCallbackProvider,
 } from '../utilities/authServer'
 
@@ -86,5 +87,12 @@ export function registerAuthIpc() {
       })
     }
     return await oauthServerPromise
+  })
+
+  register('auth:stopServer', async () => {
+    await stopOAuthServer('OAuth sign-in was cancelled.')
+    oauthServerPromise = null
+    oauthServerState = null
+    return true
   })
 }

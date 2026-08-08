@@ -10,9 +10,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RunGameParams } from "@renderer/App";
-import { accountAtom, selectedVersionAtom } from "@renderer/stores/atoms";
-import { useAtom } from "jotai";
 import {
+  accountAtom,
+  consolesAtom,
+  selectedVersionAtom,
+} from "@renderer/stores/atoms";
+import { useAtom, useAtomValue } from "jotai";
+import {
+  Archive,
   BarChart3,
   Clock,
   Copy,
@@ -30,6 +35,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Datapacks } from "./Datapacks";
+import { WorldBackups } from "./WorldBackups";
 import { WorldStats } from "./WorldStats";
 import { worldDisplayStats } from "@renderer/utilities/worldStats";
 import { ILocalProject, ProjectType } from "@/types/ModManager";
@@ -60,6 +66,7 @@ export function WorldList({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [version] = useAtom(selectedVersionAtom);
   const [account] = useAtom(accountAtom);
+  const consoles = useAtomValue(consolesAtom);
   const [editValue, setEditValue] = useState<string>("");
   const [isDatapacksOpen, setIsDatapacksOpen] = useState(false);
   const [selectedWorld, setSelectedWorld] = useState<IWorld | null>(null);
@@ -74,6 +81,8 @@ export function WorldList({
   >([]);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [statsWorld, setStatsWorld] = useState<IWorld | null>(null);
+  const [backupsWorld, setBackupsWorld] = useState<IWorld | null>(null);
+  const [backupCounts, setBackupCounts] = useState<Record<string, number>>({});
 
   const { t, i18n } = useTranslation();
   const nf = (value: number) =>
@@ -157,7 +166,28 @@ export function WorldList({
     };
   }, [version, availableMods]);
 
+  const loadBackupCounts = useCallback(async () => {
+    if (!version) return;
+
+    try {
+      const counts = await api.worlds.countBackups(version.versionPath);
+      if (isMountedRef.current) setBackupCounts(counts ?? {});
+    } catch (err) {
+      console.error(err);
+    }
+  }, [version]);
+
+  useEffect(() => {
+    void loadBackupCounts();
+  }, [loadBackupCounts]);
+
   const canPlay = !!version?.isQuickPlaySingleplayer;
+
+  const isVersionRunning = consoles.consoles.some(
+    (gameConsole) =>
+      gameConsole.versionName === version?.version.name &&
+      gameConsole.status === "running",
+  );
 
   const handleDelete = useCallback(async () => {
     if (!selectedWorld) return;
@@ -193,6 +223,11 @@ export function WorldList({
             }
             if (world.isDownloaded) {
               disabledKeys.add("rename");
+              disabledKeys.add("delete");
+            }
+            if (isVersionRunning) {
+              disabledKeys.add("rename");
+              disabledKeys.add("resetIcon");
               disabledKeys.add("delete");
             }
             if (!world.icon) disabledKeys.add("resetIcon");
@@ -279,6 +314,7 @@ export function WorldList({
                             <Button
                               size="icon-sm"
                               disabled={
+                                isVersionRunning ||
                                 editValue.trim() === "" ||
                                 editValue.trim() === world.name ||
                                 worlds.some(
@@ -409,6 +445,17 @@ export function WorldList({
                               <span>{t("worlds.datapacks")}</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                              onSelect={() => setBackupsWorld(world)}
+                            >
+                              <Archive />
+                              <span>{t("worldBackups.title")}</span>
+                              {backupCounts[world.folderName] > 0 && (
+                                <span className="ml-auto pl-2 text-xs text-muted-foreground">
+                                  {backupCounts[world.folderName]}
+                                </span>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                               disabled={disabledKeys.has("rename")}
                               onSelect={() => {
                                 setEditingIndex(index);
@@ -490,6 +537,30 @@ export function WorldList({
 
       {statsWorld && (
         <WorldStats world={statsWorld} onClose={() => setStatsWorld(null)} />
+      )}
+
+      {backupsWorld && (
+        <WorldBackups
+          world={backupsWorld}
+          onClose={() => {
+            setBackupsWorld(null);
+            void loadBackupCounts();
+          }}
+          onRestored={async () => {
+            void loadBackupCounts();
+            if (!account) return;
+
+            const refreshed = await api.worlds.readWorld(
+              backupsWorld.path,
+              account,
+            );
+            if (!refreshed) return;
+
+            setWorlds(
+              worlds.map((w) => (w.path === backupsWorld.path ? refreshed : w)),
+            );
+          }}
+        />
       )}
 
       {isDatapacksOpen && version && selectedWorld && (

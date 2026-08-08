@@ -2,9 +2,12 @@ import axios from "axios";
 import { describe, expect, it } from "vitest";
 import {
   canSkipChecksumVerification,
+  dedupeDownloadItemsBy,
   isDownloadAbortError,
+  isEncodedResponse,
   isNonRetryableDownloadError,
   OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
+  readRangeValidator,
   shouldReportDownloadFailures,
   shouldThrowDownloadFailures,
 } from "./downloaderPure";
@@ -68,5 +71,38 @@ describe("downloader pure helpers", () => {
     );
     expect(canSkipChecksumVerification(sha1, sha1, "sha256", 128)).toBe(false);
     expect(canSkipChecksumVerification(sha1, sha1, "sha1", 0)).toBe(false);
+  });
+
+  it("only trusts content-length when the body is not re-encoded", () => {
+    expect(isEncodedResponse({ "content-length": "10" })).toBe(false);
+    expect(isEncodedResponse({ "content-encoding": "identity" })).toBe(false);
+    expect(isEncodedResponse({ "content-encoding": "gzip" })).toBe(true);
+    expect(isEncodedResponse(undefined)).toBe(false);
+  });
+
+  it("prefers the etag over last-modified as a range validator", () => {
+    expect(
+      readRangeValidator({
+        etag: '"abc"',
+        "last-modified": "Wed, 21 Oct 2015 07:28:00 GMT",
+      }),
+    ).toBe('"abc"');
+    expect(
+      readRangeValidator({ "last-modified": "Wed, 21 Oct 2015 07:28:00 GMT" }),
+    ).toBe("Wed, 21 Oct 2015 07:28:00 GMT");
+    expect(readRangeValidator({})).toBeNull();
+  });
+
+  it("drops duplicated destinations so two tasks never write the same file", () => {
+    const items = [
+      { url: "a", destination: "libs/a.jar" },
+      { url: "b", destination: "libs/a.jar" },
+      { url: "c", destination: "libs/c.jar" },
+    ];
+
+    expect(dedupeDownloadItemsBy(items, (destination) => destination)).toEqual([
+      { url: "a", destination: "libs/a.jar" },
+      { url: "c", destination: "libs/c.jar" },
+    ]);
   });
 });

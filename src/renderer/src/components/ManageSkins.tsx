@@ -67,8 +67,19 @@ import { toFileUrl } from "@renderer/utilities/exportVersion";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
 
 import { showFailureToast } from "@renderer/utilities/failures";
+import type { FailureInfo } from "@/shared/errors";
+import type { TFunction } from "i18next";
 const api = window.api;
+
+const skinErrorDescription =
+  (t: TFunction) =>
+  (info: FailureInfo | null): string | undefined => {
+    const code = info?.message ?? "";
+    if (!/^[a-z0-9_]+$/.test(code)) return undefined;
+    return t(`manageSkins.errors.${code}`, { defaultValue: "" }) || undefined;
+  };
 const NO_CAPE_VALUE = "__none";
+const ELYBY_SKINS_URL = "https://ely.by/skins";
 
 const ScrollingText = memo(({ text }: { text: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -299,10 +310,17 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
 
   const { t } = useTranslation();
   const isMicrosoftAccount = selectedAccount?.type === "microsoft";
-  const isRemoteSkinServiceAvailable = canOpenSkinManagerForAccount(
-    selectedAccount?.type,
-    { isInternetOnline, isBackendOnline },
-  );
+  const isElybyAccount = selectedAccount?.type === "elyby";
+  const isRemoteSkinServiceAvailable =
+    !isElybyAccount &&
+    canOpenSkinManagerForAccount(selectedAccount?.type, {
+      isInternetOnline,
+      isBackendOnline,
+    });
+
+  const handleOpenElybySkins = useCallback(() => {
+    void api.shell.openExternal(ELYBY_SKINS_URL).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (!selectedAccount) return;
@@ -328,7 +346,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
 
         const data = await api.skins.load(
           paths.launcher,
-          selectedAccount.type as "microsoft" | "discord",
+          selectedAccount.type as "microsoft" | "discord" | "elyby",
           authData.uuid || "",
           selectedAccount.nickname || "",
           accessToken,
@@ -406,7 +424,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
 
     const data = await api.skins.load(
       paths.launcher,
-      selectedAccount.type as "microsoft" | "discord",
+      selectedAccount.type as "microsoft" | "discord" | "elyby",
       authData.uuid || "",
       selectedAccount.nickname || "",
       accessToken,
@@ -459,6 +477,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
       } catch (error) {
         showFailureToast(t("manageSkins.importError"), error, {
           channels: ["skins:"],
+          fallbackDescription: skinErrorDescription(t),
         });
       }
     },
@@ -479,6 +498,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
       } catch (error) {
         showFailureToast(t("manageSkins.applyError"), error, {
           channels: ["skins:"],
+          fallbackDescription: skinErrorDescription(t),
         });
         await refreshSkins().catch(() => undefined);
       }
@@ -520,6 +540,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     } catch (error) {
       showFailureToast(t("manageSkins.applyError"), error, {
         channels: ["skins:"],
+        fallbackDescription: skinErrorDescription(t),
       });
       await refreshSkins().catch(() => undefined);
     } finally {
@@ -565,6 +586,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     } catch (error) {
       showFailureToast(t("manageSkins.applyError"), error, {
         channels: ["skins:"],
+        fallbackDescription: skinErrorDescription(t),
       });
       await refreshSkins().catch(() => undefined);
     } finally {
@@ -595,6 +617,7 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     } catch (error) {
       showFailureToast(t("manageSkins.applyError"), error, {
         channels: ["skins:"],
+        fallbackDescription: skinErrorDescription(t),
       });
       await refreshSkins().catch(() => undefined);
     } finally {
@@ -649,17 +672,25 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
       if (!pickedFile) return;
       setActionLoading("byFile");
       try {
-        await api.skins.importByFile(
+        const result = await api.skins.importByFile(
           authData.uuid,
           selectedAccount.type,
           pickedFile.path,
           skinType,
         );
+        if (!result) {
+          showFailureToast(t("manageSkins.importError"), null, {
+            channels: ["skins:"],
+            fallbackDescription: skinErrorDescription(t),
+          });
+          return;
+        }
         await refreshSkins();
         closeAddDialog();
       } catch (error) {
         showFailureToast(t("manageSkins.importError"), error, {
           channels: ["skins:"],
+          fallbackDescription: skinErrorDescription(t),
         });
       } finally {
         setActionLoading(null);
@@ -673,16 +704,24 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
     if (addSource === "nick") {
       setActionLoading("byPlayer");
       try {
-        await api.skins.importByNickname(
+        const result = await api.skins.importByNickname(
           authData.uuid,
           selectedAccount.type,
           value,
         );
+        if (!result) {
+          showFailureToast(t("manageSkins.importError"), null, {
+            channels: ["skins:"],
+            fallbackDescription: skinErrorDescription(t),
+          });
+          return;
+        }
         await refreshSkins();
         closeAddDialog();
       } catch (error) {
         showFailureToast(t("manageSkins.importError"), error, {
           channels: ["skins:"],
+          fallbackDescription: skinErrorDescription(t),
         });
       } finally {
         setActionLoading(null);
@@ -692,17 +731,25 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
 
     setActionLoading("byLink");
     try {
-      await api.skins.importByUrl(
+      const result = await api.skins.importByUrl(
         authData.uuid,
         selectedAccount.type,
         value,
         skinType,
       );
+      if (!result) {
+        showFailureToast(t("manageSkins.importError"), null, {
+          channels: ["skins:"],
+          fallbackDescription: skinErrorDescription(t),
+        });
+        return;
+      }
       await refreshSkins();
       closeAddDialog();
     } catch (error) {
       showFailureToast(t("manageSkins.importError"), error, {
         channels: ["skins:"],
+        fallbackDescription: skinErrorDescription(t),
       });
     } finally {
       setActionLoading(null);
@@ -806,7 +853,8 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
         showFailureToast(t("manageSkins.publishError"), undefined, {
           channels: ["skins:"],
           fallbackDescription: result.error
-            ? t("errors.serverCode", { code: result.error })
+            ? t(`manageSkins.errors.${result.error}`, { defaultValue: "" }) ||
+              t("errors.serverCode", { code: result.error })
             : undefined,
         });
       }
@@ -1165,6 +1213,22 @@ export function ManageSkins({ onClose }: { onClose: () => void }) {
                       )}
                       {t("manageSkins.apply")}
                     </Button>
+
+                    {isElybyAccount && (
+                      <div className="grid gap-2 rounded-lg border border-border bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground">
+                          {t("manageSkins.elybyReadOnly")}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleOpenElybySkins}
+                        >
+                          <Link className="size-4" />
+                          {t("manageSkins.elybyOpenSite")}
+                        </Button>
+                      </div>
+                    )}
 
                     {selectedAccount.type !== "plain" && (
                       <Button

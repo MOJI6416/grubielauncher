@@ -141,6 +141,34 @@ export function getAccountKey(account: Pick<ILocalAccount, "type" | "nickname">)
   return `${account.type}_${account.nickname}`;
 }
 
+type AccountIdentityShape = Pick<ILocalAccount, "type" | "nickname"> & {
+  id?: string;
+};
+
+export function getAccountIdentity(account: AccountIdentityShape): string {
+  const id = typeof account.id === "string" ? account.id.trim() : "";
+  return id || getAccountKey(account);
+}
+
+function matchesAccountIdentity(
+  account: AccountIdentityShape,
+  identity: string,
+): boolean {
+  return account.id === identity || getAccountKey(account) === identity;
+}
+
+function findAccountByIdentity<T extends AccountIdentityShape>(
+  accounts: T[],
+  identity: string | null,
+): T | undefined {
+  if (!identity) return undefined;
+
+  return (
+    accounts.find((account) => account.id === identity) ??
+    accounts.find((account) => getAccountKey(account) === identity)
+  );
+}
+
 function getRefreshSecretKey(key: string): string {
   return `${key}:refresh`;
 }
@@ -186,17 +214,30 @@ function decodeSecret(secret?: StoredSecret): string | undefined {
   }
 }
 
-async function readStoredSecrets(): Promise<StoredSecrets> {
-  try {
-    const secretsPath = getAccountSecretsPath();
-    const exists = await fs.pathExists(secretsPath);
-    if (!exists) return {};
-
-    const data = await fs.readJSON(secretsPath, "utf-8");
-    return typeof data === "object" && data ? (data as StoredSecrets) : {};
-  } catch {
-    return {};
+export class AccountsStoreReadError extends Error {
+  constructor(filePath: string, cause: unknown) {
+    super(`Failed to read ${path.basename(filePath)}`);
+    this.name = "AccountsStoreReadError";
+    this.cause = cause;
   }
+}
+
+function isMissingFileError(error: unknown): boolean {
+  return (error as NodeJS.ErrnoException | null)?.code === "ENOENT";
+}
+
+async function readStoredSecrets(): Promise<StoredSecrets> {
+  const secretsPath = getAccountSecretsPath();
+
+  let data: unknown;
+  try {
+    data = await fs.readJSON(secretsPath, "utf-8");
+  } catch (error) {
+    if (isMissingFileError(error)) return {};
+    throw new AccountsStoreReadError(secretsPath, error);
+  }
+
+  return typeof data === "object" && data ? (data as StoredSecrets) : {};
 }
 
 function normalizeConfig(data: Partial<PersistedAccountConf> | null | undefined): PersistedAccountConf {
@@ -239,12 +280,24 @@ async function writeAccountsConfig(config: IAccountConf): Promise<void> {
     return persisted;
   });
 
+  const requestedLastPlayed = config.lastPlayed ?? null;
+  const selectedIndex = requestedLastPlayed
+    ? config.accounts.findIndex(
+        (account, index) =>
+          matchesAccountIdentity(persistedAccounts[index], requestedLastPlayed) ||
+          matchesAccountIdentity(account, requestedLastPlayed),
+      )
+    : -1;
+
   await writeJsonAtomic(getAccountSecretsPath(), nextSecrets, { mode: 0o600 });
   await writeJsonAtomic(
     getAccountsPath(),
     {
       accounts: persistedAccounts,
-      lastPlayed: config.lastPlayed ?? null,
+      lastPlayed:
+        selectedIndex >= 0
+          ? getAccountIdentity(persistedAccounts[selectedIndex])
+          : requestedLastPlayed,
     } satisfies PersistedAccountConf,
     { mode: 0o600 },
   );
@@ -259,100 +312,101 @@ export function readAccountsConfig(): Promise<IAccountConf | null> {
 }
 
 async function readAccountsConfigInner(): Promise<IAccountConf | null> {
+  const accountsPath = getAccountsPath();
+
+  let data: any;
   try {
-    const accountsPath = getAccountsPath();
-    const exists = await fs.pathExists(accountsPath);
-    if (!exists) return null;
+    data = await fs.readJSON(accountsPath, "utf-8");
+  } catch (error) {
+    if (isMissingFileError(error)) return null;
+    throw new AccountsStoreReadError(accountsPath, error);
+  }
 
-    const data = await fs.readJSON(accountsPath, "utf-8");
-    const hasLegacyShape = Array.isArray(data?.accounts)
-      ? data.accounts.some(hasLegacyAccountShape)
-      : false;
-    const raw = normalizeConfig(data);
-    const secrets = await readStoredSecrets();
+  const hasLegacyShape = Array.isArray(data?.accounts)
+    ? data.accounts.some(hasLegacyAccountShape)
+    : false;
+  const raw = normalizeConfig(data);
+  const secrets = await readStoredSecrets();
 
-    let shouldMigrate = false;
-    const hydratedAccounts = raw.accounts.map((account) => {
-      const legacyKey = getAccountKey(account);
-      const idKey = account.id;
+  let shouldMigrate = false;
+  const hydratedAccounts = raw.accounts.map((account) => {
+    const legacyKey = getAccountKey(account);
+    const idKey = account.id;
 
-      const idSecret = idKey ? secrets[idKey] : undefined;
-      const legacySecret = secrets[legacyKey];
-      const idRefreshSecret = idKey
-        ? secrets[getRefreshSecretKey(idKey)]
-        : undefined;
-      const legacyRefreshSecret = secrets[getRefreshSecretKey(legacyKey)];
+    const idSecret = idKey ? secrets[idKey] : undefined;
+    const legacySecret = secrets[legacyKey];
+    const idRefreshSecret = idKey
+      ? secrets[getRefreshSecretKey(idKey)]
+      : undefined;
+    const legacyRefreshSecret = secrets[getRefreshSecretKey(legacyKey)];
 
-      let accessToken = decodeSecret(idSecret) ?? decodeSecret(legacySecret);
-      let refreshToken =
-        decodeSecret(idRefreshSecret) ?? decodeSecret(legacyRefreshSecret);
-
-      if (
-        !accessToken &&
-        typeof account.accessToken === "string" &&
-        account.accessToken.trim() !== ""
-      ) {
-        accessToken = account.accessToken;
-        shouldMigrate = true;
-      }
-
-      if (accessToken && !idSecret && legacySecret) shouldMigrate = true;
-
-      if (
-        !refreshToken &&
-        typeof account.refreshToken === "string" &&
-        account.refreshToken.trim() !== ""
-      ) {
-        refreshToken = account.refreshToken;
-        shouldMigrate = true;
-      }
-
-      if (!refreshToken) {
-        refreshToken = decodeLegacyRefreshToken(accessToken);
-        if (refreshToken) shouldMigrate = true;
-      }
-
-      if (refreshToken && !idRefreshSecret && legacyRefreshSecret) {
-        shouldMigrate = true;
-      }
-
-      const resolvedId = decodeSubject(accessToken) || idKey || undefined;
-      if (resolvedId && resolvedId !== idKey) shouldMigrate = true;
-
-      const hydrated: ILocalAccount = { ...account };
-      if (resolvedId) hydrated.id = resolvedId;
-      if (accessToken) hydrated.accessToken = accessToken;
-      if (refreshToken) hydrated.refreshToken = refreshToken;
-
-      return hydrated;
-    });
-
-    const config: IAccountConf = {
-      accounts: hydratedAccounts,
-      lastPlayed: raw.lastPlayed,
-    };
+    let accessToken = decodeSecret(idSecret) ?? decodeSecret(legacySecret);
+    let refreshToken =
+      decodeSecret(idRefreshSecret) ?? decodeSecret(legacyRefreshSecret);
 
     if (
-      shouldMigrate ||
-      hasLegacyShape ||
-      raw.accounts.some(
-        (account) =>
-          typeof account.accessToken === "string" &&
-          account.accessToken.trim() !== "",
-      ) ||
-      raw.accounts.some(
-        (account) =>
-          typeof account.refreshToken === "string" &&
-          account.refreshToken.trim() !== "",
-      )
+      !accessToken &&
+      typeof account.accessToken === "string" &&
+      account.accessToken.trim() !== ""
     ) {
-      await writeAccountsConfig(config);
+      accessToken = account.accessToken;
+      shouldMigrate = true;
     }
 
-    return config;
-  } catch {
-    return null;
+    if (accessToken && !idSecret && legacySecret) shouldMigrate = true;
+
+    if (
+      !refreshToken &&
+      typeof account.refreshToken === "string" &&
+      account.refreshToken.trim() !== ""
+    ) {
+      refreshToken = account.refreshToken;
+      shouldMigrate = true;
+    }
+
+    if (!refreshToken) {
+      refreshToken = decodeLegacyRefreshToken(accessToken);
+      if (refreshToken) shouldMigrate = true;
+    }
+
+    if (refreshToken && !idRefreshSecret && legacyRefreshSecret) {
+      shouldMigrate = true;
+    }
+
+    const resolvedId = decodeSubject(accessToken) || idKey || undefined;
+    if (resolvedId && resolvedId !== idKey) shouldMigrate = true;
+
+    const hydrated: ILocalAccount = { ...account };
+    if (resolvedId) hydrated.id = resolvedId;
+    if (accessToken) hydrated.accessToken = accessToken;
+    if (refreshToken) hydrated.refreshToken = refreshToken;
+
+    return hydrated;
+  });
+
+  const config: IAccountConf = {
+    accounts: hydratedAccounts,
+    lastPlayed: raw.lastPlayed,
+  };
+
+  if (
+    shouldMigrate ||
+    hasLegacyShape ||
+    raw.accounts.some(
+      (account) =>
+        typeof account.accessToken === "string" &&
+        account.accessToken.trim() !== "",
+    ) ||
+    raw.accounts.some(
+      (account) =>
+        typeof account.refreshToken === "string" &&
+        account.refreshToken.trim() !== "",
+    )
+  ) {
+    await writeAccountsConfig(config);
   }
+
+  return config;
 }
 
 function getTokenExpiry(token?: string): number {
@@ -426,19 +480,27 @@ export function mutateAccountsConfig(
 }
 
 export async function loadAccountsConfig(): Promise<IAccountConf> {
-  return (await readAccountsConfig()) ?? createEmptyConfig();
+  try {
+    const config = (await readAccountsConfig()) ?? createEmptyConfig();
+    const selected = findAccountByIdentity(config.accounts, config.lastPlayed);
+    if (!selected) return config;
+
+    return { ...config, lastPlayed: getAccountKey(selected) };
+  } catch (error) {
+    console.error(
+      "Accounts store is unreadable, reporting an empty list without touching it:",
+      error instanceof Error ? error.message : error,
+    );
+    return createEmptyConfig();
+  }
 }
 
 export async function getSelectedAccount(): Promise<ILocalAccount | null> {
-  const config = await readAccountsConfig();
+  const config = await readAccountsConfig().catch(() => null);
   if (!config?.accounts?.length) return null;
 
-  if (config.lastPlayed) {
-    const selected = config.accounts.find(
-      (account) => getAccountKey(account) === config.lastPlayed,
-    );
-    if (selected) return selected;
-  }
+  const selected = findAccountByIdentity(config.accounts, config.lastPlayed);
+  if (selected) return selected;
 
   return config.accounts[0] ?? null;
 }

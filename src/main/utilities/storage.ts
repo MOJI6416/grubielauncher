@@ -10,6 +10,13 @@ import type {
   StorageVersionEntry,
 } from "@/types/Storage";
 import { getLauncherPaths } from "./other";
+import {
+  cleanupOrphanBackups,
+  DISPLACED_DIR_NAME,
+  getBackupsDir,
+  getOrphanBackupsStats,
+  getPreservedCopiesSize,
+} from "./worldBackups";
 
 const APP_CACHE_DIR_NAMES = [
   "Cache",
@@ -93,22 +100,44 @@ export async function getStorageBreakdown(): Promise<StorageBreakdown> {
   const versions: StorageVersionEntry[] = [];
   let versionsTotal = 0;
   for (const name of versionDirs) {
-    const size = await dirSize(path.join(versionsPath, name));
+    const preservedPath = path.join(
+      versionsPath,
+      name,
+      "saves",
+      DISPLACED_DIR_NAME,
+    );
+    const size = await dirSize(
+      path.join(versionsPath, name),
+      new Set([preservedPath]),
+    );
     versions.push({ name, size });
     versionsTotal += size;
   }
   versions.sort((a, b) => b.size - a.size);
 
-  const [assets, libraries, java, appData] = await Promise.all([
-    dirSize(assetsPath),
-    dirSize(librariesPath),
-    dirSize(dirs.java),
-    sumSizes(getAppCacheDirs()),
-  ]);
+  const backupsPath = getBackupsDir();
+
+  const [assets, libraries, java, backupsDirSize, preservedSize, appData] =
+    await Promise.all([
+      dirSize(assetsPath),
+      dirSize(librariesPath),
+      dirSize(dirs.java),
+      dirSize(backupsPath),
+      getPreservedCopiesSize(),
+      sumSizes(getAppCacheDirs()),
+    ]);
+
+  const backups = backupsDirSize + preservedSize;
 
   const other = await dirSize(
     rootPath,
-    new Set([assetsPath, librariesPath, versionsPath, dirs.java]),
+    new Set([
+      assetsPath,
+      librariesPath,
+      versionsPath,
+      dirs.java,
+      backupsPath,
+    ]),
   );
 
   const categories: StorageCategory[] = [
@@ -116,6 +145,7 @@ export async function getStorageBreakdown(): Promise<StorageBreakdown> {
     { id: "libraries", size: libraries },
     { id: "assets", size: assets },
     { id: "java", size: java },
+    { id: "backups", size: backups },
     { id: "appData", size: appData },
     { id: "other", size: other },
   ];
@@ -129,7 +159,8 @@ export async function getStorageBreakdown(): Promise<StorageBreakdown> {
   const cleanup = await computeCleanup(versionsPath, librariesPath, dirs.java);
 
   return {
-    total: versionsTotal + libraries + assets + java + appData + other,
+    total:
+      versionsTotal + libraries + assets + java + backups + appData + other,
     rootPath,
     categories,
     versions,
@@ -343,6 +374,9 @@ async function computeCleanup(
 
   const unusedJava = await computeUnusedJava(javaDir, scan.majors, hasVersions);
   const orphanLibs = await computeOrphanLibraries(librariesPath, scan);
+  const orphanBackups = hasVersions
+    ? await getOrphanBackupsStats()
+    : { count: 0, size: 0 };
 
   return {
     java: { count: unusedJava.length, size: await sumSizes(unusedJava) },
@@ -351,12 +385,18 @@ async function computeCleanup(
       size: await sumSizes(orphanLibs),
       safe: scan.allParsed && hasVersions,
     },
+    backups: orphanBackups,
   };
 }
 
 export async function cleanupStorage(
   kind: StorageCleanupKind,
 ): Promise<StorageClearResult> {
+  if (kind === "backups") {
+    const { size } = await cleanupOrphanBackups();
+    return { freed: size };
+  }
+
   const dirs = getLauncherPaths();
   const versionsPath = path.join(dirs.minecraft, "versions");
   const librariesPath = path.join(dirs.minecraft, "libraries");

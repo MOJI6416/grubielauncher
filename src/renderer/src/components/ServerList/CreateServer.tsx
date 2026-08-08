@@ -101,7 +101,7 @@ export function CreateServer({
       </DialogHeader>
 
       <form
-        className="grid gap-4 px-5 py-"
+        className="grid gap-4 px-5 py-4"
         onSubmit={(event) => {
           event.preventDefault();
           createServer();

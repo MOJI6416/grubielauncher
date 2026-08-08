@@ -1,5 +1,6 @@
 import {
   IFilterGroup,
+  ILocalFile,
   ILocalProject,
   IProject,
   ProjectType,
@@ -17,6 +18,7 @@ import { LoaderLabel } from "../Loaders";
 import {
   type Dispatch,
   type SetStateAction,
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -51,6 +53,9 @@ import {
   CircleHelp,
   Heart,
   History,
+  Monitor,
+  MonitorCog,
+  Server,
   Calendar,
   ScrollText,
   FileText,
@@ -140,6 +145,7 @@ import { toFileUrl } from "@renderer/utilities/exportVersion";
 import { toast } from "sonner";
 
 import { showFailureToast } from "@renderer/utilities/failures";
+import { AI_PROMPT_MAX_CHARS } from "@/shared/config";
 const api = window.api;
 
 enum LoadingType {
@@ -306,7 +312,34 @@ function isLocalProjectItem(
   return "version" in project;
 }
 
-function ProjectDetailsPane({
+function isDisabledLocalProject(project: Pick<ILocalProject, "version">) {
+  return project.version?.files.some((file) => file.disabled === true) === true;
+}
+
+function applyDisabledState(
+  files: ILocalFile[],
+  disabled: boolean,
+): ILocalFile[] {
+  if (!disabled) return files;
+  return files.map((file) => ({ ...file, disabled: true }));
+}
+
+type ModSide = "client" | "server" | "both";
+
+function getModSide(project: Pick<ILocalProject, "version">): ModSide {
+  const files = project.version?.files ?? [];
+  if (files.length === 0) return "both";
+
+  const client = files.some((file) => file.isClient !== false);
+  const server = files.some((file) => file.isServer);
+
+  if (client && !server) return "client";
+  if (!client && server) return "server";
+
+  return "both";
+}
+
+const ProjectDetailsPane = memo(function ProjectDetailsPane({
   project,
   notFoundTitle,
   changelog,
@@ -398,6 +431,99 @@ function ProjectDetailsPane({
       </TabsContent>
     </Tabs>
   );
+});
+
+function SearchField({
+  containerRef,
+  debounceRef,
+  queryRef,
+  resetToken,
+  disabled,
+  isSearching,
+  placeholder,
+  onSearch,
+}: {
+  containerRef: React.Ref<HTMLDivElement>;
+  debounceRef: { current: ReturnType<typeof setTimeout> | null };
+  queryRef: { current: string };
+  resetToken: number;
+  disabled: boolean;
+  isSearching: boolean;
+  placeholder: string;
+  onSearch: (value: string) => Promise<void>;
+}) {
+  const [value, setValue] = useState(queryRef.current);
+
+  useEffect(() => {
+    setValue(queryRef.current);
+  }, [resetToken, queryRef]);
+
+  const clearDebounce = () => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+  };
+
+  const commit = async (next: string) => {
+    clearDebounce();
+    setValue(next);
+    queryRef.current = next;
+    await onSearch(next);
+  };
+
+  return (
+    <div ref={containerRef} className="relative min-w-0 flex-1 basis-48">
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        disabled={disabled}
+        className="pr-16 pl-9"
+        placeholder={placeholder}
+        value={value}
+        onChange={(event) => {
+          const next = event.target.value;
+          setValue(next);
+          queryRef.current = next;
+
+          clearDebounce();
+          debounceRef.current = setTimeout(async () => {
+            await onSearch(next);
+          }, 500);
+        }}
+        onKeyDown={async (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            await commit(value);
+          }
+
+          if (event.key === "Escape" && value) {
+            event.preventDefault();
+            await commit("");
+          }
+        }}
+      />
+      <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+        {isSearching && (
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+        )}
+
+        {value && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="size-6 text-muted-foreground hover:text-foreground"
+            disabled={disabled}
+            onClick={async () => {
+              await commit("");
+            }}
+          >
+            <X className="size-3.5" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 async function asyncPool<T, R>(
@@ -454,7 +580,8 @@ export function ModManager({
   setPendingRemovedLocalProjects?: Dispatch<SetStateAction<ILocalProject[]>>;
   running?: boolean;
 }) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const searchQueryRef = useRef("");
+  const [searchResetToken, setSearchResetToken] = useState(0);
   const [browser, setBrowser] = useState<(IProject | ILocalProject)[]>([]);
   const [provider, setProvider] = useState<Provider>(Provider.CURSEFORGE);
   const [isLoading, setLoading] = useState(false);
@@ -501,6 +628,8 @@ export function ModManager({
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isAutoCheckingUpdates, setIsAutoCheckingUpdates] = useState(false);
   const [isLocalDropActive, setIsLocalDropActive] = useState(false);
+  const [localUpdatesOnly, setLocalUpdatesOnly] = useState(false);
+  const [localClientOnly, setLocalClientOnly] = useState(false);
   const [
     internalPendingRemovedLocalProjects,
     setInternalPendingRemovedLocalProjects,
@@ -548,6 +677,46 @@ export function ModManager({
     );
   }, []);
 
+  const isModDisabled = useCallback(
+    async (mod: ILocalProject): Promise<boolean> => {
+      if (isDisabledLocalProject(mod)) return true;
+
+      const filename = mod.version?.files?.[0]?.filename;
+      const versionPath = selectedVersion?.versionPath;
+      if (!filename || !versionPath) return false;
+
+      try {
+        const folderName = await api.modManager.ptToFolder(mod.projectType);
+        const disabledPath = await api.path.join(
+          versionPath,
+          folderName,
+          `${filename}.disabled`,
+        );
+
+        return Boolean(await api.fs.pathExists(disabledPath));
+      } catch {
+        return false;
+      }
+    },
+    [selectedVersion],
+  );
+
+  const markModDisabled = (target: ILocalProject, disabled: boolean) => {
+    setMods(
+      mods.map((mod) =>
+        mod.version && isSameLocalProject(mod, target)
+          ? {
+              ...mod,
+              version: {
+                ...mod.version,
+                files: mod.version.files.map((file) => ({ ...file, disabled })),
+              },
+            }
+          : mod,
+      ),
+    );
+  };
+
   const defaultSort = useMemo(() => sortValues[0] ?? "", [sortValues]);
 
   const installedIndex = useMemo(() => buildInstalledIndex(mods), [mods]);
@@ -582,11 +751,24 @@ export function ModManager({
   const translationCacheRef = useRef<
     Map<string, { description?: string | null; body?: string | null }>
   >(new Map());
+  const originalDescriptionsRef = useRef<Map<string, string>>(new Map());
+
+  const getOriginalDescription = useCallback((item: IProject) => {
+    return (
+      originalDescriptionsRef.current.get(`${item.provider}:${item.id}`) ??
+      item.description
+    );
+  }, []);
   const clearDebounce = () => {
     if (searchDebounceRef.current) {
       clearTimeout(searchDebounceRef.current);
       searchDebounceRef.current = null;
     }
+  };
+
+  const resetSearchQuery = () => {
+    searchQueryRef.current = "";
+    setSearchResetToken((token) => token + 1);
   };
 
   useEffect(() => {
@@ -676,6 +858,7 @@ export function ModManager({
     filter,
     isLocal,
     offset,
+    localFilters,
   }: {
     version: IVersion | undefined;
     loader: Loader | undefined;
@@ -686,6 +869,7 @@ export function ModManager({
     filter: string[];
     isLocal: boolean;
     offset: number;
+    localFilters?: { updatesOnly: boolean; clientOnly: boolean };
   }) {
     const reqId = ++requestIdRef.current;
 
@@ -718,6 +902,26 @@ export function ModManager({
               p.title.toLowerCase().includes(q) ||
               p.description.toLowerCase().includes(q),
           );
+        }
+
+        const activeLocalFilters = localFilters ?? {
+          updatesOnly: localUpdatesOnly,
+          clientOnly: localClientOnly,
+        };
+
+        if (activeLocalFilters.updatesOnly) {
+          const updatable = new Set(
+            updateMods.map(
+              (item) => `${item.project.provider}:${item.project.id}`,
+            ),
+          );
+          filtered = filtered.filter((p) =>
+            updatable.has(`${p.provider}:${p.id}`),
+          );
+        }
+
+        if (activeLocalFilters.clientOnly) {
+          filtered = filtered.filter((p) => getModSide(p) === "client");
         }
 
         const total = filtered.length;
@@ -958,6 +1162,7 @@ export function ModManager({
               filename: f.filename,
               size: f.size,
               isServer: f.isServer,
+              isClient: f.isClient,
               url: f.url,
               sha1: f.sha1,
             })),
@@ -1053,7 +1258,16 @@ export function ModManager({
               m.title.toLowerCase() == info.name.toLowerCase() ||
               m.id == info.id ||
               m.version?.files.find((f) => f.sha1 == info.sha1),
-          ),
+          ) ||
+            localProjects.find(
+              (p) =>
+                p.status !== "invalid" &&
+                (p.project.title.toLowerCase() == info.name.toLowerCase() ||
+                  p.project.id == info.id ||
+                  p.project.versions[0]?.files.some(
+                    (f) => f.sha1 == info.sha1,
+                  )),
+            ),
         );
 
         const ver: ModManagerVersion = {
@@ -1150,6 +1364,29 @@ export function ModManager({
     });
   };
 
+  const applyLocalFilters = async (next: {
+    updatesOnly: boolean;
+    clientOnly: boolean;
+  }) => {
+    clearDebounce();
+    setLocalUpdatesOnly(next.updatesOnly);
+    setLocalClientOnly(next.clientOnly);
+    setOffset(0);
+
+    await search({
+      version,
+      loader,
+      query: searchQueryRef.current,
+      provider,
+      projectType,
+      sort,
+      filter,
+      isLocal,
+      offset: 0,
+      localFilters: next,
+    });
+  };
+
   const selectProvider = async (newProvider: Provider) => {
     if (newProvider === provider) return;
     clearDebounce();
@@ -1181,7 +1418,7 @@ export function ModManager({
     await search({
       version,
       loader,
-      query: searchQuery,
+      query: searchQueryRef.current,
       provider: newProvider,
       projectType: nextProjectType,
       sort: nextSort,
@@ -1328,7 +1565,7 @@ export function ModManager({
                             await search({
                               version,
                               loader,
-                              query: searchQuery,
+                              query: searchQueryRef.current,
                               provider,
                               projectType: value,
                               sort,
@@ -1381,7 +1618,7 @@ export function ModManager({
                             await search({
                               loader,
                               version: ver,
-                              query: searchQuery,
+                              query: searchQueryRef.current,
                               provider,
                               projectType,
                               sort,
@@ -1407,7 +1644,7 @@ export function ModManager({
                             await search({
                               version,
                               loader: l,
-                              query: searchQuery,
+                              query: searchQueryRef.current,
                               provider,
                               projectType,
                               sort,
@@ -1444,60 +1681,16 @@ export function ModManager({
                   )}
 
                   {(provider != Provider.LOCAL || isLocal) && (
-                    <div
-                      ref={searchRef}
-                      className="relative min-w-0 flex-1 basis-48"
-                    >
-                      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        disabled={isSearchInputDisabled}
-                        className="pr-16 pl-9"
-                        placeholder={t("browser.search")}
-                        value={searchQuery}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setSearchQuery(value);
-
-                          clearDebounce();
-                          searchDebounceRef.current = setTimeout(async () => {
-                            await runSearch(value, 0);
-                          }, 500);
-                        }}
-                        onKeyDown={async (event) => {
-                          if (event.key === "Enter") {
-                            event.preventDefault();
-                            await runSearch(searchQuery, 0);
-                          }
-
-                          if (event.key === "Escape" && searchQuery) {
-                            event.preventDefault();
-                            setSearchQuery("");
-                            await runSearch("", 0);
-                          }
-                        }}
-                      />
-                      <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
-                        {isSearchLoading && (
-                          <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                        )}
-
-                        {searchQuery && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            className="size-6 text-muted-foreground hover:text-foreground"
-                            disabled={isSearchInputDisabled}
-                            onClick={async () => {
-                              setSearchQuery("");
-                              await runSearch("", 0);
-                            }}
-                          >
-                            <X className="size-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
+                    <SearchField
+                      containerRef={searchRef}
+                      debounceRef={searchDebounceRef}
+                      queryRef={searchQueryRef}
+                      resetToken={searchResetToken}
+                      disabled={isSearchInputDisabled}
+                      isSearching={isSearchLoading}
+                      placeholder={t("browser.search")}
+                      onSearch={(value) => runSearch(value, 0)}
+                    />
                   )}
 
                   {!isLocal && provider != Provider.LOCAL && (
@@ -1516,7 +1709,7 @@ export function ModManager({
                             await search({
                               version,
                               loader,
-                              query: searchQuery,
+                              query: searchQueryRef.current,
                               provider,
                               projectType,
                               sort: value,
@@ -1605,7 +1798,7 @@ export function ModManager({
                                         await search({
                                           version,
                                           loader,
-                                          query: searchQuery,
+                                          query: searchQueryRef.current,
                                           provider,
                                           projectType,
                                           sort,
@@ -1652,7 +1845,7 @@ export function ModManager({
                       disabled={isLoading}
                       onClick={async () => {
                         clearDebounce();
-                        setSearchQuery("");
+                        resetSearchQuery();
                         setSort(defaultSort);
                         setFilter([]);
                         setOffset(0);
@@ -1690,7 +1883,7 @@ export function ModManager({
                           const nextChecked = checked === true;
 
                           setLocal(nextChecked);
-                          setSearchQuery("");
+                          resetSearchQuery();
                           setSort(defaultSort);
                           setFilter([]);
                           setOffset(0);
@@ -1733,6 +1926,44 @@ export function ModManager({
                           {t("modManager.local")}
                         </p>
                       </div>
+                    </div>
+
+                    <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                      {!isDownloadedVersion && isOwnerVersion && (
+                        <Button
+                          size="sm"
+                          variant={localUpdatesOnly ? "default" : "outline"}
+                          disabled={isLoading}
+                          onClick={() =>
+                            applyLocalFilters({
+                              updatesOnly: !localUpdatesOnly,
+                              clientOnly: localClientOnly,
+                            })
+                          }
+                        >
+                          <CircleArrowDown className="size-3.5" />
+                          <span className="min-w-0 truncate">
+                            {t("modManager.availableUpdate")}
+                          </span>
+                        </Button>
+                      )}
+
+                      <Button
+                        size="sm"
+                        variant={localClientOnly ? "default" : "outline"}
+                        disabled={isLoading}
+                        onClick={() =>
+                          applyLocalFilters({
+                            updatesOnly: localUpdatesOnly,
+                            clientOnly: !localClientOnly,
+                          })
+                        }
+                      >
+                        <Monitor className="size-3.5" />
+                        <span className="min-w-0 truncate">
+                          {t("modManager.sides.clientOnly")}
+                        </span>
+                      </Button>
                     </div>
 
                     {!isDownloadedVersion &&
@@ -1883,7 +2114,7 @@ export function ModManager({
                       {browser.map((item, index) => {
                         const isInstalled = findInstalled(item);
                         const isPendingRemoved =
-                          item.provider == Provider.LOCAL &&
+                          isLocal &&
                           !isInstalled &&
                           pendingRemovedLocalProjects.some((project) =>
                             isSameLocalProject(project, item),
@@ -1998,30 +2229,54 @@ export function ModManager({
                                         {t("modManager.deleted")}
                                       </Badge>
                                     ) : isLocal ? (
-                                      <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                                        {item.provider ==
-                                        Provider.CURSEFORGE ? (
-                                          <>
-                                            <SiCurseforge className="size-3.5 shrink-0" />
-                                            CurseForge
-                                          </>
-                                        ) : item.provider ==
-                                          Provider.MODRINTH ? (
-                                          <>
-                                            <SiModrinth className="size-3.5 shrink-0" />
-                                            Modrinth
-                                          </>
-                                        ) : item.provider == Provider.LOCAL ? (
-                                          <>
-                                            <FileBox className="size-3.5 shrink-0" />
-                                            {t("modManager.local")}
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Globe className="size-3.5 shrink-0" />
-                                            {t("modManager.other")}
-                                          </>
-                                        )}
+                                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                        <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                                          {item.provider ==
+                                          Provider.CURSEFORGE ? (
+                                            <>
+                                              <SiCurseforge className="size-3.5 shrink-0" />
+                                              CurseForge
+                                            </>
+                                          ) : item.provider ==
+                                            Provider.MODRINTH ? (
+                                            <>
+                                              <SiModrinth className="size-3.5 shrink-0" />
+                                              Modrinth
+                                            </>
+                                          ) : item.provider ==
+                                            Provider.LOCAL ? (
+                                            <>
+                                              <FileBox className="size-3.5 shrink-0" />
+                                              {t("modManager.local")}
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Globe className="size-3.5 shrink-0" />
+                                              {t("modManager.other")}
+                                            </>
+                                          )}
+                                        </div>
+
+                                        {isLocalProjectItem(item) &&
+                                          (() => {
+                                            const side = getModSide(item);
+
+                                            return (
+                                              <Badge
+                                                variant="outline"
+                                                className="h-5 shrink-0 gap-1 px-1.5 text-[0.65rem] font-medium"
+                                              >
+                                                {side == "client" ? (
+                                                  <Monitor className="size-2.5" />
+                                                ) : side == "server" ? (
+                                                  <Server className="size-2.5" />
+                                                ) : (
+                                                  <MonitorCog className="size-2.5" />
+                                                )}
+                                                {t(`modManager.sides.${side}`)}
+                                              </Badge>
+                                            );
+                                          })()}
                                       </div>
                                     ) : null}
                                   </div>
@@ -2029,7 +2284,6 @@ export function ModManager({
 
                                 <div className="flex shrink-0 items-center gap-1">
                                   {isPendingRemoved &&
-                                  item.provider == Provider.LOCAL &&
                                   isLocalProjectItem(item) ? (
                                     <Button
                                       size="icon-lg"
@@ -2277,6 +2531,12 @@ export function ModManager({
                                             versionPath={
                                               selectedVersion.versionPath
                                             }
+                                            onToggle={(disabled) =>
+                                              markModDisabled(
+                                                isInstalled,
+                                                disabled,
+                                              )
+                                            }
                                           />
                                         )}
 
@@ -2285,10 +2545,7 @@ export function ModManager({
                                           size="icon"
                                           disabled={isLoading}
                                           onClick={async () => {
-                                            if (
-                                              item.provider == Provider.LOCAL &&
-                                              isInstalled
-                                            ) {
+                                            if (isInstalled) {
                                               rememberRemovedLocalProject(
                                                 isInstalled,
                                               );
@@ -2296,7 +2553,9 @@ export function ModManager({
 
                                             const newMods = [...mods];
                                             const idx = newMods.findIndex(
-                                              (p) => p.id == item.id,
+                                              (p) =>
+                                                `${p.provider}:${p.id}` ==
+                                                `${item.provider}:${item.id}`,
                                             );
                                             if (idx !== -1)
                                               newMods.splice(idx, 1);
@@ -2339,7 +2598,7 @@ export function ModManager({
                           variant="outline"
                           size="sm"
                           disabled={isLoading}
-                          onClick={() => runSearch(searchQuery, offset)}
+                          onClick={() => runSearch(searchQueryRef.current, offset)}
                         >
                           {t("common.retry")}
                         </Button>
@@ -2397,7 +2656,7 @@ export function ModManager({
                               await search({
                                 version,
                                 loader,
-                                query: searchQuery,
+                                query: searchQueryRef.current,
                                 provider,
                                 projectType,
                                 sort,
@@ -2617,10 +2876,29 @@ export function ModManager({
                                           const lang = settings.lang;
                                           const token =
                                             account?.accessToken || "";
+                                          const originalKey = `${project.provider}:${project.id}`;
+                                          if (
+                                            !originalDescriptionsRef.current.has(
+                                              originalKey,
+                                            )
+                                          )
+                                            originalDescriptionsRef.current.set(
+                                              originalKey,
+                                              project.description,
+                                            );
                                           const translatePrompt = (
                                             text: string,
-                                          ) =>
-                                            `Translate the following text to ${lang}, keep markdown formatting:\n\n${text}`;
+                                          ) => {
+                                            const head = `Translate the following text to ${lang}, keep markdown formatting:\n\n`;
+                                            return (
+                                              head +
+                                              text.slice(
+                                                0,
+                                                AI_PROMPT_MAX_CHARS -
+                                                  head.length,
+                                              )
+                                            );
+                                          };
 
                                           const descKey = `${project.provider}-${project.id}-${lang}`;
                                           const changelogKey = selectVersion?.id
@@ -2699,7 +2977,30 @@ export function ModManager({
                                               : undefined,
                                           ]);
 
-                                          if (needDesc) {
+                                          const translationFailed =
+                                            (needDesc &&
+                                              !!project.description &&
+                                              !translatedDescription) ||
+                                            (needChangelog &&
+                                              !translatedChangelog);
+
+                                          if (translationFailed) {
+                                            showFailureToast(
+                                              t("modManager.translateError"),
+                                              undefined,
+                                              {
+                                                channels: [
+                                                  "backend:aiComplete",
+                                                ],
+                                              },
+                                            );
+                                          }
+
+                                          if (
+                                            needDesc &&
+                                            (translatedDescription ||
+                                              translatedBody)
+                                          ) {
                                             translationCacheRef.current.set(
                                               descKey,
                                               {
@@ -2729,6 +3030,7 @@ export function ModManager({
 
                                           if (
                                             needChangelog &&
+                                            translatedChangelog &&
                                             changelogKey &&
                                             selectVersion
                                           ) {
@@ -3089,7 +3391,8 @@ export function ModManager({
 
                                           const newProject: ILocalProject = {
                                             title: project.title,
-                                            description: project.description,
+                                            description:
+                                              getOriginalDescription(project),
                                             projectType: project.projectType,
                                             iconUrl: project.iconUrl,
                                             url: project.url,
@@ -3102,6 +3405,7 @@ export function ModManager({
                                                   filename: f.filename,
                                                   size: f.size,
                                                   isServer: f.isServer,
+                                                  isClient: f.isClient,
                                                   url: f.url,
                                                   sha1: f.sha1,
                                                   localPath:
@@ -3116,6 +3420,9 @@ export function ModManager({
                                                   (d) => ({
                                                     title:
                                                       d.project?.title || "",
+                                                    projectId: d.projectId
+                                                      ? String(d.projectId)
+                                                      : undefined,
                                                     relationType:
                                                       d.relationType,
                                                   }),
@@ -3124,14 +3431,7 @@ export function ModManager({
                                           };
 
                                           setMods([...mods, newProject]);
-                                          if (
-                                            newProject.provider ==
-                                            Provider.LOCAL
-                                          ) {
-                                            forgetRemovedLocalProject(
-                                              newProject,
-                                            );
-                                          }
+                                          forgetRemovedLocalProject(newProject);
                                           setInstalledProject(newProject);
 
                                           setLoading(false);
@@ -3168,14 +3468,9 @@ export function ModManager({
                                                   );
 
                                                   for (const removed of deletionPlan.remove) {
-                                                    if (
-                                                      removed.provider ==
-                                                      Provider.LOCAL
-                                                    ) {
-                                                      rememberRemovedLocalProject(
-                                                        removed,
-                                                      );
-                                                    }
+                                                    rememberRemovedLocalProject(
+                                                      removed,
+                                                    );
                                                   }
 
                                                   setMods(
@@ -3265,15 +3560,21 @@ export function ModManager({
                                                 installedProject.version?.id ||
                                               isLoading
                                             }
-                                            onClick={() => {
+                                            onClick={async () => {
                                               if (!selectVersion) return;
 
                                               const newMods = [...mods];
+                                              const disabled =
+                                                await isModDisabled(
+                                                  installedProject,
+                                                );
 
                                               const updated: ILocalProject = {
                                                 title: project.title,
                                                 description:
-                                                  project.description,
+                                                  getOriginalDescription(
+                                                    project,
+                                                  ),
                                                 projectType:
                                                   project.projectType,
                                                 iconUrl: project.iconUrl,
@@ -3282,22 +3583,28 @@ export function ModManager({
                                                 id: project.id,
                                                 version: {
                                                   id: selectVersion.id,
-                                                  files:
+                                                  files: applyDisabledState(
                                                     selectVersion.files.map(
                                                       (f) => ({
                                                         filename: f.filename,
                                                         size: f.size,
                                                         url: f.url,
                                                         isServer: f.isServer,
+                                                        isClient: f.isClient,
                                                         sha1: f.sha1,
                                                       }),
                                                     ),
+                                                    disabled,
+                                                  ),
                                                   dependencies:
                                                     selectVersion.dependencies.map(
                                                       (d) => ({
                                                         title:
                                                           d.project?.title ||
                                                           "",
+                                                        projectId: d.projectId
+                                                          ? String(d.projectId)
+                                                          : undefined,
                                                         relationType:
                                                           d.relationType,
                                                       }),
@@ -3306,7 +3613,9 @@ export function ModManager({
                                               };
 
                                               const idx = newMods.findIndex(
-                                                (p) => p.id == project.id,
+                                                (p) =>
+                                                  `${p.provider}:${p.id}` ==
+                                                  `${project.provider}:${project.id}`,
                                               );
                                               if (idx !== -1)
                                                 newMods.splice(idx, 1, updated);
@@ -3850,12 +4159,18 @@ export function ModManager({
             setIsUpdateModalOpen(false);
             setUpdateMods([]);
           }}
-          updateProjects={(projects: IUpdateProject[]) => {
+          updateProjects={async (projects: IUpdateProject[]) => {
             const updateMods: ILocalProject[] = structuredClone(mods);
 
             for (const m of updateMods) {
-              const update = projects.find((p) => p.project.id == m.id);
+              const update = projects.find(
+                (p) =>
+                  `${p.project.provider}:${p.project.id}` ==
+                  `${m.provider}:${m.id}`,
+              );
               if (!update) continue;
+
+              const disabled = await isModDisabled(m);
 
               m.version = {
                 dependencies: update.version.dependencies.map((d) => ({
@@ -3863,7 +4178,7 @@ export function ModManager({
                   projectId: d.projectId ? String(d.projectId) : undefined,
                   relationType: d.relationType,
                 })),
-                files: update.version.files,
+                files: applyDisabledState(update.version.files, disabled),
                 id: update.version.id,
               };
             }

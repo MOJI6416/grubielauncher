@@ -14,6 +14,9 @@ import {
   accountsAtom,
   addVersionImportPathAtom,
   addVersionModalAtom,
+  aiCrashKey,
+  aiCrashOpenKeyAtom,
+  aiCrashesAtom,
   authDataAtom,
   consolesAtom,
   fileDragOverAtom,
@@ -77,6 +80,7 @@ import { startCallSound, stopCallSound } from "./utilities/voiceCallSounds";
 import { VoiceCallOverlay } from "./components/Voice/VoiceCallOverlay";
 import { evaluateAchievements } from "@renderer/utilities/achievements";
 import { fetchMergedAchievementStats } from "@renderer/utilities/achievementStats";
+import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import { IServer } from "@/types/ServersList";
 import { IConsole, IConsoleMessage } from "@/types/Console";
 import {
@@ -122,6 +126,7 @@ import { LazyDialogFallback } from "./components/LazyDialogFallback";
 import { LazyAddVersion } from "./components/LazyAddVersion";
 import { Onboarding } from "./components/Onboarding";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
+
 import { getWhatsNewDecision, markWhatsNewSeen } from "./utilities/whatsNew";
 import {
   readLauncherState,
@@ -154,11 +159,16 @@ const loadWhatsNewModal = () =>
   import("./components/WhatsNewModal").then((module) => ({
     default: module.WhatsNewModal,
   }));
+const loadAiCrashAnalysis = () =>
+  import("./components/Modals/AiCrashAnalysis").then((module) => ({
+    default: module.AiCrashAnalysis,
+  }));
 
 const LazyFriends = lazyWithPreload(loadFriends);
 const LazyNewsFeed = lazyWithPreload(loadNewsFeed);
 const LazyBlockedMods = lazyWithPreload(loadBlockedMods);
 const LazyWhatsNewModal = lazyWithPreload(loadWhatsNewModal);
+const LazyAiCrashAnalysis = lazyWithPreload(loadAiCrashAnalysis);
 
 export interface RunGameParams {
   skipUpdate?: boolean;
@@ -175,12 +185,6 @@ export interface JoinFriendWorldParams {
   hostNickname: string;
   slug?: string;
   address?: string;
-}
-
-function useLatestRef<T>(value: T) {
-  const ref = useRef(value);
-  ref.current = value;
-  return ref;
 }
 
 function useEventCallback<T extends (...args: any[]) => any>(fn: T): T {
@@ -272,6 +276,8 @@ function App() {
     version: string;
     release: ILauncherReleaseNote | null;
   } | null>(null);
+  const [aiCrashes, setAiCrashes] = useAtom(aiCrashesAtom);
+  const [aiCrashKeyOpen, setAiCrashKeyOpen] = useAtom(aiCrashOpenKeyAtom);
 
   const onlineSocket = useRef<Socket | null>(null);
   const pendingLaunchRef = useRef<RunGameParams | null>(null);
@@ -922,13 +928,16 @@ function App() {
           await api.fs.ensure(versionsPath);
         }
 
-        if (!cancelled) setVersionsLoaded(true);
-
         if (cancelled) return;
 
         await checkWhatsNewAfterInit(p.launcher, settingsData.lang);
       } catch (err) {
         console.error("Init error:", err);
+        if (!cancelled) {
+          showFailureToast(tRef.current("app.initError"), err);
+        }
+      } finally {
+        if (!cancelled) setVersionsLoaded(true);
       }
     };
 
@@ -1168,6 +1177,53 @@ function App() {
       },
     );
 
+    const unsubscribeCrashUnresolved = api.events.onCrashUnresolved(
+      (payload) => {
+        const title = tRef.current("crash.title", {
+          version: payload.versionName,
+        });
+        const details = tRef.current("aiCrash.unresolvedDetails");
+        const key = aiCrashKey(payload.versionName, payload.instance);
+
+        setAiCrashes((prev) => ({
+          ...prev,
+          [key]: { crash: payload, analysis: null, time: Date.now() },
+        }));
+
+        recordError(title, details, key);
+
+        playSound("error");
+        toast.error(title, {
+          description: details,
+          duration: 30000,
+          action: {
+            label: tRef.current("aiCrash.analyzeAction"),
+            onClick: () => setAiCrashKeyOpen(key),
+          },
+        });
+      },
+    );
+
+    const unsubscribeServerSyncNotice = api.events.onServerSyncNotice(
+      (notice) => {
+        if (!notice) return;
+
+        const entries = (notice.entries ?? []).join(", ");
+
+        if (notice.level === "info") {
+          toast.info(tRef.current("serverManager.syncAfterRestart"), {
+            description: entries || undefined,
+          });
+          return;
+        }
+
+        playSound("error");
+        toast.error(tRef.current("serverManager.syncFailed"), {
+          description: [entries, notice.reason].filter(Boolean).join(" — "),
+        });
+      },
+    );
+
     const unsubscribeFriendUpdate = api.events.onFriendUpdate((data) => {
       setOwnPresence((prev) => applyPresenceUpdate(prev, data));
       friendSocketRef.current?.emit("friendUpdate", { ...data });
@@ -1186,6 +1242,8 @@ function App() {
       unsubscribeUpdateFailed();
       unsubscribeIpcError();
       unsubscribeCrashAnalysis();
+      unsubscribeCrashUnresolved();
+      unsubscribeServerSyncNotice();
       unsubscribeFriendUpdate();
     };
   }, [
@@ -1281,7 +1339,9 @@ function App() {
       if (data.type == "recipient") {
         const options: Electron.NotificationConstructorOptions = {
           title: tRef.current("friends.newRequest"),
-          body: `${data.user.nickname} ${tRef.current("friends.sentRequest")}`,
+          body: tRef.current("friends.sentRequest", {
+            nickname: data.user.nickname,
+          }),
           icon: data.user.image || "",
         };
         await api.other.notify(options);
@@ -1307,14 +1367,18 @@ function App() {
         if (type == "accept") {
           const options: Electron.NotificationConstructorOptions = {
             title: tRef.current("friends.requestAccepted"),
-            body: `${user.nickname} ${tRef.current("friends.acceptedRequest")}`,
+            body: tRef.current("friends.acceptedRequest", {
+              nickname: user.nickname,
+            }),
             icon: user.image || "",
           };
           await api.other.notify(options);
         } else {
           const options: Electron.NotificationConstructorOptions = {
             title: tRef.current("friends.requestDeclined"),
-            body: `${user.nickname} ${tRef.current("friends.declidedRequest")}`,
+            body: tRef.current("friends.declinedRequest", {
+              nickname: user.nickname,
+            }),
             icon: user.image || "",
           };
           await api.other.notify(options);
@@ -1334,7 +1398,9 @@ function App() {
 
       const options: Electron.NotificationConstructorOptions = {
         title: tRef.current("friends.newMessage"),
-        body: `${user.nickname} ${tRef.current("friends.sentMessage")}`,
+        body: tRef.current("friends.sentMessage", {
+          nickname: user.nickname,
+        }),
         icon: user.image || "",
       };
 
@@ -1343,7 +1409,9 @@ function App() {
         friendId: user._id,
       });
       toast(tRef.current("friends.newMessage"), {
-        description: `${user.nickname} ${tRef.current("friends.sentMessage")}`,
+        description: tRef.current("friends.sentMessage", {
+          nickname: user.nickname,
+        }),
       });
     };
 
@@ -1550,7 +1618,9 @@ function App() {
 
       await api.other.notify({
         title: tRef.current("voiceCall.notificationTitle"),
-        body: `${data.caller.nickname} ${tRef.current("voiceCall.notificationBody")}`,
+        body: tRef.current("voiceCall.notificationBody", {
+          nickname: data.caller.nickname,
+        }),
         icon: data.caller.image || "",
       });
     };
@@ -2103,10 +2173,12 @@ function App() {
             modpackData.data,
           );
 
-          const bMods = await checkBlockedMods(
-            version.version.loader.mods,
-            version.versionPath,
-          );
+          const { blockedMods: bMods, mods: resolvedMods } =
+            await checkBlockedMods(
+              version.version.loader.mods,
+              version.versionPath,
+            );
+          version.version.loader.mods = resolvedMods;
           if (bMods.length > 0) {
             preload(LazyBlockedMods.preload);
             setBlockedMods(bMods);
@@ -2334,7 +2406,7 @@ function App() {
 
         <Suspense
           fallback={
-            <div className="mx-4 mb-3 h-[6.75rem] rounded-xl border bg-card" />
+            <div className="mx-4 mb-3 h-[3.25rem] rounded-xl border bg-card" />
           }
         >
           <LazyNewsFeed />
@@ -2381,10 +2453,12 @@ function App() {
 
                     setSelectedVersion(updated);
 
-                    const bMods: IBlockedMod[] = await checkBlockedMods(
-                      updated.version.loader.mods,
-                      updated.versionPath,
-                    );
+                    const { blockedMods: bMods, mods: resolvedMods } =
+                      await checkBlockedMods(
+                        updated.version.loader.mods,
+                        updated.versionPath,
+                      );
+                    updated.version.loader.mods = resolvedMods;
                     if (bMods.length > 0) {
                       preload(LazyBlockedMods.preload);
                       setBlockedMods(bMods);
@@ -2544,6 +2618,16 @@ function App() {
               release={whatsNew.release}
               version={whatsNew.version}
               onClose={dismissWhatsNew}
+            />
+          </Suspense>
+        )}
+
+        {aiCrashKeyOpen && aiCrashes[aiCrashKeyOpen] && (
+          <Suspense fallback={<LazyDialogFallback variant="form" />}>
+            <LazyAiCrashAnalysis
+              key={aiCrashes[aiCrashKeyOpen].time}
+              crashKey={aiCrashKeyOpen}
+              onClose={() => setAiCrashKeyOpen(null)}
             />
           </Suspense>
         )}

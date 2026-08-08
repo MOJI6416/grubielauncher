@@ -115,20 +115,6 @@ export function CreateServer({
         },
       };
 
-      await api.file.download(
-        [
-          {
-            url: selectedServerCore.url,
-            destination: await api.path.join(
-              serverPath,
-              selectedServerCore.core + ".jar",
-            ),
-            group: "server",
-          },
-        ],
-        settings.downloadLimit,
-      );
-
       const serverGame = new ServerGame(
         account,
         settings.downloadLimit,

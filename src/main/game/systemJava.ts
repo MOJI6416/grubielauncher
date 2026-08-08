@@ -55,6 +55,48 @@ async function probeMajor(binary: string): Promise<number | null> {
   })
 }
 
+async function probeJavaHome(binary: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    execFile(
+      binary,
+      ['-XshowSettings:properties', '-version'],
+      { timeout: VERSION_TIMEOUT_MS, windowsHide: true },
+      (error, stdout, stderr) => {
+        if (error) return resolve(null)
+
+        const match = `${stderr}${stdout}`.match(/^\s*java\.home\s*=\s*(.+?)\s*$/m)
+        resolve(match ? match[1] : null)
+      }
+    )
+  })
+}
+
+async function resolveJavaOnPath(
+  major: number,
+  platform: IPlatform
+): Promise<ISystemJava | null> {
+  const home = await probeJavaHome('java')
+  if (!home) return null
+
+  const root = path.resolve(home)
+  const ext = platform.os === 'windows' ? '.exe' : ''
+  const server = path.join(root, 'bin', 'java' + ext)
+  const client = path.join(
+    root,
+    'bin',
+    (platform.os === 'windows' ? 'javaw' : 'java') + ext
+  )
+
+  if (!(await fs.pathExists(server))) return null
+
+  return {
+    root,
+    client: (await fs.pathExists(client)) ? client : server,
+    server,
+    major
+  }
+}
+
 async function candidateRoots(platform: IPlatform): Promise<string[]> {
   const roots: string[] = []
 
@@ -94,9 +136,7 @@ export async function findSystemJava(
   }
 
   const onPath = await probeMajor('java')
-  if (onPath === major) {
-    return { root: '', client: 'java', server: 'java', major: onPath }
-  }
+  if (onPath === major) return await resolveJavaOnPath(major, platform)
 
   return null
 }

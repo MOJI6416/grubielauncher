@@ -98,7 +98,7 @@ export function Onboarding() {
     <Dialog
       open
       onOpenChange={(open) => {
-        if (!open) finish();
+        if (!open) setDismissed(true);
       }}
     >
       <DialogContent className="sm:max-w-md">
@@ -118,7 +118,7 @@ export function Onboarding() {
             >
               <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted text-muted-foreground">
                 {step.done ? (
-                  <CheckCircle2 className="size-4 text-emerald-500" />
+                  <CheckCircle2 className="size-4 text-success" />
                 ) : (
                   step.icon
                 )}

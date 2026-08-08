@@ -25,8 +25,14 @@ import {
 import { cn } from "@/lib/utils";
 import { IConsole, IConsoleMessage } from "@/types/Console";
 import { RunGameParams } from "@renderer/App";
-import { consolesAtom, versionsAtom } from "@renderer/stores/atoms";
-import { useAtom } from "jotai";
+import {
+  aiCrashKey,
+  aiCrashOpenKeyAtom,
+  aiCrashesAtom,
+  consolesAtom,
+  versionsAtom,
+} from "@renderer/stores/atoms";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Input } from "@/components/ui/input";
 import {
   AlertTriangle,
@@ -35,6 +41,7 @@ import {
   Copy,
   RotateCcw,
   Search,
+  Sparkles,
   Square,
   SquareChevronRight,
   Terminal,
@@ -161,6 +168,8 @@ export function Console({
 }) {
   const [consoles, setConsoles] = useAtom(consolesAtom);
   const [versions] = useAtom(versionsAtom);
+  const aiCrashes = useAtomValue(aiCrashesAtom);
+  const setAiCrashOpenKey = useSetAtom(aiCrashOpenKeyAtom);
   const [selectedInstance, setSelectedInstance] = useState<IInstance | null>(
     null,
   );
@@ -232,8 +241,7 @@ export function Console({
             : "info";
         if (type !== consoleFilter) return false;
       }
-      if (query && !message.message.toLowerCase().includes(query))
-        return false;
+      if (query && !message.message.toLowerCase().includes(query)) return false;
       return true;
     });
   }, [selectedConsole, consoleFilter, consoleSearch]);
@@ -308,7 +316,7 @@ export function Console({
 
   async function copyConsoleLogs() {
     if (!selectedConsole) return;
-    const text = selectedConsole.messages.map((m) => m.message).join("");
+    const text = selectedConsole.messages.map((m) => m.message).join("\n");
     if (!text) return;
     await api.clipboard.writeText(text);
     toast(t("common.copied"));
@@ -317,6 +325,12 @@ export function Console({
   const selectedStatus = selectedConsole
     ? getStatusMeta(selectedConsole.status, t)
     : null;
+
+  const selectedCrash = selectedConsole
+    ? aiCrashes[
+        aiCrashKey(selectedConsole.versionName, selectedConsole.instance)
+      ]
+    : undefined;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -393,7 +407,9 @@ export function Console({
                             <div className="flex min-w-0 items-center gap-2">
                               {versionItem?.version.image ? (
                                 <img
-                                  src={resolveLocalImage(versionItem.version.image)}
+                                  src={resolveLocalImage(
+                                    versionItem.version.image,
+                                  )}
                                   alt={inst.versionName}
                                   width={32}
                                   height={32}
@@ -487,6 +503,28 @@ export function Console({
 
                 {selectedConsole && (
                   <div className="flex shrink-0 items-center gap-1.5">
+                    {selectedCrash && (
+                      <Button
+                        size="sm"
+                        variant={
+                          selectedCrash.analysis ? "secondary" : "default"
+                        }
+                        type="button"
+                        onClick={() =>
+                          setAiCrashOpenKey(
+                            aiCrashKey(
+                              selectedConsole.versionName,
+                              selectedConsole.instance,
+                            ),
+                          )
+                        }
+                      >
+                        <Sparkles />
+                        {selectedCrash.analysis
+                          ? t("aiCrash.showResult")
+                          : t("aiCrash.analyzeAction")}
+                      </Button>
+                    )}
                     {selectedConsole.messages.length > 0 && (
                       <Button
                         size="sm"

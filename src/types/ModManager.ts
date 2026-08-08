@@ -81,6 +81,7 @@ export interface ILocalFile {
   localPath?: string;
   isServer: boolean;
   isClient?: boolean;
+  disabled?: boolean;
 }
 
 export interface IFilterGroup {

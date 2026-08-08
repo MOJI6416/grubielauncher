@@ -4,6 +4,7 @@ import { useAtom } from "jotai";
 import {
   AlertTriangle,
   AppWindow,
+  Archive,
   Boxes,
   Coffee,
   FolderOpen,
@@ -32,11 +33,12 @@ import {
 import { isRunningAtom, pathsAtom } from "@renderer/stores/atoms";
 import { formatBytes } from "@renderer/utilities/file";
 import type { StorageBreakdown, StorageCategoryId } from "@/types/Storage";
+import type { BlessedPathInfo } from "@/types/AllowedPath";
 
 import { showFailureToast } from "@renderer/utilities/failures";
 const api = window.api;
 
-type CleanupAction = "cache" | "java" | "libraries";
+type CleanupAction = "cache" | "java" | "libraries" | "backups";
 
 const CATEGORY_META: Record<
   StorageCategoryId,
@@ -46,6 +48,7 @@ const CATEGORY_META: Record<
   assets: { icon: ImageIcon, color: "bg-chart-1" },
   java: { icon: Coffee, color: "bg-chart-2" },
   libraries: { icon: Library, color: "bg-chart-3" },
+  backups: { icon: Archive, color: "bg-chart-5" },
   appData: { icon: AppWindow, color: "bg-chart-4" },
   other: { icon: MoreHorizontal, color: "bg-muted-foreground" },
 };
@@ -64,6 +67,7 @@ export function StoragePanel() {
     null,
   );
   const [showAllVersions, setShowAllVersions] = useState(false);
+  const [allowedPaths, setAllowedPaths] = useState<BlessedPathInfo[]>([]);
   const mounted = useRef(true);
 
   const sizes = [
@@ -92,13 +96,28 @@ export function StoragePanel() {
     }
   }, []);
 
+  const loadAllowedPaths = useCallback(async () => {
+    try {
+      const entries = await api.allowedPaths.list();
+      if (mounted.current) setAllowedPaths(entries ?? []);
+    } catch {
+      if (mounted.current) setAllowedPaths([]);
+    }
+  }, []);
+
   useEffect(() => {
     mounted.current = true;
     void load();
+    void loadAllowedPaths();
     return () => {
       mounted.current = false;
     };
-  }, [load]);
+  }, [load, loadAllowedPaths]);
+
+  const revokeAllowedPath = async (target: string) => {
+    await api.allowedPaths.revoke(target);
+    await loadAllowedPaths();
+  };
 
   const rootPath = data?.rootPath || paths.launcher;
   const total = data?.total ?? 0;
@@ -190,6 +209,11 @@ export function StoragePanel() {
       title: t("settings.storage.cleanupLibrariesConfirmTitle"),
       body: t("settings.storage.cleanupLibrariesConfirmBody"),
       confirm: t("settings.storage.cleanupLibraries"),
+    },
+    backups: {
+      title: t("settings.storage.cleanupBackupsConfirmTitle"),
+      body: t("settings.storage.cleanupBackupsConfirmBody"),
+      confirm: t("settings.storage.cleanupBackups"),
     },
   };
 
@@ -391,6 +415,48 @@ export function StoragePanel() {
                 cleanup.libraries.size,
               )
             : null}
+          {cleanup && cleanup.backups.count > 0
+            ? cleanupButton(
+                "backups",
+                Archive,
+                t("settings.storage.cleanupBackups"),
+                cleanup.backups.size,
+              )
+            : null}
+        </div>
+      )}
+
+      {allowedPaths.length > 0 && (
+        <div className="space-y-1 border-t pt-3">
+          <div className="space-y-0.5">
+            <p className="text-xs font-medium text-muted-foreground">
+              {t("settings.allowedPaths.title")}
+            </p>
+            <p className="text-xs text-muted-foreground/70">
+              {t("settings.allowedPaths.description")}
+            </p>
+          </div>
+          {allowedPaths.map((entry) => (
+            <div
+              key={entry.path}
+              className="flex items-center justify-between gap-3 py-0.5"
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <FolderOpen className="size-3.5 shrink-0 text-muted-foreground" />
+                <span className="truncate text-sm" title={entry.path}>
+                  {entry.path}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0"
+                onClick={() => void revokeAllowedPath(entry.path)}
+              >
+                {t("settings.allowedPaths.revoke")}
+              </Button>
+            </div>
+          ))}
         </div>
       )}
 

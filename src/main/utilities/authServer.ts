@@ -2,7 +2,7 @@ import { createServer, Server, ServerResponse } from "http";
 
 let serverInstance: Server | null = null;
 let pendingReject: ((err: Error) => void) | null = null;
-const OAUTH_TIMEOUT_MS = 2 * 60 * 1000;
+const OAUTH_TIMEOUT_MS = 10 * 60 * 1000;
 const OAUTH_PORT = 53213;
 
 export type OAuthCallbackProvider =

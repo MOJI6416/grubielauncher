@@ -5,7 +5,11 @@ import { errorLogAtom } from "../stores/atoms";
 const api = window.api;
 const ERROR_LOG_LIMIT = 50;
 
-export function recordError(title: string, details?: string) {
+export function recordError(
+  title: string,
+  details?: string,
+  crashKey?: string,
+) {
   const store = getDefaultStore();
   store.set(errorLogAtom, (prev) =>
     [
@@ -14,6 +18,7 @@ export function recordError(title: string, details?: string) {
         time: Date.now(),
         title,
         details,
+        crashKey,
       },
       ...prev,
     ].slice(0, ERROR_LOG_LIMIT),

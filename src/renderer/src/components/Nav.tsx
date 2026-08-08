@@ -6,11 +6,9 @@ import {
   ListPlus,
   Loader2,
   Play,
-  ServerOff,
   SquareChevronRight,
   Settings as LSettings,
   Wifi,
-  WifiOff,
 } from "lucide-react";
 import { ErrorLog } from "./ErrorLog";
 import { memo, Suspense, useEffect, useMemo, useState } from "react";
@@ -38,7 +36,6 @@ import {
   serverAtom,
   storageModalAtom,
 } from "@renderer/stores/atoms";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -57,7 +54,6 @@ import {
 import {
   canUseBackendFeature,
   canUseInternetFeature,
-  getConnectivityProblems,
 } from "@renderer/utilities/connectivity";
 import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 
@@ -84,29 +80,6 @@ const loadSettings = () =>
 const LazyConsole = lazyWithPreload(loadConsole);
 const LazyLanShareModal = lazyWithPreload(loadLanShareModal);
 const LazySettings = lazyWithPreload(loadSettings);
-
-function ConnectivityBadge({
-  label,
-  Icon,
-}: {
-  label: string;
-  Icon: React.ElementType;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Badge
-          variant="destructive"
-          className="h-7 w-7 justify-center rounded-md p-0"
-          aria-label={label}
-        >
-          <Icon className="size-3.5" />
-        </Badge>
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  );
-}
 
 function NavComponent({
   runGame,
@@ -138,7 +111,9 @@ function NavComponent({
   const [errorLog] = useAtom(errorLogAtom);
   const [errorLogSeen, setErrorLogSeen] = useAtom(errorLogSeenAtom);
   const [isErrorLogOpen, setIsErrorLogOpen] = useState(false);
-  const unseenErrors = errorLog.filter((entry) => entry.time > errorLogSeen).length;
+  const unseenErrors = errorLog.filter(
+    (entry) => entry.time > errorLogSeen,
+  ).length;
   const [isShareOpen, setIsShareOpen] = useAtom(isShareModalOpenAtom);
   const consoleMetas = useAtomValue(consolesMetaAtom);
   const [isFriendsConnected] = useAtom(isFriendsConnectedAtom);
@@ -147,10 +122,6 @@ function NavComponent({
   const connectivity = useMemo(
     () => ({ isInternetOnline, isBackendOnline }),
     [isBackendOnline, isInternetOnline],
-  );
-  const connectivityProblems = useMemo(
-    () => getConnectivityProblems(connectivity),
-    [connectivity],
   );
   const canUseInternet = canUseInternetFeature(connectivity);
   const canUseBackend = canUseBackendFeature(connectivity);
@@ -223,22 +194,6 @@ function NavComponent({
           <div className="flex min-h-16 w-full items-center gap-4 rounded-xl border border-border bg-card px-4 py-2.5 text-card-foreground shadow-sm">
             <div className="flex min-w-0 shrink items-center gap-3">
               <Accounts />
-              {connectivityProblems.length > 0 && (
-                <div className="flex items-center gap-1">
-                  {connectivityProblems.includes("internet") && (
-                    <ConnectivityBadge
-                      label={t("app.internetUnavailable")}
-                      Icon={WifiOff}
-                    />
-                  )}
-                  {connectivityProblems.includes("backend") && (
-                    <ConnectivityBadge
-                      label={t("app.backendUnavailable")}
-                      Icon={ServerOff}
-                    />
-                  )}
-                </div>
-              )}
             </div>
 
             <div className="ml-auto flex min-w-0 shrink-0 items-center gap-3">
@@ -404,7 +359,6 @@ function NavComponent({
                   <LSettings />
                   {t("settings.title")}
                 </Button>
-
               </div>
             </div>
           </div>

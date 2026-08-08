@@ -5,7 +5,7 @@ import fs from 'fs'
 import { PNG } from 'pngjs'
 import { blit } from './skinRender'
 
-const MAX_SKIN_FILE_BYTES = 512 * 1024
+export const MAX_SKIN_FILE_BYTES = 512 * 1024
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 
 export interface PngDimensions {

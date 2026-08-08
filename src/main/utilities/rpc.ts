@@ -4,6 +4,7 @@ import { RpcAccountContext, RpcRendererContext } from '@/types/Rpc'
 import { ShareState } from '@/types/Share'
 import * as DiscordRPC from 'discord-rpc'
 import { gameRuntime } from './runtime'
+import { linkDiscordIpcSocket } from './discordIpcSocket'
 
 type SupportedRpcLanguage = 'en' | 'ru' | 'uk'
 
@@ -271,6 +272,7 @@ export class RPC {
       this.reconnectAttempts = 0
       this.reconnectGaveUp = false
       this.lastPresenceSignature = ''
+      this.headImageRejected = false
       void this.queuePresenceSync()
     })
 
@@ -307,6 +309,7 @@ export class RPC {
     this.isConnecting = true
 
     try {
+      await linkDiscordIpcSocket()
       await this.client.login({ clientId: DISCORD_CLIENT_ID })
     } catch (error) {
       if (!this.isDisposed) {
@@ -463,11 +466,9 @@ export class RPC {
 
     const runningGame = this.getMostRecentRunningGame()
     if (runningGame) {
-      const publicAddress =
-        this.publicShare?.key === runningGame.key ? this.publicShare.publicAddress : undefined
-      const serverAddress = this.hideServer
-        ? undefined
-        : publicAddress || runningGame.serverAddress
+      const isPublicShareHost = this.publicShare?.key === runningGame.key
+      const serverAddress =
+        this.hideServer || isPublicShareHost ? undefined : runningGame.serverAddress
 
       activity.details = truncateText(runningGame.versionName) || locale.details.launcher
       activity.state = truncateText(

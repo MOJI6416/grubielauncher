@@ -6,6 +6,49 @@ const sweptDirs = new Set<string>();
 
 const TMP_SUFFIX_PATTERN = /\.tmp-\d+-\d+$/;
 const STALE_TMP_AGE_MS = 5 * 60 * 1000;
+const RENAME_RETRY_DELAYS_MS = [10, 25, 50, 100];
+const RENAME_RETRY_CODES = new Set(["EPERM", "EACCES", "EBUSY"]);
+
+function isRetryableRenameError(error: unknown, attempt: number): boolean {
+  if (attempt >= RENAME_RETRY_DELAYS_MS.length) return false;
+  const code = (error as NodeJS.ErrnoException | null)?.code;
+  return typeof code === "string" && RENAME_RETRY_CODES.has(code);
+}
+
+async function replaceByRename(source: string, target: string): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await fs.rename(source, target);
+      return;
+    } catch (error) {
+      if (!isRetryableRenameError(error, attempt)) throw error;
+      await new Promise((resolve) =>
+        setTimeout(resolve, RENAME_RETRY_DELAYS_MS[attempt]),
+      );
+    }
+  }
+}
+
+function sleepSync(milliseconds: number): void {
+  Atomics.wait(
+    new Int32Array(new SharedArrayBuffer(4)),
+    0,
+    0,
+    milliseconds,
+  );
+}
+
+function replaceByRenameSync(source: string, target: string): void {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      fs.renameSync(source, target);
+      return;
+    } catch (error) {
+      if (!isRetryableRenameError(error, attempt)) throw error;
+      sleepSync(RENAME_RETRY_DELAYS_MS[attempt]);
+    }
+  }
+}
 
 function buildTmpPath(filePath: string): string {
   return `${filePath}.tmp-${process.pid}-${Date.now()}`;
@@ -52,7 +95,7 @@ async function writeJsonOnce(
     } finally {
       await fs.close(fd);
     }
-    await fs.move(tmpFile, filePath, { overwrite: true });
+    await replaceByRename(tmpFile, filePath);
   } catch (error) {
     await fs.remove(tmpFile).catch(() => {});
     throw error;
@@ -78,7 +121,7 @@ export function writeJsonAtomicSync(
     } finally {
       fs.closeSync(fd);
     }
-    fs.moveSync(tmpFile, filePath, { overwrite: true });
+    replaceByRenameSync(tmpFile, filePath);
   } catch (error) {
     try {
       fs.removeSync(tmpFile);

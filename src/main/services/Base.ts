@@ -5,6 +5,14 @@ import { mutateAccountsConfig } from '../utilities/accounts'
 
 const inflightRefreshes = new Map<string, Promise<string | null>>()
 
+function toOrigin(url: string): string | null {
+  try {
+    return new URL(url).origin
+  } catch {
+    return null
+  }
+}
+
 async function persistRefreshedToken(token: string, oldToken: string) {
   try {
     await mutateAccountsConfig((accounts) => {
@@ -72,7 +80,23 @@ export class BaseService {
 
   protected accessToken: string | undefined
 
+  private authorizedOrigins = new Set<string>([toOrigin(BACKEND_URL) ?? BACKEND_URL])
+
   private isInitialized = false
+
+  protected allowAuthorizedOrigin(url: string) {
+    const origin = toOrigin(url)
+    if (origin) this.authorizedOrigins.add(origin)
+  }
+
+  private isAuthorizedTarget(config: { url?: string; baseURL?: string }): boolean {
+    try {
+      const resolved = new URL(String(config.url ?? ''), config.baseURL || this.baseUrl)
+      return this.authorizedOrigins.has(resolved.origin)
+    } catch {
+      return false
+    }
+  }
 
   private init() {
     if (this.isInitialized) return
@@ -81,6 +105,11 @@ export class BaseService {
 
     this.api.interceptors.request.use((config) => {
       config.headers = config.headers ?? {}
+
+      if (!this.isAuthorizedTarget(config)) {
+        delete (config.headers as any).Authorization
+        return config
+      }
 
       if (this.accessToken) {
         ; (config.headers as any).Authorization = `Bearer ${this.accessToken}`
@@ -103,7 +132,7 @@ export class BaseService {
         }
 
         if (err.response?.status === 401 && !config._retry) {
-          if (!this.accessToken) {
+          if (!this.accessToken || !this.isAuthorizedTarget(config)) {
             return Promise.reject(err)
           }
 

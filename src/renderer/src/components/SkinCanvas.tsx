@@ -107,18 +107,63 @@ export default function SkinCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const skinLoadIdRef = useRef(0);
+  const capeLoadIdRef = useRef(0);
+  const latestSkinUrlRef = useRef<string | undefined>(undefined);
+  const latestCapeUrlRef = useRef<string | undefined>(undefined);
+
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
-    if (skinUrl) void viewer.loadSkin(resolveLocalImage(skinUrl));
-    else viewer.resetSkin();
+
+    const loadId = ++skinLoadIdRef.current;
+    latestSkinUrlRef.current = skinUrl;
+
+    if (!skinUrl) {
+      viewer.resetSkin();
+      return;
+    }
+
+    void viewer
+      .loadSkin(resolveLocalImage(skinUrl))
+      .catch(() => undefined)
+      .then(() => {
+        if (skinLoadIdRef.current === loadId) return;
+
+        const current = viewerRef.current;
+        if (!current) return;
+
+        const latest = latestSkinUrlRef.current;
+        if (!latest) current.resetSkin();
+        else void current.loadSkin(resolveLocalImage(latest)).catch(() => undefined);
+      });
   }, [skinUrl]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
-    if (capeUrl) void viewer.loadCape(resolveLocalImage(capeUrl));
-    else viewer.resetCape();
+
+    const loadId = ++capeLoadIdRef.current;
+    latestCapeUrlRef.current = capeUrl;
+
+    if (!capeUrl) {
+      viewer.resetCape();
+      return;
+    }
+
+    void viewer
+      .loadCape(resolveLocalImage(capeUrl))
+      .catch(() => undefined)
+      .then(() => {
+        if (capeLoadIdRef.current === loadId) return;
+
+        const current = viewerRef.current;
+        if (!current) return;
+
+        const latest = latestCapeUrlRef.current;
+        if (!latest) current.resetCape();
+        else void current.loadCape(resolveLocalImage(latest)).catch(() => undefined);
+      });
   }, [capeUrl]);
 
   useEffect(() => {
