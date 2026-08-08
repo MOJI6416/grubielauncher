@@ -11,12 +11,15 @@ import {
 } from "@/types/Downloader";
 import { mainWindow } from "../windows/mainWindow";
 import {
+  buildDownloadRequestHeaders,
   canSkipChecksumVerification,
   dedupeDownloadItemsBy,
+  describeDownloadFailureHosts,
   DownloadFilesOptions,
   isDownloadAbortError,
   isEncodedResponse,
   isNonRetryableDownloadError,
+  isTruncatedDownload,
   readRangeValidator,
   shouldReportDownloadFailures,
   shouldThrowDownloadFailures,
@@ -434,12 +437,16 @@ export class Downloader {
       this.isSilent = false;
 
       if (shouldThrowOnFailure) {
+        const hosts = describeDownloadFailureHosts(
+          failures.map((failure) => failure.item.url),
+        );
+
         throw new Error(
           `Failed to download ${failures.length} file(s): ${failures
             .map((failure) =>
               path.basename(failure.item.destination || failure.item.url),
             )
-            .join(", ")}`,
+            .join(", ")}${hosts ? ` from ${hosts}` : ""}`,
         );
       }
 
@@ -757,11 +764,10 @@ export class Downloader {
             }
 
             const makeRequest = async (rangeStart: number) => {
-              const headers: Record<string, string> = {};
-              if (rangeStart > 0) {
-                headers["Range"] = `bytes=${rangeStart}-`;
-                if (rangeValidator) headers["If-Range"] = rangeValidator;
-              }
+              const headers = buildDownloadRequestHeaders(
+                rangeStart,
+                rangeValidator,
+              );
 
               return axios.get(url, {
                 responseType: "stream",
@@ -957,7 +963,7 @@ export class Downloader {
             });
 
             const receivedBytes = startByte + downloadedChunksBytes;
-            if (expectedBytes > 0 && receivedBytes !== expectedBytes) {
+            if (isTruncatedDownload(receivedBytes, expectedBytes)) {
               throw new Error(
                 `Incomplete download for ${path.basename(destination)}: got ${receivedBytes} of ${expectedBytes} bytes`,
               );

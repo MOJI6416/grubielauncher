@@ -128,10 +128,16 @@ export function InstallationCenter() {
   const cancelVersionInstall = async () => {
     setIsCancellingInstall(true);
     try {
-      await Promise.all([
+      const [versionCancelled, modsCancelled] = await Promise.all([
         api.version.cancelInstall(),
         api.mods.cancelInstall(),
       ]);
+
+      if (!versionCancelled && !modsCancelled) {
+        setInstallProgress(null);
+        setDownloader(null);
+        setIsCancellingInstall(false);
+      }
     } catch (error) {
       console.error(error);
       setIsCancellingInstall(false);

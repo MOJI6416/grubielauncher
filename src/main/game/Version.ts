@@ -37,6 +37,7 @@ import {
   getUnusedInstallResourcePaths,
   normalizeInstallResourcePath,
   shouldCleanupCancelledInstall,
+  shouldCloseInstallProgress,
 } from "../utilities/installCleanup";
 import {
   createLoaderInstallerProgressState,
@@ -250,11 +251,14 @@ export class Version {
     this.installAbortSignal = options.signal ?? null;
     this.sendInstallProgress("preparing", 2, true);
 
+    let succeeded = false;
+
     try {
       this.throwIfInstallCancelled();
       await this.installInternal(settings, account, items);
       this.throwIfInstallCancelled();
       this.sendInstallProgress("done", 100);
+      succeeded = true;
     } catch (error) {
       if (this.isInstallCancelError(error)) {
         await this.cleanupCancelledInstall(account, options.cleanupOnCancel);
@@ -264,7 +268,13 @@ export class Version {
       throw error;
     } finally {
       const wasCancelled = Boolean(this.installAbortSignal?.aborted);
-      if (!options.keepProgressOpen || wasCancelled) {
+      if (
+        shouldCloseInstallProgress(
+          succeeded,
+          options.keepProgressOpen,
+          wasCancelled,
+        )
+      ) {
         this.sendInstallInfo(null);
       }
       this.installOperation = "install";

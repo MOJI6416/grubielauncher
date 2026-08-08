@@ -4,6 +4,7 @@ import {
   getUnusedInstallResourcePaths,
   normalizeInstallResourcePath,
   shouldCleanupCancelledInstall,
+  shouldCloseInstallProgress,
 } from "./installCleanup";
 
 describe("install cleanup helpers", () => {
@@ -73,5 +74,18 @@ describe("install cleanup helpers", () => {
     expect(shouldCleanupCancelledInstall(true)).toBe(true);
     expect(shouldCleanupCancelledInstall(false)).toBe(false);
     expect(shouldCleanupCancelledInstall()).toBe(false);
+  });
+
+  it("closes the progress on failure even when a follow-up phase was expected", () => {
+    expect(shouldCloseInstallProgress(false, true, false)).toBe(true);
+    expect(shouldCloseInstallProgress(false, true, true)).toBe(true);
+    expect(shouldCloseInstallProgress(false, false, false)).toBe(true);
+  });
+
+  it("keeps the progress open only for a successful phase that hands over", () => {
+    expect(shouldCloseInstallProgress(true, true, false)).toBe(false);
+    expect(shouldCloseInstallProgress(true, true, true)).toBe(true);
+    expect(shouldCloseInstallProgress(true, false, false)).toBe(true);
+    expect(shouldCloseInstallProgress(true)).toBe(true);
   });
 });

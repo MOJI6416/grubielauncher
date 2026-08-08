@@ -115,6 +115,16 @@ describe("classifyError", () => {
     expect(info.code).toBe("ELY-UNKNOWN");
   });
 
+  it("attributes a batch download failure to the host that actually failed", () => {
+    const info = classifyError(
+      new Error(
+        "Failed to download 1 file(s): fabric.json from https://meta.fabricmc.net",
+      ),
+    );
+
+    expect(info.side).toBe("loader");
+  });
+
   it("keeps the channel for later correlation", () => {
     const info = classifyError(new Error("boom"), {
       channel: "backend:getModpack",

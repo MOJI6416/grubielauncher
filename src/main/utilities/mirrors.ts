@@ -54,7 +54,8 @@ export function resolveDownloadCandidates(
 
   if (source === "official") return [rawUrl];
   if (source === "mirror") return mirrorDisabled ? [rawUrl, mirror] : [mirror, rawUrl];
-  if (mirrorDisabled) return [rawUrl];
 
-  return mojangReachable === false ? [mirror, rawUrl] : [rawUrl, mirror];
+  return mojangReachable === false && !mirrorDisabled
+    ? [mirror, rawUrl]
+    : [rawUrl, mirror];
 }

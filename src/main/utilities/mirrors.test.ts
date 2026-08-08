@@ -128,18 +128,33 @@ describe("resolveDownloadCandidates", () => {
     ]);
   });
 
-  it("drops a mirror that keeps failing instead of retrying it per file", () => {
+  it("stops leading with a mirror that keeps failing, without giving it up", () => {
     const asset =
       "https://resources.download.minecraft.net/00/0011223344556677889900112233445566778899";
+    const mirrorAsset = `${MIRROR_BASE}/assets/00/0011223344556677889900112233445566778899`;
 
     expect(resolveDownloadCandidates(asset, "auto", false, true)).toEqual([
       asset,
+      mirrorAsset,
     ]);
-    expect(resolveDownloadCandidates(asset, "auto", false, false)).toHaveLength(
-      2,
-    );
+    expect(resolveDownloadCandidates(asset, "auto", false, false)).toEqual([
+      mirrorAsset,
+      asset,
+    ]);
     expect(resolveDownloadCandidates(asset, "mirror", null, true)[0]).toBe(
       asset,
     );
+  });
+
+  it("keeps a last-resort mirror when the origin is the thing that is unreachable", () => {
+    const loaderProfile =
+      "https://meta.fabricmc.net/v2/versions/loader/26.2/0.19.3/profile/json";
+    const mirrorProfile = `${MIRROR_BASE}/meta-fabric/v2/versions/loader/26.2/0.19.3/profile/json`;
+
+    for (const reachable of [true, false, null] as const) {
+      expect(
+        resolveDownloadCandidates(loaderProfile, "auto", reachable, true),
+      ).toEqual([loaderProfile, mirrorProfile]);
+    }
   });
 });

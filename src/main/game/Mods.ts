@@ -150,10 +150,13 @@ export class Mods {
     this.installAbortSignal = options?.signal ?? null;
     this.installOperation = options?.operation ?? "install";
 
+    let succeeded = false;
+
     try {
       this.throwIfInstallCancelled();
       await action();
       this.throwIfInstallCancelled();
+      succeeded = true;
     } catch (error) {
       if (this.isInstallCancelError(error)) {
         throw new Error(VERSION_INSTALL_CANCELLED);
@@ -161,7 +164,7 @@ export class Mods {
 
       throw error;
     } finally {
-      if (this.installAbortSignal && !options?.keepProgressOpen) {
+      if (!succeeded || (this.installAbortSignal && !options?.keepProgressOpen)) {
         this.sendInstallInfo(null);
       }
 

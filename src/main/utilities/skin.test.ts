@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import axios from 'axios'
 import { PNG } from 'pngjs'
-import { assertSkinBuffer, isSupportedSkinGeometry, readPngHeader } from './skin'
+import {
+  assertSkinBuffer,
+  isSupportedSkinGeometry,
+  readPngHeader,
+  resolveElybySkinUrl
+} from './skin'
 
 function makePng(width: number, height: number): Buffer {
   const png = new PNG({ width, height })
@@ -49,5 +55,65 @@ describe('assertSkinBuffer', () => {
     expect(() => assertSkinBuffer(Buffer.alloc(2 * 1024 * 1024))).toThrow(
       /too large/
     )
+  })
+})
+
+describe('resolveElybySkinUrl', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('upgrades the plaintext redirect target ely.by hands out', async () => {
+    vi.spyOn(axios, 'get').mockResolvedValue({
+      status: 301,
+      headers: { location: 'http://ely.by/storage/skins/abc.png' },
+      data: { destroy: () => undefined }
+    } as never)
+
+    await expect(resolveElybySkinUrl('erickskrauch')).resolves.toBe(
+      'https://ely.by/storage/skins/abc.png'
+    )
+  })
+
+  it('resolves a relative redirect against the skin system origin', async () => {
+    vi.spyOn(axios, 'get').mockResolvedValue({
+      status: 302,
+      headers: { location: '/storage/skins/abc.png' },
+      data: { destroy: () => undefined }
+    } as never)
+
+    await expect(resolveElybySkinUrl('nick')).resolves.toBe(
+      'https://skinsystem.ely.by/storage/skins/abc.png'
+    )
+  })
+
+  it('keeps the skin system url when nothing redirects', async () => {
+    vi.spyOn(axios, 'get').mockResolvedValue({
+      status: 200,
+      headers: {},
+      data: { destroy: () => undefined }
+    } as never)
+
+    await expect(resolveElybySkinUrl('nick')).resolves.toMatch(
+      /^https:\/\/skinsystem\.ely\.by\/skins\/nick\.png\?timestamp=\d+$/
+    )
+  })
+
+  it('falls back to the skin system url when the probe fails', async () => {
+    vi.spyOn(axios, 'get').mockRejectedValue(new Error('offline'))
+
+    await expect(resolveElybySkinUrl('nick')).resolves.toMatch(
+      /^https:\/\/skinsystem\.ely\.by\/skins\/nick\.png\?timestamp=\d+$/
+    )
+  })
+
+  it('never hands back a plaintext url, whatever the redirect says', async () => {
+    vi.spyOn(axios, 'get').mockResolvedValue({
+      status: 301,
+      headers: { location: 'ftp://ely.by/storage/skins/abc.png' },
+      data: { destroy: () => undefined }
+    } as never)
+
+    await expect(resolveElybySkinUrl('nick')).resolves.toMatch(/^https:/)
   })
 })

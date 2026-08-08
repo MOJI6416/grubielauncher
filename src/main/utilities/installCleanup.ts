@@ -32,3 +32,12 @@ export function getUnusedInstallResourcePaths(
 export function shouldCleanupCancelledInstall(cleanupOnCancel?: boolean) {
   return cleanupOnCancel === true;
 }
+
+export function shouldCloseInstallProgress(
+  succeeded: boolean,
+  keepProgressOpen?: boolean,
+  wasCancelled?: boolean,
+) {
+  if (!succeeded) return true;
+  return keepProgressOpen !== true || wasCancelled === true;
+}

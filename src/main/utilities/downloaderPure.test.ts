@@ -1,9 +1,12 @@
 import axios from "axios";
 import { describe, expect, it } from "vitest";
 import {
+  buildDownloadRequestHeaders,
   canSkipChecksumVerification,
   dedupeDownloadItemsBy,
+  describeDownloadFailureHosts,
   isDownloadAbortError,
+  isTruncatedDownload,
   isEncodedResponse,
   isNonRetryableDownloadError,
   OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
@@ -104,5 +107,60 @@ describe("downloader pure helpers", () => {
       { url: "a", destination: "libs/a.jar" },
       { url: "c", destination: "libs/c.jar" },
     ]);
+  });
+
+  it("asks for identity so Content-Length describes the bytes we write", () => {
+    expect(buildDownloadRequestHeaders(0, null)).toEqual({
+      "Accept-Encoding": "identity",
+    });
+  });
+
+  it("still resumes, and only sends If-Range when it has a validator", () => {
+    expect(buildDownloadRequestHeaders(1024, 'W/"abc"')).toEqual({
+      Range: "bytes=1024-",
+      "If-Range": 'W/"abc"',
+    });
+    expect(buildDownloadRequestHeaders(1024, null)).toEqual({
+      Range: "bytes=1024-",
+    });
+  });
+
+  it("never asks for identity while resuming, so a cache cannot slice a compressed body into the gap", () => {
+    expect(buildDownloadRequestHeaders(1, null)["Accept-Encoding"]).toBe(
+      undefined,
+    );
+    expect(buildDownloadRequestHeaders(1, 'W/"abc"')["Accept-Encoding"]).toBe(
+      undefined,
+    );
+  });
+
+  it("calls a download truncated only when bytes are missing, never when there are extra", () => {
+    expect(isTruncatedDownload(1401, 1402)).toBe(true);
+    expect(isTruncatedDownload(1402, 1402)).toBe(false);
+    expect(isTruncatedDownload(2778, 1402)).toBe(false);
+    expect(isTruncatedDownload(0, 0)).toBe(false);
+  });
+
+  it("names the hosts behind a batch of failures, each one once", () => {
+    expect(
+      describeDownloadFailureHosts([
+        "https://meta.fabricmc.net/v2/versions/loader/26.2/0.19.3/profile/json",
+        "https://meta.fabricmc.net/v2/versions/loader/26.2/0.19.2/profile/json",
+        "https://cdn.modrinth.com/data/x/y.jar",
+      ]),
+    ).toBe("https://meta.fabricmc.net, https://cdn.modrinth.com");
+  });
+
+  it("drops the path and the query, so a signed url cannot ride along", () => {
+    expect(
+      describeDownloadFailureHosts([
+        "https://files.example.com/pack.zip?X-Amz-Signature=deadbeef&token=secret",
+      ]),
+    ).toBe("https://files.example.com");
+  });
+
+  it("says nothing rather than something wrong when there is no url to read", () => {
+    expect(describeDownloadFailureHosts([])).toBe("");
+    expect(describeDownloadFailureHosts(["fabric.json", ""])).toBe("");
   });
 });

@@ -83,6 +83,33 @@ function pickActiveTexture(items?: IMicrosoftProfileTexture[]) {
   )
 }
 
+export async function resolveElybySkinUrl(nickname: string): Promise<string> {
+  const source = `https://skinsystem.ely.by/skins/${nickname}.png?timestamp=${new Date().getTime()}`
+
+  try {
+    const response = await axios.get(source, {
+      maxRedirects: 0,
+      responseType: 'stream',
+      timeout: 15000,
+      validateStatus: () => true
+    })
+
+    try {
+      response.data?.destroy?.()
+    } catch {}
+
+    const location = response.headers?.['location']
+    if (typeof location !== 'string' || location === '') return source
+
+    const resolved = new URL(location, source)
+    if (resolved.protocol === 'http:') resolved.protocol = 'https:'
+
+    return resolved.protocol === 'https:' ? resolved.toString() : source
+  } catch {
+    return source
+  }
+}
+
 export async function getSkin(
   type: string,
   uuid: string,
@@ -145,7 +172,7 @@ export async function getSkin(
     }
   } else if (type == 'elyby') {
     return {
-      skin: `https://skinsystem.ely.by/skins/${nickname}.png?timestamp=${new Date().getTime()}`
+      skin: await resolveElybySkinUrl(nickname)
     }
   } else if (type == 'discord') {
     if (!accessToken) return null

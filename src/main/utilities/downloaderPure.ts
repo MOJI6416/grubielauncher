@@ -30,6 +30,48 @@ export function shouldReportDownloadFailures(
   return failuresCount > 0 && !wasCancelled && !signalAborted;
 }
 
+export function buildDownloadRequestHeaders(
+  rangeStart: number,
+  rangeValidator: string | null,
+): Record<string, string> {
+  if (rangeStart > 0) {
+    const headers: Record<string, string> = {
+      Range: `bytes=${rangeStart}-`,
+    };
+    if (rangeValidator) headers["If-Range"] = rangeValidator;
+
+    return headers;
+  }
+
+  return { "Accept-Encoding": "identity" };
+}
+
+export function isTruncatedDownload(
+  receivedBytes: number,
+  expectedBytes: number,
+): boolean {
+  return expectedBytes > 0 && receivedBytes < expectedBytes;
+}
+
+export function describeDownloadFailureHosts(urls: string[]): string {
+  const origins: string[] = [];
+
+  for (const raw of urls) {
+    let origin: string;
+    try {
+      origin = new URL(raw).origin;
+    } catch {
+      continue;
+    }
+
+    if (origin && origin !== "null" && !origins.includes(origin)) {
+      origins.push(origin);
+    }
+  }
+
+  return origins.join(", ");
+}
+
 const NON_RETRYABLE_STATUS_CODES = new Set([400, 401, 403, 404, 410, 451]);
 
 export function isNonRetryableDownloadError(error: unknown) {
