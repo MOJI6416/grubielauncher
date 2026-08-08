@@ -108,6 +108,14 @@ const RUN_SCRIPT_EXECUTABLES = new Set([
   "java.exe",
   "javaw.exe",
 ]);
+function runScriptBasename(command: string): string {
+  const separator = Math.max(
+    command.lastIndexOf("/"),
+    command.lastIndexOf("\\"),
+  );
+  return separator === -1 ? command : command.slice(separator + 1);
+}
+
 const RUN_SCRIPT_ARGFILE =
   /^@(?:user_jvm_args\.txt|libraries\/[A-Za-z0-9._+-]+(?:\/[A-Za-z0-9._+-]+)*\.txt)$/i;
 const RUN_SCRIPT_JAR = /^[A-Za-z0-9._+-]+\.jar$/;
@@ -353,7 +361,7 @@ export function isTrustedServerJavaCommand(
   command: string,
   expectedJavaPath: string,
 ): boolean {
-  if (!RUN_SCRIPT_EXECUTABLES.has(path.basename(command).toLowerCase())) {
+  if (!RUN_SCRIPT_EXECUTABLES.has(runScriptBasename(command).toLowerCase())) {
     return false;
   }
 
@@ -401,7 +409,7 @@ export function parseRunScript(
     );
     const [command, ...args] = tokens;
     if (!command) continue;
-    if (!RUN_SCRIPT_EXECUTABLES.has(path.basename(command).toLowerCase())) {
+    if (!RUN_SCRIPT_EXECUTABLES.has(runScriptBasename(command).toLowerCase())) {
       continue;
     }
 
