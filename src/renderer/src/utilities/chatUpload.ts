@@ -1,4 +1,4 @@
-import { BACKEND_URL } from "@/shared/config";
+import { getApiBase } from "./apiBase";
 
 interface UploadChatImageOptions {
   accessToken: string;
@@ -22,7 +22,7 @@ export function uploadChatImage({
     formData.append("file", file, fileName);
     formData.append("folder", folder);
 
-    xhr.open("POST", `${BACKEND_URL}/files/upload`);
+    xhr.open("POST", `${getApiBase()}/files/upload`);
     xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
 
     xhr.upload.onprogress = (event) => {

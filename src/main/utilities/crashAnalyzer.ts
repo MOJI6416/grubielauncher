@@ -1,4 +1,3 @@
-import { BACKEND_URL } from "@/shared/config";
 import { CrashAnalysisPayload, CrashRule } from "@/types/CrashAnalysis";
 import { IVersionConf } from "@/types/IVersion";
 import { TSettings } from "@/types/Settings";
@@ -19,6 +18,7 @@ import { app } from "electron";
 import axios from "axios";
 import fs from "fs-extra";
 import path from "path";
+import { getApiBaseUrl } from "./apiHost";
 
 const CRASH_REPORT_MAX_AGE_MS = 10 * 60 * 1000;
 const MAX_SOURCE_BYTES = 256 * 1024;
@@ -41,7 +41,7 @@ async function getCrashRules(): Promise<CrashRule[]> {
   stalledPatterns.clear();
 
   try {
-    const response = await axios.get(`${BACKEND_URL}/crash-rules.json`, {
+    const response = await axios.get(`${getApiBaseUrl()}/crash-rules.json`, {
       timeout: 5000,
     });
     const remoteRules = sanitizeCrashRules(response.data);
@@ -258,7 +258,7 @@ async function reportCrashRuleHit(
       .catch(() => null)) as IVersionConf | null;
 
     await axios.post(
-      `${BACKEND_URL}/crash-analytics`,
+      `${getApiBaseUrl()}/crash-analytics`,
       {
         ruleId,
         mcVersion: versionConf?.version?.id || undefined,

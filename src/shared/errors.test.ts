@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyError } from "./errors";
+import { classifyError, isTransientNetworkFailure } from "./errors";
 
 function axiosError(status: number, url: string) {
   return {
@@ -123,6 +123,27 @@ describe("classifyError", () => {
     );
 
     expect(info.side).toBe("loader");
+  });
+
+  it("treats a dropped connection as worth one more try", () => {
+    expect(isTransientNetworkFailure({ code: "ECONNRESET" })).toBe(true);
+    expect(isTransientNetworkFailure({ code: "ETIMEDOUT" })).toBe(true);
+    expect(isTransientNetworkFailure({ code: "ERR_NETWORK" })).toBe(true);
+  });
+
+  it("never retries an answer the server actually gave", () => {
+    expect(
+      isTransientNetworkFailure({
+        code: "ECONNRESET",
+        response: { status: 409 },
+      }),
+    ).toBe(false);
+    expect(isTransientNetworkFailure({ response: { status: 400 } })).toBe(false);
+    expect(
+      isTransientNetworkFailure({ code: "ENOTFOUND", response: { status: 404 } }),
+    ).toBe(false);
+    expect(isTransientNetworkFailure(new Error("boom"))).toBe(false);
+    expect(isTransientNetworkFailure({ code: "ENOSPC" })).toBe(false);
   });
 
   it("keeps the channel for later correlation", () => {

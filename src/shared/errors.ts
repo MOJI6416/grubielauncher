@@ -385,3 +385,19 @@ export function classifyError(
 export function isCancelledFailure(info: FailureInfo | null | undefined) {
   return info?.cause === "cancelled";
 }
+
+const RETRYABLE_NETWORK_CAUSES: ReadonlySet<FailureCause> = new Set([
+  "reset",
+  "timeout",
+  "offline",
+  "refused",
+  "dns",
+]);
+
+export function isTransientNetworkFailure(error: unknown): boolean {
+  const status = (error as { response?: { status?: unknown } } | null)?.response
+    ?.status;
+  if (typeof status === "number") return false;
+
+  return RETRYABLE_NETWORK_CAUSES.has(classifyError(error).cause);
+}

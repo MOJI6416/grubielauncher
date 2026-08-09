@@ -1,10 +1,10 @@
 import axios from "axios";
-import { BACKEND_URL } from "@/shared/config";
+import { getApiBaseUrl } from "./apiHost";
 import { SERVER_PROTECTED_ENTRIES } from "./serverManager";
 
 // Client-only mod detection and the server-copy directory list both come from
 // ServerPackCreator's curated data, served (and periodically refreshed from the
-// SPC repo) by our backend at `${BACKEND_URL}/server/clientside-mods.json`. The
+// SPC repo) by our backend at `${getApiBaseUrl()}/server/clientside-mods.json`. The
 // data is NOT stored locally; the backend is the single source of truth.
 //
 // SPC clientside/whitelist entries are filename fragments matched against a
@@ -85,7 +85,7 @@ async function fetchLists(): Promise<{
       mods?: unknown;
       whitelist?: unknown;
       mustInclude?: unknown;
-    }>(`${BACKEND_URL}/server/clientside-mods.json`, { timeout: 15000 });
+    }>(`${getApiBaseUrl()}/server/clientside-mods.json`, { timeout: 15000 });
 
     const clientside = normalizeFragments(response.data?.mods);
     const whitelist = normalizeFragments(response.data?.whitelist);

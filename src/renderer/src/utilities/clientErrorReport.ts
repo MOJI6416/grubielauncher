@@ -1,4 +1,4 @@
-import { BACKEND_URL } from "@/shared/config";
+import { getApiBase } from "./apiBase";
 
 const LIMITS = {
   release: 32,
@@ -30,7 +30,7 @@ export function reportLauncherError(
     const api = window.api;
     const release = await api?.other.getVersion().catch(() => undefined);
 
-    await fetch(`${BACKEND_URL}/client-errors`, {
+    await fetch(`${getApiBase()}/client-errors`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "omit",

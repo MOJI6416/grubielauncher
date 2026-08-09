@@ -1,10 +1,11 @@
 import rpcLocaleData from './rpcLocales.json'
-import { BACKEND_URL, DISCORD_CLIENT_ID } from '@/shared/config'
+import { DISCORD_CLIENT_ID } from '@/shared/config'
 import { RpcAccountContext, RpcRendererContext } from '@/types/Rpc'
 import { ShareState } from '@/types/Share'
 import * as DiscordRPC from 'discord-rpc'
 import { gameRuntime } from './runtime'
 import { linkDiscordIpcSocket } from './discordIpcSocket'
+import { getApiBaseUrl } from './apiHost'
 
 type SupportedRpcLanguage = 'en' | 'ru' | 'uk'
 
@@ -430,7 +431,7 @@ export class RPC {
 
     if (!id) return undefined
 
-    const base = `${BACKEND_URL}/skins/head/${account.type}/${encodeURIComponent(id)}`
+    const base = `${getApiBaseUrl()}/skins/head/${account.type}/${encodeURIComponent(id)}`
     return this.skinVersion === undefined
       ? base
       : `${base}?v=${encodeURIComponent(String(this.skinVersion))}`

@@ -1,4 +1,4 @@
-import { BACKEND_URL } from '@/shared/config'
+import { attachApiHostFallback } from '../utilities/apiHost'
 import {
   ICategory,
   IFile,
@@ -12,10 +12,11 @@ import axios from 'axios'
 import { reportFailure } from '../utilities/failureBus'
 
 export class CurseForge {
-  private static api = axios.create({
-    baseURL: BACKEND_URL,
-    timeout: 30000
-  })
+  private static api = attachApiHostFallback(
+    axios.create({
+      timeout: 30000
+    })
+  )
 
   // The backend accepts up to 1000 ids and performs the upstream 50-item
   // batching itself, so avoid dozens of redundant launcher-to-API requests.

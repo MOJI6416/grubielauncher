@@ -1,7 +1,8 @@
 import axios from 'axios'
 import { checkToken, getTokenSubject } from '../utilities/jwt'
-import { BACKEND_URL } from '@/shared/config'
+import { BACKEND_CANDIDATES } from '@/shared/config'
 import { mutateAccountsConfig } from '../utilities/accounts'
+import { attachApiHostFallback, getApiBaseUrl } from '../utilities/apiHost'
 
 const inflightRefreshes = new Map<string, Promise<string | null>>()
 
@@ -72,15 +73,19 @@ function refreshAccessToken(oldToken: string): Promise<string | null> {
 }
 
 export class BaseService {
-  public readonly baseUrl: string = BACKEND_URL
+  public get baseUrl(): string {
+    return getApiBaseUrl()
+  }
+
   public api = axios.create({
-    baseURL: this.baseUrl,
     timeout: 30000
   })
 
   protected accessToken: string | undefined
 
-  private authorizedOrigins = new Set<string>([toOrigin(BACKEND_URL) ?? BACKEND_URL])
+  private authorizedOrigins = new Set<string>(
+    BACKEND_CANDIDATES.map((url) => toOrigin(url) ?? url)
+  )
 
   private isInitialized = false
 
@@ -102,6 +107,8 @@ export class BaseService {
     if (this.isInitialized) return
 
     this.isInitialized = true
+
+    attachApiHostFallback(this.api)
 
     this.api.interceptors.request.use((config) => {
       config.headers = config.headers ?? {}

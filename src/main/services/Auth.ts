@@ -1,4 +1,4 @@
-import { BACKEND_URL } from '@/shared/config'
+import { attachApiHostFallback } from '../utilities/apiHost'
 import {
   IAuthRequest,
   IAuthResponse,
@@ -8,10 +8,11 @@ import {
 import axios from 'axios'
 import { logAxiosError } from '../utilities/axiosLog'
 
-const api = axios.create({
-  baseURL: BACKEND_URL,
-  timeout: 30000
-})
+const api = attachApiHostFallback(
+  axios.create({
+    timeout: 30000
+  })
+)
 
 async function postOrNull<TResponse>(url: string, data: any, errorPrefix: string): Promise<TResponse | null> {
   try {

@@ -1,4 +1,5 @@
 import { BACKEND_URL } from '@/shared/config'
+import { getApiBaseUrl } from './apiHost'
 import { ConnectivityCheckResult, ConnectivityGroup } from '@/types/Connectivity'
 import axios from 'axios'
 import net from 'net'
@@ -267,7 +268,7 @@ export function getConnectivityCheckCount(): number {
 
 export async function checkBackendHealth(): Promise<boolean> {
   try {
-    const response = await axios.get(`${BACKEND_URL}/health`, {
+    const response = await axios.get(`${getApiBaseUrl()}/health`, {
       timeout: HTTP_TIMEOUT_MS,
       validateStatus: () => true
     })

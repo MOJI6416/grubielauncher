@@ -19,6 +19,8 @@ import axios from "axios";
 import fs from "fs-extra";
 import path from "path";
 import { reportFailure } from "../utilities/failureBus";
+import { isTransientNetworkFailure } from "@/shared/errors";
+import { toStorageUploadUrl } from "../utilities/mirrors";
 import {
   IAiAnalysisResult,
   IAiFeedbackResult,
@@ -73,6 +75,20 @@ export class Backend extends BaseService {
     };
   }
 
+  private async postModpackCreate(payload: unknown) {
+    const send = () =>
+      this.api.post<{ shareCode: string }>(`${this.baseUrl}/modpacks`, payload);
+
+    try {
+      return await send();
+    } catch (error) {
+      if (!isTransientNetworkFailure(error)) throw error;
+
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      return await send();
+    }
+  }
+
   async shareModpack(modpack: { conf: IModpack["conf"]; isPublic?: boolean }) {
     const normalizedModpack = {
       ...modpack,
@@ -100,12 +116,18 @@ export class Backend extends BaseService {
             },
           };
 
-    const response = await this.api.post<{ shareCode: string }>(
-      `${this.baseUrl}/modpacks`,
-      payload,
-    );
+    const response = await this.postModpackCreate(payload);
 
-    return response.data.shareCode;
+    const shareCode = response.data?.shareCode;
+    if (typeof shareCode !== "string" || shareCode === "") {
+      throw new Error(
+        `Modpack create answered ${response.status} without a share code (content-type: ${
+          response.headers?.["content-type"] ?? "none"
+        })`,
+      );
+    }
+
+    return shareCode;
   }
 
   async updateModpack(shareCode: string, update: IModpackUpdate) {
@@ -507,32 +529,42 @@ export class Backend extends BaseService {
       );
       directUploadStarted = true;
 
-      const stream = fs.createReadStream(filePath);
+      const putTo = (uploadUrl: string) =>
+        axios.put(uploadUrl, fs.createReadStream(filePath), {
+          headers: {
+            ...start.data.headers,
+            "Content-Length": fileSize,
+          },
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+          timeout: 10 * 60 * 1000,
+          onUploadProgress: (event) => {
+            uploadedBytes = event.loaded;
+            const now = Date.now();
+            if (
+              now - lastProgressEmit < 150 &&
+              (!event.total || event.loaded < event.total)
+            )
+              return;
+            lastProgressEmit = now;
+            emitProgress({
+              status: "uploading",
+              loaded: event.loaded,
+              total: event.total ?? fileSize,
+            });
+          },
+        });
 
-      await axios.put(start.data.upload_url, stream, {
-        headers: {
-          ...start.data.headers,
-          "Content-Length": fileSize,
-        },
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity,
-        timeout: 10 * 60 * 1000,
-        onUploadProgress: (event) => {
-          uploadedBytes = event.loaded;
-          const now = Date.now();
-          if (
-            now - lastProgressEmit < 150 &&
-            (!event.total || event.loaded < event.total)
-          )
-            return;
-          lastProgressEmit = now;
-          emitProgress({
-            status: "uploading",
-            loaded: event.loaded,
-            total: event.total ?? fileSize,
-          });
-        },
-      });
+      try {
+        await putTo(start.data.upload_url);
+      } catch (error) {
+        const viaMirror = toStorageUploadUrl(start.data.upload_url);
+        if (!viaMirror || !isTransientNetworkFailure(error)) throw error;
+
+        uploadedBytes = 0;
+        emitProgress({ status: "uploading", loaded: 0, total: fileSize });
+        await putTo(viaMirror);
+      }
 
       const complete = await this.api.post<DirectUploadCompleteResponse>(
         `${this.baseUrl}/files/direct-upload/complete`,

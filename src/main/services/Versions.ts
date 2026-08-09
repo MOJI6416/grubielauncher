@@ -2,13 +2,13 @@ import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { Loader } from '@/types/Loader'
 import { IVersion } from '@/types/IVersion'
 import { LoaderVersion } from '@/types/VersionsService'
-import { BACKEND_URL } from '@/shared/config'
 import { resolveDownloadCandidates } from '../utilities/mirrors'
 import {
   getDownloadSource,
   getMojangReachable,
   isMirrorDisabled
 } from '../utilities/mirrorState'
+import { getApiBaseUrl } from '../utilities/apiHost'
 
 export interface IVersionsManifest {
   latest: {
@@ -160,7 +160,7 @@ export class VersionsService {
 
   private static async getVersionsForge(): Promise<IVersion[]> {
     try {
-      const response = await this.api.get(`${BACKEND_URL}/loaders/forge.json`)
+      const response = await this.api.get(`${getApiBaseUrl()}/loaders/forge.json`)
 
       const versionsVanilla = await this.getVersionsVanilla()
       const versionsForge: {
@@ -188,7 +188,7 @@ export class VersionsService {
 
   private static async getVersionsNeoForge(): Promise<IVersion[]> {
     try {
-      const response = await this.api.get(`${BACKEND_URL}/loaders/neoforge.json`)
+      const response = await this.api.get(`${getApiBaseUrl()}/loaders/neoforge.json`)
 
       const versionsVanilla = await this.getVersionsVanilla()
       const versionsNeoForged: {
@@ -213,7 +213,7 @@ export class VersionsService {
 
   private static async getLoadersNeoForge(version: string): Promise<LoaderVersion[]> {
     try {
-      const response = await this.api.get(`${BACKEND_URL}/loaders/neoforge.json`)
+      const response = await this.api.get(`${getApiBaseUrl()}/loaders/neoforge.json`)
 
       const versionsNeoForged: {
         [key: string]: LoaderVersion[]
@@ -230,7 +230,7 @@ export class VersionsService {
 
   private static async getLoadersForge(version: string): Promise<LoaderVersion[]> {
     try {
-      const response = await this.api.get(`${BACKEND_URL}/loaders/forge.json`)
+      const response = await this.api.get(`${getApiBaseUrl()}/loaders/forge.json`)
 
       const versionsForge: {
         [key: string]: LoaderVersion[]

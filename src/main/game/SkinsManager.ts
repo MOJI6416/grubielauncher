@@ -17,7 +17,7 @@ import { isSafeRemoteFetchUrl, isSafeRemoteImageUrl } from '../utilities/safeUrl
 import { logAxiosError } from '../utilities/axiosLog'
 import { writeJsonAtomic } from '../utilities/atomicJson'
 import { Downloader } from '../utilities/downloader'
-import { BACKEND_URL } from '@/shared/config'
+import { getApiBaseUrl } from '../utilities/apiHost'
 import { ICape, IGrubieSkin, IMojangProfile, ISkinEntry, ISkinsConfig, SkinsData } from '@/types/SkinManager'
 
 function toFileUrl(filePath: string): string {
@@ -122,7 +122,7 @@ export class SkinsManager extends BaseService {
     this.platform = platform
 
     if (platform === 'discord') {
-      this.skinServiceUrl = BACKEND_URL
+      this.skinServiceUrl = getApiBaseUrl()
     } else if (platform === 'elyby') {
       this.skinServiceUrl = ''
     }
@@ -981,7 +981,7 @@ export class SkinsManager extends BaseService {
     }
 
     const response = await axios.post<{ status?: string }>(
-      `${BACKEND_URL}/skins/community`,
+      `${getApiBaseUrl()}/skins/community`,
       formData,
       {
         headers: {

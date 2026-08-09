@@ -7,6 +7,9 @@ import { check, handleSafe } from "../utilities/ipc";
 import { checkBackendHealth } from "../utilities/connectivityTest";
 import { assertReadablePath } from "../utilities/safePath";
 import { AI_PROMPT_MAX_CHARS } from "@/shared/config";
+import { getApiBaseUrl, onApiBaseUrlChange } from "../utilities/apiHost";
+import { BACKEND_URL } from "@/shared/config";
+import { BrowserWindow } from "electron";
 
 const isToken = check.string(32768);
 const isId = check.nonEmptyString(256);
@@ -422,6 +425,15 @@ export function registerBackendIpc() {
       return await backend.socialUnlink(provider);
     },
   );
+
+  onApiBaseUrlChange((baseUrl) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (window.isDestroyed() || window.webContents.isDestroyed()) continue;
+      window.webContents.send("api:baseUrl", baseUrl);
+    }
+  });
+
+  handleSafe("backend:apiBaseUrl", BACKEND_URL, async () => getApiBaseUrl());
 
   handleSafe(
     "backend:getSkin",

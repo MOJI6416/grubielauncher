@@ -462,6 +462,8 @@ export interface IElectronAPI {
       provider: "telegram" | "twitch" | "github",
     ) => Promise<{ provider: string; linked: null } | null>;
     getSkin: (at: string, uuid: string) => Promise<IGrubieSkin | null>;
+    apiBaseUrl: () => Promise<string>;
+    onApiBaseUrl: (callback: (baseUrl: string) => void) => () => void;
     discordAuthenticated: (at: string, userId: string) => Promise<boolean>;
     aiComplete: (at: string, prompt: string) => Promise<string | null>;
     getAuthlib: () => Promise<IAuthlib | null>;
@@ -1203,6 +1205,12 @@ export const api: IElectronAPI = {
       ipcRenderer.invoke("backend:socialUnlink", at, provider),
     getSkin: (at: string, uuid: string) =>
       ipcRenderer.invoke("backend:getSkin", at, uuid),
+    apiBaseUrl: () => ipcRenderer.invoke("backend:apiBaseUrl"),
+    onApiBaseUrl: (callback: (baseUrl: string) => void) => {
+      const listener = (_: unknown, baseUrl: string) => callback(baseUrl);
+      ipcRenderer.on("api:baseUrl", listener);
+      return () => ipcRenderer.off("api:baseUrl", listener);
+    },
     discordAuthenticated: (at: string, userId: string) =>
       ipcRenderer.invoke("backend:discordAuthenticated", at, userId),
     aiComplete: (at: string, prompt: string) =>

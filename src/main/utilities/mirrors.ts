@@ -1,6 +1,7 @@
 import { DownloadSource } from "@/types/Settings";
 
 export const MIRROR_BASE = "https://mirror.grubielauncher.com";
+export const MIRROR_BASE_DIRECT = "https://direct-mirror.grubielauncher.com";
 
 const HOST_TO_PREFIX: Record<string, string> = {
   "piston-meta.mojang.com": "piston-meta",
@@ -17,11 +18,15 @@ const HOST_TO_PREFIX: Record<string, string> = {
   "cdn.modrinth.com": "modrinth",
   "edge.forgecdn.net": "forgecdn",
   "mediafilez.forgecdn.net": "forgecdn",
+  "cdn.grubielauncher.com": "storage",
 };
 
 const TEMURIN_RELEASE_PATH = /^\/adoptium\/[^/]+-binaries\/releases\/download\//i;
 
-export function toMirrorUrl(rawUrl: string): string | null {
+export function toMirrorUrl(
+  rawUrl: string,
+  base: string = MIRROR_BASE,
+): string | null {
   let url: URL;
   try {
     url = new URL(rawUrl);
@@ -34,13 +39,29 @@ export function toMirrorUrl(rawUrl: string): string | null {
   const host = url.hostname.toLowerCase();
 
   if (host === "github.com" && TEMURIN_RELEASE_PATH.test(url.pathname)) {
-    return `${MIRROR_BASE}/temurin${url.pathname}${url.search}`;
+    return `${base}/temurin${url.pathname}${url.search}`;
   }
 
   const prefix = HOST_TO_PREFIX[host];
   if (!prefix) return null;
 
-  return `${MIRROR_BASE}/${prefix}${url.pathname}${url.search}`;
+  return `${base}/${prefix}${url.pathname}${url.search}`;
+}
+
+const R2_UPLOAD_HOST = /\.r2\.cloudflarestorage\.com$/i;
+
+export function toStorageUploadUrl(rawUrl: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+
+  if (url.protocol !== "https:") return null;
+  if (!R2_UPLOAD_HOST.test(url.hostname)) return null;
+
+  return `${MIRROR_BASE_DIRECT}/storage-upload${url.pathname}${url.search}`;
 }
 
 export function resolveDownloadCandidates(
@@ -53,9 +74,16 @@ export function resolveDownloadCandidates(
   if (!mirror) return [rawUrl];
 
   if (source === "official") return [rawUrl];
-  if (source === "mirror") return mirrorDisabled ? [rawUrl, mirror] : [mirror, rawUrl];
 
-  return mojangReachable === false && !mirrorDisabled
-    ? [mirror, rawUrl]
-    : [rawUrl, mirror];
+  const ordered =
+    source === "mirror"
+      ? mirrorDisabled
+        ? [rawUrl, mirror]
+        : [mirror, rawUrl]
+      : mojangReachable === false && !mirrorDisabled
+        ? [mirror, rawUrl]
+        : [rawUrl, mirror];
+
+  const direct = toMirrorUrl(rawUrl, MIRROR_BASE_DIRECT);
+  return direct ? [...ordered, direct] : ordered;
 }

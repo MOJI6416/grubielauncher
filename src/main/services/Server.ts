@@ -11,8 +11,8 @@ import {
 import axios from 'axios'
 import { Loader } from '@/types/Loader'
 import { LoaderVersion } from '@/types/VersionsService'
-import { BACKEND_URL } from '@/shared/config'
 import { isTrustedServerCoreUrl } from '../utilities/trustedHosts'
+import { getApiBaseUrl } from '../utilities/apiHost'
 
 export class Server {
   private static api = axios.create({
@@ -54,7 +54,7 @@ export class Server {
       if (loader == 'vanilla') {
         const [vanillaCores, paper, purpur] = await Promise.all([
           this.api
-            .get<IVanillaCores>(`${BACKEND_URL}/server/vanilla.json`)
+            .get<IVanillaCores>(`${getApiBaseUrl()}/server/vanilla.json`)
             .then((response) => response.data)
             .catch(() => null),
           this.getPaper(version),
@@ -175,7 +175,7 @@ export class Server {
 
   private static async getForge(version: string): Promise<IServerOption | null> {
     try {
-      const response = await this.api.get(`${BACKEND_URL}/loaders/forge.json`)
+      const response = await this.api.get(`${getApiBaseUrl()}/loaders/forge.json`)
 
       const versions: {
         [key: string]: LoaderVersion[]
@@ -196,7 +196,7 @@ export class Server {
 
   private static async getNeoForge(version: string): Promise<IServerOption | null> {
     try {
-      const response = await this.api.get(`${BACKEND_URL}/loaders/neoforge.json`)
+      const response = await this.api.get(`${getApiBaseUrl()}/loaders/neoforge.json`)
 
       const versions: {
         [key: string]: LoaderVersion[]

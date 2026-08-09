@@ -100,7 +100,6 @@ import { Mods } from "./classes/Mods";
 import { InstallationCenter } from "./components/InstallationCenter";
 import { ConnectivityBanner } from "./components/ConnectivityBanner";
 import { VoiceCallBar } from "./components/Voice/VoiceCallBar";
-import { BACKEND_URL } from "@/shared/config";
 import { getShareErrorDetails, getShareErrorText } from "./utilities/share";
 import { recordError, showErrorToast } from "./utilities/errorToast";
 import {
@@ -138,6 +137,7 @@ import {
   getShareAccountKey,
   isShareStateActiveForAccountBinding,
 } from "./utilities/shareAccount";
+import { getApiBase, subscribeApiBase, watchApiBase } from "./utilities/apiBase";
 
 const api = window.api;
 const MAX_CONSOLE_MESSAGES = 1000;
@@ -219,6 +219,7 @@ function App() {
   const setIsRunning = useSetAtom(isRunningAtom);
   const launchInFlightRef = useRef(false);
 
+  const [apiBase, setApiBase] = useState(getApiBase());
   const [isFriends, setIsFriends] = useState(false);
 
   const [friendSocket, setFriendSocket] = useAtom(friendSocketAtom);
@@ -418,10 +419,19 @@ function App() {
   }, [setIsInternetOnline]);
 
   useEffect(() => {
-    onlineSocket.current?.disconnect();
-    onlineSocket.current = null;
+    const stopWatching = watchApiBase();
+    const unsubscribe = subscribeApiBase(setApiBase);
 
-    const socket = io(`${BACKEND_URL}/online`, {
+    return () => {
+      stopWatching();
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    onlineSocket.current?.disconnect();
+
+    const socket = io(`${apiBase}/online`, {
       transports: ["websocket"],
       reconnection: true,
     });
@@ -432,7 +442,7 @@ function App() {
       socket.disconnect();
       onlineSocket.current = null;
     };
-  }, []);
+  }, [apiBase]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1276,7 +1286,7 @@ function App() {
 
     friendSocketRef.current?.disconnect();
 
-    const socketIo = io(`${BACKEND_URL}/friends`, {
+    const socketIo = io(`${apiBase}/friends`, {
       auth: {
         token: acc.accessToken,
       },
@@ -1315,6 +1325,7 @@ function App() {
       setFriendSocket(undefined);
     };
   }, [
+    apiBase,
     authData?.sub,
     selectedAccount?.accessToken,
     setFriendSocket,

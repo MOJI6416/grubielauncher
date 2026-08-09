@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { getSkin } from '../utilities/skin'
 import { SkinsManager } from '../game/SkinsManager'
-import { BACKEND_URL } from '@/shared/config'
+import { attachApiHostFallback } from '../utilities/apiHost'
 import type {
   CatalogListParams,
   CatalogListResult,
@@ -39,10 +39,11 @@ function getManager(platform: unknown, userId: string): SkinsManager | null {
   return skinsManagers.get(getManagerKey(validPlatform, userId)) ?? null
 }
 
-const backendApi = axios.create({
-  baseURL: BACKEND_URL,
-  timeout: 30000
-})
+const backendApi = attachApiHostFallback(
+  axios.create({
+    timeout: 30000
+  })
+)
 
 const emptySkinsData: SkinsData = {
   skins: { skins: [] },
