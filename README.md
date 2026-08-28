@@ -107,35 +107,6 @@ The interface is a permanent sidebar with full screens instead of stacked dialog
 
 The launcher updates itself; new versions arrive without a re-install.
 
-# For developers
-
-**Stack.** Electron with electron-vite, React 19 and the React Compiler, TypeScript, Tailwind CSS 4 with Radix UI, jotai for state, TanStack Query for server data, i18next for the three interface languages, Vitest for tests. CI builds on Node 22.
-
-```bash
-npm install         # electron-builder rebuilds native deps afterwards
-npm run dev         # launcher with hot reload
-npm run typecheck   # main and renderer TypeScript projects
-npm test            # Vitest
-npm run lint        # ESLint
-npm run build       # typecheck + bundle
-npm run build:win   # NSIS installer
-npm run build:linux # AppImage and deb
-```
-
-**Layout of `src/`.**
-
-| Path | What lives there |
-| --- | --- |
-| `main/` | Electron main process: version install and launch, Java, accounts, mod providers, world sharing, the server, and every IPC handler. |
-| `preload/` | The only bridge into the interface — the `window.api` surface. |
-| `renderer/src/` | The React interface. |
-| `shared/` | Code both processes use: settings, instance files, log sanitising, version naming. |
-| `types/` | Types shared across the whole app. |
-
-The renderer is feature-first. `shell/` is the frame around everything — sidebar, top bar, command palette; `navigation/` holds the routes and the back/forward history; `screens/` has one screen per route; `features/<name>/` keeps a feature's components next to its pure logic; `agent/` is the assistant's loop and its tools.
-
-Tests live beside the code they cover as `*.test.ts` and run in a plain Node environment, so the logic worth testing is kept in pure modules apart from the components.
-
 # License
 
 **MIT** — see [LICENSE](LICENSE).
