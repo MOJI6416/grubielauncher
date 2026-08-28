@@ -687,7 +687,10 @@ describe("safety net", () => {
 
     expect(latestSafetyId).toBeTruthy();
 
-    await fs.writeFile(path.join(worldPath, "level.dat"), "level-next-session");
+    const levelDat = path.join(worldPath, "level.dat");
+    await fs.writeFile(levelDat, "level-next-session");
+    const played = (Date.now() + 1000) / 1000;
+    await fs.utimes(levelDat, played, played);
     expect(await runAutoBackupForVersion(versionPath, 5, 0)).toBe(1);
 
     const listed = await getWorldBackupList(worldPath);
