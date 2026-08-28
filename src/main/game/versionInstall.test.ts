@@ -129,6 +129,11 @@ async function installedMainClass() {
   return manifest.mainClass;
 }
 
+const JAVA_BIN_DIR =
+  process.platform === "darwin" ? path.join("Contents", "Home", "bin") : "bin";
+const CLIENT_BINARY = process.platform === "win32" ? "javaw.exe" : "java";
+const SERVER_BINARY = process.platform === "win32" ? "java.exe" : "java";
+
 beforeEach(async () => {
   root = await fs.mkdtemp(path.join(os.tmpdir(), "gl-install-"));
   hoisted.appData = root;
@@ -136,9 +141,10 @@ beforeEach(async () => {
 
   for (const release of ["jdk-17.0.19+10-jre", "jdk-21.0.11+10-jre"]) {
     const javaRoot = path.join(root, ".grubielauncher", "java", release);
-    await fs.ensureDir(path.join(javaRoot, "bin"));
-    await fs.writeFile(path.join(javaRoot, "bin", "javaw.exe"), "");
-    await fs.writeFile(path.join(javaRoot, "bin", "java.exe"), "");
+    const binDir = path.join(javaRoot, JAVA_BIN_DIR);
+    await fs.ensureDir(binDir);
+    await fs.writeFile(path.join(binDir, CLIENT_BINARY), "");
+    await fs.writeFile(path.join(binDir, SERVER_BINARY), "");
     await fs.writeFile(path.join(javaRoot, ".grubie-java-verified"), "");
   }
 });

@@ -33,15 +33,24 @@ let root = "";
 
 const MARKER = ".grubie-java-verified";
 
+const JAVA_BIN_DIR =
+  process.platform === "darwin" ? path.join("Contents", "Home", "bin") : "bin";
+const CLIENT_BINARY = process.platform === "win32" ? "javaw.exe" : "java";
+const SERVER_BINARY = process.platform === "win32" ? "java.exe" : "java";
+
 function javaDir(release: string) {
   return path.join(root, ".grubielauncher", "java", release);
 }
 
+function clientPath(dir: string) {
+  return path.join(dir, JAVA_BIN_DIR, CLIENT_BINARY);
+}
+
 async function makeJavaRoot(release: string, binaryContent: string) {
   const dir = javaDir(release);
-  await fs.ensureDir(path.join(dir, "bin"));
-  await fs.writeFile(path.join(dir, "bin", "javaw.exe"), binaryContent);
-  await fs.writeFile(path.join(dir, "bin", "java.exe"), binaryContent);
+  await fs.ensureDir(path.join(dir, JAVA_BIN_DIR));
+  await fs.writeFile(clientPath(dir), binaryContent);
+  await fs.writeFile(path.join(dir, JAVA_BIN_DIR, SERVER_BINARY), binaryContent);
   return dir;
 }
 
@@ -68,7 +77,7 @@ describe("java health", () => {
     await fs.writeFile(path.join(dir, MARKER), "");
 
     const later = Date.now() + 5000;
-    await fs.utimes(path.join(dir, "bin", "javaw.exe"), later / 1000, later / 1000);
+    await fs.utimes(clientPath(dir), later / 1000, later / 1000);
 
     const java = new Java(20);
     await java.init();
@@ -83,10 +92,10 @@ describe("java health", () => {
 
     const java = new Java(23);
     await java.init();
-    expect(java.javaPath).toBe(path.join(dir, "bin", "javaw.exe"));
+    expect(java.javaPath).toBe(clientPath(dir));
 
-    await fs.remove(path.join(dir, "bin", "javaw.exe"));
-    await fs.remove(path.join(dir, "bin", "java.exe"));
+    await fs.remove(clientPath(dir));
+    await fs.remove(path.join(dir, JAVA_BIN_DIR, SERVER_BINARY));
 
     const again = new Java(23);
     await again.init();
@@ -100,6 +109,6 @@ describe("java health", () => {
     const java = new Java(22);
     await java.init();
 
-    expect(java.javaPath).toBe(path.join(dir, "bin", "javaw.exe"));
+    expect(java.javaPath).toBe(clientPath(dir));
   });
 });
