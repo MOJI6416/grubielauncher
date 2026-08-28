@@ -49,8 +49,10 @@ function clientPath(dir: string) {
 async function makeJavaRoot(release: string, binaryContent: string) {
   const dir = javaDir(release);
   await fs.ensureDir(path.join(dir, JAVA_BIN_DIR));
-  await fs.writeFile(clientPath(dir), binaryContent);
-  await fs.writeFile(path.join(dir, JAVA_BIN_DIR, SERVER_BINARY), binaryContent);
+  for (const binary of [clientPath(dir), path.join(dir, JAVA_BIN_DIR, SERVER_BINARY)]) {
+    await fs.writeFile(binary, binaryContent);
+    if (process.platform !== "win32") await fs.chmod(binary, 0o755);
+  }
   return dir;
 }
 
