@@ -263,7 +263,13 @@ function UnpublishedPanel({
     const shared = publishedShareCodes(published);
 
     return versions
-      .filter((version) => isOwner(version.version.owner, account ?? undefined))
+      .filter((version) =>
+        isOwner(
+          version.version.owner,
+          account ?? undefined,
+          version.version.ownerId,
+        ),
+      )
       .filter((version) => {
         const code = version.version.shareCode;
         return !code || !shared.has(code);

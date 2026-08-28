@@ -1,9 +1,37 @@
 import { ILocalAccount } from "@/types/Account";
+import {
+  accountKey,
+  accountSubject,
+} from "@renderer/features/accounts/identity";
 
-export function isOwner(owner?: string, account?: ILocalAccount) {
-  if (!owner || !account) return false;
+export function isOwner(
+  owner?: string,
+  account?: ILocalAccount,
+  ownerId?: string,
+) {
+  if (!account) return false;
 
-  return `${account.type}_${account.nickname}` === owner;
+  const identity = typeof ownerId === "string" ? ownerId.trim() : "";
+  if (identity) {
+    const accountId = typeof account.id === "string" ? account.id.trim() : "";
+    return identity === accountSubject(account) || identity === accountId;
+  }
+
+  if (!owner) return false;
+
+  return accountKey(account) === owner;
+}
+
+export function ownerRecordFor(account: ILocalAccount): {
+  owner: string;
+  ownerId?: string;
+} {
+  const sub = accountSubject(account);
+
+  return {
+    owner: accountKey(account),
+    ...(sub ? { ownerId: sub } : {}),
+  };
 }
 
 export function parseVersionOwner(owner?: string) {

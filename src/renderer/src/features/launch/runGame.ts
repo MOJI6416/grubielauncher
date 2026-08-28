@@ -196,7 +196,11 @@ export async function runGame(params: RunGameParams): Promise<void> {
     }
 
     launchVersion.version.lastLaunch = new Date();
-    const trackStatistics = isOwner(launchVersion.version.owner, account);
+    const trackStatistics = isOwner(
+      launchVersion.version.owner,
+      account,
+      launchVersion.version.ownerId,
+    );
 
     toast(t("app.starting"));
 

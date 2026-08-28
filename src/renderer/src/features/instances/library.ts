@@ -53,6 +53,20 @@ export function countFilters(filters: LibraryFilters): number {
   return filters.loader.length + filters.tag.length + filters.state.length;
 }
 
+export function availableFacets(input: {
+  loaders?: string[];
+  tags?: string[];
+  hasUpdates?: boolean;
+}): LibraryFilters {
+  const loaders = input.loaders ?? [];
+
+  return {
+    loader: loaders.length > 1 ? loaders : [],
+    tag: input.tags ?? [],
+    state: input.hasUpdates ? ["behind"] : [],
+  };
+}
+
 export function toggleFilter(
   filters: LibraryFilters,
   facet: LibraryFacet,

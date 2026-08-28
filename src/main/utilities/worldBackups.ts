@@ -18,6 +18,7 @@ import {
   WorldBackupTrigger,
 } from "@/types/WorldBackup";
 import { getLauncherPaths } from "./other";
+import { ensureInstanceId, readInstanceId } from "./instanceId";
 import { writeJsonAtomic } from "./atomicJson";
 import { createZipArchive, extractZip } from "./archiver";
 import { readWorldDisplayName } from "./worlds";
@@ -30,6 +31,7 @@ const RESTORE_TEMP_DIR_NAME = "world-restore";
 export const DISPLACED_DIR_NAME = ".grubie-restore";
 const PRESERVED_MARKER_FILE = ".grubie-preserved";
 const BACKUP_ID_PATTERN = /^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
+const UNOWNED_INSTANCE_ID = "";
 const EXCLUDED_FILE_NAMES = new Set(["session.lock", ".grubie-preserved"]);
 const PRE_RESTORE_KEEP = 3;
 const BACKUP_COMPRESSION_LEVEL = 6;
@@ -109,6 +111,8 @@ export function normalizeBackupEntry(value: unknown): IWorldBackup | null {
         : entry.worldFolder,
     worldFolder: entry.worldFolder,
     versionName: entry.versionName,
+    instanceId:
+      typeof entry.instanceId === "string" ? entry.instanceId : undefined,
     createdAt: Number.isFinite(createdAt) && createdAt > 0 ? createdAt : 0,
     size: Number.isFinite(size) && size >= 0 ? size : 0,
     trigger: normalizeTrigger(entry.trigger),
@@ -149,6 +153,66 @@ async function readIndex(): Promise<IWorldBackup[]> {
     entries.push(entry);
   }
 
+  return await adoptLegacyEntries(entries);
+}
+
+function isPlainFolderName(name: string): boolean {
+  return (
+    Boolean(name) &&
+    name !== "." &&
+    name !== ".." &&
+    path.basename(name) === name
+  );
+}
+
+async function resolveAdoptedId(
+  versionsPath: string,
+  versionName: string,
+): Promise<string | null> {
+  if (!isPlainFolderName(versionName)) return UNOWNED_INSTANCE_ID;
+
+  const versionPath = path.join(versionsPath, versionName);
+  const stats = await fs.stat(versionPath).catch(() => null);
+  if (!stats?.isDirectory()) return UNOWNED_INSTANCE_ID;
+
+  return await ensureInstanceId(versionPath);
+}
+
+async function adoptLegacyEntries(
+  entries: IWorldBackup[],
+): Promise<IWorldBackup[]> {
+  if (entries.every((entry) => entry.instanceId !== undefined)) return entries;
+
+  const versionsPath = path.join(getLauncherPaths().minecraft, "versions");
+  const versionsStats = await fs.stat(versionsPath).catch(() => null);
+  if (!versionsStats?.isDirectory()) return entries;
+
+  const adopted = new Map<string, string | null>();
+  let changed = false;
+
+  for (const entry of entries) {
+    if (entry.instanceId !== undefined) continue;
+
+    if (!adopted.has(entry.versionName)) {
+      adopted.set(
+        entry.versionName,
+        await resolveAdoptedId(versionsPath, entry.versionName),
+      );
+    }
+
+    const instanceId = adopted.get(entry.versionName) ?? null;
+    if (instanceId === null) continue;
+
+    entry.instanceId = instanceId;
+    changed = true;
+  }
+
+  if (changed) {
+    await writeIndex(entries).catch((error) =>
+      console.error(`[backups] the index kept its old records:`, error),
+    );
+  }
+
   return entries;
 }
 
@@ -157,8 +221,8 @@ async function writeIndex(entries: IWorldBackup[]): Promise<void> {
   await writeJsonAtomic(getIndexPath(), entries);
 }
 
-function getWorldKey(versionName: string, worldFolder: string): string {
-  return `${versionName}::${worldFolder}`;
+function getWorldKey(instanceId: string, worldFolder: string): string {
+  return `${instanceId}::${worldFolder}`;
 }
 
 async function readSkipState(): Promise<Record<string, SkipRecord>> {
@@ -228,13 +292,13 @@ function sortBackups(entries: IWorldBackup[]): IWorldBackup[] {
 
 function selectBackupsForWorld(
   entries: IWorldBackup[],
-  versionName: string,
+  instanceId: string,
   worldFolder: string,
 ): IWorldBackup[] {
   return sortBackups(
     entries.filter(
       (entry) =>
-        entry.versionName === versionName && entry.worldFolder === worldFolder,
+        entry.instanceId === instanceId && entry.worldFolder === worldFolder,
     ),
   );
 }
@@ -332,7 +396,6 @@ async function createBackupUnsafe(
   const worldFolder = path.basename(resolvedWorldPath);
   const versionPath = getVersionPathFromWorldPath(resolvedWorldPath);
   const versionName = path.basename(versionPath);
-  const worldKey = getWorldKey(versionName, worldFolder);
 
   if (isVersionRunning(versionPath)) {
     return { ok: false, error: "versionRunning" };
@@ -341,6 +404,11 @@ async function createBackupUnsafe(
   if (!(await fs.pathExists(path.join(resolvedWorldPath, "level.dat")))) {
     return { ok: false, error: "worldMissing" };
   }
+
+  const instanceId = await ensureInstanceId(versionPath);
+  if (!instanceId) return { ok: false, error: "failed" };
+
+  const worldKey = getWorldKey(instanceId, worldFolder);
 
   const files: string[] = [];
   let sourceSize: number;
@@ -406,6 +474,7 @@ async function createBackupUnsafe(
     worldName: await readWorldDisplayName(resolvedWorldPath),
     worldFolder,
     versionName,
+    instanceId,
     createdAt: Date.now(),
     size: stats.size,
     trigger,
@@ -414,7 +483,7 @@ async function createBackupUnsafe(
   entries.push(backup);
 
   const prunable = selectPrunableBackups(
-    selectBackupsForWorld(entries, versionName, worldFolder),
+    selectBackupsForWorld(entries, instanceId, worldFolder),
     keep,
     [backup.id, ...(protectedIds ?? [])],
   );
@@ -432,9 +501,13 @@ async function createBackupUnsafe(
 
 async function recordAutoBackupFailure(worldPath: string): Promise<void> {
   const resolved = path.resolve(worldPath);
-  const versionName = path.basename(getVersionPathFromWorldPath(resolved));
+  const instanceId = await readInstanceId(
+    getVersionPathFromWorldPath(resolved),
+  ).catch(() => null);
 
-  await setSkipRecord(getWorldKey(versionName, path.basename(resolved)), {
+  if (!instanceId) return;
+
+  await setSkipRecord(getWorldKey(instanceId, path.basename(resolved)), {
     reason: "failed",
     sourceSize: 0,
   }).catch(() => {});
@@ -468,15 +541,20 @@ async function listBackupsForWorld(
   const versionPath = getVersionPathFromWorldPath(resolvedWorldPath);
 
   const entries = await readIndex();
+  const instanceId = await readInstanceId(versionPath);
+  if (!instanceId) return [];
+
   const worldBackups = selectBackupsForWorld(
     entries,
-    path.basename(versionPath),
+    instanceId,
     path.basename(resolvedWorldPath),
   );
 
+  const versionName = path.basename(versionPath);
   const existing: IWorldBackup[] = [];
   for (const entry of worldBackups) {
-    if (await fs.pathExists(getBackupFilePath(entry.id))) existing.push(entry);
+    if (!(await fs.pathExists(getBackupFilePath(entry.id)))) continue;
+    existing.push({ ...entry, versionName });
   }
 
   return existing;
@@ -636,10 +714,6 @@ export async function getWorldBackupList(
 ): Promise<IWorldBackupList> {
   const resolvedWorldPath = path.resolve(worldPath);
   const versionPath = getVersionPathFromWorldPath(resolvedWorldPath);
-  const worldKey = getWorldKey(
-    path.basename(versionPath),
-    path.basename(resolvedWorldPath),
-  );
 
   const [backups, skipState, preserved] = await Promise.all([
     listBackupsForWorld(resolvedWorldPath),
@@ -647,15 +721,20 @@ export async function getWorldBackupList(
     listPreservedCopies(resolvedWorldPath),
   ]);
 
+  const instanceId = await readInstanceId(versionPath);
+  const worldKey = instanceId
+    ? getWorldKey(instanceId, path.basename(resolvedWorldPath))
+    : null;
+
   return {
     backups,
-    skipReason: skipState[worldKey]?.reason ?? null,
+    skipReason: (worldKey ? skipState[worldKey]?.reason : null) ?? null,
     preserved,
   };
 }
 
 export function reassignWorldBackups(
-  versionName: string,
+  versionPath: string,
   fromFolder: string,
   toFolder: string,
   worldName: string,
@@ -664,10 +743,13 @@ export function reassignWorldBackups(
     if (!fromFolder || !toFolder || fromFolder === toFolder) return;
 
     const entries = await readIndex();
+    const instanceId = await readInstanceId(versionPath);
+    if (!instanceId) return;
+
     let changed = false;
 
     for (const entry of entries) {
-      if (entry.versionName !== versionName) continue;
+      if (entry.instanceId !== instanceId) continue;
       if (entry.worldFolder !== fromFolder) continue;
 
       entry.worldFolder = toFolder;
@@ -678,11 +760,11 @@ export function reassignWorldBackups(
     if (changed) await writeIndex(entries);
 
     const skipState = await readSkipState();
-    const fromKey = getWorldKey(versionName, fromFolder);
+    const fromKey = getWorldKey(instanceId, fromFolder);
     const record = skipState[fromKey];
 
     if (record) {
-      await setSkipRecord(getWorldKey(versionName, toFolder), record);
+      await setSkipRecord(getWorldKey(instanceId, toFolder), record);
       await setSkipRecord(fromKey, null);
     }
   });
@@ -707,12 +789,14 @@ export async function reassignPreservedCopies(
 export async function countWorldBackups(
   versionPath: string,
 ): Promise<Record<string, number>> {
-  const versionName = path.basename(path.resolve(versionPath));
   const entries = await readIndex();
+  const instanceId = await readInstanceId(versionPath);
+  if (!instanceId) return {};
+
   const counts: Record<string, number> = {};
 
   for (const entry of entries) {
-    if (entry.versionName !== versionName) continue;
+    if (entry.instanceId !== instanceId) continue;
     if (!(await fs.pathExists(getBackupFilePath(entry.id)))) continue;
 
     counts[entry.worldFolder] = (counts[entry.worldFolder] ?? 0) + 1;
@@ -764,9 +848,12 @@ async function restoreBackupUnsafe(
   const backup = entries.find((entry) => entry.id === backupId);
   if (!backup) return { ok: false, error: "backupMissing" };
 
+  const instanceId = await readInstanceId(versionPath);
+
   if (
     backup.worldFolder !== worldFolder ||
-    backup.versionName !== path.basename(versionPath)
+    !instanceId ||
+    backup.instanceId !== instanceId
   ) {
     return { ok: false, error: "backupMissing" };
   }
@@ -975,6 +1062,28 @@ async function collectOrphanPreserved(): Promise<{
   return { paths, size };
 }
 
+async function collectLiveInstanceIds(
+  versionsPath: string,
+): Promise<Set<string>> {
+  const ids = new Set<string>();
+
+  let versions: fs.Dirent[];
+  try {
+    versions = await fs.readdir(versionsPath, { withFileTypes: true });
+  } catch {
+    return ids;
+  }
+
+  for (const version of versions) {
+    if (!version.isDirectory()) continue;
+
+    const id = await readInstanceId(path.join(versionsPath, version.name));
+    if (id) ids.add(id);
+  }
+
+  return ids;
+}
+
 async function partitionOrphanBackups(): Promise<{
   orphanIds: string[];
   orphanPreserved: string[];
@@ -995,6 +1104,7 @@ async function partitionOrphanBackups(): Promise<{
   }
 
   const files = await listBackupFilesOnDisk();
+  const liveIds = await collectLiveInstanceIds(versionsPath);
 
   const orphanIds: string[] = [];
   const survivors: IWorldBackup[] = [];
@@ -1004,7 +1114,7 @@ async function partitionOrphanBackups(): Promise<{
   for (const entry of entries) {
     indexed.add(entry.id);
 
-    if (await fs.pathExists(path.join(versionsPath, entry.versionName))) {
+    if (entry.instanceId === undefined || liveIds.has(entry.instanceId)) {
       survivors.push(entry);
       continue;
     }
@@ -1082,7 +1192,6 @@ export async function runAutoBackupForVersion(
     return 0;
   }
 
-  const versionName = path.basename(resolvedVersionPath);
   let created = 0;
 
   for (const folder of folders) {
@@ -1097,11 +1206,10 @@ export async function runAutoBackupForVersion(
     if (!levelDatStats?.isFile()) continue;
 
     const entries = await readIndex();
-    const worldBackups = selectBackupsForWorld(
-      entries,
-      versionName,
-      folder.name,
-    );
+    const instanceId = await readInstanceId(resolvedVersionPath);
+    const worldBackups = instanceId
+      ? selectBackupsForWorld(entries, instanceId, folder.name)
+      : [];
 
     if (!shouldAutoBackup(levelDatStats.mtimeMs, worldBackups, changedSince)) {
       continue;

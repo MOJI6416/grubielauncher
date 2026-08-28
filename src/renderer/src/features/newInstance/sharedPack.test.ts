@@ -118,6 +118,32 @@ describe("buildSharedPack", () => {
     expect(pack.downloads).toBe(0);
   });
 
+  it("records the author as the owner of the local copy, not the installer", () => {
+    const { pack } = buildSharedPack(
+      modpack({
+        owner: {
+          _id: "user-9",
+          nickname: "pashka4005",
+          platform: "microsoft",
+        } as never,
+      }),
+      { authSub: "user-1", takenNames: [] },
+    );
+
+    expect(pack.shareVersion?.ownerId).toBe("user-9");
+    expect(pack.shareVersion?.owner).toBe("microsoft_pashka4005");
+  });
+
+  it("leaves ownership unrecorded when the response has no owner", () => {
+    const { pack } = buildSharedPack(modpack(), {
+      authSub: "user-1",
+      takenNames: [],
+    });
+
+    expect(pack.shareVersion?.ownerId).toBeUndefined();
+    expect(pack.shareVersion?.owner).toBeUndefined();
+  });
+
   it("suggests a free name when one is taken", () => {
     const { content } = buildSharedPack(modpack(), {
       authSub: "user-1",

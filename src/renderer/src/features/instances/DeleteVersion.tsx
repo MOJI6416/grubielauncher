@@ -33,11 +33,11 @@ import { toast } from "sonner";
 
 import { showFailureToast } from "@renderer/utilities/failures";
 import { formatBytes } from "@renderer/utilities/file";
-import { isOwner, parseVersionOwner } from "@renderer/utilities/versionPure";
 import {
   useInstanceContents,
   useInstanceDiskUsage,
 } from "@renderer/features/instances/useInstanceInsights";
+import { getDeleteGates } from "@renderer/features/instances/deleteGates";
 import { clearInstanceSelection } from "@renderer/features/instances/selectInstance";
 import { forgetContinueCache } from "@renderer/features/instances/continueCache";
 import { updateInstancesFile } from "@renderer/features/instances/instancesStore";
@@ -71,34 +71,22 @@ export function DeleteVersion({
   const [authData] = useAtom(authDataAtom);
   const setConsoles = useSetAtom(consolesAtom);
 
-  const publicationOwner = useMemo(() => {
-    if (!version?.version.shareCode || version.version.downloadedVersion) {
-      return null;
-    }
-    if (!account || isOwner(version.version.owner, account)) return null;
-
-    return parseVersionOwner(version.version.owner);
-  }, [version, account]);
-
-  const canOfferRemoteDelete = useMemo(() => {
-    return (
-      !!version?.version.shareCode &&
-      !version.version.downloadedVersion &&
-      !publicationOwner
-    );
-  }, [version, publicationOwner]);
-
   const canRequestRemoteDelete =
     isNetwork && !!authData && !!account?.accessToken;
 
-  const canDeleteRemote = useMemo(() => {
-    return (
-      !!version?.version.shareCode &&
-      !version.version.downloadedVersion &&
-      shareDel &&
-      canRequestRemoteDelete
-    );
-  }, [version, shareDel, canRequestRemoteDelete]);
+  const { publicationOwner, canOfferRemoteDelete, canDeleteRemote } = useMemo(
+    () =>
+      getDeleteGates({
+        shareCode: version?.version.shareCode,
+        downloadedVersion: version?.version.downloadedVersion,
+        owner: version?.version.owner,
+        ownerId: version?.version.ownerId,
+        account,
+        shareDel,
+        canRequestRemoteDelete,
+      }),
+    [version, account, shareDel, canRequestRemoteDelete],
+  );
 
   const versionName = version?.version.name || "";
 

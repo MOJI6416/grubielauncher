@@ -241,7 +241,7 @@ export function ConnectivityModal({
           </div>
         </div>
 
-        <DialogFooter className="m-0 shrink-0 flex-row items-center justify-between gap-1 rounded-none border-t border-border px-2 py-2">
+        <DialogFooter className="m-0 shrink-0 flex-row items-center justify-between gap-1 border-t border-border px-2 py-2">
           <Button
             variant="ghost"
             size="sm"

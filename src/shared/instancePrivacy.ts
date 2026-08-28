@@ -21,11 +21,14 @@ export const PRIVATE_INSTANCE_PATHS = [
   "storage/offline-uuid-migration.json",
 ] as const;
 
+export const INSTANCE_ID_FILE = ".gl-instance-id";
+
 export const RUNTIME_INSTANCE_PATHS = [
   "natives",
   "temp",
   "downloads",
   ".fabric",
+  INSTANCE_ID_FILE,
 ] as const;
 
 export const EXCLUDED_INSTANCE_PATHS: readonly string[] = [

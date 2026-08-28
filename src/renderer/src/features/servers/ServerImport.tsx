@@ -154,7 +154,7 @@ export function ServerImport({
           </ScrollArea>
         )}
 
-        <DialogFooter className="m-0 rounded-none border-t bg-surface-1 px-5 py-3">
+        <DialogFooter className="m-0 border-t bg-surface-1 px-5 py-3">
           <Button variant="ghost" size="sm" onClick={onClose}>
             {t("common.cancel")}
           </Button>

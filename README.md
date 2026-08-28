@@ -35,7 +35,11 @@ The interface is a permanent sidebar with full screens instead of stacked dialog
 
 **Mods, resource packs and shaders, searched inside the launcher**
 
-![The Content tab of an instance with a Modrinth search](docs/screenshots/en/mods.webp)
+![The Content tab of an instance with its installed mods](docs/screenshots/en/mods.webp)
+
+**An assistant that reads your instances, logs and crashes**
+
+![The Assistant screen: a chat with a finished plan and the tools it ran](docs/screenshots/en/assistant.webp)
 
 **Friends, groups and requests, next to the chat**
 

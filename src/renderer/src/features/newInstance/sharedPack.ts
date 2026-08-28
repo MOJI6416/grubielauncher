@@ -21,6 +21,21 @@ export function isSharedPackOwned(
   return !!authSub && !!ownerId && authSub === ownerId;
 }
 
+function sharedPackOwnership(shared: IBackendModpack): {
+  owner?: string;
+  ownerId?: string;
+} {
+  const owner = shared.owner;
+  if (!owner?._id) return {};
+
+  return {
+    ...(owner.platform && owner.nickname
+      ? { owner: `${owner.platform}_${owner.nickname}` }
+      : {}),
+    ownerId: owner._id,
+  };
+}
+
 export function sharedPackAuthor(
   shared: IBackendModpack,
 ): PackAuthor | undefined {
@@ -58,7 +73,7 @@ export function buildSharedPack(
         downloadedVersion: true,
         lastLaunch: undefined,
         lastUpdate: new Date(),
-        owner: options.authSub,
+        ...sharedPackOwnership(shared),
         shareCode: shared._id,
       },
     },

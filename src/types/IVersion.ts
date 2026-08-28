@@ -17,6 +17,7 @@ export interface IVersionConf {
   loader: ILoader
   version: IVersion
   owner?: string
+  ownerId?: string
   lastLaunch?: Date
   build: number
   shareCode?: string

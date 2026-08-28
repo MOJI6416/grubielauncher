@@ -28,6 +28,36 @@ describe("version pure helpers", () => {
     ).toBe(false);
   });
 
+  it("does not hand ownership to another account that reuses the nickname", () => {
+    expect(
+      isOwner(
+        "plain_Steve",
+        { type: "plain", nickname: "Steve", id: "user-b" } as any,
+        "user-a",
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps recognising the owner after a nickname change", () => {
+    expect(
+      isOwner(
+        "discord_OldNick",
+        { type: "discord", nickname: "NewNick", id: "user-a" } as any,
+        "user-a",
+      ),
+    ).toBe(true);
+  });
+
+  it("falls back to the stored account key when no identity was recorded", () => {
+    expect(
+      isOwner("discord_Notch", {
+        type: "discord",
+        nickname: "Notch",
+        id: "user-a",
+      } as any),
+    ).toBe(true);
+  });
+
   it("parses stored owner keys without losing nicknames containing underscores", () => {
     expect(parseVersionOwner("discord_pack_owner")).toEqual({
       type: "discord",

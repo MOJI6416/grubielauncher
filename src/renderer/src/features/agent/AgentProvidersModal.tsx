@@ -641,7 +641,7 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <DialogFooter className="m-0 shrink-0 gap-2 rounded-none border-t border-border bg-surface-2 px-4 py-3 sm:justify-between">
+        <DialogFooter className="m-0 shrink-0 gap-2 border-t border-border bg-surface-2 px-4 py-3 sm:justify-between">
           {form ? (
             <>
               <Button variant="ghost" size="sm" onClick={closeForm}>

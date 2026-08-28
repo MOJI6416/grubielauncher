@@ -30,10 +30,13 @@ export function consumeUpdateDetailsRequest(key: string): boolean {
 }
 
 export function isUpdateCheckable(
-  local: Pick<IVersionConf, "shareCode" | "owner">,
+  local: Pick<IVersionConf, "shareCode" | "owner" | "ownerId">,
   account: ILocalAccount | null | undefined,
 ): boolean {
-  return !!local.shareCode && isOwner(local.owner, account ?? undefined);
+  return (
+    !!local.shareCode &&
+    isOwner(local.owner, account ?? undefined, local.ownerId)
+  );
 }
 
 export function compareBuilds(

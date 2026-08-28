@@ -176,7 +176,7 @@ async function readInstanceContext(
 ): Promise<void> {
   const store = getDefaultStore();
   const context: InstanceContext = {
-    ownerOk: isOwner(instance.version.owner, account),
+    ownerOk: isOwner(instance.version.owner, account, instance.version.ownerId),
     account,
     authData: store.get(authDataAtom),
     isNetwork: store.get(networkAtom),

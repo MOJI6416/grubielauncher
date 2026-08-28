@@ -1650,7 +1650,9 @@
     "create": "New instance",
     "never": "Never launched",
     "filters": {
-      "title": "Filters"
+      "title": "Filters",
+      "empty": "Nothing to filter by yet",
+      "emptyHint": "Filters appear once you tag instances or install one on another loader."
     },
     "state": {
       "notInstalled": "Not installed",

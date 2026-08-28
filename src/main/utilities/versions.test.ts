@@ -4,6 +4,7 @@ import AdmZip from "adm-zip";
 import fs from "fs-extra";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { importVersion, sanitizeImportedVersionConf } from "./versions";
+import { INSTANCE_ID_FILE } from "@/shared/instancePrivacy";
 import { ProjectType, Provider } from "@/types/ModManager";
 
 vi.mock("electron", () => ({
@@ -98,6 +99,27 @@ describe("import version helpers", () => {
     );
 
     expect(conf.image).toContain("logo.webp");
+  });
+
+  it("drops the instance id that travelled inside the archive", async () => {
+    const tempRoot = await makeTempRoot();
+    const versionPath = path.join(tempRoot, "Imported Stamped Pack");
+    await fs.ensureDir(versionPath);
+
+    const idPath = path.join(versionPath, INSTANCE_ID_FILE);
+    await fs.writeFile(idPath, "11111111-2222-4333-8444-555555555555", "utf-8");
+
+    sanitizeImportedVersionConf(
+      {
+        name: "Imported Stamped Pack",
+        image: "",
+        downloadedVersion: true,
+        loader: { name: "vanilla", mods: [] },
+      } as any,
+      versionPath,
+    );
+
+    expect(await fs.pathExists(idPath)).toBe(false);
   });
 
   it("removes the extracted version folder when import fails after extraction starts", async () => {

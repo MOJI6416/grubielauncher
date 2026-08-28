@@ -1,5 +1,6 @@
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -50,6 +51,7 @@ import {
   shouldAutoBackup,
 } from "./worldBackups";
 import { gameProcesses } from "./runtime";
+import { INSTANCE_ID_FILE } from "@/shared/instancePrivacy";
 import { IWorldBackup, normalizeWorldBackupKeep } from "@/types/WorldBackup";
 
 const VERSION_NAME = "TestPack";
@@ -84,6 +86,14 @@ async function seedWorld(marker: string, folder = WORLD_FOLDER): Promise<void> {
   await fs.writeFile(path.join(target, "level.dat"), `level-${marker}`);
   await fs.writeFile(path.join(target, "region", "r.0.0.mca"), marker);
   await fs.writeFile(path.join(target, "session.lock"), "locked");
+}
+
+async function stampInstanceId(
+  target = versionPath,
+  id = "11111111-2222-4333-8444-555555555555",
+): Promise<string> {
+  await fs.writeFile(path.join(target, INSTANCE_ID_FILE), id, "utf-8");
+  return id;
 }
 
 async function listBackupZips(): Promise<string[]> {
@@ -123,6 +133,7 @@ beforeEach(async () => {
   await fs.remove(backupsDir);
   await fs.remove(savesPath);
   await fs.ensureDir(versionPath);
+  await fs.remove(path.join(versionPath, INSTANCE_ID_FILE));
 });
 
 describe("normalizeWorldBackupKeep", () => {
@@ -494,7 +505,7 @@ describe("renaming a world folder", () => {
     });
 
     await reassignWorldBackups(
-      VERSION_NAME,
+      versionPath,
       WORLD_FOLDER,
       renamedFolder,
       "Renamed world",
@@ -548,6 +559,120 @@ describe("renaming a world folder", () => {
 
     const listed = await getWorldBackupList(renamedPath);
     expect(listed.preserved.map((entry) => entry.path)).toEqual([copyPath]);
+  });
+});
+
+describe("instance identity", () => {
+  const RENAMED_VERSION_NAME = "TestPack renamed";
+  const renamedVersionPath = path.join(versionsPath, RENAMED_VERSION_NAME);
+
+  async function stripInstanceIds(): Promise<void> {
+    const indexPath = path.join(backupsDir, "index.json");
+    const stored = (await fs.readJSON(indexPath)) as IWorldBackup[];
+
+    await fs.writeJSON(
+      indexPath,
+      stored.map((entry) => {
+        const legacy = { ...entry };
+        delete legacy.instanceId;
+        return legacy;
+      }),
+    );
+
+    await fs.remove(path.join(versionPath, INSTANCE_ID_FILE));
+  }
+
+  afterEach(async () => {
+    await fs.remove(renamedVersionPath);
+  });
+
+  it("does not hand the backups of a deleted instance to a new one with the same name", async () => {
+    await seedWorld("original");
+
+    const created = await createWorldBackup(worldPath, "manual", 5);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await fs.remove(versionPath);
+    await fs.ensureDir(versionPath);
+    await seedWorld("fresh");
+
+    expect((await getWorldBackupList(worldPath)).backups).toEqual([]);
+    expect(await countWorldBackups(versionPath)).toEqual({});
+
+    const restored = await restoreWorldBackup(created.backup.id, worldPath, 5);
+    expect(restored).toEqual({ ok: false, error: "backupMissing" });
+    expect(await readMarker()).toBe("fresh");
+
+    expect((await getOrphanBackupsStats()).count).toBe(1);
+  });
+
+  it("keeps the backups of a renamed instance", async () => {
+    await seedWorld("original");
+
+    const created = await createWorldBackup(worldPath, "manual", 5);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await fs.move(versionPath, renamedVersionPath);
+    const movedWorldPath = path.join(
+      renamedVersionPath,
+      "saves",
+      WORLD_FOLDER,
+    );
+    const movedMarkerPath = path.join(movedWorldPath, "region", "r.0.0.mca");
+
+    const listed = await getWorldBackupList(movedWorldPath);
+    expect(listed.backups.map((entry) => entry.id)).toEqual([
+      created.backup.id,
+    ]);
+    expect((await countWorldBackups(renamedVersionPath))[WORLD_FOLDER]).toBe(1);
+    expect((await getOrphanBackupsStats()).count).toBe(0);
+
+    await fs.writeFile(movedMarkerPath, "corrupted");
+
+    const restored = await restoreWorldBackup(
+      created.backup.id,
+      movedWorldPath,
+      5,
+    );
+    expect(restored.ok).toBe(true);
+    expect(await fs.readFile(movedMarkerPath, "utf-8")).toBe("original");
+  });
+
+  it("adopts the records of an instance that is still there", async () => {
+    await seedWorld("original");
+
+    const created = await createWorldBackup(worldPath, "manual", 5);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await stripInstanceIds();
+
+    const listed = await getWorldBackupList(worldPath);
+    expect(listed.backups.map((entry) => entry.id)).toEqual([
+      created.backup.id,
+    ]);
+    expect((await getOrphanBackupsStats()).count).toBe(0);
+  });
+
+  it("never lets a new instance adopt the records of a deleted one", async () => {
+    await seedWorld("original");
+
+    const created = await createWorldBackup(worldPath, "manual", 5);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await stripInstanceIds();
+    await fs.remove(versionPath);
+
+    expect((await getOrphanBackupsStats()).count).toBe(1);
+
+    await fs.ensureDir(versionPath);
+    await seedWorld("fresh");
+
+    expect((await getWorldBackupList(worldPath)).backups).toEqual([]);
+    expect((await getOrphanBackupsStats()).count).toBe(1);
   });
 });
 
@@ -774,9 +899,10 @@ describe("automatic backups", () => {
 
   it("records a skip reason the world dialog can surface", async () => {
     await seedWorld("original");
+    const instanceId = await stampInstanceId();
     await fs.ensureDir(backupsDir);
     await fs.writeJSON(path.join(backupsDir, "skipped.json"), {
-      [`${VERSION_NAME}::${WORLD_FOLDER}`]: "worldTooLarge",
+      [`${instanceId}::${WORLD_FOLDER}`]: "worldTooLarge",
     });
 
     expect((await getWorldBackupList(worldPath)).skipReason).toBe(
@@ -789,9 +915,10 @@ describe("automatic backups", () => {
 
   it("stops re-archiving a world that already failed at this size", async () => {
     await seedWorld("original");
+    const instanceId = await stampInstanceId();
     await fs.ensureDir(backupsDir);
     await fs.writeJSON(path.join(backupsDir, "skipped.json"), {
-      [`${VERSION_NAME}::${WORLD_FOLDER}`]: {
+      [`${instanceId}::${WORLD_FOLDER}`]: {
         reason: "worldTooLarge",
         sourceSize: 1,
       },

@@ -24,7 +24,10 @@ import {
   getLocalPathFromFileUrl,
   toFileUrl,
 } from "@renderer/utilities/exportVersion";
-import { sanitizeExtraFileSegments } from "@renderer/utilities/versionPure";
+import {
+  ownerRecordFor,
+  sanitizeExtraFileSegments,
+} from "@renderer/utilities/versionPure";
 import { parseInlineImage } from "./inlineImage";
 import type { AppliedPack } from "./state";
 
@@ -296,7 +299,9 @@ export async function createInstance(
         version: request.loaderVersion,
         other: base.loader?.other || undefined,
       },
-      owner: `${account.type}_${account.nickname}`,
+      ...(pack?.shareVersion
+        ? { owner: base.owner, ownerId: base.ownerId }
+        : ownerRecordFor(account)),
     };
 
     if (!importData) {

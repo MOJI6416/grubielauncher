@@ -16,6 +16,8 @@ const FILE_NAME = "instances.json";
 
 export const instancesFileAtom = atom<InstancesFile>(EMPTY_INSTANCES_FILE);
 
+export const instancesFileUnreadableAtom = atom(false);
+
 let filePath: string | null = null;
 let isFileReadable = false;
 
@@ -51,6 +53,7 @@ export async function hydrateInstancesFile(launcherPath: string): Promise<void> 
   });
 
   store.set(instancesFileAtom, merged);
+  store.set(instancesFileUnreadableAtom, !isFileReadable);
 
   if (isFileReadable && JSON.stringify(merged) !== JSON.stringify(loaded)) {
     writeFile(merged);

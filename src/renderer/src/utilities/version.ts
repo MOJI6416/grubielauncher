@@ -35,6 +35,7 @@ import {
   preserveLocalBlockedPaths,
   shouldReportStaleLocalShareFiles,
 } from "./shareSyncPure";
+import { ownerRecordFor } from "./versionPure";
 export {
   isOwner,
   parseVersionOwner,
@@ -334,8 +335,8 @@ ${describeFailure(failure).text}`,
 
         let isUpdated = false;
 
-        if (!conf.owner && account) {
-          version.version.owner = `${account.type}_${account.nickname}`;
+        if (!conf.owner && !conf.ownerId && account) {
+          Object.assign(version.version, ownerRecordFor(account));
           isUpdated = true;
         }
 

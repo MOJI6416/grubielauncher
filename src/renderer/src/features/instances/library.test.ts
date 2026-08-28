@@ -3,6 +3,7 @@ import { InstanceLike } from "./selectors";
 import {
   EMPTY_LIBRARY_FILTERS,
   LibraryFilters,
+  availableFacets,
   buildLibraryEntries,
   countFilters,
   filterLibrary,
@@ -60,6 +61,46 @@ describe("filters", () => {
       { facet: "loader", value: "fabric" },
       { facet: "state", value: "behind" },
     ]);
+  });
+});
+
+describe("availableFacets", () => {
+  it("drops the loader facet when every instance shares one loader", () => {
+    const facets = availableFacets({ loaders: ["fabric"], tags: ["pvp"] });
+
+    expect(facets.loader).toEqual([]);
+    expect(facets.tag).toEqual(["pvp"]);
+  });
+
+  it("offers the loader facet once loaders differ", () => {
+    const facets = availableFacets({ loaders: ["fabric", "forge"] });
+
+    expect(facets.loader).toEqual(["fabric", "forge"]);
+  });
+
+  it("offers the update facet only when something is behind", () => {
+    expect(availableFacets({ hasUpdates: true }).state).toEqual(["behind"]);
+    expect(availableFacets({ hasUpdates: false }).state).toEqual([]);
+  });
+
+  it("reports zero facets for a single untagged instance", () => {
+    const facets = availableFacets({
+      loaders: ["vanilla"],
+      tags: [],
+      hasUpdates: false,
+    });
+
+    expect(countFilters(facets)).toBe(0);
+  });
+
+  it("counts every facet the menu can offer", () => {
+    const facets = availableFacets({
+      loaders: ["fabric", "forge"],
+      tags: ["pvp", "coop"],
+      hasUpdates: true,
+    });
+
+    expect(countFilters(facets)).toBe(5);
   });
 });
 

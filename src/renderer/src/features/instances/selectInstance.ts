@@ -61,7 +61,7 @@ export async function selectInstance(
   store.set(isDownloadedVersionAtom, instance.version.downloadedVersion);
   store.set(
     isOwnerVersionAtom,
-    isOwner(instance.version.owner, account ?? undefined),
+    isOwner(instance.version.owner, account ?? undefined, instance.version.ownerId),
   );
   store.set(instanceSelectionSignatureAtom, signature);
 

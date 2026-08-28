@@ -1,4 +1,5 @@
 import { checkModpack } from "./modManager";
+import { removeInstanceIdSync } from "./instanceId";
 import { readNBT } from "./nbt";
 import type { IImportModpack, IVersionConf } from "@/types/IVersion";
 import path from "path";
@@ -20,7 +21,10 @@ export function sanitizeImportedVersionConf(
 ): IVersionConf {
   const logoPath = findImportedLogoPath(versionPath);
 
+  removeInstanceIdSync(versionPath);
+
   conf.owner = undefined;
+  conf.ownerId = undefined;
   conf.shareCode = undefined;
   conf.downloadedVersion = false;
 

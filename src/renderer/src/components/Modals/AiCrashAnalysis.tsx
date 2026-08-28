@@ -588,7 +588,7 @@ export function AiCrashAnalysis({
           )}
         </div>
 
-        <DialogFooter className="m-0 shrink-0 flex-row flex-wrap items-center gap-2 rounded-none border-t border-border bg-surface-1 px-4 py-3 sm:justify-between">
+        <DialogFooter className="m-0 shrink-0 flex-row flex-wrap items-center gap-2 border-t border-border bg-surface-1 px-4 py-3 sm:justify-between">
           <div className="flex min-w-0 items-center gap-1">
             {request?.reportPath && (
               <Button

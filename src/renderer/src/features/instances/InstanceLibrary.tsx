@@ -19,6 +19,7 @@ import {
   Search,
   SearchX,
   Tag,
+  TriangleAlert,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +95,7 @@ import {
   instanceGroupsAtom,
   instanceOrderAtom,
   instanceTagsAtom,
+  instancesFileUnreadableAtom,
   ungroupedCollapsedAtom,
   updateInstancesFile,
 } from "./instancesStore";
@@ -121,6 +123,7 @@ import {
   LibraryFacet,
   LibraryFilters,
   LibrarySort,
+  availableFacets,
   buildLibraryEntries,
   countFilters,
   listFilters,
@@ -155,6 +158,7 @@ export function InstanceLibrary({
   const updates = useAtomValue(instanceUpdatesAtom);
   const tags = useAtomValue(instanceTagsAtom);
   const groups = useAtomValue(instanceGroupsAtom);
+  const organizeUnreadable = useAtomValue(instancesFileUnreadableAtom);
   const manualOrder = useAtomValue(instanceOrderAtom);
   const isUngroupedCollapsed = useAtomValue(ungroupedCollapsedAtom);
   const playtime = useAtomValue(instancePlaytimeAtom);
@@ -249,6 +253,11 @@ export function InstanceLibrary({
     [tags, versions],
   );
   const hasUpdates = Object.values(updates).includes("behind");
+  const facets = useMemo(
+    () => availableFacets({ loaders, tags: allTags, hasUpdates }),
+    [loaders, allTags, hasUpdates],
+  );
+  const facetCount = countFilters(facets);
   const hiddenCount = versions.length - visible.length;
   const activeFilters = listFilters(filters);
   const filterCount = countFilters(filters);
@@ -449,12 +458,32 @@ export function InstanceLibrary({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
-                {loaders.length > 1 && (
+                {facetCount === 0 && (
+                  <div className="px-2 py-2.5 text-center">
+                    {organizeUnreadable ? (
+                      <p className="flex items-start gap-1.5 text-left text-xs text-warning">
+                        <TriangleAlert className="mt-px size-3.5 shrink-0" />
+                        {t("versions.organizeLoadFailed")}
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-xs text-muted-foreground">
+                          {t("versions.filters.empty")}
+                        </p>
+                        <p className="mt-1 text-xs text-faint">
+                          {t("versions.filters.emptyHint")}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {facets.loader.length > 0 && (
                   <>
                     <DropdownMenuLabel>
                       {t("versions.loader")}
                     </DropdownMenuLabel>
-                    {loaders.map((loader) => (
+                    {facets.loader.map((loader) => (
                       <DropdownMenuCheckboxItem
                         key={`loader-${loader}`}
                         checked={filters.loader.includes(loader)}
@@ -467,7 +496,7 @@ export function InstanceLibrary({
                   </>
                 )}
 
-                {hasUpdates && (
+                {facets.state.length > 0 && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuCheckboxItem
@@ -483,13 +512,13 @@ export function InstanceLibrary({
                   </>
                 )}
 
-                {allTags.length > 0 && (
+                {facets.tag.length > 0 && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>
                       {t("versions.tags.manage")}
                     </DropdownMenuLabel>
-                    {allTags.map((tag) => (
+                    {facets.tag.map((tag) => (
                       <DropdownMenuCheckboxItem
                         key={`tag-${tag}`}
                         checked={filters.tag.includes(tag)}
@@ -870,6 +899,7 @@ export function InstanceLibrary({
               const ownerOk = isOwner(
                 instance.version.owner,
                 account ?? undefined,
+                instance.version.ownerId,
               );
               const ownerInfo = ownerOk
                 ? null

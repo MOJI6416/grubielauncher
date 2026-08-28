@@ -87,7 +87,7 @@ export function registerWorldIpc() {
     const toFolder = path.basename(nextPath)
 
     if (fromFolder !== toFolder) {
-      await reassignWorldBackups(path.basename(path.resolve(versionPath)), fromFolder, toFolder, newName)
+      await reassignWorldBackups(versionPath, fromFolder, toFolder, newName)
       await reassignPreservedCopies(path.dirname(nextPath), fromFolder, toFolder)
     }
 

@@ -15,6 +15,7 @@ export interface IWorldBackup {
   worldName: string;
   worldFolder: string;
   versionName: string;
+  instanceId?: string;
   createdAt: number;
   size: number;
   trigger: WorldBackupTrigger;
