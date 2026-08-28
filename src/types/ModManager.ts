@@ -95,11 +95,6 @@ export interface IFilterItem {
   id?: string;
 }
 
-export interface ISelectedFilter {
-  name: string;
-  id?: string;
-}
-
 export interface IVersion {
   id: string;
   name: string;
@@ -160,6 +155,7 @@ export interface IModPackFile {
 }
 
 export interface ILocalFileInfo {
+  kind?: ProjectType | null;
   name: string;
   version: string | null;
   description: string;
@@ -186,9 +182,8 @@ export interface IFabricMod {
 export interface IAddedLocalProject {
   project: IProject;
   status: "valid" | "duplicate" | "invalid";
+  fileName?: string;
+  size?: number;
+  deletedAt?: number | null;
 }
 
-export interface IUpdateProject {
-  project: ILocalProject;
-  version: IVersion;
-}

@@ -43,31 +43,39 @@ async function probeMajor(binary: string): Promise<number | null> {
   if (binary !== 'java' && !(await fs.pathExists(binary))) return null
 
   return new Promise((resolve) => {
-    execFile(
-      binary,
-      ['-version'],
-      { timeout: VERSION_TIMEOUT_MS, windowsHide: true },
-      (error, stdout, stderr) => {
-        if (error) return resolve(null)
-        resolve(parseMajor(`${stderr}${stdout}`))
-      }
-    )
+    try {
+      execFile(
+        binary,
+        ['-version'],
+        { timeout: VERSION_TIMEOUT_MS, windowsHide: true },
+        (error, stdout, stderr) => {
+          if (error) return resolve(null)
+          resolve(parseMajor(`${stderr}${stdout}`))
+        }
+      )
+    } catch {
+      resolve(null)
+    }
   })
 }
 
 async function probeJavaHome(binary: string): Promise<string | null> {
   return new Promise((resolve) => {
-    execFile(
-      binary,
-      ['-XshowSettings:properties', '-version'],
-      { timeout: VERSION_TIMEOUT_MS, windowsHide: true },
-      (error, stdout, stderr) => {
-        if (error) return resolve(null)
+    try {
+      execFile(
+        binary,
+        ['-XshowSettings:properties', '-version'],
+        { timeout: VERSION_TIMEOUT_MS, windowsHide: true },
+        (error, stdout, stderr) => {
+          if (error) return resolve(null)
 
-        const match = `${stderr}${stdout}`.match(/^\s*java\.home\s*=\s*(.+?)\s*$/m)
-        resolve(match ? match[1] : null)
-      }
-    )
+          const match = `${stderr}${stdout}`.match(/^\s*java\.home\s*=\s*(.+?)\s*$/m)
+          resolve(match ? match[1] : null)
+        }
+      )
+    } catch {
+      resolve(null)
+    }
   })
 }
 

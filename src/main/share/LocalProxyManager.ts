@@ -12,6 +12,7 @@ interface StreamRecord {
   peerPort: number
   guestUserId?: string
   guestUsername?: string
+  statusPing: boolean
   socket: net.Socket
   connectedAt: string
   isOpened: boolean
@@ -89,6 +90,7 @@ export class LocalProxyManager {
       peerPort: message.peerPort,
       guestUserId: message.guestUserId,
       guestUsername: message.guestUsername,
+      statusPing: message.statusPing === true,
       socket,
       connectedAt: new Date().toISOString(),
       isOpened: false,
@@ -196,14 +198,16 @@ export class LocalProxyManager {
     if (!this.peersChangedListener) return
 
     this.peersChangedListener(
-      [...this.streams.values()].map((record) => ({
-        streamId: record.streamId,
-        peerIp: record.peerIp,
-        peerPort: record.peerPort,
-        connectedAt: record.connectedAt,
-        guestUserId: record.guestUserId,
-        guestUsername: record.guestUsername,
-      })),
+      [...this.streams.values()]
+        .filter((record) => !record.statusPing)
+        .map((record) => ({
+          streamId: record.streamId,
+          peerIp: record.peerIp,
+          peerPort: record.peerPort,
+          connectedAt: record.connectedAt,
+          guestUserId: record.guestUserId,
+          guestUsername: record.guestUsername,
+        })),
     )
   }
 

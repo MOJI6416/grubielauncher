@@ -1,3 +1,4 @@
+import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
 import type { IArguments } from "@/types/IArguments";
 import type { IVersionConf } from "@/types/IVersion";
 import type { ILocalProject } from "@/types/ModManager";
@@ -133,6 +134,8 @@ export type ShareDiffInput = {
   isOwner: boolean;
   remoteName: string;
   currentName: string;
+  remoteDescription?: string;
+  currentDescription?: string;
   remoteImage: string;
   currentLogo: string;
   modsEqual: boolean;
@@ -152,6 +155,13 @@ export function getShareDiffParts(input: ShareDiffInput) {
 
   if (input.isOwner && input.remoteName !== input.currentName) {
     diff.push("name");
+  }
+
+  if (
+    input.isOwner &&
+    (input.remoteDescription || "") !== (input.currentDescription || "")
+  ) {
+    diff.push("description");
   }
 
   if (
@@ -187,4 +197,47 @@ export function getShareDiffParts(input: ShareDiffInput) {
 
 export function formatShareDiffParts(diffParts: string[]) {
   return diffParts.length ? `${diffParts.join(", ")}, ` : "";
+}
+
+export type ModpackFetchOutcome = "ok" | "gone" | "unavailable";
+
+export function classifyModpackFetch(response: {
+  status?: "success" | "not_found" | "error";
+  data?: unknown;
+}): ModpackFetchOutcome {
+  if (response?.status === "not_found") return "gone";
+  if (response?.status === "success" && response.data) return "ok";
+  return "unavailable";
+}
+
+// Raised when a sync stopped after it had already started replacing files.
+//
+// A sync is not undoable: by the time anything can fail, mods have been
+// downloaded, the ones the published build dropped are in the trash, and the
+// extra-files archive has been unpacked over the instance. The conf is put back
+// the way it was — which is right, since version.json on disk was never
+// rewritten — but that leaves the files ahead of the manifest and nothing runs
+// a check on the way into the game, so the mismatch survives until somebody
+// repairs the instance by hand. Cancelling is the likeliest way to get here and
+// used to be completely silent, because a cancelled failure shows no toast.
+export class ShareSyncInterruptedError extends Error {
+  readonly code = "share_sync_interrupted";
+  readonly isCancelled: boolean;
+
+  constructor(cause: unknown) {
+    super("Instance files had already changed when the sync stopped");
+    this.name = "ShareSyncInterruptedError";
+    this.cause = cause;
+    this.isCancelled =
+      cause instanceof Error && cause.message === VERSION_INSTALL_CANCELLED;
+  }
+}
+
+export function isShareSyncInterrupted(
+  error: unknown,
+): error is ShareSyncInterruptedError {
+  return (
+    error instanceof Error &&
+    (error as { code?: string }).code === "share_sync_interrupted"
+  );
 }

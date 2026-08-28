@@ -4,20 +4,14 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './i18n'
-import Background from './components/Background'
-import ErrorBoundary from './components/ErrorBoundary'
-import { Toaster } from '@/components/ui/sonner'
+import { preloadAppLanguage } from './app/bootstrap/preloadLanguage'
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
-root.render(
-  <React.StrictMode>
-    <>
-      <Background>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
-      </Background>
-      <Toaster position="bottom-right" />
-    </>
-  </React.StrictMode>
-)
+
+void preloadAppLanguage().then(() => {
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  )
+})

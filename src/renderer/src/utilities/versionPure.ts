@@ -1,6 +1,4 @@
 import { ILocalAccount } from "@/types/Account";
-import { IVersionConf } from "@/types/IVersion";
-import { FORBIDDEN_VERSION_NAME_SYMBOLS } from "@/shared/versionName";
 
 export function isOwner(owner?: string, account?: ILocalAccount) {
   if (!owner || !account) return false;
@@ -23,40 +21,6 @@ export function parseVersionOwner(owner?: string) {
     type: owner.slice(0, separatorIndex),
     nickname: owner.slice(separatorIndex + 1),
   };
-}
-
-export const forbiddenSymbols: string[] = [...FORBIDDEN_VERSION_NAME_SYMBOLS];
-
-export function checkVersionName(
-  versionName: string,
-  versions: IVersionConf[],
-  selectedVersion?: IVersionConf,
-  isDownloaded?: boolean,
-) {
-  const name = versionName.trim();
-
-  if (name == "" && selectedVersion) return false;
-
-  if (name.length > 32) return false;
-
-  if (
-    !!versions.find(
-      (v) => v.name.toLocaleLowerCase() == name.toLocaleLowerCase(),
-    ) &&
-    (selectedVersion
-      ? name != selectedVersion?.name || (!selectedVersion && isDownloaded)
-      : true)
-  )
-    return false;
-
-  for (let index = 0; index < forbiddenSymbols.length; index++) {
-    const s = forbiddenSymbols[index];
-    if (name.trim().includes(s)) return false;
-  }
-
-  if (/^\.+$/.test(name)) return false;
-
-  return true;
 }
 
 export function sanitizeExtraFileSegments(extraPath: string): string[] | null {

@@ -9,7 +9,10 @@ vi.mock("electron", () => ({
   app: { on: vi.fn(), getPath: vi.fn(() => path.resolve("/fake/appdata")) },
 }));
 
-vi.mock("../windows/mainWindow", () => ({ mainWindow: null }));
+vi.mock("../windows/mainWindow", () => ({
+  mainWindow: null,
+  setRunningServersProbe: vi.fn(),
+}));
 
 import { AIKAR_FLAGS } from "../utilities/serverManager";
 import {
@@ -18,6 +21,7 @@ import {
   isLoaderManagedJvmArgument,
   isTrustedServerJavaCommand,
   parseRunScript,
+  resolveRunScriptJava,
   tokenizeArgfileContent,
   tokenizeRunScriptLine,
 } from "./Server";
@@ -475,5 +479,29 @@ describe("expandServerArgfiles", () => {
     await expect(
       expandServerArgfiles(server, ["@../evil.txt", "@evil.txt"]),
     ).resolves.toEqual([]);
+  });
+});
+
+describe("resolveRunScriptJava", () => {
+  it("keeps the run script command when the launcher still manages it", () => {
+    expect(resolveRunScriptJava(managedJava, "")).toEqual({
+      command: managedJava,
+      repointedFrom: null,
+    });
+  });
+
+  it("repoints a server installed with a system java that is gone", () => {
+    const oldSystemJava = path.resolve("/opt/jdk-21.0.5/bin/java");
+
+    expect(resolveRunScriptJava(oldSystemJava, managedJava)).toEqual({
+      command: managedJava,
+      repointedFrom: oldSystemJava,
+    });
+  });
+
+  it("gives up only when there is no java to run at all", () => {
+    expect(resolveRunScriptJava(path.resolve("/opt/gone/bin/java"), "")).toBe(
+      null,
+    );
   });
 });

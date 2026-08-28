@@ -1,4 +1,4 @@
-import { handleSafe } from "../utilities/ipc";
+import { check, handleSafe } from "../utilities/ipc";
 import {
   cleanupStorage,
   clearCaches,
@@ -26,6 +26,7 @@ const EMPTY_BREAKDOWN: StorageBreakdown = {
     java: { count: 0, size: 0 },
     libraries: { count: 0, size: 0, safe: false },
     backups: { count: 0, size: 0 },
+    instances: { count: 0, size: 0, names: [], dataNames: [] },
   },
   computedAt: 0,
   failed: true,
@@ -45,12 +46,16 @@ export function registerStorageIpc() {
     },
   );
 
-  handleSafe<StorageClearResult>(
+  handleSafe<StorageClearResult, [StorageCleanupKind, string[]?]>(
     "storage:cleanup",
     { freed: 0, failed: true },
-    (_, kind: StorageCleanupKind) => {
+    [
+      check.oneOf("java", "libraries", "backups", "instances"),
+      check.optional(check.arrayOf(check.nonEmptyString(255), 5000)),
+    ],
+    (_, kind, names) => {
       if (isLauncherBusy()) return { freed: 0, blocked: true };
-      return cleanupStorage(kind);
+      return cleanupStorage(kind, names);
     },
   );
 }

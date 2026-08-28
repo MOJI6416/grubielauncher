@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  EXPORT_EXCLUDED_TOP_LEVEL,
   getLocalPathFromFileUrl,
   sanitizeExportVersion,
 } from "./exportVersion";
@@ -61,11 +60,5 @@ describe("export version helpers", () => {
       url: "",
     });
     expect(exported.loader.mods[0].version?.files[0].localPath).toBeUndefined();
-  });
-
-  it("keeps transient top-level folders out of export", () => {
-    expect(EXPORT_EXCLUDED_TOP_LEVEL.has("logs")).toBe(true);
-    expect(EXPORT_EXCLUDED_TOP_LEVEL.has("crash-reports")).toBe(true);
-    expect(EXPORT_EXCLUDED_TOP_LEVEL.has("version.json")).toBe(false);
   });
 });

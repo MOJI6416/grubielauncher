@@ -15,7 +15,7 @@ import {
 import { getSha1 } from '../utilities/files'
 import { isSafeRemoteFetchUrl, isSafeRemoteImageUrl } from '../utilities/safeUrl'
 import { logAxiosError } from '../utilities/axiosLog'
-import { writeJsonAtomic } from '../utilities/atomicJson'
+import { mutateJsonAtomic } from '../utilities/atomicJson'
 import { Downloader } from '../utilities/downloader'
 import { getApiBaseUrl } from '../utilities/apiHost'
 import { ICape, IGrubieSkin, IMojangProfile, ISkinEntry, ISkinsConfig, SkinsData } from '@/types/SkinManager'
@@ -90,6 +90,11 @@ export class SkinsManager extends BaseService {
   private legacyCapeIdMap = new Map<string, string>()
   private storedIndexSkins: StoredSkinEntry[] = []
   private storedIndexCapes: StoredCapeEntry[] = []
+  private unloadableStoredSkins: StoredSkinEntry[] = []
+  private unloadableStoredCapes: StoredCapeEntry[] = []
+  private knownSkinKeys = new Set<string>()
+  private knownCapeKeys = new Set<string>()
+  private capeChoiceTouched = new Set<string>()
   private providerSyncedAt = 0
 
   constructor(
@@ -408,6 +413,8 @@ export class SkinsManager extends BaseService {
   }
 
   private async loadCapesFromIndex(storedCapes: StoredCapeEntry[] = []) {
+    this.unloadableStoredCapes = []
+
     for (const storedCape of storedCapes) {
       const capePath = await this.resolveStoredCapePath(storedCape)
       if (!capePath) continue
@@ -415,7 +422,11 @@ export class SkinsManager extends BaseService {
       const cape = await this.registerCapeFromFile(capePath, {
         alias: storedCape.alias,
         remoteId: storedCape.remoteId
-      }).catch(() => null)
+      }).catch((error) => {
+        console.error(`Failed to load the stored cape ${capePath}:`, error)
+        this.unloadableStoredCapes.push(storedCape)
+        return null
+      })
 
       if (cape && storedCape.id && storedCape.id !== cape.id) {
         this.legacyCapeIdMap.set(storedCape.id, cape.id)
@@ -427,36 +438,59 @@ export class SkinsManager extends BaseService {
     const indexPath = path.join(this.skinsPath, 'index.json')
     const loadCapes = options.loadCapes ?? true
 
+    let data: StoredSkinsConfig | null = null
+
     try {
-      const data: StoredSkinsConfig = await fs.readJSON(indexPath, 'utf-8')
-      this.storedIndexSkins = data.skins || []
-      this.storedIndexCapes = data.capes || []
-      this.skins.skins = []
+      data = await fs.readJSON(indexPath, 'utf-8')
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+        console.error(`Failed to read the skins index ${indexPath}:`, error)
+        throw error
+      }
+    }
 
-      if (loadCapes) {
-        await this.loadCapesFromIndex(this.storedIndexCapes)
+    this.storedIndexSkins = data?.skins || []
+    this.storedIndexCapes = data?.capes || []
+
+    this.knownSkinKeys = new Set(
+      this.storedIndexSkins.flatMap((skin) =>
+        [skin.id, skin.hash, skin.remoteId].filter((key): key is string => !!key)
+      )
+    )
+    this.knownCapeKeys = new Set(
+      this.storedIndexCapes.flatMap((cape) =>
+        [cape.id, cape.hash, cape.remoteId].filter((key): key is string => !!key)
+      )
+    )
+    this.skins.skins = []
+    this.unloadableStoredSkins = []
+
+    if (loadCapes) {
+      await this.loadCapesFromIndex(this.storedIndexCapes)
+    }
+
+    for (const storedSkin of this.storedIndexSkins) {
+      const skinPath = await this.resolveStoredSkinPath(storedSkin)
+      if (!skinPath) {
+        this.unloadableStoredSkins.push(storedSkin)
+        continue
       }
 
-      for (const storedSkin of data.skins || []) {
-        const skinPath = await this.resolveStoredSkinPath(storedSkin)
-        if (!skinPath) continue
+      const skin = await this.registerSkinFromFile(skinPath, {
+        capeId: storedSkin.capeId,
+        model: storedSkin.model,
+        name: storedSkin.name,
+        remoteId: storedSkin.remoteId,
+        syncCape: Object.prototype.hasOwnProperty.call(storedSkin, 'capeId')
+      }).catch((error) => {
+        console.error(`Failed to load the stored skin ${skinPath}:`, error)
+        this.unloadableStoredSkins.push(storedSkin)
+        return null
+      })
 
-        const skin = await this.registerSkinFromFile(skinPath, {
-          capeId: storedSkin.capeId,
-          model: storedSkin.model,
-          name: storedSkin.name,
-          remoteId: storedSkin.remoteId,
-          syncCape: Object.prototype.hasOwnProperty.call(storedSkin, 'capeId')
-        })
-
-        if (skin && storedSkin.capeId && storedSkin.capeId !== skin.capeId) {
-          this.legacyCapeIdMap.set(storedSkin.capeId, skin.capeId || storedSkin.capeId)
-        }
+      if (skin && storedSkin.capeId && storedSkin.capeId !== skin.capeId) {
+        this.legacyCapeIdMap.set(storedSkin.capeId, skin.capeId || storedSkin.capeId)
       }
-    } catch {
-      this.storedIndexSkins = []
-      this.storedIndexCapes = []
-      this.skins.skins = []
     }
   }
 
@@ -464,18 +498,28 @@ export class SkinsManager extends BaseService {
     await fs.mkdir(this.skinsPath, { recursive: true })
     await fs.mkdir(path.join(this.skinsPath, 'capes'), { recursive: true })
 
+    let providerAnswered = true
+
     if (this.platform === 'microsoft') {
       this.capes = []
       this.legacyCapeIdMap.clear()
       await this.loadSkinsFromIndex({ loadCapes: false })
-      await this.getMojangSkins()
+      await this.saveSkins()
+      providerAnswered = await this.getMojangSkins()
+
+      if (providerAnswered) await this.pruneMigratedCapeEntries()
+      else await this.loadCapesFromIndex(this.storedIndexCapes)
     } else {
       await this.getLocalCapes()
       await this.loadSkinsFromIndex()
+      await this.saveSkins()
       if (this.hasRemoteSkinService()) await this.getGrubieSkin()
     }
 
-    await this.checkSkins()
+    await this.checkSkins(providerAnswered)
+    if (!this.findSkinById(this.selectedSkin)) {
+      this.selectedSkin = this.skins.skins[0]?.id ?? null
+    }
     await this.saveSkins()
     this.providerSyncedAt = Date.now()
   }
@@ -485,18 +529,21 @@ export class SkinsManager extends BaseService {
   }
 
   public async syncFromProvider() {
+    let providerAnswered = true
+
     if (this.platform === 'microsoft') {
-      await this.getMojangSkins()
+      providerAnswered = await this.getMojangSkins()
+      if (providerAnswered) await this.pruneMigratedCapeEntries()
     } else if (this.hasRemoteSkinService()) {
       await this.getGrubieSkin()
     }
 
-    await this.checkSkins()
+    await this.checkSkins(providerAnswered)
     await this.saveSkins()
-    this.providerSyncedAt = Date.now()
+    if (providerAnswered) this.providerSyncedAt = Date.now()
   }
 
-  private async checkSkins() {
+  private async checkSkins(providerAnswered: boolean = true) {
     const capeMap = new Map<string, string>()
 
     for (const cape of this.capes) {
@@ -517,7 +564,7 @@ export class SkinsManager extends BaseService {
         const mappedCapeId = capeMap.get(skin.capeId)
         if (mappedCapeId) {
           skin.capeId = mappedCapeId
-        } else if (this.platform === 'microsoft') {
+        } else if (this.platform === 'microsoft' && providerAnswered) {
           skin.capeId = undefined
         }
       }
@@ -527,7 +574,7 @@ export class SkinsManager extends BaseService {
       const mappedActiveCapeId = capeMap.get(this.activeCape)
       if (mappedActiveCapeId) {
         this.activeCape = mappedActiveCapeId
-      } else if (this.platform === 'microsoft') {
+      } else if (this.platform === 'microsoft' && providerAnswered) {
         this.activeCape = undefined
       }
     }
@@ -603,7 +650,7 @@ export class SkinsManager extends BaseService {
     }
   }
 
-  private async getMojangSkins(options: { throwOnError?: boolean } = {}) {
+  private async getMojangSkins(options: { throwOnError?: boolean } = {}): Promise<boolean> {
     try {
       const response = await this.api.get<IMojangProfile>(`${this.skinServiceUrl}/minecraft/profile`, {
         headers: {
@@ -663,9 +710,11 @@ export class SkinsManager extends BaseService {
       }
 
       await this.saveSkins()
+      return true
     } catch (error) {
       logAxiosError('Error fetching Mojang skins', error, options.throwOnError ? undefined : 'skins:load')
       if (options.throwOnError) throw error
+      return false
     }
   }
 
@@ -684,12 +733,15 @@ export class SkinsManager extends BaseService {
     }
 
     const skin = this.findSkinById(this.selectedSkin)
-    if (skin) skin.capeId = capeId
+    if (!skin) throw new Error('skin_not_selected')
+    skin.capeId = capeId
+    this.capeChoiceTouched.add(skin.id)
   }
 
   public async changeModel(model: 'classic' | 'slim') {
     const skin = this.findSkinById(this.selectedSkin)
-    if (skin) skin.model = model
+    if (!skin) throw new Error('skin_not_selected')
+    skin.model = model
   }
 
   public async deleteSkin(skinId: string, type: 'skin' | 'cape' = 'skin') {
@@ -697,9 +749,13 @@ export class SkinsManager extends BaseService {
       const index = this.skins.skins.findIndex((skin) => skin.id === skinId)
 
       if (index !== -1) {
-        this.skins.skins.splice(index, 1)
+        const [removed] = this.skins.skins.splice(index, 1)
+        for (const key of [removed?.id, removed?.hash, removed?.remoteId]) {
+          if (key) this.knownSkinKeys.add(key)
+        }
         await fs.unlink(this.getSkinFilePath(skinId)).catch(() => {})
       }
+      this.knownSkinKeys.add(skinId)
 
       if (this.selectedSkin === skinId) {
         this.selectedSkin = this.activeSkin && this.activeSkin !== skinId ? this.activeSkin : null
@@ -714,9 +770,13 @@ export class SkinsManager extends BaseService {
       const index = this.capes.findIndex((cape) => cape.id === skinId)
 
       if (index !== -1) {
-        this.capes.splice(index, 1)
+        const [removed] = this.capes.splice(index, 1)
+        for (const key of [removed?.id, removed?.hash, removed?.remoteId]) {
+          if (key) this.knownCapeKeys.add(key)
+        }
         await fs.unlink(this.getCapeFilePath(skinId)).catch(() => {})
       }
+      this.knownCapeKeys.add(skinId)
 
       for (const skin of this.skins.skins) {
         if (skin.capeId === skinId) {
@@ -828,9 +888,11 @@ export class SkinsManager extends BaseService {
 
       const playerId = player.data.id
       const skins = await getSkin('microsoft', playerId, nickname)
-      if (!skins) return
+      if (!skins) throw new Error('skin_not_found')
 
-      await this.syncSkinFromUrl(skins.skin, { name: nickname })
+      const imported = await this.syncSkinFromUrl(skins.skin, { name: nickname })
+      if (!imported) throw new Error('skin_not_found')
+
       await this.saveSkins()
     } catch (error) {
       logAxiosError('Error importing skin by nickname', error)
@@ -1009,9 +1071,9 @@ export class SkinsManager extends BaseService {
       }
 
       const cape = await this.syncCapeFromUrl(capeUrl, {})
-      if (cape) {
-        skin.capeId = cape.id
-      }
+      if (!cape) throw new Error('pack_cape_failed')
+
+      skin.capeId = cape.id
     }
 
     await this.saveSkins()
@@ -1050,19 +1112,57 @@ export class SkinsManager extends BaseService {
     }
   }
 
+  private async pruneMigratedCapeEntries() {
+    if (this.platform !== 'microsoft' || !this.capes.length) return
+
+    const liveHashes = new Set(this.capes.map((cape) => cape.hash))
+    const liveKeys = new Set(
+      this.capes.flatMap((cape) =>
+        [cape.id, cape.hash, cape.remoteId].filter((key): key is string => !!key)
+      )
+    )
+    const kept: StoredCapeEntry[] = []
+
+    for (const storedCape of this.storedIndexCapes) {
+      const identity = [storedCape.id, storedCape.hash, storedCape.remoteId].filter(
+        (key): key is string => !!key
+      )
+      if (identity.some((key) => liveKeys.has(key))) {
+        kept.push(storedCape)
+        continue
+      }
+
+      const capePath = await this.resolveStoredCapePath(storedCape)
+      if (!capePath) {
+        kept.push(storedCape)
+        continue
+      }
+
+      const hash = await getSha1(capePath).catch(() => null)
+      if (!hash || !liveHashes.has(hash)) {
+        kept.push(storedCape)
+        continue
+      }
+
+      if (path.resolve(capePath) !== path.resolve(this.getCapeFilePath(hash))) {
+        await fs.remove(capePath).catch(() => {})
+      }
+    }
+
+    this.storedIndexCapes = kept
+  }
+
   private getCapesForSave() {
     const capesToSave = this.capes.map(({ cape, ...rest }) => ({
       ...rest,
       url: toFileUrl(this.getCapeFilePath(rest.hash))
     }))
 
-    if (this.platform !== 'microsoft') {
-      return capesToSave
-    }
-
     const keyForCape = (cape: Partial<ICape> | StoredCapeEntry) => cape.remoteId || cape.id || cape.hash
     const existingKeys = new Set(capesToSave.map(keyForCape).filter(Boolean))
-    const preservedCapes = this.storedIndexCapes.filter((cape) => {
+    const source =
+      this.platform === 'microsoft' ? this.storedIndexCapes : this.unloadableStoredCapes
+    const preservedCapes = source.filter((cape) => {
       const key = keyForCape(cape)
       if (!key || existingKeys.has(key)) return false
       existingKeys.add(key)
@@ -1081,13 +1181,18 @@ export class SkinsManager extends BaseService {
       }
     }
 
-    return this.skins.skins.map(({ character, ...rest }) => {
+    const skinsToSave = this.skins.skins.map(({ character, ...rest }) => {
       const storedSkin =
         storedSkinByIdentity.get(rest.id) ||
         storedSkinByIdentity.get(rest.hash) ||
         (rest.remoteId ? storedSkinByIdentity.get(rest.remoteId) : undefined)
       const preserveStoredCape =
-        this.platform === 'microsoft' && !rest.capeId && storedSkin?.capeId ? { capeId: storedSkin.capeId } : {}
+        this.platform === 'microsoft' &&
+        !rest.capeId &&
+        storedSkin?.capeId &&
+        !this.capeChoiceTouched.has(rest.id)
+          ? { capeId: storedSkin.capeId }
+          : {}
 
       return {
         ...rest,
@@ -1095,6 +1200,15 @@ export class SkinsManager extends BaseService {
         url: toFileUrl(this.getSkinFilePath(rest.hash))
       }
     })
+
+    const savedKeys = new Set(
+      skinsToSave.flatMap((skin) => [skin.id, skin.hash, skin.remoteId].filter(Boolean) as string[])
+    )
+    const preservedSkins = this.unloadableStoredSkins.filter((skin) =>
+      ![skin.id, skin.hash, skin.remoteId].some((key) => !!key && savedKeys.has(key))
+    )
+
+    return [...skinsToSave, ...preservedSkins]
   }
 
   public async addSkin(skin: ISkinsConfig['skins'][0]) {
@@ -1119,12 +1233,38 @@ export class SkinsManager extends BaseService {
     this.setAccessToken(accessToken)
   }
 
+  private mergeWithIndexOnDisk<T extends { id?: string; hash?: string; remoteId?: string }>(
+    entries: T[],
+    onDisk: T[],
+    handledKeys: Set<string>
+  ): T[] {
+    const keysOf = (entry: T) =>
+      [entry.id, entry.hash, entry.remoteId].filter((key): key is string => !!key)
+
+    const known = new Set(entries.flatMap(keysOf))
+    const merged = [...entries]
+
+    for (const entry of onDisk) {
+      const keys = keysOf(entry)
+      if (!keys.length) continue
+      if (keys.some((key) => known.has(key) || handledKeys.has(key))) continue
+
+      for (const key of keys) known.add(key)
+      merged.push(entry)
+    }
+
+    return merged
+  }
+
   public async saveSkins() {
     const skinsToSave = this.getSkinsForSave()
 
     const capesToSave = this.getCapesForSave()
 
-    await writeJsonAtomic(path.join(this.skinsPath, 'index.json'), { skins: skinsToSave, capes: capesToSave })
+    await mutateJsonAtomic<StoredSkinsConfig>(path.join(this.skinsPath, 'index.json'), (current) => ({
+      skins: this.mergeWithIndexOnDisk(skinsToSave, current?.skins ?? [], this.knownSkinKeys),
+      capes: this.mergeWithIndexOnDisk(capesToSave, current?.capes ?? [], this.knownCapeKeys)
+    }))
   }
 
   public async renameSkin(skinId: string, newName: string) {
@@ -1137,6 +1277,9 @@ export class SkinsManager extends BaseService {
   }
 
   public getData(): SkinsData {
+    this.selectedSkin =
+      this.findSkinById(this.selectedSkin)?.id ?? this.skins.skins[0]?.id ?? null
+
     return {
       skins: this.skins,
       capes: this.capes,

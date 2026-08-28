@@ -5,6 +5,7 @@ import { rpc } from "../rpc";
 import { is } from "@electron-toolkit/utils";
 import fs from "fs-extra";
 import { writeJsonAtomicSync } from "../utilities/atomicJson";
+import { TITLEBAR_OVERLAY } from "@/shared/titlebar";
 
 export let mainWindow: BrowserWindow | null = null;
 
@@ -48,6 +49,32 @@ function openIfTrusted(url: string): void {
 let pendingShow = true;
 let isReadyToShow = false;
 let shouldMaximizeOnShow = false;
+let hasUnsavedChanges = false;
+let isCloseConfirmed = false;
+let runningServersProbe: (() => boolean) | null = null;
+let installActiveProbe: (() => boolean) | null = null;
+
+export function setUnsavedChangesGuard(value: boolean): void {
+  hasUnsavedChanges = value;
+}
+
+export function setRunningServersProbe(probe: () => boolean): void {
+  runningServersProbe = probe;
+}
+
+export function setInstallActiveProbe(probe: () => boolean): void {
+  installActiveProbe = probe;
+}
+
+export function confirmWindowClose(): void {
+  isCloseConfirmed = true;
+  hasUnsavedChanges = false;
+  mainWindow?.close();
+}
+
+app.on("before-quit", () => {
+  isCloseConfirmed = true;
+});
 
 function presentMainWindow(): void {
   if (!mainWindow) return;
@@ -154,11 +181,7 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): void {
     ...(process.platform === "win32"
       ? {
           titleBarStyle: "hidden" as const,
-          titleBarOverlay: {
-            color: "#0a0a0a",
-            symbolColor: "#a1a1a1",
-            height: 36,
-          },
+          titleBarOverlay: { ...TITLEBAR_OVERLAY },
         }
       : {}),
     webPreferences: {
@@ -173,12 +196,47 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): void {
     },
   });
 
-  mainWindow.on("close", () => {
+  mainWindow.on("close", (event) => {
+    let hasRunningServers = false;
+    try {
+      hasRunningServers = runningServersProbe?.() === true;
+    } catch {
+      hasRunningServers = false;
+    }
+
+    let hasActiveInstall = false;
+    try {
+      hasActiveInstall = installActiveProbe?.() === true;
+    } catch {
+      hasActiveInstall = false;
+    }
+
+    if (
+      (hasUnsavedChanges || hasRunningServers || hasActiveInstall) &&
+      !isCloseConfirmed &&
+      !mainWindow?.isDestroyed()
+    ) {
+      event.preventDefault();
+      mainWindow?.webContents.send("app:closeRequested", {
+        unsaved: hasUnsavedChanges,
+        servers: hasRunningServers,
+        install: hasActiveInstall,
+      });
+      if (!mainWindow?.isVisible()) mainWindow?.show();
+      if (mainWindow?.isMinimized()) mainWindow.restore();
+      mainWindow?.focus();
+      return;
+    }
+
     if (mainWindow) saveWindowState(mainWindow);
   });
 
   mainWindow.on("closed", () => {
     mainWindow = null;
+  });
+
+  mainWindow.webContents.on("render-process-gone", () => {
+    hasUnsavedChanges = false;
   });
 
   mainWindow.once("ready-to-show", () => {

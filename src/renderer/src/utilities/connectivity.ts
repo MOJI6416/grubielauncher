@@ -58,6 +58,12 @@ export function canLoadSkinPreviewForProvider(
   return canUseInternetFeature(state);
 }
 
+export function canBrowseSkinLibrary(
+  accountType: AccountType | undefined,
+): boolean {
+  return accountType === "microsoft" || accountType === "discord";
+}
+
 export function canOpenSkinManagerForAccount(
   accountType: AccountType | undefined,
   state: ConnectivityState,

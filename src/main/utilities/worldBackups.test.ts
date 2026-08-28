@@ -9,6 +9,7 @@ import {
 } from "vitest";
 import fs from "fs-extra";
 import path from "path";
+import { execFileSync } from "child_process";
 
 const hoisted = vi.hoisted(() => {
   const root = process.env.TEMP || process.env.TMPDIR || "/tmp";
@@ -40,6 +41,8 @@ import {
   isValidBackupId,
   normalizeBackupEntry,
   pickArchiveRoot,
+  reassignPreservedCopies,
+  reassignWorldBackups,
   recoverPendingRestore,
   restoreWorldBackup,
   runAutoBackupForVersion,
@@ -474,6 +477,80 @@ describe("world backup round trip", () => {
   });
 });
 
+describe("renaming a world folder", () => {
+  it("keeps the backups of the renamed world reachable", async () => {
+    await seedWorld("original");
+
+    const created = await createWorldBackup(worldPath, "manual", 5);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const renamedFolder = "World1 renamed";
+    const renamedPath = path.join(savesPath, renamedFolder);
+    await fs.move(worldPath, renamedPath);
+
+    expect(await getWorldBackupList(renamedPath)).toMatchObject({
+      backups: [],
+    });
+
+    await reassignWorldBackups(
+      VERSION_NAME,
+      WORLD_FOLDER,
+      renamedFolder,
+      "Renamed world",
+    );
+
+    const listed = await getWorldBackupList(renamedPath);
+    expect(listed.backups.map((entry) => entry.id)).toEqual([
+      created.backup.id,
+    ]);
+    expect(listed.backups[0].worldName).toBe("Renamed world");
+
+    const counts = await countWorldBackups(versionPath);
+    expect(counts[renamedFolder]).toBe(1);
+    expect(counts[WORLD_FOLDER]).toBeUndefined();
+
+    const restored = await restoreWorldBackup(
+      created.backup.id,
+      renamedPath,
+      5,
+    );
+    expect(restored.ok).toBe(true);
+    expect(await readMarker(renamedFolder)).toBe("original");
+  });
+
+  it("moves preserved copies to the new folder name", async () => {
+    await seedWorld("original");
+    await fs.ensureDir(path.join(savesPath, ".grubie-restore"));
+
+    const copyPath = path.join(
+      savesPath,
+      ".grubie-restore",
+      `${WORLD_FOLDER}-1700000000000`,
+    );
+    await fs.ensureDir(copyPath);
+    await fs.writeFile(path.join(copyPath, "level.dat"), "preserved");
+    await fs.writeFile(
+      path.join(copyPath, ".grubie-preserved"),
+      WORLD_FOLDER,
+      "utf-8",
+    );
+
+    const renamedFolder = "World1 renamed";
+    const renamedPath = path.join(savesPath, renamedFolder);
+    await fs.move(worldPath, renamedPath);
+
+    expect(await getWorldBackupList(renamedPath)).toMatchObject({
+      preserved: [],
+    });
+
+    await reassignPreservedCopies(savesPath, WORLD_FOLDER, renamedFolder);
+
+    const listed = await getWorldBackupList(renamedPath);
+    expect(listed.preserved.map((entry) => entry.path)).toEqual([copyPath]);
+  });
+});
+
 describe("safety net", () => {
   it("keeps the old files when the safety backup cannot be made", async () => {
     await seedWorld("original");
@@ -725,6 +802,47 @@ describe("automatic backups", () => {
   });
 });
 
+describe("a damaged backup index", () => {
+  it("never becomes an empty one that overwrites the real list", async () => {
+    await seedWorld("original");
+
+    const first = await createWorldBackup(worldPath, "manual", 5);
+    expect(first.ok).toBe(true);
+    const second = await createWorldBackup(worldPath, "manual", 5);
+    expect(second.ok).toBe(true);
+
+    const indexPath = path.join(backupsDir, "index.json");
+    const intact = await fs.readFile(indexPath, "utf-8");
+    await fs.writeFile(indexPath, intact.slice(0, 40));
+
+    const third = await createWorldBackup(worldPath, "manual", 5);
+    expect(third.ok).toBe(false);
+
+    expect(await fs.readFile(indexPath, "utf-8")).toBe(intact.slice(0, 40));
+    expect(await listBackupZips()).toHaveLength(2);
+
+    await fs.writeFile(indexPath, intact);
+    expect((await getWorldBackupList(worldPath)).backups).toHaveLength(2);
+  });
+
+  it("does not let a delete wipe the archive it could not index", async () => {
+    await seedWorld("original");
+
+    const created = await createWorldBackup(worldPath, "manual", 5);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const indexPath = path.join(backupsDir, "index.json");
+    await fs.writeFile(indexPath, "{ not a list");
+
+    const deleted = await deleteWorldBackup(created.backup.id);
+    expect(deleted.ok).toBe(false);
+    expect(
+      await fs.pathExists(path.join(backupsDir, `${created.backup.id}.zip`)),
+    ).toBe(true);
+  });
+});
+
 describe("orphan cleanup", () => {
   it("removes archives that lost their index entry", async () => {
     await seedWorld("original");
@@ -744,6 +862,37 @@ describe("orphan cleanup", () => {
       false,
     );
     expect((await getWorldBackupList(worldPath)).backups).toHaveLength(1);
+  });
+
+  it("refuses to touch anything when the index is unreadable", async () => {
+    await seedWorld("original");
+
+    const created = await createWorldBackup(worldPath, "manual", 5);
+    expect(created.ok).toBe(true);
+
+    const indexPath = path.join(backupsDir, "index.json");
+    const intact = await fs.readFile(indexPath, "utf-8");
+    await fs.writeFile(indexPath, intact.slice(0, intact.length - 12));
+
+    await expect(getOrphanBackupsStats()).rejects.toThrow();
+    await expect(cleanupOrphanBackups()).rejects.toThrow();
+
+    expect(await listBackupZips()).toHaveLength(1);
+    expect(await fs.readFile(indexPath, "utf-8")).toBe(
+      intact.slice(0, intact.length - 12),
+    );
+  });
+
+  it("does not declare every backup an orphan when the instances folder is gone", async () => {
+    await seedWorld("original");
+
+    const created = await createWorldBackup(worldPath, "manual", 5);
+    expect(created.ok).toBe(true);
+
+    await fs.remove(versionsPath);
+
+    await expect(cleanupOrphanBackups()).rejects.toThrow();
+    expect(await listBackupZips()).toHaveLength(1);
   });
 
   it("removes backups of versions that no longer exist", async () => {
@@ -827,5 +976,103 @@ describe("recoverPendingRestore", () => {
 
     expect(await readMarker()).toBe("restored");
     expect(await fs.pathExists(displacedPath)).toBe(false);
+  });
+});
+
+describe("createWorldBackup with an unreadable subfolder", () => {
+  const denyRead = (target: string): boolean => {
+    if (process.platform === "win32") {
+      try {
+        execFileSync(
+          "icacls",
+          [target, "/deny", `${process.env.USERNAME}:(RX)`],
+          { stdio: "ignore" },
+        );
+      } catch {
+        return false;
+      }
+    } else {
+      try {
+        fs.chmodSync(target, 0o000);
+      } catch {
+        return false;
+      }
+    }
+
+    try {
+      fs.readdirSync(target);
+      return false;
+    } catch {
+      return true;
+    }
+  };
+
+  const allowRead = (target: string): void => {
+    if (process.platform === "win32") {
+      try {
+        execFileSync("icacls", [target, "/remove:d", `${process.env.USERNAME}`], {
+          stdio: "ignore",
+        });
+      } catch {}
+    } else {
+      fs.chmodSync(target, 0o755);
+    }
+  };
+
+  it("refuses instead of writing a silently incomplete archive", async () => {
+    await seedWorld("full");
+    const region = path.join(worldPath, "region");
+
+    if (!denyRead(region)) return;
+
+    try {
+      const result = await createWorldBackup(worldPath, "manual");
+
+      expect(result).toEqual({ ok: false, error: "worldUnreadable" });
+      expect(await listBackupZips()).toEqual([]);
+      expect((await getWorldBackupList(worldPath)).backups).toEqual([]);
+    } finally {
+      allowRead(region);
+    }
+  });
+});
+
+describe("automatic backups that keep failing", () => {
+  it("leaves a visible reason instead of silently doing nothing", async () => {
+    await seedWorld("auto");
+
+    const blocked = path.join(worldPath, "region", "r.0.0.mca");
+    if (process.platform !== "win32") return;
+
+    try {
+      execFileSync(
+        "icacls",
+        [blocked, "/deny", `${process.env.USERNAME}:(R)`],
+        { stdio: "ignore" },
+      );
+    } catch {
+      return;
+    }
+
+    try {
+      fs.readFileSync(blocked);
+      return;
+    } catch {}
+
+    try {
+      const result = await createWorldBackup(worldPath, "auto");
+
+      expect(result).toEqual({ ok: false, error: "failed" });
+      expect((await getWorldBackupList(worldPath)).skipReason).toBe("failed");
+      expect(await listBackupZips()).toEqual([]);
+    } finally {
+      try {
+        execFileSync(
+          "icacls",
+          [blocked, "/remove:d", `${process.env.USERNAME}`],
+          { stdio: "ignore" },
+        );
+      } catch {}
+    }
   });
 });

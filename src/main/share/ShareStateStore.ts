@@ -56,7 +56,7 @@ export class ShareStateStore extends EventEmitter {
       ...this.state,
       ...patch,
       lastError:
-        patch.lastError === undefined ? this.state.lastError : patch.lastError,
+        "lastError" in patch ? patch.lastError : this.state.lastError,
     });
   }
 

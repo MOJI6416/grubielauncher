@@ -99,8 +99,6 @@ export enum ProjectType {
   WORLD = 'world',
   DATAPACK = 'datapack'
 }
-export const ProjectTypes = ['mod', 'modpack', 'resourcepack', 'shader']
-
 type MonetizationStatus = 'monetized' | 'demonetized' | 'force-demonetized'
 
 interface ProjectLicense {
@@ -170,11 +168,6 @@ export interface VersionFile {
 
 export type FileType = 'required-resource-pack' | 'optional-resource-pack'
 
-export interface ITag {
-  icon: string
-  name: string
-}
-
 export interface ICategoryTag {
   icon: string
   name: string
@@ -195,13 +188,6 @@ export enum SortValue {
   Newest = 'newest',
   Updated = 'updated'
 }
-export const SortValues = ['relevance', 'downloads', 'follows', 'newest', 'updated']
-
-export interface IProjectDependencies {
-  projects: IProject[]
-  versions: IVersion[]
-}
-
 export interface IModpack {
   game: string
   formatVersion: number

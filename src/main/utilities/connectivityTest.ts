@@ -1,6 +1,10 @@
-import { BACKEND_URL } from '@/shared/config'
+import { BACKEND_URL, BACKEND_URL_DIRECT } from '@/shared/config'
 import { getApiBaseUrl } from './apiHost'
-import { ConnectivityCheckResult, ConnectivityGroup } from '@/types/Connectivity'
+import {
+  ConnectivityCheckPlanEntry,
+  ConnectivityCheckResult,
+  ConnectivityGroup
+} from '@/types/Connectivity'
 import axios from 'axios'
 import net from 'net'
 
@@ -31,13 +35,22 @@ interface TcpCheck {
 
 type ConnectivityCheck = HttpCheck | TcpCheck
 
-const CHECKS: ConnectivityCheck[] = [
+function buildChecks(): ConnectivityCheck[] {
+  return [
   {
     id: 'grubie_api',
     name: 'GrubieLauncher API',
     group: 'grubie',
     kind: 'http',
     url: `${BACKEND_URL}/health`,
+    okStatus: isSuccess
+  },
+  {
+    id: 'grubie_api_direct',
+    name: 'GrubieLauncher API (fallback)',
+    group: 'grubie',
+    kind: 'http',
+    url: `${BACKEND_URL_DIRECT}/health`,
     okStatus: isSuccess
   },
   {
@@ -141,7 +154,7 @@ const CHECKS: ConnectivityCheck[] = [
     name: 'CurseForge API (proxy)',
     group: 'mods',
     kind: 'http',
-    url: `${BACKEND_URL}/curseforge/categories/6`,
+    url: `${getApiBaseUrl()}/curseforge/categories/6`,
     okStatus: isSuccess
   },
   {
@@ -192,7 +205,8 @@ const CHECKS: ConnectivityCheck[] = [
     url: 'https://release-assets.githubusercontent.com/',
     okStatus: isReachable
   }
-]
+  ]
+}
 
 async function runHttpCheck(check: HttpCheck): Promise<ConnectivityCheckResult> {
   const startedAt = Date.now()
@@ -262,10 +276,6 @@ function runTcpCheck(check: TcpCheck): Promise<ConnectivityCheckResult> {
   })
 }
 
-export function getConnectivityCheckCount(): number {
-  return CHECKS.length
-}
-
 export async function checkBackendHealth(): Promise<boolean> {
   try {
     const response = await axios.get(`${getApiBaseUrl()}/health`, {
@@ -278,11 +288,15 @@ export async function checkBackendHealth(): Promise<boolean> {
   }
 }
 
+export function getConnectivityPlan(): ConnectivityCheckPlanEntry[] {
+  return buildChecks().map(({ id, name, group }) => ({ id, name, group }))
+}
+
 export async function runConnectivityTests(
   onResult?: (result: ConnectivityCheckResult) => void
 ): Promise<ConnectivityCheckResult[]> {
   return Promise.all(
-    CHECKS.map(async (check) => {
+    buildChecks().map(async (check) => {
       const result =
         check.kind === 'http'
           ? await runHttpCheck(check)

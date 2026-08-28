@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { AlertTriangle, Loader2, Mic, Square, Volume2 } from "lucide-react";
+import { Hint } from "@renderer/components/Hint";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -8,71 +11,163 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Mic, Square } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { VoiceMicIssue } from "@/types/Voice";
+import {
+  deviceOptions,
+  meterSegments,
+  resolveDeviceSelection,
+  type VoiceDeviceKind,
+} from "@renderer/features/voice/devices";
+import {
+  micIssueFromError,
+  micIssueHintKey,
+  micIssueTitleKey,
+} from "@renderer/features/voice/errors";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { playVoiceSound } from "@renderer/utilities/sounds";
 import {
   voiceGetDevices,
   voiceGetSavedDevice,
   voiceSwitchDevice,
 } from "@renderer/utilities/voiceClient";
 
-function deviceDisplayName(
-  device: MediaDeviceInfo,
-  index: number,
-  fallback: string,
-) {
-  const label = (device.label || "")
-    .replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*$/i, "")
-    .trim();
-  return label || `${fallback} ${index + 1}`;
-}
+const METER_SEGMENTS = 18;
+const SILENCE_HINT_MS = 4000;
 
-export function DeviceSelect({
-  kind,
-  label,
-}: {
-  kind: "audioinput" | "audiooutput";
-  label: string;
-}) {
+function useDeviceList(kind: VoiceDeviceKind, fallbackLabel: string) {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selected, setSelected] = useState(() => voiceGetSavedDevice(kind));
+  const [issue, setIssue] = useState<VoiceMicIssue>("none");
+  const [attempt, setAttempt] = useState(0);
+  const [isLoading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     const load = () => {
-      void voiceGetDevices(kind).then((list) => {
-        if (!cancelled) setDevices(list.filter((device) => device.deviceId));
+      setLoading(true);
+      void voiceGetDevices(kind).then((listing) => {
+        if (cancelled) return;
+        setDevices(listing.devices);
+        setIssue(listing.error ? micIssueFromError(listing.error) : "none");
+        setLoading(false);
       });
     };
+
     load();
     navigator.mediaDevices?.addEventListener?.("devicechange", load);
     return () => {
       cancelled = true;
       navigator.mediaDevices?.removeEventListener?.("devicechange", load);
     };
-  }, [kind]);
+  }, [attempt, kind]);
+
+  const options = useMemo(
+    () => deviceOptions(devices, fallbackLabel),
+    [devices, fallbackLabel],
+  );
+
+  return {
+    options,
+    issue,
+    isLoading,
+    reload: useCallback(() => setAttempt((value) => value + 1), []),
+  };
+}
+
+export function DeviceSelect({
+  kind,
+  label,
+  className,
+}: {
+  kind: VoiceDeviceKind;
+  label: string;
+  className?: string;
+}) {
+  const { t } = useTranslation();
+  const { options, issue, isLoading, reload } = useDeviceList(kind, label);
+  const [saved, setSaved] = useState(() => voiceGetSavedDevice(kind));
+
+  const selection = resolveDeviceSelection(saved, options);
+  const isBroken = issue !== "none";
+  const placeholder = isBroken
+    ? t(micIssueTitleKey(issue))
+    : isLoading
+      ? t("common.loading")
+      : t("voice.deviceNotFound");
+
+  const pick = (value: string) => {
+    const previous = saved;
+    setSaved(value);
+
+    void voiceSwitchDevice(kind, value).then((result) => {
+      if (result.ok) return;
+      setSaved(previous);
+      const failure = micIssueFromError(result.error);
+      toast.error(t("voice.deviceSwitchFailed"), {
+        description: t(micIssueHintKey(failure)),
+        duration: 8000,
+      });
+    });
+  };
 
   return (
-    <div className="min-w-0 space-y-1.5">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <Select
-        value={selected || undefined}
-        onValueChange={(value) => {
-          setSelected(value);
-          void voiceSwitchDevice(kind, value);
-        }}
-      >
-        <SelectTrigger className="w-full min-w-0">
-          <SelectValue />
+    <div className={cn("min-w-0 space-y-1", className)}>
+      <Select value={selection.deviceId || undefined} onValueChange={pick}>
+        <SelectTrigger
+          size="sm"
+          aria-label={label}
+          className={cn(
+            "w-full min-w-0",
+            (selection.isMissing || isBroken) && "border-warning text-warning",
+          )}
+        >
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {devices.map((device, index) => (
-            <SelectItem key={device.deviceId} value={device.deviceId}>
-              {deviceDisplayName(device, index, label)}
-            </SelectItem>
-          ))}
+          {options.length === 0 ? (
+            <p className="px-2 py-1.5 text-xs text-muted-foreground">
+              {placeholder}
+            </p>
+          ) : (
+            options.map((option) => (
+              <SelectItem key={option.deviceId} value={option.deviceId}>
+                {option.deviceId === "default"
+                  ? t("voice.deviceDefault")
+                  : option.label}
+              </SelectItem>
+            ))
+          )}
         </SelectContent>
       </Select>
+
+      {isBroken ? (
+        <p className="flex items-center gap-1.5 text-[11px] leading-4 text-warning">
+          <AlertTriangle className="size-3 shrink-0" />
+          <Hint
+            content={t(micIssueHintKey(issue))}
+            variant="text"
+            truncatedOnly
+          >
+            <span className="min-w-0 truncate">
+              {t(micIssueHintKey(issue))}
+            </span>
+          </Hint>
+          <button
+            type="button"
+            onClick={reload}
+            className="shrink-0 underline underline-offset-2 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {t("common.retry")}
+          </button>
+        </p>
+      ) : (
+        selection.isMissing && (
+          <p className="flex items-center gap-1.5 text-[11px] leading-4 text-warning">
+            <AlertTriangle className="size-3 shrink-0" />
+            {t("voice.deviceGoneHint")}
+          </p>
+        )
+      )}
     </div>
   );
 }
@@ -80,9 +175,10 @@ export function DeviceSelect({
 export function MicLevelTest() {
   const { t } = useTranslation();
   const [isActive, setIsActive] = useState(false);
+  const [isStarting, setStarting] = useState(false);
   const [level, setLevel] = useState(0);
+  const [isSilent, setSilent] = useState(false);
   const stopRef = useRef<(() => void) | null>(null);
-
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -97,16 +193,21 @@ export function MicLevelTest() {
     stopRef.current = null;
     setIsActive(false);
     setLevel(0);
+    setSilent(false);
   }, []);
 
   const start = useCallback(async () => {
+    if (stopRef.current) return;
+
     const inputId = voiceGetSavedDevice("audioinput");
+    setStarting(true);
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: inputId ? { deviceId: { ideal: inputId } } : true,
       });
 
-      if (!isMountedRef.current) {
+      if (!isMountedRef.current || stopRef.current) {
         stream.getTracks().forEach((track) => track.stop());
         return;
       }
@@ -118,14 +219,19 @@ export function MicLevelTest() {
       source.connect(analyser);
 
       const data = new Uint8Array(analyser.frequencyBinCount);
+      const startedAt = Date.now();
+      let loudestAt = 0;
       let raf = 0;
+
       const tick = () => {
         analyser.getByteTimeDomainData(data);
         let peak = 0;
         for (const value of data) {
           peak = Math.max(peak, Math.abs(value - 128) / 128);
         }
+        if (peak > 0.06) loudestAt = Date.now();
         setLevel(peak);
+        setSilent(loudestAt === 0 && Date.now() - startedAt > SILENCE_HINT_MS);
         raf = requestAnimationFrame(tick);
       };
       tick();
@@ -138,41 +244,94 @@ export function MicLevelTest() {
       };
       setIsActive(true);
     } catch (error) {
-      if (isMountedRef.current) {
-        showFailureToast(t("settings.voiceMicTestError"), error, {
-          context: { side: "launcher" },
-          fallbackDescription: t("settings.voiceMicTestErrorHint"),
-        });
-      }
+      if (!isMountedRef.current) return;
+      const issue = micIssueFromError(error);
+      showFailureToast(t(micIssueTitleKey(issue)), error, {
+        context: { side: "launcher" },
+        fallbackDescription: t("settings.voiceMicTestErrorHint"),
+      });
+    } finally {
+      if (isMountedRef.current) setStarting(false);
     }
   }, [t]);
 
   useEffect(() => stop, [stop]);
 
+  const lit = meterSegments(level, METER_SEGMENTS);
+
   return (
-    <div className="flex items-center gap-2">
-      {isActive && (
-        <div className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-emerald-500 transition-[width] duration-75"
-            style={{ width: `${Math.min(100, Math.round(level * 140))}%` }}
-          />
+    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="flex min-w-0 items-center gap-3">
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0"
+          disabled={isStarting}
+          onClick={() => (isActive ? stop() : void start())}
+        >
+          {isStarting ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : isActive ? (
+            <Square className="size-3.5" />
+          ) : (
+            <Mic className="size-3.5" />
+          )}
+          {isActive
+            ? t("settings.voiceMicTestStop")
+            : t("settings.voiceMicTestStart")}
+        </Button>
+
+        <div className="flex min-w-24 flex-1 items-center gap-[3px]">
+          {Array.from({ length: METER_SEGMENTS }, (_, index) => (
+            <span
+              key={index}
+              className={cn(
+                "h-3 flex-1 rounded-[2px] transition-colors duration-75",
+                !isActive
+                  ? "bg-surface-3"
+                  : index < lit
+                    ? index > METER_SEGMENTS - 4
+                      ? "bg-warning"
+                      : "bg-success"
+                    : "bg-surface-3",
+              )}
+            />
+          ))}
         </div>
-      )}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => (isActive ? stop() : void start())}
-      >
-        {isActive ? (
-          <Square className="size-3.5" />
-        ) : (
-          <Mic className="size-3.5" />
+
+        {isActive && (
+          <span className="w-9 shrink-0 text-right font-mono text-[11px] tabular-nums text-faint">
+            {Math.round(Math.min(1, level) * 100)}%
+          </span>
         )}
-        {isActive
-          ? t("settings.voiceMicTestStop")
-          : t("settings.voiceMicTestStart")}
-      </Button>
+      </div>
+
+      {isActive && (
+        <p
+          className={cn(
+            "truncate text-[11px] leading-4",
+            isSilent ? "text-warning" : "text-faint",
+          )}
+        >
+          {isSilent ? t("voice.micTestSilent") : t("voice.micTestSpeak")}
+        </p>
+      )}
     </div>
+  );
+}
+
+export function SpeakerTest() {
+  const { t } = useTranslation();
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="shrink-0"
+      onClick={() => playVoiceSound("join", { force: true })}
+    >
+      <Volume2 className="size-3.5" />
+      {t("voice.speakerTest")}
+    </Button>
   );
 }

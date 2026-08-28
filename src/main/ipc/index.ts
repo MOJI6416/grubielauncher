@@ -1,9 +1,11 @@
 export { registerAccountsIpc } from "./accountsIpc";
+export { registerAgentIpc } from "./agentIpc";
 export { registerAiIpc } from "./aiIpc";
 export { registerAuthIpc } from "./authIpc";
 export { registerBackendIpc } from "./backendIpc";
 export { registerFsIpc } from "./fsIpc";
 export { registerGameIpc } from "./gameIpc";
+export { registerLogsIpc } from "./logsIpc";
 export { registerModsIpc } from "./modsIpc";
 export { registerOtherIpc } from "./otherIpc";
 export { registerServerIpc } from "./serverIpc";

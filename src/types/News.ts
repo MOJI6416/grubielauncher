@@ -1,11 +1,19 @@
 export interface INews {
+  id?: string
   title: string
   url: string
   author: string
   image: string
   imageAltText: string
+  description?: string
   time: number
   tags: string[]
+}
+
+export interface INewsPage {
+  generatedAt: string
+  items: INews[]
+  nextCursor: string | null
 }
 
 export interface ISponsoredNewsAd {
@@ -16,13 +24,3 @@ export interface ISponsoredNewsAd {
   image: string
   targetUrl: string
 }
-
-export type NewsFeedItem =
-  | {
-      type: 'news'
-      item: INews
-    }
-  | {
-      type: 'sponsored'
-      item: ISponsoredNewsAd
-    }

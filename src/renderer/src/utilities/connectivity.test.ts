@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canLoadLoaderData,
+  canBrowseSkinLibrary,
   canLoadSkinPreviewForProvider,
   canOpenSkinManagerForAccount,
   canUseBackendFeature,
@@ -28,6 +29,13 @@ describe("connectivity helpers", () => {
     expect(getUnavailableConnectivityProblem(false, internetOffline)).toBe(
       "internet",
     );
+  });
+
+  it("keeps the local skin library reachable without the services", () => {
+    expect(canBrowseSkinLibrary("discord")).toBe(true);
+    expect(canBrowseSkinLibrary("microsoft")).toBe(true);
+    expect(canBrowseSkinLibrary("elyby")).toBe(false);
+    expect(canBrowseSkinLibrary(undefined)).toBe(false);
   });
 
   it("blocks backend-required flows when backend is offline", () => {

@@ -51,10 +51,15 @@ export async function getFilesRecursively(
   return results
 }
 
-async function getDirectorySize(directoryPath: string): Promise<number> {
+async function getDirectorySize(directoryPath: string): Promise<number | null> {
   let totalSize = 0
 
-  const files = await fs.readdir(directoryPath)
+  let files: string[]
+  try {
+    files = await fs.readdir(directoryPath)
+  } catch {
+    return null
+  }
 
   for (const file of files) {
     const filePath = path.join(directoryPath, file)
@@ -62,12 +67,15 @@ async function getDirectorySize(directoryPath: string): Promise<number> {
     let st: fs.Stats
     try {
       st = await fs.lstat(filePath)
-    } catch {
-      continue
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') continue
+      return null
     }
 
     if (st.isDirectory()) {
-      totalSize += await getDirectorySize(filePath)
+      const nested = await getDirectorySize(filePath)
+      if (nested === null) return null
+      totalSize += nested
     } else {
       totalSize += st.size
     }
@@ -76,20 +84,24 @@ async function getDirectorySize(directoryPath: string): Promise<number> {
   return totalSize
 }
 
-export async function getTotalSizes(paths: string[]): Promise<number> {
+export async function getTotalSizes(paths: string[]): Promise<number | null> {
   let totalSize = 0
 
   for (const p of paths) {
+    let st: fs.Stats
     try {
-      const st = await fs.lstat(p)
+      st = await fs.lstat(p)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') continue
+      return null
+    }
 
-      if (st.isDirectory()) {
-        totalSize += await getDirectorySize(p)
-      } else {
-        totalSize += st.size
-      }
-    } catch {
-      continue
+    if (st.isDirectory()) {
+      const size = await getDirectorySize(p)
+      if (size === null) return null
+      totalSize += size
+    } else {
+      totalSize += st.size
     }
   }
 

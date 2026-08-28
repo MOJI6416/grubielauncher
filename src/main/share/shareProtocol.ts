@@ -4,7 +4,6 @@ export const SHARE_STREAM_FRAME_VERSION = 1
 export const SHARE_STREAM_FRAME_TYPE_DATA = 1
 export const SHARE_WS_PATH = '/ws'
 export const SHARE_TUNNEL_URL = 'wss://tunnel.grubielauncher.com/ws'
-export const SHARE_JOIN_DOMAIN_SUFFIX = '.join.grubielauncher.com'
 export const SHARE_HANDSHAKE_PROTOCOL_VERSION = 2
 export const SHARE_GATEWAY_HOST_SUFFIX = 'grubielauncher.com'
 export const MAX_INITIAL_DATA_BASE64_LENGTH = 64 * 1024
@@ -44,6 +43,7 @@ export interface OpenStreamMessage {
   initialDataBase64: string
   guestUserId?: string
   guestUsername?: string
+  statusPing?: boolean
 }
 
 export interface StreamOpenedMessage {
@@ -235,6 +235,7 @@ export function parseTunnelControlMessage(raw: string): TunnelControlMessage {
         initialDataBase64,
         guestUserId: readOptionalPattern(source, 'guestUserId', GUEST_USER_ID_PATTERN),
         guestUsername: readOptionalPattern(source, 'guestUsername', GUEST_USERNAME_PATTERN),
+        statusPing: source.statusPing === true,
       }
     }
     case 'STREAM_OPENED':

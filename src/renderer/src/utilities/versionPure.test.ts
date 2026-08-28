@@ -1,17 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  checkVersionName,
   isOwner,
   parseVersionOwner,
   sanitizeExtraFileSegments,
   supportsQuickPlayMultiplayer,
 } from "./versionPure";
-import type { IVersionConf } from "@/types/IVersion";
-
-function version(name: string): IVersionConf {
-  return { name } as IVersionConf;
-}
 
 describe("version pure helpers", () => {
   it("detects version ownership by persisted account key", () => {
@@ -48,33 +42,6 @@ describe("version pure helpers", () => {
     expect(parseVersionOwner()).toBeNull();
   });
 
-  it("rejects duplicate version names for new versions", () => {
-    expect(
-      checkVersionName("Fabulously Optimized", [
-        version("fabulously optimized"),
-      ]),
-    ).toBe(false);
-  });
-
-  it("allows keeping the same name while editing the selected version", () => {
-    const selected = version("Fabulously Optimized");
-
-    expect(checkVersionName("Fabulously Optimized", [selected], selected)).toBe(
-      true,
-    );
-  });
-
-  it("rejects forbidden filesystem characters and overlong names", () => {
-    expect(checkVersionName("Bad/Name", [])).toBe(false);
-    expect(checkVersionName("a".repeat(33), [])).toBe(false);
-  });
-
-  it("rejects path-traversal dot names (BUG-5)", () => {
-    expect(checkVersionName(".", [])).toBe(false);
-    expect(checkVersionName("..", [])).toBe(false);
-    expect(checkVersionName("...", [])).toBe(false);
-    expect(checkVersionName("my..pack", [])).toBe(true);
-  });
 });
 
 describe("sanitizeExtraFileSegments", () => {

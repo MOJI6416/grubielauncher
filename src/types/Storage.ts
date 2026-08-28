@@ -28,9 +28,17 @@ export interface StorageCleanup {
     safe: boolean;
   };
   backups: StorageCleanupEntry;
+  instances: StorageCleanupEntry & {
+    names: string[];
+    dataNames: string[];
+  };
 }
 
-export type StorageCleanupKind = "java" | "libraries" | "backups";
+export type StorageCleanupKind =
+  | "java"
+  | "libraries"
+  | "backups"
+  | "instances";
 
 export interface StorageBreakdown {
   total: number;
@@ -47,4 +55,5 @@ export interface StorageClearResult {
   freed: number;
   blocked?: boolean;
   failed?: boolean;
+  kept?: string[];
 }

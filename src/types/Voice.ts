@@ -41,6 +41,10 @@ export type VoiceConnectionState =
   | "connected"
   | "reconnecting";
 
+export type VoiceQuality = "excellent" | "good" | "poor" | "lost" | "unknown";
+
+export type VoiceMicIssue = "none" | "denied" | "missing" | "busy" | "failed";
+
 export interface IVoiceParticipantState {
   identity: string;
   name: string;
@@ -48,6 +52,8 @@ export interface IVoiceParticipantState {
   isSpeaking: boolean;
   isMuted: boolean;
   volume: number;
+  isLocallyMuted: boolean;
+  quality: VoiceQuality;
 }
 
 export interface IVoiceSessionState {
@@ -58,6 +64,14 @@ export interface IVoiceSessionState {
   participants: IVoiceParticipantState[];
   isMicMuted: boolean;
   isDeafened: boolean;
+  connectedAt: number;
+  quality: VoiceQuality;
+  micIssue: VoiceMicIssue;
+  isTransmitting: boolean;
+  pttEnabled: boolean;
+  pttPressed: boolean;
+  pttBindLabel: string;
+  isNoiseSuppressionActive: boolean;
 }
 
 export type VoiceCallStatus = "idle" | "outgoing" | "incoming";
@@ -88,4 +102,12 @@ export const INITIAL_VOICE_SESSION: IVoiceSessionState = {
   participants: [],
   isMicMuted: false,
   isDeafened: false,
+  connectedAt: 0,
+  quality: "unknown",
+  micIssue: "none",
+  isTransmitting: false,
+  pttEnabled: false,
+  pttPressed: false,
+  pttBindLabel: "",
+  isNoiseSuppressionActive: false,
 };

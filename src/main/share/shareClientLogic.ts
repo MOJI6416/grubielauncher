@@ -7,6 +7,7 @@ import type {
 
 export const RECONNECT_BACKOFF_MS = [1000, 2000, 5000, 10000, 15000]
 export const GATEWAY_TOKEN_RENEW_SKEW_MS = 60_000
+export const SHARE_HANDSHAKE_TIMEOUT_MS = 20_000
 
 export function getReconnectDelay(attempt: number): number {
   const safeAttempt = Math.max(attempt, 1)

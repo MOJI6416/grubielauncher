@@ -2,6 +2,7 @@ import { IModpack } from './ModManager'
 import { IArguments } from './IArguments'
 import { ILoader } from './Loader'
 import { IServer } from './ServersList'
+import { InstanceSettingsOverrides } from '../shared/instanceSettings'
 
 export interface IVersion {
   id: string
@@ -12,10 +13,11 @@ export interface IVersion {
 
 export interface IVersionConf {
   name: string
+  description?: string
   loader: ILoader
   version: IVersion
   owner?: string
-  lastLaunch: Date
+  lastLaunch?: Date
   build: number
   shareCode?: string
   downloadedVersion: boolean
@@ -23,7 +25,16 @@ export interface IVersionConf {
   runArguments: IArguments
   image: string
   quickServer?: string
+  overrides?: InstanceSettingsOverrides
 }
+
+export interface VersionDeleteResult {
+  deleted: boolean
+  trashed: boolean
+  busy?: boolean
+}
+
+export const VERSION_DELETE_BUSY = 'versionDeleteBusy'
 
 export interface IModpackFile {
   path: string
@@ -39,6 +50,7 @@ export interface IImportModpack {
 }
 
 export interface IVersionClassData {
+  failed?: boolean
   hasManifest: boolean
   javaMajorVersion?: number
   launcherPath: string

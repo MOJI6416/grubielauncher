@@ -8,6 +8,12 @@ export interface IFriend {
   serverAddress: string
 }
 
+export interface IFriendRequest {
+  requestId: string
+  user: IUser
+  type: 'requester' | 'recipient'
+}
+
 export interface IUpdateStatus {
   versionName?: string
   versionCode?: string | null

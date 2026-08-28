@@ -1,16 +1,20 @@
-import { IVersionConf } from "@/types/IVersion";
+import { IVersionConf, VersionDeleteResult } from "@/types/IVersion";
 import { IVersionManifest } from "@/types/IVersionManifest";
 import { IAssetIndex } from "@/types/IAssetIndex";
 import { LANGUAGES, TSettings } from "@/types/Settings";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { Java } from "./Java";
+import { buildQuickPlayArguments } from "./quickPlayArgs";
 import { IFabricManifest } from "@/types/IFabricManifest";
 import { IInstallProfile } from "@/types/IInstallProfile";
 import { DownloadItem } from "@/types/Downloader";
 import path from "path";
 import fs from "fs-extra";
 import pLimit from "p-limit";
-import { Downloader } from "../utilities/downloader";
+import {
+  Downloader,
+  waitWhileDownloadsPaused,
+} from "../utilities/downloader";
 import { writeJsonAtomic } from "../utilities/atomicJson";
 import {
   convertMavenCoordinateToJarPath,
@@ -21,7 +25,7 @@ import {
   matchesOsRules,
   removeDuplicatesLibraries,
 } from "../utilities/other";
-import { app } from "electron";
+import { app, shell } from "electron";
 import { runGame, runJar } from "../utilities/game";
 import { getAuthlibCached } from "../utilities/authlib";
 import { AuthlibEnsureResult } from "@/types/IAuthlib";
@@ -44,6 +48,7 @@ import {
   parseLoaderInstallerProgressLine,
 } from "../utilities/loaderInstallerProgress";
 import { assertSafeVersionName } from "@/shared/versionName";
+import { resolveLaunchPath } from "./launchAlias";
 import { assertSafeFileSegment } from "./serverScriptSafety";
 import { Backend } from "../services/Backend";
 import { buildMemoryArguments } from "@/shared/jvmDefaults";
@@ -62,6 +67,13 @@ type VersionInstallRuntimeOptions = VersionInstallOptions & {
 
 const FILES_STAGE_START_PERCENT = 62;
 const FILES_STAGE_END_PERCENT = 94;
+
+const LOADER_LIBRARY_MARKERS: Record<string, string[]> = {
+  fabric: ["fabricmc"],
+  quilt: ["quiltmc"],
+  forge: ["minecraftforge"],
+  neoforge: ["neoforged", "neoforge"],
+};
 
 function parseCustomRunArguments(input?: string) {
   if (!input?.trim()) return [];
@@ -112,6 +124,7 @@ export class Version {
   public isQuickPlayMultiplayer: boolean = false;
   public isQuickPlaySingleplayer: boolean = false;
   private manifestPath: string = "";
+  private launchVersionPath: string = "";
 
   private downloader: Downloader = new Downloader(6);
   private initPromise: Promise<void> | null = null;
@@ -152,6 +165,7 @@ export class Version {
       this.versionPath,
       `${this.version.version.id}.json`,
     );
+    this.launchVersionPath = "";
 
     await fs.ensureDir(this.versionPath);
     const isExistsManifest = await fs.pathExists(this.manifestPath);
@@ -160,13 +174,25 @@ export class Version {
       await this.readManifest();
       if (this.manifest) {
         const java = new Java(
-      this.manifest.javaVersion?.majorVersion ??
-        mcVersionToJavaMajor(this.version.version.id),
-    );
+          this.manifest.javaVersion?.majorVersion ??
+            mcVersionToJavaMajor(this.version.version.id),
+        );
         await java.init();
+        if (!java.javaPath) await java.useSystemJava();
         this.javaPath = java.javaPath;
       }
     }
+  }
+
+  private async resolveLaunchVersionPath() {
+    if (this.launchVersionPath) return this.launchVersionPath;
+
+    this.launchVersionPath = await resolveLaunchPath(
+      this.versionPath,
+      this.launcherPath,
+    );
+
+    return this.launchVersionPath;
   }
 
   private sendInstallInfo(info: VersionInstallProgress | null) {
@@ -209,6 +235,14 @@ export class Version {
     if (this.installAbortSignal?.aborted) {
       throw new Error(VERSION_INSTALL_CANCELLED);
     }
+  }
+
+  private async installCheckpoint() {
+    this.throwIfInstallCancelled();
+    await waitWhileDownloadsPaused(
+      () => this.installAbortSignal?.aborted === true,
+    );
+    this.throwIfInstallCancelled();
   }
 
   private isInstallCancelError(error: unknown) {
@@ -254,9 +288,9 @@ export class Version {
     let succeeded = false;
 
     try {
-      this.throwIfInstallCancelled();
+      await this.installCheckpoint();
       await this.installInternal(settings, account, items);
-      this.throwIfInstallCancelled();
+      await this.installCheckpoint();
       this.sendInstallProgress("done", 100);
       succeeded = true;
     } catch (error) {
@@ -282,6 +316,19 @@ export class Version {
     }
   }
 
+  private isLoaderMerged() {
+    if (!this.manifest) return false;
+    if (!this.version.loader.version?.id) return true;
+
+    const markers = LOADER_LIBRARY_MARKERS[this.version.loader.name];
+    if (!markers) return true;
+
+    return (this.manifest.libraries ?? []).some((library) => {
+      const name = library.name?.toLowerCase() ?? "";
+      return markers.some((marker) => name.includes(marker));
+    });
+  }
+
   private async installInternal(
     settings: TSettings,
     account: ILocalAccount,
@@ -289,7 +336,7 @@ export class Version {
   ) {
     const downloadItems: DownloadItem[] = [...items];
     const downloadSignal = this.installAbortSignal ?? undefined;
-    this.throwIfInstallCancelled();
+    await this.installCheckpoint();
 
     const manifestPath = path.join(
       this.versionPath,
@@ -301,8 +348,9 @@ export class Version {
       await this.readManifest();
     }
 
-    if (!this.manifest) {
+    if (!this.manifest || !this.isLoaderMerged()) {
       isNewManifest = true;
+      this.manifest = undefined;
       await fs.remove(manifestPath).catch(() => {});
 
       assertTrustedDownloadUrl(
@@ -323,10 +371,10 @@ export class Version {
       );
     }
 
-    this.throwIfInstallCancelled();
+    await this.installCheckpoint();
     this.sendInstallProgress("manifest", 12, false);
     await this.readManifest();
-    this.throwIfInstallCancelled();
+    await this.installCheckpoint();
 
     if (!this.manifest) {
       throw new Error(`Failed to read version manifest: ${manifestPath}`);
@@ -344,13 +392,13 @@ export class Version {
 
     if (needsJavaBeforeLoader) {
       await java.init(downloadSignal);
-      this.throwIfInstallCancelled();
-      await java.install(downloadSignal);
-      this.throwIfInstallCancelled();
+      await this.installCheckpoint();
+      await java.install(downloadSignal, this.version.name);
+      await this.installCheckpoint();
       this.javaPath = java.javaPath;
     } else {
       const javaItem = await java.prepareInstallItem(downloadSignal);
-      this.throwIfInstallCancelled();
+      await this.installCheckpoint();
 
       if (javaItem) {
         downloadItems.push(javaItem);
@@ -397,7 +445,7 @@ export class Version {
       }
 
       if (!fabricManifest) {
-        this.throwIfInstallCancelled();
+        await this.installCheckpoint();
         assertTrustedDownloadUrl(
           this.version.loader.version.url,
           "loader manifest url",
@@ -416,7 +464,7 @@ export class Version {
           encoding: "utf-8",
         });
       }
-      this.throwIfInstallCancelled();
+      await this.installCheckpoint();
 
       if (isNewManifest && fabricManifest) {
         this.manifest.mainClass = fabricManifest.mainClass;
@@ -485,7 +533,7 @@ export class Version {
           downloadSignal,
         );
       }
-      this.throwIfInstallCancelled();
+      await this.installCheckpoint();
 
       if (isNewManifest) {
         const tempPath = path.join(this.versionPath, "temp");
@@ -554,11 +602,21 @@ export class Version {
             ),
           );
 
+          const launchBasePath = await this.resolveLaunchVersionPath();
+
           try {
             const installResult = await runJar(
               this.javaPath,
-              ["-jar", installerPath, "--installClient", "."],
-              tempPath,
+              [
+                "-jar",
+                path.join(
+                  launchBasePath,
+                  `${this.version.loader.name}.jar`,
+                ),
+                "--installClient",
+                ".",
+              ],
+              path.join(launchBasePath, "temp"),
               {
                 signal: downloadSignal,
                 onOutput: ({ message }) => handleInstallerOutput(message),
@@ -587,7 +645,7 @@ export class Version {
           }
 
           const versionsPath = path.join(tempPath, "versions");
-          this.throwIfInstallCancelled();
+          await this.installCheckpoint();
           const forgeManifestName =
             this.version.loader.name == "forge"
               ? `${this.version.version.id}-forge-${this.version.loader.version.id}`
@@ -600,7 +658,7 @@ export class Version {
             : null;
 
           this.sendInstallProgress("loader", 58, true);
-          this.throwIfInstallCancelled();
+          await this.installCheckpoint();
 
           if (!forgeInstalled || !installedForgeManifestPath) {
             const { readJSONFromArchive } = await import(
@@ -735,7 +793,7 @@ export class Version {
     }
 
     if (account.type != "microsoft" && account.type != "plain") {
-      this.throwIfInstallCancelled();
+      await this.installCheckpoint();
       const authlib = await getAuthlibCached();
       const existsAuthlib = this.manifest.libraries.find(
         (lib) => lib.name === authlib?.name,
@@ -790,7 +848,7 @@ export class Version {
       ],
       downloadSignal,
     );
-    this.throwIfInstallCancelled();
+    await this.installCheckpoint();
 
     const assets = await this.getAssets();
     downloadItems.push(...assets.downloadItems);
@@ -817,7 +875,7 @@ export class Version {
     } finally {
       this.downloader.onInfo = null;
     }
-    this.throwIfInstallCancelled();
+    await this.installCheckpoint();
 
     if (javaFinalizeNeeded) {
       await java.finalizeInstall();
@@ -976,12 +1034,12 @@ export class Version {
 
   private async getAssetPathsFromManifest(manifest: IVersionManifest) {
     const assetsIndexPath = this.getAssetIndexPath(manifest);
-    if (!assetsIndexPath) return [];
+    if (!assetsIndexPath) return { paths: [] as string[], complete: true };
 
     const paths = [assetsIndexPath];
 
     if (!(await fs.pathExists(assetsIndexPath))) {
-      return paths;
+      return { paths, complete: true };
     }
 
     try {
@@ -1001,37 +1059,56 @@ export class Version {
           ),
         );
       }
-    } catch {}
+    } catch (error) {
+      console.error(`Failed to read the asset index ${assetsIndexPath}:`, error);
+      return { paths, complete: false };
+    }
 
-    return paths;
+    return { paths, complete: true };
   }
 
   private async getOtherVersionManifestPaths() {
     const versionsPath = path.join(this.minecraftPath, "versions");
     const currentPath = this.normalizeResourcePath(this.versionPath);
-    const directories = await fs.readdir(versionsPath).catch(() => []);
     const manifestPaths: string[] = [];
+    let complete = true;
+
+    const directories = await fs.readdir(versionsPath).catch((error) => {
+      console.error(`Failed to list installed versions ${versionsPath}:`, error);
+      complete = false;
+      return [] as string[];
+    });
 
     for (const directory of directories) {
       const versionPath = path.join(versionsPath, directory);
       if (this.normalizeResourcePath(versionPath) === currentPath) continue;
 
       const stats = await fs.stat(versionPath).catch(() => null);
-      if (!stats?.isDirectory()) continue;
+      if (!stats) {
+        complete = false;
+        continue;
+      }
+      if (!stats.isDirectory()) continue;
 
-      const files = await fs.readdir(versionPath).catch(() => []);
+      const files = await fs.readdir(versionPath).catch((error) => {
+        console.error(`Failed to list version files ${versionPath}:`, error);
+        complete = false;
+        return [] as string[];
+      });
+
       for (const file of files) {
         if (!file.endsWith(".json") || file === "version.json") continue;
         manifestPaths.push(path.join(versionPath, file));
       }
     }
 
-    return manifestPaths;
+    return { manifestPaths, complete };
   }
 
   private async getOtherVersionResourcePaths(account: ILocalAccount) {
     const resourcePaths = new Set<string>();
-    const manifestPaths = await this.getOtherVersionManifestPaths();
+    const { manifestPaths, complete } = await this.getOtherVersionManifestPaths();
+    let readEveryManifest = complete;
 
     for (const manifestPath of manifestPaths) {
       try {
@@ -1047,15 +1124,22 @@ export class Version {
           resourcePaths.add(this.normalizeResourcePath(libraryPath));
         }
 
-        for (const assetPath of await this.getAssetPathsFromManifest(
-          manifest,
-        )) {
+        const assets = await this.getAssetPathsFromManifest(manifest);
+        if (!assets.complete) readEveryManifest = false;
+
+        for (const assetPath of assets.paths) {
           resourcePaths.add(this.normalizeResourcePath(assetPath));
         }
-      } catch {}
+      } catch (error) {
+        console.error(
+          `Failed to read the version manifest ${manifestPath}:`,
+          error,
+        );
+        readEveryManifest = false;
+      }
     }
 
-    return resourcePaths;
+    return { resourcePaths, complete: readEveryManifest };
   }
 
   private getUnusedResourcePaths(
@@ -1225,6 +1309,7 @@ export class Version {
     account: ILocalAccount,
     settings: TSettings,
     authData: IAuth | null,
+    launchVersionPath: string,
     quickSingle?: string,
     quickMultiplayer?: string,
   ) {
@@ -1262,35 +1347,18 @@ export class Version {
       );
     }
 
-    if (this.isQuickPlaySingleplayer && quickSingle)
-      game.push(...["--quickPlaySingleplayer", quickSingle]);
-
-    const quickServerAddress = quickMultiplayer || this.version.quickServer;
-    if (quickServerAddress) {
-      if (this.isQuickPlayMultiplayer) {
-        game.push("--quickPlayMultiplayer", quickServerAddress);
-      } else if (
-        this.manifest.type !== "old_alpha" &&
-        this.manifest.type !== "old_beta"
-      ) {
-        const separatorIndex = quickServerAddress.lastIndexOf(":");
-        const portCandidate =
-          separatorIndex > 0
-            ? quickServerAddress.slice(separatorIndex + 1)
-            : "";
-        const hasPort = /^\d+$/.test(portCandidate);
-        const host = hasPort
-          ? quickServerAddress.slice(0, separatorIndex)
-          : quickServerAddress;
-
-        game.push(
-          "--server",
-          host,
-          "--port",
-          hasPort ? portCandidate : "25565",
-        );
-      }
-    }
+    game.push(
+      ...buildQuickPlayArguments({
+        quickSingle,
+        quickMultiplayer,
+        savedServer: this.version.quickServer,
+        supportsSingleplayer: this.isQuickPlaySingleplayer,
+        supportsMultiplayer: this.isQuickPlayMultiplayer,
+        isLegacyManifest:
+          this.manifest.type === "old_alpha" ||
+          this.manifest.type === "old_beta",
+      }),
+    );
 
     jvm.push(...buildMemoryArguments(settings.xmx, settings.optimizedJvm));
 
@@ -1338,7 +1406,7 @@ export class Version {
     game = game.filter((arg) => arg !== "");
 
     const paths = [
-      path.join(this.versionPath, `${this.version.version.id}.jar`),
+      path.join(launchVersionPath, `${this.version.version.id}.jar`),
       ...this.getLibraries(account).paths,
     ];
 
@@ -1348,7 +1416,7 @@ export class Version {
       return arg
         .replace(
           /\${natives_directory}/g,
-          path.join(this.versionPath, "natives"),
+          path.join(launchVersionPath, "natives"),
         )
         .replace(/\${launcher_name}/g, "GrubieLauncher")
         .replace(/\${launcher_version}/g, app.getVersion())
@@ -1401,7 +1469,7 @@ export class Version {
       return arg
         .replace(/\${auth_player_name}/g, account.nickname || authData.nickname)
         .replace(/\${version_name}/g, this.version.version.id)
-        .replace(/\${game_directory}/g, this.versionPath)
+        .replace(/\${game_directory}/g, launchVersionPath)
         .replace(/\${assets_root}/g, path.join(this.minecraftPath, "assets"))
         .replace(/\${assets_index_name}/g, this.manifest.assetIndex.id)
         .replace(/\${auth_uuid}/g, authData.uuid)
@@ -1450,10 +1518,15 @@ export class Version {
 
     if (!this.manifest || !this.javaPath) return null;
 
+    const launchVersionPath = isRelative
+      ? this.versionPath
+      : await this.resolveLaunchVersionPath();
+
     const runArguments = await this.getRunArguments(
       account,
       settings,
       authData,
+      launchVersionPath,
       quickSingle,
       quickMultiplayer,
     );
@@ -1567,10 +1640,6 @@ export class Version {
     );
     if (!command) return false;
 
-    const trackStatistics =
-      !!this.version.owner &&
-      `${account.type}_${account.nickname}` === this.version.owner;
-
     runGame(
       command[0],
       command.slice(1),
@@ -1580,11 +1649,12 @@ export class Version {
       account.accessToken || "",
       quick.multiplayer || this.version.quickServer,
       {
-        trackStatistics,
+        trackStatistics: true,
         accountSub: authData?.sub ?? null,
         accountLabel: account.nickname,
       },
       settings.highPriority,
+      await this.resolveLaunchVersionPath(),
     );
 
     return true;
@@ -1659,28 +1729,57 @@ export class Version {
     return null;
   }
 
-  public async delete(account: ILocalAccount, isFull: boolean = false) {
-    await this.ensureInitialized();
-
-    if (!isFull) {
-      await fs.remove(this.versionPath);
-      return true;
+  private async discardInstanceFolder(): Promise<VersionDeleteResult> {
+    if (!(await fs.pathExists(this.versionPath))) {
+      return { deleted: true, trashed: false };
     }
 
+    const trashed = await shell
+      .trashItem(this.versionPath)
+      .then(() => true)
+      .catch(() => false);
+
+    if (!trashed) await fs.remove(this.versionPath);
+
+    return { deleted: true, trashed };
+  }
+
+  public async delete(
+    account: ILocalAccount,
+    isFull: boolean = false,
+  ): Promise<VersionDeleteResult> {
+    await this.ensureInitialized();
+
+    if (!isFull) return await this.discardInstanceFolder();
+
     const libraries = this.getLibraries(account);
-    const assets = await this.getAssets();
+    const assets = await this.getAssets().catch((error) => {
+      console.error(
+        `Failed to list the assets of ${this.versionPath} before deleting:`,
+        error,
+      );
+      return null;
+    });
     const assetIndexPath = this.manifest
       ? this.getAssetIndexPath(this.manifest)
       : null;
     const usedByOtherVersions =
       await this.getOtherVersionResourcePaths(account);
+
+    if (!assets || !usedByOtherVersions.complete) {
+      console.error(
+        `[version:delete] keeping shared files of ${this.versionPath}: the other installed versions could not be listed in full`,
+      );
+      return await this.discardInstanceFolder();
+    }
+
     const removableResources = this.getUnusedResourcePaths(
       [
         ...libraries.paths,
         ...assets.paths,
         ...(assetIndexPath ? [assetIndexPath] : []),
       ],
-      usedByOtherVersions,
+      usedByOtherVersions.resourcePaths,
     );
 
     if (removableResources.length) {
@@ -1691,8 +1790,7 @@ export class Version {
         ),
       );
     }
-    await fs.remove(this.versionPath);
 
-    return true;
+    return await this.discardInstanceFolder();
   }
 }

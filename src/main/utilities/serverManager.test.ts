@@ -16,6 +16,8 @@ import {
   AIKAR_FLAGS,
   getServerSettings,
   isServerRunning,
+  readServerRunOptions,
+  replaceXmxParameter,
   setServerAikarFlags,
   setServerRunning,
   syncServerExtraFiles,
@@ -316,6 +318,53 @@ describe("setServerAikarFlags", () => {
       await fs.readFile(path.join(serverPath, "run.bat"), "utf-8"),
     ).toBe(content);
   });
+
+  it("reports that nothing was applied when no launch script exists", async () => {
+    const serverPath = await makeTempRoot();
+
+    expect(await setServerAikarFlags(serverPath, true)).toBe(false);
+  });
+
+  it("reports success when at least one launch script was found", async () => {
+    const serverPath = await makeTempRoot();
+    await fs.outputFile(
+      path.join(serverPath, "run.bat"),
+      "java -Xmx4096M -jar forge.jar nogui",
+    );
+
+    expect(await setServerAikarFlags(serverPath, true)).toBe(true);
+  });
+});
+
+describe("replaceXmxParameter", () => {
+  it("reports success when a launch script carries -Xmx", async () => {
+    const serverPath = await makeTempRoot();
+    await fs.outputFile(
+      path.join(serverPath, "run.bat"),
+      "java -Xmx4096M -jar forge.jar nogui",
+    );
+
+    expect(await replaceXmxParameter(serverPath, "6144M")).toBe(true);
+    expect(
+      await fs.readFile(path.join(serverPath, "run.bat"), "utf-8"),
+    ).toContain("-Xmx6144M");
+  });
+
+  it("reports failure when there is no launch script to patch", async () => {
+    const serverPath = await makeTempRoot();
+
+    expect(await replaceXmxParameter(serverPath, "6144M")).toBe(false);
+  });
+
+  it("reports failure when the launch script has no memory argument", async () => {
+    const serverPath = await makeTempRoot();
+    await fs.outputFile(
+      path.join(serverPath, "run.sh"),
+      "java -jar forge.jar nogui",
+    );
+
+    expect(await replaceXmxParameter(serverPath, "6144M")).toBe(false);
+  });
 });
 
 describe("server.properties escaping", () => {
@@ -366,5 +415,64 @@ describe("server.properties escaping", () => {
 
     const settings = await getServerSettings(filePath);
     expect(settings.motd).toBe("\u00A7aGreen");
+  });
+});
+
+describe("readServerRunOptions", () => {
+  it("reports what the run script really says, not what conf.json says", async () => {
+    const root = await makeTempRoot();
+    await fs.writeFile(
+      path.join(root, "run.bat"),
+      `@echo off
+"java.exe" -Xmx5120M -jar server.jar nogui`,
+      "utf-8",
+    );
+
+    expect(await readServerRunOptions(root)).toEqual({
+      memory: 5120,
+      aikarFlags: false,
+    });
+  });
+
+  it("converts gigabytes and detects Aikar flags", async () => {
+    const root = await makeTempRoot();
+    await fs.writeFile(
+      path.join(root, "user_jvm_args.txt"),
+      `-Xms6G -Xmx6G ${AIKAR_FLAGS}`,
+      "utf-8",
+    );
+
+    expect(await readServerRunOptions(root)).toEqual({
+      memory: 6144,
+      aikarFlags: true,
+    });
+  });
+
+  it("returns nulls when no run script exists", async () => {
+    const root = await makeTempRoot();
+
+    expect(await readServerRunOptions(root)).toEqual({
+      memory: null,
+      aikarFlags: null,
+    });
+  });
+});
+
+describe("syncServerExtraFiles path safety", () => {
+  it("refuses sync entries that point outside the server folder", async () => {
+    const root = await makeTempRoot();
+    const versionPath = path.join(root, "version");
+    const serverPath = path.join(versionPath, "server");
+
+    await fs.outputFile(path.join(root, "neighbour", "level.dat"), "planted");
+    await fs.ensureDir(serverPath);
+
+    const result = await syncServerExtraFiles(versionPath, serverPath, [
+      "../neighbour",
+      "..\neighbour",
+    ]);
+
+    expect(result.copied).toEqual([]);
+    expect(await fs.pathExists(path.join(versionPath, "neighbour"))).toBe(false);
   });
 });

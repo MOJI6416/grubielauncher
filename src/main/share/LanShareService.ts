@@ -38,6 +38,7 @@ import {
   getReconnectDelay,
   resolveFriendShareConnection,
   shouldRenewGatewayToken,
+  SHARE_HANDSHAKE_TIMEOUT_MS,
 } from "./shareClientLogic";
 import {
   createShareError,
@@ -144,7 +145,13 @@ export class LanShareService extends EventEmitter {
           ? "tunnel_auth_failed"
           : message.code === "UNSUPPORTED_PROTOCOL_VERSION"
             ? "tunnel_version_unsupported"
-            : "tunnel_protocol_error";
+            : // The gateway keeps a share with a tunnel that still answers, so
+              // this is "somebody else is already hosting it", not a failure of
+              // this launcher. Reconnecting is the right answer: the moment the
+              // other tunnel goes quiet, this one takes over.
+              message.code === "ALREADY_ACTIVE"
+              ? "tunnel_already_active"
+              : "tunnel_protocol_error";
       this.handleShareError(createShareError(code, message.message));
       if (
         code === "tunnel_auth_failed" ||
@@ -332,6 +339,14 @@ export class LanShareService extends EventEmitter {
           sessionId: response.sessionId,
           slug: response.slug,
         });
+
+        const handshakeError = await this.waitForHandshake();
+        if (handshakeError) {
+          await this.forceLocalStop("error");
+          this.stateStore.setError(handshakeError, "error");
+          this.emit("shareError", handshakeError);
+          return { ok: false, error: handshakeError };
+        }
 
         return {
           ok: true,
@@ -786,6 +801,76 @@ export class LanShareService extends EventEmitter {
     this.stateStore.setState(applyAuthOkState(this.stateStore.getState()));
 
     await this.startHeartbeat();
+  }
+
+  private waitForHandshake(
+    timeoutMs = SHARE_HANDSHAKE_TIMEOUT_MS,
+  ): Promise<ShareStateError | null> {
+    if (this.stateStore.getState().isAuthenticated) return Promise.resolve(null);
+
+    return new Promise((resolve) => {
+      let settled = false;
+
+      const finish = (error: ShareStateError | null) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        this.tunnelClient.off("authOk", onAuthOk);
+        this.tunnelClient.off("disconnected", onDisconnected);
+        this.tunnelClient.off("controlError", onControlError);
+        this.tunnelClient.off("protocolError", onProtocolError);
+        resolve(error);
+      };
+
+      const onAuthOk = () => finish(null);
+
+      const onDisconnected = (reason: string) =>
+        finish(
+          createShareError(
+            "tunnel_disconnected",
+            `Tunnel disconnected before AUTH_OK: ${reason}`,
+          ),
+        );
+
+      const onControlError = (message: { code: string; message: string }) =>
+        finish(
+          createShareError(
+            message.code === "UNAUTHORIZED"
+              ? "tunnel_auth_failed"
+              : message.code === "UNSUPPORTED_PROTOCOL_VERSION"
+                ? "tunnel_version_unsupported"
+                : message.code === "ALREADY_ACTIVE"
+                  ? "tunnel_already_active"
+                  : "tunnel_protocol_error",
+            message.message,
+          ),
+        );
+
+      const onProtocolError = (error: Error) =>
+        finish(
+          toShareStateError(
+            error,
+            "tunnel_protocol_error",
+            "Tunnel protocol error",
+          ),
+        );
+
+      const timer = setTimeout(
+        () =>
+          finish(
+            createShareError(
+              "tunnel_handshake_timeout",
+              "Gateway did not confirm the tunnel in time",
+            ),
+          ),
+        timeoutMs,
+      );
+
+      this.tunnelClient.on("authOk", onAuthOk);
+      this.tunnelClient.on("disconnected", onDisconnected);
+      this.tunnelClient.on("controlError", onControlError);
+      this.tunnelClient.on("protocolError", onProtocolError);
+    });
   }
 
   private async handleTunnelDisconnected(reason: string): Promise<void> {

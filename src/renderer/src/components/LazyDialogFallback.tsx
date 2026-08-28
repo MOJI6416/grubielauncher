@@ -1,23 +1,15 @@
-import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { PanelFallback } from "./PanelFallback";
 
-type LazyDialogFallbackVariant =
-  | "compact"
-  | "form"
-  | "chat"
-  | "wide"
-  | "workspace"
-  | "console";
+type LazyDialogFallbackVariant = "compact" | "form" | "wide";
 
 const variantClasses: Record<LazyDialogFallbackVariant, string> = {
-  compact: "sm:max-w-sm min-h-[12rem]",
-  form: "sm:max-w-lg min-h-[24rem]",
-  chat: "sm:max-w-lg min-h-[31.5rem]",
-  wide: "sm:max-w-2xl min-h-[28rem]",
-  workspace: "sm:max-w-5xl min-h-[34rem]",
-  console: "sm:max-w-4xl min-h-[32rem]",
+  compact: "h-[17rem] sm:max-w-sm",
+  form: "h-[25rem] sm:max-w-lg",
+  wide: "h-[29rem] sm:max-w-2xl",
 };
 
 export function LazyDialogFallback({
@@ -27,17 +19,21 @@ export function LazyDialogFallback({
   className?: string;
   variant?: LazyDialogFallbackVariant;
 }) {
+  const { t } = useTranslation();
+
   return (
     <Dialog open>
-      <DialogContent aria-describedby={undefined}
+      <DialogContent
+        aria-describedby={undefined}
         showCloseButton={false}
         className={cn(
-          "flex max-h-[calc(100vh-2rem)] items-center justify-center overflow-hidden",
+          "flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden",
           variantClasses[variant],
           className,
         )}
       >
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <DialogTitle className="sr-only">{t("common.loading")}</DialogTitle>
+        <PanelFallback variant="dialog" />
       </DialogContent>
     </Dialog>
   );

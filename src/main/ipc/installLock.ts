@@ -1,3 +1,5 @@
+import { resumeDownloads } from "../utilities/downloader";
+
 type ActiveInstallOperation = {
   controller: AbortController;
   cancel: () => void;
@@ -31,6 +33,7 @@ export function tryBeginInstallOperation(
 export function cancelActiveInstallOperation(): boolean {
   if (!activeOperation) return false;
 
+  resumeDownloads();
   activeOperation.controller.abort();
   try {
     activeOperation.cancel();

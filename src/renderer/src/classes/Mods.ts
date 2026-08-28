@@ -6,6 +6,7 @@ import {
   VersionInstallOptions,
   VersionInstallResult,
 } from '@/types/InstallationProgress'
+import { installQueue } from '@renderer/features/install/installQueue'
 
 const api = window.api
 
@@ -32,30 +33,34 @@ export class Mods {
     }
   }
 
+  private queued<T>(task: () => Promise<T>): Promise<T> {
+    return installQueue.run(
+      {
+        id: installQueue.nextId('mods'),
+        label: this.versionConf.name,
+        loaderName: this.versionConf.loader.name,
+      },
+      task
+    )
+  }
+
   async check(options?: VersionInstallOptions) {
-    const result = await api.mods.check(
-      this.settings,
-      this.versionConf,
-      this.server,
-      options
+    const result = await this.queued(() =>
+      api.mods.check(this.settings, this.versionConf, this.server, options)
     )
     this.handleResult(result)
   }
 
   async downloadOther(options?: VersionInstallOptions) {
-    const result = await api.mods.downloadOther(
-      this.settings,
-      this.versionConf,
-      options
+    const result = await this.queued(() =>
+      api.mods.downloadOther(this.settings, this.versionConf, options)
     )
     this.handleResult(result)
   }
 
   async syncLive(options?: VersionInstallOptions) {
-    const result = await api.mods.syncLive(
-      this.settings,
-      this.versionConf,
-      options
+    const result = await this.queued(() =>
+      api.mods.syncLive(this.settings, this.versionConf, options)
     )
     this.handleResult(result)
   }

@@ -4,6 +4,7 @@ import {
   IImportModpack,
   IVersionClassData,
   IVersionConf,
+  VersionDeleteResult,
 } from "@/types/IVersion";
 import { TSettings } from "@/types/Settings";
 import { Version } from "../game/Version";
@@ -12,7 +13,12 @@ import { importVersion } from "../utilities/versions";
 import { uploadMods } from "../utilities/share";
 import { check, handleSafe } from "../utilities/ipc";
 import { assertReadablePath, assertWritablePath } from "../utilities/safePath";
-import { pauseDownloads, resumeDownloads } from "../utilities/downloader";
+import {
+  DownloadPauseState,
+  getDownloadPauseState,
+  pauseDownloads,
+  resumeDownloads,
+} from "../utilities/downloader";
 import { ILocalProject } from "@/types/ModManager";
 import {
   VersionInstallOptions,
@@ -27,8 +33,10 @@ import {
   isInstallOperationActive,
   tryBeginInstallOperation,
 } from "./installLock";
+import { setInstallActiveProbe } from "../windows/mainWindow";
 
 const fallbackVersionInit: IVersionClassData = {
+  failed: true,
   hasManifest: false,
   launcherPath: "",
   minecraftPath: "",
@@ -111,11 +119,14 @@ export async function runVersionInstallWithLock(
 
     return result;
   } finally {
+    resumeDownloads();
     lock.end();
   }
 }
 
 export function registerVersionIpc() {
+  setInstallActiveProbe(isInstallOperationActive);
+
   handleSafe(
     "version:init",
     fallbackVersionInit,
@@ -171,6 +182,11 @@ export function registerVersionIpc() {
     if (!isInstallOperationActive()) return false;
     resumeDownloads();
     return true;
+  });
+
+  handleSafe<DownloadPauseState>("version:getPauseState", "off", async () => {
+    if (!isInstallOperationActive()) return "off";
+    return getDownloadPauseState();
   });
 
   handleSafe(
@@ -247,7 +263,7 @@ export function registerVersionIpc() {
     },
   );
 
-  handleSafe(
+  handleSafe<VersionDeleteResult | false>(
     "version:delete",
     false,
     [isOptionalConf, isConf, check.optional(check.boolean())],
@@ -258,13 +274,12 @@ export function registerVersionIpc() {
       isFull: boolean,
     ) => {
       const lock = tryBeginInstallOperation(() => {});
-      if (!lock) return false;
+      if (!lock) return { deleted: false, trashed: false, busy: true };
 
       try {
         const vm = new Version(versionConf);
         await vm.init();
-        await vm.delete(account, isFull);
-        return true;
+        return await vm.delete(account, isFull);
       } finally {
         lock.end();
       }

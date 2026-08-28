@@ -58,15 +58,23 @@ const VOICE_SOUND_URLS: Record<VoiceSoundKind, string> = {
 const VOICE_SOUND_COOLDOWN_MS = 250;
 const voiceSoundLastPlayedAt = new Map<VoiceSoundKind, number>();
 
-export function playVoiceSound(kind: VoiceSoundKind) {
-  const settings = getDefaultStore().get(settingsAtom);
-  if (!settings.sounds) return;
+export function playVoiceSound(
+  kind: VoiceSoundKind,
+  options?: { force?: boolean },
+) {
+  if (!options?.force) {
+    const settings = getDefaultStore().get(settingsAtom);
+    if (!settings.sounds) return;
 
-  const now = Date.now();
-  if (now - (voiceSoundLastPlayedAt.get(kind) ?? 0) < VOICE_SOUND_COOLDOWN_MS) {
-    return;
+    const now = Date.now();
+    if (
+      now - (voiceSoundLastPlayedAt.get(kind) ?? 0) <
+      VOICE_SOUND_COOLDOWN_MS
+    ) {
+      return;
+    }
+    voiceSoundLastPlayedAt.set(kind, now);
   }
-  voiceSoundLastPlayedAt.set(kind, now);
 
   const audio = new Audio(VOICE_SOUND_URLS[kind]);
   audio.volume = SOUND_VOLUME;

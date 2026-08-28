@@ -1,19 +1,32 @@
 import { ipcMain, IpcMainInvokeEvent } from 'electron'
 import { PathPolicyError } from './safePath'
 import { classifyError, FailureInfo } from '@/shared/errors'
-import { redactSecrets } from './logSanitizer'
+import { redactSecrets } from '@/shared/logSanitizer'
+import { wrapIpcFailure } from '@/shared/ipcFailureEnvelope'
+import { randomUUID } from 'crypto'
+
+const ipcFailureToken = randomUUID()
+
+export function getIpcFailureToken(): string {
+    return ipcFailureToken
+}
 
 const NOTIFY_ON_ERROR_CHANNELS = new Set([
     'fs:writeFile',
     'fs:writeJSON',
-    'fs:move',
     'fs:copy',
     'fs:rimraf',
     'fs:rename',
     'fs:ensure',
     'fs:extractZip',
     'file:archiveFiles',
-    'servers:read'
+    'file:archiveForPublish',
+    'servers:read',
+    'servers:write',
+    'version:save',
+    'shell:openPath',
+    'accounts:load',
+    'accounts:save'
 ])
 
 function describeIpcError(err: unknown): unknown {
@@ -160,26 +173,30 @@ export function handleSafe<TResult, TArgs extends any[] = any[]>(
                 described
             )
 
-            if (!event.sender.isDestroyed()) {
-                const failure = sanitizeFailure(
-                    isRefused
-                        ? {
-                              ...classifyError(err, { channel, side: 'launcher' }),
-                              cause: isPathRefusal ? 'pathPolicy' : 'invalidArgument',
-                              code: isPathRefusal ? 'APP-PATHPOLICY' : 'APP-BADARG'
-                          }
-                        : classifyError(err, { channel })
-                )
-                console.error(`[IPC] ${channel} classified as ${failure.code}`)
-                event.sender.send('ipc:error', {
+            const failure = sanitizeFailure(
+                isRefused
+                    ? {
+                          ...classifyError(err, { channel, side: 'launcher' }),
+                          cause: isPathRefusal ? 'pathPolicy' : 'invalidArgument',
+                          code: isPathRefusal ? 'APP-PATHPOLICY' : 'APP-BADARG'
+                      }
+                    : classifyError(err, { channel })
+            )
+            console.error(`[IPC] ${channel} classified as ${failure.code}`)
+
+            const value =
+                typeof fallback === 'function' ? (fallback as any)(...args) : fallback
+
+            return wrapIpcFailure(
+                ipcFailureToken,
+                {
                     channel,
                     notify: !isRefused && NOTIFY_ON_ERROR_CHANNELS.has(channel),
                     failure,
                     message: failure.message
-                })
-            }
-            if (typeof fallback === 'function') return (fallback as any)(...args)
-            return fallback
+                },
+                value
+            )
         }
     })
 }

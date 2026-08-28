@@ -7,26 +7,49 @@ export interface IUser {
   platform: 'microsoft' | 'elyby' | 'discord'
   friends: IUser[]
   image: string | null
+  headUrl?: string | null
   lastActive: Date
   createdAt: Date
   playTime: number
   achievements: string[]
+  achievementPoints?: number
   publicLeaderboard?: boolean
   publicProfile?: boolean
   publishBanned?: boolean
+  publishBannedAt?: Date | string | null
+  publishBanReason?: string | null
   isDonor?: boolean
   discordId?: string | null
   discordUsername?: string | null
   linkedSocials?: {
     telegram?: { id: string; username: string | null } | null
-    twitch?: { id: string; login: string } | null
-    github?: { id: string; login: string } | null
   }
+  notifications?: INotificationPrefs
+}
+
+export interface IMutualFriend {
+  id: string
+  nickname: string
+  platform: IUser['platform']
+  uuid: string | null
+  headUrl: string | null
+}
+
+export interface IMutualFriends {
+  items: IMutualFriend[]
+  total: number
+  limit: number
+}
+
+export interface INotificationPrefs {
+  enabled: boolean
+  gameInvite: boolean
+  friendRequest: boolean
+  worldShare: boolean
 }
 
 export interface IUpdateUser {
   nickname?: string
-  image?: string
   lastActive?: Date
   playTime?: number
   achievements?: string[]

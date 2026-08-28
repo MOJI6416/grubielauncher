@@ -5,8 +5,9 @@ import {
   VersionInstallOptions,
   VersionInstallResult,
 } from "@/types/InstallationProgress";
-import { IVersionConf } from "@/types/IVersion";
+import { IVersionConf, VERSION_DELETE_BUSY } from "@/types/IVersion";
 import { TSettings } from "@/types/Settings";
+import { installQueue } from "@renderer/features/install/installQueue";
 
 const api = window.api;
 
@@ -28,6 +29,9 @@ export class Version {
 
   async init() {
     const res = await api.version.init(this.version);
+    if (!res || res.failed) {
+      throw new Error(`Failed to open instance ${this.version.name}`);
+    }
     this.javaPath = res.javaPath;
     this.versionPath = res.versionPath;
     this.minecraftPath = res.minecraftPath;
@@ -43,19 +47,30 @@ export class Version {
     settings: TSettings,
     items: DownloadItem[] = [],
     options?: VersionInstallOptions,
+    queueSignal?: AbortSignal,
   ) {
-    const result = (await api.version.install(
-      account,
-      settings,
-      this.version,
-      items,
-      options,
-    )) as VersionInstallResult | boolean | undefined;
+    const result = await installQueue.run(
+      {
+        id: installQueue.nextId("version"),
+        label: this.version.name,
+        loaderName: this.version.loader.name,
+      },
+      async () =>
+        (await api.version.install(
+          account,
+          settings,
+          this.version,
+          items,
+          options,
+        )) as VersionInstallResult | boolean | undefined,
+      queueSignal,
+    );
 
     if (typeof result === "boolean") {
       if (!result) {
         throw new Error(`Failed to install version ${this.version.name}`);
       }
+      await this.init();
       return;
     }
 
@@ -68,28 +83,12 @@ export class Version {
         result?.error || `Failed to install version ${this.version.name}`,
       );
     }
+
+    await this.init();
   }
 
   async ensureAuthlib(account: ILocalAccount) {
     return await api.version.ensureAuthlib(account, this.version);
-  }
-
-  async getRunCommand(
-    account: ILocalAccount,
-    settings: TSettings,
-    authData: IAuth | null,
-    isRelative = false,
-    quickSingle?: string,
-    quickMultiplayer?: string,
-  ) {
-    return await api.version.getRunCommand(
-      account,
-      settings,
-      this.version,
-      authData,
-      isRelative,
-      { single: quickSingle, multiplayer: quickMultiplayer },
-    );
   }
 
   async run(
@@ -110,10 +109,20 @@ export class Version {
   }
 
   async delete(account: ILocalAccount, isFull = false) {
-    await api.version.delete(account, this.version, isFull);
+    const result = await api.version.delete(account, this.version, isFull);
+
+    if (!result || !result.deleted) {
+      throw new Error(
+        result && result.busy
+          ? VERSION_DELETE_BUSY
+          : `Failed to delete version ${this.version.name}`,
+      );
+    }
+
+    return result;
   }
 
   async save() {
-    await api.version.save(this.version);
+    return (await api.version.save(this.version)) !== false;
   }
 }

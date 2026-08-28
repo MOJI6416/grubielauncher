@@ -10,9 +10,12 @@ import { Toaster as Sonner, type ToasterProps } from "sonner";
 
 import { cn } from "@/lib/utils";
 
+const TOASTER_OFFSET = { top: 44, right: 16, bottom: 16, left: 16 };
+
 function Toaster({
   className,
-  position = "bottom-right",
+  position = "top-center",
+  offset = TOASTER_OFFSET,
   style,
   toastOptions,
   ...props
@@ -21,6 +24,7 @@ function Toaster({
     <Sonner
       theme="dark"
       position={position}
+      offset={offset}
       className={cn("toaster group", className)}
       icons={{
         success: <CircleCheckIcon className="size-4 text-[var(--success)]" />,

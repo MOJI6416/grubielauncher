@@ -8,6 +8,7 @@ import {
   ProjectType,
   Provider
 } from '@/types/ModManager'
+import { isSourceUnreachable } from '@/shared/errors'
 import { CurseForge } from './CurseForge'
 import { ModTypeClassIds, ModsSearchSortField } from '@/types/CurseForge'
 import { ProjectType as ModrinthProjectType, SortValue } from '@/types/Modrinth'
@@ -111,7 +112,8 @@ export class ModManager {
       }
 
       return data
-    } catch {
+    } catch (error) {
+      if (isSourceUnreachable(error)) throw error
       return { ...data, error: true }
     }
   }
@@ -185,7 +187,8 @@ export class ModManager {
       }
 
       return null
-    } catch {
+    } catch (error) {
+      if (isSourceUnreachable(error)) throw error
       return null
     }
   }
@@ -229,7 +232,8 @@ export class ModManager {
       }
 
       return []
-    } catch {
+    } catch (error) {
+      if (isSourceUnreachable(error)) throw error
       return []
     }
   }
@@ -238,58 +242,54 @@ export class ModManager {
     provider: Provider,
     _projectId: string,
     deps: IVersionDependency[]
-  ): Promise<IVersionDependency[]> {
-    try {
-      if (provider == Provider.CURSEFORGE) {
-        const data = await CurseForge.getMods(deps.map((d) => Number(d.projectId)))
+  ): Promise<IVersionDependency[] | null> {
+    if (provider == Provider.CURSEFORGE) {
+      const data = await CurseForge.getMods(deps.map((d) => Number(d.projectId)))
+      if (!data) return null
 
-        const dependencies: IVersionDependency[] = []
-        for (let index = 0; index < deps.length; index++) {
-          const dependency = deps[index]
+      const dependencies: IVersionDependency[] = []
+      for (let index = 0; index < deps.length; index++) {
+        const dependency = deps[index]
 
-          const mod = data.find((p) => p.id.toString() == dependency.projectId)
+        const mod = data.find((p) => p.id.toString() == dependency.projectId)
 
-          if (!mod) continue
+        if (!mod) continue
 
-          if (dependencies.find((d) => d.projectId == dependency.projectId))
-            continue
+        if (dependencies.find((d) => d.projectId == dependency.projectId)) continue
 
-          dependency.project = cfModToProject(mod)
-          dependencies.push(dependency)
-        }
-
-        return dependencies
-      } else if (provider == Provider.MODRINTH) {
-        const data = await Modrinth.getDependencies(
-          deps.map((d) => ({
-            project_id: d.projectId,
-            version_id: d.versionId,
-            dependency_type: d.relationType as DependencyType,
-            file_name: ''
-          }))
-        )
-
-        const dependencies: IVersionDependency[] = []
-        for (let index = 0; index < deps.length; index++) {
-          const dependency = deps[index]
-
-          const project = data.find((p) => p.id == dependency.projectId)
-
-          if (!project) continue
-
-          if (dependencies.find((d) => d.projectId == dependency.projectId))
-            continue
-
-          dependency.project = mrProjectToProject(project, project.project_type as ProjectType)
-          dependencies.push(dependency)
-        }
-
-        return dependencies
+        dependency.project = cfModToProject(mod)
+        dependencies.push(dependency)
       }
 
-      return []
-    } catch {
-      return []
+      return dependencies
+    } else if (provider == Provider.MODRINTH) {
+      const data = await Modrinth.getDependencies(
+        deps.map((d) => ({
+          project_id: d.projectId,
+          version_id: d.versionId,
+          dependency_type: d.relationType as DependencyType,
+          file_name: ''
+        }))
+      )
+      if (!data) return null
+
+      const dependencies: IVersionDependency[] = []
+      for (let index = 0; index < deps.length; index++) {
+        const dependency = deps[index]
+
+        const project = data.find((p) => p.id == dependency.projectId)
+
+        if (!project) continue
+
+        if (dependencies.find((d) => d.projectId == dependency.projectId)) continue
+
+        dependency.project = mrProjectToProject(project, project.project_type as ProjectType)
+        dependencies.push(dependency)
+      }
+
+      return dependencies
     }
+
+    return []
   }
 }

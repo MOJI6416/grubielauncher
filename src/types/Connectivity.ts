@@ -6,6 +6,12 @@ export type ConnectivityGroup =
   | 'loaders'
   | 'java'
 
+export interface ConnectivityCheckPlanEntry {
+  id: string
+  name: string
+  group: ConnectivityGroup
+}
+
 export interface ConnectivityCheckResult {
   id: string
   name: string

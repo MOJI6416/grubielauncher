@@ -1,4 +1,5 @@
 import { execFile } from "child_process";
+import fs from "fs-extra";
 import netstat from "node-netstat";
 
 export interface TcpConnection {
@@ -78,6 +79,71 @@ function listViaNetstat(): Promise<TcpConnection[]> {
   });
 }
 
-export function listTcpConnections(): Promise<TcpConnection[]> {
-  return process.platform === "linux" ? listViaSs() : listViaNetstat();
+const PROC_NET_TCP_STATES: Record<string, string> = {
+  "01": "ESTABLISHED",
+  "02": "SYN_SENT",
+  "03": "SYN_RECV",
+  "04": "FIN_WAIT1",
+  "05": "FIN_WAIT2",
+  "06": "TIME_WAIT",
+  "07": "CLOSE",
+  "08": "CLOSE_WAIT",
+  "09": "LAST_ACK",
+  "0A": "LISTEN",
+  "0B": "CLOSING",
+};
+
+function parseHexPort(raw: string): number {
+  const port = Number.parseInt(raw.slice(raw.lastIndexOf(":") + 1), 16);
+  return Number.isInteger(port) && port > 0 && port <= 65535 ? port : 0;
+}
+
+export function parseProcNetTcp(content: string): TcpConnection[] {
+  const connections: TcpConnection[] = [];
+
+  for (const line of content.split("\n").slice(1)) {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 4) continue;
+
+    const localPort = parseHexPort(parts[1]);
+    if (!localPort) continue;
+
+    const stateCode = parts[3].toUpperCase();
+
+    connections.push({
+      state: PROC_NET_TCP_STATES[stateCode] || stateCode,
+      localPort,
+      remotePort: parseHexPort(parts[2]),
+      pid: null,
+    });
+  }
+
+  return connections;
+}
+
+async function listViaProcNet(): Promise<TcpConnection[]> {
+  const connections: TcpConnection[] = [];
+  let readAny = false;
+
+  for (const file of ["/proc/net/tcp", "/proc/net/tcp6"]) {
+    const content = await fs.readFile(file, "utf-8").catch(() => null);
+    if (content === null) continue;
+
+    readAny = true;
+    connections.push(...parseProcNetTcp(content));
+  }
+
+  if (!readAny) throw new Error("No way to list TCP connections on this system");
+
+  return connections;
+}
+
+export async function listTcpConnections(): Promise<TcpConnection[]> {
+  if (process.platform !== "linux") return await listViaNetstat();
+
+  try {
+    return await listViaSs();
+  } catch {
+    return await listViaProcNet();
+  }
 }

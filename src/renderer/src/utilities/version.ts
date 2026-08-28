@@ -9,24 +9,66 @@ import { Version } from "@renderer/classes/Version";
 import { IArguments } from "@/types/IArguments";
 import { ILocalProject } from "@/types/ModManager";
 import i18n from "@renderer/i18n";
-import { showFailureToast } from "./failures";
+import { getDefaultStore } from "jotai";
 import {
+  accountAtom,
+  pathsAtom,
+  versionsAtom,
+  versionsLoadedAtom,
+  versionsUnreadableAtom,
+} from "@renderer/stores/atoms";
+import { isSafeVersionName } from "@/shared/versionName";
+import {
+  consumeRecentFailure,
+  describeFailure,
+  showFailureToast,
+} from "./failures";
+import { showErrorToast } from "./errorToast";
+import { toast } from "sonner";
+import {
+  ShareSyncInterruptedError,
   areOtherFilesEqual,
   areRunArgumentsEqual,
   formatShareDiffParts,
   getShareDiffParts,
+  isShareSyncInterrupted,
   preserveLocalBlockedPaths,
   shouldReportStaleLocalShareFiles,
 } from "./shareSyncPure";
 export {
-  checkVersionName,
-  forbiddenSymbols,
   isOwner,
   parseVersionOwner,
   sanitizeExtraFileSegments,
 } from "./versionPure";
 
 const api = window.api;
+
+// Says out loud that the instance is now between two states. Used by every
+// caller of syncShare, cancellation included: `showFailureToast` deliberately
+// stays quiet on a cancelled operation, which is exactly the case that leaves
+// the most files half-replaced.
+export function reportShareSyncInterruption(error: unknown): boolean {
+  if (!isShareSyncInterrupted(error)) return false;
+
+  const title = i18n.t("versions.syncInterrupted");
+  const hint = i18n.t("versions.syncInterruptedHint");
+
+  if (error.isCancelled) {
+    toast.warning(title, { description: hint, duration: 12000 });
+    return true;
+  }
+
+  const cause = error.cause;
+  showErrorToast(
+    title,
+    hint,
+    i18n.t("common.copy"),
+    undefined,
+    cause instanceof Error ? cause.message : undefined,
+  );
+
+  return true;
+}
 
 export async function syncShare(
   version: Version,
@@ -75,7 +117,9 @@ export async function syncShare(
         "conf.json",
       );
       if (await api.fs.pathExists(serverConfPath)) {
-        serverConf = await api.fs.readJSON(serverConfPath, "utf-8");
+        serverConf =
+          (await api.fs.readJSON<IServerConf>(serverConfPath, "utf-8")) ??
+          undefined;
       }
     } catch {
       serverConf = undefined;
@@ -89,17 +133,22 @@ export async function syncShare(
     } catch (error) {
       version.version.loader.mods = previousMods;
       version.version.loader.other = previousOther;
-      throw error;
+      throw new ShareSyncInterruptedError(error);
     }
   }
 
+  let serversWritten = true;
   if (!(await api.servers.compare(modpack.conf.servers, servers))) {
     const serversPath = await api.path.join(version.versionPath, "servers.dat");
-    await api.servers.write(modpack.conf.servers, serversPath);
+    serversWritten = await api.servers.write(modpack.conf.servers, serversPath);
   }
 
   if (modpack.build != version.version.build) {
     version.version.build = modpack.build;
+  }
+
+  if ((modpack.conf.description || "") !== (version.version.description || "")) {
+    version.version.description = modpack.conf.description || "";
   }
 
   if (modpack.conf.image != version.version.image) {
@@ -107,7 +156,9 @@ export async function syncShare(
     version.version.image = modpack.conf.image;
     if (modpack.conf.image) {
       try {
-        const newFile = await fetch(modpack.conf.image).then((r) => r.blob());
+        const response = await fetch(modpack.conf.image);
+        if (!response.ok) throw new Error("logo fetch failed");
+        const newFile = await response.blob();
         await api.fs.writeFile(
           logoPath,
           new Uint8Array(await newFile.arrayBuffer()),
@@ -131,7 +182,14 @@ export async function syncShare(
     version.version.quickServer = modpack.conf.quickServer;
   }
 
-  await version.save();
+  if (!(await version.save())) {
+    throw new Error("share sync did not save the instance config");
+  }
+
+  if (!serversWritten) {
+    throw new Error("share sync did not write servers.dat");
+  }
+
   return version;
 }
 
@@ -186,6 +244,8 @@ export async function checkDiffenceUpdateData(
       isOwner: !!isOwner,
       remoteName: modpack.conf.name,
       currentName: version.name,
+      remoteDescription: modpack.conf.description,
+      currentDescription: version.description,
       remoteImage: modpack.conf.image,
       currentLogo: logo,
       modsEqual,
@@ -204,6 +264,17 @@ export async function checkDiffenceUpdateData(
   return diff;
 }
 
+export class InstanceLibraryUnreadableError extends Error {
+  readonly code = "instance_library_unreadable";
+  readonly reason: string;
+
+  constructor(reason: string) {
+    super("Instance library could not be read");
+    this.name = "InstanceLibraryUnreadableError";
+    this.reason = reason;
+  }
+}
+
 export async function readVerions(
   launcherPath: string,
   account: ILocalAccount | null,
@@ -214,6 +285,18 @@ export async function readVerions(
     "versions",
   );
   const directories = await api.fs.getDirectories(versionsPath);
+
+  if (directories.length === 0) {
+    const failure = consumeRecentFailure({ channels: ["fs:getDirectories"] });
+    if (failure) {
+      throw new InstanceLibraryUnreadableError(
+        failure.cause === "unknown"
+          ? i18n.t("versions.libraryUnreadableHint")
+          : `${i18n.t("versions.libraryUnreadableHint")}
+${describeFailure(failure).text}`,
+      );
+    }
+  }
 
   const results = await Promise.all(
     directories.map(async (directory) => {
@@ -226,6 +309,17 @@ export async function readVerions(
 
         if (!(await api.fs.pathExists(confPath))) return null;
 
+        if (!isSafeVersionName(directory)) {
+          showErrorToast(
+            `${i18n.t("versions.notFound")}: ${directory}`,
+            i18n.t("versions.unsafeFolderName"),
+            "",
+            `version-read-${directory}`,
+          );
+
+          return null;
+        }
+
         const conf: IVersionConf | null = await api.fs.readJSON(
           confPath,
           "utf-8",
@@ -237,8 +331,6 @@ export async function readVerions(
         const version = new Version(conf);
 
         await version.init();
-
-        if (!version.hasManifest) return null;
 
         let isUpdated = false;
 
@@ -264,4 +356,32 @@ export async function readVerions(
   );
 
   return results.filter((version): version is Version => version !== null);
+}
+
+export async function reloadInstanceLibrary(): Promise<boolean> {
+  const store = getDefaultStore();
+  const { launcher } = store.get(pathsAtom);
+  if (!launcher) return false;
+
+  store.set(versionsUnreadableAtom, null);
+  store.set(versionsLoadedAtom, false);
+
+  try {
+    const instances = await readVerions(
+      launcher,
+      store.get(accountAtom) ?? null,
+    );
+    store.set(versionsAtom, instances);
+    return true;
+  } catch (error) {
+    store.set(
+      versionsUnreadableAtom,
+      error instanceof InstanceLibraryUnreadableError
+        ? error.reason
+        : i18n.t("versions.libraryUnreadableHint"),
+    );
+    return false;
+  } finally {
+    store.set(versionsLoadedAtom, true);
+  }
 }

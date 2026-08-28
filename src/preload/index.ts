@@ -2,34 +2,69 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { createPathUtils } from "./path";
 import { IServer } from "@/types/ServersList";
+import type { ServerPingResult } from "../main/utilities/serverPing";
 import {
   IImportModpack,
   IVersion,
   IVersionClassData,
   IVersionConf,
+  VersionDeleteResult,
 } from "@/types/IVersion";
 import { IAccountConf, IAuth, ILocalAccount } from "@/types/Account";
-import { IModpack, IModpackUpdate, UploadFileProgress } from "@/types/Backend";
-import { IFriendSettingsUpdate, IUpdateUser, IUser } from "@/types/IUser";
+import {
+  IExplorePage,
+  IExploreQuery,
+  IModpack,
+  IModpackUpdate,
+  UploadFileProgress,
+} from "@/types/Backend";
+import { IPublicProfile } from "@/types/Profile";
+import {
+  IFriendSettingsUpdate,
+  IMutualFriends,
+  INotificationPrefs,
+  IUpdateUser,
+  IUser,
+} from "@/types/IUser";
 import { IGroup, IVoiceTokenResponse } from "@/types/Voice";
-import { INews, ISponsoredNewsAd } from "@/types/News";
+import { INews, INewsPage, ISponsoredNewsAd } from "@/types/News";
+import { IUpdateCheckRequest, IUpdateCheckResponse } from "@/types/Updates";
+import {
+  IAchievementReach,
+  IGlobalLeaderboard,
+  IOwnLeaderboardRank,
+} from "@/types/Leaderboard";
 import {
   CatalogListParams,
   CatalogListResult,
   ICatalogSkin,
-  IGrubieSkin,
   MyCommunityResult,
   PublishCommunityResult,
   SkinsData,
 } from "@/types/SkinManager";
 import { LoaderVersion } from "@/types/VersionsService";
-import { DownloadSource, TSettings, VoicePttBind } from "@/types/Settings";
+import {
+  AgentChatSummary,
+  AgentStoredChat,
+  AgentStreamEvent,
+  AgentStreamRequest,
+  AgentSyncPush,
+  AgentSyncResult,
+  AiModelInfo,
+  AiProviderInput,
+  AiProvidersState,
+  AiProviderTestResult,
+  RemoteAiChatMessage,
+} from "@/types/Agent";
+import { DownloadSource, TSettings, VoicePttCapture } from "@/types/Settings";
+import { MirrorState } from "@/shared/mirrorMode";
 import {
   IServerConf,
   IServerOption,
   IServerSettings,
   ServerCore,
   ServerRunResult,
+  ServerRunStatePayload,
   ServerRunStatus,
   ServerSyncNotice,
 } from "@/types/Server";
@@ -52,7 +87,13 @@ import {
   ILocalProject,
 } from "@/types/ModManager";
 import { ISkinData } from "@/types/Skin";
-import { IWorld, IWorldStatistics, IWorldStatsAggregate } from "@/types/World";
+import {
+  IWorld,
+  IWorldStatsAggregate,
+  WorldDuplicateResult,
+  WorldExportResult,
+  WorldImportResult,
+} from "@/types/World";
 import {
   IWorldBackupList,
   WorldBackupCreateResult,
@@ -63,7 +104,7 @@ import {
   IAchievementStatsResult,
   IRemoteWorldStatsResponse,
 } from "@/types/Achievements";
-import { IAuthlib, AuthlibEnsureResult } from "@/types/IAuthlib";
+import { AuthlibEnsureResult } from "@/types/IAuthlib";
 import { IAuthResponse, IRefreshTokenResponse } from "@/types/Auth";
 import {
   ActiveFriendShare,
@@ -83,15 +124,27 @@ import {
 import { NotificationClickAction } from "@/types/Notification";
 import { LauncherDeepLink } from "@/types/DeepLink";
 import type { FailureInfo } from "@/shared/errors";
-import { ConnectivityCheckResult } from "@/types/Connectivity";
+import {
+  ConnectivityCheckPlanEntry,
+  ConnectivityCheckResult,
+} from "@/types/Connectivity";
 import { CrashAnalysisPayload } from "@/types/CrashAnalysis";
+import {
+  GameLogKind,
+  IGameLogContent,
+  IGameLogDiagnosis,
+  IGameLogFile,
+} from "@/types/GameLog";
 import {
   IAiAnalysisResult,
   IAiFeedbackResult,
   IAiLogRequest,
   ICrashUnresolvedPayload,
 } from "@/types/AiAnalysis";
-import { ILauncherReleaseNote } from "@/types/LauncherRelease";
+import {
+  ILauncherReleaseNote,
+  ILauncherReleasePage,
+} from "@/types/LauncherRelease";
 import { IPlaytimeSyncEntry } from "@/types/VersionStatistics";
 import {
   StorageBreakdown,
@@ -99,6 +152,11 @@ import {
   StorageClearResult,
 } from "@/types/Storage";
 import { BlessedPathInfo } from "@/types/AllowedPath";
+import {
+  IPC_FAILURE_TOKEN_CHANNEL,
+  IpcFailurePayload,
+  readIpcFailureEnvelope,
+} from "@/shared/ipcFailureEnvelope";
 
 export type UpdaterStatus =
   | "checking"
@@ -177,18 +235,16 @@ ipcRenderer.on(
 
 export interface IElectronAPI {
   platform: string;
-  window: {
-    minimize: () => Promise<void>;
-    maximizeToggle: () => Promise<void>;
-    close: () => Promise<void>;
-  };
   os: {
     totalmem: () => Promise<number>;
   };
   storage: {
     getBreakdown: () => Promise<StorageBreakdown>;
     clearCache: () => Promise<StorageClearResult>;
-    cleanup: (kind: StorageCleanupKind) => Promise<StorageClearResult>;
+    cleanup: (
+      kind: StorageCleanupKind,
+      names?: string[],
+    ) => Promise<StorageClearResult>;
   };
   path: {
     join: (...args: string[]) => string;
@@ -211,13 +267,12 @@ export interface IElectronAPI {
       folderPath: string,
     ) => Promise<{ path: string; type: "file" | "folder" }[]>;
     sha1: (filePath: string) => Promise<string>;
-    move: (srcPath: string, destPath: string) => Promise<boolean>;
     readdir: (dirPath: string) => Promise<string[]>;
-    extractZip: (zipPath: string, destination: string) => Promise<void>;
+    extractZip: (zipPath: string, destination: string) => Promise<boolean>;
     rename: (oldPath: string, newPath: string) => Promise<boolean>;
     writeJSON: (filePath: string, data: any) => Promise<boolean>;
-    readJSON: <T>(filePath: string, encoding?: BufferEncoding) => Promise<T>;
-    isDirectory: (targetPath: string) => Promise<boolean>;
+    writeJSONSync: (filePath: string, data: any) => string;
+    readJSON: <T>(filePath: string, encoding?: BufferEncoding) => Promise<T | null>;
     getDirectories: (source: string) => Promise<string[]>;
   };
   clipboard: {
@@ -234,9 +289,14 @@ export interface IElectronAPI {
       zipPath: string,
       basePath?: string,
     ) => Promise<boolean>;
-    getTotalSizes: (filePaths: string[]) => Promise<number>;
+    archiveForPublish: (
+      filesToArchive: string[],
+      zipPath: string,
+      basePath?: string,
+    ) => Promise<boolean>;
+    getTotalSizes: (filePaths: string[]) => Promise<number | null>;
     fromBuffer: (data: ArrayBuffer) => string;
-    download(items: DownloadItem[], limit: number): Promise<void>;
+    download(items: DownloadItem[], limit: number): Promise<boolean>;
   };
   servers: {
     write: (servers: IServer[], filePath: string) => Promise<boolean>;
@@ -250,6 +310,7 @@ export interface IElectronAPI {
     get: (version: string, loader: Loader) => Promise<IServerOption[]>;
     read: (path: string) => Promise<IServer[]>;
     compare: (servers1: IServer[], servers2: IServer[]) => Promise<boolean>;
+    ping: (address: string) => Promise<ServerPingResult>;
   };
   version: {
     import: (filePath: string, tempPath: string) => Promise<IImportModpack>;
@@ -264,6 +325,7 @@ export interface IElectronAPI {
     cancelInstall: () => Promise<boolean>;
     pauseInstall: () => Promise<boolean>;
     resumeInstall: () => Promise<boolean>;
+    getPauseState: () => Promise<"off" | "pending" | "held">;
     ensureAuthlib: (
       account: ILocalAccount,
       versionConf: IVersionConf,
@@ -288,7 +350,7 @@ export interface IElectronAPI {
       account: ILocalAccount,
       versionConf: IVersionConf,
       isFull: boolean,
-    ) => Promise<boolean>;
+    ) => Promise<VersionDeleteResult | false>;
     save: (versionConf: IVersionConf) => Promise<boolean>;
     share: {
       uploadMods: (
@@ -303,7 +365,7 @@ export interface IElectronAPI {
     };
   };
   accounts: {
-    load: () => Promise<IAccountConf>;
+    load: () => Promise<IAccountConf | null>;
     save: (
       accounts: IAccountConf["accounts"],
       lastPlayed: string | null,
@@ -332,6 +394,7 @@ export interface IElectronAPI {
       code: string;
       provider: "microsoft" | "discord" | "elyby" | "twitch" | "github";
     }>;
+    stopServer: () => Promise<boolean>;
   };
   backend: {
     getModpack: (
@@ -341,11 +404,16 @@ export interface IElectronAPI {
       status: "error" | "success" | "not_found";
       data: IModpack | null;
     }>;
-    getOwnModpacks: (at: string) => Promise<IModpack[]>;
+    getOwnModpacks: (at: string) => Promise<IModpack[] | null>;
+    exploreModpacks: (query: IExploreQuery) => Promise<IExplorePage | null>;
+    getPublicProfile: (
+      nickname: string,
+      userId?: string,
+    ) => Promise<IPublicProfile | null>;
     shareModpack: (
       at: string,
       modpack: { conf: IModpack["conf"]; isPublic?: boolean },
-    ) => Promise<string>;
+    ) => Promise<string | null>;
     updateModpack: (
       at: string,
       shareCode: string,
@@ -358,6 +426,10 @@ export interface IElectronAPI {
       user: IUpdateUser,
     ) => Promise<IUser | null>;
     getUser: (at: string, id: string) => Promise<IUser | null>;
+    getMutualFriends: (
+      at: string,
+      id: string,
+    ) => Promise<IMutualFriends | null>;
     getRemoteStats: (at: string) => Promise<IRemoteWorldStatsResponse>;
     groupsList: (at: string) => Promise<IGroup[] | null>;
     groupCreate: (at: string, name: string) => Promise<IGroup | null>;
@@ -374,7 +446,15 @@ export interface IElectronAPI {
     groupJoinByCode: (
       at: string,
       code: string,
-    ) => Promise<IGroup | "banned" | "group_full" | "rate_limited" | null>;
+    ) => Promise<
+      | IGroup
+      | "banned"
+      | "group_full"
+      | "rate_limited"
+      | "not_found"
+      | "invalid_code"
+      | null
+    >;
     groupLeave: (at: string, groupId: string) => Promise<boolean>;
     groupKickMember: (
       at: string,
@@ -418,29 +498,36 @@ export interface IElectronAPI {
       at: string,
       key: string,
       isDirectory?: boolean,
-    ) => Promise<void>;
+    ) => Promise<boolean>;
     modpackDownloaded: (at: string, shareCode: string) => Promise<boolean>;
     getNews: () => Promise<INews[]>;
+    getNewsPage: (params: {
+      limit?: number;
+      cursor?: string;
+      source?: string;
+    }) => Promise<INewsPage | null>;
+    checkUpdates: (
+      request: IUpdateCheckRequest,
+    ) => Promise<IUpdateCheckResponse | null>;
+    getGlobalLeaderboard: (limit: number) => Promise<IGlobalLeaderboard | null>;
+    getOwnLeaderboardRank: (at: string) => Promise<IOwnLeaderboardRank | null>;
+    getAchievementReach: () => Promise<IAchievementReach | null>;
     getWhatsNew: (
       version: string,
       locale: string,
     ) => Promise<ILauncherReleaseNote | null>;
+    getLauncherReleases: (
+      locale: string,
+      limit: number,
+    ) => Promise<ILauncherReleasePage | null>;
     getSponsoredNewsAd: (
       locale: string,
       hiddenIds: string[],
     ) => Promise<ISponsoredNewsAd | null>;
     recordSponsoredAdImpression: (id: string) => Promise<boolean>;
     recordSponsoredAdClick: (id: string) => Promise<boolean>;
-    login: (
-      at: string,
-      id: string,
-      auth: {
-        accessToken: string;
-        refreshToken: string;
-        expiresAt: number;
-      },
-    ) => Promise<string | null>;
     approveSiteLogin: (at: string, requestId: string) => Promise<boolean>;
+    declineSiteLogin: (at: string, requestId: string) => Promise<boolean>;
     discordLink: (
       at: string,
       code: string,
@@ -449,31 +536,24 @@ export interface IElectronAPI {
     telegramLinkStart: (
       at: string,
     ) => Promise<{ botUrl: string; expiresAt: string } | null>;
-    socialLink: (
+    telegramUnlink: (
       at: string,
-      provider: "twitch" | "github",
-      code: string,
-    ) => Promise<{
-      provider: string;
-      linked: { id: string; username?: string | null; login?: string };
-    } | null>;
-    socialUnlink: (
-      at: string,
-      provider: "telegram" | "twitch" | "github",
     ) => Promise<{ provider: string; linked: null } | null>;
-    getSkin: (at: string, uuid: string) => Promise<IGrubieSkin | null>;
+    updateNotifications: (
+      at: string,
+      id: string,
+      prefs: Partial<INotificationPrefs>,
+    ) => Promise<IUser | null>;
     apiBaseUrl: () => Promise<string>;
     onApiBaseUrl: (callback: (baseUrl: string) => void) => () => void;
-    discordAuthenticated: (at: string, userId: string) => Promise<boolean>;
     aiComplete: (at: string, prompt: string) => Promise<string | null>;
-    getAuthlib: () => Promise<IAuthlib | null>;
     checkHealth: () => Promise<boolean>;
   };
   voice: {
     setPtt: (
       bind: { type: "key" | "mouse"; code: number } | null,
     ) => Promise<boolean>;
-    capturePttBind: () => Promise<VoicePttBind | null>;
+    capturePttBind: () => Promise<VoicePttCapture>;
     setSessionActive: (active: boolean) => Promise<void>;
     onPttDown: (callback: () => void) => () => void;
     onPttUp: (callback: () => void) => () => void;
@@ -482,14 +562,28 @@ export interface IElectronAPI {
     getList: (
       loader: "vanilla" | "forge" | "neoforge" | "fabric" | "quilt",
       includeSnapshots?: boolean,
-    ) => Promise<IVersion[]>;
+    ) => Promise<IVersion[] | null>;
     getLoaderVersions: (
       loader: "forge" | "neoforge" | "fabric" | "quilt",
       versionId: string,
-    ) => Promise<LoaderVersion[]>;
+    ) => Promise<LoaderVersion[] | null>;
   };
   game: {
-    closeGame: (versionName: string, instance: number) => Promise<void>;
+    closeGame: (versionName: string, instance: number) => Promise<boolean>;
+  };
+  logs: {
+    list: (versionPath: string) => Promise<IGameLogFile[]>;
+    read: (
+      versionPath: string,
+      name: string,
+      kind: GameLogKind,
+    ) => Promise<IGameLogContent | null>;
+    analyze: (
+      versionPath: string,
+      name: string,
+      kind: GameLogKind,
+      exitCode?: number,
+    ) => Promise<IGameLogDiagnosis | null>;
   };
   mods: {
     check: (
@@ -549,6 +643,15 @@ export interface IElectronAPI {
     ) => Promise<void>;
     getLocale: () => Promise<string>;
     restoreWindow: () => Promise<void>;
+    setUnsavedGuard: (value: boolean) => Promise<void>;
+    confirmClose: () => Promise<void>;
+    onCloseRequested: (
+      callback: (reason: {
+        unsaved: boolean;
+        servers: boolean;
+        install: boolean;
+      }) => void,
+    ) => () => void;
     onNotificationClick: (
       callback: (action: NotificationClickAction) => void,
     ) => () => void;
@@ -558,6 +661,7 @@ export interface IElectronAPI {
     revoke: (target: string) => Promise<boolean>;
   };
   connectivity: {
+    plan: () => Promise<ConnectivityCheckPlanEntry[]>;
     test: () => Promise<ConnectivityCheckResult[]>;
     onResult: (
       callback: (result: ConnectivityCheckResult) => void,
@@ -565,6 +669,7 @@ export interface IElectronAPI {
   };
   mirror: {
     setSource: (source: DownloadSource) => Promise<void>;
+    getState: () => Promise<MirrorState>;
   };
   shortcut: {
     create: (
@@ -585,25 +690,25 @@ export interface IElectronAPI {
       conf: IServerConf,
       versionConf?: IVersionConf,
       options?: { keepProgressOpen?: boolean },
-    ) => Promise<{ success: boolean; error?: string }>;
-    getSettings: (filePath: string) => Promise<IServerSettings>;
-    editXmx: (serverPath: string, memory: number) => Promise<void>;
+    ) => Promise<{ success: boolean; error?: string; cancelled?: boolean }>;
+    getSettings: (filePath: string) => Promise<IServerSettings | null>;
+    runOptions: (
+      serverPath: string,
+    ) => Promise<{ memory: number | null; aikarFlags: boolean | null }>;
+    stopAll: () => Promise<boolean>;
+    editXmx: (serverPath: string, memory: number) => Promise<boolean>;
     isPortAvailable: (port: number) => Promise<boolean>;
     setAikar: (serverPath: string, enabled: boolean) => Promise<boolean>;
     updateProperties: (
       filePath: string,
       settings: IServerSettings,
-    ) => Promise<void>;
+    ) => Promise<boolean>;
     start: (serverPath: string) => Promise<ServerRunResult>;
     stop: (serverPath: string, force?: boolean) => Promise<ServerRunResult>;
+    command: (serverPath: string, command: string) => Promise<ServerRunResult>;
+    lanAddress: () => Promise<string | null>;
     runStatus: (serverPath: string) => Promise<ServerRunStatus>;
-    onRunState: (
-      callback: (payload: {
-        serverPath: string;
-        state: ServerRunStatus["state"];
-        pid: number | null;
-      }) => void,
-    ) => () => void;
+    onRunState: (callback: (payload: ServerRunStatePayload) => void) => () => void;
     onRunOutput: (
       callback: (payload: { serverPath: string; lines: string[] }) => void,
     ) => () => void;
@@ -615,7 +720,7 @@ export interface IElectronAPI {
       userId: string,
       nickname: string,
       accessToken: string,
-    ) => Promise<SkinsData>;
+    ) => Promise<SkinsData | null>;
     selectSkin: (
       userId: string,
       platform: string,
@@ -672,7 +777,7 @@ export interface IElectronAPI {
     ) => Promise<SkinsData | null>;
     clearManager: (userId: string, platform: string) => Promise<boolean>;
     catalog: {
-      list: (params?: CatalogListParams) => Promise<CatalogListResult>;
+      list: (params?: CatalogListParams) => Promise<CatalogListResult | null>;
       download: (id: string) => Promise<{ downloads: number } | null>;
       get: (id: string) => Promise<ICatalogSkin | null>;
     };
@@ -695,7 +800,7 @@ export interface IElectronAPI {
       capeUrl: string,
     ) => Promise<{ ok: boolean }>;
     community: {
-      mine: (backendToken: string) => Promise<MyCommunityResult>;
+      mine: (backendToken: string) => Promise<MyCommunityResult | null>;
       delete: (backendToken: string, id: string) => Promise<{ ok: boolean }>;
     };
   };
@@ -738,7 +843,7 @@ export interface IElectronAPI {
       provider: Provider,
       projectId: string,
       deps: IVersionDependency[],
-    ) => Promise<IVersionDependency[]>;
+    ) => Promise<IVersionDependency[] | null>;
     checkLocalMod: (modPath: string) => Promise<ILocalFileInfo | null>;
     checkModpack: (
       modpackPath: string,
@@ -756,22 +861,32 @@ export interface IElectronAPI {
     ) => Promise<boolean>;
   };
   worlds: {
-    loadStatistics: (
-      worldPath: string,
-      account: ILocalAccount,
-    ) => Promise<IWorldStatistics | undefined>;
     loadVersionStatistics: (
       versionPath: string,
       account: ILocalAccount,
-    ) => Promise<IWorldStatsAggregate>;
+    ) => Promise<IWorldStatsAggregate | null>;
     loadAchievementStats: (
       account: ILocalAccount,
-    ) => Promise<IAchievementStatsResult>;
+    ) => Promise<IAchievementStatsResult | null>;
     readWorld: (
       worldPath: string,
       account: ILocalAccount,
     ) => Promise<IWorld | null>;
     writeName: (worldPath: string, newName: string) => Promise<string | null>;
+    count: (versionPath: string) => Promise<number | null>;
+    folderSizes: (versionPath: string) => Promise<Record<string, number>>;
+    duplicate: (
+      worldPath: string,
+      newName: string,
+    ) => Promise<WorldDuplicateResult>;
+    export: (
+      worldPath: string,
+      destinationDir: string,
+    ) => Promise<WorldExportResult>;
+    import: (
+      zipPath: string,
+      versionPath: string,
+    ) => Promise<WorldImportResult>;
     listBackups: (worldPath: string) => Promise<IWorldBackupList>;
     countBackups: (versionPath: string) => Promise<Record<string, number>>;
     createBackup: (
@@ -809,6 +924,43 @@ export interface IElectronAPI {
       helpful: boolean,
     ) => Promise<IAiFeedbackResult>;
   };
+  agent: {
+    providers: {
+      list: () => Promise<AiProvidersState | null>;
+      save: (input: AiProviderInput) => Promise<AiProvidersState | null>;
+      remove: (id: string) => Promise<AiProvidersState | null>;
+      select: (id: string) => Promise<AiProvidersState | null>;
+      test: (payload: {
+        id?: string;
+        baseUrl?: string;
+        apiKey?: string;
+      }) => Promise<AiProviderTestResult>;
+    };
+    models: {
+      list: (providerId: string) => Promise<AiModelInfo[]>;
+    };
+    chat: {
+      start: (runId: string, request: AgentStreamRequest) => Promise<boolean>;
+      abort: (runId: string) => Promise<boolean>;
+    };
+    chats: {
+      list: () => Promise<AgentChatSummary[]>;
+      read: (chatId: string) => Promise<AgentStoredChat | null>;
+      write: (chat: AgentStoredChat) => Promise<boolean>;
+      remove: (chatId: string) => Promise<boolean>;
+      tombstones: () => Promise<string[]>;
+      forgetTombstone: (remoteId: string) => Promise<boolean>;
+      sync: (
+        accessToken: string,
+        pending: AgentSyncPush[],
+      ) => Promise<AgentSyncResult>;
+      remoteMessages: (
+        accessToken: string,
+        chatId: string,
+      ) => Promise<RemoteAiChatMessage[]>;
+      remoteRemove: (accessToken: string, chatId: string) => Promise<boolean>;
+    };
+  };
   rpc: {
     syncContext: (context: RpcRendererContext) => Promise<void>;
   };
@@ -833,9 +985,6 @@ export interface IElectronAPI {
     fetchActiveFriendShares: () => Promise<
       ShareCommandResult<ActiveFriendShare[]>
     >;
-    requestJoinTicket: (
-      slug: string,
-    ) => Promise<ShareCommandResult<ResolvedFriendShareConnection>>;
     connectToFriendShare: (
       slug: string,
     ) => Promise<ShareCommandResult<ResolvedFriendShareConnection>>;
@@ -892,8 +1041,14 @@ export interface IElectronAPI {
     onServerSyncNotice: (
       callback: (notice: ServerSyncNotice) => void,
     ) => () => void;
+    onModsQuarantined: (
+      callback: (notice: { versionName: string; entries: string[] }) => void,
+    ) => () => void;
     onVersionInstallProgress: (
       callback: (info: VersionInstallProgress | null) => void,
+    ) => () => void;
+    onAgentStream: (
+      callback: (payload: AgentStreamEvent) => void,
     ) => () => void;
     onDeepLink: (callback: (payload: LauncherDeepLink) => void) => () => void;
     updater: {
@@ -907,23 +1062,58 @@ export interface IElectronAPI {
   };
 }
 
+type IpcFailureListener = (payload: IpcFailurePayload) => void;
+
+const ipcFailureListeners = new Set<IpcFailureListener>();
+
+function dispatchIpcFailure(payload: IpcFailurePayload): void {
+  for (const listener of [...ipcFailureListeners]) {
+    try {
+      listener(payload);
+    } catch (error) {
+      console.error("ipc:error listener failed", error);
+    }
+  }
+}
+
+ipcRenderer.on(
+  "ipc:error",
+  (_event: Electron.IpcRendererEvent, payload: IpcFailurePayload) =>
+    dispatchIpcFailure(payload),
+);
+
+const ipcFailureToken: string | undefined = (() => {
+  try {
+    const token = ipcRenderer.sendSync(IPC_FAILURE_TOKEN_CHANNEL);
+    return typeof token === "string" && token ? token : undefined;
+  } catch {
+    return undefined;
+  }
+})();
+
+function invoke<T = any>(channel: string, ...args: unknown[]): Promise<T> {
+  return ipcRenderer.invoke(channel, ...args).then((result) => {
+    const envelope = readIpcFailureEnvelope(result, ipcFailureToken);
+    if (!envelope) return result as T;
+
+    const { token: _token, ...payload } = envelope.__grubieIpcFailure;
+    dispatchIpcFailure(payload);
+    return envelope.value as T;
+  });
+}
+
 const pathUtils = createPathUtils(process.platform === "win32");
 
 export const api: IElectronAPI = {
   platform: process.platform,
-  window: {
-    minimize: () => ipcRenderer.invoke("window:minimize"),
-    maximizeToggle: () => ipcRenderer.invoke("window:maximizeToggle"),
-    close: () => ipcRenderer.invoke("window:close"),
-  },
   os: {
-    totalmem: () => ipcRenderer.invoke("os:totalmem"),
+    totalmem: () => invoke("os:totalmem"),
   },
   storage: {
-    getBreakdown: () => ipcRenderer.invoke("storage:getBreakdown"),
-    clearCache: () => ipcRenderer.invoke("storage:clearCache"),
-    cleanup: (kind: StorageCleanupKind) =>
-      ipcRenderer.invoke("storage:cleanup", kind),
+    getBreakdown: () => invoke("storage:getBreakdown"),
+    clearCache: () => invoke("storage:clearCache"),
+    cleanup: (kind: StorageCleanupKind, names?: string[]) =>
+      invoke("storage:cleanup", kind, names),
   },
   path: {
     join: (...args: string[]) => pathUtils.join(...args),
@@ -933,48 +1123,51 @@ export const api: IElectronAPI = {
   },
   fs: {
     readFile: (filePath: string, encoding: BufferEncoding) =>
-      ipcRenderer.invoke("fs:readFile", filePath, encoding),
+      invoke("fs:readFile", filePath, encoding),
     readFileBuffer: (target: string) =>
-      ipcRenderer.invoke("fs:readFileBuffer", target),
-    rimraf: (targetPath: string) => ipcRenderer.invoke("fs:rimraf", targetPath),
-    ensure: (dirPath: string) => ipcRenderer.invoke("fs:ensure", dirPath),
+      invoke("fs:readFileBuffer", target),
+    rimraf: (targetPath: string) => invoke("fs:rimraf", targetPath),
+    ensure: (dirPath: string) => invoke("fs:ensure", dirPath),
     copy: (src: string, dest: string) =>
-      ipcRenderer.invoke("fs:copy", src, dest),
+      invoke("fs:copy", src, dest),
     writeFile: (
       filePath: string,
       data: string | Uint8Array,
       encoding: BufferEncoding = "utf-8",
-    ) => ipcRenderer.invoke("fs:writeFile", filePath, data, encoding),
+    ) => invoke("fs:writeFile", filePath, data, encoding),
     pathExists: (targetPath: string) =>
-      ipcRenderer.invoke("fs:pathExists", targetPath),
+      invoke("fs:pathExists", targetPath),
     readdirWithTypes: (folderPath: string) =>
-      ipcRenderer.invoke("fs:readdirWithTypes", folderPath),
-    sha1: (filePath: string) => ipcRenderer.invoke("fs:sha1", filePath),
-    move: (srcPath: string, destPath: string) =>
-      ipcRenderer.invoke("fs:move", srcPath, destPath),
-    readdir: (dirPath: string) => ipcRenderer.invoke("fs:readdir", dirPath),
+      invoke("fs:readdirWithTypes", folderPath),
+    sha1: (filePath: string) => invoke("fs:sha1", filePath),
+    readdir: (dirPath: string) => invoke("fs:readdir", dirPath),
     extractZip: (zipPath: string, destination: string) =>
-      ipcRenderer.invoke("fs:extractZip", zipPath, destination),
+      invoke("fs:extractZip", zipPath, destination),
     rename: (oldPath: string, newPath: string) =>
-      ipcRenderer.invoke("fs:rename", oldPath, newPath),
+      invoke("fs:rename", oldPath, newPath),
     writeJSON: (filePath: string, data: any) =>
-      ipcRenderer.invoke("fs:writeJSON", filePath, data),
+      invoke("fs:writeJSON", filePath, data),
+    writeJSONSync: (filePath: string, data: any): string => {
+      try {
+        return String(ipcRenderer.sendSync("fs:writeJSONSync", filePath, data));
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+    },
     readJSON: <_>(filePath: string, encoding?: BufferEncoding) =>
-      ipcRenderer.invoke("fs:readJSON", filePath, encoding),
-    isDirectory: (targetPath: string) =>
-      ipcRenderer.invoke("fs:isDirectory", targetPath),
+      invoke("fs:readJSON", filePath, encoding),
     getDirectories: (source: string) =>
-      ipcRenderer.invoke("fs:getDirectories", source),
+      invoke("fs:getDirectories", source),
   },
   clipboard: {
     writeText: (text: string) =>
-      ipcRenderer.invoke("clipboard:writeText", text),
+      invoke("clipboard:writeText", text),
   },
   shell: {
     openExternal: (url: string) =>
-      ipcRenderer.invoke("shell:openExternal", url),
-    openPath: (path: string) => ipcRenderer.invoke("shell:openPath", path),
-    trashItem: (path: string) => ipcRenderer.invoke("shell:trashItem", path),
+      invoke("shell:openExternal", url),
+    openPath: (path: string) => invoke("shell:openPath", path),
+    trashItem: (path: string) => invoke("shell:trashItem", path),
   },
   file: {
     archiveFiles: (
@@ -982,34 +1175,46 @@ export const api: IElectronAPI = {
       zipPath: string,
       basePath?: string,
     ) =>
-      ipcRenderer.invoke(
+      invoke(
         "file:archiveFiles",
         filesToArchive,
         zipPath,
         basePath,
       ),
+    archiveForPublish: (
+      filesToArchive: string[],
+      zipPath: string,
+      basePath?: string,
+    ) =>
+      invoke(
+        "file:archiveForPublish",
+        filesToArchive,
+        zipPath,
+        basePath,
+      ),
     getTotalSizes: (filePaths: string[]) =>
-      ipcRenderer.invoke("file:getTotalSizes", filePaths),
+      invoke("file:getTotalSizes", filePaths),
     fromBuffer: (data: ArrayBuffer) => Buffer.from(data).toString("binary"),
     download: (items: DownloadItem[], limit: number) =>
-      ipcRenderer.invoke("file:download", items, limit),
+      invoke("file:download", items, limit),
   },
   servers: {
     write: (servers: IServer[], filePath: string) =>
-      ipcRenderer.invoke("servers:write", servers, filePath),
+      invoke("servers:write", servers, filePath),
     versions: (versions: IVersionConf[]) =>
-      ipcRenderer.invoke("servers:versions", versions),
+      invoke("servers:versions", versions),
     get: (version: string, loader: Loader) =>
-      ipcRenderer.invoke("servers:get", version, loader),
-    read: (path: string) => ipcRenderer.invoke("servers:read", path),
+      invoke("servers:get", version, loader),
+    read: (path: string) => invoke("servers:read", path),
+    ping: (address: string) => invoke("servers:ping", address),
     compare: (servers1: IServer[], servers2: IServer[]) =>
-      ipcRenderer.invoke("servers:compare", servers1, servers2),
+      invoke("servers:compare", servers1, servers2),
   },
   version: {
     import: (filePath: string, tempPath: string) =>
-      ipcRenderer.invoke("version:import", filePath, tempPath),
+      invoke("version:import", filePath, tempPath),
     init: (versionConf: IVersionConf) =>
-      ipcRenderer.invoke("version:init", versionConf),
+      invoke("version:init", versionConf),
     install: (
       account: ILocalAccount,
       settings: TSettings,
@@ -1017,7 +1222,7 @@ export const api: IElectronAPI = {
       extraItems?: DownloadItem[],
       options?: VersionInstallOptions,
     ) =>
-      ipcRenderer.invoke(
+      invoke(
         "version:install",
         account,
         settings,
@@ -1025,11 +1230,12 @@ export const api: IElectronAPI = {
         extraItems,
         options,
       ),
-    cancelInstall: () => ipcRenderer.invoke("version:cancelInstall"),
-    pauseInstall: () => ipcRenderer.invoke("version:pauseInstall"),
-    resumeInstall: () => ipcRenderer.invoke("version:resumeInstall"),
+    cancelInstall: () => invoke("version:cancelInstall"),
+    pauseInstall: () => invoke("version:pauseInstall"),
+    resumeInstall: () => invoke("version:resumeInstall"),
+    getPauseState: () => invoke("version:getPauseState"),
     ensureAuthlib: (account: ILocalAccount, versionConf: IVersionConf) =>
-      ipcRenderer.invoke("version:ensureAuthlib", account, versionConf),
+      invoke("version:ensureAuthlib", account, versionConf),
     getRunCommand: (
       account: ILocalAccount,
       settings: TSettings,
@@ -1038,7 +1244,7 @@ export const api: IElectronAPI = {
       isRelative: boolean,
       quick?: { single?: string; multiplayer?: string },
     ) =>
-      ipcRenderer.invoke(
+      invoke(
         "version:getRunCommand",
         account,
         settings,
@@ -1055,7 +1261,7 @@ export const api: IElectronAPI = {
       instance: number,
       quick: { single?: string; multiplayer?: string },
     ) =>
-      ipcRenderer.invoke(
+      invoke(
         "version:run",
         account,
         settings,
@@ -1068,82 +1274,89 @@ export const api: IElectronAPI = {
       account: ILocalAccount,
       versionConf: IVersionConf,
       isFull: boolean,
-    ) => ipcRenderer.invoke("version:delete", account, versionConf, isFull),
+    ) => invoke("version:delete", account, versionConf, isFull),
     save: (versionConf: IVersionConf) =>
-      ipcRenderer.invoke("version:save", versionConf),
+      invoke("version:save", versionConf),
     share: {
       uploadMods: (at: string, versionConf: IVersionConf) =>
-        ipcRenderer.invoke("share:uploadMods", at, versionConf),
+        invoke("share:uploadMods", at, versionConf),
     },
   },
   accounts: {
-    load: () => ipcRenderer.invoke("accounts:load"),
+    load: () => invoke("accounts:load"),
     save: (accounts: IAccountConf["accounts"], lastPlayed: string | null) =>
-      ipcRenderer.invoke("accounts:save", accounts, lastPlayed),
+      invoke("accounts:save", accounts, lastPlayed),
   },
   auth: {
     microsoft: (code: string, codeVerifier?: string) =>
-      ipcRenderer.invoke("auth:microsoft", code, codeVerifier),
+      invoke("auth:microsoft", code, codeVerifier),
     microsoftRefresh: (refreshToken: string, id: string) =>
-      ipcRenderer.invoke("auth:microsoft:refresh", refreshToken, id),
-    elyby: (code: string) => ipcRenderer.invoke("auth:elyby", code),
+      invoke("auth:microsoft:refresh", refreshToken, id),
+    elyby: (code: string) => invoke("auth:elyby", code),
     elybyRefresh: (refreshToken: string, id: string) =>
-      ipcRenderer.invoke("auth:elyby:refresh", refreshToken, id),
-    discord: (code: string) => ipcRenderer.invoke("auth:discord", code),
+      invoke("auth:elyby:refresh", refreshToken, id),
+    discord: (code: string) => invoke("auth:discord", code),
     discordRefresh: (refreshToken: string, id: string) =>
-      ipcRenderer.invoke("auth:discord:refresh", refreshToken, id),
+      invoke("auth:discord:refresh", refreshToken, id),
     startServer: (expectedState: string) =>
-      ipcRenderer.invoke("auth:startServer", expectedState),
+      invoke("auth:startServer", expectedState),
+    stopServer: () => invoke("auth:stopServer"),
   },
   backend: {
     getModpack: (at: string, code: string) =>
-      ipcRenderer.invoke("backend:getModpack", at, code),
+      invoke("backend:getModpack", at, code),
     getOwnModpacks: (at: string) =>
-      ipcRenderer.invoke("backend:getOwnModpacks", at),
+      invoke("backend:getOwnModpacks", at),
+    exploreModpacks: (query: IExploreQuery) =>
+      invoke("backend:exploreModpacks", query),
+    getPublicProfile: (nickname: string, userId?: string) =>
+      invoke("backend:getPublicProfile", nickname, userId),
     shareModpack: (
       at: string,
       modpack: { conf: IModpack["conf"]; isPublic?: boolean },
-    ) => ipcRenderer.invoke("backend:shareModpack", at, modpack),
+    ) => invoke("backend:shareModpack", at, modpack),
     updateModpack: (at: string, shareCode: string, update: IModpackUpdate) =>
-      ipcRenderer.invoke("backend:updateModpack", at, shareCode, update),
+      invoke("backend:updateModpack", at, shareCode, update),
     deleteModpack: (at: string, shareCode: string) =>
-      ipcRenderer.invoke("backend:deleteModpack", at, shareCode),
+      invoke("backend:deleteModpack", at, shareCode),
     updateUser: (at: string, id: string, user: IUpdateUser) =>
-      ipcRenderer.invoke("backend:updateUser", at, id, user),
+      invoke("backend:updateUser", at, id, user),
     getUser: (at: string, id: string) =>
-      ipcRenderer.invoke("backend:getUser", at, id),
+      invoke("backend:getUser", at, id),
+    getMutualFriends: (at: string, id: string) =>
+      invoke("backend:getMutualFriends", at, id),
     getRemoteStats: (at: string) =>
-      ipcRenderer.invoke("backend:getRemoteStats", at),
-    groupsList: (at: string) => ipcRenderer.invoke("backend:groupsList", at),
+      invoke("backend:getRemoteStats", at),
+    groupsList: (at: string) => invoke("backend:groupsList", at),
     groupCreate: (at: string, name: string) =>
-      ipcRenderer.invoke("backend:groupCreate", at, name),
+      invoke("backend:groupCreate", at, name),
     groupRename: (at: string, groupId: string, name: string) =>
-      ipcRenderer.invoke("backend:groupRename", at, groupId, name),
+      invoke("backend:groupRename", at, groupId, name),
     groupDelete: (at: string, groupId: string) =>
-      ipcRenderer.invoke("backend:groupDelete", at, groupId),
+      invoke("backend:groupDelete", at, groupId),
     groupJoinVoice: (at: string, groupId: string) =>
-      ipcRenderer.invoke("backend:groupJoinVoice", at, groupId),
+      invoke("backend:groupJoinVoice", at, groupId),
     groupJoinByCode: (at: string, code: string) =>
-      ipcRenderer.invoke("backend:groupJoinByCode", at, code),
+      invoke("backend:groupJoinByCode", at, code),
     groupLeave: (at: string, groupId: string) =>
-      ipcRenderer.invoke("backend:groupLeave", at, groupId),
+      invoke("backend:groupLeave", at, groupId),
     groupKickMember: (at: string, groupId: string, memberId: string) =>
-      ipcRenderer.invoke("backend:groupKickMember", at, groupId, memberId),
+      invoke("backend:groupKickMember", at, groupId, memberId),
     groupBanMember: (at: string, groupId: string, memberId: string) =>
-      ipcRenderer.invoke("backend:groupBanMember", at, groupId, memberId),
+      invoke("backend:groupBanMember", at, groupId, memberId),
     groupUnbanMember: (at: string, groupId: string, memberId: string) =>
-      ipcRenderer.invoke("backend:groupUnbanMember", at, groupId, memberId),
+      invoke("backend:groupUnbanMember", at, groupId, memberId),
     groupTransferOwner: (at: string, groupId: string, memberId: string) =>
-      ipcRenderer.invoke("backend:groupTransferOwner", at, groupId, memberId),
+      invoke("backend:groupTransferOwner", at, groupId, memberId),
     groupResetCode: (at: string, groupId: string) =>
-      ipcRenderer.invoke("backend:groupResetCode", at, groupId),
+      invoke("backend:groupResetCode", at, groupId),
     resetFriendCode: (at: string, id: string) =>
-      ipcRenderer.invoke("backend:resetFriendCode", at, id),
+      invoke("backend:resetFriendCode", at, id),
     updateFriendSettings: (
       at: string,
       id: string,
       settings: IFriendSettingsUpdate,
-    ) => ipcRenderer.invoke("backend:updateFriendSettings", at, id, settings),
+    ) => invoke("backend:updateFriendSettings", at, id, settings),
     uploadFileFromPath: (
       at: string,
       filePath: string,
@@ -1152,7 +1365,7 @@ export const api: IElectronAPI = {
       progressId?: string,
       direct?: boolean,
     ) =>
-      ipcRenderer.invoke(
+      invoke(
         "backend:uploadFileFromPath",
         at,
         filePath,
@@ -1174,56 +1387,66 @@ export const api: IElectronAPI = {
       return () => ipcRenderer.off("backend:uploadFileProgress", listener);
     },
     deleteFile: (at: string, key: string, isDirectory?: boolean) =>
-      ipcRenderer.invoke("backend:deleteFile", at, key, isDirectory),
+      invoke("backend:deleteFile", at, key, isDirectory),
     modpackDownloaded: (at: string, shareCode: string) =>
-      ipcRenderer.invoke("backend:modpackDownloaded", at, shareCode),
-    getNews: () => ipcRenderer.invoke("backend:getNews"),
+      invoke("backend:modpackDownloaded", at, shareCode),
+    getNews: () => invoke("backend:getNews"),
+    getNewsPage: (params: {
+      limit?: number;
+      cursor?: string;
+      source?: string;
+    }) => invoke("backend:getNewsPage", params),
+    checkUpdates: (request: IUpdateCheckRequest) =>
+      invoke("backend:checkUpdates", request),
+    getGlobalLeaderboard: (limit: number) =>
+      invoke("backend:getGlobalLeaderboard", limit),
+    getOwnLeaderboardRank: (at: string) =>
+      invoke("backend:getOwnLeaderboardRank", at),
+    getAchievementReach: () =>
+      invoke("backend:getAchievementReach"),
     getWhatsNew: (version: string, locale: string) =>
-      ipcRenderer.invoke("backend:getWhatsNew", version, locale),
+      invoke("backend:getWhatsNew", version, locale),
+    getLauncherReleases: (locale: string, limit: number) =>
+      invoke("backend:getLauncherReleases", locale, limit),
     getSponsoredNewsAd: (locale: string, hiddenIds: string[]) =>
-      ipcRenderer.invoke("backend:getSponsoredNewsAd", locale, hiddenIds),
+      invoke("backend:getSponsoredNewsAd", locale, hiddenIds),
     recordSponsoredAdImpression: (id: string) =>
-      ipcRenderer.invoke("backend:recordSponsoredAdImpression", id),
+      invoke("backend:recordSponsoredAdImpression", id),
     recordSponsoredAdClick: (id: string) =>
-      ipcRenderer.invoke("backend:recordSponsoredAdClick", id),
-    login: (
+      invoke("backend:recordSponsoredAdClick", id),
+    approveSiteLogin: (at: string, requestId: string) =>
+      invoke("backend:approveSiteLogin", at, requestId),
+    declineSiteLogin: (at: string, requestId: string) =>
+      invoke("backend:declineSiteLogin", at, requestId),
+    discordLink: (at: string, code: string) =>
+      invoke("backend:discordLink", at, code),
+    discordUnlink: (at: string) =>
+      invoke("backend:discordUnlink", at),
+    telegramLinkStart: (at: string) =>
+      invoke("backend:telegramLinkStart", at),
+    telegramUnlink: (at: string) =>
+      invoke("backend:telegramUnlink", at),
+    updateNotifications: (
       at: string,
       id: string,
-      auth: { accessToken: string; refreshToken: string; expiresAt: number },
-    ) => ipcRenderer.invoke("backend:login", at, id, auth),
-    approveSiteLogin: (at: string, requestId: string) =>
-      ipcRenderer.invoke("backend:approveSiteLogin", at, requestId),
-    discordLink: (at: string, code: string) =>
-      ipcRenderer.invoke("backend:discordLink", at, code),
-    discordUnlink: (at: string) =>
-      ipcRenderer.invoke("backend:discordUnlink", at),
-    telegramLinkStart: (at: string) =>
-      ipcRenderer.invoke("backend:telegramLinkStart", at),
-    socialLink: (at: string, provider: string, code: string) =>
-      ipcRenderer.invoke("backend:socialLink", at, provider, code),
-    socialUnlink: (at: string, provider: string) =>
-      ipcRenderer.invoke("backend:socialUnlink", at, provider),
-    getSkin: (at: string, uuid: string) =>
-      ipcRenderer.invoke("backend:getSkin", at, uuid),
-    apiBaseUrl: () => ipcRenderer.invoke("backend:apiBaseUrl"),
+      prefs: Partial<INotificationPrefs>,
+    ) => invoke("backend:updateNotifications", at, id, prefs),
+    apiBaseUrl: () => invoke("backend:apiBaseUrl"),
     onApiBaseUrl: (callback: (baseUrl: string) => void) => {
       const listener = (_: unknown, baseUrl: string) => callback(baseUrl);
       ipcRenderer.on("api:baseUrl", listener);
       return () => ipcRenderer.off("api:baseUrl", listener);
     },
-    discordAuthenticated: (at: string, userId: string) =>
-      ipcRenderer.invoke("backend:discordAuthenticated", at, userId),
     aiComplete: (at: string, prompt: string) =>
-      ipcRenderer.invoke("backend:aiComplete", at, prompt),
-    getAuthlib: () => ipcRenderer.invoke("backend:getAuthlib"),
-    checkHealth: () => ipcRenderer.invoke("backend:checkHealth"),
+      invoke("backend:aiComplete", at, prompt),
+    checkHealth: () => invoke("backend:checkHealth"),
   },
   voice: {
     setPtt: (bind: { type: "key" | "mouse"; code: number } | null) =>
-      ipcRenderer.invoke("voice:setPtt", bind),
-    capturePttBind: () => ipcRenderer.invoke("voice:capturePttBind"),
+      invoke("voice:setPtt", bind),
+    capturePttBind: () => invoke("voice:capturePttBind"),
     setSessionActive: (active: boolean) =>
-      ipcRenderer.invoke("voice:setSessionActive", active),
+      invoke("voice:setSessionActive", active),
     onPttDown: (callback: () => void) => {
       const listener = () => callback();
       ipcRenderer.on("voice:pttDown", listener);
@@ -1239,15 +1462,26 @@ export const api: IElectronAPI = {
     getList: (
       loader: "vanilla" | "forge" | "neoforge" | "fabric" | "quilt",
       includeSnapshots: boolean = false,
-    ) => ipcRenderer.invoke("versions:getList", loader, includeSnapshots),
+    ) => invoke("versions:getList", loader, includeSnapshots),
     getLoaderVersions: (
       loader: "forge" | "neoforge" | "fabric" | "quilt",
       versionId: string,
-    ) => ipcRenderer.invoke("versions:getLoaderVersions", loader, versionId),
+    ) => invoke("versions:getLoaderVersions", loader, versionId),
   },
   game: {
     closeGame: (versionName: string, instance: number) =>
-      ipcRenderer.invoke("game:closeGame", versionName, instance),
+      invoke("game:closeGame", versionName, instance),
+  },
+  logs: {
+    list: (versionPath: string) => invoke("logs:list", versionPath),
+    read: (versionPath: string, name: string, kind: GameLogKind) =>
+      invoke("logs:read", versionPath, name, kind),
+    analyze: (
+      versionPath: string,
+      name: string,
+      kind: GameLogKind,
+      exitCode?: number,
+    ) => invoke("logs:analyze", versionPath, name, kind, exitCode),
   },
   mods: {
     check: (
@@ -1256,40 +1490,62 @@ export const api: IElectronAPI = {
       server?: IServerConf,
       options?: VersionInstallOptions,
     ) =>
-      ipcRenderer.invoke("mods:check", settings, versionConf, server, options),
+      invoke("mods:check", settings, versionConf, server, options),
     downloadOther: (
       settings: TSettings,
       versionConf: IVersionConf,
       options?: VersionInstallOptions,
     ) =>
-      ipcRenderer.invoke("mods:downloadOther", settings, versionConf, options),
+      invoke("mods:downloadOther", settings, versionConf, options),
     syncLive: (
       settings: TSettings,
       versionConf: IVersionConf,
       options?: VersionInstallOptions,
-    ) => ipcRenderer.invoke("mods:syncLive", settings, versionConf, options),
-    cancelInstall: () => ipcRenderer.invoke("mods:cancelInstall"),
+    ) => invoke("mods:syncLive", settings, versionConf, options),
+    cancelInstall: () => invoke("mods:cancelInstall"),
   },
   other: {
-    getVersion: () => ipcRenderer.invoke("other:getVersion"),
+    getVersion: () => invoke("other:getVersion"),
     openFileDialog: (
       isFolder?: boolean,
       filters?: { name: string; extensions: string[] }[],
       multi?: boolean,
-    ) => ipcRenderer.invoke("other:openFileDialog", isFolder, filters, multi),
+    ) => invoke("other:openFileDialog", isFolder, filters, multi),
     getPathForFile: (file: File) => {
       const filePath = webUtils.getPathForFile(file);
       if (filePath) ipcRenderer.sendSync("safepath:bless", filePath);
       return filePath;
     },
-    getPaths: () => ipcRenderer.invoke("other:getPaths"),
-    getPath: (pathKey: string) => ipcRenderer.invoke("other:getPath", pathKey),
+    getPaths: () => invoke("other:getPaths"),
+    getPath: (pathKey: string) => invoke("other:getPath", pathKey),
     notify: (
       options: Electron.NotificationConstructorOptions,
       clickAction?: NotificationClickAction,
-    ) => ipcRenderer.invoke("other:notify", options, clickAction),
-    getLocale: () => ipcRenderer.invoke("other:getLocale"),
-    restoreWindow: () => ipcRenderer.invoke("other:restoreWindow"),
+    ) => invoke("other:notify", options, clickAction),
+    getLocale: () => invoke("other:getLocale"),
+    restoreWindow: () => invoke("other:restoreWindow"),
+    setUnsavedGuard: (value: boolean) =>
+      invoke("other:setUnsavedGuard", value),
+    confirmClose: () => invoke("other:confirmClose"),
+    onCloseRequested: (
+      callback: (reason: {
+        unsaved: boolean;
+        servers: boolean;
+        install: boolean;
+      }) => void,
+    ) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        reason?: { unsaved: boolean; servers: boolean; install?: boolean },
+      ) =>
+        callback({
+          unsaved: reason?.unsaved ?? true,
+          servers: reason?.servers ?? false,
+          install: reason?.install ?? false,
+        });
+      ipcRenderer.on("app:closeRequested", listener);
+      return () => ipcRenderer.off("app:closeRequested", listener);
+    },
     onNotificationClick: (
       callback: (action: NotificationClickAction) => void,
     ) => {
@@ -1302,11 +1558,12 @@ export const api: IElectronAPI = {
     },
   },
   allowedPaths: {
-    list: () => ipcRenderer.invoke("safepath:list"),
-    revoke: (target: string) => ipcRenderer.invoke("safepath:revoke", target),
+    list: () => invoke("safepath:list"),
+    revoke: (target: string) => invoke("safepath:revoke", target),
   },
   connectivity: {
-    test: () => ipcRenderer.invoke("connectivity:test"),
+    plan: () => invoke("connectivity:plan"),
+    test: () => invoke("connectivity:test"),
     onResult: (callback: (result: ConnectivityCheckResult) => void) => {
       const listener = (
         _event: Electron.IpcRendererEvent,
@@ -1318,14 +1575,15 @@ export const api: IElectronAPI = {
   },
   mirror: {
     setSource: (source: DownloadSource) =>
-      ipcRenderer.invoke("mirror:setSource", source),
+      invoke("mirror:setSource", source),
+    getState: () => invoke("mirror:getState"),
   },
   shortcut: {
     create: (versionName: string, instance?: number, imageSource?: string) =>
-      ipcRenderer.invoke("shortcut:create", versionName, instance, imageSource),
+      invoke("shortcut:create", versionName, instance, imageSource),
   },
   image: {
-    bytes: (source: string) => ipcRenderer.invoke("image:bytes", source),
+    bytes: (source: string) => invoke("image:bytes", source),
   },
   server: {
     install: (
@@ -1337,7 +1595,7 @@ export const api: IElectronAPI = {
       versionConf?: IVersionConf,
       options?: { keepProgressOpen?: boolean },
     ) =>
-      ipcRenderer.invoke(
+      invoke(
         "server:install",
         account,
         downloadLimit,
@@ -1348,35 +1606,31 @@ export const api: IElectronAPI = {
         options,
       ),
     getSettings: (filePath: string) =>
-      ipcRenderer.invoke("server:getSettings", filePath),
+      invoke("server:getSettings", filePath),
+    runOptions: (serverPath: string) =>
+      invoke("server:runOptions", serverPath),
+    stopAll: () => invoke("server:stopAll"),
     editXmx: (serverPath: string, memory: number) =>
-      ipcRenderer.invoke("server:editXmx", serverPath, memory),
+      invoke("server:editXmx", serverPath, memory),
     isPortAvailable: (port: number) =>
-      ipcRenderer.invoke("server:isPortAvailable", port),
+      invoke("server:isPortAvailable", port),
     setAikar: (serverPath: string, enabled: boolean) =>
-      ipcRenderer.invoke("server:setAikar", serverPath, enabled),
+      invoke("server:setAikar", serverPath, enabled),
     updateProperties: (filePath: string, settings: IServerSettings) =>
-      ipcRenderer.invoke("server:updateProperties", filePath, settings),
+      invoke("server:updateProperties", filePath, settings),
     start: (serverPath: string) =>
-      ipcRenderer.invoke("server:start", serverPath),
+      invoke("server:start", serverPath),
     stop: (serverPath: string, force?: boolean) =>
-      ipcRenderer.invoke("server:stop", serverPath, force),
+      invoke("server:stop", serverPath, force),
+    command: (serverPath: string, command: string) =>
+      invoke("server:command", serverPath, command),
+    lanAddress: () => invoke("server:lanAddress"),
     runStatus: (serverPath: string) =>
-      ipcRenderer.invoke("server:runStatus", serverPath),
-    onRunState: (
-      callback: (payload: {
-        serverPath: string;
-        state: ServerRunStatus["state"];
-        pid: number | null;
-      }) => void,
-    ) => {
+      invoke("server:runStatus", serverPath),
+    onRunState: (callback: (payload: ServerRunStatePayload) => void) => {
       const listener = (
         _event: Electron.IpcRendererEvent,
-        payload: {
-          serverPath: string;
-          state: ServerRunStatus["state"];
-          pid: number | null;
-        },
+        payload: ServerRunStatePayload,
       ) => callback(payload);
       ipcRenderer.on("server:state", listener);
       return () => ipcRenderer.off("server:state", listener);
@@ -1400,7 +1654,7 @@ export const api: IElectronAPI = {
       nickname: string,
       accessToken: string,
     ) =>
-      ipcRenderer.invoke(
+      invoke(
         "skins:load",
         launcherPath,
         platform,
@@ -1409,39 +1663,39 @@ export const api: IElectronAPI = {
         accessToken,
       ),
     selectSkin: (userId: string, platform: string, skinId: string | null) =>
-      ipcRenderer.invoke("skins:selectSkin", userId, platform, skinId),
+      invoke("skins:selectSkin", userId, platform, skinId),
     setCape: (userId: string, platform: string, capeId: string | undefined) =>
-      ipcRenderer.invoke("skins:setCape", userId, platform, capeId),
+      invoke("skins:setCape", userId, platform, capeId),
     changeModel: (
       userId: string,
       platform: string,
       model: "classic" | "slim",
-    ) => ipcRenderer.invoke("skins:changeModel", userId, platform, model),
+    ) => invoke("skins:changeModel", userId, platform, model),
     uploadSkin: (userId: string, platform: string, skinPath: string) =>
-      ipcRenderer.invoke("skins:uploadSkin", userId, platform, skinPath),
+      invoke("skins:uploadSkin", userId, platform, skinPath),
     deleteSkin: (
       userId: string,
       platform: string,
       skinId: string,
       type: "skin" | "cape",
-    ) => ipcRenderer.invoke("skins:deleteSkin", userId, platform, skinId, type),
+    ) => invoke("skins:deleteSkin", userId, platform, skinId, type),
     resetSkin: (userId: string, platform: string) =>
-      ipcRenderer.invoke("skins:resetSkin", userId, platform),
+      invoke("skins:resetSkin", userId, platform),
     regenerateSkin: (userId: string, platform: string) =>
-      ipcRenderer.invoke("skins:regenerateSkin", userId, platform),
+      invoke("skins:regenerateSkin", userId, platform),
     importByUrl: (
       userId: string,
       platform: string,
       url: string,
       type: "skin" | "cape",
-    ) => ipcRenderer.invoke("skins:importByUrl", userId, platform, url, type),
+    ) => invoke("skins:importByUrl", userId, platform, url, type),
     importByFile: (
       userId: string,
       platform: string,
       filePath: string,
       type: "skin" | "cape",
     ) =>
-      ipcRenderer.invoke(
+      invoke(
         "skins:importByFile",
         userId,
         platform,
@@ -1449,21 +1703,21 @@ export const api: IElectronAPI = {
         type,
       ),
     importByNickname: (userId: string, platform: string, nickname: string) =>
-      ipcRenderer.invoke("skins:importByNickname", userId, platform, nickname),
+      invoke("skins:importByNickname", userId, platform, nickname),
     renameSkin: (
       userId: string,
       platform: string,
       skinId: string,
       newName: string,
     ) =>
-      ipcRenderer.invoke("skins:renameSkin", userId, platform, skinId, newName),
+      invoke("skins:renameSkin", userId, platform, skinId, newName),
     clearManager: (userId: string, platform: string) =>
-      ipcRenderer.invoke("skins:clearManager", userId, platform),
+      invoke("skins:clearManager", userId, platform),
     catalog: {
       list: (params?: CatalogListParams) =>
-        ipcRenderer.invoke("skins:catalogList", params),
-      download: (id: string) => ipcRenderer.invoke("skins:catalogDownload", id),
-      get: (id: string) => ipcRenderer.invoke("skins:catalogItem", id),
+        invoke("skins:catalogList", params),
+      download: (id: string) => invoke("skins:catalogDownload", id),
+      get: (id: string) => invoke("skins:catalogItem", id),
     },
     publishCommunity: (
       userId: string,
@@ -1474,7 +1728,7 @@ export const api: IElectronAPI = {
       type?: "skin" | "cape" | "pack",
       tags?: string,
     ) =>
-      ipcRenderer.invoke(
+      invoke(
         "skins:publishCommunity",
         userId,
         platform,
@@ -1486,7 +1740,7 @@ export const api: IElectronAPI = {
       ),
     tags: {
       suggest: (q?: string, limit?: number) =>
-        ipcRenderer.invoke("skins:tagsSuggest", q, limit),
+        invoke("skins:tagsSuggest", q, limit),
     },
     importPack: (
       userId: string,
@@ -1494,7 +1748,7 @@ export const api: IElectronAPI = {
       skinUrl: string,
       capeUrl: string,
     ) =>
-      ipcRenderer.invoke(
+      invoke(
         "skins:importPack",
         userId,
         platform,
@@ -1503,9 +1757,9 @@ export const api: IElectronAPI = {
       ),
     community: {
       mine: (backendToken: string) =>
-        ipcRenderer.invoke("skins:communityMine", backendToken),
+        invoke("skins:communityMine", backendToken),
       delete: (backendToken: string, id: string) =>
-        ipcRenderer.invoke("skins:communityDelete", backendToken, id),
+        invoke("skins:communityDelete", backendToken, id),
     },
   },
   modManager: {
@@ -1515,7 +1769,7 @@ export const api: IElectronAPI = {
       options: any,
       pagination: any,
     ) =>
-      ipcRenderer.invoke(
+      invoke(
         "modManager:search",
         query,
         provider,
@@ -1523,73 +1777,80 @@ export const api: IElectronAPI = {
         pagination,
       ),
     getSort: (provider: any) =>
-      ipcRenderer.invoke("modManager:getSort", provider),
+      invoke("modManager:getSort", provider),
     getFilter: (provider: Provider, projectType: ProjectType) =>
-      ipcRenderer.invoke("modManager:getFilter", provider, projectType),
+      invoke("modManager:getFilter", provider, projectType),
     getProject: (provider: Provider, projectId: string) =>
-      ipcRenderer.invoke("modManager:getProject", provider, projectId),
+      invoke("modManager:getProject", provider, projectId),
     getVersions: (provider: Provider, projectId: string, options: any) =>
-      ipcRenderer.invoke(
+      invoke(
         "modManager:getVersions",
         provider,
         projectId,
         options,
       ),
     getDependencies: (provider: Provider, projectId: string, deps: any[]) =>
-      ipcRenderer.invoke(
+      invoke(
         "modManager:getDependencies",
         provider,
         projectId,
         deps,
       ),
     checkLocalMod: (modPath: string) =>
-      ipcRenderer.invoke("modManager:checkLocalMod", modPath),
+      invoke("modManager:checkLocalMod", modPath),
     checkModpack: (
       modpackPath: string,
       pack?: any,
       selectVersion?: IVersionModManager,
     ) =>
-      ipcRenderer.invoke(
+      invoke(
         "modManager:checkModpack",
         modpackPath,
         pack,
         selectVersion,
       ),
     ptToFolder: (type: ProjectType) =>
-      ipcRenderer.invoke("modManager:ptToFolder", type),
+      invoke("modManager:ptToFolder", type),
     resolveCfDownload: (fileId: number, fileName: string) =>
-      ipcRenderer.invoke("modManager:resolveCfDownload", fileId, fileName),
+      invoke("modManager:resolveCfDownload", fileId, fileName),
     compareMods: (mods1: ILocalProject[], mods2: ILocalProject[]) =>
-      ipcRenderer.invoke("modManager:compareMods", mods1, mods2),
+      invoke("modManager:compareMods", mods1, mods2),
   },
   worlds: {
-    loadStatistics: (worldPath: string, account: ILocalAccount) =>
-      ipcRenderer.invoke("worlds:loadStatistics", worldPath, account),
     loadVersionStatistics: (versionPath: string, account: ILocalAccount) =>
-      ipcRenderer.invoke("worlds:loadVersionStatistics", versionPath, account),
+      invoke("worlds:loadVersionStatistics", versionPath, account),
     loadAchievementStats: (account: ILocalAccount) =>
-      ipcRenderer.invoke("worlds:loadAchievementStats", account),
+      invoke("worlds:loadAchievementStats", account),
     readWorld: (worldPath: string, account: ILocalAccount) =>
-      ipcRenderer.invoke("worlds:readWorld", worldPath, account),
+      invoke("worlds:readWorld", worldPath, account),
     writeName: (worldPath: string, newName: string) =>
-      ipcRenderer.invoke("worlds:writeName", worldPath, newName),
+      invoke("worlds:writeName", worldPath, newName),
+    count: (versionPath: string) => invoke("worlds:count", versionPath),
+    folderSizes: (versionPath: string) =>
+      invoke("worlds:folderSizes", versionPath),
+    duplicate: (worldPath: string, newName: string) =>
+      invoke("worlds:duplicate", worldPath, newName),
+    export: (worldPath: string, destinationDir: string) =>
+      invoke("worlds:export", worldPath, destinationDir),
+    import: (zipPath: string, versionPath: string) =>
+      invoke("worlds:import", zipPath, versionPath),
     listBackups: (worldPath: string) =>
-      ipcRenderer.invoke("worlds:listBackups", worldPath),
+      invoke("worlds:listBackups", worldPath),
     countBackups: (versionPath: string) =>
-      ipcRenderer.invoke("worlds:countBackups", versionPath),
+      invoke("worlds:countBackups", versionPath),
     createBackup: (worldPath: string, keep: number) =>
-      ipcRenderer.invoke("worlds:createBackup", worldPath, keep),
+      invoke("worlds:createBackup", worldPath, keep),
     restoreBackup: (backupId: string, worldPath: string, keep: number) =>
-      ipcRenderer.invoke("worlds:restoreBackup", backupId, worldPath, keep),
+      invoke("worlds:restoreBackup", backupId, worldPath, keep),
     deleteBackup: (backupId: string) =>
-      ipcRenderer.invoke("worlds:deleteBackup", backupId),
+      invoke("worlds:deleteBackup", backupId),
     deletePreserved: (targetPath: string) =>
-      ipcRenderer.invoke("worlds:deletePreserved", targetPath),
+      invoke("worlds:deletePreserved", targetPath),
   },
   statistics: {
-    getSyncQueue: () => ipcRenderer.invoke("statistics:getSyncQueue"),
+    getSyncQueue: () => invoke("statistics:getSyncQueue"),
     resolveSyncEntries: (ids: string[]) =>
-      ipcRenderer.invoke("statistics:resolveSyncEntries", ids),
+      invoke("statistics:resolveSyncEntries", ids),
   },
   ai: {
     prepareCrashReport: (
@@ -1599,7 +1860,7 @@ export const api: IElectronAPI = {
       versionName?: string,
       instance?: number,
     ) =>
-      ipcRenderer.invoke(
+      invoke(
         "ai:prepareCrashReport",
         versionPath,
         exitCode,
@@ -1608,37 +1869,72 @@ export const api: IElectronAPI = {
         instance,
       ),
     analyzeCrash: (accessToken: string, requestId: string, locale: string) =>
-      ipcRenderer.invoke("ai:analyzeCrash", accessToken, requestId, locale),
+      invoke("ai:analyzeCrash", accessToken, requestId, locale),
     sendFeedback: (accessToken: string, analysisId: string, helpful: boolean) =>
-      ipcRenderer.invoke(
+      invoke(
         "ai:analysisFeedback",
         accessToken,
         analysisId,
         helpful,
       ),
   },
+  agent: {
+    providers: {
+      list: () => invoke("agent:providers:list"),
+      save: (input: AiProviderInput) =>
+        invoke("agent:providers:save", input),
+      remove: (id: string) => invoke("agent:providers:delete", id),
+      select: (id: string) => invoke("agent:providers:select", id),
+      test: (payload: { id?: string; baseUrl?: string; apiKey?: string }) =>
+        invoke("agent:providers:test", payload),
+    },
+    models: {
+      list: (providerId: string) =>
+        invoke("agent:models:list", providerId),
+    },
+    chat: {
+      start: (runId: string, request: AgentStreamRequest) =>
+        invoke("agent:chat:start", runId, request),
+      abort: (runId: string) => invoke("agent:chat:abort", runId),
+    },
+    chats: {
+      list: () => invoke("agent:chats:list"),
+      read: (chatId: string) => invoke("agent:chats:read", chatId),
+      write: (chat: AgentStoredChat) =>
+        invoke("agent:chats:write", chat),
+      remove: (chatId: string) =>
+        invoke("agent:chats:delete", chatId),
+      tombstones: () => invoke("agent:chats:tombstones"),
+      forgetTombstone: (remoteId: string) =>
+        invoke("agent:chats:forgetTombstone", remoteId),
+      sync: (accessToken: string, pending: AgentSyncPush[]) =>
+        invoke("agent:chats:sync", accessToken, pending),
+      remoteMessages: (accessToken: string, chatId: string) =>
+        invoke("agent:chats:remoteMessages", accessToken, chatId),
+      remoteRemove: (accessToken: string, chatId: string) =>
+        invoke("agent:chats:remoteDelete", accessToken, chatId),
+    },
+  },
   rpc: {
     syncContext: (context: RpcRendererContext) =>
-      ipcRenderer.invoke("rpc:syncContext", context),
+      invoke("rpc:syncContext", context),
   },
   skin: {
     get: (type: string, uuid: string, nickname: string, accessToken?: string) =>
-      ipcRenderer.invoke("skin:get", type, uuid, nickname, accessToken),
+      invoke("skin:get", type, uuid, nickname, accessToken),
   },
   share: {
     startShare: (visibility: ShareVisibility) =>
-      ipcRenderer.invoke("share:start", visibility),
-    stopShare: () => ipcRenderer.invoke("share:stop"),
+      invoke("share:start", visibility),
+    stopShare: () => invoke("share:stop"),
     updateShareVisibility: (visibility: ShareVisibility) =>
-      ipcRenderer.invoke("share:updateVisibility", visibility),
-    getShareState: () => ipcRenderer.invoke("share:getState"),
-    getSharePeers: () => ipcRenderer.invoke("share:getPeers"),
+      invoke("share:updateVisibility", visibility),
+    getShareState: () => invoke("share:getState"),
+    getSharePeers: () => invoke("share:getPeers"),
     fetchActiveFriendShares: () =>
-      ipcRenderer.invoke("share:fetchActiveFriendShares"),
-    requestJoinTicket: (slug: string) =>
-      ipcRenderer.invoke("share:requestJoinTicket", slug),
+      invoke("share:fetchActiveFriendShares"),
     connectToFriendShare: (slug: string) =>
-      ipcRenderer.invoke("share:connectToFriendShare", slug),
+      invoke("share:connectToFriendShare", slug),
     onShareStateChanged: (callback: (state: ShareState) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, state: ShareState) =>
         callback(state);
@@ -1721,17 +2017,11 @@ export const api: IElectronAPI = {
         failure?: FailureInfo;
       }) => void,
     ) => {
-      const listener = (
-        _event: Electron.IpcRendererEvent,
-        payload: {
-          channel: string;
-          message: string;
-          notify?: boolean;
-          failure?: FailureInfo;
-        },
-      ) => callback(payload);
-      ipcRenderer.on("ipc:error", listener);
-      return () => ipcRenderer.off("ipc:error", listener);
+      const listener: IpcFailureListener = (payload) => callback(payload);
+      ipcFailureListeners.add(listener);
+      return () => {
+        ipcFailureListeners.delete(listener);
+      };
     },
 
     onCrashAnalysis: (
@@ -1802,6 +2092,16 @@ export const api: IElectronAPI = {
       return () => ipcRenderer.off("server:syncNotice", listener);
     },
 
+    onModsQuarantined: (
+      callback: (notice: { versionName: string; entries: string[] }) => void,
+    ) => {
+      const listener = (_event, notice) => {
+        callback(notice);
+      };
+      ipcRenderer.on("mods:quarantined", listener);
+      return () => ipcRenderer.off("mods:quarantined", listener);
+    },
+
     onVersionInstallProgress: (
       callback: (info: VersionInstallProgress | null) => void,
     ) => {
@@ -1810,6 +2110,14 @@ export const api: IElectronAPI = {
       };
       ipcRenderer.on("versionInstallProgress", listener);
       return () => ipcRenderer.off("versionInstallProgress", listener);
+    },
+
+    onAgentStream: (callback: (payload: AgentStreamEvent) => void) => {
+      const listener = (_event, payload) => {
+        callback(payload);
+      };
+      ipcRenderer.on("agent:stream", listener);
+      return () => ipcRenderer.off("agent:stream", listener);
     },
 
     onDeepLink: (callback: (payload: LauncherDeepLink) => void) => {

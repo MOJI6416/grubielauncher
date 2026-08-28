@@ -35,11 +35,6 @@ export function reportMirrorSuccess(): void {
   mirrorDisabledUntil = 0;
 }
 
-export function resetMirrorCircuitBreaker(): void {
-  mirrorFailures = 0;
-  mirrorDisabledUntil = 0;
-}
-
 export function getDownloadSource(): DownloadSource {
   return downloadSource;
 }

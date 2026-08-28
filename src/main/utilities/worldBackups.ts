@@ -115,9 +115,29 @@ export function normalizeBackupEntry(value: unknown): IWorldBackup | null {
   };
 }
 
+export class WorldBackupIndexError extends Error {
+  constructor(cause: unknown) {
+    super("The world backup index could not be read");
+    this.name = "WorldBackupIndexError";
+    this.cause = cause;
+  }
+}
+
 async function readIndex(): Promise<IWorldBackup[]> {
-  const stored = await fs.readJSON(getIndexPath()).catch(() => null);
-  if (!Array.isArray(stored)) return [];
+  let stored: unknown;
+
+  try {
+    stored = await fs.readJSON(getIndexPath());
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException | null)?.code === "ENOENT") return [];
+    console.error(`[backups] unreadable index ${getIndexPath()}:`, error);
+    throw new WorldBackupIndexError(error);
+  }
+
+  if (!Array.isArray(stored)) {
+    console.error(`[backups] the index ${getIndexPath()} is not a list`);
+    throw new WorldBackupIndexError(new Error("index is not a list"));
+  }
 
   const seen = new Set<string>();
   const entries: IWorldBackup[] = [];
@@ -156,11 +176,17 @@ async function readSkipState(): Promise<Record<string, SkipRecord>> {
     if (!value || typeof value !== "object") continue;
 
     const record = value as Partial<SkipRecord>;
-    if (record.reason !== "worldTooLarge") continue;
+    if (
+      record.reason !== "worldTooLarge" &&
+      record.reason !== "worldUnreadable" &&
+      record.reason !== "failed"
+    ) {
+      continue;
+    }
 
     const sourceSize = Number(record.sourceSize);
     state[key] = {
-      reason: "worldTooLarge",
+      reason: record.reason,
       sourceSize: Number.isFinite(sourceSize) && sourceSize > 0 ? sourceSize : 0,
     };
   }
@@ -243,12 +269,19 @@ export function shouldAutoBackup(
   return levelDatMtimeMs > newest.createdAt;
 }
 
+class WorldUnreadableError extends Error {
+  constructor(target: string) {
+    super(`Cannot read world folder: ${target}`);
+    this.name = "WorldUnreadableError";
+  }
+}
+
 async function collectWorldFiles(root: string, out: string[]): Promise<number> {
   let entries: fs.Dirent[];
   try {
     entries = await fs.readdir(root, { withFileTypes: true });
   } catch {
-    return 0;
+    throw new WorldUnreadableError(root);
   }
 
   let total = 0;
@@ -310,7 +343,20 @@ async function createBackupUnsafe(
   }
 
   const files: string[] = [];
-  const sourceSize = await collectWorldFiles(resolvedWorldPath, files);
+  let sourceSize: number;
+  try {
+    sourceSize = await collectWorldFiles(resolvedWorldPath, files);
+  } catch (error) {
+    if (error instanceof WorldUnreadableError) {
+      console.error("Failed to read the world folder:", error.message);
+      await setSkipRecord(worldKey, {
+        reason: "worldUnreadable",
+        sourceSize: 0,
+      });
+      return { ok: false, error: "worldUnreadable" };
+    }
+    throw error;
+  }
 
   if (sourceSize > MAX_BACKUP_WORLD_BYTES) {
     await setSkipRecord(worldKey, { reason: "worldTooLarge", sourceSize });
@@ -323,6 +369,8 @@ async function createBackupUnsafe(
   if (skipped?.sourceSize && sourceSize >= skipped.sourceSize) {
     return { ok: false, error: "worldTooLarge" };
   }
+
+  const entries = await readIndex();
 
   const id = randomUUID();
   const targetPath = getBackupFilePath(id);
@@ -363,7 +411,6 @@ async function createBackupUnsafe(
     trigger,
   };
 
-  const entries = await readIndex();
   entries.push(backup);
 
   const prunable = selectPrunableBackups(
@@ -383,6 +430,16 @@ async function createBackupUnsafe(
   return { ok: true, backup, pruned: prunedIds.size };
 }
 
+async function recordAutoBackupFailure(worldPath: string): Promise<void> {
+  const resolved = path.resolve(worldPath);
+  const versionName = path.basename(getVersionPathFromWorldPath(resolved));
+
+  await setSkipRecord(getWorldKey(versionName, path.basename(resolved)), {
+    reason: "failed",
+    sourceSize: 0,
+  }).catch(() => {});
+}
+
 export function createWorldBackup(
   worldPath: string,
   trigger: WorldBackupTrigger = "manual",
@@ -390,9 +447,16 @@ export function createWorldBackup(
 ): Promise<WorldBackupCreateResult> {
   return enqueue(async () => {
     try {
-      return await createBackupUnsafe(worldPath, trigger, keep);
+      const result = await createBackupUnsafe(worldPath, trigger, keep);
+
+      if (trigger === "auto" && !result.ok && result.error === "failed") {
+        await recordAutoBackupFailure(worldPath);
+      }
+
+      return result;
     } catch (error) {
       console.error("Failed to create world backup:", error);
+      if (trigger === "auto") await recordAutoBackupFailure(worldPath);
       return { ok: false, error: "failed" } as WorldBackupCreateResult;
     }
   });
@@ -588,6 +652,56 @@ export async function getWorldBackupList(
     skipReason: skipState[worldKey]?.reason ?? null,
     preserved,
   };
+}
+
+export function reassignWorldBackups(
+  versionName: string,
+  fromFolder: string,
+  toFolder: string,
+  worldName: string,
+): Promise<void> {
+  return enqueue(async () => {
+    if (!fromFolder || !toFolder || fromFolder === toFolder) return;
+
+    const entries = await readIndex();
+    let changed = false;
+
+    for (const entry of entries) {
+      if (entry.versionName !== versionName) continue;
+      if (entry.worldFolder !== fromFolder) continue;
+
+      entry.worldFolder = toFolder;
+      entry.worldName = worldName || toFolder;
+      changed = true;
+    }
+
+    if (changed) await writeIndex(entries);
+
+    const skipState = await readSkipState();
+    const fromKey = getWorldKey(versionName, fromFolder);
+    const record = skipState[fromKey];
+
+    if (record) {
+      await setSkipRecord(getWorldKey(versionName, toFolder), record);
+      await setSkipRecord(fromKey, null);
+    }
+  });
+}
+
+export async function reassignPreservedCopies(
+  savesPath: string,
+  fromFolder: string,
+  toFolder: string,
+): Promise<void> {
+  if (!fromFolder || !toFolder || fromFolder === toFolder) return;
+
+  for (const full of await listPreservedEntries(savesPath)) {
+    if ((await readPreservedOwner(full)) !== fromFolder) continue;
+
+    await fs
+      .writeFile(path.join(full, PRESERVED_MARKER_FILE), toFolder, "utf-8")
+      .catch(() => {});
+  }
 }
 
 export async function countWorldBackups(
@@ -788,9 +902,9 @@ export function deleteWorldBackup(
     }
 
     try {
-      await fs.remove(getBackupFilePath(backupId));
-
       const entries = await readIndex();
+
+      await fs.remove(getBackupFilePath(backupId));
       await writeIndex(entries.filter((entry) => entry.id !== backupId));
 
       return { ok: true } as WorldBackupDeleteResult;
@@ -870,6 +984,16 @@ async function partitionOrphanBackups(): Promise<{
 }> {
   const versionsPath = path.join(getLauncherPaths().minecraft, "versions");
   const entries = await readIndex();
+
+  if (entries.length > 0) {
+    const versionsStats = await fs.stat(versionsPath).catch(() => null);
+    if (!versionsStats?.isDirectory()) {
+      throw new WorldBackupIndexError(
+        new Error(`the instances folder ${versionsPath} is not readable`),
+      );
+    }
+  }
+
   const files = await listBackupFilesOnDisk();
 
   const orphanIds: string[] = [];

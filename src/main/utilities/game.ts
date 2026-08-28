@@ -298,6 +298,8 @@ export function runJar(
 }
 
 const SERVER_INSTALL_TIMEOUT_MS = 15 * 60 * 1000;
+const INSTALLER_TAIL_LINES = 6;
+const INSTALLER_LINE_LIMIT = 160;
 const SERVER_READY_MARKERS = [
   "EULA",
   'For help, type "help"',
@@ -322,6 +324,7 @@ export function installServer(
     let settled = false;
     let eulaPoll: NodeJS.Timeout | null = null;
     let timeoutId: NodeJS.Timeout | null = null;
+    const outputTail: string[] = [];
 
     const stopWatchers = () => {
       if (eulaPoll) clearInterval(eulaPoll);
@@ -352,8 +355,18 @@ export function installServer(
 
     const server = spawn(command, args, { cwd: serverPath });
 
+    const collectOutput = (chunk: string) => {
+      for (const rawLine of chunk.split(/\r?\n/)) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        outputTail.push(line.slice(0, INSTALLER_LINE_LIMIT));
+        if (outputTail.length > INSTALLER_TAIL_LINES) outputTail.shift();
+      }
+    };
+
     const onStdout = (data: any) => {
       const output = data.toString();
+      collectOutput(output);
       onOutput?.(output);
       if (
         options.resolveOnEulaFile &&
@@ -364,16 +377,30 @@ export function installServer(
     };
 
     const onStderr = (data: any) => {
-      onOutput?.(data.toString());
+      const output = data.toString();
+      collectOutput(output);
+      onOutput?.(output);
     };
 
-    const onClose = (code: any) => {
-      if (code === 0 || code === null) {
+    const onClose = (code: any, closeSignal: any) => {
+      if (code === 0) {
         settleResolve(code);
         return;
       }
 
-      settleReject(new Error(`Server installer exited with code ${code}`));
+      const details = outputTail.join(" | ");
+      const reason =
+        code === null
+          ? `was stopped by ${closeSignal || "the system"}`
+          : `exited with code ${code}`;
+
+      settleReject(
+        new Error(
+          details
+            ? `Server installer ${reason}: ${details}`
+            : `Server installer ${reason}`,
+        ),
+      );
     };
 
     const onError = (err: any) => {
@@ -440,6 +467,7 @@ export function runGame(
     "trackStatistics" | "accountSub" | "accountLabel"
   >,
   highPriority: boolean = false,
+  workingDirectory?: string,
 ) {
   if (gameRuntime.isInstanceBusy(versionName, instance)) {
     throw new Error(
@@ -454,7 +482,7 @@ export function runGame(
   rpc.setGameLaunching({ versionName, instance, serverAddress });
 
   const javaProcess = spawn(command, args, {
-    cwd: versionPath,
+    cwd: workingDirectory || versionPath,
   });
 
   javaProcess.once("spawn", () => {
@@ -723,6 +751,13 @@ export function runGame(
       msg.tips.push("checkIntegrity");
 
       void analyzeGameCrash(versionPath, code)
+        .catch((error) => {
+          console.error(
+            `[crash] could not analyse the crash of ${versionName}:`,
+            error,
+          );
+          return null;
+        })
         .then((analysis) => {
           if (!analysis) {
             safeSend("crashUnresolved", {
@@ -734,8 +769,7 @@ export function runGame(
             return;
           }
           safeSend("crashAnalysis", versionName, instance, analysis);
-        })
-        .catch(() => {});
+        });
     }
 
     safeSend("consoleMessage", versionName, instance, msg);

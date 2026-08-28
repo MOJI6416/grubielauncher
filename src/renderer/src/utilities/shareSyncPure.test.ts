@@ -3,6 +3,7 @@ import { ProjectType, Provider } from "@/types/ModManager";
 import {
   areShareLogosEqual,
   areOtherFilesEqual,
+  classifyModpackFetch,
   formatShareDiffParts,
   getShareDiffParts,
   getRemoteModpackIdFromUrl,
@@ -141,6 +142,56 @@ describe("share sync pure helpers", () => {
     ).toEqual([]);
   });
 
+  it("reports an unpublished description only for the owner", () => {
+    const input = {
+      remoteName: "Pack",
+      currentName: "Pack",
+      remoteDescription: "published text",
+      currentDescription: "edited text",
+      remoteImage: "logo",
+      currentLogo: "logo",
+      modsEqual: true,
+      serversEqual: true,
+      remoteQuickServer: "",
+      currentQuickServer: "",
+      remoteRunArguments: { game: "", jvm: "" },
+      currentRunArguments: { game: "", jvm: "" },
+      remoteOptions: "options",
+      currentOptions: "options",
+      remoteOther: { paths: [], size: 0, url: "" },
+      currentOther: { paths: [], size: 0, url: "" },
+    };
+
+    expect(getShareDiffParts({ ...input, isOwner: true })).toEqual([
+      "description",
+    ]);
+    expect(getShareDiffParts({ ...input, isOwner: false })).toEqual([]);
+  });
+
+  it("treats a missing description and an empty one as the same text", () => {
+    expect(
+      getShareDiffParts({
+        isOwner: true,
+        remoteName: "Pack",
+        currentName: "Pack",
+        remoteDescription: undefined,
+        currentDescription: "",
+        remoteImage: "logo",
+        currentLogo: "logo",
+        modsEqual: true,
+        serversEqual: true,
+        remoteQuickServer: "",
+        currentQuickServer: "",
+        remoteRunArguments: { game: "", jvm: "" },
+        currentRunArguments: { game: "", jvm: "" },
+        remoteOptions: "options",
+        currentOptions: "options",
+        remoteOther: { paths: [], size: 0, url: "" },
+        currentOther: { paths: [], size: 0, url: "" },
+      }),
+    ).toEqual([]);
+  });
+
   it("does not report local options/name differences for downloaded versions", () => {
     expect(
       getShareDiffParts({
@@ -240,5 +291,28 @@ describe("share sync pure helpers", () => {
   it("keeps the legacy diff string format used by existing UI", () => {
     expect(formatShareDiffParts(["mods", "servers"])).toBe("mods, servers, ");
     expect(formatShareDiffParts([])).toBe("");
+  });
+});
+
+describe("classifyModpackFetch", () => {
+  const modpack = { _id: "1" };
+
+  it("separates a deleted pack from an unreachable backend", () => {
+    expect(classifyModpackFetch({ status: "success", data: modpack })).toBe(
+      "ok",
+    );
+    expect(classifyModpackFetch({ status: "not_found", data: null })).toBe(
+      "gone",
+    );
+    expect(classifyModpackFetch({ status: "error", data: null })).toBe(
+      "unavailable",
+    );
+  });
+
+  it("treats a success without a body as unreachable, never as deleted", () => {
+    expect(classifyModpackFetch({ status: "success", data: null })).toBe(
+      "unavailable",
+    );
+    expect(classifyModpackFetch({})).toBe("unavailable");
   });
 });

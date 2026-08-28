@@ -5,18 +5,24 @@ import { showErrorToast } from "./errorToast";
 const BUFFER_LIMIT = 20;
 const DEFAULT_MAX_AGE_MS = 15000;
 
-interface BufferedFailure {
+export interface BufferedFailure {
   info: FailureInfo;
   consumed: boolean;
 }
 
 const buffer: BufferedFailure[] = [];
 
-export function pushIpcFailure(info: FailureInfo) {
-  if (info.cause === "cancelled") return;
+export function pushIpcFailure(info: FailureInfo): BufferedFailure | null {
+  if (info.cause === "cancelled") return null;
 
-  buffer.unshift({ info, consumed: false });
+  const entry: BufferedFailure = { info, consumed: false };
+  buffer.unshift(entry);
   if (buffer.length > BUFFER_LIMIT) buffer.length = BUFFER_LIMIT;
+  return entry;
+}
+
+export function isFailureHandled(entry: BufferedFailure | null): boolean {
+  return !entry || entry.consumed;
 }
 
 export function consumeRecentFailure(options?: {
@@ -107,11 +113,13 @@ export function showFailureToast(
     channels?: string[];
     toastId?: string | number;
     context?: FailureContext;
+    withCopy?: boolean;
     fallbackDescription?:
       | string
       | ((info: FailureInfo | null) => string | undefined);
   },
 ): FailureInfo | null {
+  const copyLabel = options?.withCopy === false ? "" : i18n.t("common.copy");
   const resolveFallback = (info: FailureInfo | null) =>
     typeof options?.fallbackDescription === "function"
       ? options.fallbackDescription(info)
@@ -129,12 +137,7 @@ export function showFailureToast(
   if (info?.cause === "cancelled") return info;
 
   if (!info) {
-    showErrorToast(
-      title,
-      resolveFallback(null),
-      i18n.t("common.copy"),
-      options?.toastId,
-    );
+    showErrorToast(title, resolveFallback(null), copyLabel, options?.toastId);
     return null;
   }
 
@@ -142,13 +145,7 @@ export function showFailureToast(
   const fallback = info.cause === "unknown" ? resolveFallback(info) : undefined;
   const text = fallback || described.text;
 
-  showErrorToast(
-    title,
-    text,
-    i18n.t("common.copy"),
-    options?.toastId,
-    described.technical,
-  );
+  showErrorToast(title, text, copyLabel, options?.toastId, described.technical);
 
   return info;
 }

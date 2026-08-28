@@ -1,4 +1,4 @@
-import { IFriendRequest } from "@renderer/components/Friends/Friends";
+import type { IFriendRequest } from "@/types/IFriend";
 import { ILocalFriend } from "@/types/ILocalFriend";
 import { IServerConf } from "@/types/Server";
 import { atom } from "jotai";
@@ -19,8 +19,8 @@ import {
   IVoiceCallState,
   IVoiceSessionState,
 } from "@/types/Voice";
-import { loadManualOrder } from "@renderer/utilities/versionOrganize";
 import { IAiLogAnalysis, ICrashUnresolvedPayload } from "@/types/AiAnalysis";
+import { CrashAnalysisPayload } from "@/types/CrashAnalysis";
 
 export const pathsAtom = atom<{
   launcher: string;
@@ -60,19 +60,23 @@ export function aiCrashKey(versionName: string, instance: number) {
 export const aiCrashesAtom = atom<Record<string, IAiCrashEntry>>({});
 export const aiCrashOpenKeyAtom = atom<string | null>(null);
 
+export interface ICrashAnalysisEntry {
+  analysis: CrashAnalysisPayload;
+  time: number;
+}
+
+export const crashAnalysesAtom = atom<Record<string, ICrashAnalysisEntry>>({});
+
 export const errorLogAtom = atom<IErrorLogEntry[]>([]);
 export const errorLogSeenAtom = atom(0);
 
 export const versionsAtom = atom<Version[]>([]);
 export const versionsLoadedAtom = atom(false);
-export const manualOrderAtom = atom<string[]>(loadManualOrder());
-export const addVersionModalAtom = atom(false);
+export const versionsUnreadableAtom = atom<string | null>(null);
 export const fileDragOverAtom = atom(false);
-export const addVersionImportPathAtom = atom<string | null>(null);
 export const installActiveAtom = atom(false);
-export const accountsModalAtom = atom(false);
-export const storageModalAtom = atom(false);
 export const accountsAtom = atom<ILocalAccount[]>([]);
+export const accountsUnreadableAtom = atom(false);
 export const internetAtom = atom(true);
 export const backendOnlineAtom = atom(true);
 export const networkAtom = backendOnlineAtom;
@@ -122,10 +126,16 @@ export const isFriendsConnectedAtom = atom<boolean>(false);
 export const voiceSessionAtom = atom<IVoiceSessionState>(INITIAL_VOICE_SESSION);
 export const voiceSessionMetaAtom = selectAtom(
   voiceSessionAtom,
-  (session) => ({ state: session.state, roomId: session.roomId }),
-  (a, b) => a.state === b.state && a.roomId === b.roomId,
+  (session) => ({
+    state: session.state,
+    roomId: session.roomId,
+    roomName: session.roomName,
+  }),
+  (a, b) =>
+    a.state === b.state && a.roomId === b.roomId && a.roomName === b.roomName,
 );
 export const groupsAtom = atom<IGroup[]>([]);
+export const groupsLoadFailedAtom = atom(false);
 export const groupInvitesAtom = atom<IGroupInvite[]>([]);
 const GROUP_UNREADS_STORAGE_KEY = "groups.unreads";
 

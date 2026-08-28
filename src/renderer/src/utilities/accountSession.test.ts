@@ -162,6 +162,58 @@ describe("ensureAccountSession", () => {
       "discord_player",
     );
   });
+
+  it("keeps the previous refresh token when the provider returns none", async () => {
+    const api = {
+      auth: {
+        discordRefresh: vi.fn().mockResolvedValue({
+          accessToken: "fresh-token",
+        }),
+      },
+      accounts: {
+        save: vi.fn().mockResolvedValue(undefined),
+      },
+    };
+    const { ensureAccountSession } = await loadAccountSession(api);
+
+    const result = await ensureAccountSession({
+      accounts: [account],
+      authData: expiredAuth,
+      selectedAccount: account,
+      setAccounts: vi.fn(),
+      setSelectedAccount: vi.fn(),
+    });
+
+    expect(result.account.refreshToken).toBe("expired-refresh-token");
+  });
+
+  it("remembers the account by identity, not by nickname", async () => {
+    const api = {
+      auth: {
+        discordRefresh: vi.fn().mockResolvedValue({
+          accessToken: "fresh-token",
+          refreshToken: "fresh-refresh-token",
+        }),
+      },
+      accounts: {
+        save: vi.fn().mockResolvedValue(undefined),
+      },
+    };
+    const { ensureAccountSession } = await loadAccountSession(api);
+
+    await ensureAccountSession({
+      accounts: [{ ...account, id: "68439daa908d64722032db98" }],
+      authData: expiredAuth,
+      selectedAccount: { ...account, id: "68439daa908d64722032db98" },
+      setAccounts: vi.fn(),
+      setSelectedAccount: vi.fn(),
+    });
+
+    expect(api.accounts.save).toHaveBeenCalledWith(
+      expect.anything(),
+      "68439daa908d64722032db98",
+    );
+  });
 });
 
 describe("offline launches", () => {

@@ -12,6 +12,25 @@ export const FORBIDDEN_VERSION_NAME_SYMBOLS = [
 
 const WINDOWS_RESERVED_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 
+const PICTOGRAPHIC = /\p{Extended_Pictographic}/u;
+const PICTOGRAPHIC_ALLOWED = new Set(["©", "®", "™"]);
+const EMOJI_JOINERS = new Set([0x200d, 0x20e3, 0xfe0f, 0xfe0e]);
+
+export function unsupportedNameCharacters(value: string): string[] {
+  const found: string[] = [];
+
+  for (const char of value) {
+    const code = char.codePointAt(0) ?? 0;
+    if (PICTOGRAPHIC_ALLOWED.has(char)) continue;
+    if (code <= 0xffff && !EMOJI_JOINERS.has(code) && !PICTOGRAPHIC.test(char)) {
+      continue;
+    }
+    if (!found.includes(char)) found.push(char);
+  }
+
+  return found;
+}
+
 function hasControlCharacter(value: string): boolean {
   for (const char of value) {
     const code = char.codePointAt(0) ?? 0;

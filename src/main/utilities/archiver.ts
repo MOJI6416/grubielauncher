@@ -11,6 +11,7 @@ const MAX_ARCHIVE_ENTRIES = 100_000;
 const MAX_ENTRY_BYTES = 256 * 1024 * 1024;
 const MAX_TOTAL_UNCOMPRESSED_BYTES = 4 * 1024 * 1024 * 1024;
 const MAX_COMPRESSION_RATIO = 200;
+const MIN_RATIO_CHECK_BYTES = 4 * 1024 * 1024;
 
 export interface ArchiveLimits {
   maxArchiveBytes?: number;
@@ -30,7 +31,11 @@ function validateEntry(entry: zip.IZipEntry): void {
     throw new Error(`Invalid compressed zip entry: "${entry.entryName}"`);
   }
 
-  if (compressedSize > 0 && size / compressedSize > MAX_COMPRESSION_RATIO) {
+  if (
+    size >= MIN_RATIO_CHECK_BYTES &&
+    compressedSize > 0 &&
+    size / compressedSize > MAX_COMPRESSION_RATIO
+  ) {
     throw new Error(`Suspicious zip compression ratio: "${entry.entryName}"`);
   }
 }
@@ -85,12 +90,14 @@ export async function extractEntries(
   entries: zip.IZipEntry[],
   resolveTargetPath: (entryName: string) => string,
   limits?: ArchiveLimits,
+  shouldSkipEntry?: (entryName: string) => boolean,
 ): Promise<void> {
   validateEntries(entries, limits);
   const targets = new Map<string, zip.IZipEntry>();
   const directories: string[] = [];
 
   for (const entry of entries) {
+    if (shouldSkipEntry?.(entry.entryName)) continue;
     const targetPath = resolveTargetPath(entry.entryName);
     if (entry.isDirectory) {
       directories.push(targetPath);
@@ -178,11 +185,18 @@ export function getArchiveEntryName(
   return normalized;
 }
 
+export interface ArchiveExtraEntry {
+  name: string;
+  data: Buffer;
+}
+
 export async function createZipArchive(
   files: string[],
   outputPath: string,
   basePath?: string,
   compressionLevel = 9,
+  shouldSkipEntry?: (entryName: string) => boolean,
+  extraEntries?: readonly ArchiveExtraEntry[],
 ): Promise<void> {
   await fs.ensureDir(path.dirname(outputPath));
   const output = fs.createWriteStream(outputPath);
@@ -217,14 +231,26 @@ export async function createZipArchive(
       for (const file of files) {
         if (await fs.pathExists(file)) {
           const entryName = getArchiveEntryName(file, basePath);
+          if (shouldSkipEntry?.(entryName)) continue;
+
           const stats = await fs.lstat(file);
 
           if (stats.isDirectory()) {
-            archive.directory(file, entryName);
+            archive.directory(file, entryName, (data) =>
+              shouldSkipEntry?.(
+                path.posix.join(entryName, data.name.replace(/\\/g, "/")),
+              )
+                ? false
+                : data,
+            );
           } else {
             archive.file(file, { name: entryName });
           }
         }
+      }
+
+      for (const extra of extraEntries ?? []) {
+        archive.append(extra.data, { name: extra.name });
       }
 
       await archive.finalize();
@@ -236,6 +262,7 @@ export async function extractZip(
   zipPath: string,
   destination: string,
   limits?: ArchiveLimits,
+  shouldSkipEntry?: (entryName: string) => boolean,
 ): Promise<void> {
   const zipFile = await openArchive(zipPath, limits);
 
@@ -245,5 +272,6 @@ export async function extractZip(
     zipFile.getEntries(),
     (entryName) => getSafeExtractPath(destination, entryName),
     limits,
+    shouldSkipEntry,
   );
 }

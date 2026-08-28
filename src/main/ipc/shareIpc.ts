@@ -106,21 +106,6 @@ export function registerShareIpc() {
   )
 
   handleSafe(
-    'share:requestJoinTicket',
-    {
-      ok: false,
-      error: {
-        code: 'unknown',
-        message: 'Failed to request join ticket',
-      },
-    },
-    [check.nonEmptyString(128)],
-    async (_, slug: string) => {
-      return await lanShareService.requestJoinTicket(slug)
-    },
-  )
-
-  handleSafe(
     'share:connectToFriendShare',
     {
       ok: false,

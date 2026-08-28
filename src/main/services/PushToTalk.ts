@@ -1,6 +1,6 @@
 import { BrowserWindow } from "electron";
 import { uIOhook, UiohookKey } from "uiohook-napi";
-import { VoicePttBind } from "@/types/Settings";
+import { VoicePttCapture } from "@/types/Settings";
 
 type PttInput = {
   type: "key" | "mouse";
@@ -18,7 +18,7 @@ let listenersAttached = false;
 let hookStarted = false;
 let activeBind: PttInput | null = null;
 let isPressed = false;
-let captureResolve: ((bind: VoicePttBind | null) => void) | null = null;
+let captureResolve: ((result: VoicePttCapture) => void) | null = null;
 let captureTimeout: NodeJS.Timeout | null = null;
 
 function labelFor(input: PttInput): string {
@@ -40,21 +40,21 @@ function broadcast(channel: string) {
   }
 }
 
-function finishCapture(bind: VoicePttBind | null) {
+function finishCapture(result: VoicePttCapture) {
   const resolve = captureResolve;
   captureResolve = null;
   if (captureTimeout) {
     clearTimeout(captureTimeout);
     captureTimeout = null;
   }
-  resolve?.(bind);
+  resolve?.(result);
   maybeStopHook();
 }
 
 function handleDown(input: PttInput) {
   if (captureResolve) {
     if (input.type === "key" && input.code === UiohookKey.Escape) {
-      finishCapture(null);
+      finishCapture({ reason: "cancelled", bind: null });
       return;
     }
     if (input.type === "mouse" && input.code < MIN_CAPTURE_MOUSE_BUTTON) {
@@ -62,9 +62,12 @@ function handleDown(input: PttInput) {
     }
 
     finishCapture({
-      type: input.type,
-      code: input.code,
-      label: labelFor(input),
+      reason: "captured",
+      bind: {
+        type: input.type,
+        code: input.code,
+        label: labelFor(input),
+      },
     });
     return;
   }
@@ -150,21 +153,24 @@ export function setPttBind(bind: PttInput | null): boolean {
   return ensureHook();
 }
 
-export function capturePttBind(): Promise<VoicePttBind | null> {
-  if (captureResolve) finishCapture(null);
+export function capturePttBind(): Promise<VoicePttCapture> {
+  if (captureResolve) finishCapture({ reason: "cancelled", bind: null });
 
   if (!ensureHook()) {
-    return Promise.resolve(null);
+    return Promise.resolve({ reason: "unavailable", bind: null });
   }
 
   return new Promise((resolve) => {
     captureResolve = resolve;
-    captureTimeout = setTimeout(() => finishCapture(null), CAPTURE_TIMEOUT_MS);
+    captureTimeout = setTimeout(
+      () => finishCapture({ reason: "timeout", bind: null }),
+      CAPTURE_TIMEOUT_MS,
+    );
   });
 }
 
 export function disposePushToTalk() {
-  if (captureResolve) finishCapture(null);
+  if (captureResolve) finishCapture({ reason: "cancelled", bind: null });
   activeBind = null;
   isPressed = false;
 

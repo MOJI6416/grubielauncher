@@ -1,36 +1,29 @@
 import { IAccountConf } from "@/types/Account";
-import { ipcMain } from "electron";
+import { check, handleSafe } from "../utilities/ipc";
 import {
   loadAccountsConfig,
   mergeIncomingAccounts,
   mutateAccountsConfig,
 } from "../utilities/accounts";
 
-export function registerAccountsIpc() {
-  ipcMain.removeHandler("accounts:load");
-  ipcMain.removeHandler("accounts:save");
+const MAX_ACCOUNTS = 256;
 
-  ipcMain.handle("accounts:load", async () => {
+export function registerAccountsIpc() {
+  handleSafe<IAccountConf | null>("accounts:load", null, async () => {
     return await loadAccountsConfig();
   });
 
-  ipcMain.handle(
+  handleSafe<boolean, [IAccountConf["accounts"], string | null]>(
     "accounts:save",
-    async (
-      _,
-      accounts: IAccountConf["accounts"],
-      lastPlayed: string | null,
-    ) => {
-      if (
-        !Array.isArray(accounts) ||
-        (lastPlayed !== null && typeof lastPlayed !== "string")
-      ) {
-        throw new Error("Invalid accounts payload");
-      }
-
+    false,
+    [
+      check.arrayOf(check.object(), MAX_ACCOUNTS),
+      check.optional(check.string(512)),
+    ],
+    async (_, accounts, lastPlayed) => {
       await mutateAccountsConfig((current) => ({
         accounts: mergeIncomingAccounts(current.accounts, accounts),
-        lastPlayed,
+        lastPlayed: lastPlayed ?? null,
       }));
 
       return true;

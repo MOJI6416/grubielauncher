@@ -28,4 +28,5 @@ export interface GameInviteResult {
   code?: string;
   recipientId?: string;
   inviteId?: string;
+  notified?: "telegram";
 }

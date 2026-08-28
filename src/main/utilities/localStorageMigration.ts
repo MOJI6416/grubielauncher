@@ -5,7 +5,9 @@ import path from "path";
 const PENDING_FILE = "app-origin-localstorage.json";
 const DONE_FILE = "app-origin-localstorage.done";
 const PROBE_FILE = "legacy-origin-probe.html";
+const ATTEMPTS_FILE = "app-origin-localstorage.attempts";
 const PROBE_TIMEOUT_MS = 5000;
+const MAX_PROBE_ATTEMPTS = 3;
 
 let dumpRunning = false;
 let migrationSettled = false;
@@ -32,6 +34,16 @@ function getPendingPath() {
 
 function getDonePath() {
   return path.join(app.getPath("userData"), DONE_FILE);
+}
+
+function getAttemptsPath() {
+  return path.join(app.getPath("userData"), ATTEMPTS_FILE);
+}
+
+async function readFailedAttempts(): Promise<number> {
+  const raw = await fs.readFile(getAttemptsPath(), "utf-8").catch(() => "");
+  const attempts = Number.parseInt(raw.trim(), 10);
+  return Number.isSafeInteger(attempts) && attempts > 0 ? attempts : 0;
 }
 
 export async function prepareLegacyLocalStorageDump(): Promise<void> {
@@ -74,8 +86,21 @@ export async function prepareLegacyLocalStorageDump(): Promise<void> {
     } else {
       await fs.writeFile(donePath, "");
     }
-  } catch {
-    await fs.writeFile(donePath, "").catch(() => {});
+
+    await fs.remove(getAttemptsPath()).catch(() => {});
+  } catch (error) {
+    const attempts = (await readFailedAttempts()) + 1;
+    console.error(
+      `[migration] the legacy localStorage probe failed (attempt ${attempts} of ${MAX_PROBE_ATTEMPTS}):`,
+      error,
+    );
+
+    if (attempts >= MAX_PROBE_ATTEMPTS) {
+      await fs.writeFile(donePath, "").catch(() => {});
+      await fs.remove(getAttemptsPath()).catch(() => {});
+    } else {
+      await fs.writeFile(getAttemptsPath(), String(attempts)).catch(() => {});
+    }
   } finally {
     probeWindow?.destroy();
     setTimeout(() => {

@@ -167,8 +167,6 @@ export enum ModLoaderType {
   'NeoForge' = 6
 }
 
-export type ModType = 'mod' | 'resourcepack' | 'shader' | 'modpack'
-
 export enum ModTypeClassIds {
   'mod' = 6,
   'resourcepack' = 12,
@@ -197,16 +195,6 @@ export interface IPagination {
   pageSize: number
   resultCount: number
   totalCount: number
-}
-
-export interface IGetModFilesResponse {
-  data: IFile[]
-  pagination: IPagination
-}
-
-export interface GetModsByIdsListRequestBody {
-  modIds: number[]
-  filterPcOnly: boolean | null
 }
 
 export interface IModpack {

@@ -1,5 +1,5 @@
 import { CrashRule, CrashRuleMessages } from "@/types/CrashAnalysis";
-import { redactSecrets } from "./logSanitizer";
+import { redactSecrets } from "@/shared/logSanitizer";
 
 export const BUILT_IN_CRASH_RULES: CrashRule[] = [
   {
@@ -1261,7 +1261,7 @@ export interface CrashPattern {
 export type CrashPatternVerdict = (pattern: string, flags: string) => boolean;
 
 export function crashPatternKey(pattern: string, flags: string): string {
-  return `${flags} ${pattern}`;
+  return `${flags}\u0000${pattern}`;
 }
 
 function rulePatternList(rule: CrashRule): string[] {

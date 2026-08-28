@@ -1,3 +1,4 @@
+import { pingServer, type ServerPingResult } from '../utilities/serverPing'
 import { ILocalAccount } from '@/types/Account'
 import { IVersionConf } from '@/types/IVersion'
 import {
@@ -9,12 +10,16 @@ import {
 import {
   ServerGame,
   getServerRunStatus,
+  hasRunningServers,
+  sendServerCommand,
   startServer,
+  stopAllServers,
   stopServer
 } from '../game/Server'
 import {
   getServerSettings,
   getServersOfVersions,
+  readServerRunOptions,
   replaceXmxParameter,
   setServerAikarFlags,
   updateServerProperty
@@ -25,8 +30,12 @@ import { Loader } from '@/types/Loader'
 import { Server } from '../services/Server'
 import { compareServers } from '../utilities/serverList'
 import { check, handleSafe } from '../utilities/ipc'
+import { tryBeginInstallOperation } from './installLock'
+import { resumeDownloads } from '../utilities/downloader'
+import { VERSION_INSTALL_CANCELLED } from '@/types/InstallationProgress'
 import { assertReadablePath, assertWritablePath } from '../utilities/safePath'
 import { isPortAvailable } from '../utilities/portCheck'
+import { getLanAddress } from '../utilities/lanAddress'
 
 const isPath = check.nonEmptyString(4096)
 const isConf = check.object()
@@ -36,7 +45,7 @@ const isLoader = check.oneOf('vanilla', 'forge', 'neoforge', 'fabric', 'quilt')
 
 export function registerServerIpc() {
   handleSafe<
-    { success: boolean; error?: string },
+    { success: boolean; error?: string; cancelled?: boolean },
     [
       ILocalAccount | undefined,
       number,
@@ -71,24 +80,50 @@ export function registerServerIpc() {
       assertWritablePath(versionPath, 'server:install')
       assertWritablePath(serverPath, 'server:install')
 
-      const installer = new ServerGame(
-        account,
-        downloadLimit,
-        versionPath,
-        serverPath,
-        conf,
-        versionConf
-      )
+      let installer: ServerGame | null = null
+      const lock = tryBeginInstallOperation(() => installer?.cancel())
+
+      if (!lock) {
+        return {
+          success: false,
+          error: 'Another installation operation is already running.'
+        }
+      }
+
+      resumeDownloads()
 
       try {
-        await installer.install(options)
+        installer = new ServerGame(
+          account,
+          downloadLimit,
+          versionPath,
+          serverPath,
+          conf,
+          versionConf
+        )
+
+        await installer.install({ ...options, signal: lock.controller.signal })
         return { success: true }
       } catch (error) {
+        if (
+          lock.controller.signal.aborted ||
+          (error instanceof Error && error.message === 'AbortError')
+        ) {
+          return {
+            success: false,
+            cancelled: true,
+            error: VERSION_INSTALL_CANCELLED
+          }
+        }
+
         console.error('[server:install] failed:', error)
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error)
         }
+      } finally {
+        resumeDownloads()
+        lock.end()
       }
     }
   )
@@ -123,36 +158,33 @@ export function registerServerIpc() {
     }
   )
 
-  handleSafe<IServerSettings, [string]>(
+  handleSafe<IServerSettings | null, [string]>(
     'server:getSettings',
-    {
-      maxPlayers: 20,
-      gameMode: 'survival',
-      difficulty: 'normal',
-      whitelist: false,
-      onlineMode: true,
-      pvp: true,
-      enableCommandBlock: false,
-      allowFlight: false,
-      spawnAnimals: true,
-      spawnMonsters: true,
-      spawnNpcs: true,
-      allowNether: true,
-      forceGamemode: false,
-      spawnProtection: 16,
-      requireResourcePack: false,
-      resourcePack: '',
-      resourcePackPrompt: '',
-      motd: '',
-      serverIp: '',
-      serverPort: 25565
-    },
+    null,
     [isPath],
     async (_, filePath) => {
       assertReadablePath(filePath, 'server:getSettings')
       return await getServerSettings(filePath)
     }
   )
+
+  handleSafe<
+    { memory: number | null; aikarFlags: boolean | null },
+    [string]
+  >(
+    'server:runOptions',
+    { memory: null, aikarFlags: null },
+    [isPath],
+    async (_, serverPath) => {
+      assertReadablePath(serverPath, 'server:runOptions')
+      return await readServerRunOptions(serverPath)
+    }
+  )
+
+  handleSafe<boolean, []>('server:stopAll', false, [], async () => {
+    await stopAllServers()
+    return !hasRunningServers()
+  })
 
   handleSafe<ServerRunResult, [string]>(
     'server:start',
@@ -174,9 +206,23 @@ export function registerServerIpc() {
     }
   )
 
+  handleSafe<ServerRunResult, [string, string]>(
+    'server:command',
+    { ok: false, error: 'server_command_failed' },
+    [isPath, check.nonEmptyString(512)],
+    async (_, serverPath, command) => {
+      assertWritablePath(serverPath, 'server:command')
+      return await sendServerCommand(serverPath, command)
+    }
+  )
+
+  handleSafe<string | null, []>('server:lanAddress', null, [], () =>
+    getLanAddress()
+  )
+
   handleSafe<ServerRunStatus, [string]>(
     'server:runStatus',
-    { serverPath: '', state: 'stopped', pid: null, log: [] },
+    { serverPath: '', state: 'stopped', pid: null, startedAt: null, log: [] },
     [isPath],
     async (_, serverPath) => {
       assertReadablePath(serverPath, 'server:runStatus')
@@ -197,8 +243,7 @@ export function registerServerIpc() {
     [isPath, check.number()],
     async (_, serverPath, memory) => {
       assertWritablePath(serverPath, 'server:editXmx')
-      await replaceXmxParameter(serverPath, `${memory}M`)
-      return true
+      return await replaceXmxParameter(serverPath, `${memory}M`)
     }
   )
 
@@ -208,8 +253,7 @@ export function registerServerIpc() {
     [isPath, check.boolean()],
     async (_, serverPath, enabled) => {
       assertWritablePath(serverPath, 'server:setAikar')
-      await setServerAikarFlags(serverPath, enabled)
-      return true
+      return await setServerAikarFlags(serverPath, enabled)
     }
   )
 
@@ -231,6 +275,15 @@ export function registerServerIpc() {
     async (_, p) => {
       assertReadablePath(p, 'servers:read')
       return await readNBT(p)
+    }
+  )
+
+  handleSafe<ServerPingResult, [string]>(
+    'servers:ping',
+    { online: false },
+    [check.nonEmptyString(512)],
+    async (_, address) => {
+      return await pingServer(address)
     }
   )
 

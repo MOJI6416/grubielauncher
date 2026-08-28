@@ -1,13 +1,28 @@
 import {
   DirectUploadCompleteResponse,
   DirectUploadStartResponse,
+  IExplorePage,
+  IExploreQuery,
   IModpack,
   IModpackUpdate,
   UploadFileProgress,
 } from "@/types/Backend";
-import { IFriendSettingsUpdate, IUpdateUser, IUser } from "@/types/IUser";
+import { IPublicProfile } from "@/types/Profile";
+import {
+  IFriendSettingsUpdate,
+  IMutualFriends,
+  INotificationPrefs,
+  IUpdateUser,
+  IUser,
+} from "@/types/IUser";
 import { BaseService } from "./Base";
-import { INews, ISponsoredNewsAd } from "@/types/News";
+import { INews, INewsPage, ISponsoredNewsAd } from "@/types/News";
+import { IUpdateCheckRequest, IUpdateCheckResponse } from "@/types/Updates";
+import {
+  IAchievementReach,
+  IGlobalLeaderboard,
+  IOwnLeaderboardRank,
+} from "@/types/Leaderboard";
 import { IGrubieSkin } from "@/types/SkinManager";
 import {
   IGuestStatsUploadRequest,
@@ -28,7 +43,11 @@ import {
   IAiLogRequest,
 } from "@/types/AiAnalysis";
 import { IAuthlib } from "@/types/IAuthlib";
-import { ILauncherReleaseNote } from "@/types/LauncherRelease";
+import { RemoteAiChat, RemoteAiChatMessage } from "@/types/Agent";
+import {
+  ILauncherReleaseNote,
+  ILauncherReleasePage,
+} from "@/types/LauncherRelease";
 import { IGroup, IVoiceTokenResponse } from "@/types/Voice";
 import {
   ActiveFriendSharesResponse,
@@ -162,115 +181,134 @@ export class Backend extends BaseService {
     } catch (error: any) {
       if (error.response && error.response.status === 404) {
         return { status: "not_found", data: null };
-      } else {
-        return { status: "error", data: null };
+      }
+
+      throw error;
+    }
+  }
+
+  async exploreModpacks(query: IExploreQuery): Promise<IExplorePage | null> {
+    const response = await this.api.get<IExplorePage>(
+      `${this.baseUrl}/modpacks/explore`,
+      {
+        params: {
+          offset: query.offset,
+          limit: query.limit,
+          sort: query.sort,
+          q: query.q || undefined,
+          loader: query.loader || undefined,
+          mc: query.mc || undefined,
+        },
+      },
+    );
+
+    return response.data;
+  }
+
+  async getPublicProfile(
+    nickname: string,
+    userId?: string,
+  ): Promise<IPublicProfile | null> {
+    if (userId) {
+      try {
+        const byId = await this.api.get<IPublicProfile>(
+          `${this.baseUrl}/profiles/id/${encodeURIComponent(userId)}`,
+        );
+        return byId.data;
+      } catch (error: any) {
+        if (error?.response?.status !== 404) throw error;
       }
     }
+
+    const response = await this.api.get<IPublicProfile>(
+      `${this.baseUrl}/profiles/${encodeURIComponent(nickname)}`,
+    );
+
+    return response.data;
   }
 
   async getOwnModpacks(): Promise<IModpack[]> {
-    try {
-      const response = await this.api.get<IModpack[]>(
-        `${this.baseUrl}/modpacks/own`,
-      );
-      return response.data;
-    } catch {
-      return [];
-    }
+    const response = await this.api.get<IModpack[]>(
+      `${this.baseUrl}/modpacks/own`,
+    );
+    return response.data;
   }
 
   async deleteModpack(shareCode: string) {
-    try {
-      await this.api.delete(`${this.baseUrl}/modpacks/${shareCode}`);
-      return true;
-    } catch {
-      return false;
-    }
+    await this.api.delete(`${this.baseUrl}/modpacks/${shareCode}`);
+    return true;
   }
 
   async updateUser(id: string, user: IUpdateUser) {
-    try {
-      const response = await this.api.patch<IUser>(
-        `${this.baseUrl}/users/${id}`,
-        user,
-      );
+    const response = await this.api.patch<IUser>(
+      `${this.baseUrl}/users/${id}`,
+      user,
+    );
 
-      return response.data;
-    } catch (error) {
-      return null;
-    }
+    return response.data;
   }
 
   async getUser(id: string) {
-    try {
-      const response = await this.api.get<IUser>(`${this.baseUrl}/users/` + id);
+    const response = await this.api.get<IUser>(`${this.baseUrl}/users/` + id);
 
-      return response.data;
-    } catch {
-      return null;
-    }
+    return response.data;
+  }
+
+  async getMutualFriends(id: string) {
+    const response = await this.api.get<IMutualFriends>(
+      `${this.baseUrl}/users/${id}/mutual-friends`,
+    );
+
+    return response.data;
   }
 
   async groupsList() {
-    try {
-      const response = await this.api.get<IGroup[]>(`${this.baseUrl}/groups`);
+    const response = await this.api.get<IGroup[]>(`${this.baseUrl}/groups`);
 
-      return response.data;
-    } catch {
-      return null;
-    }
+    return response.data;
   }
 
   async groupCreate(name: string) {
-    try {
-      const response = await this.api.post<IGroup>(`${this.baseUrl}/groups`, {
-        name,
-      });
+    const response = await this.api.post<IGroup>(`${this.baseUrl}/groups`, {
+      name,
+    });
 
-      return response.data;
-    } catch {
-      return null;
-    }
+    return response.data;
   }
 
   async groupRename(groupId: string, name: string) {
-    try {
-      const response = await this.api.patch<IGroup>(
-        `${this.baseUrl}/groups/${groupId}`,
-        { name },
-      );
+    const response = await this.api.patch<IGroup>(
+      `${this.baseUrl}/groups/${groupId}`,
+      { name },
+    );
 
-      return response.data;
-    } catch {
-      return null;
-    }
+    return response.data;
   }
 
   async groupDelete(groupId: string) {
-    try {
-      await this.api.delete(`${this.baseUrl}/groups/${groupId}`);
+    await this.api.delete(`${this.baseUrl}/groups/${groupId}`);
 
-      return true;
-    } catch {
-      return false;
-    }
+    return true;
   }
 
   async groupJoinVoice(groupId: string) {
-    try {
-      const response = await this.api.post<IVoiceTokenResponse>(
-        `${this.baseUrl}/groups/${groupId}/join`,
-      );
+    const response = await this.api.post<IVoiceTokenResponse>(
+      `${this.baseUrl}/groups/${groupId}/join`,
+    );
 
-      return response.data;
-    } catch {
-      return null;
-    }
+    return response.data;
   }
 
   async groupJoinByCode(
     code: string,
-  ): Promise<IGroup | "banned" | "group_full" | "rate_limited" | null> {
+  ): Promise<
+    | IGroup
+    | "banned"
+    | "group_full"
+    | "rate_limited"
+    | "not_found"
+    | "invalid_code"
+  > {
     try {
       const response = await this.api.post<IGroup>(
         `${this.baseUrl}/groups/join-by-code`,
@@ -283,103 +321,73 @@ export class Backend extends BaseService {
       if (message === "banned") return "banned";
       if (message === "group_full") return "group_full";
       if (message === "rate_limited") return "rate_limited";
-      return null;
+      if (message === "group_not_found") return "not_found";
+      if (message === "invalid_code") return "invalid_code";
+      throw error;
     }
   }
 
   async groupLeave(groupId: string) {
-    try {
-      await this.api.post(`${this.baseUrl}/groups/${groupId}/leave`);
+    await this.api.post(`${this.baseUrl}/groups/${groupId}/leave`);
 
-      return true;
-    } catch {
-      return false;
-    }
+    return true;
   }
 
   async groupKickMember(groupId: string, memberId: string) {
-    try {
-      await this.api.delete(
-        `${this.baseUrl}/groups/${groupId}/members/${memberId}`,
-      );
+    await this.api.delete(
+      `${this.baseUrl}/groups/${groupId}/members/${memberId}`,
+    );
 
-      return true;
-    } catch {
-      return false;
-    }
+    return true;
   }
 
   async groupBanMember(groupId: string, memberId: string) {
-    try {
-      await this.api.post(
-        `${this.baseUrl}/groups/${groupId}/members/${memberId}/ban`,
-      );
+    await this.api.post(
+      `${this.baseUrl}/groups/${groupId}/members/${memberId}/ban`,
+    );
 
-      return true;
-    } catch {
-      return false;
-    }
+    return true;
   }
 
   async groupTransferOwner(groupId: string, memberId: string) {
-    try {
-      await this.api.post(
-        `${this.baseUrl}/groups/${groupId}/owner/${memberId}`,
-      );
+    await this.api.post(
+      `${this.baseUrl}/groups/${groupId}/owner/${memberId}`,
+    );
 
-      return true;
-    } catch {
-      return false;
-    }
+    return true;
   }
 
   async groupUnbanMember(groupId: string, memberId: string) {
-    try {
-      await this.api.delete(
-        `${this.baseUrl}/groups/${groupId}/bans/${memberId}`,
-      );
+    await this.api.delete(
+      `${this.baseUrl}/groups/${groupId}/bans/${memberId}`,
+    );
 
-      return true;
-    } catch {
-      return false;
-    }
+    return true;
   }
 
   async groupResetCode(groupId: string) {
-    try {
-      const response = await this.api.post<IGroup>(
-        `${this.baseUrl}/groups/${groupId}/code/reset`,
-      );
+    const response = await this.api.post<IGroup>(
+      `${this.baseUrl}/groups/${groupId}/code/reset`,
+    );
 
-      return response.data;
-    } catch {
-      return null;
-    }
+    return response.data;
   }
 
   async resetFriendCode(id: string) {
-    try {
-      const response = await this.api.post<IUser>(
-        `${this.baseUrl}/users/${id}/friend-code/reset`,
-      );
+    const response = await this.api.post<IUser>(
+      `${this.baseUrl}/users/${id}/friend-code/reset`,
+    );
 
-      return response.data;
-    } catch {
-      return null;
-    }
+    return response.data;
   }
 
   async updateFriendSettings(id: string, settings: IFriendSettingsUpdate) {
-    try {
-      const response = await this.api.patch<IUser>(
-        `${this.baseUrl}/users/${id}/friend-settings`,
-        settings,
-      );
+    const response = await this.api.patch<IUser>(
+      `${this.baseUrl}/users/${id}/friend-settings`,
+      settings,
+    );
 
-      return response.data;
-    } catch {
-      return null;
-    }
+    return response.data;
   }
 
   async uploadFileFromPath(
@@ -613,66 +621,108 @@ export class Backend extends BaseService {
   }
 
   async deleteFile(key: string, isDirectory = false) {
-    try {
-      await this.api.delete(`${this.baseUrl}/files`, {
-        data: { key, isDirectory },
-      });
-    } catch {}
+    await this.api.delete(`${this.baseUrl}/files`, {
+      data: { key, isDirectory },
+    });
   }
 
   async modpackDownloaded(shareCode: string) {
-    try {
-      const response = await this.api.patch<{
-        counted: boolean;
-        reason?: string;
-      }>(`${this.baseUrl}/modpacks/${shareCode}/downloaded`);
-      return response.data.counted;
-    } catch {
-      return false;
-    }
+    const response = await this.api.patch<{
+      counted: boolean;
+      reason?: string;
+    }>(`${this.baseUrl}/modpacks/${shareCode}/downloaded`);
+    return response.data.counted;
   }
 
   async getNews() {
-    try {
-      const response = await this.api.get<INews[]>(`${this.baseUrl}/news.json`);
-      return response.data;
-    } catch {
-      return [];
-    }
+    const response = await this.api.get<INews[]>(`${this.baseUrl}/news.json`);
+    return response.data;
+  }
+
+  async getNewsPage(params: {
+    limit?: number;
+    cursor?: string;
+    source?: string;
+  }): Promise<INewsPage | null> {
+    const response = await this.api.get<INewsPage>(`${this.baseUrl}/news`, {
+      params: {
+        ...(params.limit ? { limit: params.limit } : {}),
+        ...(params.cursor ? { cursor: params.cursor } : {}),
+        ...(params.source ? { source: params.source } : {}),
+      },
+    });
+    return response.data;
+  }
+
+  async checkUpdates(
+    request: IUpdateCheckRequest,
+  ): Promise<IUpdateCheckResponse | null> {
+    const response = await this.api.post<IUpdateCheckResponse>(
+      `${this.baseUrl}/updates/check`,
+      request,
+    );
+    return response.data;
+  }
+
+  async getGlobalLeaderboard(limit: number) {
+    const response = await this.api.get<IGlobalLeaderboard>(
+      `${this.baseUrl}/leaderboard`,
+      { params: { limit } },
+    );
+    return response.data;
+  }
+
+  async getOwnLeaderboardRank() {
+    const response = await this.api.get<IOwnLeaderboardRank | null>(
+      `${this.baseUrl}/leaderboard/me`,
+    );
+    return response.data;
+  }
+
+  async getAchievementReach() {
+    const response = await this.api.get<IAchievementReach>(
+      `${this.baseUrl}/leaderboard/achievements`,
+    );
+    return response.data;
   }
 
   async getWhatsNew(version: string, locale: string) {
-    try {
-      const response = await this.api.get<ILauncherReleaseNote | null>(
-        `${this.baseUrl}/launcher/releases/whats-new`,
-        {
-          params: {
-            version,
-            locale,
-          },
+    const response = await this.api.get<ILauncherReleaseNote | null>(
+      `${this.baseUrl}/launcher/releases/whats-new`,
+      {
+        params: {
+          version,
+          locale,
         },
-      );
-      return response.data;
-    } catch {
-      return null;
-    }
+      },
+    );
+    return response.data;
+  }
+
+  async getLauncherReleases(locale: string, limit: number) {
+    const response = await this.api.get<ILauncherReleasePage>(
+      `${this.baseUrl}/launcher/releases`,
+      {
+        params: {
+          locale,
+          limit,
+        },
+      },
+    );
+    return response.data;
   }
 
   async getSponsoredNewsAd(locale: string, hiddenIds: string[]) {
-    try {
-      const response = await this.api.get<ISponsoredNewsAd | null>(
-        `${this.baseUrl}/ads/feed`,
-        {
-          params: {
-            locale,
-            hidden: hiddenIds.join(","),
-          },
+    const response = await this.api.get<ISponsoredNewsAd | null>(
+      `${this.baseUrl}/ads/feed`,
+      {
+        params: {
+          locale,
+          hidden: hiddenIds.join(","),
         },
-      );
-      return response.data;
-    } catch {
-      return null;
-    }
+      },
+    );
+    return response.data;
   }
 
   async recordSponsoredAdImpression(id: string) {
@@ -711,76 +761,52 @@ export class Backend extends BaseService {
   }
 
   async approveSiteLogin(requestId: string) {
-    try {
-      await this.api.post(`${this.baseUrl}/site-auth/approve`, { requestId });
-      return true;
-    } catch {
-      return false;
-    }
+    await this.api.post(`${this.baseUrl}/site-auth/approve`, { requestId });
+    return true;
+  }
+
+  async declineSiteLogin(requestId: string) {
+    await this.api.post(`${this.baseUrl}/site-auth/decline`, { requestId });
+    return true;
   }
 
   async discordLink(code: string) {
-    try {
-      const response = await this.api.post<{
-        discordId: string;
-        username: string;
-      }>(`${this.baseUrl}/auth/discord/link`, { code });
-      return response.data;
-    } catch {
-      return null;
-    }
+    const response = await this.api.post<{
+      discordId: string;
+      username: string;
+    }>(`${this.baseUrl}/auth/discord/link`, { code });
+    return response.data;
   }
 
   async discordUnlink() {
-    try {
-      const response = await this.api.post<{
-        discordId: null;
-      }>(`${this.baseUrl}/auth/discord/unlink`, {});
-      return response.data;
-    } catch {
-      return null;
-    }
+    const response = await this.api.post<{
+      discordId: null;
+    }>(`${this.baseUrl}/auth/discord/unlink`, {});
+    return response.data;
   }
 
   async telegramLinkStart() {
-    try {
-      const response = await this.api.post<{
-        botUrl: string;
-        expiresAt: string;
-      }>(`${this.baseUrl}/auth/socials/telegram/start`, {});
-      return response.data;
-    } catch {
-      return null;
-    }
+    const response = await this.api.post<{
+      botUrl: string;
+      expiresAt: string;
+    }>(`${this.baseUrl}/auth/socials/telegram/start`, {});
+    return response.data;
   }
 
-  async socialLink(provider: string, code: string) {
-    try {
-      const response = await this.api.post<{
-        provider: string;
-        linked: { id: string; username?: string | null; login?: string };
-      }>(`${this.baseUrl}/auth/socials/${encodeURIComponent(provider)}/link`, {
-        code,
-      });
-      return response.data;
-    } catch {
-      return null;
-    }
+  async telegramUnlink() {
+    const response = await this.api.post<{
+      provider: string;
+      linked: null;
+    }>(`${this.baseUrl}/auth/socials/telegram/unlink`, {});
+    return response.data;
   }
 
-  async socialUnlink(provider: string) {
-    try {
-      const response = await this.api.post<{
-        provider: string;
-        linked: null;
-      }>(
-        `${this.baseUrl}/auth/socials/${encodeURIComponent(provider)}/unlink`,
-        {},
-      );
-      return response.data;
-    } catch {
-      return null;
-    }
+  async updateNotifications(id: string, prefs: Partial<INotificationPrefs>) {
+    const response = await this.api.patch<IUser>(
+      `${this.baseUrl}/users/${id}/notifications`,
+      prefs,
+    );
+    return response.data;
   }
 
   async getSkin(uuid: string) {
@@ -809,19 +835,95 @@ export class Backend extends BaseService {
   }
 
   async aiComplete(prompt: string) {
+    const response = await this.api.post<{ completion: string }>(
+      `${this.baseUrl}/ai/complete`,
+      {
+        prompt,
+      },
+      {
+        timeout: (this.api.defaults.timeout || 30000) * 2,
+      },
+    );
+    return response.data.completion;
+  }
+
+  async listAiChats(): Promise<RemoteAiChat[] | null> {
     try {
-      const response = await this.api.post<{ completion: string }>(
-        `${this.baseUrl}/ai/complete`,
-        {
-          prompt,
-        },
-        {
-          timeout: (this.api.defaults.timeout || 30000) * 2,
-        },
+      const response = await this.api.get<RemoteAiChat[]>(
+        `${this.baseUrl}/ai/chats`,
       );
-      return response.data.completion;
+      return Array.isArray(response.data) ? response.data : [];
     } catch {
       return null;
+    }
+  }
+
+  async createAiChat(payload: {
+    title: string;
+    provider?: string;
+    model?: string;
+  }): Promise<RemoteAiChat | null> {
+    try {
+      const response = await this.api.post<RemoteAiChat>(
+        `${this.baseUrl}/ai/chats`,
+        payload,
+      );
+      return response.data ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  async updateAiChat(
+    chatId: string,
+    payload: { title?: string; pinned?: boolean },
+  ): Promise<RemoteAiChat | null> {
+    try {
+      const response = await this.api.patch<RemoteAiChat>(
+        `${this.baseUrl}/ai/chats/${chatId}`,
+        payload,
+      );
+      return response.data ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  async deleteAiChat(chatId: string): Promise<boolean> {
+    try {
+      await this.api.delete(`${this.baseUrl}/ai/chats/${chatId}`);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async getAiChatMessages(
+    chatId: string,
+    after?: number,
+  ): Promise<RemoteAiChatMessage[] | null> {
+    try {
+      const response = await this.api.get<{ messages: RemoteAiChatMessage[] }>(
+        `${this.baseUrl}/ai/chats/${chatId}/messages`,
+        { params: Number.isFinite(after) ? { after } : undefined },
+      );
+      return response.data?.messages ?? [];
+    } catch {
+      return null;
+    }
+  }
+
+  async appendAiChatMessages(
+    chatId: string,
+    messages: RemoteAiChatMessage[],
+  ): Promise<boolean> {
+    try {
+      await this.api.post(`${this.baseUrl}/ai/chats/${chatId}/messages`, {
+        messages,
+      });
+      return true;
+    } catch {
+      return false;
     }
   }
 

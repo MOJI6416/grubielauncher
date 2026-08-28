@@ -18,7 +18,10 @@ export async function patchSettings(patch: Partial<TSettings>): Promise<void> {
     const settingsPath = await api.path.join(launcher, "settings.json");
     const next = { ...store.get(settingsAtom), ...patch };
 
-    await api.fs.writeJSON(settingsPath, next);
+    if (!(await api.fs.writeJSON(settingsPath, next))) {
+      throw new Error("settings.json was not written");
+    }
+
     store.set(settingsAtom, next);
   });
 

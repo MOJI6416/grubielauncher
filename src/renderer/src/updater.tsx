@@ -75,7 +75,7 @@ const App = () => {
 
       if (await api.fs.pathExists(settingsConfPath)) {
         try {
-          data = await api.fs.readJSON(settingsConfPath, "utf-8");
+          data = (await api.fs.readJSON(settingsConfPath, "utf-8")) ?? {};
         } catch {
           data = {};
         }

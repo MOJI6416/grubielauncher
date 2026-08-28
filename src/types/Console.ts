@@ -4,6 +4,7 @@ export interface IConsole {
   status: 'running' | 'stopped' | 'error'
   startTime: number
   trackStatistics?: boolean
+  account?: string
   messages: IConsoleMessage[]
   publicAddress?: string
 }

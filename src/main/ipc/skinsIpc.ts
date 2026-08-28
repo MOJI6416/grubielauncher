@@ -32,6 +32,22 @@ const isProfileNickname = check.pattern(/^[^\s/\\?#%&]{0,32}$/, 32)
 const skinsManagers = new Map<string, SkinsManager>()
 const getManagerKey = (platform: SkinPlatform, userId: string) => `${platform}_${userId}`
 
+const skinsLoadQueue = new Map<string, Promise<unknown>>()
+
+function queueSkinsLoad<T>(storeKey: string, task: () => Promise<T>): Promise<T> {
+  const previous = skinsLoadQueue.get(storeKey) ?? Promise.resolve()
+  const next = previous.catch(() => {}).then(task)
+
+  skinsLoadQueue.set(storeKey, next)
+  void next
+    .catch(() => {})
+    .then(() => {
+      if (skinsLoadQueue.get(storeKey) === next) skinsLoadQueue.delete(storeKey)
+    })
+
+  return next
+}
+
 function getManager(platform: unknown, userId: string): SkinsManager | null {
   const validPlatform = toSkinPlatform(platform)
   if (!validPlatform) return null
@@ -45,53 +61,40 @@ const backendApi = attachApiHostFallback(
   })
 )
 
-const emptySkinsData: SkinsData = {
-  skins: { skins: [] },
-  capes: [],
-  selectedSkin: null,
-  activeSkin: undefined,
-  activeCape: undefined,
-  activeModel: undefined
-}
-
-const emptyCatalog: CatalogListResult = {
-  items: [],
-  total: 0,
-  page: 1,
-  pageSize: 0
-}
-
 export function registerSkinsIpc() {
-  handleSafe<SkinsData, [string, SkinPlatform, string, string, string]>(
+  handleSafe<SkinsData | null, [string, SkinPlatform, string, string, string]>(
     'skins:load',
-    emptySkinsData,
+    null,
     [check.string(4096), isPlatform, isId, isId, check.string(32768)],
     async (_, launcherPath, platform, userId, nickname, accessToken) => {
       const validPlatform = toSkinPlatform(platform)
-      if (!validPlatform) return emptySkinsData
+      if (!validPlatform) return null
 
       assertWritablePath(launcherPath, 'skins:load')
       const key = getManagerKey(validPlatform, userId)
-      let manager = skinsManagers.get(key)
 
-      if (!manager) {
-        manager = new SkinsManager(
-          launcherPath,
-          validPlatform,
-          userId,
-          nickname,
-          accessToken
-        )
-        await manager.load()
-        skinsManagers.set(key, manager)
-      } else {
-        manager.refreshSession(nickname, accessToken)
-        if (manager.isProviderSyncStale(SKINS_PROVIDER_TTL_MS)) {
-          await manager.syncFromProvider()
+      return await queueSkinsLoad(launcherPath, async () => {
+        let manager = skinsManagers.get(key)
+
+        if (!manager) {
+          manager = new SkinsManager(
+            launcherPath,
+            validPlatform,
+            userId,
+            nickname,
+            accessToken
+          )
+          await manager.load()
+          skinsManagers.set(key, manager)
+        } else {
+          manager.refreshSession(nickname, accessToken)
+          if (manager.isProviderSyncStale(SKINS_PROVIDER_TTL_MS)) {
+            await manager.syncFromProvider()
+          }
         }
-      }
 
-      return manager.getData()
+        return manager.getData()
+      })
     }
   )
 
@@ -296,9 +299,9 @@ export function registerSkinsIpc() {
     }
   )
 
-  handleSafe<CatalogListResult, [CatalogListParams?]>(
+  handleSafe<CatalogListResult | null, [CatalogListParams?]>(
     'skins:catalogList',
-    emptyCatalog,
+    null,
     async (_, params) => {
       const response = await backendApi.get<CatalogListResult>(`/skins/catalog`, {
         params: {
@@ -419,9 +422,9 @@ export function registerSkinsIpc() {
     }
   )
 
-  handleSafe<MyCommunityResult, [string]>(
+  handleSafe<MyCommunityResult | null, [string]>(
     'skins:communityMine',
-    { items: [] },
+    null,
     async (_, backendToken) => {
       const response = await backendApi.get<MyCommunityResult>(`/skins/community/mine`,
         { headers: { Authorization: `Bearer ${backendToken}` } }

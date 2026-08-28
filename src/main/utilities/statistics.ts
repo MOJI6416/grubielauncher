@@ -7,6 +7,8 @@ import {
   IVersionSession,
   IVersionStatistics,
 } from "@/types/VersionStatistics";
+import { writeJsonAtomic } from "./atomicJson";
+import { reportFailure } from "./failureBus";
 
 type VersionAggregate = Omit<IVersionStatistics, "lastLaunched"> & {
   lastLaunched: string;
@@ -89,9 +91,138 @@ function sessionsPath(versionPath: string): string {
 
 async function atomicWriteJSON(file: string, data: unknown): Promise<void> {
   await fs.ensureDir(path.dirname(file));
-  const tmp = `${file}.${randomUUID()}.tmp`;
-  await fs.writeJSON(tmp, data, { spaces: 2 });
-  await fs.move(tmp, file, { overwrite: true });
+  await writeJsonAtomic(file, data);
+}
+
+async function tryWriteJSON(file: string, data: unknown): Promise<boolean> {
+  try {
+    await atomicWriteJSON(file, data);
+    return true;
+  } catch (error) {
+    console.error(`[statistics] ${file} could not be saved:`, error);
+    reportFailure(error, { channel: "statistics:writeFailed" });
+    return false;
+  }
+}
+
+function corruptedDir(): string {
+  return path.join(dataDir(), "corrupted");
+}
+
+function isMissingFileError(error: unknown): boolean {
+  return (error as NodeJS.ErrnoException | null)?.code === "ENOENT";
+}
+
+type LoadedFile =
+  | { state: "missing" }
+  | { state: "ok"; raw: string; value: unknown }
+  | { state: "corrupt"; raw: string | null; error: unknown };
+
+async function loadJSONFile(file: string): Promise<LoadedFile> {
+  let raw: string;
+  try {
+    raw = await fs.readFile(file, "utf-8");
+  } catch (error) {
+    if (isMissingFileError(error)) return { state: "missing" };
+    return { state: "corrupt", raw: null, error };
+  }
+
+  try {
+    return { state: "ok", raw, value: JSON.parse(raw) };
+  } catch (error) {
+    return { state: "corrupt", raw, error };
+  }
+}
+
+async function quarantineFile(file: string): Promise<string | null> {
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const target = path.join(corruptedDir(), `${path.basename(file)}.${stamp}`);
+
+  try {
+    await fs.ensureDir(corruptedDir());
+    await fs.move(file, target, { overwrite: true });
+    return target;
+  } catch {
+    return null;
+  }
+}
+
+function reportCorruption(
+  file: string,
+  error: unknown,
+  quarantined: string | null,
+): void {
+  console.error(
+    quarantined
+      ? `[statistics] ${file} is damaged, a copy was kept at ${quarantined}:`
+      : `[statistics] ${file} is damaged and could not be set aside, it stays untouched:`,
+    error,
+  );
+  reportFailure(error, { channel: "statistics:damagedFile" });
+}
+
+const SALVAGED_NUMBERS = [
+  "playTime",
+  "launches",
+  "longestSessionSec",
+  "crashes",
+] as const;
+const SALVAGED_DATES = ["lastLaunched", "firstLaunched"] as const;
+
+function salvageAggregate(raw: string | null): Partial<VersionAggregate> | null {
+  if (!raw) return null;
+  const salvaged: Partial<VersionAggregate> = {};
+
+  for (const field of SALVAGED_NUMBERS) {
+    const match = new RegExp(
+      `"${field}"\\s*:\\s*(\\d+(?:\\.\\d+)?)\\s*[,}]`,
+    ).exec(raw);
+    if (match) salvaged[field] = Number(match[1]);
+  }
+
+  for (const field of SALVAGED_DATES) {
+    const match = new RegExp(`"${field}"\\s*:\\s*"([^"]+)"`).exec(raw);
+    if (match) salvaged[field] = match[1];
+  }
+
+  return Object.keys(salvaged).length > 0 ? salvaged : null;
+}
+
+async function readAggregate(
+  file: string,
+): Promise<{ value: Partial<VersionAggregate> | null; writable: boolean }> {
+  const loaded = await loadJSONFile(file);
+
+  if (loaded.state === "missing") return { value: null, writable: true };
+  if (loaded.state === "ok") {
+    if (loaded.value && typeof loaded.value === "object" && !Array.isArray(loaded.value))
+      return { value: loaded.value as VersionAggregate, writable: true };
+    const quarantined = await quarantineFile(file);
+    reportCorruption(file, new Error("not an object"), quarantined);
+    return { value: null, writable: quarantined !== null };
+  }
+
+  const salvaged = salvageAggregate(loaded.raw);
+  const quarantined = await quarantineFile(file);
+  reportCorruption(file, loaded.error, quarantined);
+  if (!quarantined) return { value: null, writable: false };
+  return { value: salvaged, writable: true };
+}
+
+async function readJSONArray<T>(
+  file: string,
+): Promise<{ value: T[]; writable: boolean }> {
+  const loaded = await loadJSONFile(file);
+
+  if (loaded.state === "missing") return { value: [], writable: true };
+  if (loaded.state === "ok" && Array.isArray(loaded.value))
+    return { value: loaded.value as T[], writable: true };
+
+  const error =
+    loaded.state === "corrupt" ? loaded.error : new Error("not an array");
+  const quarantined = await quarantineFile(file);
+  reportCorruption(file, error, quarantined);
+  return { value: [], writable: quarantined !== null };
 }
 
 async function readJSONSafe<T>(file: string, fallback: T): Promise<T> {
@@ -138,9 +269,10 @@ function stopHeartbeatIfIdle(): void {
 
 async function enqueueSync(entry: IPlaytimeSyncEntry): Promise<void> {
   await withLock(syncQueuePath(), async () => {
-    const queue = await readJSONSafe<IPlaytimeSyncEntry[]>(syncQueuePath(), []);
-    queue.push(entry);
-    await atomicWriteJSON(syncQueuePath(), queue);
+    const queue = await readJSONArray<IPlaytimeSyncEntry>(syncQueuePath());
+    if (!queue.writable) return;
+    queue.value.push(entry);
+    await tryWriteJSON(syncQueuePath(), queue.value);
   });
 }
 
@@ -160,32 +292,32 @@ async function recordSession(
   if (!ctx.trackStatistics) return;
 
   await withLock(ctx.versionPath, async () => {
-    const agg = await readJSONSafe<VersionAggregate>(
-      statisticsPath(ctx.versionPath),
-      { playTime: 0, launches: 0, lastLaunched: session.endedAt },
-    );
+    const aggregate = await readAggregate(statisticsPath(ctx.versionPath));
 
-    const next: VersionAggregate = {
-      playTime: (agg.playTime || 0) + session.durationSec,
-      launches: (agg.launches || 0) + 1,
-      lastLaunched: session.endedAt,
-      firstLaunched: agg.firstLaunched || session.startedAt,
-      longestSessionSec: Math.max(
-        agg.longestSessionSec || 0,
-        session.durationSec,
-      ),
-      crashes: (agg.crashes || 0) + (session.crashed ? 1 : 0),
-    };
-    await atomicWriteJSON(statisticsPath(ctx.versionPath), next);
+    if (aggregate.writable) {
+      const agg = aggregate.value ?? {};
+      const next: VersionAggregate = {
+        playTime: (agg.playTime || 0) + session.durationSec,
+        launches: (agg.launches || 0) + 1,
+        lastLaunched: session.endedAt,
+        firstLaunched: agg.firstLaunched || session.startedAt,
+        longestSessionSec: Math.max(
+          agg.longestSessionSec || 0,
+          session.durationSec,
+        ),
+        crashes: (agg.crashes || 0) + (session.crashed ? 1 : 0),
+      };
+      await tryWriteJSON(statisticsPath(ctx.versionPath), next);
+    }
 
-    const sessions = await readJSONSafe<IVersionSession[]>(
+    const sessions = await readJSONArray<IVersionSession>(
       sessionsPath(ctx.versionPath),
-      [],
     );
-    sessions.push(session);
-    await atomicWriteJSON(
+    if (!sessions.writable) return;
+    sessions.value.push(session);
+    await tryWriteJSON(
       sessionsPath(ctx.versionPath),
-      sessions.slice(-SESSIONS_LIMIT),
+      sessions.value.slice(-SESSIONS_LIMIT),
     );
   });
 }
@@ -227,6 +359,7 @@ export async function endSession(
   versionName: string,
   instance: number,
   exitCode: number,
+  options?: { recovered?: boolean },
 ): Promise<void> {
   const key = makeKey(versionName, instance);
   const session = activeSessions.get(key);
@@ -266,6 +399,7 @@ export async function endSession(
     durationSec,
     exitCode,
     crashed: exitCode !== 0,
+    recovered: options?.recovered ? true : undefined,
     account: session.accountLabel,
     server: session.server,
   });
@@ -319,17 +453,18 @@ export async function reconcilePendingSessions(): Promise<void> {
 }
 
 export async function readSyncQueue(): Promise<IPlaytimeSyncEntry[]> {
-  return readJSONSafe<IPlaytimeSyncEntry[]>(syncQueuePath(), []);
+  return (await readJSONArray<IPlaytimeSyncEntry>(syncQueuePath())).value;
 }
 
 export async function resolveSyncEntries(ids: string[]): Promise<void> {
   if (!ids || ids.length === 0) return;
   const set = new Set(ids);
   await withLock(syncQueuePath(), async () => {
-    const queue = await readJSONSafe<IPlaytimeSyncEntry[]>(syncQueuePath(), []);
-    await atomicWriteJSON(
+    const queue = await readJSONArray<IPlaytimeSyncEntry>(syncQueuePath());
+    if (!queue.writable) return;
+    await tryWriteJSON(
       syncQueuePath(),
-      queue.filter((entry) => !set.has(entry.id)),
+      queue.value.filter((entry) => !set.has(entry.id)),
     );
   });
 }

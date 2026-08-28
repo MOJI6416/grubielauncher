@@ -2,6 +2,7 @@ export type WorldBackupTrigger = "manual" | "auto" | "preRestore";
 
 export type WorldBackupErrorCode =
   | "worldMissing"
+  | "worldUnreadable"
   | "worldTooLarge"
   | "backupTooLarge"
   | "versionRunning"

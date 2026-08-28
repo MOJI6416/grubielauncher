@@ -1,3 +1,4 @@
+import { accountIdentity } from "@renderer/features/accounts/identity";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { IRefreshTokenResponse } from "@/types/Auth";
 import { jwtDecode } from "jwt-decode";
@@ -45,8 +46,17 @@ function isOffline() {
   return typeof navigator !== "undefined" && navigator.onLine === false;
 }
 
+const SESSION_RENEW_MARGIN_SECONDS = 120;
+
 function isJwtExpired(authData: IAuth) {
   return typeof authData.exp !== "number" || Date.now() / 1000 >= authData.exp;
+}
+
+export function isJwtExpiringSoon(authData: IAuth) {
+  return (
+    typeof authData.exp !== "number" ||
+    Date.now() / 1000 >= authData.exp - SESSION_RENEW_MARGIN_SECONDS
+  );
 }
 
 function isProviderExpired(authData: IAuth) {
@@ -93,6 +103,8 @@ async function loadStoredSession(
 } | null> {
   try {
     const stored = await api.accounts.load();
+    if (!stored) return null;
+
     const account = stored.accounts.find((entry) =>
       isSameSessionAccount(entry, selectedAccount, authData.sub),
     );
@@ -226,7 +238,7 @@ export async function ensureAccountSession(
   const nextAccount: ILocalAccount = {
     ...accountForRefresh,
     accessToken: authUser.accessToken,
-    refreshToken: authUser.refreshToken,
+    refreshToken: authUser.refreshToken || accountForRefresh.refreshToken,
   };
 
   const nextAccounts = accountsForRefresh.map((account) =>
@@ -238,10 +250,7 @@ export async function ensureAccountSession(
   setSelectedAccount(nextAccount);
   setAccounts(nextAccounts);
 
-  await api.accounts.save(
-    nextAccounts,
-    `${nextAccount.type}_${nextAccount.nickname}`,
-  );
+  await api.accounts.save(nextAccounts, accountIdentity(nextAccount));
 
   return {
     account: nextAccount,

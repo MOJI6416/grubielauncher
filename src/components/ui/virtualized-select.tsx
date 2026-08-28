@@ -160,7 +160,8 @@ export function VirtualizedSelect({
     );
   }, [options, query]);
 
-  const listHeight = Math.min(options.length, MAX_VISIBLE_ROWS) * ROW_HEIGHT;
+  const listHeight =
+    Math.min(Math.max(filtered.length, 1), MAX_VISIBLE_ROWS) * ROW_HEIGHT;
   const maxScroll = Math.max(0, filtered.length * ROW_HEIGHT - listHeight);
   scrollBoundsRef.current = { maxScroll, listHeight };
 
@@ -303,6 +304,13 @@ export function VirtualizedSelect({
         data-size={size}
         aria-label={ariaLabel}
         disabled={disabled}
+        title={
+          selectedOption
+            ? selectedOption.secondaryLabel
+              ? `${selectedOption.label} · ${selectedOption.secondaryLabel}`
+              : selectedOption.label
+            : placeholder
+        }
         className={cn(
           "flex w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 py-1 text-sm leading-5 whitespace-nowrap transition-[color,box-shadow,border-color] outline-none select-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:border-ring data-[size=default]:h-9 data-[size=sm]:h-8 dark:bg-input/30 [&_svg]:pointer-events-none [&_svg]:shrink-0",
           className,

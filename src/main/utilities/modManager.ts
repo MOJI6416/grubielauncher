@@ -141,41 +141,12 @@ export function classIdToProjectType(
   }
 }
 
-export function dependencyToLocalProject(dependencies: IVersionDependency[]) {
-  const newMods: ILocalProject[] = [];
-  for (let index = 0; index < dependencies.length; index++) {
-    const dependency = dependencies[index];
-    const project = dependency.project;
-
-    if (!project) continue;
-    if (!project.versions || project.versions.length === 0) continue;
-
-    const version = project.versions[0];
-    newMods.push({
-      title: project.title,
-      description: project.description,
-      projectType: project.projectType,
-      iconUrl: project.iconUrl,
-      url: project.url,
-      provider: project.provider,
-      id: project.id,
-      version: {
-        id: version.id,
-        dependencies: [],
-        files: version.files,
-      },
-    });
-  }
-
-  return newMods;
-}
-
 export async function cfModpackToModpack(
   modpack: CurseForgeModpack,
 ): Promise<IModpack> {
-  const mods = await CurseForge.getMods(
-    modpack.files.map((file) => file.projectID),
-  );
+  const mods =
+    (await CurseForge.getMods(modpack.files.map((file) => file.projectID))) ??
+    [];
   const files = await CurseForge.getFiles(
     modpack.files.map((file) => file.fileID),
   );
@@ -537,21 +508,6 @@ export function cfRelationTypeToVersionDependency(
   return null;
 }
 
-export function versionDependencyToCfRelationType(
-  relationType: DependencyType,
-): FileRelationType | null {
-  if (relationType == DependencyType.REQUIRED)
-    return FileRelationType.RequiredDependency;
-  if (relationType == DependencyType.OPTIONAL)
-    return FileRelationType.OptionalDependency;
-  if (relationType == DependencyType.INCOMPATIBLE)
-    return FileRelationType.Incompatible;
-  if (relationType == DependencyType.EMBEDDED)
-    return FileRelationType.EmbeddedLibrary;
-
-  return null;
-}
-
 export async function cacheModIcon(
   data: Buffer,
   extension: string,
@@ -588,6 +544,30 @@ function rememberModMeta(key: string, info: ILocalFileInfo) {
   modMetaCache.set(key, info);
 }
 
+function packKindFromEntries(entryNames: string[]): ProjectType {
+  const normalized = entryNames.map((name) => name.split("\\").join("/"));
+
+  if (normalized.some((name) => name.startsWith("shaders/"))) {
+    return ProjectType.SHADER;
+  }
+  if (normalized.some((name) => name.startsWith("assets/"))) {
+    return ProjectType.RESOURCEPACK;
+  }
+  if (normalized.some((name) => name.startsWith("data/"))) {
+    return ProjectType.DATAPACK;
+  }
+
+  return ProjectType.RESOURCEPACK;
+}
+
+function isWorldArchive(entryNames: string[]): boolean {
+  return entryNames.some((entryName) => {
+    const parts = entryName.split("\\").join("/").split("/").filter(Boolean);
+    if (parts.length !== 1 && parts.length !== 2) return false;
+    return parts[parts.length - 1].toLowerCase() === "level.dat";
+  });
+}
+
 async function readLocalModInfo(
   modPath: string,
   fileName: string,
@@ -595,6 +575,7 @@ async function readLocalModInfo(
   sha1: string,
 ): Promise<ILocalFileInfo | null> {
   const fallback: ILocalFileInfo = {
+    kind: null,
     description: "",
     filename: fileName,
     size: fileSize,
@@ -644,6 +625,7 @@ async function readLocalModInfo(
 
     return {
       ...fabricMod,
+      kind: ProjectType.MOD,
       url: fabricMod.contact?.homepage || "",
       filename: fileName,
       size: fileSize,
@@ -665,6 +647,7 @@ async function readLocalModInfo(
     if (!mod) continue;
 
     return {
+      kind: ProjectType.MOD,
       description: mod.description,
       filename: fileName,
       size: fileSize,
@@ -690,10 +673,17 @@ async function readLocalModInfo(
 
     return {
       ...fallback,
+      kind: packKindFromEntries(
+        archive.getEntries().map((entry) => entry.entryName),
+      ),
       description,
       icon:
         (await readIconEntry("logo.png")) ?? (await readIconEntry("pack.png")),
     };
+  }
+
+  if (isWorldArchive(archive.getEntries().map((entry) => entry.entryName))) {
+    return { ...fallback, kind: ProjectType.WORLD };
   }
 
   return fallback;
@@ -1289,7 +1279,8 @@ async function enrichPrismIndexedProjects(
     (async () => {
       const result: IProject[] = [];
       for (const chunk of chunkArray(modrinthIds, 100)) {
-        const projects = await Modrinth.getProjects(chunk).catch(() => []);
+        const projects =
+          (await Modrinth.getProjects(chunk).catch(() => [])) ?? [];
         result.push(
           ...projects.map((project) =>
             mrProjectToProject(project, project.project_type as ProjectType),
@@ -1301,9 +1292,8 @@ async function enrichPrismIndexedProjects(
     (async () => {
       const result: IProject[] = [];
       for (const chunk of chunkArray(curseForgeIds, 100)) {
-        const mods = await CurseForge.getMods(chunk.map(Number)).catch(
-          () => [],
-        );
+        const mods =
+          (await CurseForge.getMods(chunk.map(Number)).catch(() => [])) ?? [];
         result.push(...mods.map(cfModToProject));
       }
       return result;
@@ -1616,13 +1606,13 @@ export async function checkModpack(
     }
 
     const dependensies =
-      pack && selectVersion
+      (pack && selectVersion
         ? await ModManager.getDependencies(
             Provider.MODRINTH,
             pack.id,
             selectVersion.dependencies,
           )
-        : [];
+        : []) ?? [];
 
     for (const file of mrModpack.files) {
       const downloadUrl = file.downloads[0];

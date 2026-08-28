@@ -164,7 +164,7 @@ export class CurseForge {
     }
   }
 
-  static async getMods(modIds: number[]): Promise<IMod[]> {
+  static async getMods(modIds: number[]): Promise<IMod[] | null> {
     try {
       const responses = await Promise.all(
         this.chunk(modIds, this.BATCH_LIMIT).map((batch) =>
@@ -174,7 +174,7 @@ export class CurseForge {
       return responses.flatMap((response) => response.data)
     } catch (error) {
       this.logAxiosError('Error getting mods', error)
-      return []
+      return null
     }
   }
 

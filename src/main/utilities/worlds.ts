@@ -1,4 +1,12 @@
-import { IWorld, IWorldStatistics, IWorldStatsAggregate } from "@/types/World";
+import {
+  IWorld,
+  IWorldStatistics,
+  IWorldStatsAggregate,
+  WorldDuplicateResult,
+  WorldExportResult,
+  WorldImportResult,
+} from "@/types/World";
+import { getWorldSeed, readWorldMeta } from "./worldMeta";
 import {
   IAchievementStats,
   IAchievementStatsResult,
@@ -95,68 +103,6 @@ export async function loadStatistics(
   }
 }
 
-function stringifyNbtValue(value: any): string {
-  if (value === null || value === undefined) return "";
-
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "bigint" ||
-    typeof value === "boolean"
-  ) {
-    return String(value);
-  }
-
-  if (Array.isArray(value) && value.length === 2) {
-    const [low, high] = value;
-    if (typeof low === "number" && typeof high === "number") {
-      let result = (BigInt(high) << 32n) | (BigInt(low) & 0xffffffffn);
-      if (result >= 0x8000000000000000n) {
-        result -= 0x10000000000000000n;
-      }
-      return result.toString();
-    }
-  }
-
-  if (typeof value === "object") {
-    if (typeof value.low === "number" && typeof value.high === "number") {
-      let result =
-        (BigInt(value.high) << 32n) | (BigInt(value.low) & 0xffffffffn);
-      if (result >= 0x8000000000000000n) {
-        result -= 0x10000000000000000n;
-      }
-      return result.toString();
-    }
-
-    if ("value" in value) {
-      return stringifyNbtValue(value.value);
-    }
-
-    const result = value.toString?.();
-    if (typeof result === "string" && result !== "[object Object]") {
-      return result;
-    }
-  }
-
-  return "";
-}
-
-function findNbtValueByKey(source: any, keys: string[]): any {
-  if (!source || typeof source !== "object") return undefined;
-
-  for (const [key, value] of Object.entries(source)) {
-    const normalizedKey = key.toLowerCase();
-    if (keys.includes(normalizedKey)) return value;
-  }
-
-  for (const value of Object.values(source)) {
-    const result = findNbtValueByKey(value, keys);
-    if (result !== undefined) return result;
-  }
-
-  return undefined;
-}
-
 async function decompressNbtFile(
   fileData: Buffer,
 ): Promise<{ data: Buffer; compression: NbtCompression }> {
@@ -195,25 +141,6 @@ async function compressNbt(
   return Buffer.from(await gzipAsync(input));
 }
 
-function getWorldSeed(nbtData: any): string {
-  const data = nbtData?.Data ?? nbtData?.data ?? nbtData;
-
-  const exactSeed =
-    data?.WorldGenSettings?.seed ??
-    data?.WorldGenSettings?.Seed ??
-    data?.worldGenSettings?.seed ??
-    data?.RandomSeed;
-
-  const seed = stringifyNbtValue(exactSeed);
-  if (seed) return seed;
-
-  const genSettings = data?.WorldGenSettings ?? data?.worldGenSettings;
-  const searchRoot = genSettings ?? data;
-  return stringifyNbtValue(
-    findNbtValueByKey(searchRoot, ["seed", "randomseed"]),
-  );
-}
-
 export async function readWorldDisplayName(worldPath: string): Promise<string> {
   const fallback = path.basename(worldPath);
 
@@ -243,9 +170,11 @@ export async function readWorld(
 
     let name = path.basename(worldPath);
     let seed = "";
+    let meta: ReturnType<typeof readWorldMeta> = {};
 
     try {
       const levelData = await fs.readFile(levelDatPath);
+
       const nbtData: any = await deserialize(await decompressNbt(levelData));
 
       if (
@@ -256,6 +185,7 @@ export async function readWorld(
       }
 
       seed = getWorldSeed(nbtData);
+      meta = readWorldMeta(nbtData);
     } catch (err) {
       console.warn(
         "Failed to read world level data, using folder fallback:",
@@ -282,6 +212,11 @@ export async function readWorld(
       }
     }
 
+    if (!meta.lastPlayed) {
+      const levelStats = await fs.stat(levelDatPath).catch(() => null);
+      if (levelStats?.mtimeMs) meta.lastPlayed = Math.round(levelStats.mtimeMs);
+    }
+
     let icon: string | undefined;
     if (await fs.pathExists(iconPath)) {
       icon = pathToFileURL(iconPath).href;
@@ -305,6 +240,7 @@ export async function readWorld(
       isDownloaded: await fs.pathExists(path.join(worldPath, ".downloaded")),
       path: worldPath,
       folderName: path.basename(worldPath),
+      ...meta,
     };
   } catch (err) {
     console.error("Error reading world:", err);
@@ -543,6 +479,7 @@ type CachedWorldStats = {
   size: number;
   stats: IAchievementStats | null;
   worldKey: string | null;
+  unreadable: boolean;
 };
 
 const MAX_CACHED_WORLD_STATS = 500;
@@ -574,6 +511,7 @@ async function getCachedWorldStats(
     size: statsFile.size,
     stats: null,
     worldKey: null,
+    unreadable: false,
   };
 
   try {
@@ -582,7 +520,9 @@ async function getCachedWorldStats(
       entry.stats = reduceStatsToAchievementStats(data);
       entry.worldKey = await readWorldKey(worldPath);
     }
-  } catch {}
+  } catch {
+    entry.unreadable = true;
+  }
 
   worldStatsCache.set(statsFile.path, entry);
 
@@ -601,15 +541,18 @@ export async function loadGlobalAchievementStats(
   let stats: IAchievementStats = { ...EMPTY_ACHIEVEMENT_STATS };
   const worldKeys = new Set<string>();
   const accountUUIDs = getAccountUuids(account);
+  let partial = false;
 
   const versionsPath = path.join(getLauncherPaths().minecraft, "versions");
 
   let versions: string[] = [];
   try {
-    if (!(await fs.pathExists(versionsPath))) return { stats, worldKeys: [] };
+    if (!(await fs.pathExists(versionsPath))) {
+      return { stats, worldKeys: [], partial: false };
+    }
     versions = await fs.readdir(versionsPath);
   } catch {
-    return { stats, worldKeys: [] };
+    return { stats, worldKeys: [], partial: true };
   }
 
   for (const version of versions) {
@@ -620,6 +563,7 @@ export async function loadGlobalAchievementStats(
       if (!(await fs.pathExists(savesPath))) continue;
       worldEntries = await fs.readdir(savesPath);
     } catch {
+      partial = true;
       continue;
     }
 
@@ -629,14 +573,17 @@ export async function loadGlobalAchievementStats(
       if (!statsFile) continue;
 
       const cached = await getCachedWorldStats(worldPath, statsFile);
-      if (!cached.stats) continue;
+      if (!cached.stats) {
+        if (cached.unreadable) partial = true;
+        continue;
+      }
 
       stats = addAchievementStats(stats, cached.stats);
       if (cached.worldKey) worldKeys.add(cached.worldKey);
     }
   }
 
-  return { stats, worldKeys: [...worldKeys] };
+  return { stats, worldKeys: [...worldKeys], partial };
 }
 
 function getArchiveEntryPath(entry: any) {
@@ -726,12 +673,246 @@ export async function extractWorldArchive(
   const archiveInfo = await getWorldArchiveInfo(zipPath);
   if (!archiveInfo) return null;
 
-  const destination = archiveInfo.hasRootFolder
-    ? savesPath
-    : path.join(savesPath, archiveInfo.worldName);
+  const destination = path.join(savesPath, archiveInfo.worldName);
+  const prefix = archiveInfo.hasRootFolder ? `${archiveInfo.worldName}/` : "";
 
-  const { extractZip } = await import("./archiver");
-  await extractZip(zipPath, destination);
+  const { openArchive, extractEntries, getSafeExtractPath } = await import(
+    "./archiver"
+  );
+  const archive = await openArchive(zipPath);
 
-  return path.join(savesPath, archiveInfo.worldName);
+  const entries = archive
+    .getEntries()
+    .filter(
+      (entry) =>
+        getArchiveEntryPath(entry).startsWith(prefix) &&
+        getArchiveEntryPath(entry).slice(prefix.length).length > 0,
+    );
+
+  if (!entries.length) return null;
+
+  await fs.ensureDir(destination);
+  await extractEntries(entries, (entryName) =>
+    getSafeExtractPath(
+      destination,
+      entryName.split("\\").join("/").slice(prefix.length),
+    ),
+  );
+
+  return destination;
+}
+
+const VOLATILE_WORLD_FILES = new Set([
+  "session.lock",
+  ".downloaded",
+  WORLD_ID_MARKER,
+]);
+const MAX_IMPORT_ARCHIVE_BYTES = 512 * 1024 * 1024;
+
+async function directorySize(target: string): Promise<number> {
+  let entries: import("fs-extra").Dirent[];
+  try {
+    entries = await fs.readdir(target, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+
+  let total = 0;
+
+  for (const entry of entries) {
+    const full = path.join(target, entry.name);
+
+    if (entry.isDirectory()) {
+      total += await directorySize(full);
+      continue;
+    }
+
+    const stats = await fs.lstat(full).catch(() => null);
+    if (stats?.isFile()) total += stats.size;
+  }
+
+  return total;
+}
+
+export async function listWorldFolders(
+  versionPath: string,
+): Promise<string[]> {
+  const savesPath = path.join(path.resolve(versionPath), "saves");
+
+  let entries: import("fs-extra").Dirent[];
+  try {
+    entries = await fs.readdir(savesPath, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const folders: string[] = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+    if (!(await fs.pathExists(path.join(savesPath, entry.name, "level.dat")))) {
+      continue;
+    }
+
+    folders.push(entry.name);
+  }
+
+  return folders;
+}
+
+export async function countWorlds(versionPath: string): Promise<number> {
+  return (await listWorldFolders(versionPath)).length;
+}
+
+export async function getWorldFolderSizes(
+  versionPath: string,
+): Promise<Record<string, number>> {
+  const savesPath = path.join(path.resolve(versionPath), "saves");
+  const sizes: Record<string, number> = {};
+
+  let entries: import("fs-extra").Dirent[];
+  try {
+    entries = await fs.readdir(savesPath, { withFileTypes: true });
+  } catch {
+    return sizes;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+    sizes[entry.name] = await directorySize(path.join(savesPath, entry.name));
+  }
+
+  return sizes;
+}
+
+export async function duplicateWorld(
+  worldPath: string,
+  newName: string,
+): Promise<WorldDuplicateResult> {
+  const resolvedWorldPath = path.resolve(worldPath);
+
+  if (!(await fs.pathExists(path.join(resolvedWorldPath, "level.dat")))) {
+    return { ok: false, error: "worldMissing" };
+  }
+
+  const savesPath = path.dirname(resolvedWorldPath);
+  const folderName =
+    sanitizeWorldFolderName(newName) ||
+    `${path.basename(resolvedWorldPath)}-copy`;
+  const targetPath = path.join(savesPath, folderName);
+
+  if (await fs.pathExists(targetPath)) return { ok: false, error: "nameTaken" };
+
+  const stagingPath = path.join(savesPath, `.grubie-copy-${randomUUID()}`);
+
+  try {
+    await fs.copy(resolvedWorldPath, stagingPath, {
+      filter: (source) => !VOLATILE_WORLD_FILES.has(path.basename(source)),
+    });
+    await fs.move(stagingPath, targetPath);
+  } catch (error) {
+    console.error("Failed to duplicate a world:", error);
+    await fs.remove(stagingPath).catch(() => {});
+    return { ok: false, error: "failed" };
+  }
+
+  const renamed = await writeWorldName(targetPath, newName);
+
+  return { ok: true, path: renamed || targetPath };
+}
+
+async function pickFreeArchivePath(
+  destinationDir: string,
+  baseName: string,
+): Promise<string> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const suffix = attempt === 0 ? "" : ` (${attempt + 1})`;
+    const candidate = path.join(destinationDir, `${baseName}${suffix}.zip`);
+    if (!(await fs.pathExists(candidate))) return candidate;
+  }
+
+  return path.join(destinationDir, `${baseName}-${Date.now()}.zip`);
+}
+
+export async function exportWorld(
+  worldPath: string,
+  destinationDir: string,
+): Promise<WorldExportResult> {
+  const resolvedWorldPath = path.resolve(worldPath);
+
+  if (!(await fs.pathExists(path.join(resolvedWorldPath, "level.dat")))) {
+    return { ok: false, error: "worldMissing" };
+  }
+
+  const baseName =
+    sanitizeWorldFolderName(await readWorldDisplayName(resolvedWorldPath)) ||
+    path.basename(resolvedWorldPath);
+
+  const targetPath = await pickFreeArchivePath(
+    path.resolve(destinationDir),
+    baseName,
+  );
+
+  try {
+    await fs.ensureDir(path.resolve(destinationDir));
+
+    const { createZipArchive } = await import("./archiver");
+    await createZipArchive(
+      [resolvedWorldPath],
+      targetPath,
+      path.dirname(resolvedWorldPath),
+      6,
+    );
+
+    const stats = await fs.stat(targetPath).catch(() => null);
+    if (!stats?.isFile()) return { ok: false, error: "failed" };
+
+    return { ok: true, path: targetPath, size: stats.size };
+  } catch (error) {
+    console.error("Failed to export a world:", error);
+    await fs.remove(targetPath).catch(() => {});
+    return { ok: false, error: "failed" };
+  }
+}
+
+export async function importWorldArchive(
+  zipPath: string,
+  versionPath: string,
+): Promise<WorldImportResult> {
+  const resolvedZipPath = path.resolve(zipPath);
+  const savesPath = path.join(path.resolve(versionPath), "saves");
+
+  const archiveStats = await fs.stat(resolvedZipPath).catch(() => null);
+  if (!archiveStats?.isFile()) return { ok: false, error: "archiveInvalid" };
+  if (archiveStats.size > MAX_IMPORT_ARCHIVE_BYTES) {
+    return { ok: false, error: "archiveTooLarge" };
+  }
+
+  try {
+    const worldName = await getWorldName(resolvedZipPath);
+    if (!worldName) return { ok: false, error: "archiveInvalid" };
+
+    await fs.ensureDir(savesPath);
+
+    if (await fs.pathExists(path.join(savesPath, worldName))) {
+      return { ok: false, error: "nameTaken" };
+    }
+
+    const imported = await extractWorldArchive(resolvedZipPath, savesPath);
+    if (!imported) return { ok: false, error: "archiveInvalid" };
+
+    if (!(await fs.pathExists(path.join(imported, "level.dat")))) {
+      await fs.remove(imported).catch(() => {});
+      return { ok: false, error: "archiveInvalid" };
+    }
+
+    return {
+      ok: true,
+      path: imported,
+      name: await readWorldDisplayName(imported),
+    };
+  } catch (error) {
+    console.error("Failed to import a world archive:", error);
+    return { ok: false, error: "archiveInvalid" };
+  }
 }

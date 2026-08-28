@@ -11,14 +11,22 @@ import {
   ipcMain
 } from 'electron'
 import { Downloader } from '../utilities/downloader'
-import { mainWindow } from '../windows/mainWindow'
-import { getLauncherPaths } from '../utilities/other'
-import { runConnectivityTests } from '../utilities/connectivityTest'
-import { ConnectivityCheckResult } from '@/types/Connectivity'
 import {
+  confirmWindowClose,
+  mainWindow,
+  setUnsavedChangesGuard
+} from '../windows/mainWindow'
+import { getLauncherPaths } from '../utilities/other'
+import { getConnectivityPlan, runConnectivityTests } from '../utilities/connectivityTest'
+import { ConnectivityCheckPlanEntry, ConnectivityCheckResult } from '@/types/Connectivity'
+import {
+  getDownloadSource,
+  getMojangReachable,
+  isMirrorDisabled,
   setDownloadSource,
   updateMojangReachableFromConnectivity
 } from '../utilities/mirrorState'
+import { MirrorState } from '@/shared/mirrorMode'
 import { DownloadSource } from '@/types/Settings'
 import { rpc } from '../rpc'
 import { RpcRendererContext } from '@/types/Rpc'
@@ -26,7 +34,13 @@ import { NotificationClickAction } from '@/types/Notification'
 import icon from '../../../resources/icon.png?asset'
 import axios from 'axios'
 import path from 'path'
-import { check, handleSafe, IpcArgumentError } from '../utilities/ipc'
+import {
+  check,
+  getIpcFailureToken,
+  handleSafe,
+  IpcArgumentError
+} from '../utilities/ipc'
+import { IPC_FAILURE_TOKEN_CHANNEL } from '@/shared/ipcFailureEnvelope'
 import {
   assertOpenablePath,
   assertWritablePath,
@@ -45,7 +59,7 @@ let activeConnectivityRun: Promise<ConnectivityCheckResult[]> | null = null
 
 const MAX_PATH_LENGTH = 4096
 const MAX_DOWNLOAD_ITEMS = 20000
-const MAX_CLIPBOARD_LENGTH = 100000
+const MAX_CLIPBOARD_LENGTH = 8 * 1024 * 1024
 const MAX_NOTIFICATION_TEXT_LENGTH = 512
 const MAX_DIALOG_FILTERS = 20
 const APP_PATH_KEYS = new Set([
@@ -197,6 +211,11 @@ function sendNotificationClick(action?: NotificationClickAction): void {
 }
 
 export function registerOtherIpc() {
+  ipcMain.removeAllListeners(IPC_FAILURE_TOKEN_CHANNEL)
+  ipcMain.on(IPC_FAILURE_TOKEN_CHANNEL, (event) => {
+    event.returnValue = getIpcFailureToken()
+  })
+
   ipcMain.on('safepath:bless', (event, target: unknown) => {
     event.returnValue = false
     if (typeof target !== 'string' || !target || target.length > MAX_PATH_LENGTH) return
@@ -222,8 +241,10 @@ export function registerOtherIpc() {
 
   handleSafe<boolean, [string]>('clipboard:writeText', false, async (_, text: string) => {
     if (typeof text !== 'string') return false
-    clipboard.writeText(text.slice(0, MAX_CLIPBOARD_LENGTH))
-    return true
+    if (text.length > MAX_CLIPBOARD_LENGTH) return false
+
+    clipboard.writeText(text)
+    return clipboard.readText() === text
   })
 
   handleSafe<string>('other:getLocale', 'en', () => {
@@ -255,15 +276,16 @@ export function registerOtherIpc() {
     return app.getPath(pathKey)
   })
 
-  handleSafe<void, [DownloadItem[], number?]>(
+  handleSafe<boolean, [DownloadItem[], number?]>(
     'file:download',
-    undefined,
+    false,
     [check.arrayOf(check.object(), MAX_DOWNLOAD_ITEMS), check.optional(check.number())],
     async (_, items, limit = 6) => {
       const safeItems = items.map(toSafeDownloadItem)
       const parallel = Number.isFinite(limit) ? Math.min(16, Math.max(1, Math.trunc(limit))) : 6
       const downloader = new Downloader(parallel)
       await downloader.downloadFiles(safeItems)
+      return true
     }
   )
 
@@ -326,7 +348,8 @@ export function registerOtherIpc() {
       }
     }
 
-    await shell.openPath(p)
+    const failure = await shell.openPath(p)
+    if (failure) throw new Error(failure)
   })
 
   handleSafe<boolean, [string]>('shell:trashItem', false, async (_, p: string) => {
@@ -380,19 +403,22 @@ export function registerOtherIpc() {
     restoreMainWindow()
   })
 
-  handleSafe<void>('window:minimize', undefined, () => {
-    mainWindow?.minimize()
+  handleSafe<void, [boolean]>(
+    'other:setUnsavedGuard',
+    undefined,
+    [check.boolean()],
+    async (_, value) => {
+      setUnsavedChangesGuard(value)
+    }
+  )
+
+  handleSafe<void>('other:confirmClose', undefined, () => {
+    confirmWindowClose()
   })
 
-  handleSafe<void>('window:maximizeToggle', undefined, () => {
-    if (!mainWindow || mainWindow.isDestroyed()) return
-    if (mainWindow.isMaximized()) mainWindow.unmaximize()
-    else mainWindow.maximize()
-  })
-
-  handleSafe<void>('window:close', undefined, () => {
-    mainWindow?.close()
-  })
+  handleSafe<ConnectivityCheckPlanEntry[]>('connectivity:plan', [], () =>
+    getConnectivityPlan()
+  )
 
   handleSafe<ConnectivityCheckResult[]>('connectivity:test', [], async (event) => {
     if (activeConnectivityRun) return await activeConnectivityRun
@@ -419,6 +445,16 @@ export function registerOtherIpc() {
     if (!DOWNLOAD_SOURCES.includes(source)) return
     setDownloadSource(source)
   })
+
+  handleSafe<MirrorState>(
+    'mirror:getState',
+    { source: 'auto', mirrorDisabled: false, mojangReachable: null },
+    async () => ({
+      source: getDownloadSource(),
+      mirrorDisabled: isMirrorDisabled(),
+      mojangReachable: getMojangReachable()
+    })
+  )
 
   handleSafe<{ success: boolean; error?: string }, [string, number?, string?]>(
     'shortcut:create',

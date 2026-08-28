@@ -1,12 +1,26 @@
 import type { IpcMainInvokeEvent } from "electron";
 import { Backend } from "../services/Backend";
-import { IFriendSettingsUpdate, IUpdateUser } from "@/types/IUser";
-import { IModpack, IModpackUpdate } from "@/types/Backend";
+import {
+  IFriendSettingsUpdate,
+  INotificationPrefs,
+  IUpdateUser,
+} from "@/types/IUser";
+import {
+  ExploreSort,
+  IExploreQuery,
+  IModpack,
+  IModpackUpdate,
+} from "@/types/Backend";
+import { IUpdateCheckRequest, UPDATE_CHECK_MAX_ITEMS } from "@/types/Updates";
 import { VersionsService } from "../services/Versions";
 import { check, handleSafe } from "../utilities/ipc";
 import { checkBackendHealth } from "../utilities/connectivityTest";
 import { assertReadablePath } from "../utilities/safePath";
-import { AI_PROMPT_MAX_CHARS } from "@/shared/config";
+import {
+  AI_PROMPT_MAX_CHARS,
+  LAUNCHER_RELEASES_MAX,
+  NEWS_PAGE_MAX,
+} from "@/shared/config";
 import { getApiBaseUrl, onApiBaseUrlChange } from "../utilities/apiHost";
 import { BACKEND_URL } from "@/shared/config";
 import { BrowserWindow } from "electron";
@@ -18,13 +32,13 @@ const isName = check.nonEmptyString(256);
 const isPayload = check.object();
 const isPath = check.nonEmptyString(4096);
 const isLocale = check.string(16);
-const isLoader = check.oneOf(
-  "vanilla",
-  "forge",
-  "neoforge",
-  "fabric",
-  "quilt",
-);
+const isLoader = check.oneOf("vanilla", "forge", "neoforge", "fabric", "quilt");
+
+const EXPLORE_MAX_LIMIT = 24;
+
+function isExploreSort(value: unknown): value is ExploreSort {
+  return value === "downloads" || value === "updated" || value === "new";
+}
 
 export function registerBackendIpc() {
   handleSafe(
@@ -37,10 +51,45 @@ export function registerBackendIpc() {
     },
   );
 
-  handleSafe("backend:getOwnModpacks", [], [isToken], async (_, at: string) => {
-    const backend = new Backend(at);
-    return await backend.getOwnModpacks();
-  });
+  handleSafe(
+    "backend:getOwnModpacks",
+    null,
+    [isToken],
+    async (_, at: string) => {
+      const backend = new Backend(at);
+      return await backend.getOwnModpacks();
+    },
+  );
+
+  handleSafe(
+    "backend:exploreModpacks",
+    null,
+    [isPayload],
+    async (_, query: IExploreQuery) => {
+      const backend = new Backend();
+      return await backend.exploreModpacks({
+        offset: Math.max(0, Math.trunc(Number(query.offset) || 0)),
+        limit: Math.min(
+          EXPLORE_MAX_LIMIT,
+          Math.max(1, Math.trunc(Number(query.limit) || EXPLORE_MAX_LIMIT)),
+        ),
+        sort: isExploreSort(query.sort) ? query.sort : "downloads",
+        q: String(query.q || "").slice(0, 64),
+        loader: String(query.loader || "").slice(0, 24),
+        mc: String(query.mc || "").slice(0, 24),
+      });
+    },
+  );
+
+  handleSafe(
+    "backend:getPublicProfile",
+    null,
+    [check.nonEmptyString(32), check.optional(check.string(64))],
+    async (_, nickname: string, userId?: string) => {
+      const backend = new Backend();
+      return await backend.getPublicProfile(nickname, userId);
+    },
+  );
 
   handleSafe(
     "backend:shareModpack",
@@ -90,6 +139,16 @@ export function registerBackendIpc() {
     async (_, at: string, id: string) => {
       const backend = new Backend(at);
       return await backend.getUser(id);
+    },
+  );
+
+  handleSafe(
+    "backend:getMutualFriends",
+    null,
+    [isToken, isId],
+    async (_, at: string, id: string) => {
+      const backend = new Backend(at);
+      return await backend.getMutualFriends(id);
     },
   );
 
@@ -306,12 +365,88 @@ export function registerBackendIpc() {
   });
 
   handleSafe(
+    "backend:getNewsPage",
+    null,
+    [isPayload],
+    async (_, params: { limit?: number; cursor?: string; source?: string }) => {
+      const backend = new Backend();
+      return await backend.getNewsPage({
+        limit: Number.isSafeInteger(params.limit)
+          ? Math.min(NEWS_PAGE_MAX, Math.max(1, params.limit as number))
+          : undefined,
+        cursor: typeof params.cursor === "string" ? params.cursor : undefined,
+        source: typeof params.source === "string" ? params.source : undefined,
+      });
+    },
+  );
+
+  handleSafe(
+    "backend:checkUpdates",
+    null,
+    [isPayload],
+    async (_, request: IUpdateCheckRequest) => {
+      if (
+        !Array.isArray(request.items) ||
+        request.items.length === 0 ||
+        request.items.length > UPDATE_CHECK_MAX_ITEMS
+      ) {
+        throw new Error(
+          `backend:checkUpdates expects 1..${UPDATE_CHECK_MAX_ITEMS} items`,
+        );
+      }
+
+      const backend = new Backend();
+      return await backend.checkUpdates(request);
+    },
+  );
+
+  handleSafe(
+    "backend:getGlobalLeaderboard",
+    null,
+    [check.integer()],
+    async (_, limit: number) => {
+      const backend = new Backend();
+      return await backend.getGlobalLeaderboard(
+        Math.min(100, Math.max(1, limit)),
+      );
+    },
+  );
+
+  handleSafe(
+    "backend:getOwnLeaderboardRank",
+    null,
+    [isToken],
+    async (_, at: string) => {
+      const backend = new Backend(at);
+      return await backend.getOwnLeaderboardRank();
+    },
+  );
+
+  handleSafe("backend:getAchievementReach", null, [], async () => {
+    const backend = new Backend();
+    return await backend.getAchievementReach();
+  });
+
+  handleSafe(
     "backend:getWhatsNew",
     null,
     [check.string(64), isLocale],
     async (_, version: string, locale: string) => {
       const backend = new Backend();
       return await backend.getWhatsNew(version, locale);
+    },
+  );
+
+  handleSafe(
+    "backend:getLauncherReleases",
+    null,
+    [isLocale, check.integer()],
+    async (_, locale: string, limit: number) => {
+      const backend = new Backend();
+      return await backend.getLauncherReleases(
+        locale,
+        Math.min(LAUNCHER_RELEASES_MAX, Math.max(1, limit)),
+      );
     },
   );
 
@@ -348,31 +483,22 @@ export function registerBackendIpc() {
   );
 
   handleSafe(
-    "backend:login",
-    null,
-    [isToken, isId, isPayload],
-    async (
-      _,
-      at: string,
-      id: string,
-      auth: {
-        accessToken: string;
-        refreshToken: string;
-        expiresAt: number;
-      },
-    ) => {
-      const backend = new Backend(at);
-      return await backend.login(id, auth);
-    },
-  );
-
-  handleSafe(
     "backend:approveSiteLogin",
     false,
     [isToken, isId],
     async (_, at: string, requestId: string) => {
       const backend = new Backend(at);
       return await backend.approveSiteLogin(requestId);
+    },
+  );
+
+  handleSafe(
+    "backend:declineSiteLogin",
+    false,
+    [isToken, isId],
+    async (_, at: string, requestId: string) => {
+      const backend = new Backend(at);
+      return await backend.declineSiteLogin(requestId);
     },
   );
 
@@ -407,22 +533,22 @@ export function registerBackendIpc() {
   );
 
   handleSafe(
-    "backend:socialLink",
+    "backend:telegramUnlink",
     null,
-    [isToken, check.nonEmptyString(32), isCode],
-    async (_, at: string, provider: string, code: string) => {
+    [isToken],
+    async (_, at: string) => {
       const backend = new Backend(at);
-      return await backend.socialLink(provider, code);
+      return await backend.telegramUnlink();
     },
   );
 
   handleSafe(
-    "backend:socialUnlink",
+    "backend:updateNotifications",
     null,
-    [isToken, check.nonEmptyString(32)],
-    async (_, at: string, provider: string) => {
+    [isToken, isId, isPayload],
+    async (_, at: string, id: string, prefs: Partial<INotificationPrefs>) => {
       const backend = new Backend(at);
-      return await backend.socialUnlink(provider);
+      return await backend.updateNotifications(id, prefs);
     },
   );
 
@@ -436,26 +562,6 @@ export function registerBackendIpc() {
   handleSafe("backend:apiBaseUrl", BACKEND_URL, async () => getApiBaseUrl());
 
   handleSafe(
-    "backend:getSkin",
-    null,
-    [isToken, isId],
-    async (_, at: string, uuid: string) => {
-      const backend = new Backend(at);
-      return await backend.getSkin(uuid);
-    },
-  );
-
-  handleSafe(
-    "backend:discordAuthenticated",
-    false,
-    [isToken, isId],
-    async (_, at: string, userId: string) => {
-      const backend = new Backend(at);
-      return await backend.discordAuthenticated(userId);
-    },
-  );
-
-  handleSafe(
     "backend:aiComplete",
     null,
     [isToken, check.nonEmptyString(AI_PROMPT_MAX_CHARS)],
@@ -467,7 +573,7 @@ export function registerBackendIpc() {
 
   handleSafe(
     "versions:getList",
-    [],
+    null,
     [isLoader, check.optional(check.boolean())],
     async (
       _,
@@ -480,7 +586,7 @@ export function registerBackendIpc() {
 
   handleSafe(
     "versions:getLoaderVersions",
-    [],
+    null,
     [isLoader, check.nonEmptyString(64)],
     async (
       _,
@@ -490,11 +596,6 @@ export function registerBackendIpc() {
       return await VersionsService.getLoaderVersions(loader, mcVersion);
     },
   );
-
-  handleSafe("backend:getAuthlib", null, async () => {
-    const backend = new Backend();
-    return await backend.getAuthlib();
-  });
 
   handleSafe("backend:checkHealth", false, async () => {
     return await checkBackendHealth();

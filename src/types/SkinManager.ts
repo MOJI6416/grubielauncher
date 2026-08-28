@@ -73,6 +73,9 @@ export interface ICatalogSkin {
   status?: CatalogSkinStatus
   rejectionReason?: string | null
   downloads?: number
+  sourceSite?: string | null
+  sourceUrl?: string | null
+  createdAt?: string | null
 }
 
 export interface MyCommunityResult {

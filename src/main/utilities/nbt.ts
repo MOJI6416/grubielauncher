@@ -1,4 +1,5 @@
 import { IServer } from '@/types/ServersList'
+import { toNbtSafeText } from '@/shared/nbtText'
 import { deserialize, serialize, setPrototypeOf, TagType } from '@xmcl/nbt'
 import fs from 'fs-extra'
 import path from 'path'
@@ -38,9 +39,9 @@ export async function writeNBT(servers: IServer[], filePath: string) {
         acceptTextures?: number
         hidden?: number
       } = {
-        name: s.name,
-        ip: s.ip,
-        icon: s.icon || ''
+        name: toNbtSafeText(s.name),
+        ip: toNbtSafeText(s.ip),
+        icon: toNbtSafeText(s.icon || '')
       }
 
       const acceptTextures = normalizeByteFlag(s.acceptTextures)

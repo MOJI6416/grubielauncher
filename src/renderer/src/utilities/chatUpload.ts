@@ -1,5 +1,7 @@
 import { getApiBase } from "./apiBase";
 
+const UPLOAD_TIMEOUT_MS = 180_000;
+
 interface UploadChatImageOptions {
   accessToken: string;
   file: File;
@@ -23,6 +25,7 @@ export function uploadChatImage({
     formData.append("folder", folder);
 
     xhr.open("POST", `${getApiBase()}/files/upload`);
+    xhr.timeout = UPLOAD_TIMEOUT_MS;
     xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
 
     xhr.upload.onprogress = (event) => {
@@ -41,6 +44,7 @@ export function uploadChatImage({
 
     xhr.onerror = () => reject(new Error("upload_failed"));
     xhr.onabort = () => reject(new Error("upload_aborted"));
+    xhr.ontimeout = () => reject(new Error("upload_timeout"));
 
     onProgress?.(0);
     xhr.send(formData);

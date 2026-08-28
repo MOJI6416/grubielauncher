@@ -10,7 +10,7 @@ import { Downloader } from "../utilities/downloader";
 import fs from "fs-extra";
 import { installServer } from "../utilities/game";
 import { Backend } from "../services/Backend";
-import { mainWindow } from "../windows/mainWindow";
+import { mainWindow, setRunningServersProbe } from "../windows/mainWindow";
 import {
   VersionInstallProgress,
   VersionInstallStage,
@@ -155,7 +155,7 @@ const SERVER_LOG_LINES = 300;
 const SERVER_OUTPUT_FLUSH_MS = 200;
 const SERVER_GRACEFUL_STOP_MS = 30_000;
 const SERVER_TERMINATE_MS = 10_000;
-const SERVER_QUIT_WAIT_MS = 15_000;
+const SERVER_QUIT_WAIT_MS = 30_000;
 
 export function tokenizeRunScriptLine(line: string, posix: boolean): string[] {
   const tokens: string[] = [];
@@ -395,6 +395,19 @@ export function isTrustedServerJavaCommand(
     : left === right;
 }
 
+export function resolveRunScriptJava(
+  scriptCommand: string,
+  expectedJava: string,
+): { command: string; repointedFrom: string | null } | null {
+  if (isTrustedServerJavaCommand(scriptCommand, expectedJava)) {
+    return { command: scriptCommand, repointedFrom: null };
+  }
+
+  if (!expectedJava) return null;
+
+  return { command: expectedJava, repointedFrom: scriptCommand };
+}
+
 export function parseRunScript(
   content: string,
   posix: boolean,
@@ -436,6 +449,7 @@ export function parseRunScript(
 type RunningServer = {
   child: ChildProcess;
   state: ServerRunState;
+  startedAt: number;
   log: string[];
   pending: string[];
   flushTimer: NodeJS.Timeout | null;
@@ -460,6 +474,7 @@ function setState(serverPath: string, entry: RunningServer, state: ServerRunStat
     serverPath,
     state,
     pid: entry.child.pid ?? null,
+    startedAt: entry.startedAt,
   });
 }
 
@@ -558,18 +573,26 @@ export async function startServer(
   if (!parsed) return { ok: false, error: "server_run_script_unreadable" };
 
   const expectedJava = await resolveServerJavaPath(key);
-  if (!isTrustedServerJavaCommand(parsed.command, expectedJava)) {
-    console.error(
-      `[server] refused run script java command outside the launcher runtime: ${parsed.command}`,
-    );
-    return { ok: false, error: "server_run_script_untrusted" };
+  let resolved = resolveRunScriptJava(parsed.command, expectedJava);
+
+  if (resolved && !(await fs.pathExists(resolved.command)) && expectedJava) {
+    resolved = { command: expectedJava, repointedFrom: parsed.command };
   }
+
+  if (!resolved || !(await fs.pathExists(resolved.command))) {
+    console.error(
+      `[server] no usable Java runtime for the run script command ${parsed.command}`,
+    );
+    return { ok: false, error: "server_java_unavailable" };
+  }
+
+  const { command: javaCommand, repointedFrom } = resolved;
 
   const args = await expandServerArgfiles(key, parsed.args);
 
   let child: ChildProcess;
   try {
-    child = spawn(path.resolve(parsed.command), args, {
+    child = spawn(path.resolve(javaCommand), args, {
       cwd: key,
       windowsHide: true,
       stdio: ["pipe", "pipe", "pipe"],
@@ -584,6 +607,7 @@ export async function startServer(
   const entry: RunningServer = {
     child,
     state: "starting",
+    startedAt: Date.now(),
     log: [],
     pending: [],
     flushTimer: null,
@@ -594,6 +618,14 @@ export async function startServer(
   runningServers.set(key, entry);
   setServerRunning(key, true);
   setState(key, entry, "starting");
+
+  if (repointedFrom) {
+    pushOutput(
+      key,
+      entry,
+      `[launcher] the run script pointed at ${repointedFrom}, started with ${javaCommand} instead`,
+    );
+  }
 
   const stdoutReader = createLineReader((line) => {
     pushOutput(key, entry, line);
@@ -626,7 +658,12 @@ export async function startServer(
 
     runningServers.delete(key);
     setServerRunning(key, false);
-    broadcast("server:state", { serverPath: key, state: "stopped", pid: null });
+    broadcast("server:state", {
+      serverPath: key,
+      state: "stopped",
+      pid: null,
+      startedAt: null,
+    });
   });
 
   return { ok: true };
@@ -670,6 +707,36 @@ export async function stopServer(
   return { ok: true };
 }
 
+export async function sendServerCommand(
+  serverPath: string,
+  command: string,
+): Promise<ServerRunResult> {
+  const key = path.resolve(serverPath);
+  const entry = runningServers.get(key);
+
+  if (!entry) {
+    return (await isServerRunning(key))
+      ? { ok: false, error: "server_not_managed" }
+      : { ok: false, error: "server_not_running" };
+  }
+
+  const line = command.replace(/[\r\n]+/g, " ").trim().slice(0, 512);
+  if (!line) return { ok: false, error: "server_command_empty" };
+
+  try {
+    entry.child.stdin?.write(`${line}\n`);
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  pushOutput(key, entry, `> ${line}`);
+
+  return { ok: true };
+}
+
 export async function getServerRunStatus(
   serverPath: string,
 ): Promise<ServerRunStatus> {
@@ -681,6 +748,7 @@ export async function getServerRunStatus(
       serverPath: key,
       state: entry.state,
       pid: entry.child.pid ?? null,
+      startedAt: entry.startedAt,
       log: [...entry.log],
     };
   }
@@ -689,6 +757,7 @@ export async function getServerRunStatus(
     serverPath: key,
     state: (await isServerRunning(key)) ? "running" : "stopped",
     pid: null,
+    startedAt: null,
     log: [],
   };
 }
@@ -708,22 +777,47 @@ function waitForServersToExit(timeoutMs: number): Promise<void> {
 }
 
 let quitRequested = false;
+let serversShutdownDone = false;
+let serversShutdown: Promise<void> | null = null;
 
-app.on("before-quit", (event) => {
+export function hasRunningServers() {
+  return runningServers.size > 0;
+}
+
+setRunningServersProbe(hasRunningServers);
+
+export async function stopAllServers(): Promise<void> {
   if (runningServers.size === 0) return;
 
-  if (quitRequested) {
-    for (const entry of runningServers.values()) forceKill(entry);
-    return;
-  }
-
-  quitRequested = true;
-  event.preventDefault();
-
   for (const key of [...runningServers.keys()]) void stopServer(key);
+  await waitForServersToExit(SERVER_QUIT_WAIT_MS);
+  if (runningServers.size === 0) return;
 
-  void waitForServersToExit(SERVER_QUIT_WAIT_MS).then(() => {
-    for (const entry of runningServers.values()) forceKill(entry);
+  console.warn(
+    `[server:quit] ${runningServers.size} server(s) did not stop in ${SERVER_QUIT_WAIT_MS}ms, terminating`,
+  );
+  for (const entry of runningServers.values()) forceKill(entry);
+  await waitForServersToExit(SERVER_TERMINATE_MS);
+}
+
+export function stopServersForShutdown(): Promise<void> {
+  if (serversShutdown) return serversShutdown;
+  if (runningServers.size === 0) return Promise.resolve();
+
+  serversShutdown = stopAllServers();
+
+  return serversShutdown;
+}
+
+app.on("before-quit", (event) => {
+  if (serversShutdownDone || runningServers.size === 0) return;
+
+  event.preventDefault();
+  if (quitRequested) return;
+  quitRequested = true;
+
+  void stopServersForShutdown().finally(() => {
+    serversShutdownDone = true;
     app.quit();
   });
 });
@@ -736,6 +830,7 @@ export class ServerGame {
   private downloadLimit: number = 6;
   private account: ILocalAccount | undefined = undefined;
   private downloader: Downloader;
+  private signal: AbortSignal | undefined = undefined;
 
   constructor(
     account: ILocalAccount | undefined,
@@ -752,6 +847,7 @@ export class ServerGame {
     this.serverConf = conf;
     this.downloadLimit = downloadLimit;
     this.downloader = new Downloader(this.downloadLimit);
+    this.downloader.versionName = this.installTargetName() || null;
   }
 
   private async resolveJavaMajorVersion(): Promise<number> {
@@ -770,6 +866,10 @@ export class ServerGame {
     return fallback;
   }
 
+  private installTargetName(): string {
+    return this.version?.name || this.serverConf?.core || "";
+  }
+
   private sendInstallProgress(
     stage: VersionInstallStage,
     progressPercent: number,
@@ -782,7 +882,7 @@ export class ServerGame {
       stage === "done"
         ? null
         : {
-            versionName: this.version?.name || this.serverConf?.core || "",
+            versionName: this.installTargetName(),
             loaderName: this.version?.loader.name || "vanilla",
             operation: "server",
             stage,
@@ -796,8 +896,21 @@ export class ServerGame {
     } catch {}
   }
 
-  async install(options?: { keepProgressOpen?: boolean }) {
+  cancel() {
+    this.downloader.cancelDownload();
+  }
+
+  private throwIfCancelled() {
+    if (this.signal?.aborted) throw new Error("AbortError");
+  }
+
+  async install(options?: {
+    keepProgressOpen?: boolean;
+    signal?: AbortSignal;
+  }) {
     if (!this.serverConf) return;
+
+    this.signal = options?.signal;
 
     await fs.ensureDir(this.serverPath);
 
@@ -830,9 +943,11 @@ export class ServerGame {
     const javaMajorVersion = await this.resolveJavaMajorVersion();
     this.serverConf.javaMajorVersion = javaMajorVersion;
     const java = new Java(javaMajorVersion);
-    await java.init();
+    await java.init(this.signal);
     this.sendInstallProgress("java", 15);
-    await java.install();
+    this.throwIfCancelled();
+    await java.install(this.signal, this.installTargetName());
+    this.throwIfCancelled();
 
     const javaServerResolved =
       Boolean(java.javaServerPath) &&
@@ -862,13 +977,16 @@ export class ServerGame {
         );
       }
 
-      await this.downloader.downloadFiles([
-        {
-          url: coreUrl,
-          destination: jarPath,
-          group: "server",
-        },
-      ]);
+      await this.downloader.downloadFiles(
+        [
+          {
+            url: coreUrl,
+            destination: jarPath,
+            group: "server",
+          },
+        ],
+        this.signal,
+      );
 
       const downloadedStats = await fs.stat(jarPath).catch(() => null);
       if (!downloadedStats || downloadedStats.size === 0) {
@@ -881,16 +999,28 @@ export class ServerGame {
     const javaCmdSh = `'${java.javaServerPath.replaceAll("'", `'\\''`)}'`;
 
     const backend = new Backend();
+    const needsAuthlib =
+      this.account?.type != null &&
+      this.account.type !== "microsoft" &&
+      this.account.type !== "plain";
+
     let authlib: any = null;
     try {
       authlib = await backend.getAuthlib();
-    } catch {
+    } catch (error) {
+      if (needsAuthlib) throw error;
       authlib = null;
+    }
+
+    if (needsAuthlib && !authlib) {
+      throw new Error(
+        "Failed to resolve authlib-injector for the server: players of this account type would not be able to join.",
+      );
     }
 
     let javaagent = "";
 
-    const params = ["-jar", jarPath];
+    const params = ["-jar", jar];
     let bootstrapsServer = false;
 
     if (this.serverConf.core == ServerCore.QUILT) {
@@ -908,6 +1038,10 @@ export class ServerGame {
     }
 
     this.sendInstallProgress("installer", 55);
+
+    const alreadyBootstrapped =
+      bootstrapsServer &&
+      (await fs.pathExists(path.join(this.serverPath, "eula.txt")));
 
     const installerProgressState = createLoaderInstallerProgressState(55);
     const handleInstallerOutput = (message: string) => {
@@ -936,13 +1070,18 @@ export class ServerGame {
       }
     };
 
-    await installServer(
-      java.javaServerPath,
-      params,
-      cwd,
-      handleInstallerOutput,
-      { resolveOnEulaFile: bootstrapsServer },
-    );
+    this.throwIfCancelled();
+
+    if (!alreadyBootstrapped) {
+      await installServer(
+        java.javaServerPath,
+        params,
+        cwd,
+        handleInstallerOutput,
+        { resolveOnEulaFile: bootstrapsServer, signal: this.signal },
+      );
+    }
+    this.throwIfCancelled();
     this.sendInstallProgress("loader", 80);
 
     if (
@@ -961,15 +1100,18 @@ export class ServerGame {
         true,
       )} `;
 
-      await this.downloader.downloadFiles([
-        {
-          url: authlib.url,
-          destination: path.join(this.serverPath, "libraries", authlibPath),
-          group: "server",
-          sha1: authlib.sha1,
-          size: authlib.size,
-        },
-      ]);
+      await this.downloader.downloadFiles(
+        [
+          {
+            url: authlib.url,
+            destination: path.join(this.serverPath, "libraries", authlibPath),
+            group: "server",
+            sha1: authlib.sha1,
+            size: authlib.size,
+          },
+        ],
+        this.signal,
+      );
     }
 
     const batPath = path.join(this.serverPath, "run.bat");

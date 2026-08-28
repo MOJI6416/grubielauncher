@@ -10,6 +10,7 @@ export interface DownloadItem {
     extract?: boolean;
     extractFolder?: string;
     extractDelete?: boolean;
+    keepExistingWorlds?: boolean;
     silent?: boolean;
     maxBytes?: number;
   };

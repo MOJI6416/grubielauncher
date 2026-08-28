@@ -1,11 +1,7 @@
 import { Loader } from "@/types/Loader";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Blocks, Lock } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 import fabricIcon from "@renderer/assets/loaders/fabric.svg";
 import forgeIcon from "@renderer/assets/loaders/forge.svg";
 import neoforgeIcon from "@renderer/assets/loaders/neoforge.svg";
@@ -13,56 +9,23 @@ import quiltIcon from "@renderer/assets/loaders/quilt.svg";
 
 type LoaderInfo = {
   name: string;
-  style: string;
+  dot: string;
   icon?: string;
-  iconScaleClassName?: string;
 };
 
 export const loaders = {
-  vanilla: {
-    name: "Vanilla",
-    style:
-      "bg-gradient-to-b from-[#86F87B] via-[#54C462] to-[#1B6A34] text-transparent bg-clip-text",
-  },
+  vanilla: { name: "Vanilla", dot: "bg-loader-vanilla" },
+  forge: { name: "Forge", dot: "bg-loader-forge", icon: forgeIcon },
+  neoforge: { name: "NeoForge", dot: "bg-loader-neoforge", icon: neoforgeIcon },
+  fabric: { name: "Fabric", dot: "bg-loader-fabric", icon: fabricIcon },
+  quilt: { name: "Quilt", dot: "bg-loader-quilt", icon: quiltIcon },
+} satisfies Record<Loader, LoaderInfo> as Record<Loader, LoaderInfo>;
 
-  forge: {
-    name: "Forge",
-    style:
-      "bg-gradient-to-b from-[#F3C691] via-[#DFA86A] to-[#A56733] text-transparent bg-clip-text",
-    icon: forgeIcon,
-    iconScaleClassName: "scale-110",
-  },
-
-  neoforge: {
-    name: "NeoForge",
-    style:
-      "bg-gradient-to-b from-[#F0A34B] via-[#D7742F] to-[#A44E37] text-transparent bg-clip-text",
-    icon: neoforgeIcon,
-    iconScaleClassName: "scale-100",
-  },
-
-  fabric: {
-    name: "Fabric",
-    style:
-      "bg-gradient-to-b from-[#F0E5CD] via-[#DBD0B4] to-[#38342A] text-transparent bg-clip-text",
-    icon: fabricIcon,
-    iconScaleClassName: "scale-95",
-  },
-
-  quilt: {
-    name: "Quilt",
-    style:
-      "bg-gradient-to-b from-[#9722FF] via-[#DC29DD] to-[#27A2FD] text-transparent bg-clip-text",
-    icon: quiltIcon,
-    iconScaleClassName: "scale-90",
-  },
-} satisfies Record<Loader, LoaderInfo>;
-
-const loaderTabs: Loader[] = [
+export const LOADER_ORDER: Loader[] = [
   "vanilla",
-  "forge",
-  "neoforge",
   "fabric",
+  "neoforge",
+  "forge",
   "quilt",
 ];
 
@@ -74,81 +37,108 @@ export function getLoaderInfo(loader?: string): LoaderInfo {
   return loaders.vanilla;
 }
 
+export function LoaderIcon({
+  loader,
+  className,
+}: {
+  loader: Loader;
+  className?: string;
+}) {
+  const info = getLoaderInfo(loader);
+
+  if (!info.icon) {
+    return <Blocks className={cn("text-loader-vanilla", className)} />;
+  }
+
+  return (
+    <img
+      src={info.icon}
+      alt=""
+      aria-hidden
+      draggable={false}
+      className={cn("object-contain", className)}
+    />
+  );
+}
+
 export function LoaderLabel({
   loader,
   className = "",
-  iconClassName = "",
   textClassName = "",
 }: {
   loader?: string;
   className?: string;
-  iconClassName?: string;
   textClassName?: string;
 }) {
   const info = getLoaderInfo(loader);
 
   return (
-    <div className={`flex min-w-0 items-center gap-1 ${className}`.trim()}>
-      {info.icon && (
-        <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center">
-          <img
-            src={info.icon}
-            alt=""
-            aria-hidden="true"
-            className={`h-full w-full object-contain ${info.iconScaleClassName || ""} ${iconClassName}`.trim()}
-          />
-        </span>
-      )}
-      <span className={`truncate ${info.style} ${textClassName}`.trim()}>
-        {info.name}
-      </span>
-    </div>
+    <span
+      className={`inline-flex min-w-0 items-center gap-1.5 align-middle ${className}`.trim()}
+    >
+      <span className={`size-1.5 shrink-0 rounded-full ${info.dot}`} />
+      <span className={`truncate ${textClassName}`.trim()}>{info.name}</span>
+    </span>
   );
 }
 
-export function Loaders({
-  select,
-  isLoading,
-  isDisabled = false,
-  disabledLoaders = [],
-  loader,
-  label = "Loader",
+export function LoaderPicker({
+  value,
+  onSelect,
+  isLocked = false,
+  unavailable = {},
 }: {
-  select: (loader: Loader) => void;
-  isLoading: boolean;
-  isDisabled?: boolean;
-  disabledLoaders?: Loader[];
-  loader: string;
-  label?: string;
+  value: Loader;
+  onSelect: (loader: Loader) => void;
+  isLocked?: boolean;
+  unavailable?: Partial<Record<Loader, string>>;
 }) {
-  const selectedLoader =
-    loader && loader in loaders ? (loader as Loader) : "vanilla";
+  const { t } = useTranslation();
 
   return (
-    <div className="flex w-full flex-col gap-2">
-      <span className="text-sm font-medium">{label}</span>
-      <Select
-        value={selectedLoader}
-        disabled={isLoading || isDisabled}
-        onValueChange={(value) => {
-          if (value) select(value as Loader);
-        }}
-      >
-        <SelectTrigger aria-label={label} className="w-full">
-          <SelectValue placeholder={label} />
-        </SelectTrigger>
-        <SelectContent>
-          {loaderTabs.map((loaderKey) => (
-            <SelectItem
-              key={loaderKey}
-              value={loaderKey}
-              disabled={disabledLoaders.includes(loaderKey)}
-            >
-              <LoaderLabel loader={loaderKey} />
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div
+      role="radiogroup"
+      aria-label={t("versions.loader")}
+      className="grid grid-cols-5 gap-1.5"
+    >
+      {LOADER_ORDER.map((loader) => {
+        const info = loaders[loader];
+        const isSelected = value === loader;
+        const reason = unavailable[loader];
+        const isDisabled = (isLocked && !isSelected) || !!reason;
+
+        return (
+          <button
+            key={loader}
+            type="button"
+            role="radio"
+            aria-checked={isSelected}
+            disabled={isDisabled}
+            onClick={() => onSelect(loader)}
+            className="group/loader flex min-w-0 flex-col gap-1 rounded-xl border border-border bg-surface-2 px-2.5 py-2 text-left transition-colors hover:bg-surface-3 aria-checked:border-primary/70 aria-checked:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface-2"
+          >
+            <span className="flex min-w-0 items-center gap-1.5">
+              <LoaderIcon loader={loader} className="size-4 shrink-0" />
+              <span className="min-w-0 flex-1 truncate text-[0.8rem] font-medium text-foreground">
+                {info.name}
+              </span>
+              {reason ? (
+                <Lock className="size-3 shrink-0 text-faint" />
+              ) : (
+                <span
+                  className={cn(
+                    "size-1.5 shrink-0 rounded-full opacity-0 transition-opacity group-aria-checked/loader:opacity-100",
+                    info.dot,
+                  )}
+                />
+              )}
+            </span>
+            <span className="min-w-0 text-[0.68rem] leading-snug text-muted-foreground">
+              {reason || t(`versions.loaderAbout.${loader}`)}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

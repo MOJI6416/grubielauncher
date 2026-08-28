@@ -166,6 +166,7 @@ const DISK_ERRNO: Record<string, FailureCause> = {
   ENFILE: "accessDenied",
   EXDEV: "accessDenied",
   EISDIR: "accessDenied",
+  ENOTDIR: "fileMissing",
   ENOTEMPTY: "fileBusy",
   ENAMETOOLONG: "accessDenied",
 };
@@ -382,10 +383,6 @@ export function classifyError(
   };
 }
 
-export function isCancelledFailure(info: FailureInfo | null | undefined) {
-  return info?.cause === "cancelled";
-}
-
 const RETRYABLE_NETWORK_CAUSES: ReadonlySet<FailureCause> = new Set([
   "reset",
   "timeout",
@@ -400,4 +397,19 @@ export function isTransientNetworkFailure(error: unknown): boolean {
   if (typeof status === "number") return false;
 
   return RETRYABLE_NETWORK_CAUSES.has(classifyError(error).cause);
+}
+
+const UNREACHABLE_CAUSES: ReadonlySet<FailureCause> = new Set([
+  "offline",
+  "dns",
+  "refused",
+  "timeout",
+  "reset",
+  "tls",
+  "serverError",
+  "rateLimited",
+]);
+
+export function isSourceUnreachable(error: unknown): boolean {
+  return UNREACHABLE_CAUSES.has(classifyError(error).cause);
 }

@@ -8,7 +8,7 @@ import { TSettings } from "@/types/Settings";
 import { mcVersionToJavaMajor } from "@/shared/javaVersions";
 import { findRecentCrashReport, readCrashSource } from "./crashAnalyzer";
 import { getConsoleOutput } from "./consoleBuffer";
-import { prepareLogForAnalysis } from "./logSanitizer";
+import { prepareLogForAnalysis } from "@/shared/logSanitizer";
 import { getLauncherPaths } from "./other";
 
 const MAX_LOG_CHARS = 40000;
@@ -90,6 +90,18 @@ async function listMods(versionPath: string): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+function resolveMemoryMb(
+  settings: Partial<TSettings> | null,
+  conf: IVersionConf | null,
+): number | undefined {
+  const override = conf?.overrides?.xmx;
+  if (typeof override === "number" && override > 0) return Math.round(override);
+
+  return typeof settings?.xmx === "number" && settings.xmx > 0
+    ? settings.xmx
+    : undefined;
 }
 
 async function findRecentJvmDump(versionPath: string): Promise<string | null> {
@@ -207,10 +219,7 @@ export async function buildLogAnalysisRequest(
     loaderVersion: conf?.loader?.version?.id || undefined,
     javaVersion: javaMajor ? String(javaMajor) : undefined,
     javaArch: process.arch,
-    memoryMb:
-      typeof settings?.xmx === "number" && settings.xmx > 0
-        ? settings.xmx
-        : undefined,
+    memoryMb: resolveMemoryMb(settings, conf),
     os: `${process.platform} ${process.arch}`,
     exitCode: options.exitCode,
     mods,

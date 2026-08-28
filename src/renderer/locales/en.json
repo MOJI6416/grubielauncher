@@ -2,9 +2,13 @@
   "common": {
     "save": "Save",
     "copied": "Copied to clipboard",
+    "copyFailed": "Could not copy to clipboard",
+    "copyFailedHint": "The clipboard is busy or the text is too large. Try again, or copy from the file.",
     "openFolder": "Location",
     "edit": "Edit",
     "confirmation": "Confirmation",
+    "reversible": "This can be undone",
+    "irreversible": "This cannot be undone",
     "yes": "Yes",
     "no": "No",
     "ok": "Got it",
@@ -12,7 +16,6 @@
     "select": "Select",
     "delete": "Delete",
     "deletion": "Deletion",
-    "installation": "Installation",
     "install": "Install",
     "update": "Update",
     "copy": "Copy",
@@ -25,54 +28,145 @@
     "retry": "Try again",
     "cancel": "Cancel",
     "rename": "Rename",
+    "gallery": "Gallery",
     "close": "Close",
     "add": "Add",
     "more": "More",
     "previous": "Previous",
     "next": "Next",
-    "previousPage": "Previous page",
-    "nextPage": "Next page",
-    "unsavedChanges": "Are you sure you want to close the settings without saving?"
+    "reset": "Reset",
+    "loading": "Loading",
+    "refresh": "Refresh"
   },
-  "network": {},
   "accounts": {
     "added": "Account added",
     "deleted": "Account deleted",
-    "failedLogIn": "Failed to log in",
-    "exists": "Account already exists",
+    "addAccount": "Add account",
     "accounts": "Accounts",
-    "select": "Select",
-    "accountSelection": "Account selection",
-    "delete": "Delete",
-    "addingAccount": "Adding account",
-    "plainAccount": "Plain (no password)",
     "microsoft": "Microsoft",
     "elyby": "Ely.by",
-    "notSelected": "No account selected",
     "nickname": "Nickname",
-    "invalidNickname": "Nickname must be unique and 3-16 characters long.",
-    "cancelled": "Authentication canceled",
     "sessionExpired": "Your account session has expired. Sign in again.",
     "confirmation": "Are you sure you want to delete the account {{nickname}}?",
-    "providerFeature": {
-      "plain": "Offline",
-      "discord": "Own skin system",
-      "microsoft": "Official skin",
-      "elyby": "ely.by skins"
-    },
     "sessionExpiredHint": "The account session could not be renewed. Sign in again.",
-    "failedLogInHint": "Sign-in did not complete. Check your connection and try again — the authorization window opens in your browser.",
-    "secretsPlain": "Account secrets are stored unencrypted",
-    "secretsPlainHint": "The system keychain is unavailable, so login sessions are saved as plain text. Anyone with access to this computer can read them.",
-    "oauthTimeLeft": "Time left to sign in: {{time}}"
+    "oauthTimeLeft": "Time left to sign in: {{time}}",
+    "discord": "Discord",
+    "offline": "Offline account",
+    "signIn": "Sign in",
+    "playingAs": "Playing as",
+    "manage": "Manage accounts",
+    "addSection": "Add account",
+    "switchShortcut": "Ctrl + 1…9 switches accounts",
+    "emptyTitle": "No account selected",
+    "emptyDescription": "Pick an account on the left or add a new one.",
+    "use": "Use",
+    "inUse": "Active",
+    "inGame": "In game",
+    "needsActive": "Available for the active account only",
+    "remove": "Remove account",
+    "removeWhileRunning": "The game is running under this account",
+    "renew": "Renew session",
+    "signInAgain": "Sign in again",
+    "sessionRenewed": "Session renewed",
+    "sessionRenewFailed": "Could not renew the session",
+    "saveFailedHint": "The account list could not be written to disk. Check free space and access rights, then try again.",
+    "addFailed": "The account was not added",
+    "removeFailed": "The account was not removed",
+    "switchFailed": "Could not switch the account",
+    "loadFailedTitle": "Could not read the account list",
+    "loadFailedHint": "accounts.json is unreadable, so the saved accounts are not shown. Nothing has been deleted — repeat the read once the file is available again.",
+    "uuid": "UUID",
+    "friendCode": "Friend code",
+    "capabilities": "What this account gives",
+    "longNicknameHint": "The nickname is longer than 16 characters or uses unsupported characters — the game will refuse it. Sign in again to get a shortened nickname.",
+    "offlineTitle": "Offline account",
+    "offlineHint": "Plays without a password: singleplayer, local worlds and offline servers. Skins, friends and online servers stay unavailable.",
+    "removeRisk": {
+      "last": "This is the last account. Without an account the game will not start.",
+      "selected": "This account is active now — the launcher will switch to another one.",
+      "running": "The game is running under this account right now. It keeps running, but the launcher will forget the account."
+    },
+    "session": {
+      "offline": "No session needed",
+      "active": "Session is valid",
+      "renewable": "Session will be renewed",
+      "expiring": "Session ends soon",
+      "expired": "Session expired"
+    },
+    "sessionHint": {
+      "offline": "An offline account keeps working without the internet.",
+      "active": "The launcher renews the session on its own before it runs out.",
+      "renewable": "The saved session is out of date, the launcher will renew it on the next request.",
+      "expiring": "The session ends in a couple of minutes and cannot be renewed automatically.",
+      "expired": "The session can no longer be renewed. Sign in again to play under this account."
+    },
+    "nicknameIssue": {
+      "empty": "Enter a nickname",
+      "tooShort": "At least 3 characters",
+      "tooLong": "No more than 16 characters",
+      "chars": "Latin letters, digits and the underscore only",
+      "duplicate": "An offline account with this nickname already exists"
+    },
+    "feature": {
+      "onlineServers": "Official servers",
+      "skinsManaged": "Skins in the launcher",
+      "skinsExternal": "Skins on ely.by",
+      "capes": "Capes",
+      "friends": "Friends and voice",
+      "worksOffline": "Works without the internet"
+    },
+    "auth": {
+      "waitingTitle": "Finish signing in to {{provider}}",
+      "waitingHint": "The authorization page is open in your browser. Come back here once it is done — the launcher is waiting for the answer.",
+      "exchanging": "Finishing the sign-in",
+      "exchangingHint": "Checking the answer from the provider and saving the account.",
+      "reopen": "Open the sign-in page again",
+      "copyLink": "Copy the sign-in link",
+      "failedTitle": "Sign-in failed",
+      "retry": "Try again"
+    },
+    "authError": {
+      "timeout": "The sign-in page was not completed within 10 minutes.",
+      "portBusy": "Port 53213 is taken by another program, so the answer cannot be received.",
+      "rejected": "The provider rejected the authorization.",
+      "network": "The provider could not be reached.",
+      "provider": "The provider service is answering with an error.",
+      "unknown": "The sign-in did not complete.",
+      "cancelled": "Sign-in cancelled."
+    },
+    "authFix": {
+      "timeout": "Start again and finish the sign-in in the browser window.",
+      "portBusy": "Close the second copy of the launcher or the program using port 53213 and try again.",
+      "rejected": "Check that you signed in to the right account and allowed access to the launcher.",
+      "network": "Check the internet connection, VPN and firewall, then try again.",
+      "provider": "The problem is on the provider side — try again in a few minutes.",
+      "unknown": "Try again; if it repeats, copy the code and send it to support.",
+      "cancelled": "Start the sign-in again when you are ready."
+    },
+    "launcherSession": "Launcher session",
+    "providerSession": "{{provider}} session",
+    "providerPitch": {
+      "discord": "Skins and capes, friends and voice",
+      "microsoft": "Official servers and the Mojang skin",
+      "elyby": "Skins on ely.by, no Xbox needed",
+      "plain": "No password, singleplayer only"
+    },
+    "longNicknameOffline": "The nickname is longer than 16 characters or uses unsupported characters — the game will refuse it. Remove this account and create a new one with a shorter nickname.",
+    "upgradeTitle": "What is missing",
+    "upgradeHint": "An offline account has no access to official servers and no skins. Add a Discord, Microsoft or Ely.by account on the left to play online.",
+    "welcomeTitle": "Add an account to play",
+    "welcomeHint": "The launcher needs one account to start the game. Pick where you sign in — you can add the rest later and switch between them at any time.",
+    "openProfile": "Open profile",
+    "identityInProfile": "Your UUID and friend code live in the profile."
   },
   "serverManager": {
     "logoEdited": "Logo edited",
-    "serverPropertiesNotFound": "server.properties file not found",
+    "logoEditError": "Could not save the logo",
     "deleted": "Server deleted",
     "configNotFound": "Server configuration file not found",
     "deleteError": "Server deletion error",
-    "confirmation": "Are you sure you want to delete the server?",
+    "confirmation": "Delete the server? Its folder with the server world goes to the recycle bin.",
+    "deleteTitle": "Deleting the instance server",
     "deleteErrorHint": "The server folder could not be deleted. Stop the server and try again.",
     "start": "Start server",
     "stop": "Stop server",
@@ -81,12 +175,59 @@
     "stateRunning": "Online",
     "stateStopping": "Stopping",
     "runError": "Could not control the server",
-    "runErrorUntrusted": "The server start script points at a Java runtime the launcher does not manage. Reinstall the server.",
-    "runErrorNotManaged": "This server was started outside the launcher. Stop it in the window where it is running.",
+    "runErrorJavaUnavailable": "The launcher could not find a Java runtime for this server. Check your connection and reinstall the server files.",
+    "runErrorNotManaged": "This server was started outside the launcher. Close its Java process in the task manager.",
     "syncFailed": "Could not copy files to the server",
-    "syncAfterRestart": "The server is running: the copied files will take effect after you restart it"
+    "syncAfterRestart": "The server is running: the copied files will take effect after you restart it",
+    "runErrorMissing": "The server start script is missing. Reinstall the server.",
+    "runErrorNotRunning": "The server is not running.",
+    "runErrorUnreadable": "The launcher cannot read the server start script. Reinstall the server files.",
+    "runErrorAlreadyRunning": "This server is already running.",
+    "runErrorStartFailed": "The server could not be started. Reinstall the server files and try again.",
+    "runErrorStopFailed": "The launcher could not stop the server.",
+    "commandErrorFailed": "The launcher could not send the command to the server.",
+    "commandErrorEmpty": "The command is empty.",
+    "repairTitle": "The server cannot be started",
+    "repairHint": "The launcher will download Java and the server core again and rewrite the start scripts. The world, settings and mods stay untouched.",
+    "repair": "Reinstall server files",
+    "repaired": "Server files reinstalled",
+    "repairError": "Could not reinstall the server files",
+    "runtimeMissing": "This launcher release cannot start the server.",
+    "view": {
+      "console": "Console",
+      "settings": "Settings"
+    },
+    "console": "Console",
+    "consoleEmpty": "Start the server and its output will appear here.",
+    "copyLog": "Copy the log",
+    "commandPlaceholder": "Command, for example: say hi",
+    "commandDisabled": "Commands work while the server is running",
+    "commandSend": "Send",
+    "commandError": "The command was not delivered",
+    "share": "Address for players",
+    "shareHint": "Players on your network use the second address.",
+    "addressLocal": "This machine",
+    "addressLan": "Local network",
+    "pendingChanges": "Unsaved changes: {{total}}",
+    "noChanges": "Everything is saved",
+    "apply": "Apply",
+    "saveError": "Could not save the server settings",
+    "forceStop": "Force",
+    "forceStopHint": "Kill the server process. The world may be left unsaved.",
+    "foreignTitle": "This server was not started by the launcher",
+    "foreignHint": "The server world is held by another process: the launcher was probably restarted while the server kept running. Close that Java process in the task manager and check again.",
+    "saveErrorHint": "The changes were not written to disk. Make sure the server folder is available and not locked by another program.",
+    "savePartial": "Not saved: {{parts}}",
+    "savePartialHint": "The rest was written. Make sure the server folder is available and not locked by another program, then apply again.",
+    "partProperties": "server properties",
+    "partRecord": "server record",
+    "settingsUnreadable": "Could not read server.properties",
+    "settingsUnreadableHint": "The launcher cannot read the server settings file. It may be locked by another program or the server folder may be unavailable.",
+    "closeTitle": "The server is still running",
+    "closeHint": "The launcher will send stop and wait for the world to save. Players will be disconnected.",
+    "closeStopAndQuit": "Stop and close",
+    "applyAfterRestart": "takes effect after the server restarts"
   },
-  "serverMotd": {},
   "serverSettings": {
     "description": "Description",
     "port": "Port",
@@ -103,10 +244,9 @@
     "allowNether": "Nether",
     "forceGamemode": "Force game mode",
     "spawnProtection": "Spawn protection",
-    "requireResourcePack": "Require resource pack",
     "resourcePack": "Resource pack",
     "requestResourcePack": "Request resource pack",
-    "unsavedChanges": "Are you sure you want to close the settings without saving?",
+    "fromInstance": "From the instance content",
     "gameModes": [
       "Survival",
       "Creative",
@@ -124,80 +264,99 @@
       "game": "Game",
       "rules": "Rules"
     },
-    "serverCore": "Server core",
     "portInUse": "Port {{port}} is already in use on this machine"
   },
   "webLogin": {
     "title": "Sign in to the site",
-    "body": "Allow signing in to grubielauncher.com as {{nickname}}?",
     "bodyNoName": "Allow signing in to grubielauncher.com?",
     "hint": "Only approve this if you started it yourself on the website.",
-    "code": "Code {{code}} — allow the sign-in only if the website shows the same code.",
+    "codeLabel": "Confirmation code",
+    "codeHint": "Allow the sign-in only if the website shows the same code.",
     "approve": "Allow",
     "decline": "Decline",
     "noAccount": "No active account to sign in with.",
     "approved": "Signed in on the website.",
     "failed": "Could not sign in on the website.",
     "failedHint": "The server did not confirm the website sign-in. Try signing in again.",
+    "declineFailed": "Could not decline the sign-in.",
+    "declineFailedHint": "The server did not confirm the decline. The request on the website may still be active — close the sign-in page there.",
     "selectAccount": "Account to sign in with"
   },
   "donor": {
     "badge": "Donor"
   },
-  "socials": {
-    "title": "Socials",
-    "add": "Socials",
-    "edit": "Edit",
-    "link": "Link",
-    "unlink": "Unlink",
-    "linked": "Linked",
-    "discordLinked": "Discord linked",
-    "discordLinkFailed": "Failed to link Discord",
-    "discordUnlinked": "Discord unlinked",
-    "discordUnlinkFailed": "Failed to unlink Discord",
-    "saved": "Socials saved",
+  "connections": {
+    "title": "Connections",
+    "link": "Connect",
+    "unlink": "Disconnect",
+    "linked": "Connected",
+    "discordBenefit": "Sign-in and the donor role",
+    "telegramBenefit": "Notifications while the launcher is closed",
+    "discordLinked": "Discord connected",
+    "discordLinkFailed": "Failed to connect Discord",
+    "discordUnlinked": "Discord disconnected",
+    "discordUnlinkFailed": "Failed to disconnect Discord",
+    "telegramLinked": "Telegram connected",
+    "telegramLinkFailed": "Failed to connect Telegram",
+    "telegramUnlinked": "Telegram disconnected",
+    "telegramUnlinkFailed": "Failed to disconnect Telegram",
     "saveError": "Failed to save",
-    "providerLinked": "Account linked",
-    "providerLinkFailed": "Failed to link the account",
-    "providerUnlinked": "Account unlinked",
-    "providerUnlinkFailed": "Failed to unlink the account",
-    "manage": "Manage",
-    "manageDescription": "Linked accounts are shown on your profile and on the site. Linking proves account ownership.",
-    "none": "Not linked",
-    "providerLinkTimeoutHint": "Linking did not finish in time. Make sure you confirmed access in the window that opened."
+    "summaryEmpty": "Donor role and notifications",
+    "summaryTelegramOffer": "Telegram — notifications",
+    "summaryNotifications": "Notifications in Telegram",
+    "summaryMuted": "Notifications are off",
+    "notificationsTitle": "Telegram notifications",
+    "notificationsWhen": "Only while the launcher is closed",
+    "notificationsStopHint": "Nothing arrives while the launcher is open. You can also turn everything off with /stop in the bot chat.",
+    "event": {
+      "gameInvite": "Someone invites you to play",
+      "friendRequest": "Friend requests",
+      "worldShare": "A friend opened a world"
+    },
+    "providerLinkTimeoutHint": "Connecting did not finish in time. Make sure you confirmed it in the window that opened.",
+    "signInProvider": "Sign-in",
+    "signInProviderHint": "This is the account you sign in to the launcher with, so it stays connected.",
+    "waitingBrowserHint": "A browser window is open. Confirm access there and come back to the launcher.",
+    "waitingTelegramHint": "A chat with the bot is open in Telegram. Press Start there and come back to the launcher.",
+    "reopen": "Open the link again",
+    "timeLeft": "Time left",
+    "linkNotConfirmed": "Access was not confirmed. Open the link again or start over.",
+    "needsAccount": "Sign in to a Grubie Launcher account to manage connections."
   },
   "friends": {
+    "you": "You",
+    "searchPlaceholder": "Search friends…",
     "title": "Friends",
     "unavailableHint": "Friends need an online account and an active connection",
-    "deleted": "{{nickname}} removed from friends",
+    "sessionLost": "Session expired",
+    "sessionLostHint": "Sign in to the account again to get your friends and chat back.",
     "requests": "Requests",
-    "copyId": "Copy friend code",
     "sendRequest": "Send request",
     "online": "Online",
     "playing": "In game",
     "offline": "Offline",
-    "disconnected": "Connection to friends lost",
     "join": "Join",
     "notificationEnabled": "Notifications enabled",
     "notificationDisabled": "Notifications disabled",
+    "muteSaveError": "Failed to save the notification setting",
     "enableNotifications": "Enable notifications",
     "disableNotifications": "Disable notifications",
-    "chatTitle": "Chat with",
-    "deleteAlert": "Are you sure you want to remove from friends",
+    "deleteAlert": "{{nickname}} disappears from your friends list, and you from theirs.",
     "noFriends": "No friends",
     "requestSent": "Request sent",
+    "requestQueued": "No connection — we will send the request once the link is back",
     "noRequests": "No requests",
-    "adding": "Adding to friends",
     "friendId": "Friend code",
     "send": "Send",
     "notFound": "User not found",
-    "friendCodeTitle": "Friend code",
     "friendCodeDescription": "Share this code with a friend so they can send you a request.",
+    "friendCodeDisabledHint": "Requests by code are turned off — turn them back on in Requests.",
     "friendCode": "Your code",
     "friendCodeUnavailable": "Friend code is not available yet.",
     "friendCodeReset": "Friend code reset",
     "friendCodeSaveError": "Failed to update friend code settings.",
     "resetFriendCode": "Reset code",
+    "resetFriendCodeConfirm": "The old code stops working: anyone you already gave it to will not be able to add you until you send them the new one.",
     "friendRequestsEnabledTitle": "Allow friend requests",
     "friendRequestsEnabledDescription": "When enabled, other users can add you by your friend code.",
     "operationErrors": {
@@ -208,11 +367,20 @@
       "not_allowed": "You are not allowed to do this.",
       "friend_requests_disabled": "This user does not accept friend requests.",
       "invalid_message": "The message is empty or invalid.",
+      "message_not_found": "This message is no longer there.",
       "user_not_found": "User not found.",
       "not_friend": "Add this user as a friend first.",
+      "not_member": "You are no longer a member of this group.",
+      "offline": "No connection — try again once the link is back.",
       "timeout": "The server did not respond. Try again.",
       "rate_limited": "You are doing that too fast. Please slow down.",
-      "unknown": "Failed to complete the action."
+      "unknown": "Failed to complete the action.",
+      "not_in_voice": "You are not in this group voice room.",
+      "recipient_not_member": "This player is no longer in the group.",
+      "invalid_recipient": "Could not identify the recipient.",
+      "server_error": "The server failed. Nothing was lost — try again.",
+      "voice_unavailable": "The voice server is unreachable right now. Try again later.",
+      "voice_disabled": "Voice is currently switched off."
     },
     "newRequest": "New friend request",
     "sentRequest": "{{nickname}} sent a friend request",
@@ -223,7 +391,13 @@
     "newMessage": "New message",
     "sentMessage": "{{nickname}} sent you a message",
     "chat": "Message",
+    "chatToday": "Today",
+    "chatYesterday": "Yesterday",
+    "chatJumpToLatest": "To the latest messages",
+    "chatNewMessages_one": "{{count}} new message",
+    "chatNewMessages_other": "{{count}} new messages",
     "chatAttachmentLoadError": "Attachment loading error",
+    "chatModpackGone": "This build is no longer available",
     "chatAttachmentLoading": "Loading attachment",
     "chatAttach": "Attach",
     "chatAttachImage": "Image",
@@ -233,7 +407,8 @@
     "chatExternalLinkTitle": "External link",
     "chatExternalLinkWarning": "You are about to open an external link. Only open links you trust.",
     "chatExternalLinkOpen": "Open",
-    "friendRequestsSection": "Friend requests",
+    "incomingRequests": "Incoming",
+    "outgoingRequests": "Sent",
     "chatSystem": {
       "joined": "{{nickname}} joined the group",
       "left": "{{nickname}} left the group",
@@ -243,16 +418,18 @@
     },
     "chatDeleteMessage": "Delete message",
     "chatDropImage": "Drop image to send",
+    "chatDropNotImage": "Only an image can be sent to the chat",
     "chatImage": "Image",
     "chatImageUploadError": "Failed to send image",
     "chatReaction": "Reaction",
     "chatReply": "Reply",
     "invite": "Invite",
     "inviteSent": "Invite sent",
+    "inviteNotifiedTelegram": "Your friend is away — we pinged them on Telegram.",
     "openSharePanel": "Open access",
-    "shareBuildTitle": "Share a build",
-    "noPublishedBuilds": "Publish a build first, then you can send it in chat.",
-    "friendBuildNotPublished": "Your friend's build is not published, so the launcher cannot prepare the same game files.",
+    "shareBuildTitle": "Share an instance",
+    "noPublishedBuilds": "Publish an instance first, then you can send it in chat.",
+    "friendBuildNotPublished": "Your friend's instance is not published, so the launcher cannot prepare the same game files.",
     "friendNoJoinTarget": "Your friend is in game, but not on a server and has not opened a world for friends.",
     "gameInviteTitle": "Game invite",
     "gameInviteJoin": "Join",
@@ -262,19 +439,19 @@
     "gameInviteNotificationServer": "{{nickname}} invites you to {{version}} on {{address}}.",
     "gameInviteNotificationWorld": "{{nickname}} invites you to {{version}} in a shared world.",
     "inviteGuide": {
-      "noGameTitle": "Start the build first",
-      "noGameDescription": "Your friend can only join a build that is already running.",
+      "noGameTitle": "Start the instance first",
+      "noGameDescription": "Your friend can only join an instance that is already running.",
       "noGameSteps": [
-        "Launch the published build you want to play.",
+        "Launch the published instance you want to play.",
         "Join a server or open a single-player world.",
         "Invite your friend again."
       ],
-      "unpublishedTitle": "Publish this build first",
-      "unpublishedDescription": "Your friend can only join a build that has been published.",
+      "unpublishedTitle": "Publish this instance first",
+      "unpublishedDescription": "Your friend can only join an instance that has been published.",
       "unpublishedSteps": [
-        "Exit the game — a running build's settings can't be changed.",
-        "Open the build settings and use “Share” to publish it.",
-        "Launch the build again and invite your friend — they'll get exactly the same files."
+        "Exit the game — a running instance's settings can't be changed.",
+        "Open the instance settings and use “Share” to publish it.",
+        "Launch the instance again and invite your friend — they'll get exactly the same files."
       ],
       "worldLanTitle": "Open the world for friends",
       "worldLanDescription": "If you are in a single-player world, open Minecraft pause menu, choose Open to LAN, then Start LAN World. After the launcher finds the world, open access for friends and invite again.",
@@ -286,24 +463,28 @@
     "inviteErrors": {
       "invalid_recipient": "Choose an online friend to invite.",
       "invalid_target": "The launcher could not understand where to invite your friend.",
-      "not_in_game": "Start the published build first.",
-      "unpublished_version": "Publish this build first.",
+      "not_in_game": "Start the published instance first.",
+      "unpublished_version": "Publish this instance first.",
       "user_not_found": "User not found.",
       "not_friend": "You can invite only friends.",
       "recipient_offline": "You can invite only friends who are online.",
       "not_joinable": "Join a server or open your world for friends first.",
+      "rate_limited": "Too many invites in a row. Please wait a little.",
       "unknown": "Failed to send invite."
     },
     "worldOpened": "{{nickname}} opened a world — you can join!",
     "joinFlow": {
       "playAction": "Play",
       "connecting": "Connecting to {{nickname}}’s world…",
-      "installFirst": "Installing your friend’s build first — the join will continue automatically afterwards",
-      "syncing": "Updating the build to the host’s version…",
-      "blockedMods": "The build was updated, but some mods must be downloaded manually. Press “Play” again afterwards.",
+      "installFirst": "Installing your friend’s instance first — the join will continue automatically afterwards",
+      "syncing": "Updating the instance to the host’s version…",
+      "blockedMods": "The instance was updated, but some mods must be downloaded manually — the join continues right after that.",
+      "blockedCancelled": "Joining cancelled — the mods your friend’s instance needs were not downloaded.",
       "launching": "Launching the game — you will join {{nickname}}’s world automatically",
       "addedToServers": "The world was pinned to the top of your server list — open Multiplayer and select it",
       "serverEntryName": "{{nickname}}’s world",
+      "serverEntryFailed": "Couldn't add your friend's world to the server list — connect manually to {{address}}",
+      "ownServersLost": "Couldn't restore your own servers in this instance — after the sync only your friend's servers are left in the list.",
       "openFriends": "Friends",
       "alreadyRunning": "The game is already running — the world was pinned to your server list, open Multiplayer",
       "failed": "Could not join your friend's world"
@@ -311,14 +492,96 @@
     "deepLinkNoAccount": "Sign in to an account to send a friend request",
     "cancelRequest": "Cancel request",
     "sharedWorld": "Shared world",
-    "chatImageBlocked": "The image is hosted outside the launcher and is not shown"
+    "chatImageBlocked": "The image is hosted outside the launcher and is not shown",
+    "addFriend": "Add a friend",
+    "addFriendHint": "Ask your friend for their code and paste it here.",
+    "connecting": "Connecting…",
+    "filterAll": "All",
+    "filterOnline": "Online",
+    "filterUnread": "Unread",
+    "sortLabel": "Sorting",
+    "sortActivity": "By activity",
+    "sortName": "By name",
+    "lastSeen": "Offline · {{value}}",
+    "nothingFound": "Nobody found",
+    "nothingFoundHint": "Try another name or clear the filter.",
+    "noFriendsHint": "Add a friend by code — you will see who is online and what they play.",
+    "listLoadError": "Could not load your friends list",
+    "chatsLoadError": "Could not load your conversations.",
+    "noChatsTitle": "No conversations yet",
+    "noChatsHint": "Pick a friend on the left — the chat, the call and the game invite are all there.",
+    "noRequestsHint": "Incoming and sent requests, as well as group invites, will show up here.",
+    "nowPlayingTitle": "Playing now",
+    "nobodyPlayingHint": "Once a friend starts an instance, a Play button appears here and takes you straight to them.",
+    "wantsToBeFriend": "Wants to add you as a friend",
+    "copyNickname": "Copy nickname",
+    "lookupErrors": {
+      "invalid": "A friend code has 8 characters, for example ABCD-1234.",
+      "self": "That is your own code.",
+      "already_friend": "This user is already your friend.",
+      "pending": "There is already a request with this code."
+    },
+    "chatPlaceholder": "Message",
+    "chatEmpty": "No messages yet",
+    "chatEmptyHint": "Write first — {{nickname}} will get a notification.",
+    "chatHistoryStart": "Start of the conversation",
+    "chatLoadEarlier": "Show earlier messages",
+    "chatQuoteMissing": "That message is not loaded — open «Show earlier messages»",
+    "chatQuoteGone": "That message is no longer in the conversation",
+    "chatUnreadDivider": "New messages",
+    "chatSending": "Sending",
+    "chatFailed": "Not sent",
+    "chatRetry": "Retry",
+    "chatDiscard": "Discard",
+    "chatOffline": "No connection — we will send it once the link is back",
+    "chatRead": "Read",
+    "chatTyping": "Typing…",
+    "chatDeleteConfirm": "The message disappears for both of you.",
+    "recentTitle": "Recent chats",
+    "howItWorksTitle": "How it works",
+    "howItWorksStep1": "Swap codes — you can reset yours at any time.",
+    "howItWorksStep2": "Send the request, your friend confirms it on their side.",
+    "howItWorksStep3": "You will see what your friend plays and join them with one button.",
+    "pickGroup": "Pick a group",
+    "pickGroupHint": "Every group has its own chat and voice room — open one on the left.",
+    "deleteTitle": "Remove from friends",
+    "deleteLoss": "Joining each other's worlds, calls and invites stop working until one of you sends a new friend request.",
+    "deleteAction": "Remove from friends",
+    "acceptRequest": "Accept request",
+    "declineRequest": "Decline request",
+    "chatAttachModpackHint": "The modpack goes into the chat as a card — friends install it in one click.",
+    "chatGroupInviteHint": "The invite goes into the chat with the group code."
   },
   "modManager": {
     "title": "Mod Manager",
-    "type": "Type",
     "sort": "Sort",
     "filter": "Filter",
-    "other": "Other",
+    "library": "Library",
+    "versionsTab": "Versions",
+    "searchLibrary": "Search installed",
+    "restore": "Restore",
+    "enable": "Enable",
+    "disable": "Disable",
+    "incompatible": "No matching file for this version",
+    "notDownloaded": "Not downloaded yet",
+    "translate": "Translate description",
+    "selectedCount_one": "{{count}} selected",
+    "selectedCount_other": "{{count}} selected",
+    "librarySorts": {
+      "name": "Name A–Z",
+      "nameDesc": "Name Z–A",
+      "size": "By size",
+      "update": "Updates first"
+    },
+    "facets": {
+      "update": "Update available",
+      "disabled": "Disabled",
+      "client": "Client-only",
+      "server": "Server-only",
+      "curseforge": "CurseForge",
+      "modrinth": "Modrinth",
+      "local": "Local files"
+    },
     "dependencies": "Dependencies",
     "added": "Mod added",
     "deleted": "Mod deleted",
@@ -336,6 +599,13 @@
     "searchFailed": "Search failed. Check your connection and try again",
     "searchFailedTitle": "Search unavailable",
     "noDependencies": "No dependencies",
+    "dependenciesFailed": "Could not load dependencies",
+    "dependenciesUnresolved": "The source did not answer about this mod's dependencies. Check them manually or try again later.",
+    "quarantinedTitle": "{{count}} file(s) do not belong to this instance and were moved to quarantine",
+    "quarantinedHint": "Open the content manager to restore them",
+    "trashCount": "Recently deleted: {{count}}",
+    "trashHint": "Files are kept for {{days}} days, then removed for good",
+    "trashRestore": "Restore",
     "projectTypes": {
       "mod": "Mods",
       "resourcepack": "Resource packs",
@@ -361,10 +631,8 @@
     "availableUpdate": "Update available",
     "checkUpdates": "Check for updates",
     "updateAll": "Update all",
-    "checkingUpdates": "Checking for updates…",
     "installed": "Installed",
     "install": "Install",
-    "local": "Local",
     "invalidMod": "Invalid mod file",
     "alreadyInstalled": "Mod already installed",
     "selectLocals": "Select local mods",
@@ -372,19 +640,16 @@
     "extracting": "Unpacking...",
     "disabled": "Mods are disabled",
     "enabled": "Mods are enabled",
-    "quickInstall": "Install latest version + dependencies",
     "addingProjects": "Adding mods",
     "modDuplicate": "Mod with the same name or ID is already installed",
     "modInvalid": "Mod is invalid or corrupted",
     "noAvailableUpdates": "No available updates",
-    "updatingMods": "Updating mods",
+    "modsCount_one": "{{count}} mod",
+    "modsCount_other": "{{count}} mods",
     "translateError": "Could not translate the description",
     "toggleError": "Failed to change mod state",
     "changelog": "Changelog",
-    "statsDownloads": "Downloads",
-    "statsLikes": "Likes",
     "statsUpdated": "Updated",
-    "statsCreated": "Created",
     "releaseTypes": {
       "release": "Release",
       "beta": "Beta",
@@ -393,7 +658,6 @@
     "notFoundModHint": "The source returned no mod files. This is usually a temporary CurseForge or Modrinth failure, or network blocking.",
     "notModpackHint": "The archive does not look like a modpack: there is no manifest inside. Download it again or pick another version.",
     "toggleErrorHint": "The mod file could not be renamed. Close the game and check whether an antivirus is locking the file.",
-    "galleryDialog": "Screenshot viewer",
     "deletedMultiple_one": "{{count}} mod deleted",
     "deletedMultiple_other": "{{count}} mods deleted",
     "addedMultiple_one": "{{count}} mod added",
@@ -402,76 +666,236 @@
     "updatedMultiple_other": "{{count}} mods updated",
     "quickInstalled_one": "Mod added with {{count}} dependency",
     "quickInstalled_other": "Mod added with {{count}} dependencies",
-    "availableUpdates_one": "Available update for {{count}} mod",
-    "availableUpdates_other": "Available updates for {{count}} mods",
+    "availableUpdates_one": "{{count}} mod update available",
+    "availableUpdates_other": "{{count}} mod updates available",
+    "uncheckedUpdates_one": "{{count}} mod could not be checked",
+    "uncheckedUpdates_other": "{{count}} mods could not be checked",
+    "notChecked": "Update check failed for this mod",
+    "retryCheck": "Check again",
     "sides": {
       "client": "Client",
       "server": "Server",
-      "both": "Client and server",
-      "clientOnly": "Client-only"
-    }
+      "both": "Client and server"
+    },
+    "resetFilters": "Reset filters",
+    "emptyInstalled": "Nothing installed yet",
+    "emptyInstalledHint": "Content you install shows up here and travels with the instance.",
+    "browseCatalog": "Browse the catalog",
+    "notFoundHint": "Try a shorter query or drop the filters.",
+    "selectLocalsHint": "Drag .jar or .zip files here, or pick them on disk.",
+    "categories": {
+      "adventure": "Adventure",
+      "cursed": "Cursed",
+      "decoration": "Decoration",
+      "economy": "Economy",
+      "equipment": "Equipment",
+      "food": "Food",
+      "game_mechanics": "Game mechanics",
+      "library": "Library",
+      "magic": "Magic",
+      "management": "Management",
+      "minigame": "Minigame",
+      "mobs": "Mobs",
+      "optimization": "Optimization",
+      "social": "Social",
+      "storage": "Storage",
+      "technology": "Technology",
+      "transportation": "Transportation",
+      "utility": "Utility",
+      "worldgen": "World generation",
+      "fabric": "Fabric",
+      "forge": "Forge",
+      "neoforge": "NeoForge",
+      "quilt": "Quilt",
+      "iris": "Iris",
+      "optifine": "OptiFine",
+      "canvas": "Canvas",
+      "vanilla": "Vanilla",
+      "audio": "Audio",
+      "blocks": "Blocks",
+      "combat": "Combat",
+      "core_shaders": "Core shaders",
+      "entities": "Entities",
+      "environment": "Environment",
+      "fonts": "Fonts",
+      "gui": "GUI",
+      "items": "Items",
+      "locale": "Localization",
+      "modded": "Modded",
+      "models": "Models",
+      "realistic": "Realistic",
+      "semi_realistic": "Semi-realistic",
+      "simplistic": "Simplistic",
+      "themed": "Themed",
+      "tweaks": "Tweaks",
+      "vanilla_like": "Vanilla-like",
+      "atmosphere": "Atmosphere",
+      "bloom": "Bloom",
+      "cartoon": "Cartoon",
+      "colored_lighting": "Colored lighting",
+      "fantasy": "Fantasy",
+      "foliage": "Foliage",
+      "path_tracing": "Path tracing",
+      "pbr": "PBR",
+      "reflections": "Reflections",
+      "shadows": "Shadows",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "screenshot": "Screenshot",
+      "potato": "Potato",
+      "categories": "Categories",
+      "loaders": "Loaders",
+      "resolutions": "Resolutions",
+      "performance_impact": "Performance impact",
+      "features": "Features",
+      "versions": "Versions",
+      "open_source": "Open source",
+      "client_and_server": "Client and server",
+      "client": "Client",
+      "server": "Server"
+    },
+    "restoreTitle": "Restore deleted files",
+    "restoreHint": "Pick what to bring back. Files return to the instance after you save.",
+    "importHint": "Pick what to add to the instance.",
+    "selectAll": "Select all",
+    "clearSelection": "Clear",
+    "broken": "Damaged",
+    "restoredCount": "Restored: {{n}}",
+    "addedElsewhere": "Some files went to other tabs: {{types}}"
   },
   "nav": {
-    "play": "Play",
-    "addVersion": "Add version"
+    "play": "Play"
   },
   "addVersion": {
+    "sourceTitle": "Source",
     "tabs": {
-      "manually": "Manually",
-      "fromServer": "From server",
-      "fromFile": "From file",
-      "modpacks": "Modpacks"
+      "fromFile": "From file"
     },
     "fromServer": {
-      "shareCode": "Build code",
+      "shareCode": "Instance code",
       "find": "Find",
-      "notFound": "Build not found",
-      "browsePublic": "No code? Browse public builds",
+      "notFound": "Instance not found",
+      "browsePublic": "No code? Browse public instances",
       "loadError": "Could not load the modpack from the server",
-      "timeoutHint": "The server did not respond in time. Check your connection and try again."
+      "timeoutHint": "The server did not respond in time. Check your connection and try again.",
+      "loadErrorHint": "The server did not return the instance. Check your connection and try again."
     },
     "fromFile": {
       "error": "Failed to recognize file",
-      "supportedLaunchers": "Supported launchers",
       "loaderVersionMissing": "The modpack manifest does not specify a loader version. Installation is blocked to avoid installing an incompatible version.",
       "loaderVersionNotFound": "Could not resolve the loader version from the modpack manifest. The launcher will not replace it with the latest version.",
       "errorUnsupported": "The file was not recognized as a modpack. Supported: .mrpack, CurseForge zip packs and exports from Grubie, Prism or MultiMC."
     },
-    "localModsWarning": "This modpack contains local modifications. Install it only if you trust the modpack author.",
-    "invalidName": "Use a unique version name without invalid characters.",
-    "dropTitle": "Drop to import the build",
+    "dropTitle": "Drop to import the instance",
     "dropDescription": "Supports .mrpack and .zip (GrubieLauncher, CurseForge, Modrinth, Prism)",
     "dropUnsupported": "This file does not look like a modpack — .mrpack or .zip expected",
-    "dropNoAccount": "Select an account first, then drop the build again"
+    "dropNoAccount": "Select an account first, then drop the instance again",
+    "dropNoPath": "The launcher cannot read this file from where it was dragged — save it to a folder on disk and drop it again",
+    "preview": {
+      "title": "Will be created",
+      "namePlaceholder": "Untitled",
+      "content": "Content",
+      "servers": "Servers",
+      "gameSettings": "Game settings",
+      "extraFiles": "Extra files",
+      "arguments": "Launch arguments",
+      "authorNote": "From the author",
+      "author": "Pack author",
+      "installs": "Installs",
+      "folder": "Folder"
+    },
+    "help": {
+      "fromServer": {
+        "1": "The pack code is the tail of a grubielauncher.com/pack/… link — the link itself works too.",
+        "2": "The launcher downloads exactly the same mods, configs and servers the author has.",
+        "3": "When the author updates the pack you get a notice and can sync to it."
+      },
+      "fromFile": {
+        "2": "You can simply drop the file onto the launcher window — the import starts on its own.",
+        "3": "The loader version comes from the manifest: the launcher will not swap it for the latest one."
+      }
+    }
   },
   "servers": {
     "title": "Servers",
     "name": "Name",
     "address": "Address",
     "resources": "Resource packs",
-    "already": "Server already added",
     "add": "Add",
     "noServers": "No servers",
     "quickConnect": "Quick connect",
+    "quickConnectOn": "on launch",
+    "quickConnectOff": "off",
     "added": "Server added",
+    "pendingSave": "Press “Save” to write the change into the instance.",
     "deleted": "Server deleted",
-    "adding": "Adding server",
+    "adding": "New server",
+    "editing": "Editing server",
     "copyAddress": "Copy address",
-    "moveUp": "Move up",
-    "moveDown": "Move down",
     "confirmation": "Delete server {{name}}?",
+    "deleteTitle": "Deleting a server",
+    "deleteHint": "The address disappears from this instance's list. The world on the server itself is untouched.",
     "resourceSets": [
       "Ask",
       "Enabled",
       "Disabled"
-    ]
+    ],
+    "statusOnline": "Online",
+    "statusOffline": "Offline",
+    "ms": "ms",
+    "noServersHint": "Servers you add here appear in the in-game list of this instance.",
+    "join": "Play here",
+    "checking": "Checking the server",
+    "recheck": "Check again",
+    "checkedAt": "Checked at {{time}}",
+    "addAnother": "Add a server",
+    "pingError": {
+      "timeout": "The server did not answer in time — it may be down or the port may be closed.",
+      "refused": "The connection was refused: nothing is listening on this port.",
+      "dns": "The address could not be resolved. Check the host spelling.",
+      "badResponse": "The server answered with something this launcher does not understand.",
+      "unknown": "The server did not answer the last check."
+    },
+    "players": "Players",
+    "playersOnline": "Players online",
+    "latency": "Latency",
+    "version": "Version",
+    "modded": "Modded",
+    "unsignedChat": "Chat is not signed",
+    "onlineOf": "{{online}} of {{total}} online",
+    "selectHint": "Pick a server to see its details.",
+    "incompatible": "The server runs {{server}}, the instance runs {{instance}}.",
+    "incompatibleShort": "Version differs from the instance",
+    "nameRequired": "Give the server a name",
+    "nameTooLong": "No longer than {{max}} characters",
+    "nameUnsupported": "Minecraft's server list will not keep these characters: {{characters}}",
+    "duplicateName": "A server with this name is already in the list",
+    "duplicateAddress": "This address is already in the list",
+    "addressHint": "host or host:port, port 25565 by default",
+    "addressProblem": {
+      "spaces": "The address cannot contain spaces",
+      "port": "The port must be a number from 1 to 65535",
+      "host": "The host contains characters that are not allowed"
+    },
+    "test": "Check the connection",
+    "testFailed": "The server did not answer",
+    "sort": {
+      "manual": "Game order",
+      "name": "By name",
+      "players": "By players",
+      "ping": "By latency"
+    },
+    "import": "Import",
+    "importTitle": "Servers from other instances",
+    "importEmpty": "Other instances have no servers this one is missing.",
+    "importAction": "Import",
+    "imported": "Servers added: {{total}}"
   },
   "voice": {
-    "micUnavailable": "Microphone unavailable — you joined in listen-only mode",
+    "title": "Voice chat",
     "noiseSuppressionFailed": "Noise suppression failed and has been turned off",
     "pttUnavailable": "Push-to-talk hotkey is unavailable — the microphone stays open",
-    "expand": "Expand",
-    "collapse": "Collapse",
     "volume": "Volume",
     "connected": "In call",
     "connecting": "Connecting…",
@@ -484,7 +908,51 @@
     "deafen": "Deafen",
     "undeafen": "Undeafen",
     "microphone": "Microphone",
-    "speakers": "Audio output"
+    "speakers": "Audio output",
+    "deviceDefault": "System default",
+    "deviceNotFound": "No devices found",
+    "micTestSpeak": "say something",
+    "speakerTest": "Play a sound",
+    "moreParticipants_one": "{{count}} more",
+    "moreParticipants_other": "{{count}} more",
+    "disconnected": "Not connected",
+    "inVoiceCount_one": "{{count}} in voice",
+    "inVoiceCount_other": "{{count}} in voice",
+    "inVoiceNow": "In voice",
+    "nobodyInVoice": "Voice room is empty",
+    "leaveShort": "Leave",
+    "aloneTitle": "You are alone in the voice room",
+    "aloneHint": "Call friends in or share the link.",
+    "aloneDirectHint": "Waiting for the other side to connect.",
+    "mutedForYou": "Muted for you",
+    "mutedMic": "Microphone off",
+    "listening": "Listening",
+    "muteForYou": "Mute for me",
+    "unmuteForYou": "Unmute for me",
+    "micRetry": "Try again",
+    "micOpenSettings": "System settings",
+    "micDenied": "Microphone access denied",
+    "micDeniedHint": "Allow the microphone in system settings and try again.",
+    "micMissing": "Microphone not found",
+    "micMissingHint": "Connect a microphone or pick another device.",
+    "micBusy": "Microphone is busy",
+    "micBusyHint": "Another app is using it — close that app and try again.",
+    "micFailed": "Microphone unavailable",
+    "micFailedHint": "You are in the room in listen-only mode.",
+    "micTestSilent": "No sound reaches the microphone",
+    "deviceGoneHint": "The saved device is gone, a system one is used.",
+    "inputDeviceGone": "Microphone disconnected — switched to the system one",
+    "outputDeviceGone": "Audio output disconnected — switched to the system one",
+    "errorNoToken": "The server did not issue voice access",
+    "errorRejected": "The voice server rejected the connection",
+    "errorUnreachable": "The voice server is unreachable",
+    "errorServer": "Voice server error",
+    "errorCancelled": "Connection cancelled",
+    "errorTimeout": "The voice server did not respond",
+    "errorGeneric": "Could not join voice",
+    "speakingCount_one": "{{count}} speaking",
+    "speakingCount_other": "{{count}} speaking",
+    "deviceSwitchFailed": "Could not switch the device"
   },
   "groups": {
     "tab": "Groups",
@@ -492,9 +960,7 @@
     "createPlaceholder": "Group name",
     "codePlaceholder": "Group code",
     "joinByCode": "Join by code",
-    "noGroups": "No groups yet. Create one or join by code.",
     "join": "Join voice",
-    "inCall": "in voice: {{n}}",
     "copyCode": "Copy code",
     "codeCopied": "Code copied",
     "rename": "Rename",
@@ -502,16 +968,14 @@
     "resetCode": "Reset code",
     "codeReset": "Code updated",
     "delete": "Delete group",
-    "deleteConfirm": "The group \"{{name}}\" will be deleted for all members.",
+    "deleteConfirm": "The group “{{name}}” disappears for every member.",
     "leave": "Leave group",
     "invite": "Invite",
     "inviteTitle": "Invite to \"{{group}}\"",
-    "invitePlaceholder": "Choose a friend",
     "inviteSent": "Invite sent",
     "inviteExists": "Invite already sent",
     "alreadyMember": "This player is already in the group",
     "noInvitableFriends": "All your friends are already in the group",
-    "offline": "(offline)",
     "invites": "Group invitations",
     "inviteToVoice": "Invite to group voice",
     "voicePingSent": "Voice invite sent",
@@ -523,13 +987,15 @@
     "decline": "Decline",
     "joined": "You joined the group \"{{group}}\"",
     "codeNotFound": "No group found with this code",
+    "joinCodeError": "Could not join the group",
+    "loadFailed": "Could not load your groups",
+    "loadFailedHint": "Check the connection to Grubie Launcher services and try again.",
     "joinError": "Failed to join voice",
     "actionError": "Action failed",
     "chat": "Group chat",
     "copyLink": "Copy invite link",
     "linkCopied": "Link copied",
     "members": "Members",
-    "membersTitle": "Members of \"{{group}}\"",
     "ban": "Ban",
     "bannedSection": "Banned",
     "unban": "Unban",
@@ -539,9 +1005,57 @@
     "muteNotifications": "Mute notifications",
     "unmuteNotifications": "Unmute notifications",
     "transferOwner": "Transfer ownership",
-    "transferConfirm": "Transfer ownership of \"{{group}}\" to {{nickname}}? You will remain a regular member.",
+    "transferConfirm": "{{nickname}} becomes the owner of “{{group}}”.",
     "inviteToGame": "Invite to game",
-    "gameInvitesSent": "Game invites sent"
+    "gameInvitesSent": "Game invites sent",
+    "gameInvitesPartial": "Invited {{sent}} of {{total}}",
+    "footerHint": "A group keeps its own chat and voice room. The code lets friends in.",
+    "joinByCodeShort": "By code",
+    "createShort": "Create",
+    "inviteFriend": "Invite a friend",
+    "joinShort": "Join",
+    "searchPlaceholder": "Search groups…",
+    "noGroupsTitle": "No groups yet",
+    "noGroupsHint": "A group is a shared chat and a voice room for your friends.",
+    "nothingFound": "Nothing found",
+    "nothingFoundHint": "Try another name or invite code.",
+    "createHint": "You get an invite code right away — share it with friends.",
+    "created": "Group “{{name}}” created",
+    "joinByCodeHint": "Enter the code a friend sent you.",
+    "manage": "Group settings",
+    "groupActions": "Group actions",
+    "memberActions": "Member actions",
+    "kick": "Remove from group",
+    "banConfirm": "{{nickname}} leaves “{{group}}” and the invite code stops working for them.",
+    "leaveConfirm": "You leave “{{name}}” and lose its chat and voice room.",
+    "youAreOwner": "You are the owner",
+    "youAreMember": "You are a member",
+    "inviteCode": "Invite code",
+    "inviteSentShort": "Sent",
+    "inviteTimeout": "{{nickname}} — the server did not answer. Try again.",
+    "membersCount_one": "{{count}} member",
+    "membersCount_other": "{{count}} members",
+    "formerMember": "Former member",
+    "chatEmptyHint": "Write the first message in “{{name}}”.",
+    "voicePing": "Call in",
+    "voicePingSentShort": "Called",
+    "inviteToVoiceHint": "Nudge group members to join the voice room.",
+    "deleteLoss": "Its chat history, invite code and voice room go with it.",
+    "leaveLoss": "The group stays for everyone else, and you will need a new invite code to come back.",
+    "resetCodeConfirm": "The group gets a brand new invite code.",
+    "resetCodeLoss": "Every code and link you have already shared stops letting people in.",
+    "transferLoss": "You stay an ordinary member: renaming, code reset, bans and deletion move to the new owner.",
+    "kickConfirm": "{{nickname}} leaves “{{group}}” right away.",
+    "kickLoss": "The chat and the voice room close for them, but the invite code still works.",
+    "banLoss": "You can lift the ban in the “Banned” list below.",
+    "kicked": "Player removed from the group",
+    "banApplied": "Player banned in the group",
+    "renameHint": "Everyone in the group sees the new name.",
+    "inviteHint": "The invite arrives in the launcher — one click and your friend is in.",
+    "alreadyJoined": "You are already in “{{group}}”",
+    "noGameInviteRecipients": "Nobody to invite: no friends of yours in this group",
+    "inviteSending": "Sending…",
+    "voicePinging": "Calling…"
   },
   "voiceCall": {
     "start": "Call",
@@ -560,33 +1074,31 @@
     "tooSoon": "Please wait a moment before calling this player again",
     "rateLimited": "Too many calls. Please slow down.",
     "notificationTitle": "Incoming call",
-    "notificationBody": "{{nickname}} is calling you"
+    "notificationBody": "{{nickname}} is calling you",
+    "peerPlaying": "Playing {{version}}",
+    "willLeaveRoom": "You will leave «{{room}}»"
   },
   "groupInvite": {
     "title": "Group invitation",
     "body": "{{nickname}} invites you to the group \"{{group}}\"",
     "accept": "Accept",
-    "joined": "You joined the group \"{{group}}\""
+    "joined": "You joined the group \"{{group}}\"",
+    "gone": "This invitation is no longer valid — it expired or the group was removed",
+    "acceptFailed": "Could not accept the invitation"
   },
   "settings": {
     "title": "Settings",
     "memory": "Memory allocation",
-    "memoryDescription": "How much RAM to allocate to Java for the game",
-    "memoryPrealloc": "With “JVM optimization” all {{mb}} MB are reserved upfront when the game starts.",
-    "memoryPreallocTight": "Only ~{{free}} MB would be left for the system — that's tight. If the game won't start or the PC stutters, lower the allocation or turn off “JVM optimization”.",
     "optimizedJvm": "JVM optimization",
-    "optimizedJvmDescription": "Garbage-collector tuning (Aikar's flags) for fewer stutters",
     "highPriority": "High game priority",
     "highPriorityDescription": "Run the game process at above-normal priority — can help on busy PCs",
-    "saved": "Settings saved",
+    "saved": "Saved",
     "saveFailed": "Failed to save settings",
     "language": "Interface language",
     "mb": "MB",
     "devMode": "Developer mode",
     "downloadLimit": "Download limit",
-    "downloadLimitDescription": "How many files to download at the same time",
     "downloadSource": "Download source",
-    "downloadSourceDescription": "Where to fetch Minecraft files: auto (mirror when blocked), official or mirror",
     "downloadSourceOptions": {
       "auto": "Auto",
       "official": "Official",
@@ -597,6 +1109,7 @@
       "description": "Tests access to launcher servers and official resources",
       "run": "Run test",
       "running": "Testing…",
+      "noResults": "The check did not run — no result came back. Try again.",
       "unreachable": "Unreachable",
       "statusPage": "Service status",
       "groups": {
@@ -622,19 +1135,24 @@
     "aiLogAnalysisDescription": "Skip the confirmation step: the analysis starts as soon as the window opens",
     "sounds": "Notification sounds",
     "soundsDescription": "Install finished, game crash and friend invites",
+    "notifications": {
+      "title": "Notifications",
+      "telegram": "Telegram notifications",
+      "telegramDescription": "Play invites, friend requests and shared worlds, while the launcher is closed",
+      "openProfile": "In the profile"
+    },
     "hideServerInRpc": "Hide server in Discord",
     "hideServerInRpcDescription": "Don't show the server address in Discord Rich Presence",
     "sections": {
       "game": "Game",
       "interface": "Interface",
       "voice": "Voice chat",
-      "diagnostics": "Diagnostics",
-      "storage": "Storage"
+      "storage": "Storage",
+      "downloads": "Downloads",
+      "privacy": "Privacy",
+      "about": "About"
     },
     "support": "Support the project",
-    "voicePanel": "Voice settings",
-    "voicePanelDescription": "Devices, microphone check, push-to-talk and noise suppression",
-    "voicePanelOpen": "Open",
     "voicePtt": "Push-to-talk",
     "voicePttDescription": "The microphone is only active while the selected key is held — works even over the game",
     "voicePttKeyNone": "No key selected",
@@ -645,7 +1163,6 @@
     "voiceDevices": "Audio devices",
     "voiceMicTestStart": "Test",
     "voiceMicTestStop": "Stop",
-    "voiceMicTestError": "Could not access the microphone",
     "storage": {
       "totalLabel": "Total used",
       "refresh": "Refresh",
@@ -653,18 +1170,10 @@
       "empty": "Nothing installed yet",
       "byVersion": "By version",
       "byVersionHint": "shared files excluded",
-      "showMore": "Show {{count}} more",
-      "showLess": "Show less",
-      "manage": "Storage manager",
-      "manageDescription": "What Grubie uses and cache cleanup",
-      "open": "Open",
-      "clearCache": "Clear cache",
       "cleared": "Freed ~{{size}}",
       "busy": "Cleanup is unavailable while an install or game is running",
       "actionFailed": "Cleanup failed",
       "loadError": "Couldn't load storage data",
-      "cleanupJava": "Delete unused Java",
-      "cleanupLibraries": "Orphaned libraries",
       "cleanupJavaConfirmTitle": "Delete unused Java?",
       "cleanupJavaConfirmBody": "This removes Java runtimes that no installed version needs, plus older duplicates. If one is needed later, the launcher re-downloads it on launch.",
       "cleanupLibrariesConfirmTitle": "Delete orphaned libraries?",
@@ -690,9 +1199,27 @@
         "other": "Settings, accounts, logs, shortcuts"
       },
       "actionFailedHint": "Some files could not be deleted: they may be in use by the game or protected by permissions.",
-      "cleanupBackups": "Backups with no world left",
+      "cleanupInstancesConfirmTitle": "Move broken instance folders to the recycle bin?",
+      "cleanupInstancesConfirmBody": "These folders have no instance config, so the launcher cannot open them: {{names}}. They go to the recycle bin.",
+      "cleanupInstancesData": "Careful: {{names}} contain worlds or a server.",
+      "cleanupInstancesKept": "Kept in place, the recycle bin refused them: {{names}}",
       "cleanupBackupsConfirmTitle": "Delete orphaned backups?",
-      "cleanupBackupsConfirmBody": "This removes backups and saved world files whose version or world no longer exists — including copies left behind after a world was renamed or deleted. Backups of existing worlds are untouched."
+      "cleanupBackupsConfirmBody": "This removes backups and saved world files whose version or world no longer exists — including copies left behind after a world was renamed or deleted. Backups of existing worlds are untouched.",
+      "categoriesTitle": "What takes the space",
+      "reclaimTitle": "Free up space",
+      "nothingToClean": "Nothing to clean up — the folder is tidy",
+      "offerCount": "{{value}} items",
+      "restCount": "and {{value}} more instances",
+      "offers": {
+        "cache": "Clear cache",
+        "java": "Delete unused Java",
+        "libraries": "Delete orphaned libraries",
+        "backups": "Delete orphaned backups",
+        "instances": "Move broken instances to the recycle bin"
+      },
+      "reclaimBanner": "About {{size}} can be freed without touching instances, worlds or accounts.",
+      "scanning": "Measuring the folder…",
+      "rootHint": "everything the launcher downloaded"
     },
     "devModeDescription": "Run-command copying and extra debugging tools",
     "voiceMicTestErrorHint": "No access to the microphone. Check Windows permissions and the selected device.",
@@ -703,73 +1230,386 @@
     "allowedPaths": {
       "title": "Folders and files you allowed",
       "description": "The launcher may read and write here outside its own folders. Access expires 30 days after the last use.",
-      "revoke": "Revoke"
-    }
+      "revoke": "Revoke",
+      "empty": "You haven't granted access to anything outside the launcher folders."
+    },
+    "saving": "Saving…",
+    "changed": "Changed from the default",
+    "onlyChanged": "Changed",
+    "resetOne": "Reset to default",
+    "resetAll": "Reset all",
+    "resetAllConfirmTitle": "Reset every changed setting?",
+    "autosaveHint": "Changes apply immediately — there is nothing to save.",
+    "search": {
+      "placeholder": "Search settings",
+      "results": "Found: {{value}}",
+      "empty": "Nothing matches “{{query}}”",
+      "clear": "Clear search"
+    },
+    "game": {
+      "gb": "GB",
+      "defaultsNote": "defaults for new launches — an instance can override them",
+      "memoryDescription": "How much RAM Java may use. Too much is as bad as too little: the system needs room too.",
+      "presets": {
+        "vanilla": "Vanilla",
+        "light": "Light mods",
+        "modpack": "Modpack",
+        "heavy": "Heavy modpack"
+      },
+      "advice": {
+        "balanced": "Leaves {{free}} GB for Windows and the launcher — a healthy split.",
+        "tight": "Only {{free}} GB is left for the system. With preallocation on, the game grabs it all at startup: if it won't start or the PC stutters, lower the allocation.",
+        "critical": "Only {{free}} GB is left for the system. The game will most likely fail to start.",
+        "excessive": "Above 12 GB the garbage collector pauses get longer, not shorter. Most modpacks are happy with 6–8 GB."
+      },
+      "optimizedJvmDescription": "Aikar's garbage-collector flags. Fewer stutters, but the whole heap is reserved at startup.",
+      "launchTitle": "Launch",
+      "worldsTitle": "Worlds and backups",
+      "splitGame": "Game",
+      "splitSystem": "System",
+      "overridesTitle": "Instances with their own settings",
+      "overridesHint": "the values above do not apply to them",
+      "overridesOther": "Java"
+    },
+    "downloads": {
+      "mirrorUnknown": "Checking the source…",
+      "mirrorUnknownHint": "Asking the launcher which source it will use right now.",
+      "sourceDescription": "Where Minecraft, Java and loader files come from. The mirror exists for regions where the official servers are blocked.",
+      "sourceHints": {
+        "auto": "Official servers, mirror as a fallback",
+        "official": "Mojang and the loaders only",
+        "mirror": "Always through the Grubie mirror"
+      },
+      "limitDescription": "Parallel downloads. Lower it if the router chokes, raise it on a fast link.",
+      "routingTitle": "Where each file comes from",
+      "routingHint": "with the current source",
+      "routeDirect": "Always direct",
+      "routes": {
+        "minecraft": "Minecraft, assets, libraries",
+        "java": "Java runtimes",
+        "loaders": "Forge, NeoForge, Fabric, Quilt",
+        "mods": "Mods from Modrinth and CurseForge",
+        "account": "Accounts, friends, voice chat"
+      }
+    },
+    "interface": {
+      "languageDescription": "Applies immediately, no restart needed",
+      "instancesView": "Instance list",
+      "instancesViewDescription": "How the list on the Play screen is sorted and laid out",
+      "viewList": "List",
+      "viewGrid": "Grid",
+      "sorts": {
+        "activity": "By activity",
+        "playtime": "By playtime",
+        "name": "By name",
+        "manual": "My order"
+      },
+      "shortcutsHint": "work anywhere in the launcher",
+      "shortcutVoiceOff": "off — turn it on in Voice chat",
+      "shortcutGroups": {
+        "global": "Essentials",
+        "palette": "Command palette",
+        "lists": "Lists and tabs",
+        "logs": "Logs and console",
+        "chat": "Chat",
+        "voice": "Voice chat"
+      },
+      "shortcuts": {
+        "global": {
+          "palette": "Open the command palette",
+          "paletteActions": "Palette, actions only",
+          "assistant": "Assistant",
+          "search": "Search on the current screen: mods, settings",
+          "account": "Switch to account 1…9",
+          "back": "Back through history",
+          "forward": "Forward through history",
+          "close": "Close the top layer: dialog, panel, search"
+        },
+        "palette": {
+          "modeActions": "Actions only",
+          "modeInstances": "Instances only",
+          "modeSettings": "Settings only",
+          "modeHelp": "Show what the prefixes do",
+          "move": "Move through the results",
+          "open": "Run the selected item"
+        },
+        "lists": {
+          "move": "Move through mods, instances, worlds, servers",
+          "open": "Open the selected item; in the server list it starts the game",
+          "mark": "Tick the mod under the cursor",
+          "removeServer": "Remove the server from the list",
+          "moveServer": "Move the server up or down",
+          "tab": "Neighbouring instance tab",
+          "tabEdge": "First / last instance tab",
+          "gallery": "Previous / next screenshot in a mod gallery"
+        },
+        "logs": {
+          "nextMatch": "Next match of the log search",
+          "prevMatch": "Previous match",
+          "clearSearch": "Clear the log search",
+          "history": "Command history of your server console"
+        },
+        "chat": {
+          "send": "Send the message",
+          "newline": "New line inside the message",
+          "cancelReply": "Cancel the reply",
+          "switchFriend": "Neighbouring friend, from the search field"
+        },
+        "voice": {
+          "ptt": "Talk (push-to-talk)"
+        }
+      }
+    },
+    "voice": {
+      "devicesDescription": "Devices are shared with the in-call panel. Test the microphone before joining."
+    },
+    "worlds": {
+      "hint": "backups live outside the instance folder"
+    },
+    "folders": {
+      "title": "Folders",
+      "description": "where the launcher keeps everything",
+      "launcher": "Launcher",
+      "minecraft": "Minecraft",
+      "java": "Java",
+      "open": "Open"
+    },
+    "about": {
+      "whatsNew": "What's new",
+      "supportTitle": "If something breaks",
+      "copyReport": "Copy system info",
+      "copyReportDescription": "Version, OS, memory and paths in one block — paste it into a bug report",
+      "statusDescription": "Live availability of the launcher services",
+      "communityTitle": "Community",
+      "discordDescription": "Support, bug reports and release announcements",
+      "donateDescription": "Servers, the mirror and the domain are paid for by donations",
+      "openLink": "Open",
+      "historyTitle": "Version history",
+      "historyHint": "What changed in the previous releases",
+      "historyCurrent": "Installed",
+      "historyNoDetails": "There is no change list for this release.",
+      "historyUnavailable": "The release list is unavailable right now — it will load once the connection is back."
+    },
+    "index": {
+      "memory": {
+        "title": "Memory allocation",
+        "description": "How much RAM Java may use",
+        "keywords": "ram xmx heap java memory allocation"
+      },
+      "optimizedJvm": {
+        "title": "JVM optimization",
+        "description": "Aikar's garbage-collector flags",
+        "keywords": "jvm gc aikar flags lag stutter"
+      },
+      "highPriority": {
+        "title": "High game priority",
+        "description": "Run the game above normal process priority",
+        "keywords": "priority cpu process performance"
+      },
+      "downloadSource": {
+        "title": "Download source",
+        "description": "Official servers or the Grubie mirror",
+        "keywords": "mirror official mojang blocked region proxy"
+      },
+      "downloadLimit": {
+        "title": "Download limit",
+        "description": "How many files download at once",
+        "keywords": "parallel threads speed network limit"
+      },
+      "language": {
+        "title": "Interface language",
+        "description": "English, Russian or Ukrainian",
+        "keywords": "language locale english russian ukrainian"
+      },
+      "sounds": {
+        "title": "Notification sounds",
+        "description": "Install finished, crash, friend invites",
+        "keywords": "sound audio notification mute"
+      },
+      "instancesView": {
+        "title": "Instance list",
+        "description": "Layout and sorting on the Play screen",
+        "keywords": "grid list sort order library"
+      },
+      "voiceDevices": {
+        "title": "Audio devices",
+        "description": "Microphone, speakers and the level meter",
+        "keywords": "microphone speakers headset input output device"
+      },
+      "voicePtt": {
+        "title": "Push-to-talk",
+        "description": "The microphone opens only while the key is held",
+        "keywords": "ptt push to talk hotkey key bind radio"
+      },
+      "voiceNoiseSuppression": {
+        "title": "Noise suppression (RNNoise)",
+        "description": "RNNoise on top of the built-in suppression",
+        "keywords": "rnnoise noise suppression keyboard fan"
+      },
+      "autoWorldBackup": {
+        "title": "Automatic world backups",
+        "description": "A copy is saved after a session if the world changed",
+        "keywords": "backup world save copy restore auto"
+      },
+      "worldBackupKeep": {
+        "title": "Keep backups",
+        "description": "How many automatic copies survive per world",
+        "keywords": "backup retention keep history count"
+      },
+      "hideServerInRpc": {
+        "title": "Hide server in Discord",
+        "description": "Keep the server address out of Rich Presence",
+        "keywords": "discord rpc rich presence privacy server hide"
+      },
+      "crashTelemetry": {
+        "title": "Anonymous crash statistics",
+        "description": "Only the diagnosis code is sent",
+        "keywords": "telemetry crash analytics privacy statistics"
+      },
+      "aiLogAnalysis": {
+        "title": "AI log analysis",
+        "description": "Start the analysis without asking first",
+        "keywords": "ai analysis crash log auto"
+      },
+      "devMode": {
+        "title": "Developer mode",
+        "description": "Run-command copying and extra debugging tools",
+        "keywords": "developer debug advanced command"
+      },
+      "allowedPaths": {
+        "title": "Folders and files you allowed",
+        "description": "External paths the launcher may read and write",
+        "keywords": "permissions access folder path revoke security allowed"
+      },
+      "storageUsage": {
+        "title": "Disk usage",
+        "description": "What the launcher folder is made of",
+        "keywords": "disk size space usage storage"
+      },
+      "storageCleanup": {
+        "title": "Free up space",
+        "description": "Cache, unused Java, orphaned files",
+        "keywords": "clean cache delete free space cleanup"
+      },
+      "folders": {
+        "title": "Folders",
+        "description": "Launcher, Minecraft and Java locations",
+        "keywords": "folder path directory open explorer"
+      },
+      "systemReport": {
+        "title": "System info",
+        "description": "One block of facts for a bug report",
+        "keywords": "support report copy diagnostics version"
+      },
+      "links": {
+        "title": "Community and support",
+        "description": "Discord and donations",
+        "keywords": "discord donate support link community"
+      },
+      "releaseHistory": {
+        "title": "Version history",
+        "description": "Change lists of the released launcher versions",
+        "keywords": "changelog release history version update what's new"
+      },
+      "mirrorRouting": {
+        "title": "Where each file comes from",
+        "description": "Which hosts go through the mirror and which never do",
+        "keywords": "mirror route host cdn source traffic"
+      },
+      "shortcuts": {
+        "title": "Keyboard shortcuts",
+        "description": "Command palette, navigation, search",
+        "keywords": "keyboard shortcut hotkey keybind ctrl alt"
+      },
+      "agentChatSync": {
+        "title": "Sync assistant chats",
+        "description": "Assistant history leaves this computer",
+        "keywords": "assistant ai chat sync history cloud account privacy"
+      },
+      "notifications": {
+        "title": "Telegram notifications",
+        "description": "Play invites and friend requests while the launcher is closed",
+        "keywords": "telegram notifications alerts invites friends bot profile"
+      }
+    },
+    "resetAllConfirmBody_one": "{{count}} setting goes back to its default. Instances, accounts and worlds are untouched.",
+    "resetAllConfirmBody_other": "{{count}} settings go back to their defaults. Instances, accounts and worlds are untouched.",
+    "voicePttCaptureTimeout": "No key was pressed — the shortcut is unchanged.",
+    "voicePttCaptureUnavailable": "The launcher cannot read global keys. Check that it is allowed by your antivirus and restart it.",
+    "agentChatSync": "Sync assistant chats",
+    "agentChatSyncDescription": "Keep the assistant history on the Grubie account so it follows you to another computer. It carries what the assistant read: instance names, log excerpts and the addresses of your saved servers."
   },
   "skinView": {
     "title": "Skin preview",
-    "rotation": "Rotation",
-    "speed": "Speed",
-    "animation": "Animation",
-    "animations": [
-      "None",
-      "Idle",
-      "Walk",
-      "Run",
-      "Fly"
-    ],
-    "additionally": "Additionally",
-    "showName": "Show nickname",
-    "setAvatar": "Set as avatar",
     "error": "Skin loading error"
   },
   "versions": {
-    "added": "Version added",
-    "published": "Version published",
-    "noVersions": "You haven't added any versions",
+    "added": "Instance added",
+    "published": "Instance published",
+    "noVersions": "You haven't added any instances",
     "servers": "Servers",
     "createShortcut": "Create shortcut",
+    "shortcutHint": "A desktop shortcut launches this instance without opening the launcher.",
     "shortcutCreated": "Shortcut created on the desktop",
     "shortcutFailed": "Couldn't create the shortcut",
-    "launchNotFound": "Version to launch not found",
+    "launchNotFound": "Instance to launch not found",
     "installBusy": "Wait for the current installation to finish",
-    "versionSettings": "Version settings",
     "changeLogo": "Change logo",
-    "addingVersion": "Adding version",
     "name": "Name",
-    "namePlaceholder": "Best build",
-    "notFound": "Version not found",
+    "namePlaceholder": "Best instance",
+    "notFound": "Instance not found",
     "loader": "Loader",
     "version": "Version",
-    "snapshots": "Snapshots",
     "loaderVersion": "Loader version",
-    "updated": "Version updated",
+    "loaderAbout": {
+      "vanilla": "Plain game, no mods",
+      "forge": "The largest mod library",
+      "neoforge": "Forge successor for 1.20.2 and newer",
+      "fabric": "Lightweight, updates first",
+      "quilt": "Fabric fork, takes its mods"
+    },
+    "updated": "Instance updated",
     "share": "Share",
-    "publish": "Publish",
-    "savesInfo": "Your saves will be deleted",
-    "hostInfo": "You are the host of this build, it will no longer be available for download",
+    "publish": "Publish the update",
+    "savesInfo": "The instance folder with its worlds goes to the system trash. You can take it back from there until the trash is emptied.",
+    "worldsUnknownHint": "The saves folder could not be read. If it still holds worlds, they go to the trash with the folder.",
+    "worldsLostHint_one": "{{count}} world goes to the trash with the folder. Export the instance first if you want a copy you keep.",
+    "worldsLostHint_other": "{{count}} worlds go to the trash with the folder. Export the instance first if you want a copy you keep.",
+    "hostInfo": "You are the host of this instance, it will no longer be available for download",
     "completeRemoval": "Complete removal",
-    "willReturn": "Will return",
-    "deleted": "Version deleted",
-    "updateAvailable": "Update available",
-    "hostChanged": "Host changed the build",
+    "willReturn": "Go back",
+    "discardChanges": "Discard changes",
+    "closeAnyway": "Close without saving",
+    "deleted": "Instance deleted",
+    "deletedHint": "The system trash refused the folder, so it was erased for good.",
+    "trashed": "Instance moved to the trash",
+    "trashedHint": "The folder stays in the system trash until you empty it.",
+    "updateAvailable": "A newer pack version is available",
+    "updateAheadHint": "Likely published from another device: publishing from here replaces the server copy with this instance.",
+    "hostChanged": "Host changed the instance",
     "runWithoutUpdating": "Run without updating",
-    "publicUpdate": "You shared this build, do you want to update it for everyone?",
-    "notSaved": "You haven't saved changes",
-    "updateError": "Failed to update version",
-    "integrityOk": "Version integrity verified",
+    "publicUpdate": "You shared this instance, do you want to update it for everyone?",
+    "publicUpdateTitle": "Updating the publication",
+    "notSavedTitle": "Unsaved changes",
+    "notSavedHint": "The instance changes are not saved. Closing drops them.",
+    "updateError": "Failed to update the instance",
+    "integrityOk": "Instance integrity verified",
     "integrityError": "Integrity check error",
-    "installError": "Failed to install version",
+    "installError": "Failed to install the instance",
     "checkIntegrity": "Check integrity",
     "renameError": "Rename error",
-    "publishError": "Failed to publish version",
-    "copyRunComand": "Copy run command",
-    "deleteError": "Failed to delete version",
+    "serversSaveError": "Failed to save the server list",
+    "serversSaveErrorHint": "Check that the instance's servers.dat is readable and not locked by the running game.",
+    "logoSaveError": "Failed to save the logo",
+    "organizeSaveFailed": "Failed to save tags, groups and order",
+    "organizeLoadFailed": "Failed to read tags, groups and order",
+    "organizeLoadFailedHint": "instances.json is damaged or busy. Groups, tags and order are locked so the file is not overwritten — restart the launcher once it can be read again.",
+    "publishError": "Failed to publish the instance",
+    "deleteError": "Failed to delete the instance",
     "serverManager": "Server management",
     "createingServer": "Creating server",
     "serverCore": "Server core",
     "aikarFlags": "Aikar's flags",
-    "aikarFlagsHint": "Optimized JVM flags for better server performance",
     "notFoundServerCore": "No suitable core found",
     "serverInstalled": "Server installed",
     "serverInstallError": "Failed to install server",
@@ -777,35 +1617,55 @@
     "shareOptions": "Share options",
     "shareGameSettings": "Share game settings",
     "copyRelativePath": "Copy command with relative path",
-    "copyAbsolutePath": "Copy command with absolute path",
+    "copyShareLink": "Click to copy the link",
     "ownerTooltip": "Owner: {{nickname}}",
     "downloadedLabel": "Downloaded",
-    "synchronizeDescription": "Download the latest build version from the server",
+    "synchronizeDescription": "Download the latest instance version from the server",
+    "syncReplacesFiles": "Synchronising replaces the instance files with the published ones — local edits to configs and worlds are lost.",
+    "syncInterrupted": "Synchronisation did not finish",
+    "syncInterruptedHint": "Some instance files have already been replaced. Run «Repair» to bring the instance back in line with its build.",
+    "syncServers": {
+      "title": "Syncing will replace the server list",
+      "hint": "The instance server list will be replaced with the host's. These entries are yours — after the sync they will be gone:",
+      "unknownHint": "The instance server list could not be read. Syncing replaces servers.dat with the host list — any entries of your own will be gone."
+    },
     "synchronize": "Synchronize",
-    "shareMods": "Share mods",
+    "shareMods": "Share content",
     "shareServers": "Share servers",
     "updateName": "Update name",
-    "updateMods": "Update mods",
+    "updateMods": "Update content",
     "updateServers": "Update servers",
     "updateGameSettings": "Update game settings",
     "shareArguments": "Share launch arguments",
     "updateArguments": "Update launch arguments",
+    "shareWorld": "Share world",
     "shareOtherFiles": "Share other files",
+    "updateWorld": "Update world",
     "updateOtherFiles": "Update other files",
     "updateLogo": "Update logo",
-    "versionShareDel": "Delete build from server",
-    "searchPlaceholder": "Search builds…",
+    "versionShareDel": "Delete instance from server",
+    "shareGone": "Publication removed: {{name}}",
+    "shareGoneHint": "The instance is gone from the server, so the link was removed. The instance itself stays on this computer and can be published again.",
+    "searchPlaceholder": "Search instances…",
+    "create": "New instance",
+    "never": "Never launched",
+    "filters": {
+      "title": "Filters"
+    },
+    "state": {
+      "notInstalled": "Not installed",
+      "needsUpdate": "Pack update"
+    },
     "viewList": "List",
     "viewGrid": "Grid",
-    "deselect": "Deselect",
-    "filterAll": "All",
     "noResults": "Nothing found",
     "clearFilters": "Clear filters",
     "sort": {
       "label": "Sort",
       "activity": "Recent",
       "name": "Name",
-      "manual": "Manual"
+      "manual": "Manual",
+      "playtime": "By playtime"
     },
     "tags": {
       "manage": "Tags",
@@ -815,26 +1675,159 @@
       "remove": "Remove tag"
     },
     "sections": {
-      "content": "Build management",
-      "tools": "Tools",
       "publishing": "Publishing & server"
     },
     "playAnotherInstance": "Launch another instance",
+    "openInstance": "Open instance",
     "running": "Running",
     "eulaLabel": "I accept the",
     "eulaLink": "Minecraft EULA",
     "listLoadError": "Could not load the Minecraft version list",
     "loaderListLoadError": "Could not load the loader version list",
     "serverCoreLoadError": "Could not load the server core list",
-    "modpackGoneHint": "The modpack is unavailable on the server: it may have been removed, or the service is temporarily down.",
-    "deleteErrorHint": "Version files may be locked by the game or an antivirus. Close the game and try again."
+    "modpackGoneHint": "The server says this pack no longer exists: it was removed or unpublished.",
+    "modpackUnavailableHint": "The server did not answer. The published pack is untouched — try again later.",
+    "deleteErrorHint": "Instance files may be locked by the game or an antivirus. Close the game and try again.",
+    "deleteBusyHint": "The launcher is busy with another install or removal. Wait for it to finish and try again.",
+    "groups": {
+      "create": "New group",
+      "placeholder": "Group name",
+      "hint": "Drag an instance onto a group header to move it there.",
+      "ungrouped": "Ungrouped",
+      "addTo": "Move to group",
+      "none": "No group",
+      "remove": "Delete group",
+      "rename": "Rename group",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "removeConfirm": "Delete the group “{{name}}”?",
+      "removeKeep": "The instances stay where they are — only the grouping disappears."
+    },
+    "deleteInstance": "Delete instance",
+    "serverInstall": "Install a server",
+    "serverSetup": {
+      "description": "The launcher downloads a server core into the instance folder and copies the instance content over to it.",
+      "coreHint": "The core is the server program: it decides which mods and plugins the server can run.",
+      "memoryHint": "We recommend {{recommended}} MB for this instance. This machine has {{total}} MB in total.",
+      "memoryHintShort": "We recommend {{recommended}} MB for this instance.",
+      "afterInstall": "After installing, the instance gets a “Own server” tab — start and configure the server there.",
+      "eulaRequired": "Accept the Minecraft agreement to continue.",
+      "confirmLead": "Check what the launcher is about to do with the instance folder.",
+      "continue": "Continue",
+      "confirmAction": "Download and install",
+      "effectFolder": "A “server” folder appears inside the instance — the whole server lives there.",
+      "effectCore": "The {{core}} core is downloaded from the internet.",
+      "effectMods": "The instance mods and configs are copied over to the server.",
+      "effectEula": "Your acceptance of the Minecraft agreement is written into eula.txt.",
+      "reversible": "You can delete the server later on the “Own server” tab — it goes to the trash.",
+      "cleanedUp": "The unfinished server folder has been removed."
+    },
+    "runCommand": "Launch command",
+    "runCommandError": "Could not build the launch command",
+    "runCommandErrorHint": "The instance may not be installed yet, or Java was not found. Run an integrity check and try again.",
+    "resetConfirm": {
+      "title": "Discard unsaved changes?",
+      "body": "The instance returns to its saved state. Will be discarded: {{kinds}}."
+    },
+    "launchProfileLegend": "violet — your own arguments",
+    "removeLogo": "Remove logo",
+    "repair": "Repair",
+    "repairHint": "Game files are missing — the launcher will download them again.",
+    "integrityHint": "Compare game and mod files against the manifest and download what is missing.",
+    "integrityBlocked": {
+      "noAccount": "Pick an account to check the files.",
+      "offline": "An internet connection is required to download the missing files.",
+      "running": "Close the game before checking the files."
+    },
+    "serverBlocked": {
+      "installing": "The server is already being installed — wait until it finishes.",
+      "offline": "An internet connection is required to download the server core."
+    },
+    "launchProfileHint": "This is how the launch looks with the current settings and arguments.",
+    "facts": {
+      "title": "Details",
+      "java": "Java",
+      "diskUsage": "On disk",
+      "launchProfile": "Launch profile"
+    },
+    "screenshots": {
+      "title": "Screenshots",
+      "empty": "No screenshots yet",
+      "emptyHint": "Press F2 in game — the shots will show up here."
+    },
+    "tabsLabel": "Instance sections",
+    "offlineHint": "Without a connection the integrity check, publishing and sync are unavailable.",
+    "readOnlyHint": "This instance belongs to another player: you can play and rename it, but not change its contents.",
+    "readOnlyHintNoRename": "This instance belongs to another player: you can play it, but not change its contents or name.",
+    "chip": {
+      "offline": "Offline",
+      "installing": "Installing",
+      "readOnly": "Read-only"
+    },
+    "activity": {
+      "title": "Where to start",
+      "contentHint": "Mods, resource packs, shaders and datapacks",
+      "serversHint": "Add a server — it will show up in game",
+      "settingsHint": "Memory and launch arguments for this instance"
+    },
+    "notes": {
+      "title": "Notes",
+      "placeholder": "Plans, base coordinates, mods to avoid…",
+      "saved": "Saved",
+      "loadFailed": "Could not read the notes",
+      "saveFailed": "Not saved"
+    },
+    "unsaved": {
+      "title": "Unsaved:",
+      "kind": {
+        "name": "name",
+        "content": "content",
+        "servers": "servers",
+        "arguments": "launch arguments",
+        "logo": "logo",
+        "quickServer": "quick join",
+        "settings": "instance settings"
+      }
+    },
+    "shareBlocked": {
+      "unsaved": "Save the instance first — publishing uploads what is saved.",
+      "notOwner": "Only the author of this instance can publish it.",
+      "plainAccount": "An offline account cannot publish instances."
+    },
+    "deleteBlocked": {
+      "noAccount": "Pick an account to delete this instance.",
+      "remoteUnavailable": "The publication can't be removed right now: that needs the internet and a signed-in account. The instance will only be deleted from this computer.",
+      "notOwner": "Only the {{nickname}} account can take this publication down. The instance will be deleted from this computer only."
+    },
+    "playBlocked": {
+      "noAccount": "Pick an account to play."
+    },
+    "saveBlocked": {
+      "invalidName": "Pick another name — this one is taken or invalid.",
+      "noChanges": "Nothing to save yet.",
+      "notOwner": "Only the author of this instance can save changes."
+    },
+    "playInstance": "Play {{name}}",
+    "update": {
+      "gameVersion": "Game version",
+      "openHint": "Click to see every change",
+      "pending": "Checking what changed…",
+      "nothing": "Only the build number moved",
+      "source": "The author published a newer version of this pack on Grubie",
+      "sectionTitle": "What the update brings",
+      "publishedAhead": "The published version is newer than this instance",
+      "publishSectionTitle": "What will change on the server"
+    },
+    "deleteRemoteErrorHint": "The server refused to remove the publication. Nothing was deleted on this computer — try again later.",
+    "unsafeFolderName": "The folder name is longer than 32 characters or contains forbidden characters. Rename the folder and restart the launcher.",
+    "libraryUnreadable": "The instance library could not be read",
+    "libraryUnreadableHint": "The versions folder did not open. Nothing was deleted — the instances stay on disk. Check the folder and the drive, then try again."
   },
   "app": {
     "starting": "Starting game...",
     "startupError": "Startup error",
     "authlibUnavailable": "Couldn't load the authentication component. Connect to the internet and try again.",
     "authlibDownloadFailed": "Failed to download the authentication component. Check your connection and try again.",
-    "newsFeed": "News feed",
     "sponsored": "Ad",
     "hideAd": "Hide ad",
     "adHidden": "Ad hidden",
@@ -845,23 +1838,28 @@
     "backendUnavailable": "Server unavailable",
     "serviceStatus": {
       "internet": "No internet connection. Check your network and try again.",
+      "ok": "All services are available",
       "backend": "Grubie services are temporarily unavailable."
     },
     "updateFailed": "Launcher update failed — you are on an old version",
-    "startupNoVersion": "No version selected to launch",
-    "startupNoVersionHint": "Pick a version in the list on the left or install a new one.",
+    "startupNoVersion": "No instance selected to launch",
+    "startupNoVersionHint": "Pick an instance in the list on the left or install a new one.",
     "startupNoAccount": "No active account",
     "startupNoAccountHint": "Add or select an account and try again.",
     "startupNoPaths": "Launcher folders are not configured",
     "startupNoPathsHint": "Check the launcher and Minecraft paths in the settings.",
+    "routeBlocked": {
+      "noAccount": "This section opens after you sign in to a Grubie account",
+      "offlineAccount": "This section is not available on an offline account"
+    },
     "initError": "Failed to start the launcher"
   },
   "game": {
     "download": "Download"
   },
   "worldStats": {
-    "title": "World stats",
     "noData": "No stats for this world yet",
+    "noDataHint": "Minecraft writes them once you have played this world with the selected account.",
     "playerKills": "Player kills",
     "itemsCrafted": "Items crafted",
     "timesSlept": "Nights slept",
@@ -872,52 +1870,71 @@
   },
   "versionStatistics": {
     "title": "Statistics",
+    "averageSession": "Average session",
+    "cleanRate": "Clean launches",
+    "streak": "Streak",
+    "byHour": "By hour of day",
+    "peakHour": "peak {{hour}}:00",
+    "byServer": "Where you played",
+    "byAccount": "By account",
+    "singleplayer": "Singleplayer",
+    "empty": "No statistics yet",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
     "playTime": "Playtime",
-    "launches": "Number of launches",
     "lastLaunch": "Last launch",
     "firstLaunch": "First launch",
-    "avgSession": "Avg. session",
-    "longestSession": "Longest session",
     "crashes": "Crashes",
-    "crashRate": "Crash rate",
     "dailyPlaytime": "Playtime by day",
+    "lastDays": "{{days}} d",
+    "noSessionsHint": "Play a session — charts by day, hour and server will show up here.",
     "recentSessions": "Recent sessions",
     "noSessions": "No sessions yet",
-    "inGame": "In game",
+    "journal": "Launch journal",
+    "about": {
+      "title": "What is recorded",
+      "time": "Playtime and the length of every session",
+      "crashes": "Clean exits and crashes",
+      "servers": "The server you connected to",
+      "accounts": "The account you played on",
+      "local": "The file lives in the instance folder — nothing is sent anywhere"
+    },
     "inGameTime": "In-world time",
     "deaths": "Deaths",
     "mobKills": "Mobs killed",
     "distance": "Distance",
     "blocksMined": "Blocks mined",
+    "worlds": "Worlds",
     "jumps": "Jumps",
     "km": "km",
-    "error": "Statistics loading error",
-    "errorHint": "The version statistics file could not be read."
+    "loadFailed": "Statistics could not be read",
+    "loadFailedHint": "The statistics.json file exists but could not be opened. Try again — if the game is running, wait until it exits."
   },
   "accountInfo": {
-    "title": "Account information",
     "error": "Account information loading error",
     "playTime": "Playtime",
     "registered": "Registered",
     "friends": "Friends",
-    "changeAvatar": "Change avatar",
     "viewAccount": "View account",
-    "editingAvatar": "Editing avatar",
     "updated": "Account updated",
-    "updateError": "Account update error",
     "privacy": "Public visibility",
     "publicLeaderboard": "Global leaderboard",
     "publicLeaderboardDescription": "Show you on the public leaderboard on the site",
     "publicProfile": "Public profile",
-    "publicProfileDescription": "Your profile page on the site: achievements, modpacks and skins"
+    "publicProfileDescription": "Your profile page on the site: achievements, modpacks and skins",
+    "unavailable": "Profile is unavailable",
+    "unavailableHint": "It needs an online account and an active connection to the Grubie Launcher services."
   },
   "arguments": {
     "title": "Launch arguments",
     "subtitle": "Added on top of the memory and flags from Settings",
+    "notSavedHint": "The launch arguments are not saved. Closing the window discards them.",
     "jvm": "JVM arguments",
     "game": "Game arguments",
     "alert": "Changing arguments may cause the game to malfunction",
     "presets": "Presets:",
+    "catalogTitle": "Frequently used flags",
+    "readOnly": "The instance author sets these arguments",
     "rawMode": "Text mode",
     "addPlaceholder": "Add a flag and press Enter",
     "empty": "No arguments set",
@@ -925,6 +1942,7 @@
     "previewNoteJvm": "Memory and garbage collector come from Settings",
     "previewNoteGame": "The launcher fills in login, UUID, and paths",
     "fromSettings": "From Settings:",
+    "fromInstance": "From instance:",
     "optimizedOff": "standard garbage collector",
     "optimizedHint": "The optimized G1GC set from Settings is added automatically. See the full list in the effective command.",
     "diag": {
@@ -967,30 +1985,71 @@
       "fullscreen": "Fullscreen"
     },
     "optimizedOn_one": "optimized: G1GC, {{count}} flag",
-    "optimizedOn_other": "optimized: G1GC, {{count}} flags"
+    "optimizedOn_other": "optimized: G1GC, {{count}} flags",
+    "dropped": {
+      "title_one": "{{count}} argument will be dropped at launch",
+      "title_other": "{{count}} arguments will be dropped at launch",
+      "hint": "The launcher refuses arguments that can load foreign code or overwrite files."
+    }
   },
   "selectPaths": {
-    "title": "Select paths",
-    "loadingFolders": "Loading folders...",
-    "emptyFolder": "Folder is empty",
+    "purpose": "These files travel with the pack and land in the player folder.",
+    "purposeHint": "Mods, resource packs, game settings, servers and the logo are published separately — no need to pick them here.",
+    "up": "Up one level",
+    "search": "Search",
+    "searchEmpty": "Nothing matches",
+    "clearSearch": "Clear search",
     "selectAll": "Select all",
-    "clearAll": "Clear all"
+    "clearAll": "Clear all",
+    "loadingFolders": "Loading folders...",
+    "emptyFolder": "This folder is empty",
+    "emptyFolderHint": "There is nothing here to add to the pack.",
+    "allHidden": "Only personal and service files here",
+    "allHiddenHint": "None of them travel with the pack.",
+    "hidden": "Hidden: {{count}}",
+    "showHidden": "Show",
+    "hideHidden": "Hide",
+    "reasonPrivate": "Personal — never leaves your computer",
+    "reasonRuntime": "Service data — recreated on install",
+    "reasonManaged": "Already goes with the pack",
+    "reasonWorld": "The world is published by its own tick",
+    "tagPrivate": "personal",
+    "tagRuntime": "service",
+    "tagManaged": "in the pack",
+    "tagWorld": "world",
+    "insideSelected": "inside: {{count}}",
+    "nothingSelected": "Nothing picked yet",
+    "picked": "Picked: {{count}}",
+    "overLimit": "Over 1 GB — publishing will fail",
+    "remove": "Remove from selection",
+    "nothingSelectedHint": "Tick what should travel with the pack.",
+    "pickedTitle": "Picked files",
+    "searchEmptyHint": "Try another word or clear the search.",
+    "clearPicked": "Clear"
   },
   "export": {
-    "title": "Export build",
+    "title": "Export instance",
     "btn": "Export",
     "selectFolder": "Select folder for export",
-    "success": "Build exported successfully",
-    "error": "Build export error"
+    "nameTaken": "The folder already has a file with that name — the launcher will add a date to the new one.",
+    "success": "Instance exported successfully",
+    "error": "Instance export error",
+    "contents": "The archive gets the whole instance folder — mods, configs and worlds. Your server list, chat command history, screenshots, logs, crash reports, playtime statistics, notes and launch history stay on this machine.",
+    "stageCopying": "Copying instance files",
+    "stageArchiving": "Packing the archive"
   },
   "browser": {
     "search": "Search"
   },
   "share": {
     "limitExceeded": "The additional files archive is larger than 512 MB",
+    "sourceTooLarge": "The selected files are over 1 GB.",
+    "sizeUnknown": "Could not read the size of the selected files.",
     "uploadFailedDescription": "The archive could not be uploaded. Try again later.",
+    "logoFailed": "The pack logo could not be uploaded. Try again later or remove the logo.",
     "uploadPayloadTooLarge": "The selected files are too large to publish.",
     "publishProgress": {
+      "starting": "Preparing the upload",
       "creatingShare": "Creating share",
       "uploadingMods": "Uploading mods",
       "preparingArchive": "Preparing archive",
@@ -1005,37 +2064,14 @@
     "publishErrors": {
       "payloadTooLarge": "The selected files are too large to publish. Remove some files and try again.",
       "limitExceeded": "The additional files archive exceeds the 512 MB limit. Remove some files and publish again.",
+      "sourceTooLarge": "The selected files are over 1 GB. Remove some of them and publish again.",
+      "sizeUnknown": "Could not read the selected files — check that they still exist and are not locked by another program, then publish again.",
       "uploadFailed": "The archive could not be uploaded. Try again later.",
-      "generic": "The build could not be published. Try again later."
+      "logoFailed": "The pack logo could not be uploaded. Try again later, or remove the logo and publish without it.",
+      "generic": "The instance could not be published. Try again later."
     },
-    "title": "Open Access to Your World",
-    "authenticated": "Authenticated",
-    "degraded": "Degraded",
-    "peers": "Peers: {{count}}",
-    "world": "World",
-    "address": "Connection address",
-    "copyAddress": "Copy address",
-    "plainAccountDisabled": "Opening access to your world is only available for signed-in accounts.",
-    "waitForLan": "Open your world to the network and wait while the launcher prepares the connection.",
-    "public": "Public",
-    "friends": "Friends",
-    "start": "Open Access to Your World",
-    "stop": "Close Access to Your World",
-    "publicOnline": "World is available by address",
-    "friendsOnline": "World is available to friends only",
-    "addressPending": "The address will appear when access is opened.",
-    "visibility": "Who can connect",
-    "visibilityDescriptions": {
-      "public": "Anyone with the address can connect to your world.",
-      "friends": "Only friends can connect through the launcher."
-    },
+    "title": "Play together",
     "streamDiagnostic": {
-      "title": "Connection diagnostic",
-      "description": "Last connection stream closed by {{source}}: {{reason}} (stream #{{streamId}}).",
-      "sources": {
-        "gateway": "gateway",
-        "local_proxy": "local game connection"
-      },
       "reasons": {
         "local_port_unavailable": "local world port is unavailable",
         "duplicate_stream": "duplicate connection stream",
@@ -1055,32 +2091,6 @@
         "local_socket_overflow": "The local game server could not keep up with reading the data"
       }
     },
-    "states": {
-      "idle": "Waiting",
-      "lanNotFound": "World not open",
-      "lanReady": "World ready",
-      "shareStarting": "Opening access",
-      "tunnelConnecting": "Preparing connection",
-      "pending": "Confirming access",
-      "online": "Access open",
-      "reconnecting": "Restoring connection",
-      "stopped": "Access closed",
-      "conflict": "Conflict",
-      "error": "Error"
-    },
-    "descriptions": {
-      "idle": "Open your world to the network to make it available over the internet.",
-      "lanNotFound": "The launcher has not found a world that can be shared yet.",
-      "lanReady": "World found. You can open access for friends now.",
-      "shareStarting": "Creating a session and preparing access to your world.",
-      "tunnelConnecting": "Preparing the connection so friends can join.",
-      "pending": "Finishing setup. Your world will be available in a moment.",
-      "online": "Access is open. Friends can join now.",
-      "reconnecting": "Trying to restore the connection to your world.",
-      "stopped": "Access to the world is closed.",
-      "conflict": "Another access session is already active for this account.",
-      "error": "Could not open access. Check the message below and try again."
-    },
     "errors": {
       "usePublicAddress": "This world is already available by address. Use it to connect.",
       "sessionNotOnline": "The world is still being prepared.",
@@ -1093,29 +2103,165 @@
       "shareAlreadyRunning": "Access to the world is already open.",
       "shareBusy": "Access to the world is already being opened.",
       "tunnelAuthFailed": "Could not prepare the connection. Try opening access again.",
+      "tunnelAlreadyActive": "This world is already shared from another session. Close it there, or wait a few seconds and try again.",
       "tunnelDisconnected": "The connection to the world was interrupted.",
+      "tunnelHandshakeTimeout": "The share server did not confirm the connection. Check your internet connection and try again.",
       "tunnelProtocolError": "An error occurred while connecting to the world.",
       "joinShareNotFound": "Your friend's available world was not found.",
       "invalidResponse": "Server returned an invalid response.",
       "unknown": "Could not open access to the world.",
       "tunnelVersionUnsupported": "The launcher is out of date — update it to share your world again."
     },
-    "catalogPublic": "Show in the site catalog",
-    "catalogPublicDescription": "Anyone can discover the build. The share link works either way.",
-    "catalogPublicBanned": "Publishing to the catalog is restricted by an administrator. You can still share the link.",
-    "downloadedOtherFilesHint": "This build has downloaded mods or a modpack, which often come with already configured config files — open the additional files selector and pick all directory files so they get published too.",
-    "peerList": {
-      "title": "In the share",
-      "unknownGuest": "Unknown player"
+    "description": {
+      "label": "Description for players",
+      "placeholder": "What is this instance about, what to launch first, what not to touch.",
+      "hint": "Shown before installing and on the catalog card."
     },
-    "publicWarning": {
-      "title": "Anyone with the address can join",
-      "description": "A LAN world does not verify accounts, so a public share lets anyone who knows the address enter under any nickname. Use \"Friends\" if you do not want strangers in your world."
+    "catalogPublic": "Show in the site catalog",
+    "catalogPublicDescription": "Anyone can discover the instance. The share link works either way.",
+    "catalogPublicBanned": "Publishing to the catalog is restricted by an administrator. You can still share the link.",
+    "downloadedOtherFilesHint": "This instance has downloaded mods or a modpack, which often come with already configured config files — open the additional files selector and pick all directory files so they get published too.",
+    "panel": {
+      "close": "Collapse panel",
+      "start": "Open access",
+      "starting": "Opening access…",
+      "stop": "Close access",
+      "stopConfirm": "Close and disconnect",
+      "steps": {
+        "world": "World",
+        "session": "Session",
+        "channel": "Channel",
+        "open": "Access"
+      },
+      "stage": {
+        "accountUnsupported": {
+          "title": "Sign-in required",
+          "description": "An offline nickname cannot host a world. Sign in with Microsoft, Ely.by or Discord."
+        },
+        "offline": {
+          "title": "No connection",
+          "description": "Opening access needs the internet and the Grubie service."
+        },
+        "noGame": {
+          "title": "Game is not running",
+          "description": "Launch an instance and enter a world — the launcher picks it up on its own."
+        },
+        "needsWorld": {
+          "title": "World is not open to the network",
+          "description": "The game is running, but no world has been opened to the network yet."
+        },
+        "ready": {
+          "title": "World found",
+          "description": "Access is still closed. Friends cannot join until you open it."
+        },
+        "starting": {
+          "title": "Opening access",
+          "description": "Preparing the session and the channel. Nobody can join yet."
+        },
+        "open": {
+          "title": "Access is open",
+          "description": "Friends can join right now.",
+          "descriptionPublic": "Anyone with the address can join right now."
+        },
+        "recovering": {
+          "title": "Restoring the connection",
+          "description": "The channel dropped. Guests may have been kicked out."
+        },
+        "conflict": {
+          "title": "Another world is already open",
+          "description": "This account already hosts a world. Close it and try again."
+        },
+        "failed": {
+          "title": "Access did not open",
+          "description": "Something went wrong. Try opening access again."
+        }
+      },
+      "hint": {
+        "openToLan": "In game press Esc → «Open to LAN» → «Start LAN World».",
+        "startGame": "Launch an instance and enter a world.",
+        "signIn": "Switch to a signed-in account in the sidebar.",
+        "checkInternet": "Check the internet connection and try again.",
+        "stopOtherSession": "Close the other open world, then open this one.",
+        "updateLauncher": "Update the launcher — this version can no longer host a world.",
+        "retry": "Try opening access again.",
+        "closeAndReopen": "Close access and open it again."
+      },
+      "howTo": {
+        "title": "How to open a world",
+        "one": "Enter the world you want to share.",
+        "two": "Press Esc and choose «Open to LAN».",
+        "three": "Press «Start LAN World» — the launcher picks it up."
+      },
+      "access": {
+        "title": "Who can join",
+        "friends": "Friends",
+        "public": "Anyone with the address",
+        "applying": "Applying… for now: {{access}}.",
+        "friendsHint": "Only your friends can join, straight from their launcher.",
+        "publicHint": "A network world does not check accounts: anyone who learns the address can walk in under any nickname."
+      },
+      "address": {
+        "title": "Shared world",
+        "friends": "Friends join from the launcher — no address to type.",
+        "copy": "Copy address",
+        "reveal": "Show address",
+        "hide": "Hide address"
+      },
+      "health": {
+        "degraded": "The channel is overloaded — players may lag.",
+        "heartbeatLost": "The service is not answering. Access may close.",
+        "streamDropped": "One of the connections dropped."
+      },
+      "guests": {
+        "title": "In the world",
+        "empty": "Nobody has joined yet.",
+        "notYet": "Guests appear here once access is open.",
+        "unknown": "Unknown player",
+        "connectedFor": "Time in the world"
+      },
+      "invite": {
+        "title": "Invite",
+        "search": "Find a friend",
+        "action": "Invite",
+        "sent": "Sent",
+        "joined": "In the world",
+        "offline": "Offline",
+        "empty": "No friends yet.",
+        "notFound": "Nobody found.",
+        "waiting": "You can invite once access is open.",
+        "notOpen": "Open access to invite friends.",
+        "offlineSocket": "No connection to the friends service."
+      }
+    },
+    "publish": {
+      "filesTitle": "Additional files",
+      "chooseFiles": "Choose files",
+      "unavailableNew": "nothing to publish",
+      "unavailableUpdate": "no changes",
+      "overLimit": "The selected files are over 1 GB — publishing is impossible.",
+      "noChanges": "Nothing has changed since the last publish.",
+      "pickWhatToUpdate": "Tick what to update in the published pack.",
+      "willSend": "Will be sent:",
+      "onlyPack": "Only the instance itself will be published — name, version and loader.",
+      "parts": {
+        "name": "name",
+        "logo": "logo",
+        "mods": "content",
+        "servers": "servers",
+        "options": "game settings",
+        "arguments": "launch arguments",
+        "world": "world",
+        "other": "other files",
+        "description": "description",
+        "visibility": "catalog visibility"
+      },
+      "worldPrivacyHint": "The world is published without your progress: player data, statistics, advancements and the player position from level.dat stay on your computer.",
+      "worldWillBeRemoved": "The world is not ticked, so it will be removed from the published pack."
     }
   },
   "manageSkins": {
     "reset": "Reset skin",
-    "regenerate": "Generate from avatar",
+    "regenerate": "Generate from Discord photo",
     "title": "Manage skins",
     "noSkinSet": "No skin set — click to add",
     "selectedSkin": "Selected skin",
@@ -1140,7 +2286,7 @@
     "dropPng": "Drop a PNG here",
     "dropPngHint": "or click to choose a file",
     "preview": "Preview",
-    "previewHint": "Choose a source to see a preview",
+    "previewHint": "The new texture will show up here",
     "nickNoPreview": "Preview will be available after import",
     "importError": "Could not import the skin or cape.",
     "addSkin": "Add skin",
@@ -1148,12 +2294,14 @@
     "applyError": "Could not apply the skin or cape.",
     "tabMine": "My skins",
     "tabCatalog": "Catalog",
-    "catalogSearch": "Search skins",
     "catalogEmpty": "No skins found",
     "catalogOffline": "Connect to the internet to browse the catalog",
-    "catalogLoadMore": "Show more",
+    "catalogLoadingMore": "Loading more…",
+    "catalogMoreError": "Could not load more items.",
     "catalogTake": "Add to my skins",
     "catalogImported": "Skin added to your collection",
+    "importedNotShown": "The skin was added, but the wardrobe did not refresh",
+    "importedNotShownHint": "The skin is in your collection. Open «My skins» and press «Retry».",
     "source_all": "All",
     "source_official": "Official",
     "source_community": "Community",
@@ -1161,6 +2309,7 @@
     "publishTitle": "Publish to community",
     "publishNote": "The skin will appear in the community catalog after a moderator approves it.",
     "publishName": "Public name",
+    "publishNamePlaceholder": "How people will find it",
     "publishPending": "Sent for moderation",
     "publishDuplicate": "This skin is already in the catalog",
     "publishLimit": "You have too many skins awaiting moderation",
@@ -1172,6 +2321,7 @@
     "statusApproved": "In catalog",
     "statusRejected": "Rejected",
     "myEmpty": "You haven't published any skins yet",
+    "myEmptyHint": "Publish a skin from the “My skins” tab — it shows up here once it passes review.",
     "rejectionReason": "Rejection reason",
     "removeFromGallery": "Remove from gallery",
     "type_skin": "Skins",
@@ -1182,7 +2332,6 @@
     "publishType_cape": "Cape",
     "publishType_pack": "Pack",
     "tagsLabel": "Tags",
-    "tagsPlaceholder": "Add a tag…",
     "tagsAll": "All tags",
     "tagsSearch": "Search tags…",
     "tagsEmpty": "No tags",
@@ -1210,14 +2359,93 @@
       "skin_url_rejected": "This skin link is not supported",
       "cape_url_rejected": "This cape link is not supported",
       "community_publish_no_token": "Sign in to publish to the catalog",
-      "community_publish_unsupported_env": "Publishing to the catalog is unavailable in this build",
+      "community_publish_unsupported_env": "Publishing to the catalog is unavailable in this launcher release",
       "skin_not_found": "The skin was not found in the library",
+      "skin_not_selected": "No skin is selected in the wardrobe.",
       "skin_service_not_available_for_account": "The skin service is not available for this account",
       "skin_cape_remote_id_missing": "This cape has no identifier on the service, re-upload it",
       "pack_skin_url_rejected": "The skin link from the pack was rejected",
       "pack_skin_failed": "Failed to load the skin from the pack",
+      "pack_cape_failed": "Failed to load the cape from the pack",
       "pack_cape_url_rejected": "The cape link from the pack was rejected"
-    }
+    },
+    "searchOwn": "Search skins",
+    "filter_all": "All",
+    "filter_classic": "Classic",
+    "filter_slim": "Slim",
+    "filter_cape": "With a cape",
+    "sortOwn_recent": "Newest first",
+    "sortOwn_name": "By name",
+    "emptyTitle": "No skins yet",
+    "emptyHint": "Add a PNG from a file or a link, take a skin from another player, or pick one in the catalog.",
+    "noMatches": "Nothing matches",
+    "noMatchesHint": "Change the search or the filter.",
+    "detectModel": "Detect the model from the texture",
+    "detectFailed": "Could not read the texture",
+    "detectSame": "The model already matches the texture",
+    "detectApplied": "Model set to {{model}}",
+    "appliedNow": "This is your current look",
+    "change_skin": "Skin",
+    "change_model": "Model",
+    "change_cape": "Cape",
+    "export": "Save the texture",
+    "exportDone": "Texture saved",
+    "exportError": "Could not save the texture",
+    "openFolder": "Open the folder",
+    "deleteCape": "Delete cape",
+    "deleteError": "Could not delete",
+    "deleteConfirm": "Delete «{{name}}»? The texture will be removed from the launcher.",
+    "renameTaken": "A skin with this name already exists",
+    "imported": "Added to your wardrobe",
+    "loadErrorTitle": "Skins are unavailable",
+    "loadErrorHint": "The launcher could not read your wardrobe. Try again — the reason will appear in a notification.",
+    "catalogPickHint": "Pick an item to see it on the model.",
+    "catalogSource": "Source: {{site}}",
+    "catalogAdded": "Added to the catalog",
+    "legacyFormat": "64×32",
+    "pasteHint": "or paste an image with Ctrl+V",
+    "dropAnywhere": "Release the PNG to add it",
+    "pickAnother": "Choose another",
+    "clearFile": "Clear the chosen file",
+    "linkHint": "A direct link to a PNG texture.",
+    "nickHint": "The current skin of that Minecraft player will be copied to your wardrobe.",
+    "addOffline": "No connection — only a file from disk works right now.",
+    "reading": "Reading the texture…",
+    "previewCurrent": "Your skin now",
+    "detectedModel": "Detected from the texture",
+    "texture": {
+      "empty": "The file could not be read",
+      "notPng": "This is not a PNG image",
+      "tooLarge": "The file is too large, up to 512 KB",
+      "unsupportedSize": "Unsupported size: 64×64 or 64×32 is expected",
+      "unreadable": "The image could not be decoded",
+      "unreachable": "Nothing was downloaded from this link",
+      "badLink": "A direct link starting with https:// is required"
+    },
+    "filter_favorite": "Favorites",
+    "favoriteOn": "Add to favorites",
+    "favoriteOff": "Remove from favorites",
+    "applied": "Applied",
+    "applyUnavailable": "While the server is unreachable you can pick a skin, but not apply it.",
+    "metaResolution": "Resolution",
+    "metaFormat": "Format",
+    "metaFormatModern": "Modern",
+    "metaFormatLegacy": "Legacy",
+    "metaId": "Identifier",
+    "idCopied": "Identifier copied",
+    "linkTitle": "Link to a texture",
+    "nickTitle": "Take another player's skin",
+    "selectError": "Could not select the skin",
+    "renameError": "Could not rename the skin",
+    "pasteError": "Could not read the pasted image",
+    "catalogLoadError": "Could not load the catalog",
+    "catalogLoadErrorHint": "Grubie Launcher services did not answer. Try again in a moment.",
+    "catalogLoadErrorAuth": "Sign in again to see the skins you published.",
+    "removeFromGalleryConfirm": "\"{{name}}\" will be removed from the community gallery. Publishing it again requires moderation.",
+    "removeFromGalleryError": "Could not remove the skin from the gallery",
+    "removedFromGallery": "Removed from the gallery",
+    "deleteCapeConfirm": "The cape \"{{name}}\" will be deleted from the launcher along with its file.",
+    "catalogLinkError": "This skin is no longer in the catalog"
   },
   "blockedMods": {
     "title": "Blocked mods found",
@@ -1232,14 +2460,14 @@
     "dropPartial": "Some dropped files didn't match the required mods.",
     "openAll": "Open all",
     "files": "Files",
-    "foundCount": "{{installed}} of {{total}} found in Downloads",
     "missing": "Required",
     "ready": "Found",
     "showAll": "Show all",
     "showMissing": "Missing only",
     "empty": "All required files were found.",
+    "emptySkipped": "Nothing found. Skipped files: {{count}}",
     "skip": "Skip",
-    "skipAll": "Install without missing",
+    "skipAll": "Skip the rest",
     "skippedLabel": "Skipped — won't be installed",
     "undoSkip": "Undo skip",
     "substitute": "Find on Modrinth",
@@ -1248,18 +2476,19 @@
     "substituteFailed": "No compatible version found on Modrinth",
     "searchPlaceholder": "Search Modrinth…",
     "search": "Search",
+    "searchEmpty": "Nothing found on Modrinth. Try another name.",
+    "searchError": "Modrinth search failed. Check your connection and try again.",
     "substituteHint": "Search Modrinth for a replacement of this mod.",
     "substituteFailedHint": "The replacement could not be downloaded. Check your connection or pick another mod.",
-    "installCancelled": "Installation cancelled: the blocked files were not downloaded",
-    "skipAllConfirm": "Skip all remaining files? The build will be installed without them.",
-    "skipAllSummary": "Skipped: {{skipped}}, replaced: {{substituted}}",
-    "checkProgress": "Checked {{done}} of {{total}}"
+    "progress": "Ready to install",
+    "skipWarning": "Skipped mods will not be installed — the instance may crash or behave differently.",
+    "continueWithSkipped": "Continue without them",
+    "cancelInstall": "Cancel"
   },
   "whatsNew": {
-    "openCurrent": "Show what is new",
     "fallbackTitle": "Launcher updated to {{version}}",
     "fallbackSubtitle": "The change list for this version is not available yet.",
-    "offlineSubtitle": "Launcher updated to {{version}}.",
+    "milestone": "Milestone",
     "offlineDescription": "The full change list will appear when internet is available or the release is published.",
     "highlights": "Highlights",
     "fixes": "Fixed",
@@ -1276,29 +2505,6 @@
     "preparing": "Preparing",
     "percent": "{{percent}}%"
   },
-  "console": {
-    "title": "Console",
-    "instances": "Instances",
-    "instance": "Instance",
-    "messages": "messages",
-    "noInstances": "No instances",
-    "noMessages": "No logs",
-    "search": "Search logs",
-    "noMatches": "No matching lines",
-    "filter": {
-      "all": "All",
-      "info": "Info",
-      "error": "Errors",
-      "success": "Success"
-    },
-    "noMessagesDescription": "Messages will appear after the game starts.",
-    "stop": "Stop",
-    "restart": "Restart",
-    "remove": "Remove",
-    "running": "Running",
-    "stopped": "Stopped",
-    "error": "Error"
-  },
   "time": {
     "s": "s.",
     "m": "m.",
@@ -1306,26 +2512,117 @@
   },
   "worlds": {
     "title": "Worlds",
-    "noWorlds": "No worlds",
+    "noWorlds": "No worlds yet",
+    "noWorldsHint": "Create one in the game, or import a world archive you saved earlier.",
+    "loadError": "Couldn't read the worlds",
+    "loadErrorHint": "The saves folder is unavailable. Close the game and try again.",
+    "search": "Search worlds",
+    "notFound": "Nothing matches",
+    "resetFilters": "Reset the filter",
+    "selectWorld": "Pick a world on the left",
+    "sort": "Sorting",
+    "sortBy": {
+      "recent": "Last played",
+      "name": "Name",
+      "size": "Size on disk",
+      "playtime": "Time played"
+    },
+    "filters": {
+      "all": "All",
+      "hardcore": "Hardcore",
+      "survival": "Survival",
+      "creative": "Creative",
+      "adventure": "Adventure",
+      "spectator": "Spectator"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "stats": "Stats",
+      "backups": "Backups",
+      "datapacks": "Datapacks"
+    },
+    "lastPlayed": "Last played",
+    "neverPlayed": "Never played",
+    "playTime": "Time played",
+    "size": "Size on disk",
+    "worldDays": "In-game days",
+    "spawn": "Spawn point",
+    "seed": "Seed",
+    "noSeed": "This world stores no seed",
+    "folder": "World folder",
+    "cheats": "Cheats",
+    "fromCatalog": "From the catalog",
+    "versionMismatch": "Saved in {{world}}, the instance runs {{instance}} — some chunks will be regenerated.",
+    "downloadedHint": "Installed from the catalog — manage it under Content",
+    "notOwnerHint": "Read-only: the instance belongs to another player",
+    "quickPlayUnsupported": "This game version cannot open a world directly",
+    "disabledWhileRunning": "Close the game to change this world",
+    "hardcore": "Hardcore",
+    "actions": "World actions",
+    "openFolder": "Open folder",
+    "openSaves": "Saves folder",
+    "resetIcon": "Reset icon",
+    "iconReseted": "Icon reset",
+    "iconResetError": "Failed to reset world icon",
+    "renamed": "World renamed",
+    "renameError": "Error renaming world",
+    "renameErrorHint": "The world folder could not be renamed. Close the game and try again.",
+    "duplicate": "Duplicate",
+    "duplicated": "World duplicated",
+    "duplicateError": "Couldn't duplicate the world",
+    "copyName": "{{name}} copy",
+    "export": "Export to .zip",
+    "exported": "World exported",
+    "exportError": "Couldn't export the world",
+    "import": "Import .zip",
+    "imported": "World {{name}} imported",
+    "importError": "Couldn't import the world",
+    "transferErrors": {
+      "worldMissing": "The world folder is missing or has no level.dat.",
+      "versionRunning": "Close the game first.",
+      "nameTaken": "A world folder with that name already exists.",
+      "archiveInvalid": "The archive holds no Minecraft world.",
+      "archiveTooLarge": "The archive is too large to import. Unpack it into the saves folder manually.",
+      "failed": "Check free disk space and try again."
+    },
     "deleted": "World deleted",
     "deletedError": "Error deleting world",
-    "datapacks": "Datapacks",
+    "deletedErrorHint": "The world folder could not be moved to the recycle bin. Close the game and try again.",
+    "confirmation": "Delete the world {{name}}? Its folder goes to the recycle bin.",
+    "confirmationFolder": "Folder: {{folder}}",
+    "deleteTitle": "Deleting a world",
+    "datapacksInWorld": "Attached to the world",
     "noDatapacks": "No datapacks installed",
-    "copySeed": "Copy seed",
-    "openFolder": "Open folder",
-    "resetIcon": "Reset icon",
-    "renameError": "Error renaming world",
-    "renamed": "World renamed",
-    "iconReseted": "Icon reset",
-    "confirmation": "Are you sure you want to delete the world {{name}}?",
-    "iconResetError": "Failed to reset world icon",
+    "noDatapacksHint": "Datapacks added to the instance as content can be attached to this world.",
+    "datapackPick": "Pick a datapack",
+    "datapackNoSource": "This instance has no datapacks",
+    "datapackAdd": "Add",
+    "datapackAdded": "Datapack added",
+    "datapackState": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "unknown": "Enables on the next launch"
+    },
     "datapackUnavailable": "Datapack file is unavailable",
     "datapackAddError": "Failed to add datapack",
     "datapackRemoveError": "Failed to remove datapack",
+    "openDatapacksFolder": "Open datapacks folder",
     "openDatapacksFolderError": "Failed to open datapacks folder",
-    "deletedErrorHint": "The world folder could not be moved to the recycle bin. Close the game and try again.",
-    "renameErrorHint": "The world folder could not be renamed. Close the game and try again.",
-    "disabledWhileRunning": "Close the game to change this world"
+    "gameModes": {
+      "survival": "Survival",
+      "creative": "Creative",
+      "adventure": "Adventure",
+      "spectator": "Spectator"
+    },
+    "difficulties": {
+      "peaceful": "Peaceful",
+      "easy": "Easy",
+      "normal": "Normal",
+      "hard": "Hard"
+    },
+    "datapackPendingHint": "The file is in the world folder. Minecraft will attach it the next time the world loads.",
+    "nameEmpty": "Enter a world name",
+    "nameTaken": "This instance already has a world with that name"
   },
   "worldBackups": {
     "title": "Backups",
@@ -1338,15 +2635,17 @@
     "restoredNoSafety": "World restored, but without a safety copy",
     "restoredNoSafetyHint": "The previous files could not be archived, so they were kept in the .grubie-restore folder instead of being deleted.",
     "restoreError": "Couldn't restore the world",
-    "restoreConfirm": "The current state of the world will be replaced by this backup.",
     "restoreConfirmSafety": "Before restoring, the launcher saves the current state as a separate backup.",
+    "restoreTitle": "Restoring from a backup",
+    "deleteTitle": "Deleting a backup",
+    "preservedDeleteTitle": "Deleting kept world files",
     "deleted": "Backup deleted",
     "deleteError": "Couldn't delete the backup",
-    "deleteConfirm": "This backup will be deleted permanently.",
     "empty": "No backups yet",
     "emptyHint": "Create one manually, or let the launcher save the world automatically after you finish playing.",
     "autoOn": "Automatic backups are on · up to {{keep}} automatic ones kept",
     "autoOff": "Automatic backups are off",
+    "stored": "Backups of this world",
     "triggers": {
       "manual": "Manual",
       "auto": "Automatic",
@@ -1354,6 +2653,7 @@
     },
     "errors": {
       "worldMissing": "The world folder is missing or has no level.dat.",
+      "worldUnreadable": "Part of the world folder could not be read, so the backup would be incomplete. Close the programs that hold these files and check the folder permissions.",
       "worldTooLarge": "The world is too large, so backups are not created for it. Copy the world folder manually.",
       "backupTooLarge": "This backup is too large to restore automatically. Unpack the archive into the saves folder manually.",
       "versionRunning": "Close the game before restoring a world.",
@@ -1366,21 +2666,20 @@
     "preservedTitle": "Saved world files",
     "preservedHint": "Kept after a restore that could not make a safety copy. Delete them once you are sure they are no longer needed.",
     "preservedDeleteConfirm": "These world files will be deleted. If they hold progress you still need, open the folder and copy it out first.",
-    "preservedDeleted": "Saved files deleted"
-  },
-  "tips": {
-    "checkIntegrity": "Check the integrity of game files"
+    "preservedDeleted": "Saved files deleted",
+    "restoreConfirmDated": "The world will be replaced by the backup from {{date}}.",
+    "coversLastSession": "Newer than your last session — nothing is lost",
+    "behindWorld": "Restoring rolls the world back by {{time}}",
+    "deleteConfirmDated": "The backup from {{date}} will be removed from the disk."
   },
   "achievements": {
     "title": "Achievements",
     "showAll": "Show all",
-    "noAchievements": "No achievements",
     "search": "Search achievements",
     "loading": "Reading world data…",
     "empty": "Nothing here yet",
     "level": "Level",
-    "points": "Points",
-    "toNextLevel": "To level {{level}}",
+    "pointsOf": "{{points}} of {{total}} points",
     "unlockedToast": "Achievement unlocked: {{name}}",
     "filter": {
       "all": "All",
@@ -1415,219 +2714,288 @@
     "items": {
       "explore_10km": {
         "name": "First Steps",
-        "desc": "Travel {{goal}} km in total"
+        "desc": "Travel {{goal}} km in total",
+        "descOther": "Walked {{goal}} km in total"
       },
       "explore_100km": {
         "name": "Wayfarer",
-        "desc": "Travel {{goal}} km in total"
+        "desc": "Travel {{goal}} km in total",
+        "descOther": "Walked {{goal}} km in total"
       },
       "explore_1000km": {
         "name": "Globetrotter",
-        "desc": "Travel {{goal}} km in total"
+        "desc": "Travel {{goal}} km in total",
+        "descOther": "Walked {{goal}} km in total"
       },
       "elytra_50km": {
         "name": "Sky Sailor",
-        "desc": "Fly {{goal}} km with an elytra"
+        "desc": "Fly {{goal}} km with an elytra",
+        "descOther": "Flew {{goal}} km with an elytra"
       },
       "worlds_5": {
         "name": "Multiverse",
-        "desc": "Play across {{goal}} different worlds"
+        "desc": "Play across {{goal}} different worlds",
+        "descOther": "Played across {{goal}} different worlds"
       },
       "worlds_25": {
         "name": "World Collector",
-        "desc": "Play across {{goal}} different worlds"
+        "desc": "Play across {{goal}} different worlds",
+        "descOther": "Played across {{goal}} different worlds"
       },
       "mine_1k": {
         "name": "Pebble Pusher",
-        "desc": "Mine {{goal}} blocks"
+        "desc": "Mine {{goal}} blocks",
+        "descOther": "Mined {{goal}} blocks"
       },
       "mine_25k": {
         "name": "Excavator",
-        "desc": "Mine {{goal}} blocks"
+        "desc": "Mine {{goal}} blocks",
+        "descOther": "Mined {{goal}} blocks"
       },
       "mine_150k": {
         "name": "Deep Digger",
-        "desc": "Mine {{goal}} blocks"
+        "desc": "Mine {{goal}} blocks",
+        "descOther": "Mined {{goal}} blocks"
       },
       "diamonds_64": {
         "name": "Diamonds!",
-        "desc": "Mine {{goal}} diamond ore"
+        "desc": "Mine {{goal}} diamond ore",
+        "descOther": "Mined {{goal}} diamond ore"
       },
       "diamonds_512": {
         "name": "Diamond Hoarder",
-        "desc": "Mine {{goal}} diamond ore"
+        "desc": "Mine {{goal}} diamond ore",
+        "descOther": "Mined {{goal}} diamond ore"
       },
       "debris_16": {
         "name": "Netherite",
-        "desc": "Mine {{goal}} ancient debris"
+        "desc": "Mine {{goal}} ancient debris",
+        "descOther": "Mined {{goal}} ancient debris"
       },
       "kills_250": {
         "name": "Monster Hunter",
-        "desc": "Defeat {{goal}} mobs"
+        "desc": "Defeat {{goal}} mobs",
+        "descOther": "Defeated {{goal}} mobs"
       },
       "kills_2500": {
         "name": "Slayer",
-        "desc": "Defeat {{goal}} mobs"
+        "desc": "Defeat {{goal}} mobs",
+        "descOther": "Defeated {{goal}} mobs"
       },
       "kills_25000": {
         "name": "Doom Bringer",
-        "desc": "Defeat {{goal}} mobs"
+        "desc": "Defeat {{goal}} mobs",
+        "descOther": "Defeated {{goal}} mobs"
       },
       "dragon": {
         "name": "Dragonslayer",
-        "desc": "Defeat the Ender Dragon"
+        "desc": "Defeat the Ender Dragon",
+        "descOther": "Defeated the Ender Dragon"
       },
       "wither_1": {
         "name": "Wither's Bane",
-        "desc": "Defeat the Wither"
+        "desc": "Defeat the Wither",
+        "descOther": "Defeated the Wither"
       },
       "wither_10": {
         "name": "Wither Hunter",
-        "desc": "Defeat the Wither {{goal}} times"
+        "desc": "Defeat the Wither {{goal}} times",
+        "descOther": "Defeated the Wither {{goal}} times"
       },
       "warden": {
         "name": "Into the Dark",
-        "desc": "Defeat the Warden"
+        "desc": "Defeat the Warden",
+        "descOther": "Defeated the Warden"
       },
       "ingame_10h": {
         "name": "Settling In",
-        "desc": "Spend {{goal}} hours in your worlds"
+        "desc": "Spend {{goal}} hours in your worlds",
+        "descOther": "Spent {{goal}} hours in their worlds"
       },
       "ingame_100h": {
         "name": "Homesteader",
-        "desc": "Spend {{goal}} hours in your worlds"
+        "desc": "Spend {{goal}} hours in your worlds",
+        "descOther": "Spent {{goal}} hours in their worlds"
       },
       "ingame_500h": {
         "name": "Veteran",
-        "desc": "Spend {{goal}} hours in your worlds"
+        "desc": "Spend {{goal}} hours in your worlds",
+        "descOther": "Spent {{goal}} hours in their worlds"
       },
       "jumps_25k": {
         "name": "Jumping Jack",
-        "desc": "Jump {{goal}} times"
+        "desc": "Jump {{goal}} times",
+        "descOther": "Jumped {{goal}} times"
       },
       "sleep_50": {
         "name": "Sleepyhead",
-        "desc": "Sleep {{goal}} nights"
+        "desc": "Sleep {{goal}} nights",
+        "descOther": "Slept {{goal}} nights"
       },
       "deaths_100": {
         "name": "Born to Lose",
-        "desc": "Die {{goal}} times"
+        "desc": "Die {{goal}} times",
+        "descOther": "Died {{goal}} times"
       },
       "craft_1k": {
         "name": "Tinkerer",
-        "desc": "Craft {{goal}} items"
+        "desc": "Craft {{goal}} items",
+        "descOther": "Crafted {{goal}} items"
       },
       "craft_10k": {
         "name": "Master Crafter",
-        "desc": "Craft {{goal}} items"
+        "desc": "Craft {{goal}} items",
+        "descOther": "Crafted {{goal}} items"
       },
       "enchant_50": {
         "name": "Arcane Touch",
-        "desc": "Enchant {{goal}} items"
+        "desc": "Enchant {{goal}} items",
+        "descOther": "Enchanted {{goal}} items"
       },
       "trade_100": {
         "name": "Regular Customer",
-        "desc": "Trade with villagers {{goal}} times"
+        "desc": "Trade with villagers {{goal}} times",
+        "descOther": "Traded with villagers {{goal}} times"
       },
       "trade_1000": {
         "name": "Tycoon",
-        "desc": "Trade with villagers {{goal}} times"
+        "desc": "Trade with villagers {{goal}} times",
+        "descOther": "Traded with villagers {{goal}} times"
       },
       "breed_50": {
         "name": "Rancher",
-        "desc": "Breed {{goal}} animals"
+        "desc": "Breed {{goal}} animals",
+        "descOther": "Bred {{goal}} animals"
       },
       "fish_100": {
         "name": "Angler",
-        "desc": "Catch {{goal}} fish"
+        "desc": "Catch {{goal}} fish",
+        "descOther": "Caught {{goal}} fish"
       },
       "raid_1": {
         "name": "Hero of the Village",
-        "desc": "Win a raid"
+        "desc": "Win a raid",
+        "descOther": "Won a raid"
       },
       "pt100": {
         "name": "100 Hours",
-        "desc": "Play for {{goal}} hours in the launcher"
+        "desc": "Play for {{goal}} hours in the launcher",
+        "descOther": "Played {{goal}} hours in the launcher"
       },
       "pt500": {
         "name": "500 Hours",
-        "desc": "Play for {{goal}} hours in the launcher"
+        "desc": "Play for {{goal}} hours in the launcher",
+        "descOther": "Played {{goal}} hours in the launcher"
       },
       "pt1000": {
         "name": "1000 Hours",
-        "desc": "Play for {{goal}} hours in the launcher"
+        "desc": "Play for {{goal}} hours in the launcher",
+        "descOther": "Played {{goal}} hours in the launcher"
       },
       "skin_first": {
         "name": "Debut",
-        "desc": "Get your first skin approved to the gallery"
+        "desc": "Get your first skin approved to the gallery",
+        "descOther": "First skin approved to the gallery"
       },
       "skin_author_10": {
         "name": "Skin Maker",
-        "desc": "Have 10 of your skins in the gallery"
+        "desc": "Have 10 of your skins in the gallery",
+        "descOther": "10 skins in the gallery"
       },
       "skin_downloads_100": {
         "name": "Popular",
-        "desc": "One of your skins was taken 100 times"
+        "desc": "One of your skins was taken 100 times",
+        "descOther": "A skin was taken 100 times"
       },
       "skin_downloads_1000": {
         "name": "Gallery Hit",
-        "desc": "One of your skins was taken 1000 times"
+        "desc": "One of your skins was taken 1000 times",
+        "descOther": "A skin was taken 1000 times"
       },
       "modpack_first": {
         "name": "Pack Author",
-        "desc": "Publish your first modpack to the catalog"
+        "desc": "Publish your first modpack to the catalog",
+        "descOther": "First modpack published to the catalog"
       },
       "modpack_downloads_5": {
         "name": "First Downloads",
-        "desc": "Your modpack was downloaded 5 times"
+        "desc": "Your modpack was downloaded 5 times",
+        "descOther": "A modpack was downloaded 5 times"
       },
       "modpack_downloads_25": {
         "name": "Gaining Traction",
-        "desc": "Your modpack was downloaded 25 times"
+        "desc": "Your modpack was downloaded 25 times",
+        "descOther": "A modpack was downloaded 25 times"
       },
       "modpack_downloads_100": {
         "name": "Crowd Favorite",
-        "desc": "Your modpack was downloaded 100 times"
+        "desc": "Your modpack was downloaded 100 times",
+        "descOther": "A modpack was downloaded 100 times"
       },
       "friends_10": {
         "name": "Inner Circle",
-        "desc": "Add 10 friends"
+        "desc": "Add 10 friends",
+        "descOther": "Added 10 friends"
       },
       "group_popular": {
         "name": "Life of the Party",
-        "desc": "Gather 10 members in your group"
+        "desc": "Gather 10 members in your group",
+        "descOther": "Gathered 10 members in a group"
       },
       "voice_1h": {
         "name": "First Contact",
-        "desc": "Spend 1 hour in voice chat"
+        "desc": "Spend 1 hour in voice chat",
+        "descOther": "Spent 1 hour in voice chat"
       },
       "voice_10h": {
         "name": "Always On",
-        "desc": "Spend 10 hours in voice chat"
+        "desc": "Spend 10 hours in voice chat",
+        "descOther": "Spent 10 hours in voice chat"
       },
       "voice_50h": {
         "name": "Voice of the Community",
-        "desc": "Spend 50 hours in voice chat"
+        "desc": "Spend 50 hours in voice chat",
+        "descOther": "Spent 50 hours in voice chat"
       },
       "donate_first": {
         "name": "Supporter",
-        "desc": "Support the project with a donation"
+        "desc": "Support the project with a donation",
+        "descOther": "Supported the project with a donation"
       }
     },
-    "loadError": "Couldn't load achievement data"
+    "unlockedOf": "{{unlocked}} of {{total}} unlocked",
+    "reachHint": "Rarity measured across {{players}} players",
+    "unlockedShare": "unlocked by {{percent}}% of players",
+    "rarityUnlocked": "Unlocked, {{rarity}}",
+    "sort": {
+      "progress": "Closest first",
+      "rarity": "Rarest first",
+      "points": "Most points",
+      "name": "By name"
+    },
+    "filtered": "Showing {{shown}} of {{total}}",
+    "resetFilters": "Reset filters"
   },
   "leaderboard": {
-    "title": "Leaderboard",
     "you": "(you)",
-    "empty": "Add friends to compare points"
+    "empty": "Add friends to compare points",
+    "scope": {
+      "friends": "Friends",
+      "global": "Global"
+    },
+    "friendsHint": "You and your friends by achievement points",
+    "globalHint": "Top 100 of the players who opted into the public board",
+    "globalEmpty": "The board is empty",
+    "unavailable": "The board needs a connection to Grubie Launcher services",
+    "yourPlace": "Your place: {{rank}}",
+    "yourPlaceOutside": "Your place: {{rank}} · {{points}} points",
+    "hiddenFromBoard": "Hidden from the board — turn on «Global leaderboard» in Public visibility",
+    "noPointsYet": "The first achievement puts you on the board",
+    "outsideTop": "You are outside the top 100 or hidden from the public board",
+    "friendsPlace": "Your place among friends: {{rank}} of {{total}}"
   },
   "downloadProgress": {
     "title": "Downloading",
-    "preparing": "Preparing...",
-    "files": "Files",
-    "failed": "Failed",
-    "timeRemaining": "Time remaining",
-    "size": "Size",
     "groups": {
       "manifest": "Manifest",
       "java": "Java",
@@ -1648,11 +3016,14 @@
   },
   "downloadFailures": {
     "title": "Some files were not downloaded",
-    "description": "The download finished, but these files failed. You can retry the action after checking the connection or file source.",
-    "completed": "Completed"
+    "more": "show {{count}} more",
+    "notRetryable": "Retrying will not help with these errors",
+    "retryNoInstance": "Can't retry from here: the instance is not in the list. Start the install from its own screen.",
+    "less": "show less",
+    "summary_one": "Downloaded {{completed}} of {{count}} file",
+    "summary_other": "Downloaded {{completed}} of {{count}} files"
   },
   "installationProgress": {
-    "title": "Installing version",
     "integrityTitle": "Checking integrity",
     "stages": {
       "preparing": "Preparing",
@@ -1686,11 +3057,12 @@
       }
     },
     "serverTitle": "Installing server",
-    "minimize": "Minimize",
-    "expand": "Expand",
     "pause": "Pause",
     "resume": "Resume",
-    "paused": "Paused"
+    "paused": "Paused",
+    "pausing": "Pausing — waiting for the current step",
+    "overallLabel": "Total",
+    "nowDownloading": "Downloading now"
   },
   "sizes": [
     "B",
@@ -1706,20 +3078,43 @@
     "d"
   ],
   "ownModpacks": {
-    "title": "My modpacks",
     "noModpacks": "You haven't shared any modpacks",
     "deleted": "Modpack deleted",
     "deleteError": "Error deleting modpack",
-    "confirmation": "Are you sure you want to delete the modpack {{name}}? It will be removed from the server and become unavailable for download",
+    "confirmation": "The modpack “{{name}}” is removed from the server.",
     "copyId": "Copy ID",
     "addToLauncher": "Add to launcher",
-    "loadError": "Couldn't load your modpacks"
+    "loadError": "Couldn't load your modpacks",
+    "published": "Published: {{value}}",
+    "totalDownloads": "{{value}} downloads in total",
+    "publishBanned": "Publishing is restricted by a moderator",
+    "publishBannedSince": "since {{date}}",
+    "publishBanReason": "Reason: {{reason}}",
+    "updated": "updated {{when}}",
+    "notListed": "Hidden",
+    "notListedHint": "The pack is not in the public catalog: it is private or was removed for inactivity",
+    "downloads": "Downloads",
+    "helpTitle": "How publishing works",
+    "helpStep1": "Open an instance and use «Share» to publish it",
+    "helpStep2": "The link shows up here and in the public catalog",
+    "helpStep3": "A pack with no updates for 30 days leaves the catalog",
+    "notPublished": "Not published yet",
+    "notPublishedEmpty": "Every instance of yours is already published",
+    "notPublishedNoInstances": "No instances yet — create one and you can publish it",
+    "notPublishedUnknown": "The list appears once your published modpacks load",
+    "openInstance": "Open instance",
+    "deleteTitle": "Unpublish the modpack",
+    "deleteLoss": "Its link and code stop working for everyone; your local copy of the instance stays on this computer.",
+    "deleteAction": "Unpublish"
   },
   "errorLog": {
     "title": "Error log",
     "empty": "No errors",
     "clear": "Clear",
-    "clearConfirm": "Clear the whole error history? It cannot be restored."
+    "clearConfirm": "Clear the whole error history? It cannot be restored.",
+    "description": "What the launcher itself failed at. Game crashes live in the instance Logs tab.",
+    "copyAll": "Copy everything",
+    "details": "Details"
   },
   "crash": {
     "title": "Game crashed: {{version}}",
@@ -1730,7 +3125,16 @@
     "title": "AI crash analysis",
     "consentDescription": "The log is stripped of paths, player names and tokens, then sent to our server, where an AI model diagnoses it.",
     "sentItems": "What will be sent",
-    "sentSummary": "Log excerpt of {{chars}} characters, mod list ({{mods}}), Minecraft version, loader and exit code",
+    "fact": {
+      "chars": "Log characters",
+      "mods": "Mods",
+      "minecraft": "Minecraft",
+      "loader": "Loader",
+      "java": "Java",
+      "memory": "Memory",
+      "os": "System",
+      "exit": "Exit code"
+    },
     "showLog": "Show what will be sent",
     "showSentLog": "Show what was sent",
     "hideLog": "Hide the log",
@@ -1741,7 +3145,10 @@
     "suspects": "Likely culprits",
     "steps": "What to try",
     "disclaimer": "The answer is generated by an AI model and can be wrong.",
-    "feedbackQuestion": "Was this helpful?",
+    "helpful": "It helped",
+    "notHelpful": "It did not help",
+    "copyAnalysis": "Copy the analysis",
+    "errorNothingSent": "The log stayed on your computer.",
     "feedbackSent": "Thanks for the feedback",
     "feedbackFailed": "Could not send the feedback",
     "unresolvedDetails": "We could not recognize this crash automatically.",
@@ -1755,22 +3162,27 @@
       "unauthorized": "Sign in to your Grubie account to use AI analysis.",
       "rateLimited": "You have reached the AI analysis limit. Try again later.",
       "unavailable": "AI analysis is unavailable right now."
-    }
+    },
+    "askAgent": "Ask the assistant",
+    "askAgentPrompt": "The instance “{{name}}” crashed. Read the crash log, work out why, and tell me how to fix it."
   },
   "onboarding": {
     "title": "Welcome to Grubie Launcher!",
     "description": "Two steps and you are in the game.",
     "stepAccount": "Add an account",
     "stepAccountDescription": "Microsoft, Ely.by, Discord or an offline nickname",
-    "stepVersion": "Install your first build",
+    "stepVersion": "Install your first instance",
     "stepVersionDescription": "A ready modpack, vanilla Minecraft or a file import",
     "go": "Go",
-    "skip": "Skip"
+    "skip": "Skip",
+    "stepVersionLocked": "Available after you add an account",
+    "skipHint": "You can do this later"
   },
   "errorBoundary": {
     "title": "Something went wrong",
     "description": "The interface crashed unexpectedly. Reloading usually fixes it.",
-    "reload": "Reload"
+    "reload": "Reload",
+    "copy": "Copy the details"
   },
   "ipcError": {
     "fileOperation": "File operation failed. Check available disk space and permissions."
@@ -1779,11 +3191,37 @@
     "loadFailed": "Could not load the news",
     "empty": "No news yet",
     "retry": "Try again",
-    "toggle": {
-      "hide": "Hide news",
-      "show": "Show news"
+    "refresh": "Refresh news",
+    "loadMore": "Show more",
+    "title": "News",
+    "new": "New",
+    "noDate": "No date",
+    "emptyHint": "The feed is empty right now — check back later.",
+    "loadFailedHint": "The news service did not respond. Check the connection and try again.",
+    "partialFailed": "Minecraft news did not load",
+    "offlineTitle": "News are unavailable offline",
+    "offlineHint": "Connect to the internet — the feed will load itself.",
+    "sources": {
+      "all": "All",
+      "minecraft": "Minecraft",
+      "grubie": "Grubie",
+      "other": "Other"
     },
-    "refresh": "Refresh news"
+    "kinds": {
+      "release": "Release",
+      "snapshot": "Snapshot",
+      "prerelease": "Pre-release",
+      "candidate": "Release candidate",
+      "deepDive": "Deep dive",
+      "tournament": "Tournament",
+      "marketplace": "Marketplace",
+      "realms": "Realms",
+      "article": "Article"
+    },
+    "unread_one": "{{count}} new",
+    "unread_other": "{{count}} new",
+    "updated": "Updated {{value}}",
+    "milestoneHint": "Open the change list"
   },
   "errors": {
     "code": "Code",
@@ -1856,12 +3294,891 @@
       "diskFull": "Free up disk space and try again.",
       "accessDenied": "Close the programs holding the file, check your antivirus and folder permissions.",
       "fileBusy": "Close the game or file explorer holding the file and try again.",
-      "fileMissing": "Verify the version files — they may have been deleted manually or by an antivirus.",
-      "javaMissing": "Pick Java in the version settings or let the launcher download it.",
+      "fileMissing": "Verify the instance files — they may have been deleted manually or by an antivirus.",
+      "javaMissing": "Pick Java in the instance settings or let the launcher download it.",
       "unknown": "Copy the details and attach them to your support request.",
       "pathPolicy": "Open the file through the launcher's file picker so it gets access to it.",
       "invalidArgument": "This is a launcher safeguard. Copy the code and send it to support."
     },
     "serverCode": "Server response: {{code}}"
+  },
+  "agent": {
+    "title": "Assistant",
+    "ask": "Ask the assistant",
+    "prompts": {
+      "mods": "Help me with the content of this instance ({{loader}} {{version}}): what is worth adding, what may conflict, and what should be updated.",
+      "instanceSettings": "Help me with the launch settings of this instance: memory is set to {{memory}} MB. Tell me what to change and which JVM arguments make sense."
+    },
+    "newChat": "New chat",
+    "send": "Send",
+    "stop": "Stop",
+    "working": "Working…",
+    "thinking": "Thinking…",
+    "thoughts": "Reasoning",
+    "placeholder": "Ask about your instances, mods or a crash…",
+    "emptyTitle": "What should I look at?",
+    "emptyHint": "Ask in plain words — for example: what instances do I have, why did my modpack crash, or find optimization mods for 1.20.1 Fabric.",
+    "emptyContext": "Sees {{instances}} and {{tools}} of this launcher",
+    "noProvider": "Add an AI provider and a key first — the gear icon above.",
+    "blocked": {
+      "noAccountShort": "sign in required",
+      "offlineAccountShort": "not for offline accounts",
+      "noAccount": "Sign in to use the assistant.",
+      "offlineAccount": "Not available on an offline account: chat history lives on your Grubie profile. Sign in with Microsoft, Discord or Ely.by."
+    },
+    "errors": {
+      "stepLimit": {
+        "title": "Step limit reached",
+        "hint": "The assistant used all the steps allowed for one request. Continue if it was on the right track."
+      },
+      "unknownProvider": {
+        "title": "The provider is gone",
+        "hint": "The selected provider no longer exists. Pick one in the provider settings."
+      },
+      "missingApiKey": {
+        "title": "This provider has no key",
+        "hint": "Add an API key in the provider settings."
+      },
+      "emptyTurn": {
+        "title": "The model said nothing",
+        "hint": "It finished the turn without text and without calling anything. Ask again or pick another model."
+      },
+      "emptyTurnWithTools": {
+        "title": "The model said nothing",
+        "hint": "It finished the turn without text and without calling anything. Ask again or pick another model."
+      },
+      "emptyTurnMidRun": {
+        "title": "The model stopped mid-task",
+        "hint": "It had already called a tool, then finished a turn empty. Ask again, or pick a model that handles long tool chains better."
+      },
+      "auth": {
+        "title": "The provider did not accept the key",
+        "hint": "Check the API key in the provider settings — it may have been revoked or copied with a typo."
+      },
+      "credit": {
+        "title": "The provider refused to bill the request",
+        "hint": "There is no balance or quota left on this key. Top it up or use another provider."
+      },
+      "rateLimit": {
+        "title": "The provider is rate limiting you",
+        "hint": "Too many requests in a short time. Wait half a minute and ask again."
+      },
+      "badModel": {
+        "title": "The provider does not have this model",
+        "hint": "The model id no longer exists or is unavailable on this key. Pick another model."
+      },
+      "noTools": {
+        "title": "This model cannot use tools",
+        "hint": "It can talk, but it cannot look at your instances or change anything. Pick a model that supports tool calling."
+      },
+      "context": {
+        "title": "The chat no longer fits the model",
+        "hint": "The conversation grew past the model context window. Start a new chat — the launcher state is added back automatically."
+      },
+      "timeout": {
+        "title": "The provider stopped answering",
+        "hint": "The stream went silent mid-answer. Ask again; if it repeats, pick another model."
+      },
+      "network": {
+        "title": "Could not reach the provider",
+        "hint": "The request never left your machine. Check the connection, VPN or firewall."
+      },
+      "server": {
+        "title": "The provider is having trouble",
+        "hint": "The problem is on their side, not in the launcher. Try again in a minute."
+      },
+      "unknown": {
+        "title": "The request failed",
+        "hint": "The provider returned an error the launcher does not recognise. The raw text is below."
+      }
+    },
+    "permission": {
+      "hint": "The assistant wants to change something. Nothing happens until you allow it.",
+      "destructiveHint": "This deletes data and cannot be undone.",
+      "allow": "Allow",
+      "always": "Always allow",
+      "alwaysScoped": "Always for “{{name}}”",
+      "deny": "Decline",
+      "decided": {
+        "once": "allowed",
+        "always": "always allowed",
+        "deny": "declined",
+        "stopped": "stopped"
+      },
+      "allowDestructive": "Delete",
+      "titles": {
+        "delete_instance": "Delete the instance “{{name}}”?",
+        "restore_world_backup": "Restore world “{{name}}” from a backup?",
+        "delete_world_backup": "Delete a backup of world “{{name}}”?"
+      },
+      "actions": {
+        "delete_instance": "Delete",
+        "restore_world_backup": "Restore",
+        "delete_world_backup": "Delete the backup"
+      }
+    },
+    "question": {
+      "answer": "Answer",
+      "freeform": "Or type your own answer…",
+      "unanswered": "No answer — the run was stopped"
+    },
+    "plan": {
+      "title": "Plan"
+    },
+    "tools": {
+      "unknown": "Unknown tool: {{name}}",
+      "askUser": "Asking you a question",
+      "updatePlan": "Updating the plan",
+      "listInstances": "Reading the instance list",
+      "getInstance": "Opening the instance “{{name}}”",
+      "searchMods": "Searching mods: {{query}}",
+      "getProject": "Reading the project page",
+      "getProjectVersions": "Checking available versions",
+      "getDependencies": "Resolving dependencies",
+      "listMinecraftVersions": "Fetching Minecraft versions for {{loader}}",
+      "listLoaderVersions": "Fetching {{loader}} versions for {{version}}",
+      "readLauncherSettings": "Reading the launcher settings",
+      "getSystemInfo": "Checking the system",
+      "getStorageUsage": "Measuring disk usage",
+      "listAccounts": "Reading the account list",
+      "listWorlds": "Reading the worlds of “{{name}}”",
+      "listWorldBackups": "Reading the backups of “{{name}}”",
+      "readGameLog": "Reading the log of “{{name}}”",
+      "getLastCrash": "Reading the last crash of “{{name}}”",
+      "listServers": "Reading the server list of “{{name}}”",
+      "addMods": "Installing into “{{name}}”: {{count}} project(s)",
+      "removeMods": "Removing from “{{name}}”: {{count}} project(s)",
+      "setRunArguments": "Changing the arguments of “{{name}}”",
+      "setMemory": "Setting the game memory to {{value}} MB",
+      "setMemoryInstance": "Setting the memory of “{{name}}” to {{value}} MB",
+      "launchInstance": "Launching “{{name}}”",
+      "deleteInstance": "Deleting the instance “{{name}}”",
+      "enableMods": "Enabling in “{{name}}”: {{count}} project(s)",
+      "disableMods": "Disabling in “{{name}}”: {{count}} project(s)",
+      "updateMods": "Checking updates for “{{name}}”",
+      "checkIntegrity": "Verifying the files of “{{name}}”",
+      "createWorldBackup": "Backing up the world “{{name}}”",
+      "restoreWorldBackup": "Restore world “{{name}}” of “{{instance}}” from a backup",
+      "deleteWorldBackup": "Delete a backup of world “{{name}}”",
+      "renameWorld": "Renaming the world “{{name}}”",
+      "listSkins": "Reading the skin library",
+      "selectSkin": "Putting on a skin",
+      "importSkinByNickname": "Fetching the skin of {{name}}",
+      "createInstance": "Creating the instance “{{name}}” on {{version}}"
+    },
+    "providers": {
+      "title": "AI providers",
+      "description": "The agent runs on your own API key. The key is stored on this computer, encrypted by the operating system, and is sent only to the provider you specify.",
+      "settingsRowOpen": "Configure",
+      "empty": "No providers yet. Add one to start using the agent.",
+      "add": "Add provider",
+      "edit": "Edit",
+      "delete": "Delete",
+      "label": "Name",
+      "labelPlaceholder": "My provider",
+      "baseUrl": "Base URL",
+      "baseUrlHint": "Any endpoint with a compatible chat API — a cloud provider or a local server.",
+      "apiKey": "API key",
+      "apiKeyStored": "Key saved ({{hint}}) — leave empty to keep it",
+      "model": "Model",
+      "modelPlaceholder": "Pick or type a model",
+      "modelSearch": "Search models",
+      "modelEmpty": "Nothing found",
+      "modelManual": "Enter manually",
+      "modelFromList": "Pick from the list",
+      "noTools": "no tools",
+      "noToolsWarning": "This model does not support tool calling, so the agent will not be able to do anything in the launcher.",
+      "test": "Check",
+      "testing": "Checking…",
+      "testOk": "Connection is fine, {{count}} models available",
+      "testFailed": "Check failed",
+      "saveFailed": "Could not save the provider",
+      "save": "Save",
+      "cancel": "Cancel",
+      "active": "active",
+      "keyMissing": "no key",
+      "defaultModel": "Model",
+      "defaultModelHint": "The model this provider works with. Switching it in the assistant window changes it here too. It must support tool calling, or the assistant will only be able to talk.",
+      "listDescription": "Pick which provider the assistant talks to.",
+      "formDescription": "Any endpoint with a compatible chat API works — a cloud service or a local server.",
+      "addTitle": "New provider",
+      "editTitle": "Provider settings",
+      "emptyHint": "Add an endpoint and its key — the launcher never sends the key anywhere else.",
+      "apiKeyPlaceholder": "Paste the key",
+      "keyPrivacy": "The key is stored on this computer, encrypted by the system, and is sent only to {{host}}.",
+      "testHint": "Check the key before saving — the model list comes from the same answer.",
+      "selectHint": "Click a provider to make it the active one. New chats start with it.",
+      "deleteConfirm": "Delete “{{name}}” together with its key?",
+      "blocked": {
+        "label": "Give the provider a name",
+        "baseUrl": "Fill in the base URL",
+        "apiKey": "Add an API key",
+        "model": "Pick a default model"
+      },
+      "loadFailed": "Could not read the provider list",
+      "loadFailedHint": "The launcher failed to read ai-providers.json. Your providers are still there — retry, and check that the file is readable.",
+      "deleteFailed": "The provider was not deleted",
+      "selectFailed": "The provider was not switched"
+    },
+    "searchChats": "Search chats",
+    "syncFailed": "Chats are not synced — retry",
+    "noChats": "No chats yet",
+    "pin": "Pin",
+    "rename": "Rename",
+    "retry": "Ask again",
+    "copyTranscript": "Copy the chat",
+    "transcriptCopied": "Chat copied as Markdown",
+    "answerFirst": "Answer the question above first",
+    "sendHint": "Enter — send, Shift+Enter — new line",
+    "stopHint": "Esc — stop",
+    "toolsReady": "{{count}} tools available",
+    "moreItems": "+{{count}} more",
+    "fieldCount": "{{count}} fields",
+    "risk": {
+      "read": "Reads data",
+      "write": "Changes something, asks first",
+      "destructive": "Deletes data, always asks"
+    },
+    "history": {
+      "pinned": "Pinned",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "week": "Last 7 days",
+      "older": "Earlier"
+    },
+    "rail": {
+      "tools": "What I can do",
+      "permissions": "Standing permissions",
+      "permissionsEmpty": "Nothing is allowed in advance — every change is confirmed by you.",
+      "revoke": "Revoke",
+      "grantEverywhere": "any instance",
+      "toggle": "Side panel",
+      "usage": "This chat",
+      "tokens": "Tokens",
+      "cost": "Cost",
+      "steps": "Steps",
+      "groups": {
+        "instances": "Instances",
+        "content": "Mods and versions",
+        "worlds": "Worlds and backups",
+        "diagnostics": "Logs and crashes",
+        "skins": "Skins",
+        "system": "Launcher and system",
+        "dialogue": "Questions and plan",
+        "other": "Other"
+      },
+      "needs": {
+        "internet": "Needs an internet connection",
+        "account": "Needs a signed-in account"
+      }
+    },
+    "setup": {
+      "title": "Connect a provider to start",
+      "description": "The assistant runs on your own key from any provider with a compatible API. Pick a model that supports tool calling — otherwise it will only be able to talk.",
+      "action": "Connect a provider",
+      "privacy": "The key is kept on this computer, encrypted by the system, and is sent only to the provider you name."
+    },
+    "suggestions": {
+      "crash": "Why did my instance crash?",
+      "optimize": "Find mods that improve FPS",
+      "cleanup": "What is eating my disk space?",
+      "compare": "Compare my instances"
+    },
+    "recovery": {
+      "providers": "Provider settings",
+      "model": "Pick another model",
+      "retry": "Try again",
+      "continue": "Continue",
+      "newChat": "Start a new chat",
+      "connectivity": "Check the connection",
+      "none": "Close"
+    },
+    "args": {
+      "instance": "Instance",
+      "instanceName": "Instance",
+      "name": "Name",
+      "world": "World",
+      "worldName": "World",
+      "mods": "Mods",
+      "projects": "Mods",
+      "projectIds": "Mods",
+      "query": "Query",
+      "version": "Version",
+      "loader": "Loader",
+      "memory": "Memory",
+      "megabytes": "Megabytes",
+      "arguments": "Arguments",
+      "jvm": "JVM arguments",
+      "game": "Game arguments",
+      "enabled": "Enabled",
+      "backup": "Backup",
+      "backupId": "Backup",
+      "nickname": "Nickname",
+      "skin": "Skin",
+      "skinId": "Skin",
+      "server": "Server",
+      "reason": "Reason",
+      "value": "Value",
+      "lines": "Lines",
+      "count": "Count",
+      "limit": "Limit",
+      "projectId": "Mod",
+      "versionId": "Version",
+      "path": "Path",
+      "force": "Force",
+      "worldFolder": "World folder"
+    },
+    "toolNames": {
+      "list_instances": "List instances",
+      "get_instance": "Open an instance",
+      "create_instance": "Create an instance",
+      "launch_instance": "Launch the game",
+      "check_integrity": "Verify files",
+      "set_run_arguments": "Change launch arguments",
+      "delete_instance": "Delete an instance",
+      "search_mods": "Search mods",
+      "get_project": "Read a project page",
+      "get_project_versions": "Check mod versions",
+      "get_dependencies": "Resolve dependencies",
+      "list_minecraft_versions": "List Minecraft versions",
+      "list_loader_versions": "List loader versions",
+      "add_mods": "Install mods",
+      "update_mods": "Update mods",
+      "remove_mods": "Remove mods",
+      "toggle_mods": "Enable and disable mods",
+      "list_worlds": "List worlds",
+      "list_world_backups": "List world backups",
+      "create_world_backup": "Back up a world",
+      "rename_world": "Rename a world",
+      "restore_world_backup": "Restore a world",
+      "delete_world_backup": "Delete a backup",
+      "read_game_log": "Read the game log",
+      "get_last_crash": "Read the last crash",
+      "list_servers": "List servers",
+      "list_skins": "List skins",
+      "select_skin": "Put on a skin",
+      "import_skin_by_nickname": "Import a skin by nickname",
+      "read_launcher_settings": "Read the settings",
+      "get_system_info": "Read system info",
+      "get_storage_usage": "Measure disk usage",
+      "list_accounts": "List accounts",
+      "set_memory": "Change game memory",
+      "ask_user": "Ask you a question",
+      "update_plan": "Keep a plan"
+    },
+    "stopped": "Stopped",
+    "emptyContextInstances_one": "{{count}} instance",
+    "emptyContextInstances_other": "{{count}} instances",
+    "emptyContextTools_one": "{{count}} tool",
+    "emptyContextTools_other": "{{count}} tools",
+    "preview": {
+      "instance": "Instance",
+      "minecraft": "Minecraft",
+      "projects": "Projects",
+      "worlds": "Worlds",
+      "size": "On disk",
+      "world": "World",
+      "created": "Created",
+      "instanceLoss": "The folder goes to the system trash. The launcher forgets the instance either way.",
+      "instanceLossWorlds_one": "{{count}} world goes with it. The folder goes to the system trash; the launcher forgets the instance either way.",
+      "instanceLossWorlds_other": "{{count}} worlds go with it. The folder goes to the system trash; the launcher forgets the instance either way.",
+      "restoreLoss": "Everything played since {{date}} is replaced. The launcher keeps a safety copy of the current world first.",
+      "backupLoss": "This restore point is gone for good. The world itself stays untouched."
+    }
+  },
+  "shell": {
+    "back": "Back",
+    "forward": "Forward",
+    "searchHint": "Search and commands",
+    "now": "Now",
+    "nav": {
+      "instances": "Instances",
+      "newInstance": "New instance",
+      "instance": "Instance",
+      "people": "People",
+      "profile": "Profile",
+      "profileOffline": "The profile is unavailable for an offline account — sign in with Microsoft, Discord or Ely.by."
+    },
+    "palette": {
+      "label": "Search and commands",
+      "placeholder": "Where to, or what to do?",
+      "open": "Open",
+      "askAgent": "Ask the assistant: \"{{query}}\"",
+      "modes": {
+        "actions": "Actions",
+        "instances": "Instances",
+        "settings": "Settings",
+        "help": "Prefixes"
+      },
+      "sections": {
+        "navigate": "Go to",
+        "actions": "Actions",
+        "instances": "Instances",
+        "accounts": "Accounts",
+        "settings": "Settings",
+        "agent": "Assistant"
+      }
+    },
+    "tabs": {
+      "overview": "Overview",
+      "content": "Content",
+      "worlds": "Worlds",
+      "servers": "Servers",
+      "settings": "Settings",
+      "server": "My server",
+      "logs": "Logs",
+      "statistics": "Statistics",
+      "configs": "Configs"
+    },
+    "emptyInstancesHint": "Create an instance or import one from a file — the launcher will download everything it needs.",
+    "offline": {
+      "internet": "No network",
+      "backend": "Services down"
+    }
+  },
+  "instanceSettings": {
+    "title": "Instance settings",
+    "inherited": "Inherited from launcher",
+    "overridden": "Overridden for this instance",
+    "resetAll": "Use launcher values",
+    "optimizedHint": "Adds {{flags}} garbage collector flags",
+    "priorityHint": "The game gets more processor time",
+    "runningHint": "The instance is running: settings apply on the next launch."
+  },
+  "configs": {
+    "emptyTitle": "No configuration files",
+    "emptyHint": "This instance has no config folder yet — it appears after the first launch with mods.",
+    "pickFile": "Pick a file on the left to edit it",
+    "saved": "File saved",
+    "savedOverExternal": "The file had changed on disk since you opened it — that version is now the newest entry under Restore.",
+    "saveFailed": "Failed to save the file",
+    "saveFailedHint": "The file was not written. Your changes are still in the editor — close the game or any editor that holds the file and press Save again.",
+    "backupFailedHint": "A copy of the current file could not be made, so nothing was overwritten. Your changes are still in the editor.",
+    "readFailed": "Failed to read the file",
+    "readFailedHint": "The file could not be read from disk. Close the game or any editor that holds it and try again.",
+    "tooLarge": "The file is too large to edit here",
+    "saveFile": "Save file",
+    "unsaved": "Unsaved changes",
+    "unsavedTitle": "File not saved",
+    "unsavedHint": "Config file edits are not saved. They will be lost if you leave.",
+    "restore": "Restore",
+    "backupsTitle": "Saved versions",
+    "backupBaseline": "Original file",
+    "backupPrevious": "Previous version",
+    "noBackups": "No saved versions yet — the first one appears after you save this file.",
+    "backupRestored": "Version loaded into the editor — save to apply it",
+    "backupMissing": "The saved version file is gone",
+    "completion": {
+      "literal": "value",
+      "key": "key",
+      "keyword": "keyword"
+    },
+    "notFound": "No files match the search",
+    "clearSearch": "Clear search"
+  },
+  "modpackDiff": {
+    "updated": "Will be updated",
+    "added": "Will be added",
+    "removed": "Will be removed",
+    "unchanged": "{{count}} unchanged",
+    "showAll": "Show {{count}} more",
+    "countAdded_one": "{{count}} added",
+    "countAdded_other": "{{count}} added",
+    "countUpdated_one": "{{count}} updated",
+    "countUpdated_other": "{{count}} updated",
+    "countRemoved_one": "{{count}} removed",
+    "countRemoved_other": "{{count}} removed"
+  },
+  "mirror": {
+    "modes": {
+      "official": {
+        "label": "Official source",
+        "hint": "Downloads go straight to the official servers"
+      },
+      "mirror": {
+        "label": "Mirror",
+        "hint": "Downloads go through the Grubie mirror"
+      },
+      "mirror-cooldown": {
+        "label": "Mirror unavailable",
+        "hint": "The mirror kept failing, so downloads fall back to the official servers for a few minutes"
+      },
+      "official-first": {
+        "label": "Official source",
+        "hint": "Downloads go straight to the official servers"
+      }
+    }
+  },
+  "taskCenter": {
+    "title": "Task center",
+    "open": "Task center",
+    "empty": "Nothing is running",
+    "emptyHint": "Installs, updates and file checks show up here.",
+    "stages": "Stages",
+    "queued": "Queued",
+    "recent": "Recent",
+    "files": "Files",
+    "size": "Size",
+    "speed": "Speed",
+    "remaining": "Left",
+    "checkConnection": "Check connection",
+    "showFailures": "Show errors",
+    "failures_one": "{{count}} file failed",
+    "failures_other": "{{count}} files failed",
+    "notifyDoneTitle": "Installation finished",
+    "notifyDoneBody": "{{name}} is ready to play",
+    "notifyPartialTitle": "Installed with errors",
+    "notifyPartialBody": "{{name}}: {{count}} files were not downloaded",
+    "closeTitle": "An installation is still running",
+    "closeHint": "Closing the launcher will interrupt the installation — already downloaded files stay unfinished and the build will need to be installed again.",
+    "closeHintNamed": "Closing the launcher will interrupt the installation of «{{name}}» — already downloaded files stay unfinished and the build will need to be installed again.",
+    "closeStopAndQuit": "Interrupt and close"
+  },
+  "skinStage": {
+    "animation": "Animation",
+    "animations": {
+      "none": "No animation",
+      "idle": "Idle",
+      "walk": "Walk",
+      "run": "Run",
+      "fly": "Fly",
+      "wave": "Wave",
+      "crouch": "Sneak"
+    },
+    "autoRotate": "Auto-rotate",
+    "outerLayer": "Second layer",
+    "elytra": "Show as elytra",
+    "nameTag": "Nickname above the head",
+    "resetCamera": "Reset the camera",
+    "noSkin": "No skin to preview",
+    "textureError_skin": "The skin did not load",
+    "textureError_cape": "The cape did not load"
+  },
+  "home": {
+    "continue": {
+      "title": "Continue",
+      "all": "All",
+      "empty": "Worlds and servers of this instance will show up here.",
+      "quickUnsupported": "This Minecraft version cannot jump straight into a world.",
+      "quickUnsupportedServer": "This Minecraft version cannot join a server straight from launch."
+    },
+    "noSelection": {
+      "title": "No instance selected",
+      "hint": "Pick an instance in the library below — it will show up here."
+    },
+    "offline": "No connection",
+    "offlineHint": "Grubie services are unavailable, update checks are paused.",
+    "orphans": {
+      "title_one": "{{count}} folder not recognised",
+      "title_other": "{{count}} folders not recognised",
+      "hint": "The launcher cannot open these folders as instances: version.json or the game files are missing. Look inside before deleting — they may still hold worlds.",
+      "openRoot": "Open the versions folder"
+    },
+    "stats": {
+      "launches": "Launches",
+      "longestSession": "Longest session"
+    },
+    "hiddenByFilter_one": "{{count}} hidden",
+    "hiddenByFilter_other": "{{count}} hidden"
+  },
+  "logs": {
+    "searchPlaceholder": "Search the log",
+    "noMatches": "no matches",
+    "prevMatch": "Previous match",
+    "nextMatch": "Next match",
+    "clearSearch": "Clear the search",
+    "onlyMatches": "Show matching lines only",
+    "wrap": "Wrap long lines",
+    "follow": "Follow the tail",
+    "truncated": "beginning trimmed",
+    "shownLines_one": "{{count}} line",
+    "shownLines_other": "{{count}} lines",
+    "expand_one": "{{count}} more line",
+    "expand_other": "{{count}} more lines",
+    "loading": "Reading the log…",
+    "nothingMatches": "No line matches the filter",
+    "jumpToError": "To the error",
+    "jumpToErrorHint": "Jump to the next error line",
+    "stop": "Stop the game",
+    "relaunch": "Launch again",
+    "relaunchHint": "Start this instance again",
+    "relaunchServerHint": "Start again and connect to {{server}}",
+    "runs": "Runs",
+    "refresh": "Refresh the list",
+    "now": "Right now",
+    "openFolder": "Logs folder",
+    "more": "Log actions",
+    "copyLog": "Copy the log",
+    "copyReport": "Copy for support",
+    "reportCopied": "The report is in your clipboard — paste it where you ask for help",
+    "readFailedTitle": "Could not read {{name}}",
+    "readFailedHint": "The file is on disk but the launcher could not read it: it may be locked by another program or damaged.",
+    "emptyTitle": "No logs yet",
+    "emptyHint": "They appear after the first run: the game log, the crash report and the run history.",
+    "noFileTitle": "The log of this run was not kept",
+    "noFileHint": "Minecraft keeps a limited number of archived logs and deletes the older ones.",
+    "noLinesTitle": "The log is empty",
+    "noLinesHint": "Lines appear as soon as the game writes them.",
+    "analyzing": "Working out what happened…",
+    "unknownCrash": "We could not recognise this crash",
+    "unknownCrashHint": "Open the report or ask the AI assistant — it reads the whole log.",
+    "exitCode": "Exit code",
+    "exit": {
+      "ok": "Closed normally",
+      "stopped": "Stopped",
+      "generic": "Ended with an error",
+      "terminated": "Ended abnormally",
+      "accessViolation": "Native crash (memory access)",
+      "stackOverflow": "Native crash (stack overflow)",
+      "bufferOverrun": "Native crash (usually the graphics driver)",
+      "heapCorruption": "Native crash (heap corruption)",
+      "killed": "Killed by the system, out of RAM",
+      "unknown": "Crashed",
+      "recovered": "Launcher closed mid-game"
+    },
+    "sourceLabel": "What to read",
+    "source": {
+      "console": "Game output",
+      "log": "File {{name}}",
+      "report": "Crash report",
+      "debug": "Debug",
+      "native": "JVM dump"
+    },
+    "sourceHint": {
+      "console": "Everything the game process printed while the launcher was watching it — including lines that never reach the log file.",
+      "log": "The log file the game itself writes to the logs folder.",
+      "report": "The crash-reports file the game wrote when it fell over.",
+      "debug": "debug.log — the verbose log, only if the game was told to keep one.",
+      "native": "{{name}} — the Java machine crashed, this is its dump."
+    },
+    "report": {
+      "launcher": "Launcher",
+      "os": "System",
+      "instance": "Instance",
+      "minecraft": "Minecraft",
+      "loader": "Loader",
+      "mods": "Mods",
+      "memory": "Memory",
+      "started": "Started",
+      "duration": "Duration",
+      "server": "Server",
+      "diagnosis": "Diagnosis",
+      "log": "Log"
+    },
+    "levels": {
+      "all": "All",
+      "fatal": "Fatal",
+      "error": "Errors",
+      "warn": "Warnings",
+      "info": "Info",
+      "debug": "Debug"
+    }
+  },
+  "profile": {
+    "pointsToNext": "{{points}} points to level {{level}}",
+    "hoursShort": "{{hours}} hr.",
+    "memberSince": "In the launcher since {{date}}",
+    "showcase": "Showcase",
+    "almostThere": "Almost unlocked",
+    "almostThereEmpty": "Play a session and the closest goals show up here",
+    "remaining": "{{value}} {{unit}} left",
+    "worldStats": "World stats",
+    "worldStatsEmpty": "No world data yet: the numbers appear after the first session",
+    "worldStatsFailed": "World statistics could not be read — the numbers below are incomplete",
+    "worldStatsPartial": "Some world statistics could not be read — the numbers below may be low",
+    "worldStatsPartialShort": "Incomplete data",
+    "favouriteInstance": "Most played",
+    "mutualFriends": "Mutual friends",
+    "mutualFriendsEmpty": "No mutual friends",
+    "collection": "Collection",
+    "metrics": {
+      "playTimeTicks": "In worlds",
+      "distanceCm": "Travelled",
+      "blocksMined": "Blocks",
+      "mobKills": "Mobs",
+      "diamondsMined": "Diamonds",
+      "itemsCrafted": "Crafted",
+      "deaths": "Deaths",
+      "worlds": "Worlds"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "achievements": "Achievements",
+      "leaderboard": "Leaderboard",
+      "modpacks": "Modpacks",
+      "skins": "Skins"
+    },
+    "categories": "By category",
+    "openAccounts": "Open accounts",
+    "globalRank": "Place in the global leaderboard",
+    "publicModpacks": "Packs published by {{nickname}}",
+    "publicModpacksEmpty": "This player has not published a pack yet",
+    "publicModpacksError": "Could not load this player's packs",
+    "publicProfileHidden": "This player keeps their profile private",
+    "publicModpacksHint1": "A pack installs whole: the author's mods, configs and servers.",
+    "publicModpacksHint2": "When the author updates the pack, the launcher offers the update.",
+    "publicModpacksHint3": "The confirmation screen lists everything before anything is downloaded."
+  },
+  "tagsInput": {
+    "placeholder": "Add a tag…",
+    "hint": "Enter or a comma adds the tag",
+    "limitReached": "Tag limit reached",
+    "noSuggestions": "No matching tag — Enter adds yours",
+    "alreadyAdded": "This tag is already added",
+    "reserved": "This tag is reserved by the catalog",
+    "remove": "Remove the tag"
+  },
+  "imageCropper": {
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "rotateLeft": "Rotate left",
+    "rotateRight": "Rotate right",
+    "cropFailed": "Could not prepare the image",
+    "loadFailed": "Could not read the image file"
+  },
+  "newInstance": {
+    "sources": {
+      "custom": "Own instance",
+      "community": "Community",
+      "catalog": "Modpacks",
+      "code": "Pack code",
+      "file": "From file",
+      "server": "For a server"
+    },
+    "pickHint": {
+      "custom": "Pick a loader and a Minecraft version.",
+      "community": "Pick a pack another player shared — it installs whole.",
+      "catalog": "Pick a modpack — the launcher will download and read it.",
+      "code": "Paste the pack code or its link.",
+      "file": "Pick a .zip or .mrpack file, or drop it into the window.",
+      "server": "Enter the server address — the launcher will read its version."
+    },
+    "blockers": {
+      "account": "Select an account first.",
+      "internet": "No internet connection: the game files cannot be downloaded.",
+      "backend": "Forge and NeoForge need the Grubie server.",
+      "name": "Give the instance a valid name.",
+      "minecraftVersion": "Pick a Minecraft version.",
+      "loaderVersion": "Pick a loader version.",
+      "loaderVersionUnresolved": "Pick a loader version for this pack."
+    },
+    "warnings": {
+      "localMods": "The pack carries hand-added files. Install it only if you trust the author.",
+      "snapshot": "A snapshot is a test version of the game: mods and worlds may break.",
+      "oldVersion": "A very old version — most modern mods will not run on it.",
+      "legacyJava": "This version runs on Java 8, it will be downloaded as well.",
+      "backend": "The Grubie server is unavailable, updates for this pack will not arrive.",
+      "largeDownload": "A big download — keep the launcher open until it ends."
+    },
+    "name": {
+      "empty": "Enter a name.",
+      "forbidden": "These characters cannot be used in a folder name: {{characters}}",
+      "emoji": "Java cannot open a game folder with these characters: {{characters}}",
+      "control": "The name contains invisible characters.",
+      "dots": "A name of dots only cannot be a folder.",
+      "trailing": "The name cannot end with a dot or a space.",
+      "reserved": "Windows will not create a folder with this name.",
+      "tooLong": "Up to {{max}} characters.",
+      "taken": "An instance with this name already exists.",
+      "folderTaken": "A folder with this name already exists in versions."
+    },
+    "versionKind": {
+      "release": "Releases",
+      "snapshot": "Snapshot",
+      "old": "Old"
+    },
+    "packKind": {
+      "share": "Pack from the Grubie server",
+      "file": "Imported from a file",
+      "modpack": "Modpack from the catalog"
+    },
+    "server": {
+      "title": "Instance for a server",
+      "description": "The launcher pings the server, takes its version and sets up quick join.",
+      "hint1": "The server is added to the list and to quick connect right away.",
+      "hint2": "For a modded server pick the loader and the mods yourself.",
+      "probe": "Check",
+      "offline": "The server did not answer. Check the address.",
+      "modded": "Modded",
+      "use": "Use Minecraft {{version}}",
+      "unknownVersion": "The server did not report its version — pick one yourself.",
+      "applied": "Quick join: {{address}}",
+      "versionMissing": "This version is not in the list — pick a close one.",
+      "known": "Servers from your instances"
+    },
+    "minecraftVersion": "Minecraft version",
+    "allVersions": "All",
+    "latestLoaderVersion": "latest",
+    "pickVersionFirst": "Pick a Minecraft version first",
+    "notChosen": "not chosen",
+    "releasedOn": "Released",
+    "ownServer": "Own server",
+    "serverSupported": "supported",
+    "serverUnsupported": "not supported",
+    "vanillaNote": "A clean game without mods. Pick a loader if you want mods — the instance can always be recreated.",
+    "logoHint": "PNG or JPG, square",
+    "nameFromPack": "Taken from the pack, you can change it",
+    "changePack": "Another one",
+    "fromPack": "from the pack",
+    "emptyContent": "The pack carries no content",
+    "editContent": "Edit content",
+    "browseContent": "View content",
+    "chooseFile": "Choose a file",
+    "anyVersion": "All versions",
+    "anyLoader": "All loaders",
+    "pickModpackHint": "Pick a modpack to see what is inside.",
+    "noModpackVersions": "No suitable modpack version for these filters.",
+    "modpackVersionsFailed": "Could not load the modpack version list.",
+    "useModpack": "Take this modpack",
+    "create": "Create instance",
+    "readyHint": "Everything is ready.",
+    "installHint": "The install continues in the background if you close this screen.",
+    "minimize": "Move to tasks",
+    "cancelInstall": "Cancel install",
+    "cancellingInstall": "Cancelling…",
+    "queuedBehind": "Queued behind «{{name}}»",
+    "loaderNeedsBackend": "The Grubie server is unavailable",
+    "similar": "You already have",
+    "ownPacks": "Your published packs",
+    "alreadyInstalled": "installed",
+    "openInstalled": "Already installed — open the instance",
+    "stats": {
+      "downloads": "Downloads",
+      "follows": "Followers"
+    },
+    "packVersionMissing": "Minecraft {{version}} is not available for {{loader}} — this pack cannot be installed. Pick another one.",
+    "contentHint": "Content changes apply when the instance is created.",
+    "cancelConfirmTitle": "Cancel the install?",
+    "cancelConfirmBody": "Everything downloaded so far is discarded and the instance does not appear in the list.",
+    "cancelConfirmKeep": "Keep installing",
+    "installCancelled": "Install cancelled",
+    "modpackFileRequired": "The modpack file is still missing",
+    "modpackFileRequiredHint": "This file is the modpack itself — it cannot be skipped or replaced. Download it manually and add it to the window.",
+    "contentFailed": "Instance not created: its files could not be written",
+    "contentFailedHint": "Check the free space on the disk and try again.",
+    "extraFilesFailed": "Instance created, but not every file downloaded",
+    "extraFilesFailedHint": "Some of the instance files did not arrive. Details are in the error log."
+  },
+  "community": {
+    "search": "Search by pack name",
+    "sorts": {
+      "downloads": "Most installed",
+      "updated": "Recently updated",
+      "new": "Newest"
+    },
+    "content": {
+      "mods": "Mods",
+      "servers": "Servers"
+    },
+    "contentEmpty": "Clean version, no mods",
+    "shown": "Showing {{shown}} of {{total}}",
+    "emptyTitle": "The catalog is empty",
+    "emptyHint": "Publish an instance of your own and it shows up here for everyone.",
+    "notFoundHint": "Change the filters or clear the search.",
+    "notFoundFiltersHint": "No packs match the chosen filters.",
+    "resetFilters": "Reset filters",
+    "loadFailedTitle": "The catalog did not load",
+    "loadFailed": "The Grubie server did not answer. Try again.",
+    "loadMoreFailed": "Could not load the next page"
   }
 }

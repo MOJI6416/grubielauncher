@@ -1,4 +1,22 @@
-export interface IWorld {
+export type WorldGameMode = 'survival' | 'creative' | 'adventure' | 'spectator'
+
+export type WorldDifficulty = 'peaceful' | 'easy' | 'normal' | 'hard'
+
+export interface IWorldMeta {
+  gameMode?: WorldGameMode
+  difficulty?: WorldDifficulty
+  hardcore?: boolean
+  cheats?: boolean
+  versionName?: string
+  dataVersion?: number
+  lastPlayed?: number
+  worldAgeTicks?: number
+  spawn?: { x: number; y: number; z: number }
+  enabledDatapacks?: string[]
+  disabledDatapacks?: string[]
+}
+
+export interface IWorld extends IWorldMeta {
   name: string
   seed: string
   folderName: string
@@ -22,3 +40,23 @@ export interface IWorldStatsAggregate {
   blocksMined: number
   jumps: number
 }
+
+export type WorldTransferErrorCode =
+  | 'worldMissing'
+  | 'versionRunning'
+  | 'nameTaken'
+  | 'archiveInvalid'
+  | 'archiveTooLarge'
+  | 'failed'
+
+export type WorldDuplicateResult =
+  | { ok: true; path: string }
+  | { ok: false; error: WorldTransferErrorCode }
+
+export type WorldExportResult =
+  | { ok: true; path: string; size: number }
+  | { ok: false; error: WorldTransferErrorCode }
+
+export type WorldImportResult =
+  | { ok: true; path: string; name: string }
+  | { ok: false; error: WorldTransferErrorCode }

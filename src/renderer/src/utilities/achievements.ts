@@ -54,7 +54,7 @@ export type AchievementCategory =
 export type AchievementRarity = "common" | "rare" | "epic" | "legendary";
 
 type MetricKey = keyof IAchievementStats | "playTimeSeconds";
-type MetricUnit = "count" | "km" | "ticksHours" | "secondsHours";
+export type MetricUnit = "count" | "km" | "ticksHours" | "secondsHours";
 
 export interface IAchievementDef {
   id: string;
@@ -232,6 +232,17 @@ export function pointsForAchievements(ids: Iterable<string>): number {
   return points;
 }
 
+export function resolveAchievementPoints(
+  serverPoints: number | null | undefined,
+  ids: Iterable<string>,
+): number {
+  return typeof serverPoints === "number" &&
+    Number.isFinite(serverPoints) &&
+    serverPoints >= 0
+    ? serverPoints
+    : pointsForAchievements(ids);
+}
+
 export interface ILevelInfo {
   level: number;
   nextLevel: number;
@@ -263,17 +274,4 @@ export function levelTier(level: number): ILevelTier {
   if (level >= 4) return { key: "t2", ringClass: "ring-2 ring-primary/50" };
   if (level >= 2) return { key: "t1", ringClass: "ring-2 ring-primary/30" };
   return { key: "t0", ringClass: "ring-1 ring-border" };
-}
-
-export function metricDisplay(value: number, unit: MetricUnit): number {
-  switch (unit) {
-    case "km":
-      return Math.round((value / KM) * 10) / 10;
-    case "ticksHours":
-      return Math.floor(value / HOUR_TICKS);
-    case "secondsHours":
-      return Math.floor(value / HOUR_SECONDS);
-    default:
-      return Math.floor(value);
-  }
 }

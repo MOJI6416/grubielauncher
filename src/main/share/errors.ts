@@ -71,9 +71,6 @@ export function toShareStateError(
   return createShareError(fallbackCode, fallbackMessage)
 }
 
-// A session the backend no longer knows about, or one this account may not
-// touch, will never come back: retrying every 15 seconds only pins the UI in
-// "reconnecting" forever.
 const UNRECOVERABLE_SHARE_ERROR_CODES: ShareErrorCode[] = [
   'join_share_not_found',
   'not_authenticated',

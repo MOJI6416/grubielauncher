@@ -27,6 +27,7 @@ import { MIRROR_BASE } from "./utilities/mirrors";
 import { reportFailure } from "./utilities/failureBus";
 import { gameRuntime } from "./utilities/runtime";
 import { endSession } from "./utilities/statistics";
+import { hasRunningServers, stopServersForShutdown } from "./game/Server";
 import { registerAppImageDesktopEntry } from "./utilities/linuxDesktopEntry";
 import { disposePushToTalk } from "./services/PushToTalk";
 import { initWorldBackupService } from "./services/WorldBackupService";
@@ -83,6 +84,7 @@ process.on("unhandledRejection", (reason) => {
 const gotTheLock = app.requestSingleInstanceLock();
 const APP_PROTOCOL = "grubielauncher";
 const APP_SHUTDOWN_TIMEOUT_MS = 5000;
+const APP_SERVER_SHUTDOWN_TIMEOUT_MS = 45000;
 const APP_UPDATE_SHUTDOWN_TIMEOUT_MS = 1000;
 const UPDATE_MIRROR_URL = `${MIRROR_BASE}/updates/`;
 const UPDATE_CHECK_TIMEOUT_MS = 20000;
@@ -608,19 +610,24 @@ if (!gotTheLock) {
         console.warn("[Shutdown] Cleanup timed out, forcing app exit.");
         app.exit(0);
       },
-      isUpdateInstallPending
-        ? APP_UPDATE_SHUTDOWN_TIMEOUT_MS
-        : APP_SHUTDOWN_TIMEOUT_MS,
+      hasRunningServers()
+        ? APP_SERVER_SHUTDOWN_TIMEOUT_MS
+        : isUpdateInstallPending
+          ? APP_UPDATE_SHUTDOWN_TIMEOUT_MS
+          : APP_SHUTDOWN_TIMEOUT_MS,
     );
 
     disposePushToTalk();
 
     void Promise.allSettled([
+      stopServersForShutdown(),
       lanShareService.dispose(),
       rpc.dispose(),
       stopOAuthServer("Application shutdown."),
       ...[...gameRuntime.processes.values()].map((record) =>
-        endSession(record.versionName, record.instance, 0),
+        endSession(record.versionName, record.instance, 0, {
+          recovered: true,
+        }),
       ),
     ]).finally(() => {
       if (appShutdownTimeout) {

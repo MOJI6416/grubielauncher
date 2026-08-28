@@ -109,9 +109,9 @@ export function registerModManagerIpc() {
     },
   );
 
-  handleSafe<IVersionDependency[]>(
+  handleSafe<IVersionDependency[] | null>(
     "modManager:getDependencies",
-    [],
+    null,
     [isProvider, isProjectId, check.arrayOf(check.object(), 1000)],
     async (
       _,

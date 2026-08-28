@@ -1120,7 +1120,77 @@ describe("checkLocalMod", () => {
       name: "plain.zip",
       description: "",
       version: null,
+      kind: null,
     });
+  });
+
+  it("reports a mod jar as a mod", async () => {
+    const root = await makeTempRoot();
+    const jar = writeJar(root, "kind-mod.jar", {
+      "fabric.mod.json": JSON.stringify({ id: "kindmod", name: "Kind Mod" }),
+    });
+
+    expect((await checkLocalMod(jar))?.kind).toBe(ProjectType.MOD);
+  });
+
+  it("reports a pack with assets as a resource pack", async () => {
+    const root = await makeTempRoot();
+    const jar = writeJar(root, "kind-resource.zip", {
+      "pack.mcmeta": JSON.stringify({ pack: { pack_format: 15, description: "" } }),
+      "assets/minecraft/textures/block/stone.png": "x",
+    });
+
+    expect((await checkLocalMod(jar))?.kind).toBe(ProjectType.RESOURCEPACK);
+  });
+
+  it("reports a pack with shaders as a shader pack", async () => {
+    const root = await makeTempRoot();
+    const jar = writeJar(root, "kind-shader.zip", {
+      "pack.mcmeta": JSON.stringify({ pack: { pack_format: 15, description: "" } }),
+      "shaders/world0/gbuffers_basic.vsh": "x",
+    });
+
+    expect((await checkLocalMod(jar))?.kind).toBe(ProjectType.SHADER);
+  });
+
+  it("reports a pack with only data as a datapack", async () => {
+    const root = await makeTempRoot();
+    const jar = writeJar(root, "kind-data.zip", {
+      "pack.mcmeta": JSON.stringify({ pack: { pack_format: 15, description: "" } }),
+      "data/example/function/tick.mcfunction": "say hi",
+    });
+
+    expect((await checkLocalMod(jar))?.kind).toBe(ProjectType.DATAPACK);
+  });
+
+  it("reports an archive with a root level.dat as a world", async () => {
+    const root = await makeTempRoot();
+    const jar = writeJar(root, "kind-world-root.zip", {
+      "level.dat": "x",
+      "region/r.0.0.mca": "x",
+    });
+
+    expect((await checkLocalMod(jar))?.kind).toBe(ProjectType.WORLD);
+  });
+
+  it("reports an archive with a world folder as a world", async () => {
+    const root = await makeTempRoot();
+    const jar = writeJar(root, "kind-world-folder.zip", {
+      "Explorers Base/level.dat": "x",
+      "Explorers Base/region/r.0.0.mca": "x",
+    });
+
+    expect((await checkLocalMod(jar))?.kind).toBe(ProjectType.WORLD);
+  });
+
+  it("keeps a mod jar a mod even when it ships a nested level.dat", async () => {
+    const root = await makeTempRoot();
+    const jar = writeJar(root, "kind-mod-with-level.jar", {
+      "fabric.mod.json": JSON.stringify({ id: "kindmod", name: "Kind Mod" }),
+      "data/kindmod/structures/level.dat": "x",
+    });
+
+    expect((await checkLocalMod(jar))?.kind).toBe(ProjectType.MOD);
   });
 });
 

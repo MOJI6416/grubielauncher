@@ -1,37 +1,36 @@
 import { useAtom } from "jotai";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2, PackagePlus, Rocket, UserPlus } from "lucide-react";
+import { Check, PackagePlus, UserPlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { Hint } from "./Hint";
 import {
   accountsAtom,
-  accountsModalAtom,
-  addVersionModalAtom,
   pathsAtom,
   versionsAtom,
   versionsLoadedAtom,
 } from "@renderer/stores/atoms";
+import { openAddAccount } from "@renderer/features/accounts/addAccountRequest";
 import {
   readLauncherState,
   writeLauncherState,
 } from "@renderer/utilities/launcherState";
+import { openNewInstance } from "@renderer/features/instances/newInstance";
+import { BrandMark } from "@renderer/shell/BrandMark";
 
 export function Onboarding() {
   const [accounts] = useAtom(accountsAtom);
   const [versions] = useAtom(versionsAtom);
   const [versionsLoaded] = useAtom(versionsLoadedAtom);
   const [paths] = useAtom(pathsAtom);
-  const setAccountsModalOpen = useAtom(accountsModalAtom)[1];
-  const setAddVersionOpen = useAtom(addVersionModalAtom)[1];
   const { t } = useTranslation();
 
   const [dismissed, setDismissed] = useState<boolean | null>(null);
@@ -81,7 +80,11 @@ export function Onboarding() {
       icon: <UserPlus className="size-4" />,
       title: t("onboarding.stepAccount"),
       description: t("onboarding.stepAccountDescription"),
-      action: () => setAccountsModalOpen(true),
+      locked: false,
+      action: () => {
+        setDismissed(true);
+        openAddAccount();
+      },
     },
     {
       id: "version",
@@ -89,10 +92,15 @@ export function Onboarding() {
       icon: <PackagePlus className="size-4" />,
       title: t("onboarding.stepVersion"),
       description: t("onboarding.stepVersionDescription"),
-      action: () => setAddVersionOpen(true),
-      disabled: !hasAccount,
+      locked: !hasAccount,
+      action: () => {
+        setDismissed(true);
+        openNewInstance();
+      },
     },
   ];
+
+  const activeIndex = steps.findIndex((step) => !step.done);
 
   return (
     <Dialog
@@ -101,54 +109,82 @@ export function Onboarding() {
         if (!open) setDismissed(true);
       }}
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Rocket className="size-5" />
+      <DialogContent
+        aria-describedby={undefined}
+        className="gap-0 overflow-hidden p-0 sm:max-w-md"
+      >
+        <DialogHeader className="gap-1.5 border-b border-border px-5 py-4 pr-12">
+          <BrandMark className="size-5 text-foreground" />
+          <DialogTitle className="pr-0 text-base leading-5">
             {t("onboarding.title")}
           </DialogTitle>
-          <DialogDescription>{t("onboarding.description")}</DialogDescription>
+          <p className="text-xs leading-4 text-muted-foreground">
+            {t("onboarding.description")}
+          </p>
         </DialogHeader>
 
-        <div className="grid gap-2">
-          {steps.map((step, index) => (
-            <div
-              key={step.id}
-              className="flex items-center gap-3 rounded-lg border bg-card p-3"
-            >
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted text-muted-foreground">
-                {step.done ? (
-                  <CheckCircle2 className="size-4 text-success" />
-                ) : (
-                  step.icon
+        <div className="grid gap-2 px-5 py-4">
+          {steps.map((step, index) => {
+            const isActive = index === activeIndex;
+
+            return (
+              <div
+                key={step.id}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl border p-3 transition-colors",
+                  isActive
+                    ? "border-primary/40 bg-primary-soft-raised"
+                    : "border-border bg-surface-2",
+                  step.locked && "opacity-55",
                 )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">
-                  {index + 1}. {step.title}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {step.description}
-                </p>
-              </div>
-              {!step.done && (
-                <Button
-                  size="sm"
-                  disabled={step.disabled}
-                  onClick={step.action}
+              >
+                <span
+                  className={cn(
+                    "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                    step.done
+                      ? "bg-success/12 text-success"
+                      : "bg-surface-3 text-muted-foreground",
+                  )}
                 >
-                  {t("onboarding.go")}
-                </Button>
-              )}
-            </div>
-          ))}
+                  {step.done ? <Check className="size-4" /> : step.icon}
+                </span>
+
+                <div className="grid min-w-0 flex-1">
+                  <Hint content={step.title} variant="text" truncatedOnly>
+                    <span className="truncate text-sm">
+                      {index + 1}. {step.title}
+                    </span>
+                  </Hint>
+                  <span className="text-xs leading-4 text-muted-foreground">
+                    {step.locked
+                      ? t("onboarding.stepVersionLocked")
+                      : step.description}
+                  </span>
+                </div>
+
+                {!step.done && (
+                  <Button
+                    size="sm"
+                    variant={isActive ? "default" : "secondary"}
+                    disabled={step.locked}
+                    onClick={step.action}
+                  >
+                    {t("onboarding.go")}
+                  </Button>
+                )}
+              </div>
+            );
+          })}
         </div>
 
-        <DialogFooter>
+        <div className="flex items-center justify-between gap-2 border-t border-border bg-surface-2 px-5 py-3">
+          <p className="min-w-0 text-xs leading-4 text-faint">
+            {t("onboarding.skipHint")}
+          </p>
           <Button variant="ghost" onClick={finish}>
             {t("onboarding.skip")}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

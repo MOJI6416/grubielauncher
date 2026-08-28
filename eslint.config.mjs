@@ -24,5 +24,62 @@ export default tseslint.config(
       // resubscription loops; dependency intent is covered by focused tests.
       'react-hooks/exhaustive-deps': 'off'
     }
+  },
+  {
+    files: ['src/renderer/src/features/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/screens/*', '@renderer/screens/*'],
+              message:
+                'features must not depend on screens; move the shared piece into the feature or shared/'
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    files: ['src/renderer/src/screens/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@renderer/screens/*'],
+              message:
+                'screens must not import each other; navigate between them instead'
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    files: ['src/renderer/src/shared/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/features/*',
+                '**/screens/*',
+                '**/entities/*',
+                '@renderer/features/*',
+                '@renderer/screens/*',
+                '@renderer/entities/*'
+              ],
+              message: 'shared must not depend on domain layers'
+            }
+          ]
+        }
+      ]
+    }
   }
 )

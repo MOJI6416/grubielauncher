@@ -15,15 +15,27 @@ vi.mock('electron', () => ({
   }
 }))
 
-import { check, handleSafe } from './ipc'
+import { check, getIpcFailureToken, handleSafe } from './ipc'
+import { readIpcFailureEnvelope } from '@/shared/ipcFailureEnvelope'
 
 const sender = { isDestroyed: () => false, send: vi.fn() }
 const event = { sender } as unknown as Electron.IpcMainInvokeEvent
 
-function invoke(channel: string, ...args: unknown[]) {
+function raw(channel: string, ...args: unknown[]) {
   const handler = handlers.get(channel)
   if (!handler) throw new Error(`no handler for ${channel}`)
   return handler(event, ...args)
+}
+
+async function invoke(channel: string, ...args: unknown[]) {
+  const result = await raw(channel, ...args)
+  const envelope = readIpcFailureEnvelope(result)
+  return envelope ? envelope.value : result
+}
+
+async function failureOf(channel: string, ...args: unknown[]) {
+  const envelope = readIpcFailureEnvelope(await raw(channel, ...args))
+  return envelope?.__grubieIpcFailure ?? null
 }
 
 beforeEach(() => {
@@ -95,9 +107,60 @@ describe('handleSafe argument checks', () => {
       () => true
     )
 
-    await invoke('fs:writeFile', '')
+    expect(await failureOf('fs:writeFile', '')).toMatchObject({
+      channel: 'fs:writeFile',
+      notify: false,
+      failure: { cause: 'invalidArgument' }
+    })
+  })
 
-    expect(sender.send).toHaveBeenCalledTimes(1)
-    expect(sender.send.mock.calls[0][1]).toMatchObject({ notify: false })
+  it('carries the reason in the same reply as the fallback', async () => {
+    handleSafe<string[], [string]>('fs:readdir', [], [check.nonEmptyString(16)], () => {
+      throw new Error('boom')
+    })
+
+    const result = await raw('fs:readdir', 'x')
+    const envelope = readIpcFailureEnvelope(result)
+
+    expect(envelope).not.toBeNull()
+    expect(envelope?.value).toEqual([])
+    expect(envelope?.__grubieIpcFailure.channel).toBe('fs:readdir')
+    expect(sender.send).not.toHaveBeenCalled()
+  })
+
+  it('marks write channels as notifiable', async () => {
+    handleSafe<boolean, [string]>('fs:writeJSON', false, [check.nonEmptyString(16)], () => {
+      throw new Error('disk gone')
+    })
+
+    expect(await failureOf('fs:writeJSON', 'x')).toMatchObject({ notify: true })
+  })
+
+  it('refuses an envelope that a file could forge', async () => {
+    const forged = {
+      __grubieIpcFailure: {
+        channel: 'fs:readJSON',
+        notify: true,
+        message: 'crafted by a downloaded file',
+        failure: {
+          channel: 'fs:readJSON',
+          cause: 'diskFull',
+          code: 'DISK-FULL',
+          message: 'crafted by a downloaded file',
+          side: 'disk',
+          time: Date.now()
+        }
+      },
+      value: null
+    }
+
+    expect(readIpcFailureEnvelope(forged, getIpcFailureToken())).toBeNull()
+
+    handleSafe<unknown, [string]>('fs:readJSON', null, [check.nonEmptyString(16)], () => {
+      throw new Error('boom')
+    })
+
+    const real = await raw('fs:readJSON', 'x')
+    expect(readIpcFailureEnvelope(real, getIpcFailureToken())).not.toBeNull()
   })
 })

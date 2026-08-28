@@ -6,7 +6,10 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { pathToFileURL } from "url";
 import fs from "fs-extra";
-import { Downloader } from "../utilities/downloader";
+import {
+  Downloader,
+  waitWhileDownloadsPaused,
+} from "../utilities/downloader";
 import { IVersionConf } from "@/types/IVersion";
 import { TSettings } from "@/types/Settings";
 import {
@@ -104,6 +107,19 @@ export class Mods {
     } catch {}
   }
 
+  private sendQuarantineNotice(entries: string[]) {
+    if (entries.length === 0) return;
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.webContents.isDestroyed()) return;
+
+    try {
+      mainWindow.webContents.send("mods:quarantined", {
+        versionName: this.version.version.name,
+        entries,
+      });
+    } catch {}
+  }
+
   private sendInstallProgress(
     stage: VersionInstallStage,
     progressPercent: number,
@@ -127,6 +143,14 @@ export class Mods {
     if (this.installAbortSignal?.aborted) {
       throw new Error(VERSION_INSTALL_CANCELLED);
     }
+  }
+
+  private async installCheckpoint() {
+    this.throwIfInstallCancelled();
+    await waitWhileDownloadsPaused(
+      () => this.installAbortSignal?.aborted === true,
+    );
+    this.throwIfInstallCancelled();
   }
 
   private isInstallCancelError(error: unknown) {
@@ -153,9 +177,9 @@ export class Mods {
     let succeeded = false;
 
     try {
-      this.throwIfInstallCancelled();
+      await this.installCheckpoint();
       await action();
-      this.throwIfInstallCancelled();
+      await this.installCheckpoint();
       succeeded = true;
     } catch (error) {
       if (this.isInstallCancelError(error)) {
@@ -179,7 +203,7 @@ export class Mods {
 
   private async checkInternal() {
     await this.initPromise;
-    this.throwIfInstallCancelled();
+    await this.installCheckpoint();
 
     if (this.initFailed || !this.version.versionPath) {
       throw new Error("Mods sync aborted: version initialization failed");
@@ -193,6 +217,20 @@ export class Mods {
     const serverModFiles: ServerModFile[] = [];
     const worlds: string[] = [];
     const worldZips: string[] = [];
+    let isWorldListComplete = true;
+
+    const readWorldName = async (zipPath: string) => {
+      try {
+        return await getWorldName(zipPath);
+      } catch (error) {
+        console.error(
+          `[mods:worlds] cannot read the world archive ${zipPath}:`,
+          error,
+        );
+        isWorldListComplete = false;
+        return null;
+      }
+    };
     const savesPath = path.join(
       this.version.versionPath,
       projetTypeToFolder(ProjectType.WORLD),
@@ -238,9 +276,13 @@ export class Mods {
             : null;
 
           const zipPath = existsStorage || existsUrl;
-          if (zipPath) {
-            const worldName = await getWorldName(zipPath);
-            if (worldName) {
+          if (!zipPath) {
+            isWorldListComplete = false;
+          } else {
+            const worldName = await readWorldName(zipPath);
+            if (!worldName) {
+              isWorldListComplete = false;
+            } else {
               worlds.push(worldName);
 
               this.files.push({
@@ -300,7 +342,7 @@ export class Mods {
       this.installAbortSignal ?? undefined,
       OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
     );
-    this.throwIfInstallCancelled();
+    await this.installCheckpoint();
 
     if (this.isModdedServer()) {
       await this.syncServerMods(serverModFiles);
@@ -309,14 +351,20 @@ export class Mods {
         this.getServerPath(),
         await getServerSyncDirs(),
       );
-      this.throwIfInstallCancelled();
+      await this.installCheckpoint();
     }
 
     for (const zipPath of [...new Set(worldZips)]) {
-      if (!(await fs.pathExists(zipPath))) continue;
+      if (!(await fs.pathExists(zipPath))) {
+        isWorldListComplete = false;
+        continue;
+      }
 
-      const worldName = await getWorldName(zipPath);
-      if (!worldName) continue;
+      const worldName = await readWorldName(zipPath);
+      if (!worldName) {
+        isWorldListComplete = false;
+        continue;
+      }
 
       const worldPath = path.join(savesPath, worldName);
       if (!(await fs.pathExists(worldPath))) {
@@ -343,13 +391,20 @@ export class Mods {
       }
     }
 
-    const tasks: Promise<void>[] = [
+    if (!isWorldListComplete) {
+      console.error(
+        `[mods:worlds] keeping every world of ${this.version.versionPath}: the world list of this instance could not be read in full`,
+      );
+    }
+
+    const tasks: Promise<string[]>[] = [
       this.comparison(ProjectType.MOD),
       this.comparison(ProjectType.RESOURCEPACK),
       this.comparison(ProjectType.SHADER),
-      this.comparison(ProjectType.WORLD),
       this.comparison(ProjectType.DATAPACK),
     ];
+
+    if (isWorldListComplete) tasks.push(this.comparison(ProjectType.WORLD));
 
     if (
       this.server &&
@@ -364,8 +419,9 @@ export class Mods {
     }
 
     this.sendInstallProgress("mods", 90, true);
-    await Promise.all(tasks);
-    this.throwIfInstallCancelled();
+    const quarantined = (await Promise.all(tasks)).flat();
+    this.sendQuarantineNotice(quarantined);
+    await this.installCheckpoint();
     await this.pruneTrash();
   }
 
@@ -387,7 +443,7 @@ export class Mods {
     const clientMods = serverModFiles.filter((file) => file.clientSupported);
     const CHUNK_SIZE = 16;
     for (let i = 0; i < clientMods.length; i += CHUNK_SIZE) {
-      this.throwIfInstallCancelled();
+      await this.installCheckpoint();
       await Promise.all(
         clientMods.slice(i, i + CHUNK_SIZE).map(async (file) => {
           const descriptorPath = file.disabled
@@ -437,9 +493,27 @@ export class Mods {
       }
 
       if (file.clientSupported && (await fs.pathExists(file.clientPath))) {
-        await fs
+        const copied = await fs
           .copy(file.clientPath, destination, { overwrite: true })
-          .catch(() => {});
+          .then(() => true)
+          .catch((error) => {
+            console.error(
+              `[mods:server] could not copy ${file.clientPath} to ${destination}:`,
+              error,
+            );
+            return false;
+          });
+
+        if (!copied) {
+          await fs.remove(destination).catch(() => {});
+          downloads.push({
+            destination,
+            url: file.url,
+            group: "mods",
+            sha1: file.sha1,
+            size: file.size,
+          });
+        }
       } else {
         downloads.push({
           destination,
@@ -482,11 +556,22 @@ export class Mods {
     return path.join(this.version.versionPath, "storage", "trash");
   }
 
-  private async moveToTrash(files: string[]) {
-    if (files.length === 0) return;
+  private async moveToTrash(files: string[]): Promise<string[]> {
+    if (files.length === 0) return [];
 
     const trashPath = this.getTrashPath();
-    await fs.ensureDir(trashPath);
+
+    try {
+      await fs.ensureDir(trashPath);
+    } catch (error) {
+      console.error(
+        `[mods:trash] kept ${files.length} file(s) in place: the quarantine folder ${trashPath} is not usable:`,
+        error,
+      );
+      return [];
+    }
+
+    const moved: string[] = [];
 
     await Promise.all(
       files.map(async (file) => {
@@ -497,11 +582,17 @@ export class Mods {
 
         try {
           await fs.move(file, target, { overwrite: true });
-        } catch {
-          await fs.remove(file).catch(() => {});
+          moved.push(path.basename(file));
+        } catch (error) {
+          console.error(
+            `[mods:trash] kept ${file} in place: moving it to the quarantine failed:`,
+            error,
+          );
         }
       }),
     );
+
+    return moved;
   }
 
   private async pruneTrash() {
@@ -511,12 +602,11 @@ export class Mods {
     for (const entry of entries) {
       const match = /^(\d{13})-/.exec(entry);
       const entryPath = path.join(trashPath, entry);
+      const stats = await fs.lstat(entryPath).catch(() => null);
+      if (!stats || stats.isDirectory()) continue;
 
       let createdAt = match ? Number(match[1]) : 0;
-      if (!createdAt) {
-        const stats = await fs.stat(entryPath).catch(() => null);
-        createdAt = stats?.mtimeMs ?? 0;
-      }
+      if (!createdAt) createdAt = stats.mtimeMs;
 
       if (Date.now() - createdAt > TRASH_MAX_AGE_MS) {
         await fs.remove(entryPath).catch(() => {});
@@ -524,7 +614,7 @@ export class Mods {
     }
   }
 
-  private async comparison(projectType: ProjectType) {
+  private async comparison(projectType: ProjectType): Promise<string[]> {
     const storagePath = path.join(this.version.versionPath, "storage");
     const folderName = projetTypeToFolder(projectType);
 
@@ -535,7 +625,7 @@ export class Mods {
     }
 
     const isExists = await fs.pathExists(folderPath);
-    if (!isExists) return;
+    if (!isExists) return [];
 
     const filenames = this.files
       .filter((f) => f.type == projectType)
@@ -594,7 +684,7 @@ export class Mods {
       }
     }
 
-    await this.moveToTrash(deleteFiles);
+    return await this.moveToTrash(deleteFiles);
   }
 
   async downloadOther(options?: ModsRuntimeOptions) {
@@ -603,30 +693,39 @@ export class Mods {
 
   private async downloadOtherInternal() {
     await this.initPromise;
-    this.throwIfInstallCancelled();
+    await this.installCheckpoint();
+
+    if (this.initFailed || !this.version.versionPath) {
+      throw new Error("Extra files sync aborted: version initialization failed");
+    }
 
     if (!this.version.version.loader.other) return;
+
+    const otherUrl = this.version.version.loader.other.url;
 
     const tempPath = path.join(this.version.versionPath, "temp");
 
     try {
-      this.sendInstallProgress("other", 94, true);
-      this.lastFailures = await this.downloader.downloadFiles(
-        [
-          {
-            destination: path.join(tempPath, "other.zip"),
-            group: "other",
-            url: this.version.version.loader.other.url,
-            options: {
-              extract: true,
-              extractFolder: this.version.versionPath,
+      if (otherUrl) {
+        this.sendInstallProgress("other", 94, true);
+        this.lastFailures = await this.downloader.downloadFiles(
+          [
+            {
+              destination: path.join(tempPath, "other.zip"),
+              group: "other",
+              url: otherUrl,
+              options: {
+                extract: true,
+                extractFolder: this.version.versionPath,
+                keepExistingWorlds: true,
+              },
             },
-          },
-        ],
-        this.installAbortSignal ?? undefined,
-        OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
-      );
-      this.throwIfInstallCancelled();
+          ],
+          this.installAbortSignal ?? undefined,
+          OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
+        );
+        await this.installCheckpoint();
+      }
 
       if (this.isModdedServer()) {
         await syncServerExtraFiles(
@@ -646,7 +745,7 @@ export class Mods {
 
   private async syncLiveInternal() {
     await this.initPromise;
-    this.throwIfInstallCancelled();
+    await this.installCheckpoint();
 
     if (this.initFailed || !this.version.versionPath) {
       throw new Error("Live sync aborted: version initialization failed");
@@ -694,6 +793,6 @@ export class Mods {
       this.installAbortSignal ?? undefined,
       OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
     );
-    this.throwIfInstallCancelled();
+    await this.installCheckpoint();
   }
 }

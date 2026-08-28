@@ -12,6 +12,7 @@ import {
   cancelActiveInstallOperation,
   tryBeginInstallOperation,
 } from './installLock'
+import { resumeDownloads } from '../utilities/downloader'
 
 const fallbackModsResult: VersionInstallResult = {
   success: false,
@@ -30,6 +31,8 @@ async function runModsOperation(
     }
   }
 
+  resumeDownloads()
+
   try {
     await action(mods, lock.controller.signal)
     return { success: true, failures: mods.lastFailures?.failures }
@@ -47,6 +50,7 @@ async function runModsOperation(
 
     throw error
   } finally {
+    resumeDownloads()
     lock.end()
   }
 }

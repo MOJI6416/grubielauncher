@@ -1,13 +1,12 @@
+import { EXCLUDED_INSTANCE_PATHS } from '@/shared/instancePrivacy'
+
 export const notSupportedPaths = [
-  'crash-reports',
-  'logs',
+  ...EXCLUDED_INSTANCE_PATHS,
   'mods',
   'resourcepacks',
   'screenshots',
   'shaderpacks',
-  'natives',
   'server',
-  'temp',
   'modpacks',
   '${loader}.jar',
   '${loader}.json',
@@ -21,8 +20,8 @@ export const notSupportedPaths = [
   'servers.dat',
   'options.txt',
   'version.json',
-  'statistics.json',
-  'storage'
+  'storage',
+  'saves'
 ]
 
 export function formatBytes(bytes: number, sizes: string[], decimals = 2): string {
@@ -43,9 +42,7 @@ export function revokePreviousBlobUrl(
   if (previous && previous !== next && previous.startsWith("blob:")) {
     try {
       URL.revokeObjectURL(previous)
-    } catch {
-      // the url may already be gone; nothing to release
-    }
+    } catch {}
   }
 
   return next

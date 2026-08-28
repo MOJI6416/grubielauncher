@@ -5,12 +5,7 @@ let pendingReject: ((err: Error) => void) | null = null;
 const OAUTH_TIMEOUT_MS = 10 * 60 * 1000;
 const OAUTH_PORT = 53213;
 
-export type OAuthCallbackProvider =
-  | "microsoft"
-  | "discord"
-  | "elyby"
-  | "twitch"
-  | "github";
+export type OAuthCallbackProvider = "microsoft" | "discord" | "elyby";
 
 function parseExpectedState(expectedState: string): OAuthCallbackProvider {
   const [provider, nonce] = expectedState.split(":", 2);
@@ -22,9 +17,7 @@ function parseExpectedState(expectedState: string): OAuthCallbackProvider {
   if (
     provider === "microsoft" ||
     provider === "discord" ||
-    provider === "elyby" ||
-    provider === "twitch" ||
-    provider === "github"
+    provider === "elyby"
   ) {
     return provider;
   }

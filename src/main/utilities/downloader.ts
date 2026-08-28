@@ -33,6 +33,7 @@ import {
   reportMirrorSuccess,
 } from "./mirrorState";
 import { getSafeExtractPath, getSafeLinkExtractPath } from "./archivePaths";
+import { isKeptWorldEntry, listExistingWorldFolders } from "./worldInstall";
 import {
   assertExtractablePath,
   assertReadablePath,
@@ -74,6 +75,19 @@ async function awaitWhilePaused(isAborted: () => boolean): Promise<void> {
       pauseWaiters.push(resolve);
     });
   }
+}
+
+export type DownloadPauseState = "off" | "pending" | "held";
+
+export function getDownloadPauseState(): DownloadPauseState {
+  if (!downloadsPaused) return "off";
+  return activeStreams.size > 0 || pauseWaiters.length > 0 ? "held" : "pending";
+}
+
+export async function waitWhileDownloadsPaused(
+  isAborted: () => boolean,
+): Promise<void> {
+  await awaitWhilePaused(isAborted);
 }
 
 function getExtractMarkerPath(destination: string): string {
@@ -346,6 +360,7 @@ export class Downloader {
                   destination,
                   item.options.extractFolder || path.dirname(destination),
                   item.options.extractDelete ?? true,
+                  item.options.keepExistingWorlds === true,
                 );
               }
 
@@ -1147,14 +1162,22 @@ export class Downloader {
   private extractZipSafe = async (
     filePath: string,
     targetPath: string,
+    keepExistingWorlds = false,
   ): Promise<void> => {
     const { extractEntries, openArchive } = await import("./archiver");
     const zip = await openArchive(filePath);
 
     await fs.ensureDir(targetPath);
 
-    await extractEntries(zip.getEntries(), (entryName) =>
-      getSafeExtractPath(targetPath, entryName),
+    const keptWorlds = keepExistingWorlds
+      ? await listExistingWorldFolders(targetPath)
+      : null;
+
+    await extractEntries(
+      zip.getEntries(),
+      (entryName) => getSafeExtractPath(targetPath, entryName),
+      undefined,
+      keptWorlds ? (entryName) => isKeptWorldEntry(entryName, keptWorlds) : undefined,
     );
   };
 
@@ -1207,6 +1230,7 @@ export class Downloader {
     filePath: string,
     targetPath: string,
     isDelete: boolean,
+    keepExistingWorlds = false,
   ): Promise<void> => {
     const ext = path.extname(filePath).toLowerCase();
 
@@ -1215,7 +1239,7 @@ export class Downloader {
       await fs.ensureDir(targetPath);
 
       if (ext === ".zip" || ext === ".jar" || ext === ".mrpack") {
-        await this.extractZipSafe(filePath, targetPath);
+        await this.extractZipSafe(filePath, targetPath, keepExistingWorlds);
       } else if (ext === ".gz" || ext === ".tgz") {
         await this.extractTarSafe(filePath, targetPath);
       } else {

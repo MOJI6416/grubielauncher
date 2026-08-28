@@ -1,13 +1,14 @@
-import { app, session } from "electron";
+import { app, session, shell } from "electron";
 import fs from "fs-extra";
 import path from "path";
 import type {
   StorageBreakdown,
   StorageCategory,
   StorageCleanup,
+  StorageCleanupEntry,
   StorageCleanupKind,
   StorageClearResult,
-  StorageVersionEntry,
+
 } from "@/types/Storage";
 import { getLauncherPaths } from "./other";
 import {
@@ -16,6 +17,8 @@ import {
   getBackupsDir,
   getOrphanBackupsStats,
   getPreservedCopiesSize,
+  normalizeBackupEntry,
+  WorldBackupIndexError,
 } from "./worldBackups";
 
 const APP_CACHE_DIR_NAMES = [
@@ -79,6 +82,51 @@ async function sumSizes(paths: string[]): Promise<number> {
   return total;
 }
 
+async function hasInstanceConf(versionDir: string): Promise<boolean> {
+  const rootConf = path.join(versionDir, "version.json");
+  if (await fs.pathExists(rootConf)) return true;
+
+  const entries = await fs.readdir(versionDir).catch(() => [] as string[]);
+  for (const entry of entries) {
+    if (await fs.pathExists(path.join(versionDir, entry, "version.json"))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+const PLAYER_DATA_DIRS = ["saves", "server"];
+
+async function hasPlayerData(versionDir: string): Promise<boolean> {
+  for (const name of PLAYER_DATA_DIRS) {
+    if (await fs.pathExists(path.join(versionDir, name))) return true;
+  }
+
+  return false;
+}
+
+async function computeOrphanInstances(versionsPath: string): Promise<{
+  names: string[];
+  dataNames: string[];
+  paths: string[];
+}> {
+  const names: string[] = [];
+  const dataNames: string[] = [];
+  const paths: string[] = [];
+
+  for (const name of await listVersionDirs(versionsPath)) {
+    const dir = path.join(versionsPath, name);
+    if (await hasInstanceConf(dir)) continue;
+
+    names.push(name);
+    paths.push(dir);
+    if (await hasPlayerData(dir)) dataNames.push(name);
+  }
+
+  return { names, dataNames, paths };
+}
+
 async function listVersionDirs(versionsPath: string): Promise<string[]> {
   try {
     const entries = await fs.readdir(versionsPath, { withFileTypes: true });
@@ -97,48 +145,61 @@ export async function getStorageBreakdown(): Promise<StorageBreakdown> {
   const versionsPath = path.join(dirs.minecraft, "versions");
 
   const versionDirs = await listVersionDirs(versionsPath);
-  const versions: StorageVersionEntry[] = [];
-  let versionsTotal = 0;
-  for (const name of versionDirs) {
-    const preservedPath = path.join(
-      versionsPath,
-      name,
-      "saves",
-      DISPLACED_DIR_NAME,
-    );
-    const size = await dirSize(
-      path.join(versionsPath, name),
-      new Set([preservedPath]),
-    );
-    versions.push({ name, size });
-    versionsTotal += size;
-  }
-  versions.sort((a, b) => b.size - a.size);
-
   const backupsPath = getBackupsDir();
 
-  const [assets, libraries, java, backupsDirSize, preservedSize, appData] =
-    await Promise.all([
-      dirSize(assetsPath),
-      dirSize(librariesPath),
-      dirSize(dirs.java),
-      dirSize(backupsPath),
-      getPreservedCopiesSize(),
-      sumSizes(getAppCacheDirs()),
-    ]);
+  const [
+    versions,
+    assets,
+    libraries,
+    java,
+    backupsDirSize,
+    preservedSize,
+    userDataCaches,
+    other,
+    cleanup,
+  ] = await Promise.all([
+    Promise.all(
+      versionDirs.map(async (name) => ({
+        name,
+        size: await dirSize(
+          path.join(versionsPath, name),
+          new Set([
+            path.join(versionsPath, name, "saves", DISPLACED_DIR_NAME),
+            path.join(versionsPath, name, "temp"),
+          ]),
+        ),
+      })),
+    ),
+    dirSize(assetsPath),
+    dirSize(librariesPath),
+    dirSize(dirs.java),
+    dirSize(backupsPath),
+    getPreservedCopiesSize(),
+    sumSizes(getAppCacheDirs()),
+    dirSize(
+      rootPath,
+      new Set([
+        assetsPath,
+        librariesPath,
+        versionsPath,
+        dirs.java,
+        backupsPath,
+        dirs.cache,
+      ]),
+    ),
+    computeCleanup(versionsPath, librariesPath, dirs.java),
+  ]);
 
+  versions.sort((a, b) => b.size - a.size);
+  const versionsTotal = versions.reduce((sum, entry) => sum + entry.size, 0);
   const backups = backupsDirSize + preservedSize;
 
-  const other = await dirSize(
-    rootPath,
-    new Set([
-      assetsPath,
-      librariesPath,
-      versionsPath,
-      dirs.java,
-      backupsPath,
-    ]),
-  );
+  const [cacheSize, versionTempsSize] = await Promise.all([
+    dirSize(dirs.cache),
+    sumSizes(versionDirs.map((n) => path.join(versionsPath, n, "temp"))),
+  ]);
+  const appData = userDataCaches + cacheSize + versionTempsSize;
+  const reclaimable = appData;
 
   const categories: StorageCategory[] = [
     { id: "versions", size: versionsTotal },
@@ -149,14 +210,6 @@ export async function getStorageBreakdown(): Promise<StorageBreakdown> {
     { id: "appData", size: appData },
     { id: "other", size: other },
   ];
-
-  const cacheSize = await dirSize(dirs.cache);
-  const versionTempsSize = await sumSizes(
-    versionDirs.map((n) => path.join(versionsPath, n, "temp")),
-  );
-  const reclaimable = appData + cacheSize + versionTempsSize;
-
-  const cleanup = await computeCleanup(versionsPath, librariesPath, dirs.java);
 
   return {
     total:
@@ -210,6 +263,7 @@ interface ManifestScan {
   inUseLibs: Set<string>;
   versionCount: number;
   allParsed: boolean;
+  majorsComplete: boolean;
 }
 
 function normLib(relPath: string): string {
@@ -232,6 +286,7 @@ async function scanManifests(versionsPath: string): Promise<ManifestScan> {
   const majors = new Set<number>();
   const inUseLibs = new Set<string>();
   let allParsed = true;
+  let majorsComplete = true;
 
   for (const name of dirs) {
     const dir = path.join(versionsPath, name);
@@ -240,6 +295,7 @@ async function scanManifests(versionsPath: string): Promise<ManifestScan> {
       files = await fs.readdir(dir);
     } catch {
       allParsed = false;
+      majorsComplete = false;
       continue;
     }
 
@@ -251,6 +307,7 @@ async function scanManifests(versionsPath: string): Promise<ManifestScan> {
       try {
         data = await fs.readJSON(path.join(dir, file));
       } catch {
+        majorsComplete = false;
         continue;
       }
 
@@ -275,7 +332,46 @@ async function scanManifests(versionsPath: string): Promise<ManifestScan> {
     if (!foundManifest) allParsed = false;
   }
 
-  return { majors, inUseLibs, versionCount: dirs.length, allParsed };
+  return {
+    majors,
+    inUseLibs,
+    versionCount: dirs.length,
+    allParsed,
+    majorsComplete,
+  };
+}
+
+async function assertBackupIndexIsSound(): Promise<void> {
+  const indexPath = path.join(getBackupsDir(), "index.json");
+
+  let stored: unknown;
+  try {
+    stored = await fs.readJSON(indexPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException | null)?.code === "ENOENT") return;
+    throw new WorldBackupIndexError(error);
+  }
+
+  if (!Array.isArray(stored)) {
+    throw new WorldBackupIndexError(new Error("index is not a list"));
+  }
+
+  if (stored.some((value) => !normalizeBackupEntry(value))) {
+    throw new WorldBackupIndexError(new Error("index has damaged records"));
+  }
+}
+
+async function offerableOrphanBackups(): Promise<StorageCleanupEntry> {
+  try {
+    await assertBackupIndexIsSound();
+    return await getOrphanBackupsStats();
+  } catch (error) {
+    console.error(
+      `[storage] the world backup index cannot be trusted, no backup cleanup is offered:`,
+      error,
+    );
+    return { count: 0, size: 0 };
+  }
 }
 
 export function majorFromJavaDir(dirName: string): number | null {
@@ -364,7 +460,7 @@ async function computeOrphanLibraries(
   return orphans;
 }
 
-async function computeCleanup(
+export async function computeCleanup(
   versionsPath: string,
   librariesPath: string,
   javaDir: string,
@@ -372,11 +468,17 @@ async function computeCleanup(
   const scan = await scanManifests(versionsPath);
   const hasVersions = scan.versionCount > 0;
 
-  const unusedJava = await computeUnusedJava(javaDir, scan.majors, hasVersions);
+  const unusedJava = await computeUnusedJava(
+    javaDir,
+    scan.majors,
+    hasVersions && scan.majorsComplete,
+  );
   const orphanLibs = await computeOrphanLibraries(librariesPath, scan);
   const orphanBackups = hasVersions
-    ? await getOrphanBackupsStats()
+    ? await offerableOrphanBackups()
     : { count: 0, size: 0 };
+
+  const orphanInstances = await computeOrphanInstances(versionsPath);
 
   return {
     java: { count: unusedJava.length, size: await sumSizes(unusedJava) },
@@ -386,13 +488,21 @@ async function computeCleanup(
       safe: scan.allParsed && hasVersions,
     },
     backups: orphanBackups,
+    instances: {
+      count: orphanInstances.names.length,
+      size: await sumSizes(orphanInstances.paths),
+      names: orphanInstances.names,
+      dataNames: orphanInstances.dataNames,
+    },
   };
 }
 
 export async function cleanupStorage(
   kind: StorageCleanupKind,
+  names?: string[],
 ): Promise<StorageClearResult> {
   if (kind === "backups") {
+    await assertBackupIndexIsSound();
     const { size } = await cleanupOrphanBackups();
     return { freed: size };
   }
@@ -401,11 +511,40 @@ export async function cleanupStorage(
   const versionsPath = path.join(dirs.minecraft, "versions");
   const librariesPath = path.join(dirs.minecraft, "libraries");
 
+  if (kind === "instances") {
+    const orphans = await computeOrphanInstances(versionsPath);
+    const confirmed = names ? new Set(names) : null;
+
+    const entries = orphans.names
+      .map((name, index) => ({ name, path: orphans.paths[index] }))
+      .filter((entry) => !confirmed || confirmed.has(entry.name));
+
+    const targets = entries.map((entry) => entry.path);
+    const before = await sumSizes(targets);
+    const kept: string[] = [];
+
+    for (const entry of entries) {
+      try {
+        await shell.trashItem(entry.path);
+      } catch {
+        kept.push(entry.name);
+      }
+    }
+
+    const after = await sumSizes(targets);
+
+    return { freed: Math.max(0, before - after), kept };
+  }
+
   const scan = await scanManifests(versionsPath);
 
   const targets =
     kind === "java"
-      ? await computeUnusedJava(dirs.java, scan.majors, scan.versionCount > 0)
+      ? await computeUnusedJava(
+          dirs.java,
+          scan.majors,
+          scan.versionCount > 0 && scan.majorsComplete,
+        )
       : await computeOrphanLibraries(librariesPath, scan);
 
   const before = await sumSizes(targets);

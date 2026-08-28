@@ -448,7 +448,7 @@ export class RPC {
       buttons: [
         {
           label: locale.buttons.download,
-          url: 'https://api.grubielauncher.com/download'
+          url: 'https://grubielauncher.com'
         },
         {
           label: locale.buttons.discord,

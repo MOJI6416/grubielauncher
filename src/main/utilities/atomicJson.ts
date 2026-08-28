@@ -150,3 +150,34 @@ export function writeJsonAtomic(
 
   return next;
 }
+
+export function mutateJsonAtomic<T>(
+  filePath: string,
+  mutate: (current: T | null) => T | Promise<T>,
+  options?: { mode?: number; spaces?: number },
+): Promise<void> {
+  void sweepStaleTmpFiles(filePath);
+
+  const key = path.resolve(filePath);
+  const previous = pendingWrites.get(key) ?? Promise.resolve();
+  const next = previous
+    .catch(() => {})
+    .then(async () => {
+      let current: T | null = null;
+
+      try {
+        current = (await fs.readJSON(filePath, "utf-8")) as T;
+      } catch {
+        current = null;
+      }
+
+      await writeJsonOnce(filePath, await mutate(current), options);
+    });
+
+  pendingWrites.set(key, next);
+  void next.catch(() => {}).then(() => {
+    if (pendingWrites.get(key) === next) pendingWrites.delete(key);
+  });
+
+  return next;
+}

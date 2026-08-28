@@ -72,11 +72,12 @@ export class Java {
     await this.ensureAppReady()
     this.throwIfAborted(signal)
 
-    const installedJavaRoot = await this.findInstalledJavaRoot()
-    if (installedJavaRoot) {
-      this.setJavaPaths(installedJavaRoot)
-    }
+    const installedJavaRoot = await this.findInstalledJavaRoot().catch((error) => {
+      console.error(`[java] failed to inspect installed Java ${this.majorVersion}:`, error)
+      return null
+    })
 
+    if (installedJavaRoot) this.setJavaPaths(installedJavaRoot)
   }
 
   async useSystemJava(): Promise<boolean> {
@@ -96,11 +97,12 @@ export class Java {
     if (signal?.aborted) throw new Error('AbortError')
   }
 
-  async install(signal?: AbortSignal) {
+  async install(signal?: AbortSignal, versionName?: string) {
     const item = await this.prepareInstallItem(signal)
     if (!item) return
 
     const downloader = new Downloader()
+    downloader.versionName = versionName || null
     await downloader.downloadFiles([item], signal)
     this.throwIfAborted(signal)
 
@@ -335,7 +337,13 @@ export class Java {
 
     const cached = installedRootCache.get(this.majorVersion)
     if (cached && cached.mtimeMs === baseStats.mtimeMs) {
-      if (await fs.pathExists(cached.root)) return cached.root
+      const cachedPaths = this.buildJavaPaths(cached.root)
+      if (
+        (await fs.pathExists(cachedPaths.client)) ||
+        (await fs.pathExists(cachedPaths.server))
+      ) {
+        return cached.root
+      }
       installedRootCache.delete(this.majorVersion)
     }
 
@@ -382,12 +390,31 @@ export class Java {
     const pending = javaHealthChecks.get(javaRoot)
     if (pending) return pending
 
-    const check = this.probeJavaRootHealth(javaRoot).finally(() => {
-      javaHealthChecks.delete(javaRoot)
-    })
+    const check = this.probeJavaRootHealth(javaRoot)
+      .catch(() => false)
+      .finally(() => {
+        javaHealthChecks.delete(javaRoot)
+      })
     javaHealthChecks.set(javaRoot, check)
 
     return check
+  }
+
+  private async isVerifiedMarkerFresh(markerPath: string, javaRoot: string, binary: string) {
+    const marker = await fs.stat(markerPath).catch(() => null)
+    if (!marker) return false
+
+    for (const target of [
+      binary,
+      path.join(javaRoot, 'lib', 'modules'),
+      path.join(javaRoot, 'lib', 'rt.jar')
+    ]) {
+      const stats = await fs.stat(target).catch(() => null)
+      if (!stats) continue
+      if (stats.mtimeMs > marker.mtimeMs) return false
+    }
+
+    return true
   }
 
   private async probeJavaRootHealth(javaRoot: string): Promise<boolean> {
@@ -400,19 +427,33 @@ export class Java {
     if (!binary) return false
 
     const markerPath = path.join(javaRoot, JAVA_VERIFIED_MARKER)
-    if (await fs.pathExists(markerPath)) return true
+    if (await this.isVerifiedMarkerFresh(markerPath, javaRoot, binary)) return true
 
-    const ok = await new Promise<boolean>((resolve) => {
-      execFile(binary, ['-version'], { timeout: 15000, windowsHide: true }, (error) => {
-        resolve(!error)
-      })
+    const result = await new Promise<'ok' | 'broken' | 'inconclusive'>((resolve) => {
+      try {
+        execFile(binary, ['-version'], { timeout: 15000, windowsHide: true }, (error) => {
+          if (!error) return resolve('ok')
+
+          const killed = (error as NodeJS.ErrnoException & { killed?: boolean }).killed
+          const code = (error as NodeJS.ErrnoException).code
+          resolve(killed || code === 'ETIMEDOUT' || code === 'EACCES' ? 'inconclusive' : 'broken')
+        })
+      } catch {
+        resolve('broken')
+      }
     })
 
-    if (ok) {
+    if (result === 'ok') {
       await fs.writeFile(markerPath, '').catch(() => {})
+    } else if (result === 'broken') {
+      await fs.remove(markerPath).catch(() => {})
+    } else {
+      console.warn(
+        `[java] could not verify ${binary}: the check did not finish, keeping the runtime as is`
+      )
     }
 
-    return ok
+    return result !== 'broken'
   }
 
   private isJavaDirectoryForMajor(dirName: string): boolean {

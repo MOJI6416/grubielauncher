@@ -13,7 +13,3 @@ export async function refreshActiveFriendShares(): Promise<
   getDefaultStore().set(activeFriendSharesAtom, result.data);
   return result.data;
 }
-
-export function clearActiveFriendShares() {
-  getDefaultStore().set(activeFriendSharesAtom, []);
-}

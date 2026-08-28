@@ -16,10 +16,10 @@ export function FormErrorMessage({
   return (
     <div
       className={cn(
-        "grid overflow-hidden transition-[grid-template-rows,opacity,transform,margin-top] duration-150 ease-out motion-reduce:transition-none",
+        "grid overflow-hidden transition-[grid-template-rows,opacity,margin-top] duration-[var(--dur)] ease-swift motion-reduce:transition-none",
         show
-          ? "mt-1 grid-rows-[1fr] translate-y-0 opacity-100"
-          : "mt-0 grid-rows-[0fr] -translate-y-1 opacity-0",
+          ? "mt-1 grid-rows-[1fr] opacity-100"
+          : "mt-0 grid-rows-[0fr] opacity-0",
       )}
       aria-hidden={!show}
     >

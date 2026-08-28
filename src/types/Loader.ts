@@ -13,5 +13,6 @@ export interface ILoader {
     paths: string[]
     url: string
     size: number
+    world?: boolean
   }
 }

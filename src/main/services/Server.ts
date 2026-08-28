@@ -13,6 +13,7 @@ import { Loader } from '@/types/Loader'
 import { LoaderVersion } from '@/types/VersionsService'
 import { isTrustedServerCoreUrl } from '../utilities/trustedHosts'
 import { getApiBaseUrl } from '../utilities/apiHost'
+import { isSourceUnreachable } from '@/shared/errors'
 
 export class Server {
   private static api = axios.create({
@@ -48,50 +49,68 @@ export class Server {
   }
 
   static async get(version: string, loader: Loader): Promise<IServerOption[]> {
-    try {
-      const cores: IServerOption[] = []
+    const cores: IServerOption[] = []
+    const unreachable: unknown[] = []
 
-      if (loader == 'vanilla') {
-        const [vanillaCores, paper, purpur] = await Promise.all([
-          this.api
-            .get<IVanillaCores>(`${getApiBaseUrl()}/server/vanilla.json`)
-            .then((response) => response.data)
-            .catch(() => null),
-          this.getPaper(version),
-          this.getPurpur(version)
-        ])
+    const attempt = async (
+      task: () => Promise<IServerOption | null>
+    ): Promise<IServerOption | null> => {
+      try {
+        return await task()
+      } catch (error) {
+        if (isSourceUnreachable(error)) unreachable.push(error)
+        else console.error('[servers:get] source failed:', error)
+        return null
+      }
+    }
 
-        if (vanillaCores) {
-          const vanilla = this.checkVersion(version, vanillaCores.vanilla, ServerCore.VANILLA)
-          if (this.isAllowedOption(vanilla)) cores.push(vanilla)
+    if (loader == 'vanilla') {
+      const [vanillaCores, paper, purpur] = await Promise.all([
+        (async () => {
+          try {
+            const response = await this.api.get<IVanillaCores>(
+              `${getApiBaseUrl()}/server/vanilla.json`
+            )
+            return response.data
+          } catch (error) {
+            if (isSourceUnreachable(error)) unreachable.push(error)
+            return null
+          }
+        })(),
+        attempt(() => this.getPaper(version)),
+        attempt(() => this.getPurpur(version))
+      ])
 
-          const spigot = this.checkVersion(version, vanillaCores.spigot, ServerCore.SPIGOT)
-          if (this.isAllowedOption(spigot)) cores.push(spigot)
+      if (vanillaCores) {
+        const vanilla = this.checkVersion(version, vanillaCores.vanilla, ServerCore.VANILLA)
+        if (this.isAllowedOption(vanilla)) cores.push(vanilla)
 
-          const bukkit = this.checkVersion(version, vanillaCores.bukkit, ServerCore.BUKKIT)
-          if (this.isAllowedOption(bukkit)) cores.push(bukkit)
-        }
+        const spigot = this.checkVersion(version, vanillaCores.spigot, ServerCore.SPIGOT)
+        if (this.isAllowedOption(spigot)) cores.push(spigot)
 
-        if (this.isAllowedOption(paper)) cores.push(paper)
-        if (this.isAllowedOption(purpur)) cores.push(purpur)
-      } else if (loader == 'fabric') {
-        const fabric = await this.getFabric(version)
-        if (this.isAllowedOption(fabric)) return [fabric]
-      } else if (loader == 'quilt') {
-        const quilt = await this.getQuilt(version)
-        if (this.isAllowedOption(quilt)) return [quilt]
-      } else if (loader == 'forge') {
-        const forge = await this.getForge(version)
-        if (this.isAllowedOption(forge)) return [forge]
-      } else if (loader == 'neoforge') {
-        const neoForge = await this.getNeoForge(version)
-        if (this.isAllowedOption(neoForge)) return [neoForge]
+        const bukkit = this.checkVersion(version, vanillaCores.bukkit, ServerCore.BUKKIT)
+        if (this.isAllowedOption(bukkit)) cores.push(bukkit)
       }
 
-      return cores
-    } catch {
-      return []
+      if (this.isAllowedOption(paper)) cores.push(paper)
+      if (this.isAllowedOption(purpur)) cores.push(purpur)
+    } else if (loader == 'fabric') {
+      const fabric = await attempt(() => this.getFabric(version))
+      if (this.isAllowedOption(fabric)) cores.push(fabric)
+    } else if (loader == 'quilt') {
+      const quilt = await attempt(() => this.getQuilt(version))
+      if (this.isAllowedOption(quilt)) cores.push(quilt)
+    } else if (loader == 'forge') {
+      const forge = await attempt(() => this.getForge(version))
+      if (this.isAllowedOption(forge)) cores.push(forge)
+    } else if (loader == 'neoforge') {
+      const neoForge = await attempt(() => this.getNeoForge(version))
+      if (this.isAllowedOption(neoForge)) cores.push(neoForge)
     }
+
+    if (cores.length === 0 && unreachable.length > 0) throw unreachable[0]
+
+    return cores
   }
 
   private static async getPaper(version: string): Promise<IServerOption | null> {
@@ -112,7 +131,8 @@ export class Server {
         url: `https://api.papermc.io/v2/projects/paper/versions/${version}/builds/${lastBuild.build}/downloads/paper-${version}-${lastBuild.build}.jar`,
         additionalPackage: null
       }
-    } catch {
+    } catch (error) {
+      if (isSourceUnreachable(error)) throw error
       return null
     }
   }
@@ -140,7 +160,8 @@ export class Server {
       const url = `https://meta.fabricmc.net/v2/versions/loader/${version}/${loader}/${installer}/server/jar`
 
       return { core: ServerCore.FABRIC, url, additionalPackage: null }
-    } catch {
+    } catch (error) {
+      if (isSourceUnreachable(error)) throw error
       return null
     }
   }
@@ -168,7 +189,8 @@ export class Server {
       }
 
       return { core: ServerCore.QUILT, url: installerUrl, additionalPackage: null }
-    } catch {
+    } catch (error) {
+      if (isSourceUnreachable(error)) throw error
       return null
     }
   }
@@ -189,7 +211,8 @@ export class Server {
       }
 
       return { core: ServerCore.FORGE, url: first.url, additionalPackage: null }
-    } catch {
+    } catch (error) {
+      if (isSourceUnreachable(error)) throw error
       return null
     }
   }
@@ -210,7 +233,8 @@ export class Server {
       }
 
       return { core: ServerCore.NEOFORGE, url: first.url, additionalPackage: null }
-    } catch {
+    } catch (error) {
+      if (isSourceUnreachable(error)) throw error
       return null
     }
   }
@@ -231,7 +255,8 @@ export class Server {
         url: `https://api.purpurmc.org/v2/purpur/${version}/${latest}/download`,
         additionalPackage: null
       }
-    } catch {
+    } catch (error) {
+      if (isSourceUnreachable(error)) throw error
       return null
     }
   }

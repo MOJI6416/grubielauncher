@@ -74,6 +74,12 @@ export default defineConfig(() => {
               if (/node_modules\/(radix-ui|@radix-ui)\//.test(moduleId)) {
                 return "radix-vendor";
               }
+              if (/node_modules\/@tanstack\//.test(moduleId)) {
+                return "query-vendor";
+              }
+              if (/node_modules\/(motion|framer-motion)\//.test(moduleId)) {
+                return "motion-vendor";
+              }
               return undefined;
             },
           },

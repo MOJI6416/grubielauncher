@@ -71,4 +71,33 @@ describe("LocalProxyManager peers", () => {
     expect(peers[0].guestUserId).toBeUndefined();
     expect(peers[0].guestUsername).toBeUndefined();
   });
+
+  it("keeps a server-list ping out of the guest list", async () => {
+    let peers: SharePeerInfo[] = [];
+    manager.onPeersChanged((next) => {
+      peers = next;
+    });
+
+    await manager.openStream({
+      type: "OPEN_STREAM",
+      streamId: 3,
+      peerIp: "203.0.113.12",
+      peerPort: 51236,
+      initialDataBase64: "",
+      statusPing: true,
+    });
+
+    expect(peers).toHaveLength(0);
+
+    await manager.openStream({
+      type: "OPEN_STREAM",
+      streamId: 4,
+      peerIp: "203.0.113.13",
+      peerPort: 51237,
+      initialDataBase64: "",
+      guestUsername: "Alex",
+    });
+
+    expect(peers.map((peer) => peer.streamId)).toEqual([4]);
+  });
 });

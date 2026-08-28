@@ -13,9 +13,13 @@ export function registerVoiceIpc() {
     },
   );
 
-  handleSafe("voice:capturePttBind", null, async () => {
-    return await capturePttBind();
-  });
+  handleSafe(
+    "voice:capturePttBind",
+    { reason: "unavailable" as const, bind: null },
+    async () => {
+      return await capturePttBind();
+    },
+  );
 
   handleSafe(
     "voice:setSessionActive",
@@ -28,9 +32,7 @@ export function registerVoiceIpc() {
           powerSaveBlockerId === null ||
           !powerSaveBlocker.isStarted(powerSaveBlockerId)
         ) {
-          powerSaveBlockerId = powerSaveBlocker.start(
-            "prevent-app-suspension",
-          );
+          powerSaveBlockerId = powerSaveBlocker.start("prevent-app-suspension");
         }
       } else if (powerSaveBlockerId !== null) {
         if (powerSaveBlocker.isStarted(powerSaveBlockerId)) {

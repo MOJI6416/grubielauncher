@@ -1,54 +1,62 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAtomValue, useSetAtom } from "jotai";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import {
-  lazy,
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { useAtom, useSetAtom } from "jotai";
+  Boxes,
+  Headphones,
+  Loader2,
+  LogIn,
+  Settings2,
+  Users,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Hint } from "@renderer/components/Hint";
+import { LoaderLabel } from "@renderer/components/Loaders";
+import { resolveLocalImage } from "@renderer/utilities/localMedia";
+import type { IGroup, IGroupUser } from "@/types/Voice";
+import type { IModpack } from "@/types/Backend";
+import type { Version } from "@renderer/classes/Version";
 import {
   accountAtom,
   authDataAtom,
   friendSocketAtom,
   groupUnreadsAtom,
   groupsAtom,
-  saveGroupUnreads,
+  isFriendsConnectedAtom,
   openGroupChatIdAtom,
+  saveGroupUnreads,
   versionsAtom,
+  voiceSessionMetaAtom,
 } from "@renderer/stores/atoms";
-import { Button } from "@/components/ui/button";
+import { useFaceLookup } from "@renderer/features/accounts/faceDirectory";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import { IGroup } from "@/types/Voice";
-import { IMessage } from "@/types/IMessage";
-import { IModpack } from "@/types/Backend";
-import { Version } from "@renderer/classes/Version";
+  ChatSurface,
+  type SenderView,
+} from "@renderer/features/friends/ChatSurface";
+import { groupInitials } from "@renderer/features/voice/groupList";
+import { voiceJoinErrorKey } from "@renderer/features/voice/errors";
+import { groupPanelIdAtom } from "@renderer/features/voice/state";
+import { useGroupChat } from "@renderer/features/voice/useGroupChat";
 import {
   parseGroupJoinCode,
   parsePackShareCode,
 } from "@renderer/utilities/packShare";
-import { uploadChatImage } from "@renderer/utilities/chatUpload";
-import { groupJoinErrorKey } from "@renderer/utilities/groupJoin";
-import type { LoadingType } from "../Friends/Friends";
+import { reportGroupJoinFailure } from "@renderer/utilities/groupJoin";
+import { voiceConnect, voiceDisconnect } from "@renderer/utilities/voiceClient";
 import { showFailureToast } from "@renderer/utilities/failures";
-
-const ChatModal = lazy(() =>
-  import("../Friends/ChatModal").then((module) => ({
-    default: module.ChatModal,
-  })),
-);
 
 const api = window.api;
 const PACK_CODE_PATTERN = /^[a-fA-F0-9]{24}$/;
-const REPLY_PREVIEW_LIMIT = 240;
 
 export function GroupChatModal({
   group,
@@ -59,66 +67,38 @@ export function GroupChatModal({
   onPlayModpack: (modpack: IModpack, version?: Version) => void | Promise<void>;
   onClose: () => void;
 }) {
-  const [account] = useAtom(accountAtom);
-  const [authData] = useAtom(authDataAtom);
-  const [socket] = useAtom(friendSocketAtom);
-  const [versions] = useAtom(versionsAtom);
-  const [groups] = useAtom(groupsAtom);
-  const setOpenGroupChatId = useSetAtom(openGroupChatIdAtom);
+  const account = useAtomValue(accountAtom);
+  const authData = useAtomValue(authDataAtom);
+  const socket = useAtomValue(friendSocketAtom);
+  const isConnected = useAtomValue(isFriendsConnectedAtom);
+  const versions = useAtomValue(versionsAtom);
+  const groups = useAtomValue(groupsAtom);
+  const session = useAtomValue(voiceSessionMetaAtom);
   const setGroupUnreads = useSetAtom(groupUnreadsAtom);
+  const setPanelGroupId = useSetAtom(groupPanelIdAtom);
+  const setOpenGroupChatId = useSetAtom(openGroupChatIdAtom);
   const { t } = useTranslation();
 
-  const [messages, setMessages] = useState<IMessage[]>([]);
-  const [messageText, setMessageText] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadingType, setLoadingType] = useState<LoadingType | undefined>(
-    "messages",
-  );
-  const [imageUploadProgress, setImageUploadProgress] = useState<
-    number | null
-  >(null);
-  const [replyMessage, setReplyMessage] = useState<IMessage | null>(null);
-  const [chatModpacks, setChatModpacks] = useState<IModpack[]>([]);
-  const [failedChatModpacks, setFailedChatModpacks] = useState<Set<string>>(
-    new Set(),
-  );
-  const [isVersionSelect, setIsVersionSelect] = useState(false);
-  const [isGroupInvitePicker, setIsGroupInvitePicker] = useState(false);
+  const [isVersionSelect, setVersionSelect] = useState(false);
+  const [isGroupPicker, setGroupPicker] = useState(false);
+  const [isJoiningVoice, setJoiningVoice] = useState(false);
 
-  const messagesRef = useRef<HTMLDivElement | null>(null);
-  const messageInputRef = useRef<HTMLInputElement | null>(null);
-  const replyMessageRef = useRef<IMessage | null>(null);
-  replyMessageRef.current = replyMessage;
+  const chat = useGroupChat({
+    groupId: group._id,
+    socket,
+    account,
+    ownUserId: authData?.sub,
+    isConnected,
+  });
 
-  const shareableVersions = useMemo(
-    () => versions.filter((v) => v.version.shareCode),
-    [versions],
-  );
-
-  const membersById = useMemo(() => {
-    const map = new Map<string, { nickname: string; image?: string | null }>();
-    for (const member of group.members) {
-      map.set(member._id, {
-        nickname: member.nickname,
-        image: member.image ?? null,
-      });
-    }
-    return map;
-  }, [group.members]);
-
-  const resolveSenderById = useCallback(
-    (senderId: string) => {
-      const member = membersById.get(senderId);
-      return {
-        nickname: member?.nickname || "?",
-        image: member?.image ?? null,
-      };
+  useEffect(
+    () => () => {
+      setOpenGroupChatId(null);
     },
-    [membersById],
+    [setOpenGroupChatId],
   );
 
   useEffect(() => {
-    setOpenGroupChatId(group._id);
     setGroupUnreads((prev) => {
       if (!prev[group._id]) return prev;
       const next = { ...prev };
@@ -126,232 +106,104 @@ export function GroupChatModal({
       saveGroupUnreads(next);
       return next;
     });
+  }, [group._id, chat.entries.length, setGroupUnreads]);
 
-    return () => {
-      setOpenGroupChatId(null);
-    };
-  }, [group._id, setGroupUnreads, setOpenGroupChatId]);
+  const versionsByShareCode = useMemo(() => {
+    const map = new Map<string, Version>();
+    for (const version of versions) {
+      const code = version.version.shareCode;
+      if (code) map.set(code, version);
+    }
+    return map;
+  }, [versions]);
 
-  useEffect(() => {
-    if (!socket) return;
-
-    const onMessages = (data: { groupId: string; messages: IMessage[] }) => {
-      if (data.groupId !== group._id) return;
-      setMessages(Array.isArray(data.messages) ? data.messages : []);
-      setIsLoading(false);
-      setLoadingType(undefined);
-    };
-
-    const onMessage = (data: { groupId: string; message: IMessage }) => {
-      if (data.groupId !== group._id || !data.message) return;
-      setMessages((prev) => [...prev, data.message]);
-      if (data.message.sender === authData?.sub) {
-        setIsLoading(false);
-        setLoadingType(undefined);
-      }
-    };
-
-    const onDeleted = (data: { groupId: string; messageId: string }) => {
-      if (data.groupId !== group._id) return;
-      setMessages((prev) =>
-        prev.filter((message) => message.id !== data.messageId),
-      );
-    };
-
-    const onReaction = (data: {
-      groupId: string;
-      messageId: string;
-      reactions: IMessage["reactions"];
-    }) => {
-      if (data.groupId !== group._id) return;
-      setMessages((prev) =>
-        prev.map((message) =>
-          message.id === data.messageId
-            ? { ...message, reactions: data.reactions ?? [] }
-            : message,
-        ),
-      );
-    };
-
-    socket.on("groupMessages", onMessages);
-    socket.on("groupMessage", onMessage);
-    socket.on("groupMessageDeleted", onDeleted);
-    socket.on("groupMessageReaction", onReaction);
-
-    setIsLoading(true);
-    setLoadingType("messages");
-    socket.emit("getGroupMessages", { groupId: group._id });
-
-    return () => {
-      socket.off("groupMessages", onMessages);
-      socket.off("groupMessage", onMessage);
-      socket.off("groupMessageDeleted", onDeleted);
-      socket.off("groupMessageReaction", onReaction);
-    };
-  }, [socket, group._id, authData?.sub]);
-
-  useEffect(() => {
-    const knownIds = new Set(chatModpacks.map((modpack) => modpack._id));
-    const wantedIds = [
-      ...new Set(
-        messages
-          .filter((message) => message.message?._type === "modpack")
-          .map((message) => String(message.message.value)),
-      ),
-    ].filter((id) => !knownIds.has(id) && !failedChatModpacks.has(id));
-
-    if (wantedIds.length === 0) return;
-
-    let cancelled = false;
-    void (async () => {
-      for (const id of wantedIds) {
-        const result = await api.backend.getModpack(
-          account?.accessToken || "",
-          id,
-        );
-        if (cancelled) return;
-        if (result?.data) {
-          setChatModpacks((prev) =>
-            prev.some((modpack) => modpack._id === id)
-              ? prev
-              : [...prev, result.data as IModpack],
-          );
-        } else {
-          setFailedChatModpacks((prev) => new Set(prev).add(id));
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [messages, chatModpacks, failedChatModpacks, account?.accessToken]);
-
-  const getReplyPreview = useCallback((message: IMessage | null) => {
-    if (!message?.id) return undefined;
-    const value =
-      typeof message.message?.value === "string"
-        ? message.message.value.slice(0, REPLY_PREVIEW_LIMIT)
-        : "";
-    if (!value) return undefined;
-
-    return {
-      id: message.id,
-      sender: message.sender,
-      type: message.message._type,
-      value,
-    };
-  }, []);
-
-  const sendChatMessage = useCallback(
-    (body: IMessage["message"]) => {
-      if (!authData || !socket || !body.value.trim()) return false;
-
-      const replyTo = getReplyPreview(replyMessageRef.current);
-      const message: IMessage = {
-        sender: authData.sub,
-        message: body,
-        ...(replyTo ? { replyTo } : {}),
-        time: new Date(),
-      };
-
-      socket.emit("sendGroupMessage", {
-        groupId: group._id,
-        message,
-      });
-
-      setReplyMessage(null);
-      return true;
-    },
-    [authData, socket, group._id, getReplyPreview],
+  const shareableVersions = useMemo(
+    () => versions.filter((version) => version.version.shareCode),
+    [versions],
   );
 
-  const handleSendMessage = useCallback(() => {
-    const text = messageText.trim();
+  const membersById = useMemo(() => {
+    const map = new Map<string, IGroupUser>();
+    for (const member of group.members) map.set(member._id, member);
+    for (const banned of group.banned) {
+      if (!map.has(banned._id)) map.set(banned._id, banned);
+    }
+    return map;
+  }, [group.banned, group.members]);
+
+  const faceOf = useFaceLookup();
+
+  const resolveSender = useCallback(
+    (senderId: string): SenderView => {
+      const member = membersById.get(senderId);
+      return faceOf({
+        _id: senderId,
+        nickname: member?.nickname || t("groups.formerMember"),
+      });
+    },
+    [faceOf, membersById, t],
+  );
+
+  const isActiveRoom =
+    session.state !== "disconnected" && session.roomId === group._id;
+  const voiceCount = Math.max(
+    group.participantCount ?? 0,
+    group.voiceParticipants?.length ?? 0,
+  );
+
+  const handleJoinVoice = async () => {
+    setJoiningVoice(true);
+    try {
+      const grant = await api.backend.groupJoinVoice(
+        account?.accessToken || "",
+        group._id,
+      );
+      if (!grant) {
+        showFailureToast(t("groups.joinError"), undefined, {
+          channels: ["backend:groupJoinVoice"],
+        });
+        return;
+      }
+      await voiceConnect(grant, {
+        roomId: group._id,
+        roomName: group.name,
+        isRoomOwner: group.isOwner,
+      });
+    } catch (error) {
+      showFailureToast(t(voiceJoinErrorKey(error)), error, {
+        context: { side: "grubie" },
+      });
+    } finally {
+      setJoiningVoice(false);
+    }
+  };
+
+  const handleSend = useCallback(() => {
+    const text = chat.messageText.trim();
     if (!text) return;
 
-    const groupJoinCode = parseGroupJoinCode(text);
-    if (groupJoinCode) {
-      if (
-        sendChatMessage({
-          _type: "groupInvite",
-          value: JSON.stringify({
-            code: groupJoinCode,
-            name: groups.find((g) => g.code === groupJoinCode)?.name ?? "",
-          }),
-        })
-      ) {
-        setMessageText("");
-      }
+    const joinCode = parseGroupJoinCode(text);
+    if (joinCode) {
+      const sent = chat.sendBody({
+        _type: "groupInvite",
+        value: JSON.stringify({
+          code: joinCode,
+          name: groups.find((item) => item.code === joinCode)?.name ?? "",
+        }),
+      });
+      if (sent) chat.setMessageText("");
       return;
     }
 
-    const parsedShareCode = parsePackShareCode(text);
-    const isPackShare = PACK_CODE_PATTERN.test(parsedShareCode);
+    const shareCode = parsePackShareCode(text);
+    const isPack = PACK_CODE_PATTERN.test(shareCode);
 
-    if (
-      sendChatMessage({
-        _type: isPackShare ? "modpack" : "text",
-        value: isPackShare ? parsedShareCode : messageText,
-      })
-    ) {
-      setMessageText("");
-    }
-  }, [groups, messageText, sendChatMessage]);
-
-  const handleSendImageFile = useCallback(
-    async (file: File) => {
-      if (!account?.accessToken || !authData?.sub) return;
-
-      setIsLoading(true);
-      setLoadingType("imageUpload");
-      setImageUploadProgress(0);
-
-      try {
-        const safeName = (file.name || "image.png").trim() || "image.png";
-        const url = await uploadChatImage({
-          accessToken: account.accessToken,
-          file,
-          folder: `chat/${authData.sub}`,
-          fileName: `chat_${Date.now()}_${safeName}`,
-          onProgress: setImageUploadProgress,
-        });
-        sendChatMessage({ _type: "image", value: url });
-      } catch (error) {
-        showFailureToast(t("friends.chatImageUploadError"), error, {
-          channels: ["backend:"],
-        });
-      } finally {
-        setIsLoading(false);
-        setLoadingType(undefined);
-        setImageUploadProgress(null);
-      }
-    },
-    [account?.accessToken, authData?.sub, sendChatMessage, t],
-  );
-
-  const handleDeleteMessage = useCallback(
-    (message: IMessage) => {
-      if (!socket || !message.id) return;
-      socket.emit("deleteGroupMessage", {
-        groupId: group._id,
-        messageId: message.id,
-      });
-    },
-    [socket, group._id],
-  );
-
-  const handleToggleReaction = useCallback(
-    (message: IMessage, emoji: string) => {
-      if (!socket || !message.id) return;
-      socket.emit("groupMessageReaction", {
-        groupId: group._id,
-        messageId: message.id,
-        emoji,
-      });
-    },
-    [socket, group._id],
-  );
+    const sent = chat.sendBody({
+      _type: isPack ? "modpack" : "text",
+      value: isPack ? shareCode : chat.messageText,
+    });
+    if (sent) chat.setMessageText("");
+  }, [chat, groups]);
 
   const handleAcceptGroupInvite = useCallback(
     async (code: string) => {
@@ -359,7 +211,7 @@ export function GroupChatModal({
       if (!token) return;
       const joined = await api.backend.groupJoinByCode(token, code);
       if (!joined || typeof joined === "string") {
-        toast.error(t(groupJoinErrorKey(joined ?? null)));
+        reportGroupJoinFailure(joined ?? null, t);
       } else {
         toast.success(t("groups.joined", { group: joined.name }));
       }
@@ -367,109 +219,248 @@ export function GroupChatModal({
     [account?.accessToken, t],
   );
 
-  const handleSendGroupInvite = useCallback(
-    (target: IGroup) => {
-      sendChatMessage({
-        _type: "groupInvite",
-        value: JSON.stringify({ code: target.code, name: target.name }),
-      });
-      setIsGroupInvitePicker(false);
-    },
-    [sendChatMessage],
+  const header = (
+    <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-3">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-xs font-semibold text-muted-foreground">
+        {groupInitials(group.name)}
+      </span>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Hint content={group.name} variant="text" truncatedOnly>
+          <p className="min-w-0 truncate text-sm font-medium">{group.name}</p>
+        </Hint>
+        <p className="flex min-w-0 items-center gap-1 truncate text-[11px] leading-4 text-muted-foreground">
+          <span>
+            {t("groups.membersCount", { count: group.members.length })}
+          </span>
+          {voiceCount > 0 && (
+            <>
+              <span className="text-faint">·</span>
+              <span className="text-success">
+                {t("voice.inVoiceCount", { count: voiceCount })}
+              </span>
+            </>
+          )}
+        </p>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1.5">
+        {isActiveRoom ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-destructive"
+            onClick={() => void voiceDisconnect()}
+          >
+            <Headphones className="size-3.5" />
+            {t("voice.leaveShort")}
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-8"
+            disabled={isJoiningVoice}
+            onClick={() => void handleJoinVoice()}
+          >
+            {isJoiningVoice ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <LogIn className="size-3.5" />
+            )}
+            {t("groups.join")}
+          </Button>
+        )}
+
+        <Hint content={t("groups.manage")}>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label={t("groups.manage")}
+            onClick={() => setPanelGroupId(group._id)}
+          >
+            <Settings2 className="size-4" />
+          </Button>
+        </Hint>
+
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          aria-label={t("common.close")}
+          onClick={onClose}
+        >
+          <X className="size-4" />
+        </Button>
+      </div>
+    </div>
   );
 
   return (
     <>
-      <Suspense fallback={null}>
-        <ChatModal
-        groupTitle={group.name}
-        showSenderNames
-        resolveSenderById={resolveSenderById}
-        messages={messages}
-        messageText={messageText}
-        isLoading={isLoading}
-        loadingType={loadingType}
-        loadingIndex={-1}
-        imageUploadProgress={imageUploadProgress}
-        replyMessage={replyMessage}
-        chatModpacks={chatModpacks}
-        failedChatModpacks={failedChatModpacks}
-        versions={versions}
-        shareableVersions={shareableVersions}
-        messagesRef={messagesRef}
-        messageInputRef={messageInputRef}
-        account={account}
-        onClose={onClose}
-        onMessageChange={setMessageText}
-        onSendMessage={handleSendMessage}
-        onSendImageFile={handleSendImageFile}
-        onReplyToMessage={setReplyMessage}
-        onCancelReply={() => setReplyMessage(null)}
-        onDeleteMessage={handleDeleteMessage}
-        onToggleReaction={handleToggleReaction}
-        onOpenVersionSelect={() => setIsVersionSelect(true)}
-        onPlayModpack={(modpack, version) => {
-          onClose();
-          void onPlayModpack(modpack, version);
-        }}
-        onSendGroupInvite={() => setIsGroupInvitePicker(true)}
+      <ChatSurface
+        entries={chat.entries}
+        header={header}
+        resolveSender={resolveSender}
+        isLoadingHistory={chat.isLoadingHistory}
+        isLoadingEarlier={chat.isLoadingEarlier}
+        hasMoreHistory={chat.hasMoreHistory}
+        historyError={chat.historyError}
+        onReloadHistory={chat.reloadHistory}
+        onLoadEarlier={chat.loadEarlier}
+        isSending={chat.isUploading}
+        isOffline={!isConnected}
+        messageText={chat.messageText}
+        replyMessage={chat.replyMessage}
+        imageUploadProgress={chat.imageUploadProgress}
+        modpacks={chat.modpacks}
+        failedModpacks={chat.failedModpacks}
+        goneModpacks={chat.goneModpacks}
+        onRetryModpack={chat.retryModpack}
+        versionsByShareCode={versionsByShareCode}
+        canAttachImage={Boolean(account?.accessToken)}
+        canAttachModpack={shareableVersions.length > 0}
+        emptyHint={t("groups.chatEmptyHint", { name: group.name })}
+        onMessageChange={chat.setMessageText}
+        onSend={handleSend}
+        onSendImageFile={chat.sendImageFile}
+        onReply={chat.setReplyMessage}
+        onCancelReply={() => chat.setReplyMessage(null)}
+        onDeleteMessage={chat.deleteMessage}
+        onToggleReaction={chat.toggleReaction}
+        onOpenVersionSelect={() => setVersionSelect(true)}
+        onOpenGroupInvite={
+          groups.length > 0 ? () => setGroupPicker(true) : undefined
+        }
         onAcceptGroupInvite={handleAcceptGroupInvite}
-          t={t}
-        />
-      </Suspense>
+        onPlayModpack={(modpack, version) =>
+          void onPlayModpack(modpack, version)
+        }
+        onRetry={chat.retry}
+        onDiscard={chat.discard}
+      />
 
-      {isVersionSelect && (
-        <Dialog open onOpenChange={(open) => !open && setIsVersionSelect(false)}>
-          <DialogContent aria-describedby={undefined} className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle>{t("friends.chatAttachModpack")}</DialogTitle>
-            </DialogHeader>
-            <div className="flex max-h-72 flex-col gap-1.5 overflow-y-auto">
-              {shareableVersions.map((version) => (
-                <Button
-                  key={version.version.name}
-                  variant="outline"
-                  className="justify-start"
-                  onClick={() => {
-                    const shareCode = version.version.shareCode;
-                    if (shareCode) {
-                      sendChatMessage({ _type: "modpack", value: shareCode });
-                    }
-                    setIsVersionSelect(false);
-                  }}
-                >
-                  {version.version.name}
-                </Button>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <Dialog open={isVersionSelect} onOpenChange={setVersionSelect}>
+        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-sm">
+          <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
+            <Boxes className="size-4 shrink-0 text-faint" />
+            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+              {t("friends.shareBuildTitle")}
+            </DialogTitle>
+          </DialogHeader>
 
-      {isGroupInvitePicker && (
-        <Dialog
-          open
-          onOpenChange={(open) => !open && setIsGroupInvitePicker(false)}
-        >
-          <DialogContent aria-describedby={undefined} className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle>{t("friends.chatGroupInvite")}</DialogTitle>
-            </DialogHeader>
-            <div className="flex max-h-72 flex-col gap-1.5 overflow-y-auto">
-              {groups.map((item) => (
-                <Button
-                  key={item._id}
-                  variant="outline"
-                  className="justify-start"
-                  onClick={() => handleSendGroupInvite(item)}
-                >
-                  {item.name}
-                </Button>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+          <div className="grid gap-2 px-4 py-3">
+            <DialogDescription className="text-xs leading-4">
+              {t("friends.chatAttachModpackHint")}
+            </DialogDescription>
+
+            <ScrollArea className="-mx-1 max-h-72 px-1">
+              <div className="flex flex-col gap-0.5">
+                {shareableVersions.map((version) => (
+                  <button
+                    key={version.version.name}
+                    type="button"
+                    className="flex h-12 min-w-0 items-center gap-2.5 rounded-lg px-2 text-left transition-colors hover:bg-surface-3"
+                    onClick={() => {
+                      const shareCode = version.version.shareCode;
+                      if (!shareCode) return;
+                      if (
+                        !chat.sendBody({
+                          _type: "modpack",
+                          value: shareCode,
+                        })
+                      ) {
+                        toast.error(t("friends.chatFailed"), {
+                          description: t("friends.chatOffline"),
+                        });
+                        return;
+                      }
+                      setVersionSelect(false);
+                    }}
+                  >
+                    {version.version.image && (
+                      <img
+                        src={resolveLocalImage(version.version.image)}
+                        alt=""
+                        className="size-8 shrink-0 rounded-md object-cover"
+                        width={32}
+                        height={32}
+                      />
+                    )}
+                    <span className="min-w-0 flex-1 truncate text-[13px]">
+                      {version.version.name}
+                    </span>
+                    <LoaderLabel
+                      loader={version.version.loader.name}
+                      className="shrink-0 text-[11px] text-muted-foreground"
+                    />
+                    <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint">
+                      {version.version.version.id}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isGroupPicker} onOpenChange={setGroupPicker}>
+        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-sm">
+          <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
+            <Users className="size-4 shrink-0 text-faint" />
+            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+              {t("friends.chatGroupInvite")}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-2 px-4 py-3">
+            <DialogDescription className="text-xs leading-4">
+              {t("friends.chatGroupInviteHint")}
+            </DialogDescription>
+
+            <ScrollArea className="-mx-1 max-h-72 px-1">
+              <div className="flex flex-col gap-0.5">
+                {groups.map((item) => (
+                  <button
+                    key={item._id}
+                    type="button"
+                    className="flex h-11 min-w-0 items-center gap-2 rounded-lg px-2 text-left transition-colors hover:bg-surface-3"
+                    onClick={() => {
+                      const sent = chat.sendBody({
+                        _type: "groupInvite",
+                        value: JSON.stringify({
+                          code: item.code,
+                          name: item.name,
+                        }),
+                      });
+                      if (!sent) {
+                        toast.error(t("friends.chatFailed"), {
+                          description: t("friends.chatOffline"),
+                        });
+                        return;
+                      }
+                      setGroupPicker(false);
+                    }}
+                  >
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-[10px] font-semibold text-muted-foreground">
+                      {groupInitials(item.name)}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[13px]">
+                      {item.name}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1 text-[11px] text-faint">
+                      <Users className="size-3" />
+                      <span className="font-mono tabular-nums">
+                        {item.members.length}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

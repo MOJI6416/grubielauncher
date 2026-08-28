@@ -1,17 +1,29 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
-import { Copy, Sparkles, Trash2, TriangleAlert } from "lucide-react";
+import {
+  BellOff,
+  ChevronRight,
+  ClipboardList,
+  Copy,
+  Sparkles,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   aiCrashOpenKeyAtom,
   aiCrashesAtom,
   errorLogAtom,
 } from "@renderer/stores/atoms";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@renderer/components/Hint";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -25,50 +37,57 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Empty,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { BellOff } from "lucide-react";
-
-const api = window.api;
+import { formatRelative } from "@renderer/utilities/date";
+import {
+  errorLogToText,
+  groupErrorLog,
+} from "@renderer/features/logs/errorLog";
+import { copyToClipboard } from "@renderer/utilities/clipboard";
 
 export function ErrorLog({ onClose }: { onClose: () => void }) {
   const [errorLog, setErrorLog] = useAtom(errorLogAtom);
   const aiCrashes = useAtomValue(aiCrashesAtom);
   const setAiCrashOpenKey = useSetAtom(aiCrashOpenKeyAtom);
-  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [open, setOpen] = useState<string | null>(null);
   const { t, i18n } = useTranslation();
 
-  const formatTime = (time: number) =>
+  const groups = useMemo(() => groupErrorLog(errorLog), [errorLog]);
+
+  const absolute = (time: number) =>
     new Date(time).toLocaleString(i18n.language, {
       day: "2-digit",
       month: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
+      second: "2-digit",
     });
 
   return (
     <Dialog
       open
-      onOpenChange={(open) => {
-        if (!open) onClose();
+      onOpenChange={(next) => {
+        if (!next) onClose();
       }}
     >
-      <DialogContent aria-describedby={undefined} className="p-0 sm:max-w-lg">
-        <DialogHeader className="px-5 pt-5">
+      <DialogContent className="grid max-h-[min(34rem,calc(100vh-6rem))] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 p-0 sm:max-w-xl">
+        <DialogHeader className="px-5 pt-5 pb-3 text-left">
           <DialogTitle className="flex items-center gap-2">
-            <TriangleAlert className="size-5" />
+            <TriangleAlert className="size-5 text-destructive" />
             {t("errorLog.title")}
           </DialogTitle>
+          <DialogDescription>{t("errorLog.description")}</DialogDescription>
         </DialogHeader>
 
-        <div className="px-5">
-          {errorLog.length === 0 ? (
-            <Empty className="border bg-muted/20 py-10">
+        <div className="min-h-0 overflow-y-auto px-5">
+          {groups.length === 0 ? (
+            <Empty className="border border-dashed border-border bg-card py-10">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <BellOff />
@@ -77,76 +96,126 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
               </EmptyHeader>
             </Empty>
           ) : (
-            <ScrollArea className="max-h-[50vh]">
-              <div className="flex flex-col gap-2 pr-2">
-                {errorLog.map((entry) => (
+            <div className="flex flex-col gap-1.5 pb-1">
+              {groups.map((group) => {
+                const expanded = open === group.id;
+                const crash = group.crashKey
+                  ? aiCrashes[group.crashKey]
+                  : undefined;
+
+                return (
                   <div
-                    key={entry.id}
-                    className="rounded-lg border bg-card p-3 text-sm"
+                    key={group.id}
+                    className="rounded-xl border border-border bg-card"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="font-medium break-words">{entry.title}</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {formatTime(entry.time)}
+                    <div className="flex min-w-0 items-start gap-2 p-2.5">
+                      {group.details ? (
+                        <button
+                          type="button"
+                          aria-expanded={expanded}
+                          aria-label={t("errorLog.details")}
+                          onClick={() => setOpen(expanded ? null : group.id)}
+                          className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-sm text-faint transition-colors hover:text-foreground"
+                        >
+                          <ChevronRight
+                            className={cn(
+                              "size-3.5 transition-transform",
+                              expanded && "rotate-90",
+                            )}
+                          />
+                        </button>
+                      ) : (
+                        <span className="w-4 shrink-0" />
+                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm leading-snug font-medium break-words">
+                          {group.title}
                         </p>
+                        <Hint content={absolute(group.time)} variant="text">
+                          <p className="mt-0.5 w-fit text-xs text-faint">
+                            {formatRelative(new Date(group.time))}
+                          </p>
+                        </Hint>
                       </div>
-                      {entry.details && (
+
+                      {group.count > 1 && (
+                        <Badge
+                          variant="secondary"
+                          className="shrink-0 font-mono text-[0.65rem] tabular-nums"
+                        >
+                          ×{group.count}
+                        </Badge>
+                      )}
+
+                      {crash && (
                         <Button
-                          variant="ghost"
-                          size="icon-sm"
+                          size="sm"
+                          variant="secondary"
                           className="shrink-0"
-                          title={t("common.copy")}
-                          aria-label={t("common.copy")}
-                          onClick={async () => {
-                            await api.clipboard.writeText(
-                              `${entry.title}\n${entry.details}`,
-                            );
-                            toast(t("common.copied"));
+                          onClick={() => {
+                            const key = group.crashKey as string;
+                            onClose();
+                            setTimeout(() => setAiCrashOpenKey(key), 0);
                           }}
                         >
-                          <Copy className="size-3.5" />
+                          <Sparkles className="size-3.5" />
+                          {crash.analysis
+                            ? t("aiCrash.showResult")
+                            : t("aiCrash.analyzeAction")}
                         </Button>
                       )}
+
+                      {group.details && (
+                        <Hint content={t("common.copy")}>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="shrink-0 text-faint"
+                            aria-label={t("common.copy")}
+                            onClick={async () => {
+                              const copied = await copyToClipboard(
+                                `${group.title}\n${group.details}`,
+                              );
+                              if (!copied) return;
+                              toast(t("common.copied"));
+                            }}
+                          >
+                            <Copy className="size-3.5" />
+                          </Button>
+                        </Hint>
+                      )}
                     </div>
-                    {entry.details && (
-                      <p className="mt-1.5 text-xs break-words whitespace-pre-line text-muted-foreground">
-                        {entry.details}
-                      </p>
-                    )}
-                    {entry.crashKey && aiCrashes[entry.crashKey] && (
-                      <Button
-                        size="sm"
-                        variant={
-                          aiCrashes[entry.crashKey].analysis
-                            ? "secondary"
-                            : "default"
-                        }
-                        className="mt-2"
-                        onClick={() => {
-                          const key = entry.crashKey!;
-                          onClose();
-                          setTimeout(() => setAiCrashOpenKey(key), 0);
-                        }}
-                      >
-                        <Sparkles className="size-3.5" />
-                        {aiCrashes[entry.crashKey].analysis
-                          ? t("aiCrash.showResult")
-                          : t("aiCrash.analyzeAction")}
-                      </Button>
+
+                    {expanded && group.details && (
+                      <pre className="mx-2.5 mb-2.5 max-h-56 overflow-auto rounded-lg bg-surface-1 p-2.5 font-mono text-[0.7rem] leading-relaxed whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]">
+                        {group.details}
+                      </pre>
                     )}
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
+                );
+              })}
+            </div>
           )}
         </div>
 
-        <DialogFooter className="m-0 rounded-none border-t bg-muted/25 px-5 py-4">
+        <DialogFooter className="m-0 gap-2 rounded-none border-t border-border bg-surface-2 px-5 py-3.5 sm:justify-between">
+          <Button
+            variant="ghost"
+            disabled={groups.length === 0}
+            onClick={async () => {
+              if (!(await copyToClipboard(errorLogToText(groups)))) return;
+              toast(t("common.copied"));
+            }}
+          >
+            <ClipboardList className="size-4" />
+            {t("errorLog.copyAll")}
+          </Button>
+
           <Button
             variant="outline"
-            disabled={errorLog.length === 0}
-            onClick={() => setIsClearConfirmOpen(true)}
+            disabled={groups.length === 0}
+            onClick={() => setConfirmClear(true)}
           >
             <Trash2 className="size-4" />
             {t("errorLog.clear")}
@@ -154,10 +223,7 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
         </DialogFooter>
       </DialogContent>
 
-      <AlertDialog
-        open={isClearConfirmOpen}
-        onOpenChange={setIsClearConfirmOpen}
-      >
+      <AlertDialog open={confirmClear} onOpenChange={setConfirmClear}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("errorLog.clear")}</AlertDialogTitle>
@@ -171,7 +237,7 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
               variant="destructive"
               onClick={() => {
                 setErrorLog([]);
-                setIsClearConfirmOpen(false);
+                setConfirmClear(false);
               }}
             >
               <Trash2 className="size-4" />

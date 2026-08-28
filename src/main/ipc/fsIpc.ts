@@ -1,10 +1,13 @@
+import { ipcMain } from 'electron'
 import fs from 'fs-extra'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { getDirectories, getSha1, getTotalSizes } from '../utilities/files'
-import { ArgCheck, check, handleSafe } from '../utilities/ipc'
+import { ArgCheck, check, handleSafe, IpcArgumentError } from '../utilities/ipc'
 import { assertReadablePath, assertWritablePath } from '../utilities/safePath'
-import { writeJsonAtomic } from '../utilities/atomicJson'
+import { writeJsonAtomic, writeJsonAtomicSync } from '../utilities/atomicJson'
+import { isExcludedInstancePath } from '@/shared/instancePrivacy'
+import { redactSecrets } from '@/shared/logSanitizer'
 
 type DirEntry = { path: string; type: 'folder' | 'file' }
 
@@ -96,15 +99,41 @@ export function registerFsIpc() {
     filesToArchive.forEach((source) => assertReadablePath(source, 'file:archiveFiles'))
     if (basePath !== undefined) assertReadablePath(basePath, 'file:archiveFiles')
     const { createZipArchive } = await import('../utilities/archiver')
-    await createZipArchive(filesToArchive, zipPath, basePath)
+    await createZipArchive(filesToArchive, zipPath, basePath, undefined, isExcludedInstancePath)
     return true
   })
 
-  handleSafe<number>('file:getTotalSizes', 0, [isPathList], async (_, filePaths: string[]) => {
-    if (!Array.isArray(filePaths)) return 0
-    filePaths.forEach((filePath) => assertReadablePath(filePath, 'file:getTotalSizes'))
-    return await getTotalSizes(filePaths)
+  handleSafe<boolean>('file:archiveForPublish', false, [isPathList, isPath, check.optional(isPath)], async (_, filesToArchive: string[], zipPath: string, basePath?: string) => {
+    assertWritablePath(zipPath, 'file:archiveForPublish')
+    if (!Array.isArray(filesToArchive)) return false
+    filesToArchive.forEach((source) => assertReadablePath(source, 'file:archiveForPublish'))
+    if (basePath !== undefined) assertReadablePath(basePath, 'file:archiveForPublish')
+    const { createZipArchive } = await import('../utilities/archiver')
+    const { collectSanitizedWorldEntries, shouldSkipPublishEntry } = await import(
+      '../utilities/worldPublish'
+    )
+    const sanitizedWorldEntries = await collectSanitizedWorldEntries(filesToArchive, basePath)
+    await createZipArchive(
+      filesToArchive,
+      zipPath,
+      basePath,
+      undefined,
+      shouldSkipPublishEntry,
+      sanitizedWorldEntries
+    )
+    return true
   })
+
+  handleSafe<number | null>(
+    'file:getTotalSizes',
+    null,
+    [isPathList],
+    async (_, filePaths: string[]) => {
+      if (!Array.isArray(filePaths)) return null
+      filePaths.forEach((filePath) => assertReadablePath(filePath, 'file:getTotalSizes'))
+      return await getTotalSizes(filePaths)
+    }
+  )
 
   handleSafe<boolean>('fs:ensure', false, [isPath], async (_, dirPath: string) => {
     assertWritablePath(dirPath, 'fs:ensure')
@@ -133,13 +162,6 @@ export function registerFsIpc() {
   handleSafe<string>('fs:sha1', '', [isPath], async (_, filePath: string) => {
     assertReadablePath(filePath, 'fs:sha1')
     return await getSha1(filePath)
-  })
-
-  handleSafe<boolean>('fs:move', false, [isPath, isPath], async (_, srcPath: string, destPath: string) => {
-    assertWritablePath(srcPath, 'fs:move')
-    assertWritablePath(destPath, 'fs:move')
-    await fs.move(srcPath, destPath, { overwrite: true })
-    return true
   })
 
   handleSafe<string[]>('fs:readdir', [], [isPath], async (_, dirPath: string) => {
@@ -173,9 +195,20 @@ export function registerFsIpc() {
     return await fs.readJSON(filePath, { encoding })
   })
 
-  handleSafe<boolean>('fs:isDirectory', false, [isPath], async (_, targetPath: string) => {
-    assertReadablePath(targetPath, 'fs:isDirectory')
-    const stats = await fs.stat(targetPath)
-    return stats.isDirectory()
+  ipcMain.removeAllListeners('fs:writeJSONSync')
+  ipcMain.on('fs:writeJSONSync', (event, filePath: unknown, data: unknown) => {
+    try {
+      if (!isPath(filePath)) {
+        throw new IpcArgumentError('Refused fs:writeJSONSync: argument 0 is not allowed')
+      }
+      assertWritablePath(filePath as string, 'fs:writeJSONSync')
+      writeJsonAtomicSync(filePath as string, data)
+      event.returnValue = ''
+    } catch (error) {
+      console.error('[IPC] fs:writeJSONSync error:', error)
+      event.returnValue = redactSecrets(
+        error instanceof Error ? `${error.name}: ${error.message}` : String(error)
+      )
+    }
   })
 }

@@ -190,6 +190,8 @@ export class Modrinth {
       if (ids.length === 0) return []
 
       const projects = await this.getProjects(ids)
+      if (!projects) return null
+
       const byId = new Map(projects.map((project) => [project.id, project]))
 
       const dependencies: IProject[] = []
@@ -206,7 +208,7 @@ export class Modrinth {
       return dependencies
     } catch (error) {
       this.logAxiosError('Error getting Modrinth dependencies', error)
-      return []
+      return null
     }
   }
 
@@ -222,7 +224,7 @@ export class Modrinth {
       return response.data
     } catch (error) {
       this.logAxiosError('Error getting Modrinth projects', error)
-      return []
+      return null
     }
   }
 }

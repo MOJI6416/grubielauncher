@@ -1,13 +1,5 @@
 import type { IVersionConf } from "@/types/IVersion";
 
-export const EXPORT_EXCLUDED_TOP_LEVEL = new Set([
-  "statistics.json",
-  "logs",
-  "crash-reports",
-  "temp",
-  "natives",
-]);
-
 export function getLocalPathFromFileUrl(url?: string) {
   if (!url?.startsWith("file://")) return "";
 

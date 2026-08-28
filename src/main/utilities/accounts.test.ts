@@ -289,10 +289,7 @@ describe("unreadable store never gets overwritten", () => {
     await fs.writeFile(accountsPath, "{ broken json");
 
     await expect(readAccountsConfig()).rejects.toThrow();
-    expect(await loadAccountsConfig()).toEqual({
-      accounts: [],
-      lastPlayed: null,
-    });
+    await expect(loadAccountsConfig()).rejects.toThrow();
 
     await expect(
       mutateAccountsConfig(() => ({
@@ -397,5 +394,64 @@ describe("mergeIncomingAccounts", () => {
     );
 
     expect(merged[0].accessToken).toBe(second);
+  });
+});
+
+describe("secrets are not destroyed by a token-less save", () => {
+  it("keeps stored tokens when the caller saves accounts without them", async () => {
+    const token = makeJwt({ sub: "ms-42", exp: futureExp });
+
+    await saveAccountsConfig({
+      accounts: [
+        {
+          nickname: "Kituk",
+          type: "microsoft",
+          image: "",
+          friends: [],
+          accessToken: token,
+          refreshToken: "refresh-42",
+        },
+      ],
+      lastPlayed: "ms-42",
+    });
+
+    const stored = await loadAccountsConfig();
+    expect(stored?.accounts[0].accessToken).toBe(token);
+
+    await saveAccountsConfig({
+      accounts: [
+        { nickname: "Kituk", type: "microsoft", image: "", friends: [], id: "ms-42" },
+      ],
+      lastPlayed: "ms-42",
+    });
+
+    const secrets = await fs.readJSON(secretsPath, "utf-8");
+    expect(Object.keys(secrets).length).toBeGreaterThan(0);
+
+    const reloaded = await loadAccountsConfig();
+    expect(reloaded?.accounts[0].accessToken).toBe(token);
+    expect(reloaded?.accounts[0].refreshToken).toBe("refresh-42");
+  });
+
+  it("drops secrets for accounts that were removed", async () => {
+    const token = makeJwt({ sub: "ms-43", exp: futureExp });
+
+    await saveAccountsConfig({
+      accounts: [
+        {
+          nickname: "Gone",
+          type: "microsoft",
+          image: "",
+          friends: [],
+          accessToken: token,
+        },
+      ],
+      lastPlayed: "ms-43",
+    });
+
+    await saveAccountsConfig({ accounts: [], lastPlayed: null });
+
+    const secrets = await fs.readJSON(secretsPath, "utf-8");
+    expect(secrets).toEqual({});
   });
 });

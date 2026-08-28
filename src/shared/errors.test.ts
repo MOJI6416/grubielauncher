@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { classifyError, isTransientNetworkFailure } from "./errors";
+import {
+  classifyError,
+  isSourceUnreachable,
+  isTransientNetworkFailure,
+} from "./errors";
 
 function axiosError(status: number, url: string) {
   return {
@@ -144,6 +148,23 @@ describe("classifyError", () => {
     ).toBe(false);
     expect(isTransientNetworkFailure(new Error("boom"))).toBe(false);
     expect(isTransientNetworkFailure({ code: "ENOSPC" })).toBe(false);
+  });
+
+  it("separates an unreachable source from an honest empty answer", () => {
+    expect(isSourceUnreachable({ isAxiosError: true, code: "ECONNREFUSED" })).toBe(
+      true,
+    );
+    expect(isSourceUnreachable({ isAxiosError: true, code: "ENOTFOUND" })).toBe(true);
+    expect(
+      isSourceUnreachable({ isAxiosError: true, response: { status: 503 } }),
+    ).toBe(true);
+    expect(
+      isSourceUnreachable({ isAxiosError: true, response: { status: 404 } }),
+    ).toBe(false);
+    expect(
+      isSourceUnreachable({ isAxiosError: true, response: { status: 403 } }),
+    ).toBe(false);
+    expect(isSourceUnreachable(new Error("bad json"))).toBe(false);
   });
 
   it("keeps the channel for later correlation", () => {

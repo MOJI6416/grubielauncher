@@ -197,6 +197,22 @@ async function matchCrashRulesOffThread(
   };
 }
 
+export async function analyzeCrashSource(
+  text: string,
+  exitCode?: number,
+): Promise<CrashAnalysisPayload | null> {
+  const rules = await getCrashRules();
+  const { match } = await matchCrashRulesOffThread(text || "", rules, exitCode);
+  if (!match) return null;
+
+  return {
+    ruleId: match.ruleId,
+    messages: match.messages,
+    culprits: match.culprits,
+    reportPath: null,
+  };
+}
+
 export async function analyzeGameCrash(
   versionPath: string,
   exitCode?: number,

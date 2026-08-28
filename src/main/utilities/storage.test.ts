@@ -1,13 +1,32 @@
-import { describe, expect, it, vi } from "vitest";
+import fs from "fs-extra";
+import os from "os";
+import path from "path";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const electronState = vi.hoisted(() => ({
+  appData: "C:\\Temp",
+  trashed: [] as string[],
+}));
 
 vi.mock("electron", () => ({
-  app: { getPath: vi.fn(() => "C:\\Temp") },
+  app: { getPath: vi.fn(() => electronState.appData) },
   session: {
     defaultSession: { clearCache: vi.fn(), clearStorageData: vi.fn() },
   },
+  shell: {
+    trashItem: vi.fn(async (target: string) => {
+      electronState.trashed.push(target);
+      await fs.remove(target);
+    }),
+  },
 }));
 
-import { majorFromJavaDir, mavenToRelPath } from "./storage";
+import {
+  cleanupStorage,
+  computeCleanup,
+  majorFromJavaDir,
+  mavenToRelPath,
+} from "./storage";
 
 describe("mavenToRelPath", () => {
   it("resolves basic coordinates", () => {
@@ -45,5 +64,139 @@ describe("majorFromJavaDir", () => {
 
   it("returns null for unknown layouts", () => {
     expect(majorFromJavaDir("some-random-dir")).toBeNull();
+  });
+});
+
+describe("computeCleanup", () => {
+  it("does not offer a Java runtime for deletion when a manifest is unreadable", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "storage-cleanup-"));
+    const versionsPath = path.join(root, "versions");
+    const librariesPath = path.join(root, "libraries");
+    const javaDir = path.join(root, "java");
+
+    await fs.ensureDir(path.join(versionsPath, "Pack"));
+    await fs.ensureDir(librariesPath);
+    await fs.ensureDir(path.join(javaDir, "jdk-21.0.1+12"));
+
+    await fs.writeJSON(path.join(versionsPath, "Pack", "vanilla.json"), {
+      libraries: [],
+    });
+    await fs.writeFile(
+      path.join(versionsPath, "Pack", "Pack.json"),
+      '{"javaVersion": {"majorVersion": 21',
+    );
+
+    const damaged = await computeCleanup(versionsPath, librariesPath, javaDir);
+    expect(damaged.java.count).toBe(0);
+
+    await fs.writeJSON(path.join(versionsPath, "Pack", "Pack.json"), {
+      javaVersion: { majorVersion: 17 },
+    });
+
+    const healthy = await computeCleanup(versionsPath, librariesPath, javaDir);
+    expect(healthy.java.count).toBe(1);
+
+    await fs.remove(root);
+  });
+});
+
+describe("cleanupStorage of world backups", () => {
+  const ALIVE = "11111111-1111-4111-8111-111111111111";
+  const STRANDED = "22222222-2222-4222-8222-222222222222";
+
+  function record(id: string, versionName: string) {
+    return {
+      id,
+      worldName: "World",
+      worldFolder: "World",
+      versionName,
+      createdAt: 1,
+      size: 4,
+      trigger: "manual",
+    };
+  }
+
+  async function prepare(index: string | null): Promise<string> {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "storage-backups-"));
+    electronState.appData = root;
+    electronState.trashed = [];
+
+    const launcher = path.join(root, ".grubielauncher");
+    await fs.ensureDir(path.join(launcher, "minecraft", "versions", "Pack"));
+    await fs.ensureDir(path.join(launcher, "backups"));
+
+    for (const id of [ALIVE, STRANDED]) {
+      await fs.writeFile(path.join(launcher, "backups", `${id}.zip`), "zip!");
+    }
+
+    if (index !== null) {
+      await fs.writeFile(path.join(launcher, "backups", "index.json"), index);
+    }
+
+    return launcher;
+  }
+
+  afterEach(async () => {
+    const root = electronState.appData;
+    electronState.appData = "C:\\Temp";
+    if (root !== "C:\\Temp") await fs.remove(root);
+  });
+
+  it("refuses to clean and keeps every archive when a record is damaged", async () => {
+    const launcher = await prepare(
+      JSON.stringify([
+        record(ALIVE, "Pack"),
+        { ...record(STRANDED, "Pack"), versionName: 42 },
+      ]),
+    );
+
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cleanup = await computeCleanup(
+      path.join(launcher, "minecraft", "versions"),
+      path.join(launcher, "minecraft", "libraries"),
+      path.join(launcher, "java"),
+    );
+    spy.mockRestore();
+
+    expect(cleanup.backups).toEqual({ count: 0, size: 0 });
+    await expect(cleanupStorage("backups")).rejects.toThrow(
+      /world backup index/i,
+    );
+
+    const left = await fs.readdir(path.join(launcher, "backups"));
+    expect(left).toContain(`${ALIVE}.zip`);
+    expect(left).toContain(`${STRANDED}.zip`);
+  });
+
+  it("refuses to clean when the index file is truncated", async () => {
+    const launcher = await prepare('[{"id":"111111');
+
+    await expect(cleanupStorage("backups")).rejects.toThrow(
+      /world backup index/i,
+    );
+    expect(await fs.readdir(path.join(launcher, "backups"))).toHaveLength(3);
+  });
+
+  it("still cleans stranded archives when the index is an empty list", async () => {
+    const launcher = await prepare("[]");
+
+    const result = await cleanupStorage("backups");
+
+    expect(result.freed).toBe(8);
+    expect(await fs.readdir(path.join(launcher, "backups"))).toEqual([
+      "index.json",
+    ]);
+  });
+
+  it("keeps an archive that the index still claims", async () => {
+    const launcher = await prepare(
+      JSON.stringify([record(ALIVE, "Pack"), record(STRANDED, "Removed Pack")]),
+    );
+
+    await cleanupStorage("backups");
+
+    const left = await fs.readdir(path.join(launcher, "backups"));
+    expect(left).toContain(`${ALIVE}.zip`);
+    expect(left).not.toContain(`${STRANDED}.zip`);
   });
 });

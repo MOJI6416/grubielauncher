@@ -1,9 +1,14 @@
 import { AccountType, IAccountConf, ILocalAccount } from "@/types/Account";
-import { app, safeStorage } from "electron";
+import { app } from "electron";
 import { jwtDecode } from "jwt-decode";
 import fs from "fs-extra";
 import path from "path";
 import { writeJsonAtomic } from "./atomicJson";
+import {
+  decodeSecret,
+  encodeSecret,
+  StoredSecrets,
+} from "./secretStore";
 
 function decodeSubject(token?: string): string | null {
   if (!token) return null;
@@ -37,13 +42,6 @@ type PersistedAccountConf = {
   accounts: PersistedAccount[];
   lastPlayed: string | null;
 };
-
-type StoredSecret = {
-  mode: "safeStorage" | "plain";
-  value: string;
-};
-
-type StoredSecrets = Record<string, StoredSecret>;
 
 const accountTypes: AccountType[] = ["microsoft", "plain", "elyby", "discord"];
 const persistedAccountKeys = new Set([
@@ -184,36 +182,6 @@ function withAccountsLock<T>(fn: () => Promise<T>): Promise<T> {
   return next;
 }
 
-function encodeSecret(value: string): StoredSecret {
-  if (safeStorage.isEncryptionAvailable()) {
-    return {
-      mode: "safeStorage",
-      value: safeStorage.encryptString(value).toString("base64"),
-    };
-  }
-
-  console.warn("safeStorage is unavailable, storing account secret in plaintext fallback.");
-  return {
-    mode: "plain",
-    value,
-  };
-}
-
-function decodeSecret(secret?: StoredSecret): string | undefined {
-  if (!secret?.value) return undefined;
-
-  try {
-    if (secret.mode === "safeStorage") {
-      const buffer = Buffer.from(secret.value, "base64");
-      return safeStorage.decryptString(buffer);
-    }
-
-    return secret.value;
-  } catch {
-    return undefined;
-  }
-}
-
 export class AccountsStoreReadError extends Error {
   constructor(filePath: string, cause: unknown) {
     super(`Failed to read ${path.basename(filePath)}`);
@@ -256,6 +224,7 @@ async function writeAccountsConfig(config: IAccountConf): Promise<void> {
   const launcherDir = getLauncherDir();
   await fs.ensureDir(launcherDir);
 
+  const storedSecrets = await readStoredSecrets();
   const nextSecrets: StoredSecrets = {};
   const persistedAccounts: PersistedAccount[] = config.accounts.map((account) => {
     const persisted = normalizePersistedAccount(account);
@@ -266,15 +235,26 @@ async function writeAccountsConfig(config: IAccountConf): Promise<void> {
     if (id) persisted.id = id;
     else delete persisted.id;
 
+    const legacyKey = getAccountKey(account);
+    const secretKey = id ?? legacyKey;
+    const refreshKey = getRefreshSecretKey(secretKey);
+
     const { accessToken } = account;
     if (typeof accessToken === "string" && accessToken.trim() !== "") {
-      nextSecrets[id ?? getAccountKey(account)] = encodeSecret(accessToken);
+      nextSecrets[secretKey] = encodeSecret(accessToken, "account secret");
+    } else {
+      const kept = storedSecrets[secretKey] ?? storedSecrets[legacyKey];
+      if (kept) nextSecrets[secretKey] = kept;
     }
+
     const refreshToken =
       account.refreshToken ?? decodeLegacyRefreshToken(account.accessToken);
     if (typeof refreshToken === "string" && refreshToken.trim() !== "") {
-      nextSecrets[getRefreshSecretKey(id ?? getAccountKey(account))] =
-        encodeSecret(refreshToken);
+      nextSecrets[refreshKey] = encodeSecret(refreshToken, "account secret");
+    } else {
+      const kept =
+        storedSecrets[refreshKey] ?? storedSecrets[getRefreshSecretKey(legacyKey)];
+      if (kept) nextSecrets[refreshKey] = kept;
     }
 
     return persisted;
@@ -480,19 +460,11 @@ export function mutateAccountsConfig(
 }
 
 export async function loadAccountsConfig(): Promise<IAccountConf> {
-  try {
-    const config = (await readAccountsConfig()) ?? createEmptyConfig();
-    const selected = findAccountByIdentity(config.accounts, config.lastPlayed);
-    if (!selected) return config;
+  const config = (await readAccountsConfig()) ?? createEmptyConfig();
+  const selected = findAccountByIdentity(config.accounts, config.lastPlayed);
+  if (!selected) return config;
 
-    return { ...config, lastPlayed: getAccountKey(selected) };
-  } catch (error) {
-    console.error(
-      "Accounts store is unreadable, reporting an empty list without touching it:",
-      error instanceof Error ? error.message : error,
-    );
-    return createEmptyConfig();
-  }
+  return { ...config, lastPlayed: getAccountKey(selected) };
 }
 
 export async function getSelectedAccount(): Promise<ILocalAccount | null> {

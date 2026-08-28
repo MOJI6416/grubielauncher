@@ -83,27 +83,21 @@ export interface IPurpurVersion {
   }
 }
 
-export interface ISpongeSearchResult {
-  artifacts: {
-    [key: string]: any
-  }
-}
-
-export interface ISpongeVersion {
-  assets: {
-    classifier: string
-    downloadUrl: string
-    extension: string
-  }[]
-}
-
 export type ServerRunState = 'stopped' | 'starting' | 'running' | 'stopping'
 
 export interface ServerRunStatus {
   serverPath: string
   state: ServerRunState
   pid: number | null
+  startedAt: number | null
   log: string[]
+}
+
+export interface ServerRunStatePayload {
+  serverPath: string
+  state: ServerRunState
+  pid: number | null
+  startedAt: number | null
 }
 
 export interface ServerRunResult {

@@ -38,6 +38,10 @@ export function parseSystemMessage(
 
 export interface IMessage {
   id?: string;
+  // The sender's own key for one send, echoed back by the server. It is what
+  // lets an answer be matched to the exact bubble it belongs to, instead of to
+  // the first pending one carrying the same text.
+  clientMessageId?: string;
   message: {
     _type: MessageBodyType;
     value: string;
@@ -50,6 +54,7 @@ export interface IMessage {
   };
   reactions?: IMessageReaction[];
   sender: string;
+  seq?: number;
   time: Date;
 }
 

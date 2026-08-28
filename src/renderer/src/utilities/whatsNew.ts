@@ -4,6 +4,7 @@ export interface LauncherWhatsNewState {
     updatedAt?: string;
   };
   onboardingDone?: boolean;
+  instanceConfCleanup?: boolean;
 }
 
 export type WhatsNewDecision =
@@ -11,26 +12,83 @@ export type WhatsNewDecision =
   | { type: "sameVersion"; shouldShow: false }
   | { type: "updated"; shouldShow: true };
 
-function parseVersion(version: string): number[] {
-  return String(version || "")
-    .split(/[.+-]/)
-    .map((part) => Number(part))
-    .map((part) => (Number.isFinite(part) ? part : 0));
+interface ParsedVersion {
+  release: number[];
+  prerelease: string[];
+}
+
+function parseVersion(version: string): ParsedVersion {
+  const value = String(version || "").trim();
+  const core = value.split("+")[0];
+  const separator = core.indexOf("-");
+  const releasePart = separator >= 0 ? core.slice(0, separator) : core;
+  const prereleasePart = separator >= 0 ? core.slice(separator + 1) : "";
+
+  return {
+    release: releasePart
+      .split(".")
+      .map((part) => Number(part))
+      .map((part) => (Number.isFinite(part) ? part : 0)),
+    prerelease: prereleasePart ? prereleasePart.split(".") : [],
+  };
+}
+
+function comparePrereleaseIdentifier(current: string, previous: string) {
+  const currentNumber = Number(current);
+  const previousNumber = Number(previous);
+  const currentIsNumber = current !== "" && Number.isFinite(currentNumber);
+  const previousIsNumber = previous !== "" && Number.isFinite(previousNumber);
+
+  if (currentIsNumber && previousIsNumber) {
+    if (currentNumber > previousNumber) return 1;
+    if (currentNumber < previousNumber) return -1;
+    return 0;
+  }
+
+  if (currentIsNumber) return -1;
+  if (previousIsNumber) return 1;
+
+  if (current > previous) return 1;
+  if (current < previous) return -1;
+  return 0;
+}
+
+function comparePrerelease(current: string[], previous: string[]) {
+  if (current.length === 0 && previous.length === 0) return 0;
+  if (current.length === 0) return 1;
+  if (previous.length === 0) return -1;
+
+  const length = Math.max(current.length, previous.length);
+  for (let i = 0; i < length; i++) {
+    const currentPart = current[i];
+    const previousPart = previous[i];
+    if (currentPart === undefined) return -1;
+    if (previousPart === undefined) return 1;
+
+    const result = comparePrereleaseIdentifier(currentPart, previousPart);
+    if (result !== 0) return result;
+  }
+
+  return 0;
 }
 
 export function compareLauncherVersions(current: string, previous: string) {
-  const currentParts = parseVersion(current);
-  const previousParts = parseVersion(previous);
-  const length = Math.max(currentParts.length, previousParts.length, 3);
+  const currentVersion = parseVersion(current);
+  const previousVersion = parseVersion(previous);
+  const length = Math.max(
+    currentVersion.release.length,
+    previousVersion.release.length,
+    3,
+  );
 
   for (let i = 0; i < length; i++) {
-    const currentPart = currentParts[i] ?? 0;
-    const previousPart = previousParts[i] ?? 0;
+    const currentPart = currentVersion.release[i] ?? 0;
+    const previousPart = previousVersion.release[i] ?? 0;
     if (currentPart > previousPart) return 1;
     if (currentPart < previousPart) return -1;
   }
 
-  return 0;
+  return comparePrerelease(currentVersion.prerelease, previousVersion.prerelease);
 }
 
 export function getWhatsNewDecision(
