@@ -538,6 +538,9 @@ describe("hasPendingResend", () => {
       seen: [],
     });
 
+    const at = 1_700_000_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(at);
+
     const { socket, listeners } = fakeSocket();
     bindChatOutbox(socket, "own");
     flushChatDrafts(socket, "own");
@@ -547,7 +550,8 @@ describe("hasPendingResend", () => {
       messages: [],
     } as never);
 
-    const at = Date.now();
+    clock.mockRestore();
+
     expect(hasPendingResend(at)).toBe(true);
     expect(hasPendingResend(at + RESEND_WINDOW_MS - 1)).toBe(true);
     expect(hasPendingResend(at + RESEND_WINDOW_MS)).toBe(false);
