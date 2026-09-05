@@ -68,6 +68,7 @@ The interface is a permanent sidebar with full screens instead of stacked dialog
 - Community catalog of public instances, both inside the launcher and on [grubielauncher.com/packs](https://grubielauncher.com/packs).
 - Integrity check that re-downloads damaged or missing files.
 - Config editor with search, completion and saved versions to roll back to.
+- Chunk editor for worlds: a map of every generated chunk per dimension with a satellite view of the terrain, filters for never-visited, outdated or damaged chunks, and deletion with a safety backup taken first.
 
 ### Together
 

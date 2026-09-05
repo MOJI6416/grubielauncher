@@ -1,4 +1,4 @@
-export type WorldBackupTrigger = "manual" | "auto" | "preRestore";
+export type WorldBackupTrigger = "manual" | "auto" | "preRestore" | "preEdit";
 
 export type WorldBackupErrorCode =
   | "worldMissing"

@@ -403,7 +403,7 @@ export function InstanceScreen({
                 onClick={() => version && void runGame({ version })}
               >
                 {isLaunching ? <Loader2 className="animate-spin" /> : <Play />}
-                {isVersionRunning
+                {isVersionRunning && !isLaunching
                   ? t("versions.playAnotherInstance")
                   : t("nav.play")}
               </Button>

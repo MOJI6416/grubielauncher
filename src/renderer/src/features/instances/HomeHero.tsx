@@ -94,6 +94,7 @@ export function HomeHero({
   const modsCount = countMods(instance.version.loader.mods);
   const instanceTags = tags[key] ?? [];
   const canPlay = !!account && !isLaunching;
+  const isRunningInstance = !!session && !isLaunching;
 
   const statuses = resolveInstanceStatuses({
     running: !!session,
@@ -106,7 +107,7 @@ export function HomeHero({
     instance,
     t,
     canPlay,
-    isRunningInstance: !!session,
+    isRunningInstance,
     hasSaves: flags[key]?.hasSaves === true,
     hasServer: flags[key]?.hasServer === true,
     hasStatistics: !!statistics,
@@ -281,7 +282,9 @@ export function HomeHero({
             onClick={() => void runGame({ version: instance })}
           >
             {isLaunching ? <Loader2 className="animate-spin" /> : <Play />}
-            {session ? t("versions.playAnotherInstance") : t("nav.play")}
+            {isRunningInstance
+              ? t("versions.playAnotherInstance")
+              : t("nav.play")}
           </Button>
 
           <Hint content={t("versions.openInstance")}>

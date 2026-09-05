@@ -101,6 +101,14 @@ import {
   WorldBackupRestoreResult,
 } from "@/types/WorldBackup";
 import {
+  ChunkEditResult,
+  IChunkDetails,
+  IChunkDimension,
+  IChunkEditOptions,
+  IChunkRegion,
+  IChunkRegionScan,
+} from "@/types/WorldChunks";
+import {
   IAchievementStatsResult,
   IRemoteWorldStatsResponse,
 } from "@/types/Achievements";
@@ -900,6 +908,41 @@ export interface IElectronAPI {
     ) => Promise<WorldBackupRestoreResult>;
     deleteBackup: (backupId: string) => Promise<WorldBackupDeleteResult>;
     deletePreserved: (targetPath: string) => Promise<WorldBackupDeleteResult>;
+  };
+  worldChunks: {
+    dimensions: (worldPath: string) => Promise<IChunkDimension[]>;
+    regions: (worldPath: string, dimension: string) => Promise<IChunkRegion[]>;
+    scanRegion: (
+      worldPath: string,
+      dimension: string,
+      regionX: number,
+      regionZ: number,
+    ) => Promise<IChunkRegionScan | null>;
+    inspect: (
+      worldPath: string,
+      dimension: string,
+      chunkX: number,
+      chunkZ: number,
+    ) => Promise<IChunkDetails | null>;
+    /** PNG bytes of the region's top-down render, or null when it cannot be drawn. */
+    renderSurface: (
+      worldPath: string,
+      dimension: string,
+      regionX: number,
+      regionZ: number,
+    ) => Promise<Uint8Array | null>;
+    delete: (
+      worldPath: string,
+      dimension: string,
+      coords: number[],
+      options: IChunkEditOptions,
+    ) => Promise<ChunkEditResult>;
+    resetInhabited: (
+      worldPath: string,
+      dimension: string,
+      coords: number[],
+      options: IChunkEditOptions,
+    ) => Promise<ChunkEditResult>;
   };
   statistics: {
     getSyncQueue: () => Promise<IPlaytimeSyncEntry[]>;
@@ -1846,6 +1889,56 @@ export const api: IElectronAPI = {
       invoke("worlds:deleteBackup", backupId),
     deletePreserved: (targetPath: string) =>
       invoke("worlds:deletePreserved", targetPath),
+  },
+  worldChunks: {
+    dimensions: (worldPath: string) =>
+      invoke("worldChunks:dimensions", worldPath),
+    regions: (worldPath: string, dimension: string) =>
+      invoke("worldChunks:regions", worldPath, dimension),
+    scanRegion: (
+      worldPath: string,
+      dimension: string,
+      regionX: number,
+      regionZ: number,
+    ) => invoke("worldChunks:scanRegion", worldPath, dimension, regionX, regionZ),
+    inspect: (
+      worldPath: string,
+      dimension: string,
+      chunkX: number,
+      chunkZ: number,
+    ) => invoke("worldChunks:inspect", worldPath, dimension, chunkX, chunkZ),
+    renderSurface: (
+      worldPath: string,
+      dimension: string,
+      regionX: number,
+      regionZ: number,
+    ) =>
+      invoke(
+        "worldChunks:renderSurface",
+        worldPath,
+        dimension,
+        regionX,
+        regionZ,
+      ),
+    delete: (
+      worldPath: string,
+      dimension: string,
+      coords: number[],
+      options: IChunkEditOptions,
+    ) => invoke("worldChunks:delete", worldPath, dimension, coords, options),
+    resetInhabited: (
+      worldPath: string,
+      dimension: string,
+      coords: number[],
+      options: IChunkEditOptions,
+    ) =>
+      invoke(
+        "worldChunks:resetInhabited",
+        worldPath,
+        dimension,
+        coords,
+        options,
+      ),
   },
   statistics: {
     getSyncQueue: () => invoke("statistics:getSyncQueue"),

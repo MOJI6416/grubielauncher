@@ -2541,7 +2541,8 @@
       "overview": "Overview",
       "stats": "Stats",
       "backups": "Backups",
-      "datapacks": "Datapacks"
+      "datapacks": "Datapacks",
+      "chunks": "Chunks"
     },
     "lastPlayed": "Last played",
     "neverPlayed": "Never played",
@@ -2626,6 +2627,210 @@
     "nameEmpty": "Enter a world name",
     "nameTaken": "This instance already has a world with that name"
   },
+  "worldChunks": {
+    "title": "Chunk editor",
+    "tabTitle": "Chunks and regions",
+    "tabHint": "A map of every chunk the world has generated. Find the damaged or never-visited ones and delete them so the game regenerates them.",
+    "open": "Open chunk editor",
+    "openReadOnly": "The map opens read-only: chunks cannot be changed right now",
+    "readOnly": "Read-only: {{reason}}",
+    "loadError": "Couldn't read the region files",
+    "loadErrorHint": "The world folder is unavailable. Close the game and try again.",
+    "noRegions": "No generated chunks yet",
+    "noRegionsHint": "Region files appear after the world has been opened in the game.",
+    "summary": "{{regions}} regions · {{chunks}} chunks · {{size}}",
+    "dimensionFacts": "{{regions}} regions · {{chunks}} chunks · {{size}}",
+    "dimension": "Dimension",
+    "dimensions": {
+      "overworld": "Overworld",
+      "nether": "The Nether",
+      "end": "The End"
+    },
+    "colorMode": "Colour by",
+    "colorModes": {
+      "satellite": "Satellite view",
+      "status": "Generation stage",
+      "inhabited": "Time spent nearby",
+      "updated": "Last saved",
+      "dataVersion": "Data version",
+      "size": "Size on disk"
+    },
+    "legend": {
+      "surfacePending": "Not drawn yet",
+      "statusEmpty": "Empty",
+      "statusPartial": "Partly generated",
+      "statusFull": "Fully generated",
+      "inhabitedNone": "Never visited",
+      "inhabitedSome": "Visited",
+      "inhabitedLong": "Lived in",
+      "updatedOld": "Saved long ago",
+      "updatedRecent": "Saved recently",
+      "versionCurrent": "Current version",
+      "versionOlder": "Older version",
+      "versionMuchOlder": "Much older",
+      "versionNewer": "Newer version",
+      "sizeSmall": "Small",
+      "sizeLarge": "Large",
+      "problem": "Damaged",
+      "unsupported": "Unreadable compression",
+      "unscanned": "Not scanned yet"
+    },
+    "tools": {
+      "select": "Select",
+      "pan": "Pan",
+      "all": "All",
+      "none": "None",
+      "invert": "Invert",
+      "goto": "Go to block coordinates",
+      "gotoX": "Block X",
+      "gotoZ": "Block Z",
+      "fit": "Fit the whole world",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "rescan": "Rescan the world"
+    },
+    "hover": "chunk {{x}} {{z}} · block {{block}}",
+    "rendering_one": "Drawing {{count}} region…",
+    "rendering_other": "Drawing {{count}} regions…",
+    "problemsCount_one": "{{count}} damaged chunk",
+    "problemsCount_other": "{{count}} damaged chunks",
+    "minutes_one": "{{count}} min",
+    "minutes_other": "{{count}} min",
+    "selection": {
+      "title": "Selection",
+      "count_one": "{{count}} chunk",
+      "count_other": "{{count}} chunks",
+      "empty": "Drag on the map to select chunks. Shift adds, Alt removes, Ctrl toggles. Hold Space or the right mouse button to pan.",
+      "regions": "Regions",
+      "size": "On disk",
+      "inhabited": "Time nearby",
+      "problems": "Damaged",
+      "unscanned_one": "{{count}} selected chunk is in a region that has not been scanned yet, so its data is unknown.",
+      "unscanned_other": "{{count}} selected chunks are in regions that have not been scanned yet, so their data is unknown."
+    },
+    "actions": {
+      "delete": "Delete chunks",
+      "reset": "Reset time nearby",
+      "resetHint": "Sets the inhabited time of the selected chunks to zero, so the local difficulty starts over."
+    },
+    "chunk": {
+      "title": "Chunk",
+      "pick": "Click a chunk on the map to inspect it.",
+      "absent": "This chunk has not been generated.",
+      "blocks": "Blocks",
+      "region": "Region file",
+      "status": "Stage",
+      "inhabited": "Time nearby",
+      "saved": "Saved",
+      "dataVersion": "Data version",
+      "size": "Size",
+      "external": "external file",
+      "sideData": "Also in",
+      "entitiesFile": "entities",
+      "poiFile": "poi",
+      "sections": "Sections",
+      "light": "Light computed",
+      "poi": "Points of interest",
+      "structures": "Structures",
+      "biomes": "Biomes",
+      "entities": "Entities",
+      "blockEntities": "Block entities",
+      "moreRows_one": "and {{count}} more",
+      "moreRows_other": "and {{count}} more",
+      "copyCoords": "Copy coordinates",
+      "selectRegion": "Select the whole region",
+      "detailsError": "Couldn't read the chunk details."
+    },
+    "status": {
+      "full": "Fully generated",
+      "partial": "Partly generated ({{status}})"
+    },
+    "compression": {
+      "gzip": "gzip",
+      "zlib": "zlib",
+      "none": "uncompressed",
+      "lz4": "LZ4",
+      "custom": "custom",
+      "unknown": "unknown"
+    },
+    "problems": {
+      "header": "The region header points at data that is not there. The game will regenerate this chunk.",
+      "compression": "The chunk data does not decompress: it is damaged.",
+      "nbt": "The chunk data is not valid NBT: it is damaged.",
+      "position": "The chunk claims different coordinates than its slot. The game will discard it.",
+      "unsupported": "This chunk uses LZ4 or a custom compression the launcher cannot read. It can still be deleted."
+    },
+    "filter": {
+      "title": "Select by condition",
+      "button": "Filter",
+      "kind": "Condition",
+      "kinds": {
+        "unvisited": "Rarely visited",
+        "incomplete": "Not fully generated",
+        "problems": "Damaged",
+        "olderThan": "Saved long ago",
+        "dataVersionBelow": "Older data version",
+        "fartherThan": "Far from a point"
+      },
+      "hints": {
+        "unvisited": "Chunks where players spent at most the given time. Deleting them shrinks the world without losing builds.",
+        "incomplete": "Chunks the game generated only partly while loading their neighbours.",
+        "problems": "Chunks whose data cannot be read. The game regenerates them anyway.",
+        "olderThan": "Chunks last saved before the given number of days.",
+        "dataVersionBelow": "Chunks saved by an older game version than the given data version.",
+        "fartherThan": "Chunks whose centre is further than the given distance in chunks from the point. The point defaults to the spawn."
+      },
+      "values": {
+        "maxMinutes": "At most, minutes",
+        "days": "Days ago",
+        "dataVersion": "Data version below",
+        "distance": "Distance, chunks",
+        "centerX": "Centre X, chunks",
+        "centerZ": "Centre Z, chunks"
+      },
+      "mode": "Apply as",
+      "modes": {
+        "replace": "New selection",
+        "add": "Add",
+        "subtract": "Remove"
+      },
+      "scannedOnly": "Only scanned regions are checked",
+      "matched_one": "{{count}} chunk selected",
+      "matched_other": "{{count}} chunks selected",
+      "apply": "Apply"
+    },
+    "confirm": {
+      "deleteTitle": "Deleting chunks",
+      "delete": "{{count}} chunks in {{regions}} regions ({{size}}) will be removed from the region files.",
+      "deleteHint": "Minecraft regenerates them the next time they are loaded. Anything built there is lost, entities and villages included.",
+      "resetTitle": "Resetting time nearby",
+      "reset": "The inhabited time of {{count}} chunks in {{regions}} regions will be set to zero.",
+      "backup": "Create a backup first",
+      "backupHint": "The whole world is archived before anything changes. Large worlds take a while."
+    },
+    "done": {
+      "delete_one": "{{count}} chunk deleted",
+      "delete_other": "{{count}} chunks deleted",
+      "reset_one": "Time reset for {{count}} chunk",
+      "reset_other": "Time reset for {{count}} chunks",
+      "freed": "{{size}} freed",
+      "backup": "Backup created",
+      "skipped_one": "{{count}} chunk skipped",
+      "skipped_other": "{{count}} chunks skipped"
+    },
+    "errors": {
+      "deleteTitle": "Couldn't delete the chunks",
+      "resetTitle": "Couldn't reset the chunks",
+      "backupTitle": "Couldn't create the backup, nothing was changed",
+      "worldMissing": "The world folder is missing or has no level.dat.",
+      "versionRunning": "Close the game first.",
+      "dimensionMissing": "This dimension folder no longer exists.",
+      "nothingSelected": "Nothing is selected.",
+      "tooManyChunks": "Too many chunks at once. Select fewer and repeat.",
+      "backupFailed": "The backup failed, so nothing was changed.",
+      "failed": "Check free disk space and try again."
+    }
+  },
   "worldBackups": {
     "title": "Backups",
     "create": "Create",
@@ -2651,7 +2856,8 @@
     "triggers": {
       "manual": "Manual",
       "auto": "Automatic",
-      "preRestore": "Before restore"
+      "preRestore": "Before restore",
+      "preEdit": "Before chunk edit"
     },
     "errors": {
       "worldMissing": "The world folder is missing or has no level.dat.",

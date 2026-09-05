@@ -48,6 +48,7 @@ const TRIGGER_TONE: Record<WorldBackupTrigger, string> = {
   manual: "bg-primary-soft-raised text-foreground",
   auto: "bg-surface-3 text-muted-foreground",
   preRestore: "bg-warning/15 text-warning",
+  preEdit: "bg-warning/15 text-warning",
 };
 
 export function WorldBackupsTab({

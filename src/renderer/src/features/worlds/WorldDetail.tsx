@@ -36,10 +36,17 @@ import { WorldOverviewTab } from "./WorldOverviewTab";
 import { WorldStatsTab } from "./WorldStatsTab";
 import { WorldDatapacksTab } from "./WorldDatapacksTab";
 import { WorldBackupsTab } from "./WorldBackupsTab";
+import { WorldChunksTab } from "./WorldChunksTab";
 
 const api = window.api;
 
-const TABS = ["overview", "stats", "datapacks", "backups"] as const;
+const TABS = [
+  "overview",
+  "stats",
+  "datapacks",
+  "chunks",
+  "backups",
+] as const;
 
 type WorldTab = (typeof TABS)[number];
 
@@ -499,6 +506,15 @@ export function WorldDetail({
               options={datapackOptions}
               disabled={isLocked}
               onChange={(datapacks) => onWorldPatched({ datapacks })}
+            />
+          )}
+          {tab === "chunks" && (
+            <WorldChunksTab
+              world={world}
+              locked={isLocked}
+              lockReason={lockReason}
+              locale={locale}
+              onChanged={onRefresh}
             />
           )}
           {tab === "backups" && (

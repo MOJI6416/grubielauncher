@@ -34,6 +34,7 @@ const BACKUP_ID_PATTERN = /^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 const UNOWNED_INSTANCE_ID = "";
 const EXCLUDED_FILE_NAMES = new Set(["session.lock", ".grubie-preserved"]);
 const PRE_RESTORE_KEEP = 3;
+const PRE_EDIT_KEEP = 3;
 const BACKUP_COMPRESSION_LEVEL = 6;
 const RESTORE_ARCHIVE_LIMITS = {
   maxArchiveBytes: MAX_RESTORE_ARCHIVE_BYTES,
@@ -87,7 +88,10 @@ function getBackupFilePath(id: string): string {
 }
 
 function normalizeTrigger(value: unknown): WorldBackupTrigger {
-  return value === "manual" || value === "auto" || value === "preRestore"
+  return value === "manual" ||
+    value === "auto" ||
+    value === "preRestore" ||
+    value === "preEdit"
     ? value
     : "manual";
 }
@@ -313,10 +317,12 @@ export function selectPrunableBackups(
 
   const automatic = sorted.filter((entry) => entry.trigger === "auto");
   const safety = sorted.filter((entry) => entry.trigger === "preRestore");
+  const edits = sorted.filter((entry) => entry.trigger === "preEdit");
 
   return [
     ...automatic.slice(normalizeWorldBackupKeep(keep)),
     ...safety.slice(1, Math.max(1, safety.length - (PRE_RESTORE_KEEP - 1))),
+    ...edits.slice(PRE_EDIT_KEEP),
   ].filter((entry) => !protectedSet.has(entry.id));
 }
 
