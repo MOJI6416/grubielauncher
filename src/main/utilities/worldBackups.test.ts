@@ -17,6 +17,7 @@ const hoisted = vi.hoisted(() => {
   return {
     base: `${root}/grubie-world-backups-${process.pid}-${Date.now()}`,
     trashed: [] as string[],
+    freeBytes: null as number | null,
   };
 });
 
@@ -30,7 +31,13 @@ vi.mock("electron", () => ({
   },
 }));
 
+vi.mock("./diskSpace", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./diskSpace")>()),
+  getFreeBytes: async () => hoisted.freeBytes,
+}));
+
 import {
+  backupSizeLimit,
   cleanupOrphanBackups,
   countWorldBackups,
   createWorldBackup,
@@ -130,6 +137,7 @@ afterAll(async () => {
 beforeEach(async () => {
   gameProcesses.clear();
   hoisted.trashed.length = 0;
+  hoisted.freeBytes = null;
   await fs.remove(backupsDir);
   await fs.remove(savesPath);
   await fs.ensureDir(versionPath);
@@ -913,7 +921,7 @@ describe("automatic backups", () => {
     expect((await getWorldBackupList(worldPath)).skipReason).toBeNull();
   });
 
-  it("stops re-archiving a world that already failed at this size", async () => {
+  it("backs up a world that fits the current limits despite an old size record", async () => {
     await seedWorld("original");
     const instanceId = await stampInstanceId();
     await fs.ensureDir(backupsDir);
@@ -924,11 +932,100 @@ describe("automatic backups", () => {
       },
     });
 
-    expect(await createWorldBackup(worldPath, "auto", 5)).toEqual({
+    expect((await createWorldBackup(worldPath, "auto", 5)).ok).toBe(true);
+    expect(await listBackupZips()).toHaveLength(1);
+    expect((await getWorldBackupList(worldPath)).skipReason).toBeNull();
+  });
+
+  it("keeps manual backups available for a world skipped by automatic ones", async () => {
+    await seedWorld("original");
+    const instanceId = await stampInstanceId();
+    await fs.ensureDir(backupsDir);
+    await fs.writeJSON(path.join(backupsDir, "skipped.json"), {
+      [`${instanceId}::${WORLD_FOLDER}`]: {
+        reason: "autoTooLarge",
+        sourceSize: 1,
+      },
+    });
+
+    expect((await getWorldBackupList(worldPath)).skipReason).toBe(
+      "autoTooLarge",
+    );
+    expect((await createWorldBackup(worldPath, "manual", 5)).ok).toBe(true);
+  });
+
+  it("limits automatic backups more tightly than the ones a player starts", () => {
+    expect(backupSizeLimit("auto")).toBeLessThan(backupSizeLimit("manual"));
+    expect(backupSizeLimit("preEdit")).toBe(backupSizeLimit("manual"));
+    expect(backupSizeLimit("preRestore")).toBe(backupSizeLimit("manual"));
+  });
+
+  it("does not start a backup the disk cannot hold", async () => {
+    await seedWorld("original");
+    hoisted.freeBytes = 1024;
+
+    expect(await createWorldBackup(worldPath, "manual", 5)).toEqual({
       ok: false,
-      error: "worldTooLarge",
+      error: "notEnoughSpace",
     });
     expect(await listBackupZips()).toEqual([]);
+    expect((await getWorldBackupList(worldPath)).skipReason).toBe(
+      "notEnoughSpace",
+    );
+  });
+
+  it("leaves the world untouched when the disk cannot hold the unpacked backup", async () => {
+    await seedWorld("original");
+    const created = await createWorldBackup(worldPath, "manual", 5);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await fs.writeFile(path.join(worldPath, "region", "r.0.0.mca"), "changed");
+    hoisted.freeBytes = 1024;
+
+    expect(await restoreWorldBackup(created.backup.id, worldPath, 5)).toEqual({
+      ok: false,
+      error: "notEnoughSpace",
+    });
+    expect(await readMarker()).toBe("changed");
+    expect(await listBackupZips()).toHaveLength(1);
+  });
+
+  it("reports archiving and unpacking progress", async () => {
+    await seedWorld("original");
+    const updates: {
+      phase: string;
+      processedBytes: number;
+      totalBytes: number;
+    }[] = [];
+
+    const created = await createWorldBackup(worldPath, "manual", 5, (update) =>
+      updates.push(update),
+    );
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const archiving = updates.filter((update) => update.phase === "archiving");
+    expect(archiving[0]).toMatchObject({ processedBytes: 0 });
+    expect(archiving[archiving.length - 1].processedBytes).toBe(
+      archiving[0].totalBytes,
+    );
+
+    updates.length = 0;
+    const restored = await restoreWorldBackup(
+      created.backup.id,
+      worldPath,
+      5,
+      (update) => updates.push(update),
+    );
+    expect(restored.ok).toBe(true);
+
+    const extracting = updates.filter((update) => update.phase === "extracting");
+    expect(updates[0].phase).toBe("archiving");
+    expect(extracting.length).toBeGreaterThan(0);
+    expect(extracting[extracting.length - 1].processedBytes).toBe(
+      extracting[0].totalBytes,
+    );
   });
 });
 

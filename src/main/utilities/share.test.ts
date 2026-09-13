@@ -75,18 +75,32 @@ describe("share upload helpers", () => {
     ).toBe(true);
   });
 
-  it("does not reupload unknown remote URLs without a modpack prefix", () => {
+  it("does not reupload files already served from a host the backend accepts", () => {
+    for (const url of [
+      "https://cdn.modrinth.com/data/AABB/versions/CCDD/mod.jar",
+      "https://edge.forgecdn.net/files/1/2/mod.jar",
+    ]) {
+      expect(
+        shouldUploadLocalShareFile(
+          { filename: "mod.jar", url, sha1: "", size: 0, isServer: false },
+          "current-pack",
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it("reuploads remote URLs the backend refuses to publish", () => {
     expect(
       shouldUploadLocalShareFile(
         {
           filename: "remote.jar",
-          url: "https://example.com/files/remote.jar",
+          url: "https://github.com/author/mod/releases/download/v1/remote.jar",
           sha1: "",
           size: 0,
           isServer: false,
         },
         "current-pack",
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 });

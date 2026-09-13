@@ -4,7 +4,9 @@ export type WorldBackupErrorCode =
   | "worldMissing"
   | "worldUnreadable"
   | "worldTooLarge"
+  | "autoTooLarge"
   | "backupTooLarge"
+  | "notEnoughSpace"
   | "versionRunning"
   | "backupMissing"
   | "archiveInvalid"
@@ -50,8 +52,21 @@ export type WorldBackupDeleteResult =
   | { ok: true }
   | { ok: false; error: WorldBackupErrorCode };
 
-export const MAX_BACKUP_WORLD_BYTES = 2 * 1024 * 1024 * 1024;
-export const MAX_RESTORE_ARCHIVE_BYTES = 1024 * 1024 * 1024;
+export type WorldBackupPhase = "archiving" | "extracting";
+
+export interface WorldBackupProgressUpdate {
+  phase: WorldBackupPhase;
+  processedBytes: number;
+  totalBytes: number;
+}
+
+export interface WorldBackupProgress extends WorldBackupProgressUpdate {
+  worldPath: string;
+}
+
+export const MAX_BACKUP_WORLD_BYTES = 16 * 1024 * 1024 * 1024;
+export const MAX_AUTO_BACKUP_WORLD_BYTES = 4 * 1024 * 1024 * 1024;
+export const MAX_RESTORE_ARCHIVE_BYTES = 16 * 1024 * 1024 * 1024;
 export const DEFAULT_WORLD_BACKUP_KEEP = 5;
 export const MIN_WORLD_BACKUP_KEEP = 1;
 export const MAX_WORLD_BACKUP_KEEP = 20;

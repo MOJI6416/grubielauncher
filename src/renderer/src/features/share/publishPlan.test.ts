@@ -62,6 +62,7 @@ describe("getPublishFields", () => {
       "name",
       "logo",
       "mods",
+      "loader",
       "servers",
       "options",
       "arguments",

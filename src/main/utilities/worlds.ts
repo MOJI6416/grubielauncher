@@ -586,10 +586,6 @@ export async function loadGlobalAchievementStats(
   return { stats, worldKeys: [...worldKeys], partial };
 }
 
-function getArchiveEntryPath(entry: any) {
-  return String(entry?.entryName || "").replace(/\\/g, "/");
-}
-
 function sanitizeWorldFolderName(name: string) {
   const forbidden = '<>:"/\\|?*';
   return [...name]
@@ -602,13 +598,16 @@ function sanitizeWorldFolderName(name: string) {
 }
 
 async function getWorldArchiveInfo(zipPath: string) {
-  const { openArchive } = await import("./archiver");
-  const archive = await openArchive(zipPath);
-  const entries = archive.getEntries();
-
-  const entryNames = entries
-    .map(getArchiveEntryPath)
-    .filter((entryName) => entryName && entryName !== "/" && entryName !== ".");
+  const { LARGE_ARCHIVE_LIMITS, listZipEntries } = await import("./archiver");
+  const entryNames = (await listZipEntries(zipPath, LARGE_ARCHIVE_LIMITS))
+    .map((entry) => entry.name)
+    .filter(
+      (entryName) =>
+        entryName &&
+        entryName !== "/" &&
+        entryName !== "." &&
+        !entryName.startsWith("__MACOSX/"),
+    );
 
   const hasRootLevelDat = entryNames.some(
     (entryName) => entryName.toLowerCase() === "level.dat",
@@ -622,23 +621,39 @@ async function getWorldArchiveInfo(zipPath: string) {
     return fallbackName
       ? {
           worldName: fallbackName,
-          hasRootFolder: false,
+          prefix: "",
         }
       : null;
   }
 
-  const rootsWithLevelDat = new Set<string>();
+  const worldRoots = new Set<string>();
+  let shallowestDepth = Number.POSITIVE_INFINITY;
+
   for (const entryName of entryNames) {
     const parts = entryName.split("/").filter(Boolean);
-    if (parts.length >= 2 && parts[1].toLowerCase() === "level.dat") {
-      rootsWithLevelDat.add(parts[0]);
+    if (
+      parts.length < 2 ||
+      parts[parts.length - 1].toLowerCase() !== "level.dat"
+    ) {
+      continue;
+    }
+
+    if (parts.length < shallowestDepth) {
+      shallowestDepth = parts.length;
+      worldRoots.clear();
+    }
+
+    if (parts.length === shallowestDepth) {
+      worldRoots.add(parts.slice(0, -1).join("/"));
     }
   }
 
-  if (rootsWithLevelDat.size === 1) {
+  if (worldRoots.size === 1) {
+    const root = [...worldRoots][0];
+
     return {
-      worldName: [...rootsWithLevelDat][0],
-      hasRootFolder: true,
+      worldName: root.slice(root.lastIndexOf("/") + 1),
+      prefix: `${root}/`,
     };
   }
 
@@ -652,9 +667,11 @@ async function getWorldArchiveInfo(zipPath: string) {
   }
 
   if (rootFolders.size === 1) {
+    const root = [...rootFolders][0];
+
     return {
-      worldName: [...rootFolders][0],
-      hasRootFolder: true,
+      worldName: root,
+      prefix: `${root}/`,
     };
   }
 
@@ -674,32 +691,21 @@ export async function extractWorldArchive(
   if (!archiveInfo) return null;
 
   const destination = path.join(savesPath, archiveInfo.worldName);
-  const prefix = archiveInfo.hasRootFolder ? `${archiveInfo.worldName}/` : "";
+  const { prefix } = archiveInfo;
 
-  const { openArchive, extractEntries, getSafeExtractPath } = await import(
-    "./archiver"
-  );
-  const archive = await openArchive(zipPath);
+  const { LARGE_ARCHIVE_LIMITS, extractZipEntries, getSafeExtractPath } =
+    await import("./archiver");
 
-  const entries = archive
-    .getEntries()
-    .filter(
-      (entry) =>
-        getArchiveEntryPath(entry).startsWith(prefix) &&
-        getArchiveEntryPath(entry).slice(prefix.length).length > 0,
-    );
-
-  if (!entries.length) return null;
-
-  await fs.ensureDir(destination);
-  await extractEntries(entries, (entryName) =>
-    getSafeExtractPath(
-      destination,
-      entryName.split("\\").join("/").slice(prefix.length),
-    ),
+  const extracted = await extractZipEntries(
+    zipPath,
+    (entryName) =>
+      entryName.startsWith(prefix) && entryName.length > prefix.length
+        ? getSafeExtractPath(destination, entryName.slice(prefix.length))
+        : null,
+    LARGE_ARCHIVE_LIMITS,
   );
 
-  return destination;
+  return extracted > 0 ? destination : null;
 }
 
 const VOLATILE_WORLD_FILES = new Set([
@@ -707,7 +713,6 @@ const VOLATILE_WORLD_FILES = new Set([
   ".downloaded",
   WORLD_ID_MARKER,
 ]);
-const MAX_IMPORT_ARCHIVE_BYTES = 512 * 1024 * 1024;
 
 async function directorySize(target: string): Promise<number> {
   let entries: import("fs-extra").Dirent[];
@@ -884,7 +889,9 @@ export async function importWorldArchive(
 
   const archiveStats = await fs.stat(resolvedZipPath).catch(() => null);
   if (!archiveStats?.isFile()) return { ok: false, error: "archiveInvalid" };
-  if (archiveStats.size > MAX_IMPORT_ARCHIVE_BYTES) {
+
+  const { LARGE_ARCHIVE_LIMITS } = await import("./archiver");
+  if (archiveStats.size > LARGE_ARCHIVE_LIMITS.maxArchiveBytes) {
     return { ok: false, error: "archiveTooLarge" };
   }
 

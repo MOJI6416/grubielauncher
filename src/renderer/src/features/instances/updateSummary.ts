@@ -7,7 +7,7 @@ import {
 
 export interface UpdateSideVersion {
   version: { id: string };
-  loader: { name: string; mods: unknown[] };
+  loader: { name: string; mods: unknown[]; version?: { id: string } };
   servers?: { name?: string; ip?: string }[];
 }
 
@@ -20,6 +20,7 @@ export interface UpdateSummary {
   diff: ModpackDiff;
   gameVersion: UpdateChange | null;
   loader: UpdateChange | null;
+  loaderVersion: UpdateChange | null;
   remoteServers: string[];
 }
 
@@ -39,6 +40,13 @@ export function buildUpdateSummary(
     ),
     gameVersion: changed(local.version.id, remote.version.id),
     loader: changed(local.loader.name, remote.loader.name),
+    loaderVersion:
+      local.loader.name === remote.loader.name
+        ? changed(
+            local.loader.version?.id ?? "",
+            remote.loader.version?.id ?? "",
+          )
+        : null,
     remoteServers: (remote.servers ?? []).map((server) => server.ip ?? ""),
   };
 }
@@ -81,13 +89,17 @@ export function invertUpdateSummary(summary: UpdateSummary): UpdateSummary {
     },
     gameVersion: flipChange(summary.gameVersion),
     loader: flipChange(summary.loader),
+    loaderVersion: flipChange(summary.loaderVersion),
     remoteServers: summary.remoteServers,
   };
 }
 
 export function hasUpdateDetails(summary: UpdateSummary): boolean {
   return (
-    !isEmptyDiff(summary.diff) || !!summary.gameVersion || !!summary.loader
+    !isEmptyDiff(summary.diff) ||
+    !!summary.gameVersion ||
+    !!summary.loader ||
+    !!summary.loaderVersion
   );
 }
 

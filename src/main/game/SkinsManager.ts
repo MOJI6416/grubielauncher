@@ -650,7 +650,14 @@ export class SkinsManager extends BaseService {
     }
   }
 
-  private async getMojangSkins(options: { throwOnError?: boolean } = {}): Promise<boolean> {
+  private findSkinByRemoteId(remoteId: string, preferredId?: string): ISkinEntry | undefined {
+    const linked = this.skins.skins.filter((skin) => skin.remoteId === remoteId)
+    return linked.find((skin) => skin.id === preferredId) ?? linked[0]
+  }
+
+  private async getMojangSkins(
+    options: { throwOnError?: boolean; preferSkinId?: string } = {}
+  ): Promise<boolean> {
     try {
       const response = await this.api.get<IMojangProfile>(`${this.skinServiceUrl}/minecraft/profile`, {
         headers: {
@@ -676,11 +683,13 @@ export class SkinsManager extends BaseService {
       }
 
       for (const mojangSkin of skins) {
-        const localSkin = await this.syncSkinFromUrl(mojangSkin.url, {
-          model: mojangSkin.variant == 'SLIM' ? 'slim' : 'classic',
-          name,
-          remoteId: mojangSkin.id
-        })
+        const localSkin =
+          this.findSkinByRemoteId(mojangSkin.id, options.preferSkinId) ??
+          (await this.syncSkinFromUrl(mojangSkin.url, {
+            model: mojangSkin.variant == 'SLIM' ? 'slim' : 'classic',
+            name,
+            remoteId: mojangSkin.id
+          }))
 
         if (!localSkin) continue
 
@@ -947,7 +956,9 @@ export class SkinsManager extends BaseService {
           }
         )
 
-        skin.remoteId = profile.data.skins[0]?.id || skin.remoteId
+        const uploaded =
+          profile.data.skins.find((entry) => entry.state === 'ACTIVE') ?? profile.data.skins[0]
+        skin.remoteId = uploaded?.id || skin.remoteId
       } else {
         if (selectedCape) {
           const capePath = this.getCapeFilePath(selectedCape.hash)
@@ -986,7 +997,7 @@ export class SkinsManager extends BaseService {
           await this.hideCape()
         }
 
-        await this.getMojangSkins({ throwOnError: true })
+        await this.getMojangSkins({ throwOnError: true, preferSkinId: skin.id })
         if (this.activeSkin !== skin.id) {
           throw new Error('skin_apply_not_confirmed')
         }

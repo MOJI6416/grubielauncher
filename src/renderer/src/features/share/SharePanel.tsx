@@ -553,8 +553,8 @@ export function LanShareModal({
         showCloseButton={false}
         className="grid h-auto max-h-none w-[26rem] max-w-none grid-rows-[auto_minmax(0,1fr)_auto] gap-0 rounded-none rounded-l-2xl border-l border-border bg-surface-1 p-0 ring-0 sm:max-w-none"
         style={{
-          inset: "auto",
           top: "env(titlebar-area-height, 0px)",
+          left: "auto",
           right: 0,
           bottom: 0,
         }}

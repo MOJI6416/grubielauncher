@@ -144,6 +144,8 @@ export function LaunchHost() {
                     store.get(launchServersAtom),
                     s0,
                     acc?.accessToken || "",
+                    undefined,
+                    acc,
                   );
 
                   setSelectedVersion(updated);

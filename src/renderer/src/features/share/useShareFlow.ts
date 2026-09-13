@@ -32,7 +32,8 @@ export type InstanceLoadingType =
   | "sync"
   | "server"
   | "shortcut"
-  | "check";
+  | "check"
+  | "loader";
 
 export function useShareFlow({
   version,
@@ -120,6 +121,7 @@ export function useShareFlow({
         settings,
         account.accessToken || "",
         modpack,
+        account,
       );
 
       toast.success(t("versions.updated"));

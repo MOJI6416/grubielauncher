@@ -74,6 +74,32 @@ describe("importWorldArchive", () => {
     expect(result.ok).toBe(false);
     expect(await fs.pathExists(path.join(savesPath, "NotAWorld"))).toBe(false);
   });
+
+  it("imports a world archive larger than the in-memory zip limit", async () => {
+    writeArchive({ "Big/level.dat": "big world" });
+
+    const realStat = fs.stat.bind(fs);
+    const stat = vi.spyOn(fs, "stat").mockImplementation((async (
+      target: string,
+    ) => {
+      const stats = await realStat(target);
+      if (path.resolve(target) === path.resolve(zipPath)) {
+        stats.size = 600 * 1024 * 1024;
+      }
+      return stats;
+    }) as never);
+
+    try {
+      const result = await importWorldArchive(zipPath, versionPath);
+
+      expect(result.ok).toBe(true);
+      expect(
+        await fs.readFile(path.join(savesPath, "Big", "level.dat"), "utf-8"),
+      ).toBe("big world");
+    } finally {
+      stat.mockRestore();
+    }
+  });
 });
 
 describe("extractWorldArchive", () => {
@@ -89,6 +115,42 @@ describe("extractWorldArchive", () => {
 
     expect(
       await fs.pathExists(path.join(savesPath, "Old", "region", "r.0.0.mca")),
+    ).toBe(false);
+  });
+
+  it("installs a world nested one folder deeper than the archive root", async () => {
+    writeArchive({
+      "Castle Map v1.4/readme.txt": "how to play",
+      "Castle Map v1.4/Castle/level.dat": "castle",
+      "Castle Map v1.4/Castle/region/r.0.0.mca": "region",
+    });
+
+    const extracted = await extractWorldArchive(zipPath, savesPath);
+
+    expect(extracted).toBe(path.join(savesPath, "Castle"));
+    expect(
+      await fs.readFile(path.join(savesPath, "Castle", "level.dat"), "utf-8"),
+    ).toBe("castle");
+    expect(
+      await fs.pathExists(path.join(savesPath, "Castle", "region", "r.0.0.mca")),
+    ).toBe(true);
+    expect(await fs.pathExists(path.join(savesPath, "Castle Map v1.4"))).toBe(
+      false,
+    );
+  });
+
+  it("does not unpack macOS metadata stored next to the world", async () => {
+    writeArchive({
+      "__MACOSX/Island/._level.dat": "resource fork",
+      "Island/level.dat": "island",
+    });
+
+    const extracted = await extractWorldArchive(zipPath, savesPath);
+
+    expect(extracted).toBe(path.join(savesPath, "Island"));
+    expect(await fs.pathExists(path.join(savesPath, "__MACOSX"))).toBe(false);
+    expect(
+      await fs.pathExists(path.join(savesPath, "Island", "._level.dat")),
     ).toBe(false);
   });
 });

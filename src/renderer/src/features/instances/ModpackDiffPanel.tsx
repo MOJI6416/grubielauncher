@@ -1,33 +1,34 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowUpRight, Minus, Plus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   ModpackDiff,
   ModpackDiffEntry,
   isEmptyDiff,
 } from "@/shared/modpackDiff";
+import { useLoadOnScroll } from "@renderer/utilities/useLoadOnScroll";
 
 const PREVIEW_LIMIT = 6;
+const PAGE_SIZE = 40;
 
 function Bucket({
   entries,
   label,
   tone,
   icon: Icon,
-  expanded,
+  limit,
 }: {
   entries: ModpackDiffEntry[];
   label: string;
   tone: string;
   icon: typeof Plus;
-  expanded: boolean;
+  limit: number;
 }) {
   if (!entries.length) return null;
 
-  const shown = expanded ? entries : entries.slice(0, PREVIEW_LIMIT);
+  const shown = entries.slice(0, limit);
 
   return (
     <div className="flex flex-col gap-1">
@@ -65,18 +66,32 @@ export function ModpackDiffPanel({
   fill?: boolean;
   maxHeight?: string;
 }) {
-  const [expanded, setExpanded] = useState(fill);
+  const [limit, setLimit] = useState(
+    fill ? Number.POSITIVE_INFINITY : PREVIEW_LIMIT,
+  );
   const { t } = useTranslation();
 
-  if (isEmptyDiff(diff)) return null;
+  const longest = Math.max(
+    diff.added.length,
+    diff.updated.length,
+    diff.removed.length,
+  );
+  const setViewport = useLoadOnScroll(
+    limit < longest,
+    () => setLimit((value) => value + PAGE_SIZE),
+    limit,
+  );
+  const attachScrollArea = useCallback(
+    (node: HTMLDivElement | null) =>
+      setViewport(
+        node?.querySelector<HTMLElement>(
+          '[data-slot="scroll-area-viewport"]',
+        ) ?? null,
+      ),
+    [setViewport],
+  );
 
-  const hidden =
-    diff.added.length +
-    diff.updated.length +
-    diff.removed.length -
-    Math.min(diff.added.length, PREVIEW_LIMIT) -
-    Math.min(diff.updated.length, PREVIEW_LIMIT) -
-    Math.min(diff.removed.length, PREVIEW_LIMIT);
+  if (isEmptyDiff(diff)) return null;
 
   return (
     <div
@@ -86,6 +101,7 @@ export function ModpackDiffPanel({
       )}
     >
       <ScrollArea
+        ref={attachScrollArea}
         className={cn(fill && "min-h-0 flex-1")}
         style={fill ? undefined : { maxHeight }}
       >
@@ -95,39 +111,29 @@ export function ModpackDiffPanel({
             label={t("modpackDiff.updated")}
             tone="text-foreground"
             icon={ArrowUpRight}
-            expanded={expanded}
+            limit={limit}
           />
           <Bucket
             entries={diff.added}
             label={t("modpackDiff.added")}
             tone="text-success"
             icon={Plus}
-            expanded={expanded}
+            limit={limit}
           />
           <Bucket
             entries={diff.removed}
             label={t("modpackDiff.removed")}
             tone="text-destructive"
             icon={Minus}
-            expanded={expanded}
+            limit={limit}
           />
         </div>
       </ScrollArea>
 
-      <div className="mt-2 flex shrink-0 items-center justify-between gap-2">
+      <div className="mt-2 flex shrink-0 items-center gap-2">
         <span className="text-[0.7rem] text-faint">
           {t("modpackDiff.unchanged", { count: diff.unchanged })}
         </span>
-        {hidden > 0 && !expanded && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 text-xs text-muted-foreground"
-            onClick={() => setExpanded(true)}
-          >
-            {t("modpackDiff.showAll", { count: hidden })}
-          </Button>
-        )}
       </div>
     </div>
   );

@@ -2,6 +2,11 @@ import zip from "adm-zip";
 import archiver from "archiver";
 import fs from "fs-extra";
 import path from "path";
+import { Transform } from "stream";
+import type { Readable } from "stream";
+import { pipeline } from "stream/promises";
+import yauzl from "yauzl";
+import type { Entry, ZipFile } from "yauzl";
 import { getSafeExtractPath } from "./archivePaths";
 
 export { getSafeExtractPath };
@@ -12,23 +17,52 @@ const MAX_ENTRY_BYTES = 256 * 1024 * 1024;
 const MAX_TOTAL_UNCOMPRESSED_BYTES = 4 * 1024 * 1024 * 1024;
 const MAX_COMPRESSION_RATIO = 200;
 const MIN_RATIO_CHECK_BYTES = 4 * 1024 * 1024;
+const EXTRACT_CONCURRENCY = 8;
 
 export interface ArchiveLimits {
   maxArchiveBytes?: number;
   maxTotalUncompressedBytes?: number;
 }
 
-function validateEntry(entry: zip.IZipEntry): void {
-  if (entry.isDirectory) return;
+export interface StreamArchiveLimits {
+  maxArchiveBytes: number;
+  maxTotalUncompressedBytes: number;
+}
 
-  const size = entry.header.size;
-  const compressedSize = entry.header.compressedSize;
-  if (!Number.isSafeInteger(size) || size < 0 || size > MAX_ENTRY_BYTES) {
-    throw new Error(`Zip entry exceeds size limit: "${entry.entryName}"`);
+export const LARGE_ARCHIVE_LIMITS: StreamArchiveLimits = {
+  maxArchiveBytes: 16 * 1024 * 1024 * 1024,
+  maxTotalUncompressedBytes: 64 * 1024 * 1024 * 1024,
+};
+
+export interface ZipEntryInfo {
+  name: string;
+  isDirectory: boolean;
+  size: number;
+  compressedSize: number;
+}
+
+export type ExtractProgressListener = (
+  processedBytes: number,
+  totalBytes: number,
+) => void;
+
+interface ZipDirectoryRecord {
+  entry: Entry;
+  info: ZipEntryInfo;
+}
+
+function assertEntrySizes(
+  name: string,
+  size: number,
+  compressedSize: number,
+  maxEntryBytes: number,
+): void {
+  if (!Number.isSafeInteger(size) || size < 0 || size > maxEntryBytes) {
+    throw new Error(`Zip entry exceeds size limit: "${name}"`);
   }
 
   if (size > 0 && compressedSize <= 0) {
-    throw new Error(`Invalid compressed zip entry: "${entry.entryName}"`);
+    throw new Error(`Invalid compressed zip entry: "${name}"`);
   }
 
   if (
@@ -36,8 +70,19 @@ function validateEntry(entry: zip.IZipEntry): void {
     compressedSize > 0 &&
     size / compressedSize > MAX_COMPRESSION_RATIO
   ) {
-    throw new Error(`Suspicious zip compression ratio: "${entry.entryName}"`);
+    throw new Error(`Suspicious zip compression ratio: "${name}"`);
   }
+}
+
+function validateEntry(entry: zip.IZipEntry): void {
+  if (entry.isDirectory) return;
+
+  assertEntrySizes(
+    entry.entryName,
+    entry.header.size,
+    entry.header.compressedSize,
+    MAX_ENTRY_BYTES,
+  );
 }
 
 function validateEntries(entries: zip.IZipEntry[], limits?: ArchiveLimits): void {
@@ -59,11 +104,15 @@ function validateEntries(entries: zip.IZipEntry[], limits?: ArchiveLimits): void
   }
 }
 
-export async function openArchive(zipPath: string, limits?: ArchiveLimits) {
+async function assertArchiveFile(zipPath: string, maxArchiveBytes: number) {
   const stats = await fs.stat(zipPath);
-  if (!stats.isFile() || stats.size > (limits?.maxArchiveBytes ?? MAX_ARCHIVE_BYTES)) {
+  if (!stats.isFile() || stats.size > maxArchiveBytes) {
     throw new Error("Zip archive exceeds compressed size limit");
   }
+}
+
+export async function openArchive(zipPath: string, limits?: ArchiveLimits) {
+  await assertArchiveFile(zipPath, limits?.maxArchiveBytes ?? MAX_ARCHIVE_BYTES);
 
   const archive = new zip(await fs.readFile(zipPath));
   validateEntries(archive.getEntries(), limits);
@@ -86,50 +135,218 @@ export function readEntryData(entry: zip.IZipEntry): Promise<Buffer> {
   });
 }
 
-export async function extractEntries(
-  entries: zip.IZipEntry[],
-  resolveTargetPath: (entryName: string) => string,
-  limits?: ArchiveLimits,
-  shouldSkipEntry?: (entryName: string) => boolean,
-): Promise<void> {
-  validateEntries(entries, limits);
-  const targets = new Map<string, zip.IZipEntry>();
-  const directories: string[] = [];
-
-  for (const entry of entries) {
-    if (shouldSkipEntry?.(entry.entryName)) continue;
-    const targetPath = resolveTargetPath(entry.entryName);
-    if (entry.isDirectory) {
-      directories.push(targetPath);
-    } else {
-      if (targets.has(targetPath)) {
-        throw new Error(`Duplicate zip entry target: "${entry.entryName}"`);
-      }
-      targets.set(targetPath, entry);
-    }
-  }
-
-  for (const directory of directories) {
-    await fs.ensureDir(directory);
-  }
-
-  const jobs = [...targets.entries()];
-  let jobIndex = 0;
-  // Decompressed entries are Buffers; keep concurrency low to cap peak memory.
-  const workerCount = Math.min(2, jobs.length);
-  const workers = Array.from({ length: workerCount }, async () => {
-    while (true) {
-      const current = jobIndex++;
-      if (current >= jobs.length) break;
-
-      const [targetPath, entry] = jobs[current];
-      const data = await readEntryData(entry);
-      await fs.ensureDir(path.dirname(targetPath));
-      await fs.writeFile(targetPath, data);
-    }
+function openZipFile(zipPath: string): Promise<ZipFile> {
+  return new Promise((resolve, reject) => {
+    yauzl.open(
+      zipPath,
+      {
+        lazyEntries: true,
+        autoClose: false,
+        decodeStrings: false,
+        validateEntrySizes: true,
+      },
+      (error, zipFile) => {
+        if (error || !zipFile) {
+          reject(error ?? new Error(`Cannot open zip archive: ${zipPath}`));
+        } else {
+          resolve(zipFile);
+        }
+      },
+    );
   });
+}
 
-  await Promise.all(workers);
+function readNextEntry(zipFile: ZipFile): Promise<Entry | null> {
+  return new Promise((resolve, reject) => {
+    const detach = () => {
+      zipFile.off("entry", onEntry);
+      zipFile.off("end", onEnd);
+      zipFile.off("error", onError);
+    };
+    const onEntry = (entry: Entry) => {
+      detach();
+      resolve(entry);
+    };
+    const onEnd = () => {
+      detach();
+      resolve(null);
+    };
+    const onError = (error: Error) => {
+      detach();
+      reject(error);
+    };
+
+    zipFile.on("entry", onEntry);
+    zipFile.on("end", onEnd);
+    zipFile.on("error", onError);
+    zipFile.readEntry();
+  });
+}
+
+function openEntryStream(zipFile: ZipFile, entry: Entry): Promise<Readable> {
+  return new Promise((resolve, reject) => {
+    zipFile.openReadStream(entry, (error, stream) => {
+      if (error || !stream) {
+        reject(error ?? new Error(`Cannot read zip entry: ${entry.fileName}`));
+      } else {
+        resolve(stream);
+      }
+    });
+  });
+}
+
+function toEntryInfo(entry: Entry): ZipEntryInfo {
+  const rawName = entry.fileName as unknown as Buffer;
+  const lastByte = rawName[rawName.length - 1];
+
+  return {
+    name: rawName.toString("utf8").split("\\").join("/"),
+    isDirectory: lastByte === 47 || lastByte === 92,
+    size: entry.uncompressedSize,
+    compressedSize: entry.compressedSize,
+  };
+}
+
+async function readZipDirectory(
+  zipFile: ZipFile,
+  limits: StreamArchiveLimits,
+): Promise<ZipDirectoryRecord[]> {
+  if (zipFile.entryCount > MAX_ARCHIVE_ENTRIES) {
+    throw new Error("Zip archive contains too many entries");
+  }
+
+  const records: ZipDirectoryRecord[] = [];
+  let totalSize = 0;
+
+  for (
+    let entry = await readNextEntry(zipFile);
+    entry;
+    entry = await readNextEntry(zipFile)
+  ) {
+    if (entry.isEncrypted()) {
+      throw new Error("Encrypted zip entries are not supported");
+    }
+
+    const info = toEntryInfo(entry);
+
+    if (!info.isDirectory) {
+      assertEntrySizes(
+        info.name,
+        info.size,
+        info.compressedSize,
+        limits.maxTotalUncompressedBytes,
+      );
+      totalSize += info.size;
+      if (totalSize > limits.maxTotalUncompressedBytes) {
+        throw new Error("Zip archive exceeds uncompressed size limit");
+      }
+    }
+
+    records.push({ entry, info });
+  }
+
+  return records;
+}
+
+export async function listZipEntries(
+  zipPath: string,
+  limits: StreamArchiveLimits,
+): Promise<ZipEntryInfo[]> {
+  await assertArchiveFile(zipPath, limits.maxArchiveBytes);
+  const zipFile = await openZipFile(zipPath);
+
+  try {
+    return (await readZipDirectory(zipFile, limits)).map(
+      (record) => record.info,
+    );
+  } finally {
+    zipFile.close();
+  }
+}
+
+export async function extractZipEntries(
+  zipPath: string,
+  resolveTargetPath: (entryName: string) => string | null,
+  limits: StreamArchiveLimits,
+  onProgress?: ExtractProgressListener,
+): Promise<number> {
+  await assertArchiveFile(zipPath, limits.maxArchiveBytes);
+  const zipFile = await openZipFile(zipPath);
+
+  try {
+    const directories = new Set<string>();
+    const targets = new Set<string>();
+    const jobs: { entry: Entry; target: string; size: number }[] = [];
+    let resolved = 0;
+
+    for (const { entry, info } of await readZipDirectory(zipFile, limits)) {
+      const target = resolveTargetPath(info.name);
+      if (target === null) continue;
+
+      resolved++;
+
+      if (info.isDirectory) {
+        directories.add(target);
+        continue;
+      }
+
+      if (targets.has(target)) {
+        throw new Error(`Duplicate zip entry target: "${info.name}"`);
+      }
+
+      targets.add(target);
+      directories.add(path.dirname(target));
+      jobs.push({ entry, target, size: info.size });
+    }
+
+    for (const directory of directories) {
+      await fs.ensureDir(directory);
+    }
+
+    const totalBytes = jobs.reduce((sum, job) => sum + job.size, 0);
+    let processedBytes = 0;
+    let nextJob = 0;
+    let failed = false;
+
+    onProgress?.(0, totalBytes);
+
+    const countBytes = (listener: ExtractProgressListener) =>
+      new Transform({
+        transform(chunk: Buffer, _encoding, callback) {
+          processedBytes += chunk.length;
+          listener(processedBytes, totalBytes);
+          callback(null, chunk);
+        },
+      });
+
+    const worker = async () => {
+      while (!failed && nextJob < jobs.length) {
+        const job = jobs[nextJob++];
+
+        try {
+          const source = await openEntryStream(zipFile, job.entry);
+          const destination = fs.createWriteStream(job.target);
+
+          if (onProgress) {
+            await pipeline(source, countBytes(onProgress), destination);
+          } else {
+            await pipeline(source, destination);
+          }
+        } catch (error) {
+          failed = true;
+          throw error;
+        }
+      }
+    };
+
+    await Promise.all(
+      Array.from({ length: Math.min(EXTRACT_CONCURRENCY, jobs.length) }, worker),
+    );
+
+    return resolved;
+  } finally {
+    zipFile.close();
+  }
 }
 
 export async function readJSONFromArchive<T>(
@@ -197,6 +414,7 @@ export async function createZipArchive(
   compressionLevel = 9,
   shouldSkipEntry?: (entryName: string) => boolean,
   extraEntries?: readonly ArchiveExtraEntry[],
+  onProgress?: (processedBytes: number) => void,
 ): Promise<void> {
   await fs.ensureDir(path.dirname(outputPath));
   const output = fs.createWriteStream(outputPath);
@@ -225,6 +443,12 @@ export async function createZipArchive(
       if (err?.code === "ENOENT") return;
       safeReject(err);
     });
+
+    if (onProgress) {
+      archive.on("progress", (progress) =>
+        onProgress(progress.fs.processedBytes),
+      );
+    }
 
     archive.pipe(output);
     (async () => {
@@ -263,15 +487,23 @@ export async function extractZip(
   destination: string,
   limits?: ArchiveLimits,
   shouldSkipEntry?: (entryName: string) => boolean,
+  onProgress?: ExtractProgressListener,
 ): Promise<void> {
-  const zipFile = await openArchive(zipPath, limits);
-
   await fs.ensureDir(destination);
 
-  await extractEntries(
-    zipFile.getEntries(),
-    (entryName) => getSafeExtractPath(destination, entryName),
-    limits,
-    shouldSkipEntry,
+  await extractZipEntries(
+    zipPath,
+    (entryName) =>
+      shouldSkipEntry?.(entryName)
+        ? null
+        : getSafeExtractPath(destination, entryName),
+    {
+      maxArchiveBytes:
+        limits?.maxArchiveBytes ?? LARGE_ARCHIVE_LIMITS.maxArchiveBytes,
+      maxTotalUncompressedBytes:
+        limits?.maxTotalUncompressedBytes ??
+        LARGE_ARCHIVE_LIMITS.maxTotalUncompressedBytes,
+    },
+    onProgress,
   );
 }

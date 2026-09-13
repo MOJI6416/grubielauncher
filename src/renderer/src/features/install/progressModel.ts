@@ -1,8 +1,10 @@
 import { DownloaderInfo } from "@/types/Downloader";
 import {
   VersionInstallOperation,
+  VersionInstallProgress,
   VersionInstallStage,
 } from "@/types/InstallationProgress";
+import { SERVER_FILE_STAGES, VERSION_FILE_STAGES } from "@/shared/installPlan";
 
 export interface StageEvent {
   stage: VersionInstallStage;
@@ -67,27 +69,36 @@ export interface PacedStageLog {
   nextAt: number | null;
 }
 
-const CLIENT_STAGE_PLAN: VersionInstallStage[] = [
-  "preparing",
+const INTEGRITY_LABELED_STAGES = new Set<VersionInstallStage>([
   "manifest",
-  "java",
-  "loader",
   "assets",
   "files",
-];
-
-const SERVER_STAGE_PLAN: VersionInstallStage[] = [
-  "preparing",
-  "java",
-  "files",
-  "installer",
-  "loader",
-];
+  "mods",
+  "packs",
+  "worlds",
+]);
 
 export function stagePlan(
   operation: VersionInstallOperation,
-): VersionInstallStage[] {
-  return operation === "server" ? SERVER_STAGE_PLAN : CLIENT_STAGE_PLAN;
+): readonly VersionInstallStage[] {
+  if (operation === "server") return SERVER_FILE_STAGES;
+  if (operation === "content" || operation === "update") return [];
+  return VERSION_FILE_STAGES;
+}
+
+export function resolveStagePlan(
+  progress: Pick<VersionInstallProgress, "operation" | "plan">,
+): readonly VersionInstallStage[] {
+  return progress.plan ?? stagePlan(progress.operation);
+}
+
+export function stageLabelKey(
+  stage: VersionInstallStage,
+  operation?: VersionInstallOperation,
+): string {
+  return operation === "integrity" && INTEGRITY_LABELED_STAGES.has(stage)
+    ? `installationProgress.integrityStages.${stage}`
+    : `installationProgress.stages.${stage}`;
 }
 
 export interface StageRow {
@@ -99,7 +110,7 @@ export interface StageRow {
 
 export function buildStageRows(
   paced: PacedStage[],
-  plan: VersionInstallStage[],
+  plan: readonly VersionInstallStage[],
 ): StageRow[] {
   const rows: StageRow[] = [];
   let cursor = 0;

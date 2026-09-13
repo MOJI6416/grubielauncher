@@ -94,6 +94,7 @@ import {
   readBlockedModpack,
   type ModpackDownloadStage,
 } from "./downloadModpack";
+import { withExtractProgress } from "@renderer/utilities/archiveProgress";
 import { checkInstanceName, suggestInstanceName } from "./nameValidation";
 import { hasLocalContent, summarizePackContent } from "./packSummary";
 import { resolvePackVersions } from "./resolvePackVersions";
@@ -172,6 +173,11 @@ export function NewInstancePanel({
   const [busy, setBusy] = useState<BusyKind>(null);
   const [shareCode, setShareCode] = useState("");
   const [modpackStage, setModpackStage] = useState<ModpackDownloadStage>(null);
+  const [extractPercent, setExtractPercent] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!busy) setExtractPercent(null);
+  }, [busy]);
   const [downloadInfo, setDownloadInfo] = useState<DownloaderInfo | null>(null);
   const [pendingModpack, setPendingModpack] = useState<{
     project: IProject;
@@ -414,9 +420,11 @@ export function NewInstancePanel({
       setBusy("file");
 
       try {
-        const imported = await api.version.import(
+        const tempPath = await api.path.join(paths.launcher, "temp");
+        const imported = await withExtractProgress(
           filePath,
-          await api.path.join(paths.launcher, "temp"),
+          setExtractPercent,
+          () => api.version.import(filePath, tempPath),
         );
 
         if (requestId !== packRequestRef.current) {
@@ -596,7 +604,12 @@ export function NewInstancePanel({
       setBusy("modpack");
 
       try {
-        const result = await downloadModpack(project, version, setModpackStage);
+        const result = await downloadModpack(
+          project,
+          version,
+          setModpackStage,
+          setExtractPercent,
+        );
 
         if (requestId !== packRequestRef.current) {
           if (result.status === "ok") {
@@ -1039,6 +1052,7 @@ export function NewInstancePanel({
                   offlineReason={offlineReason}
                   stage={modpackStage}
                   progressPercent={downloadInfo?.progressPercent ?? 0}
+                  extractPercent={extractPercent}
                   onPick={(project, version) =>
                     void pickModpack(project, version)
                   }
@@ -1064,6 +1078,7 @@ export function NewInstancePanel({
               ) : state.source === "file" ? (
                 <FileSource
                   isBusy={busy === "file"}
+                  progressPercent={extractPercent}
                   onPick={async () => {
                     const filePaths = await api.other.openFileDialog(false, [
                       { name: "Modpack", extensions: ["zip", "mrpack"] },
@@ -1330,6 +1345,7 @@ export function NewInstancePanel({
                 target.project,
                 target.version,
                 setModpackStage,
+                setExtractPercent,
               )
                 .then((result) => {
                   if (requestId !== packRequestRef.current) {

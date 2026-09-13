@@ -66,9 +66,12 @@ function backupRows(backup: IWorldBackup) {
 
 const BACKUP_ERRORS: Record<string, string> = {
   worldMissing: "The world folder is gone",
-  worldTooLarge: "The world is too large to back up",
+  worldTooLarge: "The world is larger than the 16 GB backup limit",
+  autoTooLarge:
+    "The world is larger than 4 GB, so only manual backups are made for it",
   backupTooLarge:
-    "The backup is larger than the 1 GB restore limit, so it cannot be restored by the launcher",
+    "The backup is larger than the 16 GB restore limit, so it cannot be restored by the launcher",
+  notEnoughSpace: "There is not enough free disk space",
   versionRunning: "The game is running; close it first",
   backupMissing: "That backup no longer exists",
   archiveInvalid: "The backup archive is damaged",

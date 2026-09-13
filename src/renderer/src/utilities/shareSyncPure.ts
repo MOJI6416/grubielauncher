@@ -2,6 +2,10 @@ import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
 import type { IArguments } from "@/types/IArguments";
 import type { IVersionConf } from "@/types/IVersion";
 import type { ILocalProject } from "@/types/ModManager";
+import {
+  LOADER_VERSION_ID_PATTERN,
+  isModdedLoader,
+} from "@/shared/loaderCompat";
 
 export function preserveLocalBlockedPaths(
   currentMods: ILocalProject[],
@@ -148,6 +152,8 @@ export type ShareDiffInput = {
   currentOptions: string;
   remoteOther?: IVersionConf["loader"]["other"];
   currentOther?: IVersionConf["loader"]["other"];
+  remoteLoaderVersion?: string;
+  currentLoaderVersion?: string;
 };
 
 export function getShareDiffParts(input: ShareDiffInput) {
@@ -192,11 +198,37 @@ export function getShareDiffParts(input: ShareDiffInput) {
     diff.push("other");
   }
 
+  if (
+    input.isOwner &&
+    !!input.remoteLoaderVersion &&
+    !!input.currentLoaderVersion &&
+    input.remoteLoaderVersion !== input.currentLoaderVersion
+  ) {
+    diff.push("loader");
+  }
+
   return diff;
 }
 
 export function formatShareDiffParts(diffParts: string[]) {
   return diffParts.length ? `${diffParts.join(", ")}, ` : "";
+}
+
+export function pickSyncLoaderVersion(
+  local: Pick<IVersionConf, "loader" | "version">,
+  remote: Pick<IVersionConf, "loader" | "version">,
+): string | null {
+  const remoteId = remote.loader?.version?.id;
+  if (!remoteId || !LOADER_VERSION_ID_PATTERN.test(remoteId)) return null;
+  if (!isModdedLoader(local.loader?.name)) return null;
+  if (remote.loader.name !== local.loader.name) return null;
+
+  const remoteVersion = remote.version as IVersionConf["version"] | string;
+  const remoteGame =
+    typeof remoteVersion === "string" ? remoteVersion : remoteVersion?.id;
+  if (!remoteGame || remoteGame !== local.version?.id) return null;
+
+  return remoteId === local.loader.version?.id ? null : remoteId;
 }
 
 export type ModpackFetchOutcome = "ok" | "gone" | "unavailable";

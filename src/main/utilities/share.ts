@@ -4,6 +4,7 @@ import fs from 'fs-extra'
 import { Version } from '../game/Version'
 import { projetTypeToFolder } from './modManager'
 import { Backend } from '../services/Backend'
+import { isPublishableContentUrl } from './trustedHosts'
 import { ILocalFile, ILocalProject, ProjectType, Provider } from '@/types/ModManager'
 
 function fileUrlToPath(fileUrl: string | undefined) {
@@ -47,7 +48,7 @@ export function shouldUploadLocalShareFile(file: ILocalFile, shareCode: string) 
   }
 
   const remoteModpackId = getRemoteModpackId(file.url)
-  if (!remoteModpackId) return false
+  if (!remoteModpackId) return !isPublishableContentUrl(file.url)
 
   return remoteModpackId !== shareCode
 }
@@ -103,6 +104,8 @@ export async function uploadMods(at: string, version: Version) {
 
         const modPath = await resolveLocalFilePath(version, mod, file)
         if (!modPath) {
+          if (/^https?:\/\//i.test(file.url || '')) continue
+
           failed = true
           failures.push(`${file.filename}: file not found locally`)
           continue

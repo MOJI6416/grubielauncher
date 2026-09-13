@@ -32,7 +32,10 @@ import { compareServers } from '../utilities/serverList'
 import { check, handleSafe } from '../utilities/ipc'
 import { tryBeginInstallOperation } from './installLock'
 import { resumeDownloads } from '../utilities/downloader'
-import { VERSION_INSTALL_CANCELLED } from '@/types/InstallationProgress'
+import {
+  VERSION_INSTALL_CANCELLED,
+  VersionInstallOptions
+} from '@/types/InstallationProgress'
 import { assertReadablePath, assertWritablePath } from '../utilities/safePath'
 import { isPortAvailable } from '../utilities/portCheck'
 import { getLanAddress } from '../utilities/lanAddress'
@@ -53,7 +56,7 @@ export function registerServerIpc() {
       string,
       IServerConf,
       IVersionConf?,
-      { keepProgressOpen?: boolean }?
+      Pick<VersionInstallOptions, 'keepProgressOpen' | 'plan'>?
     ]
   >(
     'server:install',

@@ -37,7 +37,10 @@ import {
   useInstanceContents,
   useInstanceDiskUsage,
 } from "@renderer/features/instances/useInstanceInsights";
-import { getDeleteGates } from "@renderer/features/instances/deleteGates";
+import {
+  getDeleteCopy,
+  getDeleteGates,
+} from "@renderer/features/instances/deleteGates";
 import { clearInstanceSelection } from "@renderer/features/instances/selectInstance";
 import { forgetContinueCache } from "@renderer/features/instances/continueCache";
 import { updateInstancesFile } from "@renderer/features/instances/instancesStore";
@@ -74,7 +77,12 @@ export function DeleteVersion({
   const canRequestRemoteDelete =
     isNetwork && !!authData && !!account?.accessToken;
 
-  const { publicationOwner, canOfferRemoteDelete, canDeleteRemote } = useMemo(
+  const {
+    publicationOwner,
+    foreignPublication,
+    canOfferRemoteDelete,
+    canDeleteRemote,
+  } = useMemo(
     () =>
       getDeleteGates({
         shareCode: version?.version.shareCode,
@@ -86,6 +94,11 @@ export function DeleteVersion({
         canRequestRemoteDelete,
       }),
     [version, account, shareDel, canRequestRemoteDelete],
+  );
+
+  const copy = useMemo(
+    () => getDeleteCopy({ foreignPublication, publicationOwner }),
+    [foreignPublication, publicationOwner],
   );
 
   const versionName = version?.version.name || "";
@@ -150,11 +163,11 @@ export function DeleteVersion({
       );
 
       toast.success(
-        result.trashed ? t("versions.trashed") : t("versions.deleted"),
+        result.trashed ? t(copy.trashedKey) : t(copy.deletedKey),
         {
           description: result.trashed
-            ? t("versions.trashedHint")
-            : t("versions.deletedHint"),
+            ? t(copy.trashedHintKey)
+            : t(copy.deletedHintKey),
         },
       );
 
@@ -197,8 +210,8 @@ export function DeleteVersion({
         }}
       >
         <DialogHeader>
-          <DialogTitle>{t("common.deletion")}</DialogTitle>
-          <DialogDescription>{t("versions.savesInfo")}</DialogDescription>
+          <DialogTitle>{t(copy.titleKey)}</DialogTitle>
+          <DialogDescription>{t(copy.descriptionKey)}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
@@ -303,11 +316,11 @@ export function DeleteVersion({
               </p>
             )}
 
-            {publicationOwner && (
+            {copy.ownerNoteKey && (
               <p className="flex items-start gap-2 rounded-md border border-warning/40 bg-surface-2 px-3 py-2 text-xs text-muted-foreground">
                 <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-warning" />
-                {t("versions.deleteBlocked.notOwner", {
-                  nickname: publicationOwner.nickname,
+                {t(copy.ownerNoteKey, {
+                  nickname: publicationOwner?.nickname,
                 })}
               </p>
             )}
@@ -348,7 +361,7 @@ export function DeleteVersion({
             ) : (
               <Trash2 />
             )}
-            {t("common.delete")}
+            {t(copy.confirmKey)}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -8,6 +8,8 @@ import { assertReadablePath, assertWritablePath } from '../utilities/safePath'
 import { writeJsonAtomic, writeJsonAtomicSync } from '../utilities/atomicJson'
 import { isExcludedInstancePath } from '@/shared/instancePrivacy'
 import { redactSecrets } from '@/shared/logSanitizer'
+import { ArchiveExtractProgress } from '@/types/Archive'
+import { sendProgress, throttleProgress } from '../utilities/progressEvents'
 
 type DirEntry = { path: string; type: 'folder' | 'file' }
 
@@ -169,11 +171,16 @@ export function registerFsIpc() {
     return await fs.readdir(dirPath)
   })
 
-  handleSafe<boolean>('fs:extractZip', false, [isPath, isPath], async (_, zipPath: string, destination: string) => {
+  handleSafe<boolean>('fs:extractZip', false, [isPath, isPath], async (event, zipPath: string, destination: string) => {
     assertReadablePath(zipPath, 'fs:extractZip')
     assertWritablePath(destination, 'fs:extractZip')
     const { extractZip } = await import('../utilities/archiver')
-    await extractZip(zipPath, destination)
+    const report = throttleProgress((progress: ArchiveExtractProgress) =>
+      sendProgress(event.sender, 'archive:extractProgress', progress)
+    )
+    await extractZip(zipPath, destination, undefined, undefined, (processedBytes, totalBytes) =>
+      report({ archivePath: zipPath, processedBytes, totalBytes })
+    )
     return true
   })
 

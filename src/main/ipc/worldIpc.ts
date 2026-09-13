@@ -23,12 +23,15 @@ import {
   reassignWorldBackups,
   restoreWorldBackup,
 } from '../utilities/worldBackups'
+import type { WebContents } from 'electron'
 import { check, handleSafe } from '../utilities/ipc'
+import { sendProgress, throttleProgress } from '../utilities/progressEvents'
 import { assertReadablePath, assertWritablePath } from '../utilities/safePath'
 import {
   IWorldBackupList,
   WorldBackupCreateResult,
   WorldBackupDeleteResult,
+  WorldBackupProgressUpdate,
   WorldBackupRestoreResult,
 } from '@/types/WorldBackup'
 import {
@@ -53,6 +56,12 @@ const isPath = check.nonEmptyString(4096)
 const isAccount = check.optional(check.object())
 const isBackupId = check.nonEmptyString(512)
 const isKeep = check.optional(check.integer())
+
+function backupProgressReporter(sender: WebContents, worldPath: string) {
+  return throttleProgress((progress: WorldBackupProgressUpdate) =>
+    sendProgress(sender, 'worlds:backupProgress', { worldPath, ...progress }),
+  )
+}
 
 export function registerWorldIpc() {
   handleSafe(
@@ -161,18 +170,28 @@ export function registerWorldIpc() {
     return await countWorldBackups(versionPath)
   })
 
-  handleSafe('worlds:createBackup', CREATE_FALLBACK, [isPath, isKeep], async (_, worldPath: string, keep: number) => {
+  handleSafe('worlds:createBackup', CREATE_FALLBACK, [isPath, isKeep], async (event, worldPath: string, keep: number) => {
     assertWritablePath(worldPath, 'worlds:createBackup')
-    return await createWorldBackup(worldPath, 'manual', keep)
+    return await createWorldBackup(
+      worldPath,
+      'manual',
+      keep,
+      backupProgressReporter(event.sender, worldPath),
+    )
   })
 
   handleSafe(
     'worlds:restoreBackup',
     RESTORE_FALLBACK,
     [isBackupId, isPath, isKeep],
-    async (_, backupId: string, worldPath: string, keep: number) => {
+    async (event, backupId: string, worldPath: string, keep: number) => {
       assertWritablePath(worldPath, 'worlds:restoreBackup')
-      return await restoreWorldBackup(backupId, worldPath, keep)
+      return await restoreWorldBackup(
+        backupId,
+        worldPath,
+        keep,
+        backupProgressReporter(event.sender, worldPath),
+      )
     },
   )
 

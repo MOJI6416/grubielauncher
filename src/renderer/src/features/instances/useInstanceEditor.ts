@@ -59,6 +59,7 @@ import { sameOverrides } from "./instanceOverview";
 import { updateInstancesFile } from "./instancesStore";
 import { createDesktopShortcut } from "./instanceActions";
 import { getInstanceActionFlags } from "./instanceActionFlags";
+import { isForeignPublication } from "./deleteGates";
 import {
   bumpInstanceDataRevision,
   useInstanceDataRevision,
@@ -84,6 +85,9 @@ import {
 import { useInstanceDraft } from "./useInstanceDraft";
 import { useVersionChanges } from "./useVersionChanges";
 import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
+import { VERSION_FILE_STAGES, contentPlan } from "@/shared/installPlan";
+import { loaderChangeErrorKey } from "./loaderUpdate";
 
 const api = window.api;
 
@@ -234,7 +238,11 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     if (isLoading || isInstallActive) return false;
     if (!changes.hasChanges) return false;
     if (!isNameValid) return false;
-    if (version.version.owner && account && !isOwnerVersion) {
+    if (
+      (version.version.owner || version.version.ownerId) &&
+      account &&
+      !isOwnerVersion
+    ) {
       return changes.hasOnlyDownloadedRename;
     }
     return true;
@@ -269,10 +277,19 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
         setBlockedMods([]);
       }
 
-      await version.install(account, settings, [], { operation: "integrity" });
+      const plan = [
+        ...VERSION_FILE_STAGES,
+        ...contentPlan(version.version.loader.mods, server),
+      ];
+
+      await version.install(account, settings, [], {
+        operation: "integrity",
+        keepProgressOpen: true,
+        plan,
+      });
 
       const versionMods = new Mods(settings, version.version, server);
-      await versionMods.check();
+      await versionMods.check({ operation: "integrity", plan });
 
       toast.success(t("versions.integrityOk"));
     } catch (error) {
@@ -759,6 +776,64 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     }
   }
 
+  async function changeLoaderVersion(targetId: string) {
+    if (!version || !account || isLoading) return false;
+
+    const previousId = version.version.loader.version?.id;
+
+    setLoadingType("loader");
+    setIsLoading(true);
+
+    try {
+      const next = await version.changeLoader(account, settings, targetId);
+
+      bumpInstanceDataRevision();
+      toast.success(t("loaderUpdate.done", { version: next.id }), {
+        description: previousId
+          ? t("loaderUpdate.doneHint", { version: previousId })
+          : undefined,
+      });
+
+      void share.refreshPublishDiff();
+
+      if (
+        shouldOfferPublish({
+          changed: true,
+          shareCode: version.version.shareCode,
+          isDownloadedVersion: version.version.downloadedVersion,
+          isNetwork,
+          isVersionRunning,
+        })
+      ) {
+        share.setIsOpenModalShare(true);
+      }
+
+      return true;
+    } catch (error) {
+      const messageKey = loaderChangeErrorKey(error);
+
+      if (
+        error instanceof Error &&
+        error.message === VERSION_INSTALL_CANCELLED
+      ) {
+        toast(t("loaderUpdate.cancelled"));
+      } else if (messageKey) {
+        toast.error(t("loaderUpdate.failed"), { description: t(messageKey) });
+      } else {
+        showFailureToast(t("loaderUpdate.failed"), error, {
+          fallbackDescription: previousId
+            ? t("loaderUpdate.failedHint", { version: previousId })
+            : undefined,
+        });
+      }
+
+      return false;
+    } finally {
+      setIsLoading(false);
+      setLoadingType(undefined);
+    }
+  }
+
   function closeNotSaved() {
     setIsNotSavedOpen(false);
   }
@@ -779,13 +854,23 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
   }
 
   const isForeignInstance =
-    !!version?.version.owner && !!account && !isOwnerVersion;
+    (!!version?.version.owner || !!version?.version.ownerId) &&
+    !!account &&
+    !isOwnerVersion;
+
+  const isForeignPack = isForeignPublication({
+    shareCode: version?.version.shareCode,
+    owner: version?.version.owner,
+    ownerId: version?.version.ownerId,
+    account,
+  });
 
   const flags = getInstanceActionFlags({
     hasVersion: !!version,
     shareCode: version?.version.shareCode,
     downloadedVersion: version?.version.downloadedVersion,
     owner: version?.version.owner,
+    ownerId: version?.version.ownerId,
     loaderName: version?.version.loader.name,
     hasAccount: !!account,
     isOwnerVersion,
@@ -806,6 +891,7 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     isInstallActive,
     isOwnerVersion,
     isForeignInstance,
+    isForeignPack,
     isVersionRunning,
     draft,
     changes,
@@ -834,5 +920,6 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     createShortcut,
     installServer,
     confirmPublicUpdate,
+    changeLoaderVersion,
   };
 }

@@ -5,8 +5,10 @@ import zip from "adm-zip";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createZipArchive,
-  extractEntries,
+  extractZip,
+  extractZipEntries,
   getArchiveEntryName,
+  listZipEntries,
   readEntryData,
 } from "./archiver";
 import { isExcludedInstancePath } from "@/shared/instancePrivacy";
@@ -51,20 +53,179 @@ describe("archiver helpers", () => {
 
     await expect(readEntryData(entry)).resolves.toHaveLength(8192);
   });
+});
 
-  it("rejects duplicate extraction targets", async () => {
-    const makeEntry = (entryName: string) =>
-      ({
-        entryName,
-        isDirectory: false,
-        header: { size: 1, compressedSize: 1 },
-      }) as any;
+describe("streamed zip reading", () => {
+  const LIMITS = {
+    maxArchiveBytes: 64 * 1024 * 1024,
+    maxTotalUncompressedBytes: 64 * 1024 * 1024,
+  };
+
+  let root = "";
+
+  beforeEach(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), "grubie-zip-stream-"));
+  });
+
+  afterEach(async () => {
+    await fs.remove(root);
+  });
+
+  const writeZip = (entries: Record<string, string>) => {
+    const archive = new zip();
+    for (const [name, content] of Object.entries(entries)) {
+      archive.addFile(name, Buffer.from(content));
+    }
+
+    const zipPath = path.join(root, "archive.zip");
+    archive.writeZip(zipPath);
+    return zipPath;
+  };
+
+  it("lists entries with forward-slash names and directory flags", async () => {
+    const zipPath = writeZip({ "World/": "", "World/level.dat": "nbt" });
+
+    const entries = await listZipEntries(zipPath, LIMITS);
+
+    expect(entries.map((entry) => [entry.name, entry.isDirectory])).toEqual([
+      ["World/", true],
+      ["World/level.dat", false],
+    ]);
+  });
+
+  it("writes only the entries the caller maps to a target", async () => {
+    const zipPath = writeZip({
+      "World/level.dat": "nbt",
+      "World/region/r.0.0.mca": "region",
+      "readme.txt": "hi",
+    });
+    const destination = path.join(root, "saves", "World");
+
+    const written = await extractZipEntries(
+      zipPath,
+      (name) =>
+        name.startsWith("World/")
+          ? path.join(destination, name.slice("World/".length))
+          : null,
+      LIMITS,
+    );
+
+    expect(written).toBe(2);
+    expect(
+      await fs.readFile(path.join(destination, "region", "r.0.0.mca"), "utf-8"),
+    ).toBe("region");
+    expect(await fs.pathExists(path.join(root, "saves", "readme.txt"))).toBe(
+      false,
+    );
+  });
+
+  it("refuses an archive over the size limit before reading it", async () => {
+    const zipPath = writeZip({ "a.txt": "a".repeat(4096) });
 
     await expect(
-      extractEntries([makeEntry("a.txt"), makeEntry("b.txt")], () =>
-        path.resolve("same.txt"),
-      ),
+      listZipEntries(zipPath, { ...LIMITS, maxArchiveBytes: 16 }),
+    ).rejects.toThrow("Zip archive exceeds compressed size limit");
+  });
+
+  it("refuses duplicate targets before writing anything", async () => {
+    const zipPath = writeZip({ "a.txt": "a", "b.txt": "b" });
+    const target = path.join(root, "same.txt");
+
+    await expect(
+      extractZipEntries(zipPath, () => target, LIMITS),
     ).rejects.toThrow("Duplicate zip entry target");
+    expect(await fs.pathExists(target)).toBe(false);
+  });
+
+  it("stops before writing when any target is unsafe", async () => {
+    const zipPath = writeZip({ "ok.txt": "fine", "bad.txt": "nope" });
+    const destination = path.join(root, "out");
+
+    await expect(
+      extractZipEntries(
+        zipPath,
+        (name) => {
+          if (name === "bad.txt") throw new Error("unsafe entry");
+          return path.join(destination, name);
+        },
+        LIMITS,
+      ),
+    ).rejects.toThrow("unsafe entry");
+    expect(await fs.pathExists(path.join(destination, "ok.txt"))).toBe(false);
+  });
+
+  it("reports progress up to the unpacked size", async () => {
+    const zipPath = writeZip({
+      "a.txt": "a".repeat(1000),
+      "nested/b.txt": "b".repeat(3000),
+    });
+    const updates: [number, number][] = [];
+
+    await extractZip(
+      zipPath,
+      path.join(root, "progress"),
+      undefined,
+      undefined,
+      (processed, total) => updates.push([processed, total]),
+    );
+
+    expect(updates[0]).toEqual([0, 4000]);
+    expect(updates[updates.length - 1]).toEqual([4000, 4000]);
+  });
+
+  it("extracts many entries in parallel without mixing their contents", async () => {
+    const entries: Record<string, string> = {};
+    for (let index = 0; index < 120; index++) {
+      entries[`group-${index % 7}/file-${index}.txt`] =
+        `content ${index} `.repeat(50 + index);
+    }
+    const zipPath = writeZip(entries);
+    const destination = path.join(root, "many");
+
+    await extractZip(zipPath, destination);
+
+    for (const [name, content] of Object.entries(entries)) {
+      expect(await fs.readFile(path.join(destination, name), "utf-8")).toBe(
+        content,
+      );
+    }
+  });
+
+  it("leaves out the entries the caller asks to skip", async () => {
+    const zipPath = writeZip({
+      "saves/Keep/level.dat": "old",
+      "config/mod.toml": "a=1",
+    });
+    const destination = path.join(root, "instance");
+
+    await extractZip(zipPath, destination, undefined, (name) =>
+      name.startsWith("saves/Keep/"),
+    );
+
+    expect(
+      await fs.pathExists(path.join(destination, "saves", "Keep", "level.dat")),
+    ).toBe(false);
+    expect(
+      await fs.readFile(path.join(destination, "config", "mod.toml"), "utf-8"),
+    ).toBe("a=1");
+  });
+
+  it("reports archiving progress while a zip is written", async () => {
+    const source = path.join(root, "source.bin");
+    await fs.writeFile(source, Buffer.alloc(64 * 1024, 7));
+    const updates: number[] = [];
+
+    await createZipArchive(
+      [source],
+      path.join(root, "packed.zip"),
+      root,
+      6,
+      undefined,
+      undefined,
+      (processed) => updates.push(processed),
+    );
+
+    expect(updates[updates.length - 1]).toBe(64 * 1024);
   });
 });
 

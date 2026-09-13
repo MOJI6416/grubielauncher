@@ -130,9 +130,12 @@ export class Version {
   private initPromise: Promise<void> | null = null;
   private installOperation: VersionInstallOperation = "install";
   private installAbortSignal: AbortSignal | null = null;
+  private installPlan: VersionInstallStage[] | undefined = undefined;
+  private readonly versionPathOverride: string | undefined;
 
-  constructor(version: IVersionConf) {
+  constructor(version: IVersionConf, options: { versionPath?: string } = {}) {
     this.version = version;
+    this.versionPathOverride = options.versionPath;
   }
 
   private async ensureInitialized() {
@@ -156,11 +159,9 @@ export class Version {
 
     this.launcherPath = path.join(app.getPath("appData"), ".grubielauncher");
     this.minecraftPath = path.join(this.launcherPath, "minecraft");
-    this.versionPath = path.join(
-      this.minecraftPath,
-      "versions",
-      this.version.name,
-    );
+    this.versionPath =
+      this.versionPathOverride ??
+      path.join(this.minecraftPath, "versions", this.version.name);
     this.manifestPath = path.join(
       this.versionPath,
       `${this.version.version.id}.json`,
@@ -224,6 +225,7 @@ export class Version {
       detailsKey,
       detailsParams,
       subProgress,
+      plan: this.installPlan,
     });
   }
 
@@ -283,6 +285,7 @@ export class Version {
     this.downloader.versionName = this.version.name;
     this.installOperation = options.operation ?? "install";
     this.installAbortSignal = options.signal ?? null;
+    this.installPlan = options.plan;
     this.sendInstallProgress("preparing", 2, true);
 
     let succeeded = false;
@@ -291,7 +294,7 @@ export class Version {
       await this.installCheckpoint();
       await this.installInternal(settings, account, items);
       await this.installCheckpoint();
-      this.sendInstallProgress("done", 100);
+      if (!options.keepProgressOpen) this.sendInstallProgress("done", 100);
       succeeded = true;
     } catch (error) {
       if (this.isInstallCancelError(error)) {
@@ -313,6 +316,7 @@ export class Version {
       }
       this.installOperation = "install";
       this.installAbortSignal = null;
+      this.installPlan = undefined;
     }
   }
 

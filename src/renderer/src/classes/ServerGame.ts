@@ -1,4 +1,5 @@
 import { ILocalAccount } from '@/types/Account'
+import { VersionInstallOptions } from '@/types/InstallationProgress'
 import { IVersionConf } from '@/types/IVersion'
 import { IServerConf } from '@/types/Server'
 
@@ -28,7 +29,7 @@ export class ServerGame {
     this.versionConf = versionConf
   }
 
-  async install(options?: { keepProgressOpen?: boolean }) {
+  async install(options?: Pick<VersionInstallOptions, 'keepProgressOpen' | 'plan'>) {
     const result = await api.server.install(
       this.account,
       this.downloadLimit,

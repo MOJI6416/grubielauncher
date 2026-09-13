@@ -43,6 +43,7 @@ import { app } from "electron";
 import { createHash, randomUUID } from "crypto";
 import { pathToFileURL } from "url";
 import { parseCurseForgeLoaderId } from "@/shared/loaderVersions";
+import type { LoaderRequirementSyntax } from "@/shared/loaderCompat";
 import { resolveDownloadCandidates } from "./mirrors";
 import {
   getDownloadSource,
@@ -588,9 +589,17 @@ async function readLocalModInfo(
     icon: null,
   };
 
-  const { openArchive, readEntryData } = await import("./archiver");
+  const { LARGE_ARCHIVE_LIMITS, listZipEntries, openArchive, readEntryData } =
+    await import("./archiver");
   const archive = await openArchive(modPath).catch(() => null);
-  if (!archive) return null;
+  if (!archive) {
+    const entries = await listZipEntries(modPath, LARGE_ARCHIVE_LIMITS).catch(
+      () => null,
+    );
+    return entries && isWorldArchive(entries.map((entry) => entry.name))
+      ? { ...fallback, kind: ProjectType.WORLD }
+      : null;
+  }
 
   const readEntry = async (entryName: string): Promise<Buffer | null> => {
     const entry = archive.getEntry(entryName);
@@ -825,10 +834,116 @@ function forgeDepIds(dependencies: unknown): string[] {
   return ids;
 }
 
+export interface ModLoaderRequirement {
+  dependency: string;
+  syntax: LoaderRequirementSyntax;
+  ranges: string[];
+}
+
+function versionRangeList(value: unknown): string[] {
+  const values =
+    typeof value === "string" ? [value] : Array.isArray(value) ? value : [];
+
+  return values
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function fabricLoaderRequirements(depends: unknown): ModLoaderRequirement[] {
+  if (!depends || typeof depends !== "object") return [];
+
+  const ranges = versionRangeList(
+    (depends as Record<string, unknown>).fabricloader,
+  );
+  return ranges.length
+    ? [{ dependency: "fabricloader", syntax: "semver", ranges }]
+    : [];
+}
+
+function quiltVersionRanges(versions: unknown): string[] {
+  if (!versions || typeof versions !== "object" || Array.isArray(versions)) {
+    return versionRangeList(versions);
+  }
+
+  const constraint = versions as { any?: unknown; all?: unknown };
+  if (constraint.all !== undefined) {
+    const all = versionRangeList(constraint.all);
+    return all.length ? [all.join(" ")] : [];
+  }
+
+  return versionRangeList(constraint.any);
+}
+
+function quiltLoaderRequirements(depends: unknown): ModLoaderRequirement[] {
+  if (!Array.isArray(depends)) return [];
+
+  const requirements: ModLoaderRequirement[] = [];
+  for (const dep of depends) {
+    if (!dep || typeof dep !== "object") continue;
+    if (dep.id !== "quilt_loader" || dep.optional === true) continue;
+
+    const ranges = quiltVersionRanges(dep.versions);
+    if (ranges.length) {
+      requirements.push({ dependency: "quilt_loader", syntax: "semver", ranges });
+    }
+  }
+  return requirements;
+}
+
+function forgeLoaderRequirements(
+  dependencies: unknown,
+): ModLoaderRequirement[] {
+  if (!dependencies || typeof dependencies !== "object") return [];
+
+  const requirements: ModLoaderRequirement[] = [];
+  for (const depList of Object.values(
+    dependencies as Record<string, unknown>,
+  )) {
+    if (!Array.isArray(depList)) continue;
+
+    for (const dep of depList) {
+      const dependency = String(dep?.modId ?? "")
+        .trim()
+        .toLowerCase();
+      if (dependency !== "forge" && dependency !== "neoforge") continue;
+      if (dep?.mandatory === false) continue;
+
+      const type = String(dep?.type ?? "").toLowerCase();
+      if (
+        type === "optional" ||
+        type === "incompatible" ||
+        type === "discouraged"
+      ) {
+        continue;
+      }
+
+      const ranges = versionRangeList(dep?.versionRange);
+      if (ranges.length) {
+        requirements.push({ dependency, syntax: "maven", ranges });
+      }
+    }
+  }
+  return requirements;
+}
+
 export interface ModDescriptor {
   environment: ModEnvironment | null;
   modId: string | null;
+  name: string | null;
   hardDeps: string[];
+  loaderRequirements: ModLoaderRequirement[];
+}
+
+function cloneModDescriptor(descriptor: ModDescriptor): ModDescriptor {
+  return {
+    ...descriptor,
+    hardDeps: [...descriptor.hardDeps],
+    loaderRequirements: descriptor.loaderRequirements.map((requirement) => ({
+      ...requirement,
+      ranges: [...requirement.ranges],
+    })),
+  };
 }
 
 const MOD_DESCRIPTOR_CACHE_LIMIT = 1000;
@@ -853,13 +968,13 @@ export async function getModDescriptor(
 
   if (cacheKey) {
     const cached = modDescriptorCache.get(cacheKey);
-    if (cached) return { ...cached, hardDeps: [...cached.hardDeps] };
+    if (cached) return cloneModDescriptor(cached);
   }
 
   const descriptor = await readModDescriptor(jarPath);
   if (cacheKey) rememberModDescriptor(cacheKey, descriptor);
 
-  return { ...descriptor, hardDeps: [...descriptor.hardDeps] };
+  return cloneModDescriptor(descriptor);
 }
 
 async function readModDescriptor(jarPath: string): Promise<ModDescriptor> {
@@ -867,7 +982,9 @@ async function readModDescriptor(jarPath: string): Promise<ModDescriptor> {
   const descriptor: ModDescriptor = {
     environment: null,
     modId: null,
+    name: null,
     hardDeps: [],
+    loaderRequirements: [],
   };
 
   try {
@@ -898,6 +1015,8 @@ async function readModDescriptor(jarPath: string): Promise<ModDescriptor> {
           env === "client" ? "client" : env === "server" ? "server" : "both";
         if (typeof data.id === "string") descriptor.modId = data.id;
         descriptor.hardDeps = fabricDepIds(data.depends);
+        if (typeof data.name === "string") descriptor.name = data.name;
+        descriptor.loaderRequirements = fabricLoaderRequirements(data.depends);
       } else {
         const quilt = data.quilt_loader;
         const env =
@@ -910,6 +1029,10 @@ async function readModDescriptor(jarPath: string): Promise<ModDescriptor> {
               : "both";
         if (typeof quilt?.id === "string") descriptor.modId = quilt.id;
         descriptor.hardDeps = quiltDepIds(quilt?.depends);
+        if (typeof quilt?.metadata?.name === "string") {
+          descriptor.name = quilt.metadata.name;
+        }
+        descriptor.loaderRequirements = quiltLoaderRequirements(quilt?.depends);
       }
 
       return descriptor;
@@ -937,6 +1060,15 @@ async function readModDescriptor(jarPath: string): Promise<ModDescriptor> {
         descriptor.modId = String(parsed.mods[0].modId);
       }
       descriptor.hardDeps = forgeDepIds(parsed.dependencies);
+      if (
+        Array.isArray(parsed.mods) &&
+        typeof parsed.mods[0]?.displayName === "string"
+      ) {
+        descriptor.name = parsed.mods[0].displayName;
+      }
+      descriptor.loaderRequirements = forgeLoaderRequirements(
+        parsed.dependencies,
+      );
       return descriptor;
     }
 

@@ -127,6 +127,42 @@ describe("buildUpdateSummary", () => {
 
     expect(summaryCounts(summary).total).toBe(0);
   });
+
+  it("reports a new build of the same loader as its own line", () => {
+    const summary = buildUpdateSummary(
+      {
+        version: { id: "1.21" },
+        loader: { name: "fabric", mods: [], version: { id: "0.15.11" } },
+      },
+      {
+        version: { id: "1.21" },
+        loader: { name: "fabric", mods: [], version: { id: "0.16.10" } },
+      },
+    );
+
+    expect(summary.loaderVersion).toEqual({ from: "0.15.11", to: "0.16.10" });
+    expect(hasUpdateDetails(summary)).toBe(true);
+    expect(invertUpdateSummary(summary).loaderVersion).toEqual({
+      from: "0.16.10",
+      to: "0.15.11",
+    });
+  });
+
+  it("does not compare builds across different loaders", () => {
+    const summary = buildUpdateSummary(
+      {
+        version: { id: "1.21" },
+        loader: { name: "forge", mods: [], version: { id: "51.0.1" } },
+      },
+      {
+        version: { id: "1.21" },
+        loader: { name: "neoforge", mods: [], version: { id: "21.0.167" } },
+      },
+    );
+
+    expect(summary.loader).toEqual({ from: "forge", to: "neoforge" });
+    expect(summary.loaderVersion).toBeNull();
+  });
 });
 
 describe("invertUpdateSummary", () => {

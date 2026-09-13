@@ -142,6 +142,7 @@ export function Share({
   const uploadProgressIdRef = useRef<string | null>(null);
   const uploadProgressRef = useRef<UploadFileProgress | null>(null);
   const publishErrorRef = useRef<PublishErrorCode | null>(null);
+  const publishCommittedRef = useRef(false);
   const progressRef = useRef<HTMLDivElement | null>(null);
   const publishStageRef = useRef<PublishStage | null>(null);
   const [publishProgress, setPublishProgress] =
@@ -443,6 +444,8 @@ export function Share({
           return t("versions.updateLogo");
         case "mods":
           return t("versions.updateMods");
+        case "loader":
+          return t("versions.updateLoader");
         case "servers":
           return t("versions.updateServers");
         case "options":
@@ -490,6 +493,8 @@ export function Share({
         return t("share.publish.parts.world");
       case "other":
         return t("share.publish.parts.other");
+      case "loader":
+        return t("share.publish.parts.loader");
       case "description":
         return t("share.publish.parts.description");
       default:
@@ -509,6 +514,8 @@ export function Share({
         return "options.txt";
       case "world":
         return worldCount ? String(worldCount) : "";
+      case "loader":
+        return selectedVersion?.version.loader.version?.id || "";
       case "other":
         return paths.length > 0
           ? totalSize > 0
@@ -643,6 +650,7 @@ export function Share({
 
     try {
       publishErrorRef.current = null;
+      publishCommittedRef.current = false;
       let options = "";
       if (selection.options) {
         const optionsPath = await api.path.join(versionPath, "options.txt");
@@ -853,6 +861,9 @@ export function Share({
             ? selectedVersion.version.runArguments
             : null,
         other: isArchiveSelected ? other : null,
+        loaderVersion: selection.loader
+          ? (selectedVersion.version.loader.version ?? null)
+          : null,
         image: selection.logo || silentMode ? updateImage : null,
         quickServer: selection.servers
           ? selectedVersion.version.quickServer || ""
@@ -871,6 +882,7 @@ export function Share({
       );
       if (!isUpdated) throw new Error("not updated");
       isRemoteCommitted = true;
+      publishCommittedRef.current = true;
 
       selectedVersion.version.description = nextDescription;
       if (shouldUpdateLocalMods) selectedVersion.version.loader.mods = mods;
@@ -1028,6 +1040,7 @@ export function Share({
       setLoadingType("share");
       setIsLoading(true);
       publishErrorRef.current = null;
+      publishCommittedRef.current = false;
       updatePublishProgress({
         stage: "creatingShare",
         percent: publishStagePercent("creatingShare"),
@@ -1086,7 +1099,7 @@ export function Share({
       toast.success(t("versions.published"));
       isPublished = true;
     } catch (error) {
-      if (createdShareCode) {
+      if (createdShareCode && publishCommittedRef.current) {
         await api.backend
           .deleteModpack(account.accessToken!, createdShareCode)
           .catch(() => undefined);

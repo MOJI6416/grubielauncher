@@ -36,6 +36,31 @@ export function assertTrustedDownloadUrl(
   return url;
 }
 
+const PUBLISHABLE_CONTENT_HOST_SUFFIXES = [
+  ...TRUSTED_DOWNLOAD_HOST_SUFFIXES,
+  "modrinth.com",
+  "curseforge.com",
+  "forgecdn.net",
+] as const;
+
+export function isPublishableContentUrl(url: unknown): url is string {
+  if (typeof url !== "string" || url === "") return false;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+
+  const host = parsed.hostname.toLowerCase();
+  return PUBLISHABLE_CONTENT_HOST_SUFFIXES.some(
+    (suffix) => host === suffix || host.endsWith(`.${suffix}`),
+  );
+}
+
 const SERVER_CORE_HOST_SUFFIXES = [
   ...TRUSTED_DOWNLOAD_HOST_SUFFIXES,
   "papermc.io",

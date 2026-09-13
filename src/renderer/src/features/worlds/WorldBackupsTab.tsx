@@ -15,6 +15,7 @@ import {
   IWorldBackup,
   IWorldPreservedCopy,
   WorldBackupErrorCode,
+  WorldBackupProgress,
   WorldBackupTrigger,
   normalizeWorldBackupKeep,
 } from "@/types/WorldBackup";
@@ -27,6 +28,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { Hint } from "@renderer/components/Hint";
@@ -38,6 +40,7 @@ import {
 } from "@renderer/utilities/date";
 import { formatBytes } from "@renderer/utilities/file";
 import { holdBusy } from "@renderer/utilities/busy";
+import { progressPercent } from "@renderer/utilities/archiveProgress";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { toast } from "sonner";
 import { backupFreshness } from "./worldFacts";
@@ -71,6 +74,7 @@ export function WorldBackupsTab({
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [progress, setProgress] = useState<WorldBackupProgress | null>(null);
   const [pendingRestore, setPendingRestore] = useState<IWorldBackup | null>(
     null,
   );
@@ -90,6 +94,17 @@ export function WorldBackupsTab({
       mounted.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isBusy) {
+      setProgress(null);
+      return;
+    }
+
+    return api.events.onWorldBackupProgress((update) => {
+      if (update.worldPath === world.path) setProgress(update);
+    });
+  }, [isBusy, world.path]);
 
   const sizeLabels = [
     t("sizes.0"),
@@ -260,6 +275,10 @@ export function WorldBackupsTab({
     };
   };
 
+  const progressValue = progress
+    ? progressPercent(progress.processedBytes, progress.totalBytes)
+    : 0;
+
   return (
     <>
       <div className="flex h-full min-h-0 flex-col gap-3">
@@ -303,10 +322,29 @@ export function WorldBackupsTab({
           </Alert>
         )}
 
-        {isBusy && (
+        {isBusy && !progress && (
           <p className="shrink-0 text-center text-xs text-muted-foreground">
             {t("worldBackups.longOperation")}
           </p>
+        )}
+
+        {isBusy && progress && (
+          <div className="flex shrink-0 flex-col gap-1.5 rounded-xl border bg-surface-1 px-3 py-2">
+            <div className="flex min-w-0 items-center gap-2 text-xs">
+              <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                {t(`worldBackups.progress.${progress.phase}`)}
+              </span>
+              {progress.totalBytes > 0 && (
+                <span className="shrink-0 font-mono text-[0.7rem] tabular-nums text-faint">
+                  {formatBytes(progress.processedBytes, sizeLabels, 1)} /{" "}
+                  {formatBytes(progress.totalBytes, sizeLabels, 1)} ·{" "}
+                  {progressValue}%
+                </span>
+              )}
+            </div>
+            <Progress value={progressValue} max={100} className="h-1" />
+          </div>
         )}
 
         {isLoading ? (

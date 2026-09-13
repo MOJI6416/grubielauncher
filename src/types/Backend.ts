@@ -89,6 +89,7 @@ export interface IModpackUpdate {
   options: string | null
   runArguments: IArguments | null
   other: ILoader['other'] | null
+  loaderVersion?: ILoader['version'] | null
   image: string | null
   quickServer: string | null
   isPublic?: boolean | null

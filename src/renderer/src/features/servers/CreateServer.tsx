@@ -54,7 +54,11 @@ import {
   serverMemoryLimit,
 } from "@renderer/features/instances/serverMemory";
 import { classifyError } from "@/shared/errors";
-import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
+import {
+  VERSION_INSTALL_CANCELLED,
+  type VersionInstallStage,
+} from "@/types/InstallationProgress";
+import { SERVER_FILE_STAGES, contentPlan } from "@/shared/installPlan";
 import { describeFailure } from "@renderer/utilities/failures";
 import { toast } from "sonner";
 import { copyToClipboard } from "@renderer/utilities/clipboard";
@@ -234,8 +238,12 @@ export function CreateServer({
       );
 
       const hasMods = selectedVersion.version.loader.mods.length > 0;
+      const plan: VersionInstallStage[] = [
+        ...SERVER_FILE_STAGES,
+        ...(hasMods ? contentPlan(selectedVersion.version.loader.mods, conf) : []),
+      ];
 
-      await serverGame.install({ keepProgressOpen: hasMods });
+      await serverGame.install({ keepProgressOpen: hasMods, plan });
 
       if (
         !(await api.fs.writeJSON(
@@ -260,7 +268,7 @@ export function CreateServer({
 
       if (hasMods) {
         const mods = new Mods(settings, selectedVersion.version, conf);
-        await mods.check({ operation: "server" });
+        await mods.check({ operation: "server", plan });
       }
 
       toast.success(t("versions.serverInstalled"));

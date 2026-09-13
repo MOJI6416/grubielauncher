@@ -25,8 +25,10 @@ import {
   buildStageRows,
   clampPercent,
   estimateEta,
+  resolveStagePlan,
   stagePlan,
   stageElapsed,
+  stageLabelKey,
   stripGroupPrefix,
   type StageRow,
 } from "@renderer/features/install/progressModel";
@@ -128,9 +130,12 @@ export function InstallView({
       : "";
 
   const currentStage = stages[stages.length - 1]?.stage ?? progress?.stage;
+  const operation = isQueuedBehind ? undefined : progress?.operation;
   const rows = buildStageRows(
     isQueuedBehind ? [] : stages,
-    stagePlan("install"),
+    progress && !isQueuedBehind
+      ? resolveStagePlan(progress)
+      : stagePlan("install"),
   ).slice(-STAGE_LOG_VISIBLE);
 
   return (
@@ -177,9 +182,7 @@ export function InstallView({
                   ? pauseState === "pending"
                     ? t("installationProgress.pausing")
                     : t("installationProgress.paused")
-                  : t(
-                      `installationProgress.stages.${currentStage ?? "preparing"}`,
-                    )}
+                  : t(stageLabelKey(currentStage ?? "preparing", operation))}
             </span>
             {eta !== null && eta > 0 && !isPausedView && (
               <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
@@ -259,7 +262,7 @@ export function InstallView({
                         : "text-faint",
                   )}
                 >
-                  {t(`installationProgress.stages.${row.stage}`)}
+                  {t(stageLabelKey(row.stage, operation))}
                 </span>
                 <span className="shrink-0 font-mono text-[0.7rem] tabular-nums text-faint">
                   {row.event

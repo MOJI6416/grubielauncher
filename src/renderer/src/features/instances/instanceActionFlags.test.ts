@@ -85,4 +85,32 @@ describe("getInstanceActionFlags", () => {
         .canFetchServerCore,
     ).toBe(true);
   });
+
+  it("hides publication management from a non-owner", () => {
+    const foreign = getInstanceActionFlags(
+      input({ shareCode: "abc", isOwnerVersion: false }),
+    );
+
+    expect(foreign.showShareManagementAction).toBe(false);
+    expect(
+      getInstanceActionFlags(
+        input({ shareCode: "abc", isOwnerVersion: false, hasPublishDiff: true }),
+      ).showPublishActions,
+    ).toBe(false);
+  });
+
+  it("recognises the owner from the identity alone", () => {
+    const legacyless = input({
+      shareCode: "abc",
+      owner: undefined,
+      ownerId: "user-b",
+      isOwnerVersion: false,
+    });
+
+    expect(getInstanceActionFlags(legacyless).showShareManagementAction).toBe(
+      false,
+    );
+    expect(getInstanceActionFlags(legacyless).canEditLogo).toBe(false);
+    expect(getInstanceActionFlags(legacyless).canRenameVersion).toBe(false);
+  });
 });

@@ -8,19 +8,22 @@ import {
   IWorldBackupList,
   IWorldBackupsSummary,
   IWorldPreservedCopy,
+  MAX_AUTO_BACKUP_WORLD_BYTES,
   MAX_BACKUP_WORLD_BYTES,
   MAX_RESTORE_ARCHIVE_BYTES,
   normalizeWorldBackupKeep,
   WorldBackupCreateResult,
   WorldBackupDeleteResult,
   WorldBackupErrorCode,
+  WorldBackupProgressUpdate,
   WorldBackupRestoreResult,
   WorldBackupTrigger,
 } from "@/types/WorldBackup";
 import { getLauncherPaths } from "./other";
 import { ensureInstanceId, readInstanceId } from "./instanceId";
 import { writeJsonAtomic } from "./atomicJson";
-import { createZipArchive, extractZip } from "./archiver";
+import { createZipArchive, extractZip, listZipEntries } from "./archiver";
+import { getFreeBytes, hasRoomFor } from "./diskSpace";
 import { readWorldDisplayName } from "./worlds";
 import { gameProcesses } from "./runtime";
 
@@ -246,6 +249,8 @@ async function readSkipState(): Promise<Record<string, SkipRecord>> {
     const record = value as Partial<SkipRecord>;
     if (
       record.reason !== "worldTooLarge" &&
+      record.reason !== "autoTooLarge" &&
+      record.reason !== "notEnoughSpace" &&
       record.reason !== "worldUnreadable" &&
       record.reason !== "failed"
     ) {
@@ -346,7 +351,11 @@ class WorldUnreadableError extends Error {
   }
 }
 
-async function collectWorldFiles(root: string, out: string[]): Promise<number> {
+async function collectWorldFiles(
+  root: string,
+  out: string[],
+  limit: number,
+): Promise<number> {
   let entries: fs.Dirent[];
   try {
     entries = await fs.readdir(root, { withFileTypes: true });
@@ -362,8 +371,8 @@ async function collectWorldFiles(root: string, out: string[]): Promise<number> {
     const full = path.join(root, entry.name);
 
     if (entry.isDirectory()) {
-      total += await collectWorldFiles(full, out);
-      if (total > MAX_BACKUP_WORLD_BYTES) return total;
+      total += await collectWorldFiles(full, out, limit);
+      if (total > limit) return total;
       continue;
     }
 
@@ -375,10 +384,16 @@ async function collectWorldFiles(root: string, out: string[]): Promise<number> {
     out.push(full);
     total += stats.size;
 
-    if (total > MAX_BACKUP_WORLD_BYTES) return total;
+    if (total > limit) return total;
   }
 
   return total;
+}
+
+export function backupSizeLimit(trigger: WorldBackupTrigger): number {
+  return trigger === "auto"
+    ? MAX_AUTO_BACKUP_WORLD_BYTES
+    : MAX_BACKUP_WORLD_BYTES;
 }
 
 export function isVersionRunning(versionPath: string): boolean {
@@ -397,6 +412,7 @@ async function createBackupUnsafe(
   trigger: WorldBackupTrigger,
   keep: number,
   protectedIds?: Iterable<string>,
+  onProgress?: (progress: WorldBackupProgressUpdate) => void,
 ): Promise<WorldBackupCreateResult> {
   const resolvedWorldPath = path.resolve(worldPath);
   const worldFolder = path.basename(resolvedWorldPath);
@@ -415,11 +431,12 @@ async function createBackupUnsafe(
   if (!instanceId) return { ok: false, error: "failed" };
 
   const worldKey = getWorldKey(instanceId, worldFolder);
+  const sizeLimit = backupSizeLimit(trigger);
 
   const files: string[] = [];
   let sourceSize: number;
   try {
-    sourceSize = await collectWorldFiles(resolvedWorldPath, files);
+    sourceSize = await collectWorldFiles(resolvedWorldPath, files, sizeLimit);
   } catch (error) {
     if (error instanceof WorldUnreadableError) {
       console.error("Failed to read the world folder:", error.message);
@@ -432,17 +449,14 @@ async function createBackupUnsafe(
     throw error;
   }
 
-  if (sourceSize > MAX_BACKUP_WORLD_BYTES) {
-    await setSkipRecord(worldKey, { reason: "worldTooLarge", sourceSize });
-    return { ok: false, error: "worldTooLarge" };
+  if (sourceSize > sizeLimit) {
+    const reason: WorldBackupErrorCode =
+      trigger === "auto" ? "autoTooLarge" : "worldTooLarge";
+    await setSkipRecord(worldKey, { reason, sourceSize });
+    return { ok: false, error: reason };
   }
 
   if (!files.length) return { ok: false, error: "worldMissing" };
-
-  const skipped = (await readSkipState())[worldKey];
-  if (skipped?.sourceSize && sourceSize >= skipped.sourceSize) {
-    return { ok: false, error: "worldTooLarge" };
-  }
 
   const entries = await readIndex();
 
@@ -451,12 +465,29 @@ async function createBackupUnsafe(
 
   await fs.ensureDir(getBackupsDir());
 
+  if (!hasRoomFor(await getFreeBytes(getBackupsDir()), sourceSize)) {
+    await setSkipRecord(worldKey, { reason: "notEnoughSpace", sourceSize });
+    return { ok: false, error: "notEnoughSpace" };
+  }
+
+  onProgress?.({ phase: "archiving", processedBytes: 0, totalBytes: sourceSize });
+
   try {
     await createZipArchive(
       files,
       targetPath,
       path.dirname(resolvedWorldPath),
       BACKUP_COMPRESSION_LEVEL,
+      undefined,
+      undefined,
+      onProgress
+        ? (processedBytes) =>
+            onProgress({
+              phase: "archiving",
+              processedBytes: Math.min(processedBytes, sourceSize),
+              totalBytes: sourceSize,
+            })
+        : undefined,
     );
   } catch (error) {
     await fs.remove(targetPath).catch(() => {});
@@ -500,7 +531,12 @@ async function createBackupUnsafe(
   }
 
   await writeIndex(entries.filter((entry) => !prunedIds.has(entry.id)));
-  await setSkipRecord(worldKey, null);
+  await setSkipRecord(
+    worldKey,
+    sourceSize > MAX_AUTO_BACKUP_WORLD_BYTES
+      ? { reason: "autoTooLarge", sourceSize }
+      : null,
+  );
 
   return { ok: true, backup, pruned: prunedIds.size };
 }
@@ -523,10 +559,17 @@ export function createWorldBackup(
   worldPath: string,
   trigger: WorldBackupTrigger = "manual",
   keep: number = DEFAULT_WORLD_BACKUP_KEEP,
+  onProgress?: (progress: WorldBackupProgressUpdate) => void,
 ): Promise<WorldBackupCreateResult> {
   return enqueue(async () => {
     try {
-      const result = await createBackupUnsafe(worldPath, trigger, keep);
+      const result = await createBackupUnsafe(
+        worldPath,
+        trigger,
+        keep,
+        undefined,
+        onProgress,
+      );
 
       if (trigger === "auto" && !result.ok && result.error === "failed") {
         await recordAutoBackupFailure(worldPath);
@@ -840,6 +883,7 @@ async function restoreBackupUnsafe(
   backupId: string,
   worldPath: string,
   keep: number,
+  onProgress?: (progress: WorldBackupProgressUpdate) => void,
 ): Promise<WorldBackupRestoreResult> {
   if (!isValidBackupId(backupId)) {
     return { ok: false, error: "backupMissing" };
@@ -878,6 +922,26 @@ async function restoreBackupUnsafe(
     return { ok: false, error: "versionRunning" };
   }
 
+  const archiveEntries = await listZipEntries(
+    backupFile,
+    RESTORE_ARCHIVE_LIMITS,
+  ).catch(() => null);
+  if (!archiveEntries) return { ok: false, error: "archiveInvalid" };
+
+  const restoreTempDir = path.join(
+    getLauncherPaths().cache,
+    RESTORE_TEMP_DIR_NAME,
+  );
+  const unpackedBytes = archiveEntries.reduce(
+    (sum, entry) => sum + (entry.isDirectory ? 0 : entry.size),
+    0,
+  );
+
+  await fs.ensureDir(restoreTempDir);
+  if (!hasRoomFor(await getFreeBytes(restoreTempDir), unpackedBytes)) {
+    return { ok: false, error: "notEnoughSpace" };
+  }
+
   const worldExists = await fs.pathExists(resolvedWorldPath);
 
   let safetyBackupId: string | null = null;
@@ -887,6 +951,7 @@ async function restoreBackupUnsafe(
       "preRestore",
       keep,
       [backupId],
+      onProgress,
     ).catch(() => null);
 
     if (safety?.ok) safetyBackupId = safety.backup.id;
@@ -898,15 +963,20 @@ async function restoreBackupUnsafe(
     return { ok: false, error: "backupMissing" };
   }
 
-  const tempRoot = path.join(
-    getLauncherPaths().cache,
-    RESTORE_TEMP_DIR_NAME,
-    randomUUID(),
-  );
+  const tempRoot = path.join(restoreTempDir, randomUUID());
 
   try {
     await fs.ensureDir(tempRoot);
-    await extractZip(backupFile, tempRoot, RESTORE_ARCHIVE_LIMITS);
+    await extractZip(
+      backupFile,
+      tempRoot,
+      RESTORE_ARCHIVE_LIMITS,
+      undefined,
+      onProgress
+        ? (processedBytes, totalBytes) =>
+            onProgress({ phase: "extracting", processedBytes, totalBytes })
+        : undefined,
+    );
 
     const source = await resolveExtractedWorld(tempRoot);
     if (!source) return { ok: false, error: "archiveInvalid" };
@@ -975,10 +1045,11 @@ export function restoreWorldBackup(
   backupId: string,
   worldPath: string,
   keep: number = DEFAULT_WORLD_BACKUP_KEEP,
+  onProgress?: (progress: WorldBackupProgressUpdate) => void,
 ): Promise<WorldBackupRestoreResult> {
   return enqueue(async () => {
     try {
-      return await restoreBackupUnsafe(backupId, worldPath, keep);
+      return await restoreBackupUnsafe(backupId, worldPath, keep, onProgress);
     } catch (error) {
       console.error("Failed to restore world backup:", error);
       return { ok: false, error: "failed" } as WorldBackupRestoreResult;

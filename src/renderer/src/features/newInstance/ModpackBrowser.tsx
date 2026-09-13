@@ -74,12 +74,14 @@ export function ModpackBrowser({
   offlineReason,
   stage,
   progressPercent,
+  extractPercent,
   onPick,
 }: {
   isBusy: boolean;
   offlineReason: string | null;
   stage: ModpackDownloadStage;
   progressPercent: number;
+  extractPercent: number | null;
   onPick: (project: IProject, version: IProjectVersion) => void;
 }) {
   const { t } = useTranslation();
@@ -232,6 +234,12 @@ export function ModpackBrowser({
       ? t("modManager.extracting")
       : t("downloadProgress.title")
     : "";
+  const stagePercent =
+    stage === "download"
+      ? progressPercent
+      : stage === "extract"
+        ? extractPercent
+        : null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
@@ -617,18 +625,18 @@ export function ModpackBrowser({
                           <span className="min-w-0 flex-1 truncate">
                             {stageLabel}
                           </span>
-                          {stage === "download" && (
+                          {stagePercent !== null && (
                             <span className="font-mono tabular-nums text-faint">
-                              {progressPercent}%
+                              {stagePercent}%
                             </span>
                           )}
                         </div>
                         <Progress
-                          value={stage === "extract" ? 100 : progressPercent}
+                          value={stagePercent ?? 100}
                           max={100}
                           className={cn(
                             "h-1.5",
-                            stage === "extract" &&
+                            stagePercent === null &&
                               "[&_[data-slot=progress-indicator]]:animate-pulse",
                           )}
                         />

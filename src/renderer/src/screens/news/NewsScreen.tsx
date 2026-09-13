@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ChevronDown,
   CircleAlert,
   CloudOff,
   Loader2,
@@ -19,6 +18,7 @@ import {
 } from "@/components/ui/empty";
 import { Hint } from "@renderer/components/Hint";
 import { formatRelative } from "@renderer/utilities/date";
+import { useLoadOnScroll } from "@renderer/utilities/useLoadOnScroll";
 import { NewsCard } from "@renderer/features/news/feed";
 import {
   GridCard,
@@ -51,6 +51,7 @@ export function NewsScreen() {
     cursor,
     isLoading,
     isLoadingMore,
+    loadMoreFailed,
     hasError,
     partialError,
     refresh,
@@ -61,6 +62,12 @@ export function NewsScreen() {
 
   const currentRelease = useCurrentRelease();
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+
+  const setFeedScroller = useLoadOnScroll(
+    Boolean(cursor) && !isLoadingMore && !loadMoreFailed,
+    () => void loadMore(),
+    cards.length,
+  );
 
   const markImageFailed = useCallback((url?: string) => {
     if (!url) return;
@@ -114,7 +121,7 @@ export function NewsScreen() {
       )}
     </Empty>
   ) : (
-    <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+    <div ref={setFeedScroller} className="min-h-0 flex-1 overflow-y-auto pr-1">
       <div className="grid grid-cols-12 gap-3">
         {hero && (
           <div className="col-span-7 h-[15rem]">
@@ -146,20 +153,28 @@ export function NewsScreen() {
         </div>
       )}
 
-      {cursor && (
-        <Button
-          variant="outline"
-          className="mt-3 h-9 w-full"
-          disabled={isLoadingMore}
-          onClick={() => void loadMore()}
-        >
+      {cursor && (isLoadingMore || loadMoreFailed) && (
+        <div className="mt-3 flex h-9 items-center justify-center gap-2 text-xs text-muted-foreground">
           {isLoadingMore ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
-            <ChevronDown className="size-4" />
+            <>
+              <CircleAlert className="size-3.5 shrink-0 text-warning" />
+              <span className="min-w-0 truncate">
+                {t("news.loadMoreFailed")}
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 shrink-0 px-2 text-xs"
+                onClick={() => void loadMore()}
+              >
+                <RefreshCcw className="size-3.5" />
+                {t("common.retry")}
+              </Button>
+            </>
           )}
-          {t("news.loadMore")}
-        </Button>
+        </div>
       )}
     </div>
   );

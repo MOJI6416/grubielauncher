@@ -131,6 +131,7 @@ import {
 import { installQueue } from "@renderer/features/install/installQueue";
 import { ContentRow, ROW_HEIGHT } from "./ContentRow";
 import { ContentDetails, DetailProgress } from "./ContentDetails";
+import { withExtractProgress } from "@renderer/utilities/archiveProgress";
 import { ImportLocalDialog, ImportMode } from "./ImportLocalDialog";
 
 const api = window.api;
@@ -275,6 +276,11 @@ export function ContentManager({
   const [modpackStage, setModpackStage] = useState<
     "download" | "extract" | null
   >(null);
+  const [extractPercent, setExtractPercent] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!modpackStage) setExtractPercent(null);
+  }, [modpackStage]);
   const [isTranslating, setIsTranslating] = useState(false);
   const [gameVersions, setGameVersions] = useState<IVersion[]>([]);
   const [trashEntries, setTrashEntries] = useState<TrashEntry[]>([]);
@@ -1222,7 +1228,9 @@ export function ContentManager({
         );
 
         setModpackStage("extract");
-        await api.fs.extractZip(archivePath, targetPath);
+        await withExtractProgress(archivePath, setExtractPercent, () =>
+          api.fs.extractZip(archivePath, targetPath),
+        );
         await api.fs.rimraf(archivePath);
 
         const modpack = await api.modManager.checkModpack(
@@ -1485,12 +1493,12 @@ export function ContentManager({
   const modpackProgress = useMemo<DetailProgress | null>(() => {
     if (!modpackStage) return null;
     if (modpackStage === "extract")
-      return { label: t("modManager.extracting"), percent: null };
+      return { label: t("modManager.extracting"), percent: extractPercent };
     return {
       label: t("downloadProgress.title"),
       percent: downloadInfo?.progressPercent ?? 0,
     };
-  }, [downloadInfo, modpackStage, t]);
+  }, [downloadInfo, extractPercent, modpackStage, t]);
 
   const isEmptyLibrary =
     scope === "library" &&
@@ -2353,8 +2361,12 @@ export function ContentManager({
                 ),
               );
 
+              const archivePath = first.filePath;
+
               setModpackStage("extract");
-              await api.fs.extractZip(first.filePath, targetPath);
+              await withExtractProgress(archivePath, setExtractPercent, () =>
+                api.fs.extractZip(archivePath, targetPath),
+              );
 
               const modpack = await api.modManager.checkModpack(
                 targetPath,

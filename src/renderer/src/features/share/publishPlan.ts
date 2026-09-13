@@ -6,7 +6,8 @@ export type PublishFieldId =
   | "options"
   | "arguments"
   | "world"
-  | "other";
+  | "other"
+  | "loader";
 
 export type PublishMode = "new" | "update";
 
@@ -48,6 +49,7 @@ const UPDATE_FIELDS: PublishFieldId[] = [
   "name",
   "logo",
   "mods",
+  "loader",
   "servers",
   "options",
   "arguments",
@@ -73,6 +75,7 @@ const DIFF_KEY: Record<PublishFieldId, string> = {
   arguments: "arguments",
   world: "world",
   other: "other",
+  loader: "loader",
 };
 
 export function emptyPublishSelection(): PublishSelection {
@@ -85,6 +88,7 @@ export function emptyPublishSelection(): PublishSelection {
     arguments: false,
     world: false,
     other: false,
+    loader: false,
   };
 }
 

@@ -1,9 +1,11 @@
 import { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  ArrowUp,
   Boxes,
   Cpu,
   Info,
+  Layers,
   Loader2,
   MemoryStick,
   NotebookPen,
@@ -87,6 +89,8 @@ export interface InstanceOverviewProps {
   argumentCount: number;
   statistics: IVersionStatistics | null;
   memoryMb: number;
+  loaderFact?: { currentId?: string; update?: string };
+  onOpenLoader?: () => void;
   actions: OverviewAction[];
   statuses?: ReactNode;
   banner?: ReactNode;
@@ -277,6 +281,33 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
             className="shrink-0"
           >
             <FactRows surface="card">
+              {props.loaderFact && (
+                <FactRow
+                  icon={<Layers className="size-3.5" />}
+                  label={t("versions.loader")}
+                  value={
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate font-mono">
+                        {props.loaderFact.currentId ?? "—"}
+                      </span>
+                      {props.loaderFact.update && (
+                        <span className="flex shrink-0 items-center gap-0.5 font-mono text-warning">
+                          <ArrowUp className="size-3" />
+                          {props.loaderFact.update}
+                        </span>
+                      )}
+                    </span>
+                  }
+                  hint={
+                    props.loaderFact.update
+                      ? t("loaderUpdate.available", {
+                          version: props.loaderFact.update,
+                        })
+                      : props.loaderFact.currentId
+                  }
+                  onSelect={props.onOpenLoader}
+                />
+              )}
               <FactRow
                 icon={<Cpu className="size-3.5" />}
                 label={t("versions.facts.java")}

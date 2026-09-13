@@ -142,6 +142,7 @@ export async function joinFriendWorld(
         s0,
         account?.accessToken || "",
         modpackData.data,
+        account,
       );
 
       const restored = await restoreOwnServers(version.versionPath, ownServers);

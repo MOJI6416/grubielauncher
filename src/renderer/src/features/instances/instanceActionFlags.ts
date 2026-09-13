@@ -7,6 +7,7 @@ export interface InstanceActionFlagsInput {
   shareCode?: string;
   downloadedVersion?: boolean;
   owner?: string;
+  ownerId?: string;
   loaderName?: Loader;
   hasAccount: boolean;
   isOwnerVersion: boolean;
@@ -22,6 +23,7 @@ export function getInstanceActionFlags(input: InstanceActionFlagsInput) {
     shareCode,
     downloadedVersion,
     owner,
+    ownerId,
     loaderName,
     hasAccount,
     isOwnerVersion,
@@ -31,11 +33,14 @@ export function getInstanceActionFlags(input: InstanceActionFlagsInput) {
     isNetwork,
   } = input;
 
+  const hasOwnerRecord = !!owner || !!ownerId;
+  const mayActAsOwner = !hasOwnerRecord || !hasAccount || isOwnerVersion;
+
   const showShareAction = hasVersion && !shareCode;
   const showShareManagementAction =
-    hasVersion && !!shareCode && !downloadedVersion;
+    hasVersion && !!shareCode && !downloadedVersion && mayActAsOwner;
   const showPublishActions =
-    hasPublishDiff && !downloadedVersion && !!shareCode;
+    hasPublishDiff && !downloadedVersion && !!shareCode && mayActAsOwner;
   const showSyncAction = versionDiffence === "old" && !!downloadedVersion;
   const showServerManagerAction = hasVersion;
   const showRemoteActions =
@@ -46,10 +51,8 @@ export function getInstanceActionFlags(input: InstanceActionFlagsInput) {
     showServerManagerAction;
   const canFetchServerCore =
     isInternetOnline && (!loaderRequiresBackend(loaderName) || isNetwork);
-  const canRenameVersion =
-    hasVersion && (!owner || !hasAccount || isOwnerVersion || !!downloadedVersion);
-  const canEditLogo =
-    hasVersion && !downloadedVersion && (!owner || !hasAccount || isOwnerVersion);
+  const canRenameVersion = hasVersion && (mayActAsOwner || !!downloadedVersion);
+  const canEditLogo = hasVersion && !downloadedVersion && mayActAsOwner;
 
   return {
     showShareAction,

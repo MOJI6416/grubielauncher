@@ -37,13 +37,15 @@ import {
   cancelQueuedInstall,
   toggleInstallPause,
 } from "./installActions";
+import type { VersionInstallOperation } from "@/types/InstallationProgress";
 import {
   buildDownloadStats,
   buildStageRows,
   clampPercent,
   estimateEta,
-  stagePlan,
+  resolveStagePlan,
   stageElapsed,
+  stageLabelKey,
   stripGroupPrefix,
 } from "./progressModel";
 import { TaskOutcome, TaskRecord, taskDuration } from "./taskHistory";
@@ -117,6 +119,29 @@ function MirrorChip() {
   );
 }
 
+function OperationTitle({
+  operation,
+}: {
+  operation: VersionInstallOperation;
+}) {
+  const { t } = useTranslation();
+
+  switch (operation) {
+    case "integrity":
+      return t("installationProgress.integrityTitle");
+    case "loader":
+      return t("installationProgress.loaderTitle");
+    case "server":
+      return t("installationProgress.serverTitle");
+    case "content":
+      return t("installationProgress.contentTitle");
+    case "update":
+      return t("installationProgress.updateTitle");
+    default:
+      return null;
+  }
+}
+
 function ActiveTask() {
   const progress = useAtomValue(installProgressAtom);
   const downloader = useAtomValue(downloaderInfoAtom);
@@ -167,9 +192,7 @@ function ActiveTask() {
         </Hint>
         {progress.operation !== "install" && (
           <span className="shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-            {progress.operation === "integrity"
-              ? t("installationProgress.integrityTitle")
-              : t("installationProgress.serverTitle")}
+            <OperationTitle operation={progress.operation} />
           </span>
         )}
         <span className="shrink-0 text-[10px] text-faint">
@@ -205,7 +228,7 @@ function ActiveTask() {
             ? pauseState === "pending"
               ? t("installationProgress.pausing")
               : t("installationProgress.paused")
-            : t(`installationProgress.stages.${currentStage}`)}
+            : t(stageLabelKey(currentStage, progress.operation))}
         </span>
         {eta !== null && eta > 0 && !isPaused && (
           <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint">
@@ -361,7 +384,7 @@ function StageLog() {
   if (!progress || stages.length === 0) return null;
 
   const now = Date.now();
-  const rows = buildStageRows(stages, stagePlan(progress.operation)).slice(
+  const rows = buildStageRows(stages, resolveStagePlan(progress)).slice(
     -STAGE_LOG_VISIBLE,
   );
 
@@ -403,7 +426,7 @@ function StageLog() {
                         : "text-faint"
                   }`}
                 >
-                  {t(`installationProgress.stages.${row.stage}`)}
+                  {t(stageLabelKey(row.stage, progress.operation))}
                 </span>
                 <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint">
                   {row.event

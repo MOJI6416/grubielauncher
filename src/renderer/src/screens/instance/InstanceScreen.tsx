@@ -49,6 +49,7 @@ import {
   hasInstanceBanner,
 } from "@renderer/features/instances/InstanceBanner";
 import { InstanceLaunchProfileCard } from "@renderer/features/instances/InstanceLaunchProfileCard";
+import { getDeleteCopy } from "@renderer/features/instances/deleteGates";
 import {
   InstanceOverviewTab,
   OverviewAction,
@@ -70,6 +71,15 @@ import { hasUpdateDetails } from "@renderer/features/instances/updateSummary";
 import { useInstanceContents } from "@renderer/features/instances/useInstanceInsights";
 import { useInstanceEditor } from "@renderer/features/instances/useInstanceEditor";
 import { useInstanceUpdateDetails } from "@renderer/features/instances/useInstanceUpdateDetails";
+import { InstanceLoaderCard } from "@renderer/features/instances/InstanceLoaderCard";
+import { LoaderVersionPanel } from "@renderer/features/instances/LoaderVersionPanel";
+import { findLoaderUpdate } from "@renderer/features/instances/loaderUpdate";
+import { useInstanceDataRevision } from "@renderer/features/instances/instanceRevision";
+import {
+  useLoaderCatalog,
+  useLoaderRequirements,
+} from "@renderer/features/instances/useLoaderVersions";
+import { isModdedLoader } from "@/shared/loaderCompat";
 import { useSyncGuard } from "@renderer/features/instances/useSyncGuard";
 import {
   LazyArguments,
@@ -103,12 +113,14 @@ export function InstanceScreen({
   const [croppedImage, setCroppedImage] = useState("");
   const [isOpenDel, setIsOpenDel] = useState(false);
   const [isResetOpen, setIsResetOpen] = useState(false);
+  const [isLoaderPanelOpen, setIsLoaderPanelOpen] = useState(false);
 
   const routeTab =
     currentRoute.name === "instance" ? currentRoute.tab : undefined;
 
   const setActiveTab = (tab: InstanceTab) => {
     if (currentRoute.name !== "instance") return;
+    if (tab !== "settings") setIsLoaderPanelOpen(false);
 
     navigate({
       name: "instance",
@@ -157,6 +169,38 @@ export function InstanceScreen({
     summary: updateDetails.summary,
     onSync: () => void share.sync(),
   });
+
+  const dataRevision = useInstanceDataRevision();
+  const loaderName = version?.version.loader.name;
+  const isModded = isModdedLoader(loaderName);
+  const loaderCatalog = useLoaderCatalog(
+    isModded ? loaderName : undefined,
+    version?.version.version.id,
+  );
+  const loaderRequirements = useLoaderRequirements(
+    version?.versionPath,
+    loaderName,
+    isLoaderPanelOpen && routeTab === "settings",
+    dataRevision,
+  );
+  const loaderUpdate = findLoaderUpdate(
+    loaderCatalog.versions ?? [],
+    version?.version.loader.version?.id,
+  );
+  const modTitles = useMemo(() => {
+    const titles = new Map<string, string>();
+    for (const mod of draft.mods) {
+      for (const file of mod.version?.files ?? []) {
+        if (file.filename) titles.set(file.filename, mod.title);
+      }
+    }
+    return titles;
+  }, [draft.mods]);
+
+  const openLoaderPanel = () => {
+    setIsLoaderPanelOpen(true);
+    setActiveTab("settings");
+  };
 
   const tabs = useMemo(
     () =>
@@ -446,7 +490,11 @@ export function InstanceScreen({
                   onSelect={() => setIsOpenDel(true)}
                 >
                   <Trash />
-                  {t("versions.deleteInstance")}
+                  {t(
+                    getDeleteCopy({
+                      foreignPublication: editor.isForeignPack,
+                    }).menuKey,
+                  )}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -479,9 +527,53 @@ export function InstanceScreen({
               versionPath={version.versionPath}
               disabled={isLoading}
             />
+          ) : activeTab === "settings" &&
+            version &&
+            isLoaderPanelOpen &&
+            isModded ? (
+            <LoaderVersionPanel
+              instance={version}
+              versions={loaderCatalog.versions}
+              isCatalogLoading={loaderCatalog.isLoading}
+              catalogFailed={loaderCatalog.failed}
+              onReloadCatalog={loaderCatalog.reload}
+              scan={loaderRequirements.scan}
+              isScanning={loaderRequirements.isLoading}
+              modTitles={modTitles}
+              blockInput={{
+                isReadOnly: isForeignInstance,
+                hasAccount: !!account,
+                isRunning: isVersionRunning,
+                isInstallActive,
+                isBusy: isLoading,
+                isOnline: isInternetOnline,
+              }}
+              isChanging={isLoading && loadingType === "loader"}
+              isPublishedByOwner={
+                !!version.version.shareCode &&
+                !version.version.downloadedVersion &&
+                !isForeignInstance
+              }
+              hasServer={!!server}
+              onChange={(targetId) => void editor.changeLoaderVersion(targetId)}
+              onClose={() => setIsLoaderPanelOpen(false)}
+            />
           ) : activeTab === "settings" && version ? (
             <div className="grid h-full min-h-0 grid-cols-[minmax(0,440px)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-3">
               <div className="flex min-h-0 flex-col gap-3">
+                {isModded && (
+                  <InstanceLoaderCard
+                    loader={version.version.loader.name}
+                    currentId={version.version.loader.version?.id}
+                    minecraftVersion={version.version.version.id}
+                    update={loaderUpdate}
+                    isChecking={loaderCatalog.isLoading}
+                    catalogFailed={loaderCatalog.failed}
+                    isChanging={isLoading && loadingType === "loader"}
+                    onOpen={() => setIsLoaderPanelOpen(true)}
+                  />
+                )}
+
                 <InstanceSettingsPanel
                   overrides={draft.overrides}
                   disabled={isLoading || isVersionRunning || isForeignInstance}
@@ -578,6 +670,15 @@ export function InstanceScreen({
               }
               statistics={editor.statistics}
               memoryMb={resolved.xmx}
+              loaderFact={
+                isModded
+                  ? {
+                      currentId: version.version.loader.version?.id,
+                      update: loaderUpdate,
+                    }
+                  : undefined
+              }
+              onOpenLoader={openLoaderPanel}
               actions={overviewActions}
               statuses={identityStatuses}
               banner={banner}

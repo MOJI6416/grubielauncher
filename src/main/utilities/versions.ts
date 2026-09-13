@@ -101,6 +101,7 @@ async function resolveGrubieConfRoot(
 export async function importVersion(
   filePath: string,
   tempPath: string,
+  onProgress?: (processedBytes: number, totalBytes: number) => void,
 ): Promise<IImportModpack> {
   const versionName = path.basename(filePath, path.extname(filePath));
   if (!versionName) {
@@ -117,7 +118,7 @@ export async function importVersion(
 
   try {
     const { extractZip } = await import("./archiver");
-    await extractZip(filePath, versionPath);
+    await extractZip(filePath, versionPath, undefined, undefined, onProgress);
 
     const grubieConf = await resolveGrubieConfRoot(versionPath);
 

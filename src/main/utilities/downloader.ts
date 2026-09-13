@@ -1164,18 +1164,15 @@ export class Downloader {
     targetPath: string,
     keepExistingWorlds = false,
   ): Promise<void> => {
-    const { extractEntries, openArchive } = await import("./archiver");
-    const zip = await openArchive(filePath);
-
-    await fs.ensureDir(targetPath);
+    const { extractZip } = await import("./archiver");
 
     const keptWorlds = keepExistingWorlds
       ? await listExistingWorldFolders(targetPath)
       : null;
 
-    await extractEntries(
-      zip.getEntries(),
-      (entryName) => getSafeExtractPath(targetPath, entryName),
+    await extractZip(
+      filePath,
+      targetPath,
       undefined,
       keptWorlds ? (entryName) => isKeptWorldEntry(entryName, keptWorlds) : undefined,
     );

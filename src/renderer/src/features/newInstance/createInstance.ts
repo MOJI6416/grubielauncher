@@ -4,7 +4,11 @@ import type { IArguments } from "@/types/IArguments";
 import type { Loader } from "@/types/Loader";
 import type { IVersion, IVersionConf } from "@/types/IVersion";
 import type { ILocalProject, IModpackExtraFile } from "@/types/ModManager";
-import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
+import {
+  VERSION_INSTALL_CANCELLED,
+  type VersionInstallStage,
+} from "@/types/InstallationProgress";
+import { VERSION_FILE_STAGES, contentPlan } from "@/shared/installPlan";
 import type { IServer } from "@/types/ServersList";
 import type { LoaderVersion } from "@/types/VersionsService";
 import { Mods } from "@renderer/classes/Mods";
@@ -346,6 +350,14 @@ export async function createInstance(
     instance = new Version(conf);
     await instance.init();
 
+    const plan: VersionInstallStage[] | undefined = skipContentDownload
+      ? undefined
+      : [
+          ...VERSION_FILE_STAGES,
+          ...contentPlan(request.mods),
+          ...(conf.loader.other?.url ? (["other"] as const) : []),
+        ];
+
     await instance.install(
       account,
       settings,
@@ -353,6 +365,7 @@ export async function createInstance(
       {
         cleanupOnCancel: true,
         keepProgressOpen: !skipContentDownload,
+        plan,
       },
       signal,
     );
@@ -372,10 +385,11 @@ export async function createInstance(
       await content.check({
         operation: "install",
         keepProgressOpen: !!conf.loader.other?.url,
+        plan,
       });
 
       if (conf.loader.other?.url) {
-        await content.downloadOther({ operation: "install" });
+        await content.downloadOther({ operation: "install", plan });
       }
 
       if (hasBlockedPaths) assertWritten(await instance.save());

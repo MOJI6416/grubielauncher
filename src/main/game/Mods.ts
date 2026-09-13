@@ -32,6 +32,12 @@ import {
   VersionInstallProgress,
   VersionInstallStage,
 } from "@/types/InstallationProgress";
+import {
+  ContentStage,
+  contentPlan,
+  contentStageOf,
+  isModdedServerCore,
+} from "@/shared/installPlan";
 import { mainWindow } from "../windows/mainWindow";
 import { OPTIONAL_PROJECT_DOWNLOAD_OPTIONS } from "../utilities/downloaderPure";
 import { DownloaderFailuresInfo } from "@/types/Downloader";
@@ -39,12 +45,11 @@ import { DownloaderFailuresInfo } from "@/types/Downloader";
 const TRASH_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const DISABLED_SUFFIX = ".disabled";
 
-const MODDED_SERVER_CORES = [
-  ServerCore.FABRIC,
-  ServerCore.QUILT,
-  ServerCore.FORGE,
-  ServerCore.NEOFORGE,
-];
+const CONTENT_STAGE_PERCENT: Record<ContentStage, number> = {
+  mods: 86,
+  packs: 87,
+  worlds: 88,
+};
 
 interface ServerModFile {
   filename: string;
@@ -75,6 +80,7 @@ export class Mods {
   private initFailed = false;
   private installOperation: VersionInstallOperation = "install";
   private installAbortSignal: AbortSignal | null = null;
+  private installPlan: VersionInstallStage[] | undefined = undefined;
   public lastFailures: DownloaderFailuresInfo | null = null;
 
   constructor(
@@ -136,6 +142,7 @@ export class Mods {
       progressPercent,
       isIndeterminate,
       details,
+      plan: this.installPlan,
     });
   }
 
@@ -166,13 +173,16 @@ export class Mods {
 
   private async runWithProgress(
     options: ModsRuntimeOptions | undefined,
+    defaultPlan: VersionInstallStage[],
     action: () => Promise<void>,
   ) {
     const previousSignal = this.installAbortSignal;
     const previousOperation = this.installOperation;
+    const previousPlan = this.installPlan;
 
     this.installAbortSignal = options?.signal ?? null;
-    this.installOperation = options?.operation ?? "install";
+    this.installOperation = options?.operation ?? "content";
+    this.installPlan = options?.plan ?? defaultPlan;
 
     let succeeded = false;
 
@@ -194,11 +204,16 @@ export class Mods {
 
       this.installAbortSignal = previousSignal;
       this.installOperation = previousOperation;
+      this.installPlan = previousPlan;
     }
   }
 
   async check(options?: ModsRuntimeOptions) {
-    await this.runWithProgress(options, () => this.checkInternal());
+    await this.runWithProgress(
+      options,
+      contentPlan(this.conf.loader.mods, this.server),
+      () => this.checkInternal(),
+    );
   }
 
   private async checkInternal() {
@@ -314,7 +329,7 @@ export class Mods {
               url: file.localPath
                 ? pathToFileURL(file.localPath).href
                 : file.url,
-              group: "mods",
+              group: contentStageOf(mod.projectType),
               sha1: file.sha1,
               size: file.size,
             });
@@ -336,23 +351,10 @@ export class Mods {
       }
     }
 
-    this.sendInstallProgress("mods", 86, true);
-    this.lastFailures = await this.downloader.downloadFiles(
-      downloadFiles,
-      this.installAbortSignal ?? undefined,
-      OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
-    );
-    await this.installCheckpoint();
-
-    if (this.isModdedServer()) {
-      await this.syncServerMods(serverModFiles);
-      await syncServerExtraFiles(
-        this.version.versionPath,
-        this.getServerPath(),
-        await getServerSyncDirs(),
-      );
-      await this.installCheckpoint();
-    }
+    this.lastFailures = null;
+    await this.downloadContent("mods", downloadFiles);
+    await this.downloadContent("packs", downloadFiles);
+    await this.downloadContent("worlds", downloadFiles);
 
     for (const zipPath of [...new Set(worldZips)]) {
       if (!(await fs.pathExists(zipPath))) {
@@ -397,6 +399,17 @@ export class Mods {
       );
     }
 
+    if (this.isModdedServer()) {
+      this.sendInstallProgress("serverMods", 89, true);
+      await this.syncServerMods(serverModFiles);
+      await syncServerExtraFiles(
+        this.version.versionPath,
+        this.getServerPath(),
+        await getServerSyncDirs(),
+      );
+      await this.installCheckpoint();
+    }
+
     const tasks: Promise<string[]>[] = [
       this.comparison(ProjectType.MOD),
       this.comparison(ProjectType.RESOURCEPACK),
@@ -418,7 +431,7 @@ export class Mods {
       tasks.push(this.comparison(ProjectType.PLUGIN));
     }
 
-    this.sendInstallProgress("mods", 90, true);
+    this.sendInstallProgress("cleanup", 90, true);
     const quarantined = (await Promise.all(tasks)).flat();
     this.sendQuarantineNotice(quarantined);
     await this.installCheckpoint();
@@ -426,7 +439,37 @@ export class Mods {
   }
 
   private isModdedServer(): boolean {
-    return !!this.server && MODDED_SERVER_CORES.includes(this.server.core);
+    return isModdedServerCore(this.server?.core);
+  }
+
+  private async downloadContent(stage: ContentStage, items: DownloadItem[]) {
+    const batch = items.filter((item) => item.group === stage);
+    if (batch.length === 0) return;
+
+    this.sendInstallProgress(stage, CONTENT_STAGE_PERCENT[stage], true);
+    this.mergeFailures(
+      await this.downloader.downloadFiles(
+        batch,
+        this.installAbortSignal ?? undefined,
+        OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
+      ),
+    );
+    await this.installCheckpoint();
+  }
+
+  private mergeFailures(next: DownloaderFailuresInfo | null) {
+    if (!next) return;
+
+    const previous = this.lastFailures;
+    this.lastFailures = previous
+      ? {
+          ...previous,
+          totalItems: previous.totalItems + next.totalItems,
+          completedItems: previous.completedItems + next.completedItems,
+          failedItems: previous.failedItems + next.failedItems,
+          failures: [...previous.failures, ...next.failures],
+        }
+      : next;
   }
 
   private getServerPath() {
@@ -526,29 +569,13 @@ export class Mods {
     }
 
     if (downloads.length > 0) {
-      const serverFailures = await this.downloader.downloadFiles(
-        downloads,
-        this.installAbortSignal ?? undefined,
-        OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
+      this.mergeFailures(
+        await this.downloader.downloadFiles(
+          downloads,
+          this.installAbortSignal ?? undefined,
+          OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
+        ),
       );
-
-      if (serverFailures) {
-        this.lastFailures = this.lastFailures
-          ? {
-              totalItems:
-                this.lastFailures.totalItems + serverFailures.totalItems,
-              completedItems:
-                this.lastFailures.completedItems +
-                serverFailures.completedItems,
-              failedItems:
-                this.lastFailures.failedItems + serverFailures.failedItems,
-              failures: [
-                ...this.lastFailures.failures,
-                ...serverFailures.failures,
-              ],
-            }
-          : serverFailures;
-      }
     }
   }
 
@@ -688,7 +715,9 @@ export class Mods {
   }
 
   async downloadOther(options?: ModsRuntimeOptions) {
-    await this.runWithProgress(options, () => this.downloadOtherInternal());
+    await this.runWithProgress(options, ["other"], () =>
+      this.downloadOtherInternal(),
+    );
   }
 
   private async downloadOtherInternal() {
@@ -740,7 +769,9 @@ export class Mods {
   }
 
   async syncLive(options?: ModsRuntimeOptions) {
-    await this.runWithProgress(options, () => this.syncLiveInternal());
+    await this.runWithProgress(options, ["packs"], () =>
+      this.syncLiveInternal(),
+    );
   }
 
   private async syncLiveInternal() {
@@ -780,14 +811,14 @@ export class Mods {
         downloadFiles.push({
           destination: filepath,
           url: file.localPath ? pathToFileURL(file.localPath).href : file.url,
-          group: "mods",
+          group: "packs",
           sha1: file.sha1,
           size: file.size,
         });
       }
     }
 
-    this.sendInstallProgress("mods", 90, true);
+    this.sendInstallProgress("packs", 90, true);
     this.lastFailures = await this.downloader.downloadFiles(
       downloadFiles,
       this.installAbortSignal ?? undefined,

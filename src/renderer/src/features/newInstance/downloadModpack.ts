@@ -6,6 +6,7 @@ import type {
 } from "@/types/ModManager";
 import { pathsAtom, settingsAtom } from "@renderer/stores/atoms";
 import type { IBlockedMod } from "@renderer/utilities/blockedMods";
+import { withExtractProgress } from "@renderer/utilities/archiveProgress";
 
 const api = window.api;
 
@@ -21,6 +22,7 @@ async function readModpackFolder(
   project: IProject,
   version: IProjectVersion,
   onStage: (stage: ModpackDownloadStage) => void,
+  onExtractPercent?: (percent: number) => void,
 ): Promise<IImportedModpack | null> {
   const paths = getDefaultStore().get(pathsAtom);
   const temp = await api.path.join(paths.launcher, "temp");
@@ -31,7 +33,9 @@ async function readModpackFolder(
   );
 
   onStage("extract");
-  await api.fs.extractZip(archivePath, targetPath);
+  await withExtractProgress(archivePath, onExtractPercent, () =>
+    api.fs.extractZip(archivePath, targetPath),
+  );
 
   return api.modManager.checkModpack(targetPath, project, version);
 }
@@ -40,6 +44,7 @@ export async function downloadModpack(
   project: IProject,
   version: IProjectVersion,
   onStage: (stage: ModpackDownloadStage) => void,
+  onExtractPercent?: (percent: number) => void,
 ): Promise<ModpackDownloadResult> {
   const file = version.files[0];
   if (!file) return { status: "failed" };
@@ -85,6 +90,7 @@ export async function downloadModpack(
       project,
       version,
       onStage,
+      onExtractPercent,
     );
     await api.fs.rimraf(archivePath).catch(() => undefined);
 
@@ -103,6 +109,7 @@ export async function readBlockedModpack(
   project: IProject,
   version: IProjectVersion,
   onStage: (stage: ModpackDownloadStage) => void,
+  onExtractPercent?: (percent: number) => void,
 ): Promise<ModpackDownloadResult> {
   try {
     const modpack = await readModpackFolder(
@@ -110,6 +117,7 @@ export async function readBlockedModpack(
       project,
       version,
       onStage,
+      onExtractPercent,
     );
 
     if (!modpack) return { status: "failed" };

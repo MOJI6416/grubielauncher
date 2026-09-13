@@ -60,4 +60,5 @@ export interface IVersionClassData {
   javaPath: string
   isQuickPlayMultiplayer: boolean
   isQuickPlaySingleplayer: boolean
+  loaderRollbackId?: string
 }

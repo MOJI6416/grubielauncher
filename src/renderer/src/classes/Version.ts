@@ -1,6 +1,7 @@
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { DownloadItem } from "@/types/Downloader";
 import {
+  LoaderChangeResult,
   VERSION_INSTALL_CANCELLED,
   VersionInstallOptions,
   VersionInstallResult,
@@ -15,6 +16,7 @@ export class Version {
   public version: IVersionConf;
   public hasManifest: boolean = false;
   public javaMajorVersion: number | undefined;
+  public loaderRollbackId: string | undefined;
 
   public launcherPath: string = "";
   public minecraftPath: string = "";
@@ -40,6 +42,7 @@ export class Version {
     this.isQuickPlaySingleplayer = res.isQuickPlaySingleplayer;
     this.hasManifest = res.hasManifest;
     this.javaMajorVersion = res.javaMajorVersion;
+    this.loaderRollbackId = res.loaderRollbackId;
   }
 
   async install(
@@ -85,6 +88,45 @@ export class Version {
     }
 
     await this.init();
+  }
+
+  async changeLoader(
+    account: ILocalAccount,
+    settings: TSettings,
+    targetId: string,
+    queueSignal?: AbortSignal,
+  ) {
+    const result = await installQueue.run(
+      {
+        id: installQueue.nextId("loader"),
+        label: this.version.name,
+        loaderName: this.version.loader.name,
+      },
+      async () =>
+        (await api.version.changeLoader(
+          account,
+          settings,
+          this.version,
+          targetId,
+        )) as LoaderChangeResult | undefined,
+      queueSignal,
+    );
+
+    if (!result?.success || !result.loaderVersion) {
+      if (result?.cancelled) {
+        throw new Error(VERSION_INSTALL_CANCELLED);
+      }
+
+      throw new Error(
+        result?.error ||
+          `Failed to change the loader version of ${this.version.name}`,
+      );
+    }
+
+    this.version.loader.version = result.loaderVersion;
+    await this.init();
+
+    return result.loaderVersion;
   }
 
   async ensureAuthlib(account: ILocalAccount) {

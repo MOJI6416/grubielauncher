@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
 import grubieIcon from "@renderer/assets/icon.png";
@@ -93,9 +94,11 @@ function LauncherTile({
 
 export function FileSource({
   isBusy,
+  progressPercent,
   onPick,
 }: {
   isBusy: boolean;
+  progressPercent: number | null;
   onPick: () => void;
 }) {
   const { t } = useTranslation();
@@ -135,6 +138,20 @@ export function FileSource({
         {isBusy ? <Loader2 className="animate-spin" /> : <FolderInput />}
         {t("newInstance.chooseFile")}
       </Button>
+
+      {isBusy && progressPercent !== null && (
+        <div className="grid w-full gap-1.5">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="min-w-0 flex-1 truncate">
+              {t("modManager.extracting")}
+            </span>
+            <span className="font-mono tabular-nums text-faint">
+              {progressPercent}%
+            </span>
+          </div>
+          <Progress value={progressPercent} max={100} className="h-1.5" />
+        </div>
+      )}
     </SourceShell>
   );
 }

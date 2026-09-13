@@ -19,7 +19,6 @@ import { toast } from "sonner";
 import {
   ArrowDown,
   CheckCheck,
-  ChevronUp,
   CircleAlert,
   Clock3,
   Gamepad2,
@@ -61,6 +60,7 @@ import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { cn } from "@/lib/utils";
 import { formatClock } from "@renderer/utilities/date";
 import { authDataAtom } from "@renderer/stores/atoms";
+import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import type { IModpack } from "@/types/Backend";
 import type { Version } from "@renderer/classes/Version";
 import {
@@ -79,6 +79,7 @@ import {
 const api = window.api;
 
 const UNREAD_ANCHOR_OFFSET = 44;
+const EARLIER_LOAD_THRESHOLD = 160;
 const LINK_PATTERN = /(https?:\/\/[^\s]+)/gi;
 const IMAGE_FILE_PATTERN = /\.(apng|gif|jpe?g|png|webp)$/i;
 const TRUSTED_LINK_HOSTS = ["grubielauncher.com"];
@@ -355,40 +356,71 @@ function ChatSurfaceComponent({
     anchorRef.current = anchor;
   }, [entries, onLoadEarlier]);
 
-  const setViewport = useCallback((node: HTMLDivElement | null) => {
-    const viewport =
-      node?.querySelector<HTMLDivElement>(
-        '[data-slot="scroll-area-viewport"]',
-      ) ?? null;
-    if (!viewport || viewport === viewportRef.current) return;
+  const showEarlierRef = useLatestRef(showEarlier);
+  const canLoadEarlierRef = useLatestRef(
+    Boolean(onLoadEarlier) &&
+      hasMoreHistory &&
+      !isLoadingEarlier &&
+      !isLoadingHistory &&
+      !historyError,
+  );
 
-    detachRef.current?.();
-    detachRef.current = null;
-    viewportRef.current = viewport;
+  const setViewport = useCallback(
+    (node: HTMLDivElement | null) => {
+      const viewport =
+        node?.querySelector<HTMLDivElement>(
+          '[data-slot="scroll-area-viewport"]',
+        ) ?? null;
+      if (!viewport || viewport === viewportRef.current) return;
 
-    const handleScroll = () => {
-      const distance =
-        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
-      const atBottom = distance < 48;
+      detachRef.current?.();
+      detachRef.current = null;
+      viewportRef.current = viewport;
 
-      atBottomRef.current = atBottom;
-      setIsAtBottom(atBottom);
-      if (atBottom) setMissedCount(0);
-    };
+      const handleScroll = () => {
+        const distance =
+          viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+        const atBottom = distance < 48;
 
-    viewport.addEventListener("scroll", handleScroll, { passive: true });
-    detachRef.current = () =>
-      viewport.removeEventListener("scroll", handleScroll);
+        atBottomRef.current = atBottom;
+        setIsAtBottom(atBottom);
+        if (atBottom) setMissedCount(0);
+      };
 
-    if (atBottomRef.current) viewport.scrollTop = viewport.scrollHeight;
-    handleScroll();
+      const loadEarlierNearTop = () => {
+        if (viewport.scrollTop > EARLIER_LOAD_THRESHOLD) return;
+        if (!canLoadEarlierRef.current) return;
+        if (Date.now() < jumpUntilRef.current) return;
+        showEarlierRef.current();
+      };
 
-    requestAnimationFrame(() => {
-      if (!atBottomRef.current) return;
-      viewport.scrollTop = viewport.scrollHeight;
+      const handleUserScroll = () => {
+        handleScroll();
+        loadEarlierNearTop();
+      };
+
+      const handleWheel = (event: WheelEvent) => {
+        if (event.deltaY < 0) loadEarlierNearTop();
+      };
+
+      viewport.addEventListener("scroll", handleUserScroll, { passive: true });
+      viewport.addEventListener("wheel", handleWheel, { passive: true });
+      detachRef.current = () => {
+        viewport.removeEventListener("scroll", handleUserScroll);
+        viewport.removeEventListener("wheel", handleWheel);
+      };
+
+      if (atBottomRef.current) viewport.scrollTop = viewport.scrollHeight;
       handleScroll();
-    });
-  }, []);
+
+      requestAnimationFrame(() => {
+        if (!atBottomRef.current) return;
+        viewport.scrollTop = viewport.scrollHeight;
+        handleScroll();
+      });
+    },
+    [canLoadEarlierRef, showEarlierRef],
+  );
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
     const viewport = viewportRef.current;
@@ -818,20 +850,11 @@ function ChatSurfaceComponent({
                       )}
                     </div>
                   ) : hasMoreHistory ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={isLoadingEarlier}
-                      className="h-7 gap-1.5 text-xs text-muted-foreground"
-                      onClick={showEarlier}
-                    >
-                      {isLoadingEarlier ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <ChevronUp className="size-3.5" />
+                    <span className="flex h-7 items-center">
+                      {isLoadingEarlier && (
+                        <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
                       )}
-                      {t("friends.chatLoadEarlier")}
-                    </Button>
+                    </span>
                   ) : (
                     <p className="text-[10px] tracking-wide text-faint uppercase">
                       {t("friends.chatHistoryStart")}

@@ -11,6 +11,7 @@ export interface PickerItem {
   meta?: string;
   badge?: string;
   tone?: "warning" | "muted";
+  metaTone?: "warning";
 }
 
 const ROW_HEIGHT = 30;
@@ -166,7 +167,14 @@ export function PickerList({
                   )}
 
                   {item.meta && (
-                    <span className="ml-auto shrink-0 text-[0.65rem] tabular-nums text-faint">
+                    <span
+                      className={cn(
+                        "ml-auto shrink-0 text-[0.65rem] tabular-nums",
+                        item.metaTone === "warning"
+                          ? "text-warning"
+                          : "text-faint",
+                      )}
+                    >
                       {item.meta}
                     </span>
                   )}

@@ -41,7 +41,7 @@ export function InstanceUpdateDetails({
         </Button>
       </div>
 
-      {(summary.gameVersion || summary.loader) && (
+      {(summary.gameVersion || summary.loader || summary.loaderVersion) && (
         <div className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border border-border bg-surface-2 px-3.5 py-2 text-xs">
           {summary.gameVersion && (
             <span className="flex items-center gap-1.5">
@@ -59,6 +59,14 @@ export function InstanceUpdateDetails({
               <span className="font-mono">
                 {getLoaderInfo(summary.loader.from).name} →{" "}
                 {getLoaderInfo(summary.loader.to).name}
+              </span>
+            </span>
+          )}
+          {summary.loaderVersion && (
+            <span className="flex items-center gap-1.5">
+              <span className="text-faint">{t("versions.loaderVersion")}</span>
+              <span className="font-mono">
+                {summary.loaderVersion.from} → {summary.loaderVersion.to}
               </span>
             </span>
           )}

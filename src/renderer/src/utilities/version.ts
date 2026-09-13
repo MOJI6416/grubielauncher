@@ -18,6 +18,8 @@ import {
   versionsUnreadableAtom,
 } from "@renderer/stores/atoms";
 import { isSafeVersionName } from "@/shared/versionName";
+import { contentPlan } from "@/shared/installPlan";
+import type { VersionInstallStage } from "@/types/InstallationProgress";
 import {
   consumeRecentFailure,
   describeFailure,
@@ -32,10 +34,12 @@ import {
   formatShareDiffParts,
   getShareDiffParts,
   isShareSyncInterrupted,
+  pickSyncLoaderVersion,
   preserveLocalBlockedPaths,
   shouldReportStaleLocalShareFiles,
 } from "./shareSyncPure";
 import { ownerRecordFor } from "./versionPure";
+import { loaderChangeErrorKey } from "@renderer/features/instances/loaderUpdate";
 export {
   isOwner,
   parseVersionOwner,
@@ -71,12 +75,18 @@ export function reportShareSyncInterruption(error: unknown): boolean {
   return true;
 }
 
+export function localizeLoaderChangeError(error: unknown): unknown {
+  const key = loaderChangeErrorKey(error);
+  return key ? new Error(i18n.t(key)) : error;
+}
+
 export async function syncShare(
   version: Version,
   servers: IServer[],
   settings: TSettings,
   at: string,
   modpackOverride?: IModpack,
+  account?: ILocalAccount | null,
 ) {
   if (!version || !version.version.shareCode)
     throw Error("not selected version");
@@ -85,6 +95,15 @@ export async function syncShare(
     modpackOverride ||
     (await api.backend.getModpack(at, version.version.shareCode)).data;
   if (!modpack) throw Error("not share version");
+
+  const loaderTarget = pickSyncLoaderVersion(version.version, modpack.conf);
+  if (loaderTarget && account) {
+    try {
+      await version.changeLoader(account, settings, loaderTarget);
+    } catch (error) {
+      throw localizeLoaderChangeError(error);
+    }
+  }
 
   const previousOther = version.version.loader.other;
   let isOther = false;
@@ -128,9 +147,20 @@ export async function syncShare(
 
     try {
       const versionMods = new Mods(settings, version.version, serverConf);
+      const hasOtherDownload = isOther && !!version.version.loader.other?.url;
+      const plan: VersionInstallStage[] = [
+        ...contentPlan(version.version.loader.mods, serverConf),
+        ...(hasOtherDownload ? (["other"] as const) : []),
+      ];
 
-      await versionMods.check();
-      if (isOther) await versionMods.downloadOther();
+      await versionMods.check({
+        operation: "update",
+        keepProgressOpen: hasOtherDownload,
+        plan,
+      });
+      if (isOther) {
+        await versionMods.downloadOther({ operation: "update", plan });
+      }
     } catch (error) {
       version.version.loader.mods = previousMods;
       version.version.loader.other = previousOther;
@@ -259,6 +289,8 @@ export async function checkDiffenceUpdateData(
       currentOptions: options,
       remoteOther: modpack.conf.loader.other,
       currentOther: version.loader.other,
+      remoteLoaderVersion: modpack.conf.loader.version?.id,
+      currentLoaderVersion: version.loader.version?.id,
     }),
   );
 

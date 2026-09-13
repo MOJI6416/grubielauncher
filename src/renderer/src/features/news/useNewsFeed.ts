@@ -56,6 +56,7 @@ export function useNewsFeed() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
   const [partialError, setPartialError] = useState(false);
@@ -66,6 +67,7 @@ export function useNewsFeed() {
   );
 
   const reqIdRef = useRef(0);
+  const loadingMoreRef = useRef(false);
 
   const releaseItems = useMemo(
     () => releasesToNewsItems(releases, i18n.language),
@@ -100,7 +102,10 @@ export function useNewsFeed() {
 
   const refresh = useCallback(async () => {
     const reqId = ++reqIdRef.current;
+    loadingMoreRef.current = false;
     setIsLoading(true);
+    setIsLoadingMore(false);
+    setLoadMoreFailed(false);
 
     const hiddenIds = parseHiddenSponsoredAdIds(
       window.localStorage.getItem(HIDDEN_SPONSORED_ADS_KEY),
@@ -161,9 +166,10 @@ export function useNewsFeed() {
   }, [i18n.language]);
 
   const loadMore = useCallback(async () => {
-    if (!cursor) return;
+    if (!cursor || loadingMoreRef.current) return;
 
     const reqId = reqIdRef.current;
+    loadingMoreRef.current = true;
     setIsLoadingMore(true);
 
     try {
@@ -174,6 +180,7 @@ export function useNewsFeed() {
       if (reqIdRef.current !== reqId) return;
 
       if (!answer) {
+        setLoadMoreFailed(true);
         showFailureToast(t("news.loadFailed"), undefined, {
           channels: ["backend:getNewsPage"],
           fallbackDescription: t("news.loadFailedHint"),
@@ -185,14 +192,19 @@ export function useNewsFeed() {
 
       setNews((current) => mergeNewsItems(current, page.items));
       setCursor(page.nextCursor);
+      setLoadMoreFailed(false);
     } catch (error) {
       if (reqIdRef.current !== reqId) return;
+      setLoadMoreFailed(true);
       showFailureToast(t("news.loadFailed"), error, {
         channels: ["backend:getNewsPage"],
         fallbackDescription: t("news.loadFailedHint"),
       });
     } finally {
-      if (reqIdRef.current === reqId) setIsLoadingMore(false);
+      if (reqIdRef.current === reqId) {
+        loadingMoreRef.current = false;
+        setIsLoadingMore(false);
+      }
     }
   }, [cursor, t]);
 
@@ -201,6 +213,7 @@ export function useNewsFeed() {
       setIsLoading(false);
       setHasError(false);
       setPartialError(false);
+      setLoadMoreFailed(false);
       setNews([]);
       setReleases([]);
       setCursor(null);
@@ -286,6 +299,7 @@ export function useNewsFeed() {
     cursor,
     isLoading,
     isLoadingMore,
+    loadMoreFailed,
     hasError,
     partialError,
     refresh,

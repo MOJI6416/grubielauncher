@@ -525,8 +525,7 @@
     "chatEmpty": "No messages yet",
     "chatEmptyHint": "Write first — {{nickname}} will get a notification.",
     "chatHistoryStart": "Start of the conversation",
-    "chatLoadEarlier": "Show earlier messages",
-    "chatQuoteMissing": "That message is not loaded — open «Show earlier messages»",
+    "chatQuoteMissing": "That message is not loaded yet — scroll up the conversation",
     "chatQuoteGone": "That message is no longer in the conversation",
     "chatUnreadDivider": "New messages",
     "chatSending": "Sending",
@@ -1799,7 +1798,18 @@
     "deleteBlocked": {
       "noAccount": "Pick an account to delete this instance.",
       "remoteUnavailable": "The publication can't be removed right now: that needs the internet and a signed-in account. The instance will only be deleted from this computer.",
-      "notOwner": "Only the {{nickname}} account can take this publication down. The instance will be deleted from this computer only."
+      "notOwner": "Only the {{nickname}} account can take this publication down. The instance will be deleted from this computer only.",
+      "notOwnerUnknown": "Only the player who published this instance can take it down. The instance will be deleted from this computer only."
+    },
+    "deleteCopy": {
+      "title": "Delete your copy",
+      "info": "This instance belongs to another player. Your copy, with its worlds, goes to the system trash — the publication stays up.",
+      "confirm": "Delete the copy",
+      "menu": "Delete my copy",
+      "trashed": "Your copy moved to the trash",
+      "trashedHint": "The folder stays in the system trash until you empty it. The instance is still published.",
+      "deleted": "Your copy is deleted",
+      "deletedHint": "The system trash refused the folder, so it was erased for good. The instance is still published."
     },
     "playBlocked": {
       "noAccount": "Pick an account to play."
@@ -1823,7 +1833,8 @@
     "deleteRemoteErrorHint": "The server refused to remove the publication. Nothing was deleted on this computer — try again later.",
     "unsafeFolderName": "The folder name is longer than 32 characters or contains forbidden characters. Rename the folder and restart the launcher.",
     "libraryUnreadable": "The instance library could not be read",
-    "libraryUnreadableHint": "The versions folder did not open. Nothing was deleted — the instances stay on disk. Check the folder and the drive, then try again."
+    "libraryUnreadableHint": "The versions folder did not open. Nothing was deleted — the instances stay on disk. Check the folder and the drive, then try again.",
+    "updateLoader": "Update loader version"
   },
   "app": {
     "starting": "Starting game...",
@@ -2255,7 +2266,8 @@
         "world": "world",
         "other": "other files",
         "description": "description",
-        "visibility": "catalog visibility"
+        "visibility": "catalog visibility",
+        "loader": "loader version"
       },
       "worldPrivacyHint": "The world is published without your progress: player data, statistics, advancements and the player position from level.dat stay on your computer.",
       "worldWillBeRemoved": "The world is not ticked, so it will be removed from the published pack."
@@ -2867,7 +2879,13 @@
       "versionRunning": "Close the game before restoring a world.",
       "backupMissing": "This backup no longer exists on disk.",
       "archiveInvalid": "The backup archive is damaged.",
+      "autoTooLarge": "The world is larger than 4 GB, so automatic backups are skipped to keep the disk from filling up after every session. Create backups manually.",
+      "notEnoughSpace": "There is not enough free disk space for this. Free up some space and try again.",
       "failed": "Check free disk space and try again."
+    },
+    "progress": {
+      "archiving": "Archiving the world",
+      "extracting": "Unpacking the backup"
     },
     "longOperation": "Large worlds take a few minutes to archive — please keep this window open.",
     "unknownDate": "Date unknown",
@@ -3212,6 +3230,8 @@
       "libraries": "Libraries",
       "natives": "Native libraries",
       "mods": "Mods",
+      "packs": "Resource packs and shaders",
+      "worlds": "Worlds",
       "other": "Additional files",
       "server": "Server files",
       "skins": "Skins",
@@ -3224,27 +3244,39 @@
   },
   "downloadFailures": {
     "title": "Some files were not downloaded",
-    "more": "show {{count}} more",
     "notRetryable": "Retrying will not help with these errors",
     "retryNoInstance": "Can't retry from here: the instance is not in the list. Start the install from its own screen.",
-    "less": "show less",
     "summary_one": "Downloaded {{completed}} of {{count}} file",
     "summary_other": "Downloaded {{completed}} of {{count}} files"
   },
   "installationProgress": {
     "integrityTitle": "Checking integrity",
+    "contentTitle": "Updating content",
+    "updateTitle": "Updating modpack",
     "stages": {
       "preparing": "Preparing",
-      "manifest": "Checking manifest",
+      "manifest": "Downloading version manifest",
       "java": "Preparing Java",
       "loader": "Preparing loader",
       "installer": "Running loader installer",
-      "assets": "Checking assets",
-      "files": "Checking game files",
-      "mods": "Checking modpack files",
+      "assets": "Downloading game assets",
+      "files": "Downloading game files",
+      "mods": "Downloading mods",
+      "packs": "Downloading resource packs, shaders and data packs",
+      "worlds": "Installing worlds",
+      "serverMods": "Syncing server mods",
+      "cleanup": "Checking for extra files",
       "other": "Installing additional files",
       "options": "Writing options",
       "done": "Done"
+    },
+    "integrityStages": {
+      "manifest": "Checking version manifest",
+      "assets": "Checking game assets",
+      "files": "Checking game files",
+      "mods": "Checking mods",
+      "packs": "Checking resource packs, shaders and data packs",
+      "worlds": "Checking worlds"
     },
     "installerDetails": {
       "starting": "Starting loader installer",
@@ -3270,7 +3302,8 @@
     "paused": "Paused",
     "pausing": "Pausing — waiting for the current step",
     "overallLabel": "Total",
-    "nowDownloading": "Downloading now"
+    "nowDownloading": "Downloading now",
+    "loaderTitle": "Changing loader version"
   },
   "sizes": [
     "B",
@@ -3400,7 +3433,7 @@
     "empty": "No news yet",
     "retry": "Try again",
     "refresh": "Refresh news",
-    "loadMore": "Show more",
+    "loadMoreFailed": "Could not load more news",
     "title": "News",
     "new": "New",
     "noDate": "No date",
@@ -3989,7 +4022,6 @@
     "added": "Will be added",
     "removed": "Will be removed",
     "unchanged": "{{count}} unchanged",
-    "showAll": "Show {{count}} more",
     "countAdded_one": "{{count}} added",
     "countAdded_other": "{{count}} added",
     "countUpdated_one": "{{count}} updated",
@@ -4388,5 +4420,96 @@
     "loadFailedTitle": "The catalog did not load",
     "loadFailed": "The Grubie server did not answer. Try again.",
     "loadMoreFailed": "Could not load the next page"
+  },
+  "loaderUpdate": {
+    "change": "Change version",
+    "review": "Update",
+    "available": "{{version}} is available",
+    "upToDate": "Latest stable version",
+    "checking": "Checking for updates…",
+    "catalogUnavailable": "The version list is unavailable right now",
+    "changing": "Switching version…",
+    "listLabel": "Versions",
+    "empty": "No versions for Minecraft {{version}}",
+    "filters": {
+      "stable": "Stable",
+      "all": "All"
+    },
+    "badge": {
+      "current": "current",
+      "latest": "latest",
+      "beta": "beta",
+      "previous": "previous"
+    },
+    "breaks_one": "breaks {{count}} mod",
+    "breaks_other": "breaks {{count}} mods",
+    "breaksWarning_one": "{{count}} mod may not start on this version",
+    "breaksWarning_other": "{{count}} mods may not start on this version",
+    "direction": {
+      "upgrade": "Update",
+      "downgrade": "Older version",
+      "current": "Installed"
+    },
+    "facts": {
+      "channel": "Channel",
+      "mods": "Mods",
+      "rollback": "Rollback"
+    },
+    "channel": {
+      "stable": "Stable",
+      "beta": "Beta — bugs are possible"
+    },
+    "mods": {
+      "checking": "Checking mods…",
+      "empty": "This instance has no mods",
+      "ok_one": "{{count}} mod checked — all compatible",
+      "ok_other": "{{count}} mods checked — all compatible",
+      "blocked_one": "{{count}} mod needs another version",
+      "blocked_other": "{{count}} mods need another version"
+    },
+    "rollback": {
+      "kept": "{{version}} is kept for rollback",
+      "ready": "{{version}} can be restored",
+      "none": "Available after the first change"
+    },
+    "steps": {
+      "stage": "Installs apart from the instance",
+      "verify": "Checked after installing",
+      "swap": "The previous one stays for rollback"
+    },
+    "notes": {
+      "beta": "This is a beta build: bugs are possible.",
+      "downgrade": "Some mods may not start on an older loader version.",
+      "published": "After the switch you will be offered to publish it for your players.",
+      "server": "The instance server keeps its own loader version."
+    },
+    "actions": {
+      "update": "Update to {{version}}",
+      "install": "Install {{version}}",
+      "installed": "Already installed",
+      "rollback": "Restore {{version}}"
+    },
+    "blocked": {
+      "readOnly": "This instance belongs to another player: its author sets the loader version.",
+      "noAccount": "Pick an account to change the version.",
+      "running": "Close the game to change the loader version.",
+      "installing": "Wait for the current installation to finish",
+      "busy": "Wait for the current operation to finish",
+      "offline": "An internet connection is required to download the new version."
+    },
+    "errors": {
+      "running": "The instance is running — close the game and try again.",
+      "unverified": "The new version did not install completely, so the instance stays on the previous one.",
+      "notFound": "This version is no longer available for your Minecraft version."
+    },
+    "done": "Loader switched to {{version}}",
+    "doneHint": "{{version}} is kept — you can restore it in the instance settings.",
+    "failed": "Could not change the loader version",
+    "failedHint": "The instance stays on {{version}}.",
+    "cancelled": "Version change cancelled — the instance was not changed.",
+    "requirements": {
+      "title": "Mod requirements",
+      "empty": "No mod restricts the loader version"
+    }
   }
 }

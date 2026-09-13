@@ -831,6 +831,7 @@ export class ServerGame {
   private account: ILocalAccount | undefined = undefined;
   private downloader: Downloader;
   private signal: AbortSignal | undefined = undefined;
+  private installPlan: VersionInstallStage[] | undefined = undefined;
 
   constructor(
     account: ILocalAccount | undefined,
@@ -889,6 +890,7 @@ export class ServerGame {
             progressPercent,
             isIndeterminate: true,
             subProgress,
+            plan: this.installPlan,
           };
 
     try {
@@ -907,10 +909,12 @@ export class ServerGame {
   async install(options?: {
     keepProgressOpen?: boolean;
     signal?: AbortSignal;
+    plan?: VersionInstallStage[];
   }) {
     if (!this.serverConf) return;
 
     this.signal = options?.signal;
+    this.installPlan = options?.plan;
 
     await fs.ensureDir(this.serverPath);
 

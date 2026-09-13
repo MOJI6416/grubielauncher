@@ -33,8 +33,10 @@ import {
   taskCenterViewAtom,
 } from "./installUi";
 import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { useLoadOnScroll } from "@renderer/utilities/useLoadOnScroll";
 
 const FILES_PREVIEW = 4;
+const FILES_PAGE = 40;
 
 export function FailuresView({ info }: { info: DownloaderFailuresInfo }) {
   const store = useStore();
@@ -45,7 +47,7 @@ export function FailuresView({ info }: { info: DownloaderFailuresInfo }) {
   const account = useAtomValue(accountAtom);
   const settings = useAtomValue(settingsAtom);
   const [isRetrying, setRetrying] = useState(false);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [fileLimit, setFileLimit] = useState(FILES_PREVIEW);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -53,6 +55,15 @@ export function FailuresView({ info }: { info: DownloaderFailuresInfo }) {
   }, [setFailuresSeen]);
 
   const groups = groupFailures(info.failures);
+  const largestGroup = groups.reduce(
+    (largest, group) => Math.max(largest, group.items.length),
+    0,
+  );
+  const setFilesScroller = useLoadOnScroll(
+    fileLimit < largestGroup,
+    () => setFileLimit((limit) => limit + FILES_PAGE),
+    fileLimit,
+  );
   const retryable = countRetryable(groups);
   const target = info.versionName
     ? (versions.find((item) => item.version.name === info.versionName) ?? null)
@@ -131,14 +142,14 @@ export function FailuresView({ info }: { info: DownloaderFailuresInfo }) {
         </span>
       </p>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3">
+      <div
+        ref={setFilesScroller}
+        className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3"
+      >
         <div className="flex flex-col gap-2">
           {groups.map((group) => {
             const described = describeFailure(group.info);
-            const isOpen = expanded === group.key;
-            const shown = isOpen
-              ? group.items
-              : group.items.slice(0, FILES_PREVIEW);
+            const shown = group.items.slice(0, fileLimit);
 
             return (
               <article
@@ -185,20 +196,6 @@ export function FailuresView({ info }: { info: DownloaderFailuresInfo }) {
                     </Hint>
                   ))}
                 </ul>
-
-                {group.items.length > FILES_PREVIEW && (
-                  <button
-                    type="button"
-                    className="mt-1 text-[11px] text-muted-foreground underline-offset-2 hover:underline"
-                    onClick={() => setExpanded(isOpen ? null : group.key)}
-                  >
-                    {isOpen
-                      ? t("downloadFailures.less")
-                      : t("downloadFailures.more", {
-                          count: group.items.length - FILES_PREVIEW,
-                        })}
-                  </button>
-                )}
               </article>
             );
           })}

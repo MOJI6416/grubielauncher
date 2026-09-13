@@ -98,8 +98,10 @@ import {
   IWorldBackupList,
   WorldBackupCreateResult,
   WorldBackupDeleteResult,
+  WorldBackupProgress,
   WorldBackupRestoreResult,
 } from "@/types/WorldBackup";
+import { ArchiveExtractProgress } from "@/types/Archive";
 import {
   ChunkEditResult,
   IChunkDetails,
@@ -125,10 +127,12 @@ import {
 } from "@/types/Share";
 import { RpcRendererContext } from "@/types/Rpc";
 import {
+  LoaderChangeResult,
   VersionInstallOptions,
   VersionInstallProgress,
   VersionInstallResult,
 } from "@/types/InstallationProgress";
+import type { LoaderRequirementsScan } from "@/shared/loaderCompat";
 import { NotificationClickAction } from "@/types/Notification";
 import { LauncherDeepLink } from "@/types/DeepLink";
 import type { FailureInfo } from "@/shared/errors";
@@ -330,6 +334,16 @@ export interface IElectronAPI {
       extraItems?: DownloadItem[],
       options?: VersionInstallOptions,
     ) => Promise<VersionInstallResult>;
+    changeLoader: (
+      account: ILocalAccount,
+      settings: TSettings,
+      versionConf: IVersionConf,
+      targetId: string,
+    ) => Promise<LoaderChangeResult>;
+    loaderRequirements: (
+      versionPath: string,
+      loader: Loader,
+    ) => Promise<LoaderRequirementsScan | null>;
     cancelInstall: () => Promise<boolean>;
     pauseInstall: () => Promise<boolean>;
     resumeInstall: () => Promise<boolean>;
@@ -697,7 +711,7 @@ export interface IElectronAPI {
       serverPath: string,
       conf: IServerConf,
       versionConf?: IVersionConf,
-      options?: { keepProgressOpen?: boolean },
+      options?: Pick<VersionInstallOptions, "keepProgressOpen" | "plan">,
     ) => Promise<{ success: boolean; error?: string; cancelled?: boolean }>;
     getSettings: (filePath: string) => Promise<IServerSettings | null>;
     runOptions: (
@@ -1090,6 +1104,12 @@ export interface IElectronAPI {
     onVersionInstallProgress: (
       callback: (info: VersionInstallProgress | null) => void,
     ) => () => void;
+    onWorldBackupProgress: (
+      callback: (progress: WorldBackupProgress) => void,
+    ) => () => void;
+    onArchiveExtractProgress: (
+      callback: (progress: ArchiveExtractProgress) => void,
+    ) => () => void;
     onAgentStream: (
       callback: (payload: AgentStreamEvent) => void,
     ) => () => void;
@@ -1273,6 +1293,15 @@ export const api: IElectronAPI = {
         extraItems,
         options,
       ),
+    changeLoader: (
+      account: ILocalAccount,
+      settings: TSettings,
+      versionConf: IVersionConf,
+      targetId: string,
+    ) =>
+      invoke("version:changeLoader", account, settings, versionConf, targetId),
+    loaderRequirements: (versionPath: string, loader: Loader) =>
+      invoke("version:loaderRequirements", versionPath, loader),
     cancelInstall: () => invoke("version:cancelInstall"),
     pauseInstall: () => invoke("version:pauseInstall"),
     resumeInstall: () => invoke("version:resumeInstall"),
@@ -1636,7 +1665,7 @@ export const api: IElectronAPI = {
       serverPath: string,
       conf: IServerConf,
       versionConf?: IVersionConf,
-      options?: { keepProgressOpen?: boolean },
+      options?: Pick<VersionInstallOptions, "keepProgressOpen" | "plan">,
     ) =>
       invoke(
         "server:install",
@@ -2203,6 +2232,26 @@ export const api: IElectronAPI = {
       };
       ipcRenderer.on("versionInstallProgress", listener);
       return () => ipcRenderer.off("versionInstallProgress", listener);
+    },
+
+    onWorldBackupProgress: (
+      callback: (progress: WorldBackupProgress) => void,
+    ) => {
+      const listener = (_event, progress) => {
+        callback(progress);
+      };
+      ipcRenderer.on("worlds:backupProgress", listener);
+      return () => ipcRenderer.off("worlds:backupProgress", listener);
+    },
+
+    onArchiveExtractProgress: (
+      callback: (progress: ArchiveExtractProgress) => void,
+    ) => {
+      const listener = (_event, progress) => {
+        callback(progress);
+      };
+      ipcRenderer.on("archive:extractProgress", listener);
+      return () => ipcRenderer.off("archive:extractProgress", listener);
     },
 
     onAgentStream: (callback: (payload: AgentStreamEvent) => void) => {
