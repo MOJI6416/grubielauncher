@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Boxes,
   ChartArea,
+  Copy,
   CopyPlus,
   Folder,
   Globe2,
@@ -43,6 +44,7 @@ export interface InstanceActionContext {
   onPlay: () => void;
   onPlayAnother: () => void;
   onManageTags: () => void;
+  onDuplicate: () => void;
 }
 
 export async function createDesktopShortcut(
@@ -161,6 +163,13 @@ export function buildInstanceActions(
   });
 
   const tools: InstanceAction[] = [
+    {
+      id: "duplicate",
+      label: t("versions.duplicate"),
+      icon: Copy,
+      disabled: context.isRunningInstance,
+      onSelect: context.onDuplicate,
+    },
     {
       id: "folder",
       label: t("common.openFolder"),

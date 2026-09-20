@@ -11,6 +11,7 @@ const connectToFriendShare = vi.fn(async () => ({
 }));
 const serversWrite = vi.fn(async () => true);
 const showFailureToastMock = vi.fn();
+const openNewInstanceMock = vi.fn();
 const readInstanceServersMock = vi.fn(async (..._args: unknown[]) => [] as
   | { name: string; ip: string; acceptTextures: null }[]
   | null);
@@ -34,7 +35,12 @@ beforeAll(() => {
       backend: {
         getModpack: async () => ({
           status: "ok",
-          data: { build: 7, conf: { loader: { mods: [] }, servers: [] } },
+          data: {
+            _id: "ROW-1",
+            shareCode: "SHARE-1",
+            build: 7,
+            conf: { loader: { mods: [] }, servers: [] },
+          },
         }),
       },
     },
@@ -94,7 +100,7 @@ vi.mock("@renderer/features/instances/instanceServers", () => ({
 }));
 
 vi.mock("@renderer/features/instances/newInstance", () => ({
-  openNewInstance: vi.fn(),
+  openNewInstance: (...args: unknown[]) => openNewInstanceMock(...args),
 }));
 
 vi.mock("@renderer/classes/Mods", () => ({
@@ -299,5 +305,55 @@ describe("joinFriendWorld with blocked mods", () => {
       undefined,
       expect.objectContaining({ channels: ["servers:write", "servers:read"] }),
     );
+  });
+});
+
+describe("joinFriendWorld with a build installed by code", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    checkBlockedModsMock.mockReset();
+    checkBlockedModsMock.mockResolvedValue({ blockedMods: [], mods: [] });
+    serversWrite.mockResolvedValue(true);
+    readInstanceServersMock.mockResolvedValue([]);
+  });
+
+  it("joins a build whose instance was keyed by the row id", async () => {
+    const { joinFriendWorld, atoms, store } = await load();
+
+    const guestPack = fakeInstance("Friend Pack", "ROW-1");
+    store.set(atoms.versionsAtom, [guestPack] as never);
+    store.set(atoms.accountAtom, { accessToken: "token" } as never);
+    store.set(atoms.consolesAtom, { consoles: [] });
+
+    syncShareMock.mockResolvedValue(guestPack);
+
+    await joinFriendWorld({
+      versionCode: "SHARE-1",
+      hostNickname: "Kituk",
+      slug: "abc",
+    });
+
+    expect(openNewInstanceMock).not.toHaveBeenCalled();
+    expect(runGameMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rewrites the instance to the share code it just learned", async () => {
+    const { joinFriendWorld, atoms, store } = await load();
+
+    const guestPack = fakeInstance("Friend Pack", "ROW-1");
+    store.set(atoms.versionsAtom, [guestPack] as never);
+    store.set(atoms.accountAtom, { accessToken: "token" } as never);
+    store.set(atoms.consolesAtom, { consoles: [] });
+
+    syncShareMock.mockResolvedValue(guestPack);
+
+    await joinFriendWorld({
+      versionCode: "SHARE-1",
+      hostNickname: "Kituk",
+      slug: "abc",
+    });
+
+    expect(guestPack.version.shareCode).toBe("SHARE-1");
+    expect(guestPack.save).toHaveBeenCalled();
   });
 });

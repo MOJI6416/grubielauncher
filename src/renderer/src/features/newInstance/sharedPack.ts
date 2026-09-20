@@ -1,4 +1,5 @@
 import type { IModpack as IBackendModpack } from "@/types/Backend";
+import { packShareCode } from "@renderer/features/profile/ownPacks";
 import { suggestInstanceName } from "./nameValidation";
 import {
   EMPTY_ARGUMENTS,
@@ -66,7 +67,7 @@ export function buildSharedPack(
       downloads: Number.isFinite(shared.downloads)
         ? Number(shared.downloads)
         : undefined,
-      shareCode: shared._id,
+      shareCode: packShareCode(shared),
       shareVersion: {
         ...conf,
         build: shared.build,
@@ -74,7 +75,7 @@ export function buildSharedPack(
         lastLaunch: undefined,
         lastUpdate: new Date(),
         ...sharedPackOwnership(shared),
-        shareCode: shared._id,
+        shareCode: packShareCode(shared),
       },
     },
     content: {

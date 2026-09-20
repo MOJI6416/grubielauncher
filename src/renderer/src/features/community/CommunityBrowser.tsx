@@ -39,7 +39,10 @@ import {
   versionFacetOptions,
 } from "./exploreQuery";
 import { useExploreCatalog } from "./useExploreCatalog";
-import { useInstalledShareCodes } from "./installedPacks";
+import {
+  findInstalledInstanceKey,
+  useInstalledShareCodes,
+} from "./installedPacks";
 import { usePackInstall } from "./usePackInstall";
 
 const LOAD_MORE_THRESHOLD = 180;
@@ -276,7 +279,7 @@ export function CommunityBrowser({
           ) : (
             <div className="grid gap-1.5">
               {catalog.items.map((pack) => {
-                const instanceKey = installed.get(pack.id);
+                const instanceKey = findInstalledInstanceKey(installed, pack);
 
                 return (
                   <CommunityPackCard

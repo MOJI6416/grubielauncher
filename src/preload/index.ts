@@ -326,6 +326,10 @@ export interface IElectronAPI {
   };
   version: {
     import: (filePath: string, tempPath: string) => Promise<IImportModpack>;
+    duplicate: (
+      sourceName: string,
+      targetName: string,
+    ) => Promise<IVersionConf | null>;
     init: (versionConf: IVersionConf) => Promise<IVersionClassData>;
     install: (
       account: ILocalAccount,
@@ -1276,6 +1280,8 @@ export const api: IElectronAPI = {
   version: {
     import: (filePath: string, tempPath: string) =>
       invoke("version:import", filePath, tempPath),
+    duplicate: (sourceName: string, targetName: string) =>
+      invoke("version:duplicate", sourceName, targetName),
     init: (versionConf: IVersionConf) =>
       invoke("version:init", versionConf),
     install: (

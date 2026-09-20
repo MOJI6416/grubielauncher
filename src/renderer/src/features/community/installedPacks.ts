@@ -17,3 +17,17 @@ export function useInstalledShareCodes(): Map<string, string> {
     return map;
   }, [versions]);
 }
+
+export function findInstalledInstanceKey(
+  installed: Map<string, string>,
+  pack: { id?: string; _id?: string; shareCode?: string | null },
+): string | undefined {
+  for (const key of [pack.shareCode, pack.id, pack._id]) {
+    if (!key) continue;
+
+    const found = installed.get(key);
+    if (found) return found;
+  }
+
+  return undefined;
+}

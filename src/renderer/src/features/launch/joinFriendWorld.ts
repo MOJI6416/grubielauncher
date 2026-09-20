@@ -37,6 +37,10 @@ import {
 } from "./atoms";
 import { LazyBlockedMods } from "./lazyDialogs";
 import { readInstanceServers } from "@renderer/features/instances/instanceServers";
+import {
+  adoptCanonicalShareCode,
+  findInstanceForPack,
+} from "@renderer/features/instances/shareIdentity";
 import { keepOwnServers } from "./joinServers";
 import { isInstanceRunning } from "./launchPlan";
 import { runGame } from "./runGame";
@@ -86,14 +90,22 @@ export async function joinFriendWorld(
   let ownServers: IServer[] = [];
 
   try {
-    let version = store
-      .get(versionsAtom)
-      .find((v) => v.version.shareCode === params.versionCode);
-
     const modpackData = await api.backend.getModpack(
       account?.accessToken || "",
       params.versionCode,
     );
+
+    let version =
+      (modpackData.data
+        ? findInstanceForPack(store.get(versionsAtom), modpackData.data)
+        : undefined) ??
+      store
+        .get(versionsAtom)
+        .find((v) => v.version.shareCode === params.versionCode);
+
+    if (version && modpackData.data) {
+      await adoptCanonicalShareCode(version, modpackData.data);
+    }
 
     if (!version) {
       if (!modpackData.data) {

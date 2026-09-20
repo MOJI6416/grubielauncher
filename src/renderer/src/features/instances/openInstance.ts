@@ -23,6 +23,7 @@ import {
 } from "./atoms";
 import { readInstanceServers } from "./instanceServers";
 import { instanceKey } from "./selectors";
+import { adoptCanonicalShareCode } from "./shareIdentity";
 import {
   forgetInstanceUpdates,
   recordModpackComparison,
@@ -102,6 +103,8 @@ async function resolveDiffence(
 
   const modpack = modpackData.data;
   if (!modpack) return null;
+
+  await adoptCanonicalShareCode(instance, modpack);
 
   recordModpackComparison(instanceKey(instance), instance.version, modpack);
 

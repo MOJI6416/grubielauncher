@@ -10,6 +10,7 @@ import { TSettings } from "@/types/Settings";
 import { Version } from "../game/Version";
 import { DownloadItem } from "@/types/Downloader";
 import { importVersion } from "../utilities/versions";
+import { duplicateVersion } from "../utilities/duplicateVersion";
 import { sendProgress, throttleProgress } from "../utilities/progressEvents";
 import { ArchiveExtractProgress } from "@/types/Archive";
 import { uploadMods } from "../utilities/share";
@@ -94,6 +95,7 @@ const fallbackLoaderChange: LoaderChangeResult = {
 };
 
 const isPath = check.nonEmptyString(4096);
+const isVersionName = check.nonEmptyString(32);
 const isConf = check.object();
 const isOptionalConf = check.optional(check.object());
 const isDownloadItems = check.optional(check.arrayOf(check.object(), 100000));
@@ -432,6 +434,22 @@ export function registerVersionIpc() {
         const vm = new Version(versionConf);
         await vm.init();
         return await vm.delete(account, isFull);
+      } finally {
+        lock.end();
+      }
+    },
+  );
+
+  handleSafe<IVersionConf | null, [string, string]>(
+    "version:duplicate",
+    null,
+    [isVersionName, isVersionName],
+    async (_, sourceName: string, targetName: string) => {
+      const lock = tryBeginInstallOperation(() => {});
+      if (!lock) throw new Error("install is busy");
+
+      try {
+        return await duplicateVersion(sourceName, targetName);
       } finally {
         lock.end();
       }

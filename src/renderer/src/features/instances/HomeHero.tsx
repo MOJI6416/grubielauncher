@@ -40,6 +40,7 @@ import { InstanceArt, loaderTint } from "./InstanceArt";
 import { InstanceStatusChip } from "./InstanceStatusChip";
 import { InstanceUpdateBadge } from "./InstanceUpdateBadge";
 import { countMods, instanceLastLaunch } from "./contentCounts";
+import { duplicateInstance } from "./duplicateInstance";
 import { buildInstanceActions } from "./instanceActions";
 import { instanceFlagsAtom } from "./atoms";
 import { instanceStatsAtom, runningSessionsAtom } from "./instanceStats";
@@ -114,6 +115,7 @@ export function HomeHero({
     onPlay: () => void runGame({ version: instance }),
     onPlayAnother: () => void runGame({ version: instance }),
     onManageTags: () => onManageTags(key, instance.version.name),
+    onDuplicate: () => void duplicateInstance(instance),
   });
 
   const menuGroups = actions

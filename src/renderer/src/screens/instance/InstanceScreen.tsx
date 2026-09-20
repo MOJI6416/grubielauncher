@@ -2,6 +2,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
+  Copy,
   CopySlash,
   Ellipsis,
   FolderArchive,
@@ -49,6 +50,7 @@ import {
   hasInstanceBanner,
 } from "@renderer/features/instances/InstanceBanner";
 import { InstanceLaunchProfileCard } from "@renderer/features/instances/InstanceLaunchProfileCard";
+import { duplicateInstance } from "@renderer/features/instances/duplicateInstance";
 import { getDeleteCopy } from "@renderer/features/instances/deleteGates";
 import {
   InstanceOverviewTab,
@@ -482,6 +484,17 @@ export function InstanceScreen({
                     {t("versions.copyRelativePath")}
                   </DropdownMenuItem>
                 )}
+
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  disabled={
+                    isLoading || isInstallActive || isVersionRunning || !version
+                  }
+                  onSelect={() => version && void duplicateInstance(version)}
+                >
+                  <Copy />
+                  {t("versions.duplicate")}
+                </DropdownMenuItem>
 
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

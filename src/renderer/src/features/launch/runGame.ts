@@ -8,6 +8,7 @@ import { IServer } from "@/types/ServersList";
 import { diffModpackProjects } from "@/shared/modpackDiff";
 import { resolveInstanceSettings } from "@/shared/instanceSettings";
 import { accountIdentity } from "@renderer/features/accounts/identity";
+import { adoptCanonicalShareCode } from "@renderer/features/instances/shareIdentity";
 import {
   accountAtom,
   accountsAtom,
@@ -138,6 +139,8 @@ export async function runGame(params: RunGameParams): Promise<void> {
         launchVersion.version.downloadedVersion = false;
         await launchVersion.save();
       } else if (modpackData.data) {
+        await adoptCanonicalShareCode(launchVersion, modpackData.data);
+
         const diff = await checkDiffenceUpdateData(
           {
             mods: launchVersion.version.loader.mods,

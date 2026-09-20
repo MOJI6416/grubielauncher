@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { findInstalledInstanceKey } from "@renderer/features/community/installedPacks";
 import { Hint } from "@renderer/components/Hint";
 import grubieIcon from "@renderer/assets/icon.png";
 import prismIcon from "@renderer/assets/launchers/prism.svg";
@@ -245,7 +246,10 @@ export function CodeSource({
 
           <ul className="min-h-0 flex-1 overflow-y-auto p-1">
             {own.items.map((pack) => {
-              const installedKey = own.installed.get(pack._id);
+              const installedKey = findInstalledInstanceKey(
+                own.installed,
+                pack,
+              );
 
               return (
                 <li key={pack._id}>

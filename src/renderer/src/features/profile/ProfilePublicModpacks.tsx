@@ -17,7 +17,10 @@ import { networkAtom, settingsAtom } from "@renderer/stores/atoms";
 import { navigate } from "@renderer/navigation/navigate";
 import { openNewInstance } from "@renderer/features/instances/newInstance";
 import { CommunityPackCard } from "@renderer/features/community/CommunityPackCard";
-import { useInstalledShareCodes } from "@renderer/features/community/installedPacks";
+import {
+  findInstalledInstanceKey,
+  useInstalledShareCodes,
+} from "@renderer/features/community/installedPacks";
 import { usePackInstall } from "@renderer/features/community/usePackInstall";
 
 export function ProfilePublicModpacks({
@@ -102,7 +105,7 @@ export function ProfilePublicModpacks({
           ) : (
             <div className="grid content-start gap-1.5">
               {packs.map((pack) => {
-                const instanceKey = installed.get(pack.id);
+                const instanceKey = findInstalledInstanceKey(installed, pack);
 
                 return (
                   <CommunityPackCard

@@ -89,6 +89,7 @@ import type { RunGameParams } from "@renderer/features/launch/types";
 import { GroupDialog } from "./GroupDialog";
 import { InstanceRow, InstanceTile } from "./InstanceCard";
 import { OrphanFolders, useOrphanFolders } from "./OrphanFolders";
+import { duplicateInstance } from "./duplicateInstance";
 import { buildInstanceActions } from "./instanceActions";
 import { instanceFlagsAtom } from "./atoms";
 import {
@@ -386,6 +387,7 @@ export function InstanceLibrary({
       onPlay: () => play(instance),
       onPlayAnother: () => play(instance),
       onManageTags: () => onManageTags(itemKey, instance.version.name),
+      onDuplicate: () => void duplicateInstance(instance),
     });
   };
 

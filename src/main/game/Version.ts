@@ -65,6 +65,9 @@ type VersionInstallRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
 };
 
+const AUTHLIB_INJECTOR_COORDINATES =
+  "com.github.yushijinhun:authlib-injector:";
+
 const FILES_STAGE_START_PERCENT = 62;
 const FILES_STAGE_END_PERCENT = 94;
 
@@ -1571,22 +1574,33 @@ export class Version {
     const authlib = await getAuthlibCached();
     if (!authlib) return { ok: false, reason: "unavailable" };
 
+    const staleAuthlib = this.manifest.libraries.filter(
+      (lib) =>
+        lib.name.startsWith(AUTHLIB_INJECTOR_COORDINATES) &&
+        lib.name !== authlib.name,
+    );
     const existsAuthlib = this.manifest.libraries.some(
       (lib) => lib.name === authlib.name,
     );
 
-    if (!existsAuthlib) {
-      this.manifest.libraries.push({
-        name: authlib.name,
-        downloads: {
-          artifact: {
-            url: authlib.url,
-            path: authlib.path,
-            size: authlib.size,
-            sha1: authlib.sha1,
+    if (staleAuthlib.length > 0 || !existsAuthlib) {
+      this.manifest.libraries = this.manifest.libraries.filter(
+        (lib) => !staleAuthlib.includes(lib),
+      );
+
+      if (!existsAuthlib) {
+        this.manifest.libraries.push({
+          name: authlib.name,
+          downloads: {
+            artifact: {
+              url: authlib.url,
+              path: authlib.path,
+              size: authlib.size,
+              sha1: authlib.sha1,
+            },
           },
-        },
-      });
+        });
+      }
 
       await this.writeManifest();
     }

@@ -23,6 +23,7 @@ export interface IModpack {
 
 export interface IModpackCard {
   id: string
+  shareCode?: string | null
   name: string
   description: string
   imageUrl: string

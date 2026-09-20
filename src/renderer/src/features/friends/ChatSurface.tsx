@@ -68,6 +68,7 @@ import {
   parseSystemMessage,
   type IMessage,
 } from "@/types/IMessage";
+import { packIdentityKeys } from "@renderer/features/instances/shareIdentity";
 import { buildChatRows, getDayLabel } from "./chatTimeline";
 import {
   appendedEntries,
@@ -916,7 +917,9 @@ function ChatSurfaceComponent({
                   const modpackId = isModpack ? String(message.message.value) : "";
                   const modpack = isModpack ? modpacks.get(modpackId) : undefined;
                   const modpackVersion = modpack
-                    ? versionsByShareCode.get(modpack._id)
+                    ? packIdentityKeys(modpack)
+                        .map((key) => versionsByShareCode.get(key))
+                        .find(Boolean)
                     : undefined;
                   const reactions = (message.reactions ?? []).filter(
                     (reaction) => reaction.emoji && reaction.users?.length > 0,

@@ -43,6 +43,24 @@ describe("isSharedPackOwned", () => {
 });
 
 describe("buildSharedPack", () => {
+  it("keys the instance by the share code, not by the row id", () => {
+    const { pack } = buildSharedPack(
+      modpack({ _id: "5542ae5dca494f7f8aa910f7", shareCode: "6d012725072387148fdf0f7a" }),
+      { takenNames: [] },
+    );
+
+    expect(pack.shareCode).toBe("6d012725072387148fdf0f7a");
+    expect(pack.shareVersion?.shareCode).toBe("6d012725072387148fdf0f7a");
+  });
+
+  it("falls back to the row id for a build published before share codes", () => {
+    const { pack } = buildSharedPack(modpack({ shareCode: null }), {
+      takenNames: [],
+    });
+
+    expect(pack.shareCode).toBe("code-1");
+  });
+
   it("builds a pack when the list response carries no owner", () => {
     const { pack, content } = buildSharedPack(modpack(), {
       authSub: "user-1",
