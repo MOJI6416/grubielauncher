@@ -1897,6 +1897,8 @@
       "backend": "Grubie services are temporarily unavailable."
     },
     "updateFailed": "Launcher update failed — you are on an old version",
+    "updateLoopTitle": "The update went to another copy of the launcher",
+    "updateLoopHint": "Version {{version}} is installed, but you are starting a different copy: {{path}}. Open the launcher from the desktop shortcut or reinstall it. Auto-update is paused for this copy so it doesn't loop.",
     "startupNoVersion": "No instance selected to launch",
     "startupNoVersionHint": "Pick an instance in the list on the left or install a new one.",
     "startupNoAccount": "No active account",

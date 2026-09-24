@@ -24,6 +24,12 @@ import {
 } from "./utilities/deepLink";
 import { initMirrorState } from "./utilities/mirrorState";
 import { scheduleApiRouteProbe } from "./utilities/apiRouteProbe";
+import {
+  clearUpdateAttempt,
+  isUpdateLoop,
+  readUpdateAttempt,
+  writeUpdateAttempt,
+} from "./utilities/updateLoopGuard";
 import { MIRROR_BASE } from "./utilities/mirrors";
 import { reportFailure } from "./utilities/failureBus";
 import { gameRuntime } from "./utilities/runtime";
@@ -311,7 +317,10 @@ function openMainWindowOnce() {
   createMainWindow();
 }
 
-function notifyMainWindowUpdateFailed(message: string) {
+function notifyMainWindowUpdateFailed(
+  message: string,
+  details: { reason?: "loop"; version?: string; path?: string } = {},
+) {
   openMainWindowOnce();
   showMainWindow();
   if (!mainWindow) return;
@@ -319,11 +328,12 @@ function notifyMainWindowUpdateFailed(message: string) {
   const send = () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
     if (mainWindow.webContents.isDestroyed()) return;
-    mainWindow.webContents.send("app:updateFailed", { message });
+    mainWindow.webContents.send("app:updateFailed", { message, ...details });
   };
 
-  if (mainWindow.webContents.isLoading()) {
-    mainWindow.webContents.once("did-finish-load", send);
+  const contents = mainWindow.webContents;
+  if (contents.isLoading() || !contents.getURL()) {
+    contents.once("did-finish-load", send);
     return;
   }
 
@@ -443,6 +453,33 @@ if (!gotTheLock) {
       return;
     }
 
+    const updateAttemptDir = app.getPath("userData");
+    const updateAttempt = await readUpdateAttempt(updateAttemptDir);
+    const runningCopy = { version: app.getVersion(), exe: process.execPath };
+
+    if (updateAttempt && isUpdateLoop(updateAttempt, runningCopy, Date.now())) {
+      console.warn(
+        `[Updater] ${updateAttempt.target} was installed, but ${runningCopy.exe} still runs ${runningCopy.version}; skipping the update to avoid a loop.`,
+      );
+      await writeUpdateAttempt(updateAttemptDir, {
+        ...updateAttempt,
+        at: Date.now(),
+      });
+      createMainWindow();
+      notifyMainWindowUpdateFailed(
+        `Update ${updateAttempt.target} was installed, but this copy of the launcher is still ${runningCopy.version}: ${runningCopy.exe}`,
+        {
+          reason: "loop",
+          version: updateAttempt.target,
+          path: runningCopy.exe,
+        },
+      );
+      flushPendingDeepLinks();
+      return;
+    }
+
+    if (updateAttempt) await clearUpdateAttempt(updateAttemptDir);
+
     createUpdaterWindow();
     createMainWindow({ deferShow: true });
 
@@ -509,7 +546,7 @@ if (!gotTheLock) {
       flushPendingDeepLinks();
     };
 
-    autoUpdater.on("update-downloaded", () => {
+    autoUpdater.on("update-downloaded", (info) => {
       const startedWithoutUpdate = updateFlowSettled;
       updateFlowSettled = true;
       clearUpdateWatchdog();
@@ -517,7 +554,14 @@ if (!gotTheLock) {
 
       isUpdateInstallPending = true;
       sendUpdaterStatus("downloaded");
-      setTimeout(() => autoUpdater.quitAndInstall(), 700);
+      void writeUpdateAttempt(updateAttemptDir, {
+        target: info.version,
+        from: runningCopy.version,
+        exe: runningCopy.exe,
+        at: Date.now(),
+      }).finally(() => {
+        setTimeout(() => autoUpdater.quitAndInstall(), 700);
+      });
     });
 
     autoUpdater.on("update-not-available", continueWithoutUpdate);

@@ -230,14 +230,21 @@ ipcRenderer.on(
   },
 );
 
-const pendingUpdateFailures: { message: string }[] = [];
+interface UpdateFailedPayload {
+  message: string;
+  reason?: "loop";
+  version?: string;
+  path?: string;
+}
+
+const pendingUpdateFailures: UpdateFailedPayload[] = [];
 const updateFailedSubscribers = new Set<
-  (payload: { message: string }) => void
+  (payload: UpdateFailedPayload) => void
 >();
 
 ipcRenderer.on(
   "app:updateFailed",
-  (_event: Electron.IpcRendererEvent, payload: { message: string }) => {
+  (_event: Electron.IpcRendererEvent, payload: UpdateFailedPayload) => {
     if (updateFailedSubscribers.size === 0) {
       pendingUpdateFailures.push(payload);
       return;
@@ -1088,7 +1095,7 @@ export interface IElectronAPI {
     ) => () => void;
     onLaunch: (callback: () => void) => () => void;
     onUpdateFailed: (
-      callback: (payload: { message: string }) => void,
+      callback: (payload: UpdateFailedPayload) => void,
     ) => () => void;
     onIpcError: (
       callback: (payload: {
@@ -2154,7 +2161,7 @@ export const api: IElectronAPI = {
       return () => ipcRenderer.off("launch", listener);
     },
 
-    onUpdateFailed: (callback: (payload: { message: string }) => void) => {
+    onUpdateFailed: (callback: (payload: UpdateFailedPayload) => void) => {
       updateFailedSubscribers.add(callback);
       pendingUpdateFailures.splice(0).forEach((payload) => callback(payload));
       return () => {

@@ -74,10 +74,23 @@ export function SystemEventsHost() {
 
   useEffect(() => {
     const unsubscribeUpdateFailed = api.events.onUpdateFailed((payload) => {
-      playSound("error");
-      showFailureToast(tRef.current("app.updateFailed"), payload?.message, {
-        fallbackDescription: payload?.message,
-      });
+      window.setTimeout(() => {
+        playSound("error");
+        if (payload?.reason === "loop") {
+          toast.warning(tRef.current("app.updateLoopTitle"), {
+            id: "update-loop",
+            duration: 20_000,
+            description: tRef.current("app.updateLoopHint", {
+              version: payload.version ?? "",
+              path: payload.path ?? "",
+            }),
+          });
+          return;
+        }
+        showFailureToast(tRef.current("app.updateFailed"), payload?.message, {
+          fallbackDescription: payload?.message,
+        });
+      }, 0);
     });
 
     const pendingNotices = new Set<number>();
