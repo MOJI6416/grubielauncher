@@ -23,6 +23,7 @@ import {
   parseLauncherDeepLink,
 } from "./utilities/deepLink";
 import { initMirrorState } from "./utilities/mirrorState";
+import { scheduleApiRouteProbe } from "./utilities/apiRouteProbe";
 import { MIRROR_BASE } from "./utilities/mirrors";
 import { reportFailure } from "./utilities/failureBus";
 import { gameRuntime } from "./utilities/runtime";
@@ -418,6 +419,7 @@ if (!gotTheLock) {
     await fs.ensureDir(launcherPath);
 
     void initMirrorState(launcherPath);
+    scheduleApiRouteProbe();
 
     app.on("browser-window-created", (_, window) => {
       optimizer.watchWindowShortcuts(window);

@@ -1,3 +1,5 @@
+import type { ILauncherReleaseNote } from "@/types/LauncherRelease";
+
 export interface LauncherWhatsNewState {
   whatsNew?: {
     lastSeenVersion?: string;
@@ -119,4 +121,14 @@ export function markWhatsNewSeen(
       updatedAt: new Date().toISOString(),
     },
   };
+}
+
+export function hasReleaseNotes(
+  release: ILauncherReleaseNote | null | undefined,
+): release is ILauncherReleaseNote {
+  return Boolean(
+    release &&
+      ((release.highlights?.length ?? 0) > 0 ||
+        (release.fixes?.length ?? 0) > 0),
+  );
 }

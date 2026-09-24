@@ -108,6 +108,23 @@ describe("classifyError", () => {
     expect(info.cause).toBe("blockedMod");
   });
 
+  it("explains a local file the launcher is not allowed to read", () => {
+    const info = classifyError(
+      "Refused local source outside allowed roots: D:\\Millida\\mods\\a.jar",
+    );
+
+    expect(info.cause).toBe("pathPolicy");
+    expect(info.side).toBe("launcher");
+  });
+
+  it("reports a local source that disappeared as a missing file", () => {
+    const info = classifyError(
+      "ENOENT: local source file is missing: D:\\Millida\\mods\\a.jar",
+    );
+
+    expect(info.cause).toBe("fileMissing");
+  });
+
   it("keeps cancellations recognizable", () => {
     expect(classifyError(new Error("AbortError")).cause).toBe("cancelled");
   });

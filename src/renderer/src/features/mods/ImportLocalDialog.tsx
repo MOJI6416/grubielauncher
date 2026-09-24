@@ -11,11 +11,18 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Hint } from "@renderer/components/Hint";
 import { formatBytes } from "@renderer/utilities/file";
-import { CircleAlert, FileBox, Loader2, PackageCheck } from "lucide-react";
+import {
+  CircleAlert,
+  FileBox,
+  Loader2,
+  PackageCheck,
+  PowerOff,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatDate } from "./format";
 import { ProjectIcon } from "./ProjectIcon";
+import { withEnabledFiles } from "./localImport";
 
 export type ImportMode = "import" | "restore";
 
@@ -48,6 +55,7 @@ export function ImportLocalDialog({
 
   const [isLoading, setIsLoading] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [enableDisabled, setEnableDisabled] = useState(false);
 
   const validIndexes = useMemo(
     () =>
@@ -65,12 +73,20 @@ export function ImportLocalDialog({
   const validCount = validIndexes.length;
   const allSelected = validCount > 0 && selectedCount === validCount;
 
+  const selectedDisabledCount = useMemo(
+    () =>
+      projects.filter((item, index) => selected.has(index) && item.disabled)
+        .length,
+    [projects, selected],
+  );
+
   const selectedProjects = useMemo(
     () =>
       projects
         .filter((_, index) => selected.has(index))
+        .map((item) => (enableDisabled ? withEnabledFiles(item) : item))
         .map((item) => item.project),
-    [projects, selected],
+    [enableDisabled, projects, selected],
   );
 
   const toggle = useCallback((index: number) => {
@@ -145,6 +161,20 @@ export function ImportLocalDialog({
               allSelected ? "modManager.clearSelection" : "modManager.selectAll",
             )}
           </Button>
+          {selectedDisabledCount > 0 && (
+            <label className="flex h-7 min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground">
+              <Checkbox
+                checked={enableDisabled}
+                disabled={isLoading}
+                onCheckedChange={(value) => setEnableDisabled(value === true)}
+              />
+              <span className="truncate">
+                {t("modManager.importEnableDisabled", {
+                  count: selectedDisabledCount,
+                })}
+              </span>
+            </label>
+          )}
           <span className="ml-auto font-mono text-xs tabular-nums text-faint">
             {selectedCount}/{validCount}
           </span>
@@ -209,6 +239,13 @@ export function ImportLocalDialog({
                       </span>
                     </Hint>
                   </div>
+
+                  {isValid && item.disabled && !enableDisabled && (
+                    <span className="flex shrink-0 items-center gap-1 rounded-sm bg-surface-3 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-muted-foreground">
+                      <PowerOff className="size-2.5" />
+                      {t("modManager.importWillBeDisabled")}
+                    </span>
+                  )}
 
                   {isDuplicate && (
                     <span className="flex shrink-0 items-center gap-1 rounded-sm bg-warning/15 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-warning">

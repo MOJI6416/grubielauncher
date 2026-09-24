@@ -1,6 +1,5 @@
 import {
   DependencyType,
-  IFabricMod,
   ILocalFileInfo,
   ILocalProject,
   IModpack,
@@ -45,6 +44,13 @@ import { pathToFileURL } from "url";
 import { parseCurseForgeLoaderId } from "@/shared/loaderVersions";
 import type { LoaderRequirementSyntax } from "@/shared/loaderCompat";
 import { resolveDownloadCandidates } from "./mirrors";
+import {
+  LocalModMetadata,
+  fromFabricManifest,
+  fromModsToml,
+  fromQuiltManifest,
+  packDescription,
+} from "./localModInfo";
 import {
   getDownloadSource,
   getMojangReachable,
@@ -602,9 +608,13 @@ async function readLocalModInfo(
   }
 
   const readEntry = async (entryName: string): Promise<Buffer | null> => {
-    const entry = archive.getEntry(entryName);
-    if (!entry) return null;
-    return await readEntryData(entry).catch(() => null);
+    try {
+      const entry = archive.getEntry(entryName);
+      if (!entry) return null;
+      return await readEntryData(entry);
+    } catch {
+      return null;
+    }
   };
 
   const readJsonEntry = async (entryName: string): Promise<any> => {
@@ -628,21 +638,33 @@ async function readLocalModInfo(
     return await cacheModIcon(data, path.extname(entryName)).catch(() => null);
   };
 
-  for (const entryName of ["fabric.mod.json", "quilt.mod.json"]) {
-    const fabricMod: IFabricMod | null = await readJsonEntry(entryName);
-    if (!fabricMod) continue;
+  const toModInfo = async (
+    meta: LocalModMetadata,
+  ): Promise<ILocalFileInfo> => ({
+    kind: ProjectType.MOD,
+    id: meta.id,
+    name: meta.name,
+    description: meta.description,
+    url: meta.url,
+    version: meta.version,
+    filename: fileName,
+    size: fileSize,
+    path: modPath,
+    sha1,
+    icon: await readIconEntry(meta.icon),
+  });
 
-    return {
-      ...fabricMod,
-      kind: ProjectType.MOD,
-      url: fabricMod.contact?.homepage || "",
-      filename: fileName,
-      size: fileSize,
-      path: modPath,
-      sha1,
-      icon: await readIconEntry(fabricMod.icon),
-    };
-  }
+  const fabricMeta = fromFabricManifest(
+    await readJsonEntry("fabric.mod.json"),
+    fileName,
+  );
+  if (fabricMeta) return await toModInfo(fabricMeta);
+
+  const quiltMeta = fromQuiltManifest(
+    await readJsonEntry("quilt.mod.json"),
+    fileName,
+  );
+  if (quiltMeta) return await toModInfo(quiltMeta);
 
   for (const entryName of [
     "META-INF/neoforge.mods.toml",
@@ -651,41 +673,23 @@ async function readLocalModInfo(
     const data = await readEntry(entryName);
     if (!data) continue;
 
-    const modsToml = parseModsTomlText(data.toString("utf-8"));
-    const mod = modsToml?.mods?.[0];
-    if (!mod) continue;
-
-    return {
-      kind: ProjectType.MOD,
-      description: mod.description,
-      filename: fileName,
-      size: fileSize,
-      id: mod.modId,
-      name: mod.displayName,
-      path: modPath,
-      url: mod.displayURL,
-      version: null,
-      sha1,
-      icon: await readIconEntry(mod.logoFile),
-    };
+    const tomlMeta = fromModsToml(
+      parseModsTomlText(data.toString("utf-8")),
+      fileName,
+    );
+    if (tomlMeta) return await toModInfo(tomlMeta);
   }
 
-  const packMcMeta: {
-    pack: { description: { fallback: string } | string };
-  } | null = await readJsonEntry("pack.mcmeta");
+  const packMcMeta: { pack?: unknown } | null =
+    await readJsonEntry("pack.mcmeta");
 
   if (packMcMeta?.pack) {
-    const description =
-      typeof packMcMeta.pack.description === "object"
-        ? packMcMeta.pack.description.fallback
-        : packMcMeta.pack.description;
-
     return {
       ...fallback,
       kind: packKindFromEntries(
         archive.getEntries().map((entry) => entry.entryName),
       ),
-      description,
+      description: packDescription(packMcMeta.pack),
       icon:
         (await readIconEntry("logo.png")) ?? (await readIconEntry("pack.png")),
     };

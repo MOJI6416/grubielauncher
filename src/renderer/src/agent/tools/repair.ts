@@ -4,6 +4,7 @@ import { ILocalProject, ProjectType, Provider } from "@/types/ModManager";
 import { accountAtom, settingsAtom } from "@renderer/stores/atoms";
 import { AgentTool } from "../types";
 import { forgetAllModFiles } from "@renderer/features/mods/modFiles";
+import { localTitle } from "@renderer/features/mods/entries";
 import { findInstance } from "./instances";
 import { busyError, refreshVersions, saveInstance, syncMods } from "./shared";
 
@@ -19,7 +20,7 @@ function findProject(
   const needle = String(title ?? "")
     .trim()
     .toLowerCase();
-  return mods.find((mod) => mod.title.toLowerCase() === needle);
+  return mods.find((mod) => localTitle(mod).toLowerCase() === needle);
 }
 
 export const toggleMods: AgentTool = {
@@ -172,7 +173,8 @@ export const updateMods: AgentTool = {
         (mod) =>
           !wanted ||
           wanted.some(
-            (title) => String(title).toLowerCase() === mod.title.toLowerCase(),
+            (title) =>
+              String(title).toLowerCase() === localTitle(mod).toLowerCase(),
           ),
       )
       .slice(0, MAX_UPDATE_CHECKS);

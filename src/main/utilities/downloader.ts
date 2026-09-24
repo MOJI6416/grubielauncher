@@ -251,8 +251,7 @@ export class Downloader {
             try {
               throwIfAborted();
 
-              if (!this.validateItem(item)) {
-                const error = "Invalid download item.";
+              const rejectItem = (error: string) => {
                 console.error(error, item);
                 failures.push({ item, error });
                 failedItems++;
@@ -265,6 +264,10 @@ export class Downloader {
                     groupName,
                   ),
                 );
+              };
+
+              if (!this.validateTarget(item)) {
+                rejectItem("Invalid download item.");
                 return;
               }
 
@@ -302,6 +305,12 @@ export class Downloader {
               if (fileMatches) this.downloadedBytes += size;
 
               if (!fileMatches) {
+                const sourceError = await this.validateSource(item);
+                if (sourceError) {
+                  rejectItem(sourceError);
+                  return;
+                }
+
                 await this.ensureDirectoryExists(destination);
                 throwIfAborted();
 
@@ -653,7 +662,7 @@ export class Downloader {
     } catch {}
   };
 
-  private validateItem = (item: DownloadItem): boolean => {
+  private validateTarget = (item: DownloadItem): boolean => {
     if (!item.url || typeof item.url !== "string" || item.url.trim() === "") {
       return false;
     }
@@ -683,13 +692,31 @@ export class Downloader {
     if (url.startsWith("blocked::")) return true;
     if (url.startsWith("file://")) {
       try {
-        return isReadablePath(fileURLToPath(url));
+        fileURLToPath(url);
+        return true;
       } catch {
         return false;
       }
     }
 
     return isSafeRemoteUrl(url);
+  };
+
+  private validateSource = async (
+    item: DownloadItem,
+  ): Promise<string | null> => {
+    const url = item.url.trim();
+    if (!url.startsWith("file://")) return null;
+
+    const sourcePath = fileURLToPath(url);
+    if (!isReadablePath(sourcePath)) {
+      return `Refused local source outside allowed roots: ${sourcePath}`;
+    }
+    if (!(await fs.pathExists(sourcePath))) {
+      return `ENOENT: local source file is missing: ${sourcePath}`;
+    }
+
+    return null;
   };
 
   private downloadFile = async (

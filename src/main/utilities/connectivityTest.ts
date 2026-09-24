@@ -7,9 +7,13 @@ import {
 } from '@/types/Connectivity'
 import axios from 'axios'
 import net from 'net'
+import { describeStall, probePayload } from './payloadProbe'
+import { API_PAYLOAD_PATH } from './apiRouteProbe'
 
 const HTTP_TIMEOUT_MS = 8000
 const TCP_TIMEOUT_MS = 8000
+const PAYLOAD_TIMEOUT_MS = 12000
+const PAYLOAD_MIN_BYTES = 64 * 1024
 
 interface HttpCheck {
   id: string
@@ -18,6 +22,7 @@ interface HttpCheck {
   kind: 'http'
   url: string
   okStatus: (status: number) => boolean
+  minBytes?: number
 }
 
 const isSuccess = (status: number) => status === 200 || status === 206
@@ -131,7 +136,8 @@ function buildChecks(): ConnectivityCheck[] {
     group: 'mirror',
     kind: 'http',
     url: 'https://mirror.grubielauncher.com/piston-meta/mc/game/version_manifest_v2.json',
-    okStatus: isSuccess
+    okStatus: isSuccess,
+    minBytes: PAYLOAD_MIN_BYTES
   },
   {
     id: 'modrinth_api',
@@ -154,8 +160,18 @@ function buildChecks(): ConnectivityCheck[] {
     name: 'CurseForge API (proxy)',
     group: 'mods',
     kind: 'http',
-    url: `${getApiBaseUrl()}/curseforge/categories/6`,
-    okStatus: isSuccess
+    url: `${BACKEND_URL}${API_PAYLOAD_PATH}`,
+    okStatus: isSuccess,
+    minBytes: PAYLOAD_MIN_BYTES
+  },
+  {
+    id: 'curseforge_proxy_direct',
+    name: 'CurseForge API (direct route)',
+    group: 'mods',
+    kind: 'http',
+    url: `${BACKEND_URL_DIRECT}${API_PAYLOAD_PATH}`,
+    okStatus: isSuccess,
+    minBytes: PAYLOAD_MIN_BYTES
   },
   {
     id: 'curseforge_cdn',
@@ -208,7 +224,44 @@ function buildChecks(): ConnectivityCheck[] {
   ]
 }
 
+async function runPayloadCheck(
+  check: HttpCheck,
+  minBytes: number
+): Promise<ConnectivityCheckResult> {
+  try {
+    const result = await probePayload(check.url, minBytes, PAYLOAD_TIMEOUT_MS)
+    const statusOk = check.okStatus(result.status)
+    const ok = statusOk && result.complete
+
+    return {
+      id: check.id,
+      name: check.name,
+      group: check.group,
+      target: check.url,
+      ok,
+      latencyMs: ok ? result.latencyMs : null,
+      error: !statusOk
+        ? `HTTP ${result.status}`
+        : result.complete
+          ? undefined
+          : describeStall(result.received)
+    }
+  } catch (error) {
+    return {
+      id: check.id,
+      name: check.name,
+      group: check.group,
+      target: check.url,
+      ok: false,
+      latencyMs: null,
+      error: error instanceof Error ? error.message : String(error)
+    }
+  }
+}
+
 async function runHttpCheck(check: HttpCheck): Promise<ConnectivityCheckResult> {
+  if (check.minBytes) return runPayloadCheck(check, check.minBytes)
+
   const startedAt = Date.now()
 
   try {

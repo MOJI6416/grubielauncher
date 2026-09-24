@@ -9,6 +9,7 @@ import {
   countLibraryFacets,
   humanizeFilterName,
   filterLibraryEntries,
+  findLocalDuplicates,
   matchesTextQuery,
   sortLibraryEntries,
   toggleValue,
@@ -37,6 +38,16 @@ function entry(overrides: Partial<ContentEntry> = {}): ContentEntry {
 }
 
 describe("matchesTextQuery", () => {
+  it("survives mods saved without a title or description", () => {
+    const broken = entry({
+      title: undefined as unknown as string,
+      description: undefined as unknown as string,
+    });
+
+    expect(() => matchesTextQuery(broken, "sod")).not.toThrow();
+    expect(matchesTextQuery(broken, "sodium.jar")).toBe(true);
+  });
+
   it("matches title, description and file name", () => {
     const item = entry();
     expect(matchesTextQuery(item, "sod")).toBe(true);
@@ -64,7 +75,10 @@ describe("countLibraryFacets", () => {
       entry({ key: "d", id: "d", markedDisabled: true }),
     ];
 
-    const counts = countLibraryFacets(entries, new Set(["a"]), new Set(["b"]));
+    const counts = countLibraryFacets(entries, {
+      updatable: new Set(["a"]),
+      disabled: new Set(["b"]),
+    });
 
     expect(counts.update).toBe(1);
     expect(counts.disabled).toBe(2);
@@ -73,6 +87,47 @@ describe("countLibraryFacets", () => {
     expect(counts.curseforge).toBe(1);
     expect(counts.modrinth).toBe(2);
     expect(counts.local).toBe(1);
+  });
+});
+
+describe("findLocalDuplicates", () => {
+  it("flags a local copy of a mod that is also installed from a catalog", () => {
+    const entries = [
+      entry({ key: "curseforge:1", provider: Provider.CURSEFORGE, title: "Sodium" }),
+      entry({ key: "local:sodium", provider: Provider.LOCAL, title: "Sodium (Fabric)" }),
+      entry({ key: "local:iris", provider: Provider.LOCAL, title: "Iris" }),
+    ];
+
+    expect([...findLocalDuplicates(entries)]).toEqual(["local:sodium"]);
+  });
+
+  it("ignores mods already waiting to be removed", () => {
+    const entries = [
+      entry({ key: "modrinth:x", provider: Provider.MODRINTH, title: "Sodium" }),
+      entry({
+        key: "local:sodium",
+        provider: Provider.LOCAL,
+        title: "Sodium",
+        pendingRemoved: true,
+      }),
+    ];
+
+    expect(findLocalDuplicates(entries).size).toBe(0);
+  });
+
+  it("counts duplicates as a facet", () => {
+    const entries = [
+      entry({ key: "modrinth:x", provider: Provider.MODRINTH, title: "Sodium" }),
+      entry({ key: "local:sodium", provider: Provider.LOCAL, title: "Sodium" }),
+    ];
+
+    const counts = countLibraryFacets(entries, {
+      updatable: new Set(),
+      disabled: new Set(),
+      duplicates: findLocalDuplicates(entries),
+    });
+
+    expect(counts.duplicate).toBe(1);
   });
 });
 
@@ -87,8 +142,7 @@ describe("filterLibraryEntries", () => {
     const result = filterLibraryEntries(
       entries,
       { query: "", facets: ["update", "client"], sort: "name" },
-      new Set(["a", "b"]),
-      new Set(),
+      { updatable: new Set(["a", "b"]), disabled: new Set() },
     );
 
     expect(result.map((item) => item.key)).toEqual(["a"]);
@@ -98,8 +152,7 @@ describe("filterLibraryEntries", () => {
     const result = filterLibraryEntries(
       entries,
       { query: "li", facets: ["disabled"], sort: "name" },
-      new Set(),
-      new Set(),
+      { updatable: new Set(), disabled: new Set() },
     );
 
     expect(result.map((item) => item.key)).toEqual(["c"]);
@@ -109,8 +162,7 @@ describe("filterLibraryEntries", () => {
     const result = filterLibraryEntries(
       entries,
       { query: "", facets: [], sort: "name" },
-      new Set(),
-      new Set(),
+      { updatable: new Set(), disabled: new Set() },
     );
 
     expect(result).toHaveLength(3);
@@ -142,6 +194,19 @@ describe("sortLibraryEntries", () => {
     expect(
       sortLibraryEntries(entries, "size", new Set()).map((item) => item.title),
     ).toEqual(["Alpha", "Gamma", "beta"]);
+  });
+
+  it("puts recently changed entries first and unknown ones by name", () => {
+    const changedAt = new Map([
+      ["c", 2_000],
+      ["b", 5_000],
+    ]);
+
+    expect(
+      sortLibraryEntries(entries, "recent", new Set(), changedAt).map(
+        (item) => item.title,
+      ),
+    ).toEqual(["beta", "Gamma", "Alpha"]);
   });
 
   it("puts updatable entries first", () => {

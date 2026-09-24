@@ -28,6 +28,7 @@ export const RUNTIME_INSTANCE_PATHS = [
   "temp",
   "downloads",
   ".fabric",
+  "storage/managed-files.json",
   INSTANCE_ID_FILE,
 ] as const;
 

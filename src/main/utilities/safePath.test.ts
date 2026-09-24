@@ -169,6 +169,29 @@ describe('safePath.blessUserSelectedPath', () => {
     ).toBe(false)
   })
 
+  it('keeps every file of a large multi-file pick readable', () => {
+    const picked = Array.from({ length: 400 }, (_, index) =>
+      path.resolve(`/fake/big-pick/mod-${index}.jar`),
+    )
+
+    for (const file of picked) blessUserSelectedPath(file, 'file', 'read')
+
+    expect(picked.every((file) => isReadablePath(file))).toBe(true)
+    expect(picked.some((file) => isWritablePath(file))).toBe(false)
+    expect(isReadablePath(path.resolve('/fake/big-pick/unpicked.jar'))).toBe(false)
+  })
+
+  it('does not let file picks evict blessed folders', () => {
+    const folder = path.resolve('/fake/folder-survives-picks')
+    blessUserSelectedPath(folder, 'folder')
+
+    for (let index = 0; index < 200; index++) {
+      blessUserSelectedPath(path.resolve(`/fake/pick-flood/mod-${index}.jar`), 'file', 'read')
+    }
+
+    expect(isWritablePath(path.join(folder, 'file.txt'))).toBe(true)
+  })
+
   it('refuses to bless system roots', () => {
     const systemRoot =
       process.platform === 'win32'

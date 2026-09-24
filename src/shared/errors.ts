@@ -283,6 +283,7 @@ function causeFromMessage(message: string): FailureCause | undefined {
   ) {
     return "untrusted";
   }
+  if (text.includes("outside allowed roots")) return "pathPolicy";
   if (
     text.includes("unsupported archive format") ||
     text.includes("end of central directory") ||
@@ -358,7 +359,9 @@ export function classifyError(
       cause = guessed;
       if (guessed === "offline") side = "network";
       if (guessed === "javaMissing") side = "game";
-      if (guessed === "untrusted") side = "launcher";
+      if (guessed === "untrusted" || guessed === "pathPolicy") {
+        side = "launcher";
+      }
     }
   }
 

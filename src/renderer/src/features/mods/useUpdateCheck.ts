@@ -67,33 +67,46 @@ export function useUpdateCheck({
   );
 
   const signature = checkable
-    .map((mod) => `${mod.provider}:${mod.id}:${mod.version?.id ?? ""}`)
+    .map(
+      (mod) =>
+        `${mod.provider}:${mod.id}:${mod.version?.id ?? ""}:${mod.loader ?? ""}`,
+    )
     .join(",");
 
   const run = useCallback(async (force = false) => {
     if (!gameVersion) return;
 
-    const items = buildUpdateItems(checkable);
-    if (items.length === 0) {
-      setIsChecking(false);
-      return;
+    const groups = new Map<string, IUpdateCheckItem[]>();
+    for (const mod of checkable) {
+      const modLoader = String(mod.loader ?? loader);
+      const group = groups.get(modLoader) ?? [];
+      group.push(...buildUpdateItems([mod]));
+      groups.set(modLoader, group);
     }
 
-    const keyOf = (item: IUpdateCheckItem) =>
+    const keyOf = (item: IUpdateCheckItem, groupLoader: string) =>
       cacheKey(
         entryKey(item.provider, item.id),
         item.versionId ?? "",
         gameVersion,
-        loader,
+        groupLoader,
       );
 
     if (force) {
-      for (const item of items) cache.delete(keyOf(item));
+      for (const [groupLoader, items] of groups) {
+        for (const item of items) cache.delete(keyOf(item, groupLoader));
+      }
       setRevision((value) => value + 1);
     }
 
-    const missing = items.filter((item) => !cache.has(keyOf(item)));
-    if (missing.length === 0) {
+    const pending = [...groups]
+      .map(([groupLoader, items]) => ({
+        groupLoader,
+        missing: items.filter((item) => !cache.has(keyOf(item, groupLoader))),
+      }))
+      .filter((group) => group.missing.length > 0);
+
+    if (pending.length === 0) {
       setIsChecking(false);
       return;
     }
@@ -101,33 +114,35 @@ export function useUpdateCheck({
     const runId = ++runIdRef.current;
     setIsChecking(true);
 
-    for (const chunk of chunkUpdateItems(missing)) {
-      if (runId !== runIdRef.current) return;
+    for (const { groupLoader, missing } of pending) {
+      for (const chunk of chunkUpdateItems(missing)) {
+        if (runId !== runIdRef.current) return;
 
-      const response = await api.backend
-        .checkUpdates({
-          gameVersion,
-          loader: String(loader),
-          items: chunk,
-        })
-        .catch(() => null);
+        const response = await api.backend
+          .checkUpdates({
+            gameVersion,
+            loader: groupLoader,
+            items: chunk,
+          })
+          .catch(() => null);
 
-      if (runId !== runIdRef.current) return;
+        if (runId !== runIdRef.current) return;
 
-      const outcomes = readUpdateVerdicts(chunk, response?.items);
-      const versionByKey = new Map(
-        chunk.map((item) => [
-          entryKey(item.provider, item.id),
-          item.versionId ?? "",
-        ]),
-      );
-      for (const [key, state] of outcomes) {
-        cache.set(
-          cacheKey(key, versionByKey.get(key) ?? "", gameVersion, loader),
-          state,
+        const outcomes = readUpdateVerdicts(chunk, response?.items);
+        const versionByKey = new Map(
+          chunk.map((item) => [
+            entryKey(item.provider, item.id),
+            item.versionId ?? "",
+          ]),
         );
+        for (const [key, state] of outcomes) {
+          cache.set(
+            cacheKey(key, versionByKey.get(key) ?? "", gameVersion, groupLoader),
+            state,
+          );
+        }
+        setRevision((value) => value + 1);
       }
-      setRevision((value) => value + 1);
     }
 
     if (runId === runIdRef.current) setIsChecking(false);
@@ -160,7 +175,7 @@ export function useUpdateCheck({
       for (const mod of targets) {
         const id = entryKey(mod.provider, mod.id);
         const state = cache.get(
-          cacheKey(id, mod.version?.id ?? "", gameVersion, loader),
+          cacheKey(id, mod.version?.id ?? "", gameVersion, mod.loader ?? loader),
         );
         if (!state) continue;
 

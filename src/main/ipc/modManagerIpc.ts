@@ -1,5 +1,7 @@
 import { Loader } from "@/types/Loader";
 import {
+  ILocalIdentifyRequest,
+  ILocalIdentifyResult,
   ILocalProject,
   IProject,
   ISearchData,
@@ -18,7 +20,11 @@ import {
   resolveCurseForgeCdnUrl,
 } from "../utilities/modManager";
 import { check, handleSafe } from "../utilities/ipc";
-import { assertReadablePath } from "../utilities/safePath";
+import { assertReadablePath, assertWritablePath } from "../utilities/safePath";
+import { ManagedFiles, readManagedFiles } from "../game/managedFiles";
+import { moveFilesToTrash } from "../game/trash";
+import path from "path";
+import fs from "fs-extra";
 
 const isProvider = check.oneOf(...Object.values(Provider));
 const isProjectType = check.oneOf(...Object.values(ProjectType));
@@ -145,6 +151,81 @@ export function registerModManagerIpc() {
     ) => {
       assertReadablePath(modpackPath, "modManager:checkModpack");
       return await checkModpack(modpackPath, pack, selectVersion);
+    },
+  );
+
+  handleSafe<ManagedFiles | null, [string]>(
+    "modManager:managedFiles",
+    null,
+    [isPath],
+    async (_, versionPath: string) => {
+      assertReadablePath(versionPath, "modManager:managedFiles");
+      return await readManagedFiles(versionPath);
+    },
+  );
+
+  handleSafe<ILocalIdentifyResult, [ILocalIdentifyRequest[]]>(
+    "modManager:identifyLocal",
+    { matches: [], unavailable: [Provider.CURSEFORGE, Provider.MODRINTH] },
+    [check.arrayOf(check.object(), 5000)],
+    async (_, requests: ILocalIdentifyRequest[]) => {
+      const valid = requests.filter(
+        (request) =>
+          typeof request?.key === "string" &&
+          request.key.length > 0 &&
+          request.key.length <= 512 &&
+          typeof request.path === "string" &&
+          typeof request.sha1 === "string" &&
+          request.sha1.length <= 64 &&
+          Object.values(ProjectType).includes(request.projectType),
+      );
+
+      for (const request of valid) {
+        assertReadablePath(request.path, "modManager:identifyLocal");
+      }
+
+      return await ModManager.identifyLocalFiles(valid);
+    },
+  );
+
+  handleSafe<Record<string, number>, [string, ProjectType]>(
+    "modManager:fileTimes",
+    {},
+    [isPath, isProjectType],
+    async (_, versionPath: string, projectType: ProjectType) => {
+      const folder = path.join(versionPath, projetTypeToFolder(projectType));
+      assertReadablePath(folder, "modManager:fileTimes");
+
+      const names = await fs.readdir(folder).catch(() => [] as string[]);
+      const times: Record<string, number> = {};
+
+      await Promise.all(
+        names.map(async (name) => {
+          const stats = await fs.stat(path.join(folder, name)).catch(() => null);
+          if (stats?.isFile()) times[name] = stats.mtimeMs;
+        }),
+      );
+
+      return times;
+    },
+  );
+
+  handleSafe<string[], [string, ProjectType, string[]]>(
+    "modManager:trashFiles",
+    [],
+    [isPath, isProjectType, check.arrayOf(check.nonEmptyString(512), 5000)],
+    async (_, versionPath: string, projectType: ProjectType, names: string[]) => {
+      const folder = path.join(versionPath, projetTypeToFolder(projectType));
+      assertWritablePath(folder, "modManager:trashFiles");
+
+      const files = names
+        .filter((name) => path.basename(name) === name)
+        .map((name) => path.join(folder, name));
+
+      return await moveFilesToTrash(
+        path.join(versionPath, "storage", "trash"),
+        files,
+      );
     },
   );
 

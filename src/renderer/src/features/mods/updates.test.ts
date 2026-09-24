@@ -101,6 +101,15 @@ describe("toLocalProject", () => {
     expect(result.version?.files[0].disabled).toBeUndefined();
   });
 
+  it("stamps when the version was put in place", () => {
+    const result = toLocalProject(project(), version(), {
+      updatedAt: "2026-09-24T10:00:00.000Z",
+    });
+
+    expect(result.updatedAt).toBe("2026-09-24T10:00:00.000Z");
+    expect(Date.parse(toLocalProject(project(), version()).updatedAt ?? "")).not.toBeNaN();
+  });
+
   it("keeps the disabled flag when asked", () => {
     const result = toLocalProject(project(), version(), { disabled: true });
     expect(result.version?.files.every((file) => file.disabled)).toBe(true);
@@ -186,6 +195,29 @@ describe("planQuickInstall", () => {
     );
 
     expect(plan.added.map((item) => item.id)).toEqual(["p1", "api"]);
+  });
+
+  it("installs only the root with the chosen loader when dependencies are off", async () => {
+    const dependency: IVersionDependency = {
+      projectId: "api",
+      versionId: null,
+      relationType: DependencyType.REQUIRED,
+      project: fabricApi,
+    };
+
+    const plan = await planQuickInstall(
+      project(),
+      [],
+      fetchers({
+        p1: [version({ id: "v1", dependencies: [dependency] })],
+        api: [version({ id: "apiv1" })],
+      }),
+      { loader: "fabric", dependencies: false },
+    );
+
+    expect(plan.added.map((item) => item.id)).toEqual(["p1"]);
+    expect(plan.added[0].loader).toBe("fabric");
+    expect(plan.skippedDependencies).toBe(true);
   });
 
   it("skips optional and incompatible dependencies", async () => {

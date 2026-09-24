@@ -71,23 +71,52 @@ function enqueueEdit<T>(task: () => Promise<T>): Promise<T> {
   return run;
 }
 
-export function dimensionFolder(dimensionId: string): string | null {
-  const known = KNOWN_DIMENSIONS.find((entry) => entry.id === dimensionId);
-  if (known) return known.folder;
-  if (!isDimensionId(dimensionId)) return null;
-
+function namespacedFolder(dimensionId: string): string {
   const [namespace, name] = dimensionId.split(":");
   return path.join(CUSTOM_DIMENSIONS_FOLDER, namespace, ...name.split("/"));
 }
 
-function dimensionRoot(worldPath: string, dimensionId: string): string | null {
-  const folder = dimensionFolder(dimensionId);
-  if (folder === null) return null;
-  return folder ? path.join(worldPath, folder) : worldPath;
+export function dimensionFolder(dimensionId: string): string | null {
+  const known = KNOWN_DIMENSIONS.find((entry) => entry.id === dimensionId);
+  if (known) return known.folder;
+  if (!isDimensionId(dimensionId)) return null;
+  return namespacedFolder(dimensionId);
 }
 
 function dataDir(root: string, kind: DataFolder): string {
   return path.join(root, kind);
+}
+
+async function hasDimensionData(root: string): Promise<boolean> {
+  const present = await Promise.all(
+    DATA_FOLDERS.map((kind) => fs.pathExists(dataDir(root, kind))),
+  );
+  return present.some(Boolean);
+}
+
+export async function resolveDimensionFolder(
+  worldPath: string,
+  dimensionId: string,
+): Promise<string | null> {
+  const folder = dimensionFolder(dimensionId);
+  if (folder === null) return null;
+  if (!KNOWN_DIMENSIONS.some((entry) => entry.id === dimensionId)) {
+    return folder;
+  }
+
+  const modern = namespacedFolder(dimensionId);
+  return (await hasDimensionData(path.join(worldPath, modern)))
+    ? modern
+    : folder;
+}
+
+async function dimensionRoot(
+  worldPath: string,
+  dimensionId: string,
+): Promise<string | null> {
+  const folder = await resolveDimensionFolder(worldPath, dimensionId);
+  if (folder === null) return null;
+  return folder ? path.join(worldPath, folder) : worldPath;
 }
 
 interface RegionFile {
@@ -243,10 +272,16 @@ export async function isWorldFolder(worldPath: string): Promise<boolean> {
 export async function listChunkDimensions(
   worldPath: string,
 ): Promise<IChunkDimension[]> {
-  const candidates = [
-    ...KNOWN_DIMENSIONS,
-    ...(await findCustomDimensions(worldPath)),
-  ];
+  const known = await Promise.all(
+    KNOWN_DIMENSIONS.map(async (entry) => ({
+      id: entry.id,
+      folder: (await resolveDimensionFolder(worldPath, entry.id)) as string,
+    })),
+  );
+  const custom = (await findCustomDimensions(worldPath)).filter(
+    (entry) => !known.some((dimension) => dimension.id === entry.id),
+  );
+  const candidates = [...known, ...custom];
   const dimensions: IChunkDimension[] = [];
 
   for (const candidate of candidates) {
@@ -268,7 +303,7 @@ export async function listChunkRegions(
   worldPath: string,
   dimensionId: string,
 ): Promise<IChunkRegion[]> {
-  const root = dimensionRoot(worldPath, dimensionId);
+  const root = await dimensionRoot(worldPath, dimensionId);
   if (!root) return [];
 
   const regions: IChunkRegion[] = [];
@@ -399,7 +434,7 @@ export async function scanChunkRegion(
   regionX: number,
   regionZ: number,
 ): Promise<IChunkRegionScan | null> {
-  const root = dimensionRoot(worldPath, dimensionId);
+  const root = await dimensionRoot(worldPath, dimensionId);
   if (!root) return null;
 
   const name = regionFileName(regionX, regionZ);
@@ -461,7 +496,7 @@ export async function inspectChunk(
   chunkX: number,
   chunkZ: number,
 ): Promise<IChunkDetails | null> {
-  const root = dimensionRoot(worldPath, dimensionId);
+  const root = await dimensionRoot(worldPath, dimensionId);
   if (!root) return null;
 
   const regionX = chunkX >> 5;
@@ -608,7 +643,7 @@ async function prepareEdit(
     return { ok: false, error: "worldMissing" };
   }
 
-  const root = dimensionRoot(worldPath, dimensionId);
+  const root = await dimensionRoot(worldPath, dimensionId);
   if (!root || !(await fs.pathExists(root))) {
     return { ok: false, error: "dimensionMissing" };
   }

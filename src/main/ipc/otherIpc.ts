@@ -319,8 +319,9 @@ export function registerOtherIpc() {
       if (result.canceled) return []
 
       const kind = pickFolder ? 'folder' : 'file'
+      const access = !pickFolder && result.filePaths.length > 1 ? 'read' : 'readwrite'
       for (const selectedPath of result.filePaths) {
-        blessUserSelectedPath(selectedPath, kind, 'readwrite')
+        blessUserSelectedPath(selectedPath, kind, access)
       }
 
       return result.filePaths

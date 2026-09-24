@@ -6,6 +6,7 @@ import {
   IVersionDependency,
   Provider,
 } from "@/types/ModManager";
+import { Loader } from "@/types/Loader";
 import { normalizeProjectTitle } from "@renderer/utilities/mod";
 import { applyDisabledState, entryKey } from "./entries";
 
@@ -57,7 +58,12 @@ export function toLocalProject(
     "title" | "description" | "projectType" | "iconUrl" | "url" | "provider" | "id"
   >,
   version: ModVersion,
-  options: { disabled?: boolean; keepLocalPath?: boolean } = {},
+  options: {
+    disabled?: boolean;
+    keepLocalPath?: boolean;
+    updatedAt?: string;
+    loader?: Loader;
+  } = {},
 ): ILocalProject {
   const files = version.files.map((file) => ({
     filename: file.filename,
@@ -82,6 +88,8 @@ export function toLocalProject(
       files: applyDisabledState(files, options.disabled === true),
       dependencies: toLocalDependencies(version.dependencies ?? []),
     },
+    updatedAt: options.updatedAt ?? new Date().toISOString(),
+    ...(options.loader ? { loader: options.loader } : {}),
   };
 }
 
@@ -98,7 +106,10 @@ export function applyUpdates(
     if (!version) return mod;
 
     updated += 1;
-    return toLocalProject(mod, version, { disabled: disabledKeys.has(key) });
+    return toLocalProject(mod, version, {
+      disabled: disabledKeys.has(key),
+      loader: mod.loader,
+    });
   });
 
   return { mods: next, updated };
@@ -115,13 +126,18 @@ export interface QuickInstallFetchers {
 export interface QuickInstallPlan {
   added: ILocalProject[];
   rootMissingVersion: boolean;
+  skippedDependencies: boolean;
 }
 
 export async function planQuickInstall(
   root: IProject,
   installed: ILocalProject[],
   fetchers: QuickInstallFetchers,
+  options: { loader?: Loader; dependencies?: boolean } = {},
 ): Promise<QuickInstallPlan> {
+  const withDependencies = options.dependencies !== false;
+  let skippedDependencies = false;
+
   const seenIds = new Set(
     installed.map((mod) => entryKey(mod.provider, mod.id)),
   );
@@ -155,19 +171,33 @@ export async function planQuickInstall(
       continue;
     }
 
-    const dependencies = latest.dependencies?.length
-      ? await fetchers.fetchDependencies(project, latest.dependencies)
-      : [];
+    if (
+      !withDependencies &&
+      latest.dependencies?.some(
+        (dep) => dep.relationType === DependencyType.REQUIRED,
+      )
+    ) {
+      skippedDependencies = true;
+    }
+
+    const dependencies =
+      withDependencies && latest.dependencies?.length
+        ? await fetchers.fetchDependencies(project, latest.dependencies)
+        : (latest.dependencies ?? []);
 
     added.push(
-      toLocalProject(project, { ...latest, dependencies }, { disabled: false }),
+      toLocalProject(
+        project,
+        { ...latest, dependencies },
+        { disabled: false, loader: options.loader },
+      ),
     );
 
     seenIds.add(entryKey(project.provider, project.id));
     const title = normalizeProjectTitle(project.title);
     if (title) seenTitles.add(title);
 
-    for (const dep of dependencies) {
+    for (const dep of withDependencies ? dependencies : []) {
       if (dep.relationType !== DependencyType.REQUIRED) continue;
       if (!dep.project) continue;
       if (isHandled(dep.project)) continue;
@@ -175,5 +205,5 @@ export async function planQuickInstall(
     }
   }
 
-  return { added, rootMissingVersion };
+  return { added, rootMissingVersion, skippedDependencies };
 }

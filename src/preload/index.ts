@@ -77,6 +77,8 @@ import { Loader } from "@/types/Loader";
 import {
   IFilterGroup,
   ILocalFileInfo,
+  ILocalIdentifyRequest,
+  ILocalIdentifyResult,
   IProject,
   ISearchData,
   IVersionDependency,
@@ -871,6 +873,21 @@ export interface IElectronAPI {
       deps: IVersionDependency[],
     ) => Promise<IVersionDependency[] | null>;
     checkLocalMod: (modPath: string) => Promise<ILocalFileInfo | null>;
+    managedFiles: (
+      versionPath: string,
+    ) => Promise<Partial<Record<ProjectType, string[]>> | null>;
+    trashFiles: (
+      versionPath: string,
+      projectType: ProjectType,
+      names: string[],
+    ) => Promise<string[]>;
+    fileTimes: (
+      versionPath: string,
+      projectType: ProjectType,
+    ) => Promise<Record<string, number>>;
+    identifyLocal: (
+      requests: ILocalIdentifyRequest[],
+    ) => Promise<ILocalIdentifyResult>;
     checkModpack: (
       modpackPath: string,
       pack?: IProject,
@@ -1876,6 +1893,14 @@ export const api: IElectronAPI = {
       ),
     checkLocalMod: (modPath: string) =>
       invoke("modManager:checkLocalMod", modPath),
+    managedFiles: (versionPath: string) =>
+      invoke("modManager:managedFiles", versionPath),
+    trashFiles: (versionPath: string, projectType: ProjectType, names: string[]) =>
+      invoke("modManager:trashFiles", versionPath, projectType, names),
+    fileTimes: (versionPath: string, projectType: ProjectType) =>
+      invoke("modManager:fileTimes", versionPath, projectType),
+    identifyLocal: (requests: ILocalIdentifyRequest[]) =>
+      invoke("modManager:identifyLocal", requests),
     checkModpack: (
       modpackPath: string,
       pack?: any,

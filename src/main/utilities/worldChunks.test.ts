@@ -99,6 +99,41 @@ describe("listChunkDimensions", () => {
     );
   });
 
+  it("reads vanilla dimensions from the 26.1 layout without duplicates", async () => {
+    await writeRegion(
+      "dimensions/minecraft/overworld/region",
+      "r.0.0.mca",
+      regionFile([
+        { index: 0, nbt: flatChunkNbt({ x: 0, z: 0 }) },
+        { index: 1, nbt: flatChunkNbt({ x: 1, z: 0 }) },
+      ]),
+    );
+    await writeRegion(
+      "dimensions/minecraft/the_nether/region",
+      "r.0.0.mca",
+      regionFile([{ index: 5, nbt: flatChunkNbt({ x: 5, z: 0 }) }]),
+    );
+
+    const dimensions = await listChunkDimensions(worldPath);
+
+    expect(dimensions.map((dimension) => dimension.id)).toEqual([
+      "minecraft:overworld",
+      "minecraft:the_nether",
+    ]);
+    expect(dimensions[0]).toMatchObject({
+      folder: path.join("dimensions", "minecraft", "overworld"),
+      chunkCount: 2,
+    });
+    expect(dimensions[1]).toMatchObject({
+      folder: path.join("dimensions", "minecraft", "the_nether"),
+      chunkCount: 1,
+    });
+
+    const regions = await listChunkRegions(worldPath, "minecraft:overworld");
+    expect(regions).toHaveLength(1);
+    expect(regions[0].present).toEqual([0, 1]);
+  });
+
   it("lists only the overworld for a fresh world", async () => {
     const dimensions = await listChunkDimensions(worldPath);
     expect(dimensions).toHaveLength(1);

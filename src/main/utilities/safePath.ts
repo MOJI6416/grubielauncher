@@ -24,11 +24,13 @@ interface BlessedEntry {
 const BLESSED_TTL_MS = 30 * 24 * 60 * 60 * 1000
 const BLESSED_RENEW_AFTER_MS = 24 * 60 * 60 * 1000
 const MAX_BLESSED_ENTRIES = 64
+const MAX_SESSION_FILE_GRANTS = 4096
 const DOWNLOADS_READABLE_EXTENSIONS = new Set(['.jar', '.zip', '.mrpack', '.litemod'])
 const JAVA_ARCHIVE_NAME = /\.(?:zip|tar|tgz|gz|xz|bz2)(?:\.part)?$/i
 const OPENABLE_FILE_EXTENSIONS = new Set(['.txt', '.log', '.json'])
 
 const blessedEntries = new Map<string, BlessedEntry>()
+const sessionFileGrants = new Map<string, number>()
 let persistedRootsLoaded = false
 
 function getPersistedRootsPath(): string {
@@ -163,6 +165,32 @@ function isBlessableTarget(resolved: string): boolean {
   }
 }
 
+function grantSessionFile(resolved: string): void {
+  const canonical = canonicalize(resolved)
+  if (!canonical) return
+
+  sessionFileGrants.delete(canonical)
+  sessionFileGrants.set(canonical, Date.now())
+
+  while (sessionFileGrants.size > MAX_SESSION_FILE_GRANTS) {
+    const oldest = sessionFileGrants.keys().next().value
+    if (oldest === undefined) break
+    sessionFileGrants.delete(oldest)
+  }
+}
+
+function hasSessionFileGrant(canonicalTarget: string): boolean {
+  const grantedAt = sessionFileGrants.get(canonicalTarget)
+  if (grantedAt === undefined) return false
+
+  if (Date.now() - grantedAt > BLESSED_TTL_MS) {
+    sessionFileGrants.delete(canonicalTarget)
+    return false
+  }
+
+  return true
+}
+
 export function blessUserSelectedPath(
   target: string,
   kind: BlessedKind,
@@ -173,6 +201,11 @@ export function blessUserSelectedPath(
   try {
     const resolved = path.resolve(target)
     if (!isBlessableTarget(resolved)) return
+
+    if (kind === 'file' && access === 'read') {
+      grantSessionFile(resolved)
+      return
+    }
 
     loadPersistedRoots()
     blessedEntries.set(resolved, {
@@ -278,6 +311,7 @@ function isAllowedPath(
     return canonicalRoot ? isInside(canonicalTarget, canonicalRoot) : false
   })
   if (insideRoot) return true
+  if (access === 'read' && hasSessionFileGrant(canonicalTarget)) return true
 
   for (const entry of blessedEntries.values()) {
     if (access !== 'read' && entry.access !== 'readwrite') continue

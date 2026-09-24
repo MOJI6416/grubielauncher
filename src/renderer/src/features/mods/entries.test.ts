@@ -9,6 +9,7 @@ import {
   getModSide,
   hasMorePages,
   isMarkedDisabled,
+  localTitle,
   mergeCatalogPages,
   totalSize,
   withInstalled,
@@ -56,6 +57,38 @@ function project(overrides: Partial<IProject> = {}): IProject {
     ...overrides,
   };
 }
+
+describe("localTitle", () => {
+  it("falls back to the id and then the file name", () => {
+    expect(localTitle(localMod({ title: undefined as unknown as string }))).toBe(
+      "id",
+    );
+    expect(
+      localTitle(
+        localMod({
+          title: undefined as unknown as string,
+          id: undefined as unknown as string,
+        }),
+      ),
+    ).toBe("mod.jar");
+  });
+
+  it("gives library entries a searchable title and description", () => {
+    const [entry] = buildLibraryEntries(
+      [
+        localMod({
+          title: undefined as unknown as string,
+          description: undefined as unknown as string,
+        }),
+      ],
+      [],
+      ProjectType.MOD,
+    );
+
+    expect(entry.title).toBe("id");
+    expect(entry.description).toBe("");
+  });
+});
 
 describe("getModSide", () => {
   it("treats missing files as both", () => {

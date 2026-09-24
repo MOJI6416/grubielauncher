@@ -59,6 +59,8 @@ export interface ILocalProject {
   provider: Provider;
   id: string;
   version: ILocalVersion | null;
+  updatedAt?: string;
+  loader?: Loader;
 }
 
 export interface ILocalVersion {
@@ -168,15 +170,24 @@ export interface ILocalFileInfo {
   icon: string | null;
 }
 
-export interface IFabricMod {
-  id: string;
-  version: string;
-  name: string;
-  description: string;
-  contact: {
-    homepage: string;
-  };
-  icon?: string;
+export interface ILocalIdentifyRequest {
+  key: string;
+  path: string;
+  sha1: string;
+  projectType: ProjectType;
+}
+
+export interface ILocalIdentifyMatch {
+  key: string;
+  provider: Provider.CURSEFORGE | Provider.MODRINTH;
+  project: IProject;
+  version: IVersion;
+  loaders: string[];
+}
+
+export interface ILocalIdentifyResult {
+  matches: ILocalIdentifyMatch[];
+  unavailable: Provider[];
 }
 
 export interface IAddedLocalProject {
@@ -185,5 +196,6 @@ export interface IAddedLocalProject {
   fileName?: string;
   size?: number;
   deletedAt?: number | null;
+  disabled?: boolean;
 }
 

@@ -164,6 +164,29 @@ export class CurseForge {
     }
   }
 
+  static async getFingerprintMatches(
+    fingerprints: number[]
+  ): Promise<{ id: number; modId: number; file: IFile }[] | null> {
+    if (fingerprints.length === 0) return []
+
+    try {
+      const responses = await Promise.all(
+        this.chunk(fingerprints, this.BATCH_LIMIT).map((batch) =>
+          this.retryOnce(() =>
+            this.api.post<{ id: number; modId: number; file: IFile }[]>(
+              `/curseforge/fingerprints`,
+              { fingerprints: batch }
+            )
+          )
+        )
+      )
+      return responses.flatMap((response) => response.data)
+    } catch (error) {
+      this.logAxiosError('Error identifying files on CurseForge', error)
+      return null
+    }
+  }
+
   static async getMods(modIds: number[]): Promise<IMod[] | null> {
     try {
       const responses = await Promise.all(

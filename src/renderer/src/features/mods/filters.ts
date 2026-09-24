@@ -1,9 +1,11 @@
 import { IFilterGroup, Provider } from "@/types/ModManager";
+import { normalizeProjectTitle } from "@renderer/utilities/mod";
 import { ContentEntry } from "./entries";
 
 export type LibraryFacet =
   | "update"
   | "disabled"
+  | "duplicate"
   | "client"
   | "server"
   | "curseforge"
@@ -13,6 +15,7 @@ export type LibraryFacet =
 export const LIBRARY_FACETS: LibraryFacet[] = [
   "update",
   "disabled",
+  "duplicate",
   "client",
   "server",
   "curseforge",
@@ -22,14 +25,40 @@ export const LIBRARY_FACETS: LibraryFacet[] = [
 
 export type LibraryFacetCounts = Record<LibraryFacet, number>;
 
-export type LibrarySort = "name" | "nameDesc" | "size" | "update";
+export type LibrarySort = "name" | "nameDesc" | "recent" | "size" | "update";
 
 export const LIBRARY_SORTS: LibrarySort[] = [
   "name",
   "nameDesc",
+  "recent",
   "size",
   "update",
 ];
+
+function isLocalProvider(provider: Provider): boolean {
+  return provider === Provider.LOCAL || provider === Provider.OTHER;
+}
+
+export function findLocalDuplicates(entries: ContentEntry[]): Set<string> {
+  const catalogTitles = new Set<string>();
+  for (const entry of entries) {
+    if (isLocalProvider(entry.provider) || entry.pendingRemoved) continue;
+    const title = normalizeProjectTitle(entry.title);
+    if (title) catalogTitles.add(title);
+  }
+
+  const duplicates = new Set<string>();
+  if (catalogTitles.size === 0) return duplicates;
+
+  for (const entry of entries) {
+    if (!isLocalProvider(entry.provider) || entry.pendingRemoved) continue;
+    if (catalogTitles.has(normalizeProjectTitle(entry.title))) {
+      duplicates.add(entry.key);
+    }
+  }
+
+  return duplicates;
+}
 
 export interface LibraryQuery {
   query: string;
@@ -37,17 +66,24 @@ export interface LibraryQuery {
   sort: LibrarySort;
 }
 
+export interface LibraryMarks {
+  updatable: ReadonlySet<string>;
+  disabled: ReadonlySet<string>;
+  duplicates?: ReadonlySet<string>;
+}
+
 function matchesFacet(
   entry: ContentEntry,
   facet: LibraryFacet,
-  updatable: ReadonlySet<string>,
-  disabled: ReadonlySet<string>,
+  marks: LibraryMarks,
 ): boolean {
   switch (facet) {
     case "update":
-      return updatable.has(entry.key);
+      return marks.updatable.has(entry.key);
     case "disabled":
-      return disabled.has(entry.key) || entry.markedDisabled;
+      return marks.disabled.has(entry.key) || entry.markedDisabled;
+    case "duplicate":
+      return marks.duplicates?.has(entry.key) === true;
     case "client":
       return entry.side === "client";
     case "server":
@@ -57,9 +93,7 @@ function matchesFacet(
     case "modrinth":
       return entry.provider === Provider.MODRINTH;
     case "local":
-      return (
-        entry.provider === Provider.LOCAL || entry.provider === Provider.OTHER
-      );
+      return isLocalProvider(entry.provider);
     default:
       return false;
   }
@@ -67,12 +101,12 @@ function matchesFacet(
 
 export function countLibraryFacets(
   entries: ContentEntry[],
-  updatable: ReadonlySet<string>,
-  disabled: ReadonlySet<string>,
+  marks: LibraryMarks,
 ): LibraryFacetCounts {
   const counts = {
     update: 0,
     disabled: 0,
+    duplicate: 0,
     client: 0,
     server: 0,
     curseforge: 0,
@@ -82,7 +116,7 @@ export function countLibraryFacets(
 
   for (const entry of entries) {
     for (const facet of LIBRARY_FACETS) {
-      if (matchesFacet(entry, facet, updatable, disabled)) counts[facet] += 1;
+      if (matchesFacet(entry, facet, marks)) counts[facet] += 1;
     }
   }
 
@@ -93,24 +127,22 @@ export function matchesTextQuery(entry: ContentEntry, query: string): boolean {
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
 
-  return (
-    entry.title.toLowerCase().includes(needle) ||
-    entry.description.toLowerCase().includes(needle) ||
-    entry.fileName.toLowerCase().includes(needle)
+  return [entry.title, entry.description, entry.fileName].some(
+    (value) =>
+      typeof value === "string" && value.toLowerCase().includes(needle),
   );
 }
 
 export function filterLibraryEntries(
   entries: ContentEntry[],
   query: LibraryQuery,
-  updatable: ReadonlySet<string>,
-  disabled: ReadonlySet<string>,
+  marks: LibraryMarks,
 ): ContentEntry[] {
   return entries.filter((entry) => {
     if (!matchesTextQuery(entry, query.query)) return false;
 
     for (const facet of query.facets) {
-      if (!matchesFacet(entry, facet, updatable, disabled)) return false;
+      if (!matchesFacet(entry, facet, marks)) return false;
     }
 
     return true;
@@ -121,6 +153,7 @@ export function sortLibraryEntries(
   entries: ContentEntry[],
   sort: LibrarySort,
   updatable: ReadonlySet<string>,
+  changedAt?: ReadonlyMap<string, number>,
 ): ContentEntry[] {
   const byName = (a: ContentEntry, b: ContentEntry) =>
     a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
@@ -130,6 +163,13 @@ export function sortLibraryEntries(
   switch (sort) {
     case "nameDesc":
       sorted.sort((a, b) => byName(b, a));
+      break;
+    case "recent":
+      sorted.sort(
+        (a, b) =>
+          (changedAt?.get(b.key) ?? 0) - (changedAt?.get(a.key) ?? 0) ||
+          byName(a, b),
+      );
       break;
     case "size":
       sorted.sort((a, b) => b.size - a.size || byName(a, b));

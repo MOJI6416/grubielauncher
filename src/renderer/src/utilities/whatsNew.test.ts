@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   compareLauncherVersions,
   getWhatsNewDecision,
+  hasReleaseNotes,
   markWhatsNewSeen,
 } from "./whatsNew";
 
@@ -68,5 +69,30 @@ describe("whats new launcher state helpers", () => {
       });
 
     vi.useRealTimers();
+  });
+});
+
+describe("hasReleaseNotes", () => {
+  const release = {
+    version: "2.0.4",
+    title: "",
+    subtitle: "",
+    highlights: [] as string[],
+    fixes: [] as string[],
+    discordCta: "",
+    discordUrl: "",
+    isMilestone: false,
+    publishedAt: null,
+  };
+
+  it("needs at least one highlight or fix", () => {
+    expect(hasReleaseNotes({ ...release, highlights: ["New mod manager"] })).toBe(true);
+    expect(hasReleaseNotes({ ...release, fixes: ["Import no longer hangs"] })).toBe(true);
+  });
+
+  it("treats a missing or empty release as no notes yet", () => {
+    expect(hasReleaseNotes(null)).toBe(false);
+    expect(hasReleaseNotes(undefined)).toBe(false);
+    expect(hasReleaseNotes(release)).toBe(false);
   });
 });

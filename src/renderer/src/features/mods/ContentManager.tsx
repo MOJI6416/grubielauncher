@@ -17,14 +17,18 @@ import {
   CircleAlert,
   CircleArrowUp,
   CloudOff,
+  Copy,
   FilePlus2,
+  FolderInput,
   Library,
   ListRestart,
   Loader2,
   Package,
   PackageOpen,
+  Plug,
   PowerOff,
   RotateCw,
+  ScanSearch,
   Search,
   SlidersHorizontal,
   Trash2,
@@ -34,6 +38,7 @@ import {
 import {
   DependencyType,
   IAddedLocalProject,
+  ILocalIdentifyMatch,
   ILocalProject,
   IModpack,
   IProject,
@@ -86,12 +91,15 @@ import {
   planDeletion,
 } from "@renderer/utilities/mod";
 import { showFailureToast } from "@renderer/utilities/failures";
-import { toFileUrl } from "@renderer/utilities/exportVersion";
+import {
+  getLocalPathFromFileUrl,
+  toFileUrl,
+} from "@renderer/utilities/exportVersion";
 import {
   BlockedMods,
   IBlockedMod,
 } from "@renderer/components/Modals/BlockedMods";
-import { LoaderLabel } from "@renderer/components/Loaders";
+import { LoaderLabel, getLoaderInfo } from "@renderer/components/Loaders";
 import { AskAgentButton } from "@renderer/features/agent/AskAgentButton";
 import { AI_PROMPT_MAX_CHARS } from "@/shared/config";
 import {
@@ -104,6 +112,7 @@ import {
   withInstalled,
 } from "./entries";
 import {
+  LIBRARY_FACETS,
   LIBRARY_SORTS,
   LibraryFacet,
   LibrarySort,
@@ -114,6 +123,7 @@ import {
   humanizeFilterName,
   countLibraryFacets,
   filterLibraryEntries,
+  findLocalDuplicates,
   sortLibraryEntries,
   toggleValue,
 } from "./filters";
@@ -121,7 +131,12 @@ import { applyUpdates, planQuickInstall, toLocalProject } from "./updates";
 import { useCatalogMeta, useCatalogSearch } from "./useCatalogSearch";
 import { useUpdateCheck } from "./useUpdateCheck";
 import { toggleModFile, useModFileStates } from "./useModFileStates";
-import { forgetAllModFiles, forgetModFiles } from "./modFiles";
+import {
+  folderNameForType,
+  forgetAllModFiles,
+  forgetModFiles,
+  listModFiles,
+} from "./modFiles";
 import {
   TRASH_MAX_AGE_DAYS,
   TrashEntry,
@@ -133,10 +148,26 @@ import { ContentRow, ROW_HEIGHT } from "./ContentRow";
 import { ContentDetails, DetailProgress } from "./ContentDetails";
 import { withExtractProgress } from "@renderer/utilities/archiveProgress";
 import { ImportLocalDialog, ImportMode } from "./ImportLocalDialog";
+import { IdentifyLocalDialog, IdentifyReport } from "./IdentifyLocalDialog";
+import { isIdentifiable, linkIdentified } from "./identify";
+import {
+  catalogLoaderOptions,
+  hasConnector,
+  needsConnector,
+} from "./catalogLoader";
+import {
+  LOCAL_IMPORT_EXTENSIONS,
+  buildImportEntry,
+  buildInvalidEntry,
+  findForeignFiles,
+  isImportableFileName,
+  mapWithConcurrency,
+} from "./localImport";
 
 const api = window.api;
 
 const RUNNING_ALLOWED_TYPES = [ProjectType.RESOURCEPACK, ProjectType.SHADER];
+const LOCAL_IMPORT_CONCURRENCY = 4;
 
 type Scope = "library" | Provider.CURSEFORGE | Provider.MODRINTH;
 
@@ -258,6 +289,7 @@ export function ContentManager({
   const [libraryFacets, setLibraryFacets] = useState<LibraryFacet[]>([]);
   const [catalogSort, setCatalogSort] = useState("");
   const [catalogFilters, setCatalogFilters] = useState<string[]>([]);
+  const [catalogLoader, setCatalogLoader] = useState<Loader | null>(null);
   const [filterQuery, setFilterQuery] = useState("");
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -284,9 +316,19 @@ export function ContentManager({
   const [isTranslating, setIsTranslating] = useState(false);
   const [gameVersions, setGameVersions] = useState<IVersion[]>([]);
   const [trashEntries, setTrashEntries] = useState<TrashEntry[]>([]);
+  const [isIdentifying, setIsIdentifying] = useState(false);
+  const [identifyReport, setIdentifyReport] = useState<IdentifyReport | null>(
+    null,
+  );
+  const [folderState, setFolderState] = useState<{
+    projectType: ProjectType;
+    listing: Set<string>;
+    managed: Partial<Record<ProjectType, string[]>> | null;
+  } | null>(null);
 
   const [listElement, setListElement] = useState<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const detailRequestRef = useRef(0);
   const translationsRef = useRef(
     new Map<string, { description?: string; body?: string }>(),
@@ -365,6 +407,21 @@ export function ContentManager({
     return loader;
   }, [isModpacks, loader, projectType, server]);
 
+  const loaderOptions = useMemo(
+    () => (isModpacks ? [] : catalogLoaderOptions(loader, projectType)),
+    [isModpacks, loader, projectType],
+  );
+
+  const overrideLoader =
+    scope !== "library" &&
+    catalogLoader &&
+    catalogLoader !== loader &&
+    loaderOptions.includes(catalogLoader)
+      ? catalogLoader
+      : undefined;
+
+  const browseLoader = overrideLoader ?? resolvedLoader;
+
   const isCatalogReady = meta.isReady;
 
   const catalog = useCatalogSearch(
@@ -375,7 +432,7 @@ export function ContentManager({
       sort: catalogSort,
       filters: catalogFilters,
       gameVersion: version?.id,
-      loader: resolvedLoader,
+      loader: browseLoader,
     },
     scope !== "library" && isCatalogReady,
   );
@@ -407,25 +464,74 @@ export function ContentManager({
     enabled: scope === "library" && canEdit && isOnline && !isModpacks,
   });
 
-  const facetCounts = useMemo(
-    () =>
-      countLibraryFacets(
-        libraryEntries,
-        updateCheck.updatable,
-        fileStates.disabled,
-      ),
-    [libraryEntries, updateCheck.updatable, fileStates.disabled],
+  const duplicates = useMemo(
+    () => findLocalDuplicates(libraryEntries),
+    [libraryEntries],
   );
+
+  const libraryMarks = useMemo(
+    () => ({
+      updatable: updateCheck.updatable,
+      disabled: fileStates.disabled,
+      duplicates,
+    }),
+    [duplicates, fileStates.disabled, updateCheck.updatable],
+  );
+
+  const facetCounts = useMemo(
+    () => countLibraryFacets(libraryEntries, libraryMarks),
+    [libraryEntries, libraryMarks],
+  );
+
+  const [fileTimes, setFileTimes] = useState<Record<string, number>>({});
+  const needsFileTimes = scope === "library" && librarySort === "recent";
+
+  useEffect(() => {
+    if (!needsFileTimes || !instancePath) return;
+
+    let cancelled = false;
+    void api.modManager
+      .fileTimes(instancePath, projectType)
+      .catch(() => ({}))
+      .then((times) => {
+        if (!cancelled) setFileTimes(times);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [needsFileTimes, instancePath, projectType, fileRevision]);
+
+  const changedAt = useMemo(() => {
+    const times = new Map<string, number>();
+    if (!needsFileTimes) return times;
+
+    for (const entry of libraryEntries) {
+      const stamped = Date.parse(entry.installed?.updatedAt ?? "");
+      const onDisk = Math.max(
+        fileTimes[entry.fileName] ?? 0,
+        fileTimes[`${entry.fileName}.disabled`] ?? 0,
+      );
+      const value = Math.max(Number.isNaN(stamped) ? 0 : stamped, onDisk);
+      if (value > 0) times.set(entry.key, value);
+    }
+
+    return times;
+  }, [fileTimes, libraryEntries, needsFileTimes]);
 
   const rows = useMemo<ContentEntry[]>(() => {
     if (scope === "library") {
       const filtered = filterLibraryEntries(
         libraryEntries,
         { query, facets: libraryFacets, sort: librarySort },
-        updateCheck.updatable,
-        fileStates.disabled,
+        libraryMarks,
       );
-      return sortLibraryEntries(filtered, librarySort, updateCheck.updatable);
+      return sortLibraryEntries(
+        filtered,
+        librarySort,
+        updateCheck.updatable,
+        changedAt,
+      );
     }
 
     return catalog.items.map((project) =>
@@ -437,8 +543,9 @@ export function ContentManager({
     query,
     libraryFacets,
     librarySort,
+    libraryMarks,
     updateCheck.updatable,
-    fileStates.disabled,
+    changedAt,
     catalog.items,
     findInstalled,
   ]);
@@ -523,7 +630,7 @@ export function ContentManager({
       const [versions, info] = await Promise.all([
         api.modManager
           .getVersions(entry.provider, entry.id, {
-            loader: resolvedLoader,
+            loader: entry.installed?.loader ?? browseLoader,
             version: version?.id,
             projectType: entry.projectType,
             modUrl: entry.url,
@@ -597,7 +704,7 @@ export function ContentManager({
         );
       }
     },
-    [isModpacks, resolvedLoader, version?.id],
+    [browseLoader, isModpacks, version?.id],
   );
 
   const openDetail = useCallback(
@@ -669,6 +776,7 @@ export function ContentManager({
   );
 
   const unresolvedDepsRef = useRef(false);
+  const skippedDepsRef = useRef(false);
 
   const fetchers = useMemo(
     () => ({
@@ -678,7 +786,7 @@ export function ContentManager({
             loader:
               project.projectType === ProjectType.PLUGIN && server
                 ? (server.core as unknown as Loader)
-                : loader || "vanilla",
+                : overrideLoader || loader || "vanilla",
             version: version?.id,
             projectType: project.projectType,
             modUrl: project.url,
@@ -711,7 +819,7 @@ export function ContentManager({
         return resolved;
       },
     }),
-    [loader, server, version?.id],
+    [loader, overrideLoader, server, version?.id],
   );
 
   const installProject = useCallback(
@@ -721,6 +829,7 @@ export function ContentManager({
       setBusyKey(entry.key);
       setIsBusy(true);
       unresolvedDepsRef.current = false;
+      skippedDepsRef.current = false;
 
       try {
         const base =
@@ -752,13 +861,26 @@ export function ContentManager({
         let next = [...mods];
 
         if (explicit) {
+          const installedKey = entry.installed
+            ? entryKey(entry.installed.provider, entry.installed.id)
+            : entry.key;
+          const installLoader = overrideLoader ?? entry.installed?.loader;
           const local = toLocalProject(source, explicit, {
             disabled:
-              fileStates.disabled.has(entry.key) || entry.markedDisabled,
+              fileStates.disabled.has(entry.key) ||
+              fileStates.disabled.has(installedKey) ||
+              entry.markedDisabled,
+            loader: installLoader,
           });
-          const index = next.findIndex(
+          const ownIndex = next.findIndex(
             (item) => entryKey(item.provider, item.id) === entry.key,
           );
+          const index =
+            ownIndex !== -1
+              ? ownIndex
+              : next.findIndex(
+                  (item) => entryKey(item.provider, item.id) === installedKey,
+                );
           if (index === -1) next.push(local);
           else next.splice(index, 1, local);
           added.push(local);
@@ -770,11 +892,15 @@ export function ContentManager({
             unresolvedDepsRef.current = true;
           }
 
-          const missing = required.filter(
+          const uninstalled = required.filter(
             (dep) =>
               dep.project &&
               !findInstalledProject(buildInstalledIndex(next), dep.project),
           );
+          if (installLoader && uninstalled.length > 0) {
+            skippedDepsRef.current = true;
+          }
+          const missing = installLoader ? [] : uninstalled;
 
           for (const dep of missing) {
             if (!dep.project) continue;
@@ -783,7 +909,15 @@ export function ContentManager({
             added.push(...plan.added);
           }
         } else {
-          const plan = await planQuickInstall(source, next, fetchers);
+          const plan = await planQuickInstall(
+            source,
+            next,
+            fetchers,
+            overrideLoader
+              ? { loader: overrideLoader, dependencies: false }
+              : undefined,
+          );
+          if (plan.skippedDependencies) skippedDepsRef.current = true;
 
           if (plan.added.length === 0) {
             if (plan.rootMissingVersion) {
@@ -812,7 +946,11 @@ export function ContentManager({
               ? t("modManager.updated")
               : t("modManager.added");
 
-        if (unresolvedDepsRef.current) {
+        if (skippedDepsRef.current) {
+          toast.warning(summary, {
+            description: t("modManager.dependenciesSkipped"),
+          });
+        } else if (unresolvedDepsRef.current) {
           toast.warning(summary, {
             description: t("modManager.dependenciesUnresolved"),
           });
@@ -841,6 +979,7 @@ export function ContentManager({
       fileStates.disabled,
       forgetRemoved,
       mods,
+      overrideLoader,
       setMods,
       t,
       version,
@@ -906,13 +1045,23 @@ export function ContentManager({
 
       const result = applyUpdates(mods, updates, fileStates.disabled);
       setMods(result.mods);
+      if ([...updateCheck.updatable].every((key) => updates.has(key))) {
+        setLibraryFacets((prev) => prev.filter((facet) => facet !== "update"));
+      }
       toast.success(
         result.updated > 1
           ? t("modManager.updatedMultiple", { count: result.updated })
           : t("modManager.updated"),
       );
     },
-    [fileStates.disabled, mods, setMods, t, updateCheck.latest],
+    [
+      fileStates.disabled,
+      mods,
+      setMods,
+      t,
+      updateCheck.latest,
+      updateCheck.updatable,
+    ],
   );
 
   const setEnabledFor = useCallback(
@@ -1003,101 +1152,53 @@ export function ContentManager({
 
       setImportMode(source?.mode ?? "import");
       setIsBusy(true);
-      setImportProgress(0);
+      setImportProgress(1);
 
       const collected: IAddedLocalProject[] = [];
 
-      for (const [index, filePath] of filePaths.entries()) {
-        setImportProgress(
-          Math.round(((index + 1) / filePaths.length) * 100),
-        );
-
-        const info = await api.modManager
-          .checkLocalMod(filePath)
-          .catch(() => null);
-
-        if (!info) {
-          const fallbackName =
-            names?.get(filePath) ?? (await api.path.basename(filePath));
-          collected.push({
-            project: {
-              description: "",
-              iconUrl: null,
-              id: "-1",
-              projectType,
-              provider: Provider.LOCAL,
-              title: fallbackName,
-              url: "",
-              versions: [],
-              body: "",
-              gallery: [],
-            },
-            status: "invalid",
-            fileName: fallbackName,
-            deletedAt: source?.deletedAt?.get(filePath) ?? null,
-          });
-          continue;
-        }
-
-        const fileName = names?.get(filePath) ?? info.filename;
-        const fileType = info.kind ?? projectType;
-
-        const isDuplicate = Boolean(
-          mods.find(
-            (mod) =>
-              mod.title.toLowerCase() === info.name.toLowerCase() ||
-              mod.id === info.id ||
-              mod.version?.files.some((file) => file.sha1 === info.sha1),
-          ) ||
-            collected.find(
-              (item) =>
-                item.status !== "invalid" &&
-                (item.project.title.toLowerCase() === info.name.toLowerCase() ||
-                  item.project.id === info.id ||
-                  item.project.versions[0]?.files.some(
-                    (file) => file.sha1 === info.sha1,
-                  )),
+      try {
+        const infos = await mapWithConcurrency(
+          filePaths,
+          LOCAL_IMPORT_CONCURRENCY,
+          (filePath) =>
+            api.modManager.checkLocalMod(filePath).catch(() => null),
+          (done) =>
+            setImportProgress(
+              Math.max(1, Math.round((done / filePaths.length) * 100)),
             ),
         );
 
-        collected.push({
-          project: {
-            description: info.description,
-            iconUrl: info.icon,
-            id: info.id,
-            projectType: fileType,
-            provider: Provider.LOCAL,
-            title: info.name === info.filename ? fileName : info.name,
-            url: info.url,
-            body: "",
-            gallery: [],
-            versions: [
-              {
-                dependencies: [],
-                id: info.version || "",
-                downloads: -1,
-                name: info.version || "",
-                files: [
-                  {
-                    filename: fileName,
-                    isServer: true,
-                    size: info.size,
-                    url: toFileUrl(info.path),
-                    sha1: info.sha1,
-                  },
-                ],
-              },
-            ],
-          },
-          status: isDuplicate ? "duplicate" : "valid",
-          fileName,
-          size: info.size,
-          deletedAt: source?.deletedAt?.get(filePath) ?? null,
-        });
-      }
+        for (const [index, filePath] of filePaths.entries()) {
+          const info = infos[index];
+          const deletedAt = source?.deletedAt?.get(filePath) ?? null;
+          const displayName =
+            names?.get(filePath) ??
+            info?.filename ??
+            (await api.path.basename(filePath));
 
-      setImportProgress(0);
-      setIsBusy(false);
+          collected.push(
+            info
+              ? buildImportEntry({
+                  info,
+                  displayName,
+                  projectType,
+                  installed: mods,
+                  collected,
+                  deletedAt,
+                  fileUrl: toFileUrl(info.path),
+                })
+              : buildInvalidEntry({ displayName, projectType, deletedAt }),
+          );
+        }
+      } catch (error) {
+        showFailureToast(t("modManager.invalidMod"), error, {
+          channels: ["modManager:checkLocalMod"],
+        });
+        return;
+      } finally {
+        setImportProgress(0);
+        setIsBusy(false);
+      }
 
       if (collected.length === 0) {
         toast.warning(t("modManager.invalidMod"));
@@ -1132,6 +1233,192 @@ export function ContentManager({
       cancelled = true;
     };
   }, [canUseTrash, instancePath, fileRevision]);
+
+  useEffect(() => {
+    if (!canUseTrash || !instancePath) {
+      setFolderState(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    void Promise.all([
+      listModFiles(instancePath, projectType),
+      api.modManager.managedFiles(instancePath).catch(() => null),
+    ]).then(([listing, managed]) => {
+      if (!cancelled) setFolderState({ projectType, listing, managed });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canUseTrash, instancePath, projectType, fileRevision]);
+
+  useEffect(() => {
+    if (!canUseTrash || !instancePath) return;
+
+    const onFocus = () => {
+      forgetAllModFiles(instancePath);
+      setFileRevision((value) => value + 1);
+    };
+
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [canUseTrash, instancePath]);
+
+  const foreignFiles = useMemo(() => {
+    if (!folderState || folderState.projectType !== projectType) return [];
+
+    return findForeignFiles({
+      listing: folderState.listing,
+      mods,
+      pendingRemoved,
+      projectType,
+      managed: folderState.managed
+        ? (folderState.managed[projectType] ?? [])
+        : null,
+    });
+  }, [folderState, mods, pendingRemoved, projectType]);
+
+  const identifiable = useMemo(
+    () => libraryEntries.filter(isIdentifiable),
+    [libraryEntries],
+  );
+
+  const identifyLocal = useCallback(
+    async (onlyKeys?: ReadonlySet<string>) => {
+      const targets = identifiable.filter(
+        (entry) => !onlyKeys || onlyKeys.has(entry.key),
+      );
+      if (targets.length === 0 || isIdentifying) return;
+
+      setIsIdentifying(true);
+      try {
+        const folder = await folderNameForType(projectType);
+        const requests = (
+          await Promise.all(
+            targets.map(async (entry) => {
+              const file = entry.installed?.version?.files[0];
+              if (!file) return null;
+
+              const inFolder =
+                instancePath && fileStates.present.has(entry.key)
+                  ? await api.path.join(
+                      instancePath,
+                      folder,
+                      fileStates.disabled.has(entry.key)
+                        ? `${entry.fileName}.disabled`
+                        : entry.fileName,
+                    )
+                  : "";
+              const path =
+                inFolder ||
+                file.localPath ||
+                getLocalPathFromFileUrl(file.url);
+              if (!path) return null;
+
+              return {
+                key: entry.key,
+                path,
+                sha1: file.sha1 ?? "",
+                projectType: entry.projectType,
+              };
+            }),
+          )
+        ).filter((request) => request !== null);
+
+        const result = await api.modManager.identifyLocal(requests);
+
+        if (result.matches.length === 0) {
+          if (result.unavailable.length > 0) {
+            showFailureToast(t("modManager.identifyFailed"), undefined, {
+              channels: ["service:modrinth", "service:curseforge"],
+            });
+          } else {
+            toast.info(t("modManager.identifyNone"));
+          }
+          return;
+        }
+
+        setIdentifyReport({
+          matches: result.matches,
+          fileNames: new Map(targets.map((entry) => [entry.key, entry.fileName])),
+          total: requests.length,
+          unavailable: result.unavailable,
+        });
+      } catch (error) {
+        showFailureToast(t("modManager.identifyFailed"), error, {
+          channels: ["modManager:identifyLocal"],
+        });
+      } finally {
+        setIsIdentifying(false);
+      }
+    },
+    [fileStates, identifiable, instancePath, isIdentifying, projectType, t],
+  );
+
+  const identifyRef = useRef(identifyLocal);
+  useEffect(() => {
+    identifyRef.current = identifyLocal;
+  }, [identifyLocal]);
+
+  const linkLocal = useCallback(
+    (matches: ILocalIdentifyMatch[]) => {
+      const result = linkIdentified(
+        mods,
+        matches,
+        fileStates.disabled,
+        loader ?? undefined,
+      );
+      if (result.linked.length === 0) {
+        toast.warning(t("modManager.alreadyInstalled"));
+        return;
+      }
+
+      setMods(result.mods);
+      toast.success(
+        t("modManager.identifyLinked", { count: result.linked.length }),
+      );
+    },
+    [fileStates.disabled, loader, mods, setMods, t],
+  );
+
+  const addForeignFiles = useCallback(async () => {
+    if (!instancePath || foreignFiles.length === 0) return;
+
+    const folder = await folderNameForType(projectType);
+    const filePaths = await Promise.all(
+      foreignFiles.map((name) => api.path.join(instancePath, folder, name)),
+    );
+
+    await readLocalFiles(filePaths);
+  }, [foreignFiles, instancePath, projectType, readLocalFiles]);
+
+  const trashForeignFiles = useCallback(async () => {
+    if (!instancePath || foreignFiles.length === 0) return;
+
+    setIsBusy(true);
+    try {
+      const moved = await api.modManager.trashFiles(
+        instancePath,
+        projectType,
+        foreignFiles,
+      );
+
+      if (moved.length > 0) {
+        toast.success(t("modManager.foreignTrashed", { count: moved.length }));
+      }
+      if (moved.length < foreignFiles.length) {
+        showFailureToast(t("modManager.foreignTrashFailed"), undefined, {
+          channels: ["modManager:trashFiles"],
+        });
+      }
+    } finally {
+      await forgetModFiles(instancePath, projectType);
+      setFileRevision((value) => value + 1);
+      setIsBusy(false);
+    }
+  }, [foreignFiles, instancePath, projectType, t]);
 
   const restorableTrash = useMemo(() => {
     if (trashEntries.length === 0) return trashEntries;
@@ -1170,7 +1457,7 @@ export function ContentManager({
   const pickLocalFiles = useCallback(async () => {
     const filePaths = await api.other.openFileDialog(
       false,
-      [{ name: "Mods", extensions: ["jar", "zip"] }],
+      [{ name: "Mods", extensions: LOCAL_IMPORT_EXTENSIONS }],
       true,
     );
     if (!filePaths || filePaths.length === 0) return;
@@ -1408,6 +1695,15 @@ export function ContentManager({
   );
 
   useEffect(() => {
+    const isCoveredByLayer = () => {
+      const root = rootRef.current;
+      return [
+        ...document.querySelectorAll<HTMLElement>(
+          '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]',
+        ),
+      ].some((layer) => !root || !layer.contains(root));
+    };
+
     const onGlobalKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const isTyping =
@@ -1415,6 +1711,7 @@ export function ContentManager({
         target instanceof HTMLTextAreaElement;
 
       if (event.key === "Escape" && !isTyping) {
+        if (isCoveredByLayer()) return;
         if (detail) {
           event.stopPropagation();
           if (detailStack.length > 0) {
@@ -1453,6 +1750,30 @@ export function ContentManager({
       ),
     [catalogFilters, catalogProvider, meta.filters, translateCategory],
   );
+
+  const filterChips = useMemo(
+    () =>
+      scope === "library"
+        ? libraryFacets.map((facet) => ({
+            key: facet,
+            label: t(`modManager.facets.${facet}`),
+          }))
+        : activeFilterChips,
+    [activeFilterChips, libraryFacets, scope, t],
+  );
+
+  const removeFilterChip = (key: string) => {
+    if (scope === "library") {
+      setLibraryFacets((prev) => prev.filter((facet) => facet !== key));
+    } else {
+      setCatalogFilters((prev) => toggleValue(prev, key));
+    }
+  };
+
+  const clearFilterChips = () => {
+    if (scope === "library") setLibraryFacets([]);
+    else setCatalogFilters([]);
+  };
 
   const filterGroups = useMemo(() => {
     const needle = filterQuery.trim().toLowerCase();
@@ -1521,16 +1842,27 @@ export function ContentManager({
   const updatableCount = updateCheck.updatable.size;
   const uncheckedCount = updateCheck.unchecked.size;
   const canShowUpdateBar = scope === "library" && canEdit && !isModpacks;
+  const showConnectorHint =
+    scope !== "library" &&
+    needsConnector(loader, browseLoader) &&
+    !hasConnector(mods);
+
   const bar =
     canSelectRows && selection.size > 0
       ? "selection"
-      : canShowUpdateBar && updatableCount > 0
-        ? "updates"
-        : canShowUpdateBar && uncheckedCount > 0
-          ? "unchecked"
-          : activeFilterChips.length > 0
-            ? "chips"
-            : null;
+      : canUseTrash && foreignFiles.length > 0
+        ? "foreign"
+        : canShowUpdateBar && duplicates.size > 0
+          ? "duplicates"
+          : canShowUpdateBar && updatableCount > 0
+            ? "updates"
+            : canShowUpdateBar && uncheckedCount > 0
+              ? "unchecked"
+              : showConnectorHint
+                ? "connector"
+                : filterChips.length > 0
+                  ? "chips"
+                  : null;
   const listBusy =
     scope === "library" ? false : catalog.isLoading || !isCatalogReady;
   const showAddRow =
@@ -1538,7 +1870,10 @@ export function ContentManager({
 
   return (
     <>
-      <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+      <div
+        ref={rootRef}
+        className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
+      >
         <div className="flex shrink-0 flex-wrap items-center gap-2 pb-2.5">
           <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5">
             {!isModpacks && (
@@ -1587,6 +1922,39 @@ export function ContentManager({
                 ))}
               </SelectContent>
             </Select>
+          )}
+
+          {scope !== "library" && loaderOptions.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="shrink-0">
+                  <Select
+                    value={browseLoader ?? loaderOptions[0]}
+                    onValueChange={(value: Loader) =>
+                      setCatalogLoader(value === loader ? null : value)
+                    }
+                  >
+                    <SelectTrigger
+                      size="sm"
+                      className="w-32"
+                      aria-label={t("modManager.catalogLoader")}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {loaderOptions.map((item) => (
+                        <SelectItem key={item} value={item}>
+                          <LoaderLabel loader={item} />
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64">
+                {t("modManager.catalogLoaderHint")}
+              </TooltipContent>
+            </Tooltip>
           )}
 
           {isModpacks && (
@@ -1659,7 +2027,7 @@ export function ContentManager({
               value={librarySort}
               onValueChange={(value: LibrarySort) => setLibrarySort(value)}
             >
-              <SelectTrigger size="sm" className="w-40 shrink-0">
+              <SelectTrigger size="sm" className="w-48 shrink-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1708,21 +2076,14 @@ export function ContentManager({
             <PopoverContent align="end" className="w-72 p-0">
               {scope === "library" ? (
                 <div className="max-h-80 overflow-y-auto p-1.5">
-                  {(
-                    [
-                      "update",
-                      "disabled",
-                      "client",
-                      "server",
-                      "curseforge",
-                      "modrinth",
-                      "local",
-                    ] as LibraryFacet[]
-                  ).map((facet) => (
+                  {LIBRARY_FACETS.map((facet) => (
                     <button
                       key={facet}
                       type="button"
-                      disabled={facetCounts[facet] === 0}
+                      disabled={
+                        facetCounts[facet] === 0 &&
+                        !libraryFacets.includes(facet)
+                      }
                       onClick={() =>
                         setLibraryFacets(
                           (prev) => toggleValue(prev, facet) as LibraryFacet[],
@@ -1824,6 +2185,36 @@ export function ContentManager({
               <TooltipContent>{t("modManager.selectLocals")}</TooltipContent>
             </Tooltip>
           )}
+
+          {scope === "library" &&
+            canEdit &&
+            !isModpacks &&
+            isOnline &&
+            identifiable.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon-sm"
+                    variant="outline"
+                    className="size-8 shrink-0"
+                    disabled={isBusy || isIdentifying}
+                    aria-label={t("modManager.identifyAction")}
+                    onClick={() => void identifyLocal()}
+                  >
+                    {isIdentifying ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <ScanSearch className="size-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isIdentifying
+                    ? t("modManager.identifySearching")
+                    : t("modManager.identifyAction")}
+                </TooltipContent>
+              </Tooltip>
+            )}
 
           {scope === "library" && canEdit && !isModpacks && (
             <Tooltip>
@@ -1930,6 +2321,40 @@ export function ContentManager({
                 </Button>
               </div>
             </div>
+          ) : bar === "foreign" ? (
+            <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5">
+              <FolderInput className="size-4 shrink-0 text-faint" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                    {t("modManager.foreignFiles", {
+                      count: foreignFiles.length,
+                    })}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-72">
+                  {t("modManager.foreignHint")}
+                </TooltipContent>
+              </Tooltip>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 shrink-0 px-2.5 text-xs"
+                disabled={isBusy}
+                onClick={() => void trashForeignFiles()}
+              >
+                {t("modManager.foreignTrash")}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-7 shrink-0 px-2.5 text-xs"
+                disabled={isBusy}
+                onClick={() => void addForeignFiles()}
+              >
+                {t("modManager.foreignAdd")}
+              </Button>
+            </div>
           ) : bar === "updates" ? (
             <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-warning/40 bg-surface-2 px-2.5">
               <CircleArrowUp className="size-4 shrink-0 text-warning" />
@@ -1962,16 +2387,77 @@ export function ContentManager({
                 {t("modManager.retryCheck")}
               </Button>
             </div>
+          ) : bar === "connector" ? (
+            <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5">
+              <Plug className="size-4 shrink-0 text-faint" />
+              <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                {t("modManager.connectorHint", {
+                  loader: getLoaderInfo(loader).name,
+                })}
+              </span>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-7 shrink-0 px-2.5 text-xs"
+                onClick={() => {
+                  setCatalogLoader(null);
+                  setRawQuery("Sinytra Connector");
+                  setQuery("Sinytra Connector");
+                }}
+              >
+                {t("modManager.connectorFind")}
+              </Button>
+            </div>
+          ) : bar === "duplicates" ? (
+            <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-warning/40 bg-surface-2 px-2.5">
+              <Copy className="size-4 shrink-0 text-warning" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                    {t("modManager.duplicatesFound", {
+                      count: duplicates.size,
+                    })}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-72">
+                  {t("modManager.duplicatesHint")}
+                </TooltipContent>
+              </Tooltip>
+              {!libraryFacets.includes("duplicate") && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 shrink-0 px-2.5 text-xs"
+                  onClick={() => setLibraryFacets(["duplicate"])}
+                >
+                  {t("modManager.duplicatesShow")}
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-7 shrink-0 px-2.5 text-xs"
+                disabled={isBusy}
+                onClick={() => {
+                  removeEntries(
+                    libraryEntries.filter((entry) => duplicates.has(entry.key)),
+                  );
+                  setLibraryFacets((prev) =>
+                    prev.filter((facet) => facet !== "duplicate"),
+                  );
+                }}
+              >
+                {t("modManager.duplicatesRemove")}
+              </Button>
+            </div>
           ) : bar === "chips" ? (
             <div className="mb-2.5 flex h-9 items-center gap-1.5 overflow-x-auto">
-              {activeFilterChips.map((chip) => (
+              {filterChips.map((chip) => (
                 <button
                   key={chip.key}
                   type="button"
                   className="flex h-6 shrink-0 items-center gap-1 rounded-md bg-surface-2 px-2 text-xs text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
-                  onClick={() =>
-                    setCatalogFilters((prev) => toggleValue(prev, chip.key))
-                  }
+                  onClick={() => removeFilterChip(chip.key)}
                 >
                   {chip.label}
                   <X className="size-3" />
@@ -1980,7 +2466,7 @@ export function ContentManager({
               <button
                 type="button"
                 className="flex h-6 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-faint transition-colors hover:text-foreground"
-                onClick={() => setCatalogFilters([])}
+                onClick={clearFilterChips}
               >
                 <ListRestart className="size-3" />
                 {t("modManager.resetFilters")}
@@ -2014,7 +2500,7 @@ export function ContentManager({
 
               const filePaths = [...event.dataTransfer.files]
                 .map((file) => api.other.getPathForFile(file))
-                .filter((filePath) => /\.(jar|zip)$/i.test(filePath));
+                .filter((filePath) => isImportableFileName(filePath));
 
               if (filePaths.length === 0) {
                 toast.warning(t("modManager.invalidMod"));
@@ -2081,6 +2567,20 @@ export function ContentManager({
                           hasUpdate={updateCheck.updatable.has(entry.key)}
                           isUnavailable={updateCheck.unavailable.has(entry.key)}
                           isUnchecked={updateCheck.unchecked.has(entry.key)}
+                          isDuplicate={
+                            scope === "library" && duplicates.has(entry.key)
+                          }
+                          foreignLoader={
+                            entry.installed?.loader &&
+                            entry.installed.loader !== loader
+                              ? entry.installed.loader
+                              : undefined
+                          }
+                          changedAt={
+                            needsFileTimes
+                              ? changedAt.get(entry.key)
+                              : undefined
+                          }
                           isBusy={busyKey === entry.key || isBusy}
                           actions={rowActions}
                         />
@@ -2296,6 +2796,9 @@ export function ContentManager({
             const added = projects.map((project) =>
               toLocalProject(project, project.versions[0], {
                 keepLocalPath: true,
+                disabled: project.versions[0]?.files.some(
+                  (file) => file.disabled === true,
+                ),
               }),
             );
 
@@ -2318,19 +2821,39 @@ export function ContentManager({
               ),
             ];
 
+            const addedKeys = new Set(
+              added.map((project) => entryKey(project.provider, project.id)),
+            );
+
             toast.success(
               importMode === "restore"
                 ? t("modManager.restoredCount", { n: added.length })
                 : t("modManager.addedMultiple", { count: added.length }),
-              elsewhereLabels.length > 0
-                ? {
-                    description: t("modManager.addedElsewhere", {
-                      types: elsewhereLabels.join(", "),
-                    }),
-                  }
-                : undefined,
+              {
+                description:
+                  elsewhereLabels.length > 0
+                    ? t("modManager.addedElsewhere", {
+                        types: elsewhereLabels.join(", "),
+                      })
+                    : undefined,
+                action:
+                  isOnline && importMode === "import"
+                    ? {
+                        label: t("modManager.identifyShort"),
+                        onClick: () => void identifyRef.current(addedKeys),
+                      }
+                    : undefined,
+              },
             );
           }}
+        />
+      )}
+
+      {identifyReport && (
+        <IdentifyLocalDialog
+          report={identifyReport}
+          onClose={() => setIdentifyReport(null)}
+          onLink={linkLocal}
         />
       )}
 

@@ -70,6 +70,22 @@ export function canToggleType(projectType: ProjectType): boolean {
   );
 }
 
+export function localTitle(mod: {
+  title?: unknown;
+  id?: unknown;
+  version?: { files: { filename?: string }[] } | null;
+}): string {
+  return (
+    textOf(mod.title) ||
+    textOf(mod.id) ||
+    textOf(mod.version?.files[0]?.filename)
+  );
+}
+
+function textOf(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
 export function fromLocalProject(
   mod: ILocalProject,
   pendingRemoved = false,
@@ -81,8 +97,8 @@ export function fromLocalProject(
     id: mod.id,
     provider: mod.provider,
     projectType: mod.projectType,
-    title: mod.title,
-    description: mod.description,
+    title: localTitle(mod),
+    description: textOf(mod.description),
     iconUrl: mod.iconUrl,
     url: mod.url,
     installed: mod,
@@ -199,5 +215,8 @@ export function isSameLocalProject(
   a: Pick<ILocalProject, "id" | "title">,
   b: Pick<ILocalProject, "id" | "title">,
 ): boolean {
-  return a.id === b.id || a.title.toLowerCase() === b.title.toLowerCase();
+  return (
+    a.id === b.id ||
+    textOf(a.title).toLowerCase() === textOf(b.title).toLowerCase()
+  );
 }

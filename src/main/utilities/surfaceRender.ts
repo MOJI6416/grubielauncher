@@ -26,7 +26,7 @@ import {
   composeRegionSurface,
   renderChunkColumnsFromNbt,
 } from "./chunkSurface";
-import { dimensionFolder } from "./worldChunks";
+import { resolveDimensionFolder } from "./worldChunks";
 import { CHUNKS_PER_REGION_AXIS } from "@/types/WorldChunks";
 
 const CACHE_FOLDER = "chunk-surface";
@@ -176,7 +176,7 @@ export async function renderRegionSurface(
   regionX: number,
   regionZ: number,
 ): Promise<Uint8Array | null> {
-  const folder = dimensionFolder(dimensionId);
+  const folder = await resolveDimensionFolder(worldPath, dimensionId);
   if (folder === null) return null;
 
   const root = folder ? path.join(worldPath, folder) : worldPath;

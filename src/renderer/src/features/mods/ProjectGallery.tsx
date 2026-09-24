@@ -192,6 +192,11 @@ function ModalGallery({
         }}
         className="flex items-center justify-center border-0 bg-transparent p-0 shadow-none"
         onWheel={handleWheel}
+        onClick={(event) => {
+          const target = event.target as HTMLElement;
+          if (target.closest("button, img")) return;
+          onClose();
+        }}
       >
         <DialogTitle className="sr-only">{t("common.gallery")}</DialogTitle>
 
@@ -245,7 +250,7 @@ function ModalGallery({
                 <GalleryImage
                   src={image.url}
                   alt={image.title || image.description || ""}
-                  className="h-full max-h-full w-full max-w-full rounded-xl bg-surface-2 object-contain"
+                  className="max-h-full max-w-full rounded-xl bg-surface-2 object-contain"
                   frameClassName="flex h-full w-full items-center justify-center rounded-xl bg-surface-2 text-faint"
                 />
               </div>

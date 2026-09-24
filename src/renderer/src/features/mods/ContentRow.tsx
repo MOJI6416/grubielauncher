@@ -5,6 +5,7 @@ import {
   Ban,
   CircleArrowUp,
   CloudOff,
+  Copy,
   Download,
   FileBox,
   Heart,
@@ -28,6 +29,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Hint } from "@renderer/components/Hint";
 import { formatBytes } from "@renderer/utilities/file";
+import { formatRelative } from "@renderer/utilities/date";
+import { LoaderLabel } from "@renderer/components/Loaders";
 import { ContentEntry } from "./entries";
 import { formatCompactNumber } from "./format";
 import { ProjectIcon } from "./ProjectIcon";
@@ -74,6 +77,9 @@ export const ContentRow = memo(function ContentRow({
   hasUpdate,
   isUnavailable,
   isUnchecked,
+  isDuplicate = false,
+  foreignLoader,
+  changedAt,
   isBusy,
   actions,
 }: {
@@ -92,6 +98,9 @@ export const ContentRow = memo(function ContentRow({
   hasUpdate: boolean;
   isUnavailable: boolean;
   isUnchecked: boolean;
+  isDuplicate?: boolean;
+  foreignLoader?: string;
+  changedAt?: number;
   isBusy: boolean;
   actions: ContentRowActions;
 }) {
@@ -180,6 +189,27 @@ export const ContentRow = memo(function ContentRow({
             </Tooltip>
           )}
 
+          {foreignLoader && (
+            <LoaderLabel
+              loader={foreignLoader}
+              className="shrink-0 rounded-sm bg-surface-3 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-muted-foreground"
+            />
+          )}
+
+          {isDuplicate && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex shrink-0 items-center gap-1 rounded-sm bg-warning/15 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-warning">
+                  <Copy className="size-2.5" />
+                  {t("modManager.duplicateBadge")}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64">
+                {t("modManager.duplicateHint")}
+              </TooltipContent>
+            </Tooltip>
+          )}
+
           {!isLibrary && installed && (
             <span className="flex shrink-0 items-center gap-1 rounded-sm bg-success/15 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-success">
               <PackageCheck className="size-2.5" />
@@ -205,6 +235,11 @@ export const ContentRow = memo(function ContentRow({
                 <SideMark side={entry.side} />
                 {t(`modManager.sides.${entry.side}`)}
               </span>
+              {changedAt ? (
+                <span className="shrink-0 tabular-nums">
+                  {formatRelative(new Date(changedAt))}
+                </span>
+              ) : null}
               <Hint content={entry.fileName} variant="text" truncatedOnly>
                 <span className="min-w-0 truncate">
                   {fileMissing && !entry.pendingRemoved

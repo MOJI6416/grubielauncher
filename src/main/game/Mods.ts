@@ -3,7 +3,6 @@ import { IServerConf, ServerCore } from "@/types/Server";
 import { ProjectType } from "@/types/ModManager";
 import { DownloadItem } from "@/types/Downloader";
 import path from "path";
-import { randomUUID } from "crypto";
 import { pathToFileURL } from "url";
 import fs from "fs-extra";
 import {
@@ -41,6 +40,15 @@ import {
 import { mainWindow } from "../windows/mainWindow";
 import { OPTIONAL_PROJECT_DOWNLOAD_OPTIONS } from "../utilities/downloaderPure";
 import { DownloaderFailuresInfo } from "@/types/Downloader";
+import {
+  ManagedFiles,
+  managedNamesFromMods,
+  mergeManaged,
+  readManagedFiles,
+  writeManagedFiles,
+  isForeignFile,
+} from "./managedFiles";
+import { moveFilesToTrash } from "./trash";
 
 const TRASH_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const DISABLED_SUFFIX = ".disabled";
@@ -226,6 +234,7 @@ export class Mods {
 
     this.files = [];
 
+    const managedBaseline = await readManagedFiles(this.version.versionPath);
     const storagePath = path.join(this.version.versionPath, "storage");
 
     const downloadFiles: DownloadItem[] = [];
@@ -411,13 +420,15 @@ export class Mods {
     }
 
     const tasks: Promise<string[]>[] = [
-      this.comparison(ProjectType.MOD),
-      this.comparison(ProjectType.RESOURCEPACK),
-      this.comparison(ProjectType.SHADER),
-      this.comparison(ProjectType.DATAPACK),
+      this.comparison(ProjectType.MOD, managedBaseline),
+      this.comparison(ProjectType.RESOURCEPACK, managedBaseline),
+      this.comparison(ProjectType.SHADER, managedBaseline),
+      this.comparison(ProjectType.DATAPACK, managedBaseline),
     ];
 
-    if (isWorldListComplete) tasks.push(this.comparison(ProjectType.WORLD));
+    if (isWorldListComplete) {
+      tasks.push(this.comparison(ProjectType.WORLD, managedBaseline));
+    }
 
     if (
       this.server &&
@@ -428,14 +439,28 @@ export class Mods {
         ServerCore.PURPUR,
       ].includes(this.server.core)
     ) {
-      tasks.push(this.comparison(ProjectType.PLUGIN));
+      tasks.push(this.comparison(ProjectType.PLUGIN, managedBaseline));
     }
 
     this.sendInstallProgress("cleanup", 90, true);
     const quarantined = (await Promise.all(tasks)).flat();
     this.sendQuarantineNotice(quarantined);
+    await this.rememberManagedFiles(
+      managedNamesFromMods(this.version.version.loader.mods),
+    );
     await this.installCheckpoint();
     await this.pruneTrash();
+  }
+
+  private async rememberManagedFiles(managed: ManagedFiles) {
+    await writeManagedFiles(this.version.versionPath, managed).catch(
+      (error) => {
+        console.error(
+          `[mods:managed] could not record the files of ${this.version.versionPath}:`,
+          error,
+        );
+      },
+    );
   }
 
   private isModdedServer(): boolean {
@@ -584,42 +609,7 @@ export class Mods {
   }
 
   private async moveToTrash(files: string[]): Promise<string[]> {
-    if (files.length === 0) return [];
-
-    const trashPath = this.getTrashPath();
-
-    try {
-      await fs.ensureDir(trashPath);
-    } catch (error) {
-      console.error(
-        `[mods:trash] kept ${files.length} file(s) in place: the quarantine folder ${trashPath} is not usable:`,
-        error,
-      );
-      return [];
-    }
-
-    const moved: string[] = [];
-
-    await Promise.all(
-      files.map(async (file) => {
-        const target = path.join(
-          trashPath,
-          `${Date.now()}-${randomUUID().slice(0, 8)}-${path.basename(file)}`,
-        );
-
-        try {
-          await fs.move(file, target, { overwrite: true });
-          moved.push(path.basename(file));
-        } catch (error) {
-          console.error(
-            `[mods:trash] kept ${file} in place: moving it to the quarantine failed:`,
-            error,
-          );
-        }
-      }),
-    );
-
-    return moved;
+    return moveFilesToTrash(this.getTrashPath(), files);
   }
 
   private async pruneTrash() {
@@ -641,7 +631,10 @@ export class Mods {
     }
   }
 
-  private async comparison(projectType: ProjectType): Promise<string[]> {
+  private async comparison(
+    projectType: ProjectType,
+    managedBaseline: ManagedFiles | null,
+  ): Promise<string[]> {
     const storagePath = path.join(this.version.versionPath, "storage");
     const folderName = projetTypeToFolder(projectType);
 
@@ -657,6 +650,11 @@ export class Mods {
     const filenames = this.files
       .filter((f) => f.type == projectType)
       .map((f) => f.filename);
+    const tracked = new Set(filenames);
+    const managed =
+      projectType === ProjectType.WORLD || !managedBaseline
+        ? null
+        : new Set(managedBaseline[projectType] ?? []);
     const files = await fs.readdir(folderPath);
     const deleteFiles: string[] = [];
 
@@ -686,6 +684,8 @@ export class Mods {
         filenames.includes(enabledName)
       )
         continue;
+
+      if (isForeignFile(file, tracked, managed)) continue;
 
       deleteFiles.push(filePath);
       if (this.isModdedServer()) {
@@ -823,6 +823,20 @@ export class Mods {
       downloadFiles,
       this.installAbortSignal ?? undefined,
       OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
+    );
+
+    const livePacks = managedNamesFromMods(
+      this.version.version.loader.mods.filter(
+        (mod) =>
+          mod.projectType === ProjectType.RESOURCEPACK ||
+          mod.projectType === ProjectType.SHADER,
+      ),
+    );
+    await this.rememberManagedFiles(
+      mergeManaged(
+        (await readManagedFiles(this.version.versionPath)) ?? {},
+        livePacks,
+      ),
     );
     await this.installCheckpoint();
   }

@@ -22,6 +22,7 @@ import {
 import { clearInstanceSelection } from "@renderer/features/instances/selectInstance";
 import { forgetContinueCache } from "@renderer/features/instances/continueCache";
 import { updateInstancesFile } from "@renderer/features/instances/instancesStore";
+import { localTitle } from "@renderer/features/mods/entries";
 import { forgetInstanceUpdates } from "@renderer/features/instances/updateCheck";
 import { instanceKey } from "@renderer/features/instances/selectors";
 import { forgetUpdateCache } from "@renderer/features/mods/useUpdateCheck";
@@ -228,7 +229,9 @@ export const removeMods: AgentTool = {
 
     for (const rawTitle of titles) {
       const title = String(rawTitle ?? "").toLowerCase();
-      const target = current.find((mod) => mod.title.toLowerCase() === title);
+      const target = current.find(
+        (mod) => localTitle(mod).toLowerCase() === title,
+      );
 
       if (!target) {
         notFound.push(String(rawTitle ?? ""));

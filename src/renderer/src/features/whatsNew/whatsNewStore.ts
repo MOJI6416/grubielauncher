@@ -9,6 +9,7 @@ import {
 import { consumeRecentFailure } from "@renderer/utilities/failures";
 import {
   getWhatsNewDecision,
+  hasReleaseNotes,
   markWhatsNewSeen,
 } from "@renderer/utilities/whatsNew";
 
@@ -54,6 +55,7 @@ export function loadCurrentRelease(locale: string): void {
 export async function openWhatsNew(options?: {
   launcherPath?: string;
   locale?: string;
+  requireNotes?: boolean;
 }): Promise<void> {
   const store = getDefaultStore();
   const launcherPath = options?.launcherPath || store.get(pathsAtom).launcher;
@@ -74,6 +76,8 @@ export async function openWhatsNew(options?: {
 
     loadedReleaseLocale = locale;
     store.set(currentReleaseAtom, release);
+    if (options?.requireNotes && !hasReleaseNotes(release)) return;
+
     store.set(whatsNewAtom, {
       version: currentVersion,
       release,
@@ -123,6 +127,6 @@ export async function checkWhatsNewAfterInit(
   }
 
   if (decision.shouldShow) {
-    await openWhatsNew({ launcherPath, locale });
+    await openWhatsNew({ launcherPath, locale, requireNotes: true });
   }
 }

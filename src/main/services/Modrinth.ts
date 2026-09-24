@@ -212,6 +212,22 @@ export class Modrinth {
     }
   }
 
+  static async versionsByHashes(hashes: string[]): Promise<Record<string, IVersion> | null> {
+    if (hashes.length === 0) return {}
+
+    try {
+      const response = await this.api.post<Record<string, IVersion>>('/version_files', {
+        hashes,
+        algorithm: 'sha1'
+      })
+
+      return response.data ?? {}
+    } catch (error) {
+      this.logAxiosError('Error identifying files on Modrinth', error)
+      return null
+    }
+  }
+
   static async getProjects(ids: string[]) {
     try {
       const params = new URLSearchParams()
