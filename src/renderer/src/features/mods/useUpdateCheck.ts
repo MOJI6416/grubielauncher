@@ -33,6 +33,7 @@ export interface UpdateCheckResult {
   unavailable: Set<string>;
   unchecked: Set<string>;
   latest: Map<string, ModVersion>;
+  held: Map<string, ModVersion>;
   isChecking: boolean;
   checked: number;
   pending: number;
@@ -169,6 +170,7 @@ export function useUpdateCheck({
     const unavailable = new Set<string>();
     const unchecked = new Set<string>();
     const latest = new Map<string, ModVersion>();
+    const held = new Map<string, ModVersion>();
     let checked = 0;
 
     if (gameVersion) {
@@ -183,8 +185,12 @@ export function useUpdateCheck({
         states.set(id, state);
 
         if (state.status === "update" && state.latest) {
-          updatable.add(id);
-          latest.set(id, state.latest);
+          if (mod.pinned) {
+            held.set(id, state.latest);
+          } else {
+            updatable.add(id);
+            latest.set(id, state.latest);
+          }
         }
         if (state.status === "unavailable") unavailable.add(id);
         if (state.status === "unknown") unchecked.add(id);
@@ -197,6 +203,7 @@ export function useUpdateCheck({
       unavailable,
       unchecked,
       latest,
+      held,
       isChecking,
       checked,
       pending: targets.length - checked,

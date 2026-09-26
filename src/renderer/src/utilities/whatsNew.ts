@@ -7,6 +7,7 @@ export interface LauncherWhatsNewState {
   };
   onboardingDone?: boolean;
   instanceConfCleanup?: boolean;
+  instanceConfRevision?: number;
 }
 
 export type WhatsNewDecision =

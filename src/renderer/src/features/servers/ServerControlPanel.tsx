@@ -777,7 +777,7 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex-1 justify-start"
+                  className="flex-1 justify-start bg-transparent"
                   onClick={() => void api.shell.openPath(serverPath)}
                 >
                   <FolderOpen className="size-3.5" />

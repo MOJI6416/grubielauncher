@@ -1,14 +1,19 @@
+import type { TrashReason } from "@/types/ModManager";
+
 export const TRASH_MAX_AGE_DAYS = 14;
 export const TRASH_MAX_AGE_MS = TRASH_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
 
 const ENTRY_PATTERN = /^(\d{13})-[0-9a-f]{8}-(.+)$/;
 const DISABLED_SUFFIX = /\.disabled$/i;
 const RESTORABLE = /\.(jar|zip)$/i;
+const REASONS_FILE = "reasons.json";
+const REASONS = new Set<string>(["updated", "removed", "foreign"]);
 
 export interface TrashEntry {
   raw: string;
   name: string;
   deletedAt: number | null;
+  reason?: TrashReason;
 }
 
 export function parseTrashEntry(raw: string): TrashEntry | null {
@@ -41,17 +46,45 @@ export function sortTrashEntries(entries: TrashEntry[]): TrashEntry[] {
   );
 }
 
+export function withReasons(
+  entries: TrashEntry[],
+  reasons: unknown,
+): TrashEntry[] {
+  if (!reasons || typeof reasons !== "object") return entries;
+
+  const known = reasons as Record<string, unknown>;
+  return entries.map((entry) => {
+    const reason = known[entry.raw];
+    return typeof reason === "string" && REASONS.has(reason)
+      ? { ...entry, reason: reason as TrashReason }
+      : entry;
+  });
+}
+
+export async function trashFolder(versionPath: string): Promise<string> {
+  return await window.api.path.join(versionPath, "storage", "trash");
+}
+
 export async function listTrash(versionPath: string): Promise<TrashEntry[]> {
   try {
     const api = window.api;
-    const folderPath = await api.path.join(versionPath, "storage", "trash");
+    const folderPath = await trashFolder(versionPath);
     const names = await api.fs.readdir(folderPath);
 
-    const entries: TrashEntry[] = [];
+    const parsed: TrashEntry[] = [];
     for (const raw of names) {
       const entry = parseTrashEntry(raw);
-      if (entry && !isTrashEntryExpired(entry)) entries.push(entry);
+      if (entry && !isTrashEntryExpired(entry)) parsed.push(entry);
     }
+
+    const entries = names.includes(REASONS_FILE)
+      ? withReasons(
+          parsed,
+          await api.fs
+            .readJSON(await api.path.join(folderPath, REASONS_FILE), "utf-8")
+            .catch(() => null),
+        )
+      : parsed;
 
     return sortTrashEntries(entries);
   } catch {
@@ -64,7 +97,7 @@ export async function trashPaths(
   entries: TrashEntry[],
 ): Promise<{ path: string; name: string }[]> {
   const api = window.api;
-  const folderPath = await api.path.join(versionPath, "storage", "trash");
+  const folderPath = await trashFolder(versionPath);
 
   return Promise.all(
     entries.map(async (entry) => ({

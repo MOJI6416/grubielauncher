@@ -9,7 +9,7 @@ import {
   countLibraryFacets,
   humanizeFilterName,
   filterLibraryEntries,
-  findLocalDuplicates,
+  findDuplicates,
   matchesTextQuery,
   sortLibraryEntries,
   toggleValue,
@@ -90,20 +90,42 @@ describe("countLibraryFacets", () => {
   });
 });
 
-describe("findLocalDuplicates", () => {
+describe("findDuplicates", () => {
   it("flags a local copy of a mod that is also installed from a catalog", () => {
     const entries = [
-      entry({ key: "curseforge:1", provider: Provider.CURSEFORGE, title: "Sodium" }),
-      entry({ key: "local:sodium", provider: Provider.LOCAL, title: "Sodium (Fabric)" }),
-      entry({ key: "local:iris", provider: Provider.LOCAL, title: "Iris" }),
+      entry({
+        key: "curseforge:1",
+        provider: Provider.CURSEFORGE,
+        title: "Sodium",
+        fileName: "sodium-2.jar",
+      }),
+      entry({
+        key: "local:sodium",
+        provider: Provider.LOCAL,
+        title: "Sodium (Fabric)",
+        fileName: "sodium-1.jar",
+      }),
+      entry({
+        key: "local:iris",
+        provider: Provider.LOCAL,
+        title: "Iris",
+        fileName: "iris.jar",
+      }),
     ];
 
-    expect([...findLocalDuplicates(entries)]).toEqual(["local:sodium"]);
+    const marks = findDuplicates(entries);
+    expect([...marks.extra]).toEqual(["local:sodium"]);
+    expect([...marks.all]).toEqual(["local:sodium"]);
+    expect(marks.groups).toBe(1);
   });
 
   it("ignores mods already waiting to be removed", () => {
     const entries = [
-      entry({ key: "modrinth:x", provider: Provider.MODRINTH, title: "Sodium" }),
+      entry({
+        key: "modrinth:x",
+        provider: Provider.MODRINTH,
+        title: "Sodium",
+      }),
       entry({
         key: "local:sodium",
         provider: Provider.LOCAL,
@@ -112,19 +134,149 @@ describe("findLocalDuplicates", () => {
       }),
     ];
 
-    expect(findLocalDuplicates(entries).size).toBe(0);
+    expect(findDuplicates(entries).all.size).toBe(0);
+  });
+
+  it("keeps one record of a file that two catalogs both claim", () => {
+    const entries = [
+      entry({
+        key: "modrinth:arch",
+        provider: Provider.MODRINTH,
+        title: "Architectury API",
+        fileName: "architectury-13.0.11-neoforge.jar",
+      }),
+      entry({
+        key: "curseforge:419699",
+        provider: Provider.CURSEFORGE,
+        title: "Architectury API",
+        fileName: "architectury-13.0.11-neoforge.jar",
+      }),
+    ];
+
+    const marks = findDuplicates(entries);
+    expect([...marks.extra]).toEqual(["curseforge:419699"]);
+    expect(marks.groups).toBe(1);
+  });
+
+  it("drops the local record that shares a file with a catalog copy, whatever its title", () => {
+    const entries = [
+      entry({
+        key: "local:terrablender",
+        provider: Provider.LOCAL,
+        title: "TerraBlender",
+        fileName: "TerraBlender-neoforge-1.21.1-4.1.0.8.jar",
+      }),
+      entry({
+        key: "curseforge:563928",
+        provider: Provider.CURSEFORGE,
+        title: "TerraBlender (NeoForge)",
+        fileName: "TerraBlender-neoforge-1.21.1-4.1.0.8.jar",
+      }),
+    ];
+
+    expect([...findDuplicates(entries).extra]).toEqual(["local:terrablender"]);
+  });
+
+  it("keeps the copy whose provider still has a file for this version", () => {
+    const entries = [
+      entry({
+        key: "modrinth:iron",
+        provider: Provider.MODRINTH,
+        title: "Iron Chests",
+        fileName: "ironchest.jar",
+      }),
+      entry({
+        key: "curseforge:228756",
+        provider: Provider.CURSEFORGE,
+        title: "Iron Chests",
+        fileName: "ironchest.jar",
+      }),
+    ];
+
+    const marks = findDuplicates(entries, new Set(["modrinth:iron"]));
+    expect([...marks.extra]).toEqual(["modrinth:iron"]);
+  });
+
+  it("asks for a choice when two catalogs installed different files of one mod", () => {
+    const entries = [
+      entry({
+        key: "modrinth:aga",
+        provider: Provider.MODRINTH,
+        title: "AE2 Growth Accelerators",
+        fileName: "ae2-growth-accelerator-tiers-1.0.1.jar",
+      }),
+      entry({
+        key: "curseforge:1",
+        provider: Provider.CURSEFORGE,
+        title: "AE2 Growth Accelerators",
+        fileName: "AGA Neo1.21.1 2.2.0.jar",
+      }),
+    ];
+
+    const marks = findDuplicates(entries);
+    expect(marks.extra.size).toBe(0);
+    expect([...marks.all].sort()).toEqual(["curseforge:1", "modrinth:aga"]);
+    expect(marks.groups).toBe(1);
+  });
+
+  it("does not flag two projects of one catalog that happen to share a title", () => {
+    const entries = [
+      entry({
+        key: "curseforge:1",
+        provider: Provider.CURSEFORGE,
+        title: "Backpacks",
+        fileName: "a.jar",
+      }),
+      entry({
+        key: "curseforge:2",
+        provider: Provider.CURSEFORGE,
+        title: "Backpacks",
+        fileName: "b.jar",
+      }),
+    ];
+
+    expect(findDuplicates(entries).all.size).toBe(0);
+  });
+
+  it("matches a disabled file to its enabled twin", () => {
+    const entries = [
+      entry({
+        key: "modrinth:a",
+        provider: Provider.MODRINTH,
+        title: "A",
+        fileName: "a.jar",
+      }),
+      entry({
+        key: "curseforge:1",
+        provider: Provider.CURSEFORGE,
+        title: "B",
+        fileName: "A.jar.disabled",
+      }),
+    ];
+
+    expect(findDuplicates(entries).extra.size).toBe(1);
   });
 
   it("counts duplicates as a facet", () => {
     const entries = [
-      entry({ key: "modrinth:x", provider: Provider.MODRINTH, title: "Sodium" }),
-      entry({ key: "local:sodium", provider: Provider.LOCAL, title: "Sodium" }),
+      entry({
+        key: "modrinth:x",
+        provider: Provider.MODRINTH,
+        title: "Sodium",
+        fileName: "sodium-2.jar",
+      }),
+      entry({
+        key: "local:sodium",
+        provider: Provider.LOCAL,
+        title: "Sodium",
+        fileName: "sodium-1.jar",
+      }),
     ];
 
     const counts = countLibraryFacets(entries, {
       updatable: new Set(),
       disabled: new Set(),
-      duplicates: findLocalDuplicates(entries),
+      duplicates: findDuplicates(entries).all,
     });
 
     expect(counts.duplicate).toBe(1);
@@ -180,6 +332,39 @@ describe("sortLibraryEntries", () => {
     expect(
       sortLibraryEntries(entries, "name", new Set()).map((item) => item.title),
     ).toEqual(["Alpha", "beta", "Gamma"]);
+  });
+
+  it("sorts by the name without loader tags or leading version brackets", () => {
+    const tagged = [
+      entry({ key: "s", id: "s", title: "[1.21.1] SecurityCraft" }),
+      entry({ key: "t", id: "t", title: "TerraBlender (NeoForge)" }),
+      entry({ key: "a", id: "a", title: "Architectury API" }),
+    ];
+
+    expect(
+      sortLibraryEntries(tagged, "name", new Set()).map((item) => item.key),
+    ).toEqual(["a", "s", "t"]);
+  });
+
+  it("filters mods installed for another loader", () => {
+    const list = [
+      entry({ key: "fabric", id: "fabric", title: "Fabric mod" }),
+      entry({ key: "native", id: "native", title: "Native mod" }),
+    ];
+    const marks = {
+      updatable: new Set<string>(),
+      disabled: new Set<string>(),
+      foreign: new Set(["fabric"]),
+    };
+
+    expect(
+      filterLibraryEntries(
+        list,
+        { query: "", facets: ["foreign"], sort: "name" },
+        marks,
+      ).map((item) => item.key),
+    ).toEqual(["fabric"]);
+    expect(countLibraryFacets(list, marks).foreign).toBe(1);
   });
 
   it("sorts by name descending", () => {

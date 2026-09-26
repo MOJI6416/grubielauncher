@@ -79,6 +79,7 @@ export class CurseForge {
       params.append('modType', modType.toString())
       params.append('offset', pagination.offset.toString())
       params.append('limit', pagination.limit.toString())
+      params.append('view', 'compact')
 
       if (version) params.append('version', version)
       if (loader !== undefined) params.append('loader', loader.toString())

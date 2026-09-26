@@ -626,7 +626,7 @@ export function ConfigsPanel({
         <Button
           variant="ghost"
           size="sm"
-          className="justify-start text-muted-foreground"
+          className="justify-start text-muted-foreground bg-transparent"
           onClick={() => void api.shell.openPath(root)}
         >
           <FolderOpen className="size-3.5" />

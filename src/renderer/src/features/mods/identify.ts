@@ -5,6 +5,7 @@ import {
 } from "@/types/ModManager";
 import { Loader } from "@/types/Loader";
 import { getLocalPathFromFileUrl } from "@renderer/utilities/exportVersion";
+import { sharesFile } from "@renderer/utilities/mod";
 import { ContentEntry, entryKey } from "./entries";
 import { toLocalProject } from "./updates";
 
@@ -47,11 +48,24 @@ export function linkIdentified(
   const byKey = new Map(matches.map((match) => [match.key, match]));
   const taken = new Set(mods.map((mod) => entryKey(mod.provider, mod.id)));
   const linked: string[] = [];
+  const merged = new Set<string>();
 
   const next = mods.map((mod) => {
     const key = entryKey(mod.provider, mod.id);
     const match = byKey.get(key);
     if (!match) return mod;
+
+    const twin = mods.some(
+      (other) =>
+        other !== mod &&
+        !merged.has(entryKey(other.provider, other.id)) &&
+        sharesFile(other, mod),
+    );
+    if (twin) {
+      merged.add(key);
+      linked.push(key);
+      return mod;
+    }
 
     const target = entryKey(match.provider, match.project.id);
     if (taken.has(target)) return mod;
@@ -93,5 +107,8 @@ export function linkIdentified(
     return { ...project, updatedAt: mod.updatedAt };
   });
 
-  return { mods: next, linked };
+  return {
+    mods: next.filter((mod) => !merged.has(entryKey(mod.provider, mod.id))),
+    linked,
+  };
 }

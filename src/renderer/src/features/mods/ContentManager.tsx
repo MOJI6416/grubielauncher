@@ -18,19 +18,29 @@ import {
   CircleArrowUp,
   CloudOff,
   Copy,
+  Database,
+  Earth,
+  EyeOff,
   FilePlus2,
   FolderInput,
+  FolderOpen,
   Library,
+  ListFilter,
   ListRestart,
   Loader2,
   Package,
   PackageOpen,
+  Palette,
+  Pin,
+  PinOff,
   Plug,
   PowerOff,
+  Puzzle,
   RotateCw,
   ScanSearch,
   Search,
   SlidersHorizontal,
+  Sparkles,
   Trash2,
   Undo2,
   X,
@@ -89,6 +99,7 @@ import {
   findInstalledProject,
   getProjectTypes,
   planDeletion,
+  sharesFile,
 } from "@renderer/utilities/mod";
 import { showFailureToast } from "@renderer/utilities/failures";
 import {
@@ -123,11 +134,16 @@ import {
   humanizeFilterName,
   countLibraryFacets,
   filterLibraryEntries,
-  findLocalDuplicates,
+  findDuplicates,
   sortLibraryEntries,
   toggleValue,
 } from "./filters";
-import { applyUpdates, planQuickInstall, toLocalProject } from "./updates";
+import {
+  applyUpdates,
+  isCheckableProject,
+  planQuickInstall,
+  toLocalProject,
+} from "./updates";
 import { useCatalogMeta, useCatalogSearch } from "./useCatalogSearch";
 import { useUpdateCheck } from "./useUpdateCheck";
 import { toggleModFile, useModFileStates } from "./useModFileStates";
@@ -141,8 +157,11 @@ import {
   TRASH_MAX_AGE_DAYS,
   TrashEntry,
   listTrash,
+  trashFolder,
   trashPaths,
 } from "./trash";
+import { useDetailPanelWidth } from "./detailWidth";
+import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { installQueue } from "@renderer/features/install/installQueue";
 import { ContentRow, ROW_HEIGHT } from "./ContentRow";
 import { ContentDetails, DetailProgress } from "./ContentDetails";
@@ -167,6 +186,31 @@ import {
 const api = window.api;
 
 const RUNNING_ALLOWED_TYPES = [ProjectType.RESOURCEPACK, ProjectType.SHADER];
+
+const PROJECT_TYPE_ICONS: Partial<Record<ProjectType, typeof Puzzle>> = {
+  [ProjectType.MOD]: Puzzle,
+  [ProjectType.RESOURCEPACK]: Palette,
+  [ProjectType.SHADER]: Sparkles,
+  [ProjectType.DATAPACK]: Database,
+  [ProjectType.WORLD]: Earth,
+  [ProjectType.PLUGIN]: Plug,
+};
+
+const TRASH_HIDDEN_KEY = "grubie:trashBarHidden:";
+
+function readTrashHiddenAt(instancePath: string): number {
+  try {
+    return Number(localStorage.getItem(TRASH_HIDDEN_KEY + instancePath)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeTrashHiddenAt(instancePath: string, at: number) {
+  try {
+    localStorage.setItem(TRASH_HIDDEN_KEY + instancePath, String(at));
+  } catch {}
+}
 const LOCAL_IMPORT_CONCURRENCY = 4;
 
 type Scope = "library" | Provider.CURSEFORGE | Provider.MODRINTH;
@@ -316,6 +360,10 @@ export function ContentManager({
   const [isTranslating, setIsTranslating] = useState(false);
   const [gameVersions, setGameVersions] = useState<IVersion[]>([]);
   const [trashEntries, setTrashEntries] = useState<TrashEntry[]>([]);
+  const [trashHiddenAt, setTrashHiddenAt] = useState(0);
+  const [isClearTrashOpen, setIsClearTrashOpen] = useState(false);
+  const splitRef = useRef<HTMLDivElement | null>(null);
+  const detailWidth = useDetailPanelWidth(splitRef);
   const [isIdentifying, setIsIdentifying] = useState(false);
   const [identifyReport, setIdentifyReport] = useState<IdentifyReport | null>(
     null,
@@ -465,17 +513,31 @@ export function ContentManager({
   });
 
   const duplicates = useMemo(
-    () => findLocalDuplicates(libraryEntries),
-    [libraryEntries],
+    () => findDuplicates(libraryEntries, updateCheck.unavailable),
+    [libraryEntries, updateCheck.unavailable],
+  );
+
+  const foreignKeys = useMemo(
+    () =>
+      new Set(
+        libraryEntries
+          .filter(
+            (entry) =>
+              entry.installed?.loader && entry.installed.loader !== loader,
+          )
+          .map((entry) => entry.key),
+      ),
+    [libraryEntries, loader],
   );
 
   const libraryMarks = useMemo(
     () => ({
       updatable: updateCheck.updatable,
       disabled: fileStates.disabled,
-      duplicates,
+      duplicates: duplicates.all,
+      foreign: foreignKeys,
     }),
-    [duplicates, fileStates.disabled, updateCheck.updatable],
+    [duplicates, fileStates.disabled, foreignKeys, updateCheck.updatable],
   );
 
   const facetCounts = useMemo(
@@ -872,15 +934,20 @@ export function ContentManager({
               entry.markedDisabled,
             loader: installLoader,
           });
+          if (entry.installed?.pinned) local.pinned = true;
           const ownIndex = next.findIndex(
             (item) => entryKey(item.provider, item.id) === entry.key,
           );
-          const index =
+          const installedIndex =
             ownIndex !== -1
               ? ownIndex
               : next.findIndex(
                   (item) => entryKey(item.provider, item.id) === installedKey,
                 );
+          const index =
+            installedIndex !== -1
+              ? installedIndex
+              : next.findIndex((item) => sharesFile(item, local));
           if (index === -1) next.push(local);
           else next.splice(index, 1, local);
           added.push(local);
@@ -1030,6 +1097,54 @@ export function ContentManager({
     [mods, rememberRemoved, setMods, t],
   );
 
+  const removeDuplicateRecords = useCallback(
+    (targets: ContentEntry[]) => {
+      const keys = new Set(targets.map((entry) => entry.key));
+      const removed = mods.filter((item) =>
+        keys.has(entryKey(item.provider, item.id)),
+      );
+      if (removed.length === 0) return;
+
+      setMods(
+        mods.filter((item) => !keys.has(entryKey(item.provider, item.id))),
+      );
+      for (const item of removed) rememberRemoved(item);
+      toast.success(
+        removed.length > 1
+          ? t("modManager.deletedMultiple", { count: removed.length })
+          : t("modManager.deleted"),
+      );
+    },
+    [mods, rememberRemoved, setMods, t],
+  );
+
+  const setPinnedFor = useCallback(
+    (targets: ContentEntry[], pinned: boolean) => {
+      const keys = new Set(
+        targets
+          .filter((entry) => entry.installed && isCheckableProject(entry.installed))
+          .map((entry) => entry.key),
+      );
+      if (keys.size === 0) return;
+
+      setMods(
+        mods.map((item) => {
+          if (!keys.has(entryKey(item.provider, item.id))) return item;
+          const next = { ...item };
+          if (pinned) next.pinned = true;
+          else delete next.pinned;
+          return next;
+        }),
+      );
+      toast.success(
+        t(pinned ? "modManager.pinnedDone" : "modManager.unpinnedDone", {
+          count: keys.size,
+        }),
+      );
+    },
+    [mods, setMods, t],
+  );
+
   const applyUpdateFor = useCallback(
     (keys: string[]) => {
       const updates = new Map<string, ModVersion>();
@@ -1145,6 +1260,7 @@ export function ContentManager({
       source?: {
         names?: Map<string, string>;
         deletedAt?: Map<string, number | null>;
+        reasons?: Map<string, TrashEntry["reason"]>;
         mode?: ImportMode;
       },
     ) => {
@@ -1171,24 +1287,24 @@ export function ContentManager({
         for (const [index, filePath] of filePaths.entries()) {
           const info = infos[index];
           const deletedAt = source?.deletedAt?.get(filePath) ?? null;
+          const deletedReason = source?.reasons?.get(filePath);
           const displayName =
             names?.get(filePath) ??
             info?.filename ??
             (await api.path.basename(filePath));
 
-          collected.push(
-            info
-              ? buildImportEntry({
-                  info,
-                  displayName,
-                  projectType,
-                  installed: mods,
-                  collected,
-                  deletedAt,
-                  fileUrl: toFileUrl(info.path),
-                })
-              : buildInvalidEntry({ displayName, projectType, deletedAt }),
-          );
+          const built = info
+            ? buildImportEntry({
+                info,
+                displayName,
+                projectType,
+                installed: mods,
+                collected,
+                deletedAt,
+                fileUrl: toFileUrl(info.path),
+              })
+            : buildInvalidEntry({ displayName, projectType, deletedAt });
+          collected.push(deletedReason ? { ...built, deletedReason } : built);
         }
       } catch (error) {
         showFailureToast(t("modManager.invalidMod"), error, {
@@ -1322,6 +1438,7 @@ export function ContentManager({
                 path,
                 sha1: file.sha1 ?? "",
                 projectType: entry.projectType,
+                ...(version?.id ? { gameVersion: version.id } : {}),
               };
             }),
           )
@@ -1354,7 +1471,15 @@ export function ContentManager({
         setIsIdentifying(false);
       }
     },
-    [fileStates, identifiable, instancePath, isIdentifying, projectType, t],
+    [
+      fileStates,
+      identifiable,
+      instancePath,
+      isIdentifying,
+      projectType,
+      t,
+      version?.id,
+    ],
   );
 
   const identifyRef = useRef(identifyLocal);
@@ -1433,6 +1558,63 @@ export function ContentManager({
     return trashEntries.filter((entry) => !known.has(entry.name.toLowerCase()));
   }, [mods, trashEntries]);
 
+  useEffect(() => {
+    setTrashHiddenAt(instancePath ? readTrashHiddenAt(instancePath) : 0);
+  }, [instancePath]);
+
+  const latestTrashAt = useMemo(
+    () =>
+      restorableTrash.reduce(
+        (latest, entry) => Math.max(latest, entry.deletedAt ?? 0),
+        0,
+      ),
+    [restorableTrash],
+  );
+  const showTrashBar =
+    canUseTrash &&
+    restorableTrash.length > 0 &&
+    (latestTrashAt === 0 || latestTrashAt > trashHiddenAt);
+
+  const hideTrashBar = useCallback(() => {
+    if (!instancePath) return;
+    const at = latestTrashAt || Date.now();
+    writeTrashHiddenAt(instancePath, at);
+    setTrashHiddenAt(at);
+  }, [instancePath, latestTrashAt]);
+
+  const openTrashFolder = useCallback(async () => {
+    if (!instancePath) return;
+    try {
+      await api.shell.openPath(await trashFolder(instancePath));
+    } catch (error) {
+      showFailureToast(t("modManager.trashOpenFailed"), error, {
+        channels: ["shell:openPath"],
+      });
+    }
+  }, [instancePath, t]);
+
+  const clearTrash = useCallback(async () => {
+    if (!instancePath || restorableTrash.length === 0) return;
+
+    setIsBusy(true);
+    try {
+      const files = await trashPaths(instancePath, restorableTrash);
+      const results = await Promise.all(
+        files.map((file) => api.fs.rimraf(file.path).catch(() => false)),
+      );
+      const cleared = results.filter(Boolean).length;
+
+      if (cleared < files.length) {
+        toast.warning(t("modManager.trashClearFailed"));
+      } else {
+        toast.success(t("modManager.trashCleared", { count: cleared }));
+      }
+    } finally {
+      setIsBusy(false);
+      setFileRevision((value) => value + 1);
+    }
+  }, [instancePath, restorableTrash, t]);
+
   const restoreTrash = useCallback(async () => {
     if (!instancePath || restorableTrash.length === 0) return;
 
@@ -1447,6 +1629,12 @@ export function ContentManager({
           files.map((file) => [
             file.path,
             restorableTrash[byPath.get(file.path) ?? 0]?.deletedAt ?? null,
+          ]),
+        ),
+        reasons: new Map(
+          files.map((file) => [
+            file.path,
+            restorableTrash[byPath.get(file.path) ?? 0]?.reason,
           ]),
         ),
         mode: "restore",
@@ -1665,6 +1853,24 @@ export function ContentManager({
     () => rows.filter((entry) => selection.has(entry.key)),
     [rows, selection],
   );
+  const selectedCheckable = useMemo(
+    () =>
+      selectedEntries.filter(
+        (entry) => entry.installed && isCheckableProject(entry.installed),
+      ),
+    [selectedEntries],
+  );
+  const selectionAllPinned =
+    selectedCheckable.length > 0 &&
+    selectedCheckable.every((entry) => entry.installed?.pinned === true);
+
+  const typeCounts = useMemo(() => {
+    const counts = new Map<ProjectType, number>();
+    for (const mod of mods) {
+      counts.set(mod.projectType, (counts.get(mod.projectType) ?? 0) + 1);
+    }
+    return counts;
+  }, [mods]);
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -1852,7 +2058,7 @@ export function ContentManager({
       ? "selection"
       : canUseTrash && foreignFiles.length > 0
         ? "foreign"
-        : canShowUpdateBar && duplicates.size > 0
+        : canShowUpdateBar && duplicates.groups > 0
           ? "duplicates"
           : canShowUpdateBar && updatableCount > 0
             ? "updates"
@@ -1874,13 +2080,16 @@ export function ContentManager({
         ref={rootRef}
         className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
       >
-        <div className="flex shrink-0 flex-wrap items-center gap-2 pb-2.5">
+        <div className="@container flex shrink-0 flex-wrap items-center gap-2 pb-2.5">
           <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5">
             {!isModpacks && (
               <ScopeButton
                 active={scope === "library"}
                 label={t("modManager.library")}
-                count={libraryEntries.length}
+                compact
+                count={
+                  projectTypes.length > 1 ? undefined : libraryEntries.length
+                }
                 onClick={() => setScope("library")}
               >
                 <Library className="size-4" />
@@ -1890,6 +2099,7 @@ export function ContentManager({
             <ScopeButton
               active={scope === Provider.CURSEFORGE}
               label="CurseForge"
+              compact
               disabled={!canBrowse}
               onClick={() => setScope(Provider.CURSEFORGE)}
             >
@@ -1899,6 +2109,7 @@ export function ContentManager({
             <ScopeButton
               active={scope === Provider.MODRINTH}
               label="Modrinth"
+              compact
               disabled={!canBrowse}
               onClick={() => setScope(Provider.MODRINTH)}
             >
@@ -1907,21 +2118,28 @@ export function ContentManager({
           </div>
 
           {!isModpacks && projectTypes.length > 1 && (
-            <Select
-              value={projectType}
-              onValueChange={(value: ProjectType) => setProjectType(value)}
+            <div
+              role="tablist"
+              aria-label={t("modManager.contentType")}
+              className="flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5"
             >
-              <SelectTrigger size="sm" className="w-36 shrink-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {projectTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {t(`modManager.projectTypes.${type}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {projectTypes.map((type) => {
+                const Icon = PROJECT_TYPE_ICONS[type] ?? Package;
+                return (
+                  <ScopeButton
+                    key={type}
+                    active={projectType === type}
+                    label={t(`modManager.projectTypes.${type}`)}
+                    count={
+                      scope === "library" ? (typeCounts.get(type) ?? 0) : undefined
+                    }
+                    onClick={() => setProjectType(type)}
+                  >
+                    <Icon className="size-4" />
+                  </ScopeButton>
+                );
+              })}
+            </div>
           )}
 
           {scope !== "library" && loaderOptions.length > 0 && (
@@ -1997,7 +2215,7 @@ export function ContentManager({
             </>
           )}
 
-          <div className="relative min-w-36 flex-1">
+          <div className="relative min-w-32 flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-faint" />
             <Input
               ref={searchRef}
@@ -2027,7 +2245,7 @@ export function ContentManager({
               value={librarySort}
               onValueChange={(value: LibrarySort) => setLibrarySort(value)}
             >
-              <SelectTrigger size="sm" className="w-48 shrink-0">
+              <SelectTrigger size="sm" className="w-44 shrink-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -2059,9 +2277,12 @@ export function ContentManager({
                 size="sm"
                 variant="outline"
                 className="h-8 shrink-0 px-2.5"
+                aria-label={t("modManager.filter")}
               >
                 <SlidersHorizontal className="size-4" />
-                {t("modManager.filter")}
+                <span className="hidden @5xl:inline">
+                  {t("modManager.filter")}
+                </span>
                 {(scope === "library"
                   ? libraryFacets.length
                   : catalogFilters.length) > 0 && (
@@ -2270,6 +2491,25 @@ export function ContentManager({
                   {t("common.update")}
                 </Button>
 
+                {selectedCheckable.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    disabled={isBusy}
+                    onClick={() =>
+                      setPinnedFor(selectedCheckable, !selectionAllPinned)
+                    }
+                  >
+                    {selectionAllPinned ? (
+                      <PinOff className="size-3.5" />
+                    ) : (
+                      <Pin className="size-3.5" />
+                    )}
+                    {t(selectionAllPinned ? "modManager.unpin" : "modManager.pin")}
+                  </Button>
+                )}
+
                 {canToggleType(projectType) && (
                   <>
                     <Button
@@ -2361,6 +2601,17 @@ export function ContentManager({
               <span className="min-w-0 flex-1 truncate text-xs text-foreground">
                 {t("modManager.availableUpdates", { count: updatableCount })}
               </span>
+              {!libraryFacets.includes("update") && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 shrink-0 px-2.5 text-xs"
+                  onClick={() => setLibraryFacets(["update"])}
+                >
+                  <ListFilter className="size-3.5" />
+                  {t("modManager.updatesShow")}
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="secondary"
@@ -2415,7 +2666,7 @@ export function ContentManager({
                 <TooltipTrigger asChild>
                   <span className="min-w-0 flex-1 truncate text-xs text-foreground">
                     {t("modManager.duplicatesFound", {
-                      count: duplicates.size,
+                      count: duplicates.groups,
                     })}
                   </span>
                 </TooltipTrigger>
@@ -2433,22 +2684,28 @@ export function ContentManager({
                   {t("modManager.duplicatesShow")}
                 </Button>
               )}
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-7 shrink-0 px-2.5 text-xs"
-                disabled={isBusy}
-                onClick={() => {
-                  removeEntries(
-                    libraryEntries.filter((entry) => duplicates.has(entry.key)),
-                  );
-                  setLibraryFacets((prev) =>
-                    prev.filter((facet) => facet !== "duplicate"),
-                  );
-                }}
-              >
-                {t("modManager.duplicatesRemove")}
-              </Button>
+              {duplicates.extra.size > 0 && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-7 shrink-0 px-2.5 text-xs"
+                  disabled={isBusy}
+                  onClick={() => {
+                    removeDuplicateRecords(
+                      libraryEntries.filter((entry) =>
+                        duplicates.extra.has(entry.key),
+                      ),
+                    );
+                    if (duplicates.extra.size === duplicates.all.size) {
+                      setLibraryFacets((prev) =>
+                        prev.filter((facet) => facet !== "duplicate"),
+                      );
+                    }
+                  }}
+                >
+                  {t("modManager.duplicatesRemove")}
+                </Button>
+              )}
             </div>
           ) : bar === "chips" ? (
             <div className="mb-2.5 flex h-9 items-center gap-1.5 overflow-x-auto">
@@ -2475,7 +2732,10 @@ export function ContentManager({
           ) : null}
         </Collapse>
 
-        <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-border bg-card">
+        <div
+          ref={splitRef}
+          className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-border bg-card"
+        >
           <div
             className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
             onDragEnter={(event) => {
@@ -2566,9 +2826,20 @@ export function ContentManager({
                           }
                           hasUpdate={updateCheck.updatable.has(entry.key)}
                           isUnavailable={updateCheck.unavailable.has(entry.key)}
+                          gameVersion={version?.id}
+                          heldVersion={
+                            updateCheck.held.get(entry.key)?.versionNumber ||
+                            updateCheck.held.get(entry.key)?.name
+                          }
                           isUnchecked={updateCheck.unchecked.has(entry.key)}
-                          isDuplicate={
-                            scope === "library" && duplicates.has(entry.key)
+                          duplicate={
+                            scope !== "library"
+                              ? undefined
+                              : duplicates.extra.has(entry.key)
+                                ? "extra"
+                                : duplicates.all.has(entry.key)
+                                  ? "review"
+                                  : undefined
                           }
                           foreignLoader={
                             entry.installed?.loader &&
@@ -2688,7 +2959,7 @@ export function ContentManager({
                 </div>
               )}
 
-            {canUseTrash && restorableTrash.length > 0 && (
+            {showTrashBar && (
               <div className="flex h-9 shrink-0 items-center gap-2 border-t border-border px-3">
                 <Undo2 className="size-3.5 shrink-0 text-faint" />
                 <span className="shrink-0 text-xs text-foreground">
@@ -2699,15 +2970,62 @@ export function ContentManager({
                 <span className="min-w-0 truncate text-xs text-faint">
                   {t("modManager.trashHint", { days: TRASH_MAX_AGE_DAYS })}
                 </span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="ml-auto h-7 shrink-0 px-2.5 text-xs"
-                  disabled={isBusy}
-                  onClick={() => void restoreTrash()}
-                >
-                  {t("modManager.trashRestore")}
-                </Button>
+                <div className="ml-auto flex shrink-0 items-center gap-0.5">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 shrink-0 px-2.5 text-xs"
+                    disabled={isBusy}
+                    onClick={() => void restoreTrash()}
+                  >
+                    {t("modManager.trashRestore")}
+                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        className="size-7"
+                        aria-label={t("modManager.trashOpen")}
+                        onClick={() => void openTrashFolder()}
+                      >
+                        <FolderOpen className="size-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("modManager.trashOpen")}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        className="size-7 text-destructive hover:bg-destructive/15 hover:text-destructive"
+                        disabled={isBusy}
+                        aria-label={t("modManager.trashClear")}
+                        onClick={() => setIsClearTrashOpen(true)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("modManager.trashClear")}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        className="size-7"
+                        aria-label={t("modManager.trashHide")}
+                        onClick={hideTrashBar}
+                      >
+                        <EyeOff className="size-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-60">
+                      {t("modManager.trashHideHint")}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </div>
             )}
 
@@ -2777,6 +3095,18 @@ export function ContentManager({
               }}
               onTranslate={() => void translateDetail()}
               onRetry={() => void loadDetail(detailEntry, true)}
+              width={detailWidth.width}
+              clampWidth={detailWidth.clamp}
+              onResizeEnd={detailWidth.commit}
+              onResetWidth={detailWidth.reset}
+              isPinned={detailEntry.installed?.pinned === true}
+              canPin={Boolean(
+                detailEntry.installed &&
+                  isCheckableProject(detailEntry.installed),
+              )}
+              onTogglePin={() =>
+                setPinnedFor([detailEntry], detailEntry.installed?.pinned !== true)
+              }
             />
           )}
         </div>
@@ -2846,6 +3176,36 @@ export function ContentManager({
               },
             );
           }}
+        />
+      )}
+
+      {isClearTrashOpen && (
+        <Confirmation
+          title={t("modManager.trashClearTitle")}
+          reversible={false}
+          content={[
+            {
+              text: t("modManager.trashClearConfirm", {
+                count: restorableTrash.length,
+              }),
+            },
+          ]}
+          buttons={[
+            {
+              text: t("modManager.trashClear"),
+              color: "danger",
+              onClick: async () => {
+                setIsClearTrashOpen(false);
+                await clearTrash();
+              },
+            },
+            {
+              text: t("common.cancel"),
+              color: "secondary",
+              onClick: () => setIsClearTrashOpen(false),
+            },
+          ]}
+          onClose={() => setIsClearTrashOpen(false)}
         />
       )}
 
@@ -2923,6 +3283,7 @@ function ScopeButton({
   active,
   label,
   count,
+  compact = false,
   disabled,
   onClick,
   children,
@@ -2930,6 +3291,7 @@ function ScopeButton({
   active: boolean;
   label: string;
   count?: number;
+  compact?: boolean;
   disabled?: boolean;
   onClick: () => void;
   children: React.ReactNode;
@@ -2946,15 +3308,25 @@ function ScopeButton({
           className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:text-foreground aria-pressed:bg-surface-3 aria-pressed:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
           {children}
-          {active && <span className="whitespace-nowrap">{label}</span>}
+          {active && (
+            <span
+              className={
+                compact ? "hidden whitespace-nowrap @5xl:inline" : "whitespace-nowrap"
+              }
+            >
+              {label}
+            </span>
+          )}
           {active && count != null && (
-            <span className="font-mono text-[0.625rem] tabular-nums text-faint">
+            <span className="rounded-sm bg-surface-1 px-1 font-mono text-[0.6875rem] leading-4 tabular-nums text-foreground">
               {count}
             </span>
           )}
         </button>
       </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
+      <TooltipContent>
+        {count != null && !active ? `${label} · ${count}` : label}
+      </TooltipContent>
     </Tooltip>
   );
 }

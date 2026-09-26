@@ -12,6 +12,7 @@ import {
   Monitor,
   MonitorCog,
   PackageCheck,
+  Pin,
   Plus,
   Power,
   PowerOff,
@@ -34,6 +35,7 @@ import { LoaderLabel } from "@renderer/components/Loaders";
 import { ContentEntry } from "./entries";
 import { formatCompactNumber } from "./format";
 import { ProjectIcon } from "./ProjectIcon";
+import { displayTitle, installedVersionLabel } from "./titles";
 
 export const ROW_HEIGHT = 56;
 
@@ -46,6 +48,11 @@ export interface ContentRowActions {
   onRestore: (entry: ContentEntry) => void;
   onToggleEnabled: (entry: ContentEntry, enabled: boolean) => void;
 }
+
+const PROVIDER_NAMES: Partial<Record<Provider, string>> = {
+  [Provider.CURSEFORGE]: "CurseForge",
+  [Provider.MODRINTH]: "Modrinth",
+};
 
 function ProviderMark({ provider }: { provider: Provider }) {
   if (provider === Provider.CURSEFORGE)
@@ -77,7 +84,9 @@ export const ContentRow = memo(function ContentRow({
   hasUpdate,
   isUnavailable,
   isUnchecked,
-  isDuplicate = false,
+  duplicate,
+  gameVersion,
+  heldVersion,
   foreignLoader,
   changedAt,
   isBusy,
@@ -98,7 +107,9 @@ export const ContentRow = memo(function ContentRow({
   hasUpdate: boolean;
   isUnavailable: boolean;
   isUnchecked: boolean;
-  isDuplicate?: boolean;
+  duplicate?: "extra" | "review";
+  gameVersion?: string;
+  heldVersion?: string;
   foreignLoader?: string;
   changedAt?: number;
   isBusy: boolean;
@@ -107,6 +118,10 @@ export const ContentRow = memo(function ContentRow({
   const { t } = useTranslation();
 
   const installed = entry.installed;
+  const title = displayTitle(entry.title);
+  const versionLabel =
+    isLibrary && installed ? installedVersionLabel(installed, gameVersion) : null;
+  const isPinned = isLibrary && installed?.pinned === true;
   const downloads = formatCompactNumber(entry.stats?.downloads, lang);
   const follows =
     entry.provider === Provider.MODRINTH
@@ -148,18 +163,43 @@ export const ContentRow = memo(function ContentRow({
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <Hint content={entry.title} variant="text" truncatedOnly>
+        <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+          <Hint
+            content={entry.title}
+            variant="text"
+            truncatedOnly={title === entry.title}
+          >
             <span
-              className={`truncate text-sm leading-4 ${
+              className={`min-w-16 truncate text-sm leading-4 ${
                 entry.pendingRemoved || !isEnabled
                   ? "text-muted-foreground line-through"
                   : "text-foreground"
               }`}
             >
-              {entry.title}
+              {title}
             </span>
           </Hint>
+
+          {versionLabel && (
+            <span className="max-w-24 min-w-0 truncate font-mono text-[0.6875rem] leading-4 text-faint">
+              {versionLabel}
+            </span>
+          )}
+
+          {isPinned && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex size-4 shrink-0 items-center justify-center text-primary">
+                  <Pin className="size-3" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64">
+                {heldVersion
+                  ? t("modManager.pinnedWithUpdate", { version: heldVersion })
+                  : t("modManager.pinned")}
+              </TooltipContent>
+            </Tooltip>
+          )}
 
           {hasUpdate && (
             <span className="shrink-0 rounded-sm bg-warning/15 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-warning">
@@ -174,7 +214,14 @@ export const ContentRow = memo(function ContentRow({
                   <Ban className="size-3.5" />
                 </span>
               </TooltipTrigger>
-              <TooltipContent>{t("modManager.incompatible")}</TooltipContent>
+              <TooltipContent className="max-w-72">
+                {gameVersion && PROVIDER_NAMES[entry.provider]
+                  ? t("modManager.incompatibleOn", {
+                      provider: PROVIDER_NAMES[entry.provider],
+                      version: gameVersion,
+                    })
+                  : t("modManager.incompatible")}
+              </TooltipContent>
             </Tooltip>
           )}
 
@@ -196,7 +243,7 @@ export const ContentRow = memo(function ContentRow({
             />
           )}
 
-          {isDuplicate && (
+          {duplicate && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="flex shrink-0 items-center gap-1 rounded-sm bg-warning/15 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-warning">
@@ -205,7 +252,11 @@ export const ContentRow = memo(function ContentRow({
                 </span>
               </TooltipTrigger>
               <TooltipContent className="max-w-64">
-                {t("modManager.duplicateHint")}
+                {t(
+                  duplicate === "extra"
+                    ? "modManager.duplicateHint"
+                    : "modManager.duplicateReviewHint",
+                )}
               </TooltipContent>
             </Tooltip>
           )}

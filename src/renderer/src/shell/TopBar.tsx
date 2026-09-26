@@ -25,6 +25,7 @@ import {
 import { getConnectivityProblems } from "@renderer/utilities/connectivity";
 import { instanceKey } from "@renderer/features/instances/selectors";
 import { TaskCenter } from "@renderer/features/install/TaskCenter";
+import { UpdatePill } from "@renderer/features/appUpdate/UpdatePill";
 import { openConnectivityCheck } from "@renderer/features/install/installUi";
 import { agentChatsAtom, agentCurrentChatAtom } from "@renderer/agent/store";
 import { openAgent } from "@renderer/features/agent/openAgent";
@@ -181,6 +182,8 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
             </Hint>
           ) : null}
         </CollapseInline>
+
+        <UpdatePill />
 
         <div className="mr-1.5 flex items-center">
           <TaskCenter />

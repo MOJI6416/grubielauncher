@@ -52,6 +52,7 @@ export function NewsScreen() {
     isLoading,
     isLoadingMore,
     loadMoreFailed,
+    autoLoadStalled,
     hasError,
     partialError,
     refresh,
@@ -64,7 +65,7 @@ export function NewsScreen() {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   const setFeedScroller = useLoadOnScroll(
-    Boolean(cursor) && !isLoadingMore && !loadMoreFailed,
+    Boolean(cursor) && !isLoadingMore && !loadMoreFailed && !autoLoadStalled,
     () => void loadMore(),
     cards.length,
   );
@@ -153,6 +154,19 @@ export function NewsScreen() {
         </div>
       )}
 
+      {cursor && autoLoadStalled && !isLoadingMore && !loadMoreFailed && (
+        <div className="mt-3 flex h-9 items-center justify-center">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2.5 text-xs"
+            onClick={() => void loadMore()}
+          >
+            <RefreshCcw className="size-3.5" />
+            {t("news.loadEarlier")}
+          </Button>
+        </div>
+      )}
       {cursor && (isLoadingMore || loadMoreFailed) && (
         <div className="mt-3 flex h-9 items-center justify-center gap-2 text-xs text-muted-foreground">
           {isLoadingMore ? (

@@ -153,6 +153,40 @@ function modWithDeps(
 const titles = (mods: ILocalProject[]) => mods.map((m) => m.title).sort();
 
 describe("planDeletion", () => {
+  it("lets one of two copies of a mod go without blocking or cascading", () => {
+    const terra = (provider: Provider, id: string, title: string) =>
+      localMod({
+        id,
+        provider,
+        title,
+        version: {
+          id: `${id}-v`,
+          dependencies: [],
+          files: [
+            {
+              filename: "TerraBlender-neoforge-1.21.1-4.1.0.8.jar",
+              size: 1,
+              url: "",
+              sha1: "",
+              isServer: true,
+            },
+          ],
+        },
+      });
+    const local = terra(Provider.LOCAL, "terrablender", "TerraBlender");
+    const catalog = terra(
+      Provider.CURSEFORGE,
+      "563928",
+      "TerraBlender (NeoForge)",
+    );
+    const user = modWithDeps("biomes", "Biomes", [{ title: "TerraBlender" }]);
+
+    const plan = planDeletion([local, catalog, user], local);
+
+    expect(plan.remove).toEqual([local]);
+    expect(plan.blockers).toEqual([]);
+  });
+
   it("removes the mod and its orphaned required dependencies", () => {
     const a = modWithDeps("a", "Top", [{ title: "Lib" }]);
     const b = modWithDeps("b", "Lib");

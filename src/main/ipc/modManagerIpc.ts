@@ -164,6 +164,13 @@ export function registerModManagerIpc() {
     },
   );
 
+  handleSafe<Record<string, boolean> | null, [string[]]>(
+    "modManager:modrinthClientSides",
+    null,
+    [check.arrayOf(check.nonEmptyString(64), 5000)],
+    async (_, ids: string[]) => await ModManager.modrinthClientSides(ids),
+  );
+
   handleSafe<ILocalIdentifyResult, [ILocalIdentifyRequest[]]>(
     "modManager:identifyLocal",
     { matches: [], unavailable: [Provider.CURSEFORGE, Provider.MODRINTH] },
@@ -177,7 +184,10 @@ export function registerModManagerIpc() {
           typeof request.path === "string" &&
           typeof request.sha1 === "string" &&
           request.sha1.length <= 64 &&
-          Object.values(ProjectType).includes(request.projectType),
+          Object.values(ProjectType).includes(request.projectType) &&
+          (request.gameVersion === undefined ||
+            (typeof request.gameVersion === "string" &&
+              request.gameVersion.length <= 64)),
       );
 
       for (const request of valid) {
@@ -225,6 +235,7 @@ export function registerModManagerIpc() {
       return await moveFilesToTrash(
         path.join(versionPath, "storage", "trash"),
         files,
+        () => "foreign",
       );
     },
   );

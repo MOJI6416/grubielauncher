@@ -27,6 +27,7 @@ import {
   cfFileToVersion,
   cfModToProject,
   loaderToCfLoader,
+  modrinthRunsOnClient,
   mrProjectToProject,
   mrVersionToVersion,
   sortVersionsByDate
@@ -247,7 +248,7 @@ export class ModManager {
 
         if (!versions) return []
 
-        const isClient = projectType != ProjectType.MOD || project?.client_side != 'unsupported'
+        const isClient = projectType != ProjectType.MOD || modrinthRunsOnClient(project)
 
         return sortVersionsByDate(
           versions.map((v) =>
@@ -263,12 +264,37 @@ export class ModManager {
     }
   }
 
+  static async modrinthClientSides(ids: string[]): Promise<Record<string, boolean> | null> {
+    const sides: Record<string, boolean> = {}
+
+    for (const batch of chunk([...new Set(ids)], MODRINTH_PROJECT_BATCH)) {
+      const projects = await Modrinth.getProjects(batch)
+      if (!projects) return null
+
+      for (const project of projects) {
+        const runsOnClient = modrinthRunsOnClient(project)
+        sides[project.id] = runsOnClient
+        if (project.slug) sides[project.slug] = runsOnClient
+      }
+    }
+
+    return sides
+  }
+
   static async identifyLocalFiles(
     requests: ILocalIdentifyRequest[]
   ): Promise<ILocalIdentifyResult> {
     const matches: ILocalIdentifyMatch[] = []
     const unavailable: Provider[] = []
     const limit = pLimit(FINGERPRINT_CONCURRENCY)
+    const modrinthFallbacks = new Map<string, ILocalIdentifyMatch>()
+    const finish = (): ILocalIdentifyResult => {
+      const matched = new Set(matches.map((match) => match.key))
+      for (const [key, match] of modrinthFallbacks) {
+        if (!matched.has(key)) matches.push(match)
+      }
+      return { matches, unavailable }
+    }
 
     const items = await Promise.all(
       requests.map((request) =>
@@ -316,10 +342,10 @@ export class ModManager {
       if (!version || !project || !file) continue
 
       const isServer = project.server_side != 'unsupported'
-      const isClient = item.projectType != ProjectType.MOD || project.client_side != 'unsupported'
+      const isClient = item.projectType != ProjectType.MOD || modrinthRunsOnClient(project)
       const mapped = mrVersionToVersion(version, isServer, item.projectType, isClient)
 
-      matches.push({
+      const match: ILocalIdentifyMatch = {
         key: item.key,
         provider: Provider.MODRINTH,
         loaders: version.loaders ?? [],
@@ -337,11 +363,18 @@ export class ModManager {
             }
           ]
         }
-      })
+      }
+
+      if (item.gameVersion && !(version.game_versions ?? []).includes(item.gameVersion)) {
+        modrinthFallbacks.set(item.key, match)
+        continue
+      }
+
+      matches.push(match)
       pending.delete(item.key)
     }
 
-    if (pending.size === 0) return { matches, unavailable }
+    if (pending.size === 0) return finish()
 
     const fingerprints = new Map<string, number>()
     await Promise.all(
@@ -356,14 +389,14 @@ export class ModManager {
     const found = await CurseForge.getFingerprintMatches([...new Set(fingerprints.values())])
     if (!found) {
       unavailable.push(Provider.CURSEFORGE)
-      return { matches, unavailable }
+      return finish()
     }
 
     const byFingerprint = new Map(found.map((match) => [match.id, match]))
     const mods = await CurseForge.getMods([...new Set(found.map((match) => match.modId))])
     if (!mods) {
       unavailable.push(Provider.CURSEFORGE)
-      return { matches, unavailable }
+      return finish()
     }
     const modById = new Map(mods.map((mod) => [mod.id, mod]))
 
@@ -372,6 +405,13 @@ export class ModManager {
       const match = fingerprint !== undefined ? byFingerprint.get(fingerprint) : undefined
       const mod = match ? modById.get(match.modId) : undefined
       if (!match || !mod) continue
+      if (
+        modrinthFallbacks.has(item.key) &&
+        item.gameVersion &&
+        !(match.file.gameVersions ?? []).includes(item.gameVersion)
+      ) {
+        continue
+      }
 
       const project = cfModToProject(mod)
       matches.push({
@@ -385,7 +425,7 @@ export class ModManager {
       })
     }
 
-    return { matches, unavailable }
+    return finish()
   }
 
   static async getDependencies(

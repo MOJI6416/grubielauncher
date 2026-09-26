@@ -142,6 +142,27 @@ describe("linkIdentified", () => {
 
     expect(linked).toEqual(["local:sodium"]);
   });
+
+  it("folds a local mod into the catalog entry that already owns its file", () => {
+    const owner = {
+      ...local("419699", "architectury-13.0.11-neoforge.jar"),
+      provider: Provider.CURSEFORGE,
+      title: "Architectury API",
+    };
+    const mods = [
+      local("architectury", "architectury-13.0.11-neoforge.jar"),
+      owner,
+    ];
+
+    const { mods: next, linked } = linkIdentified(
+      mods,
+      [match("local:architectury", "lhGA9TYQ")],
+      new Set(),
+    );
+
+    expect(linked).toEqual(["local:architectury"]);
+    expect(next).toEqual([owner]);
+  });
 });
 
 describe("foreignLoader", () => {

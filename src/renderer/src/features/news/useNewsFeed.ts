@@ -24,6 +24,7 @@ import {
   NewsSource,
   availableSources,
   buildNewsCards,
+  countForSource,
   filterBySource,
   mergeNewsItems,
   mixFeed,
@@ -62,6 +63,7 @@ export function useNewsFeed() {
   const [partialError, setPartialError] = useState(false);
   const [updatedAt, setUpdatedAt] = useState(0);
   const [source, setSource] = useState<NewsSource | "all">("all");
+  const [stalledSource, setStalledSource] = useState<NewsSource | null>(null);
   const [lastSeen] = useState(() =>
     parseLastSeen(window.localStorage.getItem(LAST_SEEN_KEY)),
   );
@@ -103,6 +105,7 @@ export function useNewsFeed() {
   const refresh = useCallback(async () => {
     const reqId = ++reqIdRef.current;
     loadingMoreRef.current = false;
+    setStalledSource(null);
     setIsLoading(true);
     setIsLoadingMore(false);
     setLoadMoreFailed(false);
@@ -193,6 +196,11 @@ export function useNewsFeed() {
       setNews((current) => mergeNewsItems(current, page.items));
       setCursor(page.nextCursor);
       setLoadMoreFailed(false);
+      setStalledSource(
+        source !== "all" && countForSource(page.items, source) === 0
+          ? source
+          : null,
+      );
     } catch (error) {
       if (reqIdRef.current !== reqId) return;
       setLoadMoreFailed(true);
@@ -206,7 +214,7 @@ export function useNewsFeed() {
         setIsLoadingMore(false);
       }
     }
-  }, [cursor, t]);
+  }, [cursor, source, t]);
 
   useEffect(() => {
     if (!isNetwork) {
@@ -242,6 +250,10 @@ export function useNewsFeed() {
   useEffect(() => {
     if (source !== "all" && !sources.includes(source)) setSource("all");
   }, [source, sources]);
+
+  useEffect(() => {
+    setStalledSource(null);
+  }, [source]);
 
   const persistHiddenSponsoredAdIds = useCallback((ids: string[]) => {
     setHiddenSponsoredAdIds(ids);
@@ -300,6 +312,7 @@ export function useNewsFeed() {
     isLoading,
     isLoadingMore,
     loadMoreFailed,
+    autoLoadStalled: stalledSource !== null && stalledSource === source,
     hasError,
     partialError,
     refresh,

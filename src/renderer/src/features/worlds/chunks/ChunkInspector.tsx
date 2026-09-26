@@ -475,16 +475,17 @@ function Row({
   return (
     <>
       <dt className="truncate text-faint">{label}</dt>
-      <dd
-        className={cn(
-          "min-w-0 truncate text-right",
-          mono && "font-mono",
-          tone === "destructive" ? "text-destructive" : "text-foreground",
-        )}
-        title={value}
-      >
-        {value}
-      </dd>
+      <Hint content={value} variant="text" truncatedOnly>
+        <dd
+          className={cn(
+            "min-w-0 truncate text-right",
+            mono && "font-mono",
+            tone === "destructive" ? "text-destructive" : "text-foreground",
+          )}
+        >
+          {value}
+        </dd>
+      </Hint>
     </>
   );
 }

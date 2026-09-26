@@ -38,6 +38,7 @@ import { formatBytes } from "@renderer/utilities/file";
 import { showFailureToast } from "@renderer/utilities/failures";
 import type { StorageBreakdown, StorageCategoryId } from "@/types/Storage";
 import { Highlighted, SettingsGroup } from "./SettingsPrimitives";
+import { DataLocationGroup } from "./DataLocationGroup";
 import type { SettingsEntryId } from "./catalog";
 import {
   cleanupOffers,
@@ -304,6 +305,8 @@ export function StorageSection({
           )}
         </div>
       )}
+
+      {visible("dataLocation") && <DataLocationGroup query={query} />}
 
       {showCleanup && !isLoading && reclaimable > 0 && (
         <div className="flex items-center gap-3 rounded-xl border border-warning/40 bg-surface-2 px-3.5 py-2">

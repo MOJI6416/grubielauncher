@@ -27,7 +27,7 @@ function version(overrides: Partial<ModVersion> = {}): ModVersion {
     downloads: 0,
     files: [
       {
-        filename: "mod.jar",
+        filename: `${overrides.id ?? "v1"}.jar`,
         size: 1,
         sha1: "sha",
         url: "https://example.test/mod.jar",
@@ -280,10 +280,47 @@ describe("planQuickInstall", () => {
       [],
       fetchers({
         p1: [version({ dependencies: [toApi] })],
-        api: [version({ dependencies: [toRoot] })],
+        api: [version({ id: "apiv1", dependencies: [toRoot] })],
       }),
     );
 
     expect(plan.added.map((item) => item.id)).toEqual(["p1", "api"]);
+  });
+
+  it("skips a dependency whose file another catalog already installed", async () => {
+    const dependency: IVersionDependency = {
+      projectId: "api",
+      versionId: null,
+      relationType: DependencyType.REQUIRED,
+      project: fabricApi,
+    };
+    const installed = localMod({
+      id: "P7dR8mSH",
+      title: "FAPI",
+      version: {
+        id: "mr",
+        dependencies: [],
+        files: [
+          {
+            filename: "apiv1.jar",
+            size: 1,
+            url: "",
+            sha1: "",
+            isServer: true,
+          },
+        ],
+      },
+    });
+
+    const plan = await planQuickInstall(
+      project(),
+      [installed],
+      fetchers({
+        p1: [version({ id: "v1", dependencies: [dependency] })],
+        api: [version({ id: "apiv1" })],
+      }),
+    );
+
+    expect(plan.added.map((item) => item.id)).toEqual(["p1"]);
   });
 });

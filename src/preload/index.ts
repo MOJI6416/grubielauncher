@@ -166,6 +166,15 @@ import {
   StorageClearResult,
 } from "@/types/Storage";
 import { BlessedPathInfo } from "@/types/AllowedPath";
+import type { TrayAction, TrayCommand, TrayModel } from "@/types/Tray";
+import type { AppUpdateState } from "@/types/AppUpdate";
+import type {
+  DataLocationApplyResult,
+  DataLocationInfo,
+  DataLocationPlan,
+  DataLocationWindowAction,
+  DataLocationWindowState,
+} from "@/types/DataLocation";
 import {
   IPC_FAILURE_TOKEN_CHANNEL,
   IpcFailurePayload,
@@ -267,6 +276,19 @@ export interface IElectronAPI {
       names?: string[],
     ) => Promise<StorageClearResult>;
   };
+  dataLocation: {
+    get: () => Promise<DataLocationInfo>;
+    pick: () => Promise<DataLocationPlan | null>;
+    planDefault: () => Promise<DataLocationPlan | null>;
+    apply: (kind: "move" | "adopt") => Promise<DataLocationApplyResult>;
+  };
+  dataLocationWindow: {
+    getState: () => Promise<DataLocationWindowState | null>;
+    action: (action: DataLocationWindowAction) => Promise<void>;
+    onState: (
+      callback: (state: DataLocationWindowState) => void,
+    ) => () => void;
+  };
   path: {
     join: (...args: string[]) => string;
     basename: (filePath: string, suffix?: string) => string;
@@ -298,6 +320,9 @@ export interface IElectronAPI {
   };
   clipboard: {
     writeText: (text: string) => Promise<boolean>;
+  };
+  edit: {
+    run: (command: "cut" | "copy" | "paste" | "selectAll") => Promise<void>;
   };
   shell: {
     openExternal: (url: string) => Promise<void>;
@@ -695,6 +720,30 @@ export interface IElectronAPI {
     list: () => Promise<BlessedPathInfo[]>;
     revoke: (target: string) => Promise<boolean>;
   };
+  tray: {
+    update: (model: TrayModel) => Promise<void>;
+    onAction: (callback: (action: TrayAction) => void) => () => void;
+  };
+  trayPopup: {
+    getModel: () => Promise<TrayModel | null>;
+    run: (command: TrayCommand) => Promise<void>;
+    resize: (height: number) => Promise<void>;
+    hide: () => Promise<void>;
+    reveal: () => Promise<void>;
+    onModel: (callback: (model: TrayModel) => void) => () => void;
+    onShown: (callback: () => void) => () => void;
+  };
+  appUpdate: {
+    getState: () => Promise<AppUpdateState>;
+    install: () => Promise<boolean>;
+    onState: (callback: (state: AppUpdateState) => void) => () => void;
+  };
+  system: {
+    getLaunchAtLogin: () => Promise<{ supported: boolean; enabled: boolean }>;
+    setLaunchAtLogin: (
+      enabled: boolean,
+    ) => Promise<{ supported: boolean; enabled: boolean }>;
+  };
   connectivity: {
     plan: () => Promise<ConnectivityCheckPlanEntry[]>;
     test: () => Promise<ConnectivityCheckResult[]>;
@@ -895,6 +944,9 @@ export interface IElectronAPI {
     identifyLocal: (
       requests: ILocalIdentifyRequest[],
     ) => Promise<ILocalIdentifyResult>;
+    modrinthClientSides: (
+      ids: string[],
+    ) => Promise<Record<string, boolean> | null>;
     checkModpack: (
       modpackPath: string,
       pack?: IProject,
@@ -1206,6 +1258,25 @@ export const api: IElectronAPI = {
     cleanup: (kind: StorageCleanupKind, names?: string[]) =>
       invoke("storage:cleanup", kind, names),
   },
+  dataLocation: {
+    get: () => invoke("dataLocation:get"),
+    pick: () => invoke("dataLocation:pick"),
+    planDefault: () => invoke("dataLocation:planDefault"),
+    apply: (kind: "move" | "adopt") => invoke("dataLocation:apply", kind),
+  },
+  dataLocationWindow: {
+    getState: () => invoke("dataLocationWindow:getState"),
+    action: (action: DataLocationWindowAction) =>
+      invoke("dataLocationWindow:action", action),
+    onState: (callback: (state: DataLocationWindowState) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        state: DataLocationWindowState,
+      ) => callback(state);
+      ipcRenderer.on("dataLocationWindow:state", listener);
+      return () => ipcRenderer.off("dataLocationWindow:state", listener);
+    },
+  },
   path: {
     join: (...args: string[]) => pathUtils.join(...args),
     basename: (filePath: string, suffix?: string) =>
@@ -1253,6 +1324,10 @@ export const api: IElectronAPI = {
   clipboard: {
     writeText: (text: string) =>
       invoke("clipboard:writeText", text),
+  },
+  edit: {
+    run: (command: "cut" | "copy" | "paste" | "selectAll") =>
+      invoke("edit:run", command),
   },
   shell: {
     openExternal: (url: string) =>
@@ -1663,6 +1738,50 @@ export const api: IElectronAPI = {
     list: () => invoke("safepath:list"),
     revoke: (target: string) => invoke("safepath:revoke", target),
   },
+  tray: {
+    update: (model: TrayModel) => invoke("tray:update", model),
+    onAction: (callback: (action: TrayAction) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, action: TrayAction) =>
+        callback(action);
+      ipcRenderer.on("tray:action", listener);
+      return () => ipcRenderer.off("tray:action", listener);
+    },
+  },
+  trayPopup: {
+    getModel: () => invoke("trayPopup:getModel"),
+    run: (command: TrayCommand) => invoke("trayPopup:run", command),
+    resize: (height: number) => invoke("trayPopup:resize", height),
+    hide: () => invoke("trayPopup:hide"),
+    reveal: () => invoke("trayPopup:reveal"),
+    onModel: (callback: (model: TrayModel) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, model: TrayModel) =>
+        callback(model);
+      ipcRenderer.on("trayPopup:model", listener);
+      return () => ipcRenderer.off("trayPopup:model", listener);
+    },
+    onShown: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on("trayPopup:shown", listener);
+      return () => ipcRenderer.off("trayPopup:shown", listener);
+    },
+  },
+  appUpdate: {
+    getState: () => invoke("appUpdate:getState"),
+    install: () => invoke("appUpdate:install"),
+    onState: (callback: (state: AppUpdateState) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        state: AppUpdateState,
+      ) => callback(state);
+      ipcRenderer.on("app:updateState", listener);
+      return () => ipcRenderer.off("app:updateState", listener);
+    },
+  },
+  system: {
+    getLaunchAtLogin: () => invoke("system:getLaunchAtLogin"),
+    setLaunchAtLogin: (enabled: boolean) =>
+      invoke("system:setLaunchAtLogin", enabled),
+  },
   connectivity: {
     plan: () => invoke("connectivity:plan"),
     test: () => invoke("connectivity:test"),
@@ -1908,6 +2027,8 @@ export const api: IElectronAPI = {
       invoke("modManager:fileTimes", versionPath, projectType),
     identifyLocal: (requests: ILocalIdentifyRequest[]) =>
       invoke("modManager:identifyLocal", requests),
+    modrinthClientSides: (ids: string[]) =>
+      invoke("modManager:modrinthClientSides", ids),
     checkModpack: (
       modpackPath: string,
       pack?: any,

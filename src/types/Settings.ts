@@ -2,6 +2,7 @@ import {
   DEFAULT_WORLD_BACKUP_KEEP,
   normalizeWorldBackupKeep,
 } from "./WorldBackup";
+import { AccentId, DEFAULT_ACCENT, isAccentId } from "@/shared/accents";
 
 export const LANGUAGES = [
   { code: "en", label: "English", country: "GB" },
@@ -51,7 +52,20 @@ export type TSettings = {
   worldBackupKeep: number;
   instancesView: InstancesView;
   instancesSort: InstancesSort;
+  accent: AccentId;
+  closeToTray: boolean | null;
 };
+
+export function defaultCloseToTray(platform: string): boolean {
+  return platform !== "linux";
+}
+
+export function resolveCloseToTray(
+  value: boolean | null | undefined,
+  platform: string,
+): boolean {
+  return typeof value === "boolean" ? value : defaultCloseToTray(platform);
+}
 
 export const DEFAULT_SETTINGS: TSettings = {
   xmx: 2048,
@@ -73,6 +87,8 @@ export const DEFAULT_SETTINGS: TSettings = {
   worldBackupKeep: DEFAULT_WORLD_BACKUP_KEEP,
   instancesView: "list",
   instancesSort: "activity",
+  accent: DEFAULT_ACCENT,
+  closeToTray: null,
 };
 
 export function normalizeVoicePttBind(value: unknown): VoicePttBind | null {
@@ -121,6 +137,11 @@ export function normalizeSettings(
   return {
     instancesView,
     instancesSort,
+    accent: isAccentId(value?.accent) ? value.accent : DEFAULT_SETTINGS.accent,
+    closeToTray:
+      typeof value?.closeToTray === "boolean"
+        ? value.closeToTray
+        : DEFAULT_SETTINGS.closeToTray,
     xmx:
       Number.isFinite(xmx) && xmx >= 1024
         ? Math.round(xmx)

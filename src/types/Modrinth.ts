@@ -5,6 +5,7 @@ export interface IProject {
   categories: string[]
   client_side: SideSupport
   server_side: SideSupport
+  environment?: string[] | string
   body: string
   status: ProjectStatus
   requested_status: ProjectRequestedStatus | null
@@ -49,6 +50,7 @@ export interface IResultProject {
   categories: string[]
   client_side: SideSupport
   server_side: SideSupport
+  environment?: string[] | string
   project_type: ProjectType
   downloads: number
   icon_url: string | null

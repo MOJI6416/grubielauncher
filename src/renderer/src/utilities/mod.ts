@@ -127,12 +127,46 @@ export interface DeletionPlan {
   blockers: ILocalProject[];
 }
 
+function fileNamesOf(mod: ILocalProject): string[] {
+  return (mod.version?.files ?? [])
+    .map((file) =>
+      String(file.filename ?? "")
+        .replace(/\.disabled$/i, "")
+        .toLowerCase(),
+    )
+    .filter(Boolean);
+}
+
+export function sharesFile(a: ILocalProject, b: ILocalProject): boolean {
+  if (a.projectType !== b.projectType) return false;
+  const names = new Set(fileNamesOf(a));
+  return fileNamesOf(b).some((name) => names.has(name));
+}
+
+export function findTwin(
+  mods: ILocalProject[],
+  target: ILocalProject,
+): ILocalProject | undefined {
+  const key = `${target.provider}:${target.id}`;
+  const title = normalizeProjectTitle(target.title);
+
+  return mods.find(
+    (mod) =>
+      `${mod.provider}:${mod.id}` !== key &&
+      mod.projectType === target.projectType &&
+      ((!!title && normalizeProjectTitle(mod.title) === title) ||
+        sharesFile(mod, target)),
+  );
+}
+
 export function planDeletion(
   mods: ILocalProject[],
   target: ILocalProject,
 ): DeletionPlan {
   const keyOf = (mod: ILocalProject) => `${mod.provider}:${mod.id}`;
   const norm = (value: string) => normalizeProjectTitle(value);
+
+  if (findTwin(mods, target)) return { remove: [target], blockers: [] };
 
   const byTitle = new Map<string, ILocalProject>();
   const byProjectId = new Map<string, ILocalProject>();

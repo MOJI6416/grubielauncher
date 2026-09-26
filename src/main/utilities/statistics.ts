@@ -1,4 +1,3 @@
-import { app } from "electron";
 import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs-extra";
@@ -8,6 +7,7 @@ import {
   IVersionStatistics,
 } from "@/types/VersionStatistics";
 import { writeJsonAtomic } from "./atomicJson";
+import { getDataRoot } from "./dataRoot";
 import { reportFailure } from "./failureBus";
 
 type VersionAggregate = Omit<IVersionStatistics, "lastLaunched"> & {
@@ -66,7 +66,7 @@ function makeKey(versionName: string, instance: number): string {
 }
 
 function dataDir(): string {
-  return path.join(app.getPath("appData"), ".grubielauncher", "playtime");
+  return path.join(getDataRoot(), "playtime");
 }
 
 function pendingDir(): string {

@@ -1,4 +1,3 @@
-import { app } from "electron";
 import fs from "fs-extra";
 import path from "path";
 import {
@@ -7,12 +6,13 @@ import {
   AgentStoredChat,
 } from "@/types/Agent";
 import { writeJsonAtomic } from "./atomicJson";
+import { getDataRoot } from "./dataRoot";
 
 const MAX_CHATS = 200;
 const MAX_TOMBSTONES = 500;
 
 function getChatsDir(): string {
-  return path.join(app.getPath("appData"), ".grubielauncher", "agent", "chats");
+  return path.join(getDataRoot(), "agent", "chats");
 }
 
 function getChatPath(chatId: string): string {
@@ -20,12 +20,7 @@ function getChatPath(chatId: string): string {
 }
 
 function getTombstonesPath(): string {
-  return path.join(
-    app.getPath("appData"),
-    ".grubielauncher",
-    "agent",
-    "deleted.json",
-  );
+  return path.join(getDataRoot(), "agent", "deleted.json");
 }
 
 export function isChatId(value: unknown): value is string {

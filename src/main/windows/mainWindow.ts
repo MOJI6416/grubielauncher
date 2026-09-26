@@ -5,6 +5,7 @@ import { rpc } from "../rpc";
 import { is } from "@electron-toolkit/utils";
 import fs from "fs-extra";
 import { writeJsonAtomicSync } from "../utilities/atomicJson";
+import { getDataRoot } from "../utilities/dataRoot";
 import { TITLEBAR_OVERLAY } from "@/shared/titlebar";
 
 export let mainWindow: BrowserWindow | null = null;
@@ -53,6 +54,11 @@ let hasUnsavedChanges = false;
 let isCloseConfirmed = false;
 let runningServersProbe: (() => boolean) | null = null;
 let installActiveProbe: (() => boolean) | null = null;
+let hideToTrayHandler: (() => boolean) | null = null;
+
+export function setHideToTrayHandler(handler: (() => boolean) | null): void {
+  hideToTrayHandler = handler;
+}
 
 export function setUnsavedChangesGuard(value: boolean): void {
   hasUnsavedChanges = value;
@@ -75,6 +81,56 @@ export function confirmWindowClose(): void {
 app.on("before-quit", () => {
   isCloseConfirmed = true;
 });
+
+interface CloseReasons {
+  unsaved: boolean;
+  servers: boolean;
+  install: boolean;
+}
+
+function probe(check: (() => boolean) | null): boolean {
+  try {
+    return check?.() === true;
+  } catch {
+    return false;
+  }
+}
+
+function pendingCloseReasons(): CloseReasons | null {
+  const reasons = {
+    unsaved: hasUnsavedChanges,
+    servers: probe(runningServersProbe),
+    install: probe(installActiveProbe),
+  };
+  return reasons.unsaved || reasons.servers || reasons.install
+    ? reasons
+    : null;
+}
+
+function askBeforeClosing(reasons: CloseReasons): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  mainWindow.webContents.send("app:closeRequested", reasons);
+  revealMainWindow();
+}
+
+export function revealMainWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  showMainWindow();
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.focus();
+}
+
+export function requestAppQuit(): void {
+  const reasons = pendingCloseReasons();
+  if (reasons && !isCloseConfirmed && mainWindow && !mainWindow.isDestroyed()) {
+    askBeforeClosing(reasons);
+    return;
+  }
+
+  app.quit();
+}
 
 function presentMainWindow(): void {
   if (!mainWindow) return;
@@ -100,7 +156,7 @@ interface WindowState {
 }
 
 function getWindowStatePath(): string {
-  return join(app.getPath("appData"), ".grubielauncher", "window-state.json");
+  return join(getDataRoot(), "window-state.json");
 }
 
 function readWindowState(): WindowState | null {
@@ -197,35 +253,19 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): void {
   });
 
   mainWindow.on("close", (event) => {
-    let hasRunningServers = false;
-    try {
-      hasRunningServers = runningServersProbe?.() === true;
-    } catch {
-      hasRunningServers = false;
-    }
+    if (!isCloseConfirmed && mainWindow && !mainWindow.isDestroyed()) {
+      if (hideToTrayHandler?.() === true) {
+        event.preventDefault();
+        saveWindowState(mainWindow);
+        return;
+      }
 
-    let hasActiveInstall = false;
-    try {
-      hasActiveInstall = installActiveProbe?.() === true;
-    } catch {
-      hasActiveInstall = false;
-    }
-
-    if (
-      (hasUnsavedChanges || hasRunningServers || hasActiveInstall) &&
-      !isCloseConfirmed &&
-      !mainWindow?.isDestroyed()
-    ) {
-      event.preventDefault();
-      mainWindow?.webContents.send("app:closeRequested", {
-        unsaved: hasUnsavedChanges,
-        servers: hasRunningServers,
-        install: hasActiveInstall,
-      });
-      if (!mainWindow?.isVisible()) mainWindow?.show();
-      if (mainWindow?.isMinimized()) mainWindow.restore();
-      mainWindow?.focus();
-      return;
+      const reasons = pendingCloseReasons();
+      if (reasons) {
+        event.preventDefault();
+        askBeforeClosing(reasons);
+        return;
+      }
     }
 
     if (mainWindow) saveWindowState(mainWindow);

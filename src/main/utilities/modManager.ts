@@ -441,6 +441,25 @@ function cfReleaseTypeToReleaseType(
   return undefined;
 }
 
+export function modrinthRunsOnClient(
+  project:
+    | { client_side?: string; environment?: string[] | string }
+    | null
+    | undefined,
+): boolean {
+  const environments = [project?.environment ?? []]
+    .flat()
+    .filter(
+      (value): value is string => typeof value === "string" && value.length > 0,
+    );
+
+  if (environments.length > 0) {
+    return environments.some((value) => value !== "dedicated_server_only");
+  }
+
+  return project?.client_side !== "unsupported";
+}
+
 export function mrVersionToVersion(
   version: ModrinthVersion,
   isServer: boolean,
@@ -567,6 +586,11 @@ function packKindFromEntries(entryNames: string[]): ProjectType {
   return ProjectType.RESOURCEPACK;
 }
 
+export function isJavaArchive(fileName: string, entryNames: string[]): boolean {
+  if (/\.jar$/i.test(fileName.replace(/\.disabled$/i, ""))) return true;
+  return entryNames.some((name) => name.toLowerCase().endsWith(".class"));
+}
+
 function isWorldArchive(entryNames: string[]): boolean {
   return entryNames.some((entryName) => {
     const parts = entryName.split("\\").join("/").split("/").filter(Boolean);
@@ -680,15 +704,16 @@ async function readLocalModInfo(
     if (tomlMeta) return await toModInfo(tomlMeta);
   }
 
+  const entryNames = archive.getEntries().map((entry) => entry.entryName);
+  if (isJavaArchive(fileName, entryNames)) return fallback;
+
   const packMcMeta: { pack?: unknown } | null =
     await readJsonEntry("pack.mcmeta");
 
   if (packMcMeta?.pack) {
     return {
       ...fallback,
-      kind: packKindFromEntries(
-        archive.getEntries().map((entry) => entry.entryName),
-      ),
+      kind: packKindFromEntries(entryNames),
       description: packDescription(packMcMeta.pack),
       icon:
         (await readIconEntry("logo.png")) ?? (await readIconEntry("pack.png")),
@@ -1979,7 +2004,7 @@ export function compareMods(a: ILocalProject[], b: ILocalProject[]): boolean {
         ?.map((d: any) => `${d.projectId}:${d.relationType}`)
         .sort()
         .join("|") ?? "";
-    return `${m.id}#${m.provider}#${m.projectType}#${v?.id ?? "null"}#${fileSig}#${depSig}`;
+    return `${m.id}#${m.provider}#${m.projectType}#${v?.id ?? "null"}#${fileSig}#${depSig}#${m.pinned === true ? 1 : 0}`;
   };
 
   const as = [...comparableA].map(sig).sort();

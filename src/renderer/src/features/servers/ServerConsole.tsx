@@ -121,7 +121,7 @@ export function ServerConsole({
               ? t("serverManager.commandPlaceholder")
               : t("serverManager.commandDisabled")
           }
-          className="h-8 border-0 bg-transparent px-0 font-mono text-xs shadow-none focus-visible:ring-0"
+          className="h-8 border-0 bg-transparent px-2 font-mono text-xs shadow-none focus-visible:ring-0"
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={(event) => {
             if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;

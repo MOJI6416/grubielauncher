@@ -1,6 +1,7 @@
 import { IFilterGroup, Provider } from "@/types/ModManager";
 import { normalizeProjectTitle } from "@renderer/utilities/mod";
 import { ContentEntry } from "./entries";
+import { displayTitle } from "./titles";
 
 export type LibraryFacet =
   | "update"
@@ -10,7 +11,8 @@ export type LibraryFacet =
   | "server"
   | "curseforge"
   | "modrinth"
-  | "local";
+  | "local"
+  | "foreign";
 
 export const LIBRARY_FACETS: LibraryFacet[] = [
   "update",
@@ -21,6 +23,7 @@ export const LIBRARY_FACETS: LibraryFacet[] = [
   "curseforge",
   "modrinth",
   "local",
+  "foreign",
 ];
 
 export type LibraryFacetCounts = Record<LibraryFacet, number>;
@@ -39,25 +42,82 @@ function isLocalProvider(provider: Provider): boolean {
   return provider === Provider.LOCAL || provider === Provider.OTHER;
 }
 
-export function findLocalDuplicates(entries: ContentEntry[]): Set<string> {
-  const catalogTitles = new Set<string>();
-  for (const entry of entries) {
-    if (isLocalProvider(entry.provider) || entry.pendingRemoved) continue;
-    const title = normalizeProjectTitle(entry.title);
-    if (title) catalogTitles.add(title);
+export interface DuplicateMarks {
+  all: Set<string>;
+  extra: Set<string>;
+  groups: number;
+}
+
+function fileKey(entry: ContentEntry): string {
+  const name = entry.fileName.replace(/\.disabled$/i, "").toLowerCase();
+  return name ? `${entry.projectType}|${name}` : "";
+}
+
+function pushTo<K, V>(map: Map<K, V[]>, key: K, value: V) {
+  const list = map.get(key);
+  if (list) list.push(value);
+  else map.set(key, [value]);
+}
+
+export function findDuplicates(
+  entries: ContentEntry[],
+  unavailable: ReadonlySet<string> = new Set(),
+): DuplicateMarks {
+  const live = entries.filter((entry) => !entry.pendingRemoved);
+  const all = new Set<string>();
+  const extra = new Set<string>();
+  let groups = 0;
+
+  const rank = (entry: ContentEntry) =>
+    isLocalProvider(entry.provider) ? 2 : unavailable.has(entry.key) ? 1 : 0;
+
+  const byFile = new Map<string, ContentEntry[]>();
+  for (const entry of live) {
+    const key = fileKey(entry);
+    if (key) pushTo(byFile, key, entry);
   }
 
-  const duplicates = new Set<string>();
-  if (catalogTitles.size === 0) return duplicates;
+  for (const group of byFile.values()) {
+    if (group.length < 2) continue;
+    groups += 1;
 
-  for (const entry of entries) {
-    if (!isLocalProvider(entry.provider) || entry.pendingRemoved) continue;
-    if (catalogTitles.has(normalizeProjectTitle(entry.title))) {
-      duplicates.add(entry.key);
+    const keeper = group.reduce((best, entry) =>
+      rank(entry) < rank(best) ? entry : best,
+    );
+    for (const entry of group) {
+      if (entry === keeper) continue;
+      all.add(entry.key);
+      extra.add(entry.key);
     }
   }
 
-  return duplicates;
+  const byTitle = new Map<string, ContentEntry[]>();
+  for (const entry of live) {
+    if (extra.has(entry.key)) continue;
+    const title = normalizeProjectTitle(entry.title);
+    if (title) pushTo(byTitle, title, entry);
+  }
+
+  for (const group of byTitle.values()) {
+    const catalog = group.filter((entry) => !isLocalProvider(entry.provider));
+    if (catalog.length === 0) continue;
+
+    const locals = group.filter((entry) => isLocalProvider(entry.provider));
+    const providers = new Set(catalog.map((entry) => entry.provider));
+    const isCrossCatalog = providers.size > 1;
+    if (locals.length === 0 && !isCrossCatalog) continue;
+
+    groups += 1;
+    for (const entry of locals) {
+      all.add(entry.key);
+      extra.add(entry.key);
+    }
+    if (isCrossCatalog) {
+      for (const entry of catalog) all.add(entry.key);
+    }
+  }
+
+  return { all, extra, groups };
 }
 
 export interface LibraryQuery {
@@ -70,6 +130,7 @@ export interface LibraryMarks {
   updatable: ReadonlySet<string>;
   disabled: ReadonlySet<string>;
   duplicates?: ReadonlySet<string>;
+  foreign?: ReadonlySet<string>;
 }
 
 function matchesFacet(
@@ -94,6 +155,8 @@ function matchesFacet(
       return entry.provider === Provider.MODRINTH;
     case "local":
       return isLocalProvider(entry.provider);
+    case "foreign":
+      return marks.foreign?.has(entry.key) === true;
     default:
       return false;
   }
@@ -112,6 +175,7 @@ export function countLibraryFacets(
     curseforge: 0,
     modrinth: 0,
     local: 0,
+    foreign: 0,
   } satisfies LibraryFacetCounts;
 
   for (const entry of entries) {
@@ -155,8 +219,15 @@ export function sortLibraryEntries(
   updatable: ReadonlySet<string>,
   changedAt?: ReadonlyMap<string, number>,
 ): ContentEntry[] {
+  const names = new Map(
+    entries.map((entry) => [entry.key, displayTitle(entry.title)]),
+  );
   const byName = (a: ContentEntry, b: ContentEntry) =>
-    a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
+    (names.get(a.key) ?? a.title).localeCompare(
+      names.get(b.key) ?? b.title,
+      undefined,
+      { sensitivity: "base" },
+    );
 
   const sorted = [...entries];
 

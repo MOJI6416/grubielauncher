@@ -1,19 +1,14 @@
 import { IAuthlib } from '@/types/IAuthlib'
 import { Backend } from '../services/Backend'
-import { app } from 'electron'
 import fs from 'fs-extra'
 import path from 'path'
+import { getDataRoot } from './dataRoot'
 
 let inMemoryAuthlib: IAuthlib | null = null
 let refreshPromise: Promise<IAuthlib | null> | null = null
 
 function getCachePath(): string {
-  return path.join(
-    app.getPath('appData'),
-    '.grubielauncher',
-    'cache',
-    'authlib.json'
-  )
+  return path.join(getDataRoot(), 'cache', 'authlib.json')
 }
 
 function isValidAuthlib(value: unknown): value is IAuthlib {

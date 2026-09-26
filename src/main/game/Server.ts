@@ -38,6 +38,7 @@ import {
 import { assertTrustedServerCoreUrl } from "../utilities/trustedHosts";
 import { mcVersionToJavaMajor } from "@/shared/javaVersions";
 import { createLineReader } from "../utilities/consoleLog";
+import { getDataRoot } from "../utilities/dataRoot";
 import {
   ServerRunResult,
   ServerRunState,
@@ -367,11 +368,7 @@ export function isTrustedServerJavaCommand(
 
   if (!path.isAbsolute(command)) return false;
 
-  const managedRoot = path.resolve(
-    app.getPath("appData"),
-    ".grubielauncher",
-    "java",
-  );
+  const managedRoot = path.resolve(getDataRoot(), "java");
 
   const relative = path.relative(managedRoot, path.resolve(command));
   const segments = relative ? relative.split(path.sep) : [];

@@ -289,7 +289,11 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
       });
 
       const versionMods = new Mods(settings, version.version, server);
-      await versionMods.check({ operation: "integrity", plan });
+      const repaired = await versionMods.check({
+        operation: "integrity",
+        plan,
+      });
+      if (repaired > 0) await version.save();
 
       toast.success(t("versions.integrityOk"));
     } catch (error) {

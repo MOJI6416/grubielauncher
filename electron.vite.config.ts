@@ -59,6 +59,8 @@ export default defineConfig(() => {
           input: {
             main: resolve(__dirname, "src/renderer/index.html"),
             updater: resolve(__dirname, "src/renderer/updater.html"),
+            tray: resolve(__dirname, "src/renderer/tray.html"),
+            datalocation: resolve(__dirname, "src/renderer/datalocation.html"),
           },
           output: {
             manualChunks(id) {

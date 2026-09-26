@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
 import ReactCountryFlag from "react-country-flag";
-import { LayoutGrid, Rows3 } from "lucide-react";
+import { Check, LayoutGrid, Rows3 } from "lucide-react";
+import { ACCENT_IDS, ACCENTS } from "@/shared/accents";
+import { Hint } from "@renderer/components/Hint";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -95,6 +97,47 @@ export function InterfaceSection({
                 ))}
               </SelectContent>
             </Select>
+          }
+        />
+      )}
+
+      {visible("accent") && (
+        <SettingRow
+          title={t("settings.interface.accent")}
+          description={t("settings.interface.accentDescription")}
+          query={query}
+          changed={isChanged("accent")}
+          onReset={() => reset("accent")}
+          control={
+            <div
+              role="radiogroup"
+              aria-label={t("settings.interface.accent")}
+              className="flex items-center gap-1.5"
+            >
+              {ACCENT_IDS.map((id) => {
+                const isActive = settings.accent === id;
+                return (
+                  <Hint key={id} content={t(`settings.interface.accents.${id}`)}>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={isActive}
+                      aria-label={t(`settings.interface.accents.${id}`)}
+                      onClick={() => commit({ accent: id })}
+                      style={{ backgroundColor: ACCENTS[id].primary }}
+                      className="flex size-7 items-center justify-center rounded-full ring-offset-2 ring-offset-surface-2 transition-shadow hover:ring-2 hover:ring-border aria-checked:ring-2 aria-checked:ring-foreground/70 focus-visible:ring-2 focus-visible:ring-foreground focus-visible:outline-none"
+                    >
+                      {isActive && (
+                        <Check
+                          className="size-3.5"
+                          style={{ color: ACCENTS[id].foreground }}
+                        />
+                      )}
+                    </button>
+                  </Hint>
+                );
+              })}
+            </div>
           }
         />
       )}

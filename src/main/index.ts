@@ -38,6 +38,14 @@ import { hasRunningServers, stopServersForShutdown } from "./game/Server";
 import { registerAppImageDesktopEntry } from "./utilities/linuxDesktopEntry";
 import { disposePushToTalk } from "./services/PushToTalk";
 import { initWorldBackupService } from "./services/WorldBackupService";
+import { initTray } from "./tray/tray";
+import { startBackgroundUpdateChecks } from "./utilities/backgroundUpdates";
+import { getDataRoot } from "./utilities/dataRoot";
+import { prepareDataRoot } from "./windows/dataLocationWindow";
+import {
+  consumeHiddenStart,
+  markHiddenRelaunch,
+} from "./utilities/launchAtLogin";
 import { LauncherDeepLink } from "@/types/DeepLink";
 import path from "path";
 import fs from "fs-extra";
@@ -424,8 +432,12 @@ if (!gotTheLock) {
     registerAppProtocol();
     registerProtocolClient();
 
-    const appdata = app.getPath("appData");
-    const launcherPath = path.join(appdata, ".grubielauncher");
+    if (!(await prepareDataRoot())) {
+      app.quit();
+      return;
+    }
+
+    const launcherPath = getDataRoot();
     await fs.ensureDir(launcherPath);
 
     void initMirrorState(launcherPath);
@@ -436,6 +448,8 @@ if (!gotTheLock) {
     });
 
     Object.values(ipcHandlers).forEach((register) => register());
+    const startHidden = consumeHiddenStart(process.argv);
+    initTray();
     registerLegacyLocalStorageIpc();
     initWorldBackupService();
 
@@ -448,7 +462,7 @@ if (!gotTheLock) {
     if (initialDeepLink) pendingDeepLinks.push(initialDeepLink);
 
     if (is.dev) {
-      createMainWindow();
+      createMainWindow({ deferShow: startHidden });
       flushPendingDeepLinks();
       return;
     }
@@ -480,7 +494,7 @@ if (!gotTheLock) {
 
     if (updateAttempt) await clearUpdateAttempt(updateAttemptDir);
 
-    createUpdaterWindow();
+    if (!startHidden) createUpdaterWindow();
     createMainWindow({ deferShow: true });
 
     autoUpdater.disableDifferentialDownload = true;
@@ -531,8 +545,13 @@ if (!gotTheLock) {
       sendUpdaterStatus("not-available");
       updaterWindow?.close();
       openMainWindowOnce();
-      showMainWindow();
+      if (!startHidden) showMainWindow();
       flushPendingDeepLinks();
+      startBackgroundUpdateChecks({
+        onInstall: () => {
+          isUpdateInstallPending = true;
+        },
+      });
     };
 
     const continueWithFailedUpdate = (message: string) => {
@@ -542,8 +561,18 @@ if (!gotTheLock) {
 
       sendUpdaterStatus("error", { message });
       updaterWindow?.close();
-      notifyMainWindowUpdateFailed(message);
+      if (startHidden) {
+        console.warn(`[Updater] Update check failed during a hidden start: ${message}`);
+        openMainWindowOnce();
+      } else {
+        notifyMainWindowUpdateFailed(message);
+      }
       flushPendingDeepLinks();
+      startBackgroundUpdateChecks({
+        onInstall: () => {
+          isUpdateInstallPending = true;
+        },
+      });
     };
 
     autoUpdater.on("update-downloaded", (info) => {
@@ -553,6 +582,7 @@ if (!gotTheLock) {
       if (startedWithoutUpdate) return;
 
       isUpdateInstallPending = true;
+      if (startHidden) markHiddenRelaunch();
       sendUpdaterStatus("downloaded");
       void writeUpdateAttempt(updateAttemptDir, {
         target: info.version,

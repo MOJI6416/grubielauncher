@@ -1,9 +1,9 @@
 import { AccountType, IAccountConf, ILocalAccount } from "@/types/Account";
-import { app } from "electron";
 import { jwtDecode } from "jwt-decode";
 import fs from "fs-extra";
 import path from "path";
 import { writeJsonAtomic } from "./atomicJson";
+import { getDataRoot } from "./dataRoot";
 import {
   decodeSecret,
   encodeSecret,
@@ -56,7 +56,7 @@ const persistedAccountKeys = new Set([
 const persistedFriendKeys = new Set(["id", "isMuted"]);
 
 function getLauncherDir(): string {
-  return path.join(app.getPath("appData"), ".grubielauncher");
+  return getDataRoot();
 }
 
 function getAccountsPath(): string {

@@ -61,6 +61,7 @@ export interface ILocalProject {
   version: ILocalVersion | null;
   updatedAt?: string;
   loader?: Loader;
+  pinned?: boolean;
 }
 
 export interface ILocalVersion {
@@ -175,6 +176,7 @@ export interface ILocalIdentifyRequest {
   path: string;
   sha1: string;
   projectType: ProjectType;
+  gameVersion?: string;
 }
 
 export interface ILocalIdentifyMatch {
@@ -190,12 +192,15 @@ export interface ILocalIdentifyResult {
   unavailable: Provider[];
 }
 
+export type TrashReason = "updated" | "removed" | "foreign";
+
 export interface IAddedLocalProject {
   project: IProject;
   status: "valid" | "duplicate" | "invalid";
   fileName?: string;
   size?: number;
   deletedAt?: number | null;
+  deletedReason?: TrashReason;
   disabled?: boolean;
 }
 

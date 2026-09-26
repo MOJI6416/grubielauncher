@@ -2,6 +2,7 @@ import path from 'path'
 import { app } from 'electron'
 import fs from 'fs-extra'
 import { AllowedPathAccess, AllowedPathKind, BlessedPathInfo } from '@/types/AllowedPath'
+import { getDataRoot } from './dataRoot'
 
 export class PathPolicyError extends Error {
   constructor(message: string) {
@@ -111,7 +112,7 @@ function persistBlessedRoots(): void {
 }
 
 function getLauncherDataRoot(): string {
-  return path.join(app.getPath('appData'), '.grubielauncher')
+  return getDataRoot()
 }
 
 function getLauncherRoots(): string[] {
@@ -123,7 +124,7 @@ function isInside(child: string, root: string): boolean {
   return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel))
 }
 
-function getSystemRoots(): string[] {
+export function getSystemRoots(): string[] {
   if (process.platform === 'win32') {
     return [
       process.env.SystemRoot,

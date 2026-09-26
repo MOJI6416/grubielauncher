@@ -456,7 +456,7 @@ export function Worlds({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 min-w-0 flex-1 justify-start px-1.5 text-xs text-muted-foreground"
+              className="h-7 min-w-0 flex-1 justify-start px-1.5 text-xs text-muted-foreground bg-transparent"
               disabled={isImporting || !isOwner || isVersionRunning}
               onClick={() => void handleImport()}
             >

@@ -4,6 +4,7 @@ export type SettingsSectionId =
   | "game"
   | "downloads"
   | "interface"
+  | "system"
   | "voice"
   | "privacy"
   | "storage"
@@ -17,6 +18,9 @@ export type SettingsEntryId =
   | "downloadSource"
   | "mirrorRouting"
   | "language"
+  | "accent"
+  | "closeToTray"
+  | "launchAtLogin"
   | "sounds"
   | "instancesView"
   | "shortcuts"
@@ -33,6 +37,7 @@ export type SettingsEntryId =
   | "devMode"
   | "allowedPaths"
   | "storageUsage"
+  | "dataLocation"
   | "storageCleanup"
   | "folders"
   | "systemReport"
@@ -52,6 +57,7 @@ export const SETTINGS_SECTIONS: SettingsSectionId[] = [
   "game",
   "downloads",
   "interface",
+  "system",
   "voice",
   "privacy",
   "storage",
@@ -68,6 +74,7 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "downloadLimit", section: "downloads", keys: ["downloadLimit"] },
   { id: "mirrorRouting", section: "downloads", keys: [] },
   { id: "language", section: "interface", keys: ["lang"], neutral: true },
+  { id: "accent", section: "interface", keys: ["accent"] },
   { id: "sounds", section: "interface", keys: ["sounds"] },
   {
     id: "instancesView",
@@ -75,6 +82,8 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
     keys: ["instancesView", "instancesSort"],
   },
   { id: "shortcuts", section: "interface", keys: [] },
+  { id: "closeToTray", section: "system", keys: ["closeToTray"] },
+  { id: "launchAtLogin", section: "system", keys: [] },
   { id: "voiceDevices", section: "voice", keys: [] },
   { id: "voicePtt", section: "voice", keys: ["voicePtt", "voicePttBind"] },
   {
@@ -90,6 +99,7 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "devMode", section: "privacy", keys: ["devMode"] },
   { id: "allowedPaths", section: "privacy", keys: [] },
   { id: "storageUsage", section: "storage", keys: [] },
+  { id: "dataLocation", section: "storage", keys: [] },
   { id: "storageCleanup", section: "storage", keys: [] },
   { id: "folders", section: "about", keys: [] },
   { id: "systemReport", section: "about", keys: [] },

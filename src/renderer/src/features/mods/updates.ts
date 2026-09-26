@@ -7,7 +7,7 @@ import {
   Provider,
 } from "@/types/ModManager";
 import { Loader } from "@/types/Loader";
-import { normalizeProjectTitle } from "@renderer/utilities/mod";
+import { normalizeProjectTitle, sharesFile } from "@renderer/utilities/mod";
 import { applyDisabledState, entryKey } from "./entries";
 
 export type UpdateStatus = "current" | "update" | "unavailable" | "unknown";
@@ -178,6 +178,15 @@ export async function planQuickInstall(
       )
     ) {
       skippedDependencies = true;
+    }
+
+    const candidate = toLocalProject(project, latest, {
+      disabled: false,
+      loader: options.loader,
+    });
+    if ([...installed, ...added].some((mod) => sharesFile(mod, candidate))) {
+      seenIds.add(entryKey(project.provider, project.id));
+      continue;
     }
 
     const dependencies =

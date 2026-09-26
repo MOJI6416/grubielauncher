@@ -400,6 +400,19 @@ export function registerOtherIpc() {
     }
   )
 
+  handleSafe<void, ['cut' | 'copy' | 'paste' | 'selectAll']>(
+    'edit:run',
+    undefined,
+    [check.oneOf('cut', 'copy', 'paste', 'selectAll')],
+    async (event, command) => {
+      const contents = event.sender
+      if (command === 'cut') contents.cut()
+      else if (command === 'copy') contents.copy()
+      else if (command === 'paste') contents.paste()
+      else contents.selectAll()
+    }
+  )
+
   handleSafe<void>('other:restoreWindow', undefined, () => {
     restoreMainWindow()
   })

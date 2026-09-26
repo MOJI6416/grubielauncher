@@ -19,11 +19,17 @@ import { SystemEventsHost } from "./hosts/SystemEventsHost";
 import { UnsavedCloseHost } from "./hosts/UnsavedCloseHost";
 import { VoiceCallHost } from "./hosts/VoiceCallHost";
 import { WhatsNewHost } from "./hosts/WhatsNewHost";
+import { AccentHost } from "./hosts/AccentHost";
+import { TrayHost } from "./hosts/TrayHost";
+import { AppUpdateHost } from "./hosts/AppUpdateHost";
 
 export function AppHosts() {
   return (
     <>
       <BootstrapHost />
+      <AccentHost />
+      <AppUpdateHost />
+      <TrayHost />
       <LaunchHost />
       <ConsoleHost />
       <InstallHost />

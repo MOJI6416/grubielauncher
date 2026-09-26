@@ -28,6 +28,7 @@ import {
 import { app, shell } from "electron";
 import { runGame, runJar } from "../utilities/game";
 import { getAuthlibCached } from "../utilities/authlib";
+import { getDataRoot } from "../utilities/dataRoot";
 import { AuthlibEnsureResult } from "@/types/IAuthlib";
 import {
   VersionInstallOperation,
@@ -160,7 +161,7 @@ export class Version {
       assertSafeFileSegment(this.version.loader.version.id, "loader version id");
     }
 
-    this.launcherPath = path.join(app.getPath("appData"), ".grubielauncher");
+    this.launcherPath = getDataRoot();
     this.minecraftPath = path.join(this.launcherPath, "minecraft");
     this.versionPath =
       this.versionPathOverride ??
@@ -1329,7 +1330,7 @@ export class Version {
     const platform = getOS();
     const separator = platform?.os == "windows" ? ";" : ":";
 
-    const launcherPath = path.join(app.getPath("appData"), ".grubielauncher");
+    const launcherPath = getDataRoot();
 
     const needsAuthlib =
       !!account.type && account.type != "microsoft" && account.type != "plain";

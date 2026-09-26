@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SiCurseforge, SiModrinth } from "react-icons/si";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -16,6 +16,8 @@ import {
   Loader2,
   Package,
   PackageCheck,
+  Pin,
+  PinOff,
   Plus,
   Trash2,
   X,
@@ -105,6 +107,13 @@ export function ContentDetails({
   onOpenDependency,
   onTranslate,
   onRetry,
+  width,
+  clampWidth,
+  onResizeEnd,
+  onResetWidth,
+  isPinned = false,
+  canPin = false,
+  onTogglePin,
 }: {
   entry: ContentEntry;
   project: IProject | null;
@@ -125,6 +134,13 @@ export function ContentDetails({
   deletionBlockers: ILocalProject[];
   alsoRemoves: ILocalProject[];
   findInstalled: (project: IProject) => ILocalProject | undefined;
+  width: number;
+  clampWidth: (width: number) => number;
+  onResizeEnd: (width: number) => void;
+  onResetWidth: () => void;
+  isPinned?: boolean;
+  canPin?: boolean;
+  onTogglePin?: () => void;
   onBack: () => void;
   onClose: () => void;
   onSelectVersion: (version: ModVersion) => void;
@@ -157,6 +173,37 @@ export function ContentDetails({
     setTab("about");
   }, [entry.key]);
 
+  const asideRef = useRef<HTMLElement | null>(null);
+
+  const startResize = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+
+    const handle = event.currentTarget;
+    const startX = event.clientX;
+    const startWidth = asideRef.current?.offsetWidth ?? width;
+    let next = startWidth;
+
+    handle.setPointerCapture(event.pointerId);
+    document.body.style.cursor = "col-resize";
+
+    const onMove = (move: globalThis.PointerEvent) => {
+      next = clampWidth(startWidth + (startX - move.clientX));
+      if (asideRef.current) asideRef.current.style.width = `${next}px`;
+    };
+    const onEnd = () => {
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onEnd);
+      handle.removeEventListener("pointercancel", onEnd);
+      document.body.style.cursor = "";
+      onResizeEnd(next);
+    };
+
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onEnd);
+    handle.addEventListener("pointercancel", onEnd);
+  };
+
   const isInstalled = Boolean(entry.installed);
   const isCurrentInstalled =
     isInstalled && selectedVersion?.id === installedVersionId;
@@ -177,7 +224,34 @@ export function ContentDetails({
         : t("common.update");
 
   return (
-    <aside className="flex w-[344px] shrink-0 flex-col overflow-hidden border-l border-border bg-surface-1">
+    <aside
+      ref={asideRef}
+      style={{ width }}
+      className="relative flex shrink-0 flex-col overflow-hidden border-l border-border bg-surface-1"
+    >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={t("modManager.detailResize")}
+            tabIndex={0}
+            onPointerDown={startResize}
+            onDoubleClick={onResetWidth}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft") onResizeEnd(width + 24);
+              else if (event.key === "ArrowRight") onResizeEnd(width - 24);
+              else if (event.key === "Home") onResetWidth();
+              else return;
+              event.preventDefault();
+            }}
+            className="absolute inset-y-0 left-0 z-20 w-1.5 cursor-col-resize transition-colors hover:bg-primary/40 focus-visible:bg-primary/40 focus-visible:outline-none"
+          />
+        </TooltipTrigger>
+        <TooltipContent side="left" className="max-w-56">
+          {t("modManager.detailResizeHint")}
+        </TooltipContent>
+      </Tooltip>
       <header className="flex h-11 shrink-0 items-center gap-1 border-b border-border px-2">
         {canGoBack && (
           <Button
@@ -337,6 +411,37 @@ export function ContentDetails({
                   )}
                   {primaryLabel}
                 </Button>
+
+                {isInstalled && !isModpacks && canPin && onTogglePin && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        aria-pressed={isPinned}
+                        className={
+                          isPinned
+                            ? "size-9 border-primary/50 text-primary hover:text-primary"
+                            : "size-9"
+                        }
+                        disabled={isBusy}
+                        aria-label={t(
+                          isPinned ? "modManager.unpin" : "modManager.pin",
+                        )}
+                        onClick={onTogglePin}
+                      >
+                        {isPinned ? (
+                          <PinOff className="size-4" />
+                        ) : (
+                          <Pin className="size-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-60">
+                      {t(isPinned ? "modManager.unpinHint" : "modManager.pinHint")}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
 
                 {isInstalled && !isModpacks && (
                   <Tooltip>

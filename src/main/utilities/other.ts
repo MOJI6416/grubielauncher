@@ -1,7 +1,7 @@
 import { IVersionManifest } from "@/types/IVersionManifest";
 import { IArch, IOS } from "@/types/OS";
 import { createHash } from "crypto";
-import { app } from "electron";
+import { getDataRoot } from "./dataRoot";
 import os from "os";
 import path from "path";
 
@@ -153,8 +153,7 @@ export function toUUID(hex: string): string {
 }
 
 export function getLauncherPaths() {
-  const appData = app.getPath("appData");
-  const launcher = path.join(appData, ".grubielauncher");
+  const launcher = getDataRoot();
 
   return {
     launcher: launcher,

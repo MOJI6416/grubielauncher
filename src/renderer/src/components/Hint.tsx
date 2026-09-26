@@ -7,6 +7,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,18 @@ export const HINT_DELAY = {
   control: 250,
   text: 600,
 } as const;
+
+export function HintProvider({ children }: { children: ReactNode }) {
+  return (
+    <TooltipProvider
+      delayDuration={HINT_DELAY.control}
+      skipDelayDuration={300}
+      disableHoverableContent
+    >
+      {children}
+    </TooltipProvider>
+  );
+}
 
 type HintProps = {
   content: ReactNode;

@@ -40,6 +40,7 @@ import {
   computeServerModExclusions,
   getModDescriptor,
   getModEnvironment,
+  modrinthRunsOnClient,
   sortVersionsByDate,
 } from "./modManager";
 
@@ -154,6 +155,38 @@ function createFile(id: number, overrides: Record<string, unknown> = {}) {
     ...overrides,
   } as any;
 }
+
+describe("modrinthRunsOnClient", () => {
+  it("keeps server_only world generation on the client for singleplayer", () => {
+    expect(
+      modrinthRunsOnClient({
+        client_side: "unsupported",
+        environment: ["server_only"],
+      }),
+    ).toBe(true);
+  });
+
+  it("leaves only dedicated-server mods off the client", () => {
+    expect(
+      modrinthRunsOnClient({
+        client_side: "unsupported",
+        environment: ["dedicated_server_only"],
+      }),
+    ).toBe(false);
+    expect(
+      modrinthRunsOnClient({
+        client_side: "unsupported",
+        environment: "dedicated_server_only",
+      }),
+    ).toBe(false);
+  });
+
+  it("falls back to client_side when Modrinth sends no environment", () => {
+    expect(modrinthRunsOnClient({ client_side: "unsupported" })).toBe(false);
+    expect(modrinthRunsOnClient({ client_side: "optional" })).toBe(true);
+    expect(modrinthRunsOnClient(undefined)).toBe(true);
+  });
+});
 
 describe("sortVersionsByDate", () => {
   const version = (id: string, datePublished?: string) =>
@@ -336,6 +369,25 @@ describe("compareMods", () => {
 
     expect(compareMods([enabled], [disabled])).toBe(false);
     expect(compareMods([disabled], [disabled])).toBe(true);
+  });
+
+  it("treats pinning a version as a change worth saving", () => {
+    const mod = {
+      id: "mod-a",
+      title: "Mod A",
+      provider: Provider.MODRINTH,
+      projectType: ProjectType.MOD,
+      version: {
+        id: "version-a",
+        dependencies: [],
+        files: [{ filename: "mod-a.jar", sha1: "sha1-a", size: 100 }],
+      },
+    } as any;
+
+    expect(compareMods([mod], [{ ...mod, pinned: true }])).toBe(false);
+    expect(compareMods([{ ...mod, pinned: true }], [{ ...mod, pinned: true }])).toBe(
+      true,
+    );
   });
 });
 
@@ -1086,6 +1138,39 @@ describe("checkLocalMod", () => {
       path: jar,
       icon: null,
     });
+  });
+
+  it("keeps a library jar with a pack.mcmeta out of resource packs", async () => {
+    const root = await makeTempRoot();
+    const jar = writeJar(
+      root,
+      "ScalableCatsForce-NeoForge-3.7.1-build-11-with-library.jar",
+      {
+        "META-INF/MANIFEST.MF": "Manifest-Version: 1.0\nFMLModType: LIBRARY\n",
+        "pack.mcmeta": JSON.stringify({
+          pack: { description: "a scala language loader", pack_format: 6 },
+        }),
+        "scala/Predef.class": "cafebabe",
+      },
+    );
+
+    const info = await checkLocalMod(jar);
+
+    expect(info?.kind).toBeNull();
+  });
+
+  it("still reads a zipped resource pack as a pack", async () => {
+    const root = await makeTempRoot();
+    const zip = writeJar(root, "faithful.zip", {
+      "pack.mcmeta": JSON.stringify({
+        pack: { description: "x", pack_format: 34 },
+      }),
+      "assets/minecraft/textures/block/stone.png": "png",
+    });
+
+    const info = await checkLocalMod(zip);
+
+    expect(info?.kind).toBe(ProjectType.RESOURCEPACK);
   });
 
   it("reuses the cached metadata for an unchanged file", async () => {

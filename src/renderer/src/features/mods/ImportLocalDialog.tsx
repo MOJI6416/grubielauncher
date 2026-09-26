@@ -189,6 +189,9 @@ export function ImportLocalDialog({
 
               const typeKey = TYPE_KEY[item.project.projectType];
               const meta = [
+                item.deletedReason
+                  ? t(`modManager.trashReasons.${item.deletedReason}`)
+                  : null,
                 item.fileName,
                 item.size ? formatBytes(item.size, sizeUnits, 1) : null,
                 typeKey ? t(typeKey) : null,

@@ -9,6 +9,7 @@ import {
   buildInstalledIndex,
   findInstalledProject,
   normalizeProjectTitle,
+  sharesFile,
 } from "./mod";
 
 const api = window.api;
@@ -72,6 +73,21 @@ export async function resolveInstallPlan({
     const latest = versions[0];
     if (!latest) {
       if (project.id == root.id) rootMissingVersion = true;
+      continue;
+    }
+
+    const candidate: ILocalProject = {
+      title: project.title,
+      description: project.description,
+      projectType: project.projectType,
+      iconUrl: project.iconUrl,
+      url: project.url,
+      provider: project.provider,
+      id: project.id,
+      version: { id: latest.id, files: latest.files, dependencies: [] },
+    };
+    if ([...installed, ...added].some((mod) => sharesFile(mod, candidate))) {
+      seenIds.add(`${project.provider}:${project.id}`);
       continue;
     }
 

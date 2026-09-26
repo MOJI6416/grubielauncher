@@ -1,6 +1,7 @@
 import i18n, { changeAppLanguage } from "@renderer/i18n";
 import { normalizeSettings, TSettings } from "@/types/Settings";
 import { resolveBootstrapLanguage } from "./bootstrapPlan";
+import { applyAccent } from "../theme/accent";
 
 const api = window.api;
 
@@ -14,11 +15,12 @@ export async function preloadAppLanguage(): Promise<void> {
       : null;
 
     const systemLocale = await api.other.getLocale();
-    const { lang } = normalizeSettings(
+    const { lang, accent } = normalizeSettings(
       raw,
       resolveBootstrapLanguage(systemLocale, i18n.language),
     );
 
+    applyAccent(accent);
     await changeAppLanguage(lang);
   } catch {}
 }

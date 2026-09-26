@@ -1,8 +1,8 @@
 import fs from "fs-extra";
 import path from "path";
-import { app } from "electron";
 import { assertSafeVersionName } from "@/shared/versionName";
 import { sanitizeImportedVersionConf } from "./versions";
+import { getDataRoot } from "./dataRoot";
 import type { IVersionConf } from "@/types/IVersion";
 
 export const DUPLICATE_SOURCE_MISSING = "duplicate_source_missing";
@@ -20,12 +20,7 @@ const SKIPPED_RELATIVE_PATHS = new Set([
 ]);
 
 function getVersionsPath(): string {
-  return path.join(
-    app.getPath("appData"),
-    ".grubielauncher",
-    "minecraft",
-    "versions",
-  );
+  return path.join(getDataRoot(), "minecraft", "versions");
 }
 
 function isCopiedEntry(sourcePath: string, entryPath: string): boolean {

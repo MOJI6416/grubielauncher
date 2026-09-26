@@ -4,6 +4,7 @@ import {
   availableSources,
   buildNewsCards,
   capSource,
+  countForSource,
   filterBySource,
   mergeNewsItems,
   mixFeed,
@@ -278,5 +279,20 @@ describe("resolveFeedOutcome", () => {
     expect(
       resolveFeedOutcome({ answered: false, itemCount: 12, releaseCount: 0 }),
     ).toEqual({ hasError: false, partialError: false });
+  });
+});
+
+describe("countForSource", () => {
+  const items = [
+    { url: "https://www.minecraft.net/en-us/article/a" },
+    { url: "https://grubielauncher.com/news/b" },
+    { url: "https://www.minecraft.net/en-us/article/c" },
+  ];
+
+  it("counts what a page adds to the open tab", () => {
+    expect(countForSource(items, "all")).toBe(3);
+    expect(countForSource(items, "minecraft")).toBe(2);
+    expect(countForSource(items, "grubie")).toBe(1);
+    expect(countForSource(items, "other")).toBe(0);
   });
 });

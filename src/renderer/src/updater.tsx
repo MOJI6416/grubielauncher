@@ -64,10 +64,9 @@ const App = () => {
 
       let data: Partial<TSettings> = {};
 
-      const appData = await api.other.getPath("appData");
-      if (!appData) return;
+      const { launcher: launcherPath } = await api.other.getPaths();
+      if (!launcherPath) return;
 
-      const launcherPath = await api.path.join(appData, ".grubielauncher");
       const settingsConfPath = await api.path.join(
         launcherPath,
         "settings.json",

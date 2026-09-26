@@ -1,5 +1,6 @@
 import type { Version } from "@renderer/classes/Version";
 import {
+  INSTANCE_CONF_REVISION,
   applyInstanceConfMigration,
   isEmptyMigration,
   planInstanceConfMigration,
@@ -16,7 +17,9 @@ export async function migrateInstanceConfs(
   if (!launcherPath) return 0;
 
   const state = await readLauncherState(launcherPath);
-  if (state?.instanceConfCleanup) return 0;
+  const revision =
+    state?.instanceConfRevision ?? (state?.instanceConfCleanup ? 1 : 0);
+  if (revision >= INSTANCE_CONF_REVISION) return 0;
 
   let migrated = 0;
 
@@ -40,6 +43,7 @@ export async function migrateInstanceConfs(
   await writeLauncherState(launcherPath, {
     ...(state || {}),
     instanceConfCleanup: true,
+    instanceConfRevision: INSTANCE_CONF_REVISION,
   });
 
   return migrated;

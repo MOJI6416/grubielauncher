@@ -1,4 +1,12 @@
 {
+  "editMenu": {
+    "label": "Edit",
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "selectAll": "Select all",
+    "copyLink": "Copy link"
+  },
   "common": {
     "save": "Save",
     "copied": "Copied to clipboard",
@@ -562,6 +570,7 @@
     "enable": "Enable",
     "disable": "Disable",
     "incompatible": "No matching file for this version",
+    "incompatibleOn": "{{provider}} has no file marked for Minecraft {{version}}, so no updates will come from there. If the game starts with this mod, the author just didn't tag that version.",
     "notDownloaded": "Not downloaded yet",
     "translate": "Translate description",
     "selectedCount_one": "{{count}} selected",
@@ -581,7 +590,8 @@
       "server": "Server-only",
       "curseforge": "CurseForge",
       "modrinth": "Modrinth",
-      "local": "Local files"
+      "local": "Local files",
+      "foreign": "For another loader"
     },
     "dependencies": "Dependencies",
     "added": "Mod added",
@@ -607,6 +617,32 @@
     "trashCount": "Recently deleted: {{count}}",
     "trashHint": "Files are kept for {{days}} days, then removed for good",
     "trashRestore": "Restore",
+    "trashOpen": "Open folder",
+    "trashOpenFailed": "Couldn't open the folder",
+    "trashClear": "Delete permanently",
+    "trashClearTitle": "Empty “Recently deleted”?",
+    "trashClearConfirm": "The files ({{count}}) will be deleted from disk for good and can't be restored.",
+    "trashCleared": "Deleted permanently: {{count}}",
+    "trashClearFailed": "Some files couldn't be deleted — the game may still have them open",
+    "trashHide": "Hide",
+    "trashHideHint": "Hide this bar until something else is deleted. The files stay in the trash.",
+    "trashReasons": {
+      "updated": "Replaced by an update",
+      "removed": "Removed from the instance",
+      "foreign": "Not added by the launcher"
+    },
+    "detailResize": "Panel width",
+    "detailResizeHint": "Drag to resize. Double-click to reset.",
+    "pin": "Pin version",
+    "unpin": "Unpin",
+    "pinHint": "“Update all” will leave this mod alone. You can still install a version by hand.",
+    "unpinHint": "The mod will be updated together with the rest again.",
+    "pinned": "Version pinned — “Update all” leaves it alone",
+    "pinnedWithUpdate": "Version pinned. Update available: {{version}}",
+    "pinnedDone": "Version pinned: {{count}}",
+    "unpinnedDone": "Version unpinned: {{count}}",
+    "updatesShow": "Show",
+    "contentType": "Content type",
     "projectTypes": {
       "mod": "Mods",
       "resourcepack": "Resource packs",
@@ -772,12 +808,13 @@
     "foreignTrashed": "Moved to recently deleted: {{count}}",
     "foreignTrashFailed": "Some files could not be moved",
     "duplicateBadge": "Duplicate",
-    "duplicateHint": "This mod is also installed from CurseForge or Modrinth. The local copy is extra — both would load in the game.",
+    "duplicateHint": "This mod is already in the instance under another entry — from CurseForge, Modrinth or the same file. This copy is extra.",
+    "duplicateReviewHint": "This mod is installed from both CurseForge and Modrinth as different files — both would load in the game. Keep one copy and delete the other.",
     "duplicatesFound_one": "{{count}} mod is installed twice",
     "duplicatesFound_other": "{{count}} mods are installed twice",
-    "duplicatesHint": "A local file and the same mod from a catalog. Remove the local copies — the catalog versions stay and keep getting updates.",
+    "duplicatesHint": "One mod is listed twice: a local file and a catalog copy, or copies from both CurseForge and Modrinth. Extra copies can be removed at once — one of each stays and keeps getting updates. Where the two sites installed different files, pick the copy yourself.",
     "duplicatesShow": "Show",
-    "duplicatesRemove": "Remove local copies",
+    "duplicatesRemove": "Remove extra copies",
     "identifyAction": "Find local mods on CurseForge and Modrinth",
     "identifyShort": "Find on sites",
     "identifySearching": "Looking them up on CurseForge and Modrinth…",
@@ -1184,7 +1221,8 @@
       "storage": "Storage",
       "downloads": "Downloads",
       "privacy": "Privacy",
-      "about": "About"
+      "about": "About",
+      "system": "Startup and tray"
     },
     "support": "Support the project",
     "voicePtt": "Push-to-talk",
@@ -1392,6 +1430,15 @@
         "voice": {
           "ptt": "Talk (push-to-talk)"
         }
+      },
+      "accent": "Accent color",
+      "accentDescription": "The color of the Play button, selections and active controls. Violet is the brand color.",
+      "accents": {
+        "violet": "Violet (brand)",
+        "blue": "Blue",
+        "cyan": "Teal",
+        "pink": "Pink",
+        "graphite": "Graphite"
       }
     },
     "voice": {
@@ -1564,6 +1611,26 @@
         "title": "Telegram notifications",
         "description": "Play invites and friend requests while the launcher is closed",
         "keywords": "telegram notifications alerts invites friends bot profile"
+      },
+      "accent": {
+        "title": "Accent color",
+        "description": "The color of buttons and selections",
+        "keywords": "color colour theme accent customize appearance palette"
+      },
+      "closeToTray": {
+        "title": "Minimize to tray on close",
+        "description": "Closing hides the window, calls and games keep going",
+        "keywords": "tray close background minimize call"
+      },
+      "launchAtLogin": {
+        "title": "Start with the system",
+        "description": "Start the launcher in the tray when you sign in",
+        "keywords": "autostart startup login windows system tray"
+      },
+      "dataLocation": {
+        "title": "Data folder",
+        "description": "Move launcher data to another drive",
+        "keywords": "folder path drive disk move relocate data location space"
       }
     },
     "resetAllConfirmBody_one": "{{count}} setting goes back to its default. Instances, accounts and worlds are untouched.",
@@ -1571,7 +1638,33 @@
     "voicePttCaptureTimeout": "No key was pressed — the shortcut is unchanged.",
     "voicePttCaptureUnavailable": "The launcher cannot read global keys. Check that it is allowed by your antivirus and restart it.",
     "agentChatSync": "Sync assistant chats",
-    "agentChatSyncDescription": "Keep the assistant history on the Grubie account so it follows you to another computer. It carries what the assistant read: instance names, log excerpts and the addresses of your saved servers."
+    "agentChatSyncDescription": "Keep the assistant history on the Grubie account so it follows you to another computer. It carries what the assistant read: instance names, log excerpts and the addresses of your saved servers.",
+    "system": {
+      "closeToTray": "Minimize to tray on close",
+      "closeToTrayDescription": "The close button hides the window and the launcher keeps running: calls stay connected, friends see you online, games and downloads carry on. Quit from the tray icon.",
+      "launchAtLogin": "Start with the system",
+      "launchAtLoginDescription": "The launcher starts straight in the tray, with no window — friends see you online and can call you.",
+      "launchAtLoginUnsupported": "Available in the installed version of the launcher.",
+      "launchAtLoginFailed": "Couldn't change the startup setting"
+    },
+    "dataLocation": {
+      "title": "Data folder",
+      "description": "Versions, Java, mods, worlds and settings. You can move it to another drive.",
+      "default": "default",
+      "move": "Move…",
+      "checking": "Checking…",
+      "reset": "Back to the default folder",
+      "moveTitle": "Move launcher data?",
+      "moveDescription": "The launcher will restart and move the files before it opens. The old folder is deleted after a successful move.",
+      "moveSize": "{{size}} will be moved, {{free}} free on the drive.",
+      "moveSizeUnknown": "{{size}} will be moved.",
+      "moveSameVolume": "Both folders are on the same drive, so this takes a couple of seconds.",
+      "moveConfirm": "Move and restart",
+      "adoptTitle": "This folder already has launcher data",
+      "adoptDescription": "The launcher will restart and keep working with it. The current folder stays where it is; you can delete it manually.",
+      "adoptConfirm": "Switch and restart",
+      "restarting": "Restarting…"
+    }
   },
   "skinView": {
     "title": "Skin preview",
@@ -3478,6 +3571,7 @@
     "retry": "Try again",
     "refresh": "Refresh news",
     "loadMoreFailed": "Could not load more news",
+    "loadEarlier": "Show earlier news",
     "title": "News",
     "new": "New",
     "noDate": "No date",
@@ -4554,6 +4648,89 @@
     "requirements": {
       "title": "Mod requirements",
       "empty": "No mod restricts the loader version"
+    }
+  },
+  "tray": {
+    "open": "Open Grubie Launcher",
+    "play": "Play",
+    "running": "running",
+    "voice": "Voice",
+    "mute": "Mute microphone",
+    "deafen": "Mute sound",
+    "leave": "Leave call",
+    "incoming": "Incoming call",
+    "accept": "Accept",
+    "decline": "Decline",
+    "quit": "Quit",
+    "playing": "Playing",
+    "hintTitle": "Grubie Launcher keeps running",
+    "hintBody": "Calls, friends and games carry on. Quit from the tray icon.",
+    "installUpdate": "Update to {{version}}"
+  },
+  "appUpdate": {
+    "pill": "Update {{version}}",
+    "title": "Version {{version}} is ready",
+    "description": "The update is already downloaded. The launcher restarts and installs it — it takes less than a minute.",
+    "install": "Update",
+    "failed": "Couldn't install the update",
+    "callWarning": "Your current call drops while the launcher restarts.",
+    "blocked": {
+      "game": "Close the game first — updating restarts the launcher.",
+      "install": "Wait for the install in the Task Center to finish."
+    }
+  },
+  "trayPopup": {
+    "playing": "Playing {{name}}",
+    "idle": "Running in the background",
+    "running": "Playing",
+    "noInstances": "No instances yet — create one in the launcher.",
+    "updateReady": "Update {{version}} is ready",
+    "unmute": "Unmute microphone",
+    "undeafen": "Unmute sound"
+  },
+  "dataLocation": {
+    "from": "From",
+    "to": "To",
+    "current": "Now",
+    "next": "New",
+    "folder": "Folder",
+    "window": {
+      "movingTitle": "Moving launcher data",
+      "movingDescription": "The launcher will open by itself once everything is ready.",
+      "counting": "Counting files…",
+      "copied": "{{copied}} of {{total}}",
+      "finishing": "Finishing…",
+      "cancelling": "Cancelling…",
+      "failedTitle": "Couldn't move the data",
+      "failedDescription": "Everything stayed where it was, and the launcher will keep using it.",
+      "continue": "Continue",
+      "missingTitle": "The data folder is unavailable",
+      "missingDescription": "If it is on a disconnected drive, connect it and press “Retry”. If you moved the data yourself, point to the new folder.",
+      "useDefault": "Start with the default folder",
+      "quit": "Quit",
+      "pick": "Choose folder…",
+      "retry": "Retry"
+    },
+    "failures": {
+      "space": "The drive ran out of space.",
+      "notEmpty": "The target folder turned out not to be empty.",
+      "sourceMissing": "The original data folder was not found.",
+      "verify": "The copy didn't match the original.",
+      "io": "Couldn't copy the files."
+    },
+    "problems": {
+      "same": "The data is already in this folder.",
+      "nested": "You can't choose a folder inside the current data folder.",
+      "notEmpty": "This folder already contains other files. Please choose another one.",
+      "readOnly": "There is no permission to write to this folder.",
+      "space": "Not enough space: {{size}} needed, {{free}} free.",
+      "protected": "System folders and the program folder can't be used.",
+      "cleanupPending": "This folder is still being removed after the previous move. Please try again later.",
+      "noData": "This folder has no Grubie Launcher data.",
+      "stillMissing": "The folder is still unavailable.",
+      "busy": "Moving is unavailable while a game or server is running or an installation is in progress.",
+      "stale": "The folder changed while you were confirming. Please choose it again.",
+      "failed": "Couldn't change the data folder."
     }
   }
 }

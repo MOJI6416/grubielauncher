@@ -34,6 +34,14 @@ const buttonVariants = cva(
         "icon-lg": "size-9 [&_svg:not([class*='size-'])]:size-5",
       },
     },
+    compoundVariants: [
+      {
+        variant: "ghost",
+        size: ["default", "xs", "sm", "lg"],
+        class:
+          "bg-foreground/[0.06] hover:bg-foreground/[0.11] aria-expanded:bg-foreground/[0.11] dark:hover:bg-foreground/[0.11]",
+      },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",

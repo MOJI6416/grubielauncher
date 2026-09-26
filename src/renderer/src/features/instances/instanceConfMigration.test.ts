@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { IVersionConf } from "@/types/IVersion";
+import { ILocalProject, ProjectType, Provider } from "@/types/ModManager";
 import {
   applyInstanceConfMigration,
   isEmptyMigration,
@@ -21,6 +22,72 @@ function conf(overrides: Partial<IVersionConf> = {}): IVersionConf {
 }
 
 const launched = new Date("2026-08-19T02:42:47.787Z");
+
+function localFile(
+  filename: string,
+  projectType: ProjectType,
+  provider = Provider.LOCAL,
+): ILocalProject {
+  return {
+    title: filename,
+    description: "",
+    projectType,
+    iconUrl: null,
+    url: "",
+    provider,
+    id: filename,
+    version: {
+      id: "",
+      dependencies: [],
+      files: [{ filename, size: 1, url: "", sha1: "", isServer: true }],
+    },
+  };
+}
+
+describe("jar packs", () => {
+  it("moves a local jar that was filed as a resource pack back to mods", () => {
+    const library = localFile(
+      "ScalableCatsForce-with-library.jar",
+      ProjectType.RESOURCEPACK,
+    );
+    const pack = localFile("faithful.zip", ProjectType.RESOURCEPACK);
+    const target = conf({
+      loader: { name: "neoforge", mods: [library, pack], version: "21.1.0" },
+    } as unknown as Partial<IVersionConf>);
+
+    const plan = planInstanceConfMigration(target);
+    expect(plan.jarPacks).toBe(1);
+
+    applyInstanceConfMigration(target, plan);
+
+    expect(library.projectType).toBe(ProjectType.MOD);
+    expect(pack.projectType).toBe(ProjectType.RESOURCEPACK);
+  });
+
+  it("leaves catalog projects and vanilla instances alone", () => {
+    const fromCatalog = localFile(
+      "x.jar",
+      ProjectType.DATAPACK,
+      Provider.MODRINTH,
+    );
+    const vanillaJar = localFile("y.jar", ProjectType.DATAPACK);
+
+    expect(
+      planInstanceConfMigration(
+        conf({
+          loader: { name: "fabric", mods: [fromCatalog], version: "0.16.0" },
+        } as unknown as Partial<IVersionConf>),
+      ).jarPacks,
+    ).toBe(0);
+    expect(
+      planInstanceConfMigration(
+        conf({
+          loader: { name: "vanilla", mods: [vanillaJar], version: "" },
+        } as unknown as Partial<IVersionConf>),
+      ).jarPacks,
+    ).toBe(0);
+  });
+});
 
 describe("planInstanceConfMigration", () => {
   it("drops only an empty shareCode, never a real one", () => {

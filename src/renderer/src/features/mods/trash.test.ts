@@ -3,6 +3,7 @@ import {
   isTrashEntryExpired,
   parseTrashEntry,
   sortTrashEntries,
+  withReasons,
 } from "./trash";
 
 describe("parseTrashEntry", () => {
@@ -81,5 +82,27 @@ describe("isTrashEntryExpired", () => {
   it("keeps an entry with no timestamp in the name", () => {
     const entry = parseTrashEntry("leftover.jar");
     expect(entry && isTrashEntryExpired(entry, now)).toBe(false);
+  });
+});
+
+describe("withReasons", () => {
+  it("attaches a known reason and ignores anything else", () => {
+    const entries = [
+      parseTrashEntry("1700000000000-aabbccdd-old.jar")!,
+      parseTrashEntry("1700000000001-aabbccdd-gone.jar")!,
+      parseTrashEntry("1700000000002-aabbccdd-odd.jar")!,
+    ];
+
+    const result = withReasons(entries, {
+      "1700000000000-aabbccdd-old.jar": "updated",
+      "1700000000002-aabbccdd-odd.jar": "exploded",
+    });
+
+    expect(result.map((entry) => entry.reason)).toEqual([
+      "updated",
+      undefined,
+      undefined,
+    ]);
+    expect(withReasons(entries, null)).toBe(entries);
   });
 });

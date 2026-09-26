@@ -1,4 +1,3 @@
-import { app } from "electron";
 import { randomUUID } from "crypto";
 import fs from "fs-extra";
 import path from "path";
@@ -8,6 +7,7 @@ import {
   AiProvidersState,
 } from "@/types/Agent";
 import { writeJsonAtomic } from "./atomicJson";
+import { getDataRoot } from "./dataRoot";
 import { decodeSecret, encodeSecret, StoredSecrets } from "./secretStore";
 
 type PersistedProvider = Omit<AiProviderProfile, "hasKey">;
@@ -30,7 +30,7 @@ export class AiProviderError extends Error {
 }
 
 function getLauncherDir(): string {
-  return path.join(app.getPath("appData"), ".grubielauncher");
+  return getDataRoot();
 }
 
 function getProvidersPath(): string {

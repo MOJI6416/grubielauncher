@@ -7,6 +7,7 @@ import {
   VersionInstallResult,
 } from '@/types/InstallationProgress'
 import { installQueue } from '@renderer/features/install/installQueue'
+import { repairClientSides } from '@renderer/features/mods/clientSides'
 
 const api = window.api
 
@@ -44,11 +45,13 @@ export class Mods {
     )
   }
 
-  async check(options?: VersionInstallOptions) {
+  async check(options?: VersionInstallOptions): Promise<number> {
+    const repaired = await repairClientSides(this.versionConf.loader.mods ?? [])
     const result = await this.queued(() =>
       api.mods.check(this.settings, this.versionConf, this.server, options)
     )
     this.handleResult(result)
+    return repaired
   }
 
   async downloadOther(options?: VersionInstallOptions) {

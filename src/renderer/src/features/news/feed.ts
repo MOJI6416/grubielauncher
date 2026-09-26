@@ -155,6 +155,14 @@ export function readNewsPage(page: INewsPage | null | undefined): NewsPageResult
   };
 }
 
+export function countForSource(
+  items: Pick<INews, "url">[],
+  source: NewsSource | "all",
+): number {
+  if (source === "all") return items.length;
+  return items.filter((item) => newsSource(item.url) === source).length;
+}
+
 export function availableSources(cards: NewsCard[]): NewsSource[] {
   const order: NewsSource[] = ["grubie", "minecraft", "other"];
   const present = new Set(cards.map((card) => card.source));

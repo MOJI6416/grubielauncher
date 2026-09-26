@@ -153,7 +153,7 @@ export function VoiceParticipantChip({
         <Button
           size="sm"
           variant="ghost"
-          className="mt-1 h-8 w-full justify-start"
+          className="mt-1 h-8 w-full justify-start bg-transparent"
           onClick={() =>
             voiceSetParticipantMuted(
               participant.identity,
@@ -175,7 +175,7 @@ export function VoiceParticipantChip({
           <Button
             size="sm"
             variant="ghost"
-            className="h-8 w-full justify-start text-destructive hover:text-destructive"
+            className="h-8 w-full justify-start text-destructive hover:text-destructive bg-transparent"
             onClick={onKick}
           >
             <UserX className="size-3.5" />

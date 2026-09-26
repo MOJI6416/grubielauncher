@@ -14,6 +14,7 @@ import {
   isMirrorDisabled
 } from '../utilities/mirrorState'
 import { getOS } from '../utilities/other'
+import { getDataRoot } from '../utilities/dataRoot'
 
 const JAVA_VERIFIED_MARKER = '.grubie-java-verified'
 const JAVA_ASSET_HOSTS = ['github.com', 'objects.githubusercontent.com']
@@ -486,7 +487,7 @@ export class Java {
   }
 
   private getJavaBaseDir(): string {
-    return path.join(app.getPath('appData'), '.grubielauncher', 'java')
+    return path.join(getDataRoot(), 'java')
   }
 
   private getCachePath(): string | null {

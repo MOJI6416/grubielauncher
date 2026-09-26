@@ -19,3 +19,5 @@ export { registerWorldChunksIpc } from "./worldChunksIpc";
 export { registerStatisticsIpc } from "./statisticsIpc";
 export { registerStorageIpc } from "./storageIpc";
 export { registerVoiceIpc } from "./voiceIpc";
+export { registerTrayIpc } from "./trayIpc";
+export { registerDataLocationIpc } from "./dataLocationIpc";

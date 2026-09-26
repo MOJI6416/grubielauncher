@@ -6,6 +6,7 @@ import { CheckIcon, ChevronDownIcon, SearchIcon } from "lucide-react";
 import { FixedSizeList, type ListChildComponentProps } from "react-window";
 
 import { cn } from "@/lib/utils";
+import { Hint } from "@renderer/components/Hint";
 
 export interface VirtualizedSelectOption {
   value: string;
@@ -40,6 +41,12 @@ function getMaxLabelWidth(
     if (width > max) max = width;
   }
   return max;
+}
+
+function optionHint(option: VirtualizedSelectOption): string {
+  return option.secondaryLabel
+    ? `${option.label} · ${option.secondaryLabel}`
+    : option.label;
 }
 
 function OptionContent({
@@ -86,30 +93,27 @@ function Row({ index, style, data }: ListChildComponentProps<RowData>) {
 
   return (
     <div style={style} className="px-1">
-      <button
-        type="button"
-        role="option"
-        aria-selected={isSelected}
-        tabIndex={-1}
-        onClick={() => data.onSelect(option.value)}
-        onMouseMove={() => data.onActivate(index)}
-        title={
-          option.secondaryLabel
-            ? `${option.label} · ${option.secondaryLabel}`
-            : option.label
-        }
-        className={cn(
-          "relative flex h-full w-full cursor-default items-center gap-2 rounded-md py-1 pr-8 pl-1.5 text-sm outline-none select-none",
-          isActive && "bg-accent text-accent-foreground",
-        )}
-      >
-        <OptionContent option={option} />
-        {isSelected && (
-          <span className="absolute right-2 flex size-4 items-center justify-center">
-            <CheckIcon className="size-4" />
-          </span>
-        )}
-      </button>
+      <Hint content={option.label} variant="text" truncatedOnly>
+        <button
+          type="button"
+          role="option"
+          aria-selected={isSelected}
+          tabIndex={-1}
+          onClick={() => data.onSelect(option.value)}
+          onMouseMove={() => data.onActivate(index)}
+          className={cn(
+            "relative flex h-full w-full cursor-default items-center gap-2 rounded-md py-1 pr-8 pl-1.5 text-sm outline-none select-none",
+            isActive && "bg-accent text-accent-foreground",
+          )}
+        >
+          <OptionContent option={option} />
+          {isSelected && (
+            <span className="absolute right-2 flex size-4 items-center justify-center">
+              <CheckIcon className="size-4" />
+            </span>
+          )}
+        </button>
+      </Hint>
     </div>
   );
 }
@@ -298,35 +302,40 @@ export function VirtualizedSelect({
         setOpen(next);
       }}
     >
-      <PopoverPrimitive.Trigger
-        ref={triggerRef}
-        data-slot="virtualized-select-trigger"
-        data-size={size}
-        aria-label={ariaLabel}
-        disabled={disabled}
-        title={
-          selectedOption
-            ? selectedOption.secondaryLabel
-              ? `${selectedOption.label} · ${selectedOption.secondaryLabel}`
-              : selectedOption.label
-            : placeholder
+      <Hint
+        content={
+          disabled
+            ? undefined
+            : selectedOption
+              ? optionHint(selectedOption)
+              : placeholder
         }
-        className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 py-1 text-sm leading-5 whitespace-nowrap transition-[color,box-shadow,border-color] outline-none select-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:border-ring data-[size=default]:h-9 data-[size=sm]:h-8 dark:bg-input/30 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-          className,
-        )}
+        variant="text"
+        truncatedOnly
       >
-        {selectedOption ? (
-          <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
-            <OptionContent option={selectedOption} showSecondary={false} />
-          </span>
-        ) : (
-          <span className="block min-w-0 flex-1 truncate text-left text-muted-foreground">
-            {placeholder}
-          </span>
-        )}
-        <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
-      </PopoverPrimitive.Trigger>
+        <PopoverPrimitive.Trigger
+          ref={triggerRef}
+          data-slot="virtualized-select-trigger"
+          data-size={size}
+          aria-label={ariaLabel}
+          disabled={disabled}
+          className={cn(
+            "flex w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 py-1 text-sm leading-5 whitespace-nowrap transition-[color,box-shadow,border-color] outline-none select-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:border-ring data-[size=default]:h-9 data-[size=sm]:h-8 dark:bg-input/30 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+            className,
+          )}
+        >
+          {selectedOption ? (
+            <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
+              <OptionContent option={selectedOption} showSecondary={false} />
+            </span>
+          ) : (
+            <span className="block min-w-0 flex-1 truncate text-left text-muted-foreground">
+              {placeholder}
+            </span>
+          )}
+          <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+        </PopoverPrimitive.Trigger>
+      </Hint>
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Content
           side="bottom"

@@ -19,6 +19,7 @@ import axios from "axios";
 import fs from "fs-extra";
 import path from "path";
 import { getApiBaseUrl } from "./apiHost";
+import { getDataRoot } from "./dataRoot";
 
 const CRASH_REPORT_MAX_AGE_MS = 10 * 60 * 1000;
 const MAX_SOURCE_BYTES = 256 * 1024;
@@ -262,7 +263,7 @@ async function reportCrashRuleHit(
   sample?: string,
 ): Promise<void> {
   try {
-    const launcherPath = path.join(app.getPath("appData"), ".grubielauncher");
+    const launcherPath = getDataRoot();
     const settings = (await fs
       .readJSON(path.join(launcherPath, "settings.json"))
       .catch(() => null)) as Partial<TSettings> | null;

@@ -48,7 +48,7 @@ import {
   writeManagedFiles,
   isForeignFile,
 } from "./managedFiles";
-import { moveFilesToTrash } from "./trash";
+import { fileStem, moveFilesToTrash } from "./trash";
 
 const TRASH_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const DISABLED_SUFFIX = ".disabled";
@@ -333,11 +333,14 @@ export class Mods {
           });
 
           if (!disabled || !existsDisabled) {
+            const destination = disabled ? disabledPath : filepath;
+            const url = file.localPath
+              ? pathToFileURL(file.localPath).href
+              : file.url;
+
             downloadFiles.push({
-              destination: disabled ? disabledPath : filepath,
-              url: file.localPath
-                ? pathToFileURL(file.localPath).href
-                : file.url,
+              destination,
+              url: await this.preferInstanceCopy(url, destination, filename),
               group: contentStageOf(mod.projectType),
               sha1: file.sha1,
               size: file.size,
@@ -450,6 +453,32 @@ export class Mods {
     );
     await this.installCheckpoint();
     await this.pruneTrash();
+  }
+
+  private async preferInstanceCopy(
+    url: string,
+    destination: string,
+    filename: string,
+  ): Promise<string> {
+    if (!url?.startsWith("file:")) return url;
+    if (await fs.pathExists(destination)) return url;
+
+    for (const type of [
+      ProjectType.MOD,
+      ProjectType.RESOURCEPACK,
+      ProjectType.SHADER,
+      ProjectType.DATAPACK,
+    ]) {
+      const candidate = path.join(
+        this.version.versionPath,
+        projetTypeToFolder(type),
+        filename,
+      );
+      if (candidate === destination) continue;
+      if (await fs.pathExists(candidate)) return pathToFileURL(candidate).href;
+    }
+
+    return url;
   }
 
   private async rememberManagedFiles(managed: ManagedFiles) {
@@ -608,8 +637,16 @@ export class Mods {
     return path.join(this.version.versionPath, "storage", "trash");
   }
 
-  private async moveToTrash(files: string[]): Promise<string[]> {
-    return moveFilesToTrash(this.getTrashPath(), files);
+  private async moveToTrash(
+    files: string[],
+    keptNames: string[] = [],
+  ): Promise<string[]> {
+    const kept = new Set(keptNames.map(fileStem).filter(Boolean));
+
+    return moveFilesToTrash(this.getTrashPath(), files, (file) => {
+      const stem = fileStem(path.basename(file));
+      return stem && kept.has(stem) ? "updated" : "removed";
+    });
   }
 
   private async pruneTrash() {
@@ -711,7 +748,7 @@ export class Mods {
       }
     }
 
-    return await this.moveToTrash(deleteFiles);
+    return await this.moveToTrash(deleteFiles, filenames);
   }
 
   async downloadOther(options?: ModsRuntimeOptions) {

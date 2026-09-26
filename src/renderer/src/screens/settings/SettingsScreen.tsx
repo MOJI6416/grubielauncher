@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  AppWindow,
   Check,
   Cpu,
   Download,
@@ -51,6 +52,7 @@ import { GameSection } from "@renderer/features/settings/GameSection";
 import { DownloadsSection } from "@renderer/features/settings/DownloadsSection";
 import { InterfaceSection } from "@renderer/features/settings/InterfaceSection";
 import { VoiceSection } from "@renderer/features/settings/VoiceSection";
+import { SystemSection } from "@renderer/features/settings/SystemSection";
 import { PrivacySection } from "@renderer/features/settings/PrivacySection";
 import { StorageSection } from "@renderer/features/settings/StorageSection";
 import { AboutSection } from "@renderer/features/settings/AboutSection";
@@ -59,6 +61,7 @@ const SECTION_ICON: Record<SettingsSectionId, LucideIcon> = {
   game: Cpu,
   downloads: Download,
   interface: Palette,
+  system: AppWindow,
   voice: Headphones,
   privacy: Shield,
   storage: HardDrive,
@@ -300,6 +303,7 @@ export function SettingsScreen({
               )}
               {active === "downloads" && <DownloadsSection {...sectionProps} />}
               {active === "interface" && <InterfaceSection {...sectionProps} />}
+              {active === "system" && <SystemSection {...sectionProps} />}
               {active === "voice" && <VoiceSection {...sectionProps} />}
               {active === "privacy" && <PrivacySection {...sectionProps} />}
               {active === "storage" && (

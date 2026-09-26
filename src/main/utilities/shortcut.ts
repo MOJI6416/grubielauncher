@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { getLauncherPaths } from "./other";
 import { isSafeRemoteFetchUrl } from "./safeUrl";
 import { isReadablePath } from "./safePath";
+import { isInsidePath } from "./dataRoot";
 import { assertSafeVersionName } from "@/shared/versionName";
 
 const MAX_REMOTE_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -161,4 +162,64 @@ export async function createInstanceShortcut(
   }
 
   return { success: false, error: "unsupported platform" };
+}
+
+function rebaseIcon(icon: string, from: string, to: string): string | null {
+  if (!icon || !isInsidePath(icon, from)) return null;
+  return path.join(to, path.relative(from, icon));
+}
+
+export async function rebaseShortcutIcons(
+  from: string,
+  to: string,
+): Promise<number> {
+  let names: string[];
+  try {
+    names = await fs.readdir(app.getPath("desktop"));
+  } catch {
+    return 0;
+  }
+
+  let updated = 0;
+  for (const name of names) {
+    const shortcutPath = path.join(app.getPath("desktop"), name);
+
+    try {
+      if (process.platform === "win32" && name.toLowerCase().endsWith(".lnk")) {
+        const link = shell.readShortcutLink(shortcutPath);
+        const icon = rebaseIcon(link.icon ?? "", from, to);
+        if (!icon) continue;
+        if (
+          shell.writeShortcutLink(shortcutPath, "update", {
+            ...link,
+            icon,
+            iconIndex: link.iconIndex ?? 0,
+          })
+        ) {
+          updated += 1;
+        }
+        continue;
+      }
+
+      if (process.platform === "linux" && name.endsWith(".desktop")) {
+        const lines = (await fs.readFile(shortcutPath, "utf-8")).split("\n");
+        let changed = false;
+        const next = lines.map((line) => {
+          const icon = line.startsWith("Icon=")
+            ? rebaseIcon(line.slice(5), from, to)
+            : null;
+          if (!icon) return line;
+          changed = true;
+          return `Icon=${icon}`;
+        });
+        if (!changed) continue;
+        await fs.writeFile(shortcutPath, next.join("\n"));
+        updated += 1;
+      }
+    } catch (error) {
+      console.warn(`[Shortcut] Could not update ${name}:`, error);
+    }
+  }
+
+  return updated;
 }
