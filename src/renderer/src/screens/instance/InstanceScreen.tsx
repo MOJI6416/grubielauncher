@@ -439,7 +439,14 @@ export function InstanceScreen({
               </CollapseInline>
             ))}
 
-            <Hint content={playBlockedReason}>
+            <Hint
+              content={
+                playBlockedReason ??
+                (isVersionRunning && !isLaunching
+                  ? t("versions.playAnotherInstance")
+                  : undefined)
+              }
+            >
               <Button
                 type="button"
                 size="sm"
@@ -450,7 +457,7 @@ export function InstanceScreen({
               >
                 {isLaunching ? <Loader2 className="animate-spin" /> : <Play />}
                 {isVersionRunning && !isLaunching
-                  ? t("versions.playAnotherInstance")
+                  ? t("versions.playAnotherShort")
                   : t("nav.play")}
               </Button>
             </Hint>

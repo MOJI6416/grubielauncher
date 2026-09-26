@@ -28,6 +28,7 @@ import {
 } from "@renderer/utilities/accountSession";
 import { showErrorToast } from "@renderer/utilities/errorToast";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { uiJournal } from "@renderer/utilities/journal";
 import { isOnlineSocketConnected } from "@renderer/utilities/onlineSocket";
 import { checkDiffenceUpdateData, isOwner } from "@renderer/utilities/version";
 import {
@@ -38,6 +39,11 @@ import {
   pendingLaunchAtom,
 } from "./atoms";
 import { nextInstanceNumber, resolveLaunchBlock } from "./launchPlan";
+import {
+  beginLaunchProgress,
+  planLaunchStages,
+  setLaunchStage,
+} from "./launchProgress";
 import type { RunGameParams } from "./types";
 
 const api = window.api;
@@ -64,6 +70,10 @@ export async function runGame(params: RunGameParams): Promise<void> {
   });
 
   if (block) {
+    uiJournal.info("launch", "launch blocked", {
+      versionName: launchVersion?.version.name,
+      block,
+    });
     if (block.kind === "busy") toast.error(t(block.messageKey));
     else showErrorToast(t(block.titleKey), t(block.hintKey), t("common.copy"));
     return;
@@ -88,9 +98,43 @@ export async function runGame(params: RunGameParams): Promise<void> {
   const setSelectedAccount = (next: typeof account) =>
     store.set(accountAtom, next);
 
-  if (launchInFlight) return;
+  if (launchInFlight) {
+    uiJournal.info("launch", "ignored: another launch is in progress", {
+      versionName: launchVersion.version.name,
+    });
+    return;
+  }
   launchInFlight = true;
   store.set(isRunningAtom, true);
+
+  const checksModpack =
+    !skipUpdate &&
+    Boolean(launchVersion.version.shareCode) &&
+    Boolean(launchVersion.version.downloadedVersion) &&
+    isOnlineSocketConnected();
+  beginLaunchProgress({
+    versionName: launchVersion.version.name,
+    instance: _instance,
+    plan: planLaunchStages({
+      checksAccount: Boolean(ad) && a0.type !== "plain",
+      checksModpack,
+      modded: launchVersion.version.loader?.name !== "vanilla",
+    }),
+  });
+
+  const startedAt = Date.now();
+  const since = () => Date.now() - startedAt;
+  uiJournal.info("launch", "play pressed", {
+    versionName: launchVersion.version.name,
+    instance: _instance,
+    minecraft: launchVersion.version.version?.id,
+    loader: launchVersion.version.loader?.name,
+    accountType: a0.type,
+    nickname: a0.nickname,
+    skipUpdate: Boolean(skipUpdate),
+    quick,
+    shareCode: launchVersion.version.shareCode,
+  });
 
   try {
     if (ad && account.type !== "plain") {
@@ -104,18 +148,18 @@ export async function runGame(params: RunGameParams): Promise<void> {
 
       account = refreshed.account;
       currentAccounts = refreshed.accounts;
+      uiJournal.info("launch", "account session checked", {
+        refreshed: refreshed.refreshed,
+        ms: since(),
+      });
 
       if (refreshed.refreshed && account.accessToken) {
         runtimeAuthData = jwtDecode<IAuth>(account.accessToken);
       }
     }
 
-    if (
-      !skipUpdate &&
-      launchVersion.version.shareCode &&
-      launchVersion.version.downloadedVersion &&
-      isOnlineSocketConnected()
-    ) {
+    if (checksModpack && launchVersion.version.shareCode) {
+      setLaunchStage("modpack");
       const serversPath = await api.path.join(
         p0.minecraft,
         "versions",
@@ -133,6 +177,11 @@ export async function runGame(params: RunGameParams): Promise<void> {
         account.accessToken || "",
         launchVersion.version.shareCode,
       );
+      uiJournal.info("launch", "modpack update check", {
+        status: modpackData?.status,
+        found: Boolean(modpackData?.data),
+        ms: since(),
+      });
 
       if (modpackData.status == "not_found") {
         launchVersion.version.shareCode = undefined;
@@ -159,6 +208,7 @@ export async function runGame(params: RunGameParams): Promise<void> {
         );
 
         if (diff) {
+          uiJournal.info("launch", "modpack update offered, waiting for the player");
           store.set(
             launchUpdateDiffAtom,
             diffModpackProjects(
@@ -185,8 +235,13 @@ export async function runGame(params: RunGameParams): Promise<void> {
       }
     }
 
+    setLaunchStage("prepare");
     const authlibResult = await launchVersion.ensureAuthlib(account);
     if (!authlibResult.ok) {
+      uiJournal.warn("launch", "authlib-injector unavailable", {
+        reason: authlibResult.reason,
+        ms: since(),
+      });
       toast.error(
         t(
           authlibResult.reason === "download_failed"
@@ -204,8 +259,6 @@ export async function runGame(params: RunGameParams): Promise<void> {
       account,
       launchVersion.version.ownerId,
     );
-
-    toast(t("app.starting"));
 
     store.set(consolesAtom, (prev) => {
       const idx = prev.consoles.findIndex(
@@ -239,6 +292,9 @@ export async function runGame(params: RunGameParams): Promise<void> {
       return { consoles: [...prev.consoles, newConsole] };
     });
 
+    uiJournal.info("launch", "asking main process to start the game", {
+      ms: since(),
+    });
     const started = await launchVersion.run(
       account,
       resolveInstanceSettings(s0, launchVersion.version.overrides),
@@ -246,7 +302,11 @@ export async function runGame(params: RunGameParams): Promise<void> {
       _instance,
       quick,
     );
+    uiJournal.info("launch", started ? "game process started" : "game process did not start", {
+      ms: since(),
+    });
     if (!started) throw new Error("Game process did not start");
+    setLaunchStage("java");
 
     const nextPresence = {
       versionName: launchVersion.version.name,
@@ -261,6 +321,10 @@ export async function runGame(params: RunGameParams): Promise<void> {
     await api.accounts.save(currentAccounts, accountIdentity(account));
   } catch (err) {
     console.error(err);
+    uiJournal.failure("launch", "launch failed", err, {
+      versionName: launchVersion.version.name,
+      ms: since(),
+    });
     if (isAccountSessionRefreshError(err)) {
       showErrorToast(
         t("accounts.sessionExpired"),

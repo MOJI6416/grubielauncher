@@ -1,4 +1,5 @@
 import axios from "axios";
+import { journal } from "../journal/journal";
 import fs from "fs-extra";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -433,6 +434,26 @@ export class Downloader {
       this.sendInfo(null);
       this.clearTaskbarProgress();
       this.abortController = null;
+
+      journal.timed(
+        failures.length > 0 ? "warn" : this.isSilent ? "debug" : "info",
+        "download",
+        `batch ${wasCancelled || signal?.aborted ? "cancelled" : "finished"}`,
+        Date.now() - this.startTime,
+        {
+          versionName: this.versionName ?? undefined,
+          files: totalItems,
+          completed: completedItems,
+          failed: failedItems,
+          bytes: this.downloadedBytes,
+          groups: [...new Set(items.map((item) => item.group))],
+          failures: failures.slice(0, 15).map((failure) => ({
+            file: path.basename(failure.item.destination || failure.item.url),
+            url: failure.item.url?.split("?")[0],
+            error: failure.error,
+          })),
+        },
+      );
 
       if (failures.length === 0) {
         this.isSilent = false;

@@ -9,6 +9,7 @@ import { TopBar } from "./TopBar";
 import { CommandPalette } from "./CommandPalette";
 import type { RunGameParams } from "@renderer/features/launch/types";
 import { openAgent } from "@renderer/features/agent/openAgent";
+import { AmbientTint } from "@renderer/features/instances/AmbientTint";
 import { goBack, goForward } from "@renderer/navigation/navigate";
 import { isAgentShortcut } from "./shortcuts";
 
@@ -90,13 +91,14 @@ export function Shell({
   }, []);
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden">
+    <div className="app-grain flex h-screen w-full flex-col overflow-hidden">
       <TopBar onOpenPalette={openPalette} />
 
       <div className="flex min-h-0 flex-1">
         <Sidebar />
 
-        <main className="min-h-0 min-w-0 flex-1 overflow-hidden px-4 py-3">
+        <main className="relative isolate min-h-0 min-w-0 flex-1 overflow-hidden px-4 py-3">
+          <AmbientTint />
           {children}
         </main>
         {aside}

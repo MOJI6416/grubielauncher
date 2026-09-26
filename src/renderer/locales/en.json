@@ -1222,7 +1222,8 @@
       "downloads": "Downloads",
       "privacy": "Privacy",
       "about": "About",
-      "system": "Startup and tray"
+      "system": "Startup and tray",
+      "support": "Support"
     },
     "support": "Support the project",
     "voicePtt": "Push-to-talk",
@@ -1631,6 +1632,16 @@
         "title": "Data folder",
         "description": "Move launcher data to another drive",
         "keywords": "folder path drive disk move relocate data location space"
+      },
+      "supportReport": {
+        "title": "Send a report to support",
+        "description": "Collect the launcher journal and game logs and get a code for support",
+        "keywords": "support report bug problem logs journal code help diagnostics"
+      },
+      "verboseJournal": {
+        "title": "Detailed journal",
+        "description": "Record more details for 24 hours and open the journal folder",
+        "keywords": "journal log verbose debug detailed folder diagnostics"
       }
     },
     "resetAllConfirmBody_one": "{{count}} setting goes back to its default. Instances, accounts and worlds are untouched.",
@@ -1664,6 +1675,20 @@
       "adoptDescription": "The launcher will restart and keep working with it. The current folder stays where it is; you can delete it manually.",
       "adoptConfirm": "Switch and restart",
       "restarting": "Restarting…"
+    },
+    "supportSection": {
+      "reportTitle": "Report for support",
+      "reportHint": "The launcher records what it does in the background",
+      "send": "Send a report",
+      "sendDescription": "Collects the launcher journal, game logs and system details, uploads them and gives you a short code for support",
+      "sendAction": "Send",
+      "verbose": "Detailed journal",
+      "verboseDescription": "Records more details for 24 hours — turn it on if support asked you to, then repeat the problem",
+      "verboseUntil": "On until {{time}} — repeat the problem and send a report",
+      "folder": "Journal files",
+      "folderDescription": "Files: {{files}} · {{size}} on this computer",
+      "folderDescriptionEmpty": "Stored on this computer",
+      "historyTitle": "Sent reports"
     }
   },
   "skinView": {
@@ -1814,6 +1839,7 @@
       "publishing": "Publishing & server"
     },
     "playAnotherInstance": "Launch another instance",
+    "playAnotherShort": "Launch another",
     "openInstance": "Open instance",
     "running": "Running",
     "eulaLabel": "I accept the",
@@ -1972,7 +1998,6 @@
     "updateLoader": "Update loader version"
   },
   "app": {
-    "starting": "Starting game...",
     "startupError": "Startup error",
     "authlibUnavailable": "Couldn't load the authentication component. Connect to the internet and try again.",
     "authlibDownloadFailed": "Failed to download the authentication component. Check your connection and try again.",
@@ -4732,5 +4757,64 @@
       "stale": "The folder changed while you were confirming. Please choose it again.",
       "failed": "Couldn't change the data folder."
     }
+  },
+  "supportReport": {
+    "title": "Report for support",
+    "description": "The launcher collects a detailed journal of its work and uploads it. You get a short code — send it to support.",
+    "instance": "Instance with the problem",
+    "noInstance": "Not about an instance",
+    "comment": "What happened",
+    "commentPlaceholder": "For example: I press Play, the timer runs, but the game never opens",
+    "connectivity": "Check the connection to services",
+    "connectivityHint": "Takes up to 20 seconds and shows what is blocked on your network",
+    "includedTitle": "The report contains",
+    "included": {
+      "journal": "Launcher journal for the last 3 days: launches, installs, requests, errors",
+      "system": "System: OS, memory, free disk space",
+      "settings": "Launcher settings",
+      "accounts": "Accounts: type and nickname, without passwords or tokens",
+      "instances": "Instances and the mod list of the selected one",
+      "gameLogs": "Game logs and crash reports of the selected instance",
+      "connectivity": "Connection check results"
+    },
+    "privacy": "Passwords and tokens are removed. The report is kept for 30 days and only the developers can open it.",
+    "preparing": "Collecting the journal…",
+    "preparingHint": "Checking the connection to services, this takes up to 20 seconds",
+    "sending": "Uploading the report ({{size}})…",
+    "codeLabel": "Report code",
+    "codeHint": "Send this code to support in Discord or to the administrator. The report is kept until {{date}}.",
+    "copyCode": "Copy code",
+    "close": "Done",
+    "send": "Send report",
+    "retry": "Try again",
+    "saveToFile": "Save to file",
+    "saved": "Report saved — attach the file to your message to support",
+    "saveHint": "If the upload keeps failing, save the report to a file and attach it to your message to support.",
+    "openAction": "Send a report to support",
+    "failed": {
+      "prepare": "Could not collect the report. Try again; if it repeats, open the journal folder in Settings → Support.",
+      "expired": "The collected report is outdated. Collect it again.",
+      "network": "Could not reach the server. Check your connection or save the report to a file.",
+      "rateLimited": "Too many reports in a short time. Wait a few minutes and try again.",
+      "tooLarge": "The report is too large for the server. Save it to a file instead.",
+      "rejected": "The server did not accept the report. Save it to a file and send it to support."
+    }
+  },
+  "launchStage": {
+    "stages": {
+      "account": "Checking your account",
+      "modpack": "Syncing the modpack with the server",
+      "prepare": "Preparing files and Java",
+      "java": "Starting Java",
+      "loader": "Loading mods",
+      "game": "Starting the game"
+    },
+    "minimizeHint": "The launcher will minimize once the game window opens"
+  },
+  "launchStall": {
+    "title": "{{version}} is taking too long to start",
+    "silent": "The game process has not written anything for a long time. Send a report — it shows where the launch stopped.",
+    "quiet": "The game stopped writing to the log. Send a report — it shows where the launch stopped.",
+    "report": "Send report"
   }
 }

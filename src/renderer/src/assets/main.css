@@ -166,6 +166,13 @@
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: var(--primary);
+
+  --lit-edge: oklch(1 0 0 / 6%);
+  --lit-shadow-near: oklch(0 0 0 / 35%);
+  --lit-shadow-far: oklch(0 0 0 / 55%);
+  --spot-light: oklch(1 0 0 / 9%);
+  --sheen-light: oklch(1 0 0 / 22%);
+  --grain-opacity: 0.035;
 }
 
 @layer base {
@@ -371,6 +378,191 @@ body {
 @media (prefers-reduced-motion: no-preference) {
   .progress-sweep [data-slot="progress-indicator"] {
     animation: progress-sweep-slide 1.5s ease-in-out infinite;
+  }
+}
+
+.app-grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.1 -0.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.surface-lit {
+  box-shadow:
+    inset 0 1px 0 0 var(--lit-edge),
+    0 1px 2px 0 var(--lit-shadow-near),
+    0 14px 28px -18px var(--lit-shadow-far);
+}
+
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    240px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    var(--spot-light),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease-swift);
+}
+
+.spotlight:hover::before {
+  opacity: 1;
+}
+
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.btn-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    var(--sheen-light) 50%,
+    transparent 65%
+  );
+  transform: translateX(-120%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn-sheen:hover:not(:disabled)::after {
+    transform: translateX(120%);
+    transition: transform 700ms var(--ease-swift);
+  }
+}
+
+@keyframes hero-drift {
+  0%,
+  100% {
+    transform: scale(1.08) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scale(1.2) translate3d(-3%, 2%, 0);
+  }
+}
+
+.hero-drift {
+  animation: hero-drift 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes launch-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.06);
+  }
+}
+
+.launch-glow {
+  pointer-events: none;
+  background: radial-gradient(closest-side, var(--primary-veil), transparent);
+  animation: launch-breathe 3.2s ease-in-out infinite;
+}
+
+@keyframes stage-sweep-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+.stage-sweep {
+  overflow: hidden;
+}
+
+.stage-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  animation: stage-sweep-slide 1.4s ease-in-out infinite;
+}
+
+@keyframes slide-drift {
+  from {
+    transform: scale(1.04) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.14) translate3d(-2.5%, -1.5%, 0);
+  }
+}
+
+.slide-drift {
+  animation: slide-drift 9s ease-out both;
+}
+
+@property --art-tint {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+.ambient-tint {
+  pointer-events: none;
+  background:
+    radial-gradient(
+      70% 55% at 88% -12%,
+      color-mix(in oklab, var(--art-tint) 20%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      45% 40% at 0% 105%,
+      color-mix(in oklab, var(--art-tint) 9%, transparent),
+      transparent 70%
+    );
+  transition: --art-tint 700ms var(--ease-swift);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-slow);
+  animation-timing-function: var(--ease-swift);
+}
+
+::view-transition-group(morph-art) {
+  animation-duration: 340ms;
+  animation-timing-function: var(--ease-swift);
+}
+
+::view-transition-old(morph-art),
+::view-transition-new(morph-art) {
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-drift,
+  .launch-glow,
+  .slide-drift,
+  .stage-sweep::after {
+    animation: none;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
 

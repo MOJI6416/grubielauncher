@@ -2,6 +2,15 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { createPathUtils } from "./path";
 import { IServer } from "@/types/ServersList";
+import type {
+  JournalStatus,
+  JournalUiEntry,
+  LaunchStalledPayload,
+  SupportReportHistoryItem,
+  SupportReportPrepared,
+  SupportReportRequest,
+  SupportReportSendResult,
+} from "@/types/Journal";
 import type { ServerPingResult } from "../main/utilities/serverPing";
 import {
   IImportModpack,
@@ -631,6 +640,23 @@ export interface IElectronAPI {
   game: {
     closeGame: (versionName: string, instance: number) => Promise<boolean>;
   };
+  journal: {
+    write: (entries: JournalUiEntry[]) => void;
+    status: () => Promise<JournalStatus | null>;
+    setVerbose: (minutes: number | null) => Promise<number | null>;
+    openFolder: () => Promise<boolean>;
+  };
+  support: {
+    prepare: (
+      request: SupportReportRequest,
+    ) => Promise<SupportReportPrepared | null>;
+    send: (
+      id: string,
+      accessToken?: string | null,
+    ) => Promise<SupportReportSendResult>;
+    save: (id: string) => Promise<string | null>;
+    history: () => Promise<SupportReportHistoryItem[]>;
+  };
   logs: {
     list: (versionPath: string) => Promise<IGameLogFile[]>;
     read: (
@@ -1146,6 +1172,9 @@ export interface IElectronAPI {
       callback: (versionName: string, instance: number) => void,
     ) => () => void;
     onLaunch: (callback: () => void) => () => void;
+    onLaunchStalled: (
+      callback: (payload: LaunchStalledPayload) => void,
+    ) => () => void;
     onUpdateFailed: (
       callback: (payload: UpdateFailedPayload) => void,
     ) => () => void;
@@ -1648,6 +1677,23 @@ export const api: IElectronAPI = {
   game: {
     closeGame: (versionName: string, instance: number) =>
       invoke("game:closeGame", versionName, instance),
+  },
+  journal: {
+    write: (entries: JournalUiEntry[]) => {
+      ipcRenderer.send("journal:write", entries);
+    },
+    status: () => invoke("journal:status"),
+    setVerbose: (minutes: number | null) =>
+      invoke("journal:setVerbose", minutes),
+    openFolder: () => invoke("journal:openFolder"),
+  },
+  support: {
+    prepare: (request: SupportReportRequest) =>
+      invoke("support:prepare", request),
+    send: (id: string, accessToken?: string | null) =>
+      invoke("support:send", id, accessToken ?? null),
+    save: (id: string) => invoke("support:save", id),
+    history: () => invoke("support:history"),
   },
   logs: {
     list: (versionPath: string) => invoke("logs:list", versionPath),
@@ -2280,6 +2326,14 @@ export const api: IElectronAPI = {
       };
       ipcRenderer.on("launch", listener);
       return () => ipcRenderer.off("launch", listener);
+    },
+
+    onLaunchStalled: (callback: (payload: LaunchStalledPayload) => void) => {
+      const listener = (_event, payload: LaunchStalledPayload) => {
+        callback(payload);
+      };
+      ipcRenderer.on("launchStalled", listener);
+      return () => ipcRenderer.off("launchStalled", listener);
     },
 
     onUpdateFailed: (callback: (payload: UpdateFailedPayload) => void) => {

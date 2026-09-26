@@ -10,6 +10,8 @@ import { IConsoleMessage } from "@/types/Console";
 import { listTcpConnections } from "./tcpConnections";
 import { rpc } from "../rpc";
 import { parseMinecraftServerConnectionLine } from "./gameConnection";
+import { journal, type JournalSpan } from "../journal/journal";
+import { LaunchWatch } from "../journal/launchWatch";
 import {
   classifyConsoleStream,
   createLineReader,
@@ -41,6 +43,13 @@ function safeMinimize() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   try {
     mainWindow.minimize();
+  } catch {}
+}
+
+function safeTaskbarProgress(mode: "indeterminate" | "none") {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  try {
+    mainWindow.setProgressBar(mode === "none" ? -1 : 2, { mode });
   } catch {}
 }
 
@@ -468,6 +477,7 @@ export function runGame(
   >,
   highPriority: boolean = false,
   workingDirectory?: string,
+  trace?: JournalSpan,
 ) {
   if (gameRuntime.isInstanceBusy(versionName, instance)) {
     throw new Error(
@@ -481,11 +491,36 @@ export function runGame(
   clearConsoleOutput(versionName, instance);
   rpc.setGameLaunching({ versionName, instance, serverAddress });
 
+  const span =
+    trace ?? journal.span("game", "launch", { versionName, instance });
+  let processFinalized = false;
+  const watch = new LaunchWatch({
+    span,
+    isAlive: () => !processFinalized,
+    onStall: (info) => {
+      safeSend("launchStalled", {
+        versionName,
+        instance,
+        afterMs: info.afterMs,
+        alive: info.alive,
+        outLines: info.outLines + info.errLines,
+      });
+    },
+  });
+
+  span.step("spawning", {
+    cwd: workingDirectory || versionPath,
+    highPriority,
+    serverAddress,
+  });
+
   const javaProcess = spawn(command, args, {
     cwd: workingDirectory || versionPath,
   });
 
   javaProcess.once("spawn", () => {
+    watch.spawned(javaProcess.pid);
+    safeTaskbarProgress("indeterminate");
     if (highPriority && javaProcess.pid) {
       try {
         os.setPriority(
@@ -527,7 +562,6 @@ export function runGame(
   let netstatInFlight = false;
   let intervalId: NodeJS.Timeout | null = null;
   let launchAnnounced = false;
-  let processFinalized = false;
 
   const checkConnection = (): void => {
     const processData = gameProcesses.get(instanceKey);
@@ -626,6 +660,7 @@ export function runGame(
   };
 
   const stdoutReader = createLineReader((message) => {
+    watch.line("out", message);
     gameRuntime.emitStdout({
       key: instanceKey,
       versionName,
@@ -638,7 +673,11 @@ export function runGame(
       (message.includes("Setting gameDir") || message.includes("Setting user"))
     ) {
       launchAnnounced = true;
+      watch.ready(
+        message.includes("Setting gameDir") ? "Setting gameDir" : "Setting user",
+      );
       markSessionReady(versionName, instance);
+      safeTaskbarProgress("none");
       safeMinimize();
       safeSend("launch");
     }
@@ -653,6 +692,7 @@ export function runGame(
   });
 
   const stderrReader = createLineReader((message) => {
+    watch.line("err", message);
     gameRuntime.emitStderr({
       key: instanceKey,
       versionName,
@@ -684,6 +724,7 @@ export function runGame(
 
     if (intervalId) clearInterval(intervalId);
     finalizeConsole();
+    watch.failedToStart(err);
 
     void endSession(versionName, instance, 1).finally(() =>
       safeSend("playtimeRecorded"),
@@ -706,6 +747,7 @@ export function runGame(
     safeSend("consoleChangeStatus", versionName, instance, "error");
     safeSend("consoleMessage", versionName, instance, msg);
 
+    safeTaskbarProgress("none");
     safeRestoreIfMinimized();
 
     safeSend("launch");
@@ -731,6 +773,8 @@ export function runGame(
       code = SIGNAL_EXIT_BASE + (os.constants.signals[signal] ?? 0);
     }
     if (signal == "SIGTERM" || killedByUser) code = 0;
+
+    watch.exited(code, signal ?? null, killedByUser);
 
     void endSession(versionName, instance, code).finally(() =>
       safeSend("playtimeRecorded"),
@@ -759,6 +803,12 @@ export function runGame(
           return null;
         })
         .then((analysis) => {
+          journal.info("game", "crash analysis", {
+            versionName,
+            instance,
+            code,
+            analysis: analysis ?? null,
+          });
           if (!analysis) {
             safeSend("crashUnresolved", {
               versionName,
@@ -784,6 +834,7 @@ export function runGame(
       code,
     });
 
+    safeTaskbarProgress("none");
     safeRestoreIfMinimized();
 
     safeSend("launch");

@@ -1,3 +1,4 @@
+import "./journal/bootstrap";
 import { app, crashReporter, Menu, net, protocol, session } from "electron";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import { pathToFileURL } from "url";
@@ -47,6 +48,7 @@ import {
   markHiddenRelaunch,
 } from "./utilities/launchAtLogin";
 import { LauncherDeepLink } from "@/types/DeepLink";
+import { journal } from "./journal/journal";
 import path from "path";
 import fs from "fs-extra";
 
@@ -87,6 +89,7 @@ process.on("uncaughtException", (error) => {
   try {
     reportFailure(error, { channel: "main:uncaughtException" });
   } catch {}
+  journal.flushSync();
 });
 
 process.on("unhandledRejection", (reason) => {
@@ -94,6 +97,7 @@ process.on("unhandledRejection", (reason) => {
   try {
     reportFailure(reason, { channel: "main:unhandledRejection" });
   } catch {}
+  journal.flushSync();
 });
 
 const gotTheLock = app.requestSingleInstanceLock();
@@ -439,6 +443,7 @@ if (!gotTheLock) {
 
     const launcherPath = getDataRoot();
     await fs.ensureDir(launcherPath);
+    journal.info("app", "data root ready", { dataRoot: launcherPath });
 
     void initMirrorState(launcherPath);
     scheduleApiRouteProbe();
@@ -516,17 +521,31 @@ if (!gotTheLock) {
       if (stallLimitMs !== undefined) updateStallLimitMs = stallLimitMs;
     };
 
+    let loggedUpdateQuarter = -1;
+
     autoUpdater.on("checking-for-update", () => {
+      journal.info("updater", "checking for update");
       markUpdateActivity();
       sendUpdaterStatus("checking");
     });
 
     autoUpdater.on("update-available", (info) => {
+      journal.info("updater", "update available", { version: info.version });
       markUpdateActivity(UPDATE_STALL_TIMEOUT_MS);
       sendUpdaterStatus("available", { version: info.version });
     });
 
     autoUpdater.on("download-progress", (p) => {
+      const quarter = Math.floor(p.percent / 25);
+      if (quarter > loggedUpdateQuarter) {
+        loggedUpdateQuarter = quarter;
+        journal.info("updater", "downloading update", {
+          percent: Math.round(p.percent),
+          transferred: p.transferred,
+          total: p.total,
+          bytesPerSecond: Math.round(p.bytesPerSecond),
+        });
+      }
       markUpdateActivity(UPDATE_STALL_TIMEOUT_MS);
       sendUpdaterStatus("downloading");
       updaterWindow?.webContents.send("updater:downloadProgress", {
@@ -540,6 +559,7 @@ if (!gotTheLock) {
     const continueWithoutUpdate = () => {
       if (updateFlowSettled) return;
       updateFlowSettled = true;
+      journal.info("updater", "starting without update");
       clearUpdateWatchdog();
 
       sendUpdaterStatus("not-available");
@@ -557,6 +577,9 @@ if (!gotTheLock) {
     const continueWithFailedUpdate = (message: string) => {
       if (updateFlowSettled) return;
       updateFlowSettled = true;
+      journal.warn("updater", "update check failed, starting anyway", {
+        message,
+      });
       clearUpdateWatchdog();
 
       sendUpdaterStatus("error", { message });
@@ -576,6 +599,10 @@ if (!gotTheLock) {
     };
 
     autoUpdater.on("update-downloaded", (info) => {
+      journal.info("updater", "update downloaded", {
+        version: info.version,
+        installNow: !updateFlowSettled,
+      });
       const startedWithoutUpdate = updateFlowSettled;
       updateFlowSettled = true;
       clearUpdateWatchdog();
@@ -597,6 +624,9 @@ if (!gotTheLock) {
     autoUpdater.on("update-not-available", continueWithoutUpdate);
 
     autoUpdater.on("error", (error) => {
+      journal.failure("updater", "updater error", error, {
+        mirror: mirrorFeedTried,
+      });
       if (switchToMirrorFeed()) return;
       continueWithFailedUpdate(error.message);
     });

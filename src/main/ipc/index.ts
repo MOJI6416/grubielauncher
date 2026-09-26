@@ -21,3 +21,4 @@ export { registerStorageIpc } from "./storageIpc";
 export { registerVoiceIpc } from "./voiceIpc";
 export { registerTrayIpc } from "./trayIpc";
 export { registerDataLocationIpc } from "./dataLocationIpc";
+export { registerSupportIpc } from "./supportIpc";

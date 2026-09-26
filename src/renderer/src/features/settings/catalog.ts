@@ -8,6 +8,7 @@ export type SettingsSectionId =
   | "voice"
   | "privacy"
   | "storage"
+  | "support"
   | "about";
 
 export type SettingsEntryId =
@@ -41,6 +42,8 @@ export type SettingsEntryId =
   | "storageCleanup"
   | "folders"
   | "systemReport"
+  | "supportReport"
+  | "verboseJournal"
   | "links"
   | "releaseHistory";
 
@@ -61,6 +64,7 @@ export const SETTINGS_SECTIONS: SettingsSectionId[] = [
   "voice",
   "privacy",
   "storage",
+  "support",
   "about",
 ];
 
@@ -101,8 +105,10 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "storageUsage", section: "storage", keys: [] },
   { id: "dataLocation", section: "storage", keys: [] },
   { id: "storageCleanup", section: "storage", keys: [] },
+  { id: "supportReport", section: "support", keys: [] },
+  { id: "verboseJournal", section: "support", keys: [] },
+  { id: "systemReport", section: "support", keys: [] },
   { id: "folders", section: "about", keys: [] },
-  { id: "systemReport", section: "about", keys: [] },
   { id: "links", section: "about", keys: [] },
   { id: "releaseHistory", section: "about", keys: [] },
 ];

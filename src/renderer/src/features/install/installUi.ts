@@ -14,6 +14,9 @@ export const taskCenterViewAtom = atom<TaskCenterView>("tasks");
 export const connectivityCheckOpenAtom = atom(false);
 
 export const installProgressAtom = atom<VersionInstallProgress | null>(null);
+export const installingVersionAtom = atom(
+  (get) => get(installProgressAtom)?.versionName ?? null,
+);
 export const downloaderInfoAtom = atom<DownloaderInfo | null>(null);
 export const installStageLogAtom = atom<StageEvent[]>([]);
 export const installSpeedAtom = atom<number | null>(null);

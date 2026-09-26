@@ -84,7 +84,6 @@ import { isOwner, parseVersionOwner } from "@renderer/utilities/versionPure";
 import { reloadInstanceLibrary } from "@renderer/utilities/version";
 import type { InstancesView } from "@/types/Settings";
 import type { InstanceTab } from "@renderer/navigation/routes";
-import { navigate } from "@renderer/navigation/navigate";
 import type { RunGameParams } from "@renderer/features/launch/types";
 import { GroupDialog } from "./GroupDialog";
 import { InstanceRow, InstanceTile } from "./InstanceCard";
@@ -110,6 +109,7 @@ import {
 import { openNewInstance } from "./newInstance";
 import { resolveInstanceStatuses } from "./instanceStatus";
 import { selectInstance } from "./selectInstance";
+import { openInstanceScreen } from "./openInstanceScreen";
 import {
   allTags as listTags,
   availableLoaders,
@@ -283,10 +283,11 @@ export function InstanceLibrary({
     void selectInstance(instance, account);
   };
 
-  const open = (instance: Version, tab?: InstanceTab) => {
-    select(instance);
-    navigate({ name: "instance", id: instanceKey(instance), tab });
-  };
+  const open = (instance: Version, tab?: InstanceTab) =>
+    openInstanceScreen(instance, account, {
+      tab,
+      morphFrom: `library:${instanceKey(instance)}`,
+    });
 
   const play = (instance: Version) => {
     select(instance);

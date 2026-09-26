@@ -22,6 +22,7 @@ import { WhatsNewHost } from "./hosts/WhatsNewHost";
 import { AccentHost } from "./hosts/AccentHost";
 import { TrayHost } from "./hosts/TrayHost";
 import { AppUpdateHost } from "./hosts/AppUpdateHost";
+import { SupportHost } from "./hosts/SupportHost";
 
 export function AppHosts() {
   return (
@@ -42,6 +43,7 @@ export function AppHosts() {
       <VoiceCallHost />
       <GameInviteHost />
       <CrashHost />
+      <SupportHost />
       <AchievementsHost />
       <SystemEventsHost />
       <DeepLinkHost />

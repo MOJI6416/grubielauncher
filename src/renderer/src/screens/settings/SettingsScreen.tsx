@@ -8,6 +8,7 @@ import {
   HardDrive,
   Headphones,
   Info,
+  LifeBuoy,
   Loader2,
   Palette,
   RotateCcw,
@@ -56,6 +57,7 @@ import { SystemSection } from "@renderer/features/settings/SystemSection";
 import { PrivacySection } from "@renderer/features/settings/PrivacySection";
 import { StorageSection } from "@renderer/features/settings/StorageSection";
 import { AboutSection } from "@renderer/features/settings/AboutSection";
+import { SupportSection } from "@renderer/features/settings/SupportSection";
 
 const SECTION_ICON: Record<SettingsSectionId, LucideIcon> = {
   game: Cpu,
@@ -65,6 +67,7 @@ const SECTION_ICON: Record<SettingsSectionId, LucideIcon> = {
   voice: Headphones,
   privacy: Shield,
   storage: HardDrive,
+  support: LifeBuoy,
   about: Info,
 };
 
@@ -313,12 +316,20 @@ export function SettingsScreen({
                   query={result.query}
                 />
               )}
-              {active === "about" && (
-                <AboutSection
+              {active === "support" && (
+                <SupportSection
                   settings={settings}
                   appVersion={appVersion}
                   totalMemoryMb={totalMemoryMb}
                   storageTotal={storageTotal}
+                  visible={visible}
+                  query={result.query}
+                />
+              )}
+              {active === "about" && (
+                <AboutSection
+                  appVersion={appVersion}
+                  totalMemoryMb={totalMemoryMb}
                   onShowWhatsNew={onShowWhatsNew}
                   visible={visible}
                   query={result.query}

@@ -108,7 +108,7 @@ export function InstanceIdentityCard({
   const nameProblem = instanceNameMessage(nameCheck, t);
 
   return (
-    <div className="relative flex shrink-0 items-center gap-3.5 overflow-hidden rounded-2xl border border-border bg-card p-3">
+    <div className="surface-lit relative flex shrink-0 items-center gap-3.5 overflow-hidden rounded-2xl border border-border bg-card p-3">
       {cover && (
         <>
           <img
@@ -125,6 +125,7 @@ export function InstanceIdentityCard({
       <div className="relative shrink-0">
         <InstanceArt
           eager
+          morphTarget
           name={instance.version.name}
           image={image}
           className="size-16 rounded-xl"

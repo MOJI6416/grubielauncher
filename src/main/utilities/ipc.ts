@@ -4,6 +4,18 @@ import { classifyError, FailureInfo } from '@/shared/errors'
 import { redactSecrets } from '@/shared/logSanitizer'
 import { wrapIpcFailure } from '@/shared/ipcFailureEnvelope'
 import { randomUUID } from 'crypto'
+import { journal } from '../journal/journal'
+
+const SLOW_IPC_MS = 3000
+
+function traceIpcCall(channel: string, startedAt: number, ok: boolean): void {
+    const ms = Date.now() - startedAt
+    if (ms >= SLOW_IPC_MS) {
+        journal.timed('info', 'ipc', `${channel} took long`, ms, { ok })
+        return
+    }
+    journal.timed('debug', 'ipc', channel, ms, { ok })
+}
 
 const ipcFailureToken = randomUUID()
 
@@ -161,10 +173,14 @@ export function handleSafe<TResult, TArgs extends any[] = any[]>(
 
     ipcMain.removeHandler(channel)
     ipcMain.handle(channel, async (event, ...args: TArgs) => {
+        const startedAt = Date.now()
         try {
             assertArgs(channel, checks, args)
-            return await handler(event, ...args)
+            const result = await handler(event, ...args)
+            traceIpcCall(channel, startedAt, true)
+            return result
         } catch (err) {
+            traceIpcCall(channel, startedAt, false)
             const isPathRefusal = err instanceof PathPolicyError
             const isRefused = isPathRefusal || err instanceof IpcArgumentError
             const described = describeIpcError(err)

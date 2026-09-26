@@ -34,7 +34,13 @@ import { navigate } from "@renderer/navigation/navigate";
 import type { InstanceTab } from "@renderer/navigation/routes";
 import { formatRelative } from "@renderer/utilities/date";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
+import { useCountUp } from "@renderer/utilities/useCountUp";
 import type { RunGameParams } from "@renderer/features/launch/types";
+import { InstallStageStrip } from "@renderer/features/install/InstallStageStrip";
+import { installingVersionAtom } from "@renderer/features/install/installUi";
+import { LaunchCompanion } from "@renderer/features/launch/LaunchCompanion";
+import { LaunchStageStrip } from "@renderer/features/launch/LaunchStageStrip";
+import { launchProgressAtom } from "@renderer/features/launch/launchProgress";
 import { ContinuePanel } from "./ContinuePanel";
 import { InstanceArt, loaderTint } from "./InstanceArt";
 import { InstanceStatusChip } from "./InstanceStatusChip";
@@ -48,10 +54,26 @@ import { instanceTagsAtom } from "./instancesStore";
 import { instanceUpdatesAtom } from "./updateCheck";
 import { formatPlaytime, formatSessionClock } from "./playtime";
 import { resolveInstanceStatuses } from "./instanceStatus";
-import { selectInstance } from "./selectInstance";
+import { openInstanceScreen } from "./openInstanceScreen";
 import { instanceKey } from "./selectors";
 
 const HERO_BUTTONS = new Set(["overview", "folder"]);
+
+type HeroCell = {
+  id: string;
+  label: string;
+  value: string | { count: number; format: (value: number) => string };
+};
+
+function CountUpValue({
+  count,
+  format,
+}: {
+  count: number;
+  format: (value: number) => string;
+}) {
+  return <>{format(useCountUp(count))}</>;
+}
 
 export function HomeHero({
   instance,
@@ -70,6 +92,8 @@ export function HomeHero({
   const updates = useAtomValue(instanceUpdatesAtom);
   const flags = useAtomValue(instanceFlagsAtom);
   const tags = useAtomValue(instanceTagsAtom);
+  const launch = useAtomValue(launchProgressAtom);
+  const installingVersion = useAtomValue(installingVersionAtom);
   const [now, setNow] = useState(() => Date.now());
   const { t } = useTranslation();
 
@@ -96,6 +120,10 @@ export function HomeHero({
   const instanceTags = tags[key] ?? [];
   const canPlay = !!account && !isLaunching;
   const isRunningInstance = !!session && !isLaunching;
+  const launchHere =
+    launch?.versionName === instance.version.name ? launch : null;
+  const installingHere = installingVersion === instance.version.name;
+  const waiting = !!launchHere || installingHere;
 
   const statuses = resolveInstanceStatuses({
     running: !!session,
@@ -123,10 +151,8 @@ export function HomeHero({
     .map((group) => group.filter((action) => !HERO_BUTTONS.has(action.id)))
     .filter((group) => group.length > 0);
 
-  const openInstance = (tab?: InstanceTab) => {
-    void selectInstance(instance, account);
-    navigate({ name: "instance", id: key, tab });
-  };
+  const openInstance = (tab?: InstanceTab) =>
+    openInstanceScreen(instance, account, { tab, morphFrom: "hero" });
 
   const timeLabels = { h: t("time.h"), m: t("time.m") };
   const lastLaunchedAt = instanceLastLaunch(
@@ -134,16 +160,26 @@ export function HomeHero({
     statistics,
   );
 
-  const cells = [
+  const formatHours = (value: number) =>
+    formatPlaytime(Math.round(value), timeLabels);
+
+  const cells: HeroCell[] = [
     {
       id: "playtime",
       label: t("versionStatistics.playTime"),
-      value: formatPlaytime(statistics?.playTime, timeLabels),
+      value: statistics?.playTime
+        ? { count: statistics.playTime, format: formatHours }
+        : formatPlaytime(undefined, timeLabels),
     },
     {
       id: "launches",
       label: t("home.stats.launches"),
-      value: statistics ? String(statistics.launches ?? 0) : "—",
+      value: statistics
+        ? {
+            count: statistics.launches ?? 0,
+            format: (value) => String(Math.round(value)),
+          }
+        : "—",
     },
     {
       id: "last",
@@ -158,12 +194,12 @@ export function HomeHero({
     cells.push({
       id: "longest",
       label: t("home.stats.longestSession"),
-      value: formatPlaytime(statistics.longestSessionSec, timeLabels),
+      value: { count: statistics.longestSessionSec, format: formatHours },
     });
   }
 
   return (
-    <section className="relative flex h-full overflow-hidden rounded-2xl border border-border bg-card">
+    <section className="surface-lit relative flex h-full overflow-hidden rounded-2xl border border-border bg-card">
       {image ? (
         <>
           <img
@@ -171,7 +207,10 @@ export function HomeHero({
             alt=""
             aria-hidden
             draggable={false}
-            className="pointer-events-none absolute inset-y-0 right-0 h-full w-3/5 scale-110 object-cover opacity-45 blur-2xl select-none [mask-image:linear-gradient(to_right,transparent,black_60%)]"
+            className={cn(
+              "pointer-events-none absolute inset-y-0 right-0 h-full w-3/5 scale-110 object-cover opacity-45 blur-2xl select-none [mask-image:linear-gradient(to_right,transparent,black_60%)]",
+              waiting && "hero-drift",
+            )}
           />
           <img
             src={image}
@@ -191,10 +230,21 @@ export function HomeHero({
         />
       )}
 
+      {waiting && (
+        <>
+          <span
+            aria-hidden
+            className="launch-glow absolute -bottom-20 -left-12 size-60 rounded-full"
+          />
+          <span aria-hidden className="milestone-marker" data-state="on" />
+        </>
+      )}
+
       <div className="relative flex min-w-0 flex-1 flex-col justify-between p-4">
         <div className="flex min-w-0 items-start gap-3.5">
           <InstanceArt
             eager
+            morph="hero"
             name={instance.version.name}
             image={instance.version.image}
             className="size-14 rounded-xl"
@@ -263,31 +313,50 @@ export function HomeHero({
           </div>
         </div>
 
-        <div className="flex min-w-0 gap-6">
-          {cells.map((cell) => (
-            <div key={cell.id} className="flex min-w-0 flex-col gap-0.5">
-              <span className="truncate text-[0.65rem] tracking-[0.06em] text-faint uppercase">
-                {cell.label}
-              </span>
-              <span className="truncate text-sm font-semibold tabular-nums">
-                {cell.value}
-              </span>
-            </div>
-          ))}
-        </div>
+        {launchHere ? (
+          <LaunchStageStrip progress={launchHere} />
+        ) : installingHere ? (
+          <InstallStageStrip />
+        ) : (
+          <div className="flex min-w-0 gap-6">
+            {cells.map((cell) => (
+              <div key={cell.id} className="flex min-w-0 flex-col gap-0.5">
+                <span className="truncate text-[0.65rem] tracking-[0.06em] text-faint uppercase">
+                  {cell.label}
+                </span>
+                <span className="truncate text-sm font-semibold tabular-nums">
+                  {typeof cell.value === "string" ? (
+                    cell.value
+                  ) : (
+                    <CountUpValue
+                      count={cell.value.count}
+                      format={cell.value.format}
+                    />
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="flex min-w-0 items-center gap-2">
-          <Button
-            size="lg"
-            disabled={!canPlay}
-            className="h-11 px-7 text-base font-semibold [&_svg]:size-5"
-            onClick={() => void runGame({ version: instance })}
+          <Hint
+            content={
+              isRunningInstance ? t("versions.playAnotherInstance") : undefined
+            }
           >
-            {isLaunching ? <Loader2 className="animate-spin" /> : <Play />}
-            {isRunningInstance
-              ? t("versions.playAnotherInstance")
-              : t("nav.play")}
-          </Button>
+            <Button
+              size="lg"
+              disabled={!canPlay}
+              className="btn-sheen h-11 px-7 text-base font-semibold active:scale-[0.97] [&_svg]:size-5"
+              onClick={() => void runGame({ version: instance })}
+            >
+              {isLaunching ? <Loader2 className="animate-spin" /> : <Play />}
+              {isRunningInstance
+                ? t("versions.playAnotherShort")
+                : t("nav.play")}
+            </Button>
+          </Hint>
 
           <Hint content={t("versions.openInstance")}>
             <Button
@@ -371,7 +440,16 @@ export function HomeHero({
       </div>
 
       <div className="relative w-72 shrink-0">
-        <ContinuePanel instance={instance} runGame={runGame} />
+        {waiting ? (
+          <div className="size-full animate-in duration-500 fade-in">
+            <LaunchCompanion
+              instance={instance}
+              caption={launchHere ? t("launchStage.minimizeHint") : undefined}
+            />
+          </div>
+        ) : (
+          <ContinuePanel instance={instance} runGame={runGame} />
+        )}
       </div>
     </section>
   );

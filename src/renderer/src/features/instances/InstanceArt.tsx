@@ -25,18 +25,24 @@ export function InstanceArt({
   className,
   textClassName,
   eager,
+  morph,
+  morphTarget,
 }: {
   name: string;
   image?: string | null;
   className?: string;
   textClassName?: string;
   eager?: boolean;
+  morph?: string;
+  morphTarget?: boolean;
 }) {
   const source = resolveLocalImage(image);
   const [brokenSource, setBrokenSource] = useState("");
 
   return (
     <span
+      data-morph={morph}
+      data-morph-target={morphTarget || undefined}
       className={cn(
         "flex shrink-0 items-center justify-center overflow-hidden bg-surface-3 select-none",
         className,

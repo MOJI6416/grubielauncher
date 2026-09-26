@@ -21,6 +21,7 @@ beforeAll(() => {
       fs: { pathExists: async () => false },
       servers: { read: async () => [] },
       backend: { getModpack: async () => ({ status: "ok", data: null }) },
+      events: { onConsoleMessage: () => () => {} },
     },
   };
 });

@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ClipboardList,
   Copy,
+  LifeBuoy,
   Sparkles,
   Trash2,
   TriangleAlert,
@@ -49,6 +50,7 @@ import {
   groupErrorLog,
 } from "@renderer/features/logs/errorLog";
 import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { openSupportReport } from "@renderer/features/support/supportReport";
 
 export function ErrorLog({ onClose }: { onClose: () => void }) {
   const [errorLog, setErrorLog] = useAtom(errorLogAtom);
@@ -200,17 +202,29 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
         </div>
 
         <DialogFooter className="m-0 gap-2 border-t border-border bg-surface-2 px-5 py-3.5 sm:justify-between">
-          <Button
-            variant="ghost"
-            disabled={groups.length === 0}
-            onClick={async () => {
-              if (!(await copyToClipboard(errorLogToText(groups)))) return;
-              toast(t("common.copied"));
-            }}
-          >
-            <ClipboardList className="size-4" />
-            {t("errorLog.copyAll")}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              disabled={groups.length === 0}
+              onClick={async () => {
+                if (!(await copyToClipboard(errorLogToText(groups)))) return;
+                toast(t("common.copied"));
+              }}
+            >
+              <ClipboardList className="size-4" />
+              {t("errorLog.copyAll")}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                onClose();
+                openSupportReport("failure");
+              }}
+            >
+              <LifeBuoy className="size-4" />
+              {t("supportReport.openAction")}
+            </Button>
+          </div>
 
           <Button
             variant="outline"

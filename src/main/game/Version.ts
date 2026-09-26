@@ -61,6 +61,8 @@ import {
 } from "../utilities/trustedHosts";
 import { resolveOfflineUuid } from "../utilities/offlineUuidMigration";
 import { migrateInlineModIcons } from "../utilities/modManager";
+import { journal, type JournalSpan } from "../journal/journal";
+import { describeLaunchCommand } from "../journal/launchCommand";
 
 type VersionInstallRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
@@ -135,6 +137,8 @@ export class Version {
   private installOperation: VersionInstallOperation = "install";
   private installAbortSignal: AbortSignal | null = null;
   private installPlan: VersionInstallStage[] | undefined = undefined;
+  private installSpan: JournalSpan | null = null;
+  private lastLoggedStage: VersionInstallStage | null = null;
   private readonly versionPathOverride: string | undefined;
 
   constructor(version: IVersionConf, options: { versionPath?: string } = {}) {
@@ -218,6 +222,14 @@ export class Version {
     detailsParams?: VersionInstallProgress["detailsParams"],
     subProgress?: VersionInstallProgress["subProgress"],
   ) {
+    if (this.installSpan && stage !== this.lastLoggedStage) {
+      this.lastLoggedStage = stage;
+      this.installSpan.step(`stage ${stage}`, {
+        percent: progressPercent,
+        details: detailsKey ?? details,
+      });
+    }
+
     this.sendInstallInfo({
       versionName: this.version.name,
       loaderName: this.version.loader.name,
@@ -290,6 +302,18 @@ export class Version {
     this.installOperation = options.operation ?? "install";
     this.installAbortSignal = options.signal ?? null;
     this.installPlan = options.plan;
+    this.lastLoggedStage = null;
+    this.installSpan = journal.span("install", this.installOperation, {
+      versionName: this.version.name,
+      minecraft: this.version.version.id,
+      loader: this.version.loader.name,
+      loaderVersion: this.version.loader.version?.id,
+      extraItems: items.length,
+      downloadLimit: settings.downloadLimit,
+      downloadSource: settings.downloadSource,
+      plan: options.plan,
+    });
+    const installSpan = this.installSpan;
     this.sendInstallProgress("preparing", 2, true);
 
     let succeeded = false;
@@ -300,14 +324,18 @@ export class Version {
       await this.installCheckpoint();
       if (!options.keepProgressOpen) this.sendInstallProgress("done", 100);
       succeeded = true;
+      installSpan.ok({ javaPath: this.javaPath || null });
     } catch (error) {
       if (this.isInstallCancelError(error)) {
+        installSpan.ok({ cancelled: true });
         await this.cleanupCancelledInstall(account, options.cleanupOnCancel);
         throw new Error(VERSION_INSTALL_CANCELLED);
       }
 
+      installSpan.fail(error);
       throw error;
     } finally {
+      this.installSpan = null;
       const wasCancelled = Boolean(this.installAbortSignal?.aborted);
       if (
         shouldCloseInstallProgress(
@@ -1646,37 +1674,84 @@ export class Version {
       multiplayer?: string;
     },
   ) {
-    await this.ensureInitialized();
-    if (!(await this.ensureAuthlib(account)).ok) return false;
-
-    const command = await this.getRunCommand(
-      account,
-      settings,
-      false,
-      authData,
-      quick.single,
-      quick.multiplayer,
-    );
-    if (!command) return false;
-
-    runGame(
-      command[0],
-      command.slice(1),
-      this.versionPath,
-      this.version.name,
+    const span = journal.span("game", "launch", {
+      versionName: this.version.name,
       instance,
-      account.accessToken || "",
-      quick.multiplayer || this.version.quickServer,
-      {
-        trackStatistics: true,
-        accountSub: authData?.sub ?? null,
-        accountLabel: account.nickname,
-      },
-      settings.highPriority,
-      await this.resolveLaunchVersionPath(),
-    );
+      minecraft: this.version.version.id,
+      loader: this.version.loader.name,
+      loaderVersion: this.version.loader.version?.id,
+      mods: this.version.loader.mods?.length ?? 0,
+      shareCode: this.version.shareCode,
+      accountType: account.type,
+      nickname: account.nickname,
+      memoryMb: settings.xmx,
+      memoryOverrideMb: this.version.overrides?.xmx,
+      optimizedJvm: settings.optimizedJvm,
+      highPriority: settings.highPriority,
+      quick,
+    });
 
-    return true;
+    try {
+      await this.ensureInitialized();
+
+      const authlib = await this.ensureAuthlib(account);
+      if (!authlib.ok) {
+        span.fail(new Error(`authlib-injector ${authlib.reason}`));
+        return false;
+      }
+
+      const command = await this.getRunCommand(
+        account,
+        settings,
+        false,
+        authData,
+        quick.single,
+        quick.multiplayer,
+      );
+      if (!command || !this.manifest) {
+        span.fail(
+          new Error(
+            this.manifest
+              ? "Java runtime was not found"
+              : "Version manifest is missing",
+          ),
+          { javaPath: this.javaPath || null, versionPath: this.versionPath },
+        );
+        return false;
+      }
+
+      span.step("command built", {
+        javaMajor:
+          this.manifest.javaVersion?.majorVersion ??
+          mcVersionToJavaMajor(this.version.version.id),
+        ...(await describeLaunchCommand(command, this.manifest.mainClass).catch(
+          (error) => ({ describeError: String(error) }),
+        )),
+      });
+
+      runGame(
+        command[0],
+        command.slice(1),
+        this.versionPath,
+        this.version.name,
+        instance,
+        account.accessToken || "",
+        quick.multiplayer || this.version.quickServer,
+        {
+          trackStatistics: true,
+          accountSub: authData?.sub ?? null,
+          accountLabel: account.nickname,
+        },
+        settings.highPriority,
+        await this.resolveLaunchVersionPath(),
+        span,
+      );
+
+      return true;
+    } catch (error) {
+      span.fail(error);
+      throw error;
+    }
   }
 
   private async writeLauncherProfile() {

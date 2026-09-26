@@ -34,7 +34,10 @@ import { currentRouteAtom } from "@renderer/navigation/store";
 import { navigate } from "@renderer/navigation/navigate";
 import { Route } from "@renderer/navigation/routes";
 import { OWN_PROFILE_ID } from "@renderer/features/profile/loadProfileUser";
-import { LazySettingsScreen } from "@renderer/screens/lazyScreens";
+import {
+  LazyInstanceScreen,
+  LazySettingsScreen,
+} from "@renderer/screens/lazyScreens";
 import { InstanceDock } from "./InstanceDock";
 import { NowBlock } from "./NowBlock";
 import { VoicePanel } from "./VoicePanel";
@@ -141,7 +144,10 @@ export function Sidebar() {
   }, [shouldShowShareButton]);
 
   useEffect(() => {
-    return schedulePreload([LazySettingsScreen.preload], 2500);
+    return schedulePreload(
+      [LazySettingsScreen.preload, LazyInstanceScreen.preload],
+      2500,
+    );
   }, []);
 
   useEffect(() => {

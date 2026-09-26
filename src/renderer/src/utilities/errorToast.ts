@@ -3,6 +3,7 @@ import { getDefaultStore } from "jotai";
 import i18n from "@renderer/i18n";
 import { errorLogAtom } from "../stores/atoms";
 import { copyToClipboard } from "./clipboard";
+import { uiJournal } from "./journal";
 
 const ERROR_LOG_LIMIT = 50;
 
@@ -11,6 +12,10 @@ export function recordError(
   details?: string,
   crashKey?: string,
 ) {
+  uiJournal.warn("error-shown", title, {
+    details: details?.slice(0, 4000),
+    crashKey,
+  });
   const store = getDefaultStore();
   store.set(errorLogAtom, (prev) =>
     [

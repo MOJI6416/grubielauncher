@@ -20,7 +20,7 @@ export function SectionCard({
   return (
     <section
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card",
+        "surface-lit flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card",
         className,
       )}
     >

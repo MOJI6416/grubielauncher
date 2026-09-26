@@ -1,4 +1,5 @@
 import { DragEvent, ReactNode } from "react";
+import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import { CopyPlus, Play } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,6 +15,9 @@ import { Hint } from "@renderer/components/Hint";
 import { LoaderLabel } from "@renderer/components/Loaders";
 import { formatRelative } from "@renderer/utilities/date";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
+import { trackSpotlight } from "@renderer/utilities/spotlight";
+import { installingVersionAtom } from "@renderer/features/install/installUi";
+import { launchingVersionAtom } from "@renderer/features/launch/launchProgress";
 import { countMods } from "./contentCounts";
 import { InstanceArt, loaderTint } from "./InstanceArt";
 import { InstanceStatusChip } from "./InstanceStatusChip";
@@ -109,6 +113,20 @@ function TileBackdrop({ instance }: { instance: Version }) {
   );
 }
 
+function WaitSweep({ name }: { name: string }) {
+  const launching = useAtomValue(launchingVersionAtom);
+  const installing = useAtomValue(installingVersionAtom);
+
+  if (launching !== name && installing !== name) return null;
+
+  return (
+    <span
+      aria-hidden
+      className="stage-sweep pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-primary/15"
+    />
+  );
+}
+
 function Meta({
   instance,
   tags,
@@ -163,6 +181,7 @@ export function InstanceRow(props: InstanceCardProps) {
       aria-label={props.instance.version.name}
       onClick={props.onSelect}
       onDoubleClick={props.onOpen}
+      onPointerMove={trackSpotlight}
       onKeyDown={(event) => {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -174,7 +193,7 @@ export function InstanceRow(props: InstanceCardProps) {
         }
       }}
       className={cn(
-        "group relative flex h-14 cursor-pointer items-center gap-3 rounded-xl px-2.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        "spotlight group relative flex h-14 cursor-pointer items-center gap-3 overflow-hidden rounded-xl px-2.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         props.active ? "bg-primary-soft" : "bg-surface-2 hover:bg-surface-3",
       )}
       {...props.dragProps}
@@ -185,6 +204,7 @@ export function InstanceRow(props: InstanceCardProps) {
 
       <div className="relative shrink-0">
         <InstanceArt
+          morph={`library:${props.itemKey}`}
           name={props.instance.version.name}
           image={props.instance.version.image}
           className="size-10 rounded-lg text-xs"
@@ -253,6 +273,8 @@ export function InstanceRow(props: InstanceCardProps) {
         </Hint>
         {props.menu}
       </div>
+
+      <WaitSweep name={props.instance.version.name} />
     </div>
   );
 }
@@ -272,6 +294,7 @@ export function InstanceTile(props: InstanceCardProps) {
       aria-label={props.instance.version.name}
       onClick={props.onSelect}
       onDoubleClick={props.onOpen}
+      onPointerMove={trackSpotlight}
       onKeyDown={(event) => {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -283,7 +306,7 @@ export function InstanceTile(props: InstanceCardProps) {
         }
       }}
       className={cn(
-        "group relative flex h-38 cursor-pointer flex-col overflow-hidden rounded-xl bg-surface-2 text-left transition-colors hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset focus-visible:outline-none",
+        "spotlight surface-lit group relative flex h-38 cursor-pointer flex-col overflow-hidden rounded-xl bg-surface-2 text-left transition-colors hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset focus-visible:outline-none",
         props.active && "bg-primary-soft",
       )}
       {...props.dragProps}
@@ -299,6 +322,7 @@ export function InstanceTile(props: InstanceCardProps) {
         <TileBackdrop instance={props.instance} />
 
         <InstanceArt
+          morph={`library:${props.itemKey}`}
           name={props.instance.version.name}
           image={props.instance.version.image}
           className="absolute top-1/2 left-1/2 size-13 -translate-x-1/2 -translate-y-1/2 rounded-xl text-base shadow-lg shadow-background/40 ring-1 ring-border/60"
@@ -364,6 +388,8 @@ export function InstanceTile(props: InstanceCardProps) {
         </Hint>
         <Meta instance={props.instance} tags={props.tags} />
       </div>
+
+      <WaitSweep name={props.instance.version.name} />
     </article>
   );
 }

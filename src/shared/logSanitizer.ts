@@ -42,6 +42,21 @@ const REDACTIONS: Array<[RegExp, string]> = [
   ],
 ];
 
+const CREDENTIAL_REDACTIONS: Array<[RegExp, string]> = [
+  [/\bbearer\s+[A-Za-z0-9._~+/-]+=*/gi, "Bearer <token>"],
+  [/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*/g, "<jwt>"],
+  [/\bsk-[A-Za-z0-9_-]{20,}/g, "<secret>"],
+  [
+    /([\w-]*[_-](?:token|secret|password|api[_-]?key|credential)[\w-]*|(?:token|secret|password|api[_-]?key|credential)[_-][\w-]*)(\s*=\s*)[^\s&"',}]+/gi,
+    "$1$2<secret>",
+  ],
+  [
+    /\b(accessToken|access_token|refreshToken|refresh_token|password|apiKey|api_key|secret|token|credential|authorization)(["'\s]*[:=]["'\s]*)[^\s"',}&]+/gi,
+    "$1$2<secret>",
+  ],
+  [/(--(?:accessToken|session))[,\s]+[^\s,\]]+/gi, "$1 <secret>"],
+];
+
 const IP_REDACTIONS: Array<[RegExp, string]> = [
   [/\b(?:\d{1,3}\.){3}\d{1,3}:\d{1,5}\b/g, "<ip>"],
   [
@@ -65,6 +80,16 @@ const KEEP_LINE_PATTERN =
   /exception|error|caused by|failed|fatal|crash|missing|incompatib|conflict/i;
 
 const MAX_REPEATED_LINES = 3;
+
+export function redactCredentials(text: string): string {
+  let result = text;
+
+  for (const [pattern, replacement] of CREDENTIAL_REDACTIONS) {
+    result = result.replace(pattern, replacement);
+  }
+
+  return result;
+}
 
 export function redactSecrets(text: string): string {
   let result = text;
