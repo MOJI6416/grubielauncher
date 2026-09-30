@@ -76,6 +76,13 @@ export interface ILocalDependency {
   relationType: DependencyType;
 }
 
+export interface LocalModDependencies {
+  provides: string[];
+  requires: string[];
+}
+
+export type LocalModDependencyIndex = Record<string, LocalModDependencies>;
+
 export interface ILocalFile {
   filename: string;
   size: number;
@@ -203,4 +210,3 @@ export interface IAddedLocalProject {
   deletedReason?: TrashReason;
   disabled?: boolean;
 }
-

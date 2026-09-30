@@ -19,6 +19,7 @@ electronLanguages:
   - uk
 
 files:
+  - '!dist/**'
   - '!**/.vscode/*'
   - '!src/*'
   - '!docs/*'

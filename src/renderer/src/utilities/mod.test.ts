@@ -27,6 +27,65 @@ function localMod(overrides: Partial<ILocalProject>): ILocalProject {
   } as ILocalProject;
 }
 
+describe("deletion with JAR dependencies", () => {
+  const withFile = (id: string) =>
+    localMod({
+      id,
+      title: id,
+      provider: Provider.CURSEFORGE,
+      version: {
+        id: "v",
+        dependencies: [],
+        files: [
+          { filename: `${id}.jar`, size: 0, sha1: "", url: "", isServer: true },
+        ],
+      },
+    });
+  it("finds an imported mod chain even when all catalog dependencies are empty", () => {
+    const mods = [withFile("library"), withFile("mod"), withFile("addon")];
+    const localDependencies = {
+      "library.jar": { provides: ["native_library"], requires: [] },
+      "mod.jar": { provides: ["native_mod"], requires: ["native_library"] },
+      "addon.jar": { provides: ["native_addon"], requires: ["native_mod"] },
+    };
+    expect(planDeletion(mods, mods[0], { localDependencies }).blockers).toEqual(
+      [mods[1]],
+    );
+    expect(
+      planDeletion(mods, mods[0], {
+        localDependencies,
+        includeDependents: true,
+      }).remove,
+    ).toEqual(mods);
+  });
+  it("retains a native library needed by another installed mod", () => {
+    const mods = [withFile("library"), withFile("mod"), withFile("other")];
+    const localDependencies = {
+      "library.jar": { provides: ["lib"], requires: [] },
+      "mod.jar": { provides: ["mod"], requires: ["lib"] },
+      "other.jar": { provides: ["other"], requires: ["lib"] },
+    };
+    expect(planDeletion(mods, mods[1], { localDependencies }).remove).toEqual([
+      mods[1],
+    ]);
+  });
+  it("checks each provided native id separately when a JAR bundles several mods", () => {
+    const mods = [withFile("bundle"), withFile("replacement"), withFile("mod")];
+    const localDependencies = {
+      "bundle.jar": { provides: ["first", "second"], requires: [] },
+      "replacement.jar": { provides: ["first"], requires: [] },
+      "mod.jar": { provides: ["mod"], requires: ["second"] },
+    };
+    expect(planDeletion(mods, mods[0], { localDependencies }).blockers).toEqual(
+      [mods[2]],
+    );
+    localDependencies["mod.jar"].requires = ["first"];
+    expect(planDeletion(mods, mods[0], { localDependencies }).blockers).toEqual(
+      [],
+    );
+  });
+});
+
 describe("normalizeProjectTitle", () => {
   it("collapses case, punctuation and loader suffixes to the same key", () => {
     const expected = "justenoughitems";

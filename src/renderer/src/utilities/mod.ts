@@ -3,6 +3,7 @@ import {
   DependencyType,
   ILocalDependency,
   ILocalProject,
+  LocalModDependencyIndex,
   ProjectType,
   Provider,
 } from "@/types/ModManager";
@@ -162,7 +163,11 @@ export function findTwin(
 export function planDeletion(
   mods: ILocalProject[],
   target: ILocalProject | ILocalProject[],
-  options: { includeDependents?: boolean; removeDependencies?: boolean } = {},
+  options: {
+    includeDependents?: boolean;
+    removeDependencies?: boolean;
+    localDependencies?: LocalModDependencyIndex;
+  } = {},
 ): DeletionPlan {
   const keyOf = (mod: ILocalProject) =>
     `${mod.projectType}:${mod.provider}:${mod.id}`;
@@ -173,8 +178,27 @@ export function planDeletion(
   if (requested.length === 0) return { remove: [], blockers: [] };
   const explicit = new Set(requested.map(keyOf));
   const dependencies = new Map<string, Set<string>>();
+  const catalogDependencies = new Map<string, Set<string>>();
   const byTitle = new Map<string, ILocalProject[]>();
   const byFilename = new Map<string, Set<string>>();
+  const nativeInfo = new Map(
+    mods
+      .filter((mod) => mod.projectType === ProjectType.MOD)
+      .map((mod) => [
+        keyOf(mod),
+        fileNamesOf(mod)
+          .map((filename) => options.localDependencies?.[filename])
+          .filter((info) => !!info),
+      ]),
+  );
+  const byModId = new Map<string, Set<string>>();
+  for (const [key, infos] of nativeInfo)
+    for (const info of infos)
+      for (const id of info.provides) {
+        const matches = byModId.get(id) ?? new Set<string>();
+        matches.add(key);
+        byModId.set(id, matches);
+      }
   for (const mod of mods) {
     for (const filename of fileNamesOf(mod)) {
       const key = `${mod.projectType}:${filename}`;
@@ -216,18 +240,30 @@ export function planDeletion(
   const requiredBy = new Map<string, Set<string>>();
   for (const mod of mods) {
     const edges = new Set<string>();
+    const catalogEdges = new Set<string>();
+    for (const info of nativeInfo.get(keyOf(mod)) ?? [])
+      for (const id of info.requires) {
+        const matches = byModId.get(id);
+        if (matches?.has(keyOf(mod))) continue;
+        const dependency = matches?.values().next().value;
+        if (dependency) edges.add(dependency);
+      }
     for (const dep of mod.version?.dependencies ?? []) {
       if (dep.relationType !== DependencyType.REQUIRED) continue;
       const resolved = resolveDependency(mod, dep);
       if (resolved) {
         const key = keyOf(resolved);
         edges.add(key);
-        const users = requiredBy.get(key) ?? new Set<string>();
-        users.add(keyOf(mod));
-        requiredBy.set(key, users);
+        catalogEdges.add(key);
       }
     }
+    for (const key of edges) {
+      const users = requiredBy.get(key) ?? new Set<string>();
+      users.add(keyOf(mod));
+      requiredBy.set(key, users);
+    }
     dependencies.set(keyOf(mod), edges);
+    catalogDependencies.set(keyOf(mod), catalogEdges);
   }
 
   const replacements = new Map<string, Set<string>>();
@@ -250,8 +286,16 @@ export function planDeletion(
   const hasReplacement = (key: string, removed: Set<string>) =>
     [...(replacements.get(key) ?? [])].some((other) => !removed.has(other));
   const losesDependency = (mod: ILocalProject, removed: Set<string>) =>
-    [...(dependencies.get(keyOf(mod)) ?? [])].some(
+    [...(catalogDependencies.get(keyOf(mod)) ?? [])].some(
       (key) => removed.has(key) && !hasReplacement(key, removed),
+    ) ||
+    (nativeInfo.get(keyOf(mod)) ?? []).some((info) =>
+      info.requires.some((id) => {
+        const providers = byModId.get(id);
+        return (
+          !!providers?.size && [...providers].every((key) => removed.has(key))
+        );
+      }),
     );
 
   // Add the whole reverse chain before looking for orphaned libraries.

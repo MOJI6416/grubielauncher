@@ -62,11 +62,13 @@ export function Confirmation({
   buttons,
   reversible,
   children,
+  wide = false,
 }: {
   onClose: () => void;
   title?: string;
   children?: ReactNode;
   reversible?: boolean;
+  wide?: boolean;
   content: {
     text: string;
     color?: Tone;
@@ -118,7 +120,12 @@ export function Confirmation({
       }}
     >
       <AlertDialogContent
-        className="gap-0 overflow-hidden p-0 data-[size=default]:max-w-sm data-[size=default]:sm:max-w-md"
+        className={cn(
+          "flex min-w-0 flex-col gap-0 overflow-hidden p-0",
+          wide
+            ? "data-[size=default]:max-w-[calc(100%-2rem)] data-[size=default]:sm:max-w-2xl"
+            : "data-[size=default]:max-w-sm data-[size=default]:sm:max-w-md",
+        )}
         onEscapeKeyDown={(event) => {
           if (isBusy) event.preventDefault();
         }}
@@ -129,75 +136,78 @@ export function Confirmation({
           defaultRef.current.focus();
         }}
       >
-        <AlertDialogHeader className="flex flex-row items-start gap-3 px-4 pt-4 pb-3 text-left">
-          <span
-            className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-lg",
-              ICON_TONE[tone],
-            )}
-          >
-            <ToneIcon className="size-4" />
-          </span>
-          <div className="grid min-w-0 gap-1.5">
-            <AlertDialogTitle className="text-sm leading-5">
-              {title || t("common.confirmation")}
-            </AlertDialogTitle>
+        <div className="min-h-0 min-w-0 overflow-y-auto">
+          <AlertDialogHeader className="flex min-w-0 flex-row items-start gap-3 px-4 pt-4 pb-3 text-left">
+            <span
+              className={cn(
+                "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                ICON_TONE[tone],
+              )}
+            >
+              <ToneIcon className="size-4" />
+            </span>
+            <div className="grid min-w-0 flex-1 gap-1.5 [overflow-wrap:anywhere]">
+              <AlertDialogTitle className="text-sm leading-5">
+                {title || t("common.confirmation")}
+              </AlertDialogTitle>
 
-            {content.map((item, index) =>
-              index === 0 ? (
-                <AlertDialogDescription
-                  key={index}
-                  className={cn(
-                    "text-xs leading-4.5 text-wrap",
-                    LINE_TONE[item.color ?? ""] ?? "text-foreground",
-                  )}
-                >
-                  {item.text}
-                </AlertDialogDescription>
-              ) : (
-                <p
-                  key={index}
-                  className={cn(
-                    "text-xs leading-4.5",
-                    LINE_TONE[item.color ?? ""] ?? "text-muted-foreground",
-                  )}
-                >
-                  {item.text}
-                </p>
-              ),
-            )}
-          </div>
-        </AlertDialogHeader>
-
-        {(children || reversible !== undefined) && (
-          <div className="grid max-h-[52vh] gap-2.5 overflow-y-auto px-4 pb-3">
-            {children}
-
-            {reversible !== undefined && (
-              <p
-                className={cn(
-                  "flex items-center gap-1.5 text-[0.7rem]",
-                  reversible ? "text-faint" : "text-destructive",
-                )}
-              >
-                {reversible ? (
-                  <RotateCcw className="size-3 shrink-0" />
+              {content.map((item, index) =>
+                index === 0 ? (
+                  <AlertDialogDescription
+                    key={index}
+                    className={cn(
+                      "text-xs leading-4.5 text-wrap",
+                      LINE_TONE[item.color ?? ""] ?? "text-foreground",
+                    )}
+                  >
+                    {item.text}
+                  </AlertDialogDescription>
                 ) : (
-                  <TriangleAlert className="size-3 shrink-0" />
-                )}
-                {t(reversible ? "common.reversible" : "common.irreversible")}
-              </p>
-            )}
-          </div>
-        )}
+                  <p
+                    key={index}
+                    className={cn(
+                      "text-xs leading-4.5",
+                      LINE_TONE[item.color ?? ""] ?? "text-muted-foreground",
+                    )}
+                  >
+                    {item.text}
+                  </p>
+                ),
+              )}
+            </div>
+          </AlertDialogHeader>
 
-        <AlertDialogFooter className="m-0 gap-2 border-t border-border bg-surface-2 px-4 py-3">
+          {(children || reversible !== undefined) && (
+            <div className="grid min-w-0 gap-2.5 px-4 pb-3 [overflow-wrap:anywhere]">
+              {children}
+
+              {reversible !== undefined && (
+                <p
+                  className={cn(
+                    "flex items-center gap-1.5 text-[0.7rem]",
+                    reversible ? "text-faint" : "text-destructive",
+                  )}
+                >
+                  {reversible ? (
+                    <RotateCcw className="size-3 shrink-0" />
+                  ) : (
+                    <TriangleAlert className="size-3 shrink-0" />
+                  )}
+                  {t(reversible ? "common.reversible" : "common.irreversible")}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <AlertDialogFooter className="m-0 min-w-0 shrink-0 gap-2 border-t border-border bg-surface-2 px-4 py-3 sm:flex-wrap">
           {slots.map((slot, position) => {
             return (
               <Button
                 key={slot.index}
                 ref={position === defaultPosition ? defaultRef : undefined}
                 variant={slot.variant}
+                className="h-auto min-h-8 max-w-full whitespace-normal [overflow-wrap:anywhere]"
                 disabled={isBusy && activeBtn !== slot.index}
                 onClick={() => void press(slot.index)}
               >

@@ -50,6 +50,7 @@ import {
   IAddedLocalProject,
   ILocalIdentifyMatch,
   ILocalProject,
+  LocalModDependencyIndex,
   IModpack,
   IProject,
   IVersion as ModVersion,
@@ -343,6 +344,22 @@ export function ContentManager({
   const [isBusy, setIsBusy] = useState(false);
   const [pendingDeletion, setPendingDeletion] = useState<ContentEntry[] | null>(
     null,
+  );
+  const [localDependencyScan, setLocalDependencyScan] = useState<{
+    path: string;
+    index: LocalModDependencyIndex;
+  } | null>(null);
+  const localDependencies =
+    localDependencyScan && localDependencyScan.path === instancePath
+      ? localDependencyScan.index
+      : undefined;
+  const deletionRequestRef = useRef(0);
+  const checkingDeletionRef = useRef(false);
+  useEffect(
+    () => () => {
+      deletionRequestRef.current++;
+    },
+    [instancePath],
   );
   const [fileRevision, setFileRevision] = useState(0);
   const [importing, setImporting] = useState<IAddedLocalProject[]>([]);
@@ -1062,6 +1079,7 @@ export function ContentManager({
     (
       targets: ContentEntry[],
       mode: "selected" | "dependencies" | "dependents",
+      dependencyIndex = localDependencies,
     ) => {
       if (
         !canEdit ||
@@ -1079,6 +1097,7 @@ export function ContentManager({
       const plan = planDeletion(mods, installed, {
         includeDependents: mode === "dependents",
         removeDependencies: mode !== "selected",
+        localDependencies: dependencyIndex,
       });
       if (mode !== "selected" && plan.blockers.length > 0) return;
       const keys = new Set(
@@ -1096,23 +1115,64 @@ export function ContentManager({
           : t("modManager.deleted"),
       );
     },
-    [canEdit, isBusy, mods, rememberRemoved, running, setMods, t],
+    [
+      canEdit,
+      isBusy,
+      localDependencies,
+      mods,
+      rememberRemoved,
+      running,
+      setMods,
+      t,
+    ],
   );
 
   const removeEntries = useCallback(
-    (targets: ContentEntry[]) => {
-      const targetKeys = new Set(targets.map((entry) => entry.key));
-      const installed = mods.filter((item) =>
-        targetKeys.has(entryKey(item.provider, item.id)),
-      );
-      const plan = planDeletion(mods, installed);
-      if (plan.blockers.length > 0 || plan.remove.length > installed.length) {
-        setPendingDeletion(targets);
+    async (targets: ContentEntry[]) => {
+      if (
+        !canEdit ||
+        isBusy ||
+        checkingDeletionRef.current ||
+        (running &&
+          targets.some(
+            (entry) => !RUNNING_ALLOWED_TYPES.includes(entry.projectType),
+          ))
+      )
         return;
+      checkingDeletionRef.current = true;
+      const request = ++deletionRequestRef.current;
+      setIsBusy(true);
+      try {
+        const index =
+          instancePath &&
+          targets.some((entry) => entry.projectType === ProjectType.MOD)
+            ? await api.modManager.localDependencies(instancePath)
+            : undefined;
+        if (request !== deletionRequestRef.current) return;
+        if (instancePath && index)
+          setLocalDependencyScan({ path: instancePath, index });
+        const targetKeys = new Set(targets.map((entry) => entry.key));
+        const installed = mods.filter((item) =>
+          targetKeys.has(entryKey(item.provider, item.id)),
+        );
+        const plan = planDeletion(mods, installed, {
+          localDependencies: index,
+        });
+        if (plan.blockers.length > 0 || plan.remove.length > installed.length) {
+          setPendingDeletion(targets);
+          return;
+        }
+        applyDeletion(targets, "dependencies", index);
+      } catch (error) {
+        showFailureToast(t("modManager.deleteTitle"), error, {
+          channels: ["modManager:localDependencies"],
+        });
+      } finally {
+        checkingDeletionRef.current = false;
+        setIsBusy(false);
       }
-      applyDeletion(targets, "dependencies");
     },
-    [applyDeletion, mods],
+    [applyDeletion, canEdit, instancePath, isBusy, mods, running, t],
   );
 
   const pendingDeletionTargets = useMemo(
@@ -1127,18 +1187,19 @@ export function ContentManager({
   const pendingDeletionPlan = useMemo(
     () =>
       pendingDeletion
-        ? planDeletion(mods, pendingDeletionTargets)
+        ? planDeletion(mods, pendingDeletionTargets, { localDependencies })
         : { remove: [], blockers: [] },
-    [mods, pendingDeletion, pendingDeletionTargets],
+    [localDependencies, mods, pendingDeletion, pendingDeletionTargets],
   );
   const cascadeDeletionPlan = useMemo(
     () =>
       pendingDeletion
         ? planDeletion(mods, pendingDeletionTargets, {
             includeDependents: true,
+            localDependencies,
           })
         : { remove: [], blockers: [] },
-    [mods, pendingDeletion, pendingDeletionTargets],
+    [localDependencies, mods, pendingDeletion, pendingDeletionTargets],
   );
 
   const removeDuplicateRecords = useCallback(
@@ -3236,6 +3297,7 @@ export function ContentManager({
       {pendingDeletion && (
         <Confirmation
           title={t("modManager.deleteTitle")}
+          wide
           reversible
           content={[
             {
@@ -3250,9 +3312,6 @@ export function ContentManager({
                   {
                     text: t("modManager.deleteDependencyWarning"),
                     color: "warning" as const,
-                  },
-                  {
-                    text: `${t("modManager.requiredBy")}: ${pendingDeletionPlan.blockers.map((item) => item.title).join(", ")}`,
                   },
                 ]
               : []),
@@ -3282,11 +3341,11 @@ export function ContentManager({
           ]}
           onClose={() => setPendingDeletion(null)}
         >
-          <div className="max-h-52 overflow-y-auto rounded-lg border border-border p-3 text-sm">
+          <div className="min-w-0 rounded-lg border border-border p-3 text-sm">
             <p className="mb-2 text-muted-foreground">
               {t("modManager.deleteList")}
             </p>
-            <ul className="list-inside list-disc space-y-1">
+            <ul className="max-h-52 list-outside list-disc space-y-1 overflow-y-auto pl-5 [overflow-wrap:anywhere]">
               {cascadeDeletionPlan.remove.map((item) => (
                 <li key={entryKey(item.provider, item.id)}>{item.title}</li>
               ))}

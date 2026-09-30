@@ -955,6 +955,7 @@ export interface IElectronAPI {
       deps: IVersionDependency[],
     ) => Promise<IVersionDependency[] | null>;
     checkLocalMod: (modPath: string) => Promise<ILocalFileInfo | null>;
+    localDependencies: (versionPath: string) => Promise<import("@/types/ModManager").LocalModDependencyIndex>;
     managedFiles: (
       versionPath: string,
     ) => Promise<Partial<Record<ProjectType, string[]>> | null>;
@@ -2065,6 +2066,8 @@ export const api: IElectronAPI = {
       ),
     checkLocalMod: (modPath: string) =>
       invoke("modManager:checkLocalMod", modPath),
+    localDependencies: (versionPath: string) =>
+      invoke("modManager:localDependencies", versionPath),
     managedFiles: (versionPath: string) =>
       invoke("modManager:managedFiles", versionPath),
     trashFiles: (versionPath: string, projectType: ProjectType, names: string[]) =>

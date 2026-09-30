@@ -3,6 +3,7 @@ import {
   ILocalIdentifyRequest,
   ILocalIdentifyResult,
   ILocalProject,
+  LocalModDependencyIndex,
   IProject,
   ISearchData,
   IVersion,
@@ -25,6 +26,7 @@ import { ManagedFiles, readManagedFiles } from "../game/managedFiles";
 import { moveFilesToTrash } from "../game/trash";
 import path from "path";
 import fs from "fs-extra";
+import { scanLocalModDependencies } from "../utilities/localModDependencies";
 
 const isProvider = check.oneOf(...Object.values(Provider));
 const isProjectType = check.oneOf(...Object.values(ProjectType));
@@ -34,6 +36,18 @@ const isOptions = check.object();
 const isProjectList = check.arrayOf(check.object(), 20000);
 
 export function registerModManagerIpc() {
+  handleSafe<LocalModDependencyIndex, [string]>(
+    "modManager:localDependencies",
+    {},
+    [isPath],
+    async (_, versionPath: string) => {
+      assertReadablePath(
+        path.join(versionPath, "mods"),
+        "modManager:localDependencies",
+      );
+      return await scanLocalModDependencies(versionPath);
+    },
+  );
   handleSafe(
     "modManager:search",
     (
@@ -211,7 +225,9 @@ export function registerModManagerIpc() {
 
       await Promise.all(
         names.map(async (name) => {
-          const stats = await fs.stat(path.join(folder, name)).catch(() => null);
+          const stats = await fs
+            .stat(path.join(folder, name))
+            .catch(() => null);
           if (stats?.isFile()) times[name] = stats.mtimeMs;
         }),
       );
@@ -224,7 +240,12 @@ export function registerModManagerIpc() {
     "modManager:trashFiles",
     [],
     [isPath, isProjectType, check.arrayOf(check.nonEmptyString(512), 5000)],
-    async (_, versionPath: string, projectType: ProjectType, names: string[]) => {
+    async (
+      _,
+      versionPath: string,
+      projectType: ProjectType,
+      names: string[],
+    ) => {
       const folder = path.join(versionPath, projetTypeToFolder(projectType));
       assertWritablePath(folder, "modManager:trashFiles");
 
