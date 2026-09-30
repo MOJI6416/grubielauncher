@@ -29,7 +29,6 @@ import {
   clearUpdateAttempt,
   isUpdateLoop,
   readUpdateAttempt,
-  writeUpdateAttempt,
 } from "./utilities/updateLoopGuard";
 import { MIRROR_BASE } from "./utilities/mirrors";
 import { reportFailure } from "./utilities/failureBus";
@@ -41,11 +40,13 @@ import { disposePushToTalk } from "./services/PushToTalk";
 import { initWorldBackupService } from "./services/WorldBackupService";
 import { initTray } from "./tray/tray";
 import { startBackgroundUpdateChecks } from "./utilities/backgroundUpdates";
+import { recoverWindowsStartup } from "./utilities/windowsStartup";
+import { scheduleUpdateInstall } from "./utilities/updateInstall";
 import { getDataRoot } from "./utilities/dataRoot";
 import { prepareDataRoot } from "./windows/dataLocationWindow";
 import {
   consumeHiddenStart,
-  markHiddenRelaunch,
+  HIDDEN_START_FLAG,
 } from "./utilities/launchAtLogin";
 import { LauncherDeepLink } from "@/types/DeepLink";
 import { journal } from "./journal/journal";
@@ -421,7 +422,7 @@ if (!gotTheLock) {
       return;
     }
 
-    focusMainWindow();
+    if (!argv.includes(HIDDEN_START_FLAG)) focusMainWindow();
   });
 
   app.on("open-url", (event, url) => {
@@ -431,6 +432,20 @@ if (!gotTheLock) {
 
   app.whenReady().then(async () => {
     electronApp.setAppUserModelId("com.grubielauncher");
+    const startHidden = consumeHiddenStart(process.argv);
+    const updateAttemptDir = app.getPath("userData");
+    const updateAttempt = is.dev
+      ? null
+      : await readUpdateAttempt(updateAttemptDir);
+    const runningCopy = { version: app.getVersion(), exe: process.execPath };
+    if (
+      !is.dev &&
+      (await recoverWindowsStartup({
+        hidden: startHidden,
+        attempt: updateAttempt,
+      }))
+    )
+      return;
     setupContentSecurityPolicy();
     setupPermissionHandlers();
     registerAppProtocol();
@@ -453,7 +468,6 @@ if (!gotTheLock) {
     });
 
     Object.values(ipcHandlers).forEach((register) => register());
-    const startHidden = consumeHiddenStart(process.argv);
     initTray();
     registerLegacyLocalStorageIpc();
     initWorldBackupService();
@@ -472,27 +486,21 @@ if (!gotTheLock) {
       return;
     }
 
-    const updateAttemptDir = app.getPath("userData");
-    const updateAttempt = await readUpdateAttempt(updateAttemptDir);
-    const runningCopy = { version: app.getVersion(), exe: process.execPath };
-
     if (updateAttempt && isUpdateLoop(updateAttempt, runningCopy, Date.now())) {
       console.warn(
-        `[Updater] ${updateAttempt.target} was installed, but ${runningCopy.exe} still runs ${runningCopy.version}; skipping the update to avoid a loop.`,
+        `[Updater] After attempting update ${updateAttempt.target}, ${runningCopy.exe} still runs ${runningCopy.version}; skipping the update to avoid a loop.`,
       );
-      await writeUpdateAttempt(updateAttemptDir, {
-        ...updateAttempt,
-        at: Date.now(),
-      });
-      createMainWindow();
-      notifyMainWindowUpdateFailed(
-        `Update ${updateAttempt.target} was installed, but this copy of the launcher is still ${runningCopy.version}: ${runningCopy.exe}`,
-        {
-          reason: "loop",
-          version: updateAttempt.target,
-          path: runningCopy.exe,
-        },
-      );
+      createMainWindow({ deferShow: startHidden });
+      if (!startHidden) {
+        notifyMainWindowUpdateFailed(
+          `After attempting update ${updateAttempt.target}, this copy of the launcher is still ${runningCopy.version}: ${runningCopy.exe}`,
+          {
+            reason: "loop",
+            version: updateAttempt.target,
+            path: runningCopy.exe,
+          },
+        );
+      }
       flushPendingDeepLinks();
       return;
     }
@@ -503,6 +511,7 @@ if (!gotTheLock) {
     createMainWindow({ deferShow: true });
 
     autoUpdater.disableDifferentialDownload = true;
+    autoUpdater.autoInstallOnAppQuit = false;
 
     let updateFlowSettled = false;
     let mirrorFeedTried = false;
@@ -568,8 +577,8 @@ if (!gotTheLock) {
       if (!startHidden) showMainWindow();
       flushPendingDeepLinks();
       startBackgroundUpdateChecks({
-        onInstall: () => {
-          isUpdateInstallPending = true;
+        onInstall: (pending) => {
+          isUpdateInstallPending = pending;
         },
       });
     };
@@ -585,15 +594,17 @@ if (!gotTheLock) {
       sendUpdaterStatus("error", { message });
       updaterWindow?.close();
       if (startHidden) {
-        console.warn(`[Updater] Update check failed during a hidden start: ${message}`);
+        console.warn(
+          `[Updater] Update check failed during a hidden start: ${message}`,
+        );
         openMainWindowOnce();
       } else {
         notifyMainWindowUpdateFailed(message);
       }
       flushPendingDeepLinks();
       startBackgroundUpdateChecks({
-        onInstall: () => {
-          isUpdateInstallPending = true;
+        onInstall: (pending) => {
+          isUpdateInstallPending = pending;
         },
       });
     };
@@ -608,16 +619,19 @@ if (!gotTheLock) {
       clearUpdateWatchdog();
       if (startedWithoutUpdate) return;
 
-      isUpdateInstallPending = true;
-      if (startHidden) markHiddenRelaunch();
       sendUpdaterStatus("downloaded");
-      void writeUpdateAttempt(updateAttemptDir, {
-        target: info.version,
-        from: runningCopy.version,
-        exe: runningCopy.exe,
-        at: Date.now(),
-      }).finally(() => {
-        setTimeout(() => autoUpdater.quitAndInstall(), 700);
+      void scheduleUpdateInstall({
+        version: info.version,
+        hidden: startHidden,
+        delay: 700,
+        onInstall: () => {
+          isUpdateInstallPending = true;
+        },
+        onError: (error) => {
+          isUpdateInstallPending = false;
+          updaterWindow?.close();
+          if (!startHidden) notifyMainWindowUpdateFailed(error.message);
+        },
       });
     });
 
@@ -688,7 +702,9 @@ if (!gotTheLock) {
     if (updaterContents?.isLoading()) {
       updaterContents.once("did-finish-load", checkForUpdates);
       updaterContents.once("did-fail-load", (_event, code, description) => {
-        console.error(`[Updater] Splash failed to load: ${code} ${description}`);
+        console.error(
+          `[Updater] Splash failed to load: ${code} ${description}`,
+        );
         checkForUpdates();
       });
       return;

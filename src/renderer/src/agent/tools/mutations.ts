@@ -226,10 +226,11 @@ export const removeMods: AgentTool = {
     const blocked: { title: string; requiredBy: string[] }[] = [];
     const notFound: string[] = [];
     let current = [...before];
+    const targets: ILocalProject[] = [];
 
     for (const rawTitle of titles) {
       const title = String(rawTitle ?? "").toLowerCase();
-      const target = current.find(
+      const target = before.find(
         (mod) => localTitle(mod).toLowerCase() === title,
       );
 
@@ -238,21 +239,15 @@ export const removeMods: AgentTool = {
         continue;
       }
 
-      const plan = planDeletion(current, target);
-      if (plan.blockers.length > 0) {
-        blocked.push({
-          title: target.title,
-          requiredBy: plan.blockers.map((mod) => mod.title),
-        });
-        continue;
-      }
+      targets.push(target);
+    }
 
-      const removeKeys = new Set(
-        plan.remove.map((mod) => `${mod.provider}:${mod.id}`),
-      );
-      current = current.filter(
-        (mod) => !removeKeys.has(`${mod.provider}:${mod.id}`),
-      );
+    const plan = planDeletion(before, targets);
+    if (plan.blockers.length > 0) {
+      blocked.push({ title: targets.map((mod) => mod.title).join(", "), requiredBy: plan.blockers.map((mod) => mod.title) });
+    } else {
+      const removeKeys = new Set(plan.remove.map((mod) => `${mod.provider}:${mod.id}`));
+      current = current.filter((mod) => !removeKeys.has(`${mod.provider}:${mod.id}`));
       removed.push(...plan.remove.map((mod) => mod.title));
     }
 

@@ -138,7 +138,7 @@ async function refreshForSubject(
         return {
           ...entry,
           accessToken: newToken,
-          refreshToken: nextRefreshToken
+          refreshToken: nextRefreshToken || entry.refreshToken
         }
       })
 

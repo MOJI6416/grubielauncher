@@ -131,6 +131,7 @@ export function getJavaAgent(
   accountType: "elyby" | "discord",
   authinjPath: string,
   isQuotes = false,
+  server?: string,
 ): string {
   let authServer = "";
   switch (accountType) {
@@ -141,6 +142,7 @@ export function getJavaAgent(
       authServer = `grubielauncher.com`;
       break;
   }
+  if (server) authServer = server;
 
   if (isQuotes) {
     authinjPath = `"${authinjPath}"`;

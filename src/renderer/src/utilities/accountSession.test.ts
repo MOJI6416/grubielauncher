@@ -42,6 +42,92 @@ afterEach(() => {
 });
 
 describe("ensureAccountSession", () => {
+  it("handles the Ely.by 400 from report GRB-M5DN-0106 as a session failure", async () => {
+    const failure = new Error(
+      "Error invoking remote method 'auth:elyby:refresh': AxiosError: Request failed with status code 400",
+    );
+    const elyAccount = { ...account, type: "elyby" as const };
+    const api = {
+      auth: { elybyRefresh: vi.fn().mockRejectedValue(failure) },
+      accounts: { load: vi.fn().mockResolvedValue(null), save: vi.fn() },
+    };
+    const { ensureAccountSession, AccountSessionRefreshError } =
+      await loadAccountSession(api);
+    await expect(
+      ensureAccountSession({
+        accounts: [elyAccount],
+        authData: expiredAuth,
+        selectedAccount: elyAccount,
+        setAccounts: vi.fn(),
+        setSelectedAccount: vi.fn(),
+      }),
+    ).rejects.toMatchObject({
+      name: AccountSessionRefreshError.name,
+      provider: "elyby",
+      cause: failure,
+    });
+    expect(api.accounts.save).not.toHaveBeenCalled();
+  });
+
+  it("does not treat a provider outage or broken connection as expired credentials", async () => {
+    const api = {
+      auth: { discordRefresh: vi.fn() },
+      accounts: { load: vi.fn().mockResolvedValue(null), save: vi.fn() },
+    };
+    const { ensureAccountSession } = await loadAccountSession(api);
+    for (const message of [
+      "Request failed with status code 503",
+      "connect ECONNREFUSED 127.0.0.1:443",
+    ]) {
+      const failure = new Error(message);
+      api.auth.discordRefresh.mockRejectedValue(failure);
+      await expect(
+        ensureAccountSession({
+          accounts: [account],
+          authData: expiredAuth,
+          selectedAccount: account,
+          setAccounts: vi.fn(),
+          setSelectedAccount: vi.fn(),
+        }),
+      ).rejects.toBe(failure);
+    }
+  });
+
+  it("recovers a refresh exception when another caller has already saved a fresh session", async () => {
+    const freshAccount = {
+      ...account,
+      accessToken: jwt({
+        ...expiredAuth,
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        auth: { ...expiredAuth.auth, expiresAt: Date.now() + 3600_000 },
+      }),
+    };
+    const api = {
+      auth: {
+        discordRefresh: vi
+          .fn()
+          .mockRejectedValue(new Error("Request failed with status code 400")),
+      },
+      accounts: {
+        load: vi
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({ accounts: [freshAccount] }),
+        save: vi.fn(),
+      },
+    };
+    const { ensureAccountSession } = await loadAccountSession(api);
+    await expect(
+      ensureAccountSession({
+        accounts: [account],
+        authData: expiredAuth,
+        selectedAccount: account,
+        setAccounts: vi.fn(),
+        setSelectedAccount: vi.fn(),
+      }),
+    ).resolves.toMatchObject({ account: freshAccount, refreshed: true });
+  });
+
   it("uses a fresher stored token instead of refreshing an already rotated token", async () => {
     const freshAuth: IAuth = {
       ...expiredAuth,

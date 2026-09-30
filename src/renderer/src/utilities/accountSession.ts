@@ -2,6 +2,7 @@ import { accountIdentity } from "@renderer/features/accounts/identity";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { IRefreshTokenResponse } from "@/types/Auth";
 import { jwtDecode } from "jwt-decode";
+import { classifyError } from "@/shared/errors";
 
 const api = window.api;
 
@@ -22,11 +23,13 @@ type EnsureAccountSessionResult = {
 export class AccountSessionRefreshError extends Error {
   readonly code = "account_session_refresh_failed";
   readonly provider: ILocalAccount["type"];
+  readonly cause?: unknown;
 
-  constructor(provider: ILocalAccount["type"]) {
+  constructor(provider: ILocalAccount["type"], cause?: unknown) {
     super("Account session refresh failed");
     this.name = "AccountSessionRefreshError";
     this.provider = provider;
+    this.cause = cause;
   }
 }
 
@@ -200,10 +203,13 @@ export async function ensureAccountSession(
     authDataForRefresh = storedSession.authData;
   }
 
-  const authUser = await refreshAccountToken(
-    accountForRefresh,
-    authDataForRefresh,
-  );
+  let authUser: IRefreshTokenResponse | null = null;
+  let refreshError: unknown;
+  try {
+    authUser = await refreshAccountToken(accountForRefresh, authDataForRefresh);
+  } catch (error) {
+    refreshError = error;
+  }
   if (!authUser?.accessToken) {
     const fallbackSession = await loadStoredSession(
       accountForRefresh,
@@ -232,7 +238,15 @@ export async function ensureAccountSession(
       };
     }
 
-    throw new AccountSessionRefreshError(accountForRefresh.type);
+    if (refreshError) {
+      const failure = classifyError(refreshError);
+      if (
+        !["badRequest", "unauthorized", "forbidden"].includes(failure.cause)
+      ) {
+        throw refreshError;
+      }
+    }
+    throw new AccountSessionRefreshError(accountForRefresh.type, refreshError);
   }
 
   const nextAccount: ILocalAccount = {

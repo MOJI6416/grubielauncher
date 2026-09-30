@@ -35,7 +35,11 @@ export function SupportHost() {
         {
           id: `launch-stall-${payload.versionName}-${payload.instance}`,
           description: tRef.current(
-            payload.outLines > 0 ? "launchStall.quiet" : "launchStall.silent",
+            payload.hint === "auth"
+              ? "launchStall.auth"
+              : payload.outLines > 0
+                ? "launchStall.quiet"
+                : "launchStall.silent",
           ),
           duration: 30000,
           action: {

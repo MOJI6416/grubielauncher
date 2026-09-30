@@ -101,6 +101,19 @@ describe("checkToken", () => {
     expect(mutateAccountsConfig).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the Ely.by-style original refresh token when the provider omits a new one", async () => {
+    refreshDiscordToken.mockResolvedValue({ accessToken: "fresh" });
+    await checkToken(expiredToken);
+    const mutate = mutateAccountsConfig.mock.calls[0][0] as (
+      config: unknown,
+    ) => any;
+    const config = await readAccountsConfig();
+    expect(mutate(config).accounts[0]).toMatchObject({
+      accessToken: "fresh",
+      refreshToken: "refresh-1",
+    });
+  });
+
   it("collapses parallel refreshes of the same account into one request", async () => {
     let resolveRefresh!: (value: unknown) => void;
     const pending = new Promise((resolve) => {

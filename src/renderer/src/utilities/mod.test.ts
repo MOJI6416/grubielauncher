@@ -285,3 +285,83 @@ describe("planDeletion without dependency titles", () => {
     expect(titles(plan.remove)).toEqual(["First"]);
   });
 });
+
+describe("deletion recovery", () => {
+  it("plans bulk removal together regardless of selection order", () => {
+    const lib = modWithDeps("lib", "Lib");
+    const user = modWithDeps("user", "User", [{ title: "Lib" }]);
+    for (const targets of [
+      [lib, user],
+      [user, lib],
+    ]) {
+      const plan = planDeletion([lib, user], targets);
+      expect(titles(plan.remove)).toEqual(["Lib", "User"]);
+      expect(plan.blockers).toEqual([]);
+    }
+  });
+
+  it("lets the user remove only the selected crashing mod", () => {
+    const connector = modWithDeps("connector", "Sinytra Connector");
+    const api = modWithDeps("api", "Forgified Fabric API", [
+      { title: connector.title },
+    ]);
+    const plan = planDeletion([connector, api], connector, {
+      removeDependencies: false,
+    });
+    expect(plan.remove).toEqual([connector]);
+    expect(plan.blockers).toEqual([api]);
+  });
+
+  it("includes all transitive dependents without removing shared libraries", () => {
+    const lib = modWithDeps("lib", "Lib");
+    const a = modWithDeps("a", "A", [{ title: "Lib" }]);
+    const b = modWithDeps("b", "B", [{ title: "A" }, { title: "Shared" }]);
+    const c = modWithDeps("c", "C", [{ title: "B" }]);
+    const other = modWithDeps("other", "Other", [{ title: "Shared" }]);
+    const shared = modWithDeps("shared", "Shared");
+    const optional = modWithDeps("optional", "Optional", [
+      { title: "Lib", relationType: DependencyType.OPTIONAL },
+    ]);
+    const plan = planDeletion([lib, a, b, c, other, shared, optional], lib, {
+      includeDependents: true,
+    });
+    expect(titles(plan.remove)).toEqual(["A", "B", "C", "Lib"]);
+    expect(plan.blockers).toEqual([]);
+  });
+
+  it("handles a three-node dependency cycle", () => {
+    const a = modWithDeps("a", "A", [{ title: "B" }]);
+    const b = modWithDeps("b", "B", [{ title: "C" }]);
+    const c = modWithDeps("c", "C", [{ title: "A" }]);
+    const plan = planDeletion([a, b, c], a);
+    expect(titles(plan.remove)).toEqual(["A", "B", "C"]);
+    expect(plan.blockers).toEqual([]);
+  });
+
+  it("retains a cyclic library component used by another mod", () => {
+    const top = modWithDeps("top", "Top", [{ title: "B" }]);
+    const b = modWithDeps("b", "B", [{ title: "C" }]);
+    const c = modWithDeps("c", "C", [{ title: "B" }]);
+    const other = modWithDeps("other", "Other", [{ title: "C" }]);
+    const plan = planDeletion([top, b, c, other], top);
+    expect(plan.remove).toEqual([top]);
+    expect(plan.blockers).toEqual([]);
+  });
+
+  it("resolves ids within the owner's provider and content type", () => {
+    const resourcepack = {
+      ...modWithDeps("lib", "Pack"),
+      projectType: ProjectType.RESOURCEPACK,
+    };
+    const curseforge = {
+      ...modWithDeps("lib", "CF Lib"),
+      provider: Provider.CURSEFORGE,
+    };
+    const lib = modWithDeps("lib", "MR Lib");
+    const user = modWithDeps("user", "User", [{ title: "", projectId: "lib" }]);
+    const mods = [resourcepack, curseforge, lib, user];
+    expect(planDeletion(mods, lib).blockers).toEqual([user]);
+    expect(planDeletion(mods, curseforge).blockers).toEqual([]);
+    expect(titles(planDeletion(mods, user).remove)).toEqual(["MR Lib", "User"]);
+  });
+});

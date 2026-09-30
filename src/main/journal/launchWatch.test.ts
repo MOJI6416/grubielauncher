@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { LaunchWatch } from "./launchWatch";
+import { LaunchWatch, launchStallHint } from "./launchWatch";
 import type { JournalSpan } from "./journal";
 
 function fakeSpan() {
@@ -114,5 +114,36 @@ describe("LaunchWatch", () => {
     expect(failure?.data.tail).toEqual([
       "Error: could not find or load main class",
     ]);
+  });
+});
+
+describe("launchStallHint", () => {
+  const stall = (outLines: number, tail: string[]) => ({
+    afterMs: 150_000,
+    alive: true,
+    outLines,
+    errLines: tail.length,
+    quietMs: 150_000,
+    tail,
+  });
+
+  it("points at sign-in when authlib-injector is the last thing the game said", () => {
+    expect(
+      launchStallHint(
+        stall(0, [
+          "[authlib-injector] [INFO] Version: 1.2.8",
+          "[authlib-injector] [INFO] Authentication server: https://grubielauncher.com",
+        ]),
+      ),
+    ).toBe("auth");
+  });
+
+  it("gives no hint once Minecraft itself has written output", () => {
+    expect(
+      launchStallHint(
+        stall(12, ["[authlib-injector] [INFO] Version: 1.2.8"]),
+      ),
+    ).toBeUndefined();
+    expect(launchStallHint(stall(0, []))).toBeUndefined();
   });
 });

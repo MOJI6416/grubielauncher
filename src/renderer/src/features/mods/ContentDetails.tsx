@@ -450,7 +450,7 @@ export function ContentDetails({
                         size="icon"
                         variant="outline"
                         className="size-9 border-destructive/40 text-destructive hover:bg-destructive/15 hover:text-destructive"
-                        disabled={isBusy || deletionBlockers.length > 0}
+                        disabled={isBusy}
                         aria-label={t("common.delete")}
                         onClick={onDelete}
                       >

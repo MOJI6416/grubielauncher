@@ -17,6 +17,19 @@ describe("getJavaAgent", () => {
       "-javaagent:authlib-injector.jar=ely.by",
     );
   });
+
+  it("points the agent at an explicit API url when one is given", () => {
+    expect(
+      getJavaAgent(
+        "discord",
+        "authlib-injector.jar",
+        false,
+        "https://direct.grubielauncher.com/yggdrasil",
+      ),
+    ).toBe(
+      "-javaagent:authlib-injector.jar=https://direct.grubielauncher.com/yggdrasil",
+    );
+  });
 });
 
 describe("matchesOsRules", () => {

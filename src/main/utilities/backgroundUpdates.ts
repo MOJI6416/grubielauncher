@@ -2,7 +2,7 @@ import { app } from "electron";
 import { autoUpdater } from "electron-updater";
 import { AppUpdateState } from "@/types/AppUpdate";
 import { mainWindow } from "../windows/mainWindow";
-import { writeUpdateAttempt } from "./updateLoopGuard";
+import { scheduleUpdateInstall } from "./updateInstall";
 import { gameRuntime } from "./runtime";
 
 export const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
@@ -12,7 +12,8 @@ let state: AppUpdateState = { status: "idle" };
 let timer: NodeJS.Timeout | null = null;
 let started = false;
 let checking = false;
-let onInstall: (() => void) | null = null;
+let stopping = false;
+let onInstall: ((pending: boolean) => void) | null = null;
 const listeners = new Set<(next: AppUpdateState) => void>();
 
 function publish(next: AppUpdateState): void {
@@ -53,7 +54,7 @@ async function check(): Promise<void> {
 }
 
 export function startBackgroundUpdateChecks(options: {
-  onInstall: () => void;
+  onInstall: (pending: boolean) => void;
 }): void {
   if (started || !app.isPackaged) return;
   started = true;
@@ -73,6 +74,7 @@ export function startBackgroundUpdateChecks(options: {
   });
 
   const schedule = (delay: number) => {
+    if (stopping) return;
     timer = setTimeout(() => {
       void check().finally(() => schedule(UPDATE_CHECK_INTERVAL_MS));
     }, delay);
@@ -82,6 +84,7 @@ export function startBackgroundUpdateChecks(options: {
   schedule(FIRST_UPDATE_CHECK_DELAY_MS);
 
   app.on("before-quit", () => {
+    stopping = true;
     if (timer) clearTimeout(timer);
     timer = null;
   });
@@ -91,14 +94,14 @@ export async function installDownloadedUpdate(): Promise<boolean> {
   if (state.status !== "ready" || !state.version) return false;
   if (gameRuntime.processes.size > 0) return false;
 
-  onInstall?.();
-  await writeUpdateAttempt(app.getPath("userData"), {
-    target: state.version,
-    from: app.getVersion(),
-    exe: process.execPath,
-    at: Date.now(),
-  }).catch(() => undefined);
-
-  setTimeout(() => autoUpdater.quitAndInstall(), 300);
-  return true;
+  return scheduleUpdateInstall({
+    version: state.version,
+    delay: 300,
+    onInstall: () => onInstall?.(true),
+    onError: (error) => {
+      onInstall?.(false);
+      console.warn("[Updater] Could not install the downloaded update:", error);
+      publish({ status: "idle" });
+    },
+  });
 }

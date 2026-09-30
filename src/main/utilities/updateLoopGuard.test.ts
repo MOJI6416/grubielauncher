@@ -66,6 +66,12 @@ describe("isUpdateLoop", () => {
     ).toBe(false);
     expect(isUpdateLoop(null, { version: "2.0.3", exe: "x" }, now)).toBe(false);
   });
+
+  it("ignores timestamps in the future or non-finite timestamps", () => {
+    const current = { version: "2.0.3", exe: "x" };
+    expect(isUpdateLoop(attempt({ at: now + 1 }), current, now)).toBe(false);
+    expect(isUpdateLoop(attempt({ at: NaN }), current, now)).toBe(false);
+  });
 });
 
 describe("update attempt file", () => {

@@ -341,6 +341,9 @@ export function ContentManager({
   const [detailStack, setDetailStack] = useState<ContentEntry[]>([]);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [pendingDeletion, setPendingDeletion] = useState<ContentEntry[] | null>(
+    null,
+  );
   const [fileRevision, setFileRevision] = useState(0);
   const [importing, setImporting] = useState<IAddedLocalProject[]>([]);
   const [importMode, setImportMode] = useState<ImportMode>("import");
@@ -758,7 +761,9 @@ export function ContentManager({
                 depsError: depsFailed,
                 versions: dependencies
                   ? prev.versions.map((item) =>
-                      item.id === selected.id ? { ...item, dependencies } : item,
+                      item.id === selected.id
+                        ? { ...item, dependencies }
+                        : item,
                     )
                   : prev.versions,
               }
@@ -1053,48 +1058,87 @@ export function ContentManager({
     ],
   );
 
+  const applyDeletion = useCallback(
+    (
+      targets: ContentEntry[],
+      mode: "selected" | "dependencies" | "dependents",
+    ) => {
+      if (
+        !canEdit ||
+        isBusy ||
+        (running &&
+          targets.some(
+            (entry) => !RUNNING_ALLOWED_TYPES.includes(entry.projectType),
+          ))
+      )
+        return;
+      const targetKeys = new Set(targets.map((entry) => entry.key));
+      const installed = mods.filter((item) =>
+        targetKeys.has(entryKey(item.provider, item.id)),
+      );
+      const plan = planDeletion(mods, installed, {
+        includeDependents: mode === "dependents",
+        removeDependencies: mode !== "selected",
+      });
+      if (mode !== "selected" && plan.blockers.length > 0) return;
+      const keys = new Set(
+        plan.remove.map((item) => entryKey(item.provider, item.id)),
+      );
+      if (keys.size === 0) return;
+      setMods(
+        mods.filter((item) => !keys.has(entryKey(item.provider, item.id))),
+      );
+      for (const item of plan.remove) rememberRemoved(item);
+      setPendingDeletion(null);
+      toast.success(
+        plan.remove.length > 1
+          ? t("modManager.deletedMultiple", { count: plan.remove.length })
+          : t("modManager.deleted"),
+      );
+    },
+    [canEdit, isBusy, mods, rememberRemoved, running, setMods, t],
+  );
+
   const removeEntries = useCallback(
     (targets: ContentEntry[]) => {
-      let next = [...mods];
-      const removed: ILocalProject[] = [];
-      const blocked: string[] = [];
-
-      for (const entry of targets) {
-        const installed = next.find(
-          (item) => entryKey(item.provider, item.id) === entry.key,
-        );
-        if (!installed) continue;
-
-        const plan = planDeletion(next, installed);
-        if (plan.blockers.length > 0) {
-          blocked.push(entry.title);
-          continue;
-        }
-
-        const keys = new Set(
-          plan.remove.map((item) => entryKey(item.provider, item.id)),
-        );
-        next = next.filter(
-          (item) => !keys.has(entryKey(item.provider, item.id)),
-        );
-        removed.push(...plan.remove);
+      const targetKeys = new Set(targets.map((entry) => entry.key));
+      const installed = mods.filter((item) =>
+        targetKeys.has(entryKey(item.provider, item.id)),
+      );
+      const plan = planDeletion(mods, installed);
+      if (plan.blockers.length > 0 || plan.remove.length > installed.length) {
+        setPendingDeletion(targets);
+        return;
       }
-
-      if (removed.length > 0) {
-        setMods(next);
-        for (const item of removed) rememberRemoved(item);
-        toast.success(
-          removed.length > 1
-            ? t("modManager.deletedMultiple", { count: removed.length })
-            : t("modManager.deleted"),
-        );
-      }
-
-      if (blocked.length > 0) {
-        toast.warning(`${t("modManager.requiredBy")}: ${blocked.join(", ")}`);
-      }
+      applyDeletion(targets, "dependencies");
     },
-    [mods, rememberRemoved, setMods, t],
+    [applyDeletion, mods],
+  );
+
+  const pendingDeletionTargets = useMemo(
+    () =>
+      mods.filter((item) =>
+        pendingDeletion?.some(
+          (entry) => entry.key === entryKey(item.provider, item.id),
+        ),
+      ),
+    [mods, pendingDeletion],
+  );
+  const pendingDeletionPlan = useMemo(
+    () =>
+      pendingDeletion
+        ? planDeletion(mods, pendingDeletionTargets)
+        : { remove: [], blockers: [] },
+    [mods, pendingDeletion, pendingDeletionTargets],
+  );
+  const cascadeDeletionPlan = useMemo(
+    () =>
+      pendingDeletion
+        ? planDeletion(mods, pendingDeletionTargets, {
+            includeDependents: true,
+          })
+        : { remove: [], blockers: [] },
+    [mods, pendingDeletion, pendingDeletionTargets],
   );
 
   const removeDuplicateRecords = useCallback(
@@ -1122,7 +1166,9 @@ export function ContentManager({
     (targets: ContentEntry[], pinned: boolean) => {
       const keys = new Set(
         targets
-          .filter((entry) => entry.installed && isCheckableProject(entry.installed))
+          .filter(
+            (entry) => entry.installed && isCheckableProject(entry.installed),
+          )
           .map((entry) => entry.key),
       );
       if (keys.size === 0) return;
@@ -1328,10 +1374,7 @@ export function ContentManager({
   );
 
   const canUseTrash =
-    scope === "library" &&
-    canEdit &&
-    !isModpacks &&
-    Boolean(instancePath);
+    scope === "library" && canEdit && !isModpacks && Boolean(instancePath);
 
   useEffect(() => {
     if (!canUseTrash || !instancePath) {
@@ -1428,9 +1471,7 @@ export function ContentManager({
                     )
                   : "";
               const path =
-                inFolder ||
-                file.localPath ||
-                getLocalPathFromFileUrl(file.url);
+                inFolder || file.localPath || getLocalPathFromFileUrl(file.url);
               if (!path) return null;
 
               return {
@@ -1459,7 +1500,9 @@ export function ContentManager({
 
         setIdentifyReport({
           matches: result.matches,
-          fileNames: new Map(targets.map((entry) => [entry.key, entry.fileName])),
+          fileNames: new Map(
+            targets.map((entry) => [entry.key, entry.fileName]),
+          ),
           total: requests.length,
           unavailable: result.unavailable,
         });
@@ -2131,7 +2174,9 @@ export function ContentManager({
                     active={projectType === type}
                     label={t(`modManager.projectTypes.${type}`)}
                     count={
-                      scope === "library" ? (typeCounts.get(type) ?? 0) : undefined
+                      scope === "library"
+                        ? (typeCounts.get(type) ?? 0)
+                        : undefined
                     }
                     onClick={() => setProjectType(type)}
                   >
@@ -2506,7 +2551,11 @@ export function ContentManager({
                     ) : (
                       <Pin className="size-3.5" />
                     )}
-                    {t(selectionAllPinned ? "modManager.unpin" : "modManager.pin")}
+                    {t(
+                      selectionAllPinned
+                        ? "modManager.unpin"
+                        : "modManager.pin",
+                    )}
                   </Button>
                 )}
 
@@ -3007,7 +3056,9 @@ export function ContentManager({
                         <Trash2 className="size-3.5" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>{t("modManager.trashClear")}</TooltipContent>
+                    <TooltipContent>
+                      {t("modManager.trashClear")}
+                    </TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -3105,7 +3156,10 @@ export function ContentManager({
                   isCheckableProject(detailEntry.installed),
               )}
               onTogglePin={() =>
-                setPinnedFor([detailEntry], detailEntry.installed?.pinned !== true)
+                setPinnedFor(
+                  [detailEntry],
+                  detailEntry.installed?.pinned !== true,
+                )
               }
             />
           )}
@@ -3177,6 +3231,68 @@ export function ContentManager({
             );
           }}
         />
+      )}
+
+      {pendingDeletion && (
+        <Confirmation
+          title={t("modManager.deleteTitle")}
+          reversible
+          content={[
+            {
+              text: t("modManager.deleteSelected", {
+                names: pendingDeletionTargets
+                  .map((item) => item.title)
+                  .join(", "),
+              }),
+            },
+            ...(pendingDeletionPlan.blockers.length > 0
+              ? [
+                  {
+                    text: t("modManager.deleteDependencyWarning"),
+                    color: "warning" as const,
+                  },
+                  {
+                    text: `${t("modManager.requiredBy")}: ${pendingDeletionPlan.blockers.map((item) => item.title).join(", ")}`,
+                  },
+                ]
+              : []),
+            { text: t("modManager.deleteSaveHint") },
+          ]}
+          buttons={[
+            {
+              text: t("common.cancel"),
+              color: "secondary",
+              onClick: () => setPendingDeletion(null),
+            },
+            {
+              text: t(
+                pendingDeletionPlan.blockers.length > 0
+                  ? "modManager.deleteWithDependents"
+                  : "modManager.deleteWithDependencies",
+                { count: cascadeDeletionPlan.remove.length },
+              ),
+              color: "danger",
+              onClick: () => applyDeletion(pendingDeletion, "dependents"),
+            },
+            {
+              text: t("modManager.deleteOnlySelected"),
+              color: "warning",
+              onClick: () => applyDeletion(pendingDeletion, "selected"),
+            },
+          ]}
+          onClose={() => setPendingDeletion(null)}
+        >
+          <div className="max-h-52 overflow-y-auto rounded-lg border border-border p-3 text-sm">
+            <p className="mb-2 text-muted-foreground">
+              {t("modManager.deleteList")}
+            </p>
+            <ul className="list-inside list-disc space-y-1">
+              {cascadeDeletionPlan.remove.map((item) => (
+                <li key={entryKey(item.provider, item.id)}>{item.title}</li>
+              ))}
+            </ul>
+          </div>
+        </Confirmation>
       )}
 
       {isClearTrashOpen && (
@@ -3311,7 +3427,9 @@ function ScopeButton({
           {active && (
             <span
               className={
-                compact ? "hidden whitespace-nowrap @5xl:inline" : "whitespace-nowrap"
+                compact
+                  ? "hidden whitespace-nowrap @5xl:inline"
+                  : "whitespace-nowrap"
               }
             >
               {label}

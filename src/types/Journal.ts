@@ -159,4 +159,5 @@ export interface LaunchStalledPayload {
   afterMs: number;
   alive: boolean;
   outLines: number;
+  hint?: "auth";
 }

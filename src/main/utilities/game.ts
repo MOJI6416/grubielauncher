@@ -11,7 +11,7 @@ import { listTcpConnections } from "./tcpConnections";
 import { rpc } from "../rpc";
 import { parseMinecraftServerConnectionLine } from "./gameConnection";
 import { journal, type JournalSpan } from "../journal/journal";
-import { LaunchWatch } from "../journal/launchWatch";
+import { LaunchWatch, launchStallHint } from "../journal/launchWatch";
 import {
   classifyConsoleStream,
   createLineReader,
@@ -504,6 +504,7 @@ export function runGame(
         afterMs: info.afterMs,
         alive: info.alive,
         outLines: info.outLines + info.errLines,
+        hint: launchStallHint(info),
       });
     },
   });

@@ -28,6 +28,10 @@ import {
 import { app, shell } from "electron";
 import { runGame, runJar } from "../utilities/game";
 import { getAuthlibCached } from "../utilities/authlib";
+import {
+  AUTHLIB_PREFETCHED_PROPERTY,
+  resolveAuthlibServer,
+} from "../utilities/authlibServer";
 import { getDataRoot } from "../utilities/dataRoot";
 import { AuthlibEnsureResult } from "@/types/IAuthlib";
 import {
@@ -1374,11 +1378,16 @@ export class Version {
       account.type != "plain" &&
       authlib
     ) {
+      const authServer = await resolveAuthlibServer(account.type);
       jvm.push(httpAgent);
+      if (authServer)
+        jvm.push(`${AUTHLIB_PREFETCHED_PROPERTY}=${authServer.prefetched}`);
       jvm.push(
         getJavaAgent(
           account.type,
           path.join(launcherPath, "minecraft", "libraries", authlib.path),
+          false,
+          authServer?.url,
         ),
       );
     }

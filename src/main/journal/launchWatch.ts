@@ -9,6 +9,12 @@ export interface LaunchStallInfo {
   tail: string[];
 }
 
+export function launchStallHint(info: LaunchStallInfo): "auth" | undefined {
+  if (info.outLines > 0) return undefined;
+  const last = info.tail[info.tail.length - 1] ?? "";
+  return last.startsWith("[authlib-injector]") ? "auth" : undefined;
+}
+
 export interface LaunchWatchOptions {
   span: JournalSpan;
   isAlive: () => boolean;

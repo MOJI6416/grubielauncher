@@ -34,6 +34,7 @@ import axios from "axios";
 import fs from "fs-extra";
 import path from "path";
 import { reportFailure } from "../utilities/failureBus";
+import { apiBaseOf } from "../utilities/apiHost";
 import { isTransientNetworkFailure } from "@/shared/errors";
 import { toStorageUploadUrl } from "../utilities/mirrors";
 import {
@@ -946,6 +947,22 @@ export class Backend extends BaseService {
         `${this.baseUrl}/libs/authlib`,
       );
       return response.data;
+    } catch {
+      return null;
+    }
+  }
+
+  async getYggdrasilMetadata(
+    timeout: number,
+  ): Promise<{ baseUrl: string; metadata: unknown } | null> {
+    try {
+      const response = await this.api.get(`${this.baseUrl}/yggdrasil`, {
+        timeout,
+      });
+      return {
+        baseUrl: apiBaseOf(String(response.config?.url || "")) ?? this.baseUrl,
+        metadata: response.data,
+      };
     } catch {
       return null;
     }

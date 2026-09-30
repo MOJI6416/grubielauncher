@@ -5,6 +5,7 @@ const SECRET_FLAGS = new Set(["--accessToken", "--session"]);
 const CLASSPATH_FLAGS = new Set(["-cp", "-classpath", "--class-path"]);
 const MODULE_PATH_FLAGS = new Set(["-p", "--module-path"]);
 const JAVA_AGENT_PREFIX = "-javaagent:";
+const AUTHLIB_PREFETCHED_PREFIX = "-Dauthlibinjector.yggdrasil.prefetched=";
 const MAX_LISTED_MISSING = 20;
 
 export interface MaskedArguments {
@@ -55,6 +56,11 @@ export function maskLaunchArguments(
     if (hasValue && SECRET_FLAGS.has(arg)) {
       masked.push(arg, "<secret>");
       index += 1;
+      continue;
+    }
+
+    if (arg.startsWith(AUTHLIB_PREFETCHED_PREFIX)) {
+      masked.push(`${AUTHLIB_PREFETCHED_PREFIX}<metadata>`);
       continue;
     }
 

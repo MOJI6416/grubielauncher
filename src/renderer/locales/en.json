@@ -596,7 +596,15 @@
     "dependencies": "Dependencies",
     "added": "Mod added",
     "deleted": "Mod deleted",
-    "requiredBy": "Can't delete — required by",
+    "requiredBy": "Required by",
+    "deleteTitle": "Remove mods",
+    "deleteSelected": "Selected: {{names}}",
+    "deleteDependencyWarning": "Other mods depend on your selection. Remove the whole chain or just the selected mods. Keeping a mod without a required dependency may prevent the game from starting.",
+    "deleteSaveHint": "Apply your changes with Save. Removed files can be restored from the trash.",
+    "deleteOnlySelected": "Only selected mods",
+    "deleteWithDependents": "Remove the whole chain ({{count}})",
+    "deleteWithDependencies": "With unused dependencies ({{count}})",
+    "deleteList": "Removing the chain will remove:",
     "alsoRemoves": "Also removes unused dependencies",
     "updated": "Mod updated",
     "dependencyTypes": [
@@ -2015,8 +2023,8 @@
       "backend": "Grubie services are temporarily unavailable."
     },
     "updateFailed": "Launcher update failed — you are on an old version",
-    "updateLoopTitle": "The update went to another copy of the launcher",
-    "updateLoopHint": "Version {{version}} is installed, but you are starting a different copy: {{path}}. Open the launcher from the desktop shortcut or reinstall it. Auto-update is paused for this copy so it doesn't loop.",
+    "updateLoopTitle": "An older version started after the update",
+    "updateLoopHint": "After attempting to update to {{version}}, this file still starts the older version: {{path}}. Open the installed launcher from its shortcut or reinstall it. Auto-update is temporarily paused to avoid repeated installation.",
     "startupNoVersion": "No instance selected to launch",
     "startupNoVersionHint": "Pick an instance in the list on the left or install a new one.",
     "startupNoAccount": "No active account",
@@ -4815,6 +4823,7 @@
     "title": "{{version}} is taking too long to start",
     "silent": "The game process has not written anything for a long time. Send a report — it shows where the launch stopped.",
     "quiet": "The game stopped writing to the log. Send a report — it shows where the launch stopped.",
+    "auth": "The game stopped at sign-in, before Minecraft started. This is usually caused by a VPN, proxy, DPI-bypass tool (Zapret, GoodbyeDPI) or antivirus: turn them off while playing or add grubielauncher.com and javaw.exe to their exclusions. If that doesn't help, send a report.",
     "report": "Send report"
   }
 }

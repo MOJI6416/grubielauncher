@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs-extra";
+import { writeJsonAtomic } from "./atomicJson";
 
 export interface UpdateAttempt {
   target: string;
@@ -39,7 +40,8 @@ function isAttempt(value: unknown): value is UpdateAttempt {
     typeof attempt?.target === "string" &&
     typeof attempt.from === "string" &&
     typeof attempt.exe === "string" &&
-    typeof attempt.at === "number"
+    typeof attempt.at === "number" &&
+    Number.isFinite(attempt.at)
   );
 }
 
@@ -49,6 +51,7 @@ export function isUpdateLoop(
   now: number,
 ): boolean {
   if (!attempt) return false;
+  if (!Number.isFinite(attempt.at) || now < attempt.at) return false;
   if (now - attempt.at > UPDATE_LOOP_WINDOW_MS) return false;
   if (attempt.from !== current.version) return false;
   return isVersionBelow(current.version, attempt.target);
@@ -69,7 +72,7 @@ export async function writeUpdateAttempt(
   dir: string,
   attempt: UpdateAttempt,
 ): Promise<void> {
-  await fs.outputJSON(attemptPath(dir), attempt).catch(() => {});
+  await writeJsonAtomic(attemptPath(dir), attempt).catch(() => {});
 }
 
 export async function clearUpdateAttempt(dir: string): Promise<void> {

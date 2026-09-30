@@ -4,9 +4,11 @@ import fs from "fs-extra";
 import { app } from "electron";
 
 export const HIDDEN_START_FLAG = "--hidden";
+export const WINDOWS_LOGIN_ITEM_NAME = "com.grubielauncher";
 
 const AUTOSTART_FILE = "grubie-launcher.desktop";
 const HIDDEN_RELAUNCH_FILE = "start-hidden.flag";
+export const HIDDEN_RELAUNCH_TTL_MS = 5 * 60 * 1000;
 
 export interface LaunchAtLoginState {
   supported: boolean;
@@ -69,6 +71,9 @@ export async function setLaunchAtLogin(
   }
 
   app.setLoginItemSettings({
+    ...(process.platform === "win32"
+      ? { name: WINDOWS_LOGIN_ITEM_NAME, path: process.execPath }
+      : {}),
     openAtLogin: enabled,
     openAsHidden: enabled,
     args: [HIDDEN_START_FLAG],
@@ -86,11 +91,22 @@ export function markHiddenRelaunch(): void {
   } catch {}
 }
 
+export function clearHiddenRelaunch(): void {
+  try {
+    fs.removeSync(hiddenRelaunchPath());
+  } catch {}
+}
+
 export function consumeHiddenStart(argv: string[]): boolean {
   let relaunch = false;
   try {
-    relaunch = fs.pathExistsSync(hiddenRelaunchPath());
-    if (relaunch) fs.removeSync(hiddenRelaunchPath());
+    if (fs.pathExistsSync(hiddenRelaunchPath())) {
+      const at = Number(fs.readFileSync(hiddenRelaunchPath(), "utf8"));
+      const age = Date.now() - at;
+      relaunch =
+        Number.isFinite(at) && age >= 0 && age <= HIDDEN_RELAUNCH_TTL_MS;
+      clearHiddenRelaunch();
+    }
   } catch {
     relaunch = false;
   }

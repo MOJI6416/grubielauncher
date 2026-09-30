@@ -122,4 +122,74 @@ export function installUiErrorCapture(): void {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") send();
   });
+
+  document.addEventListener(
+    "click",
+    (event) => {
+      const label = describeClickTarget(event.target);
+      if (label) uiJournal.info("click", label);
+    },
+    { capture: true, passive: true },
+  );
+
+  watchBlankWindow();
+}
+
+const CLICKABLE =
+  'button, a, [role="button"], [role="tab"], [role="menuitem"], [role="option"], [role="checkbox"], [role="switch"], input, select, summary, label';
+const MAX_LABEL_CHARS = 80;
+
+export function describeClickTarget(target: EventTarget | null): string | null {
+  if (!(target instanceof Element)) return null;
+
+  const element = target.closest(CLICKABLE);
+  if (!element) return null;
+
+  if (element instanceof HTMLInputElement && element.type !== "checkbox" && element.type !== "radio") {
+    return `${element.type || "text"} field${element.name ? ` ${element.name}` : ""}`;
+  }
+
+  const text =
+    element.getAttribute("aria-label") ||
+    element.getAttribute("title") ||
+    (element as HTMLElement).innerText ||
+    element.textContent ||
+    "";
+  const label = text.replace(/\s+/g, " ").trim().slice(0, MAX_LABEL_CHARS);
+  const role = element.getAttribute("role") || element.tagName.toLowerCase();
+
+  return label ? `${role}: ${label}` : role;
+}
+
+const BLANK_CHECK_MS = 5000;
+
+export function isWindowBlank(root: Element | null, body: HTMLElement | null): boolean {
+  if (!root || !body) return true;
+  if (root.childElementCount === 0) return true;
+  return (root.textContent ?? "").trim().length === 0;
+}
+
+function watchBlankWindow(): void {
+  let reported = false;
+
+  window.setInterval(() => {
+    if (document.visibilityState !== "visible") return;
+
+    const root = document.getElementById("root");
+    const blank = isWindowBlank(root, document.body);
+
+    if (blank && !reported) {
+      reported = true;
+      uiJournal.error("ui", "window content is blank", {
+        rootChildren: root?.childElementCount ?? null,
+        bodyChildren: document.body?.childElementCount ?? null,
+        size: `${window.innerWidth}x${window.innerHeight}`,
+        url: location.pathname,
+      });
+      send();
+    } else if (!blank && reported) {
+      reported = false;
+      uiJournal.info("ui", "window content is back");
+    }
+  }, BLANK_CHECK_MS);
 }

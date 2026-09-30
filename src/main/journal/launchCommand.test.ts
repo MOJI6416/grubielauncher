@@ -40,6 +40,18 @@ describe("launch command description", () => {
     expect(masked.classpath).toEqual(["a.jar", "b.jar"]);
   });
 
+  it("collapses prefetched authlib-injector metadata", () => {
+    expect(
+      maskLaunchArguments([
+        "-Dauthlibinjector.yggdrasil.prefetched=eyJtZXRhIjp7fX0=",
+        "-Xmx2G",
+      ]).args,
+    ).toEqual([
+      "-Dauthlibinjector.yggdrasil.prefetched=<metadata>",
+      "-Xmx2G",
+    ]);
+  });
+
   it("reads java agent paths with and without quotes", () => {
     expect(
       javaAgentPaths([

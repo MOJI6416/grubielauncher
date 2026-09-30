@@ -161,75 +161,146 @@ export function findTwin(
 
 export function planDeletion(
   mods: ILocalProject[],
-  target: ILocalProject,
+  target: ILocalProject | ILocalProject[],
+  options: { includeDependents?: boolean; removeDependencies?: boolean } = {},
 ): DeletionPlan {
-  const keyOf = (mod: ILocalProject) => `${mod.provider}:${mod.id}`;
-  const norm = (value: string) => normalizeProjectTitle(value);
-
-  if (findTwin(mods, target)) return { remove: [target], blockers: [] };
-
-  const byTitle = new Map<string, ILocalProject>();
-  const byProjectId = new Map<string, ILocalProject>();
+  const keyOf = (mod: ILocalProject) =>
+    `${mod.projectType}:${mod.provider}:${mod.id}`;
+  const byKey = new Map(mods.map((mod) => [keyOf(mod), mod]));
+  const requested = (Array.isArray(target) ? target : [target])
+    .map((mod) => byKey.get(keyOf(mod)))
+    .filter((mod): mod is ILocalProject => Boolean(mod));
+  if (requested.length === 0) return { remove: [], blockers: [] };
+  const explicit = new Set(requested.map(keyOf));
+  const dependencies = new Map<string, Set<string>>();
+  const byTitle = new Map<string, ILocalProject[]>();
+  const byFilename = new Map<string, Set<string>>();
   for (const mod of mods) {
-    const key = norm(mod.title);
-    if (key && !byTitle.has(key)) byTitle.set(key, mod);
-
-    const id = String(mod.id ?? "");
-    if (id && !byProjectId.has(id)) byProjectId.set(id, mod);
+    for (const filename of fileNamesOf(mod)) {
+      const key = `${mod.projectType}:${filename}`;
+      const matches = byFilename.get(key) ?? new Set<string>();
+      matches.add(keyOf(mod));
+      byFilename.set(key, matches);
+    }
+    const title = normalizeProjectTitle(mod.title);
+    if (!title) continue;
+    const key = `${mod.projectType}:${title}`;
+    const matches = byTitle.get(key) ?? [];
+    matches.push(mod);
+    byTitle.set(key, matches);
   }
 
-  const resolveDependency = (dep: ILocalDependency) =>
-    (dep.projectId ? byProjectId.get(String(dep.projectId)) : undefined) ??
-    byTitle.get(norm(dep.title));
+  const resolveDependency = (owner: ILocalProject, dep: ILocalDependency) => {
+    if (dep.projectId) {
+      const exact = byKey.get(
+        `${owner.projectType}:${owner.provider}:${dep.projectId}`,
+      );
+      if (exact) return exact;
+    }
+    const title = normalizeProjectTitle(dep.title);
+    if (!title) return undefined;
+    const matches = (byTitle.get(`${owner.projectType}:${title}`) ?? []).filter(
+      (mod) =>
+        !dep.projectId ||
+        mod.provider !== owner.provider ||
+        mod.id === dep.projectId,
+    );
+    if (
+      matches.length > 1 &&
+      new Set(matches.map((mod) => mod.provider)).size === matches.length
+    )
+      return matches[0];
+    return matches.length === 1 ? matches[0] : undefined;
+  };
 
-  const requiredBy = new Map<string, ILocalProject[]>();
+  const requiredBy = new Map<string, Set<string>>();
   for (const mod of mods) {
+    const edges = new Set<string>();
     for (const dep of mod.version?.dependencies ?? []) {
       if (dep.relationType !== DependencyType.REQUIRED) continue;
-      const target = resolveDependency(dep);
-      const key = target ? keyOf(target) : norm(dep.title);
-      if (!key) continue;
-      const requirers = requiredBy.get(key) ?? [];
-      requirers.push(mod);
-      requiredBy.set(key, requirers);
+      const resolved = resolveDependency(mod, dep);
+      if (resolved) {
+        const key = keyOf(resolved);
+        edges.add(key);
+        const users = requiredBy.get(key) ?? new Set<string>();
+        users.add(keyOf(mod));
+        requiredBy.set(key, users);
+      }
     }
+    dependencies.set(keyOf(mod), edges);
   }
 
-  const removeKeys = new Set<string>([keyOf(target)]);
-  const remove: ILocalProject[] = [target];
+  const replacements = new Map<string, Set<string>>();
+  for (const mod of mods) {
+    const keys = new Set(
+      (
+        byTitle.get(`${mod.projectType}:${normalizeProjectTitle(mod.title)}`) ??
+        []
+      )
+        .filter((other) => other.provider !== mod.provider)
+        .map(keyOf),
+    );
+    for (const filename of fileNamesOf(mod)) {
+      for (const key of byFilename.get(`${mod.projectType}:${filename}`) ?? [])
+        keys.add(key);
+    }
+    keys.delete(keyOf(mod));
+    replacements.set(keyOf(mod), keys);
+  }
+  const hasReplacement = (key: string, removed: Set<string>) =>
+    [...(replacements.get(key) ?? [])].some((other) => !removed.has(other));
+  const losesDependency = (mod: ILocalProject, removed: Set<string>) =>
+    [...(dependencies.get(keyOf(mod)) ?? [])].some(
+      (key) => removed.has(key) && !hasReplacement(key, removed),
+    );
 
+  // Add the whole reverse chain before looking for orphaned libraries.
+  // Planning all selected targets together makes bulk removal order independent.
   let changed = true;
-  while (changed) {
+  while (options.includeDependents && changed) {
     changed = false;
-    for (const mod of [...remove]) {
-      for (const dep of mod.version?.dependencies ?? []) {
-        if (dep.relationType !== DependencyType.REQUIRED) continue;
-
-        const depMod = resolveDependency(dep);
-        if (!depMod || removeKeys.has(keyOf(depMod))) continue;
-
-        const requirers = requiredBy.get(keyOf(depMod)) ?? [];
-        const neededOutside = requirers.some((r) => !removeKeys.has(keyOf(r)));
-        if (neededOutside) continue;
-
-        removeKeys.add(keyOf(depMod));
-        remove.push(depMod);
+    for (const mod of mods) {
+      if (!explicit.has(keyOf(mod)) && losesDependency(mod, explicit)) {
+        explicit.add(keyOf(mod));
         changed = true;
       }
     }
   }
 
-  const blockerKeys = new Set<string>();
-  const blockers: ILocalProject[] = [];
-  for (const mod of remove) {
-    const requirers = requiredBy.get(keyOf(mod)) ?? [];
-    for (const requirer of requirers) {
-      if (removeKeys.has(keyOf(requirer))) continue;
-      if (blockerKeys.has(keyOf(requirer))) continue;
-      blockerKeys.add(keyOf(requirer));
-      blockers.push(requirer);
+  const removeKeys = new Set(explicit);
+  if (options.removeDependencies !== false) {
+    // Reach the entire dependency component, then retain anything needed outside
+    // it. This also handles cycles with three or more nodes and shared cycles.
+    const queue = [...explicit];
+    for (let index = 0; index < queue.length; index++) {
+      const key = queue[index];
+      if (hasReplacement(key, explicit)) continue;
+      for (const dependency of dependencies.get(key) ?? []) {
+        if (removeKeys.has(dependency)) continue;
+        removeKeys.add(dependency);
+        queue.push(dependency);
+      }
+    }
+    changed = true;
+    while (changed) {
+      changed = false;
+      for (const key of removeKeys) {
+        if (explicit.has(key)) continue;
+        const neededOutside = [...(requiredBy.get(key) ?? [])].some(
+          (user) => !removeKeys.has(user),
+        );
+        if (neededOutside) {
+          removeKeys.delete(key);
+          changed = true;
+        }
+      }
     }
   }
 
-  return { remove, blockers };
+  return {
+    remove: mods.filter((mod) => removeKeys.has(keyOf(mod))),
+    blockers: mods.filter(
+      (mod) => !removeKeys.has(keyOf(mod)) && losesDependency(mod, removeKeys),
+    ),
+  };
 }
