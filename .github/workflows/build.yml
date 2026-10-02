@@ -18,9 +18,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            build_command: npm run build:linux
+            build_command: npm run build:linux -- --publish never
           - os: windows-2022
-            build_command: npm run build:win
+            build_command: npm run build:win -- --publish never
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -55,8 +55,6 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Build Electron + Vite app
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: ${{ matrix.build_command }}
 
       - name: Upload build artifacts
