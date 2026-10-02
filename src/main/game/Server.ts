@@ -39,6 +39,7 @@ import { assertTrustedServerCoreUrl } from "../utilities/trustedHosts";
 import { mcVersionToJavaMajor } from "@/shared/javaVersions";
 import { createLineReader } from "../utilities/consoleLog";
 import { getDataRoot } from "../utilities/dataRoot";
+import { childProcessEnv } from "../utilities/childEnv";
 import {
   ServerRunResult,
   ServerRunState,
@@ -591,6 +592,7 @@ export async function startServer(
   try {
     child = spawn(path.resolve(javaCommand), args, {
       cwd: key,
+      env: childProcessEnv(),
       windowsHide: true,
       stdio: ["pipe", "pipe", "pipe"],
     });

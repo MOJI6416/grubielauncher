@@ -122,6 +122,16 @@ export function InstallView({
   const fileName = isQueuedBehind
     ? undefined
     : stripGroupPrefix(downloader?.currentFileName);
+  const sub = isQueuedBehind ? undefined : progress?.subProgress;
+  const subDetails = sub?.detailsKey
+    ? t(sub.detailsKey, {
+        defaultValue: sub.details || "",
+        ...(sub.detailsParams || {}),
+      })
+    : sub?.details;
+  const showInstaller = !!sub && !fileName;
+  const hasStats =
+    !!stats || (!isQueuedBehind && !isPaused && !!speed && speed > 0);
   const groupLabel =
     !isQueuedBehind && downloader?.currentGroup
       ? t(`downloadProgress.groups.${downloader.currentGroup}`, {
@@ -202,37 +212,69 @@ export function InstallView({
                 {groupLabel}
               </span>
             )}
-            <Hint content={fileName || details} variant="text" truncatedOnly>
+            <Hint
+              content={fileName || subDetails || details}
+              variant="text"
+              truncatedOnly
+            >
               <span className="min-w-0 flex-1 truncate font-mono text-[0.7rem] text-faint">
-                {fileName || details || ""}
+                {fileName || subDetails || details || ""}
               </span>
             </Hint>
           </p>
 
-          <div className="grid grid-cols-3 gap-2">
-            <Stat
-              label={t("taskCenter.files")}
-              value={stats ? `${stats.filesDone}/${stats.filesTotal}` : "—"}
-            />
-            <Stat
-              label={t("taskCenter.size")}
-              value={
-                !stats
-                  ? "—"
-                  : stats.bytesTotal > 0
-                    ? format.byteRange(stats.bytesDone, stats.bytesTotal)
-                    : format.bytes(stats.bytesDone)
-              }
-            />
-            <Stat
-              label={t("taskCenter.speed")}
-              value={
-                !isQueuedBehind && !isPaused && speed && speed > 0
-                  ? format.speed(speed)
-                  : "—"
-              }
-            />
-          </div>
+          {showInstaller && sub ? (
+            <div className="grid gap-1.5 rounded-lg bg-surface-2 px-2.5 py-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                  {t(
+                    sub.titleKey ||
+                      `installationProgress.subProgress.${sub.kind}.title`,
+                  )}
+                </span>
+                {!sub.isIndeterminate && (
+                  <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
+                    {clampPercent(sub.progressPercent)}%
+                  </span>
+                )}
+              </div>
+              <Progress
+                value={
+                  sub.isIndeterminate ? 100 : clampPercent(sub.progressPercent)
+                }
+                max={100}
+                className={cn(
+                  "h-1",
+                  sub.isIndeterminate && !isPausedView && "progress-sweep",
+                )}
+              />
+            </div>
+          ) : hasStats ? (
+            <div className="grid grid-cols-3 gap-2">
+              <Stat
+                label={t("taskCenter.files")}
+                value={stats ? `${stats.filesDone}/${stats.filesTotal}` : "—"}
+              />
+              <Stat
+                label={t("taskCenter.size")}
+                value={
+                  !stats
+                    ? "—"
+                    : stats.bytesTotal > 0
+                      ? format.byteRange(stats.bytesDone, stats.bytesTotal)
+                      : format.bytes(stats.bytesDone)
+                }
+              />
+              <Stat
+                label={t("taskCenter.speed")}
+                value={
+                  !isQueuedBehind && !isPaused && speed && speed > 0
+                    ? format.speed(speed)
+                    : "—"
+                }
+              />
+            </div>
+          ) : null}
         </div>
 
         <ol

@@ -5,6 +5,8 @@ const handlers = new Map<string, InvokeHandler>();
 
 let stored = "";
 let writable = true;
+let storedImage: unknown = null;
+let imageEmpty = false;
 const MAX_STORE = 100_000;
 
 vi.mock("electron", () => ({
@@ -20,11 +22,17 @@ vi.mock("electron", () => ({
       stored = text.slice(0, MAX_STORE);
     },
     readText: () => stored,
+    writeImage: (image: unknown) => {
+      storedImage = image;
+    },
   },
   dialog: { showOpenDialog: vi.fn() },
   shell: {},
   Notification: class {},
-  nativeImage: { createFromBuffer: vi.fn() },
+  nativeImage: {
+    createFromBuffer: vi.fn(),
+    createFromPath: (file: string) => ({ file, isEmpty: () => imageEmpty }),
+  },
   ipcMain: {
     removeHandler: (channel: string) => handlers.delete(channel),
     removeAllListeners: vi.fn(),
@@ -52,6 +60,7 @@ vi.mock("../utilities/shortcut", () => ({
   getImageBase64: vi.fn(),
 }));
 
+import path from "path";
 import { readIpcFailureEnvelope } from "@/shared/ipcFailureEnvelope";
 import { registerOtherIpc } from "./otherIpc";
 
@@ -99,5 +108,35 @@ describe("clipboard:writeText", () => {
 
     await expect(invoke("clipboard:writeText", text)).resolves.toBe(false);
     expect(stored).toBe("");
+  });
+});
+
+describe("clipboard:writeImage", () => {
+  const shot = path.resolve(
+    "/fake/.grubielauncher/minecraft/versions/A/screenshots/2026-10-02_03.21.15.png",
+  );
+
+  beforeEach(() => {
+    handlers.clear();
+    storedImage = null;
+    imageEmpty = false;
+    registerOtherIpc();
+  });
+
+  it("copies a screenshot from the launcher folder", async () => {
+    await expect(invoke("clipboard:writeImage", shot)).resolves.toBe(true);
+    expect(storedImage).toMatchObject({ file: shot });
+  });
+
+  it("refuses files outside the launcher folder, other types and broken images", async () => {
+    await expect(
+      invoke("clipboard:writeImage", path.resolve("/etc/secret.png")),
+    ).resolves.toBe(false);
+    await expect(
+      invoke("clipboard:writeImage", shot.replace(".png", ".txt")),
+    ).resolves.toBe(false);
+    imageEmpty = true;
+    await expect(invoke("clipboard:writeImage", shot)).resolves.toBe(false);
+    expect(storedImage).toBeNull();
   });
 });

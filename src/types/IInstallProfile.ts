@@ -1,6 +1,7 @@
 export interface IInstallProfile {
   install: {
     filePath: string
+    path?: string
   }
   versionInfo: {
     minecraftArguments: string
@@ -10,6 +11,7 @@ export interface IInstallProfile {
       url?: string
       clientreq?: boolean
       checksums?: string[]
+      natives?: Record<string, string>
     }[]
   }
 }

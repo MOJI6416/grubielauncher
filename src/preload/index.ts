@@ -329,6 +329,7 @@ export interface IElectronAPI {
   };
   clipboard: {
     writeText: (text: string) => Promise<boolean>;
+    writeImage: (path: string) => Promise<boolean>;
   };
   edit: {
     run: (command: "cut" | "copy" | "paste" | "selectAll") => Promise<void>;
@@ -337,6 +338,7 @@ export interface IElectronAPI {
     openExternal: (url: string) => Promise<void>;
     openPath: (path: string) => Promise<void>;
     trashItem: (path: string) => Promise<boolean>;
+    showItemInFolder: (path: string) => Promise<void>;
   };
   file: {
     archiveFiles: (
@@ -1354,6 +1356,7 @@ export const api: IElectronAPI = {
   clipboard: {
     writeText: (text: string) =>
       invoke("clipboard:writeText", text),
+    writeImage: (path: string) => invoke("clipboard:writeImage", path),
   },
   edit: {
     run: (command: "cut" | "copy" | "paste" | "selectAll") =>
@@ -1364,6 +1367,8 @@ export const api: IElectronAPI = {
       invoke("shell:openExternal", url),
     openPath: (path: string) => invoke("shell:openPath", path),
     trashItem: (path: string) => invoke("shell:trashItem", path),
+    showItemInFolder: (path: string) =>
+      invoke("shell:showItemInFolder", path),
   },
   file: {
     archiveFiles: (

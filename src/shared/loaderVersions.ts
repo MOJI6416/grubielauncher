@@ -152,9 +152,11 @@ export function createLoaderVersionFromManifest(
   }
 
   if (loader === "neoforge") {
+    const artifact = minecraftVersion === "1.20.1" ? "forge" : "neoforge";
+    const file = artifact === "forge" ? `${minecraftVersion}-${id}` : id;
     return {
       id,
-      url: `https://maven.neoforged.net/releases/net/neoforged/neoforge/${id}/neoforge-${id}-installer.jar`,
+      url: `https://maven.neoforged.net/releases/net/neoforged/${artifact}/${file}/${artifact}-${file}-installer.jar`,
     };
   }
 

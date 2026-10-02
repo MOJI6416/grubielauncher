@@ -81,6 +81,15 @@ export async function setLaunchAtLogin(
   return getLaunchAtLogin();
 }
 
+export async function refreshLaunchAtLogin(): Promise<void> {
+  if (process.platform !== "linux" || !isSupported()) return;
+  const executable = linuxExecutable();
+  const current = await fs.readFile(autostartPath(), "utf8").catch(() => null);
+  if (!executable || current === null) return;
+  const entry = linuxAutostartEntry(executable);
+  if (current !== entry) await fs.outputFile(autostartPath(), entry);
+}
+
 function hiddenRelaunchPath(): string {
   return path.join(app.getPath("userData"), HIDDEN_RELAUNCH_FILE);
 }

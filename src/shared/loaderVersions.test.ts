@@ -70,6 +70,19 @@ describe("loader version helpers", () => {
     });
   });
 
+  it("points NeoForge 1.20.1 at the old forge artifact", () => {
+    expect(
+      createLoaderVersionFromManifest("neoforge", "1.20.1", "47.1.106")?.url,
+    ).toBe(
+      "https://maven.neoforged.net/releases/net/neoforged/forge/1.20.1-47.1.106/forge-1.20.1-47.1.106-installer.jar",
+    );
+    expect(
+      createLoaderVersionFromManifest("neoforge", "1.21.1", "21.1.209")?.url,
+    ).toBe(
+      "https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.209/neoforge-21.1.209-installer.jar",
+    );
+  });
+
   it("does not synthesize unsafe loader ids", () => {
     expect(
       createLoaderVersionFromManifest("forge", "1.20.1", "../47.2.20"),

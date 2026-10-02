@@ -1923,7 +1923,16 @@
     "screenshots": {
       "title": "Screenshots",
       "empty": "No screenshots yet",
-      "emptyHint": "Press F2 in game — the shots will show up here."
+      "emptyHint": "Press F2 in game — the shots will show up here.",
+      "copy": "Copy image",
+      "showInFolder": "Show in folder",
+      "openExternal": "Open in system viewer",
+      "useAsCover": "Make it the instance cover",
+      "delete": "Delete",
+      "deleteTitle": "Delete this screenshot?",
+      "deleteBody": "The file goes to the Recycle Bin, you can restore it from there.",
+      "deleted": "Screenshot deleted",
+      "deleteFailed": "Could not delete the screenshot"
     },
     "tabsLabel": "Instance sections",
     "offlineHint": "Without a connection the integrity check, publishing and sync are unavailable.",

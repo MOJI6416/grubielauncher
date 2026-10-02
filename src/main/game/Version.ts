@@ -61,12 +61,33 @@ import { mcVersionToJavaMajor } from "@/shared/javaVersions";
 import { filterRunArguments } from "@/shared/runArguments";
 import {
   assertTrustedDownloadUrl,
+  isTrustedDownloadUrl,
   normalizeLoaderLibraryUrl,
 } from "../utilities/trustedHosts";
 import { resolveOfflineUuid } from "../utilities/offlineUuidMigration";
 import { migrateInlineModIcons } from "../utilities/modManager";
 import { journal, type JournalSpan } from "../journal/journal";
 import { describeLaunchCommand } from "../journal/launchCommand";
+import { mergeLoaderLibraries } from "./loaderLibraries";
+import {
+  collectInstallerLibraries,
+  collectProcessorArtifacts,
+  isModernInstallProfile,
+  isSameFile,
+  linkOrCopy,
+  safeVersionId,
+  versionLibraryPaths,
+} from "./loaderInstallerSeed";
+import {
+  legacyAssetsDir,
+  legacyFmlDownloads,
+  legacyForgeJvmArguments,
+  legacySessionArgument,
+  materializeLegacyAssets,
+  prepareLegacyHome,
+  usesLegacyWorkDir,
+  usesUppercaseLangCode,
+} from "./legacyGame";
 
 type VersionInstallRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
@@ -643,25 +664,51 @@ export class Version {
           );
 
           const launchBasePath = await this.resolveLaunchVersionPath();
+          const seed = await this.seedLoaderInstaller(
+            installerPath,
+            tempPath,
+            downloadSignal,
+            (detailsKey) =>
+              this.sendInstallProgress(
+                "installer",
+                38,
+                true,
+                undefined,
+                undefined,
+                undefined,
+                createLoaderInstallerSubProgress(
+                  38,
+                  detailsKey,
+                  undefined,
+                  true,
+                ),
+              ),
+          );
+          await this.installCheckpoint();
 
           try {
-            const installResult = await runJar(
-              this.javaPath,
-              [
-                "-jar",
-                path.join(
-                  launchBasePath,
-                  `${this.version.loader.name}.jar`,
-                ),
-                "--installClient",
-                ".",
-              ],
-              path.join(launchBasePath, "temp"),
-              {
-                signal: downloadSignal,
-                onOutput: ({ message }) => handleInstallerOutput(message),
-              },
-            );
+            if (!seed.modern) {
+              throw new Error("installer has no processors, using its profile");
+            }
+            const installResult = seed.cached
+              ? "done"
+              : await runJar(
+                  this.javaPath,
+                  [
+                    "-jar",
+                    path.join(
+                      launchBasePath,
+                      `${this.version.loader.name}.jar`,
+                    ),
+                    "--installClient",
+                    ".",
+                  ],
+                  path.join(launchBasePath, "temp"),
+                  {
+                    signal: downloadSignal,
+                    onOutput: ({ message }) => handleInstallerOutput(message),
+                  },
+                );
             forgeInstalled = installResult === "done" || installResult === 0;
           } catch (error) {
             this.sendInstallProgress(
@@ -701,9 +748,8 @@ export class Version {
           await this.installCheckpoint();
 
           if (!forgeInstalled || !installedForgeManifestPath) {
-            const { readJSONFromArchive } = await import(
-              "../utilities/archiver"
-            );
+            const { openArchive, readEntryData, readJSONFromArchive } =
+              await import("../utilities/archiver");
             const installProfile = await readJSONFromArchive<IInstallProfile>(
               installerPath,
               "install_profile.json",
@@ -718,10 +764,38 @@ export class Version {
             this.manifest.minecraftArguments =
               installProfile.versionInfo.minecraftArguments;
 
+            const librariesPath = path.join(this.minecraftPath, "libraries");
+            const embeddedName = installProfile.install?.path;
+            const embeddedEntry = installProfile.install?.filePath
+              ? (await openArchive(installerPath)).getEntry(
+                  installProfile.install.filePath,
+                )
+              : null;
+            const embeddedPath = embeddedName
+              ? convertMavenCoordinateToJarPath(embeddedName)
+              : null;
+            const embeddedTarget = embeddedPath
+              ? path.resolve(librariesPath, embeddedPath)
+              : null;
+            const embedded =
+              embeddedEntry &&
+              embeddedTarget?.startsWith(path.resolve(librariesPath) + path.sep)
+                ? embeddedPath
+                : null;
+            if (embedded && embeddedEntry && embeddedTarget) {
+              await fs.outputFile(
+                embeddedTarget,
+                await readEntryData(embeddedEntry),
+              );
+            }
+
+            const loaderLibraries: IVersionManifest["libraries"] = [];
             for (const lib of installProfile.versionInfo.libraries) {
+              if (lib.natives) continue;
               if (!lib.url) lib.url = "https://libraries.minecraft.net/";
 
               let path = convertMavenCoordinateToJarPath(lib.name);
+              const isEmbedded = !!embedded && lib.name === embeddedName;
 
               if (path.includes("minecraftforge/forge")) {
                 path = path.replace(".jar", `-universal.jar`);
@@ -737,15 +811,19 @@ export class Version {
                 downloads: {
                   artifact: {
                     url: artifactUrl,
-                    path,
+                    path: isEmbedded && embedded ? embedded : path,
                     size: 0,
-                    sha1: lib.checksums ? lib.checksums[0] : "",
+                    sha1: lib.checksums && !isEmbedded ? lib.checksums[0] : "",
                   },
                 },
               };
 
-              this.manifest.libraries.push(library);
+              loaderLibraries.push(library);
             }
+            this.manifest.libraries = mergeLoaderLibraries(
+              loaderLibraries,
+              this.manifest.libraries,
+            );
           } else {
             const installedClientPath = path.join(
               versionsPath,
@@ -753,11 +831,14 @@ export class Version {
               `${this.version.version.id}.jar`,
             );
 
+            const clientPath = path.join(
+              this.versionPath,
+              `${this.version.version.id}.jar`,
+            );
             if (await fs.pathExists(installedClientPath)) {
-              await fs.copyFile(
-                installedClientPath,
-                path.join(this.versionPath, `${this.version.version.id}.jar`),
-              );
+              if (!(await isSameFile(installedClientPath, clientPath))) {
+                await fs.copyFile(installedClientPath, clientPath);
+              }
               isDownloadClient = false;
             }
 
@@ -775,6 +856,8 @@ export class Version {
                 path.join(this.minecraftPath, "libraries"),
                 {
                   overwrite: true,
+                  filter: async (source, target) =>
+                    !(await isSameFile(source, target)),
                 },
               );
             }
@@ -866,6 +949,13 @@ export class Version {
     const libraries = this.getLibraries(account);
 
     downloadItems.push(...libraries.downloadItems);
+    downloadItems.push(
+      ...legacyFmlDownloads(
+        this.version.loader.name,
+        this.version.version.id,
+        this.versionPath,
+      ),
+    );
 
     const assetsIndex = this.manifest.assetIndex;
     const assetsIndexPath = path.join(
@@ -922,6 +1012,8 @@ export class Version {
       this.javaPath = java.javaPath;
     }
 
+    await this.prepareLegacyAssets(this.versionPath);
+
     const optionsPath = path.join(this.versionPath, "options.txt");
     const isExistsOptions = await fs.pathExists(optionsPath);
     if (!isExistsOptions) {
@@ -930,7 +1022,10 @@ export class Version {
       if (lang) {
         await fs.writeFile(
           optionsPath,
-          `lang:${getFullLangCode(lang)}`,
+          `lang:${getFullLangCode(
+            lang,
+            usesUppercaseLangCode(this.version.version.id),
+          )}`,
           "utf-8",
         );
       }
@@ -1300,6 +1395,36 @@ export class Version {
     await writeJsonAtomic(manifestPath, this.manifest);
   }
 
+  private async prepareLegacyAssets(gameDir: string): Promise<string | null> {
+    const indexId = this.manifest?.assetIndex?.id;
+    if (!indexId) return null;
+
+    const assetsPath = path.join(this.minecraftPath, "assets");
+    const index: IAssetIndex | null = await fs
+      .readJSON(path.join(assetsPath, "indexes", `${indexId}.json`), "utf-8")
+      .catch(() => null);
+    if (!index) return null;
+
+    const target = legacyAssetsDir(index, {
+      minecraftPath: this.minecraftPath,
+      indexId,
+      gameDir,
+    });
+    if (!target) return null;
+
+    await materializeLegacyAssets(
+      index,
+      path.join(assetsPath, "objects"),
+      target,
+    ).catch((error) =>
+      console.warn(
+        `[version] failed to lay out legacy assets in ${target}:`,
+        error,
+      ),
+    );
+    return target;
+  }
+
   private async getAssets() {
     if (!this.manifest) return { downloadItems: [], paths: [] };
 
@@ -1417,7 +1542,15 @@ export class Version {
     }
 
     if (this.manifest.minecraftArguments) {
+      const legacyHome = usesLegacyWorkDir(this.manifest.minecraftArguments)
+        ? await prepareLegacyHome({
+            dataRoot: launcherPath,
+            gameDir: launchVersionPath,
+          }).catch(() => null)
+        : null;
       jvm.push(
+        ...(legacyHome?.jvm ?? []),
+        ...legacyForgeJvmArguments(this.version.loader.name, true),
         ...["-Djava.library.path=${natives_directory}", "-cp", "${classpath}"],
       );
       game.push(...this.manifest.minecraftArguments.split(" "));
@@ -1451,8 +1584,8 @@ export class Version {
     game = game.filter((arg) => arg !== "");
 
     const paths = [
-      path.join(launchVersionPath, `${this.version.version.id}.jar`),
       ...this.getLibraries(account).paths,
+      path.join(launchVersionPath, `${this.version.version.id}.jar`),
     ];
 
     jvm = jvm.map((arg) => {
@@ -1491,6 +1624,11 @@ export class Version {
     }
 
     const activeAuthData = authData;
+    const legacyAssets = this.manifest.minecraftArguments?.includes(
+      "${game_assets}",
+    )
+      ? await this.prepareLegacyAssets(launchVersionPath)
+      : null;
 
     let gameToken: string | null = null;
     if (account.type == "discord" && account.accessToken) {
@@ -1523,7 +1661,19 @@ export class Version {
         .replace(/\${auth_xuid}/g, authData.uuid)
         .replace(/\${user_type}/g, accountType)
         .replace(/\${version_type}/g, this.manifest.type)
-        .replace(/\${user_properties}/g, "{}");
+        .replace(/\${user_properties}/g, "{}")
+        .replace(
+          /\${game_assets}/g,
+          legacyAssets ?? path.join(this.minecraftPath, "assets"),
+        )
+        .replace(
+          /\${auth_session}/g,
+          legacySessionArgument(
+            account.type !== "plain",
+            accessToken,
+            authData.uuid,
+          ),
+        );
     });
 
     if (this.version.runArguments) {
@@ -1738,6 +1888,14 @@ export class Version {
         )),
       });
 
+      const launchVersionPath = await this.resolveLaunchVersionPath();
+      const legacyHome = usesLegacyWorkDir(this.manifest.minecraftArguments)
+        ? await prepareLegacyHome({
+            dataRoot: getDataRoot(),
+            gameDir: launchVersionPath,
+          }).catch(() => null)
+        : null;
+
       runGame(
         command[0],
         command.slice(1),
@@ -1752,8 +1910,9 @@ export class Version {
           accountLabel: account.nickname,
         },
         settings.highPriority,
-        await this.resolveLaunchVersionPath(),
+        launchVersionPath,
         span,
+        legacyHome?.env,
       );
 
       return true;
@@ -1761,6 +1920,110 @@ export class Version {
       span.fail(error);
       throw error;
     }
+  }
+
+  private async seedLoaderInstaller(
+    installerPath: string,
+    tempPath: string,
+    signal: AbortSignal | undefined,
+    onStep: (detailsKey: string) => void,
+  ): Promise<{ modern: boolean; cached: boolean }> {
+    const { readJSONFromArchive } = await import("../utilities/archiver");
+    const profile = await readJSONFromArchive<unknown>(
+      installerPath,
+      "install_profile.json",
+    ).catch(() => null);
+    if (!isModernInstallProfile(profile)) {
+      return { modern: false, cached: false };
+    }
+
+    try {
+      const versionJson = profile.json
+        ? await readJSONFromArchive<{ id?: string; libraries?: [] }>(
+            installerPath,
+            profile.json.replace(/^\//, ""),
+          ).catch(() => null)
+        : null;
+      const librariesPath = path.join(this.minecraftPath, "libraries");
+      const libraries = collectInstallerLibraries(profile, versionJson)
+        .map((library) => ({
+          ...library,
+          url: normalizeLoaderLibraryUrl(library.url),
+        }))
+        .filter((library) => isTrustedDownloadUrl(library.url));
+
+      const mcId = this.version.version.id;
+      const clientPath = path.join(this.versionPath, `${mcId}.jar`);
+      const client = this.manifest?.downloads?.client;
+      const items: DownloadItem[] = libraries.map((library) => ({
+        url: library.url,
+        destination: path.join(librariesPath, library.path),
+        sha1: library.sha1,
+        size: library.size,
+        group: "libraries",
+      }));
+      if (client?.url && isTrustedDownloadUrl(client.url)) {
+        items.push({
+          url: client.url,
+          destination: clientPath,
+          sha1: client.sha1,
+          size: client.size,
+          group: "client",
+        });
+      }
+
+      onStep("installationProgress.installerDetails.downloadingLibraries");
+      await this.downloader.downloadFiles(items, signal);
+      await this.installCheckpoint();
+
+      const tempLibraries = path.join(tempPath, "libraries");
+      const seeded = [
+        ...libraries.map((library) => library.path),
+        ...collectProcessorArtifacts(profile),
+      ];
+      for (const relative of new Set(seeded)) {
+        const source = path.join(librariesPath, relative);
+        if (await fs.pathExists(source)) {
+          await linkOrCopy(source, path.join(tempLibraries, relative));
+        }
+      }
+
+      const tempVersion = path.join(tempPath, "versions", mcId);
+      if (await fs.pathExists(clientPath)) {
+        await linkOrCopy(clientPath, path.join(tempVersion, `${mcId}.jar`));
+      }
+      const manifestPath = path.join(this.versionPath, `${mcId}.json`);
+      if (await fs.pathExists(manifestPath)) {
+        await fs.copy(manifestPath, path.join(tempVersion, `${mcId}.json`));
+      }
+
+      const loaderId = safeVersionId(versionJson?.id);
+      const required = [
+        ...versionLibraryPaths(versionJson),
+        ...collectProcessorArtifacts(profile),
+      ];
+      const present = await Promise.all(
+        required.map((relative) =>
+          fs.pathExists(path.join(librariesPath, relative)),
+        ),
+      );
+      if (loaderId && required.length > 0 && present.every(Boolean)) {
+        await fs.outputJson(
+          path.join(tempPath, "versions", loaderId, `${loaderId}.json`),
+          versionJson,
+          { spaces: 2 },
+        );
+        return { modern: true, cached: true };
+      }
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      console.warn(
+        "[version:install] could not prepare the loader installer, it will download everything itself:",
+        error,
+      );
+    }
+
+    return { modern: true, cached: false };
   }
 
   private async writeLauncherProfile() {

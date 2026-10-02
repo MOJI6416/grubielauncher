@@ -120,11 +120,17 @@ export function removeDuplicatesLibraries(
   });
 }
 
-export function getFullLangCode(lang: {
-  code: string;
-  country: string;
-}): string {
-  return `${lang.code}_${lang.country.toLowerCase()}`;
+export function getFullLangCode(
+  lang: {
+    code: string;
+    country: string;
+  },
+  upperCountry = false,
+): string {
+  const country = upperCountry
+    ? lang.country.toUpperCase()
+    : lang.country.toLowerCase();
+  return `${lang.code}_${country}`;
 }
 
 export function getJavaAgent(

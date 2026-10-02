@@ -47,6 +47,7 @@ import { prepareDataRoot } from "./windows/dataLocationWindow";
 import {
   consumeHiddenStart,
   HIDDEN_START_FLAG,
+  refreshLaunchAtLogin,
 } from "./utilities/launchAtLogin";
 import { LauncherDeepLink } from "@/types/DeepLink";
 import { journal } from "./journal/journal";
@@ -450,6 +451,9 @@ if (!gotTheLock) {
     setupPermissionHandlers();
     registerAppProtocol();
     registerProtocolClient();
+    void refreshLaunchAtLogin().catch((error) =>
+      console.warn("Failed to refresh the autostart entry:", error),
+    );
 
     if (!(await prepareDataRoot())) {
       app.quit();

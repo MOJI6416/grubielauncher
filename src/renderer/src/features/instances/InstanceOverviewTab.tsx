@@ -102,6 +102,7 @@ export interface InstanceOverviewProps {
   onCancelRename: () => void;
   onCommitRename: () => void;
   onPickLogo: () => void;
+  onUseScreenshotAsCover?: (file: string) => void;
   onRemoveLogo: () => void;
 }
 
@@ -260,6 +261,7 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
               }
               screenshots={screenshots}
               folder={folder}
+              onUseAsCover={props.onUseScreenshotAsCover}
             />
           )}
 

@@ -24,6 +24,13 @@ describe("mcVersionToJavaMajor", () => {
     expect(mcVersionToJavaMajor("1.21.4")).toBe(21);
   });
 
+  it("maps calendar versions (26.1+) to Java 25", () => {
+    expect(mcVersionToJavaMajor("26.1")).toBe(25);
+    expect(mcVersionToJavaMajor("26.3")).toBe(25);
+    expect(mcVersionToJavaMajor("26.1-snapshot-1")).toBe(25);
+    expect(mcVersionToJavaMajor("26.2-pre-3")).toBe(25);
+  });
+
   it("defaults to 21 for unknown or snapshot versions", () => {
     expect(mcVersionToJavaMajor("")).toBe(21);
     expect(mcVersionToJavaMajor("24w14a")).toBe(21);

@@ -58,6 +58,7 @@ import { assertSafeVersionName } from '@/shared/versionName'
 let activeConnectivityRun: Promise<ConnectivityCheckResult[]> | null = null
 
 const MAX_PATH_LENGTH = 4096
+const CLIPBOARD_IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg'])
 const MAX_DOWNLOAD_ITEMS = 20000
 const MAX_CLIPBOARD_LENGTH = 8 * 1024 * 1024
 const MAX_NOTIFICATION_TEXT_LENGTH = 512
@@ -351,6 +352,25 @@ export function registerOtherIpc() {
 
     const failure = await shell.openPath(p)
     if (failure) throw new Error(failure)
+  })
+
+  handleSafe<boolean, [string]>('clipboard:writeImage', false, async (_, p: string) => {
+    assertOpenablePath(p, 'clipboard:writeImage')
+    if (!CLIPBOARD_IMAGE_EXTENSIONS.has(path.extname(p).toLowerCase())) return false
+
+    const image = nativeImage.createFromPath(p)
+    if (image.isEmpty()) return false
+
+    clipboard.writeImage(image)
+    return true
+  })
+
+  handleSafe<void, [string]>('shell:showItemInFolder', undefined, async (_, p: string) => {
+    assertOpenablePath(p, 'shell:showItemInFolder')
+    if (!(await fs.pathExists(p))) {
+      throw new PathPolicyError(`Refused shell:showItemInFolder for ${String(p)}`)
+    }
+    shell.showItemInFolder(p)
   })
 
   handleSafe<boolean, [string]>('shell:trashItem', false, async (_, p: string) => {

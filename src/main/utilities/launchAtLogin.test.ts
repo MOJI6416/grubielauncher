@@ -1,10 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "fs-extra";
 
 vi.mock("fs-extra", () => ({
   default: {
+    outputFile: vi.fn(),
     outputFileSync: vi.fn(),
     pathExistsSync: vi.fn(),
+    readFile: vi.fn(),
     readFileSync: vi.fn(),
     removeSync: vi.fn(),
   },
@@ -19,12 +21,14 @@ vi.mock("electron", () => ({
   },
 }));
 
+import { app } from "electron";
 import {
   HIDDEN_START_FLAG,
   HIDDEN_RELAUNCH_TTL_MS,
   consumeHiddenStart,
   getLaunchAtLogin,
   linuxAutostartEntry,
+  refreshLaunchAtLogin,
   setLaunchAtLogin,
 } from "./launchAtLogin";
 
@@ -60,6 +64,55 @@ describe("launch at login in a development build", () => {
       supported: false,
       enabled: false,
     });
+  });
+});
+
+describe("refreshLaunchAtLogin on Linux", () => {
+  const platform = process.platform;
+  const appImage = process.env["APPIMAGE"];
+
+  beforeEach(() => {
+    Object.defineProperty(process, "platform", { value: "linux" });
+    Object.defineProperty(app, "isPackaged", {
+      value: true,
+      configurable: true,
+    });
+    process.env["APPIMAGE"] = "/home/steve/Apps/grubie-launcher-2.0.8.AppImage";
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process, "platform", { value: platform });
+    Object.defineProperty(app, "isPackaged", {
+      value: false,
+      configurable: true,
+    });
+    if (appImage === undefined) delete process.env["APPIMAGE"];
+    else process.env["APPIMAGE"] = appImage;
+  });
+
+  it("points an enabled entry at the renamed AppImage", async () => {
+    vi.mocked(fs.readFile).mockResolvedValue(
+      linuxAutostartEntry(
+        "/home/steve/Apps/grubie-launcher-2.0.7.AppImage",
+      ) as never,
+    );
+    await refreshLaunchAtLogin();
+    expect(fs.outputFile).toHaveBeenCalledWith(
+      expect.stringContaining("grubie-launcher.desktop"),
+      linuxAutostartEntry("/home/steve/Apps/grubie-launcher-2.0.8.AppImage"),
+    );
+  });
+
+  it("leaves a current entry alone and never enables autostart", async () => {
+    vi.mocked(fs.readFile).mockResolvedValue(
+      linuxAutostartEntry(
+        "/home/steve/Apps/grubie-launcher-2.0.8.AppImage",
+      ) as never,
+    );
+    await refreshLaunchAtLogin();
+    vi.mocked(fs.readFile).mockRejectedValue(new Error("ENOENT") as never);
+    await refreshLaunchAtLogin();
+    expect(fs.outputFile).not.toHaveBeenCalled();
   });
 });
 

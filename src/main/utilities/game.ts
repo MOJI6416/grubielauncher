@@ -12,6 +12,7 @@ import { rpc } from "../rpc";
 import { parseMinecraftServerConnectionLine } from "./gameConnection";
 import { journal, type JournalSpan } from "../journal/journal";
 import { LaunchWatch, launchStallHint } from "../journal/launchWatch";
+import { childProcessEnv } from "./childEnv";
 import {
   classifyConsoleStream,
   createLineReader,
@@ -237,7 +238,7 @@ export function runJar(
       } catch {}
     };
 
-    const jar = spawn(command, args, { cwd });
+    const jar = spawn(command, args, { cwd, env: childProcessEnv() });
 
     const onAbort = () => {
       void terminateProcessTree(jar).finally(() => {
@@ -362,7 +363,10 @@ export function installServer(
       void terminateProcessTree(server).finally(() => reject(err));
     };
 
-    const server = spawn(command, args, { cwd: serverPath });
+    const server = spawn(command, args, {
+      cwd: serverPath,
+      env: childProcessEnv(),
+    });
 
     const collectOutput = (chunk: string) => {
       for (const rawLine of chunk.split(/\r?\n/)) {
@@ -478,6 +482,7 @@ export function runGame(
   highPriority: boolean = false,
   workingDirectory?: string,
   trace?: JournalSpan,
+  extraEnv?: Record<string, string>,
 ) {
   if (gameRuntime.isInstanceBusy(versionName, instance)) {
     throw new Error(
@@ -517,6 +522,7 @@ export function runGame(
 
   const javaProcess = spawn(command, args, {
     cwd: workingDirectory || versionPath,
+    env: { ...childProcessEnv(), ...extraEnv },
   });
 
   javaProcess.once("spawn", () => {

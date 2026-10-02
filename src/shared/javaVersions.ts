@@ -4,6 +4,7 @@
 // fallback whenever the manifest does not carry javaVersion.
 const LEGACY_ID_PATTERN = /^(?:rd-|inf-|c0\.|a1\.|b1\.)/i;
 const SNAPSHOT_ID_PATTERN = /^(\d{2})w(\d{2})/;
+const CALENDAR_ID_PATTERN = /^\d{2}\.\d+/;
 
 function snapshotToJavaMajor(mcVersion: string): number | null {
   const match = SNAPSHOT_ID_PATTERN.exec(mcVersion);
@@ -25,6 +26,8 @@ export function mcVersionToJavaMajor(mcVersion: string): number {
 
   const snapshot = snapshotToJavaMajor(id);
   if (snapshot !== null) return snapshot;
+
+  if (CALENDAR_ID_PATTERN.test(id)) return 25;
 
   const match = /^1\.(\d+)/.exec(id);
   if (!match) return 21;

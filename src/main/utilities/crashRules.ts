@@ -160,6 +160,16 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
     },
   },
   {
+    id: "linux_xrandr_missing",
+    priority: 70,
+    pattern: "LinuxDisplay\\.getAvailableDisplayModes",
+    messages: {
+      en: "Older Minecraft versions on Linux need the xrandr tool. Install it (x11-xserver-utils on Ubuntu, Debian and Mint, xrandr on Fedora, xorg-xrandr on Arch) and start the game again.",
+      ru: "Старым версиям Minecraft на Linux нужна утилита xrandr. Установите её (пакет x11-xserver-utils в Ubuntu, Debian и Mint, xrandr в Fedora, xorg-xrandr в Arch) и запустите игру снова.",
+      uk: "Старим версіям Minecraft на Linux потрібна утиліта xrandr. Встановіть її (пакет x11-xserver-utils в Ubuntu, Debian і Mint, xrandr у Fedora, xorg-xrandr в Arch) і запустіть гру знову.",
+    },
+  },
+  {
     id: "disk_full",
     priority: 78,
     pattern:

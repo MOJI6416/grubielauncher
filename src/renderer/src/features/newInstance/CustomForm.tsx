@@ -60,7 +60,7 @@ export function CustomForm({
   const { t } = useTranslation();
   const [versionQuery, setVersionQuery] = useState("");
   const [loaderQuery, setLoaderQuery] = useState("");
-  const [kinds, setKinds] = useState<VersionKind[]>(["release"]);
+  const [kinds, setKinds] = useState<VersionKind[]>(KIND_FILTERS);
 
   const entries = useMemo(
     () => toVersionEntries(state.versions),

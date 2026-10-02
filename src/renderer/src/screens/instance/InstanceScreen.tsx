@@ -732,6 +732,10 @@ export function InstanceScreen({
                 draft.setImage("");
                 draft.setIsLogoChanged(true);
               }}
+              onUseScreenshotAsCover={(file) => {
+                setCroppedImage(file);
+                setIsCropping(true);
+              }}
             />
           ) : null}
         </div>

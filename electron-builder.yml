@@ -12,6 +12,9 @@ directories:
 
 compression: maximum
 
+toolsets:
+  appimage: '1.0.3'
+
 electronLanguages:
   - en-US
   - en-GB

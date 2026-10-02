@@ -154,6 +154,18 @@ describe("matchCrashRules", () => {
     ).toBe("auth_invalid_session");
   });
 
+  it("points LWJGL 2 display-mode crashes on Linux to xrandr", () => {
+    const match = matchCrashRules(
+      [
+        "java.lang.ExceptionInInitializerError",
+        "Caused by: java.lang.ArrayIndexOutOfBoundsException: 0",
+        "\tat org.lwjgl.opengl.LinuxDisplay.getAvailableDisplayModes(LinuxDisplay.java:951)",
+        "\tOpenGL: ~~ERROR~~ RuntimeException: No OpenGL context found in the current thread.",
+      ].join("\n"),
+    );
+    expect(match?.ruleId).toBe("linux_xrandr_missing");
+  });
+
   it("matches native crashes by exit code when there is no report text", () => {
     const match = matchCrashRules("", undefined, -1073740791);
     expect(match?.ruleId).toBe("native_crash");

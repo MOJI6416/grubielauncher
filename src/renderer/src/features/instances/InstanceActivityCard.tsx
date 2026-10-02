@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Camera,
@@ -17,6 +18,7 @@ import { SectionCard } from "./SectionCard";
 import { recentSessions, screenshotLabel } from "./instanceOverview";
 import { formatPlaytime } from "./playtime";
 import { InstanceScreenshot } from "./useInstanceInsights";
+import { ScreenshotViewer } from "./ScreenshotViewer";
 
 const api = window.api;
 
@@ -32,12 +34,15 @@ export function ScreenshotsCard({
   screenshots,
   folder,
   className,
+  onUseAsCover,
 }: {
   screenshots: InstanceScreenshot[] | null;
   folder: string;
   className?: string;
+  onUseAsCover?: (file: string) => void;
 }) {
   const { t } = useTranslation();
+  const [viewing, setViewing] = useState<string | null>(null);
 
   return (
     <SectionCard
@@ -83,7 +88,7 @@ export function ScreenshotsCard({
               key={shot.path}
               type="button"
               aria-label={screenshotLabel(shot.name)}
-              onClick={() => void api.shell.openPath(shot.path)}
+              onClick={() => setViewing(shot.path)}
               className="group relative min-h-[68px] overflow-hidden rounded-lg border border-border bg-surface-3 transition-colors hover:border-input focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               <img
@@ -106,6 +111,14 @@ export function ScreenshotsCard({
             </button>
           ))}
         </div>
+      )}
+      {viewing && (
+        <ScreenshotViewer
+          folder={folder}
+          initialPath={viewing}
+          onClose={() => setViewing(null)}
+          onUseAsCover={onUseAsCover}
+        />
       )}
     </SectionCard>
   );
