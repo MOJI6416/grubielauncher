@@ -179,6 +179,16 @@ describe("foreignLoader", () => {
     expect(foreignLoader(["fabric"], undefined)).toBeUndefined();
   });
 
+  it("treats plain Fabric builds as native to Legacy Fabric only", () => {
+    expect(foreignLoader(["fabric"], "legacy-fabric")).toBeUndefined();
+    expect(foreignLoader(["legacy-fabric"], "legacy-fabric")).toBeUndefined();
+    expect(foreignLoader(["babric"], "legacy-fabric")).toBe("babric");
+    expect(foreignLoader(["fabric"], "ornithe")).toBe("fabric");
+    expect(foreignLoader(["legacy-fabric"], "fabric")).toBe("legacy-fabric");
+    expect(foreignLoader(["bta-babric"], "babric")).toBe("bta-babric");
+    expect(foreignLoader(["bta-babric"], "bta-babric")).toBeUndefined();
+  });
+
   it("carries the loader onto the linked mod", () => {
     const { mods } = linkIdentified(
       [local("sodium", "sodium.jar")],

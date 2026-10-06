@@ -76,6 +76,7 @@ export interface NewInstanceState {
   quickServer: string;
   serverAddress: string;
   serverTarget: ServerTarget | null;
+  serverVersions: string[];
   loaderVersionIssue: LoaderVersionIssue;
   packVersionIssue: PackVersionIssue;
 }
@@ -121,6 +122,7 @@ export type NewInstanceAction =
       target: ServerTarget;
       server: IServer;
       logo?: string;
+      gameVersions?: string[];
     }
   | { type: "clearServer" };
 
@@ -161,9 +163,22 @@ export function createInitialState(
     quickServer: "",
     serverAddress: "",
     serverTarget: null,
+    serverVersions: [],
     loaderVersionIssue: null,
     packVersionIssue: null,
   };
+}
+
+function firstVersionOf(
+  versions: IVersion[],
+  wanted: string[],
+): IVersion | undefined {
+  for (const id of wanted) {
+    const match = versions.find((version) => version.id === id);
+    if (match) return match;
+  }
+
+  return undefined;
 }
 
 export function isPackLocked(state: NewInstanceState): boolean {
@@ -230,7 +245,9 @@ export function newInstanceReducer(
     case "versionsLoaded": {
       const entries = toVersionEntries(action.versions);
       const preferred =
-        action.preferredId ?? state.minecraftVersion?.id ?? undefined;
+        action.preferredId ??
+        state.minecraftVersion?.id ??
+        firstVersionOf(action.versions, state.serverVersions)?.id;
 
       return {
         ...state,
@@ -326,19 +343,35 @@ export function newInstanceReducer(
     case "setServerAddress":
       return { ...state, serverAddress: action.value };
 
-    case "applyServer":
+    case "applyServer": {
+      const serverVersions = action.gameVersions ?? [];
+      const match = isPackLocked(state)
+        ? undefined
+        : firstVersionOf(state.versions, serverVersions);
+
       return {
         ...state,
         serverTarget: action.target,
         servers: [action.server],
         quickServer: action.target.address,
         image: action.logo ?? "",
+        serverVersions,
+        ...(match && match.id !== state.minecraftVersion?.id
+          ? {
+              minecraftVersion: match,
+              loaderVersions: [],
+              loaderVersion: undefined,
+              loaderVersionIssue: null,
+            }
+          : {}),
       };
+    }
 
     case "clearServer":
       return {
         ...state,
         serverTarget: null,
+        serverVersions: [],
         servers: [],
         quickServer: "",
       };

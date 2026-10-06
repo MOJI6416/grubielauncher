@@ -9,6 +9,7 @@ import {
   ELYBY_CLIENT_ID,
   MICROSOFT_CLIENT_ID,
 } from "@/shared/config";
+import { withSessionNickname } from "@/shared/sessionNickname";
 import {
   accountAtom,
   accountsAtom,
@@ -324,11 +325,11 @@ export function useAccountsController() {
 
         if (!refreshed?.accessToken) throw new Error("Empty refresh response");
 
-        const updated: ILocalAccount = {
+        const updated: ILocalAccount = withSessionNickname({
           ...account,
           accessToken: refreshed.accessToken,
           refreshToken: refreshed.refreshToken ?? account.refreshToken,
-        };
+        });
 
         const next = accountsRef.current.map((entry) =>
           accountIdentity(entry) === identity ? updated : entry,
@@ -361,6 +362,28 @@ export function useAccountsController() {
     [persist, selectedAccount, setSelectedAccount, t],
   );
 
+  const replaceAccount = useCallback(
+    async (account: ILocalAccount, updated: ILocalAccount) => {
+      const identity = accountIdentity(account);
+      const next = accountsRef.current.map((entry) =>
+        accountIdentity(entry) === identity ? updated : entry,
+      );
+
+      const stillSelected =
+        selectedAccount && accountIdentity(selectedAccount) === identity;
+
+      const saved = await persist(
+        next,
+        stillSelected ? updated : (selectedAccount ?? null),
+        t("accounts.gameName.saveFailed"),
+      );
+      if (saved && stillSelected) setSelectedAccount(updated);
+
+      return saved;
+    },
+    [persist, selectedAccount, setSelectedAccount, t],
+  );
+
   return {
     accounts,
     selectedAccount,
@@ -372,6 +395,7 @@ export function useAccountsController() {
     useAccount,
     removeAccount,
     renewSession,
+    replaceAccount,
     reopenAuthWindow: useCallback(() => {
       if (progress) void api.shell.openExternal(progress.authUrl);
     }, [progress]),

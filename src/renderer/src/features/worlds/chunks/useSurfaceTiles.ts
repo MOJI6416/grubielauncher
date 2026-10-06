@@ -14,6 +14,7 @@ interface Store {
   loading: Set<string>;
   failed: Set<string>;
   queue: string[];
+  wanted: string[];
   generation: number;
 }
 
@@ -23,8 +24,27 @@ function emptyStore(): Store {
     loading: new Set(),
     failed: new Set(),
     queue: [],
+    wanted: [],
     generation: 0,
   };
+}
+
+function evictFor(store: Store): void {
+  if (store.tiles.size < MAX_TILES) return;
+
+  const wanted = new Set(store.wanted);
+  let victim: string | undefined;
+  for (const key of store.tiles.keys()) {
+    if (!wanted.has(key)) {
+      victim = key;
+      break;
+    }
+  }
+  victim ??= store.tiles.keys().next().value;
+  if (victim === undefined) return;
+
+  store.tiles.get(victim)?.close();
+  store.tiles.delete(victim);
 }
 
 function disposeTiles(tiles: Map<string, ImageBitmap>): void {
@@ -69,6 +89,7 @@ export function useSurfaceTiles(
     store.loading.clear();
     store.failed.clear();
     store.queue = [];
+    store.wanted = [];
     setPending(0);
     setVersion((value) => value + 1);
   }, [worldPath, dimension]);
@@ -95,13 +116,7 @@ export function useSurfaceTiles(
             return;
           }
 
-          if (store.tiles.size >= MAX_TILES) {
-            const oldest = store.tiles.keys().next().value;
-            if (oldest !== undefined) {
-              store.tiles.get(oldest)?.close();
-              store.tiles.delete(oldest);
-            }
-          }
+          evictFor(store);
           store.tiles.set(key, bitmap);
         })
         .catch((error) => {
@@ -127,19 +142,13 @@ export function useSurfaceTiles(
       const store = storeRef.current;
       if (!enabled) return;
 
-      const wanted = keys.filter(
+      store.wanted = keys.slice(0, MAX_TILES);
+      store.queue = store.wanted.filter(
         (key) =>
           !store.tiles.has(key) &&
           !store.loading.has(key) &&
           !store.failed.has(key),
       );
-      if (wanted.length === 0) return;
-
-      const wantedSet = new Set(wanted);
-      store.queue = [
-        ...wanted,
-        ...store.queue.filter((key) => !wantedSet.has(key)),
-      ];
       pump();
     },
     [enabled, pump],
@@ -155,7 +164,7 @@ export function useSurfaceTiles(
         store.failed.delete(key);
       }
       setVersion((value) => value + 1);
-      request(keys);
+      request(store.wanted);
     },
     [request],
   );

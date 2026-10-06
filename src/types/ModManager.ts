@@ -1,4 +1,6 @@
 import { Loader } from "./Loader";
+import type { IJarMod } from "./IVersion";
+import type { IModpackSource } from "./ModpackSource";
 
 export interface ISearchData {
   projects: IProject[];
@@ -144,6 +146,9 @@ export interface IModpack {
   mods: ILocalProject[];
   versionId?: string;
   extraFiles?: IModpackExtraFile[];
+  jarMods?: IJarMod[];
+  mainJar?: IJarMod;
+  source?: IModpackSource;
 }
 
 export interface IModpackExtraFile {

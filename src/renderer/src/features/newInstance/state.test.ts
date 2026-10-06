@@ -244,6 +244,47 @@ describe("newInstanceReducer", () => {
     expect(cleared.quickServer).toBe("");
   });
 
+  it("selects the version the server supports when the catalog is ready", () => {
+    const loaded = reduce(createInitialState("server"), {
+      type: "versionsLoaded",
+      versions: catalog,
+    });
+
+    const applied = reduce(loaded, {
+      type: "applyServer",
+      target: { host: "mc.example.com", port: null, address: "mc.example.com" },
+      server: { name: "Example", ip: "mc.example.com", acceptTextures: null },
+      gameVersions: ["1.21.5", "1.21.3"],
+    });
+
+    expect(applied.minecraftVersion?.id).toBe("1.21.3");
+    expect(applied.serverVersions).toEqual(["1.21.5", "1.21.3"]);
+  });
+
+  it("selects the server version once the catalog arrives later", () => {
+    const state = reduce(
+      createInitialState("server"),
+      {
+        type: "applyServer",
+        target: { host: "mc.example.com", port: null, address: "mc.example.com" },
+        server: { name: "Example", ip: "mc.example.com", acceptTextures: null },
+        gameVersions: ["1.21.3"],
+      },
+      { type: "versionsLoaded", versions: catalog },
+    );
+
+    expect(state.minecraftVersion?.id).toBe("1.21.3");
+
+    const reloaded = reduce(
+      state,
+      { type: "selectLoader", loader: "fabric" },
+      { type: "versionsLoaded", versions: catalog },
+    );
+
+    expect(reloaded.minecraftVersion?.id).toBe("1.21.3");
+    expect(reduce(state, { type: "clearServer" }).serverVersions).toEqual([]);
+  });
+
   it("takes the logo from the server favicon and drops it with the server", () => {
     const target = {
       host: "mc.example.com",

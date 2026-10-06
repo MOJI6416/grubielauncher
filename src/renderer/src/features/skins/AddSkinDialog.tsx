@@ -41,6 +41,7 @@ import {
   isLikelyTextureLink,
   isNicknameValid,
 } from "./addSkin";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
@@ -93,6 +94,7 @@ export function AddSkinDialog({
   onSubmit: (request: AddSkinRequest) => Promise<boolean>;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
 
   const [type, setType] = useState<AddSkinType>("skin");
   const [source, setSource] = useState<AddSkinSource>("file");
@@ -394,9 +396,13 @@ export function AddSkinDialog({
                         {picked.name}
                       </p>
                     </Hint>
-                    <Hint content={picked.path} variant="text" truncatedOnly>
+                    <Hint
+                      content={redact.path(picked.path)}
+                      variant="text"
+                      truncatedOnly
+                    >
                       <p className="truncate font-mono text-[10px] text-faint">
-                        {picked.path}
+                        {redact.path(picked.path)}
                       </p>
                     </Hint>
                   </div>

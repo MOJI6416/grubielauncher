@@ -16,7 +16,6 @@ import {
   Trash,
   TriangleAlert,
   Users,
-  X,
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -25,6 +24,7 @@ import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
 import type { IServerSettings, ServerRunState } from "@/types/Server";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
   accountAtom,
@@ -37,6 +37,7 @@ import { ServerGame } from "@renderer/classes/ServerGame";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { Hint } from "@renderer/components/Hint";
 import { ImageCropper } from "@renderer/components/ImageCropper";
+import { LogoPicker } from "@renderer/features/logoPicker/LogoPicker";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { getServerRuntime } from "./serverRuntime";
 import { ServerConsole } from "./ServerConsole";
@@ -46,7 +47,10 @@ import { parseMotd, stripMotd } from "./motd";
 import { DIFFICULTIES, GAME_MODES, formatUptime } from "./serverProperties";
 import type { ServerPingState } from "./types";
 import { toPingState } from "./types";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
@@ -87,6 +91,8 @@ function toBase64(buffer: ArrayBuffer) {
 
 export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
   const { t } = useTranslation();
+  const redact = useRedact();
+  const viewIndicator = useSlidingIndicator<HTMLDivElement>();
   const [server, setServer] = useAtom(serverAtom);
   const version = useAtomValue(selectedVersionAtom);
   const account = useAtomValue(accountAtom);
@@ -353,7 +359,7 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
     }
   }, [serverPath, onDelete, t]);
 
-  const changeLogo = useCallback(
+  const writeLogo = useCallback(
     async (blob: Blob) => {
       const base64 = toBase64(await blob.arrayBuffer());
       const iconPath = await api.path.join(serverPath, "server-icon.png");
@@ -366,17 +372,46 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
       }
 
       setLogo(`data:image/png;base64,${base64}`);
-      setIsCropping(false);
-      toast.success(t("serverManager.logoEdited"));
       return true;
     },
     [serverPath, t],
   );
 
+  const changeLogo = useCallback(
+    async (blob: Blob) => {
+      if (!(await writeLogo(blob))) return false;
+      setIsCropping(false);
+      toast.success(t("serverManager.logoEdited"));
+      return true;
+    },
+    [writeLogo, t],
+  );
+
+  const removeLogo = useCallback(async () => {
+    const removed = await api.fs.rimraf(
+      await api.path.join(serverPath, "server-icon.png"),
+    );
+
+    if (!removed) {
+      showFailureToast(t("serverManager.logoEditError"), undefined, {
+        channels: ["fs:rimraf"],
+      });
+      return;
+    }
+
+    setLogo("");
+  }, [serverPath, t]);
+
+  const pickLogoFile = useCallback(async () => {
+    const files = await api.other.openFileDialog();
+    if (!files?.length) return;
+    setCropImage(files[0]);
+    setIsCropping(true);
+  }, []);
+
   const copy = useCallback(
     async (value: string) => {
-      if (!(await copyToClipboard(value))) return;
-      toast.success(t("common.copied"));
+      await copyWithFeedback(value);
     },
     [t],
   );
@@ -400,13 +435,14 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
     stopping: t("serverManager.stateStopping"),
   }[runState];
 
-  const addresses: { label: string; value: string }[] = [
+  const addresses: { label: string; value: string; private?: boolean }[] = [
     { label: t("serverManager.addressLocal"), value: `127.0.0.1:${port}` },
   ];
   if (lanAddress) {
     addresses.push({
       label: t("serverManager.addressLan"),
       value: `${lanAddress}:${port}`,
+      private: true,
     });
   }
 
@@ -449,46 +485,34 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
     <>
       <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3">
         <header className="flex shrink-0 items-center gap-3 rounded-xl border bg-card px-3 py-2.5">
-          <Hint content={logo ? t("common.delete") : t("common.logo")}>
-            <button
-              type="button"
-              aria-label={logo ? t("common.delete") : t("common.logo")}
-              onClick={async () => {
-                if (logo) {
-                  const removed = await api.fs.rimraf(
-                    await api.path.join(serverPath, "server-icon.png"),
-                  );
-
-                  if (!removed) {
-                    showFailureToast(t("serverManager.logoEditError"), undefined, {
-                      channels: ["fs:rimraf"],
-                    });
-                    return;
-                  }
-
-                  setLogo("");
-                  return;
-                }
-
-                const files = await api.other.openFileDialog();
-                if (!files?.length) return;
-                setCropImage(files[0]);
-                setIsCropping(true);
-              }}
-              className="group relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-3 text-faint transition-colors hover:bg-surface-3/70"
-            >
-              {logo ? (
-                <>
-                  <ServerFavicon icon={logo} size={44} />
-                  <span className="absolute inset-0 flex items-center justify-center bg-background/70 opacity-0 transition-opacity group-hover:opacity-100">
-                    <X className="size-4" />
-                  </span>
-                </>
-              ) : (
-                <ImagePlus className="size-4" />
-              )}
-            </button>
-          </Hint>
+          <LogoPicker
+            outputSize={64}
+            hasImage={Boolean(logo)}
+            onApply={(blob) => void writeLogo(blob)}
+            onPickFile={() => void pickLogoFile()}
+            onRemove={() => void removeLogo()}
+          >
+            <Hint content={t("versions.changeLogo")}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t("versions.changeLogo")}
+                  className="group relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-3 text-faint transition-colors hover:bg-surface-3/70"
+                >
+                  {logo ? (
+                    <>
+                      <ServerFavicon icon={logo} size={44} />
+                      <span className="absolute inset-0 flex items-center justify-center bg-background/70 opacity-0 transition-opacity group-hover:opacity-100 group-aria-expanded:opacity-100">
+                        <ImagePlus className="size-4" />
+                      </span>
+                    </>
+                  ) : (
+                    <ImagePlus className="size-4" />
+                  )}
+                </button>
+              </PopoverTrigger>
+            </Hint>
+          </LogoPicker>
 
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
@@ -528,17 +552,26 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            <div className="flex items-center gap-0.5 rounded-lg bg-surface-1 p-0.5">
+            <div
+              ref={viewIndicator.containerRef}
+              className="relative flex items-center gap-0.5 rounded-lg bg-surface-1 p-0.5"
+            >
+              <SlidingIndicator
+                indicator={viewIndicator}
+                variant="fill"
+                className="rounded-md bg-surface-3"
+              />
               {(["console", "settings"] as const).map((value) => (
                 <button
                   key={value}
                   type="button"
                   aria-pressed={view === value}
+                  data-indicator-active={view === value}
                   onClick={() => setView(value)}
                   className={cn(
-                    "rounded-md px-2.5 py-1.5 text-xs transition-colors",
+                    "relative rounded-md px-2.5 py-1.5 text-xs transition-colors",
                     view === value
-                      ? "bg-surface-3 text-foreground"
+                      ? "text-foreground"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -632,7 +665,9 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                           {entry.label}
                         </span>
                         <span className="block truncate font-mono text-xs">
-                          {entry.value}
+                          {entry.private
+                            ? redact.value(entry.value)
+                            : entry.value}
                         </span>
                       </span>
                       <Copy className="size-3 shrink-0 text-faint opacity-0 transition-opacity group-hover:opacity-100" />

@@ -1,12 +1,17 @@
 import { IProject } from "@/types/ModManager";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import useEmblaCarousel from "embla-carousel-react";
-import { ChevronLeft, ChevronRight, ImageOff, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { RemoteGalleryViewer } from "@renderer/components/mediaViewer/RemoteGalleryViewer";
+import { ImageOff } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-export function ProjectGallery({ gallery }: { gallery: IProject["gallery"] }) {
+export function ProjectGallery({
+  gallery,
+  title,
+}: {
+  gallery: IProject["gallery"];
+  title?: string;
+}) {
+  const { t } = useTranslation();
   const stripRef = useRef<HTMLDivElement | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -92,173 +97,14 @@ export function ProjectGallery({ gallery }: { gallery: IProject["gallery"] }) {
       </div>
 
       {modalOpen && (
-        <ModalGallery
-          gallery={gallery}
+        <RemoteGalleryViewer
+          images={gallery}
           startIndex={selectedIndex}
+          title={title || t("common.gallery")}
           onClose={() => setModalOpen(false)}
         />
       )}
     </>
-  );
-}
-
-function ModalGallery({
-  gallery,
-  startIndex,
-  onClose,
-}: {
-  gallery: IProject["gallery"];
-  startIndex: number;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
-  const [current, setCurrent] = useState(startIndex);
-  const lastWheelAtRef = useRef(0);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-    emblaApi.scrollTo(startIndex, true);
-    setCurrent(startIndex);
-  }, [emblaApi, startIndex]);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-
-    const onSelect = () => {
-      setCurrent(emblaApi.selectedScrollSnap());
-    };
-
-    emblaApi.on("select", onSelect);
-    onSelect();
-
-    return () => {
-      emblaApi.off("select", onSelect);
-    };
-  }, [emblaApi]);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "ArrowLeft") emblaApi.scrollPrev();
-      if (event.key === "ArrowRight") emblaApi.scrollNext();
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [emblaApi]);
-
-  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
-  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
-  const handleWheel = useCallback(
-    (event: React.WheelEvent<HTMLDivElement>) => {
-      if (!emblaApi || gallery.length < 2) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      const now = Date.now();
-      if (now - lastWheelAtRef.current < 180) return;
-      lastWheelAtRef.current = now;
-
-      const delta =
-        Math.abs(event.deltaX) > Math.abs(event.deltaY)
-          ? event.deltaX
-          : event.deltaY;
-
-      if (delta > 0) emblaApi.scrollNext();
-      else if (delta < 0) emblaApi.scrollPrev();
-    },
-    [emblaApi, gallery.length],
-  );
-
-  return (
-    <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent
-        showCloseButton={false}
-        aria-describedby={undefined}
-        style={{
-          top: "calc(env(titlebar-area-height, 0px))",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          width: "auto",
-          height: "auto",
-          maxWidth: "none",
-          maxHeight: "none",
-          margin: 0,
-          transform: "none",
-        }}
-        className="flex items-center justify-center border-0 bg-transparent p-0 shadow-none"
-        onWheel={handleWheel}
-        onClick={(event) => {
-          const target = event.target as HTMLElement;
-          if (target.closest("button, img")) return;
-          onClose();
-        }}
-      >
-        <DialogTitle className="sr-only">{t("common.gallery")}</DialogTitle>
-
-        <Button
-          type="button"
-          variant="secondary"
-          size="icon"
-          onClick={onClose}
-          className="absolute top-4 right-4"
-          aria-label={t("common.close")}
-        >
-          <X className="size-4" />
-        </Button>
-
-        <div className="absolute top-4 left-4 rounded-lg bg-surface-2 px-3 py-1.5 font-mono text-sm text-muted-foreground select-none">
-          {current + 1}/{gallery.length}
-        </div>
-
-        <Button
-          type="button"
-          variant="secondary"
-          size="icon"
-          onClick={scrollPrev}
-          className="absolute left-6"
-          aria-label={t("common.previous")}
-        >
-          <ChevronLeft className="size-5" />
-        </Button>
-
-        <Button
-          type="button"
-          variant="secondary"
-          size="icon"
-          onClick={scrollNext}
-          className="absolute right-6"
-          aria-label={t("common.next")}
-        >
-          <ChevronRight className="size-5" />
-        </Button>
-
-        <div
-          className="h-[calc(100%-6rem)] w-[calc(100%-8rem)] max-w-6xl overflow-hidden"
-          ref={emblaRef}
-        >
-          <div className="flex h-full">
-            {gallery.map((image, idx) => (
-              <div
-                key={idx}
-                className="flex h-full min-w-full items-center justify-center px-4"
-              >
-                <GalleryImage
-                  src={image.url}
-                  alt={image.title || image.description || ""}
-                  className="max-h-full max-w-full rounded-xl bg-surface-2 object-contain"
-                  frameClassName="flex h-full w-full items-center justify-center rounded-xl bg-surface-2 text-faint"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }
 

@@ -7,6 +7,7 @@ export interface ServerTarget {
   host: string;
   port: number | null;
   address: string;
+  label?: string;
 }
 
 export function parseServerAddress(raw: string): ServerTarget | null {
@@ -67,6 +68,9 @@ export function serverListName(
 }
 
 export function serverInstanceName(target: ServerTarget): string {
+  const label = target.label?.trim();
+  if (label) return label;
+
   const parts = target.host.split(".").filter(Boolean);
   if (parts.length === 0) return target.host;
 

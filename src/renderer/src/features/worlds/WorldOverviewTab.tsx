@@ -26,13 +26,13 @@ import {
 import { formatBytes } from "@renderer/utilities/file";
 import { shortenPath } from "@renderer/features/instances/instanceOverview";
 import { worldDisplayStats } from "@renderer/utilities/worldStats";
-import { toast } from "sonner";
 import {
   formatSpawn,
   isWorldVersionMismatch,
   worldAgeDays,
 } from "./worldFacts";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
@@ -50,6 +50,7 @@ export function WorldOverviewTab({
   locale: string;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const stats = worldDisplayStats(world.statistics);
   const nf = (value: number) => new Intl.NumberFormat(locale).format(value);
 
@@ -157,9 +158,13 @@ export function WorldOverviewTab({
           {t("worlds.seed")}
         </span>
 
-        <Hint content={world.seed || undefined} variant="text" truncatedOnly>
+        <Hint
+          content={redact.value(world.seed) || undefined}
+          variant="text"
+          truncatedOnly
+        >
           <span className="min-w-0 flex-1 truncate text-right font-mono text-sm tabular-nums">
-            {world.seed || (
+            {redact.value(world.seed) || (
               <span className="font-sans text-xs text-faint">
                 {t("worlds.noSeed")}
               </span>
@@ -175,8 +180,7 @@ export function WorldOverviewTab({
             disabled={!world.seed}
             aria-label={t("common.copy")}
             onClick={async () => {
-              if (!(await copyToClipboard(world.seed))) return;
-              toast(t("common.copied"));
+              await copyWithFeedback(world.seed);
             }}
           >
             <Copy className="size-3.5" />
@@ -189,9 +193,9 @@ export function WorldOverviewTab({
           {t("worlds.folder")}
         </span>
 
-        <Hint content={world.path} variant="text">
+        <Hint content={redact.path(world.path)} variant="text">
           <span className="min-w-0 flex-1 truncate text-right font-mono text-xs text-faint">
-            <bdi>{shortenPath(world.path)}</bdi>
+            <bdi>{shortenPath(redact.path(world.path))}</bdi>
           </span>
         </Hint>
 

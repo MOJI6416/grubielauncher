@@ -7,6 +7,7 @@ import {
   rpcSkinVersionAtom,
   settingsAtom,
 } from "@renderer/stores/atoms";
+import { streamerActiveAtom } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
@@ -16,6 +17,8 @@ export function RpcHost() {
   const authData = useAtomValue(authDataAtom);
   const settings = useAtomValue(settingsAtom);
   const rpcSkinVersion = useAtomValue(rpcSkinVersionAtom);
+  const isStreaming = useAtomValue(streamerActiveAtom);
+  const hideServer = settings.hideServerInRpc || isStreaming;
 
   useEffect(() => {
     void api.rpc.syncContext({
@@ -27,7 +30,7 @@ export function RpcHost() {
           }
         : null,
       lang: i18n.resolvedLanguage || i18n.language || "en",
-      hideServer: settings.hideServerInRpc,
+      hideServer,
       skinVersion: rpcSkinVersion,
     });
   }, [
@@ -36,7 +39,7 @@ export function RpcHost() {
     selectedAccount?.nickname,
     selectedAccount?.type,
     authData?.uuid,
-    settings.hideServerInRpc,
+    hideServer,
     rpcSkinVersion,
   ]);
 

@@ -322,6 +322,7 @@ describe("resolvePublishErrorCode", () => {
     expect(resolvePublishErrorCode(new Error("upload_failed"))).toBe(
       "uploadFailed",
     );
+    expect(resolvePublishErrorCode(new Error("name_taken"))).toBe("nameTaken");
     expect(resolvePublishErrorCode("boom")).toBe("generic");
   });
 });

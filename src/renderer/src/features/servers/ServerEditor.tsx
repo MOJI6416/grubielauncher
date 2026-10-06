@@ -25,6 +25,9 @@ import {
 import { PingBars } from "./ServerVisuals";
 import { stripMotd } from "./motd";
 import { holdBusy } from "@renderer/utilities/busy";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
@@ -48,6 +51,8 @@ export function ServerEditor({
 }) {
   const source = editIndex === null ? undefined : servers[editIndex];
   const { t } = useTranslation();
+  const redact = useRedact();
+  const texturesIndicator = useSlidingIndicator<HTMLDivElement>();
 
   const [name, setName] = useState(source?.name ?? "");
   const [address, setAddress] = useState(source?.ip ?? "");
@@ -186,7 +191,10 @@ export function ServerEditor({
           </span>
           <Input
             value={address}
-            className="h-9 font-mono text-xs"
+            className={cn(
+              "h-9 font-mono text-xs",
+              redact.active && "streamer-mask",
+            )}
             placeholder="play.example.net:25565"
             onChange={(event) => {
               setAddress(event.currentTarget.value);
@@ -208,7 +216,15 @@ export function ServerEditor({
           <span className="text-xs font-medium text-muted-foreground">
             {t("servers.resources")}
           </span>
-          <div className="grid grid-cols-3 gap-1 rounded-lg bg-surface-1 p-1">
+          <div
+            ref={texturesIndicator.containerRef}
+            className="relative grid grid-cols-3 gap-1 rounded-lg bg-surface-1 p-1"
+          >
+            <SlidingIndicator
+              indicator={texturesIndicator}
+              variant="fill"
+              className="rounded-md bg-surface-3"
+            />
             {TEXTURE_OPTIONS.map((option, index) => {
               const Icon = option.icon;
               const active = acceptTextures === option.value;
@@ -218,11 +234,12 @@ export function ServerEditor({
                   key={String(option.value)}
                   type="button"
                   aria-pressed={active}
+                  data-indicator-active={active}
                   onClick={() => setAcceptTextures(option.value)}
                   className={cn(
-                    "flex h-8 items-center justify-center gap-1.5 rounded-md text-xs transition-colors",
+                    "relative flex h-8 items-center justify-center gap-1.5 rounded-md text-xs transition-colors",
                     active
-                      ? "bg-surface-3 text-foreground"
+                      ? "text-foreground"
                       : "text-muted-foreground hover:bg-surface-2",
                   )}
                 >

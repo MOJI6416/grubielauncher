@@ -29,6 +29,7 @@ export const RUNTIME_INSTANCE_PATHS = [
   "downloads",
   ".fabric",
   "storage/managed-files.json",
+  "storage/patched-jar",
   INSTANCE_ID_FILE,
 ] as const;
 

@@ -17,6 +17,7 @@ import {
   CHUNKS_PER_REGION,
   CHUNKS_PER_REGION_AXIS,
   REGION_SECTOR_BYTES,
+  RegionFileExtension,
 } from "@/types/WorldChunks";
 
 const gunzipAsync = promisify(zlib.gunzip);
@@ -28,17 +29,30 @@ export const REGION_HEADER_BYTES = 2 * REGION_SECTOR_BYTES;
 export const MAX_CHUNK_SECTORS = 255;
 export const EXTERNAL_CHUNK_FLAG = 0x80;
 
-const REGION_NAME = /^r\.(-?\d+)\.(-?\d+)\.mca$/;
+const REGION_NAMES: Record<RegionFileExtension, RegExp> = {
+  mca: /^r\.(-?\d+)\.(-?\d+)\.mca$/,
+  mcr: /^r\.(-?\d+)\.(-?\d+)\.mcr$/,
+};
 const EMPTY = Buffer.alloc(0);
 
-export function regionFileName(x: number, z: number): string {
-  return `r.${x}.${z}.mca`;
+const LZ4_MAGIC = Buffer.from("LZ4Block", "latin1");
+const LZ4_HEADER_BYTES = 21;
+const LZ4_METHOD_RAW = 0x10;
+const LZ4_METHOD_LZ4 = 0x20;
+
+export function regionFileName(
+  x: number,
+  z: number,
+  extension: RegionFileExtension = "mca",
+): string {
+  return `r.${x}.${z}.${extension}`;
 }
 
 export function parseRegionFileName(
   name: string,
+  extension: RegionFileExtension = "mca",
 ): { x: number; z: number } | null {
-  const match = REGION_NAME.exec(name);
+  const match = REGION_NAMES[extension].exec(name);
   if (!match) return null;
 
   const x = Number(match[1]);
@@ -124,7 +138,116 @@ export function compressionByte(kind: ChunkCompression): number {
 }
 
 export function isDecodableCompression(kind: ChunkCompression): boolean {
+  return (
+    kind === "gzip" || kind === "zlib" || kind === "none" || kind === "lz4"
+  );
+}
+
+export function isWritableCompression(kind: ChunkCompression): boolean {
   return kind === "gzip" || kind === "zlib" || kind === "none";
+}
+
+class Lz4Error extends Error {
+  constructor() {
+    super("Malformed LZ4 data");
+    this.name = "Lz4Error";
+  }
+}
+
+function lz4Length(source: Buffer, start: number, base: number) {
+  let length = base;
+  let cursor = start;
+  if (base !== 15) return { length, cursor };
+
+  for (;;) {
+    if (cursor >= source.length) throw new Lz4Error();
+    const byte = source[cursor++];
+    length += byte;
+    if (byte !== 255) return { length, cursor };
+  }
+}
+
+export function decodeLz4Block(source: Buffer, size: number): Buffer {
+  const output = Buffer.alloc(size);
+  let input = 0;
+  let written = 0;
+
+  while (input < source.length) {
+    const token = source[input++];
+    const literals = lz4Length(source, input, token >>> 4);
+    input = literals.cursor;
+
+    if (
+      input + literals.length > source.length ||
+      written + literals.length > size
+    ) {
+      throw new Lz4Error();
+    }
+    source.copy(output, written, input, input + literals.length);
+    input += literals.length;
+    written += literals.length;
+
+    if (input >= source.length) break;
+    if (input + 2 > source.length) throw new Lz4Error();
+
+    const distance = source[input] | (source[input + 1] << 8);
+    input += 2;
+    if (distance === 0 || distance > written) throw new Lz4Error();
+
+    const match = lz4Length(source, input, token & 15);
+    input = match.cursor;
+    const length = match.length + 4;
+    if (written + length > size) throw new Lz4Error();
+
+    let from = written - distance;
+    if (distance >= length) {
+      output.copy(output, written, from, from + length);
+      written += length;
+    } else {
+      for (let index = 0; index < length; index += 1) {
+        output[written++] = output[from++];
+      }
+    }
+  }
+
+  if (written !== size) throw new Lz4Error();
+  return output;
+}
+
+export function decodeLz4BlockStream(input: Buffer): Buffer {
+  const parts: Buffer[] = [];
+  let offset = 0;
+
+  while (offset < input.length) {
+    if (
+      offset + LZ4_HEADER_BYTES > input.length ||
+      !input.subarray(offset, offset + LZ4_MAGIC.length).equals(LZ4_MAGIC)
+    ) {
+      throw new Lz4Error();
+    }
+
+    const method = input[offset + 8] & 0xf0;
+    const compressed = input.readInt32LE(offset + 9);
+    const original = input.readInt32LE(offset + 13);
+    offset += LZ4_HEADER_BYTES;
+
+    if (compressed < 0 || original < 0 || offset + compressed > input.length) {
+      throw new Lz4Error();
+    }
+    if (original === 0) break;
+
+    const block = input.subarray(offset, offset + compressed);
+    if (method === LZ4_METHOD_RAW && compressed === original) {
+      parts.push(Buffer.from(block));
+    } else if (method === LZ4_METHOD_LZ4) {
+      parts.push(decodeLz4Block(block, original));
+    } else {
+      throw new Lz4Error();
+    }
+    offset += compressed;
+  }
+
+  return Buffer.concat(parts);
 }
 
 export interface RawChunk {
@@ -195,6 +318,8 @@ export async function decompressChunk(
       return Buffer.from(await inflateAsync(input));
     case "none":
       return Buffer.from(input);
+    case "lz4":
+      return decodeLz4BlockStream(data);
     default:
       return null;
   }

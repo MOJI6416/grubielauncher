@@ -12,20 +12,22 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PopoverAnchor, PopoverTrigger } from "@/components/ui/popover";
 import { Version } from "@renderer/classes/Version";
 import { Hint } from "@renderer/components/Hint";
 import { LoaderLabel } from "@renderer/components/Loaders";
 import { buildPackShareUrl } from "@renderer/utilities/packShare";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   instanceNameMessage,
   type InstanceNameCheck,
 } from "@renderer/features/newInstance/nameValidation";
+import { LogoPicker } from "@renderer/features/logoPicker/LogoPicker";
 import { InstanceArt } from "./InstanceArt";
 import { shortenPath } from "./instanceOverview";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 export interface IdentityStat {
   id: string;
@@ -81,6 +83,7 @@ export function InstanceIdentityCard({
   onCancelRename,
   onCommitRename,
   onPickLogo,
+  onApplyLogo,
   onRemoveLogo,
 }: {
   instance: Version;
@@ -98,9 +101,11 @@ export function InstanceIdentityCard({
   onCancelRename: () => void;
   onCommitRename: () => void;
   onPickLogo: () => void;
+  onApplyLogo: (blob: Blob) => void;
   onRemoveLogo: () => void;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const nameErrorId = "instance-name-error";
   const shareCode = instance.version.shareCode;
   const cover = resolveLocalImage(image);
@@ -122,49 +127,59 @@ export function InstanceIdentityCard({
         </>
       )}
 
-      <div className="relative shrink-0">
-        <InstanceArt
-          eager
-          morphTarget
-          name={instance.version.name}
-          image={image}
-          className="size-16 rounded-xl"
-          textClassName="text-lg"
-        />
+      <LogoPicker
+        hasImage={Boolean(image)}
+        onApply={onApplyLogo}
+        onPickFile={onPickLogo}
+        onRemove={onRemoveLogo}
+      >
+        <PopoverAnchor asChild>
+          <div className="relative shrink-0">
+            <InstanceArt
+              eager
+              morphTarget
+              name={instance.version.name}
+              image={image}
+              className="size-16 rounded-xl"
+              textClassName="text-lg"
+            />
 
-        {canEditLogo && (
-          <div className="absolute -right-1.5 -bottom-1.5 flex gap-1">
-            <Hint content={t("versions.changeLogo")}>
-              <Button
-                type="button"
-                size="icon-sm"
-                variant="secondary"
-                className="size-6 rounded-full shadow"
-                disabled={isLoading}
-                aria-label={t("versions.changeLogo")}
-                onClick={onPickLogo}
-              >
-                <ImagePlus />
-              </Button>
-            </Hint>
-            {image && (
-              <Hint content={t("versions.removeLogo")}>
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant="secondary"
-                  className="size-6 rounded-full shadow"
-                  disabled={isLoading}
-                  aria-label={t("versions.removeLogo")}
-                  onClick={onRemoveLogo}
-                >
-                  <ImageMinus />
-                </Button>
-              </Hint>
+            {canEditLogo && (
+              <div className="absolute -right-1.5 -bottom-1.5 flex gap-1">
+                <Hint content={t("versions.changeLogo")}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="secondary"
+                      className="size-6 rounded-full shadow"
+                      disabled={isLoading}
+                      aria-label={t("versions.changeLogo")}
+                    >
+                      <ImagePlus />
+                    </Button>
+                  </PopoverTrigger>
+                </Hint>
+                {image && (
+                  <Hint content={t("versions.removeLogo")}>
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="secondary"
+                      className="size-6 rounded-full shadow"
+                      disabled={isLoading}
+                      aria-label={t("versions.removeLogo")}
+                      onClick={onRemoveLogo}
+                    >
+                      <ImageMinus />
+                    </Button>
+                  </Hint>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
+        </PopoverAnchor>
+      </LogoPicker>
 
       <div className="relative flex min-w-0 flex-1 flex-col gap-1">
         {editName ? (
@@ -279,11 +294,10 @@ export function InstanceIdentityCard({
             aria-label={instance.versionPath}
             className="max-w-72 truncate rounded font-mono transition-colors hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             onClick={async () => {
-              if (!(await copyToClipboard(instance.versionPath))) return;
-              toast(t("common.copied"));
+              await copyWithFeedback(instance.versionPath);
             }}
           >
-            <bdi>{shortenPath(instance.versionPath)}</bdi>
+            <bdi>{shortenPath(redact.path(instance.versionPath))}</bdi>
           </button>
 
           {shareCode && (
@@ -292,7 +306,9 @@ export function InstanceIdentityCard({
               content={
                 <span className="grid gap-0.5 text-left">
                   <span className="font-mono">
-                    {buildPackShareUrl(shareCode)}
+                    {redact.active
+                      ? redact.value(shareCode)
+                      : buildPackShareUrl(shareCode)}
                   </span>
                   <span className="text-[0.65rem] opacity-65">
                     {t("versions.copyShareLink")}
@@ -305,12 +321,11 @@ export function InstanceIdentityCard({
                 aria-label={t("versions.copyShareLink")}
                 className="flex max-w-64 items-center gap-1 rounded font-mono transition-colors hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 onClick={async () => {
-                  if (!(await copyToClipboard(buildPackShareUrl(shareCode)))) return;
-                  toast(t("common.copied"));
+                  await copyWithFeedback(buildPackShareUrl(shareCode));
                 }}
               >
                 <Share2 className="size-3 shrink-0" />
-                <span className="truncate">/{shareCode}</span>
+                <span className="truncate">/{redact.value(shareCode)}</span>
                 <Copy className="size-3 shrink-0" />
               </button>
             </Hint>

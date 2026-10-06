@@ -57,6 +57,7 @@ import {
 import { useDatapackOptions, useWorldsData } from "./useWorldsData";
 import { WorldDetail } from "./WorldDetail";
 import { WorldIcon } from "./WorldIcon";
+import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 
 const api = window.api;
 
@@ -131,6 +132,10 @@ export function Worlds({
   const filters = useMemo(() => availableWorldFilters(worlds), [worlds]);
   const filterCounts = useMemo(() => countWorldFilters(searched), [searched]);
   const ambiguousNames = useMemo(() => duplicateWorldNames(worlds), [worlds]);
+  const worldPaths = useMemo(
+    () => new Set(worlds.map((world) => world.path)),
+    [worlds],
+  );
 
   const revealWorld = useCallback((folderName: string) => {
     setQuery("");
@@ -370,79 +375,86 @@ export function Worlds({
               </div>
             )}
 
-            {items.map((item) => {
-              const world = item.world;
-              const isActive = world.folderName === selectedFolder;
+            <RemovalList sourceKeys={worldPaths}>
+              {items.map((item) => {
+                const world = item.world;
+                const isActive = world.folderName === selectedFolder;
 
-              return (
-                <button
-                  key={world.path}
-                  type="button"
-                  role="option"
-                  aria-selected={isActive}
-                  aria-current={isActive}
-                  onClick={() => setSelected(world.folderName)}
-                  className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-accent/40 aria-[current=true]:bg-primary-soft"
-                >
-                  <WorldIcon
-                    icon={world.icon}
-                    size={36}
-                    className="size-9 rounded-md"
-                    iconClassName="size-4"
-                  />
+                return (
+                  <RemovalItem key={world.path} itemKey={world.path}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={isActive}
+                      aria-current={isActive}
+                      onClick={() => setSelected(world.folderName)}
+                      className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-accent/40 aria-[current=true]:bg-primary-soft"
+                    >
+                      <WorldIcon
+                        icon={world.icon}
+                        size={36}
+                        className="size-9 rounded-md"
+                        iconClassName="size-4"
+                      />
 
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="flex min-w-0 items-center gap-1">
-                      {world.hardcore && (
-                        <Skull className="size-3 shrink-0 text-destructive" />
-                      )}
-                      <Hint content={world.name} variant="text" truncatedOnly>
-                        <span className="truncate text-xs font-medium">
-                          {world.name}
-                        </span>
-                      </Hint>
-                      {ambiguousNames.has(world.name) &&
-                        world.name !== world.folderName && (
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="flex min-w-0 items-center gap-1">
+                          {world.hardcore && (
+                            <Skull className="size-3 shrink-0 text-destructive" />
+                          )}
                           <Hint
-                            content={world.folderName}
+                            content={world.name}
                             variant="text"
                             truncatedOnly
                           >
-                            <span className="max-w-20 shrink-0 truncate font-mono text-[0.6rem] text-faint">
-                              {world.folderName}
+                            <span className="truncate text-xs font-medium">
+                              {world.name}
                             </span>
                           </Hint>
-                        )}
-                    </span>
+                          {ambiguousNames.has(world.name) &&
+                            world.name !== world.folderName && (
+                              <Hint
+                                content={world.folderName}
+                                variant="text"
+                                truncatedOnly
+                              >
+                                <span className="max-w-20 shrink-0 truncate font-mono text-[0.6rem] text-faint">
+                                  {world.folderName}
+                                </span>
+                              </Hint>
+                            )}
+                        </span>
 
-                    <span className="flex min-w-0 items-center gap-1 font-mono text-[0.65rem] text-faint">
-                      <span className="truncate">
-                        {world.lastPlayed
-                          ? formatRelative(new Date(world.lastPlayed))
-                          : t("worlds.neverPlayed")}
-                      </span>
-                      {item.sizeBytes !== null && (
-                        <>
-                          <span aria-hidden>·</span>
-                          <span className="shrink-0">
-                            {formatBytes(item.sizeBytes, sizeLabels, 1)}
+                        <span className="flex min-w-0 items-center gap-1 font-mono text-[0.65rem] text-faint">
+                          <span className="truncate">
+                            {world.lastPlayed
+                              ? formatRelative(new Date(world.lastPlayed))
+                              : t("worlds.neverPlayed")}
                           </span>
-                        </>
-                      )}
-                    </span>
-                  </span>
-
-                  {item.backups > 0 && (
-                    <Hint content={t("worldBackups.title")}>
-                      <span className="flex shrink-0 items-center gap-0.5 font-mono text-[0.65rem] text-faint">
-                        <Archive className="size-3" />
-                        {item.backups}
+                          {item.sizeBytes !== null && (
+                            <>
+                              <span aria-hidden>·</span>
+                              <span className="shrink-0">
+                                {formatBytes(item.sizeBytes, sizeLabels, 1)}
+                              </span>
+                            </>
+                          )}
+                        </span>
                       </span>
-                    </Hint>
-                  )}
-                </button>
-              );
-            })}
+
+                      {item.backups > 0 && (
+                        <Hint content={t("worldBackups.title")}>
+                          <span className="flex shrink-0 items-center gap-0.5 font-mono text-[0.65rem] text-faint">
+                            <Archive className="size-3" />
+                            {item.backups}
+                          </span>
+                        </Hint>
+                      )}
+                    </button>
+                  </RemovalItem>
+                );
+              })}
+            </RemovalList>
           </div>
         </div>
 

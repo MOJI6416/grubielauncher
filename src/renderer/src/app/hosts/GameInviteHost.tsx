@@ -9,6 +9,7 @@ import {
 } from "@renderer/features/friends/gameInvite";
 import { friendSocketAtom, localFriendsAtom } from "@renderer/stores/atoms";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
+import { isStreamerActive } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
@@ -31,7 +32,10 @@ export function GameInviteHost() {
 
       setInvite(incoming);
 
-      const notification = describeInviteNotification(incoming);
+      const notification = describeInviteNotification(
+        incoming,
+        isStreamerActive(),
+      );
       await api.other.notify(
         {
           title: tRef.current("friends.gameInviteNotificationTitle"),

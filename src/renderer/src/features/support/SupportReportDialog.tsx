@@ -40,7 +40,7 @@ import {
   selectedVersionAtom,
   versionsAtom,
 } from "@renderer/stores/atoms";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { uiJournal } from "@renderer/utilities/journal";
 import {
   collectSupportUiState,
@@ -144,7 +144,7 @@ export function SupportReportDialog({
   };
 
   const copyCode = async (code: string) => {
-    if (await copyToClipboard(code)) toast(t("common.copied"));
+    await copyWithFeedback(code);
   };
 
   const expiresLabel =

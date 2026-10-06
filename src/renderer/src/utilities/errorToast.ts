@@ -1,9 +1,10 @@
 import { toast } from "sonner";
 import { getDefaultStore } from "jotai";
-import i18n from "@renderer/i18n";
 import { errorLogAtom } from "../stores/atoms";
-import { copyToClipboard } from "./clipboard";
+import { copyWithFeedback } from "./copyFeedback";
 import { uiJournal } from "./journal";
+import { isStreamerActive } from "@renderer/features/streamer/streamerMode";
+import { redactText } from "@renderer/features/streamer/redact";
 
 const ERROR_LOG_LIMIT = 50;
 
@@ -43,18 +44,18 @@ export function showErrorToast(
 
   toast.error(title, {
     id: toastId,
-    description: details || undefined,
+    description: details
+      ? isStreamerActive()
+        ? redactText(details)
+        : details
+      : undefined,
     duration: 12000,
     ...(fullDetails && copyLabel
       ? {
           action: {
             label: copyLabel,
             onClick: () => {
-              void copyToClipboard(`${title}\n${fullDetails}`).then(
-                (copied) => {
-                  if (copied) toast(i18n.t("common.copied"));
-                },
-              );
+              void copyWithFeedback(`${title}\n${fullDetails}`);
             },
           },
         }

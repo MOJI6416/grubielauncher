@@ -2,9 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
 import {
+  Check,
   Copy,
   Download,
+  Gamepad2,
   GripVertical,
+  HardDriveDownload,
   Loader2,
   Pencil,
   Plus,
@@ -14,6 +17,7 @@ import {
   TriangleAlert,
   Zap,
 } from "lucide-react";
+import { SiModrinth } from "react-icons/si";
 import { toast } from "sonner";
 import { IServer } from "@/types/ServersList";
 import { Button } from "@/components/ui/button";
@@ -43,10 +47,13 @@ import {
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 import {
+  internetAtom,
   isDownloadedVersionAtom,
   isOwnerVersionAtom,
   selectedVersionAtom,
 } from "@renderer/stores/atoms";
+import type { ModrinthServer } from "@/types/ModrinthServers";
+import { openNewInstance } from "@renderer/features/instances/newInstance";
 import type { RunGameParams } from "@renderer/features/launch/types";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { MotdText, PingBars, ServerFavicon, StatusDot } from "./ServerVisuals";
@@ -60,15 +67,27 @@ import {
   ServerSort,
   countOnline,
   filterServers,
+  findDuplicateAddress,
   reorder,
   sortServers,
 } from "./serverList";
+import { DiscoverSwitch } from "./discover/DiscoverSwitch";
+import { ServerDiscovery } from "./discover/ServerDiscovery";
+import {
+  type ServerFit,
+  fitInstanceOf,
+  serverEntryOf,
+  summarizeVersions,
+} from "./discover/serverFit";
 import { ServerPingState, toPingState } from "./types";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
 const SORTS: ServerSort[] = ["manual", "name", "players", "ping"];
+
+type ServersView = "mine" | "discover";
 
 export function ServersPanel({
   servers,
@@ -88,9 +107,11 @@ export function ServersPanel({
   isAdding?: boolean;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const isDownloadedVersion = useAtomValue(isDownloadedVersionAtom);
   const isOwnerVersion = useAtomValue(isOwnerVersionAtom);
   const selectedVersion = useAtomValue(selectedVersionAtom);
+  const isInternetOnline = useAtomValue(internetAtom);
 
   const [statuses, setStatuses] = useState<Record<string, ServerPingState>>({});
   const [query, setQuery] = useState("");
@@ -101,6 +122,7 @@ export function ServersPanel({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [view, setView] = useState<ServersView>("mine");
 
   const runsRef = useRef(0);
   const mountedRef = useRef(true);
@@ -112,6 +134,11 @@ export function ServersPanel({
   const readOnly = !isAdding && (isDownloadedVersion || !isOwnerVersion);
   const canQuickConnect = selectedVersion?.isQuickPlayMultiplayer === true;
   const instanceVersion = selectedVersion?.version.version.id;
+  const fitInstance = useMemo(
+    () =>
+      selectedVersion ? fitInstanceOf(selectedVersion.version) : undefined,
+    [selectedVersion],
+  );
 
   const addresses = useMemo(
     () => servers.map((server) => server.ip).filter(Boolean),
@@ -199,10 +226,23 @@ export function ServersPanel({
     [runGame, selectedVersion, onPlayed],
   );
 
+  const addDiscovered = useCallback(
+    (server: ModrinthServer) => {
+      setServers((prev) =>
+        findDuplicateAddress(prev, server.address) >= 0
+          ? prev
+          : [...prev, serverEntryOf(server)],
+      );
+      toast.success(t("servers.added"), {
+        description: t("servers.pendingSave"),
+      });
+    },
+    [setServers, t],
+  );
+
   const copyAddress = useCallback(
     async (server: IServer) => {
-      if (!(await copyToClipboard(server.ip))) return;
-      toast.success(t("common.copied"));
+      await copyWithFeedback(server.ip);
     },
     [t],
   );
@@ -249,8 +289,67 @@ export function ServersPanel({
     }
   };
 
+  const viewSwitch = isAdding ? null : (
+    <DiscoverSwitch
+      value={view}
+      onChange={setView}
+      items={[
+        {
+          id: "mine",
+          label: t("servers.discover.mine"),
+          icon: <ServerIcon className="size-4" />,
+          count: servers.length,
+        },
+        {
+          id: "discover",
+          label: "Modrinth",
+          icon: <SiModrinth className="size-4" />,
+        },
+      ]}
+    />
+  );
+
+  if (view === "discover" && !isAdding) {
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <ServerDiscovery
+          leading={viewSwitch}
+          instance={fitInstance}
+          tone="card"
+          offlineReason={
+            isInternetOnline ? null : t("newInstance.blockers.internet")
+          }
+          renderActions={(server, fit) => (
+            <DiscoverActions
+              server={server}
+              fit={fit}
+              instanceVersion={instanceVersion}
+              inList={findDuplicateAddress(servers, server.address) >= 0}
+              readOnly={readOnly}
+              canPlay={!!runGame && !!selectedVersion}
+              onPlay={() => {
+                if (!runGame || !selectedVersion) return;
+                void runGame({
+                  version: selectedVersion,
+                  quick: { multiplayer: server.address },
+                });
+                onPlayed();
+              }}
+              onAdd={() => addDiscovered(server)}
+              onCreate={() =>
+                openNewInstance({ source: "server", modrinthServer: server })
+              }
+            />
+          )}
+        />
+      </div>
+    );
+  }
+
   const header = (
-    <div className="flex shrink-0 items-center gap-2 border-b px-2.5 py-2">
+    <div className="flex shrink-0 items-center gap-2">
+      {viewSwitch}
+
       <Input
         value={query}
         placeholder={t("common.search")}
@@ -359,15 +458,16 @@ export function ServersPanel({
 
   return (
     <>
-      <div
-        className={cn(
-          "grid h-full min-h-0 gap-3",
-          showDetails ? "grid-cols-[minmax(0,1fr)_21rem]" : "grid-cols-1",
-        )}
-      >
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card">
-          {header}
+      <div className="flex h-full min-h-0 flex-col gap-2.5">
+        {header}
 
+        <div
+          className={cn(
+            "grid min-h-0 flex-1 gap-3",
+            showDetails ? "grid-cols-[minmax(0,1fr)_21rem]" : "grid-cols-1",
+          )}
+        >
+        <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card">
           {!servers.length ? (
             emptyState
           ) : !visible.length ? (
@@ -444,12 +544,12 @@ export function ServersPanel({
                           <div className="min-w-0 flex-1">
                             <div className="flex min-w-0 items-center gap-1.5">
                               <Hint
-                                content={server.name}
+                                content={redact.text(server.name)}
                                 variant="text"
                                 truncatedOnly
                               >
                                 <span className="min-w-0 truncate text-sm font-medium">
-                                  {server.name}
+                                  {redact.text(server.name)}
                                 </span>
                               </Hint>
                               {quickConnectIp === server.ip && (
@@ -469,13 +569,16 @@ export function ServersPanel({
                                 className="text-xs leading-4"
                               />
                             ) : (
-                              <Hint content={server.ip} variant="text">
+                              <Hint
+                                content={redact.value(server.ip)}
+                                variant="text"
+                              >
                                 <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                                   <StatusDot
                                     state={status?.state ?? "pending"}
                                   />
                                   <span className="min-w-0 truncate font-mono">
-                                    {server.ip}
+                                    {redact.value(server.ip)}
                                   </span>
                                 </span>
                               </Hint>
@@ -624,6 +727,7 @@ export function ServersPanel({
             )}
           </aside>
         )}
+        </div>
       </div>
 
       {isImporting && (
@@ -677,6 +781,104 @@ export function ServersPanel({
           onClose={() => setDeleteIndex(null)}
         />
       )}
+    </>
+  );
+}
+
+function DiscoverActions({
+  server,
+  fit,
+  instanceVersion,
+  inList,
+  readOnly,
+  canPlay,
+  onPlay,
+  onAdd,
+  onCreate,
+}: {
+  server: ModrinthServer;
+  fit: ServerFit | null;
+  instanceVersion: string | undefined;
+  inList: boolean;
+  readOnly: boolean;
+  canPlay: boolean;
+  onPlay: () => void;
+  onAdd: () => void;
+  onCreate: () => void;
+}) {
+  const { t } = useTranslation();
+  const { content } = server;
+
+  const note =
+    fit === "packVersion"
+      ? t("servers.discover.fit.packVersion")
+      : fit === "otherVersion"
+        ? t("servers.discover.fit.otherVersion", {
+            version: instanceVersion,
+            versions: summarizeVersions(content.gameVersions),
+          })
+        : fit === "needsPack"
+          ? t("servers.discover.fit.needsPack", {
+              title:
+                (content.kind === "modpack" ? content.title : null) ??
+                server.name,
+            })
+          : null;
+
+  const canJoin = fit === "ready" || fit === "packVersion";
+
+  return (
+    <>
+      {note && (
+        <p className="flex items-start gap-1.5 text-[0.7rem] leading-snug text-warning">
+          <TriangleAlert className="mt-px size-3 shrink-0" />
+          <span className="min-w-0">{note}</span>
+        </p>
+      )}
+
+      <div className="flex items-center gap-2">
+        {canJoin ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-9 min-w-0 flex-1"
+            disabled={!canPlay}
+            onClick={onPlay}
+          >
+            <Gamepad2 className="size-4" />
+            <span className="truncate">{t("servers.join")}</span>
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-9 min-w-0 flex-1 shrink"
+            onClick={onCreate}
+          >
+            <HardDriveDownload className="size-4" />
+            <span className="truncate">
+              {t("servers.discover.createInstance")}
+            </span>
+          </Button>
+        )}
+
+        {!readOnly && fit !== "needsPack" && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 shrink-0"
+            disabled={inList}
+            onClick={onAdd}
+          >
+            {inList ? (
+              <Check className="size-3.5" />
+            ) : (
+              <Plus className="size-3.5" />
+            )}
+            {inList ? t("servers.discover.inList") : t("servers.discover.add")}
+          </Button>
+        )}
+      </div>
     </>
   );
 }

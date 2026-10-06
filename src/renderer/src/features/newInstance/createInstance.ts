@@ -9,10 +9,12 @@ import {
   type VersionInstallStage,
 } from "@/types/InstallationProgress";
 import { VERSION_FILE_STAGES, contentPlan } from "@/shared/installPlan";
+import { baseProjectsOf } from "@/shared/modpackMerge";
 import type { IServer } from "@/types/ServersList";
 import type { LoaderVersion } from "@/types/VersionsService";
 import { Mods } from "@renderer/classes/Mods";
 import { Version } from "@renderer/classes/Version";
+import { mergeServerLists } from "@renderer/features/servers/serverList";
 import {
   accountAtom,
   networkAtom,
@@ -150,7 +152,7 @@ async function persistImage(
   }
 }
 
-function rewriteImportedLocalPaths(
+export function rewriteImportedLocalPaths(
   mods: ILocalProject[],
   importRoot: string,
   versionPath: string,
@@ -303,21 +305,17 @@ export async function createInstance(
         version: request.loaderVersion,
         other: base.loader?.other || undefined,
       },
+      ...(importModpack?.jarMods?.length
+        ? { jarMods: importModpack.jarMods }
+        : {}),
+      ...(importModpack?.mainJar ? { mainJar: importModpack.mainJar } : {}),
+      ...(importModpack?.source ? { modpack: importModpack.source } : {}),
       ...(pack?.shareVersion
         ? { owner: base.owner, ownerId: base.ownerId }
         : ownerRecordFor(account)),
     };
 
     if (!importData) {
-      if (request.servers.length > 0) {
-        assertWritten(
-          await api.servers.write(
-            request.servers,
-            await api.path.join(versionPath, "servers.dat"),
-          ),
-        );
-      }
-
       if (request.options) {
         assertWritten(
           await api.fs.writeFile(
@@ -333,6 +331,16 @@ export async function createInstance(
       assertWritten(await api.fs.copy(importData.path, versionPath));
     } else if (importModpack) {
       await copyImportedFolders(importModpack.folderPath, versionPath);
+      if (importModpack.source) {
+        assertWritten(
+          await api.modpack.writeBase(versionPath, importModpack.folderPath, {
+            versionId: importModpack.source.versionId,
+            loaderVersion: importModpack.loaderVersion,
+            projects: baseProjectsOf(importModpack.mods),
+            extraFiles: importModpack.extraFiles ?? [],
+          }),
+        );
+      }
       extraFilesFailed = !(await downloadExtraFiles(
         importModpack.extraFiles ?? [],
         versionPath,
@@ -342,6 +350,21 @@ export async function createInstance(
         request.mods,
         importModpack.folderPath,
         versionPath,
+      );
+    }
+
+    if (!importData && request.servers.length > 0) {
+      const serversPath = await api.path.join(versionPath, "servers.dat");
+      const packServers =
+        importModpack && (await api.fs.pathExists(serversPath))
+          ? await api.servers.read(serversPath).catch(() => [])
+          : [];
+
+      assertWritten(
+        await api.servers.write(
+          mergeServerLists(request.servers, packServers),
+          serversPath,
+        ),
       );
     }
 

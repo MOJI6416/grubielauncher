@@ -11,7 +11,6 @@ import {
   Settings2,
   Sparkles,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Hint } from "@renderer/components/Hint";
@@ -56,7 +55,7 @@ import { AgentContextRail } from "@renderer/features/agent/AgentContextRail";
 import { AgentProvidersModal } from "@renderer/features/agent/AgentProvidersModal";
 import { AgentSetupCard } from "@renderer/features/agent/AgentSetupCard";
 import { AgentEmptyState } from "@renderer/features/agent/AgentEmptyState";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 
 const api = window.api;
 
@@ -281,13 +280,9 @@ export function AgentScreen({ chatId }: { chatId?: string }) {
                     size="icon-sm"
                     aria-label={t("agent.copyTranscript")}
                     onClick={async () => {
-                      if (
-                        !(await copyToClipboard(
-                          chatToMarkdown(t("agent.title"), chat.timeline),
-                        ))
-                      )
-                        return;
-                      toast.success(t("agent.transcriptCopied"));
+                      await copyWithFeedback(
+                        chatToMarkdown(t("agent.title"), chat.timeline),
+                      );
                     }}
                   >
                     <ClipboardCopy />

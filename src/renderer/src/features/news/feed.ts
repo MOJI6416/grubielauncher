@@ -95,11 +95,41 @@ export function newsItemKey(item: INews): string {
   return item.id || item.url || item.title;
 }
 
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: "\u00a0",
+};
+
+export function decodeEntities(text: string): string {
+  return text.replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (match, code: string) => {
+    if (code[0] !== "#") return NAMED_ENTITIES[code.toLowerCase()] ?? match;
+    const point =
+      code[1] === "x" || code[1] === "X"
+        ? parseInt(code.slice(2), 16)
+        : parseInt(code.slice(1), 10);
+    return Number.isFinite(point) && point > 0 && point <= 0x10ffff
+      ? String.fromCodePoint(point)
+      : match;
+  });
+}
+
 export function toNewsCard(
-  item: INews,
+  raw: INews,
   index: number,
   releaseOf?: ReleaseLookup,
 ): NewsCard {
+  const item: INews = {
+    ...raw,
+    title: decodeEntities(raw.title),
+    ...(typeof raw.description === "string"
+      ? { description: decodeEntities(raw.description) }
+      : {}),
+  };
+
   return {
     key: `${newsItemKey(item)}-${index}`,
     item,

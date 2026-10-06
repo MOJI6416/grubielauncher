@@ -464,6 +464,38 @@ describe("checkModpack Prism/MultiMC imports", () => {
     ).resolves.toBe(true);
   });
 
+  it.each([
+    ["net.ornithemc:calamus-intermediary:1.12.2", "0.19.5+gen1"],
+    ["net.ornithemc:calamus-intermediary-gen2:1.12.2", "0.19.5"],
+  ])("keeps the Ornithe generation from %s", async (library, loaderVersion) => {
+    const instanceRoot = await makeTempRoot();
+    await fs.outputJSON(path.join(instanceRoot, "mmc-pack.json"), {
+      components: [
+        { uid: "net.minecraft", version: "1.12.2" },
+        { uid: "net.fabricmc.intermediary", version: "1.12.2" },
+        { uid: "net.fabricmc.fabric-loader", version: "0.19.5" },
+      ],
+    });
+    await fs.outputJSON(
+      path.join(instanceRoot, "patches", "net.fabricmc.intermediary.json"),
+      {
+        formatVersion: 1,
+        libraries: [{ name: library, url: "https://maven.ornithemc.net/releases" }],
+        uid: "net.fabricmc.intermediary",
+        version: "1.12.2",
+      },
+    );
+    await fs.writeFile(path.join(instanceRoot, "instance.cfg"), "name=Ornithe\n");
+
+    const result = await checkModpack(instanceRoot);
+
+    expect(result).toMatchObject({
+      version: "1.12.2",
+      loader: "ornithe",
+      loaderVersion,
+    });
+  });
+
   it("finds Prism/MultiMC exports inside one top-level folder", async () => {
     const tempRoot = await makeTempRoot();
     const nestedRoot = path.join(tempRoot, "Exported Instance");

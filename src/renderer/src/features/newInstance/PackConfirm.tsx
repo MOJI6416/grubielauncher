@@ -28,6 +28,7 @@ import { resolveLocalImage } from "@renderer/utilities/localMedia";
 import { SummaryCard, type SummaryRowData } from "./CreationSummary";
 import { summarizePackContent } from "./packSummary";
 import type { NewInstanceState } from "./state";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const ROW_HEIGHT = 34;
 
@@ -46,28 +47,21 @@ export function PackConfirm({
   state,
   folderPath,
   warnings,
-  canChangeContent,
   isBusy,
   onRetryVersions,
   onChangePack,
-  onOpenContent,
-  onOpenServers,
-  onOpenArguments,
   onSelectLoaderVersion,
 }: {
   state: NewInstanceState;
   folderPath: string;
   warnings: string[];
-  canChangeContent: boolean;
   isBusy?: boolean;
   onRetryVersions?: () => void;
   onChangePack?: () => void;
-  onOpenContent: () => void;
-  onOpenServers: () => void;
-  onOpenArguments: () => void;
   onSelectLoaderVersion: (id: string) => void;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
     null,
   );
@@ -178,8 +172,12 @@ export function PackConfirm({
     key: "folder",
     icon: <FolderTree className="size-3.5" />,
     label: t("addVersion.preview.folder"),
-    value: <span className="font-mono">{shortenPath(folderPath, 2)}</span>,
-    title: folderPath,
+    value: (
+      <span className="font-mono">
+        {shortenPath(redact.path(folderPath), 2)}
+      </span>
+    ),
+    title: redact.path(folderPath),
   });
 
   return (
@@ -405,31 +403,16 @@ export function PackConfirm({
             )}
           </div>
 
-          <footer className="flex h-10 shrink-0 items-center gap-1.5 border-t border-border px-1.5">
-            <Button variant="ghost" size="sm" onClick={onOpenContent}>
-              <SlidersHorizontal />
-              {canChangeContent
-                ? t("newInstance.editContent")
-                : t("newInstance.browseContent")}
-            </Button>
-
-            {state.servers.length > 0 &&
-              state.minecraftVersion?.serverManager && (
-                <Button variant="ghost" size="sm" onClick={onOpenServers}>
-                  <Server />
-                  {t("versions.servers")}
-                  <span className="font-mono text-xs tabular-nums text-faint">
-                    {state.servers.length}
-                  </span>
-                </Button>
-              )}
-
-            {hasArguments && (
-              <Button variant="ghost" size="sm" onClick={onOpenArguments}>
-                <SquareTerminal />
-                {t("arguments.title")}
-              </Button>
-            )}
+          <footer className="flex h-9 shrink-0 items-center border-t border-border px-2.5">
+            <Hint
+              content={t("newInstance.afterInstallHint")}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="min-w-0 truncate text-[0.7rem] text-faint">
+                {t("newInstance.afterInstallHint")}
+              </span>
+            </Hint>
           </footer>
         </section>
       </div>

@@ -64,6 +64,7 @@ import {
   accountAtom,
   accountsAtom,
   isRunningAtom,
+  internetAtom,
   networkAtom,
   selectedVersionAtom,
   settingsAtom,
@@ -117,6 +118,8 @@ import {
   reorderKeys,
 } from "./selectors";
 import { instanceUpdatesAtom } from "./updateCheck";
+import { modpackUpdatesAtom } from "@renderer/features/modpack/modpackCatalog";
+import { useModpackUpdateCheck } from "@renderer/features/modpack/useModpackSource";
 import { useInstanceUpdateCheck } from "./useInstanceUpdateCheck";
 import {
   EMPTY_LIBRARY_FILTERS,
@@ -126,6 +129,7 @@ import {
   LibrarySort,
   availableFacets,
   buildLibraryEntries,
+  sectionLibraryEntries,
   countFilters,
   listFilters,
   mergeManualOrder,
@@ -134,6 +138,8 @@ import {
   sortLibrary,
   toggleFilter,
 } from "./library";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 
 const api = window.api;
 
@@ -155,6 +161,8 @@ export function InstanceLibrary({
   const accounts = useAtomValue(accountsAtom);
   const isLaunching = useAtomValue(isRunningAtom);
   const isNetwork = useAtomValue(networkAtom);
+  const isInternetOnline = useAtomValue(internetAtom);
+  const modpackUpdates = useAtomValue(modpackUpdatesAtom);
   const settings = useAtomValue(settingsAtom);
   const updates = useAtomValue(instanceUpdatesAtom);
   const tags = useAtomValue(instanceTagsAtom);
@@ -168,6 +176,7 @@ export function InstanceLibrary({
   const sessions = useAtomValue(runningSessionsAtom);
   const flags = useAtomValue(instanceFlagsAtom);
   const { t } = useTranslation();
+  const viewIndicator = useSlidingIndicator<HTMLDivElement>();
 
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_LIBRARY_FILTERS);
@@ -188,6 +197,7 @@ export function InstanceLibrary({
   const orphans = useOrphanFolders(versions);
 
   useInstanceUpdateCheck(versions, account, isNetwork);
+  useModpackUpdateCheck(versions, isInternetOnline);
 
   useEffect(() => {
     if (!versionsLoaded || versions.length === 0) return;
@@ -585,7 +595,15 @@ export function InstanceLibrary({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5">
+            <div
+              ref={viewIndicator.containerRef}
+              className="relative flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5"
+            >
+              <SlidingIndicator
+                indicator={viewIndicator}
+                variant="fill"
+                className="rounded-md bg-secondary"
+              />
               {(["list", "grid"] as InstancesView[]).map((mode) => (
                 <Hint
                   key={mode}
@@ -595,7 +613,14 @@ export function InstanceLibrary({
                 >
                   <Button
                     size="icon-sm"
-                    variant={view === mode ? "secondary" : "ghost"}
+                    variant="ghost"
+                    data-indicator-active={view === mode}
+                    className={cn(
+                      "relative",
+                      view === mode
+                        ? "text-foreground hover:bg-transparent"
+                        : "text-muted-foreground",
+                    )}
                     aria-label={t(
                       mode === "list"
                         ? "versions.viewList"
@@ -776,248 +801,270 @@ export function InstanceLibrary({
                 event.preventDefault();
               }
             }}
-            className={cn(
-              "pr-2.5",
-              view === "grid"
-                ? "grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3"
-                : "flex flex-col gap-1.5",
-            )}
+            className="flex flex-col gap-3 pr-2.5"
           >
-            {entries.map((entry) => {
-              if (entry.kind === "header") {
-                return (
-                  <div
-                    key={entry.key}
-                    onDragOver={(event) => {
-                      event.preventDefault();
-                      event.dataTransfer.dropEffect = "move";
-                    }}
-                    onDrop={(event) => {
-                      event.preventDefault();
-                      dropIntoGroup(entry.id);
-                    }}
-                    className={cn(
-                      "sticky top-0 z-10 col-span-full mt-1.5 flex h-7 items-center gap-2 rounded-lg bg-background px-1 first:mt-0",
-                      isDragging && "border border-dashed border-input",
-                    )}
-                  >
-                    {isFiltering ? (
-                      <span className="flex min-w-0 flex-1 items-center gap-1.5 pl-5">
-                        <span className="truncate text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
-                          {entry.name}
+            {sectionLibraryEntries(entries).map((section) => {
+              const renderEntry = (entry: (typeof entries)[number]) => {
+                if (entry.kind === "header") {
+                  return (
+                    <div
+                      key={entry.key}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = "move";
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        dropIntoGroup(entry.id);
+                      }}
+                      className={cn(
+                        "sticky top-0 z-10 flex h-7 shrink-0 items-center gap-2 bg-background px-1",
+                        isDragging && "rounded-lg border border-dashed border-input",
+                      )}
+                    >
+                      {isFiltering ? (
+                        <span className="flex min-w-0 flex-1 items-center gap-1.5 pl-5">
+                          <span className="truncate text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+                            {entry.name}
+                          </span>
+                          <span className="shrink-0 font-mono text-[0.65rem] text-faint">
+                            {entry.count}
+                          </span>
                         </span>
-                        <span className="shrink-0 font-mono text-[0.65rem] text-faint">
-                          {entry.count}
-                        </span>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateInstancesFile((file) =>
-                            entry.id
-                              ? toggleGroup(file, entry.id as string)
-                              : toggleUngrouped(file),
-                          )
-                        }
-                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
-                      >
-                        <ChevronRight
-                          className={cn(
-                            "size-3.5 shrink-0 text-faint transition-transform",
-                            !entry.collapsed && "rotate-90",
-                          )}
-                        />
-                        <span className="truncate text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
-                          {entry.name}
-                        </span>
-                        <span className="shrink-0 font-mono text-[0.65rem] text-faint">
-                          {entry.count}
-                        </span>
-                      </button>
-                    )}
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateInstancesFile((file) =>
+                              entry.id
+                                ? toggleGroup(file, entry.id as string)
+                                : toggleUngrouped(file),
+                            )
+                          }
+                          className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                        >
+                          <ChevronRight
+                            className={cn(
+                              "size-3.5 shrink-0 text-faint transition-transform",
+                              !entry.collapsed && "rotate-90",
+                            )}
+                          />
+                          <span className="truncate text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+                            {entry.name}
+                          </span>
+                          <span className="shrink-0 font-mono text-[0.65rem] text-faint">
+                            {entry.count}
+                          </span>
+                        </button>
+                      )}
 
-                    {entry.id && (
-                      <DropdownMenu>
-                        <Hint content={t("common.more")}>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              size="icon-sm"
-                              variant="ghost"
-                              className="shrink-0 text-faint"
-                              aria-label={`${t("common.more")} — ${entry.name}`}
+                      {entry.id && (
+                        <DropdownMenu>
+                          <Hint content={t("common.more")}>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                size="icon-sm"
+                                variant="ghost"
+                                className="shrink-0 text-faint"
+                                aria-label={`${t("common.more")} — ${entry.name}`}
+                              >
+                                <Ellipsis className="size-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                          </Hint>
+                          <DropdownMenuContent align="end" className="w-52">
+                            <DropdownMenuItem
+                              onSelect={() =>
+                                setRenamingGroup({
+                                  id: entry.id as string,
+                                  name: entry.name,
+                                })
+                              }
                             >
-                              <Ellipsis className="size-3.5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                        </Hint>
-                        <DropdownMenuContent align="end" className="w-52">
-                          <DropdownMenuItem
-                            onSelect={() =>
-                              setRenamingGroup({
-                                id: entry.id as string,
-                                name: entry.name,
-                              })
-                            }
-                          >
-                            <FolderPen />
-                            <span>{t("versions.groups.rename")}</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            disabled={groupIndex(entry.id) <= 0}
-                            onSelect={() => moveGroup(entry.id, -1)}
-                          >
-                            <ArrowUp />
-                            <span>{t("versions.groups.moveUp")}</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            disabled={groupIndex(entry.id) >= groups.length - 1}
-                            onSelect={() => moveGroup(entry.id, 1)}
-                          >
-                            <ArrowDown />
-                            <span>{t("versions.groups.moveDown")}</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onSelect={() =>
-                              setPendingGroup({
-                                id: entry.id as string,
-                                name: entry.name,
-                              })
-                            }
-                          >
-                            <X />
-                            <span>{t("versions.groups.remove")}</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
+                              <FolderPen />
+                              <span>{t("versions.groups.rename")}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={groupIndex(entry.id) <= 0}
+                              onSelect={() => moveGroup(entry.id, -1)}
+                            >
+                              <ArrowUp />
+                              <span>{t("versions.groups.moveUp")}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={
+                                groupIndex(entry.id) >= groups.length - 1
+                              }
+                              onSelect={() => moveGroup(entry.id, 1)}
+                            >
+                              <ArrowDown />
+                              <span>{t("versions.groups.moveDown")}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onSelect={() =>
+                                setPendingGroup({
+                                  id: entry.id as string,
+                                  name: entry.name,
+                                })
+                              }
+                            >
+                              <X />
+                              <span>{t("versions.groups.remove")}</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                  );
+                }
+
+                const instance = entry.instance;
+                const itemKey = entry.key;
+                const ownerOk = isOwner(
+                  instance.version.owner,
+                  account ?? undefined,
+                  instance.version.ownerId,
                 );
-              }
+                const ownerInfo = ownerOk
+                  ? null
+                  : parseVersionOwner(instance.version.owner);
+                const ownerAccount = ownerInfo
+                  ? accounts?.find(
+                      (entry) =>
+                        entry.type === ownerInfo.type &&
+                        entry.nickname === ownerInfo.nickname,
+                    )
+                  : undefined;
 
-              const instance = entry.instance;
-              const itemKey = entry.key;
-              const ownerOk = isOwner(
-                instance.version.owner,
-                account ?? undefined,
-                instance.version.ownerId,
-              );
-              const ownerInfo = ownerOk
-                ? null
-                : parseVersionOwner(instance.version.owner);
-              const ownerAccount = ownerInfo
-                ? accounts?.find(
-                    (entry) =>
-                      entry.type === ownerInfo.type &&
-                      entry.nickname === ownerInfo.nickname,
-                  )
-                : undefined;
+                const actions = renderMenu(instance, itemKey);
 
-              const actions = renderMenu(instance, itemKey);
+                const menu = (
+                  <DropdownMenu>
+                    <Hint content={t("common.more")}>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`${t("common.more")} — ${instance.version.name}`}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <Ellipsis />
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </Hint>
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-56"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {actions.slice(1).map((group, index) => (
+                        <div key={group[0]?.id ?? index}>
+                          {index > 0 && <DropdownMenuSeparator />}
+                          {group.map((action) => (
+                            <DropdownMenuItem
+                              key={action.id}
+                              disabled={action.disabled}
+                              onSelect={action.onSelect}
+                            >
+                              <action.icon />
+                              <span>{action.label}</span>
+                            </DropdownMenuItem>
+                          ))}
+                        </div>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                );
 
-              const menu = (
-                <DropdownMenu>
-                  <Hint content={t("common.more")}>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`${t("common.more")} — ${instance.version.name}`}
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <Ellipsis />
-                      </Button>
-                    </DropdownMenuTrigger>
-                  </Hint>
-                  <DropdownMenuContent
-                    align="end"
-                    className="w-56"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    {actions.slice(1).map((group, index) => (
-                      <div key={group[0]?.id ?? index}>
-                        {index > 0 && <DropdownMenuSeparator />}
-                        {group.map((action) => (
-                          <DropdownMenuItem
-                            key={action.id}
-                            disabled={action.disabled}
-                            onSelect={action.onSelect}
-                          >
-                            <action.icon />
-                            <span>{action.label}</span>
-                          </DropdownMenuItem>
-                        ))}
-                      </div>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              );
+                const cardProps = {
+                  instance,
+                  itemKey,
+                  active: !!selected && instanceKey(selected) === itemKey,
+                  statuses: resolveInstanceStatuses({
+                    running: runningKeys.includes(itemKey),
+                    installed: instance.hasManifest,
+                    update:
+                      updates[itemKey] ??
+                      (modpackUpdates[itemKey] ? "behind" : undefined),
+                    downloaded: instance.version.downloadedVersion,
+                  }),
+                  tags: tags[itemKey] ?? [],
+                  playtime: playtime[itemKey],
+                  lastLaunchedAt: instanceLastLaunch(
+                    instance.version.lastLaunch,
+                    stats[itemKey],
+                  ),
+                  ownerNickname: ownerInfo?.nickname,
+                  ownerImage: ownerAccount?.image,
+                  canPlay: !!account && !isLaunching,
+                  menu,
+                  onSelect: () => select(instance),
+                  onOpen: () => open(instance),
+                  onPlay: () => play(instance),
+                  dragProps: dragProps(itemKey),
+                };
 
-              const cardProps = {
-                instance,
-                itemKey,
-                active: !!selected && instanceKey(selected) === itemKey,
-                statuses: resolveInstanceStatuses({
-                  running: runningKeys.includes(itemKey),
-                  installed: instance.hasManifest,
-                  update: updates[itemKey],
-                  downloaded: instance.version.downloadedVersion,
-                }),
-                tags: tags[itemKey] ?? [],
-                playtime: playtime[itemKey],
-                lastLaunchedAt: instanceLastLaunch(
-                  instance.version.lastLaunch,
-                  stats[itemKey],
-                ),
-                ownerNickname: ownerInfo?.nickname,
-                ownerImage: ownerAccount?.image,
-                canPlay: !!account && !isLaunching,
-                menu,
-                onSelect: () => select(instance),
-                onOpen: () => open(instance),
-                onPlay: () => play(instance),
-                dragProps: dragProps(itemKey),
+                return (
+                  <ContextMenu key={itemKey}>
+                    <ContextMenuTrigger className="contents">
+                      {view === "grid" ? (
+                        <InstanceTile {...cardProps} />
+                      ) : (
+                        <InstanceRow {...cardProps} />
+                      )}
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="w-56">
+                      {actions.map((group, index) => (
+                        <div key={group[0]?.id ?? index}>
+                          {index > 0 && <ContextMenuSeparator />}
+                          {group.map((action) => (
+                            <ContextMenuItem
+                              key={action.id}
+                              disabled={action.disabled}
+                              onSelect={action.onSelect}
+                            >
+                              <action.icon />
+                              <span>{action.label}</span>
+                            </ContextMenuItem>
+                          ))}
+                        </div>
+                      ))}
+                      <ContextMenuSeparator />
+                      <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                          <FolderPlus />
+                          <span>{t("versions.groups.addTo")}</span>
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                          {groupItems(itemKey)}
+                        </ContextMenuSubContent>
+                      </ContextMenuSub>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                );
               };
 
               return (
-                <ContextMenu key={itemKey}>
-                  <ContextMenuTrigger className="contents">
-                    {view === "grid" ? (
-                      <InstanceTile {...cardProps} />
-                    ) : (
-                      <InstanceRow {...cardProps} />
-                    )}
-                  </ContextMenuTrigger>
-                  <ContextMenuContent className="w-56">
-                    {actions.map((group, index) => (
-                      <div key={group[0]?.id ?? index}>
-                        {index > 0 && <ContextMenuSeparator />}
-                        {group.map((action) => (
-                          <ContextMenuItem
-                            key={action.id}
-                            disabled={action.disabled}
-                            onSelect={action.onSelect}
-                          >
-                            <action.icon />
-                            <span>{action.label}</span>
-                          </ContextMenuItem>
-                        ))}
-                      </div>
-                    ))}
-                    <ContextMenuSeparator />
-                    <ContextMenuSub>
-                      <ContextMenuSubTrigger>
-                        <FolderPlus />
-                        <span>{t("versions.groups.addTo")}</span>
-                      </ContextMenuSubTrigger>
-                      <ContextMenuSubContent>
-                        {groupItems(itemKey)}
-                      </ContextMenuSubContent>
-                    </ContextMenuSub>
-                  </ContextMenuContent>
-                </ContextMenu>
+                <div
+                  key={section.key}
+                  role={section.header ? "group" : undefined}
+                  aria-label={section.header?.name}
+                  className={cn(
+                    "flex flex-col",
+                    view === "grid" ? "gap-3" : "gap-1.5",
+                  )}
+                >
+                  {section.header && renderEntry(section.header)}
+                  {view === "grid"
+                    ? section.items.length > 0 && (
+                        <div className="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3">
+                          {section.items.map(renderEntry)}
+                        </div>
+                      )
+                    : section.items.map(renderEntry)}
+                </div>
               );
             })}
           </div>

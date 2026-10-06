@@ -1,3 +1,5 @@
+import path from "path";
+import fs from "fs-extra";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { AuthlibEnsureResult } from "@/types/IAuthlib";
 import {
@@ -13,11 +15,12 @@ import { importVersion } from "../utilities/versions";
 import { duplicateVersion } from "../utilities/duplicateVersion";
 import { sendProgress, throttleProgress } from "../utilities/progressEvents";
 import { ArchiveExtractProgress } from "@/types/Archive";
-import { uploadMods } from "../utilities/share";
+import { uploadJarMods, uploadMods } from "../utilities/share";
 import { check, handleSafe } from "../utilities/ipc";
 import { assertReadablePath, assertWritablePath } from "../utilities/safePath";
 import {
   DownloadPauseState,
+  Downloader,
   getDownloadPauseState,
   pauseDownloads,
   resumeDownloads,
@@ -55,6 +58,19 @@ import {
 import { readInstanceLoaderRequirements } from "../utilities/loaderRequirements";
 import { isVersionRunning } from "../utilities/worldBackups";
 import { VersionsService } from "../services/Versions";
+import { LOADERS } from "@/types/Loader";
+import { IJarMod, IJarModSet } from "@/types/IVersion";
+import {
+  importJarMods,
+  jarModDownloads,
+  listJarModFiles,
+  removeJarModFile,
+  removeUnusedJarModFiles,
+} from "../game/jarMods";
+import { checkOrnitheMods, ensureOrnitheMapping } from "../game/ornitheMods";
+import { assertSafeFileSegment } from "../game/serverScriptSafety";
+import { getDataRoot } from "../utilities/dataRoot";
+import type { OrnitheModsCheck } from "@/shared/profileLoaders";
 
 const fallbackVersionInit: IVersionClassData = {
   failed: true,
@@ -100,7 +116,12 @@ const isConf = check.object();
 const isOptionalConf = check.optional(check.object());
 const isDownloadItems = check.optional(check.arrayOf(check.object(), 100000));
 const isLoaderVersionId = check.pattern(LOADER_VERSION_ID_PATTERN, 128);
-const isModdedLoaderName = check.oneOf("forge", "neoforge", "fabric", "quilt");
+const isModdedLoaderName = check.oneOf(
+  ...LOADERS.filter((loader) => loader !== "vanilla"),
+);
+const isJarModFile = check.pattern(/^[A-Za-z0-9._+-]+$/, 128);
+const isVersionId = check.pattern(/^[A-Za-z0-9._+-]+$/, 64);
+const isFilePaths = check.arrayOf(isPath, 64);
 
 export function isVersionInstallActive(): boolean {
   return isInstallOperationActive();
@@ -322,6 +343,89 @@ export function registerVersionIpc() {
     },
   );
 
+  handleSafe<IJarMod[] | null>(
+    "version:importJarMods",
+    null,
+    [isPath, isFilePaths],
+    async (_, versionPath: string, filePaths: string[]) => {
+      assertWritablePath(versionPath, "version:importJarMods");
+      for (const filePath of filePaths) {
+        assertReadablePath(filePath, "version:importJarMods");
+      }
+      return importJarMods(versionPath, filePaths);
+    },
+  );
+
+  handleSafe(
+    "version:removeJarMod",
+    false,
+    [isPath, isJarModFile],
+    async (_, versionPath: string, file: string) => {
+      assertWritablePath(versionPath, "version:removeJarMod");
+      await removeJarModFile(versionPath, file);
+      return true;
+    },
+  );
+
+  handleSafe<string[]>(
+    "version:jarModFiles",
+    [],
+    [isPath],
+    async (_, versionPath: string) => {
+      assertReadablePath(versionPath, "version:jarModFiles");
+      return listJarModFiles(versionPath);
+    },
+  );
+
+  handleSafe(
+    "version:syncJarMods",
+    false,
+    [isPath, isConf],
+    async (_, versionPath: string, jar: IJarModSet) => {
+      assertWritablePath(versionPath, "version:syncJarMods");
+      const conf = {
+        jarMods: Array.isArray(jar.mods) ? jar.mods : [],
+        mainJar: jar.main ?? undefined,
+      };
+      const items = await jarModDownloads(versionPath, conf);
+      if (items.length > 0) await new Downloader(2).downloadFiles(items);
+      const missing = await jarModDownloads(versionPath, conf);
+      if (missing.length > 0) {
+        throw new Error(`Jar mods were not downloaded: ${missing.length}`);
+      }
+      await removeUnusedJarModFiles(versionPath, conf);
+      return true;
+    },
+  );
+
+  handleSafe<OrnitheModsCheck | null>(
+    "version:checkOrnitheMods",
+    null,
+    [isPath, isVersionId],
+    async (_, versionPath: string, minecraftVersion: string) => {
+      assertReadablePath(versionPath, "version:checkOrnitheMods");
+      assertSafeFileSegment(minecraftVersion, "version id");
+
+      const manifest = await fs
+        .readJSON(path.join(versionPath, `${minecraftVersion}.json`))
+        .catch(() => null);
+      const libraries: string[] = Array.isArray(manifest?.libraries)
+        ? manifest.libraries.map((library: { name?: unknown }) =>
+            String(library?.name ?? ""),
+          )
+        : [];
+      const librariesPath = path.join(getDataRoot(), "minecraft", "libraries");
+
+      return checkOrnitheMods({
+        libraries,
+        librariesPath,
+        modsPath: path.join(versionPath, "mods"),
+        loadMapping: (generation) =>
+          ensureOrnitheMapping(minecraftVersion, generation, librariesPath),
+      });
+    },
+  );
+
   handleSafe("version:cancelInstall", false, async () => {
     return cancelActiveInstallOperation();
   });
@@ -495,6 +599,19 @@ export function registerVersionIpc() {
       const version = new Version(versionConf);
       await version.init();
       return uploadMods(at, version);
+    },
+  );
+
+  handleSafe<IJarModSet | null>(
+    "share:uploadJarMods",
+    null,
+    [check.string(32768), isPath, check.nonEmptyString(64), isConf],
+    async (_, at: string, versionPath: string, shareCode: string, jar: IJarModSet) => {
+      assertReadablePath(versionPath, "share:uploadJarMods");
+      return uploadJarMods(at, versionPath, shareCode, {
+        mods: Array.isArray(jar.mods) ? jar.mods : [],
+        main: jar.main ?? null,
+      });
     },
   );
 }

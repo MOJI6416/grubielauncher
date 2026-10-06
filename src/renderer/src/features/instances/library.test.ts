@@ -11,6 +11,7 @@ import {
   matchesQuery,
   mergeManualOrder,
   moveFocus,
+  sectionLibraryEntries,
   selectLibrary,
   sortLibrary,
   toggleFilter,
@@ -358,16 +359,16 @@ describe("buildLibraryEntries", () => {
 describe("mergeManualOrder", () => {
   it("writes the new order back into the slots the visible rows occupied", () => {
     expect(
-      mergeManualOrder(["a", "hidden", "b", "c"], ["a", "b", "c"], ["c", "a", "b"]),
+      mergeManualOrder(
+        ["a", "hidden", "b", "c"],
+        ["a", "b", "c"],
+        ["c", "a", "b"],
+      ),
     ).toEqual(["c", "hidden", "a", "b"]);
   });
 
   it("keeps instances that no filter shows", () => {
-    const result = mergeManualOrder(
-      ["a", "b", "c"],
-      ["a", "c"],
-      ["c", "a"],
-    );
+    const result = mergeManualOrder(["a", "b", "c"], ["a", "c"], ["c", "a"]);
 
     expect(result).toEqual(["c", "b", "a"]);
     expect(result).toHaveLength(3);
@@ -393,5 +394,46 @@ describe("moveFocus", () => {
 
   it("returns null for an empty list", () => {
     expect(moveFocus([], "a", 1)).toBeNull();
+  });
+});
+
+describe("sectionLibraryEntries", () => {
+  const a = make("A", { path: "/a" });
+  const b = make("B", { path: "/b" });
+  const c = make("C", { path: "/c" });
+
+  it("gives every group its own section so sticky headers do not stack", () => {
+    const sections = sectionLibraryEntries(
+      buildLibraryEntries(
+        [a, b, c],
+        [
+          { id: "g1", name: "Co-op", keys: ["/b"] },
+          { id: "g2", name: "Empty", keys: [], collapsed: true },
+        ],
+        { ungroupedName: "Rest" },
+      ),
+    );
+
+    expect(
+      sections.map((section) => [
+        section.key,
+        section.header?.name,
+        section.items.map((item) => item.key),
+      ]),
+    ).toEqual([
+      ["group:g1", "Co-op", ["/b"]],
+      ["group:g2", "Empty", []],
+      ["group:none", "Rest", ["/a", "/c"]],
+    ]);
+  });
+
+  it("keeps a flat list as one section without a header", () => {
+    const sections = sectionLibraryEntries(
+      buildLibraryEntries([a, b], [], { ungroupedName: "Rest" }),
+    );
+
+    expect(sections).toHaveLength(1);
+    expect(sections[0].header).toBeUndefined();
+    expect(sections[0].items.map((item) => item.key)).toEqual(["/a", "/b"]);
   });
 });

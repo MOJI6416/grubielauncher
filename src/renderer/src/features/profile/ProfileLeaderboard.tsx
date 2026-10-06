@@ -264,7 +264,9 @@ function BoardRow({
           : undefined
       }
       className={`flex h-11 min-w-0 items-center gap-2 rounded-lg px-2 ${
-        row.isSelf ? "bg-primary/10 ring-1 ring-primary/30" : "bg-surface-1"
+        row.isSelf
+          ? "bg-primary/10 ring-1 ring-primary/30 ring-inset"
+          : "bg-surface-1"
       } ${onOpen ? "cursor-pointer transition-colors hover:bg-surface-3" : ""}`}
     >
       <RankBadge rank={row.rank} />

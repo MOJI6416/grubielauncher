@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
@@ -44,6 +44,7 @@ import { progressPercent } from "@renderer/utilities/archiveProgress";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { toast } from "sonner";
 import { backupFreshness } from "./worldFacts";
+import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 
 const api = window.api;
 
@@ -67,6 +68,10 @@ export function WorldBackupsTab({
   const settings = useAtomValue(settingsAtom);
 
   const [backups, setBackups] = useState<IWorldBackup[]>([]);
+  const backupIds = useMemo(
+    () => new Set(backups.map((backup) => backup.id)),
+    [backups],
+  );
   const [preserved, setPreserved] = useState<IWorldPreservedCopy[]>([]);
   const [skipReason, setSkipReason] = useState<WorldBackupErrorCode | null>(
     null,
@@ -401,89 +406,90 @@ export function WorldBackupsTab({
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-2">
-              {backups.map((backup) => {
-                const freshness = freshnessLabel(backup);
+              <RemovalList sourceKeys={backupIds}>
+                {backups.map((backup) => {
+                  const freshness = freshnessLabel(backup);
 
-                return (
-                  <div
-                    key={backup.id}
-                    className="flex min-w-0 items-center gap-3 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-accent/30"
-                  >
-                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <Hint
-                          variant="text"
-                          content={
-                            backup.createdAt
-                              ? formatDate(new Date(backup.createdAt))
-                              : undefined
-                          }
-                        >
-                          <span className="truncate text-xs font-medium">
-                            {backup.createdAt
-                              ? formatRelative(new Date(backup.createdAt))
-                              : t("worldBackups.unknownDate")}
-                          </span>
-                        </Hint>
+                  return (
+                    <RemovalItem key={backup.id} itemKey={backup.id}>
+                      <div className="flex min-w-0 items-center gap-3 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-accent/30">
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <Hint
+                              variant="text"
+                              content={
+                                backup.createdAt
+                                  ? formatDate(new Date(backup.createdAt))
+                                  : undefined
+                              }
+                            >
+                              <span className="truncate text-xs font-medium">
+                                {backup.createdAt
+                                  ? formatRelative(new Date(backup.createdAt))
+                                  : t("worldBackups.unknownDate")}
+                              </span>
+                            </Hint>
 
-                        <span
-                          className={`shrink-0 rounded px-1.5 py-0.5 text-[0.65rem] ${TRIGGER_TONE[backup.trigger]}`}
-                        >
-                          {t(`worldBackups.triggers.${backup.trigger}`)}
-                        </span>
+                            <span
+                              className={`shrink-0 rounded px-1.5 py-0.5 text-[0.65rem] ${TRIGGER_TONE[backup.trigger]}`}
+                            >
+                              {t(`worldBackups.triggers.${backup.trigger}`)}
+                            </span>
 
-                        <span className="shrink-0 font-mono text-[0.65rem] text-faint">
-                          {formatBytes(backup.size, sizeLabels, 1)}
-                        </span>
-                      </div>
+                            <span className="shrink-0 font-mono text-[0.65rem] text-faint">
+                              {formatBytes(backup.size, sizeLabels, 1)}
+                            </span>
+                          </div>
 
-                      {freshness && (
-                        <span
-                          className={`truncate text-[0.65rem] ${freshness.tone}`}
-                        >
-                          {freshness.text}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-1">
-                      <Hint
-                        content={
-                          isVersionRunning
-                            ? t("worldBackups.errors.versionRunning")
-                            : undefined
-                        }
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          disabled={isBusy || isVersionRunning}
-                          onClick={() => setPendingRestore(backup)}
-                        >
-                          {busyId === backup.id ? (
-                            <Loader2 className="animate-spin" />
-                          ) : (
-                            <HardDriveDownload className="size-3.5" />
+                          {freshness && (
+                            <span
+                              className={`truncate text-[0.65rem] ${freshness.tone}`}
+                            >
+                              {freshness.text}
+                            </span>
                           )}
-                          {t("worldBackups.restore")}
-                        </Button>
-                      </Hint>
+                        </div>
 
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="size-7 text-muted-foreground hover:text-destructive"
-                        disabled={isBusy}
-                        aria-label={t("common.delete")}
-                        onClick={() => setPendingDelete(backup)}
-                      >
-                        <Trash className="size-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
+                        <div className="flex shrink-0 items-center gap-1">
+                          <Hint
+                            content={
+                              isVersionRunning
+                                ? t("worldBackups.errors.versionRunning")
+                                : undefined
+                            }
+                          >
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              disabled={isBusy || isVersionRunning}
+                              onClick={() => setPendingRestore(backup)}
+                            >
+                              {busyId === backup.id ? (
+                                <Loader2 className="animate-spin" />
+                              ) : (
+                                <HardDriveDownload className="size-3.5" />
+                              )}
+                              {t("worldBackups.restore")}
+                            </Button>
+                          </Hint>
+
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="size-7 text-muted-foreground hover:text-destructive"
+                            disabled={isBusy}
+                            aria-label={t("common.delete")}
+                            onClick={() => setPendingDelete(backup)}
+                          >
+                            <Trash className="size-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </RemovalItem>
+                  );
+                })}
+              </RemovalList>
 
               {preserved.length > 0 && (
                 <div className="mt-1 flex flex-col gap-1.5 border-t pt-2.5">

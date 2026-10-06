@@ -365,6 +365,18 @@ describe("mergeIncomingAccounts", () => {
     expect(merged[0].refreshToken).toBe("refresh-new");
   });
 
+  it("keeps the nickname that came with the token refreshed in main", () => {
+    const stale = makeJwt({ sub: "ms-1", exp: staleExp, nickname: "Steve" });
+    const fresh = makeJwt({ sub: "ms-1", exp: freshExp, nickname: "Steve2" });
+
+    const merged = mergeIncomingAccounts(
+      [{ ...account(fresh, "refresh-new"), nickname: "Steve2" }],
+      [account(stale, "refresh-old")],
+    );
+
+    expect(merged[0].nickname).toBe("Steve2");
+  });
+
   it("accepts a genuinely newer token from the renderer", () => {
     const stale = makeJwt({ sub: "ms-1", exp: staleExp });
     const fresh = makeJwt({ sub: "ms-1", exp: freshExp });

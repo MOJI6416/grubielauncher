@@ -18,16 +18,19 @@ import { ShareHost } from "./hosts/ShareHost";
 import { SystemEventsHost } from "./hosts/SystemEventsHost";
 import { UnsavedCloseHost } from "./hosts/UnsavedCloseHost";
 import { VoiceCallHost } from "./hosts/VoiceCallHost";
+import { VoiceOverlayHost } from "./hosts/VoiceOverlayHost";
 import { WhatsNewHost } from "./hosts/WhatsNewHost";
 import { AccentHost } from "./hosts/AccentHost";
 import { TrayHost } from "./hosts/TrayHost";
 import { AppUpdateHost } from "./hosts/AppUpdateHost";
 import { SupportHost } from "./hosts/SupportHost";
+import { StreamerModeHost } from "./hosts/StreamerModeHost";
 
 export function AppHosts() {
   return (
     <>
       <BootstrapHost />
+      <StreamerModeHost />
       <AccentHost />
       <AppUpdateHost />
       <TrayHost />
@@ -41,6 +44,7 @@ export function AppHosts() {
       <FriendsSocketHost />
       <FriendsEventsHost />
       <VoiceCallHost />
+      <VoiceOverlayHost />
       <GameInviteHost />
       <CrashHost />
       <SupportHost />

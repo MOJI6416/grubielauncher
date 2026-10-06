@@ -1,11 +1,12 @@
-import { Loader } from "@/types/Loader";
+import { LOADERS as ALL_LOADERS, Loader } from "@/types/Loader";
 import { AgentTool } from "../types";
 import { limitList } from "../untrusted";
 
 const api = window.api;
 
 const MAX_VERSIONS = 25;
-const LOADERS: Loader[] = ["vanilla", "forge", "neoforge", "fabric", "quilt"];
+const LOADERS: Loader[] = [...ALL_LOADERS];
+const MODDED_LOADERS = LOADERS.filter((loader) => loader !== "vanilla");
 
 export const listMinecraftVersions: AgentTool = {
   name: "list_minecraft_versions",
@@ -64,7 +65,7 @@ export const listLoaderVersions: AgentTool = {
     properties: {
       loader: {
         type: "string",
-        enum: ["forge", "neoforge", "fabric", "quilt"],
+        enum: MODDED_LOADERS,
       },
       minecraftVersion: { type: "string" },
     },

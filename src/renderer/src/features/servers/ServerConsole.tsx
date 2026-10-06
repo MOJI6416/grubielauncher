@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, Copy, Terminal } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const LEVEL_CLASS: { pattern: RegExp; className: string }[] = [
   {
@@ -35,6 +35,7 @@ export function ServerConsole({
   onSend: (command: string) => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const [value, setValue] = useState("");
   const [history, setHistory] = useState<string[]>([]);
   const [cursor, setCursor] = useState<number | null>(null);
@@ -75,8 +76,7 @@ export function ServerConsole({
             disabled={!lines.length}
             aria-label={t("serverManager.copyLog")}
             onClick={async () => {
-              if (!(await copyToClipboard(lines.join("\n")))) return;
-              toast.success(t("common.copied"));
+              await copyWithFeedback(lines.join("\n"));
             }}
           >
             <Copy className="size-3.5" />
@@ -92,7 +92,7 @@ export function ServerConsole({
                 key={index}
                 className={cn("break-all whitespace-pre-wrap", lineClass(line))}
               >
-                {line}
+                {redact.text(line)}
               </p>
             ))}
             <div ref={endRef} />

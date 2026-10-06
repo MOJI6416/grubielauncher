@@ -5,6 +5,7 @@ import {
   buildNewsCards,
   capSource,
   countForSource,
+  decodeEntities,
   filterBySource,
   mergeNewsItems,
   mixFeed,
@@ -294,5 +295,28 @@ describe("countForSource", () => {
     expect(countForSource(items, "minecraft")).toBe(2);
     expect(countForSource(items, "grubie")).toBe(1);
     expect(countForSource(items, "other")).toBe(0);
+  });
+});
+
+describe("decodeEntities", () => {
+  it("decodes the entities minecraft.net leaves in titles", () => {
+    expect(decodeEntities("Capes &amp; Promos")).toBe("Capes & Promos");
+    expect(decodeEntities("&lt;b&gt; &quot;x&quot; &#39;y&#39;")).toBe(
+      "<b> \"x\" 'y'",
+    );
+    expect(decodeEntities("&#x41;&#66;")).toBe("AB");
+  });
+
+  it("leaves unknown or plain text alone", () => {
+    expect(decodeEntities("Fish & Chips")).toBe("Fish & Chips");
+    expect(decodeEntities("&unknown; &#0;")).toBe("&unknown; &#0;");
+  });
+
+  it("is applied to card titles and descriptions", () => {
+    const [card] = buildNewsCards([
+      item({ title: "Capes &amp; Promos", description: "Rock &amp; roll" }),
+    ]);
+    expect(card.item.title).toBe("Capes & Promos");
+    expect(card.summary).toBe("Rock & roll");
   });
 });

@@ -121,6 +121,10 @@ export interface QuickInstallFetchers {
     project: IProject,
     deps: IVersionDependency[],
   ) => Promise<IVersionDependency[]>;
+  pickVersion?: (
+    versions: ModVersion[],
+    requiredBy?: ModVersion,
+  ) => Promise<ModVersion | undefined>;
 }
 
 export interface QuickInstallPlan {
@@ -133,7 +137,11 @@ export async function planQuickInstall(
   root: IProject,
   installed: ILocalProject[],
   fetchers: QuickInstallFetchers,
-  options: { loader?: Loader; dependencies?: boolean } = {},
+  options: {
+    loader?: Loader;
+    dependencies?: boolean;
+    requiredBy?: ModVersion;
+  } = {},
 ): Promise<QuickInstallPlan> {
   const withDependencies = options.dependencies !== false;
   let skippedDependencies = false;
@@ -154,15 +162,18 @@ export async function planQuickInstall(
   };
 
   const added: ILocalProject[] = [];
-  const queue: IProject[] = [root];
+  const queue: { project: IProject; requiredBy?: ModVersion }[] = [
+    { project: root, requiredBy: options.requiredBy },
+  ];
   let rootMissingVersion = false;
 
   while (queue.length) {
-    const project = queue.shift()!;
+    const { project, requiredBy } = queue.shift()!;
     if (isHandled(project)) continue;
 
     const versions = await fetchers.fetchVersions(project);
-    const latest = versions[0];
+    const latest =
+      (await fetchers.pickVersion?.(versions, requiredBy)) ?? versions[0];
 
     if (!latest) {
       if (project.id === root.id && project.provider === root.provider) {
@@ -210,7 +221,7 @@ export async function planQuickInstall(
       if (dep.relationType !== DependencyType.REQUIRED) continue;
       if (!dep.project) continue;
       if (isHandled(dep.project)) continue;
-      queue.push(dep.project);
+      queue.push({ project: dep.project, requiredBy: latest });
     }
   }
 

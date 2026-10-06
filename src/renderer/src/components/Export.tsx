@@ -31,6 +31,7 @@ import {
 } from "@renderer/utilities/exportVersion";
 import { formatBytes } from "@renderer/utilities/file";
 import { useInstanceDiskUsage } from "@renderer/features/instances/useInstanceInsights";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
@@ -154,6 +155,7 @@ export function Export({
   const [selectedVersion] = useAtom(selectedVersionAtom);
   const { size, isUnknown: isSizeUnknown } = useInstanceDiskUsage(versionPath);
   const { t } = useTranslation();
+  const redact = useRedact();
 
   const isLoading = stage !== null;
 
@@ -351,7 +353,7 @@ export function Export({
 
             <span className="grid min-w-0 flex-1">
               <span className="truncate text-sm">
-                {folderPath || t("export.selectFolder")}
+                {redact.path(folderPath) || t("export.selectFolder")}
               </span>
               {folderPath && archiveName && (
                 <span className="truncate font-mono text-[0.7rem] text-faint">

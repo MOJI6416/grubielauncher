@@ -12,11 +12,19 @@ import type {
   SupportReportSendResult,
 } from "@/types/Journal";
 import type { ServerPingResult } from "../main/utilities/serverPing";
+import type {
+  ModrinthServerImage,
+  ModrinthServerPack,
+  ModrinthServerPage,
+  ModrinthServerQuery,
+} from "@/types/ModrinthServers";
 import {
   IImportModpack,
   IVersion,
   IVersionClassData,
   IVersionConf,
+  IJarMod,
+  IJarModSet,
   VersionDeleteResult,
 } from "@/types/IVersion";
 import { IAccountConf, IAuth, ILocalAccount } from "@/types/Account";
@@ -28,6 +36,11 @@ import {
   UploadFileProgress,
 } from "@/types/Backend";
 import { IPublicProfile } from "@/types/Profile";
+import type {
+  INicknameStatus,
+  NicknameAvailability,
+  NicknameChangeResult,
+} from "@/types/Nickname";
 import {
   IFriendSettingsUpdate,
   IMutualFriends,
@@ -35,7 +48,7 @@ import {
   IUpdateUser,
   IUser,
 } from "@/types/IUser";
-import { IGroup, IVoiceTokenResponse } from "@/types/Voice";
+import { IGroup, IVoiceTokenResponse, VoiceOverlayState } from "@/types/Voice";
 import { INews, INewsPage, ISponsoredNewsAd } from "@/types/News";
 import { IUpdateCheckRequest, IUpdateCheckResponse } from "@/types/Updates";
 import {
@@ -95,8 +108,17 @@ import {
   Provider,
   IVersion as IVersionModManager,
   IModpack as IModpackModManager,
+  IModpackExtraFile,
   ILocalProject,
 } from "@/types/ModManager";
+import type {
+  ModpackApplyResult,
+  ModpackBase,
+  ModpackBaseInput,
+  ModpackFilesPlan,
+  ModpackRollback,
+  ModpackRollbackInfo,
+} from "@/types/ModpackSource";
 import { ISkinData } from "@/types/Skin";
 import {
   IWorld,
@@ -144,6 +166,7 @@ import {
   VersionInstallResult,
 } from "@/types/InstallationProgress";
 import type { LoaderRequirementsScan } from "@/shared/loaderCompat";
+import type { OrnitheModsCheck } from "@/shared/profileLoaders";
 import { NotificationClickAction } from "@/types/Notification";
 import { LauncherDeepLink } from "@/types/DeepLink";
 import type { FailureInfo } from "@/shared/errors";
@@ -294,9 +317,7 @@ export interface IElectronAPI {
   dataLocationWindow: {
     getState: () => Promise<DataLocationWindowState | null>;
     action: (action: DataLocationWindowAction) => Promise<void>;
-    onState: (
-      callback: (state: DataLocationWindowState) => void,
-    ) => () => void;
+    onState: (callback: (state: DataLocationWindowState) => void) => () => void;
   };
   path: {
     join: (...args: string[]) => string;
@@ -324,12 +345,26 @@ export interface IElectronAPI {
     rename: (oldPath: string, newPath: string) => Promise<boolean>;
     writeJSON: (filePath: string, data: any) => Promise<boolean>;
     writeJSONSync: (filePath: string, data: any) => string;
-    readJSON: <T>(filePath: string, encoding?: BufferEncoding) => Promise<T | null>;
+    readJSON: <T>(
+      filePath: string,
+      encoding?: BufferEncoding,
+    ) => Promise<T | null>;
     getDirectories: (source: string) => Promise<string[]>;
   };
   clipboard: {
     writeText: (text: string) => Promise<boolean>;
     writeImage: (path: string) => Promise<boolean>;
+    writeImageData: (bytes: Uint8Array) => Promise<boolean>;
+  };
+  media: {
+    fetchImage: (
+      url: string,
+    ) => Promise<{ bytes: Uint8Array; type: string } | null>;
+    saveImage: (
+      url: string,
+      name: string,
+    ) => Promise<"saved" | "cancelled" | "failed">;
+    showSaved: () => Promise<void>;
   };
   edit: {
     run: (command: "cut" | "copy" | "paste" | "selectAll") => Promise<void>;
@@ -368,6 +403,12 @@ export interface IElectronAPI {
     read: (path: string) => Promise<IServer[]>;
     compare: (servers1: IServer[], servers2: IServer[]) => Promise<boolean>;
     ping: (address: string) => Promise<ServerPingResult>;
+    discover: (query: ModrinthServerQuery) => Promise<ModrinthServerPage>;
+    discoverPack: (
+      projectId: string,
+      versionId: string,
+    ) => Promise<ModrinthServerPack | null>;
+    discoverGallery: (projectId: string) => Promise<ModrinthServerImage[] | null>;
   };
   version: {
     import: (filePath: string, tempPath: string) => Promise<IImportModpack>;
@@ -393,6 +434,17 @@ export interface IElectronAPI {
       versionPath: string,
       loader: Loader,
     ) => Promise<LoaderRequirementsScan | null>;
+    importJarMods: (
+      versionPath: string,
+      filePaths: string[],
+    ) => Promise<IJarMod[] | null>;
+    removeJarMod: (versionPath: string, file: string) => Promise<boolean>;
+    jarModFiles: (versionPath: string) => Promise<string[]>;
+    syncJarMods: (versionPath: string, jar: IJarModSet) => Promise<boolean>;
+    checkOrnitheMods: (
+      versionPath: string,
+      minecraftVersion: string,
+    ) => Promise<OrnitheModsCheck | null>;
     cancelInstall: () => Promise<boolean>;
     pauseInstall: () => Promise<boolean>;
     resumeInstall: () => Promise<boolean>;
@@ -433,6 +485,12 @@ export interface IElectronAPI {
         uploaded: number;
         failures: string[];
       }>;
+      uploadJarMods: (
+        at: string,
+        versionPath: string,
+        shareCode: string,
+        jar: IJarModSet,
+      ) => Promise<IJarModSet | null>;
     };
   };
   accounts: {
@@ -549,6 +607,24 @@ export interface IElectronAPI {
     ) => Promise<boolean>;
     groupResetCode: (at: string, groupId: string) => Promise<IGroup | null>;
     resetFriendCode: (at: string, id: string) => Promise<IUser | null>;
+    getNicknameStatus: (
+      at: string,
+      id: string,
+    ) => Promise<INicknameStatus | null>;
+    checkNickname: (
+      at: string,
+      id: string,
+      name: string,
+    ) => Promise<NicknameAvailability | null>;
+    changeNickname: (
+      at: string,
+      id: string,
+      nickname: string,
+    ) => Promise<NicknameChangeResult | null>;
+    resetNickname: (
+      at: string,
+      id: string,
+    ) => Promise<NicknameChangeResult | null>;
     updateFriendSettings: (
       at: string,
       id: string,
@@ -628,14 +704,18 @@ export interface IElectronAPI {
     setSessionActive: (active: boolean) => Promise<void>;
     onPttDown: (callback: () => void) => () => void;
     onPttUp: (callback: () => void) => () => void;
+    updateOverlay: (state: VoiceOverlayState) => Promise<void>;
+    onOverlayState: (
+      callback: (state: VoiceOverlayState) => void,
+    ) => () => void;
   };
   versions: {
     getList: (
-      loader: "vanilla" | "forge" | "neoforge" | "fabric" | "quilt",
+      loader: Loader,
       includeSnapshots?: boolean,
     ) => Promise<IVersion[] | null>;
     getLoaderVersions: (
-      loader: "forge" | "neoforge" | "fabric" | "quilt",
+      loader: Exclude<Loader, "vanilla">,
       versionId: string,
     ) => Promise<LoaderVersion[] | null>;
   };
@@ -700,6 +780,9 @@ export interface IElectronAPI {
       multi?: boolean,
     ) => Promise<string[]>;
     getPathForFile: (file: File) => string;
+    gameTextures: (
+      names: string[],
+    ) => Promise<{ version: string; files: Record<string, Uint8Array> } | null>;
     getPaths: () => Promise<{
       launcher: string;
       minecraft: string;
@@ -766,6 +849,10 @@ export interface IElectronAPI {
     install: () => Promise<boolean>;
     onState: (callback: (state: AppUpdateState) => void) => () => void;
   };
+  streamer: {
+    watch: (enabled: boolean) => Promise<string | null>;
+    onDetected: (callback: (app: string | null) => void) => () => void;
+  };
   system: {
     getLaunchAtLogin: () => Promise<{ supported: boolean; enabled: boolean }>;
     setLaunchAtLogin: (
@@ -820,7 +907,9 @@ export interface IElectronAPI {
     command: (serverPath: string, command: string) => Promise<ServerRunResult>;
     lanAddress: () => Promise<string | null>;
     runStatus: (serverPath: string) => Promise<ServerRunStatus>;
-    onRunState: (callback: (payload: ServerRunStatePayload) => void) => () => void;
+    onRunState: (
+      callback: (payload: ServerRunStatePayload) => void,
+    ) => () => void;
     onRunOutput: (
       callback: (payload: { serverPath: string; lines: string[] }) => void,
     ) => () => void;
@@ -956,8 +1045,20 @@ export interface IElectronAPI {
       projectId: string,
       deps: IVersionDependency[],
     ) => Promise<IVersionDependency[] | null>;
+    getChangelog: (
+      provider: Provider,
+      projectId: string,
+      versionId: string,
+    ) => Promise<string | null>;
+    ornitheGeneration: (
+      url: string,
+      sha1: string | undefined,
+      minecraftVersion: string,
+    ) => Promise<{ generation: number | null } | null>;
     checkLocalMod: (modPath: string) => Promise<ILocalFileInfo | null>;
-    localDependencies: (versionPath: string) => Promise<import("@/types/ModManager").LocalModDependencyIndex>;
+    localDependencies: (
+      versionPath: string,
+    ) => Promise<import("@/types/ModManager").LocalModDependencyIndex>;
     managedFiles: (
       versionPath: string,
     ) => Promise<Partial<Record<ProjectType, string[]>> | null>;
@@ -990,6 +1091,31 @@ export interface IElectronAPI {
       mods1: ILocalProject[],
       mods2: ILocalProject[],
     ) => Promise<boolean>;
+  };
+  modpack: {
+    writeBase: (
+      versionPath: string,
+      root: string,
+      input: ModpackBaseInput,
+    ) => Promise<boolean>;
+    readBase: (versionPath: string) => Promise<ModpackBase | null>;
+    planFiles: (
+      versionPath: string,
+      root: string,
+      extraFiles: IModpackExtraFile[],
+    ) => Promise<ModpackFilesPlan | null>;
+    applyFiles: (
+      versionPath: string,
+      root: string,
+      extraFiles: IModpackExtraFile[],
+      plan: ModpackFilesPlan,
+      previousConf: IVersionConf,
+      toVersion: string,
+      preserve?: string[],
+    ) => Promise<ModpackApplyResult | null>;
+    rollbackInfo: (versionPath: string) => Promise<ModpackRollbackInfo | null>;
+    restoreRollback: (versionPath: string) => Promise<ModpackRollback | null>;
+    dropRollback: (versionPath: string) => Promise<boolean>;
   };
   worlds: {
     loadVersionStatistics: (
@@ -1318,19 +1444,16 @@ export const api: IElectronAPI = {
   fs: {
     readFile: (filePath: string, encoding: BufferEncoding) =>
       invoke("fs:readFile", filePath, encoding),
-    readFileBuffer: (target: string) =>
-      invoke("fs:readFileBuffer", target),
+    readFileBuffer: (target: string) => invoke("fs:readFileBuffer", target),
     rimraf: (targetPath: string) => invoke("fs:rimraf", targetPath),
     ensure: (dirPath: string) => invoke("fs:ensure", dirPath),
-    copy: (src: string, dest: string) =>
-      invoke("fs:copy", src, dest),
+    copy: (src: string, dest: string) => invoke("fs:copy", src, dest),
     writeFile: (
       filePath: string,
       data: string | Uint8Array,
       encoding: BufferEncoding = "utf-8",
     ) => invoke("fs:writeFile", filePath, data, encoding),
-    pathExists: (targetPath: string) =>
-      invoke("fs:pathExists", targetPath),
+    pathExists: (targetPath: string) => invoke("fs:pathExists", targetPath),
     readdirWithTypes: (folderPath: string) =>
       invoke("fs:readdirWithTypes", folderPath),
     sha1: (filePath: string) => invoke("fs:sha1", filePath),
@@ -1350,49 +1473,41 @@ export const api: IElectronAPI = {
     },
     readJSON: <_>(filePath: string, encoding?: BufferEncoding) =>
       invoke("fs:readJSON", filePath, encoding),
-    getDirectories: (source: string) =>
-      invoke("fs:getDirectories", source),
+    getDirectories: (source: string) => invoke("fs:getDirectories", source),
   },
   clipboard: {
-    writeText: (text: string) =>
-      invoke("clipboard:writeText", text),
+    writeText: (text: string) => invoke("clipboard:writeText", text),
     writeImage: (path: string) => invoke("clipboard:writeImage", path),
+    writeImageData: (bytes: Uint8Array) =>
+      invoke("clipboard:writeImageData", bytes),
+  },
+  media: {
+    fetchImage: (url: string) => invoke("media:fetchImage", url),
+    saveImage: (url: string, name: string) =>
+      invoke("media:saveImage", url, name),
+    showSaved: () => invoke("media:showSaved"),
   },
   edit: {
     run: (command: "cut" | "copy" | "paste" | "selectAll") =>
       invoke("edit:run", command),
   },
   shell: {
-    openExternal: (url: string) =>
-      invoke("shell:openExternal", url),
+    openExternal: (url: string) => invoke("shell:openExternal", url),
     openPath: (path: string) => invoke("shell:openPath", path),
     trashItem: (path: string) => invoke("shell:trashItem", path),
-    showItemInFolder: (path: string) =>
-      invoke("shell:showItemInFolder", path),
+    showItemInFolder: (path: string) => invoke("shell:showItemInFolder", path),
   },
   file: {
     archiveFiles: (
       filesToArchive: string[],
       zipPath: string,
       basePath?: string,
-    ) =>
-      invoke(
-        "file:archiveFiles",
-        filesToArchive,
-        zipPath,
-        basePath,
-      ),
+    ) => invoke("file:archiveFiles", filesToArchive, zipPath, basePath),
     archiveForPublish: (
       filesToArchive: string[],
       zipPath: string,
       basePath?: string,
-    ) =>
-      invoke(
-        "file:archiveForPublish",
-        filesToArchive,
-        zipPath,
-        basePath,
-      ),
+    ) => invoke("file:archiveForPublish", filesToArchive, zipPath, basePath),
     getTotalSizes: (filePaths: string[]) =>
       invoke("file:getTotalSizes", filePaths),
     fromBuffer: (data: ArrayBuffer) => Buffer.from(data).toString("binary"),
@@ -1408,6 +1523,12 @@ export const api: IElectronAPI = {
       invoke("servers:get", version, loader),
     read: (path: string) => invoke("servers:read", path),
     ping: (address: string) => invoke("servers:ping", address),
+    discover: (query: ModrinthServerQuery) =>
+      invoke("servers:discover", query),
+    discoverPack: (projectId: string, versionId: string) =>
+      invoke("servers:discoverPack", projectId, versionId),
+    discoverGallery: (projectId: string) =>
+      invoke("servers:discoverGallery", projectId),
     compare: (servers1: IServer[], servers2: IServer[]) =>
       invoke("servers:compare", servers1, servers2),
   },
@@ -1416,8 +1537,7 @@ export const api: IElectronAPI = {
       invoke("version:import", filePath, tempPath),
     duplicate: (sourceName: string, targetName: string) =>
       invoke("version:duplicate", sourceName, targetName),
-    init: (versionConf: IVersionConf) =>
-      invoke("version:init", versionConf),
+    init: (versionConf: IVersionConf) => invoke("version:init", versionConf),
     install: (
       account: ILocalAccount,
       settings: TSettings,
@@ -1442,6 +1562,16 @@ export const api: IElectronAPI = {
       invoke("version:changeLoader", account, settings, versionConf, targetId),
     loaderRequirements: (versionPath: string, loader: Loader) =>
       invoke("version:loaderRequirements", versionPath, loader),
+    importJarMods: (versionPath: string, filePaths: string[]) =>
+      invoke("version:importJarMods", versionPath, filePaths),
+    removeJarMod: (versionPath: string, file: string) =>
+      invoke("version:removeJarMod", versionPath, file),
+    jarModFiles: (versionPath: string) =>
+      invoke("version:jarModFiles", versionPath),
+    syncJarMods: (versionPath: string, jar: IJarModSet) =>
+      invoke("version:syncJarMods", versionPath, jar),
+    checkOrnitheMods: (versionPath: string, minecraftVersion: string) =>
+      invoke("version:checkOrnitheMods", versionPath, minecraftVersion),
     cancelInstall: () => invoke("version:cancelInstall"),
     pauseInstall: () => invoke("version:pauseInstall"),
     resumeInstall: () => invoke("version:resumeInstall"),
@@ -1487,11 +1617,16 @@ export const api: IElectronAPI = {
       versionConf: IVersionConf,
       isFull: boolean,
     ) => invoke("version:delete", account, versionConf, isFull),
-    save: (versionConf: IVersionConf) =>
-      invoke("version:save", versionConf),
+    save: (versionConf: IVersionConf) => invoke("version:save", versionConf),
     share: {
       uploadMods: (at: string, versionConf: IVersionConf) =>
         invoke("share:uploadMods", at, versionConf),
+      uploadJarMods: (
+        at: string,
+        versionPath: string,
+        shareCode: string,
+        jar: IJarModSet,
+      ) => invoke("share:uploadJarMods", at, versionPath, shareCode, jar),
     },
   },
   accounts: {
@@ -1517,8 +1652,7 @@ export const api: IElectronAPI = {
   backend: {
     getModpack: (at: string, code: string) =>
       invoke("backend:getModpack", at, code),
-    getOwnModpacks: (at: string) =>
-      invoke("backend:getOwnModpacks", at),
+    getOwnModpacks: (at: string) => invoke("backend:getOwnModpacks", at),
     exploreModpacks: (query: IExploreQuery) =>
       invoke("backend:exploreModpacks", query),
     getPublicProfile: (nickname: string, userId?: string) =>
@@ -1533,12 +1667,10 @@ export const api: IElectronAPI = {
       invoke("backend:deleteModpack", at, shareCode),
     updateUser: (at: string, id: string, user: IUpdateUser) =>
       invoke("backend:updateUser", at, id, user),
-    getUser: (at: string, id: string) =>
-      invoke("backend:getUser", at, id),
+    getUser: (at: string, id: string) => invoke("backend:getUser", at, id),
     getMutualFriends: (at: string, id: string) =>
       invoke("backend:getMutualFriends", at, id),
-    getRemoteStats: (at: string) =>
-      invoke("backend:getRemoteStats", at),
+    getRemoteStats: (at: string) => invoke("backend:getRemoteStats", at),
     groupsList: (at: string) => invoke("backend:groupsList", at),
     groupCreate: (at: string, name: string) =>
       invoke("backend:groupCreate", at, name),
@@ -1564,6 +1696,14 @@ export const api: IElectronAPI = {
       invoke("backend:groupResetCode", at, groupId),
     resetFriendCode: (at: string, id: string) =>
       invoke("backend:resetFriendCode", at, id),
+    getNicknameStatus: (at: string, id: string) =>
+      invoke("backend:getNicknameStatus", at, id),
+    checkNickname: (at: string, id: string, name: string) =>
+      invoke("backend:checkNickname", at, id, name),
+    changeNickname: (at: string, id: string, nickname: string) =>
+      invoke("backend:changeNickname", at, id, nickname),
+    resetNickname: (at: string, id: string) =>
+      invoke("backend:resetNickname", at, id),
     updateFriendSettings: (
       at: string,
       id: string,
@@ -1614,8 +1754,7 @@ export const api: IElectronAPI = {
       invoke("backend:getGlobalLeaderboard", limit),
     getOwnLeaderboardRank: (at: string) =>
       invoke("backend:getOwnLeaderboardRank", at),
-    getAchievementReach: () =>
-      invoke("backend:getAchievementReach"),
+    getAchievementReach: () => invoke("backend:getAchievementReach"),
     getWhatsNew: (version: string, locale: string) =>
       invoke("backend:getWhatsNew", version, locale),
     getLauncherReleases: (locale: string, limit: number) =>
@@ -1632,12 +1771,9 @@ export const api: IElectronAPI = {
       invoke("backend:declineSiteLogin", at, requestId),
     discordLink: (at: string, code: string) =>
       invoke("backend:discordLink", at, code),
-    discordUnlink: (at: string) =>
-      invoke("backend:discordUnlink", at),
-    telegramLinkStart: (at: string) =>
-      invoke("backend:telegramLinkStart", at),
-    telegramUnlink: (at: string) =>
-      invoke("backend:telegramUnlink", at),
+    discordUnlink: (at: string) => invoke("backend:discordUnlink", at),
+    telegramLinkStart: (at: string) => invoke("backend:telegramLinkStart", at),
+    telegramUnlink: (at: string) => invoke("backend:telegramUnlink", at),
     updateNotifications: (
       at: string,
       id: string,
@@ -1669,14 +1805,22 @@ export const api: IElectronAPI = {
       ipcRenderer.on("voice:pttUp", listener);
       return () => ipcRenderer.off("voice:pttUp", listener);
     },
+    updateOverlay: (state: VoiceOverlayState) =>
+      invoke("voice:overlayUpdate", state),
+    onOverlayState: (callback: (state: VoiceOverlayState) => void) => {
+      const listener = (
+        _: Electron.IpcRendererEvent,
+        state: VoiceOverlayState,
+      ) => callback(state);
+      ipcRenderer.on("voiceOverlay:state", listener);
+      return () => ipcRenderer.off("voiceOverlay:state", listener);
+    },
   },
   versions: {
-    getList: (
-      loader: "vanilla" | "forge" | "neoforge" | "fabric" | "quilt",
-      includeSnapshots: boolean = false,
-    ) => invoke("versions:getList", loader, includeSnapshots),
+    getList: (loader: Loader, includeSnapshots: boolean = false) =>
+      invoke("versions:getList", loader, includeSnapshots),
     getLoaderVersions: (
-      loader: "forge" | "neoforge" | "fabric" | "quilt",
+      loader: Exclude<Loader, "vanilla">,
       versionId: string,
     ) => invoke("versions:getLoaderVersions", loader, versionId),
   },
@@ -1718,14 +1862,12 @@ export const api: IElectronAPI = {
       versionConf: IVersionConf,
       server?: IServerConf,
       options?: VersionInstallOptions,
-    ) =>
-      invoke("mods:check", settings, versionConf, server, options),
+    ) => invoke("mods:check", settings, versionConf, server, options),
     downloadOther: (
       settings: TSettings,
       versionConf: IVersionConf,
       options?: VersionInstallOptions,
-    ) =>
-      invoke("mods:downloadOther", settings, versionConf, options),
+    ) => invoke("mods:downloadOther", settings, versionConf, options),
     syncLive: (
       settings: TSettings,
       versionConf: IVersionConf,
@@ -1745,6 +1887,7 @@ export const api: IElectronAPI = {
       if (filePath) ipcRenderer.sendSync("safepath:bless", filePath);
       return filePath;
     },
+    gameTextures: (names: string[]) => invoke("other:gameTextures", names),
     getPaths: () => invoke("other:getPaths"),
     getPath: (pathKey: string) => invoke("other:getPath", pathKey),
     notify: (
@@ -1753,8 +1896,7 @@ export const api: IElectronAPI = {
     ) => invoke("other:notify", options, clickAction),
     getLocale: () => invoke("other:getLocale"),
     restoreWindow: () => invoke("other:restoreWindow"),
-    setUnsavedGuard: (value: boolean) =>
-      invoke("other:setUnsavedGuard", value),
+    setUnsavedGuard: (value: boolean) => invoke("other:setUnsavedGuard", value),
     confirmClose: () => invoke("other:confirmClose"),
     onCloseRequested: (
       callback: (reason: {
@@ -1793,8 +1935,10 @@ export const api: IElectronAPI = {
   tray: {
     update: (model: TrayModel) => invoke("tray:update", model),
     onAction: (callback: (action: TrayAction) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, action: TrayAction) =>
-        callback(action);
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        action: TrayAction,
+      ) => callback(action);
       ipcRenderer.on("tray:action", listener);
       return () => ipcRenderer.off("tray:action", listener);
     },
@@ -1829,6 +1973,17 @@ export const api: IElectronAPI = {
       return () => ipcRenderer.off("app:updateState", listener);
     },
   },
+  streamer: {
+    watch: (enabled: boolean) => invoke("streamer:watch", enabled),
+    onDetected: (callback: (app: string | null) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        app: string | null,
+      ) => callback(app);
+      ipcRenderer.on("streamer:detected", listener);
+      return () => ipcRenderer.off("streamer:detected", listener);
+    },
+  },
   system: {
     getLaunchAtLogin: () => invoke("system:getLaunchAtLogin"),
     setLaunchAtLogin: (enabled: boolean) =>
@@ -1847,8 +2002,7 @@ export const api: IElectronAPI = {
     },
   },
   mirror: {
-    setSource: (source: DownloadSource) =>
-      invoke("mirror:setSource", source),
+    setSource: (source: DownloadSource) => invoke("mirror:setSource", source),
     getState: () => invoke("mirror:getState"),
   },
   shortcut: {
@@ -1878,28 +2032,23 @@ export const api: IElectronAPI = {
         versionConf,
         options,
       ),
-    getSettings: (filePath: string) =>
-      invoke("server:getSettings", filePath),
-    runOptions: (serverPath: string) =>
-      invoke("server:runOptions", serverPath),
+    getSettings: (filePath: string) => invoke("server:getSettings", filePath),
+    runOptions: (serverPath: string) => invoke("server:runOptions", serverPath),
     stopAll: () => invoke("server:stopAll"),
     editXmx: (serverPath: string, memory: number) =>
       invoke("server:editXmx", serverPath, memory),
-    isPortAvailable: (port: number) =>
-      invoke("server:isPortAvailable", port),
+    isPortAvailable: (port: number) => invoke("server:isPortAvailable", port),
     setAikar: (serverPath: string, enabled: boolean) =>
       invoke("server:setAikar", serverPath, enabled),
     updateProperties: (filePath: string, settings: IServerSettings) =>
       invoke("server:updateProperties", filePath, settings),
-    start: (serverPath: string) =>
-      invoke("server:start", serverPath),
+    start: (serverPath: string) => invoke("server:start", serverPath),
     stop: (serverPath: string, force?: boolean) =>
       invoke("server:stop", serverPath, force),
     command: (serverPath: string, command: string) =>
       invoke("server:command", serverPath, command),
     lanAddress: () => invoke("server:lanAddress"),
-    runStatus: (serverPath: string) =>
-      invoke("server:runStatus", serverPath),
+    runStatus: (serverPath: string) => invoke("server:runStatus", serverPath),
     onRunState: (callback: (payload: ServerRunStatePayload) => void) => {
       const listener = (
         _event: Electron.IpcRendererEvent,
@@ -1967,14 +2116,7 @@ export const api: IElectronAPI = {
       platform: string,
       filePath: string,
       type: "skin" | "cape",
-    ) =>
-      invoke(
-        "skins:importByFile",
-        userId,
-        platform,
-        filePath,
-        type,
-      ),
+    ) => invoke("skins:importByFile", userId, platform, filePath, type),
     importByNickname: (userId: string, platform: string, nickname: string) =>
       invoke("skins:importByNickname", userId, platform, nickname),
     renameSkin: (
@@ -1982,13 +2124,11 @@ export const api: IElectronAPI = {
       platform: string,
       skinId: string,
       newName: string,
-    ) =>
-      invoke("skins:renameSkin", userId, platform, skinId, newName),
+    ) => invoke("skins:renameSkin", userId, platform, skinId, newName),
     clearManager: (userId: string, platform: string) =>
       invoke("skins:clearManager", userId, platform),
     catalog: {
-      list: (params?: CatalogListParams) =>
-        invoke("skins:catalogList", params),
+      list: (params?: CatalogListParams) => invoke("skins:catalogList", params),
       download: (id: string) => invoke("skins:catalogDownload", id),
       get: (id: string) => invoke("skins:catalogItem", id),
     },
@@ -2020,14 +2160,7 @@ export const api: IElectronAPI = {
       platform: string,
       skinUrl: string,
       capeUrl: string,
-    ) =>
-      invoke(
-        "skins:importPack",
-        userId,
-        platform,
-        skinUrl,
-        capeUrl,
-      ),
+    ) => invoke("skins:importPack", userId, platform, skinUrl, capeUrl),
     community: {
       mine: (backendToken: string) =>
         invoke("skins:communityMine", backendToken),
@@ -2041,42 +2174,35 @@ export const api: IElectronAPI = {
       provider: Provider,
       options: any,
       pagination: any,
-    ) =>
-      invoke(
-        "modManager:search",
-        query,
-        provider,
-        options,
-        pagination,
-      ),
-    getSort: (provider: any) =>
-      invoke("modManager:getSort", provider),
+    ) => invoke("modManager:search", query, provider, options, pagination),
+    getSort: (provider: any) => invoke("modManager:getSort", provider),
     getFilter: (provider: Provider, projectType: ProjectType) =>
       invoke("modManager:getFilter", provider, projectType),
     getProject: (provider: Provider, projectId: string) =>
       invoke("modManager:getProject", provider, projectId),
     getVersions: (provider: Provider, projectId: string, options: any) =>
-      invoke(
-        "modManager:getVersions",
-        provider,
-        projectId,
-        options,
-      ),
+      invoke("modManager:getVersions", provider, projectId, options),
     getDependencies: (provider: Provider, projectId: string, deps: any[]) =>
-      invoke(
-        "modManager:getDependencies",
-        provider,
-        projectId,
-        deps,
-      ),
+      invoke("modManager:getDependencies", provider, projectId, deps),
+    getChangelog: (provider: Provider, projectId: string, versionId: string) =>
+      invoke("modManager:getChangelog", provider, projectId, versionId),
+    ornitheGeneration: (
+      url: string,
+      sha1: string | undefined,
+      minecraftVersion: string,
+    ) =>
+      invoke("modManager:ornitheGeneration", url, sha1, minecraftVersion),
     checkLocalMod: (modPath: string) =>
       invoke("modManager:checkLocalMod", modPath),
     localDependencies: (versionPath: string) =>
       invoke("modManager:localDependencies", versionPath),
     managedFiles: (versionPath: string) =>
       invoke("modManager:managedFiles", versionPath),
-    trashFiles: (versionPath: string, projectType: ProjectType, names: string[]) =>
-      invoke("modManager:trashFiles", versionPath, projectType, names),
+    trashFiles: (
+      versionPath: string,
+      projectType: ProjectType,
+      names: string[],
+    ) => invoke("modManager:trashFiles", versionPath, projectType, names),
     fileTimes: (versionPath: string, projectType: ProjectType) =>
       invoke("modManager:fileTimes", versionPath, projectType),
     identifyLocal: (requests: ILocalIdentifyRequest[]) =>
@@ -2087,19 +2213,47 @@ export const api: IElectronAPI = {
       modpackPath: string,
       pack?: any,
       selectVersion?: IVersionModManager,
-    ) =>
-      invoke(
-        "modManager:checkModpack",
-        modpackPath,
-        pack,
-        selectVersion,
-      ),
-    ptToFolder: (type: ProjectType) =>
-      invoke("modManager:ptToFolder", type),
+    ) => invoke("modManager:checkModpack", modpackPath, pack, selectVersion),
+    ptToFolder: (type: ProjectType) => invoke("modManager:ptToFolder", type),
     resolveCfDownload: (fileId: number, fileName: string) =>
       invoke("modManager:resolveCfDownload", fileId, fileName),
     compareMods: (mods1: ILocalProject[], mods2: ILocalProject[]) =>
       invoke("modManager:compareMods", mods1, mods2),
+  },
+  modpack: {
+    writeBase: (versionPath: string, root: string, input: ModpackBaseInput) =>
+      invoke("modpack:writeBase", versionPath, root, input),
+    readBase: (versionPath: string) => invoke("modpack:readBase", versionPath),
+    planFiles: (
+      versionPath: string,
+      root: string,
+      extraFiles: IModpackExtraFile[],
+    ) => invoke("modpack:planFiles", versionPath, root, extraFiles),
+    applyFiles: (
+      versionPath: string,
+      root: string,
+      extraFiles: IModpackExtraFile[],
+      plan: ModpackFilesPlan,
+      previousConf: IVersionConf,
+      toVersion: string,
+      preserve?: string[],
+    ) =>
+      invoke(
+        "modpack:applyFiles",
+        versionPath,
+        root,
+        extraFiles,
+        plan,
+        previousConf,
+        toVersion,
+        preserve,
+      ),
+    rollbackInfo: (versionPath: string) =>
+      invoke("modpack:rollbackInfo", versionPath),
+    restoreRollback: (versionPath: string) =>
+      invoke("modpack:restoreRollback", versionPath),
+    dropRollback: (versionPath: string) =>
+      invoke("modpack:dropRollback", versionPath),
   },
   worlds: {
     loadVersionStatistics: (versionPath: string, account: ILocalAccount) =>
@@ -2119,16 +2273,14 @@ export const api: IElectronAPI = {
       invoke("worlds:export", worldPath, destinationDir),
     import: (zipPath: string, versionPath: string) =>
       invoke("worlds:import", zipPath, versionPath),
-    listBackups: (worldPath: string) =>
-      invoke("worlds:listBackups", worldPath),
+    listBackups: (worldPath: string) => invoke("worlds:listBackups", worldPath),
     countBackups: (versionPath: string) =>
       invoke("worlds:countBackups", versionPath),
     createBackup: (worldPath: string, keep: number) =>
       invoke("worlds:createBackup", worldPath, keep),
     restoreBackup: (backupId: string, worldPath: string, keep: number) =>
       invoke("worlds:restoreBackup", backupId, worldPath, keep),
-    deleteBackup: (backupId: string) =>
-      invoke("worlds:deleteBackup", backupId),
+    deleteBackup: (backupId: string) => invoke("worlds:deleteBackup", backupId),
     deletePreserved: (targetPath: string) =>
       invoke("worlds:deletePreserved", targetPath),
   },
@@ -2142,7 +2294,8 @@ export const api: IElectronAPI = {
       dimension: string,
       regionX: number,
       regionZ: number,
-    ) => invoke("worldChunks:scanRegion", worldPath, dimension, regionX, regionZ),
+    ) =>
+      invoke("worldChunks:scanRegion", worldPath, dimension, regionX, regionZ),
     inspect: (
       worldPath: string,
       dimension: string,
@@ -2206,26 +2359,19 @@ export const api: IElectronAPI = {
     analyzeCrash: (accessToken: string, requestId: string, locale: string) =>
       invoke("ai:analyzeCrash", accessToken, requestId, locale),
     sendFeedback: (accessToken: string, analysisId: string, helpful: boolean) =>
-      invoke(
-        "ai:analysisFeedback",
-        accessToken,
-        analysisId,
-        helpful,
-      ),
+      invoke("ai:analysisFeedback", accessToken, analysisId, helpful),
   },
   agent: {
     providers: {
       list: () => invoke("agent:providers:list"),
-      save: (input: AiProviderInput) =>
-        invoke("agent:providers:save", input),
+      save: (input: AiProviderInput) => invoke("agent:providers:save", input),
       remove: (id: string) => invoke("agent:providers:delete", id),
       select: (id: string) => invoke("agent:providers:select", id),
       test: (payload: { id?: string; baseUrl?: string; apiKey?: string }) =>
         invoke("agent:providers:test", payload),
     },
     models: {
-      list: (providerId: string) =>
-        invoke("agent:models:list", providerId),
+      list: (providerId: string) => invoke("agent:models:list", providerId),
     },
     chat: {
       start: (runId: string, request: AgentStreamRequest) =>
@@ -2235,10 +2381,8 @@ export const api: IElectronAPI = {
     chats: {
       list: () => invoke("agent:chats:list"),
       read: (chatId: string) => invoke("agent:chats:read", chatId),
-      write: (chat: AgentStoredChat) =>
-        invoke("agent:chats:write", chat),
-      remove: (chatId: string) =>
-        invoke("agent:chats:delete", chatId),
+      write: (chat: AgentStoredChat) => invoke("agent:chats:write", chat),
+      remove: (chatId: string) => invoke("agent:chats:delete", chatId),
       tombstones: () => invoke("agent:chats:tombstones"),
       forgetTombstone: (remoteId: string) =>
         invoke("agent:chats:forgetTombstone", remoteId),
@@ -2266,8 +2410,7 @@ export const api: IElectronAPI = {
       invoke("share:updateVisibility", visibility),
     getShareState: () => invoke("share:getState"),
     getSharePeers: () => invoke("share:getPeers"),
-    fetchActiveFriendShares: () =>
-      invoke("share:fetchActiveFriendShares"),
+    fetchActiveFriendShares: () => invoke("share:fetchActiveFriendShares"),
     connectToFriendShare: (slug: string) =>
       invoke("share:connectToFriendShare", slug),
     onShareStateChanged: (callback: (state: ShareState) => void) => {

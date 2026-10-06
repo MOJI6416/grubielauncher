@@ -48,6 +48,25 @@ export function accountFace(account: {
   };
 }
 
+export function resolveHeadUrl(
+  account: HeadFace,
+  apiBase: string,
+  localAccount: AccountLike | null | undefined,
+  skinVersion: number | string | undefined,
+): string | null {
+  const headId = headImageId(account);
+  const isOwnHead =
+    headId !== null && localAccount
+      ? headId === headImageId(localAccount)
+      : false;
+  return (
+    account.headUrl ||
+    headImageUrl(account, apiBase, isOwnHead ? skinVersion : undefined) ||
+    userHeadUrl(apiBase, account.id) ||
+    null
+  );
+}
+
 function useApiBase() {
   const [base, setBase] = useState(getApiBase());
   useEffect(() => subscribeApiBase(setBase), []);
@@ -68,17 +87,7 @@ export function AccountHead({
   const apiBase = useApiBase();
   const localAccount = useAtomValue(accountAtom);
   const skinVersion = useAtomValue(rpcSkinVersionAtom);
-
-  const headId = headImageId(account);
-  const isOwnHead =
-    headId !== null && localAccount
-      ? headId === headImageId(localAccount)
-      : false;
-
-  const url =
-    account.headUrl ||
-    headImageUrl(account, apiBase, isOwnHead ? skinVersion : undefined) ||
-    userHeadUrl(apiBase, account.id);
+  const url = resolveHeadUrl(account, apiBase, localAccount, skinVersion);
 
   const [headFailed, setHeadFailed] = useState(false);
 

@@ -18,7 +18,39 @@ export function catalogLoaderOptions(
     return [instanceLoader, "fabric"];
   }
 
+  if (instanceLoader === "legacy-fabric") return [instanceLoader, "fabric"];
+
   return [];
+}
+
+export function catalogLoaderHintKey(
+  instanceLoader: Loader | undefined,
+): string {
+  if (instanceLoader === "quilt") return "modManager.catalogLoaderHintQuilt";
+  if (instanceLoader === "legacy-fabric") {
+    return "modManager.catalogLoaderHintLegacyFabric";
+  }
+  return "modManager.catalogLoaderHint";
+}
+
+export function sharedTagLoader(
+  instanceLoader: Loader | undefined,
+  requested: Loader,
+  projectType: ProjectType,
+): Loader | undefined {
+  if (instanceLoader !== "legacy-fabric" || projectType !== ProjectType.MOD) {
+    return undefined;
+  }
+  if (requested === "legacy-fabric") return "fabric";
+  return requested === "fabric" ? "legacy-fabric" : undefined;
+}
+
+export function skipsDependencies(
+  instanceLoader: Loader | undefined,
+  installLoader: Loader | undefined,
+): boolean {
+  if (!installLoader || installLoader === instanceLoader) return false;
+  return instanceLoader !== "legacy-fabric";
 }
 
 export function needsConnector(

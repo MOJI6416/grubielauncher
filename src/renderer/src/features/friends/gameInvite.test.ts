@@ -4,6 +4,7 @@ import {
   describeIncomingInvite,
   describeInviteNotification,
 } from "./gameInvite";
+import { MASK } from "@renderer/features/streamer/redact";
 
 const base = {
   inviteId: "i1",
@@ -38,6 +39,15 @@ describe("describeIncomingInvite", () => {
         address: "play.example.com",
       },
     });
+  });
+
+  it("hides the server address in streamer mode", () => {
+    expect(describeIncomingInvite(serverInvite, true).params.address).toBe(
+      MASK,
+    );
+    expect(describeInviteNotification(serverInvite, true).params.address).toBe(
+      MASK,
+    );
   });
 
   it("omits the address for world invites", () => {

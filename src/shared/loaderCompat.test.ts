@@ -184,6 +184,26 @@ describe("isRequirementSatisfied", () => {
 });
 
 describe("manifestMentionsLoaderVersion", () => {
+  it("tells Ornithe generations apart", () => {
+    const gen1 = {
+      libraries: [
+        { name: "net.fabricmc:fabric-loader:0.19.5" },
+        { name: "net.ornithemc:calamus-intermediary:1.12.2" },
+      ],
+    };
+    const gen2 = {
+      libraries: [
+        { name: "net.fabricmc:fabric-loader:0.19.5" },
+        { name: "net.ornithemc:calamus-intermediary-gen2:1.12.2" },
+      ],
+    };
+
+    expect(manifestMentionsLoaderVersion(gen1, "0.19.5+gen1")).toBe(true);
+    expect(manifestMentionsLoaderVersion(gen1, "0.19.5")).toBe(false);
+    expect(manifestMentionsLoaderVersion(gen2, "0.19.5")).toBe(true);
+    expect(manifestMentionsLoaderVersion(gen2, "0.19.5+gen1")).toBe(false);
+  });
+
   it("finds Fabric and Quilt loaders by library version", () => {
     const manifest = {
       libraries: [{ name: "net.fabricmc:fabric-loader:0.16.10" }],

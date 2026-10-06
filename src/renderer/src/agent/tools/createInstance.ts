@@ -1,5 +1,5 @@
 import { getDefaultStore } from "jotai";
-import { Loader } from "@/types/Loader";
+import { LOADERS as ALL_LOADERS, Loader } from "@/types/Loader";
 import { IVersionConf } from "@/types/IVersion";
 import {
   InstanceNameIssue,
@@ -17,7 +17,7 @@ import { busyError, refreshVersions, SAVE_FAILED, settings } from "./shared";
 
 const api = window.api;
 
-const LOADERS: Loader[] = ["vanilla", "forge", "neoforge", "fabric", "quilt"];
+const LOADERS: Loader[] = [...ALL_LOADERS];
 
 const NAME_ERRORS: Record<InstanceNameIssue, string> = {
   empty: "The instance needs a name.",

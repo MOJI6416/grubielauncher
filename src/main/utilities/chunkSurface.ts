@@ -2,9 +2,6 @@
  * Top-down "satellite" rendering of chunks: for every block column the first
  * block that is not see-through decides the pixel, water is tinted by depth
  * and the whole region gets relief shading from height differences.
- *
- * Works with palette-based chunks (Minecraft 1.13+). Older chunks store
- * numeric block ids and are reported as unsupported.
  */
 import { deserialize } from "@xmcl/nbt";
 import {
@@ -17,6 +14,15 @@ import {
   resolvePaint,
 } from "@/shared/blockColors";
 import { CHUNKS_PER_REGION_AXIS } from "@/types/WorldChunks";
+import { paletteEntryName } from "./chunkNbt";
+import {
+  LegacyBlockNames,
+  byteArray,
+  legacyBiomeId,
+  legacyBiomeName,
+  legacyBlockName,
+  nibble,
+} from "./legacyChunks";
 
 export const CHUNK_PIXELS = 16;
 export const REGION_PIXELS = CHUNK_PIXELS * CHUNKS_PER_REGION_AXIS;
@@ -30,6 +36,15 @@ const NON_SPANNING_DATA_VERSION = 2529;
 
 const UNSUPPORTED_RGB: BlockRgb = [70, 70, 78];
 const MAX_WATER_DEPTH = 64;
+const SECTION_BLOCKS = 4096;
+const MCREGION_HEIGHT = 128;
+const LEGACY_CELL_LAYERS = 64;
+
+const LOOKING = 0;
+const UNDER_WATER = 1;
+const DONE = 2;
+const ABOVE_ROOF = 3;
+const IN_ROOF = 4;
 
 export interface ChunkColumns {
   /** RGB per column, row-major by z then x. */
@@ -38,6 +53,11 @@ export interface ChunkColumns {
   heights: Int16Array;
   /** Water blocks above the floor, 0 for dry columns. */
   water: Uint8Array;
+}
+
+export interface ChunkRenderOptions {
+  ceiling?: boolean;
+  legacyBlocks?: LegacyBlockNames | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -117,19 +137,14 @@ interface DecodedSection {
   palette: BlockPaint[];
   /** Palette index per block (y*256 + z*16 + x), or null when uniform. */
   blocks: Uint16Array | null;
-  biomes: BiomeTint[];
+  biomes: BiomeTint[] | null;
   /** Biome palette index per 4×4×4 cell, or null when uniform. */
   biomeCells: Uint16Array | null;
 }
 
 function paletteNames(palette: unknown): string[] {
   if (!Array.isArray(palette)) return [];
-
-  return palette.map((entry) => {
-    if (typeof entry === "string") return entry;
-    if (isRecord(entry) && typeof entry.Name === "string") return entry.Name;
-    return "minecraft:air";
-  });
+  return palette.map((entry) => paletteEntryName(entry) ?? "minecraft:air");
 }
 
 function decodeSection(
@@ -151,7 +166,7 @@ function decodeSection(
     blocks = unpackIndices(
       data,
       bitsForPalette(palette.length, 4),
-      4096,
+      SECTION_BLOCKS,
       spanning,
     );
   }
@@ -160,11 +175,16 @@ function decodeSection(
   const biomeNames = paletteNames(biomeContainer?.palette);
   const biomes = biomeNames.length
     ? biomeNames.map((name) => biomeTint(name))
-    : [DEFAULT_TINT];
+    : null;
 
   let biomeCells: Uint16Array | null = null;
   const biomeData = biomeContainer?.data;
-  if (Array.isArray(biomeData) && biomeData.length > 0 && biomes.length > 1) {
+  if (
+    biomes &&
+    Array.isArray(biomeData) &&
+    biomeData.length > 0 &&
+    biomes.length > 1
+  ) {
     biomeCells = unpackIndices(
       biomeData,
       bitsForPalette(biomes.length, 1),
@@ -176,6 +196,129 @@ function decodeSection(
   return { y, palette, blocks, biomes, biomeCells };
 }
 
+class LegacyPalette {
+  readonly paints: BlockPaint[] = [];
+  private readonly slots = new Map<number, number>();
+
+  constructor(private readonly registry: LegacyBlockNames | null) {}
+
+  slot(id: number, data: number): number {
+    const key = id * 16 + data;
+    let slot = this.slots.get(key);
+    if (slot === undefined) {
+      slot = this.paints.length;
+      this.paints.push(paintForBlock(legacyBlockName(id, data, this.registry)));
+      this.slots.set(key, slot);
+    }
+    return slot;
+  }
+}
+
+function decodeLegacySection(
+  section: Record<string, unknown>,
+  registry: LegacyBlockNames | null,
+): DecodedSection | null {
+  const y = toNumber(section.Y);
+  const ids = byteArray(section.Blocks);
+  if (y === null || !ids || ids.length < SECTION_BLOCKS) return null;
+
+  const add = byteArray(section.Add);
+  const data = byteArray(section.Data);
+  const palette = new LegacyPalette(registry);
+  const blocks = new Uint16Array(SECTION_BLOCKS);
+
+  for (let index = 0; index < SECTION_BLOCKS; index += 1) {
+    const id = (ids[index] & 0xff) | (add ? nibble(add, index) << 8 : 0);
+    blocks[index] = palette.slot(id, data ? nibble(data, index) : 0);
+  }
+
+  return {
+    y,
+    palette: palette.paints,
+    blocks: palette.paints.length > 1 ? blocks : null,
+    biomes: null,
+    biomeCells: null,
+  };
+}
+
+function decodeMcRegionBlocks(
+  level: Record<string, unknown>,
+  registry: LegacyBlockNames | null,
+): DecodedSection[] | null {
+  const ids = byteArray(level.Blocks);
+  if (!ids || ids.length < COLUMNS * MCREGION_HEIGHT) return null;
+
+  const data = byteArray(level.Data);
+  const sections: DecodedSection[] = [];
+
+  for (let sectionY = 0; sectionY < MCREGION_HEIGHT / 16; sectionY += 1) {
+    const palette = new LegacyPalette(registry);
+    const blocks = new Uint16Array(SECTION_BLOCKS);
+
+    for (let localY = 0; localY < 16; localY += 1) {
+      const y = sectionY * 16 + localY;
+      for (let z = 0; z < 16; z += 1) {
+        for (let x = 0; x < 16; x += 1) {
+          const source = (x << 11) | (z << 7) | y;
+          blocks[(localY << 8) | (z << 4) | x] = palette.slot(
+            ids[source] & 0xff,
+            data ? nibble(data, source) : 0,
+          );
+        }
+      }
+    }
+
+    sections.push({
+      y: sectionY,
+      palette: palette.paints,
+      blocks: palette.paints.length > 1 ? blocks : null,
+      biomes: null,
+      biomeCells: null,
+    });
+  }
+
+  return sections;
+}
+
+interface LegacyBiomes {
+  tints: BiomeTint[];
+  layered: boolean;
+}
+
+function decodeLegacyBiomes(value: unknown): LegacyBiomes | null {
+  if (!Array.isArray(value)) return null;
+  if (value.length !== COLUMNS && value.length !== COLUMNS * 4) return null;
+
+  const cache = new Map<number, BiomeTint>();
+  const tints = value.map((raw) => {
+    const id = legacyBiomeId(raw);
+    if (id === null) return DEFAULT_TINT;
+    let tint = cache.get(id);
+    if (!tint) {
+      tint = biomeTint(legacyBiomeName(id));
+      cache.set(id, tint);
+    }
+    return tint;
+  });
+
+  return { tints, layered: value.length === COLUMNS * 4 };
+}
+
+function legacyTintAt(
+  biomes: LegacyBiomes,
+  column: number,
+  worldY: number,
+): BiomeTint {
+  if (!biomes.layered) return biomes.tints[column] ?? DEFAULT_TINT;
+
+  const layer = Math.min(LEGACY_CELL_LAYERS - 1, Math.max(0, worldY >> 2));
+  const x = column & 15;
+  const z = column >> 4;
+  return (
+    biomes.tints[(layer << 4) | ((z >> 2) << 2) | (x >> 2)] ?? DEFAULT_TINT
+  );
+}
+
 function mix(a: BlockRgb, b: BlockRgb, t: number): BlockRgb {
   return [
     a[0] + (b[0] - a[0]) * t,
@@ -184,113 +327,163 @@ function mix(a: BlockRgb, b: BlockRgb, t: number): BlockRgb {
   ];
 }
 
-/**
- * Resolves the top-down colour of every column of a chunk.
- * Returns null for chunks in a layout the renderer cannot read.
- */
-export function renderChunkColumns(nbt: unknown): ChunkColumns | null {
-  if (!isRecord(nbt)) return null;
-
-  const level = isRecord(nbt.Level) ? nbt.Level : null;
-  const data = level ?? nbt;
-  const dataVersion = toNumber(nbt.DataVersion) ?? 0;
-  const spanning = dataVersion < NON_SPANNING_DATA_VERSION;
-
+function decodeSections(
+  data: Record<string, unknown>,
+  dataVersion: number,
+  registry: LegacyBlockNames | null,
+): DecodedSection[] | null {
   const rawSections = Array.isArray(data.sections)
     ? data.sections
     : Array.isArray(data.Sections)
       ? data.Sections
       : null;
-  if (!rawSections) return null;
 
+  if (!rawSections) return decodeMcRegionBlocks(data, registry);
+
+  const spanning = dataVersion < NON_SPANNING_DATA_VERSION;
   const sections: DecodedSection[] = [];
+
   for (const raw of rawSections) {
     if (!isRecord(raw)) continue;
-    if (!raw.block_states && !raw.Palette) {
-      if (raw.Blocks) return null;
-      continue;
-    }
-    const decoded = decodeSection(raw, spanning);
+
+    const decoded =
+      raw.block_states || raw.Palette
+        ? decodeSection(raw, spanning)
+        : raw.Blocks
+          ? decodeLegacySection(raw, registry)
+          : null;
     if (decoded) sections.push(decoded);
   }
+
+  return sections;
+}
+
+/**
+ * Resolves the top-down colour of every column of a chunk.
+ * Returns null for chunks in a layout the renderer cannot read.
+ */
+export function renderChunkColumns(
+  nbt: unknown,
+  options: ChunkRenderOptions = {},
+): ChunkColumns | null {
+  if (!isRecord(nbt)) return null;
+
+  const level = isRecord(nbt.Level) ? nbt.Level : null;
+  const data = level ?? nbt;
+  const dataVersion = toNumber(nbt.DataVersion) ?? 0;
+
+  const sections = decodeSections(
+    data,
+    dataVersion,
+    options.legacyBlocks ?? null,
+  );
+  if (!sections) return null;
   sections.sort((a, b) => b.y - a.y);
+
+  const legacyBiomes = decodeLegacyBiomes(data.Biomes);
+  const ceiling = options.ceiling === true;
 
   const colors = new Uint8Array(COLUMNS * 3);
   const heights = new Int16Array(COLUMNS).fill(EMPTY_HEIGHT);
   const water = new Uint8Array(COLUMNS);
 
-  // 0 = looking for the top block, 1 = under water looking for the floor, 2 = done
-  const state = new Uint8Array(COLUMNS);
+  const state = new Uint8Array(COLUMNS).fill(ceiling ? ABOVE_ROOF : LOOKING);
   const waterTop = new Int16Array(COLUMNS);
   const waterTint: BlockRgb[] = new Array(COLUMNS);
+  const roofRgb: (BlockRgb | null)[] = new Array(COLUMNS).fill(null);
+  const roofTop = new Int16Array(COLUMNS);
   let unresolved = COLUMNS;
+
+  const paint = (column: number, rgb: BlockRgb, height: number) => {
+    colors[column * 3] = rgb[0];
+    colors[column * 3 + 1] = rgb[1];
+    colors[column * 3 + 2] = rgb[2];
+    heights[column] = height;
+  };
 
   for (const section of sections) {
     if (unresolved === 0) break;
 
-    const allTransparent = section.palette.every(
-      (paint) => paint.kind === "transparent",
-    );
-    if (allTransparent) continue;
-
     const uniform = section.blocks === null ? section.palette[0] : null;
-    if (uniform && uniform.kind === "transparent") continue;
+    const seeThrough =
+      (uniform !== null && uniform.kind === "transparent") ||
+      section.palette.every((entry) => entry.kind === "transparent");
+
+    if (seeThrough) {
+      if (ceiling) {
+        for (let column = 0; column < COLUMNS; column += 1) {
+          if (state[column] === IN_ROOF) state[column] = LOOKING;
+        }
+      }
+      continue;
+    }
 
     for (let column = 0; column < COLUMNS; column += 1) {
-      if (state[column] === 2) continue;
+      if (state[column] === DONE) continue;
 
       const x = column & 15;
       const z = column >> 4;
 
       for (let localY = 15; localY >= 0; localY -= 1) {
-        const paint =
+        const block =
           uniform ??
           section.palette[section.blocks![(localY << 8) | (z << 4) | x]] ??
           section.palette[0];
-
-        if (paint.kind === "transparent") continue;
-
-        const biomeIndex = section.biomeCells
-          ? section.biomeCells[
-              ((localY >> 2) << 4) | ((z >> 2) << 2) | (x >> 2)
-            ]
-          : 0;
-        const tint = section.biomes[biomeIndex] ?? section.biomes[0];
         const worldY = section.y * 16 + localY;
+        const current = state[column];
 
-        if (state[column] === 0) {
-          if (paint.kind === "water") {
-            state[column] = 1;
+        if (current === ABOVE_ROOF || current === IN_ROOF) {
+          if (block.kind === "transparent") {
+            if (current === IN_ROOF) state[column] = LOOKING;
+            continue;
+          }
+          if (current === ABOVE_ROOF) {
+            state[column] = IN_ROOF;
+            roofRgb[column] = resolvePaint(block, DEFAULT_TINT) ?? null;
+            roofTop[column] = worldY;
+          }
+          continue;
+        }
+
+        if (block.kind === "transparent") continue;
+
+        const tint = section.biomes
+          ? (section.biomes[
+              section.biomeCells
+                ? section.biomeCells[
+                    ((localY >> 2) << 4) | ((z >> 2) << 2) | (x >> 2)
+                  ]
+                : 0
+            ] ?? section.biomes[0])
+          : legacyBiomes
+            ? legacyTintAt(legacyBiomes, column, worldY)
+            : DEFAULT_TINT;
+
+        if (current === LOOKING) {
+          if (block.kind === "water") {
+            state[column] = UNDER_WATER;
             waterTop[column] = worldY;
             waterTint[column] = tint.water;
             water[column] = 1;
             continue;
           }
 
-          const rgb = resolvePaint(paint, tint) ?? UNSUPPORTED_RGB;
-          colors[column * 3] = rgb[0];
-          colors[column * 3 + 1] = rgb[1];
-          colors[column * 3 + 2] = rgb[2];
-          heights[column] = worldY;
-          state[column] = 2;
+          paint(column, resolvePaint(block, tint) ?? UNSUPPORTED_RGB, worldY);
+          state[column] = DONE;
           unresolved -= 1;
           break;
         }
 
-        if (paint.kind === "water") {
+        if (block.kind === "water") {
           if (water[column] < MAX_WATER_DEPTH) water[column] += 1;
           continue;
         }
 
-        const floor = resolvePaint(paint, tint) ?? UNSUPPORTED_RGB;
+        const floor = resolvePaint(block, tint) ?? UNSUPPORTED_RGB;
         const depth = water[column];
         const blend = Math.min(0.9, 0.45 + depth * 0.04);
-        const rgb = mix(floor, waterTint[column], blend);
-        colors[column * 3] = rgb[0];
-        colors[column * 3 + 1] = rgb[1];
-        colors[column * 3 + 2] = rgb[2];
-        heights[column] = waterTop[column];
-        state[column] = 2;
+        paint(column, mix(floor, waterTint[column], blend), waterTop[column]);
+        state[column] = DONE;
         unresolved -= 1;
         break;
       }
@@ -298,13 +491,17 @@ export function renderChunkColumns(nbt: unknown): ChunkColumns | null {
   }
 
   for (let column = 0; column < COLUMNS; column += 1) {
-    if (state[column] !== 1) continue;
+    if (state[column] === UNDER_WATER) {
+      paint(
+        column,
+        mix(waterTint[column], [10, 20, 60], 0.5),
+        waterTop[column],
+      );
+      continue;
+    }
 
-    const rgb = mix(waterTint[column], [10, 20, 60], 0.5);
-    colors[column * 3] = rgb[0];
-    colors[column * 3 + 1] = rgb[1];
-    colors[column * 3 + 2] = rgb[2];
-    heights[column] = waterTop[column];
+    const roof = roofRgb[column];
+    if (state[column] !== DONE && roof) paint(column, roof, roofTop[column]);
   }
 
   return { colors, heights, water };
@@ -312,9 +509,10 @@ export function renderChunkColumns(nbt: unknown): ChunkColumns | null {
 
 export async function renderChunkColumnsFromNbt(
   payload: Buffer,
+  options: ChunkRenderOptions = {},
 ): Promise<ChunkColumns | null> {
   const nbt: unknown = await deserialize(new Uint8Array(payload));
-  return renderChunkColumns(nbt);
+  return renderChunkColumns(nbt, options);
 }
 
 export type RegionColumns = Map<number, ChunkColumns | null>;

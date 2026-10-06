@@ -80,6 +80,36 @@ describe("toMirrorUrl", () => {
     ).toBeNull();
   });
 
+  it("maps the hosts of the loaders for old versions and BTA", () => {
+    expect(
+      toMirrorUrl(
+        "https://repo.legacyfabric.net/legacyfabric/org/lwjgl/lwjgl/lwjgl/2.9.4%2Blegacyfabric.17/x.jar",
+      ),
+    ).toBe(
+      `${MIRROR_BASE}/repo-legacyfabric/legacyfabric/org/lwjgl/lwjgl/lwjgl/2.9.4%2Blegacyfabric.17/x.jar`,
+    );
+    expect(toMirrorUrl("https://meta.legacyfabric.net/v2/versions/game")).toBe(
+      `${MIRROR_BASE}/meta-legacyfabric/v2/versions/game`,
+    );
+    expect(toMirrorUrl("https://meta.babric.glass-launcher.net/v2/x")).toBe(
+      `${MIRROR_BASE}/meta-babric/v2/x`,
+    );
+    expect(toMirrorUrl("https://maven.glass-launcher.net/babric/x.jar")).toBe(
+      `${MIRROR_BASE}/maven-babric/babric/x.jar`,
+    );
+    expect(toMirrorUrl("https://meta.ornithemc.net/v3/x")).toBe(
+      `${MIRROR_BASE}/meta-ornithe/v3/x`,
+    );
+    expect(toMirrorUrl("https://maven.ornithemc.net/releases/x.jar")).toBe(
+      `${MIRROR_BASE}/maven-ornithe/releases/x.jar`,
+    );
+    expect(
+      toMirrorUrl(
+        "https://downloads.betterthanadventure.net/bta-client/release/v8.0.1/client.jar",
+      ),
+    ).toBe(`${MIRROR_BASE}/bta/bta-client/release/v8.0.1/client.jar`);
+  });
+
   it("returns null for unmapped hosts, non-https and junk", () => {
     expect(toMirrorUrl("https://cdn.curseforge.com/x")).toBeNull();
     expect(toMirrorUrl("http://libraries.minecraft.net/x")).toBeNull();

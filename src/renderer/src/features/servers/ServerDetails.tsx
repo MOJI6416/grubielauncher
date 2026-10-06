@@ -23,6 +23,9 @@ import { parseMotd, stripMotd } from "./motd";
 import { ServerCompatibility, checkServerCompatibility } from "./compat";
 import { describePingError } from "./ping";
 import type { ServerPingState } from "./types";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const TEXTURE_ICON = {
   ask: PackageSearch,
@@ -74,6 +77,8 @@ export function ServerDetails({
   onToggleQuickConnect: () => void;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
+  const texturesIndicator = useSlidingIndicator<HTMLDivElement>();
 
   const result = status?.result;
   const spans = parseMotd(result?.descriptionRaw);
@@ -113,8 +118,10 @@ export function ServerDetails({
         <div className="flex min-w-0 items-start gap-3">
           <ServerFavicon icon={result?.favicon ?? server.icon} size={48} />
           <div className="min-w-0 flex-1">
-            <Hint content={server.name} variant="text" truncatedOnly>
-              <p className="truncate text-sm font-semibold">{server.name}</p>
+            <Hint content={redact.text(server.name)} variant="text" truncatedOnly>
+              <p className="truncate text-sm font-semibold">
+                {redact.text(server.name)}
+              </p>
             </Hint>
             {(result?.modded || result?.secureChat === false) && (
               <span className="mt-0.5 mb-0.5 flex flex-wrap gap-1">
@@ -138,7 +145,7 @@ export function ServerDetails({
                 className="group flex min-w-0 max-w-full items-center gap-1 text-left"
               >
                 <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
-                  {server.ip}
+                  {redact.value(server.ip)}
                 </span>
                 <Copy className="size-3 shrink-0 text-faint opacity-0 transition-opacity group-hover:opacity-100" />
               </button>
@@ -200,7 +207,15 @@ export function ServerDetails({
           <span className="text-xs text-muted-foreground">
             {t("servers.resources")}
           </span>
-          <div className="grid grid-cols-3 gap-1 rounded-lg bg-surface-1 p-1">
+          <div
+            ref={texturesIndicator.containerRef}
+            className="relative grid grid-cols-3 gap-1 rounded-lg bg-surface-1 p-1"
+          >
+            <SlidingIndicator
+              indicator={texturesIndicator}
+              variant="fill"
+              className="rounded-md bg-surface-3"
+            />
             {TEXTURE_OPTIONS.map((option, index) => {
               const Icon = TEXTURE_ICON[texturesKind(option)];
               const active = texturesIndex(server.acceptTextures) === index;
@@ -211,11 +226,12 @@ export function ServerDetails({
                   type="button"
                   disabled={readOnly}
                   aria-pressed={active}
+                  data-indicator-active={active}
                   onClick={() => onChangeTextures(option)}
                   className={cn(
-                    "flex h-7 items-center justify-center gap-1 rounded-md text-[0.7rem] transition-colors disabled:pointer-events-none disabled:opacity-50",
+                    "relative flex h-7 items-center justify-center gap-1 rounded-md text-[0.7rem] transition-colors disabled:pointer-events-none disabled:opacity-50",
                     active
-                      ? "bg-surface-3 text-foreground"
+                      ? "text-foreground"
                       : "text-muted-foreground hover:bg-surface-2",
                   )}
                 >

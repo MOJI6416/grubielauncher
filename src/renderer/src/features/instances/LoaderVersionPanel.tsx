@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowDownToLine,
+  ArrowLeftRight,
   ArrowRight,
   ArrowUpToLine,
   CircleCheck,
@@ -44,6 +45,7 @@ const DIRECTION_TONE: Record<LoaderDirection, string> = {
   upgrade: "border-success/30 bg-success/12 text-success",
   downgrade: "border-warning/30 bg-warning/12 text-warning",
   current: "border-border bg-surface-3 text-muted-foreground",
+  switch: "border-primary/30 bg-primary/12 text-primary",
 };
 
 function Note({
@@ -270,6 +272,13 @@ export function LoaderVersionPanel({
       </Note>,
     );
   }
+  if (selected?.direction === "switch") {
+    notes.push(
+      <Note key="generation" icon={TriangleAlert} tone="warning">
+        {t("loaderUpdate.notes.generation")}
+      </Note>,
+    );
+  }
   if (isPublishedByOwner) {
     notes.push(
       <Note key="published" icon={Info}>
@@ -337,11 +346,12 @@ export function LoaderVersionPanel({
                       key={filter}
                       type="button"
                       aria-pressed={isActive}
+                      data-indicator-active={isActive}
                       onClick={() => setShowAll(filter === "all")}
                       className={cn(
-                        "flex h-6 items-center gap-1 rounded-md px-1.5 text-[0.65rem] transition-colors",
+                        "relative flex h-6 items-center gap-1 rounded-md px-1.5 text-[0.65rem] transition-colors",
                         isActive
-                          ? "bg-surface-3 text-foreground"
+                          ? "text-foreground"
                           : "text-faint hover:text-muted-foreground",
                       )}
                     >
@@ -562,6 +572,8 @@ export function LoaderVersionPanel({
                 <Loader2 className="animate-spin" />
               ) : selected?.direction === "downgrade" ? (
                 <ArrowDownToLine />
+              ) : selected?.direction === "switch" ? (
+                <ArrowLeftRight />
               ) : (
                 <ArrowUpToLine />
               )}

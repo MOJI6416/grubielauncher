@@ -1,6 +1,6 @@
 {
   "name": "grubie-launcher",
-  "version": "2.0.8",
+  "version": "2.1.0",
   "description": "Nextgen Minecraft Launcher",
   "main": "./out/main/index.js",
   "author": "MOJI",
@@ -74,6 +74,7 @@
     "jotai": "^2.12.5",
     "jwt-decode": "^4.0.0",
     "livekit-client": "^2.20.0",
+    "lottie-web": "^5.13.0",
     "lucide-react": "^0.513.0",
     "marked": "^15.0.12",
     "motion": "^13.1.0",

@@ -111,3 +111,21 @@ export const INITIAL_VOICE_SESSION: IVoiceSessionState = {
   pttBindLabel: "",
   isNoiseSuppressionActive: false,
 };
+
+export interface VoiceOverlaySpeaker {
+  id: string;
+  name: string;
+  initials: string;
+  headUrl: string | null;
+  isLocal: boolean;
+}
+
+export interface VoiceOverlayState {
+  visible: boolean;
+  speakers: VoiceOverlaySpeaker[];
+}
+
+export const HIDDEN_VOICE_OVERLAY: VoiceOverlayState = {
+  visible: false,
+  speakers: [],
+};

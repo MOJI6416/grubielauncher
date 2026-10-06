@@ -8,6 +8,7 @@ import {
   inspectChunk,
   listChunkDimensions,
   listChunkRegions,
+  readWorldFormat,
   resetChunkInhabitedTime,
   scanChunkRegion,
 } from "./worldChunks";
@@ -16,8 +17,11 @@ import {
   compressNbt,
   entityChunkNbt,
   flatChunkNbt,
+  legacyAnvilChunkNbt,
   levelChunkNbt,
+  levelDat,
   localIndex,
+  mcRegionChunkNbt,
   poiChunkNbt,
   regionFile,
 } from "./chunkFixtures.test-helpers";
@@ -190,7 +194,7 @@ describe("scanChunkRegion", () => {
         nbt: fine,
         rawData: Buffer.from("not zlib at all"),
       },
-      { index: localIndex(6, 4), nbt: fine, rawCompressionByte: 4 },
+      { index: localIndex(6, 4), nbt: fine, rawCompressionByte: 127 },
       {
         index: localIndex(7, 4),
         nbt: fine,
@@ -235,7 +239,7 @@ describe("scanChunkRegion", () => {
     expect(byX.get(-27)?.problem).toBe("compression");
     expect(byX.get(-26)).toMatchObject({
       problem: "unsupported",
-      compression: "lz4",
+      compression: "custom",
       status: null,
     });
     expect(byX.get(-25)?.problem).toBe("nbt");
@@ -247,6 +251,39 @@ describe("scanChunkRegion", () => {
     expect(
       await scanChunkRegion(worldPath, "minecraft:overworld", 4, 4),
     ).toBeNull();
+  });
+
+  it("reads LZ4 chunks written by servers with region-file-compression=lz4", async () => {
+    await writeRegion(
+      "region",
+      "r.0.0.mca",
+      regionFile([
+        {
+          index: localIndex(2, 3),
+          nbt: flatChunkNbt({ x: 2, z: 3, inhabitedTime: 77 }),
+          compression: "lz4",
+        },
+        {
+          index: localIndex(3, 3),
+          nbt: flatChunkNbt({ x: 3, z: 3 }),
+          rawCompressionByte: 4,
+          rawData: Buffer.from("LZ4Block but not really"),
+        },
+      ]),
+    );
+
+    const scan = await scanChunkRegion(worldPath, "minecraft:overworld", 0, 0);
+    const byX = new Map(scan!.chunks.map((chunk) => [chunk.x, chunk]));
+    expect(byX.get(2)).toMatchObject({
+      compression: "lz4",
+      problem: null,
+      status: "full",
+      inhabitedTime: 77,
+    });
+    expect(byX.get(3)?.problem).toBe("compression");
+
+    const details = await inspectChunk(worldPath, "minecraft:overworld", 2, 3);
+    expect(details?.biomes).toEqual(["minecraft:plains"]);
   });
 });
 
@@ -479,6 +516,204 @@ describe("deleteChunks", () => {
   });
 });
 
+describe("McRegion worlds", () => {
+  beforeEach(async () => {
+    await fs.outputFile(
+      path.join(worldPath, "level.dat"),
+      levelDat({ version: 19132 }),
+    );
+    const chunk = (x: number, z: number, populated = true) =>
+      mcRegionChunkNbt({
+        x,
+        z,
+        column: (_x, _z, y) => (y < 64 ? 1 : 0),
+        terrainPopulated: populated,
+      });
+
+    await writeRegion(
+      "region",
+      "r.0.0.mcr",
+      regionFile([
+        { index: localIndex(0, 0), nbt: chunk(0, 0) },
+        { index: localIndex(1, 0), nbt: chunk(1, 0, false) },
+      ]),
+    );
+    await writeRegion(
+      "region",
+      "r.-1.0.mcr",
+      regionFile([{ index: localIndex(31, 0), nbt: chunk(-1, 0) }]),
+    );
+    await writeRegion(
+      "DIM-1/region",
+      "r.0.0.mcr",
+      regionFile([{ index: localIndex(0, 0), nbt: chunk(0, 0) }]),
+    );
+  });
+
+  it("lists, scans and inspects .mcr regions", async () => {
+    const dimensions = await listChunkDimensions(worldPath);
+    expect(
+      dimensions.map((entry) => [
+        entry.id,
+        entry.regionExtension,
+        entry.chunkCount,
+      ]),
+    ).toEqual([
+      ["minecraft:overworld", "mcr", 3],
+      ["minecraft:the_nether", "mcr", 1],
+    ]);
+
+    const regions = await listChunkRegions(worldPath, "minecraft:overworld");
+    expect(regions.map((region) => `${region.x},${region.z}`)).toEqual([
+      "-1,0",
+      "0,0",
+    ]);
+
+    const scan = await scanChunkRegion(worldPath, "minecraft:overworld", 0, 0);
+    expect(
+      scan!.chunks.map((chunk) => [chunk.x, chunk.status, chunk.problem]),
+    ).toEqual([
+      [0, "full", null],
+      [1, "carvers", null],
+    ]);
+
+    const details = await inspectChunk(worldPath, "minecraft:overworld", 0, 0);
+    expect(details).toMatchObject({
+      format: "level",
+      sectionCount: null,
+      entities: [{ id: "Pig", count: 1 }],
+    });
+    expect(details!.blockEntities).toHaveLength(1);
+  });
+
+  it("deletes chunks from .mcr files", async () => {
+    const result = await deleteChunks(
+      worldPath,
+      "minecraft:overworld",
+      [1, 0, -1, 0],
+    );
+    expect(result).toMatchObject({ ok: true, affected: 2, removedFiles: 1 });
+    expect(
+      await fs.pathExists(path.join(worldPath, "region", "r.-1.0.mcr")),
+    ).toBe(false);
+
+    const scan = await scanChunkRegion(worldPath, "minecraft:overworld", 0, 0);
+    expect(scan!.chunks.map((chunk) => chunk.x)).toEqual([0]);
+  });
+
+  it("prefers Anvil files once the world has been converted", async () => {
+    await fs.outputFile(
+      path.join(worldPath, "level.dat"),
+      levelDat({ version: 19133 }),
+    );
+    await writeRegion(
+      "region",
+      "r.5.5.mca",
+      regionFile([
+        { index: localIndex(0, 0), nbt: flatChunkNbt({ x: 160, z: 160 }) },
+      ]),
+    );
+
+    const regions = await listChunkRegions(worldPath, "minecraft:overworld");
+    expect(regions.map((region) => `${region.x},${region.z}`)).toEqual(["5,5"]);
+  });
+});
+
+describe("Forge DIM folders", () => {
+  it("lists mod dimensions stored next to the overworld and edits them", async () => {
+    const chunk = (x: number, z: number) =>
+      legacyAnvilChunkNbt({
+        x,
+        z,
+        sections: [{ y: 0, ids: new Array(4096).fill(1) }],
+      });
+    await writeRegion(
+      "region",
+      "r.0.0.mca",
+      regionFile([{ index: localIndex(0, 0), nbt: chunk(0, 0) }]),
+    );
+    await writeRegion(
+      "DIM7/region",
+      "r.0.0.mca",
+      regionFile([
+        { index: localIndex(1, 1), nbt: chunk(1, 1) },
+        { index: localIndex(2, 1), nbt: chunk(2, 1) },
+      ]),
+    );
+    await writeRegion(
+      "DIM-28/region",
+      "r.0.0.mca",
+      regionFile([{ index: localIndex(0, 0), nbt: chunk(0, 0) }]),
+    );
+    await fs.ensureDir(path.join(worldPath, "DIM_EMPTY"));
+
+    const dimensions = await listChunkDimensions(worldPath);
+    expect(
+      dimensions.map((entry) => [entry.id, entry.folder, entry.chunkCount]),
+    ).toEqual([
+      ["minecraft:overworld", "", 1],
+      ["legacy:dim-28", "DIM-28", 1],
+      ["legacy:dim7", "DIM7", 2],
+    ]);
+
+    const scan = await scanChunkRegion(worldPath, "legacy:dim7", 0, 0);
+    expect(scan!.chunks.map((entry) => [entry.x, entry.problem])).toEqual([
+      [1, null],
+      [2, null],
+    ]);
+
+    const result = await deleteChunks(worldPath, "legacy:dim7", [2, 1]);
+    expect(result).toMatchObject({ ok: true, affected: 1 });
+    const after = await scanChunkRegion(worldPath, "legacy:dim7", 0, 0);
+    expect(after!.chunks.map((entry) => entry.x)).toEqual([1]);
+    expect(await listChunkRegions(worldPath, "legacy:dim9")).toEqual([]);
+  });
+});
+
+describe("readWorldFormat", () => {
+  it("collects Forge block ids from both registry layouts", async () => {
+    await fs.outputFile(
+      path.join(worldPath, "level.dat"),
+      levelDat({
+        version: 19133,
+        forgeBlocks: { "minecraft:stone": 1, "biomesoplenty:grass": 302 },
+      }),
+    );
+    const modern = await readWorldFormat(worldPath);
+    expect(modern.regionExtension).toBe("mca");
+    expect(modern.legacyBlocks?.get(302)).toBe("biomesoplenty:grass");
+
+    await fs.outputFile(
+      path.join(worldPath, "level.dat"),
+      levelDat({
+        version: 19133,
+        forgeItemData: {
+          "\u0001minecraft:stone": 1,
+          "\u0001chisel:marble": 1700,
+          "\u0002chisel:chisel": 4000,
+        },
+      }),
+    );
+    const old = await readWorldFormat(worldPath);
+    expect(old.legacyBlocks?.get(1700)).toBe("chisel:marble");
+    expect(old.legacyBlocks?.has(4000)).toBe(false);
+  });
+
+  it("falls back to the files on disk without a readable level.dat", async () => {
+    await writeRegion(
+      "region",
+      "r.0.0.mcr",
+      regionFile([
+        {
+          index: localIndex(0, 0),
+          nbt: mcRegionChunkNbt({ x: 0, z: 0, column: () => 1 }),
+        },
+      ]),
+    );
+    expect((await readWorldFormat(worldPath)).regionExtension).toBe("mcr");
+  });
+});
+
 describe("resetChunkInhabitedTime", () => {
   it("zeroes the counter for selected chunks and leaves the others alone", async () => {
     const regionPath = await writeRegion(
@@ -505,7 +740,12 @@ describe("resetChunkInhabitedTime", () => {
         {
           index: localIndex(4, 0),
           nbt: flatChunkNbt({ x: 4, z: 0, inhabitedTime: 9 }),
-          rawCompressionByte: 4,
+          rawCompressionByte: 127,
+        },
+        {
+          index: localIndex(5, 0),
+          nbt: flatChunkNbt({ x: 5, z: 0, inhabitedTime: 4000 }),
+          compression: "lz4",
         },
       ]),
     );
@@ -513,13 +753,13 @@ describe("resetChunkInhabitedTime", () => {
     const result = await resetChunkInhabitedTime(
       worldPath,
       "minecraft:overworld",
-      [0, 0, 2, 0, 3, 0, 4, 0],
+      [0, 0, 2, 0, 3, 0, 4, 0, 5, 0],
       { now: 1_800_000_000 },
     );
 
     expect(result).toMatchObject({
       ok: true,
-      affected: 2,
+      affected: 3,
       skipped: 2,
       regions: 1,
       backupId: null,
@@ -542,6 +782,11 @@ describe("resetChunkInhabitedTime", () => {
     });
     expect(byX.get(3)?.inhabitedTime).toBe(0);
     expect(byX.get(4)?.problem).toBe("unsupported");
+    expect(byX.get(5)).toMatchObject({
+      inhabitedTime: 0,
+      compression: "zlib",
+      problem: null,
+    });
     expect((await fs.readFile(regionPath)).length % REGION_SECTOR_BYTES).toBe(
       0,
     );

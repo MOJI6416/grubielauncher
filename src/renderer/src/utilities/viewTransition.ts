@@ -3,6 +3,12 @@ import { flushSync } from "react-dom";
 const MORPH_NAME = "morph-art";
 const POLL_MS = 16;
 
+let morphing = false;
+
+export function isMorphing(): boolean {
+  return morphing;
+}
+
 async function waitForElement(
   selector: string,
   timeoutMs: number,
@@ -42,7 +48,12 @@ export function morphTransition({
 
   const transition = document.startViewTransition(async () => {
     from.style.viewTransitionName = "";
-    flushSync(update);
+    morphing = true;
+    try {
+      flushSync(update);
+    } finally {
+      morphing = false;
+    }
     to = await waitForElement(target, timeoutMs);
     if (to) to.style.viewTransitionName = MORPH_NAME;
   });

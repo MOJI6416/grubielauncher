@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Hint } from "@renderer/components/Hint";
 import { ExitCodeInfo } from "./runs";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 export type CrashTone = "crash" | "unknown" | "clean";
 
@@ -24,6 +25,7 @@ export function CrashCard({
   actions: ReactNode;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
 
   const Icon =
     tone === "crash"
@@ -53,12 +55,12 @@ export function CrashCard({
 
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="text-sm leading-snug font-medium text-foreground">
-            {title}
+            {redact.text(title)}
           </p>
 
           {hint && (
             <p className="line-clamp-2 text-xs leading-snug text-muted-foreground [overflow-wrap:anywhere]">
-              {hint}
+              {redact.text(hint)}
             </p>
           )}
         </div>

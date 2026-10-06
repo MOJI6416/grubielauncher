@@ -1,5 +1,7 @@
 import { atom, getDefaultStore } from "jotai";
 import { IModpack } from "@/types/Backend";
+import type { IProject, IVersion as IProjectVersion } from "@/types/ModManager";
+import type { ModrinthServer } from "@/types/ModrinthServers";
 import { navigate } from "@renderer/navigation/navigate";
 import { rememberFocusOrigin } from "@renderer/navigation/focusReturn";
 import type { NewInstanceSource } from "@renderer/features/newInstance/state";
@@ -7,6 +9,8 @@ import type { NewInstanceSource } from "@renderer/features/newInstance/state";
 export type NewInstanceRequest = {
   importFilePath?: string;
   modpack?: IModpack;
+  catalogPack?: { project: IProject; version: IProjectVersion };
+  modrinthServer?: ModrinthServer;
   source?: NewInstanceSource;
   onSuccess?: () => void;
 };

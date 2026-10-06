@@ -18,7 +18,20 @@ export function isIdentifiable(entry: ContentEntry): boolean {
   );
 }
 
-const MOD_LOADERS: Loader[] = ["neoforge", "forge", "fabric", "quilt"];
+const MOD_LOADERS: Loader[] = [
+  "neoforge",
+  "forge",
+  "fabric",
+  "quilt",
+  "legacy-fabric",
+  "babric",
+  "ornithe",
+  "bta-babric",
+];
+
+const NATIVE_ALIASES: Partial<Record<Loader, string[]>> = {
+  "legacy-fabric": ["fabric"],
+};
 
 export function foreignLoader(
   loaders: string[],
@@ -27,7 +40,11 @@ export function foreignLoader(
   if (!instanceLoader || instanceLoader === "vanilla") return undefined;
 
   const normalized = loaders.map((loader) => loader.toLowerCase());
-  if (normalized.length === 0 || normalized.includes(instanceLoader)) {
+  const native = [instanceLoader, ...(NATIVE_ALIASES[instanceLoader] ?? [])];
+  if (
+    normalized.length === 0 ||
+    native.some((loader) => normalized.includes(loader))
+  ) {
     return undefined;
   }
 

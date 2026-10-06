@@ -11,7 +11,6 @@ import {
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import { toast } from "sonner";
 import {
   aiCrashOpenKeyAtom,
   aiCrashesAtom,
@@ -49,8 +48,9 @@ import {
   errorLogToText,
   groupErrorLog,
 } from "@renderer/features/logs/errorLog";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { openSupportReport } from "@renderer/features/support/supportReport";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 export function ErrorLog({ onClose }: { onClose: () => void }) {
   const [errorLog, setErrorLog] = useAtom(errorLogAtom);
@@ -59,6 +59,7 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
   const [confirmClear, setConfirmClear] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const { t, i18n } = useTranslation();
+  const redact = useRedact();
 
   const groups = useMemo(() => groupErrorLog(errorLog), [errorLog]);
 
@@ -176,11 +177,9 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
                             className="shrink-0 text-faint"
                             aria-label={t("common.copy")}
                             onClick={async () => {
-                              const copied = await copyToClipboard(
+                              await copyWithFeedback(
                                 `${group.title}\n${group.details}`,
                               );
-                              if (!copied) return;
-                              toast(t("common.copied"));
                             }}
                           >
                             <Copy className="size-3.5" />
@@ -191,7 +190,7 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
 
                     {expanded && group.details && (
                       <pre className="mx-2.5 mb-2.5 max-h-56 overflow-auto rounded-lg bg-surface-1 p-2.5 font-mono text-[0.7rem] leading-relaxed whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]">
-                        {group.details}
+                        {redact.text(group.details)}
                       </pre>
                     )}
                   </div>
@@ -207,8 +206,7 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
               variant="ghost"
               disabled={groups.length === 0}
               onClick={async () => {
-                if (!(await copyToClipboard(errorLogToText(groups)))) return;
-                toast(t("common.copied"));
+                await copyWithFeedback(errorLogToText(groups));
               }}
             >
               <ClipboardList className="size-4" />

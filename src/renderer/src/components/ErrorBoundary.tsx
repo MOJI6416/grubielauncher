@@ -1,7 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from "react";
-import { toast } from "sonner";
 import i18n from "../i18n";
-import { copyToClipboard } from "../utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { reportLauncherError } from "../utilities/clientErrorReport";
 import { recordError } from "../utilities/errorToast";
 
@@ -61,8 +60,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       .filter(Boolean)
       .join("\n");
 
-    if (!(await copyToClipboard(text))) return;
-    toast.success(i18n.t("common.copied"));
+    await copyWithFeedback(text);
   };
 
   render(): ReactNode {

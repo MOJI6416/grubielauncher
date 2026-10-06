@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { IAuth } from "@/types/Account";
 import { showFailureToast } from "@renderer/utilities/failures";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 
 const api = window.api;
 
@@ -55,8 +55,7 @@ export function useFriendCode(
       return;
     }
 
-    if (!(await copyToClipboard(code))) return;
-    toast(t("common.copied"));
+    await copyWithFeedback(code);
   }, [code, t]);
 
   const reset = useCallback(async () => {

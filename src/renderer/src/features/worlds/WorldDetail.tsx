@@ -37,6 +37,8 @@ import { WorldStatsTab } from "./WorldStatsTab";
 import { WorldDatapacksTab } from "./WorldDatapacksTab";
 import { WorldBackupsTab } from "./WorldBackupsTab";
 import { WorldChunksTab } from "./WorldChunksTab";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
 
 const api = window.api;
 
@@ -85,6 +87,7 @@ export function WorldDetail({
 }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<WorldTab>("overview");
+  const tabIndicator = useSlidingIndicator<HTMLDivElement>();
   const [editValue, setEditValue] = useState<string | null>(null);
   const [busy, setBusy] = useState<"rename" | "duplicate" | "export" | null>(
     null,
@@ -136,7 +139,6 @@ export function WorldDetail({
       }
 
       setEditValue(null);
-      toast.success(t("worlds.renamed"));
       onRenamed(result);
     } catch (error) {
       showFailureToast(t("worlds.renameError"), error, {
@@ -223,7 +225,6 @@ export function WorldDetail({
       }
 
       onWorldPatched({ icon: undefined });
-      toast.success(t("worlds.iconReseted"));
     } catch (error) {
       showFailureToast(t("worlds.iconResetError"), error, {
         channels: ["fs:"],
@@ -459,14 +460,18 @@ export function WorldDetail({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1 border-b px-3">
+        <div
+          ref={tabIndicator.containerRef}
+          className="relative flex shrink-0 items-center gap-1 border-b px-3"
+        >
           {TABS.map((entry) => (
             <button
               key={entry}
               type="button"
               aria-selected={tab === entry}
+              data-indicator-active={tab === entry}
               onClick={() => setTab(entry)}
-              className="-mb-px border-b-2 border-transparent px-2 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground aria-selected:border-primary aria-selected:text-foreground"
+              className="-mb-px border-b-2 border-transparent px-2 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground aria-selected:text-foreground"
             >
               {t(`worlds.tabs.${entry}`)}
               {entry === "datapacks" && world.datapacks.length > 0 && (
@@ -487,6 +492,7 @@ export function WorldDetail({
               {lockReason}
             </span>
           )}
+          <SlidingIndicator indicator={tabIndicator} variant="underline" />
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-3">

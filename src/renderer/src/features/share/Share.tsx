@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Hint } from "@renderer/components/Hint";
 import { ILoader } from "@/types/Loader";
+import type { IJarModSet } from "@/types/IVersion";
 import { SelectPathsPanel } from "./SelectPaths";
 import { applyUnpublish } from "./unpublish";
 import { IModpack, IModpackUpdate } from "@/types/Backend";
@@ -77,9 +78,19 @@ import {
 } from "@renderer/features/share/publishPlan";
 
 import { countContent } from "@renderer/features/instances/contentCounts";
-import { showFailureToast } from "@renderer/utilities/failures";
+import {
+  applyJarModSet,
+  countJarMods,
+  jarModSetOf,
+} from "@/shared/jarMods";
+import {
+  consumeRecentFailure,
+  showFailureToast,
+} from "@renderer/utilities/failures";
 import { copyToClipboard } from "@renderer/utilities/clipboard";
 import { announceShareCode } from "./publishPresence";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 const api = window.api;
 
 interface SharePublishProgress {
@@ -106,6 +117,7 @@ export function Share({
   onPublished?: (shareCode: string) => void;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState<"share" | "delete" | "size">();
   const [selectedVersion, setSelectedVersion] = useAtom(selectedVersionAtom);
@@ -321,7 +333,9 @@ export function Share({
       getPublishFields({
         mode: shareType,
         diff: diffenceUpdateData,
-        modsCount: countContent(selectedVersion?.version.loader.mods),
+        modsCount:
+          countContent(selectedVersion?.version.loader.mods) +
+          countJarMods(selectedVersion?.version),
         serversCount: servers.length,
         hasOptionsFile: isExistsOptionsFile,
         hasArguments: Boolean(
@@ -507,7 +521,10 @@ export function Share({
       case "name":
         return selectedVersion?.version.name || "";
       case "mods":
-        return String(countContent(selectedVersion?.version.loader.mods));
+        return String(
+          countContent(selectedVersion?.version.loader.mods) +
+            countJarMods(selectedVersion?.version),
+        );
       case "servers":
         return String(servers.length);
       case "options":
@@ -583,6 +600,8 @@ export function Share({
     if (errorCode === "sizeUnknown") return t("share.sizeUnknown");
     if (errorCode === "uploadFailed") return t("share.uploadFailedDescription");
     if (errorCode === "logoFailed") return t("share.logoFailed");
+    if (errorCode === "nameTaken")
+      return t("share.nameTaken", { name: selectedVersion?.version.name });
     return t("versions.publishError");
   }
 
@@ -641,6 +660,7 @@ export function Share({
     }
 
     let mods = [...selectedVersion.version.loader.mods];
+    let jar: IJarModSet | null = null;
     let shouldUpdateLocalMods = false;
     let shouldUpdateLocalOther = false;
     let shouldUpdateLocalImage = false;
@@ -686,6 +706,14 @@ export function Share({
           );
         }
         mods = result.mods;
+
+        jar = await api.version.share.uploadJarMods(
+          account.accessToken!,
+          versionPath,
+          shareCode,
+          jarModSetOf(selectedVersion.version),
+        );
+        if (!jar) throw new Error("jar mods upload failed");
         shouldUpdateLocalMods = true;
       }
 
@@ -864,6 +892,7 @@ export function Share({
         loaderVersion: selection.loader
           ? (selectedVersion.version.loader.version ?? null)
           : null,
+        jar,
         image: selection.logo || silentMode ? updateImage : null,
         quickServer: selection.servers
           ? selectedVersion.version.quickServer || ""
@@ -885,7 +914,10 @@ export function Share({
       publishCommittedRef.current = true;
 
       selectedVersion.version.description = nextDescription;
-      if (shouldUpdateLocalMods) selectedVersion.version.loader.mods = mods;
+      if (shouldUpdateLocalMods) {
+        selectedVersion.version.loader.mods = mods;
+        if (jar) applyJarModSet(selectedVersion.version, jar);
+      }
       if (shouldUpdateLocalOther) {
         if (other) selectedVersion.version.loader.other = other;
         else delete selectedVersion.version.loader.other;
@@ -900,6 +932,7 @@ export function Share({
         versions[versionIndex].version.description = nextDescription;
         if (shouldUpdateLocalMods) {
           versions[versionIndex].version.loader.mods = mods;
+          if (jar) applyJarModSet(versions[versionIndex].version, jar);
         }
         if (shouldUpdateLocalOther) {
           if (other) versions[versionIndex].version.loader.other = other;
@@ -1066,7 +1099,13 @@ export function Share({
         },
       });
 
-      if (!shareCode) throw new Error("not share code");
+      if (!shareCode) {
+        const nameConflict = consumeRecentFailure({
+          channels: ["backend:shareModpack"],
+          status: 409,
+        });
+        throw new Error(nameConflict ? "name_taken" : "not share code");
+      }
       createdShareCode = shareCode;
 
       const isUpdated = await updateShare(true, shareCode);
@@ -1108,6 +1147,8 @@ export function Share({
         publishErrorRef.current || resolvePublishErrorCode(error);
       showFailureToast(getPublishErrorToast(errorCode), error, {
         channels: ["backend:", "version:save", "fs:"],
+        fallbackDescription:
+          errorCode === "nameTaken" ? t("share.nameTakenHint") : undefined,
       });
     } finally {
       setIsLoading(false);
@@ -1354,7 +1395,7 @@ export function Share({
                   <div className="flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5">
                     <Link2 className="size-3.5 shrink-0 text-faint" />
                     <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
-                      {shareUrl}
+                      {redact.value(shareUrl)}
                     </span>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -1363,8 +1404,7 @@ export function Share({
                           variant="ghost"
                           aria-label={t("common.copy")}
                           onClick={async () => {
-                            if (!(await copyToClipboard(shareUrl))) return;
-                            toast.success(t("common.copied"));
+                            await copyWithFeedback(shareUrl);
                           }}
                         >
                           <Copy />

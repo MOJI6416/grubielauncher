@@ -172,3 +172,28 @@ describe("loaderChangeErrorKey", () => {
     expect(loaderChangeErrorKey(undefined)).toBeNull();
   });
 });
+
+describe("Ornithe generations", () => {
+  const ornithe = ["0.19.5", "0.19.5+gen1", "0.19.4", "0.19.4+gen1"].map((id) => ({
+    id,
+  }));
+
+  it("marks the other generation as a switch, not an upgrade", () => {
+    const options = buildLoaderVersionOptions({
+      versions: ornithe,
+      currentId: "0.19.4",
+    });
+    const byId = new Map(options.map((option) => [option.id, option]));
+
+    expect(byId.get("0.19.5")?.direction).toBe("upgrade");
+    expect(byId.get("0.19.5+gen1")?.direction).toBe("switch");
+    expect(byId.get("0.19.4+gen1")?.direction).toBe("switch");
+    expect(options.find((option) => option.isLatest)?.id).toBe("0.19.5");
+  });
+
+  it("offers updates only within the current generation", () => {
+    expect(findLoaderUpdate(ornithe, "0.19.4+gen1")).toBe("0.19.5+gen1");
+    expect(findLoaderUpdate(ornithe, "0.19.4")).toBe("0.19.5");
+    expect(findLoaderUpdate(ornithe, "0.19.5+gen1")).toBeUndefined();
+  });
+});

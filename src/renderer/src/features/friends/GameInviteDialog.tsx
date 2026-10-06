@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { joinFriendWorld } from "@renderer/features/launch/joinFriendWorld";
 import { describeIncomingInvite } from "./gameInvite";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 export function GameInviteDialog({
   invite,
@@ -23,7 +24,7 @@ export function GameInviteDialog({
 }) {
   const { t } = useTranslation();
   const [isJoining, setIsJoining] = useState(false);
-  const text = describeIncomingInvite(invite);
+  const text = describeIncomingInvite(invite, useRedact().active);
 
   const join = async () => {
     if (isJoining) return;

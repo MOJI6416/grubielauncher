@@ -145,6 +145,17 @@ describe("identity", () => {
       headImageUrl(account({ type: "elyby", nickname: "Kit uk" }), base),
     ).toBe(`${base}/skins/head/elyby/Kit%20uk`);
 
+    expect(
+      headImageUrl(
+        account({
+          type: "elyby",
+          nickname: "Kituk",
+          accessToken: token({ sub: "s", uuid: "uuid-ely", exp: 1 }),
+        }),
+        base,
+      ),
+    ).toBe(`${base}/skins/head/elyby/uuid-ely`);
+
     expect(headImageUrl(account({ type: "plain" }), base)).toBeNull();
     expect(headImageUrl(account({}), base)).toBeNull();
   });

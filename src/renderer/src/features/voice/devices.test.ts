@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   cleanDeviceLabel,
   deviceOptions,
-  meterSegments,
   resolveDeviceSelection,
 } from "./devices";
 
@@ -73,14 +72,5 @@ describe("resolveDeviceSelection", () => {
       deviceId: "",
       isMissing: false,
     });
-  });
-});
-
-describe("meterSegments", () => {
-  it("scales the level onto the segment count", () => {
-    expect(meterSegments(0, 18)).toBe(0);
-    expect(meterSegments(-1, 18)).toBe(0);
-    expect(meterSegments(1, 18)).toBe(18);
-    expect(meterSegments(0.5, 18)).toBe(13);
   });
 });

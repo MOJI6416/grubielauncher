@@ -45,6 +45,9 @@ import { formatCompactNumber, formatDate } from "./format";
 import { ProjectBody } from "./ProjectBody";
 import { ProjectGallery } from "./ProjectGallery";
 import { ProjectIcon } from "./ProjectIcon";
+import { TranslateToggle } from "./TranslateToggle";
+import { useTranslatableText, useVersionChangelog } from "./changelog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const api = window.api;
 
@@ -162,7 +165,12 @@ export function ContentDetails({
     [detail],
   );
   const stats = detail?.stats ?? entry.stats;
-  const changelog = selectedVersion?.changelog?.trim() ?? "";
+  const changelog = useVersionChangelog({
+    provider: entry.provider,
+    projectId: entry.id,
+    version: selectedVersion,
+  });
+  const changelogText = useTranslatableText(changelog.key, changelog.text);
   const dependencies = selectedVersion?.dependencies ?? [];
   const resolvedDependencies = useMemo(
     () => dependencies.filter((dependency) => dependency.project),
@@ -314,9 +322,19 @@ export function ContentDetails({
       </header>
 
       {isLoading ? (
-        <div className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {t("common.loading")}
+        <div
+          aria-hidden
+          className="flex flex-1 flex-col gap-3 overflow-hidden p-4"
+        >
+          <Skeleton className="h-32 w-full shrink-0 rounded-lg" />
+          <div className="flex gap-2">
+            <Skeleton className="h-9 flex-1 rounded-lg" />
+            <Skeleton className="size-9 rounded-lg" />
+          </div>
+          <Skeleton className="h-3 w-11/12 rounded" />
+          <Skeleton className="h-3 w-4/5 rounded" />
+          <Skeleton className="h-3 w-5/6 rounded" />
+          <Skeleton className="h-3 w-2/3 rounded" />
         </div>
       ) : error ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
@@ -438,7 +456,11 @@ export function ContentDetails({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-60">
-                      {t(isPinned ? "modManager.unpinHint" : "modManager.pinHint")}
+                      {t(
+                        isPinned
+                          ? "modManager.unpinHint"
+                          : "modManager.pinHint",
+                      )}
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -529,22 +551,38 @@ export function ContentDetails({
             >
               {gallery.length > 0 && (
                 <div className="mb-3">
-                  <ProjectGallery gallery={gallery} />
+                  <ProjectGallery gallery={gallery} title={title} />
                 </div>
               )}
 
-              {changelog && (
+              {(changelog.status === "ready" ||
+                changelog.status === "loading") && (
                 <div className="mb-3 rounded-lg border border-border bg-surface-2 p-2.5">
-                  <p className="mb-1 text-xs font-medium text-foreground">
-                    {t("modManager.changelog")}
-                    {selectedVersion?.name ? ` · ${selectedVersion.name}` : ""}
-                  </p>
+                  <div className="mb-1 flex min-h-6 items-center gap-1">
+                    <p className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+                      {t("modManager.changelog")}
+                      {selectedVersion?.name ? ` · ${selectedVersion.name}` : ""}
+                    </p>
+                    {changelogText.canTranslate && (
+                      <TranslateToggle
+                        isTranslated={changelogText.isTranslated}
+                        isTranslating={changelogText.isTranslating}
+                        onToggle={() => void changelogText.toggle()}
+                      />
+                    )}
+                  </div>
                   <div className="max-h-40 overflow-y-auto">
-                    <ProjectBody
-                      key={`changelog-${entry.key}-${selectedVersion?.id}`}
-                      body={changelog}
-                      baseUrl={detail?.url}
-                    />
+                    {changelog.status === "loading" ? (
+                      <div className="flex h-10 items-center justify-center">
+                        <Loader2 className="size-4 animate-spin text-faint" />
+                      </div>
+                    ) : (
+                      <ProjectBody
+                        key={`changelog-${changelog.key}-${changelogText.isTranslated}`}
+                        body={changelogText.text}
+                        baseUrl={detail?.url}
+                      />
+                    )}
                   </div>
                 </div>
               )}

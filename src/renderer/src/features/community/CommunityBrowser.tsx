@@ -44,6 +44,7 @@ import {
   useInstalledShareCodes,
 } from "./installedPacks";
 import { usePackInstall } from "./usePackInstall";
+import { ListSkeleton } from "@renderer/components/ListSkeleton";
 
 const LOAD_MORE_THRESHOLD = 180;
 const api = window.api;
@@ -222,58 +223,52 @@ export function CommunityBrowser({
           onScroll={onScroll}
           className="min-h-0 flex-1 overflow-y-auto p-1.5"
         >
-          {catalog.items.length === 0 ? (
+          {catalog.items.length === 0 &&
+          catalog.isLoading &&
+          !offlineProblem ? (
+            <ListSkeleton rows={9} />
+          ) : catalog.items.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
-              {catalog.isLoading && !offlineProblem ? (
-                <Loader2 className="size-5 animate-spin text-faint" />
-              ) : (
-                <>
-                  <span className="flex size-11 items-center justify-center rounded-xl bg-surface-2">
-                    {emptyState.action === "none" ||
-                    emptyState.action === "resetFilters" ? (
-                      <Users className="size-5 text-faint" />
-                    ) : (
-                      <CircleAlert className="size-5 text-destructive" />
-                    )}
-                  </span>
-                  <p className="text-sm font-medium text-foreground">
-                    {t(emptyState.titleKey)}
-                  </p>
-                  <p className="max-w-72 text-xs text-muted-foreground">
-                    {t(emptyState.hintKey)}
-                  </p>
-                  {emptyState.action === "retryConnection" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={isRechecking}
-                      onClick={() => void recheckConnection()}
-                    >
-                      {isRechecking ? (
-                        <Loader2 className="animate-spin" />
-                      ) : (
-                        <RotateCw />
-                      )}
-                      {t("common.retry")}
-                    </Button>
+              <span className="flex size-11 items-center justify-center rounded-xl bg-surface-2">
+                {emptyState.action === "none" ||
+                emptyState.action === "resetFilters" ? (
+                  <Users className="size-5 text-faint" />
+                ) : (
+                  <CircleAlert className="size-5 text-destructive" />
+                )}
+              </span>
+              <p className="text-sm font-medium text-foreground">
+                {t(emptyState.titleKey)}
+              </p>
+              <p className="max-w-72 text-xs text-muted-foreground">
+                {t(emptyState.hintKey)}
+              </p>
+              {emptyState.action === "retryConnection" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isRechecking}
+                  onClick={() => void recheckConnection()}
+                >
+                  {isRechecking ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <RotateCw />
                   )}
-                  {emptyState.action === "retryLoad" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={catalog.reload}
-                    >
-                      <RotateCw />
-                      {t("common.retry")}
-                    </Button>
-                  )}
-                  {emptyState.action === "resetFilters" && (
-                    <Button size="sm" variant="outline" onClick={resetFilters}>
-                      <FilterX />
-                      {t("community.resetFilters")}
-                    </Button>
-                  )}
-                </>
+                  {t("common.retry")}
+                </Button>
+              )}
+              {emptyState.action === "retryLoad" && (
+                <Button size="sm" variant="outline" onClick={catalog.reload}>
+                  <RotateCw />
+                  {t("common.retry")}
+                </Button>
+              )}
+              {emptyState.action === "resetFilters" && (
+                <Button size="sm" variant="outline" onClick={resetFilters}>
+                  <FilterX />
+                  {t("community.resetFilters")}
+                </Button>
               )}
             </div>
           ) : (

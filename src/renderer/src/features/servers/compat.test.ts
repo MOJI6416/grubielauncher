@@ -20,6 +20,18 @@ describe("checkServerCompatibility", () => {
     expect(checkServerCompatibility("Paper 1.21.4", "1.21")).toBe("match");
   });
 
+  it("treats a proxy version range as supported versions", () => {
+    expect(checkServerCompatibility("Velocity 1.7.2-26.3", "1.21.11")).toBe(
+      "match",
+    );
+    expect(checkServerCompatibility("Requires MC 1.20.4-1.21", "1.20.6")).toBe(
+      "match",
+    );
+    expect(checkServerCompatibility("Velocity 1.7.2-1.20.4", "1.21.1")).toBe(
+      "mismatch",
+    );
+  });
+
   it("reports a real mismatch", () => {
     expect(checkServerCompatibility("Paper 1.20.1", "1.21.1")).toBe("mismatch");
   });

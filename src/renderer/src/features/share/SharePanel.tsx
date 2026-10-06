@@ -80,7 +80,8 @@ import {
 import { ShareGuestList } from "./ShareGuestList";
 import { ShareInviteList } from "./ShareInviteList";
 import { ShareStatus } from "./ShareStatus";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
@@ -139,6 +140,7 @@ export function LanShareModal({
   const isInternetOnline = useAtomValue(internetAtom);
   const isBackendOnline = useAtomValue(networkAtom);
   const { t } = useTranslation();
+  const redact = useRedact();
 
   const [pendingAction, setPendingAction] = useState<
     "start" | "stop" | "visibility" | null
@@ -290,8 +292,7 @@ export function LanShareModal({
 
   const handleCopyAddress = useCallback(async () => {
     if (!address) return;
-    if (!(await copyToClipboard(address.raw))) return;
-    toast.success(t("common.copied"));
+    await copyWithFeedback(address.raw);
   }, [address, t]);
 
   const inviteReason = useCallback(
@@ -685,29 +686,31 @@ export function LanShareModal({
                   address &&
                   visibility.effective === "public" && (
                     <span className="flex items-center gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon-xs"
-                            variant="ghost"
-                            aria-label={
-                              isAddressRevealed
-                                ? t("share.panel.address.hide")
-                                : t("share.panel.address.reveal")
-                            }
-                            onClick={() =>
-                              setIsAddressRevealed((prev) => !prev)
-                            }
-                          >
-                            {isAddressRevealed ? <EyeOff /> : <Eye />}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {isAddressRevealed
-                            ? t("share.panel.address.hide")
-                            : t("share.panel.address.reveal")}
-                        </TooltipContent>
-                      </Tooltip>
+                      {!redact.active && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon-xs"
+                              variant="ghost"
+                              aria-label={
+                                isAddressRevealed
+                                  ? t("share.panel.address.hide")
+                                  : t("share.panel.address.reveal")
+                              }
+                              onClick={() =>
+                                setIsAddressRevealed((prev) => !prev)
+                              }
+                            >
+                              {isAddressRevealed ? <EyeOff /> : <Eye />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {isAddressRevealed
+                              ? t("share.panel.address.hide")
+                              : t("share.panel.address.reveal")}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
@@ -729,7 +732,9 @@ export function LanShareModal({
               >
                 {visibility.effective === "public" && address ? (
                   <p className="truncate rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 font-mono text-xs text-muted-foreground">
-                    {isAddressRevealed ? address.raw : address.masked}
+                    {isAddressRevealed && !redact.active
+                      ? address.raw
+                      : address.masked}
                   </p>
                 ) : (
                   <p className="text-xs leading-4 text-muted-foreground">

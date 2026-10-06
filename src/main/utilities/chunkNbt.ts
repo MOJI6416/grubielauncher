@@ -23,6 +23,7 @@ import {
   readNbtString,
   writeNbtLong,
 } from "./nbtScan";
+import { legacyBiomeId, legacyBiomeName } from "./legacyChunks";
 
 export interface ChunkNbtSummary {
   format: ChunkNbtFormat;
@@ -39,11 +40,32 @@ export interface ChunkNbtSummary {
   sectionCount: number | null;
 }
 
+const LEGACY_STATUSES: Record<string, string> = {
+  base: "surface",
+  carved: "carvers",
+  liquid_carved: "liquid_carvers",
+  decorated: "features",
+  lighted: "light",
+  mobs_spawned: "spawn",
+  finalized: "heightmaps",
+  fullchunk: "full",
+  postprocessed: "full",
+};
+
 export function normalizeChunkStatus(raw: string): string {
   const trimmed = raw.trim().toLowerCase();
-  return trimmed.startsWith("minecraft:")
+  const name = trimmed.startsWith("minecraft:")
     ? trimmed.slice("minecraft:".length)
     : trimmed;
+  return LEGACY_STATUSES[name] ?? name;
+}
+
+export function paletteEntryName(entry: unknown): string | null {
+  if (typeof entry === "string") return entry;
+  if (!isRecord(entry)) return null;
+  if (typeof entry.Name === "string") return entry.Name;
+  if (typeof entry[""] === "string") return entry[""];
+  return null;
 }
 
 function intField(
@@ -96,12 +118,19 @@ export function scanChunkNbt(buffer: Buffer): ChunkNbtSummary {
     findNbtChild(fields, "sections", NBT_TAG.List) ??
     findNbtChild(fields, "Sections", NBT_TAG.List);
   const lightOn = byteField(buffer, fields, "isLightOn");
+  const populated = level
+    ? byteField(buffer, fields, "TerrainPopulated")
+    : null;
 
   return {
     format,
     status: statusTag
       ? normalizeChunkStatus(readNbtString(buffer, statusTag.payloadStart))
-      : null,
+      : populated === null
+        ? null
+        : populated !== 0
+          ? "full"
+          : "carvers",
     inhabitedTime: inhabitedTag
       ? readNbtLong(buffer, inhabitedTag.payloadStart)
       : null,
@@ -134,7 +163,7 @@ export interface ChunkNbtDetails {
   nbtBytes: number;
   yMin: number | null;
   yMax: number | null;
-  sectionCount: number;
+  sectionCount: number | null;
   lightOn: boolean | null;
   heightmaps: string[];
   biomes: string[];
@@ -159,8 +188,20 @@ function paletteNames(palette: unknown): string[] {
   if (!Array.isArray(palette)) return [];
 
   return palette
-    .map((entry) => (isRecord(entry) ? entry.Name : entry))
-    .filter((entry): entry is string => typeof entry === "string");
+    .map(paletteEntryName)
+    .filter((entry): entry is string => entry !== null);
+}
+
+function legacyBiomeNames(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  const names = new Set<string>();
+  for (const raw of new Set(value)) {
+    const id = legacyBiomeId(raw);
+    const name = id === null ? null : legacyBiomeName(id);
+    if (name) names.add(name);
+  }
+  return [...names];
 }
 
 function isEmptySection(section: Record<string, unknown>): boolean {
@@ -237,11 +278,12 @@ export async function readChunkNbtDetails(
     .map((section) => toNumber(section.Y))
     .filter((y): y is number => y !== null);
 
-  const biomes = new Set<string>();
+  const biomes = new Set<string>(legacyBiomeNames(data.Biomes));
   for (const section of sections) {
     const container = isRecord(section.biomes) ? section.biomes : null;
     for (const name of paletteNames(container?.palette)) biomes.add(name);
   }
+  const mcRegion = sections.length === 0 && data.Blocks !== undefined;
 
   const structures = isRecord(data.structures)
     ? data.structures
@@ -275,7 +317,7 @@ export async function readChunkNbtDetails(
     nbtBytes: buffer.length,
     yMin: ys.length ? Math.min(...ys) : null,
     yMax: ys.length ? Math.max(...ys) : null,
-    sectionCount: ys.length,
+    sectionCount: mcRegion ? null : ys.length,
     lightOn: lightOn === null ? null : lightOn !== 0,
     heightmaps: isRecord(data.Heightmaps)
       ? Object.keys(data.Heightmaps).sort()

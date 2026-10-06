@@ -26,7 +26,7 @@ import {
 } from '../utilities/serverManager'
 import { readNBT, writeNBT } from '../utilities/nbt'
 import { IServer } from '@/types/ServersList'
-import { Loader } from '@/types/Loader'
+import { LOADERS, Loader } from '@/types/Loader'
 import { Server } from '../services/Server'
 import { compareServers } from '../utilities/serverList'
 import { check, handleSafe } from '../utilities/ipc'
@@ -39,14 +39,25 @@ import {
 import { assertReadablePath, assertWritablePath } from '../utilities/safePath'
 import { isPortAvailable } from '../utilities/portCheck'
 import { getLanAddress } from '../utilities/lanAddress'
+import { Modrinth } from '../services/Modrinth'
+import { ModManager } from '../services/ModManager'
+import { sanitizeServerQuery } from '@/shared/modrinthServers'
+import type {
+  ModrinthServerImage,
+  ModrinthServerPack,
+  ModrinthServerPage,
+  ModrinthServerQuery
+} from '@/types/ModrinthServers'
 
 const isPath = check.nonEmptyString(4096)
 const isConf = check.object()
 const isOptionalConf = check.optional(check.object())
 const isServerList = check.arrayOf(check.object(), 5000)
-const isLoader = check.oneOf('vanilla', 'forge', 'neoforge', 'fabric', 'quilt')
+const isLoader = check.oneOf(...LOADERS)
+const isModrinthId = check.pattern(/^[A-Za-z0-9]{1,64}$/, 64)
 
 export function registerServerIpc() {
+
   handleSafe<
     { success: boolean; error?: string; cancelled?: boolean },
     [
@@ -288,6 +299,36 @@ export function registerServerIpc() {
     async (_, address) => {
       return await pingServer(address)
     }
+  )
+
+  handleSafe<ModrinthServerPage, [ModrinthServerQuery]>(
+    'servers:discover',
+    (query) => ({
+      servers: [],
+      total: 0,
+      nextOffset: query?.offset ?? 0,
+      error: true
+    }),
+    [check.object(16)],
+    async (_, rawQuery) => {
+      const query = sanitizeServerQuery(rawQuery)
+      const page = await Modrinth.searchServers(query)
+      return page ?? { servers: [], total: 0, nextOffset: query.offset, error: true }
+    }
+  )
+
+  handleSafe<ModrinthServerImage[] | null, [string]>(
+    'servers:discoverGallery',
+    null,
+    [isModrinthId],
+    async (_, projectId) => await Modrinth.getServerGallery(projectId)
+  )
+
+  handleSafe<ModrinthServerPack | null, [string, string]>(
+    'servers:discoverPack',
+    null,
+    [isModrinthId, isModrinthId],
+    async (_, projectId, versionId) => await ModManager.getModrinthPack(projectId, versionId)
   )
 
   handleSafe<boolean, [IServer[], IServer[]]>(

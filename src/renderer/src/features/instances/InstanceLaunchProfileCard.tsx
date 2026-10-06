@@ -3,8 +3,11 @@ import { Copy, SquareTerminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IArguments } from "@/types/IArguments";
 import { buildMemoryArguments } from "@/shared/jvmDefaults";
+import { classifyRunArguments } from "@/shared/runArguments";
 import { parseArgs } from "@renderer/utilities/jvmArguments";
+import { Hint } from "@renderer/components/Hint";
 import { SectionCard } from "./SectionCard";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 export function InstanceLaunchProfileCard({
   runArguments,
@@ -22,6 +25,7 @@ export function InstanceLaunchProfileCard({
   onCopy: () => void;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
 
   return (
     <SectionCard
@@ -56,22 +60,30 @@ export function InstanceLaunchProfileCard({
             {flag}
           </span>
         ))}
-        {parseArgs(runArguments.jvm).map((flag, index) => (
-          <span
-            key={`jvm-${index}`}
-            className="rounded border border-primary/35 bg-primary-soft px-1.5 py-0.5 font-mono text-[0.65rem]"
-          >
-            {flag}
-          </span>
-        ))}
-        {parseArgs(runArguments.game).map((flag, index) => (
-          <span
-            key={`game-${index}`}
-            className="rounded border border-primary/35 bg-primary-soft px-1.5 py-0.5 font-mono text-[0.65rem]"
-          >
-            {flag}
-          </span>
-        ))}
+        {(["jvm", "game"] as const).flatMap((kind) => {
+          const tokens = parseArgs(runArguments[kind]);
+          const allowed = classifyRunArguments(tokens, kind);
+
+          return tokens.map((flag, index) =>
+            allowed[index] ? (
+              <span
+                key={`${kind}-${index}`}
+                className="rounded border border-primary/35 bg-primary-soft px-1.5 py-0.5 font-mono text-[0.65rem]"
+              >
+                {redact.text(flag)}
+              </span>
+            ) : (
+              <Hint
+                key={`${kind}-${index}`}
+                content={t("versions.launchProfileDropped")}
+              >
+                <span className="rounded border border-destructive/40 bg-destructive/10 px-1.5 py-0.5 font-mono text-[0.65rem] text-destructive line-through">
+                  {redact.text(flag)}
+                </span>
+              </Hint>
+            ),
+          );
+        })}
       </div>
 
       <div className="flex shrink-0 items-center gap-3 text-[0.7rem] text-faint">

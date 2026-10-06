@@ -9,6 +9,7 @@ import {
   findBlockingRequirements,
   isStableLoaderVersion,
 } from "@/shared/loaderCompat";
+import { splitOrnitheGeneration } from "@/shared/profileLoaders";
 
 const LOADER_CHANGE_ERROR_KEYS = new Map<string, string>([
   [LOADER_CHANGE_RUNNING, "loaderUpdate.errors.running"],
@@ -27,7 +28,11 @@ export function loaderChangeErrorKey(error: unknown): string | null {
   return LOADER_CHANGE_ERROR_KEYS.get(message) ?? null;
 }
 
-export type LoaderDirection = "current" | "upgrade" | "downgrade";
+export type LoaderDirection = "current" | "upgrade" | "downgrade" | "switch";
+
+function generationOf(id: string): number {
+  return splitOrnitheGeneration(id).generation;
+}
 
 export interface LoaderVersionOption {
   id: string;
@@ -60,7 +65,11 @@ export function buildLoaderVersionOptions({
     ),
   ].sort((left, right) => compareLoaderVersions(right, left));
 
-  const latest = ids.find((id) => isStableLoaderVersion(id));
+  const latest = ids.find(
+    (id) =>
+      isStableLoaderVersion(id) &&
+      (!currentId || generationOf(id) === generationOf(currentId)),
+  );
 
   return ids.map((id) => ({
     id,
@@ -71,9 +80,11 @@ export function buildLoaderVersionOptions({
     direction:
       id === currentId
         ? "current"
-        : currentId && compareLoaderVersions(id, currentId) < 0
-          ? "downgrade"
-          : "upgrade",
+        : currentId && generationOf(id) !== generationOf(currentId)
+          ? "switch"
+          : currentId && compareLoaderVersions(id, currentId) < 0
+            ? "downgrade"
+            : "upgrade",
     blocked: requirements
       ? findBlockingRequirements(id, requirements, minecraftVersion)
       : [],
@@ -90,6 +101,7 @@ export function findLoaderUpdate(
 
   for (const { id } of versions) {
     if (!isStableLoaderVersion(id)) continue;
+    if (generationOf(id) !== generationOf(currentId)) continue;
     if (compareLoaderVersions(id, currentId) <= 0) continue;
     if (!newest || compareLoaderVersions(id, newest) > 0) newest = id;
   }

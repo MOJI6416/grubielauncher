@@ -61,7 +61,7 @@ import {
 import { SERVER_FILE_STAGES, contentPlan } from "@/shared/installPlan";
 import { describeFailure } from "@renderer/utilities/failures";
 import { toast } from "sonner";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 
 const api = window.api;
 
@@ -577,11 +577,9 @@ export function CreateServer({
                 size="sm"
                 className="h-6 shrink-0 px-2 text-[0.7rem]"
                 onClick={async () => {
-                  const copied = await copyToClipboard(
+                  await copyWithFeedback(
                     [error.text, error.technical].filter(Boolean).join("\n"),
                   );
-                  if (!copied) return;
-                  toast(t("common.copied"));
                 }}
               >
                 <Copy className="size-3" />

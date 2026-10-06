@@ -426,7 +426,7 @@ export class RPC {
       account.type === 'microsoft' || account.type === 'discord'
         ? account.uuid
         : account.type === 'elyby'
-          ? account.nickname
+          ? account.uuid || account.nickname
           : undefined
 
     if (!id) return undefined

@@ -1,8 +1,11 @@
-import { Suspense, useEffect } from "react";
+import { type ReactNode, Suspense, useEffect, useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { currentRouteAtom } from "@renderer/navigation/store";
+import { screenKey } from "@renderer/navigation/routes";
+import { isMorphing } from "@renderer/utilities/viewTransition";
+import { cn } from "@/lib/utils";
 import { navigate } from "@renderer/navigation/navigate";
 import {
   isRouteAllowed,
@@ -40,15 +43,37 @@ import { HomeScreen } from "./home/HomeScreen";
 import { ProfileScreen } from "./profile/ProfileScreen";
 import { AccountsScreen } from "./accounts/AccountsScreen";
 
-export function Router({
-  runGame,
-  joinFriendWorld,
-  onShowWhatsNew,
-}: {
+type RouterProps = {
   runGame: (params: RunGameParams) => Promise<void>;
   joinFriendWorld: (params: JoinFriendWorldParams) => Promise<void>;
   onShowWhatsNew: () => void;
-}) {
+};
+
+function ScreenEnter({ children }: { children: ReactNode }) {
+  const [animate] = useState(() => !isMorphing());
+
+  return (
+    <div className={cn("h-full min-h-0", animate && "screen-enter")}>
+      {children}
+    </div>
+  );
+}
+
+export function Router(props: RouterProps) {
+  const route = useAtomValue(currentRouteAtom);
+
+  return (
+    <ScreenEnter key={screenKey(route)}>
+      <RouteScreen {...props} />
+    </ScreenEnter>
+  );
+}
+
+function RouteScreen({
+  runGame,
+  joinFriendWorld,
+  onShowWhatsNew,
+}: RouterProps) {
   const route = useAtomValue(currentRouteAtom);
   const [selectedVersion] = useAtom(selectedVersionAtom);
   const versions = useAtomValue(versionsAtom);

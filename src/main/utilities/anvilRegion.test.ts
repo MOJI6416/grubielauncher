@@ -8,7 +8,11 @@ import {
   REGION_HEADER_BYTES,
   buildRegionFile,
   compressionKind,
+  decodeLz4Block,
+  decodeLz4BlockStream,
+  decompressChunk,
   externalChunkFileName,
+  isDecodableCompression,
   parseRegionFileName,
   readRawChunk,
   readRegionHeader,
@@ -19,10 +23,56 @@ import { REGION_SECTOR_BYTES } from "@/types/WorldChunks";
 import {
   flatChunkNbt,
   localIndex,
+  lz4Stream,
   regionFile,
 } from "./chunkFixtures.test-helpers";
 
+describe("LZ4 chunks", () => {
+  it("decodes the LZ4Block stream across several blocks", async () => {
+    const nbt = flatChunkNbt({ x: 1, z: 2, inhabitedTime: 5 });
+    const stream = lz4Stream(nbt, 100);
+    expect(stream.subarray(0, 8).toString("latin1")).toBe("LZ4Block");
+    expect(await decompressChunk("lz4", stream)).toEqual(nbt);
+    expect(isDecodableCompression("lz4")).toBe(true);
+  });
+
+  it("copies back-references, overlapping ones included", () => {
+    const block = Buffer.from([
+      0x35,
+      ..."abc".split("").map((char) => char.charCodeAt(0)),
+      0x03,
+      0x00,
+      0x1f,
+      "!".charCodeAt(0),
+      0x01,
+      0x00,
+      0x00,
+    ]);
+    expect(decodeLz4Block(block, 32).toString("latin1")).toBe(
+      `abcabcabcabc${"!".repeat(20)}`,
+    );
+  });
+
+  it("rejects malformed data instead of reading past it", () => {
+    expect(() => decodeLz4Block(Buffer.from([0x00, 0x05, 0x00]), 4)).toThrow();
+    expect(() => decodeLz4Block(Buffer.from([0xf0]), 20)).toThrow();
+    expect(() => decodeLz4BlockStream(Buffer.from("LZ4Bloc"))).toThrow();
+    expect(() =>
+      decodeLz4BlockStream(
+        Buffer.concat([lz4Stream(Buffer.from("x")), Buffer.from("junk")]),
+      ),
+    ).not.toThrow();
+  });
+});
+
 describe("region file names", () => {
+  it("handles McRegion files separately from Anvil ones", () => {
+    expect(regionFileName(-1, 2, "mcr")).toBe("r.-1.2.mcr");
+    expect(parseRegionFileName("r.-1.2.mcr", "mcr")).toEqual({ x: -1, z: 2 });
+    expect(parseRegionFileName("r.-1.2.mcr")).toBeNull();
+    expect(parseRegionFileName("r.-1.2.mca", "mcr")).toBeNull();
+  });
+
   it("parses coordinates, negatives included", () => {
     expect(parseRegionFileName("r.0.0.mca")).toEqual({ x: 0, z: 0 });
     expect(parseRegionFileName("r.-3.12.mca")).toEqual({ x: -3, z: 12 });

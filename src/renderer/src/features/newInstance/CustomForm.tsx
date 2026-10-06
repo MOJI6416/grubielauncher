@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Loader } from "@/types/Loader";
-import { mcVersionToJavaMajor } from "@/shared/javaVersions";
+import { instanceJavaMajor } from "@/shared/javaVersions";
 import { LoaderIcon, LoaderPicker } from "@renderer/components/Loaders";
 import { Hint } from "@renderer/components/Hint";
 import { shortenPath } from "@renderer/features/instances/instanceOverview";
@@ -26,6 +26,7 @@ import {
 } from "./versionCatalog";
 import type { NewInstanceAction, NewInstanceState } from "./state";
 import type { VersionCatalogState } from "./useVersionCatalog";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const KIND_FILTERS: VersionKind[] = ["release", "snapshot", "old"];
 
@@ -58,6 +59,7 @@ export function CustomForm({
   unavailableReason: string | null;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const [versionQuery, setVersionQuery] = useState("");
   const [loaderQuery, setLoaderQuery] = useState("");
   const [kinds, setKinds] = useState<VersionKind[]>(KIND_FILTERS);
@@ -68,8 +70,11 @@ export function CustomForm({
   );
   const counts = useMemo(() => countVersionKinds(entries), [entries]);
   const activeKinds = useMemo(
-    () => (state.showSnapshots ? kinds : ["release" as VersionKind]),
-    [kinds, state.showSnapshots],
+    () =>
+      state.showSnapshots || counts.release === 0
+        ? kinds
+        : ["release" as VersionKind],
+    [counts.release, kinds, state.showSnapshots],
   );
 
   const visibleEntries = useMemo(
@@ -113,7 +118,14 @@ export function CustomForm({
 
   const selected = state.minecraftVersion;
   const selectedEntry = entries.find((entry) => entry.id === selected?.id);
-  const javaMajor = selected ? mcVersionToJavaMajor(selected.id) : null;
+  const javaMajor = selected
+    ? instanceJavaMajor(
+        selected.id,
+        state.loader,
+        undefined,
+        state.loaderVersion?.id,
+      )
+    : null;
 
   const summaryRows = [
     {
@@ -154,8 +166,12 @@ export function CustomForm({
       key: "folder",
       icon: <FolderTree className="size-3.5" />,
       label: t("addVersion.preview.folder"),
-      value: <span className="font-mono">{shortenPath(folderPath, 2)}</span>,
-      title: folderPath,
+      value: (
+        <span className="font-mono">
+          {shortenPath(redact.path(folderPath), 2)}
+        </span>
+      ),
+      title: redact.path(folderPath),
     },
   ];
 
@@ -202,8 +218,9 @@ export function CustomForm({
               <button
                 type="button"
                 aria-pressed={!state.showSnapshots}
+                data-indicator-active={!state.showSnapshots}
                 onClick={() => dispatch({ type: "setSnapshots", value: false })}
-                className="flex h-6 items-center gap-1.5 rounded-md px-2 text-[0.7rem] text-muted-foreground transition-colors hover:bg-surface-3 aria-pressed:bg-surface-3 aria-pressed:text-foreground"
+                className="relative flex h-6 items-center gap-1.5 rounded-md px-2 text-[0.7rem] text-muted-foreground transition-colors not-aria-pressed:hover:bg-surface-3 aria-pressed:text-foreground"
               >
                 {t("newInstance.versionKind.release")}
                 <span className="font-mono text-[0.65rem] tabular-nums text-faint">
@@ -214,8 +231,9 @@ export function CustomForm({
               <button
                 type="button"
                 aria-pressed={state.showSnapshots}
+                data-indicator-active={state.showSnapshots}
                 onClick={() => dispatch({ type: "setSnapshots", value: true })}
-                className="flex h-6 items-center gap-1.5 rounded-md px-2 text-[0.7rem] text-muted-foreground transition-colors hover:bg-surface-3 aria-pressed:bg-surface-3 aria-pressed:text-foreground"
+                className="relative flex h-6 items-center gap-1.5 rounded-md px-2 text-[0.7rem] text-muted-foreground transition-colors not-aria-pressed:hover:bg-surface-3 aria-pressed:text-foreground"
               >
                 {t("newInstance.allVersions")}
                 {state.showSnapshots && (

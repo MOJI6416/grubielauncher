@@ -13,6 +13,8 @@ export const OVERWORLD_ID = "minecraft:overworld";
 export const NETHER_ID = "minecraft:the_nether";
 export const END_ID = "minecraft:the_end";
 
+export type RegionFileExtension = "mca" | "mcr";
+
 export type ChunkCompression =
   | "gzip"
   | "zlib"
@@ -28,7 +30,7 @@ export type ChunkCompression =
  * - `compression` — the payload does not decompress.
  * - `nbt` — the decompressed payload is not a well-formed NBT compound.
  * - `position` — the chunk says it belongs to different coordinates.
- * - `unsupported` — the payload uses a compression the launcher cannot decode (LZ4 or custom).
+ * - `unsupported` — the payload uses a compression the launcher cannot decode (custom).
  */
 export type ChunkProblem =
   | "header"
@@ -42,6 +44,7 @@ export interface IChunkDimension {
   id: string;
   /** Folder relative to the world root: `` for the overworld, `DIM-1`, `dimensions/ns/name`. */
   folder: string;
+  regionExtension: RegionFileExtension;
   regionCount: number;
   chunkCount: number;
   sizeBytes: number;

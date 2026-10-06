@@ -24,6 +24,7 @@ import type { IModpack as IBackendModpack } from "@/types/Backend";
 import { ServerFavicon } from "@renderer/features/servers/ServerVisuals";
 import type { ServerProbe } from "./useServerProbe";
 import type { KnownServer, OwnModpacksState } from "./useSuggestions";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
@@ -179,6 +180,7 @@ export function CodeSource({
   offlineReason: string | null;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const canSearch = value.trim() !== "" && !isBusy && isBackendOnline;
 
   return (
@@ -199,7 +201,10 @@ export function CodeSource({
     >
       <div className="flex w-full items-center gap-2">
         <Input
-          className="h-9 flex-1 font-mono"
+          className={cn(
+            "h-9 flex-1 font-mono",
+            redact.active && "streamer-mask",
+          )}
           placeholder="grubielauncher.com/pack/…"
           value={value}
           disabled={isBusy}
@@ -327,6 +332,7 @@ export function ServerSource({
   known: KnownServer[];
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const canProbe = value.trim() !== "" && !isBusy;
 
   return (
@@ -338,7 +344,10 @@ export function ServerSource({
     >
       <div className="flex w-full items-center gap-2">
         <Input
-          className="h-9 flex-1 font-mono"
+          className={cn(
+            "h-9 flex-1 font-mono",
+            redact.active && "streamer-mask",
+          )}
           placeholder="mc.example.com"
           value={value}
           disabled={isBusy}
@@ -383,7 +392,7 @@ export function ServerSource({
                   <span className="size-2 shrink-0 rounded-full bg-success" />
                 )}
                 <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                  {probe.motd || probe.address}
+                  {probe.motd || redact.value(probe.address)}
                 </span>
                 {typeof probe.latencyMs === "number" && (
                   <span className="flex shrink-0 items-center gap-1 font-mono text-[0.7rem] tabular-nums text-faint">
@@ -454,10 +463,10 @@ export function ServerSource({
                 >
                   <Server className="size-3 shrink-0 text-faint" />
                   <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                    {server.name}
+                    {redact.text(server.name)}
                   </span>
                   <span className="min-w-0 shrink-0 truncate font-mono text-[0.65rem] text-faint">
-                    {server.ip}
+                    {redact.value(server.ip)}
                   </span>
                 </button>
               </li>

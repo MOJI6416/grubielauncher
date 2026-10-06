@@ -113,8 +113,11 @@ async function assertArchiveFile(zipPath: string, maxArchiveBytes: number) {
 
 export async function openArchive(zipPath: string, limits?: ArchiveLimits) {
   await assertArchiveFile(zipPath, limits?.maxArchiveBytes ?? MAX_ARCHIVE_BYTES);
+  return openArchiveBuffer(await fs.readFile(zipPath), limits);
+}
 
-  const archive = new zip(await fs.readFile(zipPath));
+export function openArchiveBuffer(data: Buffer, limits?: ArchiveLimits) {
+  const archive = new zip(data);
   validateEntries(archive.getEntries(), limits);
   return archive;
 }
@@ -344,6 +347,37 @@ export async function extractZipEntries(
     );
 
     return resolved;
+  } finally {
+    zipFile.close();
+  }
+}
+
+async function streamToBuffer(stream: Readable): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks);
+}
+
+export async function readZipEntries(
+  zipPath: string,
+  names: ReadonlySet<string>,
+  limits: StreamArchiveLimits,
+): Promise<Map<string, Buffer>> {
+  await assertArchiveFile(zipPath, limits.maxArchiveBytes);
+  const zipFile = await openZipFile(zipPath);
+
+  try {
+    const found = new Map<string, Buffer>();
+    for (const { entry, info } of await readZipDirectory(zipFile, limits)) {
+      if (info.isDirectory || !names.has(info.name) || found.has(info.name)) {
+        continue;
+      }
+      found.set(
+        info.name,
+        await streamToBuffer(await openEntryStream(zipFile, entry)),
+      );
+    }
+    return found;
   } finally {
     zipFile.close();
   }

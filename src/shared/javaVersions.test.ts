@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mcVersionToJavaMajor } from "./javaVersions";
+import { instanceJavaMajor, mcVersionToJavaMajor } from "./javaVersions";
 
 describe("mcVersionToJavaMajor", () => {
   it("maps legacy versions (<= 1.16) to Java 8", () => {
@@ -52,5 +52,23 @@ describe("mcVersionToJavaMajor", () => {
     expect(mcVersionToJavaMajor("22w13a")).toBe(17);
     expect(mcVersionToJavaMajor("23w51b")).toBe(17);
     expect(mcVersionToJavaMajor("24w03a")).toBe(21);
+  });
+});
+
+describe("instanceJavaMajor", () => {
+  it("runs Babric on Java 17 so StationAPI mods load", () => {
+    expect(instanceJavaMajor("b1.7.3", "babric")).toBe(17);
+    expect(instanceJavaMajor("b1.7.3", "babric", 8)).toBe(17);
+    expect(instanceJavaMajor("b1.7.3", "babric", 21)).toBe(21);
+  });
+
+  it("follows the BTA release for BTA instances", () => {
+    expect(instanceJavaMajor("b1.7.3", "bta-babric", 8, "v8.0.1")).toBe(17);
+    expect(instanceJavaMajor("b1.7.3", "bta-babric", 8, "v7.3_04")).toBe(8);
+  });
+
+  it("keeps the game's own Java for other loaders", () => {
+    expect(instanceJavaMajor("b1.7.3", "ornithe")).toBe(8);
+    expect(instanceJavaMajor("1.21.1", "fabric", 21)).toBe(21);
   });
 });

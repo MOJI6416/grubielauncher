@@ -46,12 +46,17 @@ export function useUpdateCheck({
   gameVersion,
   loader,
   enabled,
+  keepsUpdate,
 }: {
   mods: ILocalProject[];
   projectType: ProjectType;
   gameVersion: string | undefined;
   loader: Loader | string;
   enabled: boolean;
+  keepsUpdate?: (
+    current: NonNullable<ILocalProject["version"]>,
+    next: ModVersion,
+  ) => Promise<boolean>;
 }): UpdateCheckResult {
   const [revision, setRevision] = useState(0);
   const [isChecking, setIsChecking] = useState(false);
@@ -114,6 +119,9 @@ export function useUpdateCheck({
 
     const runId = ++runIdRef.current;
     setIsChecking(true);
+    const modByKey = new Map(
+      checkable.map((mod) => [entryKey(mod.provider, mod.id), mod]),
+    );
 
     for (const { groupLoader, missing } of pending) {
       for (const chunk of chunkUpdateItems(missing)) {
@@ -137,9 +145,17 @@ export function useUpdateCheck({
           ]),
         );
         for (const [key, state] of outcomes) {
+          const current = modByKey.get(key)?.version;
+          const kept =
+            !keepsUpdate ||
+            state.status !== "update" ||
+            !state.latest ||
+            !current ||
+            (await keepsUpdate(current, state.latest));
+          if (runId !== runIdRef.current) return;
           cache.set(
             cacheKey(key, versionByKey.get(key) ?? "", gameVersion, groupLoader),
-            state,
+            kept ? state : { status: "current", latest: null },
           );
         }
         setRevision((value) => value + 1);
@@ -148,7 +164,7 @@ export function useUpdateCheck({
 
     if (runId === runIdRef.current) setIsChecking(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameVersion, loader, signature]);
+  }, [gameVersion, keepsUpdate, loader, signature]);
 
   useEffect(() => {
     if (!enabled) {

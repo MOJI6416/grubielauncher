@@ -13,8 +13,7 @@ vi.mock("electron", () => ({
 }));
 
 import { loadGlobalAchievementStats } from "./worlds";
-import { getOfflineUuidCandidates } from "./offlineUuidMigration";
-import { toUUID } from "./other";
+import { generateCanonicalOfflineUUID, toUUID } from "./other";
 import type { ILocalAccount } from "@/types/Account";
 
 const account = {
@@ -22,7 +21,7 @@ const account = {
   type: "plain",
 } as unknown as ILocalAccount;
 
-const uuid = toUUID(getOfflineUuidCandidates(account.nickname).canonical);
+const uuid = toUUID(generateCanonicalOfflineUUID(account.nickname));
 const versions = path.join(
   hoisted.base,
   ".grubielauncher",

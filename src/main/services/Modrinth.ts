@@ -10,11 +10,24 @@ import {
   VersionDependency
 } from '@/types/Modrinth'
 import { ServerCore } from '@/types/Server'
+import type {
+  ModrinthServer,
+  ModrinthServerImage,
+  ModrinthServerPage,
+  ModrinthServerQuery
+} from '@/types/ModrinthServers'
+import {
+  buildServerFilters,
+  normalizeServerGallery,
+  normalizeServerHit,
+  serverSortIndex
+} from '@/shared/modrinthServers'
 import axios from 'axios'
 import { app } from 'electron'
 import { reportFailure } from '../utilities/failureBus'
 
 const URL = 'https://api.modrinth.com/v2'
+const V3_URL = 'https://api.modrinth.com/v3'
 const CONTACT = 'https://grubielauncher.com'
 
 function buildUserAgent(): string {
@@ -54,6 +67,7 @@ export class Modrinth {
     query: string,
     options: {
       version?: string
+      versions?: string[]
       loader?: Loader | ServerCore
       projectType: ProjectType
       category?: string[]
@@ -65,7 +79,7 @@ export class Modrinth {
     }
   ) {
     try {
-      const { version, loader, projectType, category, sort } = options
+      const { version, versions, loader, projectType, category, sort } = options
       const params = new URLSearchParams()
 
       params.append('query', query)
@@ -76,7 +90,8 @@ export class Modrinth {
 
       facets.push([`project_type:${projectType}`])
 
-      if (version) facets.push([`versions:${version}`])
+      if (versions?.length) facets.push(versions.map((item) => `versions:${item}`))
+      else if (version) facets.push([`versions:${version}`])
 
       if (
         loader &&
@@ -102,6 +117,46 @@ export class Modrinth {
       return response.data
     } catch (error) {
       this.logAxiosError('Error searching Modrinth projects', error)
+      return null
+    }
+  }
+
+  static async searchServers(query: ModrinthServerQuery): Promise<ModrinthServerPage | null> {
+    try {
+      const params = new URLSearchParams()
+
+      if (query.query.trim()) params.append('query', query.query.trim())
+      params.append('index', serverSortIndex(query.sort))
+      params.append('new_filters', buildServerFilters(query))
+      params.append('limit', query.limit.toString())
+      params.append('offset', query.offset.toString())
+
+      const response = await this.api.get<{ hits?: unknown[]; total_hits?: number }>(
+        `${V3_URL}/search`,
+        { params }
+      )
+
+      const hits = Array.isArray(response.data?.hits) ? response.data.hits : []
+
+      return {
+        servers: hits
+          .map((hit) => normalizeServerHit(hit))
+          .filter((server): server is ModrinthServer => server !== null),
+        total: typeof response.data?.total_hits === 'number' ? response.data.total_hits : 0,
+        nextOffset: query.offset + hits.length
+      }
+    } catch (error) {
+      this.logAxiosError('Error searching Modrinth servers', error)
+      return null
+    }
+  }
+
+  static async getServerGallery(id: string): Promise<ModrinthServerImage[] | null> {
+    try {
+      const response = await this.api.get<unknown>(`${V3_URL}/project/${id}`)
+      return normalizeServerGallery(response.data)
+    } catch (error) {
+      this.logAxiosError('Error getting Modrinth server gallery', error)
       return null
     }
   }

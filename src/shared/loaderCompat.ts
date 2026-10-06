@@ -1,4 +1,8 @@
 import type { Loader } from "@/types/Loader";
+import {
+  ornitheIntermediaryGeneration,
+  splitOrnitheGeneration,
+} from "./profileLoaders";
 
 export type ModdedLoader = Exclude<Loader, "vanilla">;
 
@@ -22,9 +26,19 @@ export const LOADER_DEPENDENCY_IDS: Record<ModdedLoader, string> = {
   quilt: "quilt_loader",
   forge: "forge",
   neoforge: "neoforge",
+  "legacy-fabric": "fabricloader",
+  babric: "fabricloader",
+  ornithe: "fabricloader",
+  "bta-babric": "bta",
 };
 
-export const LOADER_VERSION_ID_PATTERN = /^[0-9A-Za-z][0-9A-Za-z._+-]{0,127}$/;
+export const LOADERS_WITHOUT_CURSEFORGE_MODS: ReadonlySet<string> = new Set([
+  "babric",
+  "ornithe",
+  "bta-babric",
+]);
+
+export const LOADER_VERSION_ID_PATTERN =/^[0-9A-Za-z][0-9A-Za-z._+-]{0,127}$/;
 
 export function isModdedLoader(loader: unknown): loader is ModdedLoader {
   return (
@@ -313,6 +327,7 @@ export function findBlockingRequirements(
 }
 
 export interface LoaderManifestLike {
+  id?: string;
   mainClass?: string;
   minecraftArguments?: string;
   arguments?: { game?: unknown[] };
@@ -323,11 +338,19 @@ export function manifestMentionsLoaderVersion(
   manifest: LoaderManifestLike | null | undefined,
   id: string,
 ): boolean {
-  const target = id.trim();
-  if (!manifest || !target) return false;
+  const trimmed = id.trim();
+  if (!manifest || !trimmed) return false;
+  if (manifest.id === trimmed) return true;
 
-  const inLibraries = (manifest.libraries ?? []).some((library) => {
-    const version = String(library?.name ?? "").split(":")[2] ?? "";
+  const libraryNames = (manifest.libraries ?? []).map((library) =>
+    String(library?.name ?? ""),
+  );
+  const intermediary = ornitheIntermediaryGeneration(libraryNames);
+  const { version: target, generation } = splitOrnitheGeneration(trimmed);
+  if (intermediary !== undefined && intermediary !== generation) return false;
+
+  const inLibraries = libraryNames.some((name) => {
+    const version = name.split(":")[2] ?? "";
     return (
       version === target ||
       version.endsWith(`-${target}`) ||

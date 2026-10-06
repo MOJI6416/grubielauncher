@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import {
   ArrowLeft,
   ClipboardCopy,
@@ -32,7 +31,7 @@ import {
   openConnectivityCheck,
   taskCenterViewAtom,
 } from "./installUi";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { useLoadOnScroll } from "@renderer/utilities/useLoadOnScroll";
 
 const FILES_PREVIEW = 4;
@@ -99,8 +98,7 @@ export function FailuresView({ info }: { info: DownloaderFailuresInfo }) {
   };
 
   const copyReport = async () => {
-    if (!(await copyToClipboard(buildFailureReport(info, groups)))) return;
-    toast.success(t("common.copied"));
+    await copyWithFeedback(buildFailureReport(info, groups));
   };
 
   return (

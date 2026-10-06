@@ -27,6 +27,9 @@ import { moveFilesToTrash } from "../game/trash";
 import path from "path";
 import fs from "fs-extra";
 import { scanLocalModDependencies } from "../utilities/localModDependencies";
+import { detectFileGeneration } from "../game/ornitheMods";
+import { getDataRoot } from "../utilities/dataRoot";
+import { isPublishableContentUrl } from "../utilities/trustedHosts";
 
 const isProvider = check.oneOf(...Object.values(Provider));
 const isProjectType = check.oneOf(...Object.values(ProjectType));
@@ -34,8 +37,19 @@ const isProjectId = check.nonEmptyString(256);
 const isPath = check.nonEmptyString(4096);
 const isOptions = check.object();
 const isProjectList = check.arrayOf(check.object(), 20000);
+const isHttpsUrl = check.pattern(/^https:\/\//, 2048);
+const isSha1 = check.optional(check.pattern(/^[0-9a-f]{40}$/i, 40));
+const isMinecraftVersion = check.pattern(/^[A-Za-z0-9._+-]+$/, 64);
 
 export function registerModManagerIpc() {
+  handleSafe<string | null, [Provider, string, string]>(
+    "modManager:getChangelog",
+    null,
+    [isProvider, isProjectId, isProjectId],
+    async (_, provider, projectId, versionId) =>
+      await ModManager.getChangelog(provider, projectId, versionId),
+  );
+
   handleSafe<LocalModDependencyIndex, [string]>(
     "modManager:localDependencies",
     {},
@@ -126,6 +140,29 @@ export function registerModManagerIpc() {
       },
     ) => {
       return await ModManager.getVersions(provider, projectId, options);
+    },
+  );
+
+  handleSafe<{ generation: number | null } | null>(
+    "modManager:ornitheGeneration",
+    null,
+    [isHttpsUrl, isSha1, isMinecraftVersion],
+    async (
+      _,
+      url: string,
+      sha1: string | undefined,
+      minecraftVersion: string,
+    ) => {
+      if (!isPublishableContentUrl(url)) {
+        throw new Error(`Refused untrusted mod url: ${url}`);
+      }
+      const generation = await detectFileGeneration({
+        url,
+        sha1: sha1 || undefined,
+        minecraftVersion,
+        librariesPath: path.join(getDataRoot(), "minecraft", "libraries"),
+      });
+      return { generation };
     },
   );
 

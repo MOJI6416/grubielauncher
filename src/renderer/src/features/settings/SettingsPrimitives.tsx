@@ -4,6 +4,7 @@ import { RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Hint } from "@renderer/components/Hint";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { highlightParts } from "./search";
 
 export function Highlighted({ text, query }: { text: string; query: string }) {
@@ -181,9 +182,11 @@ export function PathRow({
   onOpen: () => void;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
+  const shown = redact.path(path);
 
   return (
-    <Hint content={path || undefined} variant="text" wrapperClassName="w-full">
+    <Hint content={shown || undefined} variant="text" wrapperClassName="w-full">
       <button
         type="button"
         onClick={onOpen}
@@ -192,7 +195,7 @@ export function PathRow({
       >
         <span className="w-24 shrink-0 text-sm text-foreground">{label}</span>
         <span className="min-w-0 flex-1 truncate font-mono text-xs text-faint">
-          {path || "—"}
+          {shown || "—"}
         </span>
         <span className="shrink-0 text-xs text-muted-foreground">
           {t("settings.folders.open")}

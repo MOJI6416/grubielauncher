@@ -30,6 +30,8 @@ import { friendRowDetail, type FriendEntry } from "./friendsList";
 import { canJoinFriend, presenceDotColor } from "./presence";
 import { isDmRoomWith } from "./voiceRoom";
 import { PlatformIcon } from "./PlatformIcon";
+import { maskValue } from "@renderer/features/streamer/redact";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 export interface FriendRowActions {
   onOpenChat: (friendId: string) => void;
@@ -54,7 +56,11 @@ interface FriendRowProps extends FriendRowActions {
   t: TFunction;
 }
 
-export function describePresence(entry: FriendEntry, t: TFunction) {
+export function describePresence(
+  entry: FriendEntry,
+  t: TFunction,
+  streamer = false,
+) {
   const { presence } = entry;
 
   if (presence.kind === "offline") {
@@ -66,7 +72,9 @@ export function describePresence(entry: FriendEntry, t: TFunction) {
 
   const place =
     presence.place?.kind === "server"
-      ? presence.place.address
+      ? streamer
+        ? maskValue(presence.place.address)
+        : presence.place.address
       : presence.place?.kind === "sharedWorld"
         ? t("friends.sharedWorld")
         : presence.place?.kind === "world"
@@ -81,9 +89,12 @@ export function describeRowDetail(
   entry: FriendEntry,
   ownUserId: string | undefined,
   t: TFunction,
+  streamer = false,
 ): string {
   const detail = friendRowDetail(entry);
   if (detail === "typing") return t("friends.chatTyping");
+
+  if (detail === "preview" && streamer) return t("streamer.messageHidden");
 
   if (detail === "preview") {
     const preview = describePreview(entry.preview, ownUserId);
@@ -93,7 +104,7 @@ export function describeRowDetail(
     }
   }
 
-  return describePresence(entry, t);
+  return describePresence(entry, t, streamer);
 }
 
 function FriendRowComponent({
@@ -120,7 +131,8 @@ function FriendRowComponent({
   const canJoin = canJoinFriend(presence, isGameRunning);
   const canInvite = friend.isOnline && isGameRunning;
   const detailKind = friendRowDetail(entry);
-  const detail = describeRowDetail(entry, ownUserId, t);
+  const streamer = useRedact().active;
+  const detail = describeRowDetail(entry, ownUserId, t, streamer);
   const canViewSkin = !(
     friend.user.platform === "microsoft" && !friend.user.uuid
   );

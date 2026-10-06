@@ -28,8 +28,14 @@ export type SettingsEntryId =
   | "voiceDevices"
   | "voicePtt"
   | "voiceNoiseSuppression"
+  | "voiceAutoGain"
+  | "voiceEchoCancellation"
+  | "voiceGate"
+  | "voiceOverlay"
   | "autoWorldBackup"
   | "worldBackupKeep"
+  | "streamerMode"
+  | "streamerModeAuto"
   | "notifications"
   | "hideServerInRpc"
   | "crashTelemetry"
@@ -95,6 +101,20 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
     section: "voice",
     keys: ["voiceNoiseSuppression"],
   },
+  { id: "voiceAutoGain", section: "voice", keys: ["voiceAutoGain"] },
+  {
+    id: "voiceEchoCancellation",
+    section: "voice",
+    keys: ["voiceEchoCancellation"],
+  },
+  {
+    id: "voiceGate",
+    section: "voice",
+    keys: ["voiceGate", "voiceGateThreshold"],
+  },
+  { id: "voiceOverlay", section: "voice", keys: ["voiceOverlay"] },
+  { id: "streamerMode", section: "privacy", keys: ["streamerMode"] },
+  { id: "streamerModeAuto", section: "privacy", keys: ["streamerModeAuto"] },
   { id: "notifications", section: "privacy", keys: [] },
   { id: "hideServerInRpc", section: "privacy", keys: ["hideServerInRpc"] },
   { id: "crashTelemetry", section: "privacy", keys: ["crashTelemetry"] },

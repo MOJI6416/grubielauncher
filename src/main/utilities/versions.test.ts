@@ -13,6 +13,15 @@ vi.mock("electron", () => ({
   },
 }));
 
+const identifyModpack = vi.fn();
+
+vi.mock("../services/ModManager", () => ({
+  ModManager: {
+    search: vi.fn(async () => ({ projects: [] })),
+    identifyModpack: (...args: unknown[]) => identifyModpack(...args),
+  },
+}));
+
 const tempRoots: string[] = [];
 
 async function makeTempRoot() {
@@ -170,5 +179,70 @@ describe("import version helpers", () => {
       projectType: ProjectType.MOD,
       title: "example.jar",
     });
+  });
+
+  it("links an imported Modrinth pack to its project by the file hash", async () => {
+    const tempRoot = await makeTempRoot();
+    const zipPath = path.join(tempRoot, "fresh.mrpack");
+    const importTempPath = path.join(tempRoot, "import");
+    const archive = new AdmZip();
+
+    archive.addFile(
+      "modrinth.index.json",
+      Buffer.from(
+        JSON.stringify({
+          game: "minecraft",
+          formatVersion: 1,
+          versionId: "2.6.5",
+          name: "Fresh",
+          files: [],
+          dependencies: { minecraft: "1.21.1", "fabric-loader": "0.16.0" },
+        }),
+      ),
+    );
+    archive.writeZip(zipPath);
+
+    const source = {
+      provider: Provider.MODRINTH,
+      projectId: "abc",
+      versionId: "ver",
+      versionNumber: "2.6.5",
+      title: "Fresh",
+      url: "https://modrinth.com/modpack/fresh",
+    };
+    identifyModpack.mockResolvedValueOnce(source);
+
+    const result = await importVersion(zipPath, importTempPath);
+
+    expect(identifyModpack).toHaveBeenCalledWith(zipPath);
+    expect(result.other?.source).toEqual(source);
+  });
+
+  it("imports a pack without a link when the file is unknown", async () => {
+    const tempRoot = await makeTempRoot();
+    const zipPath = path.join(tempRoot, "custom.mrpack");
+    const importTempPath = path.join(tempRoot, "import");
+    const archive = new AdmZip();
+
+    archive.addFile(
+      "modrinth.index.json",
+      Buffer.from(
+        JSON.stringify({
+          game: "minecraft",
+          formatVersion: 1,
+          versionId: "1",
+          name: "Custom",
+          files: [],
+          dependencies: { minecraft: "1.21.1" },
+        }),
+      ),
+    );
+    archive.writeZip(zipPath);
+    identifyModpack.mockRejectedValueOnce(new Error("offline"));
+
+    const result = await importVersion(zipPath, importTempPath);
+
+    expect(result.type).toBe("other");
+    expect(result.other?.source).toBeUndefined();
   });
 });

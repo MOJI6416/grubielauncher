@@ -1,4 +1,5 @@
 import {
+  type CSSProperties,
   ReactNode,
   useCallback,
   useEffect,
@@ -72,6 +73,8 @@ import {
   normalizeCatalogState,
   toCatalogParams,
 } from "./catalogQuery";
+import { useEntranceWave } from "@renderer/utilities/useEntranceWave";
+import { TileSkeleton } from "@renderer/components/ListSkeleton";
 
 const api = window.api;
 const PAGE_SIZE = 60;
@@ -86,13 +89,7 @@ function statusMeta(status?: ICatalogSkin["status"]) {
   return STATUS_META[status ?? "approved"] ?? STATUS_META.approved;
 }
 
-function CatalogPreview({
-  item,
-  size,
-}: {
-  item: ICatalogSkin;
-  size: number;
-}) {
+function CatalogPreview({ item, size }: { item: ICatalogSkin; size: number }) {
   const source =
     item.previewUrl ?? (item.type === "cape" ? item.capeUrl : null);
 
@@ -178,7 +175,10 @@ function CatalogTile({
   const added = item.createdAt ? formatDay(new Date(item.createdAt)) : "";
 
   return (
-    <Hint content={added ? `${item.name} · ${added}` : item.name} variant="text">
+    <Hint
+      content={added ? `${item.name} · ${added}` : item.name}
+      variant="text"
+    >
       <button
         type="button"
         aria-pressed={isSelected}
@@ -493,8 +493,7 @@ export function CatalogPanel({
 
   const virtualRows = rowVirtualizer.getVirtualItems();
   const lastVisibleRow = virtualRows[virtualRows.length - 1]?.index ?? -1;
-  const hasMore =
-    !isExhausted && catalogHasMore(state, items.length, total);
+  const hasMore = !isExhausted && catalogHasMore(state, items.length, total);
 
   useEffect(() => {
     if (!hasMore || isLoading) return;
@@ -504,6 +503,7 @@ export function CatalogPanel({
   }, [hasMore, isLoading, lastVisibleRow, rowCount]);
 
   const isLoadingMore = isLoading && page > 1 && items.length > 0;
+  const isResultWave = useEntranceWave(isLoading && !isLoadingMore);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -611,9 +611,7 @@ export function CatalogPanel({
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface-1">
           {isLoading && items.length === 0 ? (
-            <div className="flex min-h-0 flex-1 items-center justify-center">
-              <Loader2 className="size-5 animate-spin text-muted-foreground" />
-            </div>
+            <TileSkeleton className="flex-1 p-2.5" />
           ) : items.length === 0 ? (
             <Empty className="min-h-0 flex-1">
               <EmptyHeader>
@@ -676,20 +674,27 @@ export function CatalogPanel({
                 className="min-h-0 flex-1 overflow-y-auto p-2.5"
               >
                 <div
-                  className="relative w-full"
+                  className={cn(
+                    "relative w-full",
+                    isResultWave && "result-wave",
+                  )}
                   style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
                 >
                   {virtualRows.map((virtualRow) => (
                     <div
                       key={virtualRow.key}
                       role="presentation"
+                      data-wave-row
                       className="absolute top-0 left-0 grid w-full"
-                      style={{
-                        height: `${tileHeight}px`,
-                        gap: `${CATALOG_GRID_GAP}px`,
-                        transform: `translateY(${virtualRow.start}px)`,
-                        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                      }}
+                      style={
+                        {
+                          height: `${tileHeight}px`,
+                          gap: `${CATALOG_GRID_GAP}px`,
+                          transform: `translateY(${virtualRow.start}px)`,
+                          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                          "--wave-index": virtualRow.index * 2,
+                        } as CSSProperties
+                      }
                     >
                       {items
                         .slice(

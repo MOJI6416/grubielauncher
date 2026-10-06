@@ -152,7 +152,7 @@ function tokenizeKeyValueLine(
 function tokenizeJson(source: string): Token[] {
   const tokens: Token[] = [];
   const pattern =
-    /("(?:[^"\\]|\\.)*"\s*:)|("(?:[^"\\]|\\.)*")|(\/\/[^\n]*)|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(\btrue\b|\bfalse\b|\bnull\b)|([{}[\],:])/g;
+    /("(?:[^"\\]|\\.)*"\s*:)|("(?:[^"\\]|\\.)*")|(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(\btrue\b|\bfalse\b|\bnull\b)|([{}[\],:])/g;
 
   let lastIndex = 0;
   let match: RegExpExecArray | null;

@@ -3,6 +3,7 @@ import {
   normalizeWorldBackupKeep,
 } from "./WorldBackup";
 import { AccentId, DEFAULT_ACCENT, isAccentId } from "@/shared/accents";
+import { clampGateDb, DEFAULT_GATE_DB } from "@/shared/voiceGate";
 
 export const LANGUAGES = [
   { code: "en", label: "English", country: "GB" },
@@ -45,9 +46,16 @@ export type TSettings = {
   agentChatSync: boolean;
   sounds: boolean;
   hideServerInRpc: boolean;
+  streamerMode: boolean;
+  streamerModeAuto: boolean;
   voicePtt: boolean;
   voicePttBind: VoicePttBind | null;
   voiceNoiseSuppression: boolean;
+  voiceAutoGain: boolean;
+  voiceEchoCancellation: boolean;
+  voiceGate: boolean;
+  voiceGateThreshold: number;
+  voiceOverlay: boolean;
   autoWorldBackup: boolean;
   worldBackupKeep: number;
   instancesView: InstancesView;
@@ -80,9 +88,16 @@ export const DEFAULT_SETTINGS: TSettings = {
   agentChatSync: true,
   sounds: true,
   hideServerInRpc: true,
+  streamerMode: false,
+  streamerModeAuto: true,
   voicePtt: false,
   voicePttBind: null,
   voiceNoiseSuppression: false,
+  voiceAutoGain: true,
+  voiceEchoCancellation: true,
+  voiceGate: false,
+  voiceGateThreshold: DEFAULT_GATE_DB,
+  voiceOverlay: true,
   autoWorldBackup: true,
   worldBackupKeep: DEFAULT_WORLD_BACKUP_KEEP,
   instancesView: "list",
@@ -184,6 +199,14 @@ export function normalizeSettings(
       typeof value?.hideServerInRpc === "boolean"
         ? value.hideServerInRpc
         : DEFAULT_SETTINGS.hideServerInRpc,
+    streamerMode:
+      typeof value?.streamerMode === "boolean"
+        ? value.streamerMode
+        : DEFAULT_SETTINGS.streamerMode,
+    streamerModeAuto:
+      typeof value?.streamerModeAuto === "boolean"
+        ? value.streamerModeAuto
+        : DEFAULT_SETTINGS.streamerModeAuto,
     voicePtt:
       typeof value?.voicePtt === "boolean"
         ? value.voicePtt
@@ -193,6 +216,23 @@ export function normalizeSettings(
       typeof value?.voiceNoiseSuppression === "boolean"
         ? value.voiceNoiseSuppression
         : DEFAULT_SETTINGS.voiceNoiseSuppression,
+    voiceAutoGain:
+      typeof value?.voiceAutoGain === "boolean"
+        ? value.voiceAutoGain
+        : DEFAULT_SETTINGS.voiceAutoGain,
+    voiceEchoCancellation:
+      typeof value?.voiceEchoCancellation === "boolean"
+        ? value.voiceEchoCancellation
+        : DEFAULT_SETTINGS.voiceEchoCancellation,
+    voiceGate:
+      typeof value?.voiceGate === "boolean"
+        ? value.voiceGate
+        : DEFAULT_SETTINGS.voiceGate,
+    voiceGateThreshold: clampGateDb(value?.voiceGateThreshold),
+    voiceOverlay:
+      typeof value?.voiceOverlay === "boolean"
+        ? value.voiceOverlay
+        : DEFAULT_SETTINGS.voiceOverlay,
     autoWorldBackup:
       typeof value?.autoWorldBackup === "boolean"
         ? value.autoWorldBackup

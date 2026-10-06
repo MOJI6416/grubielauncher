@@ -28,6 +28,7 @@ export function isFailureHandled(entry: BufferedFailure | null): boolean {
 export function consumeRecentFailure(options?: {
   channels?: string[];
   maxAgeMs?: number;
+  status?: number;
 }): FailureInfo | null {
   const maxAge = options?.maxAgeMs ?? DEFAULT_MAX_AGE_MS;
   const now = Date.now();
@@ -36,6 +37,9 @@ export function consumeRecentFailure(options?: {
   const entry = buffer.find((item) => {
     if (item.consumed) return false;
     if (now - item.info.time > maxAge) return false;
+    if (options?.status !== undefined && item.info.status !== options.status) {
+      return false;
+    }
     if (!channels || channels.length === 0) return true;
     return channels.some(
       (channel) =>

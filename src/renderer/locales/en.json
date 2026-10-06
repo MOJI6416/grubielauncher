@@ -165,7 +165,54 @@
     "welcomeTitle": "Add an account to play",
     "welcomeHint": "The launcher needs one account to start the game. Pick where you sign in — you can add the rest later and switch between them at any time.",
     "openProfile": "Open profile",
-    "identityInProfile": "Your UUID and friend code live in the profile."
+    "identityInProfile": "Your UUID and friend code live in the profile.",
+    "gameName": {
+      "title": "In-game nickname",
+      "custom": "Your own",
+      "fromProvider": "From {{provider}}",
+      "customHint": "You can change the nickname and stay linked to {{provider}}: friends, achievements, skins and progress on servers stay with you.",
+      "providerNickname": "{{provider}} nickname",
+      "nextChange": "Next change",
+      "change": "Change nickname",
+      "reset": "Restore the {{provider}} nickname",
+      "resetAction": "Restore",
+      "resetConfirm": "Your nickname will be {{nickname}} again. You can change it again in 30 days.",
+      "managedByProvider": "{{provider}} sets this nickname, and servers check it there. Change it on the {{provider}} website — the launcher picks it up the next time the session is renewed.",
+      "openProviderSite": "Change on {{provider}}",
+      "dialogTitle": "New nickname",
+      "dialogHint": "It is shown on servers, to friends and on the website. The account stays linked to Discord, so friends, achievements, skins and progress on servers are kept.",
+      "rules": "3–16 characters: Latin letters, digits and _",
+      "cooldownWarning": "You will not be able to change it again for 30 days.",
+      "offlineServersWarning": "On servers that do not verify accounts (sign-in with /login) progress is tied to the nickname — there you will start as a new player.",
+      "restartGame": "The game is running — the new nickname takes effect after you restart it.",
+      "save": "Change nickname",
+      "changed": "Nickname changed to {{nickname}}",
+      "resetDone": "Your nickname is {{nickname}} again",
+      "saveFailed": "Could not save the account",
+      "status": {
+        "checking": "Checking…",
+        "available": "This nickname is free",
+        "current": "This is your current nickname",
+        "invalid": "3–16 characters: Latin letters, digits and _",
+        "reserved": "This nickname is reserved",
+        "taken": "This nickname is taken",
+        "held": "This nickname was released recently and is still held for its previous owner"
+      },
+      "error": {
+        "current": "This is your current nickname",
+        "invalid": "3–16 characters: Latin letters, digits and _",
+        "reserved": "This nickname is reserved",
+        "taken": "This nickname is taken",
+        "held": "This nickname was released recently and is still held for its previous owner",
+        "cooldown": "You can change the nickname again on {{date}}",
+        "not_customizable": "This account's nickname is set by the provider",
+        "not_custom": "The account already uses the {{provider}} nickname",
+        "launcher_only": "The nickname can only be changed from the launcher. Sign in to the account again and retry.",
+        "rate_limited": "Too many attempts. Please wait a little.",
+        "failed": "Could not change the nickname. Please try again.",
+        "providerTaken": "Another player has the {{provider}} nickname right now — choose a different one."
+      }
+    }
   },
   "serverManager": {
     "logoEdited": "Logo edited",
@@ -557,7 +604,30 @@
     "acceptRequest": "Accept request",
     "declineRequest": "Decline request",
     "chatAttachModpackHint": "The modpack goes into the chat as a card — friends install it in one click.",
-    "chatGroupInviteHint": "The invite goes into the chat with the group code."
+    "chatGroupInviteHint": "The invite goes into the chat with the group code.",
+    "chatSticker": "Sticker",
+    "chatImageTooLarge": "Skipped images larger than 16 MB: {{count}}",
+    "chatImagesLimit": "You can attach up to {{count}} images at once",
+    "chatReactionMore": "{{names}} and {{count}} more",
+    "chatCopyText": "Copy text",
+    "chatOpenImage": "Open image",
+    "chatRemoveAttachment": "Remove",
+    "chatExpressions": "Emoji and stickers",
+    "chatEmojiTab": "Emoji",
+    "chatStickersTab": "Stickers",
+    "chatRecent": "Recent",
+    "chatStickersOffline": "Stickers need a connection to the server",
+    "emojiGroups": {
+      "smileys": "Smileys",
+      "gestures": "Gestures",
+      "hearts": "Hearts and symbols",
+      "activities": "Games and objects",
+      "nature": "Nature and food"
+    },
+    "stickerPacks": {
+      "noto": "Animated emoji"
+    },
+    "stickerCredit": "Noto Emoji Animation © Google"
   },
   "modManager": {
     "title": "Mod Manager",
@@ -678,13 +748,12 @@
     "updateAll": "Update all",
     "installed": "Installed",
     "install": "Install",
+    "installing": "Installing…",
     "invalidMod": "Invalid mod file",
     "alreadyInstalled": "Mod already installed",
     "selectLocals": "Select local mods",
     "notModpack": "Failed to recognize modpack",
     "extracting": "Unpacking...",
-    "disabled": "Mods are disabled",
-    "enabled": "Mods are enabled",
     "addingProjects": "Adding mods",
     "modDuplicate": "Mod with the same name or ID is already installed",
     "modInvalid": "Mod is invalid or corrupted",
@@ -692,6 +761,9 @@
     "modsCount_one": "{{count}} mod",
     "modsCount_other": "{{count}} mods",
     "translateError": "Could not translate the description",
+    "translateChangelog": "Translate the changelog",
+    "showOriginal": "Show the original",
+    "translateChangelogError": "Could not translate the changelog",
     "toggleError": "Failed to change mod state",
     "changelog": "Changelog",
     "statsUpdated": "Updated",
@@ -798,7 +870,11 @@
       "open_source": "Open source",
       "client_and_server": "Client and server",
       "client": "Client",
-      "server": "Server"
+      "server": "Server",
+      "legacy-fabric": "Legacy Fabric",
+      "babric": "Babric",
+      "ornithe": "Ornithe",
+      "bta-babric": "BTA (Babric)"
     },
     "restoreTitle": "Restore deleted files",
     "restoreHint": "Pick what to bring back. Files return to the instance after you save.",
@@ -841,7 +917,9 @@
     "connectorFind": "Find Connector",
     "dependenciesSkipped": "Dependencies of a mod for another loader are not installed automatically — with Connector you usually need Forgified Fabric API instead of Fabric API. Check them on the mod page.",
     "restoredCount": "Restored: {{n}}",
-    "addedElsewhere": "Some files went to other tabs: {{types}}"
+    "addedElsewhere": "Some files went to other tabs: {{types}}",
+    "catalogLoaderHintQuilt": "Quilt runs most Fabric mods, so you can look for them here too. Their updates are checked for Quilt as well.",
+    "catalogLoaderHintLegacyFabric": "Some Legacy Fabric mods on Modrinth are tagged plain Fabric. Switch to find them as well."
   },
   "nav": {
     "play": "Play"
@@ -969,11 +1047,130 @@
     "importTitle": "Servers from other instances",
     "importEmpty": "Other instances have no servers this one is missing.",
     "importAction": "Import",
-    "imported": "Servers added: {{total}}"
+    "imported": "Servers added: {{total}}",
+    "discover": {
+      "mine": "My servers",
+      "byAddress": "By address",
+      "title": "Modrinth servers",
+      "search": "Search servers",
+      "type": {
+        "compatible": "Compatible",
+        "all": "All servers",
+        "vanilla": "No mods",
+        "modpack": "With a modpack"
+      },
+      "anyLanguage": "Any language",
+      "sort": {
+        "relevance": "Relevance",
+        "players": "Players online",
+        "verified": "Verified plays",
+        "follows": "Followers",
+        "newest": "Newest",
+        "updated": "Updated"
+      },
+      "emptyTitle": "No servers found",
+      "emptyHint": "Change the search or clear the filters.",
+      "compatibleEmptyHint": "No servers fit {{version}} right now. Browse all servers: you can create an instance for any of them.",
+      "showAll": "Show all servers",
+      "failedTitle": "Modrinth did not respond",
+      "failedHint": "Check your connection and try again.",
+      "pickHint": "Pick a server to see its details.",
+      "modpack": "Modpack",
+      "vanilla": "No mods",
+      "packOf": "Server modpack",
+      "online": "Online",
+      "ping": "Ping",
+      "pingOffline": "No answer",
+      "plays": "Plays in 2 weeks",
+      "follows": "Followers",
+      "region": "Region",
+      "languages": "Languages",
+      "openModrinth": "Open on Modrinth",
+      "fit": {
+        "packVersion": "The server runs another version of the modpack. Update it on the Modpack tab.",
+        "otherVersion": "The server does not support {{version}}. It needs {{versions}}.",
+        "needsPack": "Joining requires the “{{title}}” modpack."
+      },
+      "fitShort": {
+        "packVersion": "Different modpack version",
+        "otherVersion": "Different Minecraft version",
+        "needsPack": "Needs the server modpack"
+      },
+      "add": "Add to list",
+      "inList": "In the list",
+      "createInstance": "Create instance",
+      "pick": "Use this server",
+      "packFailed": "Could not get the server modpack",
+      "packFailedHint": "Modrinth did not return the modpack file. Try again later.",
+      "regions": {
+        "us_east": "US East",
+        "us_west": "US West",
+        "europe": "Europe",
+        "asia": "Asia",
+        "australia": "Australia",
+        "south_america": "South America",
+        "middle_east": "Middle East",
+        "russia": "Russia"
+      },
+      "categories": {
+        "adventure-mode": "Adventure mode",
+        "creative-mode": "Creative mode",
+        "crossplay": "Crossplay",
+        "hardcore-mode": "Hardcore",
+        "keep-inventory": "Keep inventory",
+        "network": "Network",
+        "offline-mode": "Offline mode",
+        "survival-mode": "Survival",
+        "whitelisted": "Whitelist",
+        "world-resets": "World resets",
+        "anarchy": "Anarchy",
+        "battle-royale": "Battle royale",
+        "bedwars": "Bed Wars",
+        "factions": "Factions",
+        "gens": "Gens",
+        "kitpvp": "Kit PvP",
+        "lifesteal": "Lifesteal",
+        "microgames": "Microgames",
+        "minigames": "Minigames",
+        "oneblock": "One Block",
+        "parkour": "Parkour",
+        "prison": "Prison",
+        "racing": "Racing",
+        "rpg": "RPG",
+        "skyblock": "Skyblock",
+        "towns": "Towns",
+        "vanilla-like": "Vanilla-like",
+        "bosses": "Bosses",
+        "classes": "Classes",
+        "custom-content": "Custom content",
+        "dungeons": "Dungeons",
+        "economy": "Economy",
+        "media": "Media",
+        "op": "OP",
+        "personal-worlds": "Personal worlds",
+        "plots": "Plots",
+        "pokemon": "Pokémon",
+        "pve": "PvE",
+        "pvp": "PvP",
+        "questing": "Quests",
+        "teams": "Teams",
+        "competitive": "Competitive",
+        "creator-community": "Creator community",
+        "mmo": "MMO",
+        "recording-smp": "Recording SMP",
+        "roleplay": "Roleplay",
+        "smp": "SMP",
+        "social": "Social",
+        "technical": "Technical"
+      }
+    }
   },
   "voice": {
     "title": "Voice chat",
     "noiseSuppressionFailed": "Noise suppression failed and has been turned off",
+    "processingFailed": "Microphone processing failed to start and was turned off",
+    "micTestGateHint": "The mark on the meter is the threshold: anything quieter is not sent",
+    "micLevelDb": "{{value}} dB",
     "pttUnavailable": "Push-to-talk hotkey is unavailable — the microphone stays open",
     "volume": "Volume",
     "connected": "In call",
@@ -991,6 +1188,8 @@
     "deviceDefault": "System default",
     "deviceNotFound": "No devices found",
     "micTestSpeak": "say something",
+    "micTestHearSelf": "Hear yourself",
+    "micTestHearSelfHint": "You hear yourself the way others hear you in a call. Use headphones: speakers will echo",
     "speakerTest": "Play a sound",
     "moreParticipants_one": "{{count}} more",
     "moreParticipants_other": "{{count}} more",
@@ -1222,6 +1421,15 @@
     },
     "hideServerInRpc": "Hide server in Discord",
     "hideServerInRpcDescription": "Don't show the server address in Discord Rich Presence",
+    "streamer": {
+      "title": "Streaming",
+      "enabled": "Streamer mode",
+      "enabledDescription": "Hides server addresses, world seeds, friend and invite codes, modpack links, message previews and your user name in folder paths. Copy buttons keep working.",
+      "autoActive": "On right now because {{app}} is running.",
+      "autoDismissed": "Off until {{app}} is closed.",
+      "auto": "Turn on automatically",
+      "autoDescription": "While OBS Studio, Streamlabs, XSplit or another streaming app is running"
+    },
     "sections": {
       "game": "Game",
       "interface": "Interface",
@@ -1241,6 +1449,15 @@
     "voicePttCapturing": "Press a key…",
     "voiceNoiseSuppression": "Noise suppression (RNNoise)",
     "voiceNoiseSuppressionDescription": "Additionally removes background noise (keyboard, fans) on top of the built-in suppression",
+    "voiceAutoGain": "Automatic gain control",
+    "voiceAutoGainDescription": "Evens out your voice volume. Turn it off if others hear crackling or a pumping volume",
+    "voiceEchoCancellation": "Echo cancellation",
+    "voiceEchoCancellationDescription": "Keeps other people's voices from your speakers out of the mic. With headphones you can turn it off if your voice sounds distorted",
+    "voiceGate": "Input sensitivity",
+    "voiceGateDescription": "The mic only sends sound while you are louder than the threshold. For talking without push-to-talk: keyboard and background noise stay out",
+    "voiceGateThreshold": "Threshold: {{value}} dB",
+    "voiceOverlay": "Who's talking over the game",
+    "voiceOverlayDescription": "While you play, the top-left corner shows who is talking. Does not show over exclusive fullscreen",
     "voiceDevices": "Audio devices",
     "voiceMicTestStart": "Test",
     "voiceMicTestStop": "Stop",
@@ -1536,6 +1753,36 @@
         "description": "RNNoise on top of the built-in suppression",
         "keywords": "rnnoise noise suppression keyboard fan"
       },
+      "voiceAutoGain": {
+        "title": "Automatic gain control",
+        "description": "Automatic voice volume",
+        "keywords": "agc gain volume crackling distortion microphone"
+      },
+      "voiceEchoCancellation": {
+        "title": "Echo cancellation",
+        "description": "Speaker sound stays out of the mic",
+        "keywords": "echo aec speakers headphones distortion"
+      },
+      "voiceGate": {
+        "title": "Input sensitivity",
+        "description": "Voice-activated microphone",
+        "keywords": "threshold sensitivity activation voice vad noise gate"
+      },
+      "voiceOverlay": {
+        "title": "Who's talking over the game",
+        "description": "Speaker names in the screen corner",
+        "keywords": "overlay talking game screen corner"
+      },
+      "streamerMode": {
+        "title": "Streamer mode",
+        "description": "Hide addresses, seeds, codes and paths on stream",
+        "keywords": "streamer stream obs twitch youtube privacy hide address seed code"
+      },
+      "streamerModeAuto": {
+        "title": "Turn on streamer mode automatically",
+        "description": "When OBS or another streaming app is running",
+        "keywords": "streamer stream obs streamlabs xsplit automatic"
+      },
       "autoWorldBackup": {
         "title": "Automatic world backups",
         "description": "A copy is saved after a session if the world changed",
@@ -1733,7 +1980,11 @@
       "forge": "The largest mod library",
       "neoforge": "Forge successor for 1.20.2 and newer",
       "fabric": "Lightweight, updates first",
-      "quilt": "Fabric fork, takes its mods"
+      "quilt": "Fabric fork, takes its mods",
+      "legacy-fabric": "Fabric for 1.3–1.13.2",
+      "babric": "Fabric for Beta 1.7.3",
+      "ornithe": "Fabric for alpha, beta and versions up to 1.14.4",
+      "bta-babric": "Better than Adventure with Babric mods"
     },
     "updated": "Instance updated",
     "share": "Share",
@@ -1916,6 +2167,7 @@
     "launchProfileHint": "This is how the launch looks with the current settings and arguments.",
     "facts": {
       "title": "Details",
+      "modpack": "Modpack",
       "java": "Java",
       "diskUsage": "On disk",
       "launchProfile": "Launch profile"
@@ -2012,7 +2264,10 @@
     "unsafeFolderName": "The folder name is longer than 32 characters or contains forbidden characters. Rename the folder and restart the launcher.",
     "libraryUnreadable": "The instance library could not be read",
     "libraryUnreadableHint": "The versions folder did not open. Nothing was deleted — the instances stay on disk. Check the folder and the drive, then try again.",
-    "updateLoader": "Update loader version"
+    "updateLoader": "Update loader version",
+    "legacyLoaders": "For old versions",
+    "launchProfileDropped": "Will not be passed at launch",
+    "savedInline": "Changes saved"
   },
   "app": {
     "startupError": "Startup error",
@@ -2148,7 +2403,8 @@
       "remove": "Remove",
       "moveToGame": "Move to Game",
       "moveToJvm": "Move to JVM",
-      "dangerous": "The launcher will not pass {{flag}} to Java: only memory, GC, module and system-property flags are allowed. Remove it if you did not add it yourself."
+      "dangerous": "The launcher will not pass {{flag}} to Java: only memory, GC, module and system-property flags are allowed. Remove it if you did not add it yourself.",
+      "dangerousGame": "The launcher will not pass {{flag}} to the game: such arguments can load third-party code. Remove it if you did not add it yourself."
     },
     "catalog": {
       "utf8": "UTF-8 encoding",
@@ -2240,6 +2496,8 @@
     "uploadFailedDescription": "The archive could not be uploaded. Try again later.",
     "logoFailed": "The pack logo could not be uploaded. Try again later or remove the logo.",
     "uploadPayloadTooLarge": "The selected files are too large to publish.",
+    "nameTaken": "You already have a published modpack named \"{{name}}\"",
+    "nameTakenHint": "Rename this modpack or delete the old one in your profile on the Modpacks tab, then publish again.",
     "publishProgress": {
       "starting": "Preparing the upload",
       "creatingShare": "Creating share",
@@ -2625,7 +2883,6 @@
     "metaFormatModern": "Modern",
     "metaFormatLegacy": "Legacy",
     "metaId": "Identifier",
-    "idCopied": "Identifier copied",
     "linkTitle": "Link to a texture",
     "nickTitle": "Take another player's skin",
     "selectError": "Could not select the skin",
@@ -2756,9 +3013,7 @@
     "openFolder": "Open folder",
     "openSaves": "Saves folder",
     "resetIcon": "Reset icon",
-    "iconReseted": "Icon reset",
     "iconResetError": "Failed to reset world icon",
-    "renamed": "World renamed",
     "renameError": "Error renaming world",
     "renameErrorHint": "The world folder could not be renamed. Close the game and try again.",
     "duplicate": "Duplicate",
@@ -3948,7 +4203,6 @@
     "rename": "Rename",
     "retry": "Ask again",
     "copyTranscript": "Copy the chat",
-    "transcriptCopied": "Chat copied as Markdown",
     "answerFirst": "Answer the question above first",
     "sendHint": "Enter — send, Shift+Enter — new line",
     "stopHint": "Esc — stop",
@@ -4142,6 +4396,7 @@
     },
     "tabs": {
       "overview": "Overview",
+      "modpack": "Modpack",
       "content": "Content",
       "worlds": "Worlds",
       "servers": "Servers",
@@ -4182,7 +4437,6 @@
     "unsaved": "Unsaved changes",
     "unsavedTitle": "File not saved",
     "unsavedHint": "Config file edits are not saved. They will be lost if you leave.",
-    "restore": "Restore",
     "backupsTitle": "Saved versions",
     "backupBaseline": "Original file",
     "backupPrevious": "Previous version",
@@ -4195,7 +4449,134 @@
       "keyword": "keyword"
     },
     "notFound": "No files match the search",
-    "clearSearch": "Clear search"
+    "clearSearch": "Clear search",
+    "otherGroup": "Other files",
+    "editorLabel": "Config file text",
+    "findPlaceholder": "Find in file",
+    "findNone": "none",
+    "findPrevious": "Previous (Shift+Enter)",
+    "findNext": "Next (Enter)",
+    "findHint": "Find in file (Ctrl+F)",
+    "history": "Version history",
+    "backupsHint": "Click a version to compare it with the current file before restoring.",
+    "showInFolder": "Show in folder",
+    "discard": "Discard",
+    "modeLabel": "Editor view",
+    "mode": {
+      "text": "Text",
+      "form": "Form"
+    },
+    "position": "Ln {{line}}, Col {{column}}",
+    "language": {
+      "json": "JSON",
+      "properties": "Properties",
+      "toml": "TOML",
+      "yaml": "YAML",
+      "script": "Script",
+      "text": "Text"
+    },
+    "searchMode": {
+      "files": "Names",
+      "content": "Text"
+    },
+    "groupOn": "Group by mod",
+    "groupOff": "Show as a flat list",
+    "contentSearch": {
+      "placeholder": "Search all files",
+      "hint": "Type at least 2 characters, for example an option name",
+      "reading": "Reading files… {{done}}/{{total}}",
+      "none": "Nothing found",
+      "more_one": "and {{count}} more",
+      "more_few": "and {{count}} more",
+      "more_many": "and {{count}} more",
+      "more_other": "and {{count}} more"
+    },
+    "translate": {
+      "on": "Translate comments",
+      "off": "Turn off comment translation",
+      "progress": "Translating comments… {{done}}/{{total}}",
+      "noComments": "This file has no comments to translate",
+      "banner": "Comments translated · the file stays unchanged",
+      "showOriginal": "Show original",
+      "failed": "Could not translate the comments",
+      "partial": "Some comments are not translated"
+    },
+    "translateFailed": "Could not translate the comments",
+    "translateFailedHint": "The translation service did not answer. Check your connection and try again.",
+    "translatePartial": "Some comments could not be translated",
+    "reset": {
+      "action": "Reset to default",
+      "title": "Reset “{{name}}” to default?",
+      "hint": "The file goes to the version history, and the mod creates it again the next time the game starts.",
+      "confirm": "Reset"
+    },
+    "resetDone": "File removed — the mod will create it again on launch",
+    "resetFailed": "Could not reset the file",
+    "resetFailedHint": "The file could not be removed. Close the game or the editor that holds it and try again.",
+    "restoredFile": "File restored from history",
+    "missing": {
+      "title": "The file is gone",
+      "hint": "The mod will create it again the next time the game starts. To bring your old settings back, restore a saved version.",
+      "restore": "Compare and restore"
+    },
+    "diff": {
+      "show": "Show changes",
+      "short": "Changes",
+      "changesTitle": "Unsaved changes",
+      "back": "Back to editing",
+      "snapshotTitle": "Restore the version from {{date}}?",
+      "apply": "Restore",
+      "same": "No differences",
+      "hidden_one": "{{count}} unchanged line",
+      "hidden_few": "{{count}} unchanged lines",
+      "hidden_many": "{{count}} unchanged lines",
+      "hidden_other": "{{count}} unchanged lines"
+    },
+    "syntax": {
+      "ok": "Syntax is fine",
+      "issue": "Line {{line}}, column {{column}}: {{message}}",
+      "unexpectedEnd": "the file ends too early",
+      "unexpectedChar": "unexpected character “{{detail}}”",
+      "expectedColon": "a colon “:” is needed after the key",
+      "expectedComma": "a comma is needed between values",
+      "expectedEquals": "an “=” is needed after the key",
+      "expectedKey": "a key is expected here",
+      "expectedValue": "there is no value after “=”",
+      "unterminatedString": "a quote is not closed",
+      "unterminatedComment": "a /* */ comment is not closed",
+      "invalidValue": "unclear value “{{detail}}” — a typo or missing quotes",
+      "duplicateKey": "the key “{{detail}}” appears twice",
+      "unclosedBracket": "the bracket “{{detail}}” is not closed",
+      "unexpectedClose": "an extra closing bracket",
+      "trailingContent": "extra text after the value",
+      "invalidHeader": "the section header is not closed with “]”",
+      "tabIndent": "YAML does not allow tabs for indentation — use spaces"
+    },
+    "saveWithIssue": {
+      "title": "Save the file with an error?",
+      "hint": "The mod may fail to read this file and reset its settings to the defaults.",
+      "fix": "Fix it",
+      "confirm": "Save anyway"
+    },
+    "form": {
+      "search": "Find an option",
+      "count_one": "{{count}} option",
+      "count_few": "{{count}} options",
+      "count_many": "{{count}} options",
+      "count_other": "{{count}} options",
+      "items_one": "{{count}} item",
+      "items_few": "{{count}} items",
+      "items_many": "{{count}} items",
+      "items_other": "{{count}} items",
+      "emptyList": "empty list",
+      "editInText": "Edit in text",
+      "empty": "This file has no options that fit a form",
+      "notFound": "No options found",
+      "range": "range {{min}} – {{max}}",
+      "default": "default: {{value}}",
+      "resetField": "Restore the default value",
+      "partial": "The file has a syntax error, so the form may miss some options. Click to jump to the error."
+    }
   },
   "modpackDiff": {
     "updated": "Will be updated",
@@ -4208,6 +4589,88 @@
     "countUpdated_other": "{{count}} updated",
     "countRemoved_one": "{{count}} removed",
     "countRemoved_other": "{{count}} removed"
+  },
+  "modpack": {
+    "versions": "Versions",
+    "onlyGame": "Only versions for Minecraft {{version}}",
+    "noVersions": "No versions for this loader",
+    "current": "Installed",
+    "newest": "Update",
+    "channel": {
+      "beta": "Beta",
+      "alpha": "Alpha"
+    },
+    "changelog": "Changelog",
+    "noChangelog": "The author did not describe the changes in this version.",
+    "changelogFailed": "Could not load the changelog from {{site}}.",
+    "loadFailed": "Could not load the modpack from {{site}}",
+    "loadFailedHint": "The instance works as usual. Check your connection and try again.",
+    "downloadFailedHint": "The new version did not download from {{site}}. Check your connection and try again.",
+    "downloadsCount": "Downloads: {{value}}",
+    "upToDate": "You have the latest version of the modpack.",
+    "updateAvailable": "{{title}}: version {{version}} is available",
+    "updateTo": "Update to {{version}}",
+    "switchTo": "Switch to {{version}}",
+    "newInstance": "New instance with {{version}}",
+    "otherGame": "This version is for Minecraft {{version}}",
+    "otherGameHint": "The game version of an instance cannot be changed. A new instance will be created and the current one stays as it is.",
+    "otherProject": "This file belongs to another modpack: {{title}}",
+    "loaderMissing": "The loader version this modpack version needs was not found.",
+    "openSite": "Open on {{site}}",
+    "copyIds": "Copy the project and version IDs",
+    "fromFile": "From file",
+    "fromFileHint": "Update from a .mrpack or .zip you downloaded yourself",
+    "stats": {
+      "downloads": "downloads",
+      "versions": "versions",
+      "updated": "updated",
+      "created": "created"
+    },
+    "stage": {
+      "download": "Downloading the new version · {{percent}}%",
+      "extract": "Unpacking · {{percent}}%",
+      "plan": "Comparing with your instance…",
+      "apply": "Updating the instance…",
+      "rollback": "Restoring the previous version…"
+    },
+    "blocked": {
+      "downloaded": "The author of this instance updates it: new versions arrive through Grubie.",
+      "noBase": "This instance cannot be updated: the launcher does not know what came from the modpack. This happens with exported copies.",
+      "unsaved": "Save or reset your changes first.",
+      "running": "Close the game to update the instance.",
+      "offline": "No connection to {{site}}."
+    },
+    "preview": {
+      "title": "Here is what the update changes",
+      "olderTitle": "Here is what switching to the older version changes",
+      "apply": "Update",
+      "switch": "Switch",
+      "olderWarning": "This is an older version. A world opened with newer mods may fail to load — back up your worlds first.",
+      "loader": "Loader version changes to {{version}}",
+      "own": "Mods you added yourself stay: {{count}}",
+      "removedByUser": "Modpack mods you removed will not come back: {{count}}",
+      "removedRestored": "Modpack mods you removed will be returned: {{count}}",
+      "restoreRemoved": "Return them",
+      "pinned": "Pinned mods keep their version: {{count}}",
+      "replaced": "Versions you changed yourself are replaced by the modpack's: {{count}}",
+      "files": "Config files to update: {{count}}",
+      "conflicts": "Files you changed are replaced, a copy is kept for rollback: {{count}}",
+      "kept": "Your edits in files the modpack dropped stay: {{count}}",
+      "protected": "Game settings, the server list and worlds are not touched",
+      "sameMods": "The list of mods does not change."
+    },
+    "done": "The instance is updated to {{version}}",
+    "doneHint": "If something went wrong, return the previous version on the Modpack tab.",
+    "doneWithGaps": "The instance is updated to {{version}}, but not every file downloaded",
+    "failed": "Could not update the instance",
+    "failedHint": "The instance is back on version {{version}}.",
+    "rollback": {
+      "summary": "Last update: {{from}} → {{to}} · {{date}}",
+      "action": "Return {{version}}",
+      "backups": "File copies",
+      "done": "The instance is back on version {{version}}",
+      "failed": "Could not return the previous version"
+    }
   },
   "mirror": {
     "modes": {
@@ -4471,7 +4934,8 @@
       "catalog": "Pick a modpack — the launcher will download and read it.",
       "code": "Paste the pack code or its link.",
       "file": "Pick a .zip or .mrpack file, or drop it into the window.",
-      "server": "Enter the server address — the launcher will read its version."
+      "server": "Enter the server address — the launcher will read its version.",
+      "serverCatalog": "Pick a server on Modrinth — the modpack and the version are filled in for you."
     },
     "blockers": {
       "account": "Select an account first.",
@@ -4536,13 +5000,11 @@
     "serverSupported": "supported",
     "serverUnsupported": "not supported",
     "vanillaNote": "A clean game without mods. Pick a loader if you want mods — the instance can always be recreated.",
-    "logoHint": "PNG or JPG, square",
+    "logoHint": "Ready-made picture or your PNG/JPG",
     "nameFromPack": "Taken from the pack, you can change it",
     "changePack": "Another one",
     "fromPack": "from the pack",
     "emptyContent": "The pack carries no content",
-    "editContent": "Edit content",
-    "browseContent": "View content",
     "chooseFile": "Choose a file",
     "anyVersion": "All versions",
     "anyLoader": "All loaders",
@@ -4567,7 +5029,6 @@
       "follows": "Followers"
     },
     "packVersionMissing": "Minecraft {{version}} is not available for {{loader}} — this pack cannot be installed. Pick another one.",
-    "contentHint": "Content changes apply when the instance is created.",
     "cancelConfirmTitle": "Cancel the install?",
     "cancelConfirmBody": "Everything downloaded so far is discarded and the instance does not appear in the list.",
     "cancelConfirmKeep": "Keep installing",
@@ -4577,7 +5038,8 @@
     "contentFailed": "Instance not created: its files could not be written",
     "contentFailedHint": "Check the free space on the disk and try again.",
     "extraFilesFailed": "Instance created, but not every file downloaded",
-    "extraFilesFailedHint": "Some of the instance files did not arrive. Details are in the error log."
+    "extraFilesFailedHint": "Some of the instance files did not arrive. Details are in the error log.",
+    "afterInstallHint": "Content, servers and launch arguments can be changed after installation"
   },
   "community": {
     "search": "Search by pack name",
@@ -4628,7 +5090,8 @@
     "direction": {
       "upgrade": "Update",
       "downgrade": "Older version",
-      "current": "Installed"
+      "current": "Installed",
+      "switch": "Other generation"
     },
     "facts": {
       "channel": "Channel",
@@ -4661,7 +5124,8 @@
       "beta": "This is a beta build: bugs are possible.",
       "downgrade": "Some mods may not start on an older loader version.",
       "published": "After the switch you will be offered to publish it for your players.",
-      "server": "The instance server keeps its own loader version."
+      "server": "The instance server keeps its own loader version.",
+      "generation": "This is a different Ornithe mapping generation. Mods only work with the generation they were built for."
     },
     "actions": {
       "update": "Update to {{version}}",
@@ -4690,6 +5154,15 @@
     "requirements": {
       "title": "Mod requirements",
       "empty": "No mod restricts the loader version"
+    },
+    "ornithe": {
+      "title": "Mods were built for another Ornithe generation",
+      "switchHint": "{{mods}}: built for gen{{generation}}, while the instance runs gen{{current}}. Switch the loader and the game will start.",
+      "switchAction": "Switch to gen{{generation}}",
+      "switching": "Switching the loader to {{version}}…",
+      "mixedTitle": "Mods for different Ornithe generations",
+      "mixedHint": "The instance runs gen{{current}}, but {{mods}} were built for gen{{generation}}. Remove them or install versions for gen{{current}}.",
+      "more": "{{list}} and {{count}} more"
     }
   },
   "tray": {
@@ -4834,5 +5307,186 @@
     "quiet": "The game stopped writing to the log. Send a report — it shows where the launch stopped.",
     "auth": "The game stopped at sign-in, before Minecraft started. This is usually caused by a VPN, proxy, DPI-bypass tool (Zapret, GoodbyeDPI) or antivirus: turn them off while playing or add grubielauncher.com and javaw.exe to their exclusions. If that doesn't help, send a report.",
     "report": "Send report"
+  },
+  "jarMods": {
+    "title": "Minecraft.jar",
+    "fileFilter": "Jar mods",
+    "importFailed": "Could not add the file",
+    "saveFailed": "Could not save the jar mods",
+    "card": {
+      "count": "Jar mods: {{active}} of {{total}} enabled",
+      "none": "No jar mods",
+      "open": "Configure"
+    },
+    "list": {
+      "title": "Jar mods",
+      "add": "Add files",
+      "empty": "Add .jar or .zip mods made for old versions — ModLoader, Better Than Wolves and the like. Their files are written into minecraft.jar on top of the game.",
+      "missing": "File not found",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "remove": "Remove"
+    },
+    "base": {
+      "title": "Game base",
+      "vanillaTitle": "Vanilla client.jar {{version}}",
+      "vanillaHint": "Jar mods go on top of the original game file",
+      "replacing": "Replaces client.jar",
+      "replacementOff": "Off — the vanilla client.jar is used",
+      "replace": "Replace with a file…",
+      "restore": "Back to vanilla"
+    },
+    "notes": {
+      "title": "How it works",
+      "order": "Mods apply from top to bottom: when two mods change the same file, the lower one wins.",
+      "untouched": "The original files stay untouched: the patched jar is built at launch, without the META-INF signatures.",
+      "local": "Jar mods stay on this computer and are not published with the modpack."
+    }
+  },
+  "logoPicker": {
+    "title": "Ready-made logos",
+    "loading": "Reading game textures…",
+    "source": "Minecraft {{version}} textures",
+    "noGame": "No game textures",
+    "noGameHint": "Logos are taken from the game files. Install any Minecraft version and they will appear here.",
+    "placeholder": "Hover a picture or roll the dice",
+    "random": "Random",
+    "randomHint": "Roll the dice: a random picture and background",
+    "fromFile": "Your file…",
+    "remove": "Remove",
+    "backdrop": "Background",
+    "categories": {
+      "blocks": "Blocks",
+      "mobs": "Mobs",
+      "items": "Items"
+    },
+    "backdrops": {
+      "none": "No background",
+      "grubie": "Grubie",
+      "sky": "Sky",
+      "sunset": "Sunset",
+      "night": "Night",
+      "forest": "Forest",
+      "ocean": "Ocean",
+      "cave": "Cave",
+      "nether": "Nether",
+      "end": "The End"
+    },
+    "presets": {
+      "grass": "Grass Block",
+      "dirt": "Dirt",
+      "stone": "Stone",
+      "cobblestone": "Cobblestone",
+      "mossyCobblestone": "Mossy Cobblestone",
+      "oakLog": "Oak Log",
+      "oakPlanks": "Oak Planks",
+      "craftingTable": "Crafting Table",
+      "bookshelf": "Bookshelf",
+      "furnace": "Furnace",
+      "barrel": "Barrel",
+      "tnt": "TNT",
+      "jackOLantern": "Jack o'Lantern",
+      "melon": "Melon",
+      "hayBale": "Hay Bale",
+      "leaves": "Leaves",
+      "sand": "Sand",
+      "gravel": "Gravel",
+      "bricks": "Bricks",
+      "ice": "Ice",
+      "coalOre": "Coal Ore",
+      "ironOre": "Iron Ore",
+      "goldOre": "Gold Ore",
+      "redstoneOre": "Redstone Ore",
+      "lapisOre": "Lapis Lazuli Ore",
+      "diamondOre": "Diamond Ore",
+      "emeraldOre": "Emerald Ore",
+      "ironBlock": "Block of Iron",
+      "goldBlock": "Block of Gold",
+      "diamondBlock": "Block of Diamond",
+      "emeraldBlock": "Block of Emerald",
+      "netheriteBlock": "Block of Netherite",
+      "copper": "Block of Copper",
+      "quartz": "Block of Quartz",
+      "amethyst": "Block of Amethyst",
+      "deepslate": "Deepslate",
+      "sculk": "Sculk",
+      "obsidian": "Obsidian",
+      "cryingObsidian": "Crying Obsidian",
+      "netherrack": "Netherrack",
+      "ancientDebris": "Ancient Debris",
+      "magma": "Magma Block",
+      "glowstone": "Glowstone",
+      "endStone": "End Stone",
+      "prismarine": "Prismarine",
+      "seaLantern": "Sea Lantern",
+      "sponge": "Sponge",
+      "jukebox": "Jukebox",
+      "steve": "Steve",
+      "alex": "Alex",
+      "creeper": "Creeper",
+      "zombie": "Zombie",
+      "husk": "Husk",
+      "drowned": "Drowned",
+      "skeleton": "Skeleton",
+      "stray": "Stray",
+      "witherSkeleton": "Wither Skeleton",
+      "enderman": "Enderman",
+      "spider": "Spider",
+      "blaze": "Blaze",
+      "ghast": "Ghast",
+      "pig": "Pig",
+      "cow": "Cow",
+      "sheep": "Sheep",
+      "villager": "Villager",
+      "sword": "Diamond Sword",
+      "netheriteSword": "Netherite Sword",
+      "pickaxe": "Diamond Pickaxe",
+      "axe": "Iron Axe",
+      "bow": "Bow",
+      "trident": "Trident",
+      "apple": "Apple",
+      "goldenApple": "Golden Apple",
+      "cake": "Cake",
+      "diamond": "Diamond",
+      "emerald": "Emerald",
+      "goldIngot": "Gold Ingot",
+      "enderPearl": "Ender Pearl",
+      "enderEye": "Eye of Ender",
+      "netherStar": "Nether Star",
+      "totem": "Totem of Undying",
+      "elytra": "Elytra",
+      "heart": "Heart",
+      "potion": "Potion",
+      "experienceBottle": "Bottle o' Enchanting",
+      "torch": "Torch",
+      "book": "Enchanted Book",
+      "compass": "Compass",
+      "clock": "Clock"
+    }
+  },
+  "mediaViewer": {
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fit": "Fit to window",
+    "loadError": "Couldn't load the image",
+    "copy": "Copy image",
+    "save": "Save as…",
+    "openExternal": "Open in browser",
+    "saved": "Image saved",
+    "saveFailed": "Couldn't save the image",
+    "showInFolder": "Show in folder",
+    "showInChat": "Show in chat"
+  },
+  "streamer": {
+    "pill": "Streamer mode",
+    "title": "Streamer mode is on",
+    "reasonManual": "Turned on manually.",
+    "reasonAuto": "Turned on automatically because {{app}} is running.",
+    "hides": "Server addresses, world seeds, friend and invite codes, modpack links, private message previews and your user name in folder paths are hidden. Copy buttons still copy the real value.",
+    "turnOff": "Turn off",
+    "settings": "Settings",
+    "commandOn": "Turn on streamer mode",
+    "commandOff": "Turn off streamer mode",
+    "messageHidden": "Message hidden"
   }
 }

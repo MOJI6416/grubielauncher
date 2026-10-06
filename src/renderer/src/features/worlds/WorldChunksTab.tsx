@@ -96,7 +96,10 @@ export function WorldChunksTab({
 
   const dimensionLabel = (id: string) => {
     const key = DIMENSION_LABELS[id];
-    return key ? t(`worldChunks.dimensions.${key}`) : id;
+    if (key) return t(`worldChunks.dimensions.${key}`);
+    return id.startsWith("legacy:")
+      ? id.slice("legacy:".length).toUpperCase()
+      : id;
   };
 
   if (status === "loading") {

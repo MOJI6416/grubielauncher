@@ -8,6 +8,12 @@ import {
   UploadFileProgress,
 } from "@/types/Backend";
 import { IPublicProfile } from "@/types/Profile";
+import type {
+  INicknameStatus,
+  NicknameAvailability,
+  NicknameChangeResult,
+} from "@/types/Nickname";
+import { toNicknameFailure } from "../utilities/nicknameResult";
 import {
   IFriendSettingsUpdate,
   IMutualFriends,
@@ -389,6 +395,50 @@ export class Backend extends BaseService {
     );
 
     return response.data;
+  }
+
+  async getNicknameStatus(id: string) {
+    const response = await this.api.get<INicknameStatus>(
+      `${this.baseUrl}/users/${id}/nickname`,
+    );
+
+    return response.data;
+  }
+
+  async checkNickname(id: string, name: string) {
+    const response = await this.api.get<{ status: NicknameAvailability }>(
+      `${this.baseUrl}/users/${id}/nickname/availability`,
+      { params: { name } },
+    );
+
+    return response.data.status;
+  }
+
+  async changeNickname(
+    id: string,
+    nickname: string,
+  ): Promise<NicknameChangeResult> {
+    try {
+      const response = await this.api.put<
+        INicknameStatus & { accessToken: string }
+      >(`${this.baseUrl}/users/${id}/nickname`, { nickname });
+      const { accessToken, ...status } = response.data;
+      return { ok: true, status, accessToken };
+    } catch (error) {
+      return toNicknameFailure(error);
+    }
+  }
+
+  async resetNickname(id: string): Promise<NicknameChangeResult> {
+    try {
+      const response = await this.api.delete<
+        INicknameStatus & { accessToken: string }
+      >(`${this.baseUrl}/users/${id}/nickname`);
+      const { accessToken, ...status } = response.data;
+      return { ok: true, status, accessToken };
+    } catch (error) {
+      return toNicknameFailure(error);
+    }
   }
 
   async uploadFileFromPath(

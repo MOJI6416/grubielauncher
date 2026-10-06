@@ -79,10 +79,12 @@ export function isSameAccount(a: AccountLike, b: AccountLike): boolean {
 
 export function headImageId(account: AccountLike): string | null {
   if (account.type === "plain") return null;
-  if (account.type === "elyby") return account.nickname || null;
 
   const explicit = typeof account.uuid === "string" ? account.uuid.trim() : "";
-  return explicit || accountUuid(account);
+  const uuid = explicit || accountUuid(account);
+  if (account.type === "elyby") return uuid || account.nickname || null;
+
+  return uuid;
 }
 
 export function headImageUrl(

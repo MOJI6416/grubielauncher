@@ -27,6 +27,7 @@ import {
   IVersion as ModrinthVersion,
 } from "@/types/Modrinth";
 import { ServerCore } from "@/types/Server";
+import type { IModpackSource } from "@/types/ModpackSource";
 import { getFilesRecursively, getSha1 } from "./files";
 import { getLauncherPaths } from "./other";
 import { Loader } from "@/types/Loader";
@@ -56,6 +57,12 @@ import {
   getMojangReachable,
   isMirrorDisabled,
 } from "./mirrorState";
+import { readPrismJarMods } from "./prismJarMods";
+import {
+  fabricFamilyFor,
+  ornitheIntermediaryGeneration,
+  ornitheLoaderVersionId,
+} from "@/shared/profileLoaders";
 
 const FORGE_CDN_HOSTS = [
   "https://edge.forgecdn.net",
@@ -305,7 +312,8 @@ export async function mrModpackToModpack(
 }
 
 export function loaderToCfLoader(loader: Loader | ServerCore): ModLoaderType {
-  if (loader == "fabric") return ModLoaderType.Fabric;
+  if (loader == "fabric" || loader == "legacy-fabric")
+    return ModLoaderType.Fabric;
   if (loader == "forge") return ModLoaderType.Forge;
   if (loader == "neoforge") return ModLoaderType.NeoForge;
   if (loader == "quilt") return ModLoaderType.Quilt;
@@ -397,6 +405,9 @@ export function cfFileToVersion(
 ): IVersion {
   return {
     id: file.id.toString(),
+    ...(projectType == ProjectType.MODPACK
+      ? { versionNumber: file.displayName }
+      : {}),
     name:
       projectType != ProjectType.MODPACK
         ? file.displayName
@@ -1223,6 +1234,8 @@ interface MultiMcPackComponent {
   uid?: string;
   version?: string;
   cachedName?: string;
+  cachedVersion?: string;
+  disabled?: boolean;
 }
 
 interface MultiMcPack {
@@ -1282,6 +1295,51 @@ function normalizeImportedLoader(value: unknown): Loader | undefined {
   return undefined;
 }
 
+const FABRIC_FAMILY_MARKERS: Array<[string, Loader]> = [
+  ["ornithemc", "ornithe"],
+  ["babric", "babric"],
+  ["legacyfabric", "legacy-fabric"],
+];
+
+const ORNITHE_INTERMEDIARY_NAME = /net\.ornithemc:calamus-intermediary(?:-gen\d+)?:/g;
+
+async function readPrismComponentText(
+  instanceRoot: string,
+  components: MultiMcPackComponent[],
+): Promise<string> {
+  const texts = components.map(
+    (component) => `${component.uid ?? ""} ${component.cachedName ?? ""}`,
+  );
+
+  const patchesPath = path.join(instanceRoot, "patches");
+  for (const name of await fs.readdir(patchesPath).catch(() => [] as string[])) {
+    if (!name.endsWith(".json")) continue;
+    texts.push(
+      await fs.readFile(path.join(patchesPath, name), "utf-8").catch(() => ""),
+    );
+  }
+
+  return texts.join(" ").toLowerCase();
+}
+
+function detectFabricFamily(componentText: string): Loader | undefined {
+  return FABRIC_FAMILY_MARKERS.find(([marker]) =>
+    componentText.includes(marker),
+  )?.[1];
+}
+
+function prismOrnitheLoaderVersion(
+  componentText: string,
+  loaderVersion: string | undefined,
+): string | undefined {
+  const generation = ornitheIntermediaryGeneration(
+    componentText.match(ORNITHE_INTERMEDIARY_NAME) ?? [],
+  );
+  return loaderVersion && generation !== undefined
+    ? ornitheLoaderVersionId(loaderVersion, generation)
+    : loaderVersion;
+}
+
 async function findFileInRootOrOneChild(root: string, fileName: string) {
   const rootCandidate = path.join(root, fileName);
   if (await fs.pathExists(rootCandidate)) return rootCandidate;
@@ -1297,6 +1355,10 @@ async function findFileInRootOrOneChild(root: string, fileName: string) {
   }
 
   return null;
+}
+
+export async function isPrismInstance(root: string): Promise<boolean> {
+  return !!(await findFileInRootOrOneChild(root, "mmc-pack.json"));
 }
 
 async function findExistingGameRoot(instanceRoot: string) {
@@ -1605,9 +1667,18 @@ async function prismModpackToModpack(
     );
   });
 
-  const loader = normalizeImportedLoader(loaderComponent?.uid) || "vanilla";
+  const baseLoader = normalizeImportedLoader(loaderComponent?.uid) || "vanilla";
+  const componentText =
+    baseLoader === "fabric"
+      ? await readPrismComponentText(instanceRoot, components)
+      : "";
+  const loader = detectFabricFamily(componentText) ?? baseLoader;
   const loaderVersion =
-    loader === "vanilla" ? undefined : loaderComponent?.version;
+    loader === "vanilla"
+      ? undefined
+      : loader === "ornithe"
+        ? prismOrnitheLoaderVersion(componentText, loaderComponent?.version)
+        : loaderComponent?.version;
   const minecraftVersion = minecraftComponent?.version;
 
   if (!minecraftVersion) return null;
@@ -1621,6 +1692,11 @@ async function prismModpackToModpack(
   await copyForeignInstanceOverrides(instanceRoot, gameRoot);
   const image = await findPrismIconPath(instanceRoot, gameRoot, instanceCfg);
   const indexedMods = await readPrismModIndexProjects(instanceRoot, gameRoot);
+  const jarImport = await readPrismJarMods(
+    instanceRoot,
+    components,
+    path.join(instanceRoot, "overrides"),
+  );
 
   const baseModpack: IModpack = {
     name:
@@ -1628,11 +1704,13 @@ async function prismModpackToModpack(
       instanceCfg.ManagedPackName ||
       path.basename(instanceRoot),
     version: minecraftVersion,
-    loader,
-    loaderVersion,
+    loader: jarImport.btaVersion ? "bta-babric" : loader,
+    loaderVersion: jarImport.btaVersion ?? loaderVersion,
     mods: [...indexedMods.values()],
     folderPath: "",
     image,
+    ...(jarImport.jarMods.length > 0 ? { jarMods: jarImport.jarMods } : {}),
+    ...(jarImport.mainJar ? { mainJar: jarImport.mainJar } : {}),
   };
 
   const flameManifestPath = await findFileInRootOrOneChild(
@@ -1669,11 +1747,33 @@ async function prismModpackToModpack(
   return baseModpack;
 }
 
+function sourceFromProject(
+  pack?: IProject,
+  version?: IVersion,
+): IModpackSource | undefined {
+  if (!pack?.id || !version?.id) return undefined;
+  if (pack.provider !== Provider.MODRINTH && pack.provider !== Provider.CURSEFORGE) {
+    return undefined;
+  }
+
+  return {
+    provider: pack.provider,
+    projectId: pack.id,
+    versionId: version.id,
+    versionNumber: version.versionNumber || version.name,
+    title: pack.title,
+    url: pack.url,
+    publishedAt: version.datePublished,
+    releaseType: version.releaseType,
+  };
+}
+
 export async function checkModpack(
   modpackPath: string,
   pack?: IProject,
   selectVersion?: IVersion,
 ): Promise<IModpack | null> {
+  const source = sourceFromProject(pack, selectVersion);
   const tempPath = app.getPath("temp");
 
   if (!tempPath) return null;
@@ -1855,6 +1955,10 @@ export async function checkModpack(
 
   if (!modpack) return null;
 
+  if (modpack.loader === "fabric") {
+    modpack.loader = fabricFamilyFor(modpack.version);
+  }
+
   const contentRoot = confPath ? path.dirname(confPath) : modpackPath;
   await scanOverrideMods(path.join(contentRoot, "overrides"), modpack, false);
   await scanOverrideMods(
@@ -1868,6 +1972,7 @@ export async function checkModpack(
     folderPath: contentRoot,
     image: pack?.iconUrl || modpack.image,
     extraFiles: extraFiles.length ? extraFiles : modpack.extraFiles,
+    ...(source && !foreignProvider ? { source } : {}),
   };
 }
 

@@ -41,6 +41,8 @@ import {
 import { InstanceDock } from "./InstanceDock";
 import { NowBlock } from "./NowBlock";
 import { VoicePanel } from "./VoicePanel";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 
 const loadLanShareModal = () =>
   import("@renderer/features/share/SharePanel").then((module) => ({
@@ -50,7 +52,7 @@ const loadLanShareModal = () =>
 const LazyLanShareModal = lazyWithPreload(loadLanShareModal);
 
 const NAV_CLASS =
-  "flex h-8.5 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground aria-[current=true]:bg-primary-soft aria-[current=true]:text-foreground aria-disabled:cursor-not-allowed aria-disabled:opacity-50 disabled:cursor-not-allowed disabled:opacity-50";
+  "relative flex h-8.5 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground not-aria-[current=true]:hover:bg-sidebar-accent aria-[current=true]:text-foreground aria-disabled:cursor-not-allowed aria-disabled:opacity-50 disabled:cursor-not-allowed disabled:opacity-50";
 
 function NavRow({
   icon,
@@ -77,6 +79,7 @@ function NavRow({
         type="button"
         aria-current={current}
         aria-disabled={disabled}
+        data-indicator-active={current}
         onMouseEnter={onPreload}
         onFocus={onPreload}
         onClick={() => {
@@ -110,6 +113,7 @@ export function Sidebar() {
   const shareOwnerAccountKey = useAtomValue(shareOwnerAccountKeyAtom);
   const route = useAtomValue(currentRouteAtom);
   const { t } = useTranslation();
+  const navIndicator = useSlidingIndicator<HTMLDivElement>();
 
   const connectivity = useMemo(
     () => ({ isInternetOnline, isBackendOnline }),
@@ -159,7 +163,15 @@ export function Sidebar() {
     <>
       <aside className="flex w-62 shrink-0 flex-col border-r border-border bg-sidebar">
         <div className="flex min-h-0 flex-1 flex-col p-2.5">
-          <div className="flex shrink-0 flex-col gap-0.5">
+          <div
+            ref={navIndicator.containerRef}
+            className="relative flex shrink-0 flex-col gap-0.5"
+          >
+            <SlidingIndicator
+              indicator={navIndicator}
+              variant="fill"
+              className="rounded-lg bg-primary-soft"
+            />
             <NavRow
               icon={<Play className="size-4" />}
               label={t("nav.play")}

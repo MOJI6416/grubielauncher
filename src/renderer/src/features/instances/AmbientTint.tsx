@@ -3,9 +3,10 @@ import { useAtomValue } from "jotai";
 import { selectedVersionAtom } from "@renderer/stores/atoms";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
 import { pickArtTint } from "./artTint";
+import { LOADERS } from "@/types/Loader";
 
 const SAMPLE_SIZE = 24;
-const LOADER_TOKENS = new Set(["forge", "neoforge", "fabric", "quilt", "vanilla"]);
+const LOADER_TOKENS = new Set<string>(LOADERS);
 const tintCache = new Map<string, string | null>();
 
 function sampleTint(source: string): Promise<string | null> {

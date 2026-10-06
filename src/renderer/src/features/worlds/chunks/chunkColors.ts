@@ -40,6 +40,7 @@ export const STATUS_ORDER = [
   "surface",
   "carvers",
   "liquid_carvers",
+  "terrain",
   "features",
   "initialize_light",
   "light",

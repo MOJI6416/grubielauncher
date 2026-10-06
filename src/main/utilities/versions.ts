@@ -1,4 +1,5 @@
-import { checkModpack } from "./modManager";
+import { checkModpack, isPrismInstance } from "./modManager";
+import { ModManager } from "../services/ModManager";
 import { removeInstanceIdSync } from "./instanceId";
 import { readNBT } from "./nbt";
 import type { IImportModpack, IVersionConf } from "@/types/IVersion";
@@ -128,6 +129,13 @@ export async function importVersion(
       if (!modpack) {
         await fs.remove(versionPath).catch(() => {});
         throw Error("not modpack");
+      }
+
+      if (!(await isPrismInstance(versionPath))) {
+        const source = await ModManager.identifyModpack(filePath).catch(
+          () => null,
+        );
+        if (source) modpack.source = source;
       }
 
       return {

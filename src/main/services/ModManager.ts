@@ -12,6 +12,9 @@ import {
   Provider
 } from '@/types/ModManager'
 import { isSourceUnreachable } from '@/shared/errors'
+import { LOADERS_WITHOUT_CURSEFORGE_MODS } from '@/shared/loaderCompat'
+import type { IModpackSource } from '@/types/ModpackSource'
+import type { ModrinthServerPack } from '@/types/ModrinthServers'
 import { CurseForge } from './CurseForge'
 import { ModTypeClassIds, ModsSearchSortField } from '@/types/CurseForge'
 import {
@@ -23,6 +26,8 @@ import {
 import { Modrinth } from './Modrinth'
 import { ServerCore } from '@/types/Server'
 import { Loader } from '@/types/Loader'
+import { LegacyLoader, fabricFamilyFor, isLegacyLoader } from '@/shared/profileLoaders'
+import { VersionsService } from './Versions'
 import {
   cfFileToVersion,
   cfModToProject,
@@ -41,6 +46,19 @@ const MODRINTH_HASH_BATCH = 500
 const MODRINTH_PROJECT_BATCH = 100
 const FINGERPRINT_CONCURRENCY = 4
 const CURSEFORGE_LOADER_NAMES = new Set(['forge', 'neoforge', 'fabric', 'quilt'])
+
+async function legacyModpackVersions(loader: LegacyLoader, version: string | undefined) {
+  if (version) return fabricFamilyFor(version) === loader ? [version] : []
+
+  const all = (await VersionsService.getVersions('vanilla', true)) ?? []
+  return all
+    .filter((item) => item.type !== 'snapshot' && fabricFamilyFor(item.id) === loader)
+    .map((item) => item.id)
+}
+
+function modpackLoader(loader: Loader | undefined, projectType: ProjectType) {
+  return projectType === ProjectType.MODPACK && isLegacyLoader(loader) ? 'fabric' : loader
+}
 
 function chunk<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = []
@@ -76,6 +94,42 @@ export class ModManager {
     }
 
     try {
+      if (
+        provider == 'curseforge' &&
+        projectType == ProjectType.MOD &&
+        loader &&
+        LOADERS_WITHOUT_CURSEFORGE_MODS.has(loader)
+      ) {
+        return data
+      }
+
+      if (projectType == ProjectType.MODPACK && isLegacyLoader(loader)) {
+        if (provider != 'modrinth') return data
+
+        const versions = await legacyModpackVersions(loader, version)
+        if (versions.length === 0) return data
+
+        const modrinth = await Modrinth.search(
+          query,
+          {
+            loader: 'fabric',
+            versions,
+            projectType,
+            sort: sort != '' ? SortValue[sort] : undefined,
+            category: filter
+          },
+          pagination
+        )
+        if (!modrinth) return { ...data, error: true }
+
+        return {
+          projects: modrinth.hits.map((hit) => mrProjectToProject(hit, projectType)),
+          limit: modrinth.limit,
+          offset: modrinth.offset,
+          total: modrinth.total_hits
+        }
+      }
+
       if (provider == 'curseforge') {
         let cfSortField: ModsSearchSortField = ModsSearchSortField.Popularity
 
@@ -225,7 +279,8 @@ export class ModManager {
     options: { version?: string; loader?: Loader; projectType: ProjectType; modUrl: string }
   ): Promise<IVersion[]> {
     try {
-      const { version, loader, projectType, modUrl } = options
+      const { version, projectType, modUrl } = options
+      const loader = modpackLoader(options.loader, projectType)
 
       if (provider == Provider.CURSEFORGE) {
         const files = await CurseForge.getModFiles(Number(projectId), {
@@ -261,6 +316,63 @@ export class ModManager {
     } catch (error) {
       if (isSourceUnreachable(error)) throw error
       return []
+    }
+  }
+
+  static async getModrinthPack(
+    projectId: string,
+    versionId: string
+  ): Promise<ModrinthServerPack | null> {
+    const [project, version] = await Promise.all([
+      Modrinth.get(projectId),
+      Modrinth.getVersion(versionId)
+    ])
+
+    if (!project || !version || version.project_id !== project.id) return null
+
+    return {
+      project: mrProjectToProject(project, ProjectType.MODPACK),
+      version: mrVersionToVersion(
+        version,
+        project.server_side != 'unsupported',
+        ProjectType.MODPACK
+      )
+    }
+  }
+
+  static async getChangelog(
+    provider: Provider,
+    projectId: string,
+    versionId: string
+  ): Promise<string | null> {
+    if (provider == Provider.CURSEFORGE) {
+      return CurseForge.getFileChangelog(Number(projectId), Number(versionId))
+    }
+
+    if (provider == Provider.MODRINTH) {
+      const version = await Modrinth.getVersion(versionId)
+      return version?.changelog ?? null
+    }
+
+    return null
+  }
+
+  static async identifyModpack(filePath: string): Promise<IModpackSource | null> {
+    const { matches } = await this.identifyLocalFiles([
+      { key: 'modpack', path: filePath, sha1: '', projectType: ProjectType.MODPACK }
+    ])
+    const match = matches.find((item) => item.key === 'modpack')
+    if (!match) return null
+
+    return {
+      provider: match.provider,
+      projectId: match.project.id,
+      versionId: match.version.id,
+      versionNumber: match.version.versionNumber || match.version.name,
+      title: match.project.title,
+      url: match.project.url,
+      publishedAt: match.version.datePublished,
+      releaseType: match.version.releaseType
     }
   }
 

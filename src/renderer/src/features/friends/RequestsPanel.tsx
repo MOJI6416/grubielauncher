@@ -29,6 +29,7 @@ import {
 import { PlatformIcon } from "./PlatformIcon";
 import type { FriendLookupProblem } from "./friendLookup";
 import { keepPendingIds } from "./pendingIds";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const ANSWER_TIMEOUT_MS = 15000;
 
@@ -214,6 +215,7 @@ export function RequestsPanel({
   onViewProfile,
   t,
 }: RequestsPanelProps) {
+  const redact = useRedact();
   const fallbackRef = useRef<HTMLInputElement>(null);
   const pending = useMemo(
     () => new Set(pendingRequestIds),
@@ -451,7 +453,7 @@ export function RequestsPanel({
           <div className="flex h-11 items-center justify-center rounded-lg border border-border bg-surface-1 px-2 text-center">
             {ownFriendCode ? (
               <p className="font-mono text-lg font-semibold tracking-[0.14em] select-all">
-                {ownFriendCode}
+                {redact.value(ownFriendCode)}
               </p>
             ) : isLoadingCode ? (
               <Loader2 className="size-4 animate-spin text-muted-foreground" />

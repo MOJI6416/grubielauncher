@@ -75,7 +75,15 @@ export function ChunkFilterPopover({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (next) setMatched(null);
+        if (!next) return;
+        setMatched(null);
+        if (worldDataVersion) {
+          setValues((previous) =>
+            previous.dataVersion > 0
+              ? previous
+              : { ...previous, dataVersion: worldDataVersion },
+          );
+        }
       }}
     >
       <Hint content={t("worldChunks.filter.title")}>

@@ -5,6 +5,9 @@
  */
 import fs from "fs-extra";
 import path from "path";
+import zlib from "zlib";
+import { promisify } from "util";
+import { deserialize } from "@xmcl/nbt";
 import { WorldBackupCreateResult } from "@/types/WorldBackup";
 import {
   ChunkEditResult,
@@ -19,6 +22,7 @@ import {
   MAX_CHUNK_EDIT_COUNT,
   NETHER_ID,
   OVERWORLD_ID,
+  RegionFileExtension,
   isDimensionId,
 } from "@/types/WorldChunks";
 import {
@@ -31,12 +35,14 @@ import {
   externalChunkFileName,
   hasRegionHeader,
   isDecodableCompression,
+  isWritableCompression,
   parseRegionFileName,
   readRawChunk,
   readRegionHeader,
   regionFileName,
   rewriteRegionFile,
 } from "./anvilRegion";
+import { LegacyBlockNames } from "./legacyChunks";
 import {
   ChunkNbtSummary,
   patchChunkInhabitedTime,
@@ -59,6 +65,113 @@ type DataFolder = (typeof DATA_FOLDERS)[number];
 const CUSTOM_DIMENSIONS_FOLDER = "dimensions";
 const MAX_CUSTOM_DIMENSION_DEPTH = 6;
 const SCAN_BATCH = 32;
+const MCREGION_VERSION = 19132;
+const LEGACY_DIMENSION_NAMESPACE = "legacy";
+const LEGACY_DIMENSION_FOLDER = /^DIM[A-Za-z0-9_-]+$/;
+const FML_BLOCK_PREFIX = "\u0001";
+
+const gunzipAsync = promisify(zlib.gunzip);
+
+export interface WorldFormat {
+  regionExtension: RegionFileExtension;
+  legacyBlocks: LegacyBlockNames | null;
+}
+
+const formatCache = new Map<string, { key: string; format: WorldFormat }>();
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function forgeBlockNames(
+  root: Record<string, unknown>,
+): LegacyBlockNames | null {
+  const fml = isRecord(root.FML) ? root.FML : null;
+  if (!fml) return null;
+
+  const names = new Map<number, string>();
+  const add = (key: unknown, value: unknown) => {
+    if (typeof key === "string" && typeof value === "number") {
+      names.set(value, key);
+    }
+  };
+
+  const registries = isRecord(fml.Registries) ? fml.Registries : null;
+  const blocks = isRecord(registries?.["minecraft:blocks"])
+    ? registries["minecraft:blocks"]
+    : null;
+  if (Array.isArray(blocks?.ids)) {
+    for (const entry of blocks.ids) {
+      if (isRecord(entry)) add(entry.K, entry.V);
+    }
+  }
+
+  if (Array.isArray(fml.ItemData)) {
+    for (const entry of fml.ItemData) {
+      if (
+        isRecord(entry) &&
+        typeof entry.K === "string" &&
+        entry.K.startsWith(FML_BLOCK_PREFIX)
+      ) {
+        add(entry.K.slice(FML_BLOCK_PREFIX.length), entry.V);
+      }
+    }
+  }
+
+  return names.size > 0 ? names : null;
+}
+
+async function readLevelRoot(
+  file: string,
+): Promise<Record<string, unknown> | null> {
+  try {
+    const raw = await fs.readFile(file);
+    const nbt: unknown = await deserialize(
+      new Uint8Array(await gunzipAsync(new Uint8Array(raw))),
+    );
+    return isRecord(nbt) ? nbt : null;
+  } catch {
+    return null;
+  }
+}
+
+async function guessRegionExtension(
+  worldPath: string,
+): Promise<RegionFileExtension> {
+  const names = await fs
+    .readdir(path.join(worldPath, "region"))
+    .catch(() => [] as string[]);
+  const hasAnvil = names.some((name) => parseRegionFileName(name, "mca"));
+  const hasMcRegion = names.some((name) => parseRegionFileName(name, "mcr"));
+  return !hasAnvil && hasMcRegion ? "mcr" : "mca";
+}
+
+export async function readWorldFormat(worldPath: string): Promise<WorldFormat> {
+  const resolved = path.resolve(worldPath);
+  const file = path.join(resolved, "level.dat");
+  const stats = await fs.stat(file).catch(() => null);
+  const key = stats ? `${stats.size}:${stats.mtimeMs}` : "missing";
+
+  const cached = formatCache.get(resolved);
+  if (cached && cached.key === key) return cached.format;
+
+  const root = stats ? await readLevelRoot(file) : null;
+  const data = root && isRecord(root.Data) ? root.Data : null;
+  const version = typeof data?.version === "number" ? data.version : null;
+
+  const format: WorldFormat = {
+    regionExtension:
+      version === null
+        ? await guessRegionExtension(resolved)
+        : version === MCREGION_VERSION
+          ? "mcr"
+          : "mca",
+    legacyBlocks: root ? forgeBlockNames(root) : null,
+  };
+
+  formatCache.set(resolved, { key, format });
+  return format;
+}
 
 let editQueue: Promise<unknown> = Promise.resolve();
 
@@ -76,10 +189,27 @@ function namespacedFolder(dimensionId: string): string {
   return path.join(CUSTOM_DIMENSIONS_FOLDER, namespace, ...name.split("/"));
 }
 
+function legacyDimensionId(folder: string): string | null {
+  if (!LEGACY_DIMENSION_FOLDER.test(folder)) return null;
+  if (KNOWN_DIMENSIONS.some((entry) => entry.folder === folder)) return null;
+
+  const id = `${LEGACY_DIMENSION_NAMESPACE}:${folder.toLowerCase()}`;
+  return isDimensionId(id) ? id : null;
+}
+
+function isLegacyDimension(dimensionId: string): boolean {
+  return dimensionId.startsWith(`${LEGACY_DIMENSION_NAMESPACE}:`);
+}
+
 export function dimensionFolder(dimensionId: string): string | null {
   const known = KNOWN_DIMENSIONS.find((entry) => entry.id === dimensionId);
   if (known) return known.folder;
   if (!isDimensionId(dimensionId)) return null;
+  if (isLegacyDimension(dimensionId)) {
+    return dimensionId
+      .slice(LEGACY_DIMENSION_NAMESPACE.length + 1)
+      .toUpperCase();
+  }
   return namespacedFolder(dimensionId);
 }
 
@@ -100,6 +230,13 @@ export async function resolveDimensionFolder(
 ): Promise<string | null> {
   const folder = dimensionFolder(dimensionId);
   if (folder === null) return null;
+  if (isLegacyDimension(dimensionId)) {
+    const names = await fs.readdir(worldPath).catch(() => [] as string[]);
+    return (
+      names.find((name) => legacyDimensionId(name) === dimensionId) ??
+      namespacedFolder(dimensionId)
+    );
+  }
   if (!KNOWN_DIMENSIONS.some((entry) => entry.id === dimensionId)) {
     return folder;
   }
@@ -127,12 +264,15 @@ interface RegionFile {
   mtimeMs: number;
 }
 
-async function listRegionFiles(directory: string): Promise<RegionFile[]> {
+async function listRegionFiles(
+  directory: string,
+  extension: RegionFileExtension = "mca",
+): Promise<RegionFile[]> {
   const names = await fs.readdir(directory).catch(() => [] as string[]);
   const files: RegionFile[] = [];
 
   for (const name of names) {
-    const parsed = parseRegionFileName(name);
+    const parsed = parseRegionFileName(name, extension);
     if (!parsed) continue;
 
     const filePath = path.join(directory, name);
@@ -170,6 +310,7 @@ async function describeDimension(
   id: string,
   folder: string,
   root: string,
+  regionExtension: RegionFileExtension,
 ): Promise<IChunkDimension | null> {
   const regionDir = dataDir(root, "region");
   const entitiesDir = dataDir(root, "entities");
@@ -185,7 +326,9 @@ async function describeDimension(
     return null;
   }
 
-  const regions = hasRegion ? await listRegionFiles(regionDir) : [];
+  const regions = hasRegion
+    ? await listRegionFiles(regionDir, regionExtension)
+    : [];
   let chunkCount = 0;
   let sizeBytes = 0;
 
@@ -206,6 +349,7 @@ async function describeDimension(
   return {
     id,
     folder,
+    regionExtension,
     regionCount: regions.length,
     chunkCount,
     sizeBytes,
@@ -269,6 +413,28 @@ export async function isWorldFolder(worldPath: string): Promise<boolean> {
   return fs.pathExists(path.join(worldPath, "level.dat"));
 }
 
+async function findLegacyDimensions(
+  worldPath: string,
+): Promise<{ id: string; folder: string }[]> {
+  const entries = await fs
+    .readdir(worldPath, { withFileTypes: true })
+    .catch(() => []);
+  const found: { id: string; folder: string }[] = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const id = legacyDimensionId(entry.name);
+    if (!id || found.some((item) => item.id === id)) continue;
+    if (await hasDimensionData(path.join(worldPath, entry.name))) {
+      found.push({ id, folder: entry.name });
+    }
+  }
+
+  return found.sort((a, b) =>
+    a.folder.localeCompare(b.folder, undefined, { numeric: true }),
+  );
+}
+
 export async function listChunkDimensions(
   worldPath: string,
 ): Promise<IChunkDimension[]> {
@@ -281,8 +447,13 @@ export async function listChunkDimensions(
   const custom = (await findCustomDimensions(worldPath)).filter(
     (entry) => !known.some((dimension) => dimension.id === entry.id),
   );
-  const candidates = [...known, ...custom];
+  const candidates = [
+    ...known,
+    ...custom,
+    ...(await findLegacyDimensions(worldPath)),
+  ];
   const dimensions: IChunkDimension[] = [];
+  const { regionExtension } = await readWorldFormat(worldPath);
 
   for (const candidate of candidates) {
     const root = candidate.folder
@@ -292,6 +463,7 @@ export async function listChunkDimensions(
       candidate.id,
       candidate.folder,
       root,
+      regionExtension,
     );
     if (described) dimensions.push(described);
   }
@@ -307,8 +479,12 @@ export async function listChunkRegions(
   if (!root) return [];
 
   const regions: IChunkRegion[] = [];
+  const { regionExtension } = await readWorldFormat(worldPath);
 
-  for (const file of await listRegionFiles(dataDir(root, "region"))) {
+  for (const file of await listRegionFiles(
+    dataDir(root, "region"),
+    regionExtension,
+  )) {
     const header = await readRegionHeaderOnly(file.path);
     regions.push({
       x: file.x,
@@ -437,9 +613,14 @@ export async function scanChunkRegion(
   const root = await dimensionRoot(worldPath, dimensionId);
   if (!root) return null;
 
+  const { regionExtension } = await readWorldFormat(worldPath);
   const name = regionFileName(regionX, regionZ);
   const regionDir = dataDir(root, "region");
-  const file = await fs.readFile(path.join(regionDir, name)).catch(() => null);
+  const file = await fs
+    .readFile(
+      path.join(regionDir, regionFileName(regionX, regionZ, regionExtension)),
+    )
+    .catch(() => null);
   if (!file) return null;
 
   const [entities, poi] = await Promise.all([
@@ -504,8 +685,13 @@ export async function inspectChunk(
   const index = ((chunkZ & 31) << 5) | (chunkX & 31);
   const name = regionFileName(regionX, regionZ);
   const regionDir = dataDir(root, "region");
+  const { regionExtension } = await readWorldFormat(worldPath);
 
-  const file = await fs.readFile(path.join(regionDir, name)).catch(() => null);
+  const file = await fs
+    .readFile(
+      path.join(regionDir, regionFileName(regionX, regionZ, regionExtension)),
+    )
+    .catch(() => null);
   if (!file || !hasRegionHeader(file)) return null;
 
   const entry = readRegionHeader(file).find((item) => item.index === index);
@@ -676,6 +862,7 @@ export function deleteChunks(
     if (!prepared.ok) return prepared;
 
     const { root, groups, backupId } = prepared;
+    const { regionExtension } = await readWorldFormat(worldPath);
     let affected = 0;
     let regions = 0;
     let removedFiles = 0;
@@ -683,12 +870,18 @@ export function deleteChunks(
     let bytesAfter = 0;
 
     for (const group of groups.values()) {
-      const name = regionFileName(group.x, group.z);
       let removedInRegion = 0;
       let touched = false;
 
       for (const kind of DATA_FOLDERS) {
-        const filePath = path.join(dataDir(root, kind), name);
+        const filePath = path.join(
+          dataDir(root, kind),
+          regionFileName(
+            group.x,
+            group.z,
+            kind === "region" ? regionExtension : "mca",
+          ),
+        );
         if (!(await fs.pathExists(filePath))) continue;
 
         const result = await rewriteRegionFile(filePath, group.x, group.z, {
@@ -731,6 +924,7 @@ export function resetChunkInhabitedTime(
     if (!prepared.ok) return prepared;
 
     const { root, groups, backupId } = prepared;
+    const { regionExtension } = await readWorldFormat(worldPath);
     let affected = 0;
     let regions = 0;
     let bytesBefore = 0;
@@ -739,7 +933,7 @@ export function resetChunkInhabitedTime(
     for (const group of groups.values()) {
       const filePath = path.join(
         dataDir(root, "region"),
-        regionFileName(group.x, group.z),
+        regionFileName(group.x, group.z, regionExtension),
       );
       if (!(await fs.pathExists(filePath))) continue;
 
@@ -771,10 +965,13 @@ export function resetChunkInhabitedTime(
             summary.inhabitedTimeOffset,
             0,
           );
+          const target = isWritableCompression(chunk.compression)
+            ? chunk.compression
+            : "zlib";
 
           return {
-            compressionByte: compressionByte(chunk.compression),
-            data: await compressChunk(chunk.compression, patched),
+            compressionByte: compressionByte(target),
+            data: await compressChunk(target, patched),
           };
         },
       });

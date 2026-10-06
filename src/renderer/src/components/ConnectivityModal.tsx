@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import {
   Check,
   ClipboardCopy,
@@ -35,7 +34,7 @@ import {
   latencyTone,
   mergeConnectivityResult,
 } from "@renderer/features/install/connectivityModel";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 
 const api = window.api;
 
@@ -101,11 +100,9 @@ export function ConnectivityModal({
   const total = plan.length || results.length;
 
   const copyReport = async () => {
-    const copied = await copyToClipboard(
+    await copyWithFeedback(
       buildConnectivityReport(results, settings.downloadSource),
     );
-    if (!copied) return;
-    toast.success(t("common.copied"));
   };
 
   return (

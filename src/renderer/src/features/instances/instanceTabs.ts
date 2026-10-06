@@ -16,11 +16,16 @@ export interface InstanceTabsInput {
   hasServerManager: boolean;
   hasOwnServer: boolean;
   hasUnsavedContent?: boolean;
+  hasModpack?: boolean;
+  hasModpackUpdate?: boolean;
 }
 
 export function buildInstanceTabs(input: InstanceTabsInput): InstanceTabItem[] {
   const tabs: InstanceTabItem[] = [
     { id: "overview" },
+    ...(input.hasModpack
+      ? [{ id: "modpack" as const, alert: input.hasModpackUpdate === true }]
+      : []),
     {
       id: "content",
       count: input.contentCount,

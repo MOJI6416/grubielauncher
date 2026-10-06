@@ -1,3 +1,5 @@
+import { btaJavaMajor } from "./btaLoader";
+
 // Minecraft version -> required Java major version. Mojang only ships the
 // `javaVersion` field in the version manifest for 1.17+, so older versions
 // (which run on Java 8) must be resolved from the version string. Used as a
@@ -40,4 +42,18 @@ export function mcVersionToJavaMajor(mcVersion: string): number {
     return patch >= 5 ? 21 : 17;
   }
   return 21;
+}
+
+export const BABRIC_JAVA_MAJOR = 17;
+
+export function instanceJavaMajor(
+  mcVersion: string,
+  loader: string | undefined,
+  manifestMajor?: number,
+  loaderVersion?: string,
+): number {
+  if (loader === "bta-babric" && loaderVersion)
+    return btaJavaMajor(loaderVersion);
+  const major = manifestMajor ?? mcVersionToJavaMajor(mcVersion);
+  return loader === "babric" ? Math.max(major, BABRIC_JAVA_MAJOR) : major;
 }

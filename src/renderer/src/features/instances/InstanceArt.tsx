@@ -8,6 +8,10 @@ const LOADER_TINT: Record<string, string> = {
   neoforge: "from-loader-neoforge/25",
   fabric: "from-loader-fabric/25",
   quilt: "from-loader-quilt/25",
+  "legacy-fabric": "from-loader-legacy-fabric/25",
+  babric: "from-loader-babric/25",
+  ornithe: "from-loader-ornithe/25",
+  "bta-babric": "from-loader-bta/25",
 };
 
 export function loaderTint(loader?: string): string {

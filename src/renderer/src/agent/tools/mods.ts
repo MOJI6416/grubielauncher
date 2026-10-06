@@ -1,7 +1,9 @@
 import { IVersionDependency, ProjectType, Provider } from "@/types/ModManager";
-import { Loader } from "@/types/Loader";
+import { LOADERS, Loader } from "@/types/Loader";
 import { AgentTool } from "../types";
 import { limitList, truncate, wrapUntrusted } from "../untrusted";
+
+const MOD_LOADERS = LOADERS.filter((loader) => loader !== "vanilla");
 
 const api = window.api;
 
@@ -49,7 +51,7 @@ export const searchMods: AgentTool = {
       minecraftVersion: { type: "string" },
       loader: {
         type: "string",
-        enum: ["forge", "neoforge", "fabric", "quilt"],
+        enum: MOD_LOADERS,
       },
       limit: { type: "number", description: "1-8, defaults to 8" },
     },
@@ -160,7 +162,7 @@ export const getProjectVersions: AgentTool = {
       minecraftVersion: { type: "string" },
       loader: {
         type: "string",
-        enum: ["forge", "neoforge", "fabric", "quilt"],
+        enum: MOD_LOADERS,
       },
       projectType: { type: "string", enum: PROJECT_TYPES },
     },

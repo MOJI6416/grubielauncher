@@ -5,6 +5,10 @@ const TRUSTED_DOWNLOAD_HOST_SUFFIXES = [
   "quiltmc.org",
   "minecraftforge.net",
   "neoforged.net",
+  "legacyfabric.net",
+  "glass-launcher.net",
+  "ornithemc.net",
+  "betterthanadventure.net",
   "grubielauncher.com",
 ] as const;
 
@@ -31,6 +35,31 @@ export function assertTrustedDownloadUrl(
   label = "download url",
 ): string {
   if (!isTrustedDownloadUrl(url)) {
+    throw new Error(`Refused untrusted ${label}: ${String(url)}`);
+  }
+  return url;
+}
+
+const LOADER_LIBRARY_HOST_SUFFIXES = [
+  ...TRUSTED_DOWNLOAD_HOST_SUFFIXES,
+  "repo1.maven.org",
+  "build.lwjgl.org",
+] as const;
+
+export function assertTrustedLoaderLibraryUrl(
+  url: string,
+  label = "loader library url",
+): string {
+  let host = "";
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "https:") host = parsed.hostname.toLowerCase();
+  } catch {}
+
+  const trusted = LOADER_LIBRARY_HOST_SUFFIXES.some(
+    (suffix) => host === suffix || host.endsWith(`.${suffix}`),
+  );
+  if (!trusted) {
     throw new Error(`Refused untrusted ${label}: ${String(url)}`);
   }
   return url;
@@ -108,6 +137,11 @@ export function normalizeLoaderLibraryUrl(url: string): string {
       "https://maven.minecraftforge.net",
     );
   }
+
+  normalized = normalized.replace(
+    /^https:\/\/maven\.legacyfabric\.net\//i,
+    "https://repo.legacyfabric.net/legacyfabric/",
+  );
 
   return normalized.replace(/([^:])\/{2,}/g, "$1/");
 }

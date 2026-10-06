@@ -49,6 +49,8 @@ import {
   ProfileSection,
   resolveProfileSection,
 } from "@renderer/features/profile/sections";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 
 const api = window.api;
 
@@ -91,6 +93,7 @@ export default function AccountInfo({
   onUserSynced?: (user: IUser) => void;
 }) {
   const { t } = useTranslation();
+  const sectionIndicator = useSlidingIndicator<HTMLElement>();
 
   const localAccount = useAtomValue(accountAtom);
   const authData = useAtomValue(authDataAtom);
@@ -276,14 +279,23 @@ export default function AccountInfo({
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
           {tabs.length > 1 && (
-            <nav className="flex h-9 shrink-0 items-center gap-0.5 self-start rounded-lg bg-surface-1 p-1">
+            <nav
+              ref={sectionIndicator.containerRef}
+              className="relative flex h-9 shrink-0 items-center gap-0.5 self-start rounded-lg bg-surface-1 p-1"
+            >
+              <SlidingIndicator
+                indicator={sectionIndicator}
+                variant="fill"
+                className="rounded-md bg-surface-3"
+              />
               {tabs.map((tab) => (
                 <button
                   key={tab ?? "overview"}
                   type="button"
                   aria-pressed={visibleSection === tab}
+                  data-indicator-active={visibleSection === tab}
                   onClick={() => openSection(tab)}
-                  className="rounded-md px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground aria-pressed:bg-surface-3 aria-pressed:text-foreground"
+                  className="relative rounded-md px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground aria-pressed:text-foreground"
                 >
                   {t(TAB_LABEL[tab ?? "overview"])}
                 </button>

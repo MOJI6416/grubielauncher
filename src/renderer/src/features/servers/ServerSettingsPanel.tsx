@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  CircleCheck,
   Gamepad2,
   Loader2,
   MemoryStick,
@@ -18,7 +19,10 @@ import {
   Shield,
   TriangleAlert,
 } from "lucide-react";
-import { toast } from "sonner";
+import {
+  SAVED_FLASH_MS,
+  useRecentFlag,
+} from "@renderer/utilities/useRecentFlag";
 import { IServerConf, IServerSettings } from "@/types/Server";
 import { ILocalProject } from "@/types/ModManager";
 import { Button } from "@/components/ui/button";
@@ -43,6 +47,8 @@ import {
   clampNumber,
   normalizeDraft,
 } from "./serverProperties";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { cn } from "@/lib/utils";
 
 const api = window.api;
 
@@ -160,12 +166,15 @@ export function ServerSettingsPanel({
   onSaved: (conf: IServerConf) => void;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
 
   const [baseline, setBaseline] = useState<ServerDraft | null>(null);
   const [draft, setDraft] = useState<ServerDraft | null>(null);
   const [totalMemory, setTotalMemory] = useState(0);
   const [portInUse, setPortInUse] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState(0);
+  const isSavedShown = useRecentFlag(savedAt, SAVED_FLASH_MS);
   const [readError, setReadError] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -334,7 +343,7 @@ export function ServerSettingsPanel({
       setBaseline(truth);
       if (!failedParts.length) {
         setDraft({ ...truth, settings: { ...truth.settings } });
-        toast.success(t("settings.saved"));
+        setSavedAt(Date.now());
         return;
       }
 
@@ -436,7 +445,10 @@ export function ServerSettingsPanel({
             <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] gap-2">
               <Field label="IP">
                 <Input
-                  className="h-8 font-mono text-xs"
+                  className={cn(
+                    "h-8 font-mono text-xs",
+                    redact.active && "streamer-mask",
+                  )}
                   value={settings.serverIp}
                   placeholder="0.0.0.0"
                   onChange={(event) =>
@@ -645,10 +657,20 @@ export function ServerSettingsPanel({
       </div>
 
       <div className="flex shrink-0 items-center gap-2 rounded-xl border bg-card px-3 py-2">
-        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-          {isDirty
-            ? t("serverManager.pendingChanges", { total: changed.length })
-            : t("serverManager.noChanges")}
+        <span
+          role="status"
+          className="min-w-0 flex-1 truncate text-xs text-muted-foreground"
+        >
+          {isDirty ? (
+            t("serverManager.pendingChanges", { total: changed.length })
+          ) : isSavedShown ? (
+            <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+              <CircleCheck className="size-3.5 text-success" />
+              {t("versions.savedInline")}
+            </span>
+          ) : (
+            t("serverManager.noChanges")
+          )}
           {runningPort !== undefined && (
             <span className="text-faint">
               {" · "}

@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Copy, ExternalLink, Loader2, TriangleAlert, X } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
 import { ProviderIcon, providerName } from "./ProviderMark";
 import { formatCountdown } from "./session";
 import { OAUTH_WINDOW_MS, type AuthProgress } from "./useAccountsController";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 
 export function AuthProgressView({
   progress,
@@ -99,8 +98,7 @@ export function AuthProgressView({
                   size="icon"
                   aria-label={t("accounts.auth.copyLink")}
                   onClick={async () => {
-                    if (!(await copyToClipboard(progress.authUrl))) return;
-                    toast.success(t("common.copied"));
+                    await copyWithFeedback(progress.authUrl);
                   }}
                 >
                   <Copy className="size-4" />

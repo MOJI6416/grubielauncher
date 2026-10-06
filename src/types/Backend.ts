@@ -3,6 +3,7 @@ import { ILocalProject } from './ModManager'
 import { IArguments } from './IArguments'
 import { ILoader } from './Loader'
 import { IUser } from './IUser'
+import { IJarMod, IJarModSet } from './IVersion'
 
 export interface IModpack {
   readonly _id: string
@@ -71,6 +72,8 @@ export interface IModpackConf {
   runArguments: IArguments
   image: string
   quickServer: string
+  jarMods?: IJarMod[]
+  mainJar?: IJarMod
 }
 
 export interface IModpackVersion {
@@ -91,6 +94,7 @@ export interface IModpackUpdate {
   runArguments: IArguments | null
   other: ILoader['other'] | null
   loaderVersion?: ILoader['version'] | null
+  jar?: IJarModSet | null
   image: string | null
   quickServer: string | null
   isPublic?: boolean | null

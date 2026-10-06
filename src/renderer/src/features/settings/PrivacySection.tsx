@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bell, ChevronRight, FolderOpen } from "lucide-react";
+import { Bell, ChevronRight, FolderOpen, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
 import { Switch } from "@/components/ui/switch";
@@ -8,6 +8,11 @@ import type { BlessedPathInfo } from "@/types/AllowedPath";
 import type { TSettings } from "@/types/Settings";
 import { navigate } from "@renderer/navigation/navigate";
 import { OWN_PROFILE_ID } from "@renderer/features/profile/loadProfileUser";
+import {
+  setStreamerMode,
+  useRedact,
+  useStreamerState,
+} from "@renderer/features/streamer/streamerMode";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
 
@@ -30,6 +35,8 @@ export function PrivacySection({
 }) {
   const { t } = useTranslation();
   const [allowed, setAllowed] = useState<BlessedPathInfo[]>([]);
+  const streamer = useStreamerState();
+  const redact = useRedact();
 
   const load = useCallback(async () => {
     try {
@@ -45,6 +52,55 @@ export function PrivacySection({
 
   return (
     <div className="flex flex-col gap-4">
+      <SettingsGroup title={t("settings.streamer.title")}>
+        {visible("streamerMode") && (
+          <SettingRow
+            htmlFor="settings-streamer-mode"
+            title={t("settings.streamer.enabled")}
+            description={t("settings.streamer.enabledDescription")}
+            query={query}
+            changed={isChanged("streamerMode")}
+            onReset={() => reset("streamerMode")}
+            control={
+              <Switch
+                id="settings-streamer-mode"
+                checked={streamer.active}
+                onCheckedChange={(value) =>
+                  void setStreamerMode(value, async (patch) => commit(patch))
+                }
+              />
+            }
+          >
+            {streamer.app && streamer.reason !== "manual" && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Radio className="size-3.5 shrink-0 text-faint" />
+                {streamer.active
+                  ? t("settings.streamer.autoActive", { app: streamer.app })
+                  : t("settings.streamer.autoDismissed", { app: streamer.app })}
+              </p>
+            )}
+          </SettingRow>
+        )}
+
+        {visible("streamerModeAuto") && (
+          <SettingRow
+            htmlFor="settings-streamer-auto"
+            title={t("settings.streamer.auto")}
+            description={t("settings.streamer.autoDescription")}
+            query={query}
+            changed={isChanged("streamerModeAuto")}
+            onReset={() => reset("streamerModeAuto")}
+            control={
+              <Switch
+                id="settings-streamer-auto"
+                checked={settings.streamerModeAuto}
+                onCheckedChange={(value) => commit({ streamerModeAuto: value })}
+              />
+            }
+          />
+        )}
+      </SettingsGroup>
+
       {visible("notifications") && (
         <SettingsGroup title={t("settings.notifications.title")}>
           <button
@@ -182,9 +238,13 @@ export function PrivacySection({
                 className="flex items-center gap-3 px-3.5 py-2"
               >
                 <FolderOpen className="size-3.5 shrink-0 text-faint" />
-                <Hint content={entry.path} variant="text" truncatedOnly>
+                <Hint
+                  content={redact.path(entry.path)}
+                  variant="text"
+                  truncatedOnly
+                >
                   <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
-                    {entry.path}
+                    {redact.path(entry.path)}
                   </span>
                 </Hint>
                 <Button

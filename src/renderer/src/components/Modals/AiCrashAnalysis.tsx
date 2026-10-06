@@ -41,7 +41,8 @@ import { Hint } from "@renderer/components/Hint";
 import { CrashCard } from "@renderer/features/logs/CrashCard";
 import { describeExitCode } from "@renderer/features/logs/runs";
 import { formatBytes } from "@renderer/utilities/file";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
@@ -61,6 +62,7 @@ export function AiCrashAnalysis({
   onClose: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const redact = useRedact();
   const account = useAtomValue(accountAtom);
   const settings = useAtomValue(settingsAtom);
   const crashes = useAtomValue(aiCrashesAtom);
@@ -286,8 +288,7 @@ export function AiCrashAnalysis({
       ...analysis.steps.map((step, index) => `${index + 1}. ${step}`),
     ].filter(Boolean);
 
-    if (!(await copyToClipboard(lines.join("\n")))) return;
-    toast.success(t("common.copied"));
+    await copyWithFeedback(lines.join("\n"));
   }, [analysis, t]);
 
   const sizeLabels = useMemo(
@@ -549,7 +550,7 @@ export function AiCrashAnalysis({
                           {index + 1}
                         </span>
                         <span className="min-w-0 flex-1 text-sm leading-snug [overflow-wrap:anywhere] hyphens-auto">
-                          {step}
+                          {redact.text(step)}
                         </span>
                       </li>
                     ))}
@@ -581,7 +582,7 @@ export function AiCrashAnalysis({
 
               {showLog && (
                 <pre className="max-h-44 shrink-0 overflow-auto rounded-lg border border-border bg-surface-1 p-2.5 font-mono text-[0.65rem] leading-relaxed break-all whitespace-pre-wrap text-muted-foreground">
-                  {request.log}
+                  {redact.text(request.log)}
                 </pre>
               )}
             </>

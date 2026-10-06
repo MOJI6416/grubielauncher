@@ -7,6 +7,7 @@ import {
   refreshMicrosoftToken
 } from '../services/Auth'
 import { mutateAccountsConfig, readAccountsConfig } from './accounts'
+import { withSessionNickname } from '@/shared/sessionNickname'
 
 function isTokenExpired(token: string) {
   try {
@@ -135,11 +136,11 @@ async function refreshForSubject(
         if (getTokenSubject(entry.accessToken) !== sub) return entry
 
         didUpdate = true
-        return {
+        return withSessionNickname({
           ...entry,
           accessToken: newToken,
           refreshToken: nextRefreshToken || entry.refreshToken
-        }
+        })
       })
 
       if (!didUpdate) return null

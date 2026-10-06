@@ -36,6 +36,11 @@ import {
   nextProblem,
   problemPositions,
 } from "./logView";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { useAtomValue } from "jotai";
+import { streamerActiveAtom } from "@renderer/features/streamer/streamerMode";
+import { redactText } from "@renderer/features/streamer/redact";
 
 const LEVEL_TEXT: Record<LogLevel, string> = {
   fatal: "text-destructive",
@@ -67,8 +72,24 @@ export interface LogSource {
   hint?: string;
 }
 
+const redactedEntries = new WeakMap<LogEntry, LogEntry>();
+
+function redactEntry(entry: LogEntry): LogEntry {
+  let redacted = redactedEntries.get(entry);
+  if (!redacted) {
+    redacted = {
+      ...entry,
+      text: redactText(entry.text),
+      raw: redactText(entry.raw),
+      extra: entry.extra.map(redactText),
+    };
+    redactedEntries.set(entry, redacted);
+  }
+  return redacted;
+}
+
 export function LogViewer({
-  entries,
+  entries: sourceEntries,
   loading,
   truncated,
   sources,
@@ -97,6 +118,12 @@ export function LogViewer({
   emptyAction?: ReactNode;
 }) {
   const { t } = useTranslation();
+  const sourceIndicator = useSlidingIndicator<HTMLDivElement>();
+  const isStreaming = useAtomValue(streamerActiveAtom);
+  const entries = useMemo(
+    () => (isStreaming ? sourceEntries.map(redactEntry) : sourceEntries),
+    [isStreaming, sourceEntries],
+  );
 
   const [levels, setLevels] = useState<LogLevel[]>(ALL_LEVELS);
   const [search, setSearch] = useState("");
@@ -212,10 +239,16 @@ export function LogViewer({
       <div className="flex min-w-0 shrink-0 items-center gap-2 border-b border-border px-2 py-1.5">
         {sources.length > 0 && (
           <div
+            ref={sourceIndicator.containerRef}
             role="tablist"
             aria-label={t("logs.sourceLabel")}
-            className="flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-3 p-0.5"
+            className="relative flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-3 p-0.5"
           >
+            <SlidingIndicator
+              indicator={sourceIndicator}
+              variant="fill"
+              className="rounded-md bg-surface-1 shadow-xs"
+            />
             {sources.map((source) => (
               <Tooltip key={source.id}>
                 <TooltipTrigger asChild>
@@ -223,11 +256,12 @@ export function LogViewer({
                     type="button"
                     role="tab"
                     aria-selected={source.id === sourceId}
+                    data-indicator-active={source.id === sourceId}
                     onClick={() => onSourceChange(source.id)}
                     className={cn(
-                      "max-w-44 truncate rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                      "relative max-w-44 truncate rounded-md px-2 py-1 text-xs font-medium transition-colors",
                       source.id === sourceId
-                        ? "bg-surface-1 text-foreground shadow-xs"
+                        ? "text-foreground"
                         : "text-muted-foreground hover:text-foreground",
                     )}
                   >

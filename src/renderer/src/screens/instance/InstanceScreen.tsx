@@ -1,7 +1,8 @@
 import { Suspense, useMemo, useState } from "react";
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
+  CircleCheck,
   Copy,
   CopySlash,
   Ellipsis,
@@ -38,7 +39,7 @@ import { PanelFallback } from "@renderer/components/PanelFallback";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { BlockedMods } from "@renderer/components/Modals/BlockedMods";
 import { CreateServer } from "@renderer/features/servers/CreateServer";
-import { isRunningAtom, pathsAtom } from "@renderer/stores/atoms";
+import { isRunningAtom, pathsAtom, versionsAtom } from "@renderer/stores/atoms";
 import { navigate } from "@renderer/navigation/navigate";
 import { getBlockingIds } from "@renderer/navigation/guards";
 import { currentRouteAtom } from "@renderer/navigation/store";
@@ -81,8 +82,21 @@ import {
   useLoaderCatalog,
   useLoaderRequirements,
 } from "@renderer/features/instances/useLoaderVersions";
+import {
+  InstanceJarCard,
+  JarModsRow,
+} from "@renderer/features/instances/InstanceJarCard";
+import { JarModsPanel } from "@renderer/features/instances/JarModsPanel";
+import { showsJarModsCard } from "@renderer/features/instances/jarMods";
 import { isModdedLoader } from "@/shared/loaderCompat";
 import { useSyncGuard } from "@renderer/features/instances/useSyncGuard";
+import {
+  SAVED_FLASH_MS,
+  useRecentFlag,
+} from "@renderer/utilities/useRecentFlag";
+import { bumpInstanceDataRevision } from "@renderer/features/instances/instanceRevision";
+import { ModpackPanel } from "@renderer/features/modpack/ModpackPanel";
+import { useModpackSource } from "@renderer/features/modpack/useModpackSource";
 import {
   LazyArguments,
   LazyDeleteVersion,
@@ -116,13 +130,17 @@ export function InstanceScreen({
   const [isOpenDel, setIsOpenDel] = useState(false);
   const [isResetOpen, setIsResetOpen] = useState(false);
   const [isLoaderPanelOpen, setIsLoaderPanelOpen] = useState(false);
+  const [isJarPanelOpen, setIsJarPanelOpen] = useState(false);
 
   const routeTab =
     currentRoute.name === "instance" ? currentRoute.tab : undefined;
 
   const setActiveTab = (tab: InstanceTab) => {
     if (currentRoute.name !== "instance") return;
-    if (tab !== "settings") setIsLoaderPanelOpen(false);
+    if (tab !== "settings") {
+      setIsLoaderPanelOpen(false);
+      setIsJarPanelOpen(false);
+    }
 
     navigate({
       name: "instance",
@@ -137,6 +155,7 @@ export function InstanceScreen({
   };
 
   const editor = useInstanceEditor({ closeModal: () => void closeScreen() });
+  const isSavedShown = useRecentFlag(editor.savedAt, SAVED_FLASH_MS);
 
   const {
     version,
@@ -164,6 +183,8 @@ export function InstanceScreen({
   useInstancePanelPreload();
 
   const contents = useInstanceContents(version?.versionPath);
+  const modpackState = useModpackSource(version, isInternetOnline);
+  const setVersions = useSetAtom(versionsAtom);
   const updateDetails = useInstanceUpdateDetails(version);
   const syncGuard = useSyncGuard({
     versionPath: version?.versionPath,
@@ -200,6 +221,7 @@ export function InstanceScreen({
   }, [draft.mods]);
 
   const openLoaderPanel = () => {
+    setIsJarPanelOpen(false);
     setIsLoaderPanelOpen(true);
     setActiveTab("settings");
   };
@@ -216,8 +238,11 @@ export function InstanceScreen({
         hasServerManager: !!version?.version.version?.serverManager,
         hasOwnServer: !!server,
         hasUnsavedContent: changes.changeKinds.includes("content"),
+        hasModpack: !!version?.version.modpack,
+        hasModpackUpdate: !!modpackState.update,
       }),
     [
+      modpackState.update,
       contents,
       draft.mods.length,
       draft.servers.length,
@@ -527,7 +552,25 @@ export function InstanceScreen({
           aria-labelledby={`instance-tab-${activeTab}`}
           className="min-h-0 flex-1 overflow-hidden pt-3"
         >
-          {activeTab === "logs" && version ? (
+          {activeTab === "modpack" && version ? (
+            <ModpackPanel
+              instance={version}
+              state={modpackState}
+              account={account}
+              server={server}
+              isOnline={isInternetOnline}
+              isRunning={isVersionRunning}
+              isBusy={isLoading || isInstallActive}
+              isReadOnly={isForeignInstance}
+              hasUnsavedChanges={changes.hasChanges}
+              onUpdated={() => {
+                draft.reset();
+                bumpInstanceDataRevision();
+                setVersions((previous) => [...previous]);
+                void share.refreshPublishDiff();
+              }}
+            />
+          ) : activeTab === "logs" && version ? (
             <Suspense fallback={<PanelFallback variant="rail" />}>
               <LazyLogs runGame={runGame} />
             </Suspense>
@@ -546,6 +589,19 @@ export function InstanceScreen({
             <ConfigsPanel
               versionPath={version.versionPath}
               disabled={isLoading}
+              mods={draft.mods}
+            />
+          ) : activeTab === "settings" && version && isJarPanelOpen ? (
+            <JarModsPanel
+              instance={version}
+              lockedReason={
+                isForeignInstance
+                  ? readOnlyHint
+                  : isVersionRunning
+                    ? t("instanceSettings.runningHint")
+                    : undefined
+              }
+              onClose={() => setIsJarPanelOpen(false)}
             />
           ) : activeTab === "settings" &&
             version &&
@@ -591,6 +647,21 @@ export function InstanceScreen({
                     catalogFailed={loaderCatalog.failed}
                     isChanging={isLoading && loadingType === "loader"}
                     onOpen={() => setIsLoaderPanelOpen(true)}
+                    footer={
+                      showsJarModsCard(version.version) ? (
+                        <JarModsRow
+                          conf={version.version}
+                          onOpen={() => setIsJarPanelOpen(true)}
+                        />
+                      ) : undefined
+                    }
+                  />
+                )}
+
+                {!isModded && showsJarModsCard(version.version) && (
+                  <InstanceJarCard
+                    conf={version.version}
+                    onOpen={() => setIsJarPanelOpen(true)}
                   />
                 )}
 
@@ -699,6 +770,19 @@ export function InstanceScreen({
                   : undefined
               }
               onOpenLoader={openLoaderPanel}
+              modpackFact={
+                version.version.modpack
+                  ? {
+                      title: version.version.modpack.title,
+                      version: version.version.modpack.versionNumber,
+                      provider: version.version.modpack.provider,
+                      update: modpackState.update
+                        ? (modpackState.update.versionNumber ??
+                          modpackState.update.name)
+                        : undefined,
+                    }
+                  : undefined
+              }
               actions={overviewActions}
               statuses={identityStatuses}
               banner={banner}
@@ -728,6 +812,11 @@ export function InstanceScreen({
                 setCroppedImage(filePaths[0]);
                 setIsCropping(true);
               }}
+              onApplyLogo={(blob) => {
+                const url = URL.createObjectURL(blob);
+                draft.setImage((prev) => revokePreviousBlobUrl(prev, url) ?? "");
+                draft.setIsLogoChanged(true);
+              }}
               onRemoveLogo={() => {
                 draft.setImage("");
                 draft.setIsLogoChanged(true);
@@ -740,8 +829,16 @@ export function InstanceScreen({
           ) : null}
         </div>
 
-        <Collapse show={changes.hasChanges}>
-          {changes.hasChanges ? (
+        <Collapse show={changes.hasChanges || isSavedShown}>
+          {!changes.hasChanges && isSavedShown ? (
+            <footer
+              role="status"
+              className="mt-3 flex h-14 items-center gap-2 border-t border-border pt-3 text-xs"
+            >
+              <CircleCheck className="size-4 shrink-0 text-success" />
+              <span className="font-medium">{t("versions.savedInline")}</span>
+            </footer>
+          ) : changes.hasChanges ? (
             <footer className="mt-3 flex h-14 items-center gap-3 border-t border-border pt-3">
               <span className="flex min-w-0 flex-1 items-center gap-2 text-xs">
                 <span

@@ -516,7 +516,10 @@ export function ChunkEditorDialog({
 
   const dimensionLabel = (id: string) => {
     const key = DIMENSION_LABELS[id];
-    return key ? t(`worldChunks.dimensions.${key}`) : id;
+    if (key) return t(`worldChunks.dimensions.${key}`);
+    return id.startsWith("legacy:")
+      ? id.slice("legacy:".length).toUpperCase()
+      : id;
   };
 
   const scanning = progress.running && progress.total > 0;
@@ -851,6 +854,7 @@ export function ChunkEditorDialog({
                 lookup={focusedLookup}
                 details={details}
                 detailsStatus={detailsStatus}
+                regionExtension={currentDimension?.regionExtension ?? "mca"}
                 onDelete={() => setPending("delete")}
                 onReset={() => setPending("reset")}
                 onSelectRegion={selectRegionOf}

@@ -56,7 +56,11 @@ import fs from "fs-extra";
 
 app.commandLine.appendSwitch(
   "disable-features",
-  "SpareRendererForSitePerProcess",
+  [
+    "SpareRendererForSitePerProcess",
+    "WebRtcAllowInputVolumeAdjustment",
+    "SystemLoopbackAsAecReference",
+  ].join(","),
 );
 
 crashReporter.start({

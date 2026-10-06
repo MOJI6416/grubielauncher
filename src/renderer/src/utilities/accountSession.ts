@@ -3,6 +3,7 @@ import { IAuth, ILocalAccount } from "@/types/Account";
 import { IRefreshTokenResponse } from "@/types/Auth";
 import { jwtDecode } from "jwt-decode";
 import { classifyError } from "@/shared/errors";
+import { withSessionNickname } from "@/shared/sessionNickname";
 
 const api = window.api;
 
@@ -249,11 +250,11 @@ export async function ensureAccountSession(
     throw new AccountSessionRefreshError(accountForRefresh.type, refreshError);
   }
 
-  const nextAccount: ILocalAccount = {
+  const nextAccount: ILocalAccount = withSessionNickname({
     ...accountForRefresh,
     accessToken: authUser.accessToken,
     refreshToken: authUser.refreshToken || accountForRefresh.refreshToken,
-  };
+  });
 
   const nextAccounts = accountsForRefresh.map((account) =>
     isSameSessionAccount(account, accountForRefresh, authDataForRefresh.sub)

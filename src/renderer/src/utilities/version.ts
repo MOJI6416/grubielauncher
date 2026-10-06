@@ -19,6 +19,11 @@ import {
 } from "@renderer/stores/atoms";
 import { isSafeVersionName } from "@/shared/versionName";
 import { contentPlan } from "@/shared/installPlan";
+import {
+  applyJarModSet,
+  jarModSetOf,
+  jarModsSignature,
+} from "@/shared/jarMods";
 import type { VersionInstallStage } from "@/types/InstallationProgress";
 import {
   consumeRecentFailure,
@@ -168,6 +173,21 @@ export async function syncShare(
     }
   }
 
+  if (jarModsSignature(modpack.conf) !== jarModsSignature(version.version)) {
+    const previousJar = jarModSetOf(version.version);
+    const remoteJar = jarModSetOf(modpack.conf);
+    applyJarModSet(version.version, remoteJar);
+    const synced = await api.version
+      .syncJarMods(version.versionPath, remoteJar)
+      .catch(() => false);
+    if (!synced) {
+      applyJarModSet(version.version, previousJar);
+      throw new ShareSyncInterruptedError(
+        new Error("jar mods were not downloaded"),
+      );
+    }
+  }
+
   let serversWritten = true;
   if (!(await api.servers.compare(modpack.conf.servers, servers))) {
     const serversPath = await api.path.join(version.versionPath, "servers.dat");
@@ -261,7 +281,8 @@ export async function checkDiffenceUpdateData(
   );
   const modsEqual =
     (await api.modManager.compareMods(modpack.conf.loader.mods, mods)) &&
-    !hasStaleLocalShareFiles;
+    !hasStaleLocalShareFiles &&
+    jarModsSignature(modpack.conf) === jarModsSignature(version);
   const serversEqual = await api.servers.compare(modpack.conf.servers, servers);
 
   const optionsPath = await api.path.join(versionPath, "options.txt");

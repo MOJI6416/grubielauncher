@@ -8,6 +8,7 @@ interface UploadChatImageOptions {
   folder: string;
   fileName: string;
   onProgress?: (progress: number) => void;
+  signal?: AbortSignal;
 }
 
 export function uploadChatImage({
@@ -16,9 +17,16 @@ export function uploadChatImage({
   folder,
   fileName,
   onProgress,
+  signal,
 }: UploadChatImageOptions): Promise<string> {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error("upload_aborted"));
+      return;
+    }
+
     const xhr = new XMLHttpRequest();
+    signal?.addEventListener("abort", () => xhr.abort(), { once: true });
     const formData = new FormData();
 
     formData.append("file", file, fileName);

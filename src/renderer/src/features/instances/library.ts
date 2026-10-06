@@ -279,6 +279,37 @@ export function buildLibraryEntries<T extends InstanceLike>(
   return entries;
 }
 
+export type LibraryHeaderEntry<T> = Extract<
+  LibraryEntry<T>,
+  { kind: "header" }
+>;
+export type LibraryItemEntry<T> = Extract<LibraryEntry<T>, { kind: "item" }>;
+
+export interface LibrarySection<T> {
+  key: string;
+  header?: LibraryHeaderEntry<T>;
+  items: LibraryItemEntry<T>[];
+}
+
+export function sectionLibraryEntries<T>(
+  entries: LibraryEntry<T>[],
+): LibrarySection<T>[] {
+  const sections: LibrarySection<T>[] = [];
+
+  for (const entry of entries) {
+    if (entry.kind === "header") {
+      sections.push({ key: entry.key, header: entry, items: [] });
+      continue;
+    }
+
+    const current = sections[sections.length - 1];
+    if (current) current.items.push(entry);
+    else sections.push({ key: "section:loose", items: [entry] });
+  }
+
+  return sections;
+}
+
 export function mergeManualOrder(
   fullOrder: string[],
   visibleKeys: string[],

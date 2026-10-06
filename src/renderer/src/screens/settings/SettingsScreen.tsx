@@ -58,6 +58,8 @@ import { PrivacySection } from "@renderer/features/settings/PrivacySection";
 import { StorageSection } from "@renderer/features/settings/StorageSection";
 import { AboutSection } from "@renderer/features/settings/AboutSection";
 import { SupportSection } from "@renderer/features/settings/SupportSection";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 
 const SECTION_ICON: Record<SettingsSectionId, LucideIcon> = {
   game: Cpu,
@@ -79,6 +81,7 @@ export function SettingsScreen({
   onShowWhatsNew?: () => void;
 }) {
   const { t } = useTranslation();
+  const sectionIndicator = useSlidingIndicator<HTMLElement>();
   const { settings, status, commit } = useSettingsWriter();
   const { appVersion, totalMemoryMb } = useSystemFacts();
 
@@ -244,7 +247,15 @@ export function SettingsScreen({
       </header>
 
       <div className="flex min-h-0 flex-1 gap-3">
-        <nav className="flex w-48 shrink-0 flex-col gap-0.5 overflow-y-auto rounded-xl border border-border bg-card p-2">
+        <nav
+          ref={sectionIndicator.containerRef}
+          className="relative flex w-48 shrink-0 flex-col gap-0.5 overflow-x-hidden overflow-y-auto rounded-xl border border-border bg-card p-2"
+        >
+          <SlidingIndicator
+            indicator={sectionIndicator}
+            variant="fill"
+            className="rounded-lg bg-primary-soft"
+          />
           {SETTINGS_SECTIONS.map((id) => {
             const Icon = SECTION_ICON[id];
             const isDimmed = isFiltering && !visibleSections.includes(id);
@@ -259,13 +270,14 @@ export function SettingsScreen({
                 key={id}
                 type="button"
                 aria-current={active === id}
+                data-indicator-active={active === id}
                 onClick={() =>
                   navigate({ name: "settings", section: id }, { replace: true })
                 }
                 className={cn(
-                  "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors",
+                  "relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors",
                   active === id
-                    ? "bg-primary-soft text-foreground"
+                    ? "text-foreground"
                     : "text-muted-foreground hover:bg-surface-3 hover:text-foreground",
                   isDimmed && "opacity-35",
                 )}

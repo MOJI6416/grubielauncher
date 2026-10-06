@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useAtomValue, useSetAtom } from "jotai";
-import { toast } from "sonner";
 import { FaDiscord, FaMicrosoft } from "react-icons/fa";
 import { TbSquareLetterE } from "react-icons/tb";
 import {
@@ -42,7 +41,8 @@ import { ProfileConnections } from "./ProfileConnections";
 import { playedHours } from "./profileMetrics";
 import { profileRelation } from "./profileRelation";
 import { useMutualFriends } from "./useProfileData";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 interface PeopleEntry {
   id: string;
@@ -121,6 +121,7 @@ export function ProfileIdentityRail({
   accessToken?: string;
 }) {
   const { t, i18n } = useTranslation();
+  const redact = useRedact();
   const friends = useAtomValue(friendsAtom);
   const requests = useAtomValue(friendRequestsAtom);
   const authData = useAtomValue(authDataAtom);
@@ -192,8 +193,7 @@ export function ProfileIdentityRail({
     : "";
 
   const copy = async (value: string) => {
-    if (!(await copyToClipboard(value))) return;
-    toast.success(t("common.copied"));
+    await copyWithFeedback(value);
   };
 
   return (
@@ -383,7 +383,7 @@ export function ProfileIdentityRail({
                     {t("accounts.friendCode")}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-right font-mono tabular-nums">
-                    {user.friendCode}
+                    {redact.value(user.friendCode)}
                   </span>
                   <Copy className="size-3 shrink-0 text-faint" />
                 </button>

@@ -44,6 +44,7 @@ import {
   planLaunchStages,
   setLaunchStage,
 } from "./launchProgress";
+import { checkOrnitheGeneration } from "./ornitheGeneration";
 import type { RunGameParams } from "./types";
 
 const api = window.api;
@@ -249,6 +250,14 @@ export async function runGame(params: RunGameParams): Promise<void> {
             : "app.authlibUnavailable",
         ),
       );
+      store.set(isRunningAtom, false);
+      return;
+    }
+
+    const generationReady = await checkOrnitheGeneration(launchVersion, () =>
+      void runGame({ ...params, version: launchVersion, skipUpdate: true }),
+    );
+    if (!generationReady) {
       store.set(isRunningAtom, false);
       return;
     }

@@ -4,6 +4,7 @@ import { assertSafeVersionName } from "@/shared/versionName";
 import { sanitizeImportedVersionConf } from "./versions";
 import { getDataRoot } from "./dataRoot";
 import type { IVersionConf } from "@/types/IVersion";
+import { PATCHED_JAR_FOLDER } from "../game/jarMods";
 
 export const DUPLICATE_SOURCE_MISSING = "duplicate_source_missing";
 export const DUPLICATE_NAME_TAKEN = "duplicate_name_taken";
@@ -17,6 +18,8 @@ const SKIPPED_ROOT_ENTRIES = new Set([
 
 const SKIPPED_RELATIVE_PATHS = new Set([
   path.join("storage", "loader-rollback"),
+  path.join("storage", "modpack", "rollback"),
+  PATCHED_JAR_FOLDER,
 ]);
 
 function getVersionsPath(): string {

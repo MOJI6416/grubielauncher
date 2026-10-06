@@ -12,6 +12,7 @@ import {
   IChunkDetails,
   IChunkSummary,
   REGION_SECTOR_BYTES,
+  RegionFileExtension,
 } from "@/types/WorldChunks";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -19,8 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Hint } from "@renderer/components/Hint";
 import { formatDate } from "@renderer/utilities/date";
 import { formatBytes } from "@renderer/utilities/file";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
-import { toast } from "sonner";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { cn } from "@/lib/utils";
 import { inhabitedMinutes } from "./chunkFilters";
 import { ChunkLookup } from "./chunkModel";
@@ -41,6 +41,7 @@ export function ChunkInspector({
   lookup,
   details,
   detailsStatus,
+  regionExtension,
   onDelete,
   onReset,
   onSelectRegion,
@@ -54,6 +55,7 @@ export function ChunkInspector({
   lookup: ChunkLookup | null;
   details: IChunkDetails | null;
   detailsStatus: DetailsStatus;
+  regionExtension: RegionFileExtension;
   onDelete: () => void;
   onReset: () => void;
   onSelectRegion: (chunk: ChunkPoint) => void;
@@ -178,6 +180,7 @@ export function ChunkInspector({
             detailsStatus={detailsStatus}
             nf={nf}
             sizeLabels={sizeLabels}
+            regionExtension={regionExtension}
             onSelectRegion={onSelectRegion}
           />
         )}
@@ -193,6 +196,7 @@ function ChunkFacts({
   detailsStatus,
   nf,
   sizeLabels,
+  regionExtension,
   onSelectRegion,
 }: {
   focused: ChunkPoint;
@@ -201,18 +205,18 @@ function ChunkFacts({
   detailsStatus: DetailsStatus;
   nf: (value: number) => string;
   sizeLabels: string[];
+  regionExtension: RegionFileExtension;
   onSelectRegion: (chunk: ChunkPoint) => void;
 }) {
   const { t } = useTranslation();
 
   const blockX = focused.x * BLOCKS_PER_CHUNK;
   const blockZ = focused.z * BLOCKS_PER_CHUNK;
-  const regionName = `r.${focused.x >> 5}.${focused.z >> 5}.mca`;
+  const regionName = `r.${focused.x >> 5}.${focused.z >> 5}.${regionExtension}`;
 
   const copyCoordinates = async () => {
     const text = `${blockX + 8} ~ ${blockZ + 8}`;
-    if (await copyToClipboard(text)) toast.success(t("common.copied"));
-    else toast.error(t("common.copyFailed"));
+    await copyWithFeedback(text);
   };
 
   const problem = summary?.problem ?? null;

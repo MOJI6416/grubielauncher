@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { selectedVersionAtom, versionsAtom } from "@renderer/stores/atoms";
 import { ServerFavicon } from "./ServerVisuals";
 import { findDuplicateAddress, normalizeAddress } from "./serverList";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
@@ -36,6 +37,7 @@ export function ServerImport({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const versions = useAtomValue(versionsAtom);
   const selectedVersion = useAtomValue(selectedVersionAtom);
 
@@ -142,7 +144,7 @@ export function ServerImport({
                       {entry.server.name}
                     </span>
                     <span className="block truncate font-mono text-[0.7rem] text-faint">
-                      {entry.server.ip}
+                      {redact.value(entry.server.ip)}
                     </span>
                   </span>
                   <span className="max-w-28 shrink-0 truncate text-[0.7rem] text-muted-foreground">

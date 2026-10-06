@@ -13,7 +13,9 @@ import {
   Hash,
   Info,
   ListPlus,
+  PackageOpen,
   Play,
+  Radio,
   ScrollText,
   Search,
   Server,
@@ -51,6 +53,10 @@ import { OWN_PROFILE_ID } from "@renderer/features/profile/loadProfileUser";
 import { instanceKey } from "@renderer/features/instances/selectors";
 import { getLoaderInfo } from "@renderer/components/Loaders";
 import { askAgent, openAgent } from "@renderer/features/agent/openAgent";
+import {
+  setStreamerMode,
+  useStreamerState,
+} from "@renderer/features/streamer/streamerMode";
 import type { InstanceTab } from "@renderer/navigation/routes";
 import type { RunGameParams } from "@renderer/features/launch/types";
 import {
@@ -68,6 +74,7 @@ const api = window.api;
 
 const INSTANCE_TABS: InstanceTab[] = [
   "overview",
+  "modpack",
   "content",
   "worlds",
   "servers",
@@ -81,6 +88,8 @@ const INSTANCE_TABS: InstanceTab[] = [
 const INSTANCE_TAB_KEYWORDS: Record<InstanceTab, string> = {
   overview:
     "overview publish share overview обзор огляд публикация опубликовать поделиться ярлык публікація",
+  modpack:
+    "modpack modrinth curseforge update version модпак обновить версия оновити версія",
   content:
     "content mods resourcepacks shaders контент моды модификации ресурспаки шейдеры моди",
   worlds:
@@ -96,6 +105,7 @@ const INSTANCE_TAB_KEYWORDS: Record<InstanceTab, string> = {
 
 const TAB_ICON: Record<InstanceTab, ReactNode> = {
   overview: <Info className="size-4 text-faint" />,
+  modpack: <PackageOpen className="size-4 text-faint" />,
   content: <Boxes className="size-4 text-faint" />,
   worlds: <TreePine className="size-4 text-faint" />,
   servers: <Server className="size-4 text-faint" />,
@@ -157,6 +167,7 @@ export function CommandPalette({
   const isRunning = useAtomValue(isRunningAtom);
   const selected = useAtomValue(selectedVersionAtom);
   const [raw, setRaw] = useState(initialQuery);
+  const streamer = useStreamerState();
   const { t } = useTranslation();
 
   useFocusReturn(open);
@@ -237,6 +248,17 @@ export function CommandPalette({
         disabled: isRunning,
         run: () => openNewInstance(),
       },
+      {
+        id: "action:streamer-mode",
+        section: "actions",
+        title: streamer.active
+          ? t("streamer.commandOff")
+          : t("streamer.commandOn"),
+        keywords:
+          "streamer stream obs twitch privacy стример стрим трансляция приватность стрімер трансляція",
+        icon: <Radio className="size-4 text-faint" />,
+        run: () => void setStreamerMode(!streamer.active),
+      },
     ];
 
     if (selected) {
@@ -253,6 +275,7 @@ export function CommandPalette({
       });
 
       for (const tab of INSTANCE_TABS) {
+        if (tab === "modpack" && !selected.version.modpack) continue;
         list.push({
           id: `tab:${tab}`,
           section: "actions",
@@ -350,6 +373,7 @@ export function CommandPalette({
     runGame,
     selected,
     selectedIdentity,
+    streamer.active,
     t,
     versions,
   ]);

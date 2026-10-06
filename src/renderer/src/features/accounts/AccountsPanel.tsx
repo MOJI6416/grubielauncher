@@ -44,6 +44,7 @@ import { readAccountSession } from "./session";
 import { addAccountRequestAtom } from "./addAccountRequest";
 import { loadAccounts } from "./loadAccounts";
 import { useAccountsController } from "./useAccountsController";
+import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 
 const SEARCH_THRESHOLD = 6;
 
@@ -77,6 +78,10 @@ export function AccountsPanel() {
   const visible = useMemo(
     () => filterAccounts(ordered, query),
     [ordered, query],
+  );
+  const accountKeys = useMemo(
+    () => new Set(accounts.map((account) => accountIdentity(account))),
+    [accounts],
   );
 
   useEffect(() => {
@@ -197,77 +202,82 @@ export function AccountsPanel() {
                   </p>
                 )}
 
-                {visible.map((account) => {
-                  const identity = accountIdentity(account);
-                  const isFocused =
-                    focusedAccount !== null &&
-                    accountIdentity(focusedAccount) === identity;
-                  const isActive = selectedIdentity === identity;
-                  const session = readAccountSession(account);
+                <RemovalList sourceKeys={accountKeys}>
+                  {visible.map((account) => {
+                    const identity = accountIdentity(account);
+                    const isFocused =
+                      focusedAccount !== null &&
+                      accountIdentity(focusedAccount) === identity;
+                    const isActive = selectedIdentity === identity;
+                    const session = readAccountSession(account);
 
-                  return (
-                    <button
-                      key={identity}
-                      type="button"
-                      role="option"
-                      aria-selected={isFocused}
-                      aria-current={isFocused}
-                      onClick={() => {
-                        setFocused(identity);
-                        setOfflineFormOpen(false);
-                      }}
-                      onDoubleClick={() => void controller.useAccount(account)}
-                      className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-accent/40 aria-[current=true]:bg-primary-soft"
-                    >
-                      <AccountHead account={account} size={34} />
+                    return (
+                      <RemovalItem key={identity} itemKey={identity}>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={isFocused}
+                          aria-current={isFocused}
+                          onClick={() => {
+                            setFocused(identity);
+                            setOfflineFormOpen(false);
+                          }}
+                          onDoubleClick={() =>
+                            void controller.useAccount(account)
+                          }
+                          className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-accent/40 aria-[current=true]:bg-primary-soft"
+                        >
+                          <AccountHead account={account} size={34} />
 
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          <Hint
-                            content={account.nickname}
-                            variant="text"
-                            truncatedOnly
-                          >
-                            <span className="truncate text-sm font-medium">
-                              {account.nickname}
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <Hint
+                                content={account.nickname}
+                                variant="text"
+                                truncatedOnly
+                              >
+                                <span className="truncate text-sm font-medium">
+                                  {account.nickname}
+                                </span>
+                              </Hint>
+                              {!isNicknameGameSafe(account.nickname) && (
+                                <TriangleAlert className="size-3 shrink-0 text-warning" />
+                              )}
                             </span>
-                          </Hint>
-                          {!isNicknameGameSafe(account.nickname) && (
-                            <TriangleAlert className="size-3 shrink-0 text-warning" />
-                          )}
-                        </span>
 
-                        <span className="flex min-w-0 items-center gap-1 text-[0.7rem] text-faint">
-                          <ProviderIcon type={account.type} size={10} />
-                          <span className="truncate">
-                            {providerName(account.type, t)}
-                          </span>
-                          {session.state !== "offline" && (
-                            <>
-                              <span aria-hidden>·</span>
+                            <span className="flex min-w-0 items-center gap-1 text-[0.7rem] text-faint">
+                              <ProviderIcon type={account.type} size={10} />
                               <span className="truncate">
-                                {t(`accounts.session.${session.state}`)}
+                                {providerName(account.type, t)}
                               </span>
-                            </>
+                              {session.state !== "offline" && (
+                                <>
+                                  <span aria-hidden>·</span>
+                                  <span className="truncate">
+                                    {t(`accounts.session.${session.state}`)}
+                                  </span>
+                                </>
+                              )}
+                            </span>
+                          </span>
+
+                          <SessionIcon
+                            state={session.state}
+                            busy={controller.busyIdentity === identity}
+                            className="shrink-0"
+                          />
+
+                          {isActive && (
+                            <span
+                              aria-label={t("accounts.inUse")}
+                              className="h-8 w-0.5 shrink-0 rounded-full bg-primary"
+                            />
                           )}
-                        </span>
-                      </span>
-
-                      <SessionIcon
-                        state={session.state}
-                        busy={controller.busyIdentity === identity}
-                        className="shrink-0"
-                      />
-
-                      {isActive && (
-                        <span
-                          aria-label={t("accounts.inUse")}
-                          className="h-8 w-0.5 shrink-0 rounded-full bg-primary"
-                        />
-                      )}
-                    </button>
-                  );
-                })}
+                        </button>
+                      </RemovalItem>
+                    );
+                  })}
+                </RemovalList>
               </div>
             </div>
 

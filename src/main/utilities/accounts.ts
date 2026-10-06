@@ -235,15 +235,14 @@ async function writeAccountsConfig(config: IAccountConf): Promise<void> {
     if (id) persisted.id = id;
     else delete persisted.id;
 
-    const legacyKey = getAccountKey(account);
-    const secretKey = id ?? legacyKey;
+    const secretKey = id ?? getAccountKey(account);
     const refreshKey = getRefreshSecretKey(secretKey);
 
     const { accessToken } = account;
     if (typeof accessToken === "string" && accessToken.trim() !== "") {
       nextSecrets[secretKey] = encodeSecret(accessToken, "account secret");
     } else {
-      const kept = storedSecrets[secretKey] ?? storedSecrets[legacyKey];
+      const kept = storedSecrets[secretKey];
       if (kept) nextSecrets[secretKey] = kept;
     }
 
@@ -252,8 +251,7 @@ async function writeAccountsConfig(config: IAccountConf): Promise<void> {
     if (typeof refreshToken === "string" && refreshToken.trim() !== "") {
       nextSecrets[refreshKey] = encodeSecret(refreshToken, "account secret");
     } else {
-      const kept =
-        storedSecrets[refreshKey] ?? storedSecrets[getRefreshSecretKey(legacyKey)];
+      const kept = storedSecrets[refreshKey];
       if (kept) nextSecrets[refreshKey] = kept;
     }
 
@@ -310,19 +308,11 @@ async function readAccountsConfigInner(): Promise<IAccountConf | null> {
 
   let shouldMigrate = false;
   const hydratedAccounts = raw.accounts.map((account) => {
-    const legacyKey = getAccountKey(account);
     const idKey = account.id;
+    const secretKey = idKey || getAccountKey(account);
 
-    const idSecret = idKey ? secrets[idKey] : undefined;
-    const legacySecret = secrets[legacyKey];
-    const idRefreshSecret = idKey
-      ? secrets[getRefreshSecretKey(idKey)]
-      : undefined;
-    const legacyRefreshSecret = secrets[getRefreshSecretKey(legacyKey)];
-
-    let accessToken = decodeSecret(idSecret) ?? decodeSecret(legacySecret);
-    let refreshToken =
-      decodeSecret(idRefreshSecret) ?? decodeSecret(legacyRefreshSecret);
+    let accessToken = decodeSecret(secrets[secretKey]);
+    let refreshToken = decodeSecret(secrets[getRefreshSecretKey(secretKey)]);
 
     if (
       !accessToken &&
@@ -332,8 +322,6 @@ async function readAccountsConfigInner(): Promise<IAccountConf | null> {
       accessToken = account.accessToken;
       shouldMigrate = true;
     }
-
-    if (accessToken && !idSecret && legacySecret) shouldMigrate = true;
 
     if (
       !refreshToken &&
@@ -347,10 +335,6 @@ async function readAccountsConfigInner(): Promise<IAccountConf | null> {
     if (!refreshToken) {
       refreshToken = decodeLegacyRefreshToken(accessToken);
       if (refreshToken) shouldMigrate = true;
-    }
-
-    if (refreshToken && !idRefreshSecret && legacyRefreshSecret) {
-      shouldMigrate = true;
     }
 
     const resolvedId = decodeSubject(accessToken) || idKey || undefined;
@@ -440,6 +424,7 @@ export function mergeIncomingAccounts(
 
     return {
       ...account,
+      nickname: storedAccount.nickname,
       accessToken: storedAccount.accessToken,
       refreshToken: storedAccount.refreshToken,
     };

@@ -82,7 +82,7 @@ import {
   toggleFavorite,
 } from "./skinLibrary";
 import { readFavorites, writeFavorites } from "./favorites";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 
 const api = window.api;
 const ELYBY_SKINS_URL = "https://ely.by/skins";
@@ -951,8 +951,7 @@ export function WardrobePanel({
                     aria-label={t("common.copy")}
                     onClick={async () => {
                       if (!selected) return;
-                      if (!(await copyToClipboard(selected.hash))) return;
-                      toast.success(t("manageSkins.idCopied"));
+                      await copyWithFeedback(selected.hash);
                     }}
                     className="font-mono text-faint transition-colors hover:text-foreground"
                   >

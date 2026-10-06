@@ -113,6 +113,20 @@ export function findDuplicateName(
   );
 }
 
+export function mergeServerLists(
+  primary: IServer[],
+  extra: IServer[],
+): IServer[] {
+  const merged = [...primary];
+
+  for (const server of extra) {
+    if (!server.ip || findDuplicateAddress(merged, server.ip) >= 0) continue;
+    merged.push(server);
+  }
+
+  return merged;
+}
+
 export function filterServers(servers: IServer[], query: string): IServer[] {
   const key = query.trim().toLowerCase();
   if (!key) return servers;

@@ -254,6 +254,9 @@ describe("describePreview", () => {
     expect(
       describePreview(preview({ type: "groupInvite", value: "" }))?.labelKey,
     ).toBe("friends.chatGroupInvite");
+    expect(
+      describePreview(preview({ type: "sticker", value: "" }))?.labelKey,
+    ).toBe("friends.chatSticker");
   });
 
   it("has nothing to say about an empty or system message", () => {

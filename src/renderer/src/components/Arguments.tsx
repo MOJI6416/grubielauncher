@@ -40,6 +40,11 @@ import {
 } from "@renderer/features/instances/launchArguments";
 import { buildMemoryArguments, OPTIMIZED_GC_FLAGS } from "@/shared/jvmDefaults";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@/components/ui/popover";
 import { ArgumentsShell } from "./ArgumentsShell";
 import { Confirmation } from "./Modals/Confirmation";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,6 +55,11 @@ import { Hint } from "./Hint";
 import { Label } from "@/components/ui/label";
 import { TSettings } from "@/types/Settings";
 import { cn } from "@/lib/utils";
+
+interface SuggestionAnchor {
+  getBoundingClientRect: () => DOMRect;
+  readonly contextElement?: Element;
+}
 
 function chipClass(severity?: ArgSeverity) {
   return cn(
@@ -96,6 +106,18 @@ function ArgEditor({
   const [highlight, setHighlight] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<SuggestionAnchor>({
+    getBoundingClientRect: () => {
+      const box = boxRef.current?.getBoundingClientRect();
+      const input = inputRef.current?.getBoundingClientRect();
+      if (!box || !input) return box ?? input ?? new DOMRect();
+      return new DOMRect(box.left, input.top, box.width, input.height);
+    },
+    get contextElement() {
+      return inputRef.current ?? undefined;
+    },
+  });
 
   const presets = useMemo(
     () => ARG_PRESETS.filter((preset) => preset.kind === kind),
@@ -137,10 +159,15 @@ function ArgEditor({
   };
 
   const diagText = (diagnostic: ArgDiagnostic) =>
-    t(`arguments.diag.${diagnostic.code}`, {
-      flag: diagnostic.flag ?? diagnostic.token,
-      mb: diagnostic.value,
-    });
+    t(
+      diagnostic.code === "dangerous" && kind === "game"
+        ? "arguments.diag.dangerousGame"
+        : `arguments.diag.${diagnostic.code}`,
+      {
+        flag: diagnostic.flag ?? diagnostic.token,
+        mb: diagnostic.value,
+      },
+    );
 
   const summary = useMemo(() => {
     const seen = new Set<string>();
@@ -253,6 +280,7 @@ function ArgEditor({
       ) : (
         <div className="relative min-h-0 flex-1">
           <div
+            ref={boxRef}
             className="flex h-full min-h-24 flex-wrap content-start items-start gap-1.5 overflow-y-auto rounded-lg border border-border bg-surface-1 p-2.5"
             onClick={() => inputRef.current?.focus()}
           >
@@ -292,11 +320,7 @@ function ArgEditor({
               );
 
               return (
-                <Hint
-                  key={index}
-                  content={diagnostic ? diagText(diagnostic) : token}
-                  variant={diagnostic ? "control" : "text"}
-                >
+                <Hint key={index} content={token} variant="text" truncatedOnly>
                   {chip}
                 </Hint>
               );
@@ -375,30 +399,41 @@ function ArgEditor({
             )}
           </div>
 
-          {dropdownOpen && (
-            <div className="absolute inset-x-0 top-full z-50 mt-1 overflow-hidden rounded-lg border bg-popover shadow-md">
+          <Popover open={dropdownOpen}>
+            <PopoverAnchor virtualRef={anchorRef} />
+            <PopoverContent
+              side="bottom"
+              align="start"
+              sideOffset={4}
+              collisionPadding={8}
+              updatePositionStrategy="always"
+              onOpenAutoFocus={(event) => event.preventDefault()}
+              onCloseAutoFocus={(event) => event.preventDefault()}
+              onEscapeKeyDown={() => dismissEditing()}
+              className="w-(--radix-popover-trigger-width) rounded-lg p-1 shadow-md"
+            >
               {suggestions.map((entry, index) => (
                 <button
                   key={entry.id}
                   type="button"
                   className={cn(
-                    "flex w-full items-baseline gap-3 px-3 py-1.5 text-left",
+                    "flex w-full min-w-0 flex-col gap-0.5 rounded-md px-2 py-1.5 text-left",
                     index === highlight ? "bg-accent" : "hover:bg-accent/60",
                   )}
                   onMouseDown={(event) => event.preventDefault()}
                   onMouseEnter={() => setHighlight(index)}
                   onClick={() => selectSuggestion(entry)}
                 >
-                  <span className="min-w-44 font-mono text-xs text-foreground">
+                  <span className="font-mono text-xs leading-4 break-all text-foreground">
                     {entry.value}
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span className="text-[0.7rem] leading-4 text-muted-foreground">
                     {t(`arguments.catalog.${entry.id}`)}
                   </span>
                 </button>
               ))}
-            </div>
-          )}
+            </PopoverContent>
+          </Popover>
         </div>
       )}
 
@@ -604,7 +639,7 @@ export function Arguments({
           </div>
         )}
 
-        {dropped.length > 0 && (
+        {!canEdit && dropped.length > 0 && (
           <div className="flex shrink-0 items-start gap-2 rounded-lg border border-destructive/40 bg-surface-2 px-2.5 py-2">
             <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-destructive" />
             <div className="flex min-w-0 flex-col gap-0.5">

@@ -10,41 +10,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { SiCurseforge, SiModrinth } from "react-icons/si";
 import { toast } from "sonner";
-import {
-  CheckCheck,
-  CircleAlert,
-  CircleArrowUp,
-  CloudOff,
-  Copy,
-  Database,
-  Earth,
-  EyeOff,
-  FilePlus2,
-  FolderInput,
-  FolderOpen,
-  Library,
-  ListFilter,
-  ListRestart,
-  Loader2,
-  Package,
-  PackageOpen,
-  Palette,
-  Pin,
-  PinOff,
-  Plug,
-  PowerOff,
-  Puzzle,
-  RotateCw,
-  ScanSearch,
-  Search,
-  SlidersHorizontal,
-  Sparkles,
-  Trash2,
-  Undo2,
-  X,
-} from "lucide-react";
 import {
   DependencyType,
   IAddedLocalProject,
@@ -61,29 +27,6 @@ import {
 import { IVersion } from "@/types/IVersion";
 import { Loader } from "@/types/Loader";
 import { DownloaderInfo } from "@/types/Downloader";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Collapse } from "@/components/ui/collapse";
-import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { VirtualizedSelect } from "@/components/ui/virtualized-select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   accountAtom,
   internetAtom,
@@ -98,7 +41,6 @@ import {
   MatchableProject,
   buildInstalledIndex,
   findInstalledProject,
-  getProjectTypes,
   planDeletion,
   sharesFile,
 } from "@renderer/utilities/mod";
@@ -107,32 +49,21 @@ import {
   getLocalPathFromFileUrl,
   toFileUrl,
 } from "@renderer/utilities/exportVersion";
-import {
-  BlockedMods,
-  IBlockedMod,
-} from "@renderer/components/Modals/BlockedMods";
-import { LoaderLabel, getLoaderInfo } from "@renderer/components/Loaders";
-import { AskAgentButton } from "@renderer/features/agent/AskAgentButton";
+import { IBlockedMod } from "@renderer/components/Modals/BlockedMods";
 import { AI_PROMPT_MAX_CHARS } from "@/shared/config";
+import { splitOrnitheGeneration } from "@/shared/profileLoaders";
 import {
   ContentEntry,
   buildLibraryEntries,
   entryKey,
   fromCatalogProject,
   isSameLocalProject,
-  canToggleType,
   withInstalled,
 } from "./entries";
 import {
-  LIBRARY_FACETS,
-  LIBRARY_SORTS,
   LibraryFacet,
   LibrarySort,
   buildCatalogChips,
-  catalogFilterKey,
-  catalogFilterLabel,
-  categoryLocaleKey,
-  humanizeFilterName,
   countLibraryFacets,
   filterLibraryEntries,
   findDuplicates,
@@ -146,6 +77,16 @@ import {
   toLocalProject,
 } from "./updates";
 import { useCatalogMeta, useCatalogSearch } from "./useCatalogSearch";
+import { useCatalogAvailability } from "./useCatalogAvailability";
+import {
+  BROWSE_PREFERENCE,
+  CATALOG_PROVIDERS,
+  CatalogProvider,
+  CatalogTarget,
+  libraryTypes,
+  providerTypes,
+} from "./catalogAvailability";
+import { createOrnitheVersionGuard } from "./ornitheVersions";
 import { useUpdateCheck } from "./useUpdateCheck";
 import { toggleModFile, useModFileStates } from "./useModFileStates";
 import {
@@ -154,48 +95,40 @@ import {
   forgetModFiles,
   listModFiles,
 } from "./modFiles";
-import {
-  TRASH_MAX_AGE_DAYS,
-  TrashEntry,
-  listTrash,
-  trashFolder,
-  trashPaths,
-} from "./trash";
+import { TrashEntry, listTrash, trashFolder, trashPaths } from "./trash";
 import { useDetailPanelWidth } from "./detailWidth";
-import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { installQueue } from "@renderer/features/install/installQueue";
-import { ContentRow, ROW_HEIGHT } from "./ContentRow";
-import { ContentDetails, DetailProgress } from "./ContentDetails";
+import { ROW_HEIGHT } from "./ContentRow";
+import { DetailProgress } from "./ContentDetails";
 import { withExtractProgress } from "@renderer/utilities/archiveProgress";
-import { ImportLocalDialog, ImportMode } from "./ImportLocalDialog";
-import { IdentifyLocalDialog, IdentifyReport } from "./IdentifyLocalDialog";
+import { ImportMode } from "./ImportLocalDialog";
+import { IdentifyReport } from "./IdentifyLocalDialog";
 import { isIdentifiable, linkIdentified } from "./identify";
 import {
   catalogLoaderOptions,
   hasConnector,
   needsConnector,
+  sharedTagLoader,
+  skipsDependencies,
 } from "./catalogLoader";
 import {
   LOCAL_IMPORT_EXTENSIONS,
   buildImportEntry,
   buildInvalidEntry,
   findForeignFiles,
-  isImportableFileName,
   mapWithConcurrency,
 } from "./localImport";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { useEntranceWave } from "@renderer/utilities/useEntranceWave";
+import { type DetailState, type Scope } from "./contentManagerParts";
+import { ContentToolbar } from "./ContentToolbar";
+import { ContentStatusBar } from "./ContentStatusBar";
+import { ContentDialogs } from "./ContentDialogs";
+import { ContentListPane } from "./ContentListPane";
 
 const api = window.api;
 
 const RUNNING_ALLOWED_TYPES = [ProjectType.RESOURCEPACK, ProjectType.SHADER];
-
-const PROJECT_TYPE_ICONS: Partial<Record<ProjectType, typeof Puzzle>> = {
-  [ProjectType.MOD]: Puzzle,
-  [ProjectType.RESOURCEPACK]: Palette,
-  [ProjectType.SHADER]: Sparkles,
-  [ProjectType.DATAPACK]: Database,
-  [ProjectType.WORLD]: Earth,
-  [ProjectType.PLUGIN]: Plug,
-};
 
 const TRASH_HIDDEN_KEY = "grubie:trashBarHidden:";
 
@@ -213,18 +146,6 @@ function writeTrashHiddenAt(instancePath: string, at: number) {
   } catch {}
 }
 const LOCAL_IMPORT_CONCURRENCY = 4;
-
-type Scope = "library" | Provider.CURSEFORGE | Provider.MODRINTH;
-
-interface DetailState {
-  entry: ContentEntry;
-  project: IProject | null;
-  versions: ModVersion[];
-  selectedVersionId: string | null;
-  isLoading: boolean;
-  error: boolean;
-  depsError: boolean;
-}
 
 function toModVersion(mod: ILocalProject): ModVersion[] {
   if (!mod.version) return [];
@@ -271,6 +192,8 @@ export function ContentManager({
   canEdit?: boolean;
 }) {
   const { t } = useTranslation();
+  const scopeIndicator = useSlidingIndicator<HTMLDivElement>();
+  const typeIndicator = useSlidingIndicator<HTMLDivElement>();
   const translateCategory = useCallback(
     (key: string, fallback: string) => t(key, { defaultValue: fallback }),
     [t],
@@ -310,24 +233,81 @@ export function ContentManager({
   const setPendingRemoved =
     setPendingRemovedLocalProjects ?? setInternalPending;
 
-  const projectTypes = useMemo(() => {
-    if (isModpacks) return [ProjectType.MODPACK];
-    const types = getProjectTypes(
-      loader || "vanilla",
-      server,
-      Provider.CURSEFORGE,
-    );
-    return running
-      ? types.filter((type) => RUNNING_ALLOWED_TYPES.includes(type))
-      : types;
-  }, [isModpacks, loader, server, running]);
+  const typeCounts = useMemo(() => {
+    const counts = new Map<ProjectType, number>();
+    for (const mod of mods) {
+      counts.set(mod.projectType, (counts.get(mod.projectType) ?? 0) + 1);
+    }
+    return counts;
+  }, [mods]);
+
+  const catalogTarget = useMemo<CatalogTarget>(
+    () => ({ loader, server, mcVersion: version?.id }),
+    [loader, server, version?.id],
+  );
+  const availability = useCatalogAvailability(
+    catalogTarget,
+    !isModpacks && canBrowse,
+  );
+
+  const typesForScope = useCallback(
+    (target: Scope): ProjectType[] => {
+      if (isModpacks) return [ProjectType.MODPACK];
+      const types =
+        target === "library"
+          ? libraryTypes(catalogTarget, availability, typeCounts)
+          : providerTypes(
+              target as CatalogProvider,
+              catalogTarget,
+              availability,
+            );
+      return running
+        ? types.filter((type) => RUNNING_ALLOWED_TYPES.includes(type))
+        : types;
+    },
+    [availability, catalogTarget, isModpacks, running, typeCounts],
+  );
+
+  const visibleProviders = useMemo(
+    () =>
+      isModpacks
+        ? [...CATALOG_PROVIDERS]
+        : CATALOG_PROVIDERS.filter(
+            (provider) => typesForScope(provider).length > 0,
+          ),
+    [isModpacks, typesForScope],
+  );
 
   const [scope, setScope] = useState<Scope>(
     isModpacks ? Provider.CURSEFORGE : "library",
   );
+  const projectTypes = useMemo(
+    () => typesForScope(scope),
+    [scope, typesForScope],
+  );
   const [projectType, setProjectType] = useState<ProjectType>(
     () => projectTypes[0] ?? ProjectType.MOD,
   );
+
+  const changeScope = useCallback(
+    (next: Scope) => {
+      setScope(next);
+      const types = typesForScope(next);
+      if (types.length > 0 && !types.includes(projectType)) {
+        setProjectType(types[0]);
+      }
+    },
+    [projectType, typesForScope],
+  );
+
+  const browseScope: Scope =
+    BROWSE_PREFERENCE.find(
+      (provider) =>
+        visibleProviders.includes(provider) &&
+        typesForScope(provider).includes(projectType),
+    ) ??
+    visibleProviders[0] ??
+    Provider.MODRINTH;
   const [rawQuery, setRawQuery] = useState("");
   const [query, setQuery] = useState("");
   const [librarySort, setLibrarySort] = useState<LibrarySort>("name");
@@ -408,8 +388,11 @@ export function ContentManager({
   }, [projectTypes, projectType]);
 
   useEffect(() => {
-    if (!canBrowse && scope !== "library") setScope("library");
-  }, [canBrowse, scope]);
+    if (scope === "library") return;
+    if (!canBrowse || !visibleProviders.includes(scope as CatalogProvider)) {
+      setScope("library");
+    }
+  }, [canBrowse, scope, visibleProviders]);
 
   useEffect(() => {
     const timer = setTimeout(() => setQuery(rawQuery), 350);
@@ -524,12 +507,29 @@ export function ContentManager({
     fileRevision,
   );
 
+  const ornitheLoaderId = isSelectedInstance
+    ? selectedVersion?.version.loader.version?.id
+    : undefined;
+  const ornitheGuard = useMemo(
+    () =>
+      loader === "ornithe" && version?.id && !isModpacks
+        ? createOrnitheVersionGuard({
+            minecraftVersion: version.id,
+            instanceGeneration: splitOrnitheGeneration(ornitheLoaderId ?? "")
+              .generation,
+            probe: api.modManager.ornitheGeneration,
+          })
+        : undefined,
+    [isModpacks, loader, ornitheLoaderId, version?.id],
+  );
+
   const updateCheck = useUpdateCheck({
     mods,
     projectType,
     gameVersion: version?.id,
     loader: resolvedLoader ?? "vanilla",
     enabled: scope === "library" && canEdit && isOnline && !isModpacks,
+    keepsUpdate: ornitheGuard?.keepsGeneration,
   });
 
   const duplicates = useMemo(
@@ -864,18 +864,26 @@ export function ContentManager({
 
   const fetchers = useMemo(
     () => ({
-      fetchVersions: (project: IProject) =>
-        api.modManager
-          .getVersions(project.provider, project.id, {
-            loader:
-              project.projectType === ProjectType.PLUGIN && server
-                ? (server.core as unknown as Loader)
-                : overrideLoader || loader || "vanilla",
-            version: version?.id,
-            projectType: project.projectType,
-            modUrl: project.url,
-          })
-          .catch(() => [] as ModVersion[]),
+      pickVersion: ornitheGuard?.pick,
+      fetchVersions: async (project: IProject) => {
+        const request = (target: Loader) =>
+          api.modManager
+            .getVersions(project.provider, project.id, {
+              loader: target,
+              version: version?.id,
+              projectType: project.projectType,
+              modUrl: project.url,
+            })
+            .catch(() => [] as ModVersion[]);
+
+        const primary =
+          project.projectType === ProjectType.PLUGIN && server
+            ? (server.core as unknown as Loader)
+            : overrideLoader || loader || "vanilla";
+        const versions = await request(primary);
+        const fallback = sharedTagLoader(loader, primary, project.projectType);
+        return versions.length > 0 || !fallback ? versions : request(fallback);
+      },
       fetchDependencies: async (
         project: IProject,
         deps: IVersionDependency[],
@@ -903,7 +911,7 @@ export function ContentManager({
         return resolved;
       },
     }),
-    [loader, overrideLoader, server, version?.id],
+    [loader, ornitheGuard, overrideLoader, server, version?.id],
   );
 
   const installProject = useCallback(
@@ -986,14 +994,17 @@ export function ContentManager({
               dep.project &&
               !findInstalledProject(buildInstalledIndex(next), dep.project),
           );
-          if (installLoader && uninstalled.length > 0) {
+          const skipDependencies = skipsDependencies(loader, installLoader);
+          if (skipDependencies && uninstalled.length > 0) {
             skippedDepsRef.current = true;
           }
-          const missing = installLoader ? [] : uninstalled;
+          const missing = skipDependencies ? [] : uninstalled;
 
           for (const dep of missing) {
             if (!dep.project) continue;
-            const plan = await planQuickInstall(dep.project, next, fetchers);
+            const plan = await planQuickInstall(dep.project, next, fetchers, {
+              requiredBy: explicit,
+            });
             next = [...next, ...plan.added];
             added.push(...plan.added);
           }
@@ -1003,7 +1014,10 @@ export function ContentManager({
             next,
             fetchers,
             overrideLoader
-              ? { loader: overrideLoader, dependencies: false }
+              ? {
+                  loader: overrideLoader,
+                  dependencies: !skipsDependencies(loader, overrideLoader),
+                }
               : undefined,
           );
           if (plan.skippedDependencies) skippedDepsRef.current = true;
@@ -1068,6 +1082,7 @@ export function ContentManager({
       fileStates.disabled,
       forgetRemoved,
       mods,
+      loader,
       overrideLoader,
       setMods,
       t,
@@ -1333,9 +1348,6 @@ export function ContentManager({
         );
 
         setFileRevision((value) => value + 1);
-        toast.success(
-          t(enabled ? "modManager.enabled" : "modManager.disabled"),
-        );
       }
 
       if (failure) {
@@ -1968,14 +1980,6 @@ export function ContentManager({
     selectedCheckable.length > 0 &&
     selectedCheckable.every((entry) => entry.installed?.pinned === true);
 
-  const typeCounts = useMemo(() => {
-    const counts = new Map<ProjectType, number>();
-    for (const mod of mods) {
-      counts.set(mod.projectType, (counts.get(mod.projectType) ?? 0) + 1);
-    }
-    return counts;
-  }, [mods]);
-
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -2175,6 +2179,7 @@ export function ContentManager({
                   : null;
   const listBusy =
     scope === "library" ? false : catalog.isLoading || !isCatalogReady;
+  const isResultWave = useEntranceWave(listBusy, scope !== "library");
   const showAddRow =
     scope === "library" && canEdit && canBrowse && !isModpacks && !query;
 
@@ -2184,1351 +2189,202 @@ export function ContentManager({
         ref={rootRef}
         className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
       >
-        <div className="@container flex shrink-0 flex-wrap items-center gap-2 pb-2.5">
-          <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5">
-            {!isModpacks && (
-              <ScopeButton
-                active={scope === "library"}
-                label={t("modManager.library")}
-                compact
-                count={
-                  projectTypes.length > 1 ? undefined : libraryEntries.length
-                }
-                onClick={() => setScope("library")}
-              >
-                <Library className="size-4" />
-              </ScopeButton>
-            )}
+        <ContentToolbar
+          browseLoader={browseLoader}
+          canBrowse={canBrowse}
+          canEdit={canEdit}
+          catalogFilters={catalogFilters}
+          catalogProvider={catalogProvider}
+          catalogSort={catalogSort}
+          facetCounts={facetCounts}
+          filterGroups={filterGroups}
+          filterQuery={filterQuery}
+          gameVersions={gameVersions}
+          identifiable={identifiable}
+          identifyLocal={identifyLocal}
+          isBusy={isBusy}
+          isIdentifying={isIdentifying}
+          isModpacks={isModpacks}
+          isOnline={isOnline}
+          libraryEntries={libraryEntries}
+          libraryFacets={libraryFacets}
+          librarySort={librarySort}
+          listBusy={listBusy}
+          loader={loader}
+          loaderOptions={loaderOptions}
+          meta={meta}
+          pickLocalFiles={pickLocalFiles}
+          projectType={projectType}
+          projectTypes={projectTypes}
+          providers={visibleProviders}
+          rawQuery={rawQuery}
+          scope={scope}
+          scopeIndicator={scopeIndicator}
+          searchRef={searchRef}
+          setCatalogFilters={setCatalogFilters}
+          setCatalogLoader={setCatalogLoader}
+          setCatalogSort={setCatalogSort}
+          setFilterQuery={setFilterQuery}
+          setLibraryFacets={setLibraryFacets}
+          setLibrarySort={setLibrarySort}
+          setLoader={setLoader}
+          setProjectType={setProjectType}
+          setRawQuery={setRawQuery}
+          setScope={changeScope}
+          setVersion={setVersion}
+          t={t}
+          translateCategory={translateCategory}
+          typeCounts={typeCounts}
+          typeIndicator={typeIndicator}
+          updateCheck={updateCheck}
+          version={version}
+        />
 
-            <ScopeButton
-              active={scope === Provider.CURSEFORGE}
-              label="CurseForge"
-              compact
-              disabled={!canBrowse}
-              onClick={() => setScope(Provider.CURSEFORGE)}
-            >
-              <SiCurseforge className="size-4" />
-            </ScopeButton>
+        <ContentStatusBar
+          addForeignFiles={addForeignFiles}
+          applyUpdateFor={applyUpdateFor}
+          bar={bar}
+          clearFilterChips={clearFilterChips}
+          duplicates={duplicates}
+          filterChips={filterChips}
+          foreignFiles={foreignFiles}
+          isBusy={isBusy}
+          libraryEntries={libraryEntries}
+          libraryFacets={libraryFacets}
+          loader={loader}
+          projectType={projectType}
+          removeDuplicateRecords={removeDuplicateRecords}
+          removeEntries={removeEntries}
+          removeFilterChip={removeFilterChip}
+          selectedCheckable={selectedCheckable}
+          selectedEntries={selectedEntries}
+          selection={selection}
+          selectionAllPinned={selectionAllPinned}
+          setCatalogLoader={setCatalogLoader}
+          setEnabledFor={setEnabledFor}
+          setLibraryFacets={setLibraryFacets}
+          setPinnedFor={setPinnedFor}
+          setQuery={setQuery}
+          setRawQuery={setRawQuery}
+          setSelection={setSelection}
+          t={t}
+          trashForeignFiles={trashForeignFiles}
+          uncheckedCount={uncheckedCount}
+          updatableCount={updatableCount}
+          updateCheck={updateCheck}
+        />
 
-            <ScopeButton
-              active={scope === Provider.MODRINTH}
-              label="Modrinth"
-              compact
-              disabled={!canBrowse}
-              onClick={() => setScope(Provider.MODRINTH)}
-            >
-              <SiModrinth className="size-4" />
-            </ScopeButton>
-          </div>
-
-          {!isModpacks && projectTypes.length > 1 && (
-            <div
-              role="tablist"
-              aria-label={t("modManager.contentType")}
-              className="flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5"
-            >
-              {projectTypes.map((type) => {
-                const Icon = PROJECT_TYPE_ICONS[type] ?? Package;
-                return (
-                  <ScopeButton
-                    key={type}
-                    active={projectType === type}
-                    label={t(`modManager.projectTypes.${type}`)}
-                    count={
-                      scope === "library"
-                        ? (typeCounts.get(type) ?? 0)
-                        : undefined
-                    }
-                    onClick={() => setProjectType(type)}
-                  >
-                    <Icon className="size-4" />
-                  </ScopeButton>
-                );
-              })}
-            </div>
-          )}
-
-          {scope !== "library" && loaderOptions.length > 0 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="shrink-0">
-                  <Select
-                    value={browseLoader ?? loaderOptions[0]}
-                    onValueChange={(value: Loader) =>
-                      setCatalogLoader(value === loader ? null : value)
-                    }
-                  >
-                    <SelectTrigger
-                      size="sm"
-                      className="w-32"
-                      aria-label={t("modManager.catalogLoader")}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {loaderOptions.map((item) => (
-                        <SelectItem key={item} value={item}>
-                          <LoaderLabel loader={item} />
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-64">
-                {t("modManager.catalogLoaderHint")}
-              </TooltipContent>
-            </Tooltip>
-          )}
-
-          {isModpacks && (
-            <>
-              <div className="w-28 shrink-0">
-                <VirtualizedSelect
-                  size="sm"
-                  aria-label={t("versions.version")}
-                  value={version?.id || ""}
-                  placeholder={t("versions.version")}
-                  searchPlaceholder={t("common.search")}
-                  emptyText={t("common.notFound")}
-                  options={gameVersions.map((item) => ({
-                    value: item.id,
-                    label: item.id,
-                  }))}
-                  onValueChange={(value) =>
-                    setVersion(gameVersions.find((item) => item.id === value))
-                  }
-                />
-              </div>
-
-              <Select
-                value={loader || ""}
-                onValueChange={(value: Loader) => setLoader(value)}
-              >
-                <SelectTrigger size="sm" className="w-32 shrink-0">
-                  <SelectValue placeholder={t("versions.loader")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(["forge", "neoforge", "fabric", "quilt"] as Loader[]).map(
-                    (item) => (
-                      <SelectItem key={item} value={item}>
-                        <LoaderLabel loader={item} />
-                      </SelectItem>
-                    ),
-                  )}
-                </SelectContent>
-              </Select>
-            </>
-          )}
-
-          <div className="relative min-w-32 flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-faint" />
-            <Input
-              ref={searchRef}
-              value={rawQuery}
-              className="h-8 pr-8 pl-8"
-              placeholder={
-                scope === "library"
-                  ? t("modManager.searchLibrary")
-                  : t("browser.search")
-              }
-              onChange={(event) => setRawQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape" && rawQuery) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  setRawQuery("");
-                }
-              }}
-            />
-            {(listBusy || (scope === "library" && updateCheck.isChecking)) && (
-              <Loader2 className="absolute top-1/2 right-2.5 size-4 -translate-y-1/2 animate-spin text-faint" />
-            )}
-          </div>
-
-          {scope === "library" ? (
-            <Select
-              value={librarySort}
-              onValueChange={(value: LibrarySort) => setLibrarySort(value)}
-            >
-              <SelectTrigger size="sm" className="w-44 shrink-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {LIBRARY_SORTS.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {t(`modManager.librarySorts.${value}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <Select value={catalogSort} onValueChange={setCatalogSort}>
-              <SelectTrigger size="sm" className="w-40 shrink-0">
-                <SelectValue placeholder={t("modManager.sort")} />
-              </SelectTrigger>
-              <SelectContent>
-                {meta.sorts.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {t(`modManager.sorts.${value}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 shrink-0 px-2.5"
-                aria-label={t("modManager.filter")}
-              >
-                <SlidersHorizontal className="size-4" />
-                <span className="hidden @5xl:inline">
-                  {t("modManager.filter")}
-                </span>
-                {(scope === "library"
-                  ? libraryFacets.length
-                  : catalogFilters.length) > 0 && (
-                  <span className="ml-0.5 rounded-sm bg-primary-soft px-1 font-mono text-[0.625rem] tabular-nums">
-                    {scope === "library"
-                      ? libraryFacets.length
-                      : catalogFilters.length}
-                  </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-72 p-0">
-              {scope === "library" ? (
-                <div className="max-h-80 overflow-y-auto p-1.5">
-                  {LIBRARY_FACETS.map((facet) => (
-                    <button
-                      key={facet}
-                      type="button"
-                      disabled={
-                        facetCounts[facet] === 0 &&
-                        !libraryFacets.includes(facet)
-                      }
-                      onClick={() =>
-                        setLibraryFacets(
-                          (prev) => toggleValue(prev, facet) as LibraryFacet[],
-                        )
-                      }
-                      className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-surface-3 disabled:opacity-40"
-                    >
-                      <Checkbox
-                        checked={libraryFacets.includes(facet)}
-                        className="pointer-events-none"
-                      />
-                      <span className="min-w-0 flex-1 truncate">
-                        {t(`modManager.facets.${facet}`)}
-                      </span>
-                      <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
-                        {facetCounts[facet]}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <>
-                  <div className="border-b border-border p-1.5">
-                    <Input
-                      value={filterQuery}
-                      className="h-8"
-                      placeholder={t("common.search")}
-                      onChange={(event) => setFilterQuery(event.target.value)}
-                    />
-                  </div>
-                  <div className="max-h-72 overflow-y-auto p-1.5">
-                    {!meta.isReady ? (
-                      <div className="flex h-20 items-center justify-center">
-                        <Loader2 className="size-4 animate-spin text-faint" />
-                      </div>
-                    ) : filterGroups.length === 0 ? (
-                      <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-                        {t("common.notFound")}
-                      </p>
-                    ) : (
-                      filterGroups.map((group) => (
-                        <div key={group.title} className="mb-1">
-                          <p className="px-2 py-1 text-[0.6875rem] font-medium text-faint uppercase">
-                            {translateCategory(
-                              categoryLocaleKey(group.title),
-                              humanizeFilterName(group.title),
-                            )}
-                          </p>
-                          {group.items.map((item) => {
-                            const key = catalogFilterKey(item, catalogProvider);
-                            return (
-                              <button
-                                key={key}
-                                type="button"
-                                onClick={() =>
-                                  setCatalogFilters((prev) =>
-                                    toggleValue(prev, key),
-                                  )
-                                }
-                                className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-surface-3"
-                              >
-                                <Checkbox
-                                  checked={catalogFilters.includes(key)}
-                                  className="pointer-events-none"
-                                />
-                                <span className="min-w-0 flex-1 truncate">
-                                  {catalogFilterLabel(
-                                    item,
-                                    catalogProvider,
-                                    translateCategory,
-                                  )}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </>
-              )}
-            </PopoverContent>
-          </Popover>
-
-          {canEdit && !isModpacks && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon-sm"
-                  variant="outline"
-                  className="size-8 shrink-0"
-                  disabled={isBusy}
-                  aria-label={t("modManager.selectLocals")}
-                  onClick={pickLocalFiles}
-                >
-                  <FilePlus2 className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t("modManager.selectLocals")}</TooltipContent>
-            </Tooltip>
-          )}
-
-          {scope === "library" &&
-            canEdit &&
-            !isModpacks &&
-            isOnline &&
-            identifiable.length > 0 && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon-sm"
-                    variant="outline"
-                    className="size-8 shrink-0"
-                    disabled={isBusy || isIdentifying}
-                    aria-label={t("modManager.identifyAction")}
-                    onClick={() => void identifyLocal()}
-                  >
-                    {isIdentifying ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <ScanSearch className="size-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isIdentifying
-                    ? t("modManager.identifySearching")
-                    : t("modManager.identifyAction")}
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-          {scope === "library" && canEdit && !isModpacks && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon-sm"
-                  variant="outline"
-                  className="size-8 shrink-0"
-                  disabled={isBusy || updateCheck.isChecking}
-                  aria-label={t("modManager.checkUpdates")}
-                  onClick={() => updateCheck.check(true)}
-                >
-                  {updateCheck.isChecking ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <RotateCw className="size-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t("modManager.checkUpdates")}</TooltipContent>
-            </Tooltip>
-          )}
-
-          {!isModpacks && (
-            <AskAgentButton
-              className="size-8 shrink-0"
-              prompt={t("agent.prompts.mods", {
-                loader: loader ?? "",
-                version: version?.id ?? "",
-              })}
-            />
-          )}
-        </div>
-
-        <Collapse show={bar !== null}>
-          {bar === "selection" ? (
-            <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-primary/40 bg-primary-soft px-2.5">
-              <span className="text-xs font-medium text-foreground">
-                {t("modManager.selectedCount", { count: selection.size })}
-              </span>
-
-              <div className="ml-auto flex items-center gap-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2 text-xs"
-                  disabled={isBusy}
-                  onClick={() =>
-                    applyUpdateFor(selectedEntries.map((item) => item.key))
-                  }
-                >
-                  <CircleArrowUp className="size-3.5" />
-                  {t("common.update")}
-                </Button>
-
-                {selectedCheckable.length > 0 && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-xs"
-                    disabled={isBusy}
-                    onClick={() =>
-                      setPinnedFor(selectedCheckable, !selectionAllPinned)
-                    }
-                  >
-                    {selectionAllPinned ? (
-                      <PinOff className="size-3.5" />
-                    ) : (
-                      <Pin className="size-3.5" />
-                    )}
-                    {t(
-                      selectionAllPinned
-                        ? "modManager.unpin"
-                        : "modManager.pin",
-                    )}
-                  </Button>
-                )}
-
-                {canToggleType(projectType) && (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-2 text-xs"
-                      disabled={isBusy}
-                      onClick={() => void setEnabledFor(selectedEntries, true)}
-                    >
-                      <CheckCheck className="size-3.5" />
-                      {t("modManager.enable")}
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-2 text-xs"
-                      disabled={isBusy}
-                      onClick={() => void setEnabledFor(selectedEntries, false)}
-                    >
-                      <PowerOff className="size-3.5" />
-                      {t("modManager.disable")}
-                    </Button>
-                  </>
-                )}
-
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2 text-xs text-destructive hover:bg-destructive/15 hover:text-destructive"
-                  disabled={isBusy}
-                  onClick={() => {
-                    removeEntries(selectedEntries);
-                    setSelection(new Set());
-                  }}
-                >
-                  <Trash2 className="size-3.5" />
-                  {t("common.delete")}
-                </Button>
-
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  className="size-7"
-                  aria-label={t("common.cancel")}
-                  onClick={() => setSelection(new Set())}
-                >
-                  <X className="size-3.5" />
-                </Button>
-              </div>
-            </div>
-          ) : bar === "foreign" ? (
-            <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5">
-              <FolderInput className="size-4 shrink-0 text-faint" />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                    {t("modManager.foreignFiles", {
-                      count: foreignFiles.length,
-                    })}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-72">
-                  {t("modManager.foreignHint")}
-                </TooltipContent>
-              </Tooltip>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 shrink-0 px-2.5 text-xs"
-                disabled={isBusy}
-                onClick={() => void trashForeignFiles()}
-              >
-                {t("modManager.foreignTrash")}
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-7 shrink-0 px-2.5 text-xs"
-                disabled={isBusy}
-                onClick={() => void addForeignFiles()}
-              >
-                {t("modManager.foreignAdd")}
-              </Button>
-            </div>
-          ) : bar === "updates" ? (
-            <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-warning/40 bg-surface-2 px-2.5">
-              <CircleArrowUp className="size-4 shrink-0 text-warning" />
-              <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                {t("modManager.availableUpdates", { count: updatableCount })}
-              </span>
-              {!libraryFacets.includes("update") && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 shrink-0 px-2.5 text-xs"
-                  onClick={() => setLibraryFacets(["update"])}
-                >
-                  <ListFilter className="size-3.5" />
-                  {t("modManager.updatesShow")}
-                </Button>
-              )}
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-7 shrink-0 px-2.5 text-xs"
-                disabled={isBusy}
-                onClick={() => applyUpdateFor([...updateCheck.updatable])}
-              >
-                {t("modManager.updateAll")}
-              </Button>
-            </div>
-          ) : bar === "unchecked" ? (
-            <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5">
-              <CloudOff className="size-4 shrink-0 text-faint" />
-              <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-                {t("modManager.uncheckedUpdates", { count: uncheckedCount })}
-              </span>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 shrink-0 px-2.5 text-xs"
-                disabled={isBusy || updateCheck.isChecking}
-                onClick={() => updateCheck.check(true)}
-              >
-                {t("modManager.retryCheck")}
-              </Button>
-            </div>
-          ) : bar === "connector" ? (
-            <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5">
-              <Plug className="size-4 shrink-0 text-faint" />
-              <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                {t("modManager.connectorHint", {
-                  loader: getLoaderInfo(loader).name,
-                })}
-              </span>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-7 shrink-0 px-2.5 text-xs"
-                onClick={() => {
-                  setCatalogLoader(null);
-                  setRawQuery("Sinytra Connector");
-                  setQuery("Sinytra Connector");
-                }}
-              >
-                {t("modManager.connectorFind")}
-              </Button>
-            </div>
-          ) : bar === "duplicates" ? (
-            <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-warning/40 bg-surface-2 px-2.5">
-              <Copy className="size-4 shrink-0 text-warning" />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                    {t("modManager.duplicatesFound", {
-                      count: duplicates.groups,
-                    })}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-72">
-                  {t("modManager.duplicatesHint")}
-                </TooltipContent>
-              </Tooltip>
-              {!libraryFacets.includes("duplicate") && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 shrink-0 px-2.5 text-xs"
-                  onClick={() => setLibraryFacets(["duplicate"])}
-                >
-                  {t("modManager.duplicatesShow")}
-                </Button>
-              )}
-              {duplicates.extra.size > 0 && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="h-7 shrink-0 px-2.5 text-xs"
-                  disabled={isBusy}
-                  onClick={() => {
-                    removeDuplicateRecords(
-                      libraryEntries.filter((entry) =>
-                        duplicates.extra.has(entry.key),
-                      ),
-                    );
-                    if (duplicates.extra.size === duplicates.all.size) {
-                      setLibraryFacets((prev) =>
-                        prev.filter((facet) => facet !== "duplicate"),
-                      );
-                    }
-                  }}
-                >
-                  {t("modManager.duplicatesRemove")}
-                </Button>
-              )}
-            </div>
-          ) : bar === "chips" ? (
-            <div className="mb-2.5 flex h-9 items-center gap-1.5 overflow-x-auto">
-              {filterChips.map((chip) => (
-                <button
-                  key={chip.key}
-                  type="button"
-                  className="flex h-6 shrink-0 items-center gap-1 rounded-md bg-surface-2 px-2 text-xs text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
-                  onClick={() => removeFilterChip(chip.key)}
-                >
-                  {chip.label}
-                  <X className="size-3" />
-                </button>
-              ))}
-              <button
-                type="button"
-                className="flex h-6 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-faint transition-colors hover:text-foreground"
-                onClick={clearFilterChips}
-              >
-                <ListRestart className="size-3" />
-                {t("modManager.resetFilters")}
-              </button>
-            </div>
-          ) : null}
-        </Collapse>
-
-        <div
-          ref={splitRef}
-          className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-border bg-card"
-        >
-          <div
-            className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-            onDragEnter={(event) => {
-              if (!canEdit || isModpacks) return;
-              event.preventDefault();
-              setIsDropActive(true);
-            }}
-            onDragOver={(event) => {
-              if (!canEdit || isModpacks) return;
-              event.preventDefault();
-              event.dataTransfer.dropEffect = "copy";
-            }}
-            onDragLeave={(event) => {
-              if (event.currentTarget.contains(event.relatedTarget as Node))
-                return;
-              setIsDropActive(false);
-            }}
-            onDrop={async (event) => {
-              if (!canEdit || isModpacks) return;
-              event.preventDefault();
-              setIsDropActive(false);
-
-              const filePaths = [...event.dataTransfer.files]
-                .map((file) => api.other.getPathForFile(file))
-                .filter((filePath) => isImportableFileName(filePath));
-
-              if (filePaths.length === 0) {
-                toast.warning(t("modManager.invalidMod"));
-                return;
-              }
-
-              await readLocalFiles(filePaths);
-            }}
-          >
-            <div
-              ref={setListElement}
-              tabIndex={0}
-              role="listbox"
-              aria-label={t("modManager.title")}
-              onKeyDown={handleKeyDown}
-              className="min-h-0 flex-1 overflow-y-auto p-2 outline-none"
-            >
-              {rows.length > 0 ? (
-                <div
-                  className="relative w-full"
-                  style={{
-                    height: `${rowVirtualizer.getTotalSize() + (showAddRow ? 56 : 0)}px`,
-                  }}
-                >
-                  {virtualItems.map((virtualRow) => {
-                    const entry = rows[virtualRow.index];
-                    if (!entry) return null;
-
-                    return (
-                      <div
-                        key={entry.key}
-                        role="presentation"
-                        className="absolute top-0 left-0 w-full"
-                        style={{
-                          height: `${virtualRow.size}px`,
-                          transform: `translateY(${virtualRow.start}px)`,
-                        }}
-                      >
-                        <ContentRow
-                          entry={entry}
-                          lang={lang}
-                          sizeUnits={sizeUnits}
-                          isLibrary={scope === "library"}
-                          isActive={virtualRow.index === activeIndex}
-                          isSelected={selection.has(entry.key)}
-                          isDetailOpen={detail?.entry.key === entry.key}
-                          isSelectable={canSelectRows}
-                          isEnabled={
-                            fileStates.ready
-                              ? !fileStates.disabled.has(entry.key)
-                              : !entry.markedDisabled
-                          }
-                          canEdit={canEdit && !isModpacks}
-                          canToggle={
-                            canEdit &&
-                            canToggleType(projectType) &&
-                            Boolean(instancePath) &&
-                            fileStates.present.has(entry.key)
-                          }
-                          fileMissing={
-                            fileStates.ready &&
-                            !fileStates.present.has(entry.key)
-                          }
-                          hasUpdate={updateCheck.updatable.has(entry.key)}
-                          isUnavailable={updateCheck.unavailable.has(entry.key)}
-                          gameVersion={version?.id}
-                          heldVersion={
-                            updateCheck.held.get(entry.key)?.versionNumber ||
-                            updateCheck.held.get(entry.key)?.name
-                          }
-                          isUnchecked={updateCheck.unchecked.has(entry.key)}
-                          duplicate={
-                            scope !== "library"
-                              ? undefined
-                              : duplicates.extra.has(entry.key)
-                                ? "extra"
-                                : duplicates.all.has(entry.key)
-                                  ? "review"
-                                  : undefined
-                          }
-                          foreignLoader={
-                            entry.installed?.loader &&
-                            entry.installed.loader !== loader
-                              ? entry.installed.loader
-                              : undefined
-                          }
-                          changedAt={
-                            needsFileTimes
-                              ? changedAt.get(entry.key)
-                              : undefined
-                          }
-                          isBusy={busyKey === entry.key || isBusy}
-                          actions={rowActions}
-                        />
-                      </div>
-                    );
-                  })}
-
-                  {showAddRow && (
-                    <button
-                      type="button"
-                      className="absolute left-0 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-                      style={{
-                        top: `${rowVirtualizer.getTotalSize() + 6}px`,
-                      }}
-                      onClick={() => setScope(Provider.MODRINTH)}
-                    >
-                      <PackageOpen className="size-4" />
-                      {t("modManager.browseCatalog")}
-                    </button>
-                  )}
-                </div>
-              ) : listBusy ? (
-                <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin" />
-                  {t("common.searching")}
-                </div>
-              ) : catalog.error && scope !== "library" ? (
-                <EmptyState
-                  icon={<CircleAlert className="size-6 text-destructive" />}
-                  title={t("modManager.searchFailedTitle")}
-                  description={t("modManager.searchFailed")}
-                  action={
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={catalog.reload}
-                    >
-                      {t("common.retry")}
-                    </Button>
-                  }
-                />
-              ) : isEmptyLibrary ? (
-                <EmptyState
-                  icon={<Package className="size-6 text-faint" />}
-                  title={t("modManager.emptyInstalled")}
-                  description={t("modManager.emptyInstalledHint")}
-                  action={
-                    canBrowse ? (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => setScope(Provider.MODRINTH)}
-                      >
-                        <PackageOpen className="size-4" />
-                        {t("modManager.browseCatalog")}
-                      </Button>
-                    ) : undefined
-                  }
-                />
-              ) : (
-                <EmptyState
-                  icon={<Search className="size-6 text-faint" />}
-                  title={t("common.notFound")}
-                  description={t("modManager.notFoundHint")}
-                  action={
-                    hasActiveFilters ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={resetFilters}
-                      >
-                        <ListRestart className="size-4" />
-                        {t("modManager.resetFilters")}
-                      </Button>
-                    ) : undefined
-                  }
-                />
-              )}
-            </div>
-
-            <Collapse show={catalog.isLoadingMore}>
-              <div className="flex h-8 items-center justify-center gap-2 border-t border-border text-xs text-muted-foreground">
-                <Loader2 className="size-3.5 animate-spin" />
-                {t("common.searching")}
-              </div>
-            </Collapse>
-
-            {scope !== "library" &&
-              catalog.error &&
-              !catalog.isLoadingMore &&
-              rows.length > 0 && (
-                <div className="flex h-8 shrink-0 items-center justify-center gap-2 border-t border-border px-3 text-xs text-muted-foreground">
-                  <CircleAlert className="size-3.5 shrink-0 text-destructive" />
-                  <span className="min-w-0 truncate">
-                    {t("modManager.searchFailedTitle")}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 shrink-0 px-2 text-xs"
-                    onClick={() => catalog.loadMore(true)}
-                  >
-                    {t("common.retry")}
-                  </Button>
-                </div>
-              )}
-
-            {showTrashBar && (
-              <div className="flex h-9 shrink-0 items-center gap-2 border-t border-border px-3">
-                <Undo2 className="size-3.5 shrink-0 text-faint" />
-                <span className="shrink-0 text-xs text-foreground">
-                  {t("modManager.trashCount", {
-                    count: restorableTrash.length,
-                  })}
-                </span>
-                <span className="min-w-0 truncate text-xs text-faint">
-                  {t("modManager.trashHint", { days: TRASH_MAX_AGE_DAYS })}
-                </span>
-                <div className="ml-auto flex shrink-0 items-center gap-0.5">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 shrink-0 px-2.5 text-xs"
-                    disabled={isBusy}
-                    onClick={() => void restoreTrash()}
-                  >
-                    {t("modManager.trashRestore")}
-                  </Button>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        className="size-7"
-                        aria-label={t("modManager.trashOpen")}
-                        onClick={() => void openTrashFolder()}
-                      >
-                        <FolderOpen className="size-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t("modManager.trashOpen")}</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        className="size-7 text-destructive hover:bg-destructive/15 hover:text-destructive"
-                        disabled={isBusy}
-                        aria-label={t("modManager.trashClear")}
-                        onClick={() => setIsClearTrashOpen(true)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {t("modManager.trashClear")}
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        className="size-7"
-                        aria-label={t("modManager.trashHide")}
-                        onClick={hideTrashBar}
-                      >
-                        <EyeOff className="size-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-60">
-                      {t("modManager.trashHideHint")}
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
-            )}
-
-            {isDropActive && (
-              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary bg-primary-veil text-sm font-medium text-foreground">
-                <FilePlus2 className="size-4" />
-                {t("modManager.selectLocalsHint")}
-              </div>
-            )}
-
-            {importProgress > 0 && (
-              <div className="absolute right-3 bottom-3 left-3 z-10 rounded-lg border border-border bg-popover p-2.5 shadow-lg">
-                <p className="mb-1.5 text-xs text-muted-foreground">
-                  {t(
-                    importMode === "restore"
-                      ? "modManager.restoreTitle"
-                      : "modManager.addingProjects",
-                  )}
-                </p>
-                <Progress value={importProgress} max={100} />
-              </div>
-            )}
-          </div>
-
-          {detailEntry && (
-            <ContentDetails
-              entry={detailEntry}
-              project={detail?.project ?? null}
-              versions={detail?.versions ?? []}
-              selectedVersion={detailSelectedVersion}
-              installedVersionId={detailEntry.installed?.version?.id ?? null}
-              isLoading={detail?.isLoading ?? false}
-              isBusy={isBusy}
-              error={detail?.error ?? false}
-              depsError={detail?.depsError ?? false}
-              canEdit={canEdit || isModpacks}
-              canGoBack={detailStack.length > 0}
-              isModpacks={isModpacks}
-              lang={lang}
-              progress={modpackProgress}
-              canTranslate={lang !== "en" && account?.type !== "plain"}
-              isTranslating={isTranslating}
-              deletionBlockers={deletionPlan.blockers}
-              alsoRemoves={deletionPlan.remove.filter(
-                (item) => entryKey(item.provider, item.id) !== detailEntry.key,
-              )}
-              findInstalled={(project) => findInstalled(project)}
-              onBack={() => {
-                const previous = detailStack[detailStack.length - 1];
-                if (!previous) return;
-                setDetailStack((prev) => prev.slice(0, -1));
-                void loadDetail(previous, true);
-              }}
-              onClose={closeDetail}
-              onSelectVersion={(next) => void selectDetailVersion(next)}
-              onInstall={(next) => {
-                if (isModpacks) void installModpack(detailEntry, next);
-                else void installProject(detailEntry, next);
-              }}
-              onDelete={() => removeEntries([detailEntry])}
-              onOpenDependency={(project) => {
-                setDetailStack((prev) => [...prev, detailEntry]);
-                void loadDetail(
-                  fromCatalogProject(project, findInstalled(project) ?? null),
-                  true,
-                );
-              }}
-              onTranslate={() => void translateDetail()}
-              onRetry={() => void loadDetail(detailEntry, true)}
-              width={detailWidth.width}
-              clampWidth={detailWidth.clamp}
-              onResizeEnd={detailWidth.commit}
-              onResetWidth={detailWidth.reset}
-              isPinned={detailEntry.installed?.pinned === true}
-              canPin={Boolean(
-                detailEntry.installed &&
-                  isCheckableProject(detailEntry.installed),
-              )}
-              onTogglePin={() =>
-                setPinnedFor(
-                  [detailEntry],
-                  detailEntry.installed?.pinned !== true,
-                )
-              }
-            />
-          )}
-        </div>
-      </div>
-
-      {isImportOpen && importing.length > 0 && (
-        <ImportLocalDialog
-          projects={importing}
-          mode={importMode}
+        <ContentListPane
+          account={account}
+          activeIndex={activeIndex}
+          busyKey={busyKey}
+          canBrowse={canBrowse}
+          canEdit={canEdit}
+          canSelectRows={canSelectRows}
+          catalog={catalog}
+          changedAt={changedAt}
+          closeDetail={closeDetail}
+          deletionPlan={deletionPlan}
+          detail={detail}
+          detailEntry={detailEntry}
+          detailSelectedVersion={detailSelectedVersion}
+          detailStack={detailStack}
+          detailWidth={detailWidth}
+          duplicates={duplicates}
+          fileStates={fileStates}
+          findInstalled={findInstalled}
+          handleKeyDown={handleKeyDown}
+          hasActiveFilters={hasActiveFilters}
+          hideTrashBar={hideTrashBar}
+          importMode={importMode}
+          importProgress={importProgress}
+          installModpack={installModpack}
+          installProject={installProject}
+          instancePath={instancePath}
+          isBusy={isBusy}
+          isDropActive={isDropActive}
+          isEmptyLibrary={isEmptyLibrary}
+          isModpacks={isModpacks}
+          isResultWave={isResultWave}
+          isTranslating={isTranslating}
           lang={lang}
+          listBusy={listBusy}
+          loadDetail={loadDetail}
+          loader={loader}
+          modpackProgress={modpackProgress}
+          needsFileTimes={needsFileTimes}
+          openTrashFolder={openTrashFolder}
+          projectType={projectType}
+          readLocalFiles={readLocalFiles}
+          removeEntries={removeEntries}
+          resetFilters={resetFilters}
+          restorableTrash={restorableTrash}
+          restoreTrash={restoreTrash}
+          rowActions={rowActions}
+          rows={rows}
+          rowVirtualizer={rowVirtualizer}
+          scope={scope}
+          selectDetailVersion={selectDetailVersion}
+          selection={selection}
+          setDetailStack={setDetailStack}
+          setIsClearTrashOpen={setIsClearTrashOpen}
+          setIsDropActive={setIsDropActive}
+          setListElement={setListElement}
+          setPinnedFor={setPinnedFor}
+          setScope={changeScope}
+          browseScope={browseScope}
+          showAddRow={showAddRow}
+          showTrashBar={showTrashBar}
           sizeUnits={sizeUnits}
-          onClose={() => {
-            setIsImportOpen(false);
-            setImporting([]);
-          }}
-          addProjects={(projects: IProject[]) => {
-            const added = projects.map((project) =>
-              toLocalProject(project, project.versions[0], {
-                keepLocalPath: true,
-                disabled: project.versions[0]?.files.some(
-                  (file) => file.disabled === true,
-                ),
-              }),
-            );
-
-            setMods([...mods, ...added]);
-            setPendingRemoved((prev) =>
-              prev.filter(
-                (item) =>
-                  !added.some((project) => isSameLocalProject(item, project)),
-              ),
-            );
-
-            const elsewhere = added.filter(
-              (project) => project.projectType !== projectType,
-            );
-            const elsewhereLabels = [
-              ...new Set(
-                elsewhere.map((project) =>
-                  t(`modManager.projectTypes.${project.projectType}`),
-                ),
-              ),
-            ];
-
-            const addedKeys = new Set(
-              added.map((project) => entryKey(project.provider, project.id)),
-            );
-
-            toast.success(
-              importMode === "restore"
-                ? t("modManager.restoredCount", { n: added.length })
-                : t("modManager.addedMultiple", { count: added.length }),
-              {
-                description:
-                  elsewhereLabels.length > 0
-                    ? t("modManager.addedElsewhere", {
-                        types: elsewhereLabels.join(", "),
-                      })
-                    : undefined,
-                action:
-                  isOnline && importMode === "import"
-                    ? {
-                        label: t("modManager.identifyShort"),
-                        onClick: () => void identifyRef.current(addedKeys),
-                      }
-                    : undefined,
-              },
-            );
-          }}
+          splitRef={splitRef}
+          t={t}
+          translateDetail={translateDetail}
+          updateCheck={updateCheck}
+          version={version}
+          virtualItems={virtualItems}
         />
-      )}
-
-      {pendingDeletion && (
-        <Confirmation
-          title={t("modManager.deleteTitle")}
-          wide
-          reversible
-          content={[
-            {
-              text: t("modManager.deleteSelected", {
-                names: pendingDeletionTargets
-                  .map((item) => item.title)
-                  .join(", "),
-              }),
-            },
-            ...(pendingDeletionPlan.blockers.length > 0
-              ? [
-                  {
-                    text: t("modManager.deleteDependencyWarning"),
-                    color: "warning" as const,
-                  },
-                ]
-              : []),
-            { text: t("modManager.deleteSaveHint") },
-          ]}
-          buttons={[
-            {
-              text: t("common.cancel"),
-              color: "secondary",
-              onClick: () => setPendingDeletion(null),
-            },
-            {
-              text: t(
-                pendingDeletionPlan.blockers.length > 0
-                  ? "modManager.deleteWithDependents"
-                  : "modManager.deleteWithDependencies",
-                { count: cascadeDeletionPlan.remove.length },
-              ),
-              color: "danger",
-              onClick: () => applyDeletion(pendingDeletion, "dependents"),
-            },
-            {
-              text: t("modManager.deleteOnlySelected"),
-              color: "warning",
-              onClick: () => applyDeletion(pendingDeletion, "selected"),
-            },
-          ]}
-          onClose={() => setPendingDeletion(null)}
-        >
-          <div className="min-w-0 rounded-lg border border-border p-3 text-sm">
-            <p className="mb-2 text-muted-foreground">
-              {t("modManager.deleteList")}
-            </p>
-            <ul className="max-h-52 list-outside list-disc space-y-1 overflow-y-auto pl-5 [overflow-wrap:anywhere]">
-              {cascadeDeletionPlan.remove.map((item) => (
-                <li key={entryKey(item.provider, item.id)}>{item.title}</li>
-              ))}
-            </ul>
-          </div>
-        </Confirmation>
-      )}
-
-      {isClearTrashOpen && (
-        <Confirmation
-          title={t("modManager.trashClearTitle")}
-          reversible={false}
-          content={[
-            {
-              text: t("modManager.trashClearConfirm", {
-                count: restorableTrash.length,
-              }),
-            },
-          ]}
-          buttons={[
-            {
-              text: t("modManager.trashClear"),
-              color: "danger",
-              onClick: async () => {
-                setIsClearTrashOpen(false);
-                await clearTrash();
-              },
-            },
-            {
-              text: t("common.cancel"),
-              color: "secondary",
-              onClick: () => setIsClearTrashOpen(false),
-            },
-          ]}
-          onClose={() => setIsClearTrashOpen(false)}
-        />
-      )}
-
-      {identifyReport && (
-        <IdentifyLocalDialog
-          report={identifyReport}
-          onClose={() => setIdentifyReport(null)}
-          onLink={linkLocal}
-        />
-      )}
-
-      {blockedMods.length > 0 && (
-        <BlockedMods
-          mods={blockedMods}
-          onClose={async (resolved) => {
-            setBlockedMods([]);
-
-            const first = resolved?.[0];
-            if (
-              !first?.filePath ||
-              !detail?.project ||
-              !detailSelectedVersion
-            ) {
-              setIsBusy(false);
-              setBusyKey(null);
-              return;
-            }
-
-            try {
-              const temp = await api.path.join(paths.launcher, "temp");
-              const targetPath = await api.path.join(
-                temp,
-                await api.path.basename(
-                  first.fileName,
-                  await api.path.extname(first.fileName),
-                ),
-              );
-
-              const archivePath = first.filePath;
-
-              setModpackStage("extract");
-              await withExtractProgress(archivePath, setExtractPercent, () =>
-                api.fs.extractZip(archivePath, targetPath),
-              );
-
-              const modpack = await api.modManager.checkModpack(
-                targetPath,
-                detail.project,
-                detailSelectedVersion,
-              );
-
-              if (!modpack) {
-                showFailureToast(t("modManager.notModpack"), undefined, {
-                  channels: ["modManager:checkModpack"],
-                  fallbackDescription: t("modManager.notModpackHint"),
-                });
-                return;
-              }
-
-              setModpack(modpack);
-              onClose(modpack);
-            } finally {
-              setModpackStage(null);
-              setIsBusy(false);
-              setBusyKey(null);
-            }
-          }}
-        />
-      )}
-    </>
-  );
-}
-
-function ScopeButton({
-  active,
-  label,
-  count,
-  compact = false,
-  disabled,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  label: string;
-  count?: number;
-  compact?: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          disabled={disabled}
-          aria-pressed={active}
-          aria-label={label}
-          onClick={onClick}
-          className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:text-foreground aria-pressed:bg-surface-3 aria-pressed:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {children}
-          {active && (
-            <span
-              className={
-                compact
-                  ? "hidden whitespace-nowrap @5xl:inline"
-                  : "whitespace-nowrap"
-              }
-            >
-              {label}
-            </span>
-          )}
-          {active && count != null && (
-            <span className="rounded-sm bg-surface-1 px-1 font-mono text-[0.6875rem] leading-4 tabular-nums text-foreground">
-              {count}
-            </span>
-          )}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent>
-        {count != null && !active ? `${label} · ${count}` : label}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function EmptyState({
-  icon,
-  title,
-  description,
-  action,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="flex h-full min-h-0 w-full flex-col items-center justify-center px-8 text-center">
-      <div className="flex size-12 items-center justify-center rounded-xl bg-surface-3">
-        {icon}
       </div>
-      <p className="mt-3 text-sm font-medium text-foreground">{title}</p>
-      <p className="mt-1 max-w-80 text-xs leading-5 text-balance text-muted-foreground">
-        {description}
-      </p>
-      {action && <div className="mt-4">{action}</div>}
-    </div>
+
+      <ContentDialogs
+        applyDeletion={applyDeletion}
+        blockedMods={blockedMods}
+        cascadeDeletionPlan={cascadeDeletionPlan}
+        clearTrash={clearTrash}
+        detail={detail}
+        detailSelectedVersion={detailSelectedVersion}
+        identifyRef={identifyRef}
+        identifyReport={identifyReport}
+        importing={importing}
+        importMode={importMode}
+        isClearTrashOpen={isClearTrashOpen}
+        isImportOpen={isImportOpen}
+        isOnline={isOnline}
+        lang={lang}
+        linkLocal={linkLocal}
+        mods={mods}
+        onClose={onClose}
+        paths={paths}
+        pendingDeletion={pendingDeletion}
+        pendingDeletionPlan={pendingDeletionPlan}
+        pendingDeletionTargets={pendingDeletionTargets}
+        projectType={projectType}
+        restorableTrash={restorableTrash}
+        setBlockedMods={setBlockedMods}
+        setBusyKey={setBusyKey}
+        setExtractPercent={setExtractPercent}
+        setIdentifyReport={setIdentifyReport}
+        setImporting={setImporting}
+        setIsBusy={setIsBusy}
+        setIsClearTrashOpen={setIsClearTrashOpen}
+        setIsImportOpen={setIsImportOpen}
+        setModpack={setModpack}
+        setModpackStage={setModpackStage}
+        setMods={setMods}
+        setPendingDeletion={setPendingDeletion}
+        setPendingRemoved={setPendingRemoved}
+        sizeUnits={sizeUnits}
+        t={t}
+      />
+    </>
   );
 }

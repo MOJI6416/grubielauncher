@@ -1,8 +1,9 @@
-import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { InstanceTab } from "@renderer/navigation/routes";
 import { cn } from "@/lib/utils";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
 import type { InstanceTabItem } from "./instanceTabs";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 
 export function InstanceTabBar({
   items,
@@ -14,11 +15,11 @@ export function InstanceTabBar({
   onSelect: (tab: InstanceTab) => void;
 }) {
   const { t } = useTranslation();
-  const listRef = useRef<HTMLDivElement>(null);
+  const indicator = useSlidingIndicator<HTMLDivElement>();
 
   const focusAt = (index: number) => {
     const buttons =
-      listRef.current?.querySelectorAll<HTMLButtonElement>(
+      indicator.containerRef.current?.querySelectorAll<HTMLButtonElement>(
         "button[role='tab']",
       );
     if (!buttons?.length) return;
@@ -30,10 +31,10 @@ export function InstanceTabBar({
 
   return (
     <div
-      ref={listRef}
+      ref={indicator.containerRef}
       role="tablist"
       aria-label={t("versions.tabsLabel")}
-      className="flex min-w-0 flex-1 items-center"
+      className="relative flex min-w-0 flex-1 items-center"
       onKeyDown={(event) => {
         const index = items.findIndex((item) => item.id === active);
         if (index === -1) return;
@@ -64,13 +65,14 @@ export function InstanceTabBar({
             id={`instance-tab-${item.id}`}
             aria-selected={selected}
             aria-controls="instance-tabpanel"
+            data-indicator-active={selected}
             tabIndex={selected ? 0 : -1}
             onClick={() => onSelect(item.id)}
             className={cn(
-              "-mb-px flex min-w-0 shrink items-center gap-1.5 border-b-2 px-2.5 py-2.5 text-[0.82rem] whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset focus-visible:outline-none",
+              "-mb-px flex min-w-0 shrink items-center gap-1.5 border-b-2 border-transparent px-2.5 py-2.5 text-[0.82rem] whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset focus-visible:outline-none",
               selected
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground",
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             <span className="truncate">{t(`shell.tabs.${item.id}`)}</span>
@@ -85,6 +87,7 @@ export function InstanceTabBar({
           </button>
         );
       })}
+      <SlidingIndicator indicator={indicator} variant="underline" />
     </div>
   );
 }

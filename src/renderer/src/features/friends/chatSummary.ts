@@ -25,6 +25,7 @@ export type ChatPreviews = Record<string, ChatPreview>;
 const PREVIEW_TYPES: MessageBodyType[] = [
   "text",
   "image",
+  "sticker",
   "modpack",
   "groupInvite",
   "system",
@@ -32,6 +33,7 @@ const PREVIEW_TYPES: MessageBodyType[] = [
 
 const PREVIEW_LABEL_KEYS: Partial<Record<MessageBodyType, string>> = {
   image: "friends.chatImage",
+  sticker: "friends.chatSticker",
   modpack: "friends.chatAttachModpack",
   groupInvite: "friends.chatGroupInvite",
 };

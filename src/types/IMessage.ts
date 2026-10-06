@@ -7,6 +7,7 @@ export type MessageBodyType =
   | "text"
   | "modpack"
   | "image"
+  | "sticker"
   | "groupInvite"
   | "system";
 

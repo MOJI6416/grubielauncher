@@ -84,7 +84,7 @@ import {
 } from "./saveDecisions";
 import { useInstanceDraft } from "./useInstanceDraft";
 import { useVersionChanges } from "./useVersionChanges";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
 import { VERSION_FILE_STAGES, contentPlan } from "@/shared/installPlan";
 import { loaderChangeErrorKey } from "./loaderUpdate";
@@ -140,6 +140,7 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
   const [serverCores, setServerCores] = useState<IServerOption[]>([]);
   const [isServerCreate, setIsServerCreate] = useState(false);
   const [isNotSavedOpen, setIsNotSavedOpen] = useState(false);
+  const [savedAt, setSavedAt] = useState(0);
 
   const share = useShareFlow({
     version,
@@ -568,7 +569,7 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     bumpInstanceDataRevision();
 
     if (!isConfWriteFailed && !hasPartialFailure) {
-      toast.success(t("versions.updated"));
+      setSavedAt(Date.now());
     }
 
     void share.refreshPublishDiff();
@@ -657,8 +658,7 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
       return;
     }
 
-    if (!(await copyToClipboard(formatRunCommandForClipboard(command)))) return;
-    toast(t("common.copied"));
+    await copyWithFeedback(formatRunCommandForClipboard(command));
   }
 
   async function createShortcut() {
@@ -904,6 +904,7 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     statistics,
     isLoading,
     loadingType,
+    savedAt,
     nameCheck,
     isNameValid,
     canSave,

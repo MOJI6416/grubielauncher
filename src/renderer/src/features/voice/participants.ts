@@ -46,6 +46,14 @@ export function volumePercent(volume: number): number {
   return Math.round(clampParticipantVolume(volume) * 100);
 }
 
+export function splitParticipantVolume(volume: number): {
+  level: number;
+  boost: number;
+} {
+  const clamped = clampParticipantVolume(volume);
+  return { level: Math.min(1, clamped), boost: Math.max(1, clamped) };
+}
+
 export function levelBucket(level: number): number {
   if (!Number.isFinite(level) || level <= 0) return 0;
   return Math.min(4, Math.ceil(Math.min(1, level) * 4));

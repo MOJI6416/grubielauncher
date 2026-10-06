@@ -8,7 +8,6 @@ import {
   FolderOpen,
   LifeBuoy,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { STATUS_URL } from "@/shared/config";
@@ -24,7 +23,7 @@ import {
   openSupportReport,
   supportDialogAtom,
 } from "@renderer/features/support/supportReport";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { Hint } from "@renderer/components/Hint";
 import { formatRelative } from "@renderer/utilities/date";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
@@ -80,7 +79,7 @@ export function SupportSection({
   };
 
   const copy = async (text: string) => {
-    if (await copyToClipboard(text)) toast(t("common.copied"));
+    await copyWithFeedback(text);
   };
 
   const copySystemFacts = () =>

@@ -42,6 +42,8 @@ import {
 } from "./achievementVisuals";
 import { reachPercentParts } from "./profileMetrics";
 import { ensureFreshAccount } from "./loadProfileUser";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 
 const api = window.api;
 
@@ -94,6 +96,7 @@ export function ProfileAchievements({
     "all" | (typeof CATEGORY_ORDER)[number]
   >("all");
   const [status, setStatus] = useState<AchievementStatus>("all");
+  const statusIndicator = useSlidingIndicator<HTMLDivElement>();
   const [sort, setSort] = useState<AchievementSort>(
     isOwner ? "progress" : "rarity",
   );
@@ -208,15 +211,24 @@ export function ProfileAchievements({
             />
           </div>
 
-          <div className="flex h-9 shrink-0 items-center gap-0.5 rounded-lg bg-surface-1 p-1">
+          <div
+            ref={statusIndicator.containerRef}
+            className="relative flex h-9 shrink-0 items-center gap-0.5 rounded-lg bg-surface-1 p-1"
+          >
+            <SlidingIndicator
+              indicator={statusIndicator}
+              variant="fill"
+              className="rounded-md bg-surface-3"
+            />
             {(["all", "unlocked", "locked"] as AchievementStatus[]).map(
               (value) => (
                 <button
                   key={value}
                   type="button"
                   aria-pressed={status === value}
+                  data-indicator-active={status === value}
                   onClick={() => setStatus(value)}
-                  className="rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground aria-pressed:bg-surface-3 aria-pressed:text-foreground"
+                  className="relative rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground aria-pressed:text-foreground"
                 >
                   {t(`achievements.filter.${value}`)}
                 </button>

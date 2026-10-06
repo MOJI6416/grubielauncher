@@ -17,6 +17,7 @@ import {
   setUnsavedChangesGuard
 } from '../windows/mainWindow'
 import { getLauncherPaths } from '../utilities/other'
+import { GAME_TEXTURE_ENTRY, GameTextures, readGameTextures } from '../utilities/gameTextures'
 import { getConnectivityPlan, runConnectivityTests } from '../utilities/connectivityTest'
 import { ConnectivityCheckPlanEntry, ConnectivityCheckResult } from '@/types/Connectivity'
 import {
@@ -339,6 +340,13 @@ export function registerOtherIpc() {
   }, async () => {
     return await getLauncherPaths()
   })
+
+  handleSafe<GameTextures | null, [string[]]>(
+    'other:gameTextures',
+    null,
+    [check.arrayOf(check.pattern(GAME_TEXTURE_ENTRY, 160), 400)],
+    async (_, names) => await readGameTextures(names)
+  )
 
   handleSafe<void, [string]>('shell:openPath', undefined, async (_, p: string) => {
     assertOpenablePath(p, 'shell:openPath')

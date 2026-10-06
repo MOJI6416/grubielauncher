@@ -31,9 +31,12 @@ import { NewsBodySkeleton } from "@renderer/features/news/NewsFeedSkeleton";
 import { useNewsFeed } from "@renderer/features/news/useNewsFeed";
 import { showMilestoneInFeed } from "@renderer/features/whatsNew/milestone";
 import { useCurrentRelease } from "@renderer/features/whatsNew/useCurrentRelease";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 
 export function NewsScreen() {
   const { t } = useTranslation();
+  const sourceIndicator = useSlidingIndicator<HTMLDivElement>();
   const {
     isNetwork,
     cards,
@@ -203,14 +206,23 @@ export function NewsScreen() {
         )}
 
         {showSource && (
-          <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5">
+          <div
+            ref={sourceIndicator.containerRef}
+            className="relative flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5"
+          >
+            <SlidingIndicator
+              indicator={sourceIndicator}
+              variant="fill"
+              className="rounded-md bg-surface-3"
+            />
             {(["all", ...sources] as const).map((value) => (
               <button
                 key={value}
                 type="button"
                 aria-pressed={source === value}
+                data-indicator-active={source === value}
                 onClick={() => setSource(value)}
-                className="h-7 rounded-md px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground aria-pressed:bg-surface-3 aria-pressed:text-foreground"
+                className="relative h-7 rounded-md px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground aria-pressed:text-foreground"
               >
                 {value === "all"
                   ? t("news.sources.all")

@@ -71,8 +71,8 @@ import {
 } from "@renderer/utilities/lazyPreload";
 import { LazyDialogFallback } from "@renderer/components/LazyDialogFallback";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
-import { VoiceCallBar } from "@renderer/components/Voice/VoiceCallBar";
-import { GroupsTab } from "@renderer/components/Voice/GroupsTab";
+import { VoiceCallBar } from "@renderer/features/voice/VoiceCallBar";
+import { GroupsTab } from "@renderer/features/voice/GroupsTab";
 import { ConversationPanel } from "@renderer/features/friends/ConversationPanel";
 import { FriendsListPanel } from "@renderer/features/friends/FriendsListPanel";
 import { PeopleStartPanel } from "@renderer/features/friends/PeopleStartPanel";
@@ -102,7 +102,10 @@ import { useVoicePing } from "@renderer/features/voice/useVoicePing";
 import { useFriendCode } from "@renderer/features/friends/useFriendCode";
 import { useFriendsRealtime } from "@renderer/features/friends/useFriendsRealtime";
 import { useGameInvite } from "@renderer/features/friends/useGameInvite";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
@@ -113,7 +116,7 @@ const LazySkinView = lazyWithPreload(() =>
 );
 
 const LazyGroupChat = lazyWithPreload(() =>
-  import("@renderer/components/Voice/GroupChatModal").then((module) => ({
+  import("@renderer/features/voice/GroupChatModal").then((module) => ({
     default: module.GroupChatModal,
   })),
 );
@@ -126,6 +129,8 @@ export function PeopleScreen({
   joinFriendWorld: (params: JoinFriendWorldParams) => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
+  const sectionIndicator = useSlidingIndicator<HTMLDivElement>();
 
   const route = useAtomValue(currentRouteAtom);
   const account = useAtomValue(accountAtom);
@@ -506,8 +511,7 @@ export function PeopleScreen({
       const entry = entryById.get(friendId);
       if (!entry) return;
 
-      if (!(await copyToClipboard(entry.friend.user.nickname))) return;
-      toast(t("common.copied"));
+      await copyWithFeedback(entry.friend.user.nickname);
     },
     [entryById, t],
   );
@@ -651,16 +655,25 @@ export function PeopleScreen({
     <>
       <div className="flex h-full min-h-0 flex-col gap-3">
         <div className="flex h-9 shrink-0 items-center gap-2">
-          <div className="flex h-9 items-center gap-0.5 rounded-lg bg-surface-1 p-0.5">
+          <div
+            ref={sectionIndicator.containerRef}
+            className="relative flex h-9 items-center gap-0.5 rounded-lg bg-surface-1 p-0.5"
+          >
+            <SlidingIndicator
+              indicator={sectionIndicator}
+              variant="fill"
+              className="rounded-md bg-surface-3"
+            />
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 aria-current={section === tab.id}
+                data-indicator-active={section === tab.id}
                 className={cn(
-                  "flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
+                  "relative flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
                   section === tab.id
-                    ? "bg-surface-3 text-foreground"
+                    ? "text-foreground"
                     : "text-muted-foreground hover:text-foreground",
                 )}
                 onClick={() => goToSection(tab.id)}
@@ -820,7 +833,11 @@ export function PeopleScreen({
                   groups={groups}
                   shareableVersions={shareableVersions}
                   versionsByShareCode={versionsByShareCode}
-                  presenceText={describePresence(activeEntry, t)}
+                  presenceText={describePresence(
+                    activeEntry,
+                    t,
+                    redact.active,
+                  )}
                   isPeerTyping={typingIds.has(activeEntry.friend.user._id)}
                   onTyping={realtime.notifyTyping}
                   onStopTyping={realtime.notifyStopTyping}
@@ -857,9 +874,11 @@ export function PeopleScreen({
                   isGameRunning={isRunning}
                   ownFriendCode={friendCode.code}
                   friendRequestsEnabled={friendCode.isEnabled}
-                  describePresence={(entry) => describePresence(entry, t)}
+                  describePresence={(entry) =>
+                    describePresence(entry, t, redact.active)
+                  }
                   describeChat={(entry) =>
-                    describeRowDetail(entry, authData?.sub, t)
+                    describeRowDetail(entry, authData?.sub, t, redact.active)
                   }
                   onJoin={handleJoin}
                   onInvite={handleInvite}

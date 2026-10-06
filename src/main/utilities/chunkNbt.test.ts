@@ -12,7 +12,10 @@ import { NbtScanError, readNbtRoot } from "./nbtScan";
 import {
   entityChunkNbt,
   flatChunkNbt,
+  heterogeneousChunkNbt,
+  legacyAnvilChunkNbt,
   levelChunkNbt,
+  mcRegionChunkNbt,
   poiChunkNbt,
 } from "./chunkFixtures.test-helpers";
 
@@ -82,6 +85,50 @@ describe("scanChunkNbt", () => {
     expect(normalizeChunkStatus("  Structure_Starts ")).toBe(
       "structure_starts",
     );
+    expect(normalizeChunkStatus("terrain")).toBe("terrain");
+  });
+
+  it("maps the 1.13 status names onto the modern ones", () => {
+    expect(normalizeChunkStatus("postprocessed")).toBe("full");
+    expect(normalizeChunkStatus("fullchunk")).toBe("full");
+    expect(normalizeChunkStatus("mobs_spawned")).toBe("spawn");
+    expect(normalizeChunkStatus("decorated")).toBe("features");
+    expect(normalizeChunkStatus("liquid_carved")).toBe("liquid_carvers");
+    expect(normalizeChunkStatus("carved")).toBe("carvers");
+    expect(normalizeChunkStatus("base")).toBe("surface");
+
+    const summary = scanChunkNbt(
+      levelChunkNbt({ x: 0, z: 0, status: "postprocessed", dataVersion: 1631 }),
+    );
+    expect(summary.status).toBe("full");
+  });
+
+  it("derives the status of pre-1.13 chunks from TerrainPopulated", () => {
+    const section = { y: 0, ids: new Array(4096).fill(1) };
+    expect(
+      scanChunkNbt(legacyAnvilChunkNbt({ x: 0, z: 0, sections: [section] }))
+        .status,
+    ).toBe("full");
+    expect(
+      scanChunkNbt(
+        legacyAnvilChunkNbt({
+          x: 0,
+          z: 0,
+          sections: [section],
+          terrainPopulated: false,
+        }),
+      ).status,
+    ).toBe("carvers");
+    expect(
+      scanChunkNbt(
+        mcRegionChunkNbt({
+          x: 0,
+          z: 0,
+          column: () => 1,
+          terrainPopulated: false,
+        }),
+      ).status,
+    ).toBe("carvers");
   });
 });
 
@@ -177,6 +224,51 @@ describe("readChunkNbtDetails", () => {
     ]);
     expect(details.sectionCount).toBe(1);
     expect(details.yMin).toBe(0);
+  });
+});
+
+describe("readChunkNbtDetails across versions", () => {
+  it("names the numeric biomes of pre-1.18 chunks", async () => {
+    const biomes = Array.from({ length: 256 }, (_, column) =>
+      column < 128 ? 4 : -127,
+    );
+    const details = await readChunkNbtDetails(
+      legacyAnvilChunkNbt({
+        x: 0,
+        z: 0,
+        sections: [{ y: 0, ids: new Array(4096).fill(1) }],
+        biomes,
+      }),
+    );
+    expect(details.biomes).toEqual([
+      "minecraft:forest",
+      "minecraft:sunflower_plains",
+    ]);
+    expect(details.sectionCount).toBe(1);
+  });
+
+  it("reads 26.x sections whose palette mixes bare names and block states", async () => {
+    const details = await readChunkNbtDetails(
+      heterogeneousChunkNbt({
+        x: 0,
+        z: 0,
+        palette: [
+          "minecraft:air",
+          { Name: "minecraft:water", Properties: { level: "0" } },
+        ],
+        data: new Array(4096).fill(0).map((_, index) => (index < 256 ? 1 : 0)),
+      }),
+    );
+    expect(details.sectionCount).toBe(1);
+    expect(details.yMin).toBe(0);
+  });
+
+  it("leaves the section count out for McRegion chunks", async () => {
+    const details = await readChunkNbtDetails(
+      mcRegionChunkNbt({ x: 0, z: 0, column: () => 1 }),
+    );
+    expect(details.sectionCount).toBeNull();
+    expect(details.legacyEntities).toEqual([{ id: "Pig", count: 1 }]);
   });
 });
 

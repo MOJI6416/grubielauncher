@@ -21,15 +21,17 @@ import {
   regionFileName,
 } from "./anvilRegion";
 import {
+  ChunkRenderOptions,
   REGION_PIXELS,
   RegionColumns,
   composeRegionSurface,
   renderChunkColumnsFromNbt,
 } from "./chunkSurface";
-import { resolveDimensionFolder } from "./worldChunks";
-import { CHUNKS_PER_REGION_AXIS } from "@/types/WorldChunks";
+import { readWorldFormat, resolveDimensionFolder } from "./worldChunks";
+import { CHUNKS_PER_REGION_AXIS, NETHER_ID } from "@/types/WorldChunks";
 
 const CACHE_FOLDER = "chunk-surface";
+const RENDER_VERSION = 2;
 const MAX_PARALLEL_RENDERS = 2;
 /** Chunks rendered between two turns of the event loop. */
 const YIELD_EVERY = 4;
@@ -73,7 +75,7 @@ function cacheFileName(
   size: number,
   mtimeMs: number,
 ): string {
-  return `r.${regionX}.${regionZ}.${size}-${Math.round(mtimeMs)}.png`;
+  return `r.${regionX}.${regionZ}.${size}-${Math.round(mtimeMs)}.v${RENDER_VERSION}.png`;
 }
 
 function isCacheFileFor(
@@ -117,6 +119,7 @@ export async function renderRegionFile(
   filePath: string,
   regionX: number,
   regionZ: number,
+  options: ChunkRenderOptions = {},
 ): Promise<Uint8ClampedArray | null> {
   const file = await fs.readFile(filePath).catch(() => null);
   if (!file || !hasRegionHeader(file)) return null;
@@ -154,7 +157,10 @@ export async function renderRegionFile(
     try {
       const payload = await decompressChunk(chunk.compression, compressed);
       if (!payload) continue;
-      columns.set(entry.index, await renderChunkColumnsFromNbt(payload));
+      columns.set(
+        entry.index,
+        await renderChunkColumnsFromNbt(payload, options),
+      );
     } catch {
       continue;
     }
@@ -180,7 +186,12 @@ export async function renderRegionSurface(
   if (folder === null) return null;
 
   const root = folder ? path.join(worldPath, folder) : worldPath;
-  const filePath = path.join(root, "region", regionFileName(regionX, regionZ));
+  const format = await readWorldFormat(worldPath);
+  const filePath = path.join(
+    root,
+    "region",
+    regionFileName(regionX, regionZ, format.regionExtension),
+  );
   const stats = await fs.stat(filePath).catch(() => null);
   if (!stats?.isFile()) return null;
 
@@ -193,7 +204,10 @@ export async function renderRegionSurface(
 
   const release = await acquire();
   try {
-    const rgba = await renderRegionFile(filePath, regionX, regionZ);
+    const rgba = await renderRegionFile(filePath, regionX, regionZ, {
+      ceiling: dimensionId === NETHER_ID,
+      legacyBlocks: format.legacyBlocks,
+    });
     if (!rgba) return null;
 
     const png = await encodePng(rgba, REGION_PIXELS);

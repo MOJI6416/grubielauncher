@@ -4,6 +4,10 @@ Loader logo sources used in the renderer UI, retrieved on March 29, 2026.
 - NeoForge: vectorized from https://neoforged.net/img/authors/neoforged.png
 - Fabric: vectorized from https://raw.githubusercontent.com/FabricMC/fabricmc.net/main/assets/logo.png
 - Quilt: adapted from https://raw.githubusercontent.com/QuiltMC/quiltmc.org/main/public/assets/img/logo.svg
+- Legacy Fabric: https://legacyfabric.net/res/img/logo.png (rounded corners), retrieved on October 4, 2026
+- Babric: uses the Fabric logo, which is also the logo on https://babric.github.io/assets/logo.png
+- Ornithe: cropped from https://raw.githubusercontent.com/OrnitheMC/ornithe-installer-rs/main/res/icon.png (rounded corners), retrieved on October 4, 2026
+- Better than Adventure: trimmed from https://www.betterthanadventure.net/apple-touch-icon.png, retrieved on October 4, 2026
 
 Reference licenses:
 
@@ -14,4 +18,4 @@ Reference licenses:
 - NeoForged websites repository: CC BY 4.0
   https://github.com/neoforged/websites/blob/main/LICENSE.txt
 
-Forge branding remains the property of its respective owners.
+Forge, Legacy Fabric, Ornithe and Better than Adventure branding remains the property of its respective owners.

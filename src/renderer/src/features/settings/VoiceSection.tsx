@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   DeviceSelect,
+  GateThresholdSlider,
   MicLevelTest,
   SpeakerTest,
-} from "@renderer/components/Voice/VoiceDeviceControls";
+} from "@renderer/features/voice/VoiceDeviceControls";
 import type { TSettings } from "@/types/Settings";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
@@ -143,6 +144,87 @@ export function VoiceSection({
               checked={settings.voiceNoiseSuppression}
               onCheckedChange={(value) =>
                 commit({ voiceNoiseSuppression: value })
+              }
+            />
+          }
+        />
+      )}
+
+      {visible("voiceGate") && (
+        <SettingRow
+          htmlFor="settings-voice-gate"
+          title={t("settings.voiceGate")}
+          description={t("settings.voiceGateDescription")}
+          query={query}
+          changed={isChanged("voiceGate")}
+          onReset={() => reset("voiceGate")}
+          control={
+            <Switch
+              id="settings-voice-gate"
+              checked={settings.voiceGate}
+              onCheckedChange={(value) => commit({ voiceGate: value })}
+            />
+          }
+        >
+          {settings.voiceGate && (
+            <GateThresholdSlider
+              value={settings.voiceGateThreshold}
+              onCommit={(value) => commit({ voiceGateThreshold: value })}
+            />
+          )}
+        </SettingRow>
+      )}
+
+      {visible("voiceOverlay") && (
+        <SettingRow
+          htmlFor="settings-voice-overlay"
+          title={t("settings.voiceOverlay")}
+          description={t("settings.voiceOverlayDescription")}
+          query={query}
+          changed={isChanged("voiceOverlay")}
+          onReset={() => reset("voiceOverlay")}
+          control={
+            <Switch
+              id="settings-voice-overlay"
+              checked={settings.voiceOverlay}
+              onCheckedChange={(value) => commit({ voiceOverlay: value })}
+            />
+          }
+        />
+      )}
+
+      {visible("voiceAutoGain") && (
+        <SettingRow
+          htmlFor="settings-voice-agc"
+          title={t("settings.voiceAutoGain")}
+          description={t("settings.voiceAutoGainDescription")}
+          query={query}
+          changed={isChanged("voiceAutoGain")}
+          onReset={() => reset("voiceAutoGain")}
+          control={
+            <Switch
+              id="settings-voice-agc"
+              checked={settings.voiceAutoGain}
+              onCheckedChange={(value) => commit({ voiceAutoGain: value })}
+            />
+          }
+        />
+      )}
+
+      {visible("voiceEchoCancellation") && (
+        <SettingRow
+          htmlFor="settings-voice-aec"
+          title={t("settings.voiceEchoCancellation")}
+          description={t("settings.voiceEchoCancellationDescription")}
+          query={query}
+          changed={isChanged("voiceEchoCancellation")}
+          onReset={() => reset("voiceEchoCancellation")}
+          control={
+            <Switch
+              id="settings-voice-aec"
+              checked={settings.voiceEchoCancellation}
+              onCheckedChange={(value) =>
+                commit({ voiceEchoCancellation: value })
               }
             />
           }

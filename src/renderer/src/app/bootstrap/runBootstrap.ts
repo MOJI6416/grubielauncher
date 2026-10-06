@@ -9,6 +9,7 @@ import {
   readLegacyViewPrefs,
 } from "@renderer/features/instances/viewPrefsMigration";
 import { checkWhatsNewAfterInit } from "@renderer/features/whatsNew/whatsNewStore";
+import { startStreamingWatch } from "@renderer/features/streamer/streamerMode";
 import {
   accountAtom,
   pathsAtom,
@@ -55,7 +56,10 @@ async function loadSettings(launcherPath: string): Promise<TSettings> {
   }
 
   store.set(settingsAtom, data);
-  await changeAppLanguage(data.lang);
+  await Promise.all([
+    changeAppLanguage(data.lang),
+    startStreamingWatch(data.streamerModeAuto),
+  ]);
   return data;
 }
 

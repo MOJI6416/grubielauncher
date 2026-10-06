@@ -323,4 +323,50 @@ describe("planQuickInstall", () => {
 
     expect(plan.added.map((item) => item.id)).toEqual(["p1"]);
   });
+
+  it("lets the picker choose a dependency version for the version that needs it", async () => {
+    const dependency: IVersionDependency = {
+      projectId: "api",
+      versionId: null,
+      relationType: DependencyType.REQUIRED,
+      project: fabricApi,
+    };
+    const calls: [string[], string | undefined][] = [];
+
+    const plan = await planQuickInstall(project(), [], {
+      ...fetchers({
+        p1: [version({ id: "v2", dependencies: [dependency] })],
+        api: [version({ id: "api-new" }), version({ id: "api-old" })],
+      }),
+      pickVersion: async (versions, requiredBy) => {
+        calls.push([versions.map((item) => item.id), requiredBy?.id]);
+        return requiredBy ? versions[versions.length - 1] : undefined;
+      },
+    });
+
+    expect(calls).toEqual([
+      [["v2"], undefined],
+      [["api-new", "api-old"], "v2"],
+    ]);
+    expect(plan.added.map((item) => item.version?.id)).toEqual(["v2", "api-old"]);
+  });
+
+  it("passes an explicit parent version to the picker", async () => {
+    const parents: (string | undefined)[] = [];
+
+    await planQuickInstall(
+      fabricApi,
+      [],
+      {
+        ...fetchers({ api: [version({ id: "apiv1" })] }),
+        pickVersion: async (versions, requiredBy) => {
+          parents.push(requiredBy?.id);
+          return versions[0];
+        },
+      },
+      { requiredBy: version({ id: "chosen" }) },
+    );
+
+    expect(parents).toEqual(["chosen"]);
+  });
 });

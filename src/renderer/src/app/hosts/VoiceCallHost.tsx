@@ -7,7 +7,7 @@ import {
   IVoiceCallPeer,
   IVoiceTokenResponse,
 } from "@/types/Voice";
-import { VoiceCallToast } from "@renderer/components/Voice/VoiceCallToast";
+import { VoiceCallToast } from "@renderer/features/voice/VoiceCallToast";
 import {
   friendSocketAtom,
   localFriendsAtom,

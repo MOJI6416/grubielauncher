@@ -18,6 +18,7 @@ import {
 import { writeJsonAtomic } from "../utilities/atomicJson";
 import {
   convertMavenCoordinateToJarPath,
+  generateCanonicalOfflineUUID,
   getFullLangCode,
   getJavaAgent,
   getOS,
@@ -57,14 +58,15 @@ import { resolveLaunchPath } from "./launchAlias";
 import { assertSafeFileSegment } from "./serverScriptSafety";
 import { Backend } from "../services/Backend";
 import { buildMemoryArguments } from "@/shared/jvmDefaults";
-import { mcVersionToJavaMajor } from "@/shared/javaVersions";
+import { sessionNickname } from "@/shared/sessionNickname";
+import { instanceJavaMajor, mcVersionToJavaMajor } from "@/shared/javaVersions";
 import { filterRunArguments } from "@/shared/runArguments";
 import {
   assertTrustedDownloadUrl,
+  assertTrustedLoaderLibraryUrl,
   isTrustedDownloadUrl,
   normalizeLoaderLibraryUrl,
 } from "../utilities/trustedHosts";
-import { resolveOfflineUuid } from "../utilities/offlineUuidMigration";
 import { migrateInlineModIcons } from "../utilities/modManager";
 import { journal, type JournalSpan } from "../journal/journal";
 import { describeLaunchCommand } from "../journal/launchCommand";
@@ -88,6 +90,31 @@ import {
   usesLegacyWorkDir,
   usesUppercaseLangCode,
 } from "./legacyGame";
+import {
+  isLegacyLoader,
+  isProfileLoader,
+  splitOrnitheGeneration,
+} from "@/shared/profileLoaders";
+import { VersionsService } from "../services/Versions";
+import {
+  completeOrnitheProfile,
+  libraryDownloadUrls,
+  profileJvmArguments,
+  replaceVanillaLibraries,
+  toManifestLibrary,
+} from "./profileLoaderManifest";
+import { jarModDownloads, prepareGameJar } from "./jarMods";
+import {
+  BTA_VANILLA_CLIENT,
+  BTA_VANILLA_JAR,
+  shipsOwnClientJar,
+} from "@/shared/btaLoader";
+import {
+  applyBabricLayer,
+  hasBabricLayer,
+  readTurnipInstance,
+  turnipInstanceUrls,
+} from "./btaBabric";
 
 type VersionInstallRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
@@ -104,6 +131,9 @@ const LOADER_LIBRARY_MARKERS: Record<string, string[]> = {
   quilt: ["quiltmc"],
   forge: ["minecraftforge"],
   neoforge: ["neoforged", "neoforge"],
+  "legacy-fabric": ["net.legacyfabric:intermediary"],
+  babric: ["babric:intermediary"],
+  ornithe: ["net.ornithemc:calamus-intermediary"],
 };
 
 function parseCustomRunArguments(input?: string) {
@@ -377,9 +407,22 @@ export class Version {
     }
   }
 
+  private baseManifestUrl() {
+    return shipsOwnClientJar(this.version.loader.name) &&
+      this.version.loader.version
+      ? this.version.loader.version.url
+      : this.version.version.url;
+  }
+
   private isLoaderMerged() {
     if (!this.manifest) return false;
     if (!this.version.loader.version?.id) return true;
+    if (shipsOwnClientJar(this.version.loader.name)) {
+      return (
+        this.manifest.id === this.version.loader.version.id &&
+        hasBabricLayer(this.manifest)
+      );
+    }
 
     const markers = LOADER_LIBRARY_MARKERS[this.version.loader.name];
     if (!markers) return true;
@@ -414,16 +457,14 @@ export class Version {
       this.manifest = undefined;
       await fs.remove(manifestPath).catch(() => {});
 
-      assertTrustedDownloadUrl(
-        this.version.version.url,
-        "version manifest url",
-      );
+      const baseManifestUrl = this.baseManifestUrl();
+      assertTrustedDownloadUrl(baseManifestUrl, "version manifest url");
 
       this.sendInstallProgress("manifest", 8, true);
       await this.downloader.downloadFiles(
         [
           {
-            url: this.version.version.url,
+            url: baseManifestUrl,
             destination: manifestPath,
             group: "manifest",
           },
@@ -439,6 +480,30 @@ export class Version {
 
     if (!this.manifest) {
       throw new Error(`Failed to read version manifest: ${manifestPath}`);
+    }
+
+    if (
+      isNewManifest &&
+      shipsOwnClientJar(this.version.loader.name) &&
+      this.version.loader.version
+    ) {
+      this.sendInstallProgress("loader", 14, true);
+      await this.applyBtaBabricLayer(
+        this.version.loader.version.id,
+        downloadSignal,
+      );
+      await this.installCheckpoint();
+    }
+
+    if (isNewManifest && this.version.loader.name === "babric") {
+      this.manifest.javaVersion = {
+        component: this.manifest.javaVersion?.component ?? "",
+        majorVersion: instanceJavaMajor(
+          this.version.version.id,
+          this.version.loader.name,
+          this.manifest.javaVersion?.majorVersion,
+        ),
+      };
     }
 
     this.sendInstallProgress("java", 18, true);
@@ -482,7 +547,7 @@ export class Version {
     this.sendInstallProgress("loader", 28, true);
 
     if (
-      ["fabric", "quilt"].includes(this.version.loader.name) &&
+      isProfileLoader(this.version.loader.name) &&
       this.version.loader.version
     ) {
       const fabricManifestPath = path.join(
@@ -524,48 +589,47 @@ export class Version {
         fabricManifest = await fs.readJSON(fabricManifestPath, {
           encoding: "utf-8",
         });
+        if (this.version.loader.name === "ornithe" && fabricManifest) {
+          fabricManifest = await this.completeOrnitheProfile(fabricManifest);
+          await writeJsonAtomic(fabricManifestPath, fabricManifest);
+        }
       }
       await this.installCheckpoint();
 
       if (isNewManifest && fabricManifest) {
         this.manifest.mainClass = fabricManifest.mainClass;
-        if (fabricManifest.arguments.jvm && this.manifest.arguments?.jvm)
-          this.manifest.arguments.jvm.push(...fabricManifest.arguments.jvm);
 
-        if (fabricManifest.arguments.game && this.manifest.arguments?.game)
-          this.manifest.arguments.game.push(...fabricManifest.arguments.game);
+        const jvmArguments = profileJvmArguments(
+          fabricManifest.arguments?.jvm,
+          !!this.manifest.minecraftArguments,
+        );
+        if (this.manifest.arguments) {
+          if (fabricManifest.arguments?.jvm && this.manifest.arguments.jvm)
+            this.manifest.arguments.jvm.push(...jvmArguments);
 
-        const fabricLibraries: IVersionManifest["libraries"] = [];
-        for (const lib of fabricManifest.libraries) {
-          const baseUrl = lib.url || "https://libraries.minecraft.net/";
-
-          const path = convertMavenCoordinateToJarPath(lib.name);
-
-          const artifactUrl = normalizeLoaderLibraryUrl(`${baseUrl}/${path}`);
-          assertTrustedDownloadUrl(
-            artifactUrl,
-            `${this.version.loader.name} library url`,
-          );
-
-          const library: IVersionManifest["libraries"][0] = {
-            name: lib.name,
-            downloads: {
-              artifact: {
-                url: artifactUrl,
-                path,
-                size: lib.size,
-                sha1: lib.sha1,
-              },
-            },
-          };
-
-          fabricLibraries.push(library);
+          if (fabricManifest.arguments?.game && this.manifest.arguments.game)
+            this.manifest.arguments.game.push(...fabricManifest.arguments.game);
+        } else if (jvmArguments.length > 0) {
+          this.manifest.arguments = { game: [], jvm: jvmArguments };
         }
 
-        this.manifest.libraries = this.removeDuplicateLibraries(
-          [...fabricLibraries, ...this.manifest.libraries],
-          ["org.ow2.asm:asm"],
-        );
+        const fabricLibraries = fabricManifest.libraries.map((lib) => {
+          const library = toManifestLibrary(lib);
+          for (const url of libraryDownloadUrls(library)) {
+            assertTrustedLoaderLibraryUrl(
+              url,
+              `${this.version.loader.name} library url`,
+            );
+          }
+          return library;
+        });
+
+        this.manifest.libraries = isLegacyLoader(this.version.loader.name)
+          ? replaceVanillaLibraries(fabricLibraries, this.manifest.libraries)
+          : this.removeDuplicateLibraries(
+              [...fabricLibraries, ...this.manifest.libraries],
+              ["org.ow2.asm:asm"],
+            );
         await this.writeManifest();
       }
     } else if (
@@ -913,7 +977,19 @@ export class Version {
         size: this.manifest.downloads.client.size,
         group: "client",
       });
+
+      if (shipsOwnClientJar(this.version.loader.name)) {
+        downloadItems.push({
+          ...BTA_VANILLA_CLIENT,
+          destination: path.join(this.versionPath, BTA_VANILLA_JAR),
+          group: "client",
+        });
+      }
     }
+
+    downloadItems.push(
+      ...(await jarModDownloads(this.versionPath, this.version)),
+    );
 
     if (account.type != "microsoft" && account.type != "plain") {
       await this.installCheckpoint();
@@ -1385,6 +1461,20 @@ export class Version {
     }
   }
 
+  private async completeOrnitheProfile(
+    profile: IFabricManifest,
+  ): Promise<IFabricManifest> {
+    const minecraftVersion = this.version.version.id;
+    const { generation } = splitOrnitheGeneration(
+      this.version.loader.version?.id ?? "",
+    );
+    const [intermediary, upgrades] = await Promise.all([
+      VersionsService.getOrnitheIntermediary(minecraftVersion, generation),
+      VersionsService.getOrnitheLibraryUpgrades(minecraftVersion, generation),
+    ]);
+    return completeOrnitheProfile(profile, intermediary, upgrades);
+  }
+
   private async writeManifest() {
     if (!this.manifest) return;
 
@@ -1583,9 +1673,10 @@ export class Version {
     jvm = jvm.filter((arg) => arg !== "");
     game = game.filter((arg) => arg !== "");
 
+    const gameJar = await prepareGameJar(this.versionPath, this.version);
     const paths = [
       ...this.getLibraries(account).paths,
-      path.join(launchVersionPath, `${this.version.version.id}.jar`),
+      path.join(launchVersionPath, gameJar),
     ];
 
     jvm = jvm.map((arg) => {
@@ -1608,7 +1699,7 @@ export class Version {
     });
 
     if (!authData) {
-      const uuid = await resolveOfflineUuid(this.versionPath, account.nickname);
+      const uuid = generateCanonicalOfflineUUID(account.nickname);
 
       authData = {
         nickname: account.nickname,
@@ -1634,6 +1725,10 @@ export class Version {
     if (account.type == "discord" && account.accessToken) {
       gameToken = await new Backend(account.accessToken).getGameToken();
     }
+    const playerName =
+      sessionNickname(gameToken ?? undefined) ||
+      account.nickname ||
+      activeAuthData.nickname;
 
     game = game.map((arg) => {
       if (!this.manifest) return "";
@@ -1650,7 +1745,7 @@ export class Version {
       else if (account.type == "plain") accountType = "legacy";
 
       return arg
-        .replace(/\${auth_player_name}/g, account.nickname || authData.nickname)
+        .replace(/\${auth_player_name}/g, playerName)
         .replace(/\${version_name}/g, this.version.version.id)
         .replace(/\${game_directory}/g, launchVersionPath)
         .replace(/\${assets_root}/g, path.join(this.minecraftPath, "assets"))
@@ -1840,6 +1935,8 @@ export class Version {
       loader: this.version.loader.name,
       loaderVersion: this.version.loader.version?.id,
       mods: this.version.loader.mods?.length ?? 0,
+      jarMods: this.version.jarMods?.filter((mod) => mod.enabled).length ?? 0,
+      mainJar: this.version.mainJar?.enabled === true,
       shareCode: this.version.shareCode,
       accountType: account.type,
       nickname: account.nickname,
@@ -1919,6 +2016,57 @@ export class Version {
     } catch (error) {
       span.fail(error);
       throw error;
+    }
+  }
+
+  private async applyBtaBabricLayer(
+    btaVersion: string,
+    signal: AbortSignal | undefined,
+  ) {
+    assertSafeFileSegment(btaVersion, "BTA version");
+    const archivePath = path.join(
+      this.versionPath,
+      `${this.version.loader.name}.zip`,
+    );
+
+    try {
+      let lastError: unknown = null;
+      let downloaded = false;
+      for (const url of turnipInstanceUrls(btaVersion)) {
+        try {
+          await fs.remove(archivePath);
+          await this.downloader.downloadFiles(
+            [{ url, destination: archivePath, group: "manifest" }],
+            signal,
+          );
+          downloaded = true;
+          break;
+        } catch (error) {
+          if (signal?.aborted) throw error;
+          lastError = error;
+        }
+      }
+      if (!downloaded) throw lastError ?? new Error("BTA instance not found");
+
+      const layer = await readTurnipInstance(archivePath);
+      for (const library of layer.libraries) {
+        for (const url of libraryDownloadUrls(library)) {
+          assertTrustedLoaderLibraryUrl(url, "BTA library url");
+        }
+      }
+
+      const librariesPath = path.join(this.minecraftPath, "libraries");
+      for (const local of layer.localLibraries) {
+        const target = path.resolve(librariesPath, local.path);
+        if (!target.startsWith(path.resolve(librariesPath) + path.sep)) continue;
+        await fs.outputFile(target, local.data);
+      }
+
+      if (!this.manifest) return;
+      this.manifest = applyBabricLayer(this.manifest, layer);
+      await this.writeManifest();
+    } finally {
+      await fs.remove(archivePath).catch(() => {});
     }
   }
 

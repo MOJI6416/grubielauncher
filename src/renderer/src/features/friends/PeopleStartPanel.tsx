@@ -19,6 +19,7 @@ import { formatRelative } from "@renderer/utilities/date";
 import { canJoinFriend, presenceDotColor } from "./presence";
 import { PlatformIcon } from "./PlatformIcon";
 import type { FriendEntry } from "./friendsList";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 interface PeopleStartPanelProps {
   playing: FriendEntry[];
@@ -159,6 +160,7 @@ export function PeopleStartPanel({
   onSignIn,
   t,
 }: PeopleStartPanelProps) {
+  const redact = useRedact();
   const hasContent = hasFriends || playing.length > 0 || chats.length > 0;
   const chatTime = (value: string | null | undefined) =>
     value ? formatRelative(new Date(value)) : "";
@@ -369,7 +371,7 @@ export function PeopleStartPanel({
             {ownFriendCode && (
               <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-1 px-3 py-1.5">
                 <span className="font-mono text-lg font-semibold tracking-[0.14em] select-all">
-                  {ownFriendCode}
+                  {redact.value(ownFriendCode)}
                 </span>
                 <Button
                   size="icon-xs"
@@ -425,7 +427,7 @@ export function PeopleStartPanel({
           {ownFriendCode && (
             <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-3 py-1.5">
               <span className="font-mono text-sm tracking-[0.15em] select-all">
-                {ownFriendCode}
+                {redact.value(ownFriendCode)}
               </span>
               <Button
                 size="icon-xs"

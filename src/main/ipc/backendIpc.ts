@@ -23,6 +23,7 @@ import {
 } from "@/shared/config";
 import { getApiBaseUrl, onApiBaseUrlChange } from "../utilities/apiHost";
 import { BACKEND_URL } from "@/shared/config";
+import { LOADERS, type Loader } from "@/types/Loader";
 import { BrowserWindow } from "electron";
 
 const isToken = check.string(32768);
@@ -32,7 +33,7 @@ const isName = check.nonEmptyString(256);
 const isPayload = check.object();
 const isPath = check.nonEmptyString(4096);
 const isLocale = check.string(16);
-const isLoader = check.oneOf("vanilla", "forge", "neoforge", "fabric", "quilt");
+const isLoader = check.oneOf(...LOADERS);
 
 const EXPLORE_MAX_LIMIT = 24;
 
@@ -284,6 +285,46 @@ export function registerBackendIpc() {
     async (_, at: string, id: string) => {
       const backend = new Backend(at);
       return await backend.resetFriendCode(id);
+    },
+  );
+
+  handleSafe(
+    "backend:getNicknameStatus",
+    null,
+    [isToken, isId],
+    async (_, at: string, id: string) => {
+      const backend = new Backend(at);
+      return await backend.getNicknameStatus(id);
+    },
+  );
+
+  handleSafe(
+    "backend:checkNickname",
+    null,
+    [isToken, isId, check.string(32)],
+    async (_, at: string, id: string, name: string) => {
+      const backend = new Backend(at);
+      return await backend.checkNickname(id, name);
+    },
+  );
+
+  handleSafe(
+    "backend:changeNickname",
+    null,
+    [isToken, isId, check.string(32)],
+    async (_, at: string, id: string, nickname: string) => {
+      const backend = new Backend(at);
+      return await backend.changeNickname(id, nickname);
+    },
+  );
+
+  handleSafe(
+    "backend:resetNickname",
+    null,
+    [isToken, isId],
+    async (_, at: string, id: string) => {
+      const backend = new Backend(at);
+      return await backend.resetNickname(id);
     },
   );
 
@@ -577,7 +618,7 @@ export function registerBackendIpc() {
     [isLoader, check.optional(check.boolean())],
     async (
       _,
-      loader: "vanilla" | "forge" | "neoforge" | "fabric" | "quilt",
+      loader: Loader,
       includeSnapshots = false,
     ) => {
       return await VersionsService.getVersions(loader, includeSnapshots);
@@ -590,7 +631,7 @@ export function registerBackendIpc() {
     [isLoader, check.nonEmptyString(64)],
     async (
       _,
-      loader: "forge" | "neoforge" | "fabric" | "quilt",
+      loader: Loader,
       mcVersion: string,
     ) => {
       return await VersionsService.getLoaderVersions(loader, mcVersion);

@@ -114,6 +114,29 @@ describe("checkToken", () => {
     });
   });
 
+  it("takes the nickname the refreshed session token carries", async () => {
+    const fresh = token({
+      sub: "user-1",
+      exp: Math.floor(Date.now() / 1000) + 600,
+      nickname: "renamed",
+      auth: { accessToken: "provider" },
+    });
+    refreshDiscordToken.mockResolvedValue({
+      accessToken: fresh,
+      refreshToken: "refresh-2",
+    });
+
+    await checkToken(expiredToken);
+    const mutate = mutateAccountsConfig.mock.calls[0][0] as (
+      config: unknown,
+    ) => any;
+    const config = await readAccountsConfig();
+    expect(mutate(config).accounts[0]).toMatchObject({
+      nickname: "renamed",
+      accessToken: fresh,
+    });
+  });
+
   it("collapses parallel refreshes of the same account into one request", async () => {
     let resolveRefresh!: (value: unknown) => void;
     const pending = new Promise((resolve) => {

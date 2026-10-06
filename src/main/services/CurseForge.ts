@@ -118,6 +118,18 @@ export class CurseForge {
     }
   }
 
+  static async getFileChangelog(modId: number, fileId: number): Promise<string | null> {
+    try {
+      const response = await this.api.get<string>(
+        `/curseforge/mods/${modId}/files/${fileId}/changelog`
+      )
+      return typeof response.data === 'string' ? response.data : null
+    } catch (error) {
+      this.logAxiosError('Error getting file changelog', error)
+      return null
+    }
+  }
+
   static async getModFiles(
     modId: number,
     options: { modType: ModTypeClassIds; version?: string; loader?: ModLoaderType }

@@ -556,6 +556,8 @@ export function ChunkMap({
       }
     }
 
+    if (!satellite) visibleKeysRef.current = "";
+
     if (onVisibleRegions && satellite) {
       // Regions nearest the centre of the view are requested first.
       const [centerX, centerZ] = [camera.x / TILE, camera.z / TILE];

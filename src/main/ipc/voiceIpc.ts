@@ -1,10 +1,20 @@
-import { powerSaveBlocker } from "electron";
+import { app, powerSaveBlocker } from "electron";
 import { handleSafe } from "../utilities/ipc";
 import { capturePttBind, setPttBind } from "../services/PushToTalk";
+import {
+  destroyVoiceOverlay,
+  updateVoiceOverlay,
+} from "../windows/voiceOverlay";
 
 let powerSaveBlockerId: number | null = null;
 
 export function registerVoiceIpc() {
+  app.on("before-quit", destroyVoiceOverlay);
+
+  handleSafe("voice:overlayUpdate", undefined, async (_, state: unknown) => {
+    updateVoiceOverlay(state);
+  });
+
   handleSafe(
     "voice:setPtt",
     false,

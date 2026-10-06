@@ -34,6 +34,7 @@ import {
 } from "./continueTargets";
 import { instanceKey } from "./selectors";
 import { useContinueTargets } from "./useContinueTargets";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 export function ContinuePanel({
   instance,
@@ -47,6 +48,7 @@ export function ContinuePanel({
   const account = useAtomValue(accountAtom);
   const isLaunching = useAtomValue(isRunningAtom);
   const { t } = useTranslation();
+  const redact = useRedact();
 
   const addresses = useMemo(
     () =>
@@ -176,7 +178,7 @@ export function ContinuePanel({
                 ? target.lastPlayed > 0
                   ? formatRelative(new Date(target.lastPlayed))
                   : t("worlds.neverPlayed")
-                : target.address;
+                : redact.value(target.address);
             const players =
               ping?.state === "online" && ping.players
                 ? `${ping.players.online}/${ping.players.max}`

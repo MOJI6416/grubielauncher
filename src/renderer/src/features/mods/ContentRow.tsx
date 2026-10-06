@@ -19,6 +19,7 @@ import {
   Server,
   Trash2,
   Undo2,
+  Loader2,
 } from "lucide-react";
 import { Provider } from "@/types/ModManager";
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,7 @@ export const ContentRow = memo(function ContentRow({
   foreignLoader,
   changedAt,
   isBusy,
+  isWorking = false,
   actions,
 }: {
   entry: ContentEntry;
@@ -113,6 +115,7 @@ export const ContentRow = memo(function ContentRow({
   foreignLoader?: string;
   changedAt?: number;
   isBusy: boolean;
+  isWorking?: boolean;
   actions: ContentRowActions;
 }) {
   const { t } = useTranslation();
@@ -420,10 +423,15 @@ export const ContentRow = memo(function ContentRow({
             variant="outline"
             className="h-7 px-2.5"
             disabled={isBusy}
+            aria-busy={isWorking}
             onClick={() => actions.onInstall(entry)}
           >
-            <Plus className="size-3.5" />
-            {t("modManager.install")}
+            {isWorking ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Plus className="size-3.5" />
+            )}
+            {t(isWorking ? "modManager.installing" : "modManager.install")}
           </Button>
         ) : null}
       </div>

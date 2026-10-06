@@ -261,7 +261,7 @@ export function levelChunkNbt(options: LevelChunkOptions): Buffer {
   return Buffer.from(serializeSync(chunk));
 }
 
-/** A pre-1.13 chunk with numeric block ids, which the renderer cannot read. */
+/** A pre-1.13 chunk with numeric block ids. */
 export function legacyNumericChunkNbt(x: number, z: number): Buffer {
   const chunk = {
     DataVersion: 1343,
@@ -336,12 +336,288 @@ export function poiChunkNbt(records: number): Buffer {
   return Buffer.from(serializeSync(chunk));
 }
 
+export function heterogeneousChunkNbt(options: {
+  x: number;
+  z: number;
+  palette: (string | { Name: string; Properties: Record<string, string> })[];
+  data?: number[];
+}): Buffer {
+  const entries = options.palette.map((entry) =>
+    typeof entry === "string" ? { "": entry } : entry,
+  );
+  const chunk = {
+    DataVersion: 5023,
+    xPos: options.x,
+    zPos: options.z,
+    Status: "minecraft:full",
+    InhabitedTime: 0,
+    sections: [
+      {
+        Y: 0,
+        block_states: {
+          palette: entries,
+          ...(options.data
+            ? { data: packIndices(options.data, bitsFor(entries.length, 4)) }
+            : {}),
+        },
+        biomes: { palette: ["minecraft:plains"] },
+      },
+    ],
+  };
+
+  setPrototypeOf(chunk, {
+    DataVersion: TagType.Int,
+    xPos: TagType.Int,
+    zPos: TagType.Int,
+    Status: TagType.String,
+    InhabitedTime: TagType.Long,
+    sections: [
+      {
+        Y: TagType.Byte,
+        block_states: {
+          palette: [
+            {
+              "": TagType.String,
+              Name: TagType.String,
+              Properties: { level: TagType.String, snowy: TagType.String },
+            },
+          ],
+          ...(options.data ? { data: TagType.LongArray } : {}),
+        },
+        biomes: { palette: [TagType.String] },
+      },
+    ],
+  } as any);
+
+  return Buffer.from(serializeSync(chunk));
+}
+
+function toSignedBytes(values: number[]): number[] {
+  return values.map((value) => ((value & 0xff) << 24) >> 24);
+}
+
+function packNibbles(values: number[]): number[] {
+  const bytes = new Array<number>(Math.ceil(values.length / 2)).fill(0);
+  values.forEach((value, index) => {
+    bytes[index >> 1] |= (value & 15) << ((index & 1) * 4);
+  });
+  return toSignedBytes(bytes);
+}
+
+export interface LegacyAnvilSection {
+  y: number;
+  ids: number[];
+  data?: number[];
+}
+
+export function legacyAnvilChunkNbt(options: {
+  x: number;
+  z: number;
+  sections: LegacyAnvilSection[];
+  biomes?: number[];
+  terrainPopulated?: boolean;
+  dataVersion?: number;
+}): Buffer {
+  const hasAdd = options.sections.some((section) =>
+    section.ids.some((id) => id > 255),
+  );
+  const chunk = {
+    ...(options.dataVersion ? { DataVersion: options.dataVersion } : {}),
+    Level: {
+      xPos: options.x,
+      zPos: options.z,
+      LastUpdate: 10,
+      InhabitedTime: 0,
+      TerrainPopulated: options.terrainPopulated === false ? 0 : 1,
+      Sections: options.sections.map((section) => ({
+        Y: section.y,
+        Blocks: toSignedBytes(section.ids),
+        Data: packNibbles(section.data ?? new Array(4096).fill(0)),
+        ...(hasAdd
+          ? { Add: packNibbles(section.ids.map((id) => id >> 8)) }
+          : {}),
+      })),
+      ...(options.biomes ? { Biomes: options.biomes } : {}),
+      Entities: [],
+      TileEntities: [],
+    },
+  };
+
+  setPrototypeOf(chunk, {
+    ...(options.dataVersion ? { DataVersion: TagType.Int } : {}),
+    Level: {
+      xPos: TagType.Int,
+      zPos: TagType.Int,
+      LastUpdate: TagType.Long,
+      InhabitedTime: TagType.Long,
+      TerrainPopulated: TagType.Byte,
+      Sections: [
+        {
+          Y: TagType.Byte,
+          Blocks: TagType.ByteArray,
+          Data: TagType.ByteArray,
+          ...(hasAdd ? { Add: TagType.ByteArray } : {}),
+        },
+      ],
+      ...(options.biomes
+        ? {
+            Biomes:
+              options.biomes.length === 1024
+                ? TagType.IntArray
+                : TagType.ByteArray,
+          }
+        : {}),
+      Entities: [{ id: TagType.String }],
+      TileEntities: [{ id: TagType.String }],
+    },
+  } as any);
+
+  return Buffer.from(serializeSync(chunk));
+}
+
+export function mcRegionChunkNbt(options: {
+  x: number;
+  z: number;
+  column: (x: number, z: number, y: number) => number;
+  terrainPopulated?: boolean;
+}): Buffer {
+  const ids = new Array<number>(32768);
+  for (let x = 0; x < 16; x += 1) {
+    for (let z = 0; z < 16; z += 1) {
+      for (let y = 0; y < 128; y += 1) {
+        ids[(x << 11) | (z << 7) | y] = options.column(x, z, y);
+      }
+    }
+  }
+
+  const chunk = {
+    Level: {
+      xPos: options.x,
+      zPos: options.z,
+      LastUpdate: 5,
+      TerrainPopulated: options.terrainPopulated === false ? 0 : 1,
+      Blocks: toSignedBytes(ids),
+      Data: packNibbles(new Array(32768).fill(0)),
+      Entities: [{ id: "Pig" }],
+      TileEntities: [
+        { id: "Chest", x: options.x * 16, y: 64, z: options.z * 16 },
+      ],
+    },
+  };
+
+  setPrototypeOf(chunk, {
+    Level: {
+      xPos: TagType.Int,
+      zPos: TagType.Int,
+      LastUpdate: TagType.Long,
+      TerrainPopulated: TagType.Byte,
+      Blocks: TagType.ByteArray,
+      Data: TagType.ByteArray,
+      Entities: [{ id: TagType.String }],
+      TileEntities: [
+        { id: TagType.String, x: TagType.Int, y: TagType.Int, z: TagType.Int },
+      ],
+    },
+  } as any);
+
+  return Buffer.from(serializeSync(chunk));
+}
+
+export function levelDat(options: {
+  version?: number;
+  forgeBlocks?: Record<string, number>;
+  forgeItemData?: Record<string, number>;
+}): Buffer {
+  const root: Record<string, unknown> = {
+    Data: {
+      LevelName: "World",
+      ...(options.version ? { version: options.version } : {}),
+    },
+  };
+  const schema: Record<string, unknown> = {
+    Data: {
+      LevelName: TagType.String,
+      ...(options.version ? { version: TagType.Int } : {}),
+    },
+  };
+
+  if (options.forgeBlocks || options.forgeItemData) {
+    root.FML = {
+      ...(options.forgeBlocks
+        ? {
+            Registries: {
+              "minecraft:blocks": {
+                ids: Object.entries(options.forgeBlocks).map(([K, V]) => ({
+                  K,
+                  V,
+                })),
+              },
+            },
+          }
+        : {}),
+      ...(options.forgeItemData
+        ? {
+            ItemData: Object.entries(options.forgeItemData).map(([K, V]) => ({
+              K,
+              V,
+            })),
+          }
+        : {}),
+    };
+    schema.FML = {
+      Registries: {
+        "minecraft:blocks": { ids: [{ K: TagType.String, V: TagType.Int }] },
+      },
+      ItemData: [{ K: TagType.String, V: TagType.Int }],
+    };
+  }
+
+  setPrototypeOf(root, schema as any);
+  return zlib.gzipSync(Buffer.from(serializeSync(root)));
+}
+
+export function lz4Stream(data: Buffer, blockSize = 65536): Buffer {
+  const header = (method: number, compressed: number, original: number) => {
+    const bytes = Buffer.alloc(21);
+    bytes.write("LZ4Block", 0, "latin1");
+    bytes[8] = method | 6;
+    bytes.writeInt32LE(compressed, 9);
+    bytes.writeInt32LE(original, 13);
+    return bytes;
+  };
+
+  const parts: Buffer[] = [];
+  for (let start = 0; start < data.length; start += blockSize) {
+    const literals = data.subarray(start, start + blockSize);
+    const lengthBytes: number[] = [];
+    let token = literals.length;
+    if (token >= 15) {
+      let rest = token - 15;
+      token = 15;
+      while (rest >= 255) {
+        lengthBytes.push(255);
+        rest -= 255;
+      }
+      lengthBytes.push(rest);
+    }
+    const block = Buffer.concat([
+      Buffer.from([token << 4, ...lengthBytes]),
+      literals,
+    ]);
+    parts.push(header(0x20, block.length, literals.length), block);
+  }
+  parts.push(header(0x10, 0, 0));
+
+  return Buffer.concat(parts);
+}
+
 export function compressNbt(
   nbt: Buffer,
   kind: ChunkCompression = "zlib",
 ): Buffer {
   if (kind === "zlib") return zlib.deflateSync(nbt);
   if (kind === "gzip") return zlib.gzipSync(nbt);
+  if (kind === "lz4") return lz4Stream(nbt);
   return nbt;
 }
 

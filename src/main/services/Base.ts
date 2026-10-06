@@ -3,6 +3,7 @@ import { checkToken, getTokenSubject } from '../utilities/jwt'
 import { BACKEND_CANDIDATES } from '@/shared/config'
 import { mutateAccountsConfig } from '../utilities/accounts'
 import { attachApiHostFallback, getApiBaseUrl } from '../utilities/apiHost'
+import { withSessionNickname } from '@/shared/sessionNickname'
 
 const inflightRefreshes = new Map<string, Promise<string | null>>()
 
@@ -32,10 +33,10 @@ async function persistRefreshedToken(token: string, oldToken: string) {
         if (!isSameToken && !isSameSubject) return account
 
         didUpdate = true
-        return {
+        return withSessionNickname({
           ...account,
           accessToken: token
-        }
+        })
       })
 
       if (!didUpdate) return null

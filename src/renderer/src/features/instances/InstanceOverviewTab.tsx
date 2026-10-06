@@ -9,11 +9,13 @@ import {
   Loader2,
   MemoryStick,
   NotebookPen,
+  PackageOpen,
   Server,
   SquareTerminal,
   type LucideIcon,
 } from "lucide-react";
 import { Version } from "@renderer/classes/Version";
+import { Provider } from "@/types/ModManager";
 import { IVersionStatistics } from "@/types/VersionStatistics";
 import type { InstanceTab } from "@renderer/navigation/routes";
 import { formatRelative } from "@renderer/utilities/date";
@@ -91,6 +93,12 @@ export interface InstanceOverviewProps {
   memoryMb: number;
   loaderFact?: { currentId?: string; update?: string };
   onOpenLoader?: () => void;
+  modpackFact?: {
+    title: string;
+    version: string;
+    provider: Provider;
+    update?: string;
+  };
   actions: OverviewAction[];
   statuses?: ReactNode;
   banner?: ReactNode;
@@ -102,6 +110,7 @@ export interface InstanceOverviewProps {
   onCancelRename: () => void;
   onCommitRename: () => void;
   onPickLogo: () => void;
+  onApplyLogo: (blob: Blob) => void;
   onUseScreenshotAsCover?: (file: string) => void;
   onRemoveLogo: () => void;
 }
@@ -235,6 +244,7 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
           onCancelRename={props.onCancelRename}
           onCommitRename={props.onCommitRename}
           onPickLogo={props.onPickLogo}
+          onApplyLogo={props.onApplyLogo}
           onRemoveLogo={props.onRemoveLogo}
         />
       </div>
@@ -283,6 +293,38 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
             className="shrink-0"
           >
             <FactRows surface="card">
+              {props.modpackFact && (
+                <FactRow
+                  icon={<PackageOpen className="size-3.5" />}
+                  label={t("versions.facts.modpack")}
+                  value={
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate font-mono">
+                        {props.modpackFact.version}
+                      </span>
+                      {props.modpackFact.update && (
+                        <span className="flex shrink-0 items-center gap-0.5 font-mono text-warning">
+                          <ArrowUp className="size-3" />
+                          {props.modpackFact.update}
+                        </span>
+                      )}
+                    </span>
+                  }
+                  hint={
+                    props.modpackFact.update
+                      ? t("modpack.updateAvailable", {
+                          title: props.modpackFact.title,
+                          version: props.modpackFact.update,
+                        })
+                      : `${props.modpackFact.title} · ${
+                          props.modpackFact.provider === Provider.CURSEFORGE
+                            ? "CurseForge"
+                            : "Modrinth"
+                        }`
+                  }
+                  onSelect={() => props.onOpenTab("modpack")}
+                />
+              )}
               {props.loaderFact && (
                 <FactRow
                   icon={<Layers className="size-3.5" />}

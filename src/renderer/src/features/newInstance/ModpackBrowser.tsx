@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -7,6 +14,7 @@ import {
   CircleAlert,
   Download,
   HardDriveDownload,
+  Images,
   Loader2,
   Package,
   RotateCw,
@@ -14,7 +22,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -24,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { VirtualizedSelect } from "@/components/ui/virtualized-select";
 import { Hint } from "@renderer/components/Hint";
+import { RemoteGalleryViewer } from "@renderer/components/mediaViewer/RemoteGalleryViewer";
 import type { Loader } from "@/types/Loader";
 import type { IVersion as IGameVersion } from "@/types/IVersion";
 import {
@@ -44,11 +52,15 @@ import {
 } from "@renderer/features/mods/format";
 import { cn } from "@/lib/utils";
 import type { ModpackDownloadStage } from "./downloadModpack";
+import { PackStageProgress } from "./PackStageProgress";
+import { useEntranceWave } from "@renderer/utilities/useEntranceWave";
+import { ListSkeleton } from "@renderer/components/ListSkeleton";
 
 const api = window.api;
 
 const VERSIONS_CHANNEL = "modManager:getVersions";
 const CATALOG_LOADERS: Loader[] = ["forge", "neoforge", "fabric", "quilt"];
+const MODRINTH_ONLY_LOADERS: Loader[] = ["legacy-fabric", "babric", "ornithe"];
 const ROW_HEIGHT = 60;
 
 interface DetailState {
@@ -97,6 +109,7 @@ export function ModpackBrowser({
   const [gameVersions, setGameVersions] = useState<IGameVersion[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [detail, setDetail] = useState<DetailState>(EMPTY_DETAIL);
+  const [isGalleryOpen, setGalleryOpen] = useState(false);
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
     null,
   );
@@ -165,6 +178,7 @@ export function ModpackBrowser({
   });
 
   const virtualItems = virtualizer.getVirtualItems();
+  const isResultWave = useEntranceWave(catalog.isLoading);
   const lastVisible = virtualItems[virtualItems.length - 1]?.index ?? -1;
 
   useEffect(() => {
@@ -229,18 +243,6 @@ export function ModpackBrowser({
     [detail.selectedId, detail.versions],
   );
 
-  const stageLabel = stage
-    ? stage === "extract"
-      ? t("modManager.extracting")
-      : t("downloadProgress.title")
-    : "";
-  const stagePercent =
-    stage === "download"
-      ? progressPercent
-      : stage === "extract"
-        ? extractPercent
-        : null;
-
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
       <div className="flex shrink-0 items-center gap-2">
@@ -251,7 +253,16 @@ export function ModpackBrowser({
               type="button"
               aria-pressed={provider === item}
               disabled={isBusy}
-              onClick={() => setProvider(item)}
+              onClick={() => {
+                setProvider(item);
+                if (
+                  item !== Provider.MODRINTH &&
+                  loader &&
+                  MODRINTH_ONLY_LOADERS.includes(loader)
+                ) {
+                  setLoader(undefined);
+                }
+              }}
               className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:text-foreground aria-pressed:bg-surface-3 aria-pressed:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
               {item === Provider.CURSEFORGE ? (
@@ -311,7 +322,10 @@ export function ModpackBrowser({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="any">{t("newInstance.anyLoader")}</SelectItem>
-            {CATALOG_LOADERS.map((item) => (
+            {[
+              ...CATALOG_LOADERS,
+              ...(provider === Provider.MODRINTH ? MODRINTH_ONLY_LOADERS : []),
+            ].map((item) => (
               <SelectItem key={item} value={item}>
                 <LoaderLabel loader={item} />
               </SelectItem>
@@ -339,48 +353,46 @@ export function ModpackBrowser({
             ref={setScrollElement}
             className="min-h-0 flex-1 overflow-y-auto p-1.5"
           >
-            {items.length === 0 ? (
+            {items.length === 0 &&
+            (catalog.isLoading || !meta.isReady) &&
+            !offlineReason ? (
+              <ListSkeleton
+                rows={9}
+                rowClassName="h-[60px]"
+                iconClassName="size-11 rounded-lg"
+              />
+            ) : items.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
-                {(catalog.isLoading || !meta.isReady) && !offlineReason ? (
-                  <Loader2 className="size-5 animate-spin text-faint" />
-                ) : (
-                  <>
-                    <span className="flex size-11 items-center justify-center rounded-xl bg-surface-2">
-                      {catalog.error || offlineReason ? (
-                        <CircleAlert className="size-5 text-destructive" />
-                      ) : (
-                        <Search className="size-5 text-faint" />
-                      )}
-                    </span>
-                    <p className="text-sm font-medium text-foreground">
-                      {offlineReason
-                        ? t("shell.offline.internet")
-                        : catalog.error
-                          ? t("modManager.searchFailedTitle")
-                          : t("common.notFound")}
-                    </p>
-                    <p className="max-w-64 text-xs text-muted-foreground">
-                      {offlineReason ??
-                        (catalog.error
-                          ? t("modManager.searchFailed")
-                          : t("modManager.notFoundHint"))}
-                    </p>
-                    {catalog.error && !offlineReason && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={catalog.reload}
-                      >
-                        <RotateCw />
-                        {t("common.retry")}
-                      </Button>
-                    )}
-                  </>
+                <span className="flex size-11 items-center justify-center rounded-xl bg-surface-2">
+                  {catalog.error || offlineReason ? (
+                    <CircleAlert className="size-5 text-destructive" />
+                  ) : (
+                    <Search className="size-5 text-faint" />
+                  )}
+                </span>
+                <p className="text-sm font-medium text-foreground">
+                  {offlineReason
+                    ? t("shell.offline.internet")
+                    : catalog.error
+                      ? t("modManager.searchFailedTitle")
+                      : t("common.notFound")}
+                </p>
+                <p className="max-w-64 text-xs text-muted-foreground">
+                  {offlineReason ??
+                    (catalog.error
+                      ? t("modManager.searchFailed")
+                      : t("modManager.notFoundHint"))}
+                </p>
+                {catalog.error && !offlineReason && (
+                  <Button size="sm" variant="outline" onClick={catalog.reload}>
+                    <RotateCw />
+                    {t("common.retry")}
+                  </Button>
                 )}
               </div>
             ) : (
               <div
-                className="relative w-full"
+                className={cn("relative w-full", isResultWave && "result-wave")}
                 style={{ height: `${virtualizer.getTotalSize()}px` }}
               >
                 {virtualItems.map((row) => {
@@ -402,10 +414,14 @@ export function ModpackBrowser({
                       type="button"
                       disabled={isBusy}
                       aria-selected={activeId === project.id}
-                      style={{
-                        height: `${row.size}px`,
-                        transform: `translateY(${row.start}px)`,
-                      }}
+                      data-wave-row
+                      style={
+                        {
+                          height: `${row.size}px`,
+                          transform: `translateY(${row.start}px)`,
+                          "--wave-index": row.index,
+                        } as CSSProperties
+                      }
                       onClick={() => void openDetail(project)}
                       className="absolute top-0 left-0 flex w-full items-center gap-2.5 rounded-xl px-2 text-left transition-colors hover:bg-surface-2 aria-selected:bg-primary-soft disabled:cursor-not-allowed"
                     >
@@ -467,11 +483,34 @@ export function ModpackBrowser({
             <>
               <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
                 {detail.project.gallery?.[0]?.url && (
-                  <img
-                    src={detail.project.gallery[0].url}
-                    alt=""
-                    draggable={false}
-                    className="h-28 w-full shrink-0 border-b border-border object-cover"
+                  <button
+                    type="button"
+                    aria-label={t("common.gallery")}
+                    className="group relative h-28 w-full shrink-0 overflow-hidden border-b border-border focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    onClick={() => setGalleryOpen(true)}
+                  >
+                    <img
+                      src={detail.project.gallery[0].url}
+                      alt=""
+                      draggable={false}
+                      className="size-full object-cover transition-opacity group-hover:opacity-85"
+                    />
+                    {detail.project.gallery.length > 1 && (
+                      <span className="absolute right-2 bottom-2 flex items-center gap-1 rounded-md border border-border bg-surface-1/90 px-1.5 py-0.5 text-[0.65rem] text-muted-foreground">
+                        <Images className="size-3" />
+                        <span className="font-mono tabular-nums">
+                          {detail.project.gallery.length}
+                        </span>
+                      </span>
+                    )}
+                  </button>
+                )}
+                {isGalleryOpen && detail.project.gallery?.length > 0 && (
+                  <RemoteGalleryViewer
+                    images={detail.project.gallery}
+                    startIndex={0}
+                    title={detail.project.title}
+                    onClose={() => setGalleryOpen(false)}
                   />
                 )}
 
@@ -619,28 +658,11 @@ export function ModpackBrowser({
                     />
 
                     {isBusy && stage ? (
-                      <div className="grid gap-1.5">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Loader2 className="size-3.5 animate-spin" />
-                          <span className="min-w-0 flex-1 truncate">
-                            {stageLabel}
-                          </span>
-                          {stagePercent !== null && (
-                            <span className="font-mono tabular-nums text-faint">
-                              {stagePercent}%
-                            </span>
-                          )}
-                        </div>
-                        <Progress
-                          value={stagePercent ?? 100}
-                          max={100}
-                          className={cn(
-                            "h-1.5",
-                            stagePercent === null &&
-                              "[&_[data-slot=progress-indicator]]:animate-pulse",
-                          )}
-                        />
-                      </div>
+                      <PackStageProgress
+                        stage={stage}
+                        progressPercent={progressPercent}
+                        extractPercent={extractPercent}
+                      />
                     ) : (
                       <Button
                         type="button"

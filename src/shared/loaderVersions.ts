@@ -1,5 +1,7 @@
-import type { Loader } from "@/types/Loader";
+import { LOADERS, type Loader } from "@/types/Loader";
 import type { LoaderVersion } from "@/types/VersionsService";
+import { isLegacyLoader, profileJsonUrl } from "./profileLoaders";
+import { btaManifestUrl } from "./btaLoader";
 
 type ResolveImportedLoaderVersionInput = {
   loader: Loader | undefined;
@@ -16,6 +18,7 @@ export type ImportedLoaderVersionResolution =
   | { status: "notFound"; version?: undefined };
 
 const loaderPrefixes: Array<{ prefix: string; loader: Loader }> = [
+  { prefix: "legacy-fabric-", loader: "legacy-fabric" },
   { prefix: "fabric-loader-", loader: "fabric" },
   { prefix: "quilt-loader-", loader: "quilt" },
   { prefix: "neoforge-", loader: "neoforge" },
@@ -25,7 +28,7 @@ const loaderPrefixes: Array<{ prefix: string; loader: Loader }> = [
 ];
 
 function isLoader(value: string): value is Loader {
-  return ["vanilla", "forge", "neoforge", "fabric", "quilt"].includes(value);
+  return (LOADERS as readonly string[]).includes(value);
 }
 
 function trimVersion(value?: string) {
@@ -173,6 +176,12 @@ export function createLoaderVersionFromManifest(
       url: `https://meta.quiltmc.org/v3/versions/loader/${minecraftVersion}/${id}/profile/json`,
     };
   }
+
+  if (isLegacyLoader(loader)) {
+    return { id, url: profileJsonUrl(loader, minecraftVersion, id) };
+  }
+
+  if (loader === "bta-babric") return { id, url: btaManifestUrl(id) };
 
   return null;
 }

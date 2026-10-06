@@ -48,6 +48,7 @@ import {
   saveWatchedFolders,
   type IBlockedMod,
 } from "@renderer/utilities/blockedMods";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 export { applyBlockedModFilePaths, areBlockedModsReady, checkBlockedMods };
 export type { IBlockedMod };
@@ -120,6 +121,7 @@ export function BlockedMods({
   const dragCounterRef = useRef(0);
 
   const { t } = useTranslation();
+  const redact = useRedact();
 
   const watchedFolders = useMemo<IWatchedFolder[]>(() => {
     const folders: IWatchedFolder[] = [];
@@ -813,9 +815,13 @@ export function BlockedMods({
                     key={folder.path}
                     className="flex h-7 items-center gap-2 rounded-md bg-background/40 px-2"
                   >
-                    <Hint content={folder.path} variant="text" truncatedOnly>
+                    <Hint
+                      content={redact.path(folder.path)}
+                      variant="text"
+                      truncatedOnly
+                    >
                       <span className="min-w-0 flex-1 truncate font-mono text-[0.7rem] text-muted-foreground">
-                        {folder.path}
+                        {redact.path(folder.path)}
                       </span>
                     </Hint>
                     {folder.removable ? (

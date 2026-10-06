@@ -58,8 +58,3 @@ export function resolveDeviceSelection(
 
   return { deviceId: options[0].deviceId, isMissing: true };
 }
-
-export function meterSegments(level: number, segments: number): number {
-  if (!Number.isFinite(level) || level <= 0) return 0;
-  return Math.min(segments, Math.round(Math.min(1, level * 1.4) * segments));
-}

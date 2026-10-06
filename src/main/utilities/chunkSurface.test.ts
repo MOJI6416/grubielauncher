@@ -12,9 +12,12 @@ import {
 import {
   columnStack,
   flatChunkNbt,
+  heterogeneousChunkNbt,
+  legacyAnvilChunkNbt,
   legacyNumericChunkNbt,
   levelChunkNbt,
   localIndex,
+  mcRegionChunkNbt,
   packIndices,
   packIndicesSpanning,
 } from "./chunkFixtures.test-helpers";
@@ -174,9 +177,160 @@ describe("renderChunkColumns", () => {
     }
   });
 
-  it("reports numeric-id chunks as unsupported", () => {
-    expect(renderChunkColumns(parse(legacyNumericChunkNbt(0, 0)))).toBeNull();
+  it("reads numeric block ids of 1.2–1.12 chunks", () => {
+    const columns = renderChunkColumns(parse(legacyNumericChunkNbt(0, 0)))!;
+    expect(columns.heights[0]).toBe(15);
+    expect([columns.colors[0], columns.colors[1], columns.colors[2]]).toEqual(
+      rgbOf(paintForBlock("minecraft:stone")),
+    );
     expect(renderChunkColumns("nope")).toBeNull();
+  });
+
+  it("decodes block data, the Add nibble and per-column biomes", () => {
+    const ids = columnStack((x, _z, y) => {
+      if (y === 0) return 1;
+      if (y === 1) return x === 0 ? 35 : x === 1 ? 300 : 2;
+      return 0;
+    });
+    const data = columnStack((x, _z, y) => (y === 1 && x === 0 ? 14 : 0));
+    const biomes = Array.from({ length: 256 }, (_, column) =>
+      (column & 15) === 2 ? 6 : -1,
+    );
+    const chunk = legacyAnvilChunkNbt({
+      x: 0,
+      z: 0,
+      sections: [{ y: 4, ids, data }],
+      biomes,
+    });
+
+    const plain = renderChunkColumns(parse(chunk))!;
+    const color = (columns: typeof plain, column: number) => [
+      columns.colors[column * 3],
+      columns.colors[column * 3 + 1],
+      columns.colors[column * 3 + 2],
+    ];
+
+    expect(plain.heights[0]).toBe(65);
+    expect(color(plain, 0)).toEqual(rgbOf(paintForBlock("minecraft:red_wool")));
+    expect(color(plain, 2)).toEqual([...biomeTint("minecraft:swamp").grass]);
+    expect(color(plain, 3)).toEqual([...DEFAULT_TINT.grass]);
+    expect(color(plain, 1)).toEqual(rgbOf(paintForBlock("legacy:block_300")));
+
+    const named = renderChunkColumns(parse(chunk), {
+      legacyBlocks: new Map([[300, "mymod:sandy_thing"]]),
+    })!;
+    expect(color(named, 1)).toEqual(rgbOf(paintForBlock("minecraft:sand")));
+  });
+
+  it("reads the 3D biome array of 1.15–1.17 chunks", async () => {
+    const names = ["minecraft:air", "minecraft:grass_block"];
+    const data = columnStack((_x, _z, y) => (y === 0 ? 1 : 0));
+    const chunk = levelChunkNbt({
+      x: 0,
+      z: 0,
+      dataVersion: 2586,
+      sections: [{ y: 4, blocks: names, data }],
+    });
+    const nbt = parse(chunk) as { Level: Record<string, unknown> };
+    nbt.Level.Biomes = Array.from({ length: 1024 }, (_, cell) =>
+      cell >> 4 === 16 ? 21 : 1,
+    );
+
+    const columns = renderChunkColumns(nbt)!;
+    expect(columns.heights[0]).toBe(64);
+    expect([columns.colors[0], columns.colors[1], columns.colors[2]]).toEqual([
+      ...biomeTint("minecraft:jungle").grass,
+    ]);
+  });
+
+  it("reads the single block array of Beta McRegion chunks", () => {
+    const chunk = mcRegionChunkNbt({
+      x: 0,
+      z: 0,
+      column: (x, _z, y) => (y < 60 ? 1 : y === 60 ? (x === 0 ? 12 : 2) : 0),
+    });
+
+    const columns = renderChunkColumns(parse(chunk))!;
+    expect(columns.heights[0]).toBe(60);
+    expect([columns.colors[0], columns.colors[1], columns.colors[2]]).toEqual(
+      rgbOf(paintForBlock("minecraft:sand")),
+    );
+    expect(columns.heights[1]).toBe(60);
+    expect([columns.colors[3], columns.colors[4], columns.colors[5]]).toEqual([
+      ...DEFAULT_TINT.grass,
+    ]);
+  });
+
+  it("reads 26.x palettes that mix bare names with full block states", () => {
+    const data = columnStack((x, _z, y) =>
+      y === 0 ? 1 : y === 1 && x === 0 ? 2 : 0,
+    );
+    const chunk = heterogeneousChunkNbt({
+      x: 0,
+      z: 0,
+      palette: [
+        "minecraft:air",
+        "minecraft:stone",
+        { Name: "minecraft:grass_block", Properties: { snowy: "false" } },
+      ],
+      data,
+    });
+
+    const columns = renderChunkColumns(parse(chunk))!;
+    expect(columns.heights[0]).toBe(1);
+    expect([columns.colors[0], columns.colors[1], columns.colors[2]]).toEqual([
+      ...DEFAULT_TINT.grass,
+    ]);
+    expect(columns.heights[1]).toBe(0);
+    expect([columns.colors[3], columns.colors[4], columns.colors[5]]).toEqual(
+      rgbOf(paintForBlock("minecraft:stone")),
+    );
+  });
+
+  it("looks under the bedrock roof in ceiling mode", () => {
+    const names = [
+      "minecraft:air",
+      "minecraft:bedrock",
+      "minecraft:netherrack",
+      "minecraft:soul_sand",
+    ];
+    const roof = columnStack((_x, _z, y) => (y >= 13 ? 1 : 2));
+    const cave = columnStack((x, _z, y) => {
+      if (y <= 2) return x === 0 ? 3 : 2;
+      if (x === 1) return 2;
+      return 0;
+    });
+    const chunk = flatChunkNbt({
+      x: 0,
+      z: 0,
+      sections: [
+        { y: 7, blocks: names, data: roof },
+        { y: 6, blocks: ["minecraft:air"] },
+        { y: 5, blocks: names, data: cave },
+      ],
+    });
+    const nbt = parse(chunk);
+
+    const plain = renderChunkColumns(nbt)!;
+    expect(plain.heights[0]).toBe(127);
+
+    const ceiling = renderChunkColumns(nbt, { ceiling: true })!;
+    expect(ceiling.heights[0]).toBe(82);
+    expect([ceiling.colors[0], ceiling.colors[1], ceiling.colors[2]]).toEqual(
+      rgbOf(paintForBlock("minecraft:soul_sand")),
+    );
+    expect(ceiling.heights[2]).toBe(82);
+
+    const solid = flatChunkNbt({
+      x: 0,
+      z: 0,
+      sections: [{ y: 7, blocks: names, data: roof }],
+    });
+    const capped = renderChunkColumns(parse(solid), { ceiling: true })!;
+    expect(capped.heights[0]).toBe(127);
+    expect([capped.colors[0], capped.colors[1], capped.colors[2]]).toEqual(
+      rgbOf(paintForBlock("minecraft:bedrock")),
+    );
   });
 });
 

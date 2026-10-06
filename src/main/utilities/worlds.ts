@@ -13,8 +13,11 @@ import {
   EMPTY_ACHIEVEMENT_STATS,
   addAchievementStats,
 } from "@/types/Achievements";
-import { getLauncherPaths, toUUID } from "./other";
-import { getOfflineUuidCandidates } from "./offlineUuidMigration";
+import {
+  generateCanonicalOfflineUUID,
+  getLauncherPaths,
+  toUUID,
+} from "./other";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { jwtDecode } from "jwt-decode";
 import { deserialize } from "@xmcl/nbt";
@@ -49,11 +52,7 @@ function getAccountUuids(account: ILocalAccount): string[] {
     } catch {}
   }
 
-  const { legacy, canonical } = getOfflineUuidCandidates(account.nickname);
-  const uuids = [toUUID(canonical)];
-  if (legacy !== canonical) uuids.push(toUUID(legacy));
-
-  return uuids;
+  return [toUUID(generateCanonicalOfflineUUID(account.nickname))];
 }
 
 type StatsFileRef = { path: string; mtimeMs: number; size: number };

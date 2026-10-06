@@ -116,4 +116,15 @@ describe("serverInstanceName", () => {
       }),
     ).toBe("192.168.1.5");
   });
+
+  it("prefers the catalog name of the server", () => {
+    expect(
+      serverInstanceName({
+        host: "play.aerosmp.com",
+        port: null,
+        address: "play.aerosmp.com",
+        label: " Aero SMP ",
+      }),
+    ).toBe("Aero SMP");
+  });
 });

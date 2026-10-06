@@ -1,5 +1,6 @@
 export type InstanceTab =
   | "overview"
+  | "modpack"
   | "content"
   | "worlds"
   | "servers"
@@ -64,4 +65,15 @@ export function routeKey(route: Route): string {
 
 export function isSameRoute(a: Route, b: Route): boolean {
   return routeKey(a) === routeKey(b);
+}
+
+export function screenKey(route: Route): string {
+  switch (route.name) {
+    case "instance":
+      return `instance:${route.id}`;
+    case "profile":
+      return `profile:${route.userId}`;
+    default:
+      return route.name;
+  }
 }

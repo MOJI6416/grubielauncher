@@ -4,6 +4,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Loader2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 
 export interface PickerItem {
   id: string;
@@ -44,6 +46,7 @@ export function PickerList({
   total?: number;
 }) {
   const { t } = useTranslation();
+  const filterIndicator = useSlidingIndicator<HTMLDivElement>();
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
     null,
   );
@@ -99,7 +102,15 @@ export function PickerList({
       </header>
 
       {filters && (
-        <div className="flex shrink-0 items-center gap-1 border-b border-border px-1.5 py-1.5">
+        <div
+          ref={filterIndicator.containerRef}
+          className="relative flex shrink-0 items-center gap-1 border-b border-border px-1.5 py-1.5"
+        >
+          <SlidingIndicator
+            indicator={filterIndicator}
+            variant="fill"
+            className="rounded-md bg-surface-3"
+          />
           {filters}
         </div>
       )}

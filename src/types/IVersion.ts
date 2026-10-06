@@ -3,12 +3,27 @@ import { IArguments } from './IArguments'
 import { ILoader } from './Loader'
 import { IServer } from './ServersList'
 import { InstanceSettingsOverrides } from '../shared/instanceSettings'
+import type { IModpackSource } from './ModpackSource'
 
 export interface IVersion {
   id: string
   type: string
   url: string
   serverManager: boolean
+}
+
+export interface IJarMod {
+  file: string
+  name: string
+  enabled: boolean
+  url?: string
+  sha1?: string
+  size?: number
+}
+
+export interface IJarModSet {
+  mods: IJarMod[]
+  main: IJarMod | null
 }
 
 export interface IVersionConf {
@@ -27,6 +42,9 @@ export interface IVersionConf {
   image: string
   quickServer?: string
   overrides?: InstanceSettingsOverrides
+  jarMods?: IJarMod[]
+  mainJar?: IJarMod
+  modpack?: IModpackSource
 }
 
 export interface VersionDeleteResult {

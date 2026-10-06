@@ -6,6 +6,9 @@ import { projetTypeToFolder } from './modManager'
 import { Backend } from '../services/Backend'
 import { isPublishableContentUrl } from './trustedHosts'
 import { ILocalFile, ILocalProject, ProjectType, Provider } from '@/types/ModManager'
+import { IJarMod, IJarModSet } from '@/types/IVersion'
+import { jarModRelativePath } from '../game/jarMods'
+import { getSha1 } from './files'
 
 function fileUrlToPath(fileUrl: string | undefined) {
   if (!fileUrl || !fileUrl.startsWith('file://')) return ''
@@ -140,4 +143,37 @@ export async function uploadMods(at: string, version: Version) {
     uploaded: uploaded.length,
     failures
   }
+}
+
+export async function uploadJarMods(
+  at: string,
+  versionPath: string,
+  shareCode: string,
+  jar: IJarModSet
+): Promise<IJarModSet> {
+  const backend = new Backend(at)
+
+  const upload = async (mod: IJarMod): Promise<IJarMod> => {
+    if (mod.url && getRemoteModpackId(mod.url) === shareCode) return mod
+
+    const filePath = path.join(versionPath, jarModRelativePath(mod.file))
+    if (!(await fs.pathExists(filePath))) {
+      throw new Error(`${mod.name || mod.file}: file not found locally`)
+    }
+
+    const url = await backend.uploadFileFromPathDirect(
+      filePath,
+      mod.file,
+      `modpacks/${shareCode}/jarmods`
+    )
+    if (!url) throw new Error(`${mod.name || mod.file}: upload rejected`)
+
+    const stats = await fs.stat(filePath)
+    return { ...mod, url, sha1: await getSha1(filePath), size: stats.size }
+  }
+
+  const mods: IJarMod[] = []
+  for (const mod of jar.mods) mods.push(await upload(mod))
+
+  return { mods, main: jar.main ? await upload(jar.main) : null }
 }

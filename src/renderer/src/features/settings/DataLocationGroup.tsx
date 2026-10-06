@@ -18,6 +18,7 @@ import { formatBytes } from "@renderer/utilities/file";
 import type { DataLocationInfo, DataLocationPlan } from "@/types/DataLocation";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import { PathRows, PathText } from "../dataLocation/PathRows";
+import { useRedact } from "../streamer/streamerMode";
 
 const api = window.api;
 
@@ -26,6 +27,7 @@ type ReadyPlan = Exclude<DataLocationPlan, { kind: "error" }>;
 export function DataLocationGroup({ query }: { query: string }) {
   const { t } = useTranslation();
   const isRunning = useAtomValue(isRunningAtom);
+  const redact = useRedact();
   const [info, setInfo] = useState<DataLocationInfo | null>(null);
   const [checking, setChecking] = useState<"pick" | "default" | null>(null);
   const [plan, setPlan] = useState<ReadyPlan | null>(null);
@@ -116,7 +118,7 @@ export function DataLocationGroup({ query }: { query: string }) {
         >
           <div className="flex min-w-0 items-center gap-2">
             <PathText
-              path={info?.root || "…"}
+              path={info?.root ? redact.path(info.root) : "…"}
               className="flex-1 text-xs text-faint"
             />
             {info?.isDefault ? (
@@ -174,14 +176,14 @@ export function DataLocationGroup({ query }: { query: string }) {
                       plan.kind === "move"
                         ? t("dataLocation.from")
                         : t("dataLocation.current"),
-                    path: info.root,
+                    path: redact.path(info.root),
                   },
                   {
                     label:
                       plan.kind === "move"
                         ? t("dataLocation.to")
                         : t("dataLocation.next"),
-                    path: plan.target,
+                    path: redact.path(plan.target),
                   },
                 ]}
               />

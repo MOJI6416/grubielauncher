@@ -33,7 +33,7 @@ import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { Hint } from "@renderer/components/Hint";
 import { useOwnModpacks } from "./useProfileData";
 import { packShareCode, publishedShareCodes } from "./ownPacks";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 
 const api = window.api;
 
@@ -43,6 +43,10 @@ const LOADER_TEXT: Record<string, string> = {
   neoforge: "text-loader-neoforge",
   fabric: "text-loader-fabric",
   quilt: "text-loader-quilt",
+  "legacy-fabric": "text-loader-legacy-fabric",
+  babric: "text-loader-babric",
+  ornithe: "text-loader-ornithe",
+  "bta-babric": "text-loader-bta",
 };
 
 export function ProfileModpacks({ user }: { user: IUser }) {
@@ -464,8 +468,7 @@ function ModpackRow({
             size="icon-sm"
             aria-label={t("ownModpacks.copyId")}
             onClick={async () => {
-              if (!(await copyToClipboard(buildPackShareUrl(packShareCode(modpack))))) return;
-              toast(t("common.copied"));
+              await copyWithFeedback(buildPackShareUrl(packShareCode(modpack)));
             }}
           >
             <Link2 />

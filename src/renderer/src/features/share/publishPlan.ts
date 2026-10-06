@@ -304,6 +304,7 @@ export type PublishErrorCode =
   | "sizeUnknown"
   | "uploadFailed"
   | "logoFailed"
+  | "nameTaken"
   | "generic";
 
 export function resolvePublishErrorCode(error: unknown): PublishErrorCode {
@@ -314,6 +315,7 @@ export function resolvePublishErrorCode(error: unknown): PublishErrorCode {
   if (message === "size_unknown") return "sizeUnknown";
   if (message === "upload_failed") return "uploadFailed";
   if (message === "logo_failed") return "logoFailed";
+  if (message === "name_taken") return "nameTaken";
   return "generic";
 }
 

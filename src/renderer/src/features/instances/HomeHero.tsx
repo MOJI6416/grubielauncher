@@ -52,6 +52,7 @@ import { instanceFlagsAtom } from "./atoms";
 import { instanceStatsAtom, runningSessionsAtom } from "./instanceStats";
 import { instanceTagsAtom } from "./instancesStore";
 import { instanceUpdatesAtom } from "./updateCheck";
+import { modpackUpdatesAtom } from "@renderer/features/modpack/modpackCatalog";
 import { formatPlaytime, formatSessionClock } from "./playtime";
 import { resolveInstanceStatuses } from "./instanceStatus";
 import { openInstanceScreen } from "./openInstanceScreen";
@@ -90,6 +91,7 @@ export function HomeHero({
   const sessions = useAtomValue(runningSessionsAtom);
   const stats = useAtomValue(instanceStatsAtom);
   const updates = useAtomValue(instanceUpdatesAtom);
+  const modpackUpdates = useAtomValue(modpackUpdatesAtom);
   const flags = useAtomValue(instanceFlagsAtom);
   const tags = useAtomValue(instanceTagsAtom);
   const launch = useAtomValue(launchProgressAtom);
@@ -128,7 +130,7 @@ export function HomeHero({
   const statuses = resolveInstanceStatuses({
     running: !!session,
     installed: instance.hasManifest,
-    update: updates[key],
+    update: updates[key] ?? (modpackUpdates[key] ? "behind" : undefined),
     downloaded: instance.version.downloadedVersion,
   });
 

@@ -2,8 +2,10 @@ import { useTranslation } from "react-i18next";
 import { ImageOff, ImagePlus, Trash2, Wand2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PopoverAnchor, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
+import { LogoPicker } from "@renderer/features/logoPicker/LogoPicker";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
 import {
   INSTANCE_NAME_MAX,
@@ -17,6 +19,7 @@ export function IdentityFields({
   image,
   canEditImage,
   onPickImage,
+  onApplyImage,
   onClearImage,
   check,
   onUseSuggestion,
@@ -29,6 +32,7 @@ export function IdentityFields({
   image: string;
   canEditImage: boolean;
   onPickImage: () => void;
+  onApplyImage: (blob: Blob) => void;
   onClearImage: () => void;
   check: InstanceNameCheck;
   onUseSuggestion: (value: string) => void;
@@ -43,50 +47,72 @@ export function IdentityFields({
 
   return (
     <div className="flex shrink-0 items-start gap-3">
-      {cover ? (
-        <div className="group/logo relative size-16 shrink-0 overflow-hidden rounded-xl border border-border bg-surface-2">
+      {canEditImage ? (
+        <LogoPicker
+          hasImage={Boolean(cover)}
+          onApply={onApplyImage}
+          onPickFile={onPickImage}
+          onRemove={onClearImage}
+        >
+          <PopoverAnchor asChild>
+            <div className="relative size-16 shrink-0">
+              {cover ? (
+                <div className="group/logo relative size-full overflow-hidden rounded-xl border border-border bg-surface-2">
+                  <img
+                    src={cover}
+                    alt=""
+                    draggable={false}
+                    className="size-full object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center gap-1 bg-background/75 opacity-0 transition-opacity group-hover/logo:opacity-100 focus-within:opacity-100 has-aria-expanded:opacity-100">
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        disabled={isDisabled}
+                        aria-label={t("common.editingLogo")}
+                        className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
+                      >
+                        <ImagePlus className="size-4" />
+                      </button>
+                    </PopoverTrigger>
+                    <button
+                      type="button"
+                      disabled={isDisabled}
+                      aria-label={t("common.delete")}
+                      onClick={onClearImage}
+                      className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <Hint content={t("newInstance.logoHint")}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={isDisabled}
+                      aria-label={t("common.editingLogo")}
+                      className="flex size-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border bg-surface-1 text-faint transition-colors hover:border-input hover:bg-surface-2 hover:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-expanded:border-input aria-expanded:bg-surface-2"
+                    >
+                      <ImagePlus className="size-5" />
+                      <span className="text-[0.6rem]">{t("common.logo")}</span>
+                    </button>
+                  </PopoverTrigger>
+                </Hint>
+              )}
+            </div>
+          </PopoverAnchor>
+        </LogoPicker>
+      ) : cover ? (
+        <div className="size-16 shrink-0 overflow-hidden rounded-xl border border-border bg-surface-2">
           <img
             src={cover}
             alt=""
             draggable={false}
             className="size-full object-cover"
           />
-          {canEditImage && (
-            <div className="absolute inset-0 flex items-center justify-center gap-1 bg-background/75 opacity-0 transition-opacity group-hover/logo:opacity-100 focus-within:opacity-100">
-              <button
-                type="button"
-                disabled={isDisabled}
-                aria-label={t("common.editingLogo")}
-                onClick={onPickImage}
-                className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
-              >
-                <ImagePlus className="size-4" />
-              </button>
-              <button
-                type="button"
-                disabled={isDisabled}
-                aria-label={t("common.delete")}
-                onClick={onClearImage}
-                className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
-              >
-                <Trash2 className="size-4" />
-              </button>
-            </div>
-          )}
         </div>
-      ) : canEditImage ? (
-        <Hint content={t("newInstance.logoHint")}>
-          <button
-            type="button"
-            disabled={isDisabled}
-            aria-label={t("common.editingLogo")}
-            onClick={onPickImage}
-            className="flex size-16 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border bg-surface-1 text-faint transition-colors hover:border-input hover:bg-surface-2 hover:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <ImagePlus className="size-5" />
-            <span className="text-[0.6rem]">{t("common.logo")}</span>
-          </button>
-        </Hint>
       ) : (
         <Hint content={t("common.logo")}>
           <div className="flex size-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-border bg-surface-1 text-faint">

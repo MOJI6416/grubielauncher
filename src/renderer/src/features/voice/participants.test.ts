@@ -8,6 +8,7 @@ import {
   pingableMembers,
   sortVoiceParticipants,
   splitOverflow,
+  splitParticipantVolume,
   volumePercent,
 } from "./participants";
 
@@ -89,6 +90,14 @@ describe("volume helpers", () => {
     expect(clampParticipantVolume(3)).toBe(2);
     expect(clampParticipantVolume(Number.NaN)).toBe(1);
     expect(volumePercent(1.5)).toBe(150);
+  });
+
+  it("keeps the plain gain at or below 100% and moves the rest into the boost", () => {
+    expect(splitParticipantVolume(0)).toEqual({ level: 0, boost: 1 });
+    expect(splitParticipantVolume(0.4)).toEqual({ level: 0.4, boost: 1 });
+    expect(splitParticipantVolume(1)).toEqual({ level: 1, boost: 1 });
+    expect(splitParticipantVolume(1.15)).toEqual({ level: 1, boost: 1.15 });
+    expect(splitParticipantVolume(5)).toEqual({ level: 1, boost: 2 });
   });
 });
 

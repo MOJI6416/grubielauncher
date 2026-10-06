@@ -21,6 +21,7 @@ import { navigate } from "@renderer/navigation/navigate";
 import { OWN_PROFILE_ID } from "@renderer/features/profile/loadProfileUser";
 import { formatDate } from "@renderer/utilities/date";
 import { AccountHead } from "./AccountHead";
+import { GameNameSection } from "./GameNameSection";
 import { ProviderIcon, providerName } from "./ProviderMark";
 import { SessionIcon, sessionLabel } from "./SessionMark";
 import { accountIdentity } from "./identity";
@@ -200,6 +201,16 @@ export function AccountDetail({
         <p className="text-xs leading-relaxed text-faint">
           {t("accounts.identityInProfile")}
         </p>
+      )}
+
+      {account.type !== "plain" && (
+        <GameNameSection
+          account={account}
+          controller={controller}
+          isRunning={isRunning}
+          reachable={isInternetOnline && isBackendOnline}
+          offlineHint={offlineHint}
+        />
       )}
 
       <section className="grid gap-2 rounded-xl border border-border bg-surface-2 p-3">

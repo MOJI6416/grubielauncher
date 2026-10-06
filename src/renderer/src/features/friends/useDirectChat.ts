@@ -5,10 +5,8 @@ import { toast } from "sonner";
 import type { ILocalAccount } from "@/types/Account";
 import type { IModpack } from "@/types/Backend";
 import type { IMessage } from "@/types/IMessage";
-import { uploadChatImage } from "@renderer/utilities/chatUpload";
-import { showFailureToast } from "@renderer/utilities/failures";
-import { uploadFailure } from "./uploadFailure";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
+import { useChatImageUpload } from "./useChatImageUpload";
 import {
   applyReactions,
   appendEntry,
@@ -37,7 +35,6 @@ const SEND_TIMEOUT_MS = 12000;
 const HISTORY_TIMEOUT_MS = 15000;
 const OPERATION_TIMEOUT_MS = 15000;
 const TYPING_IDLE_MS = 4000;
-const IMAGE_FILE_PATTERN = /\.(apng|gif|jpe?g|png|webp)$/i;
 
 let localIdCounter = 0;
 
@@ -52,10 +49,6 @@ function nextLocalId() {
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return `local-${unique}-${localIdCounter}`;
-}
-
-function isChatImageFile(file: File) {
-  return file.type.startsWith("image/") || IMAGE_FILE_PATTERN.test(file.name);
 }
 
 function findPendingMatch(entries: ChatEntry[], message: IMessage) {
@@ -106,9 +99,6 @@ export function useDirectChat({
   const [peerReadSeq, setPeerReadSeq] = useState(0);
   const [messageText, setMessageText] = useState("");
   const [replyMessage, setReplyMessage] = useState<IMessage | null>(null);
-  const [imageUploadProgress, setImageUploadProgress] = useState<number | null>(
-    null,
-  );
   const [modpacks, setModpacks] = useState<Map<string, IModpack>>(new Map());
   const [failedModpacks, setFailedModpacks] = useState<Set<string>>(new Set());
   const [goneModpacks, setGoneModpacks] = useState<Set<string>>(new Set());
@@ -679,43 +669,17 @@ export function useDirectChat({
     }
   }, [isLoadingHistory, emitMessage, entriesRef]);
 
-  const sendImageFile = useCallback(
-    async (file: File) => {
-      if (!account?.accessToken || !ownUserIdRef.current) return;
-      if (!isChatImageFile(file)) return;
-
-      setImageUploadProgress(0);
-      try {
-        const safeName = (file.name || "image.png").trim() || "image.png";
-        const url = await uploadChatImage({
-          accessToken: account.accessToken,
-          file,
-          fileName: `chat_${Date.now()}_${safeName}`,
-          folder: `chat/${ownUserIdRef.current}`,
-          onProgress: setImageUploadProgress,
-        });
-
-        setImageUploadProgress(null);
-        sendBody({ _type: "image", value: url });
-      } catch (error) {
-        setImageUploadProgress(null);
-
-        if (error instanceof Error && error.message === "upload_timeout") {
-          toast.warning(t("friends.chatImageUploadError"), {
-            description: t("friends.operationErrors.timeout"),
-          });
-          return;
-        }
-
-        showFailureToast(
-          t("friends.chatImageUploadError"),
-          uploadFailure(error),
-          { channels: ["backend:"], context: { side: "grubie" } },
-        );
-      }
-    },
-    [account?.accessToken, sendBody, t],
+  const sendUploadedImage = useCallback(
+    (url: string) => sendBody({ _type: "image", value: url }),
+    [sendBody],
   );
+
+  const { imageUploadProgress, isUploading, sendImageFile, cancelImageUpload } =
+    useChatImageUpload({
+      accessToken: account?.accessToken,
+      ownUserIdRef,
+      onUploaded: sendUploadedImage,
+    });
 
   const warnOffline = useCallback(() => {
     toast.warning(tRef.current("friends.operationErrors.offline"));
@@ -756,11 +720,6 @@ export function useDirectChat({
     [armOperationTimer, socket, warnOffline],
   );
 
-  const isUploading = useMemo(
-    () => imageUploadProgress !== null,
-    [imageUploadProgress],
-  );
-
   const readReceiptKey = useMemo(
     () => lastReadOwnKey(entries, ownUserId, peerReadSeq),
     [entries, ownUserId, peerReadSeq],
@@ -789,6 +748,7 @@ export function useDirectChat({
     retry,
     discard,
     sendImageFile,
+    cancelImageUpload,
     deleteMessage,
     toggleReaction,
   };

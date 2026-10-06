@@ -22,6 +22,8 @@ export function NewInstanceScreen() {
     <NewInstancePanel
       importFilePath={request.importFilePath}
       modpack={request.modpack}
+      catalogPack={request.catalogPack}
+      modrinthServer={request.modrinthServer}
       source={request.source}
       successCallback={request.onSuccess}
       closeModal={async () => {

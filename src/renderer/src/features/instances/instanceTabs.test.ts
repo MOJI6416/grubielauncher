@@ -46,6 +46,21 @@ describe("buildInstanceTabs", () => {
     ]);
   });
 
+  it("shows the modpack tab next to the overview for linked packs", () => {
+    const tabs = buildInstanceTabs({
+      ...base,
+      hasModpack: true,
+      hasModpackUpdate: true,
+    });
+
+    expect(tabs.map((tab) => tab.id).slice(0, 3)).toEqual([
+      "overview",
+      "modpack",
+      "content",
+    ]);
+    expect(tabs[1].alert).toBe(true);
+  });
+
   it("carries counters for content, worlds and servers", () => {
     const tabs = buildInstanceTabs({
       ...base,

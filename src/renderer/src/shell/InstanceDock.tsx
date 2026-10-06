@@ -17,6 +17,8 @@ import {
 import { openNewInstance } from "@renderer/features/instances/newInstance";
 import { currentRouteAtom } from "@renderer/navigation/store";
 import { navigate } from "@renderer/navigation/navigate";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 
 export function InstanceDock() {
   const versions = useAtomValue(versionsAtom);
@@ -24,6 +26,7 @@ export function InstanceDock() {
   const isRunning = useAtomValue(isRunningAtom);
   const route = useAtomValue(currentRouteAtom);
   const { t } = useTranslation();
+  const dockIndicator = useSlidingIndicator<HTMLDivElement>();
 
   const ordered = useMemo(
     () => [...versions].sort((a, b) => activityTime(b) - activityTime(a)),
@@ -68,7 +71,15 @@ export function InstanceDock() {
       </div>
 
       {ordered.length > 0 && (
-        <div className="mt-0.5 min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-0.5">
+        <div
+          ref={dockIndicator.containerRef}
+          className="relative mt-0.5 min-h-0 flex-1 space-y-0.5 overflow-x-hidden overflow-y-auto pr-0.5"
+        >
+          <SlidingIndicator
+            indicator={dockIndicator}
+            variant="fill"
+            className="rounded-lg bg-primary-soft"
+          />
           {ordered.map((instance) => {
             const key = instanceKey(instance);
             const loader = getLoaderInfo(instance.version.loader.name);
@@ -79,8 +90,9 @@ export function InstanceDock() {
                 key={key}
                 type="button"
                 aria-current={isActive}
+                data-indicator-active={isActive}
                 onClick={() => navigate({ name: "instance", id: key })}
-                className="flex h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-left transition-colors hover:bg-sidebar-accent aria-[current=true]:bg-primary-soft"
+                className="relative flex h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-left transition-colors not-aria-[current=true]:hover:bg-sidebar-accent"
               >
                 <InstanceArt
                   name={instance.version.name}

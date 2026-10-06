@@ -44,6 +44,7 @@ import {
   type ConnectionsSummary,
   type NotificationEvent,
 } from "./notificationPrefs";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
@@ -82,6 +83,7 @@ export function ProfileConnections({
   accessToken?: string;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const isBackendOnline = useAtomValue(networkAtom);
 
   const [discordId, setDiscordId] = useState<string | null>(
@@ -343,7 +345,11 @@ export function ProfileConnections({
       icon: <FaDiscord className="size-4" />,
       name: "Discord",
       benefit: t("connections.discordBenefit"),
-      handle: discordId ? discordUsername || t("connections.linked") : null,
+      handle: discordId
+        ? discordUsername
+          ? redact.value(discordUsername)
+          : t("connections.linked")
+        : null,
       url: discordId ? `https://discord.com/users/${discordId}` : null,
       isSignIn: user.platform === "discord",
       onLink: () => void runDiscordLink(),
@@ -355,7 +361,7 @@ export function ProfileConnections({
       benefit: t("connections.telegramBenefit"),
       handle: telegram
         ? telegram.username
-          ? `@${telegram.username}`
+          ? redact.value(`@${telegram.username}`)
           : t("connections.linked")
         : null,
       url: null,

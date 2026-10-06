@@ -6,6 +6,7 @@ import {
   filterServers,
   findDuplicateAddress,
   findDuplicateName,
+  mergeServerLists,
   normalizeAddress,
   reorder,
   sortServers,
@@ -158,5 +159,23 @@ describe("countOnline", () => {
         },
       ),
     ).toBe(1);
+  });
+});
+
+describe("mergeServerLists", () => {
+  it("keeps the primary servers first and skips addresses already listed", () => {
+    expect(
+      mergeServerLists(
+        [server("Aero", "play.aerosmp.com")],
+        [
+          server("Aero (pack)", "Play.AeroSMP.com:25565"),
+          server("Lobby", "lobby.aerosmp.com"),
+          server("Empty", ""),
+        ],
+      ),
+    ).toEqual([
+      server("Aero", "play.aerosmp.com"),
+      server("Lobby", "lobby.aerosmp.com"),
+    ]);
   });
 });

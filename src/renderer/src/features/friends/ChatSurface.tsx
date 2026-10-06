@@ -21,7 +21,11 @@ import {
   CheckCheck,
   CircleAlert,
   Clock3,
+  Copy,
+  Download,
+  Expand,
   Gamepad2,
+  Image as ImageIcon,
   ImagePlus,
   Loader2,
   MessageSquareDashed,
@@ -45,22 +49,33 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
+import { Hint } from "@renderer/components/Hint";
+import type { MediaViewerItem } from "@renderer/components/mediaViewer/MediaViewer";
 import { cn } from "@/lib/utils";
 import { formatClock } from "@renderer/utilities/date";
 import { authDataAtom } from "@renderer/stores/atoms";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { copyRemoteImage, saveRemoteImage } from "@renderer/utilities/remoteImage";
+import {
+  findSticker,
+  stickerValue,
+  type StickerItem,
+} from "@renderer/features/stickers/catalog";
+import { StickerView } from "@renderer/features/stickers/StickerView";
 import type { IModpack } from "@/types/Backend";
 import type { Version } from "@renderer/classes/Version";
 import {
@@ -76,20 +91,34 @@ import {
   quoteMessage,
   type ChatEntry,
 } from "./chatEntries";
+import { EMOJI_FONT_FAMILY, insertAtCursor, jumboEmojiCount } from "./chatEmoji";
+import {
+  MAX_PENDING_IMAGES,
+  isChatImageFile,
+  pickChatImages,
+} from "./chatAttachments";
+import { AttachmentTray, type PendingImage } from "./AttachmentTray";
+import { ExpressionPicker } from "./ExpressionPicker";
+import { ChatImageViewer, chatImageFileName } from "./ChatImageViewer";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
 const UNREAD_ANCHOR_OFFSET = 44;
 const EARLIER_LOAD_THRESHOLD = 160;
 const LINK_PATTERN = /(https?:\/\/[^\s]+)/gi;
-const IMAGE_FILE_PATTERN = /\.(apng|gif|jpe?g|png|webp)$/i;
 const TRUSTED_LINK_HOSTS = ["grubielauncher.com"];
+const MESSAGE_LIMIT = 4000;
+const COUNTER_FROM = 3500;
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
+const REACTION_NAMES_LIMIT = 8;
 
 const EMOJI_FONT_STYLE: CSSProperties = {
-  fontFamily:
-    '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif',
+  fontFamily: EMOJI_FONT_FAMILY,
   lineHeight: 1,
 };
+
+let pendingImageCounter = 0;
 
 const REACTION_EMOJIS = [
   "👍",
@@ -123,16 +152,18 @@ function ReactionPicker({
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          className="size-5 rounded-md text-muted-foreground hover:text-foreground"
-          aria-label={label}
-        >
-          <SmilePlus className="size-3" />
-        </Button>
-      </PopoverTrigger>
+      <Hint content={label}>
+        <PopoverTrigger asChild>
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            className="size-5 rounded-md text-muted-foreground hover:text-foreground"
+            aria-label={label}
+          >
+            <SmilePlus className="size-3" />
+          </Button>
+        </PopoverTrigger>
+      </Hint>
       <PopoverContent
         align="end"
         side="top"
@@ -159,10 +190,6 @@ function ReactionPicker({
       </PopoverContent>
     </Popover>
   );
-}
-
-function isImageFile(file: File) {
-  return file.type.startsWith("image/") || IMAGE_FILE_PATTERN.test(file.name);
 }
 
 function isTrustedHost(host: string) {
@@ -214,7 +241,9 @@ export interface ChatSurfaceProps {
   emptyHint?: string;
   onMessageChange: (text: string) => void;
   onSend: () => void;
-  onSendImageFile: (file: File) => void | Promise<void>;
+  onSendImageFile: (file: File) => Promise<boolean>;
+  onCancelImageUpload?: () => void;
+  onSendSticker?: (value: string) => void;
   onReply: (message: IMessage) => void;
   onCancelReply: () => void;
   onDeleteMessage: (message: IMessage) => void;
@@ -255,6 +284,8 @@ function ChatSurfaceComponent({
   onMessageChange,
   onSend,
   onSendImageFile,
+  onCancelImageUpload,
+  onSendSticker,
   onReply,
   onCancelReply,
   onDeleteMessage,
@@ -268,10 +299,13 @@ function ChatSurfaceComponent({
   onDiscard,
 }: ChatSurfaceProps) {
   const { t, i18n } = useTranslation();
+  const redact = useRedact();
   const authData = useAtomValue(authDataAtom);
   const ownUserId = authData?.sub;
 
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [viewerKey, setViewerKey] = useState<string | null>(null);
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [pendingLink, setPendingLink] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<IMessage | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -280,7 +314,11 @@ function ChatSurfaceComponent({
   const [missedCount, setMissedCount] = useState(0);
   const [joiningInvite, setJoiningInvite] = useState<string | null>(null);
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
-  const [imageAttempt, setImageAttempt] = useState(0);
+  const [imageAttempts, setImageAttempts] = useState<Record<string, number>>({});
+  const pendingImagesRef = useLatestRef(pendingImages);
+  const onSendRef = useLatestRef(onSend);
+  const sendingQueueRef = useRef(false);
+  const menuSelectionRef = useRef("");
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -604,6 +642,12 @@ function ChatSurfaceComponent({
       const value = "message" in message ? message.message.value : message.value;
 
       if (type === "image") return t("friends.chatImage");
+      if (type === "sticker") {
+        const sticker = findSticker(value);
+        return sticker
+          ? `${sticker.emoji} ${t("friends.chatSticker")}`
+          : t("friends.chatSticker");
+      }
       if (type === "modpack") return t("friends.chatAttachModpack");
       if (type === "groupInvite") return t("friends.chatGroupInvite");
       return value;
@@ -628,6 +672,75 @@ function ChatSurfaceComponent({
     textareaRef.current?.focus();
   }, [replyMessage]);
 
+  const addPendingImages = useCallback(
+    (files: File[]) => {
+      if (!canAttachImage || files.length === 0) return;
+      const pick = pickChatImages(files, pendingImagesRef.current.length);
+
+      if (pick.notImage > 0) toast.warning(t("friends.chatDropNotImage"));
+      if (pick.tooLarge > 0) {
+        toast.warning(t("friends.chatImageTooLarge", { count: pick.tooLarge }));
+      }
+      if (pick.overflow > 0) {
+        toast.warning(t("friends.chatImagesLimit", { count: MAX_PENDING_IMAGES }));
+      }
+      if (pick.accepted.length === 0) return;
+
+      const added = pick.accepted.map((file) => {
+        pendingImageCounter += 1;
+        return {
+          id: `pending-${pendingImageCounter}`,
+          file,
+          url: URL.createObjectURL(file),
+        };
+      });
+      setPendingImages((prev) => [...prev, ...added]);
+      textareaRef.current?.focus();
+    },
+    [canAttachImage, pendingImagesRef, t],
+  );
+
+  const removePendingImage = useCallback((id: string) => {
+    setPendingImages((prev) => {
+      const item = prev.find((entry) => entry.id === id);
+      if (item) URL.revokeObjectURL(item.url);
+      return prev.filter((entry) => entry.id !== id);
+    });
+    textareaRef.current?.focus();
+  }, []);
+
+  useEffect(
+    () => () => {
+      for (const item of pendingImagesRef.current) URL.revokeObjectURL(item.url);
+    },
+    [pendingImagesRef],
+  );
+
+  const submit = useCallback(async () => {
+    if (sendingQueueRef.current || isSending) return;
+
+    const queue = pendingImagesRef.current;
+    if (queue.length === 0) {
+      if (messageText.trim()) onSend();
+      return;
+    }
+
+    sendingQueueRef.current = true;
+    try {
+      for (const item of queue) {
+        setUploadingId(item.id);
+        const sent = await onSendImageFile(item.file);
+        if (!sent) return;
+        URL.revokeObjectURL(item.url);
+        setPendingImages((prev) => prev.filter((entry) => entry.id !== item.id));
+      }
+      onSendRef.current();
+    } finally {
+      sendingQueueRef.current = false;
+      setUploadingId(null);
+    }
+  }, [isSending, messageText, onSend, onSendImageFile, onSendRef, pendingImagesRef]);
+
   const handleComposerKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === "Escape" && replyMessage) {
@@ -636,22 +749,48 @@ function ChatSurfaceComponent({
         return;
       }
 
-      if (event.key !== "Enter" || event.shiftKey) return;
+      if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) {
+        return;
+      }
       event.preventDefault();
-      if (!messageText.trim() || isSending) return;
-      onSend();
+      void submit();
     },
-    [isSending, messageText, onCancelReply, onSend, replyMessage],
+    [onCancelReply, replyMessage, submit],
   );
 
   const handlePaste = useCallback(
     (event: ClipboardEvent<HTMLTextAreaElement>) => {
-      const file = Array.from(event.clipboardData.files).find(isImageFile);
-      if (!file) return;
+      const images = Array.from(event.clipboardData.files).filter(isChatImageFile);
+      if (images.length === 0) return;
       event.preventDefault();
-      void onSendImageFile(file);
+      addPendingImages(images);
     },
-    [onSendImageFile],
+    [addPendingImages],
+  );
+
+  const insertEmoji = useCallback(
+    (emoji: string) => {
+      const node = textareaRef.current;
+      const next = insertAtCursor(
+        messageText,
+        emoji,
+        node?.selectionStart ?? null,
+        node?.selectionEnd ?? null,
+        MESSAGE_LIMIT,
+      );
+      if (!next) return;
+
+      onMessageChange(next.value);
+      requestAnimationFrame(() => {
+        textareaRef.current?.setSelectionRange(next.caret, next.caret);
+      });
+    },
+    [messageText, onMessageChange],
+  );
+
+  const sendSticker = useCallback(
+    (sticker: StickerItem) => onSendSticker?.(stickerValue(sticker)),
+    [onSendSticker],
   );
 
   const handleDragEnter = useCallback(
@@ -689,18 +828,9 @@ function ChatSurfaceComponent({
       dragDepthRef.current = 0;
       setIsDragging(false);
 
-      const files = Array.from(event.dataTransfer.files);
-      if (files.length === 0) return;
-
-      const file = files.find(isImageFile);
-      if (!file) {
-        toast.warning(t("friends.chatDropNotImage"));
-        return;
-      }
-
-      void onSendImageFile(file);
+      addPendingImages(Array.from(event.dataTransfer.files));
     },
-    [canAttachImage, onSendImageFile, t],
+    [addPendingImages, canAttachImage],
   );
 
   const renderText = useCallback((value: string) => {
@@ -755,10 +885,84 @@ function ChatSurfaceComponent({
       next.delete(url);
       return next;
     });
-    setImageAttempt((attempt) => attempt + 1);
+    setImageAttempts((prev) => ({ ...prev, [url]: (prev[url] ?? 0) + 1 }));
   }, []);
 
-  const canSend = messageText.trim().length > 0 && !isSending;
+  const formatMoment = useCallback(
+    (time: string | number | Date) =>
+      new Date(time).toLocaleString(i18n.language, {
+        day: "numeric",
+        month: "long",
+        year:
+          new Date(time).getFullYear() === new Date().getFullYear()
+            ? undefined
+            : "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    [i18n.language],
+  );
+
+  const viewerItems = useMemo<MediaViewerItem[]>(() => {
+    if (!viewerKey) return [];
+
+    return entries.flatMap((entry) => {
+      const message = entry.message;
+      const url = message.message?._type === "image" ? message.message.value : "";
+      if (!url || !isTrustedImageUrl(url) || brokenImages.has(url)) return [];
+
+      const isOwn = Boolean(ownUserId && message.sender === ownUserId);
+      const sender = resolveSender(message.sender);
+      return [
+        {
+          key: message.id || entry.key,
+          src: url,
+          alt: t("friends.chatImage"),
+          leading: <AccountHead account={sender} size={28} />,
+          title: isOwn ? t("friends.you") : sender.nickname,
+          subtitle: formatMoment(message.time),
+        },
+      ];
+    });
+  }, [brokenImages, entries, formatMoment, ownUserId, resolveSender, t, viewerKey]);
+
+  const closeViewer = useCallback(() => setViewerKey(null), []);
+
+  const showInChat = useCallback(
+    (key: string) => {
+      setViewerKey(null);
+      window.setTimeout(() => jumpToMessage(key), 0);
+    },
+    [jumpToMessage],
+  );
+
+  const reactionNames = useCallback(
+    (users: string[]) => {
+      const names = users
+        .slice(0, REACTION_NAMES_LIMIT)
+        .map((id) =>
+          id === ownUserId ? t("friends.you") : resolveSender(id).nickname,
+        );
+      const rest = users.length - names.length;
+      return rest > 0
+        ? t("friends.chatReactionMore", { names: names.join(", "), count: rest })
+        : names.join(", ");
+    },
+    [ownUserId, resolveSender, t],
+  );
+
+  const copyMessageText = useCallback((text: string) => {
+    const selected = menuSelectionRef.current.trim();
+    void copyWithFeedback(selected && text.includes(selected) ? selected : text);
+  }, []);
+
+  const hasDraft = messageText.trim().length > 0 || pendingImages.length > 0;
+  const canSend = hasDraft && !isSending && uploadingId === null;
+  const replySender = replyMessage
+    ? replyMessage.sender === ownUserId
+      ? t("friends.you")
+      : resolveSender(replyMessage.sender).nickname
+    : "";
 
   return (
     <section
@@ -924,17 +1128,33 @@ function ChatSurfaceComponent({
                   const reactions = (message.reactions ?? []).filter(
                     (reaction) => reaction.emoji && reaction.users?.length > 0,
                   );
+                  const body = message.message;
+                  const rowKey = message.id || row.key;
+                  const jumbo =
+                    body._type === "text" ? jumboEmojiCount(body.value) : 0;
+                  const sticker =
+                    body._type === "sticker" ? findSticker(body.value) : null;
+                  const imageUrl =
+                    body._type === "image" &&
+                    isTrustedImageUrl(body.value) &&
+                    !brokenImages.has(body.value)
+                      ? body.value
+                      : "";
 
                   return (
+                    <ContextMenu key={row.key}>
+                    <ContextMenuTrigger asChild>
                     <div
-                      key={row.key}
-                      ref={setNodeRef(message.id || row.key)}
+                      ref={setNodeRef(rowKey)}
                       className={cn(
                         "group/row flex min-w-0 items-start gap-2 rounded-lg transition-colors",
                         row.grouped ? "mt-0.5" : "mt-3 first:mt-0",
-                        highlightedKey === (message.id || row.key) &&
-                          "bg-primary-soft",
+                        highlightedKey === rowKey && "bg-primary-soft",
                       )}
+                      onContextMenu={() => {
+                        menuSelectionRef.current =
+                          window.getSelection()?.toString() ?? "";
+                      }}
                     >
                       {row.grouped ? (
                         <span className="w-8 shrink-0 pt-1 text-center font-mono text-[10px] leading-4 text-faint opacity-0 transition-opacity group-hover/row:opacity-100">
@@ -969,26 +1189,60 @@ function ChatSurfaceComponent({
                                 : resolveSender(message.replyTo.sender ?? "")
                                     .nickname}
                             </span>
+                            {message.replyTo.type === "image" && (
+                              <ImageIcon className="size-2.5 shrink-0 self-center" />
+                            )}
                             <span className="min-w-0 truncate">
                               {previewOf(message.replyTo)}
                             </span>
                           </button>
                         )}
 
-                        {message.message._type === "text" && (
-                          <div
-                            className={cn(
-                              "w-fit max-w-full rounded-lg border px-3 py-2 text-xs leading-5 whitespace-pre-wrap wrap-anywhere",
-                              isOwn
-                                ? "border-primary/30 bg-primary-soft-raised"
-                                : "border-border bg-surface-3",
-                              entry.status === "failed" &&
-                                "border-destructive/40 bg-surface-3",
-                            )}
-                          >
-                            {renderText(message.message.value)}
-                          </div>
-                        )}
+                        {body._type === "text" &&
+                          (jumbo > 0 ? (
+                            <p
+                              className={cn(
+                                "w-fit px-0.5 py-0.5 select-text",
+                                entry.status === "failed" && "opacity-60",
+                              )}
+                              style={{
+                                ...EMOJI_FONT_STYLE,
+                                fontSize: jumbo === 1 ? 44 : 34,
+                              }}
+                            >
+                              {body.value.trim()}
+                            </p>
+                          ) : (
+                            <div
+                              className={cn(
+                                "w-fit max-w-full rounded-lg border px-3 py-2 text-xs leading-5 whitespace-pre-wrap wrap-anywhere",
+                                isOwn
+                                  ? "border-primary/30 bg-primary-soft-raised"
+                                  : "border-border bg-surface-3",
+                                entry.status === "failed" &&
+                                  "border-destructive/40 bg-surface-3",
+                              )}
+                            >
+                              {renderText(body.value)}
+                            </div>
+                          ))}
+
+                        {body._type === "sticker" &&
+                          (sticker ? (
+                            <StickerView
+                              sticker={sticker}
+                              size={128}
+                              mode="inline"
+                              playOnAppear
+                              className={cn(
+                                entry.status === "failed" && "opacity-60",
+                              )}
+                            />
+                          ) : (
+                            <div className="w-fit rounded-lg border border-border bg-surface-3 px-3 py-2 text-xs text-muted-foreground">
+                              {t("friends.chatSticker")}
+                            </div>
+                          ))}
 
                         {message.message._type === "image" &&
                           (isTrustedImageUrl(message.message.value) ? (
@@ -1011,11 +1265,12 @@ function ChatSurfaceComponent({
                             ) : (
                               <button
                                 type="button"
-                                className="w-fit max-w-full overflow-hidden rounded-lg border border-border bg-surface-3 p-1 transition-colors hover:bg-accent"
-                                onClick={() => setPreviewImage(message.message.value)}
+                                aria-label={t("friends.chatImage")}
+                                className="w-fit max-w-full cursor-zoom-in overflow-hidden rounded-lg border border-border bg-surface-3 p-1 transition-colors hover:bg-accent"
+                                onClick={() => setViewerKey(rowKey)}
                               >
                                 <img
-                                  key={`${message.message.value}-${imageAttempt}`}
+                                  key={`${message.message.value}-${imageAttempts[message.message.value] ?? 0}`}
                                   src={message.message.value}
                                   className="max-h-56 max-w-full rounded-md object-contain"
                                   alt={t("friends.chatImage")}
@@ -1059,7 +1314,7 @@ function ChatSurfaceComponent({
                                   <p className="truncate text-[10px] text-muted-foreground">
                                     {invite?.name
                                       ? t("friends.chatGroupInvite")
-                                      : invite?.code}
+                                      : redact.value(invite?.code ?? "")}
                                   </p>
                                 </div>
                                 {invite && onAcceptGroupInvite && (
@@ -1148,29 +1403,33 @@ function ChatSurfaceComponent({
                               );
 
                               return (
-                                <button
+                                <Hint
                                   key={reaction.emoji}
-                                  type="button"
-                                  disabled={!message.id}
-                                  className={cn(
-                                    "flex h-6 items-center gap-1 rounded-md border px-1.5 text-[11px] leading-none transition-colors",
-                                    isSelected
-                                      ? "border-primary/50 bg-primary-soft text-foreground"
-                                      : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                                  )}
-                                  aria-label={t("friends.chatReaction")}
-                                  onClick={() => onToggleReaction(message, reaction.emoji)}
+                                  content={reactionNames(reaction.users)}
                                 >
-                                  <span
-                                    className="flex size-3.5 items-center justify-center"
-                                    style={EMOJI_FONT_STYLE}
+                                  <button
+                                    type="button"
+                                    disabled={!message.id}
+                                    className={cn(
+                                      "flex h-6 items-center gap-1 rounded-md border px-1.5 text-[11px] leading-none transition-colors",
+                                      isSelected
+                                        ? "border-primary/50 bg-primary-soft text-foreground"
+                                        : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                                    )}
+                                    aria-label={`${t("friends.chatReaction")} ${reaction.emoji}`}
+                                    onClick={() => onToggleReaction(message, reaction.emoji)}
                                   >
-                                    {reaction.emoji}
-                                  </span>
-                                  <span className="tabular-nums">
-                                    {reaction.users.length}
-                                  </span>
-                                </button>
+                                    <span
+                                      className="flex size-3.5 items-center justify-center"
+                                      style={EMOJI_FONT_STYLE}
+                                    >
+                                      {reaction.emoji}
+                                    </span>
+                                    <span className="font-mono tabular-nums">
+                                      {reaction.users.length}
+                                    </span>
+                                  </button>
+                                </Hint>
                               );
                             })}
                           </div>
@@ -1223,15 +1482,17 @@ function ChatSurfaceComponent({
 
                       {message.id && (
                         <div className="flex shrink-0 items-center gap-0.5 self-start rounded-lg border border-border bg-popover p-0.5 opacity-0 shadow-sm transition-opacity group-focus-within/row:opacity-100 group-hover/row:opacity-100 has-[[data-state=open]]:opacity-100">
-                          <Button
-                            size="icon-xs"
-                            variant="ghost"
-                            className="size-5 rounded-md text-muted-foreground hover:text-foreground"
-                            aria-label={t("friends.chatReply")}
-                            onClick={() => onReply(message)}
-                          >
-                            <Reply className="size-3" />
-                          </Button>
+                          <Hint content={t("friends.chatReply")}>
+                            <Button
+                              size="icon-xs"
+                              variant="ghost"
+                              className="size-5 rounded-md text-muted-foreground hover:text-foreground"
+                              aria-label={t("friends.chatReply")}
+                              onClick={() => onReply(message)}
+                            >
+                              <Reply className="size-3" />
+                            </Button>
+                          </Hint>
 
                           <ReactionPicker
                             label={t("friends.chatReaction")}
@@ -1239,19 +1500,115 @@ function ChatSurfaceComponent({
                           />
 
                           {isOwn && (
-                            <Button
-                              size="icon-xs"
-                              variant="ghost"
-                              className="size-5 rounded-md text-muted-foreground hover:text-destructive"
-                              aria-label={t("friends.chatDeleteMessage")}
-                              onClick={() => setPendingDelete(message)}
-                            >
-                              <Trash2 className="size-3" />
-                            </Button>
+                            <Hint content={t("friends.chatDeleteMessage")}>
+                              <Button
+                                size="icon-xs"
+                                variant="ghost"
+                                className="size-5 rounded-md text-muted-foreground hover:text-destructive"
+                                aria-label={t("friends.chatDeleteMessage")}
+                                onClick={() => setPendingDelete(message)}
+                              >
+                                <Trash2 className="size-3" />
+                              </Button>
+                            </Hint>
                           )}
                         </div>
                       )}
                     </div>
+                    </ContextMenuTrigger>
+
+                    <ContextMenuContent className="w-64">
+                      {message.id && (
+                        <>
+                          <div className="flex items-center justify-between gap-0.5 px-1 py-1">
+                            {QUICK_REACTIONS.map((emoji) => {
+                              const isSelected = Boolean(
+                                ownUserId &&
+                                  reactions.some(
+                                    (reaction) =>
+                                      reaction.emoji === emoji &&
+                                      reaction.users.includes(ownUserId),
+                                  ),
+                              );
+
+                              return (
+                                <ContextMenuItem
+                                  key={emoji}
+                                  aria-label={`${t("friends.chatReaction")} ${emoji}`}
+                                  className={cn(
+                                    "size-8 justify-center p-0 text-lg",
+                                    isSelected && "bg-primary-soft",
+                                  )}
+                                  style={EMOJI_FONT_STYLE}
+                                  onSelect={() => onToggleReaction(message, emoji)}
+                                >
+                                  {emoji}
+                                </ContextMenuItem>
+                              );
+                            })}
+                          </div>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem onSelect={() => onReply(message)}>
+                            <Reply />
+                            {t("friends.chatReply")}
+                          </ContextMenuItem>
+                        </>
+                      )}
+
+                      {body._type === "text" && (
+                        <ContextMenuItem onSelect={() => copyMessageText(body.value)}>
+                          <Copy />
+                          {t("friends.chatCopyText")}
+                        </ContextMenuItem>
+                      )}
+
+                      {imageUrl && (
+                        <>
+                          <ContextMenuItem onSelect={() => setViewerKey(rowKey)}>
+                            <Expand />
+                            {t("friends.chatOpenImage")}
+                          </ContextMenuItem>
+                          <ContextMenuItem onSelect={() => void copyRemoteImage(imageUrl)}>
+                            <Copy />
+                            {t("mediaViewer.copy")}
+                          </ContextMenuItem>
+                          <ContextMenuItem
+                            onSelect={() =>
+                              void saveRemoteImage(
+                                imageUrl,
+                                chatImageFileName(imageUrl, t("friends.chatImage")),
+                              )
+                            }
+                          >
+                            <Download />
+                            {t("mediaViewer.save")}
+                          </ContextMenuItem>
+                        </>
+                      )}
+
+                      {isOwn && message.id && (
+                        <>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
+                            variant="destructive"
+                            onSelect={() => setPendingDelete(message)}
+                          >
+                            <Trash2 />
+                            {t("friends.chatDeleteMessage")}
+                          </ContextMenuItem>
+                        </>
+                      )}
+
+                      {!message.id && body._type !== "text" && !imageUrl && (
+                        <ContextMenuItem disabled>
+                          {entry.status === "failed" ? <CircleAlert /> : <Clock3 />}
+                          {entry.status === "failed"
+                            ? t("friends.chatFailed")
+                            : t("friends.chatSending")}
+                        </ContextMenuItem>
+                      )}
+                    </ContextMenuContent>
+                    </ContextMenu>
                   );
                 })}
               </div>
@@ -1284,13 +1641,22 @@ function ChatSurfaceComponent({
                   style={{ width: `${imageUploadProgress}%` }}
                 />
               </div>
-              <p className="flex items-center gap-1.5 text-[11px] leading-4 text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-[11px] leading-4 text-muted-foreground">
                 <Loader2 className="size-3 shrink-0 animate-spin" />
                 {t("friends.chatAttachmentLoading")}
                 <span className="font-mono tabular-nums">
                   {imageUploadProgress}%
                 </span>
-              </p>
+                {onCancelImageUpload && (
+                  <button
+                    type="button"
+                    className="ml-auto underline underline-offset-2 hover:text-foreground"
+                    onClick={onCancelImageUpload}
+                  >
+                    {t("common.cancel")}
+                  </button>
+                )}
+              </div>
             </>
           )}
 
@@ -1305,6 +1671,9 @@ function ChatSurfaceComponent({
             <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-1 px-3 py-1.5 text-xs">
               <Reply className="size-3.5 shrink-0 text-muted-foreground" />
               <p className="min-w-0 flex-1 truncate text-muted-foreground">
+                <span className="font-medium text-foreground/80">
+                  {replySender}:
+                </span>{" "}
                 {previewOf(replyMessage)}
               </p>
               <Button
@@ -1319,16 +1688,26 @@ function ChatSurfaceComponent({
             </div>
           )}
 
+          {pendingImages.length > 0 && (
+            <AttachmentTray
+              items={pendingImages}
+              uploadingId={uploadingId}
+              onRemove={removePendingImage}
+              onAdd={() => fileInputRef.current?.click()}
+            />
+          )}
+
           <div className="flex items-end gap-2">
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
               onChange={(event) => {
-                const file = event.currentTarget.files?.[0];
+                const files = Array.from(event.currentTarget.files ?? []);
                 event.currentTarget.value = "";
-                if (file && isImageFile(file)) void onSendImageFile(file);
+                addPendingImages(files);
               }}
             />
 
@@ -1370,17 +1749,41 @@ function ChatSurfaceComponent({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={messageText}
-              maxLength={4000}
-              placeholder={t("friends.chatPlaceholder")}
-              aria-label={t("friends.chatPlaceholder")}
-              className="max-h-28 min-h-9 min-w-0 flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-xs leading-5 outline-none [scrollbar-width:none] placeholder:text-faint focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40 [&::-webkit-scrollbar]:hidden"
-              onChange={(event) => onMessageChange(event.target.value)}
-              onKeyDown={handleComposerKeyDown}
-              onPaste={handlePaste}
+            <div className="relative flex min-w-0 flex-1">
+              <textarea
+                ref={textareaRef}
+                rows={1}
+                value={messageText}
+                maxLength={MESSAGE_LIMIT}
+                placeholder={t("friends.chatPlaceholder")}
+                aria-label={t("friends.chatPlaceholder")}
+                className={cn(
+                  "max-h-28 min-h-9 min-w-0 flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-xs leading-5 outline-none [scrollbar-width:none] placeholder:text-faint focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40 [&::-webkit-scrollbar]:hidden",
+                  messageText.length >= COUNTER_FROM && "pb-5",
+                )}
+                onChange={(event) => onMessageChange(event.target.value)}
+                onKeyDown={handleComposerKeyDown}
+                onPaste={handlePaste}
+              />
+              {messageText.length >= COUNTER_FROM && (
+                <span
+                  className={cn(
+                    "pointer-events-none absolute right-2 bottom-1 font-mono text-[10px] tabular-nums",
+                    messageText.length >= MESSAGE_LIMIT
+                      ? "text-warning"
+                      : "text-faint",
+                  )}
+                >
+                  {messageText.length}/{MESSAGE_LIMIT}
+                </span>
+              )}
+            </div>
+
+            <ExpressionPicker
+              canSendSticker={Boolean(onSendSticker) && !isOffline}
+              onEmoji={insertEmoji}
+              onSticker={sendSticker}
+              onClosed={() => textareaRef.current?.focus()}
             />
 
             <Button
@@ -1389,9 +1792,9 @@ function ChatSurfaceComponent({
               className="size-9 shrink-0"
               disabled={!canSend}
               aria-label={t("friends.send")}
-              onClick={onSend}
+              onClick={() => void submit()}
             >
-              {isSending ? (
+              {isSending || uploadingId !== null ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <SendHorizontal size={18} />
@@ -1460,41 +1863,15 @@ function ChatSurfaceComponent({
         </Confirmation>
       )}
 
-      <Dialog
-        open={!!previewImage}
-        onOpenChange={(open) => {
-          if (!open) setPreviewImage(null);
-        }}
-      >
-        <DialogContent
-          aria-describedby={undefined}
-          style={{
-            top: "calc(env(titlebar-area-height, 0px) + 1rem)",
-            left: "1rem",
-            right: "1rem",
-            bottom: "1rem",
-            width: "auto",
-            height: "auto",
-            maxWidth: "none",
-            maxHeight: "none",
-            margin: 0,
-          }}
-          className="overflow-hidden p-2"
-        >
-          <DialogHeader className="sr-only">
-            <DialogTitle>{t("friends.chatImage")}</DialogTitle>
-          </DialogHeader>
-          <div className="flex h-full min-h-0 w-full items-center justify-center overflow-hidden rounded-lg bg-muted/20">
-            {previewImage && (
-              <img
-                src={previewImage}
-                alt={t("friends.chatImage")}
-                className="max-h-full max-w-full object-contain"
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {viewerKey && (
+        <ChatImageViewer
+          items={viewerItems}
+          activeKey={viewerKey}
+          onActiveKeyChange={setViewerKey}
+          onClose={closeViewer}
+          onShowInChat={showInChat}
+        />
+      )}
     </section>
   );
 }

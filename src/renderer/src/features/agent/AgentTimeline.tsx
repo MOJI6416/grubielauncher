@@ -36,6 +36,7 @@ import {
   toolGroupStatus,
   type ToolItem,
 } from "./timelineGroups";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 function StatusGlyph({ status }: { status: ToolItem["status"] }) {
   if (status === "running") {
@@ -48,12 +49,13 @@ function StatusGlyph({ status }: { status: ToolItem["status"] }) {
 
 function ArgumentRows({ input }: { input?: string }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const summary = useMemo(() => describeArguments(input), [input]);
 
   if (summary.raw) {
     return (
       <pre className="overflow-x-auto rounded-md bg-surface-1 p-2 text-[0.65rem] whitespace-pre-wrap text-muted-foreground">
-        {summary.raw}
+        {redact.text(summary.raw)}
       </pre>
     );
   }
@@ -68,10 +70,10 @@ function ArgumentRows({ input }: { input?: string }) {
             {t(`agent.args.${row.key}`, { defaultValue: row.key })}
           </dt>
           <dd className="min-w-0 break-words text-muted-foreground">
-            {row.value.kind === "text" && row.value.text}
+            {row.value.kind === "text" && redact.text(row.value.text)}
             {row.value.kind === "list" &&
               [
-                row.value.items.join(", "),
+                redact.text(row.value.items.join(", ")),
                 row.value.more > 0
                   ? t("agent.moreItems", { count: row.value.more })
                   : "",
@@ -97,6 +99,7 @@ function ArgumentRows({ input }: { input?: string }) {
 
 function ToolRow({ item }: { item: ToolItem }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const [expanded, setExpanded] = useState(false);
 
   const label = t(item.label.key, {
@@ -117,7 +120,7 @@ function ToolRow({ item }: { item: ToolItem }) {
         </span>
         {item.status === "error" && item.error && (
           <span className="max-w-[45%] shrink-0 truncate text-[0.65rem] text-destructive">
-            {item.error}
+            {redact.text(item.error)}
           </span>
         )}
         <ChevronRight
@@ -135,11 +138,13 @@ function ToolRow({ item }: { item: ToolItem }) {
           </code>
           <ArgumentRows input={item.input} />
           {item.error && (
-            <p className="text-[0.7rem] text-destructive">{item.error}</p>
+            <p className="text-[0.7rem] text-destructive">
+              {redact.text(item.error)}
+            </p>
           )}
           {item.output && (
             <pre className="max-h-48 overflow-auto rounded-md bg-surface-1 p-2 text-[0.65rem] whitespace-pre-wrap text-muted-foreground">
-              {item.output}
+              {redact.text(item.output)}
             </pre>
           )}
         </div>
@@ -171,6 +176,7 @@ function ReasoningCard({
   item: Extract<TimelineItem, { kind: "reasoning" }>;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -193,7 +199,7 @@ function ReasoningCard({
       </button>
       {expanded && (
         <p className="border-t border-border px-2.5 py-2 text-[0.7rem] whitespace-pre-wrap text-muted-foreground">
-          {item.text}
+          {redact.text(item.text)}
         </p>
       )}
     </div>
@@ -202,6 +208,7 @@ function ReasoningCard({
 
 function PreviewRows({ preview }: { preview: ToolPreview }) {
   const { t } = useTranslation();
+  const redact = useRedact();
 
   return (
     <div className="rounded-md bg-surface-1 px-2.5 py-2">
@@ -211,7 +218,9 @@ function PreviewRows({ preview }: { preview: ToolPreview }) {
             <dt className="truncate text-faint">
               {t(`agent.preview.${row.key}`, { defaultValue: row.key })}
             </dt>
-            <dd className="min-w-0 break-words text-foreground">{row.value}</dd>
+            <dd className="min-w-0 break-words text-foreground">
+              {redact.text(row.value)}
+            </dd>
           </div>
         ))}
       </dl>
@@ -502,6 +511,7 @@ function ErrorCard({
   onRecover: (recovery: AgentErrorRecovery) => void;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
   const report = classifyAgentError({ message: item.message, code: item.code });
   const Icon = RECOVERY_ICON[report.recovery];
 
@@ -518,7 +528,7 @@ function ErrorCard({
           </p>
           {report.detail && (
             <p className="mt-1.5 rounded-md bg-surface-1 px-2 py-1 font-mono text-[0.65rem] break-words text-faint">
-              {report.detail}
+              {redact.text(report.detail)}
             </p>
           )}
         </div>
@@ -552,12 +562,14 @@ const Row = memo(function Row({
   item: TimelineItem;
   onRecover: (recovery: AgentErrorRecovery) => void;
 }) {
+  const redact = useRedact();
+
   switch (item.kind) {
     case "user":
       return (
         <div className="flex justify-end">
           <div className="max-w-[80%] rounded-xl rounded-br-sm bg-surface-3 px-3 py-2 text-sm whitespace-pre-wrap text-foreground">
-            {item.text}
+            {redact.text(item.text)}
           </div>
         </div>
       );
@@ -569,7 +581,7 @@ const Row = memo(function Row({
             <Loader2 className="size-4 animate-spin text-faint" />
           ) : (
             <Markdown
-              body={item.text}
+              body={redact.text(item.text)}
               fallback={null}
               keepPrevious={item.streaming}
             />

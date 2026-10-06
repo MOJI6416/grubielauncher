@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   assertTrustedDownloadUrl,
+  assertTrustedLoaderLibraryUrl,
+  isPublishableContentUrl,
   isTrustedDownloadUrl,
   isTrustedServerCoreUrl,
   normalizeLoaderLibraryUrl,
@@ -23,6 +25,18 @@ describe("isTrustedDownloadUrl", () => {
     expect(
       isTrustedDownloadUrl("https://api.grubielauncher.com/loaders/forge.json"),
     ).toBe(true);
+  });
+
+  it("accepts the hosts of the loaders for old versions", () => {
+    expect(
+      isTrustedDownloadUrl("https://meta.legacyfabric.net/v2/versions/game"),
+    ).toBe(true);
+    expect(
+      isTrustedDownloadUrl(
+        "https://maven.glass-launcher.net/babric/babric/x.jar",
+      ),
+    ).toBe(true);
+    expect(isTrustedDownloadUrl("https://meta.ornithemc.net/v3/x")).toBe(true);
   });
 
   it("rejects untrusted hosts, look-alikes and bad input", () => {
@@ -61,6 +75,16 @@ describe("normalizeLoaderLibraryUrl", () => {
     expect(normalizeLoaderLibraryUrl(url)).toBe(url);
   });
 
+  it("skips the Legacy Fabric maven redirect", () => {
+    expect(
+      normalizeLoaderLibraryUrl(
+        "https://maven.legacyfabric.net//net/legacyfabric/intermediary/1.8.9/intermediary-1.8.9.jar",
+      ),
+    ).toBe(
+      "https://repo.legacyfabric.net/legacyfabric/net/legacyfabric/intermediary/1.8.9/intermediary-1.8.9.jar",
+    );
+  });
+
   it("makes legacy forge libraries pass the trust check", () => {
     expect(
       isTrustedDownloadUrl(
@@ -81,5 +105,33 @@ describe("isTrustedServerCoreUrl", () => {
   it("refuses unknown hosts and plain http", () => {
     expect(isTrustedServerCoreUrl("https://evil.tld/server.jar")).toBe(false);
     expect(isTrustedServerCoreUrl("http://api.papermc.io/v2/x.jar")).toBe(false);
+  });
+});
+
+describe("assertTrustedLoaderLibraryUrl", () => {
+  it("lets loader profiles pull from Maven Central but keeps it out of shared packs", () => {
+    const central =
+      "https://repo1.maven.org/maven2/net/minecrell/terminalconsoleappender/1.2.0/terminalconsoleappender-1.2.0.jar";
+
+    expect(assertTrustedLoaderLibraryUrl(central)).toBe(central);
+    expect(isTrustedDownloadUrl(central)).toBe(false);
+    expect(isPublishableContentUrl(central)).toBe(false);
+  });
+
+  it("accepts LWJGL natives from the official build server", () => {
+    const natives =
+      "https://build.lwjgl.org/release/3.3.3/bin/lwjgl/lwjgl-natives-linux-arm64.jar";
+
+    expect(assertTrustedLoaderLibraryUrl(natives)).toBe(natives);
+    expect(isTrustedDownloadUrl(natives)).toBe(false);
+  });
+
+  it("refuses other hosts and plain http", () => {
+    expect(() =>
+      assertTrustedLoaderLibraryUrl("https://evil.com/x.jar"),
+    ).toThrow(/Refused untrusted/);
+    expect(() =>
+      assertTrustedLoaderLibraryUrl("http://repo1.maven.org/x.jar"),
+    ).toThrow(/Refused untrusted/);
   });
 });

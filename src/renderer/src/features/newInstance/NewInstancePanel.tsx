@@ -10,12 +10,14 @@ import {
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { SiModrinth } from "react-icons/si";
 import {
   FolderInput,
   HardDriveDownload,
   Layers3,
   Loader2,
   PencilLine,
+  Radar,
   Server,
   Signal,
   Ticket,
@@ -24,7 +26,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { IArguments } from "@/types/IArguments";
 import type { Loader } from "@/types/Loader";
 import type { IModpack as IBackendModpack } from "@/types/Backend";
 import {
@@ -35,6 +36,7 @@ import {
   Provider,
 } from "@/types/ModManager";
 import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
+import type { ModrinthServer } from "@/types/ModrinthServers";
 import { DownloaderInfo } from "@/types/Downloader";
 import {
   accountAtom,
@@ -72,12 +74,18 @@ import {
   parsePackShareCode,
   withPackRequestTimeout,
 } from "@renderer/utilities/packShare";
-import { mcVersionToJavaMajor } from "@/shared/javaVersions";
+import { instanceJavaMajor } from "@/shared/javaVersions";
 import {
   getUnavailableConnectivityProblem,
   loaderRequiresBackend,
 } from "@renderer/utilities/connectivity";
 import { CommunityBrowser } from "@renderer/features/community/CommunityBrowser";
+import { DiscoverSwitch } from "@renderer/features/servers/discover/DiscoverSwitch";
+import { ServerDiscovery } from "@renderer/features/servers/discover/ServerDiscovery";
+import {
+  serverEntryOf,
+  serverVersionPreference,
+} from "@renderer/features/servers/discover/serverFit";
 import { CustomForm } from "./CustomForm";
 import { IdentityFields } from "./IdentityFields";
 import { InstallView } from "./InstallView";
@@ -100,7 +108,13 @@ import { hasLocalContent, summarizePackContent } from "./packSummary";
 import { resolvePackVersions } from "./resolvePackVersions";
 import { buildSharedPack } from "./sharedPack";
 import { creationBlockers, creationWarnings } from "./creationPlan";
-import { serverInstanceName, serverListName } from "./serverTarget";
+import { PackStageProgress } from "./PackStageProgress";
+import {
+  type ServerTarget,
+  parseServerAddress,
+  serverInstanceName,
+  serverListName,
+} from "./serverTarget";
 import {
   EMPTY_ARGUMENTS,
   NewInstanceSource,
@@ -115,31 +129,21 @@ import { useKnownServers, useOwnModpacks } from "./useSuggestions";
 import { useInstanceFolderNames } from "./useInstanceFolders";
 import { useVersionCatalog } from "./useVersionCatalog";
 import { versionKind } from "./versionCatalog";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
-const LazyServers = lazyWithPreload(() =>
-  import("@renderer/features/servers/ServersDialog").then((module) => ({
-    default: module.ServersDialog,
-  })),
-);
 const LazyImageCropper = lazyWithPreload(() =>
   import("@renderer/components/ImageCropper").then((module) => ({
     default: module.ImageCropper,
   })),
 );
-const LazyArguments = lazyWithPreload(() =>
-  import("@renderer/components/Arguments").then((module) => ({
-    default: module.Arguments,
-  })),
-);
-const LazyContentManager = lazyWithPreload(() =>
-  import("@renderer/features/mods/ContentManager").then((module) => ({
-    default: module.ContentManager,
-  })),
-);
 
 type BusyKind = "file" | "code" | "modpack" | "install" | null;
+
+type ServerMode = "modrinth" | "address";
 
 const SOURCE_ICONS = {
   custom: PencilLine,
@@ -153,20 +157,26 @@ const SOURCE_ICONS = {
 export function NewInstancePanel({
   closeModal,
   modpack,
+  catalogPack,
+  modrinthServer,
   source,
   successCallback,
   importFilePath,
 }: {
   closeModal: () => void;
   modpack?: IBackendModpack;
+  catalogPack?: { project: IProject; version: IProjectVersion };
+  modrinthServer?: ModrinthServer;
   source?: NewInstanceSource;
   successCallback?: () => void;
   importFilePath?: string;
 }) {
   const { t } = useTranslation();
+  const redact = useRedact();
+  const sourceIndicator = useSlidingIndicator<HTMLElement>();
   const [state, dispatch] = useReducer(
     newInstanceReducer,
-    source ?? (modpack ? "code" : "custom"),
+    source ?? (modpack ? "code" : catalogPack ? "catalog" : "custom"),
     createInitialState,
   );
 
@@ -186,9 +196,8 @@ export function NewInstancePanel({
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>([]);
   const [isBlockedOpen, setBlockedOpen] = useState(false);
   const [cropSource, setCropSource] = useState("");
-  const [isContentOpen, setContentOpen] = useState(false);
-  const [isServersOpen, setServersOpen] = useState(false);
-  const [isArgumentsOpen, setArgumentsOpen] = useState(false);
+  const [serverMode, setServerMode] = useState<ServerMode>("modrinth");
+  const [pinnedServer, setPinnedServer] = useState(modrinthServer);
 
   const account = useAtomValue(accountAtom);
   const authData = useAtomValue(authDataAtom);
@@ -232,15 +241,7 @@ export function NewInstancePanel({
   const isInstalling = busy === "install";
 
   useEffect(() => {
-    return schedulePreload(
-      [
-        LazyArguments.preload,
-        LazyImageCropper.preload,
-        LazyContentManager.preload,
-        LazyServers.preload,
-      ],
-      900,
-    );
+    return schedulePreload([LazyImageCropper.preload], 900);
   }, []);
 
   useEffect(() => {
@@ -629,6 +630,118 @@ export function NewInstancePanel({
     [applyModpackResult, discardTempPack],
   );
 
+  const catalogPackRef = useRef(catalogPack);
+
+  useEffect(() => {
+    const requested = catalogPackRef.current;
+    if (!requested) return;
+
+    catalogPackRef.current = undefined;
+    void pickModpack(requested.project, requested.version);
+  }, [pickModpack]);
+
+  const pickModrinthServer = useCallback(
+    async (server: ModrinthServer) => {
+      const parsed = parseServerAddress(server.address);
+      const target: ServerTarget = {
+        host: parsed?.host ?? server.address,
+        port: parsed?.port ?? null,
+        address: parsed?.address ?? server.address,
+        label: server.name,
+      };
+      const entry = serverEntryOf(server);
+
+      if (server.content.kind === "vanilla") {
+        const gameVersions = serverVersionPreference(server.content);
+
+        dispatch({
+          type: "applyServer",
+          target,
+          server: entry,
+          logo: server.iconUrl ?? undefined,
+          gameVersions,
+        });
+
+        if (
+          state.versions.length > 0 &&
+          gameVersions.length > 0 &&
+          !state.versions.some((item) => gameVersions.includes(item.id))
+        ) {
+          toast.warning(t("newInstance.server.versionMissing"));
+        }
+        return;
+      }
+
+      const requestId = ++packRequestRef.current;
+      setBusy("modpack");
+
+      try {
+        const pack = await api.servers
+          .discoverPack(server.content.projectId, server.content.versionId)
+          .catch(() => null);
+
+        if (requestId !== packRequestRef.current) return;
+
+        if (!pack) {
+          showFailureToast(t("servers.discover.packFailed"), undefined, {
+            channels: ["servers:discoverPack"],
+            fallbackDescription: t("servers.discover.packFailedHint"),
+          });
+          return;
+        }
+
+        const result = await downloadModpack(
+          pack.project,
+          pack.version,
+          setModpackStage,
+          setExtractPercent,
+        );
+
+        if (requestId !== packRequestRef.current) {
+          if (result.status === "ok") {
+            await discardTempPack(result.modpack.folderPath);
+          }
+          return;
+        }
+
+        await applyModpackResult(result, pack.project, pack.version);
+
+        if (result.status !== "ok" || requestId !== packRequestRef.current) {
+          return;
+        }
+
+        dispatch({
+          type: "applyServer",
+          target,
+          server: entry,
+          logo:
+            server.iconUrl ??
+            (result.modpack.image || pack.project.iconUrl || undefined),
+        });
+        dispatch({
+          type: "autoName",
+          value: suggestInstanceName(server.name, takenNames),
+        });
+      } finally {
+        if (requestId === packRequestRef.current) {
+          setBusy(null);
+          setModpackStage(null);
+        }
+      }
+    },
+    [applyModpackResult, discardTempPack, state.versions, t, takenNames],
+  );
+
+  const modrinthServerRef = useRef(modrinthServer);
+
+  useEffect(() => {
+    const requested = modrinthServerRef.current;
+    if (!requested) return;
+
+    modrinthServerRef.current = undefined;
+    void pickModrinthServer(requested);
+  }, [pickModrinthServer]);
+
   const useServer = useCallback(() => {
     const target = probe.probe;
     if (target.status !== "online" || !target.minecraftVersion) return;
@@ -738,7 +851,12 @@ export function NewInstancePanel({
         ? versionKind(state.minecraftVersion.type)
         : null,
       javaMajor: state.minecraftVersion
-        ? mcVersionToJavaMajor(state.minecraftVersion.id)
+        ? instanceJavaMajor(
+            state.minecraftVersion.id,
+            state.loader,
+            undefined,
+            state.loaderVersion?.id,
+          )
         : null,
       hasLocalMods: hasLocalContent(state.mods),
       bytes: contentSummary.bytes,
@@ -932,15 +1050,14 @@ export function NewInstancePanel({
     setModpackStage(null);
     void cleanupTemp();
     probe.reset();
+    setPinnedServer(undefined);
     setShareCode("");
-    setContentOpen(false);
     dispatch({ type: "selectSource", source });
   };
 
   const dropPack = () => {
     packRequestRef.current += 1;
     void cleanupTemp();
-    setContentOpen(false);
     dispatch({ type: "clearPack" });
   };
 
@@ -948,13 +1065,42 @@ export function NewInstancePanel({
     ? t(`newInstance.blockers.${blockers[0]}`)
     : "";
 
+  const serverSwitch = (
+    <DiscoverSwitch
+      value={serverMode}
+      compact
+      disabled={busy !== null}
+      onChange={setServerMode}
+      items={[
+        {
+          id: "modrinth",
+          label: "Modrinth",
+          icon: <SiModrinth className="size-4" />,
+        },
+        {
+          id: "address",
+          label: t("servers.discover.byAddress"),
+          icon: <Radar className="size-4" />,
+        },
+      ]}
+    />
+  );
+
   return (
     <>
       <section
         data-add-version-screen="true"
         className="flex h-full min-h-0 overflow-hidden rounded-xl border border-border bg-card"
       >
-        <nav className="flex w-44 shrink-0 flex-col gap-0.5 border-r border-border bg-surface-1 p-2">
+        <nav
+          ref={sourceIndicator.containerRef}
+          className="relative flex w-44 shrink-0 flex-col gap-0.5 border-r border-border bg-surface-1 p-2"
+        >
+          <SlidingIndicator
+            indicator={sourceIndicator}
+            variant="fill"
+            className="rounded-lg bg-primary-soft"
+          />
           <span className="px-2.5 pt-1 pb-2 text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
             {t("addVersion.sourceTitle")}
           </span>
@@ -970,8 +1116,9 @@ export function NewInstancePanel({
                   isInstalling || (!!modpack && source !== state.source)
                 }
                 aria-current={state.source === source}
+                data-indicator-active={state.source === source}
                 onClick={() => changeSource(source)}
-                className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground aria-[current=true]:bg-primary-soft aria-[current=true]:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                className="relative flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm text-muted-foreground transition-colors not-aria-[current=true]:hover:bg-surface-3 hover:text-foreground aria-[current=true]:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 <Icon className="size-4 shrink-0 text-faint" />
                 <span className="min-w-0 truncate">
@@ -997,41 +1144,6 @@ export function NewInstancePanel({
                 loader={state.loader}
                 onCancel={() => installAbortRef.current?.abort()}
               />
-            ) : isContentOpen ? (
-              <div className="flex min-h-0 flex-1 flex-col gap-2.5">
-                <header className="flex h-8 shrink-0 items-center gap-2">
-                  <Layers3 className="size-4 shrink-0 text-faint" />
-                  <span className="min-w-0 truncate text-sm font-medium text-foreground">
-                    {t("modManager.title")}
-                  </span>
-                  <span className="min-w-0 truncate text-xs text-faint">
-                    {state.name.trim()}
-                  </span>
-                </header>
-
-                <div className="min-h-0 flex-1">
-                  <Suspense
-                    fallback={
-                      <div className="flex h-full items-center justify-center">
-                        <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                      </div>
-                    }
-                  >
-                    <LazyContentManager
-                      mods={state.mods}
-                      setMods={(mods) => dispatch({ type: "setMods", mods })}
-                      onClose={() => setContentOpen(false)}
-                      loader={state.loader}
-                      version={state.minecraftVersion}
-                      isModpacks={false}
-                      setLoader={() => undefined}
-                      setVersion={() => undefined}
-                      setModpack={() => undefined}
-                      canEdit={state.pack?.kind !== "share"}
-                    />
-                  </Suspense>
-                </div>
-              </div>
             ) : isPicking ? (
               state.source === "community" ? (
                 <CommunityBrowser
@@ -1087,18 +1199,55 @@ export function NewInstancePanel({
                     await importFromFile(filePaths[0]);
                   }}
                 />
-              ) : (
-                <ServerSource
-                  value={state.serverAddress}
-                  probe={probe.probe}
-                  known={knownServers}
-                  isBusy={probe.probe.status === "probing"}
-                  onChange={(value) =>
-                    dispatch({ type: "setServerAddress", value })
+              ) : serverMode === "modrinth" ? (
+                <ServerDiscovery
+                  leading={serverSwitch}
+                  initialServer={pinnedServer}
+                  isBusy={busy === "modpack"}
+                  offlineReason={offlineReason}
+                  renderActions={(server) =>
+                    busy === "modpack" && modpackStage ? (
+                      <PackStageProgress
+                        stage={modpackStage}
+                        progressPercent={downloadInfo?.progressPercent ?? 0}
+                        extractPercent={extractPercent}
+                      />
+                    ) : (
+                      <Button
+                        type="button"
+                        className="h-9 w-full min-w-0"
+                        disabled={busy !== null}
+                        onClick={() => void pickModrinthServer(server)}
+                      >
+                        {busy === "modpack" ? (
+                          <Loader2 className="animate-spin" />
+                        ) : (
+                          <HardDriveDownload />
+                        )}
+                        <span className="min-w-0 truncate">
+                          {t("servers.discover.pick")}
+                        </span>
+                      </Button>
+                    )
                   }
-                  onProbe={() => void probe.run(state.serverAddress)}
-                  onUse={useServer}
                 />
+              ) : (
+                <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+                  <div className="flex shrink-0 items-center gap-2">
+                    {serverSwitch}
+                  </div>
+                  <ServerSource
+                    value={state.serverAddress}
+                    probe={probe.probe}
+                    known={knownServers}
+                    isBusy={probe.probe.status === "probing"}
+                    onChange={(value) =>
+                      dispatch({ type: "setServerAddress", value })
+                    }
+                    onProbe={() => void probe.run(state.serverAddress)}
+                    onUse={useServer}
+                  />
+                </div>
               )
             ) : (
               <>
@@ -1121,6 +1270,16 @@ export function NewInstancePanel({
                     if (!filePaths.length) return;
                     setCropSource(filePaths[0]);
                   }}
+                  onApplyImage={(blob) =>
+                    dispatch({
+                      type: "setImage",
+                      value:
+                        revokePreviousBlobUrl(
+                          state.image,
+                          URL.createObjectURL(blob),
+                        ) ?? "",
+                    })
+                  }
                   onClearImage={() => dispatch({ type: "setImage", value: "" })}
                 />
 
@@ -1129,14 +1288,18 @@ export function NewInstancePanel({
                     <Signal className="size-4 shrink-0 text-success" />
                     <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
                       {t("newInstance.server.applied", {
-                        address: state.serverTarget.address,
+                        address: redact.value(state.serverTarget.address),
                       })}
                     </span>
                     <Button
                       variant="ghost"
                       size="icon-sm"
                       aria-label={t("common.delete")}
-                      onClick={() => dispatch({ type: "clearServer" })}
+                      onClick={() => {
+                        setPinnedServer(undefined);
+                        if (state.pack) dropPack();
+                        else dispatch({ type: "clearServer" });
+                      }}
                     >
                       <X />
                     </Button>
@@ -1148,7 +1311,6 @@ export function NewInstancePanel({
                     state={state}
                     folderPath={folderPath}
                     warnings={warnings}
-                    canChangeContent={state.pack?.kind !== "share"}
                     isBusy={busy !== null}
                     onRetryVersions={
                       state.pack?.importModpack
@@ -1156,9 +1318,6 @@ export function NewInstancePanel({
                         : undefined
                     }
                     onChangePack={modpack ? undefined : dropPack}
-                    onOpenContent={() => setContentOpen(true)}
-                    onOpenServers={() => setServersOpen(true)}
-                    onOpenArguments={() => setArgumentsOpen(true)}
                     onSelectLoaderVersion={(id) => {
                       const version = state.loaderVersions.find(
                         (item) => item.id === id,
@@ -1206,18 +1365,6 @@ export function NewInstancePanel({
                   {t("newInstance.minimize")}
                 </Button>
               </>
-            ) : isContentOpen ? (
-              <>
-                <span className="min-w-0 flex-1 truncate text-xs text-faint">
-                  {t("newInstance.contentHint")}
-                </span>
-                <Button
-                  variant="secondary"
-                  onClick={() => setContentOpen(false)}
-                >
-                  {t("common.ok")}
-                </Button>
-              </>
             ) : (
               <>
                 <span
@@ -1229,7 +1376,11 @@ export function NewInstancePanel({
                   )}
                 >
                   {isPicking
-                    ? t(`newInstance.pickHint.${state.source}`)
+                    ? t(
+                        state.source === "server" && serverMode === "modrinth"
+                          ? "newInstance.pickHint.serverCatalog"
+                          : `newInstance.pickHint.${state.source}`,
+                      )
                     : blockerLabel || t("newInstance.readyHint")}
                 </span>
 
@@ -1256,18 +1407,6 @@ export function NewInstancePanel({
         </div>
       </section>
 
-      {isArgumentsOpen && (
-        <Suspense fallback={<LazyDialogFallback variant="form" />}>
-          <LazyArguments
-            runArguments={state.runArguments}
-            onClose={() => setArgumentsOpen(false)}
-            setArguments={(value: IArguments) =>
-              dispatch({ type: "setRunArguments", value })
-            }
-          />
-        </Suspense>
-      )}
-
       {cropSource && (
         <Suspense fallback={<LazyDialogFallback variant="form" />}>
           <LazyImageCropper
@@ -1281,27 +1420,6 @@ export function NewInstancePanel({
                 value: revokePreviousBlobUrl(state.image, url) ?? "",
               });
             }}
-          />
-        </Suspense>
-      )}
-
-      {isServersOpen && (
-        <Suspense fallback={<LazyDialogFallback variant="wide" />}>
-          <LazyServers
-            isAdding
-            servers={state.servers}
-            setServers={(update) =>
-              dispatch({
-                type: "setServers",
-                servers:
-                  typeof update === "function" ? update(state.servers) : update,
-              })
-            }
-            onClose={() => setServersOpen(false)}
-            quickConnectIp={state.quickServer}
-            setQuickConnectIp={(value: string) =>
-              dispatch({ type: "setQuickServer", value })
-            }
           />
         </Suspense>
       )}

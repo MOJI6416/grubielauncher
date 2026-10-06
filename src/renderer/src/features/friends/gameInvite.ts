@@ -1,5 +1,6 @@
 import { atom } from "jotai";
 import { GameInvite } from "@/types/GameInvite";
+import { maskValue } from "@renderer/features/streamer/redact";
 
 export const incomingInviteAtom = atom<GameInvite | null>(null);
 
@@ -8,14 +9,19 @@ export interface InviteText {
   params: Record<string, string>;
 }
 
-export function describeIncomingInvite(invite: GameInvite): InviteText {
+export function describeIncomingInvite(
+  invite: GameInvite,
+  streamer = false,
+): InviteText {
   if (invite.target.type === "server") {
     return {
       messageKey: "friends.gameInviteServerBody",
       params: {
         nickname: invite.sender.nickname,
         version: invite.versionName,
-        address: invite.target.address,
+        address: streamer
+          ? maskValue(invite.target.address)
+          : invite.target.address,
       },
     };
   }
@@ -29,14 +35,19 @@ export function describeIncomingInvite(invite: GameInvite): InviteText {
   };
 }
 
-export function describeInviteNotification(invite: GameInvite): InviteText {
+export function describeInviteNotification(
+  invite: GameInvite,
+  streamer = false,
+): InviteText {
   if (invite.target.type === "server") {
     return {
       messageKey: "friends.gameInviteNotificationServer",
       params: {
         nickname: invite.sender.nickname,
         version: invite.versionName,
-        address: invite.target.address,
+        address: streamer
+          ? maskValue(invite.target.address)
+          : invite.target.address,
       },
     };
   }
