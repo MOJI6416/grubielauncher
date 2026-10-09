@@ -34,7 +34,13 @@ import { planDeletion } from "@renderer/utilities/mod";
 import i18n from "@renderer/i18n";
 import { AgentTool, ToolPreview } from "../types";
 import { wrapUntrusted } from "../untrusted";
-import { findInstance, overriddenKeysOf } from "./instances";
+import {
+  describeInstanceJava,
+  findInstance,
+  overriddenKeysOf,
+} from "./instances";
+import { isValidJavaMajor, javaFit } from "@/shared/javaRuntime";
+import { instanceRequiredJava } from "@renderer/features/java/javaChoices";
 import {
   busyError,
   previewSize,
@@ -510,6 +516,80 @@ export const setMemory: AgentTool = {
         memoryMb: requested,
         totalMemoryMb: totalMb,
         instancesKeepingTheirOwnMemory: unaffected,
+        appliesToNextLaunch: true,
+      },
+    };
+  },
+};
+
+export const setInstanceJava: AgentTool = {
+  name: "set_instance_java",
+  risk: "write",
+  description:
+    "Choose which Java one instance launches with. mode auto drops the manual choice so the launcher uses the Java this Minecraft version needs: that is the fix when a manual choice causes UnsupportedClassVersionError or the instance's java.launchesWith.problem is set. mode major pins a Java major version (8, 17, 21, 25): the launcher then uses the Java the user set for that major in its Java settings, or downloads its own on the next launch. A Java older than recommendedMajor from get_instance never starts the game, and Minecraft 1.16.5 and older with mods usually needs exactly 8. Only pin a major when the user asks or a log clearly shows the instance needs it. Applies to the next launch.",
+  parameters: {
+    type: "object",
+    properties: {
+      instance: { type: "string", description: "Exact instance name" },
+      mode: { type: "string", enum: ["auto", "major"] },
+      major: {
+        type: "number",
+        description: "Java major version, only with mode major",
+      },
+    },
+    required: ["instance", "mode"],
+  },
+  summarize: (input) => ({
+    key:
+      input?.mode === "major"
+        ? "agent.tools.setInstanceJava"
+        : "agent.tools.setInstanceJavaAuto",
+    params: { name: input?.instance, major: input?.major },
+  }),
+  run: async (input) => {
+    const version = findInstance(input?.instance);
+    if (!version) {
+      return { ok: false, error: `No instance named "${input?.instance}"` };
+    }
+
+    const busy = busyError();
+    if (busy) return { ok: false, error: busy };
+
+    const mode = input?.mode;
+    const major = Math.round(Number(input?.major));
+    if (mode !== "auto" && mode !== "major") {
+      return { ok: false, error: "mode must be auto or major" };
+    }
+    if (mode === "major" && !isValidJavaMajor(major)) {
+      return { ok: false, error: "major must be a Java major version such as 8, 17, 21 or 25" };
+    }
+
+    const conf = version.version;
+    const previousOverrides = conf.overrides;
+    conf.overrides =
+      mode === "auto"
+        ? clearOverride(conf.overrides, "java")
+        : setOverride(conf.overrides, "java", { major });
+
+    const saveError = await saveInstance(version);
+    if (saveError) {
+      conf.overrides = previousOverrides;
+      return { ok: false, error: saveError };
+    }
+
+    await version.init().catch(() => {});
+    refreshVersions();
+
+    const recommended = instanceRequiredJava(version);
+
+    return {
+      ok: true,
+      data: {
+        instance: conf.name,
+        recommendedMajor: recommended,
+        choice: mode === "auto" ? "auto" : `major ${major}`,
+        fit: mode === "auto" ? "recommended" : javaFit(recommended, major),
+        launchesWith: describeInstanceJava(version).launchesWith,
         appliesToNextLaunch: true,
       },
     };

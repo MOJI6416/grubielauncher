@@ -12,6 +12,8 @@ import {
   sanitizeJournalValue,
 } from "./journal";
 import { getDataRoot } from "../utilities/dataRoot";
+import { collectJavaForReport, resolveJava } from "../game/javaRuntimes";
+import { mcVersionToJavaMajor } from "@/shared/javaVersions";
 import { getLauncherPaths } from "../utilities/other";
 import { getFreeBytes } from "../utilities/diskSpace";
 import { getApiBaseUrl } from "../utilities/apiHost";
@@ -274,6 +276,11 @@ async function collectTarget(
     manifest: manifest
       ? { present: true, mainClass: manifest.mainClass, javaMajor: manifest.javaVersion?.majorVersion }
       : { present: false },
+    java: await resolveJava({
+      requiredMajor:
+        manifest?.javaVersion?.majorVersion ?? mcVersionToJavaMajor(conf.version?.id ?? ""),
+      override: conf.overrides?.java,
+    }).catch((error) => ({ error: String(error) })),
     mods: mods.slice(0, MAX_MODS_LISTED).map(summarizeMod),
     modsTruncated: mods.length > MAX_MODS_LISTED || undefined,
     folders: {
@@ -303,6 +310,15 @@ async function collectJava(javaDir: string): Promise<Array<Record<string, unknow
     const entries = await fs.promises.readdir(root).catch(() => [] as string[]);
 
     runtimes.push({ name, version, implementor, entries: entries.slice(0, 30) });
+  }
+
+  const registered = await collectJavaForReport().catch(() => null);
+  if (registered) {
+    const defaults = registered.defaults as Record<string, string>;
+    for (const runtime of registered.registered as Array<Record<string, unknown>>) {
+      const chosenFor = Object.keys(defaults).filter((major) => defaults[major] === runtime.home);
+      runtimes.push({ ...runtime, ...(chosenFor.length ? { defaultFor: chosenFor } : {}) });
+    }
   }
 
   return runtimes;

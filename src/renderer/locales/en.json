@@ -281,7 +281,8 @@
     "closeTitle": "The server is still running",
     "closeHint": "The launcher will send stop and wait for the world to save. Players will be disconnected.",
     "closeStopAndQuit": "Stop and close",
-    "applyAfterRestart": "takes effect after the server restarts"
+    "applyAfterRestart": "takes effect after the server restarts",
+    "runErrorChosenJava": "The Java chosen for this server is unavailable — pick another one in the server settings."
   },
   "serverSettings": {
     "description": "Description",
@@ -319,7 +320,8 @@
       "game": "Game",
       "rules": "Rules"
     },
-    "portInUse": "Port {{port}} is already in use on this machine"
+    "portInUse": "Port {{port}} is already in use on this machine",
+    "javaHint": "Applies the next time the server starts"
   },
   "webLogin": {
     "title": "Sign in to the site",
@@ -1897,6 +1899,11 @@
         "title": "Detailed journal",
         "description": "Record more details for 24 hours and open the journal folder",
         "keywords": "journal log verbose debug detailed folder diagnostics"
+      },
+      "java": {
+        "title": "Java",
+        "description": "Which Java runs the games: your own or the launcher's",
+        "keywords": "java jdk jre path javaw zulu graalvm temurin corretto liberica version runtime"
       }
     },
     "resetAllConfirmBody_one": "{{count}} setting goes back to its default. Instances, accounts and worlds are untouched.",
@@ -4140,7 +4147,9 @@
       "listSkins": "Reading the skin library",
       "selectSkin": "Putting on a skin",
       "importSkinByNickname": "Fetching the skin of {{name}}",
-      "createInstance": "Creating the instance “{{name}}” on {{version}}"
+      "createInstance": "Creating the instance “{{name}}” on {{version}}",
+      "setInstanceJava": "Setting Java {{major}} for “{{name}}”",
+      "setInstanceJavaAuto": "Setting Java back to automatic for “{{name}}”"
     },
     "providers": {
       "title": "AI providers",
@@ -4339,7 +4348,8 @@
       "list_accounts": "List accounts",
       "set_memory": "Change game memory",
       "ask_user": "Ask you a question",
-      "update_plan": "Keep a plan"
+      "update_plan": "Keep a plan",
+      "set_instance_java": "Change an instance's Java"
     },
     "stopped": "Stopped",
     "emptyContextInstances_one": "{{count}} instance",
@@ -4419,7 +4429,16 @@
     "resetAll": "Use launcher values",
     "optimizedHint": "Adds {{flags}} garbage collector flags",
     "priorityHint": "The game gets more processor time",
-    "runningHint": "The instance is running: settings apply on the next launch."
+    "runningHint": "The instance is running: settings apply on the next launch.",
+    "java": {
+      "title": "Java",
+      "autoHint": "picks Java {{major}}",
+      "newer": "Newer than recommended (Java {{major}}) — usually works",
+      "legacyRisk": "This version expects Java 8 — with mods it may not start",
+      "tooOld": "Needs Java {{major}} or newer — it will not start with this one",
+      "missing": "This Java is no longer found — pick another",
+      "manual": "manual"
+    }
   },
   "configs": {
     "emptyTitle": "No configuration files",
@@ -5488,5 +5507,53 @@
     "commandOn": "Turn on streamer mode",
     "commandOff": "Turn off streamer mode",
     "messageHidden": "Message hidden"
+  },
+  "java": {
+    "title": "Java",
+    "hint": "which Java runs the games",
+    "auto": "Automatic",
+    "downloadsOnLaunch": "downloads on launch",
+    "missing": "not found",
+    "chosenFor": "chosen for Java {{major}}",
+    "source": {
+      "managed": "Launcher",
+      "system": "System",
+      "custom": "Yours"
+    },
+    "range": {
+      "legacy": "Minecraft 1.16.5 and older",
+      "other": "Not used by Minecraft",
+      "mc117": "Minecraft 1.17",
+      "mc118": "Minecraft 1.18 – 1.20.4",
+      "mc1205": "Minecraft 1.20.5 – 1.21.x",
+      "calendar": "Minecraft 26.1 and newer"
+    },
+    "installedTitle": "Installed Java",
+    "installedDescription": "The launcher's own, found on the system (JAVA_HOME, PATH, standard folders) and added by you",
+    "rescan": "Search again",
+    "add": "Add Java…",
+    "remove": "Remove from the list",
+    "scanning": "Looking for installed Java…",
+    "empty": "No Java yet — the launcher downloads the right one on the first launch",
+    "groupLauncher": "By Java version",
+    "groupInstalled": "Installed",
+    "added": "Java added: {{name}}",
+    "addFailed": {
+      "not_java": "That is not Java: pick the java file (java.exe or javaw.exe on Windows) in the bin folder",
+      "managed": "This Java already belongs to the launcher — pick it by its version number",
+      "failed": "Could not add Java"
+    },
+    "defaultFailed": "This Java is no longer available — the list was refreshed",
+    "launch": {
+      "downloading": "Downloading Java {{major}}…",
+      "busy": "Wait for the installation to finish, then start the game",
+      "downloadFailed": "Could not download Java {{major}}",
+      "downloadFailedHint": "Check the internet connection or pick an installed Java in the instance settings.",
+      "missing": "The Java chosen for this instance was not found",
+      "untrusted": "The Java chosen for this instance is not in the launcher's list",
+      "chosenHint": "Pick Java again in the instance settings or set it back to automatic.",
+      "openSettings": "Instance settings",
+      "notInstalled": "Java {{major}} is not installed — run the integrity check"
+    }
   }
 }

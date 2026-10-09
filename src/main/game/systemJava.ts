@@ -1,12 +1,56 @@
 import fs from 'fs-extra'
+import os from 'os'
 import path from 'path'
 import { execFile } from 'child_process'
 import { IPlatform } from '@/types/OS'
 
-const SYSTEM_JAVA_DIRS: Record<string, string[]> = {
-  windows: ['C:\\Program Files\\Java', 'C:\\Program Files\\Eclipse Adoptium'],
-  linux: ['/usr/lib/jvm', '/usr/java'],
-  osx: ['/Library/Java/JavaVirtualMachines']
+const WINDOWS_VENDOR_DIRS = [
+  'Java',
+  'Eclipse Adoptium',
+  'Eclipse Foundation',
+  'AdoptOpenJDK',
+  'Zulu',
+  'Microsoft',
+  'BellSoft',
+  'Amazon Corretto',
+  'Semeru',
+  'GraalVM'
+]
+
+export function systemJavaDirs(platform: IPlatform): string[] {
+  const home = os.homedir()
+
+  if (platform.os === 'windows') {
+    const programFiles = process.env.ProgramFiles || 'C:\\Program Files'
+    const localPrograms = process.env.LOCALAPPDATA
+      ? path.join(process.env.LOCALAPPDATA, 'Programs')
+      : null
+
+    return [
+      ...WINDOWS_VENDOR_DIRS.map((vendor) => path.join(programFiles, vendor)),
+      ...(localPrograms
+        ? ['Eclipse Adoptium', 'Microsoft'].map((vendor) => path.join(localPrograms, vendor))
+        : []),
+      path.join(home, '.jdks')
+    ]
+  }
+
+  if (platform.os === 'osx') {
+    return [
+      '/Library/Java/JavaVirtualMachines',
+      path.join(home, 'Library', 'Java', 'JavaVirtualMachines'),
+      path.join(home, '.sdkman', 'candidates', 'java'),
+      path.join(home, '.jdks')
+    ]
+  }
+
+  return [
+    '/usr/lib/jvm',
+    '/usr/java',
+    '/opt/java',
+    path.join(home, '.sdkman', 'candidates', 'java'),
+    path.join(home, '.jdks')
+  ]
 }
 
 const VERSION_TIMEOUT_MS = 10000
@@ -111,7 +155,7 @@ async function candidateRoots(platform: IPlatform): Promise<string[]> {
   const javaHome = process.env.JAVA_HOME?.trim()
   if (javaHome) roots.push(javaHome)
 
-  for (const dir of SYSTEM_JAVA_DIRS[platform.os] || []) {
+  for (const dir of systemJavaDirs(platform)) {
     let entries: string[]
     try {
       entries = await fs.readdir(dir)

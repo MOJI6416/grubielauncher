@@ -25,3 +25,4 @@ export { registerDataLocationIpc } from "./dataLocationIpc";
 export { registerSupportIpc } from "./supportIpc";
 export { registerMediaIpc } from "./mediaIpc";
 export { registerStreamerIpc } from "./streamerIpc";
+export { registerJavaIpc } from "./javaIpc";

@@ -52,9 +52,8 @@ const { Version } = await import("@renderer/classes/Version");
 const atoms = await import("@renderer/stores/atoms");
 const { getInstance } = await import("./instances");
 const { readLauncherSettings } = await import("./system");
-const { setMemory, setRunArguments, deleteInstance } = await import(
-  "./mutations"
-);
+const { setMemory, setRunArguments, deleteInstance, setInstanceJava } =
+  await import("./mutations");
 const { readGameLog, getLastCrash } = await import("./diagnostics");
 
 const store = getDefaultStore();
@@ -212,6 +211,66 @@ describe("set_run_arguments", () => {
 
     expect(result.ok).toBe(false);
     expect(version.version.runArguments).toEqual({ jvm: "-Xss2M", game: "" });
+  });
+});
+
+describe("set_instance_java", () => {
+  it("pins a Java major and reports how it fits", async () => {
+    const version = makeVersion("Fabric 26.2", { xmx: 6144 });
+    version.javaMajorVersion = 21;
+    store.set(atoms.versionsAtom, [version]);
+
+    const result = await setInstanceJava.run({
+      instance: "Fabric 26.2",
+      mode: "major",
+      major: 17,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.data).toMatchObject({
+      recommendedMajor: 21,
+      choice: "major 17",
+      fit: "too_old",
+    });
+    expect(version.version.overrides).toEqual({ xmx: 6144, java: { major: 17 } });
+    expect(saved).toHaveLength(1);
+  });
+
+  it("returns the instance to the automatic choice", async () => {
+    const version = makeVersion("Fabric 26.2", { java: { home: "D:/jdks/graal" } });
+    store.set(atoms.versionsAtom, [version]);
+
+    const result = await setInstanceJava.run({ instance: "Fabric 26.2", mode: "auto" });
+
+    expect(result.ok).toBe(true);
+    expect(version.version.overrides).toBeUndefined();
+  });
+
+  it("refuses a made-up major and an unknown mode", async () => {
+    store.set(atoms.versionsAtom, [makeVersion("Fabric 26.2")]);
+
+    expect(
+      (await setInstanceJava.run({ instance: "Fabric 26.2", mode: "major", major: 2 })).ok,
+    ).toBe(false);
+    expect(
+      (await setInstanceJava.run({ instance: "Fabric 26.2", mode: "path" })).ok,
+    ).toBe(false);
+    expect(saved).toHaveLength(0);
+  });
+
+  it("is reported by get_instance without exposing paths", async () => {
+    const version = makeVersion("Fabric 26.2", { java: { home: "C:/Users/Steve/jdk" } });
+    version.javaMajorVersion = 21;
+    store.set(atoms.versionsAtom, [version]);
+
+    const result = await getInstance.run({ name: "Fabric 26.2" });
+    const java = (result.data as { java: unknown }).java;
+
+    expect(java).toMatchObject({
+      recommendedMajor: 21,
+      choice: "a specific installed Java picked by the user",
+    });
+    expect(JSON.stringify(java)).not.toContain("Steve");
   });
 });
 

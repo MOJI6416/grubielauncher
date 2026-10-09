@@ -1,3 +1,5 @@
+import type { JavaOverride } from '../shared/javaRuntime'
+
 export interface IVanillaCores {
   vanilla: IServerVersion[]
   spigot: IServerVersion[]
@@ -30,6 +32,7 @@ export interface IServerOption {
 export interface IServerConf {
   core: ServerCore
   javaMajorVersion: number
+  java?: JavaOverride
   memory: number
   aikarFlags?: boolean
   downloads: {

@@ -4,6 +4,8 @@ import { IAssetIndex } from "@/types/IAssetIndex";
 import { LANGUAGES, TSettings } from "@/types/Settings";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { Java } from "./Java";
+import { resolveJava } from "./javaRuntimes";
+import type { ResolvedJava } from "@/shared/javaRuntime";
 import { buildQuickPlayArguments } from "./quickPlayArgs";
 import { IFabricManifest } from "@/types/IFabricManifest";
 import { IInstallProfile } from "@/types/IInstallProfile";
@@ -182,6 +184,7 @@ export class Version {
   public minecraftPath: string = "";
   public versionPath: string = "";
   public javaPath: string = "";
+  public java: ResolvedJava | null = null;
   public isQuickPlayMultiplayer: boolean = false;
   public isQuickPlaySingleplayer: boolean = false;
   private manifestPath: string = "";
@@ -236,16 +239,24 @@ export class Version {
 
     if (isExistsManifest) {
       await this.readManifest();
-      if (this.manifest) {
-        const java = new Java(
-          this.manifest.javaVersion?.majorVersion ??
-            mcVersionToJavaMajor(this.version.version.id),
-        );
-        await java.init();
-        if (!java.javaPath) await java.useSystemJava();
-        this.javaPath = java.javaPath;
-      }
+      if (this.manifest) await this.resolveJavaRuntime();
     }
+  }
+
+  public requiredJavaMajor(): number {
+    return (
+      this.manifest?.javaVersion?.majorVersion ??
+      mcVersionToJavaMajor(this.version.version.id)
+    );
+  }
+
+  public async resolveJavaRuntime(): Promise<ResolvedJava> {
+    this.java = await resolveJava({
+      requiredMajor: this.requiredJavaMajor(),
+      override: this.version.overrides?.java,
+    });
+    this.javaPath = this.java.client;
+    return this.java;
   }
 
   private async resolveLaunchVersionPath() {
@@ -507,36 +518,52 @@ export class Version {
     }
 
     this.sendInstallProgress("java", 18, true);
-    const java = new Java(
-      this.manifest.javaVersion?.majorVersion ??
-        mcVersionToJavaMajor(this.version.version.id),
-    );
+    const requiredJavaMajor = this.requiredJavaMajor();
     const needsJavaBeforeLoader = ["forge", "neoforge"].includes(
       this.version.loader.name,
     );
-    let javaFinalizeNeeded = false;
+    let installerJavaPath = "";
+    let pendingJava: Java | null = null;
 
     if (needsJavaBeforeLoader) {
-      await java.init(downloadSignal);
-      await this.installCheckpoint();
-      await java.install(downloadSignal, this.version.name);
-      await this.installCheckpoint();
-      this.javaPath = java.javaPath;
-    } else {
+      const installerJava = await resolveJava({
+        requiredMajor: requiredJavaMajor,
+      });
+      installerJavaPath = installerJava.client;
+
+      if (installerJava.problem === "not_installed") {
+        const java = new Java(requiredJavaMajor);
+        await java.init(downloadSignal);
+        await this.installCheckpoint();
+        await java.install(downloadSignal, this.version.name);
+        await this.installCheckpoint();
+        installerJavaPath = java.javaPath;
+      }
+    }
+
+    const gameJava = await this.resolveJavaRuntime();
+    await this.installCheckpoint();
+
+    if (gameJava.problem === "not_installed") {
+      const java = new Java(gameJava.major);
       const javaItem = await java.prepareInstallItem(downloadSignal);
       await this.installCheckpoint();
 
       if (javaItem) {
         downloadItems.push(javaItem);
-        javaFinalizeNeeded = true;
+        pendingJava = java;
       } else {
-        this.javaPath = java.javaPath;
+        await this.resolveJavaRuntime();
       }
+    } else if (gameJava.problem) {
+      console.warn(
+        `[version:install] the Java chosen for ${this.version.name} is unavailable (${gameJava.problem}): ${gameJava.home}`,
+      );
     }
 
     const agent = "-Dhttp.agent=Mozilla/5.0";
     if (
-      java.majorVersion === 8 &&
+      requiredJavaMajor === 8 &&
       this.manifest.arguments?.jvm &&
       !this.manifest.arguments.jvm.includes(agent)
     ) {
@@ -757,7 +784,7 @@ export class Version {
             const installResult = seed.cached
               ? "done"
               : await runJar(
-                  this.javaPath,
+                  installerJavaPath,
                   [
                     "-jar",
                     path.join(
@@ -1083,9 +1110,9 @@ export class Version {
     }
     await this.installCheckpoint();
 
-    if (javaFinalizeNeeded) {
-      await java.finalizeInstall();
-      this.javaPath = java.javaPath;
+    if (pendingJava) {
+      await pendingJava.finalizeInstall();
+      await this.resolveJavaRuntime();
     }
 
     await this.prepareLegacyAssets(this.versionPath);
@@ -1968,18 +1995,24 @@ export class Version {
         span.fail(
           new Error(
             this.manifest
-              ? "Java runtime was not found"
+              ? `Java runtime was not found${this.java?.problem ? ` (${this.java.problem})` : ""}`
               : "Version manifest is missing",
           ),
-          { javaPath: this.javaPath || null, versionPath: this.versionPath },
+          {
+            javaPath: this.javaPath || null,
+            java: this.java,
+            versionPath: this.versionPath,
+          },
         );
         return false;
       }
 
       span.step("command built", {
-        javaMajor:
-          this.manifest.javaVersion?.majorVersion ??
-          mcVersionToJavaMajor(this.version.version.id),
+        javaMajor: this.java?.major ?? this.requiredJavaMajor(),
+        javaRequired: this.requiredJavaMajor(),
+        javaVia: this.java?.via,
+        javaSource: this.java?.source,
+        javaVendor: this.java?.vendor,
         ...(await describeLaunchCommand(command, this.manifest.mainClass).catch(
           (error) => ({ describeError: String(error) }),
         )),

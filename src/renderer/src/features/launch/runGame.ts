@@ -45,6 +45,7 @@ import {
   setLaunchStage,
 } from "./launchProgress";
 import { checkOrnitheGeneration } from "./ornitheGeneration";
+import { prepareJavaForLaunch } from "@renderer/features/java/javaLaunch";
 import type { RunGameParams } from "./types";
 
 const api = window.api;
@@ -250,6 +251,11 @@ export async function runGame(params: RunGameParams): Promise<void> {
             : "app.authlibUnavailable",
         ),
       );
+      store.set(isRunningAtom, false);
+      return;
+    }
+
+    if (!(await prepareJavaForLaunch(launchVersion))) {
       store.set(isRunningAtom, false);
       return;
     }

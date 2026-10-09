@@ -9,6 +9,7 @@ import {
 import { useTranslation } from "react-i18next";
 import {
   CircleCheck,
+  Coffee,
   Gamepad2,
   Loader2,
   MemoryStick,
@@ -49,6 +50,13 @@ import {
 } from "./serverProperties";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { cn } from "@/lib/utils";
+import { sameJavaOverride } from "@/shared/javaRuntime";
+import {
+  JAVA_STATUS_TONE,
+  JavaPicker,
+  javaStatus,
+} from "@renderer/features/java/JavaPicker";
+import { useJavaRuntimes } from "@renderer/features/java/useJavaRuntimes";
 
 const api = window.api;
 
@@ -167,6 +175,7 @@ export function ServerSettingsPanel({
 }) {
   const { t } = useTranslation();
   const redact = useRedact();
+  const javaRuntimes = useJavaRuntimes();
 
   const [baseline, setBaseline] = useState<ServerDraft | null>(null);
   const [draft, setDraft] = useState<ServerDraft | null>(null);
@@ -193,6 +202,7 @@ export function ServerSettingsPanel({
       settings,
       memory: run?.memory ?? confRef.current.memory,
       aikarFlags: run?.aikarFlags ?? confRef.current.aikarFlags ?? false,
+      java: confRef.current.java,
     };
   }, [serverPath]);
 
@@ -295,6 +305,20 @@ export function ServerSettingsPanel({
         }
       }
 
+      let nextJava = baseline.java;
+      if (!sameJavaOverride(normalized.java, baseline.java)) {
+        const prepared = await api.java.ensure(
+          conf.javaMajorVersion,
+          normalized.java ?? null,
+        );
+        if (prepared.ok) {
+          nextJava = normalized.java;
+        } else {
+          failedChannels.push("java:ensure");
+          failedParts.push(t("instanceSettings.java.title"));
+        }
+      }
+
       if (
         !(await api.server.updateProperties(
           await api.path.join(serverPath, "server.properties"),
@@ -315,11 +339,14 @@ export function ServerSettingsPanel({
         aikarFlags:
           applied?.aikarFlags ??
           (aikarWritten ? normalized.aikarFlags : baseline.aikarFlags),
+        java: nextJava,
       };
+      if (!nextConf.java) delete nextConf.java;
 
       if (
         nextConf.memory !== conf.memory ||
-        nextConf.aikarFlags !== (conf.aikarFlags ?? false)
+        nextConf.aikarFlags !== (conf.aikarFlags ?? false) ||
+        !sameJavaOverride(nextConf.java, conf.java)
       ) {
         if (
           await api.fs.writeJSON(
@@ -334,10 +361,13 @@ export function ServerSettingsPanel({
         }
       }
 
-      const truth: ServerDraft = applied ?? {
-        settings: normalized.settings,
-        memory: nextConf.memory,
-        aikarFlags: nextConf.aikarFlags === true,
+      const truth: ServerDraft = {
+        ...(applied ?? {
+          settings: normalized.settings,
+          memory: nextConf.memory,
+          aikarFlags: nextConf.aikarFlags === true,
+        }),
+        java: nextConf.java,
       };
 
       setBaseline(truth);
@@ -392,6 +422,13 @@ export function ServerSettingsPanel({
 
   const settings = draft.settings;
   const maxMemory = Math.max(2048, totalMemory - 1024);
+  const javaState = javaStatus(
+    draft.java,
+    conf.javaMajorVersion,
+    javaRuntimes.list,
+    t,
+  );
+  const JavaStateIcon = javaState?.icon;
 
   const rules: [string, keyof IServerSettings][] = [
     [t("serverSettings.whitelist"), "whitelist"],
@@ -436,6 +473,35 @@ export function ServerSettingsPanel({
                 setDraft((prev) => (prev ? { ...prev, aikarFlags: value } : prev))
               }
             />
+          </Section>
+
+          <Section
+            title={t("instanceSettings.java.title")}
+            icon={<Coffee className="size-3.5" />}
+          >
+            <JavaPicker
+              value={draft.java}
+              requiredMajor={conf.javaMajorVersion}
+              className="h-8 w-full"
+              onChange={(java) =>
+                setDraft((prev) => (prev ? { ...prev, java } : prev))
+              }
+            />
+            {javaState && JavaStateIcon ? (
+              <p
+                className={cn(
+                  "flex items-start gap-1.5 text-[0.7rem] leading-snug",
+                  JAVA_STATUS_TONE[javaState.tone],
+                )}
+              >
+                <JavaStateIcon className="mt-px size-3 shrink-0" />
+                {javaState.text}
+              </p>
+            ) : (
+              <p className="text-[0.7rem] text-faint">
+                {t("serverSettings.javaHint")}
+              </p>
+            )}
           </Section>
 
           <Section

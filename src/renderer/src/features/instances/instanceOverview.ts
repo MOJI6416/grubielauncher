@@ -4,6 +4,7 @@ import {
   InstanceSettingsOverrides,
   OVERRIDABLE_KEYS,
 } from "@/shared/instanceSettings";
+import { sameJavaOverride } from "@/shared/javaRuntime";
 
 export type InstanceChangeKind =
   | "name"
@@ -49,7 +50,11 @@ export function sameOverrides(
   left: InstanceSettingsOverrides | undefined,
   right: InstanceSettingsOverrides | undefined,
 ): boolean {
-  return OVERRIDABLE_KEYS.every((key) => (left?.[key] ?? null) === (right?.[key] ?? null));
+  return OVERRIDABLE_KEYS.every((key) =>
+    key === "java"
+      ? sameJavaOverride(left?.java, right?.java)
+      : (left?.[key] ?? null) === (right?.[key] ?? null),
+  );
 }
 
 export function sameQuickServer(

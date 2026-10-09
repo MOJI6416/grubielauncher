@@ -32,6 +32,7 @@ import {
   tickOffset,
 } from "./memory";
 import type { SettingsEntryId } from "./catalog";
+import { JavaSettingsGroup } from "@renderer/features/java/JavaSettingsGroup";
 
 const KEEP_OPTIONS = [1, 3, 5, 10, 20];
 
@@ -250,6 +251,8 @@ export function GameSection({
           />
         )}
       </SettingsGroup>
+
+      {visible("java") && <JavaSettingsGroup query={query} />}
 
       {(visible("autoWorldBackup") || visible("worldBackupKeep")) && (
         <SettingsGroup

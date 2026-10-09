@@ -40,7 +40,7 @@ function describeInstances(): string {
     const marker = selected?.version.name === conf.name ? " [selected]" : "";
     const overridden = countOverrides(conf.overrides);
     const settingsNote = overridden
-      ? `, overrides ${overridden} launcher setting(s) of its own`
+      ? `, overrides ${overridden} launcher setting(s) of its own${conf.overrides?.java ? " (Java chosen by hand)" : ""}`
       : "";
 
     return `- ${conf.name}${marker}: Minecraft ${conf.version.id}, ${loader}, ${conf.loader.mods.length} mods${settingsNote}`;

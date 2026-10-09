@@ -4,6 +4,7 @@ import { ILoader } from './Loader'
 import { IServer } from './ServersList'
 import { InstanceSettingsOverrides } from '../shared/instanceSettings'
 import type { IModpackSource } from './ModpackSource'
+import type { ResolvedJava } from '../shared/javaRuntime'
 
 export interface IVersion {
   id: string
@@ -76,6 +77,7 @@ export interface IVersionClassData {
   minecraftPath: string
   versionPath: string
   javaPath: string
+  java?: ResolvedJava | null
   isQuickPlayMultiplayer: boolean
   isQuickPlaySingleplayer: boolean
   loaderRollbackId?: string

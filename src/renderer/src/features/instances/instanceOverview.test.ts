@@ -337,6 +337,9 @@ describe("sameOverrides", () => {
   it("sees a real difference", () => {
     expect(sameOverrides({ xmx: 4096 }, { xmx: 8192 })).toBe(false);
     expect(sameOverrides({ highPriority: false }, undefined)).toBe(false);
+    expect(sameOverrides({ java: { major: 17 } }, { java: { major: 17 } })).toBe(true);
+    expect(sameOverrides({ java: { major: 17 } }, { java: { major: 21 } })).toBe(false);
+    expect(sameOverrides({ java: { home: "/opt/jdk" } }, undefined)).toBe(false);
   });
 });
 

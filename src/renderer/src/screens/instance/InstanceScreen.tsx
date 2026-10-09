@@ -59,6 +59,12 @@ import {
 } from "@renderer/features/instances/InstanceOverviewTab";
 import { InstancePublishingCard } from "@renderer/features/instances/InstancePublishingCard";
 import { InstanceSettingsPanel } from "@renderer/features/instances/InstanceSettingsPanel";
+import {
+  effectiveJava,
+  instanceRequiredJava,
+  javaLabel,
+} from "@renderer/features/java/javaChoices";
+import { useJavaRuntimes } from "@renderer/features/java/useJavaRuntimes";
 import { InstanceStatisticsPanel } from "@renderer/features/instances/InstanceStatisticsPanel";
 import { InstanceStatusChip } from "@renderer/features/instances/InstanceStatusChip";
 import { InstanceTabBar } from "@renderer/features/instances/InstanceTabBar";
@@ -422,6 +428,7 @@ export function InstanceScreen({
   ) : null;
 
   const resolved = resolveInstanceSettings(settings, draft.overrides);
+  const javaRuntimes = useJavaRuntimes();
 
   return (
     <>
@@ -666,6 +673,7 @@ export function InstanceScreen({
                 )}
 
                 <InstanceSettingsPanel
+                  requiredJavaMajor={instanceRequiredJava(version)}
                   overrides={draft.overrides}
                   disabled={isLoading || isVersionRunning || isForeignInstance}
                   hint={
@@ -682,7 +690,13 @@ export function InstanceScreen({
                   runArguments={draft.runArguments}
                   memoryMb={resolved.xmx}
                   optimizedJvm={resolved.optimizedJvm}
-                  javaMajorVersion={version.javaMajorVersion}
+                  java={javaLabel(
+                    effectiveJava(
+                      draft.overrides?.java,
+                      instanceRequiredJava(version),
+                      javaRuntimes.list,
+                    ),
+                  )}
                   canCopy={!isLoading && !!account}
                   onCopy={() => void editor.copyRunCommand(false)}
                 />

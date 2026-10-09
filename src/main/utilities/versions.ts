@@ -3,6 +3,7 @@ import { ModManager } from "../services/ModManager";
 import { removeInstanceIdSync } from "./instanceId";
 import { readNBT } from "./nbt";
 import type { IImportModpack, IVersionConf } from "@/types/IVersion";
+import { stripJavaOverride } from "@/shared/javaRuntime";
 import path from "path";
 import fs from "fs-extra";
 import { pathToFileURL } from "url";
@@ -145,9 +146,11 @@ export async function importVersion(
     }
 
     const effectiveRoot = grubieConf.root;
-    const conf = sanitizeImportedVersionConf(
-      normalizeLegacyVersionField(grubieConf.conf),
-      effectiveRoot,
+    const conf = stripJavaOverride(
+      sanitizeImportedVersionConf(
+        normalizeLegacyVersionField(grubieConf.conf),
+        effectiveRoot,
+      ),
     );
 
     const servers = await readNBT(

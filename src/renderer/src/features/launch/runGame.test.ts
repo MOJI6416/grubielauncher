@@ -2,6 +2,18 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const memory: Record<string, string> = {};
 const accountsSave = vi.fn(async () => {});
+const readyJava = {
+  requiredMajor: 21,
+  major: 21,
+  via: "auto",
+  source: "managed",
+  home: "C:/launcher/java/jdk-21",
+  client: "C:/launcher/java/jdk-21/bin/javaw.exe",
+  server: "C:/launcher/java/jdk-21/bin/java.exe",
+  vendor: "Temurin",
+  version: "21.0.5",
+};
+const javaPrepare = vi.fn(async (): Promise<any> => ({ ok: true, java: readyJava }));
 
 beforeAll(() => {
   (globalThis as any).localStorage = {
@@ -22,6 +34,7 @@ beforeAll(() => {
       servers: { read: async () => [] },
       backend: { getModpack: async () => ({ status: "ok", data: null }) },
       events: { onConsoleMessage: () => () => {} },
+      java: { prepare: javaPrepare },
     },
   };
 });
@@ -115,6 +128,8 @@ describe("runGame", () => {
       java: "C:/launcher/java",
     });
     accountsSave.mockClear();
+    javaPrepare.mockClear();
+    javaPrepare.mockImplementation(async () => ({ ok: true, java: readyJava }));
   });
 
   it("never raises the running flag when an install holds the lock", async () => {
@@ -155,6 +170,33 @@ describe("runGame", () => {
 
     expect(store.get(atoms.isRunningAtom)).toBe(false);
     expect(instance.run).not.toHaveBeenCalled();
+  });
+
+  it("does not start the game when the chosen Java is gone", async () => {
+    const { runGame, atoms, store } = await load();
+    javaPrepare.mockImplementation(async () => ({
+      ok: false,
+      problem: "missing",
+      java: { ...readyJava, via: "instance", source: null, client: "" },
+    }));
+    const instance = fakeInstance();
+
+    await runGame({ version: instance as any });
+
+    expect(javaPrepare).toHaveBeenCalledTimes(1);
+    expect(instance.run).not.toHaveBeenCalled();
+    expect(store.get(atoms.isRunningAtom)).toBe(false);
+  });
+
+  it("hands the prepared Java to the instance before starting", async () => {
+    const { runGame } = await load();
+    const instance: any = fakeInstance();
+
+    await runGame({ version: instance });
+
+    expect(javaPrepare).toHaveBeenCalledWith(instance.version);
+    expect(instance.java).toEqual(readyJava);
+    expect(instance.run).toHaveBeenCalledTimes(1);
   });
 
   it("lowers the running flag and marks the console when the process fails", async () => {

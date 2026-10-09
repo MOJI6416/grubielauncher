@@ -51,6 +51,8 @@ import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
 import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { effectiveJava, javaLabel } from "@renderer/features/java/javaChoices";
+import { useJavaRuntimes } from "@renderer/features/java/useJavaRuntimes";
 
 const api = window.api;
 
@@ -100,6 +102,7 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
   const isInstallActive = useAtomValue(installActiveAtom);
 
   const runtime = useMemo(() => getServerRuntime(), []);
+  const javaRuntimes = useJavaRuntimes();
 
   const [serverPath, setServerPath] = useState("");
   const [view, setView] = useState<"console" | "settings">("console");
@@ -261,9 +264,15 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
         }
 
         const code = result?.error ?? "";
-        const key = RUN_ERROR_KEYS[code];
+        const chosenJavaFailed =
+          code === "server_java_unavailable" && Boolean(server?.java);
+        const key = chosenJavaFailed
+          ? "serverManager.runErrorChosenJava"
+          : RUN_ERROR_KEYS[code];
 
-        if (action === "start" && REPAIRABLE_ERRORS.has(code)) {
+        if (chosenJavaFailed) {
+          setView("settings");
+        } else if (action === "start" && REPAIRABLE_ERRORS.has(code)) {
           setRunError(code);
           setView("console");
         }
@@ -278,7 +287,7 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
         setIsBusy(false);
       }
     },
-    [runtime, serverPath, t],
+    [runtime, serverPath, server, t],
   );
 
   const repair = useCallback(async () => {
@@ -448,7 +457,12 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
 
   const identity: { icon: typeof Cpu; value: string }[] = [
     { icon: Cpu, value: server.core },
-    { icon: Coffee, value: `Java ${server.javaMajorVersion}` },
+    {
+      icon: Coffee,
+      value: `Java ${javaLabel(
+        effectiveJava(server.java, server.javaMajorVersion, javaRuntimes.list),
+      )}`,
+    },
     { icon: MemoryStick, value: `${server.memory} ${t("settings.mb")}` },
   ];
 

@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { Collapse } from "@/components/ui/collapse";
 import { Hint } from "@renderer/components/Hint";
 import { FactRow, FactRows } from "@renderer/components/FactRows";
+import { javaLabel } from "@renderer/features/java/javaChoices";
 import { SectionCard } from "./SectionCard";
 import {
   ActivityHint,
@@ -356,12 +357,27 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
                 icon={<Cpu className="size-3.5" />}
                 label={t("versions.facts.java")}
                 value={
-                  <span className="font-mono">
-                    {instance.javaMajorVersion
-                      ? `Java ${instance.javaMajorVersion}`
-                      : "—"}
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    {instance.java?.via === "instance" && (
+                      <span className="shrink-0 text-faint">
+                        {t("instanceSettings.java.manual")}
+                      </span>
+                    )}
+                    <span
+                      className={cn(
+                        "truncate font-mono",
+                        instance.java?.problem && "text-destructive",
+                      )}
+                    >
+                      {instance.java
+                        ? `Java ${javaLabel(instance.java)}`
+                        : instance.javaMajorVersion
+                          ? `Java ${instance.javaMajorVersion}`
+                          : "—"}
+                    </span>
                   </span>
                 }
+                onSelect={() => props.onOpenTab("settings")}
               />
               <FactRow
                 icon={<MemoryStick className="size-3.5" />}

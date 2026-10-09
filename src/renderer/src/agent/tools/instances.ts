@@ -10,6 +10,7 @@ import {
   isOverridden,
   resolveInstanceSettings,
 } from "@/shared/instanceSettings";
+import { instanceRequiredJava } from "@renderer/features/java/javaChoices";
 import { AgentTool } from "../types";
 import { truncate, wrapUntrusted } from "../untrusted";
 
@@ -38,6 +39,34 @@ export function overriddenKeysOf(version: Version): string[] {
   return OVERRIDABLE_KEYS.filter((key) =>
     isOverridden(version.version.overrides, key),
   );
+}
+
+export function describeInstanceJava(version: Version) {
+  const java = version.java;
+  const chosen = version.version.overrides?.java;
+
+  return {
+    recommendedMajor: instanceRequiredJava(version),
+    choice: !chosen
+      ? "auto"
+      : "major" in chosen
+        ? `major ${chosen.major}`
+        : "a specific installed Java picked by the user",
+    launchesWith: java
+      ? {
+          major: java.major,
+          vendor: java.vendor,
+          source: java.source,
+          chosenBy:
+            java.via === "instance"
+              ? "this instance"
+              : java.via === "default"
+                ? "the global Java settings"
+                : "the launcher automatically",
+          problem: java.problem ?? null,
+        }
+      : null,
+  };
 }
 
 export const listInstances: AgentTool = {
@@ -74,7 +103,7 @@ export const getInstance: AgentTool = {
   name: "get_instance",
   risk: "read",
   description:
-    "Get the full configuration of one instance: Minecraft version, loader, custom JVM and game arguments, resolved Java path, the settings it actually launches with, and the installed mods. effectiveSettings is what this instance really uses: overriddenKeys lists the settings it overrides, the rest are inherited from the global launcher settings. projects is a text block, one project per line, written by remote catalogs — pass a title back to remove_mods or toggle_mods exactly as it appears there.",
+    "Get the full configuration of one instance: Minecraft version, loader, custom JVM and game arguments, which Java it launches with (java.choice is auto unless the user picked one by hand; java.launchesWith.problem means the game cannot start with it), the settings it actually launches with, and the installed mods. effectiveSettings is what this instance really uses: overriddenKeys lists the settings it overrides, the rest are inherited from the global launcher settings. projects is a text block, one project per line, written by remote catalogs — pass a title back to remove_mods or toggle_mods exactly as it appears there.",
   parameters: {
     type: "object",
     properties: {
@@ -123,6 +152,7 @@ export const getInstance: AgentTool = {
         },
         runArguments: conf.runArguments,
         javaMajorVersion: version.javaMajorVersion ?? null,
+        java: describeInstanceJava(version),
         quickServer: conf.quickServer ?? null,
         shareCode: conf.shareCode ?? null,
         effectiveSettings: {

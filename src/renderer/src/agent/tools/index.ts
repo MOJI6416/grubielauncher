@@ -24,6 +24,7 @@ import {
   deleteInstance,
   launchInstance,
   removeMods,
+  setInstanceJava,
   setMemory,
   setRunArguments,
 } from "./mutations";
@@ -53,6 +54,7 @@ const LOCAL_TOOLS: AgentTool[] = [
   toggleMods,
   setRunArguments,
   setMemory,
+  setInstanceJava,
   deleteInstance,
 ];
 

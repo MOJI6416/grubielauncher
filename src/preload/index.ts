@@ -28,6 +28,12 @@ import {
   VersionDeleteResult,
 } from "@/types/IVersion";
 import { IAccountConf, IAuth, ILocalAccount } from "@/types/Account";
+import type {
+  JavaAddResult,
+  JavaOverride,
+  JavaPrepareResult,
+  JavaRuntimeList,
+} from "@/shared/javaRuntime";
 import {
   IExplorePage,
   IExploreQuery,
@@ -299,6 +305,20 @@ export interface IElectronAPI {
   platform: string;
   os: {
     totalmem: () => Promise<number>;
+  };
+  java: {
+    list: (rescan?: boolean) => Promise<JavaRuntimeList>;
+    add: () => Promise<JavaAddResult>;
+    remove: (home: string) => Promise<JavaRuntimeList>;
+    setDefault: (
+      major: number,
+      home: string | null,
+    ) => Promise<JavaRuntimeList | null>;
+    prepare: (conf: IVersionConf) => Promise<JavaPrepareResult>;
+    ensure: (
+      requiredMajor: number,
+      override: JavaOverride | null,
+    ) => Promise<JavaPrepareResult>;
   };
   storage: {
     getBreakdown: () => Promise<StorageBreakdown>;
@@ -1409,6 +1429,16 @@ export const api: IElectronAPI = {
   platform: process.platform,
   os: {
     totalmem: () => invoke("os:totalmem"),
+  },
+  java: {
+    list: (rescan?: boolean) => invoke("java:list", rescan),
+    add: () => invoke("java:add"),
+    remove: (home: string) => invoke("java:remove", home),
+    setDefault: (major: number, home: string | null) =>
+      invoke("java:setDefault", major, home),
+    prepare: (conf: IVersionConf) => invoke("java:prepare", conf),
+    ensure: (requiredMajor: number, override: JavaOverride | null) =>
+      invoke("java:ensure", requiredMajor, override),
   },
   storage: {
     getBreakdown: () => invoke("storage:getBreakdown"),

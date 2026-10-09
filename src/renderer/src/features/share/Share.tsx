@@ -91,6 +91,7 @@ import { copyToClipboard } from "@renderer/utilities/clipboard";
 import { announceShareCode } from "./publishPresence";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { withoutOverrides } from "@/shared/instanceSettings";
 const api = window.api;
 
 interface SharePublishProgress {
@@ -1082,7 +1083,7 @@ export function Share({
       const shareCode = await api.backend.shareModpack(account.accessToken!, {
         isPublic: isCatalogPublic,
         conf: {
-          ...selectedVersion.version,
+          ...withoutOverrides(selectedVersion.version),
           description: nextDescription,
           loader: {
             ...selectedVersion.version.loader,

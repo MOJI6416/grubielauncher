@@ -6,6 +6,7 @@ import { IAiLogContext, IAiLogRequest } from "@/types/AiAnalysis";
 import { IVersionConf } from "@/types/IVersion";
 import { TSettings } from "@/types/Settings";
 import { mcVersionToJavaMajor } from "@/shared/javaVersions";
+import { resolveJava } from "../game/javaRuntimes";
 import { findRecentCrashReport, readCrashSource } from "./crashAnalyzer";
 import { getConsoleOutput } from "./consoleBuffer";
 import { prepareLogForAnalysis } from "@/shared/logSanitizer";
@@ -62,18 +63,33 @@ async function readVersionConf(
     .catch(() => null)) as IVersionConf | null;
 }
 
-async function resolveJavaMajor(mcVersion?: string): Promise<number | null> {
-  if (!mcVersion) return null;
+async function describeJava(
+  versionPath: string,
+  conf: IVersionConf | null,
+): Promise<string | undefined> {
+  const mcVersion = conf?.version?.id;
+  if (!mcVersion) return undefined;
 
-  const { minecraft } = getLauncherPaths();
   const manifest = (await fs
-    .readJSON(path.join(minecraft, "versions", mcVersion, `${mcVersion}.json`))
+    .readJSON(path.join(versionPath, `${mcVersion}.json`))
     .catch(() => null)) as { javaVersion?: { majorVersion?: number } } | null;
 
-  const major = manifest?.javaVersion?.majorVersion;
-  if (typeof major === "number" && major > 0) return major;
+  const manifestMajor = manifest?.javaVersion?.majorVersion;
+  const required =
+    typeof manifestMajor === "number" && manifestMajor > 0
+      ? manifestMajor
+      : mcVersionToJavaMajor(mcVersion);
 
-  return mcVersionToJavaMajor(mcVersion);
+  const java = await resolveJava({
+    requiredMajor: required,
+    override: conf?.overrides?.java,
+  }).catch(() => null);
+  if (!java) return String(required);
+
+  const label = [String(java.major), java.vendor].filter(Boolean).join(" ");
+  return java.via === "instance" && java.major !== required
+    ? `${label} (chosen by hand, recommended ${required})`
+    : label;
 }
 
 async function listMods(versionPath: string): Promise<string[]> {
@@ -211,13 +227,13 @@ export async function buildLogAnalysisRequest(
   ]);
 
   const mcVersion = conf?.version?.id || undefined;
-  const javaMajor = await resolveJavaMajor(mcVersion);
+  const javaVersion = await describeJava(versionPath, conf);
 
   const context: IAiLogContext = {
     mcVersion,
     loaderName: conf?.loader?.name || undefined,
     loaderVersion: conf?.loader?.version?.id || undefined,
-    javaVersion: javaMajor ? String(javaMajor) : undefined,
+    javaVersion,
     javaArch: process.arch,
     memoryMb: resolveMemoryMb(settings, conf),
     os: `${process.platform} ${process.arch}`,

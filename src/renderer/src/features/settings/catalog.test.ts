@@ -42,6 +42,7 @@ describe("catalog coverage", () => {
       "memory",
       "optimizedJvm",
       "highPriority",
+      "java",
       "autoWorldBackup",
       "worldBackupKeep",
     ]);

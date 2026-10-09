@@ -12,6 +12,8 @@ import {
   MAX_CULPRITS,
   sanitizeCrashRules,
   selectCrashRule,
+  UNSUPPORTED_JAVA_OVERRIDE_MESSAGES,
+  UNSUPPORTED_JAVA_RULE_ID,
 } from "./crashRules";
 import { runCrashRegexJobs } from "./crashRegexWorker";
 import { app } from "electron";
@@ -251,10 +253,22 @@ export async function analyzeGameCrash(
 
   return {
     ruleId: match.ruleId,
-    messages: match.messages,
+    messages:
+      match.ruleId === UNSUPPORTED_JAVA_RULE_ID &&
+      (await hasJavaOverride(versionPath))
+        ? UNSUPPORTED_JAVA_OVERRIDE_MESSAGES
+        : match.messages,
     culprits: match.culprits,
     reportPath,
   };
+}
+
+async function hasJavaOverride(versionPath: string): Promise<boolean> {
+  const conf = (await fs
+    .readJSON(path.join(versionPath, "version.json"))
+    .catch(() => null)) as IVersionConf | null;
+
+  return Boolean(conf?.overrides?.java);
 }
 
 async function reportCrashRuleHit(

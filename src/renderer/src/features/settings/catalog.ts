@@ -15,6 +15,7 @@ export type SettingsEntryId =
   | "memory"
   | "optimizedJvm"
   | "highPriority"
+  | "java"
   | "downloadLimit"
   | "downloadSource"
   | "mirrorRouting"
@@ -78,6 +79,7 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "memory", section: "game", keys: ["xmx"] },
   { id: "optimizedJvm", section: "game", keys: ["optimizedJvm"] },
   { id: "highPriority", section: "game", keys: ["highPriority"] },
+  { id: "java", section: "game", keys: [] },
   { id: "autoWorldBackup", section: "game", keys: ["autoWorldBackup"] },
   { id: "worldBackupKeep", section: "game", keys: ["worldBackupKeep"] },
   { id: "downloadSource", section: "downloads", keys: ["downloadSource"] },

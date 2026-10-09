@@ -13,14 +13,14 @@ export function InstanceLaunchProfileCard({
   runArguments,
   memoryMb,
   optimizedJvm,
-  javaMajorVersion,
+  java,
   canCopy,
   onCopy,
 }: {
   runArguments: IArguments;
   memoryMb: number;
   optimizedJvm: boolean;
-  javaMajorVersion?: number;
+  java: string;
   canCopy: boolean;
   onCopy: () => void;
 }) {
@@ -89,7 +89,7 @@ export function InstanceLaunchProfileCard({
       <div className="flex shrink-0 items-center gap-3 text-[0.7rem] text-faint">
         <span>
           {t("versions.facts.java")}:{" "}
-          <span className="font-mono">{javaMajorVersion ?? "—"}</span>
+          <span className="font-mono">{java}</span>
         </span>
         {(runArguments.jvm || runArguments.game) && (
           <span className="ml-auto">{t("versions.launchProfileLegend")}</span>

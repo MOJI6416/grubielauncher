@@ -148,6 +148,7 @@ const CATALOG: ToolDescriptor[] = [
   { name: "get_storage_usage", group: "system", risk: "read", need: "none" },
   { name: "list_accounts", group: "system", risk: "read", need: "none" },
   { name: "set_memory", group: "system", risk: "write", need: "none" },
+  { name: "set_instance_java", group: "system", risk: "write", need: "none" },
 
   { name: "ask_user", group: "dialogue", risk: "read", need: "none" },
   { name: "update_plan", group: "dialogue", risk: "read", need: "none" },

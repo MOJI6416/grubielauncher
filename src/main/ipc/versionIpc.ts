@@ -291,6 +291,7 @@ export function registerVersionIpc() {
         minecraftPath: vm.minecraftPath,
         versionPath: vm.versionPath,
         javaPath: vm.javaPath,
+        java: vm.java,
         isQuickPlayMultiplayer: vm.isQuickPlayMultiplayer,
         isQuickPlaySingleplayer: vm.isQuickPlaySingleplayer,
         loaderRollbackId: rollback?.id,

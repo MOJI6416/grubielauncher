@@ -1,15 +1,18 @@
 import { TSettings } from '../types/Settings'
+import type { JavaOverride } from './javaRuntime'
 
 export interface InstanceSettingsOverrides {
   xmx?: number
   optimizedJvm?: boolean
   highPriority?: boolean
+  java?: JavaOverride
 }
 
 export const OVERRIDABLE_KEYS = [
   'xmx',
   'optimizedJvm',
-  'highPriority'
+  'highPriority',
+  'java'
 ] as const
 
 export type OverridableKey = (typeof OVERRIDABLE_KEYS)[number]
@@ -69,4 +72,12 @@ export function clearOverride(
   delete next[key]
 
   return countOverrides(next) > 0 ? next : undefined
+}
+
+export function withoutOverrides<T extends { overrides?: unknown }>(
+  conf: T
+): Omit<T, 'overrides'> {
+  const copy = { ...conf }
+  delete copy.overrides
+  return copy
 }

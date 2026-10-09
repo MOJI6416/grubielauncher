@@ -281,7 +281,8 @@
     "closeTitle": "Сервер ещё работает",
     "closeHint": "Лаунчер отправит серверу «stop» и дождётся, пока мир сохранится. Игроки будут отключены.",
     "closeStopAndQuit": "Остановить и закрыть",
-    "applyAfterRestart": "применится после перезапуска сервера"
+    "applyAfterRestart": "применится после перезапуска сервера",
+    "runErrorChosenJava": "Java, выбранная для сервера, недоступна — выберите другую в настройках сервера."
   },
   "serverSettings": {
     "description": "Описание",
@@ -319,7 +320,8 @@
       "game": "Игра",
       "rules": "Правила"
     },
-    "portInUse": "Порт {{port}} на этом компьютере уже занят"
+    "portInUse": "Порт {{port}} на этом компьютере уже занят",
+    "javaHint": "Применится при следующем запуске сервера"
   },
   "webLogin": {
     "title": "Вход на сайт",
@@ -1921,6 +1923,11 @@
         "title": "Подробный журнал",
         "description": "Записывать больше деталей 24 часа и открыть папку журнала",
         "keywords": "журнал лог подробный отладка папка диагностика"
+      },
+      "java": {
+        "title": "Java",
+        "description": "Какая Java запускает игры: своя или от лаунчера",
+        "keywords": "java jdk jre джава ява путь javaw zulu graalvm temurin corretto liberica версия"
       }
     },
     "resetAllConfirmBody_one": "{{count}} настройка вернётся к значению по умолчанию. Сборки, аккаунты и миры не пострадают.",
@@ -4194,7 +4201,9 @@
       "listSkins": "Читаю библиотеку скинов",
       "selectSkin": "Надеваю скин",
       "importSkinByNickname": "Забираю скин игрока {{name}}",
-      "createInstance": "Создаю сборку «{{name}}» на {{version}}"
+      "createInstance": "Создаю сборку «{{name}}» на {{version}}",
+      "setInstanceJava": "Ставлю сборке «{{name}}» Java {{major}}",
+      "setInstanceJavaAuto": "Возвращаю сборке «{{name}}» автоматический выбор Java"
     },
     "providers": {
       "title": "Провайдеры ИИ",
@@ -4393,7 +4402,8 @@
       "list_accounts": "Смотреть аккаунты",
       "set_memory": "Менять память игры",
       "ask_user": "Задавать вам вопрос",
-      "update_plan": "Вести план"
+      "update_plan": "Вести план",
+      "set_instance_java": "Менять Java сборки"
     },
     "stopped": "Остановлено",
     "emptyContextInstances_one": "{{count}} сборку",
@@ -4476,7 +4486,16 @@
     "resetAll": "Вернуть общие",
     "optimizedHint": "Добавляет {{flags}} флагов сборщика мусора",
     "priorityHint": "Игра получает больше процессорного времени",
-    "runningHint": "Сборка запущена: настройки применятся со следующего запуска."
+    "runningHint": "Сборка запущена: настройки применятся со следующего запуска.",
+    "java": {
+      "title": "Java",
+      "autoHint": "подберёт Java {{major}}",
+      "newer": "Новее рекомендуемой (Java {{major}}) — обычно работает",
+      "legacyRisk": "Версия рассчитана на Java 8 — с модами может не запуститься",
+      "tooOld": "Нужна Java {{major}} или новее — с этой не запустится",
+      "missing": "Эта Java больше не найдена — выберите другую",
+      "manual": "вручную"
+    }
   },
   "configs": {
     "emptyTitle": "Файлов конфигурации нет",
@@ -5567,5 +5586,53 @@
     "commandOn": "Включить режим стримера",
     "commandOff": "Выключить режим стримера",
     "messageHidden": "Сообщение скрыто"
+  },
+  "java": {
+    "title": "Java",
+    "hint": "какая Java запускает игры",
+    "auto": "Автоматически",
+    "downloadsOnLaunch": "скачается при запуске",
+    "missing": "не найдена",
+    "chosenFor": "выбрана для Java {{major}}",
+    "source": {
+      "managed": "Лаунчер",
+      "system": "Система",
+      "custom": "Своя"
+    },
+    "range": {
+      "legacy": "Minecraft 1.16.5 и старше",
+      "other": "Не нужна версиям Minecraft",
+      "mc117": "Minecraft 1.17",
+      "mc118": "Minecraft 1.18 – 1.20.4",
+      "mc1205": "Minecraft 1.20.5 – 1.21.x",
+      "calendar": "Minecraft 26.1 и новее"
+    },
+    "installedTitle": "Установленные Java",
+    "installedDescription": "Java лаунчера, найденные в системе (JAVA_HOME, PATH, стандартные папки) и добавленные вами",
+    "rescan": "Найти заново",
+    "add": "Добавить Java…",
+    "remove": "Убрать из списка",
+    "scanning": "Ищем установленные Java…",
+    "empty": "Java пока нет — лаунчер сам скачает нужную при первом запуске",
+    "groupLauncher": "По версии Java",
+    "groupInstalled": "Установленные",
+    "added": "Java добавлена: {{name}}",
+    "addFailed": {
+      "not_java": "Это не Java: выберите файл java (в Windows — java.exe или javaw.exe) в папке bin",
+      "managed": "Эта Java уже принадлежит лаунчеру — выберите её по номеру версии",
+      "failed": "Не удалось добавить Java"
+    },
+    "defaultFailed": "Эта Java больше недоступна — список обновлён",
+    "launch": {
+      "downloading": "Скачиваем Java {{major}}…",
+      "busy": "Дождитесь окончания установки, затем запустите игру",
+      "downloadFailed": "Не удалось скачать Java {{major}}",
+      "downloadFailedHint": "Проверьте интернет или выберите установленную Java в настройках сборки.",
+      "missing": "Java, выбранная для сборки, не найдена",
+      "untrusted": "Java, выбранной для сборки, нет в списке лаунчера",
+      "chosenHint": "Выберите Java заново в настройках сборки или верните автоматический выбор.",
+      "openSettings": "Настройки сборки",
+      "notInstalled": "Java {{major}} не установлена — запустите проверку целостности"
+    }
   }
 }

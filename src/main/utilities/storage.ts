@@ -315,6 +315,10 @@ async function scanManifests(versionsPath: string): Promise<ManifestScan> {
         majors.add(data.javaVersion.majorVersion);
       }
 
+      if (typeof data?.overrides?.java?.major === "number") {
+        majors.add(data.overrides.java.major);
+      }
+
       if (Array.isArray(data?.libraries)) {
         foundManifest = true;
         for (const lib of data.libraries) {
@@ -330,6 +334,13 @@ async function scanManifests(versionsPath: string): Promise<ManifestScan> {
     }
 
     if (!foundManifest) allParsed = false;
+
+    const serverConf = await fs
+      .readJSON(path.join(dir, "server", "conf.json"))
+      .catch(() => null);
+    if (typeof serverConf?.java?.major === "number") {
+      majors.add(serverConf.java.major);
+    }
   }
 
   return {

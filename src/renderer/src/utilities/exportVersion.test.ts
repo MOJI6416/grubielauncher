@@ -61,4 +61,14 @@ describe("export version helpers", () => {
     });
     expect(exported.loader.mods[0].version?.files[0].localPath).toBeUndefined();
   });
+
+  it("keeps instance settings but not the Java picked on this computer", () => {
+    const exported = sanitizeExportVersion({
+      name: "Pack",
+      loader: { name: "fabric", mods: [] },
+      overrides: { xmx: 6144, java: { home: "C:/Users/Steve/jdks/zulu-21" } },
+    } as any);
+
+    expect(exported.overrides).toEqual({ xmx: 6144 });
+  });
 });

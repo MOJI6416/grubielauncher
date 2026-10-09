@@ -1,4 +1,5 @@
 import type { IVersionConf } from "@/types/IVersion";
+import { stripJavaOverride } from "@/shared/javaRuntime";
 
 export function getLocalPathFromFileUrl(url?: string) {
   if (!url?.startsWith("file://")) return "";
@@ -28,7 +29,7 @@ export function toFileUrl(filePath: string) {
 
 export function sanitizeExportVersion(version: IVersionConf): IVersionConf {
   return {
-    ...version,
+    ...stripJavaOverride(version),
     owner: undefined,
     downloadedVersion: false,
     shareCode: undefined,

@@ -1,9 +1,15 @@
+import {
+  normalizeJavaOverride,
+  sameJavaOverride,
+  type JavaOverride,
+} from "@/shared/javaRuntime";
 import { IServerSettings } from "@/types/Server";
 
 export interface ServerDraft {
   settings: IServerSettings;
   memory: number;
   aikarFlags: boolean;
+  java?: JavaOverride;
 }
 
 export const GAME_MODES = ["survival", "creative", "adventure", "spectator"];
@@ -20,6 +26,7 @@ export function normalizeDraft(draft: ServerDraft): ServerDraft {
   return {
     memory: clampNumber(draft.memory, 512, 65536),
     aikarFlags: draft.aikarFlags,
+    java: normalizeJavaOverride(draft.java),
     settings: {
       ...draft.settings,
       maxPlayers: clampNumber(draft.settings.maxPlayers, 1, 2000),
@@ -66,6 +73,7 @@ export function changedFields(
 
   if (next.memory !== previous.memory) changed.push("memory");
   if (next.aikarFlags !== previous.aikarFlags) changed.push("aikarFlags");
+  if (!sameJavaOverride(next.java, previous.java)) changed.push("java");
 
   for (const key of SETTING_KEYS) {
     if (next.settings[key] !== previous.settings[key]) changed.push(key);

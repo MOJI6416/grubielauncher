@@ -1,6 +1,14 @@
 import { CrashRule, CrashRuleMessages } from "@/types/CrashAnalysis";
 import { redactSecrets } from "@/shared/logSanitizer";
 
+export const UNSUPPORTED_JAVA_RULE_ID = "unsupported_java";
+
+export const UNSUPPORTED_JAVA_OVERRIDE_MESSAGES: CrashRuleMessages = {
+  en: "The Java chosen by hand in this instance's settings does not suit this Minecraft version. Open the instance settings and set Java back to automatic.",
+  ru: "Java, выбранная вручную в настройках сборки, не подходит этой версии игры. Откройте настройки сборки и верните автоматический выбор Java.",
+  uk: "Java, вибрана вручну в налаштуваннях збірки, не підходить цій версії гри. Відкрийте налаштування збірки й поверніть автоматичний вибір Java.",
+};
+
 export const BUILT_IN_CRASH_RULES: CrashRule[] = [
   {
     id: "out_of_memory",
@@ -13,7 +21,7 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
     },
   },
   {
-    id: "unsupported_java",
+    id: UNSUPPORTED_JAVA_RULE_ID,
     priority: 80,
     pattern:
       "UnsupportedClassVersionError|requires the use of Java|class file version",

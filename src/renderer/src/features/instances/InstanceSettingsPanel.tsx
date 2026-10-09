@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
-import { Gauge, Lock, MemoryStick, RotateCcw, Zap } from "lucide-react";
+import {
+  Coffee,
+  Gauge,
+  Lock,
+  MemoryStick,
+  RotateCcw,
+  Zap,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapse } from "@/components/ui/collapse";
 import { Slider } from "@/components/ui/slider";
@@ -9,6 +16,13 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { settingsAtom } from "@renderer/stores/atoms";
 import { AskAgentButton } from "@renderer/features/agent/AskAgentButton";
+import { Hint } from "@renderer/components/Hint";
+import {
+  JAVA_STATUS_TONE,
+  JavaPicker,
+  javaStatus,
+} from "@renderer/features/java/JavaPicker";
+import { useJavaRuntimes } from "@renderer/features/java/useJavaRuntimes";
 import {
   MEMORY_MIN_MB,
   MEMORY_STEP_MB,
@@ -94,16 +108,78 @@ function OverrideRow({
   );
 }
 
+function JavaOverrideRow({
+  overrides,
+  requiredMajor,
+  disabled,
+  onChange,
+}: {
+  overrides: InstanceSettingsOverrides | undefined;
+  requiredMajor: number;
+  disabled?: boolean;
+  onChange: (next: InstanceSettingsOverrides | undefined) => void;
+}) {
+  const { t } = useTranslation();
+  const { list } = useJavaRuntimes();
+  const overridden = isOverridden(overrides, "java");
+  const status = javaStatus(overrides?.java, requiredMajor, list, t);
+  const StatusIcon = status?.icon;
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2.5">
+      <Coffee
+        className={cn(
+          "size-4 shrink-0",
+          overridden ? "text-primary" : "text-faint",
+        )}
+      />
+      <span className="min-w-0 flex-1 truncate text-sm">
+        {t("instanceSettings.java.title")}
+      </span>
+      {status && StatusIcon && (
+        <Hint content={status.text}>
+          <span
+            data-slot="java-status"
+            role="img"
+            aria-label={status.text}
+            className={cn(
+              "flex size-6 shrink-0 items-center justify-center",
+              JAVA_STATUS_TONE[status.tone],
+            )}
+          >
+            <StatusIcon className="size-3.5" />
+          </span>
+        </Hint>
+      )}
+      <JavaPicker
+        value={overrides?.java}
+        requiredMajor={requiredMajor}
+        disabled={disabled}
+        className="w-48"
+        onChange={(java) =>
+          onChange(
+            java
+              ? setOverride(overrides, "java", java)
+              : clearOverride(overrides, "java"),
+          )
+        }
+      />
+    </div>
+  );
+}
+
 export function InstanceSettingsPanel({
   overrides,
   onChange,
   disabled,
   hint,
+  requiredJavaMajor,
 }: {
   overrides: InstanceSettingsOverrides | undefined;
   onChange: (next: InstanceSettingsOverrides | undefined) => void;
   disabled?: boolean;
   hint?: string;
+  requiredJavaMajor: number;
 }) {
   const global = useAtomValue(settingsAtom);
   const resolved = resolveInstanceSettings(global, overrides);
@@ -243,6 +319,13 @@ export function InstanceSettingsPanel({
             }
           />
         </OverrideRow>
+
+        <JavaOverrideRow
+          overrides={overrides}
+          requiredMajor={requiredJavaMajor}
+          disabled={disabled}
+          onChange={onChange}
+        />
       </div>
     </section>
   );

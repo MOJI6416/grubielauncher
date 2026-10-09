@@ -281,7 +281,8 @@
     "closeTitle": "Сервер ще працює",
     "closeHint": "Лаунчер надішле серверу «stop» і дочекається, поки світ збережеться. Гравців буде відключено.",
     "closeStopAndQuit": "Зупинити й закрити",
-    "applyAfterRestart": "застосується після перезапуску сервера"
+    "applyAfterRestart": "застосується після перезапуску сервера",
+    "runErrorChosenJava": "Java, вибрана для сервера, недоступна — виберіть іншу в налаштуваннях сервера."
   },
   "serverSettings": {
     "description": "Опис",
@@ -319,7 +320,8 @@
       "game": "Гра",
       "rules": "Правила"
     },
-    "portInUse": "Порт {{port}} на цьому комп’ютері вже зайнятий"
+    "portInUse": "Порт {{port}} на цьому комп’ютері вже зайнятий",
+    "javaHint": "Застосується під час наступного запуску сервера"
   },
   "webLogin": {
     "title": "Вхід на сайт",
@@ -1921,6 +1923,11 @@
         "title": "Докладний журнал",
         "description": "Записувати більше деталей 24 години та відкрити теку журналу",
         "keywords": "журнал лог докладний налагодження тека діагностика"
+      },
+      "java": {
+        "title": "Java",
+        "description": "Яка Java запускає ігри: своя чи від лаунчера",
+        "keywords": "java jdk jre джава ява шлях javaw zulu graalvm temurin corretto liberica версія"
       }
     },
     "resetAllConfirmBody_one": "{{count}} налаштування повернеться до значення за замовчуванням. Збірки, акаунти та світи не постраждають.",
@@ -4194,7 +4201,9 @@
       "listSkins": "Читаю бібліотеку скінів",
       "selectSkin": "Вдягаю скін",
       "importSkinByNickname": "Забираю скін гравця {{name}}",
-      "createInstance": "Створюю збірку «{{name}}» на {{version}}"
+      "createInstance": "Створюю збірку «{{name}}» на {{version}}",
+      "setInstanceJava": "Встановлюю збірці «{{name}}» Java {{major}}",
+      "setInstanceJavaAuto": "Повертаю збірці «{{name}}» автоматичний вибір Java"
     },
     "providers": {
       "title": "Провайдери ШІ",
@@ -4393,7 +4402,8 @@
       "list_accounts": "Дивитися акаунти",
       "set_memory": "Змінювати памʼять гри",
       "ask_user": "Ставити вам питання",
-      "update_plan": "Вести план"
+      "update_plan": "Вести план",
+      "set_instance_java": "Змінювати Java збірки"
     },
     "stopped": "Зупинено",
     "emptyContextInstances_one": "{{count}} збірку",
@@ -4476,7 +4486,16 @@
     "resetAll": "Повернути спільні",
     "optimizedHint": "Додає {{flags}} прапорців збирача сміття",
     "priorityHint": "Гра отримує більше процесорного часу",
-    "runningHint": "Збірка запущена: налаштування застосуються з наступного запуску."
+    "runningHint": "Збірка запущена: налаштування застосуються з наступного запуску.",
+    "java": {
+      "title": "Java",
+      "autoHint": "підбере Java {{major}}",
+      "newer": "Новіша за рекомендовану (Java {{major}}) — зазвичай працює",
+      "legacyRisk": "Версію розраховано на Java 8 — з модами може не запуститися",
+      "tooOld": "Потрібна Java {{major}} або новіша — з цією не запуститься",
+      "missing": "Цю Java більше не знайдено — виберіть іншу",
+      "manual": "вручну"
+    }
   },
   "configs": {
     "emptyTitle": "Файлів конфігурації немає",
@@ -5567,5 +5586,53 @@
     "commandOn": "Увімкнути режим стрімера",
     "commandOff": "Вимкнути режим стрімера",
     "messageHidden": "Повідомлення приховано"
+  },
+  "java": {
+    "title": "Java",
+    "hint": "яка Java запускає ігри",
+    "auto": "Автоматично",
+    "downloadsOnLaunch": "завантажиться під час запуску",
+    "missing": "не знайдено",
+    "chosenFor": "вибрано для Java {{major}}",
+    "source": {
+      "managed": "Лаунчер",
+      "system": "Система",
+      "custom": "Своя"
+    },
+    "range": {
+      "legacy": "Minecraft 1.16.5 і старіші",
+      "other": "Не потрібна версіям Minecraft",
+      "mc117": "Minecraft 1.17",
+      "mc118": "Minecraft 1.18 – 1.20.4",
+      "mc1205": "Minecraft 1.20.5 – 1.21.x",
+      "calendar": "Minecraft 26.1 і новіші"
+    },
+    "installedTitle": "Встановлені Java",
+    "installedDescription": "Java лаунчера, знайдені в системі (JAVA_HOME, PATH, стандартні теки) та додані вами",
+    "rescan": "Знайти знову",
+    "add": "Додати Java…",
+    "remove": "Прибрати зі списку",
+    "scanning": "Шукаємо встановлені Java…",
+    "empty": "Java поки немає — лаунчер сам завантажить потрібну під час першого запуску",
+    "groupLauncher": "За версією Java",
+    "groupInstalled": "Встановлені",
+    "added": "Java додано: {{name}}",
+    "addFailed": {
+      "not_java": "Це не Java: виберіть файл java (у Windows — java.exe або javaw.exe) у теці bin",
+      "managed": "Ця Java вже належить лаунчеру — виберіть її за номером версії",
+      "failed": "Не вдалося додати Java"
+    },
+    "defaultFailed": "Ця Java більше недоступна — список оновлено",
+    "launch": {
+      "downloading": "Завантажуємо Java {{major}}…",
+      "busy": "Дочекайтеся завершення встановлення, потім запустіть гру",
+      "downloadFailed": "Не вдалося завантажити Java {{major}}",
+      "downloadFailedHint": "Перевірте інтернет або виберіть встановлену Java в налаштуваннях збірки.",
+      "missing": "Java, вибрану для збірки, не знайдено",
+      "untrusted": "Java, вибраної для збірки, немає у списку лаунчера",
+      "chosenHint": "Виберіть Java заново в налаштуваннях збірки або поверніть автоматичний вибір.",
+      "openSettings": "Налаштування збірки",
+      "notInstalled": "Java {{major}} не встановлено — запустіть перевірку цілісності"
+    }
   }
 }

@@ -100,6 +100,48 @@ describe("computeCleanup", () => {
   });
 });
 
+describe("computeCleanup with a Java chosen by hand", () => {
+  it("keeps the launcher's Java an instance is pinned to", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "storage-java-pin-"));
+    const versionsPath = path.join(root, "versions");
+    const librariesPath = path.join(root, "libraries");
+    const javaDir = path.join(root, "java");
+
+    await fs.ensureDir(librariesPath);
+    await fs.ensureDir(path.join(javaDir, "jdk-21.0.1+12"));
+    await fs.ensureDir(path.join(javaDir, "jdk-17.0.9+9"));
+    await fs.outputJSON(path.join(versionsPath, "Pack", "1.21.1.json"), {
+      javaVersion: { majorVersion: 21 },
+      libraries: [],
+    });
+    await fs.writeJSON(path.join(versionsPath, "Pack", "version.json"), {
+      name: "Pack",
+      overrides: { java: { major: 17 } },
+    });
+
+    const pinned = await computeCleanup(versionsPath, librariesPath, javaDir);
+    expect(pinned.java.count).toBe(0);
+
+    await fs.writeJSON(path.join(versionsPath, "Pack", "version.json"), {
+      name: "Pack",
+    });
+
+    const unpinned = await computeCleanup(versionsPath, librariesPath, javaDir);
+    expect(unpinned.java.count).toBe(1);
+
+    await fs.outputJSON(path.join(versionsPath, "Pack", "server", "conf.json"), {
+      core: "fabric",
+      javaMajorVersion: 21,
+      java: { major: 17 },
+    });
+
+    const serverPinned = await computeCleanup(versionsPath, librariesPath, javaDir);
+    expect(serverPinned.java.count).toBe(0);
+
+    await fs.remove(root);
+  });
+});
+
 describe("cleanupStorage of world backups", () => {
   const ALIVE = "11111111-1111-4111-8111-111111111111";
   const STRANDED = "22222222-2222-4222-8222-222222222222";

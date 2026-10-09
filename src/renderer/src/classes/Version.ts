@@ -8,6 +8,7 @@ import {
 } from "@/types/InstallationProgress";
 import { IVersionConf, VERSION_DELETE_BUSY } from "@/types/IVersion";
 import { TSettings } from "@/types/Settings";
+import type { ResolvedJava } from "@/shared/javaRuntime";
 import { installQueue } from "@renderer/features/install/installQueue";
 
 const api = window.api;
@@ -22,6 +23,7 @@ export class Version {
   public minecraftPath: string = "";
   public versionPath: string = "";
   public javaPath: string = "";
+  public java: ResolvedJava | null = null;
   public isQuickPlayMultiplayer: boolean = false;
   public isQuickPlaySingleplayer: boolean = false;
 
@@ -35,6 +37,7 @@ export class Version {
       throw new Error(`Failed to open instance ${this.version.name}`);
     }
     this.javaPath = res.javaPath;
+    this.java = res.java ?? null;
     this.versionPath = res.versionPath;
     this.minecraftPath = res.minecraftPath;
     this.launcherPath = res.launcherPath;

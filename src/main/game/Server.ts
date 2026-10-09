@@ -1,5 +1,6 @@
 import { IServerConf, ServerCore } from "@/types/Server";
 import { Java } from "./Java";
+import { resolveJava } from "./javaRuntimes";
 import { IVersionConf } from "@/types/IVersion";
 import { ILocalAccount } from "@/types/Account";
 import { app } from "electron";
@@ -527,7 +528,9 @@ function forceKill(entry: RunningServer) {
   } catch {}
 }
 
-async function resolveServerJavaPath(serverPath: string): Promise<string> {
+async function resolveServerJavaPath(
+  serverPath: string,
+): Promise<{ path: string; chosen: boolean }> {
   const conf = await fs
     .readJSON(path.join(serverPath, "conf.json"))
     .catch(() => null);
@@ -537,13 +540,11 @@ async function resolveServerJavaPath(serverPath: string): Promise<string> {
       : 21;
 
   try {
-    const java = new Java(major);
-    await java.init();
-    if (!java.javaServerPath) await java.useSystemJava();
-
-    return java.javaServerPath;
+    const java = await resolveJava({ requiredMajor: major, override: conf?.java });
+    if (java.problem) return { path: "", chosen: java.via === "instance" };
+    return { path: java.server, chosen: java.via !== "auto" };
   } catch {
-    return "";
+    return { path: "", chosen: false };
   }
 }
 
@@ -570,8 +571,20 @@ export async function startServer(
   );
   if (!parsed) return { ok: false, error: "server_run_script_unreadable" };
 
-  const expectedJava = await resolveServerJavaPath(key);
-  let resolved = resolveRunScriptJava(parsed.command, expectedJava);
+  const { path: expectedJava, chosen } = await resolveServerJavaPath(key);
+  if (chosen && !expectedJava) {
+    return { ok: false, error: "server_java_unavailable" };
+  }
+  let resolved =
+    chosen && expectedJava
+      ? {
+          command: expectedJava,
+          repointedFrom:
+            path.resolve(parsed.command) === path.resolve(expectedJava)
+              ? null
+              : parsed.command,
+        }
+      : resolveRunScriptJava(parsed.command, expectedJava);
 
   if (resolved && !(await fs.pathExists(resolved.command)) && expectedJava) {
     resolved = { command: expectedJava, repointedFrom: parsed.command };
@@ -945,21 +958,42 @@ export class ServerGame {
 
     const javaMajorVersion = await this.resolveJavaMajorVersion();
     this.serverConf.javaMajorVersion = javaMajorVersion;
-    const java = new Java(javaMajorVersion);
-    await java.init(this.signal);
-    this.sendInstallProgress("java", 15);
-    this.throwIfCancelled();
-    await java.install(this.signal, this.installTargetName());
-    this.throwIfCancelled();
+    const chosenJava = await resolveJava({
+      requiredMajor: javaMajorVersion,
+      override: this.serverConf.java,
+    });
+    let javaServerPath =
+      !chosenJava.problem && chosenJava.via !== "auto" ? chosenJava.server : "";
 
-    const javaServerResolved =
-      Boolean(java.javaServerPath) &&
-      (java.usingSystemJava || (await fs.pathExists(java.javaServerPath)));
-
-    if (!javaServerResolved)
+    if (
+      !javaServerPath &&
+      chosenJava.via === "instance" &&
+      chosenJava.problem !== "not_installed"
+    ) {
       throw new Error(
-        `Java ${javaMajorVersion} runtime for the server could not be installed`,
+        `The Java chosen for the server is unavailable: ${chosenJava.home}`,
       );
+    }
+
+    if (!javaServerPath) {
+      const java = new Java(chosenJava.major);
+      await java.init(this.signal);
+      this.sendInstallProgress("java", 15);
+      this.throwIfCancelled();
+      await java.install(this.signal, this.installTargetName());
+      this.throwIfCancelled();
+
+      const javaServerResolved =
+        Boolean(java.javaServerPath) &&
+        (java.usingSystemJava || (await fs.pathExists(java.javaServerPath)));
+
+      if (!javaServerResolved)
+        throw new Error(
+          `Java ${chosenJava.major} runtime for the server could not be installed`,
+        );
+
+      javaServerPath = java.javaServerPath;
+    }
 
     if (!this.version || !this.account) {
       throw new Error("Server install requires version and account data");
@@ -998,8 +1032,8 @@ export class ServerGame {
     }
 
     const cwd = this.serverPath;
-    const javaCmd = `"${java.javaServerPath}"`;
-    const javaCmdSh = `'${java.javaServerPath.replaceAll("'", `'\\''`)}'`;
+    const javaCmd = `"${javaServerPath}"`;
+    const javaCmdSh = `'${javaServerPath.replaceAll("'", `'\\''`)}'`;
 
     const backend = new Backend();
     const needsAuthlib =
@@ -1077,7 +1111,7 @@ export class ServerGame {
 
     if (!alreadyBootstrapped) {
       await installServer(
-        java.javaServerPath,
+        javaServerPath,
         params,
         cwd,
         handleInstallerOutput,

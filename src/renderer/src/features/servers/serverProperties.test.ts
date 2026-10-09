@@ -105,6 +105,16 @@ describe("changedFields", () => {
     expect(isDraftDirty(next, draft())).toBe(true);
   });
 
+  it("notices a different Java and ignores an equal one", () => {
+    expect(changedFields(draft({ java: { major: 17 } }), draft())).toEqual(["java"]);
+    expect(
+      changedFields(draft({ java: { major: 17 } }), draft({ java: { major: 17 } })),
+    ).toEqual([]);
+    expect(
+      changedFields(draft({ java: { home: "/opt/jdk" } }), draft({ java: { major: 17 } })),
+    ).toEqual(["java"]);
+  });
+
   it("ignores a resource pack url that is switched off on both sides", () => {
     const next = draft({
       settings: {
