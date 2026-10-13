@@ -311,6 +311,9 @@ export async function createInstance(
         ? { jarMods: importModpack.jarMods }
         : {}),
       ...(importModpack?.mainJar ? { mainJar: importModpack.mainJar } : {}),
+      ...(importModpack?.launchOverride
+        ? { launchOverride: importModpack.launchOverride }
+        : {}),
       ...(importModpack?.source ? { modpack: importModpack.source } : {}),
       ...(pack?.shareVersion
         ? { owner: base.owner, ownerId: base.ownerId }

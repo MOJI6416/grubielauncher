@@ -28,6 +28,7 @@ vi.mock("../services/Modrinth", () => ({
 
 import { CurseForge } from "../services/CurseForge";
 import { Modrinth } from "../services/Modrinth";
+import { VersionsService } from "../services/Versions";
 import {
   buildForgeCdnUrls,
   cacheModIcon,
@@ -494,6 +495,68 @@ describe("checkModpack Prism/MultiMC imports", () => {
       loader: "ornithe",
       loaderVersion,
     });
+  });
+
+  it("turns the BTA updater instance into BTA with the newest release", async () => {
+    const instanceRoot = await makeTempRoot();
+    await fs.outputJSON(path.join(instanceRoot, "mmc-pack.json"), {
+      components: [
+        { uid: "net.minecraft", version: "b1.7.3" },
+        { uid: "org.multimc.jarmod.updater" },
+      ],
+    });
+    await fs.outputJSON(
+      path.join(instanceRoot, "patches", "org.multimc.jarmod.updater.json"),
+      { jarMods: [{ "MMC-filename": "updater.jar", name: "org.multimc.jarmods:updater:1" }] },
+    );
+    const installer = new AdmZip();
+    installer.addFile("b100/installer/Main.class", Buffer.from("x"));
+    await fs.ensureDir(path.join(instanceRoot, "jarmods"));
+    installer.writeZip(path.join(instanceRoot, "jarmods", "updater.jar"));
+    await fs.writeFile(path.join(instanceRoot, "instance.cfg"), "name=bta.updater\n");
+    const versions = vi
+      .spyOn(VersionsService, "getLoaderVersions")
+      .mockResolvedValue([
+        { id: "v8.0.1", url: "" },
+        { id: "v8.0", url: "" },
+      ]);
+
+    const result = await checkModpack(instanceRoot);
+    versions.mockRestore();
+
+    expect(result).toMatchObject({
+      version: "b1.7.3",
+      loader: "bta-babric",
+      loaderVersion: "v8.0.1",
+    });
+    expect(result?.jarMods).toBeUndefined();
+  });
+
+  it("imports the jar mod and launch target an NSSS instance keeps in its Minecraft patch", async () => {
+    const instanceRoot = await makeTempRoot();
+    await fs.outputJSON(path.join(instanceRoot, "mmc-pack.json"), {
+      components: [{ uid: "net.minecraft", version: "a1.1.2_01" }],
+    });
+    await fs.outputJSON(path.join(instanceRoot, "patches", "net.minecraft.json"), {
+      type: "old_alpha",
+      mainClass: "com.mojang.minecraft.client.Minecraft",
+      minecraftArguments: "${auth_player_name} ${auth_session}",
+      jarMods: [{ "MMC-filename": "a1.1.12.jar", "MMC-displayname": "a1.1.12" }],
+    });
+    await fs.outputFile(path.join(instanceRoot, "jarmods", "a1.1.12.jar"), "nsss");
+    await fs.writeFile(path.join(instanceRoot, "instance.cfg"), "name=NSSS\n");
+
+    const result = await checkModpack(instanceRoot);
+
+    expect(result).toMatchObject({
+      version: "a1.1.2_01",
+      loader: "vanilla",
+      launchOverride: {
+        mainClass: "com.mojang.minecraft.client.Minecraft",
+        minecraftArguments: "${auth_player_name} ${auth_session}",
+      },
+    });
+    expect(result?.jarMods?.map((mod) => mod.name)).toEqual(["a1.1.12"]);
   });
 
   it("finds Prism/MultiMC exports inside one top-level folder", async () => {

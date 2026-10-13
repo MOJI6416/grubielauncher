@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { IVersionConf } from "@/types/IVersion";
 import { classifyError } from "@/shared/errors";
 import {
+  JAR_MOD_ASM,
   PATCHED_JAR_FOLDER,
   gameJarInputs,
   importJarMods,
@@ -13,6 +14,7 @@ import {
   normalizeEntryName,
   prepareGameJar,
   removeUnusedJarModFiles,
+  withJarModAsm,
 } from "./jarMods";
 import { BTA_VANILLA_JAR } from "@/shared/btaLoader";
 
@@ -236,6 +238,51 @@ describe("Better than Adventure", () => {
     await expect(prepareGameJar(root, bta())).rejects.toThrow(
       "Jar mod file is missing: Minecraft b1.7.3",
     );
+  });
+});
+
+describe("withJarModAsm", () => {
+  const library = (name: string) => ({
+    name,
+    downloads: { artifact: { path: name, url: "", sha1: "", size: 0 } },
+  });
+  const legacy = [
+    library("net.minecraft:launchwrapper:1.5"),
+    library("org.ow2.asm:asm-all:4.1"),
+    library("net.java.jinput:jinput:2.0.5"),
+  ];
+  const jarMod = { file: "mod.jar", name: "Beta Recrafted", enabled: true };
+
+  it("swaps ASM 4 for 5, which reads Java 8 classes, under a vanilla jar mod", () => {
+    expect(
+      withJarModAsm(legacy, conf({ jarMods: [jarMod] })).map((lib) => lib.name),
+    ).toEqual([
+      "net.minecraft:launchwrapper:1.5",
+      JAR_MOD_ASM.name,
+      "net.java.jinput:jinput:2.0.5",
+    ]);
+    expect(
+      withJarModAsm(legacy, conf({ mainJar: jarMod })).map((lib) => lib.name),
+    ).toContain(JAR_MOD_ASM.name);
+  });
+
+  it("leaves the libraries alone without an enabled jar mod or launchwrapper", () => {
+    expect(withJarModAsm(legacy, conf())).toBe(legacy);
+    expect(
+      withJarModAsm(legacy, conf({ jarMods: [{ ...jarMod, enabled: false }] })),
+    ).toBe(legacy);
+    expect(
+      withJarModAsm(
+        legacy,
+        conf({
+          jarMods: [jarMod],
+          loader: { name: "legacy-fabric", mods: [] },
+        }),
+      ),
+    ).toBe(legacy);
+
+    const modern = legacy.slice(1);
+    expect(withJarModAsm(modern, conf({ jarMods: [jarMod] }))).toBe(modern);
   });
 });
 

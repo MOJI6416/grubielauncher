@@ -87,6 +87,7 @@ import {
   legacyFmlDownloads,
   legacyForgeJvmArguments,
   legacySessionArgument,
+  legacySortJvmArguments,
   materializeLegacyAssets,
   prepareLegacyHome,
   usesLegacyWorkDir,
@@ -105,7 +106,12 @@ import {
   replaceVanillaLibraries,
   toManifestLibrary,
 } from "./profileLoaderManifest";
-import { jarModDownloads, prepareGameJar } from "./jarMods";
+import {
+  JAR_MOD_ASM,
+  jarModDownloads,
+  prepareGameJar,
+  withJarModAsm,
+} from "./jarMods";
 import {
   BTA_VANILLA_CLIENT,
   BTA_VANILLA_JAR,
@@ -127,6 +133,8 @@ const AUTHLIB_INJECTOR_COORDINATES =
 
 const FILES_STAGE_START_PERCENT = 62;
 const FILES_STAGE_END_PERCENT = 94;
+
+const JAVA_CLASS_NAME = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/;
 
 const LOADER_LIBRARY_MARKERS: Record<string, string[]> = {
   fabric: ["fabricmc"],
@@ -1164,7 +1172,7 @@ export class Version {
     const downloadItems: DownloadItem[] = [];
     const paths: string[] = [];
 
-    const libraries = this.manifest.libraries;
+    const libraries = withJarModAsm(this.manifest.libraries, this.version);
 
     for (const library of libraries) {
       if (
@@ -1225,6 +1233,43 @@ export class Version {
     }
 
     return { downloadItems, paths };
+  }
+
+  private launchTarget(manifest: IVersionManifest) {
+    const override = this.version.launchOverride;
+    const applies =
+      !!override &&
+      this.version.loader.name === "vanilla" &&
+      !!manifest.minecraftArguments &&
+      JAVA_CLASS_NAME.test(override.mainClass);
+
+    return {
+      mainClass: applies ? override.mainClass : manifest.mainClass,
+      minecraftArguments: applies
+        ? override.minecraftArguments
+        : manifest.minecraftArguments,
+    };
+  }
+
+  private async ensureJarModAsm() {
+    if (!this.manifest) return;
+    if (!withJarModAsm(this.manifest.libraries, this.version).includes(JAR_MOD_ASM))
+      return;
+
+    const artifact = JAR_MOD_ASM.downloads.artifact;
+    const destination = path.join(this.minecraftPath, "libraries", artifact.path);
+    if (await fs.pathExists(destination)) return;
+
+    await this.downloader.downloadFiles([
+      {
+        url: artifact.url,
+        destination,
+        sha1: artifact.sha1,
+        size: artifact.size,
+        group: "libraries",
+        options: { silent: true },
+      },
+    ]);
   }
 
   private normalizeResourcePath(targetPath: string) {
@@ -1658,8 +1703,9 @@ export class Version {
       );
     }
 
-    if (this.manifest.minecraftArguments) {
-      const legacyHome = usesLegacyWorkDir(this.manifest.minecraftArguments)
+    const { minecraftArguments } = this.launchTarget(this.manifest);
+    if (minecraftArguments) {
+      const legacyHome = usesLegacyWorkDir(minecraftArguments)
         ? await prepareLegacyHome({
             dataRoot: launcherPath,
             gameDir: launchVersionPath,
@@ -1668,9 +1714,10 @@ export class Version {
       jvm.push(
         ...(legacyHome?.jvm ?? []),
         ...legacyForgeJvmArguments(this.version.loader.name, true),
+        ...legacySortJvmArguments(this.manifest.type),
         ...["-Djava.library.path=${natives_directory}", "-cp", "${classpath}"],
       );
-      game.push(...this.manifest.minecraftArguments.split(" "));
+      game.push(...minecraftArguments.split(" "));
     }
 
     if (this.manifest.arguments?.jvm)
@@ -1851,7 +1898,7 @@ export class Version {
     const command = [
       this.javaPath,
       ...runArguments.jvm,
-      this.manifest.mainClass,
+      this.launchTarget(this.manifest).mainClass,
       ...runArguments.game,
     ];
 
@@ -1983,6 +2030,8 @@ export class Version {
         return false;
       }
 
+      await this.ensureJarModAsm();
+
       const command = await this.getRunCommand(
         account,
         settings,
@@ -2007,19 +2056,20 @@ export class Version {
         return false;
       }
 
+      const target = this.launchTarget(this.manifest);
       span.step("command built", {
         javaMajor: this.java?.major ?? this.requiredJavaMajor(),
         javaRequired: this.requiredJavaMajor(),
         javaVia: this.java?.via,
         javaSource: this.java?.source,
         javaVendor: this.java?.vendor,
-        ...(await describeLaunchCommand(command, this.manifest.mainClass).catch(
+        ...(await describeLaunchCommand(command, target.mainClass).catch(
           (error) => ({ describeError: String(error) }),
         )),
       });
 
       const launchVersionPath = await this.resolveLaunchVersionPath();
-      const legacyHome = usesLegacyWorkDir(this.manifest.minecraftArguments)
+      const legacyHome = usesLegacyWorkDir(target.minecraftArguments)
         ? await prepareLegacyHome({
             dataRoot: getDataRoot(),
             gameDir: launchVersionPath,

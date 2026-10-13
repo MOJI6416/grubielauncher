@@ -7,6 +7,7 @@ import {
   legacyFmlDownloads,
   legacyForgeJvmArguments,
   legacySessionArgument,
+  legacySortJvmArguments,
   materializeLegacyAssets,
   legacyHomeBase,
   prepareLegacyHome,
@@ -70,6 +71,16 @@ describe("legacyForgeJvmArguments", () => {
     ]);
     expect(legacyForgeJvmArguments("forge", false)).toEqual([]);
     expect(legacyForgeJvmArguments("vanilla", true)).toEqual([]);
+  });
+});
+
+describe("legacySortJvmArguments", () => {
+  it("keeps alpha and beta off the strict sort that crashes them on Java 7+", () => {
+    expect(legacySortJvmArguments("old_alpha")).toEqual([
+      "-Djava.util.Arrays.useLegacyMergeSort=true",
+    ]);
+    expect(legacySortJvmArguments("old_beta")).toHaveLength(1);
+    expect(legacySortJvmArguments("release")).toEqual([]);
   });
 });
 

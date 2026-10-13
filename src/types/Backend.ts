@@ -3,7 +3,7 @@ import { ILocalProject } from './ModManager'
 import { IArguments } from './IArguments'
 import { ILoader } from './Loader'
 import { IUser } from './IUser'
-import { IJarMod, IJarModSet } from './IVersion'
+import { IJarMod, IJarModSet, ILaunchOverride } from './IVersion'
 
 export interface IModpack {
   readonly _id: string
@@ -74,6 +74,7 @@ export interface IModpackConf {
   quickServer: string
   jarMods?: IJarMod[]
   mainJar?: IJarMod
+  launchOverride?: ILaunchOverride
 }
 
 export interface IModpackVersion {

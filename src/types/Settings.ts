@@ -61,6 +61,7 @@ export type TSettings = {
   instancesView: InstancesView;
   instancesSort: InstancesSort;
   accent: AccentId;
+  seasonalDecor: boolean;
   closeToTray: boolean | null;
 };
 
@@ -103,6 +104,7 @@ export const DEFAULT_SETTINGS: TSettings = {
   instancesView: "list",
   instancesSort: "activity",
   accent: DEFAULT_ACCENT,
+  seasonalDecor: true,
   closeToTray: null,
 };
 
@@ -153,6 +155,10 @@ export function normalizeSettings(
     instancesView,
     instancesSort,
     accent: isAccentId(value?.accent) ? value.accent : DEFAULT_SETTINGS.accent,
+    seasonalDecor:
+      typeof value?.seasonalDecor === "boolean"
+        ? value.seasonalDecor
+        : DEFAULT_SETTINGS.seasonalDecor,
     closeToTray:
       typeof value?.closeToTray === "boolean"
         ? value.closeToTray

@@ -21,6 +21,7 @@ export type SettingsEntryId =
   | "mirrorRouting"
   | "language"
   | "accent"
+  | "seasonalDecor"
   | "closeToTray"
   | "launchAtLogin"
   | "sounds"
@@ -87,6 +88,7 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "mirrorRouting", section: "downloads", keys: [] },
   { id: "language", section: "interface", keys: ["lang"], neutral: true },
   { id: "accent", section: "interface", keys: ["accent"] },
+  { id: "seasonalDecor", section: "interface", keys: ["seasonalDecor"] },
   { id: "sounds", section: "interface", keys: ["sounds"] },
   {
     id: "instancesView",

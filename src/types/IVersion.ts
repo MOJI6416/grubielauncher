@@ -22,9 +22,15 @@ export interface IJarMod {
   size?: number
 }
 
+export interface ILaunchOverride {
+  mainClass: string
+  minecraftArguments: string
+}
+
 export interface IJarModSet {
   mods: IJarMod[]
   main: IJarMod | null
+  launch?: ILaunchOverride | null
 }
 
 export interface IVersionConf {
@@ -45,6 +51,7 @@ export interface IVersionConf {
   overrides?: InstanceSettingsOverrides
   jarMods?: IJarMod[]
   mainJar?: IJarMod
+  launchOverride?: ILaunchOverride
   modpack?: IModpackSource
 }
 

@@ -18,7 +18,8 @@ export function BrandMark({ className = "size-3.5" }: { className?: string }) {
         y="228"
         width="56"
         height="52"
-        fill="var(--color-primary)"
+        fill="var(--brand-tongue)"
+        className="brand-tongue"
       />
     </svg>
   );

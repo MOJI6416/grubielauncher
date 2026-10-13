@@ -21,6 +21,7 @@ import { VoiceCallHost } from "./hosts/VoiceCallHost";
 import { VoiceOverlayHost } from "./hosts/VoiceOverlayHost";
 import { WhatsNewHost } from "./hosts/WhatsNewHost";
 import { AccentHost } from "./hosts/AccentHost";
+import { SeasonalHost } from "./hosts/SeasonalHost";
 import { TrayHost } from "./hosts/TrayHost";
 import { AppUpdateHost } from "./hosts/AppUpdateHost";
 import { SupportHost } from "./hosts/SupportHost";
@@ -32,6 +33,7 @@ export function AppHosts() {
       <BootstrapHost />
       <StreamerModeHost />
       <AccentHost />
+      <SeasonalHost />
       <AppUpdateHost />
       <TrayHost />
       <LaunchHost />

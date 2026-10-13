@@ -1,8 +1,9 @@
 import path from "path";
 import fs from "fs-extra";
 import { randomUUID } from "crypto";
-import type { IJarMod } from "@/types/IVersion";
+import type { IJarMod, ILaunchOverride } from "@/types/IVersion";
 import { hasBtaLauncherManifest } from "@/shared/btaLoader";
+import { openArchive } from "./archiver";
 
 export interface PrismComponent {
   uid?: string;
@@ -21,6 +22,9 @@ interface PrismJarEntry {
 
 interface PrismPatch {
   version?: string;
+  type?: string;
+  mainClass?: string;
+  minecraftArguments?: string;
   jarMods?: PrismJarEntry[];
   "+jarMods"?: PrismJarEntry[];
   mainJar?: PrismJarEntry;
@@ -30,12 +34,16 @@ export interface PrismJarImport {
   jarMods: IJarMod[];
   mainJar?: IJarMod;
   btaVersion?: string;
+  btaInstaller?: boolean;
+  launch?: ILaunchOverride;
 }
 
 const SAFE_UID = /^[A-Za-z0-9._-]+$/;
 const SAFE_FILE = /^[^/\\]+\.(?:jar|zip)$/i;
 const BTA_JAR_MOD =
   /^(?:custom\.jarmods:bta:|org\.multimc\.jarmods:bta:|net\.betterthanadventure:)/;
+const BTA_INSTALLER_CLASS = "b100/installer/Main.class";
+const LEGACY_TYPE = /^old_(?:alpha|beta)$/;
 
 function storedFileName(
   entry: PrismJarEntry,
@@ -59,7 +67,21 @@ function btaVersionOf(component: PrismComponent, patch: PrismPatch | null) {
     ""
   ).trim();
   if (!raw) return undefined;
-  return raw.startsWith("v") ? raw : `v${raw}`;
+  const id = raw.startsWith("v") ? raw : `v${raw}`;
+  return id.includes(".") ? id : id.replace(/_/g, ".");
+}
+
+function launchOverrideOf(patch: PrismPatch | null): ILaunchOverride | undefined {
+  if (!patch || !LEGACY_TYPE.test(patch.type ?? "")) return undefined;
+  const { mainClass, minecraftArguments } = patch;
+  if (typeof mainClass !== "string" || typeof minecraftArguments !== "string")
+    return undefined;
+  return { mainClass, minecraftArguments };
+}
+
+async function isBtaInstaller(source: string): Promise<boolean> {
+  const archive = await openArchive(source).catch(() => null);
+  return !!archive?.getEntry(BTA_INSTALLER_CLASS);
 }
 
 async function copyIntoOverrides(
@@ -83,13 +105,15 @@ export async function readPrismJarMods(
 
   for (const component of components) {
     const uid = component.uid;
-    if (!uid || !SAFE_UID.test(uid) || uid === "net.minecraft") continue;
+    if (!uid || !SAFE_UID.test(uid)) continue;
 
     const patch: PrismPatch | null = await fs
       .readJSON(path.join(instanceRoot, "patches", `${uid}.json`))
       .catch(() => null);
     const entries = patch?.jarMods ?? patch?.["+jarMods"] ?? [];
     const enabled = component.disabled !== true;
+
+    if (uid === "net.minecraft") result.launch = launchOverrideOf(patch);
 
     const isBta =
       uid.endsWith("jarmod.bta") ||
@@ -106,10 +130,13 @@ export async function readPrismJarMods(
       const stored = storedFileName(entry, false);
       if (!stored) continue;
 
-      const file = await copyIntoOverrides(
-        path.join(instanceRoot, "jarmods", stored),
-        overridesPath,
-      );
+      const source = path.join(instanceRoot, "jarmods", stored);
+      if (await isBtaInstaller(source)) {
+        result.btaInstaller = true;
+        continue;
+      }
+
+      const file = await copyIntoOverrides(source, overridesPath);
       if (!file) continue;
 
       result.jarMods.push({

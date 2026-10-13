@@ -359,10 +359,13 @@ function notifyMainWindowUpdateFailed(
 }
 
 function registerProtocolClient() {
-  if (process.defaultApp && process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient(APP_PROTOCOL, process.execPath, [
-      path.resolve(process.argv[1]),
-    ]);
+  if (process.defaultApp) {
+    const appPath = process.argv.slice(1).find((arg) => !arg.startsWith("-"));
+    if (appPath) {
+      app.setAsDefaultProtocolClient(APP_PROTOCOL, process.execPath, [
+        path.resolve(appPath),
+      ]);
+    }
     return;
   }
 

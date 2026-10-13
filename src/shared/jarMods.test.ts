@@ -44,4 +44,25 @@ describe("jar mod sets", () => {
     applyJarModSet(conf, jarModSetOf({ jarMods: [bta], mainJar: main }));
     expect(conf).toEqual({ jarMods: [bta], mainJar: main });
   });
+
+  it("carries the launch target of an imported alpha with the jar mods", () => {
+    const launch = {
+      mainClass: "com.mojang.minecraft.client.Minecraft",
+      minecraftArguments: "${auth_player_name} ${auth_session}",
+    };
+    const conf: Parameters<typeof applyJarModSet>[0] = {};
+
+    applyJarModSet(conf, jarModSetOf({ jarMods: [bta], launchOverride: launch }));
+    expect(conf).toEqual({ jarMods: [bta], launchOverride: launch });
+    expect(jarModsSignature(conf)).not.toBe(jarModsSignature({ jarMods: [bta] }));
+
+    applyJarModSet(conf, { mods: [bta], main: null });
+    expect(conf).toEqual({ jarMods: [bta] });
+  });
+
+  it("keeps the signature of builds without a launch target", () => {
+    expect(jarModsSignature({ jarMods: [bta] })).toBe(
+      '{"mods":["a.jar:1"],"main":null}',
+    );
+  });
 });

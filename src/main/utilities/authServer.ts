@@ -1,9 +1,10 @@
-import { createServer, Server, ServerResponse } from "http";
+import { createServer, IncomingMessage, Server, ServerResponse } from "http";
 
-let serverInstance: Server | null = null;
+let serverInstances: Server[] = [];
 let pendingReject: ((err: Error) => void) | null = null;
 const OAUTH_TIMEOUT_MS = 10 * 60 * 1000;
 const OAUTH_PORT = 53213;
+const OAUTH_HOSTS = ["127.0.0.1", "::1"];
 
 export type OAuthCallbackProvider = "microsoft" | "discord" | "elyby";
 
@@ -31,19 +32,22 @@ function redirect(res: ServerResponse, location: string) {
   res.end();
 }
 
-function closeServer(): Promise<void> {
-  return new Promise((resolve) => {
-    if (!serverInstance) return resolve();
+async function closeServer(): Promise<void> {
+  const servers = serverInstances;
+  serverInstances = [];
 
-    const s = serverInstance;
-    serverInstance = null;
-
-    try {
-      s.close(() => resolve());
-    } catch {
-      resolve();
-    }
-  });
+  await Promise.all(
+    servers.map(
+      (s) =>
+        new Promise<void>((resolve) => {
+          try {
+            s.close(() => resolve());
+          } catch {
+            resolve();
+          }
+        }),
+    ),
+  );
 }
 
 export async function stopOAuthServer(
@@ -106,7 +110,10 @@ export function startOAuthServer(expectedState: string): Promise<{
         safeReject(new Error("OAuth callback timed out."));
       }, OAUTH_TIMEOUT_MS);
 
-      const server = createServer(async (req, res) => {
+      const handleRequest = async (
+        req: IncomingMessage,
+        res: ServerResponse,
+      ) => {
         let url: URL;
         try {
           url = new URL(req.url || "/", `http://localhost:${OAUTH_PORT}`);
@@ -144,16 +151,22 @@ export function startOAuthServer(expectedState: string): Promise<{
 
         redirect(res, "https://grubielauncher.com/auth/success");
         void closeServer();
+      };
+
+      const servers = OAUTH_HOSTS.map(() => createServer(handleRequest));
+      serverInstances = servers;
+      let failed = 0;
+
+      servers.forEach((server, i) => {
+        server.on("error", async (err: any) => {
+          failed += 1;
+          if (failed < servers.length) return;
+          await closeServer();
+          safeReject(err instanceof Error ? err : new Error(String(err)));
+        });
+
+        server.listen(OAUTH_PORT, OAUTH_HOSTS[i]);
       });
-
-      serverInstance = server;
-
-      server.on("error", async (err: any) => {
-        await closeServer();
-        safeReject(err instanceof Error ? err : new Error(String(err)));
-      });
-
-      server.listen(OAUTH_PORT, "localhost");
     })().catch((err) =>
       safeReject(err instanceof Error ? err : new Error(String(err))),
     );

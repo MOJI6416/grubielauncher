@@ -1,5 +1,5 @@
 import { Loader } from "./Loader";
-import type { IJarMod } from "./IVersion";
+import type { IJarMod, ILaunchOverride } from "./IVersion";
 import type { IModpackSource } from "./ModpackSource";
 
 export interface ISearchData {
@@ -148,6 +148,7 @@ export interface IModpack {
   extraFiles?: IModpackExtraFile[];
   jarMods?: IJarMod[];
   mainJar?: IJarMod;
+  launchOverride?: ILaunchOverride;
   source?: IModpackSource;
 }
 

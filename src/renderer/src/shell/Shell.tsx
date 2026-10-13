@@ -10,6 +10,10 @@ import { CommandPalette } from "./CommandPalette";
 import type { RunGameParams } from "@renderer/features/launch/types";
 import { openAgent } from "@renderer/features/agent/openAgent";
 import { AmbientTint } from "@renderer/features/instances/AmbientTint";
+import {
+  SeasonalBackdrop,
+  SeasonalBats,
+} from "@renderer/features/seasonal/SeasonalDecor";
 import { goBack, goForward } from "@renderer/navigation/navigate";
 import { isAgentShortcut } from "./shortcuts";
 
@@ -99,6 +103,7 @@ export function Shell({
 
         <main className="relative isolate min-h-0 min-w-0 flex-1 overflow-hidden px-4 py-3">
           <AmbientTint />
+          <SeasonalBackdrop />
           {children}
         </main>
         {aside}
@@ -110,6 +115,8 @@ export function Shell({
         initialQuery={paletteQuery}
         runGame={runGame}
       />
+
+      <SeasonalBats />
     </div>
   );
 }

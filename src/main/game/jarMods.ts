@@ -3,6 +3,7 @@ import fs from "fs-extra";
 import { createHash, randomUUID } from "crypto";
 import AdmZip from "adm-zip";
 import type { IJarMod, IVersionConf } from "@/types/IVersion";
+import type { IVersionManifest } from "@/types/IVersionManifest";
 import type { DownloadItem } from "@/types/Downloader";
 import { isTrustedDownloadUrl } from "../utilities/trustedHosts";
 import { assertSafeFileSegment } from "./serverScriptSafety";
@@ -15,6 +16,23 @@ export const PATCHED_JAR_FOLDER = path.join("storage", "patched-jar");
 
 const SIGNATURE_ENTRY =
   /^META-INF\/(?:[^/]+\.(?:SF|RSA|DSA|EC)|MANIFEST\.MF)$/i;
+
+type ManifestLibrary = IVersionManifest["libraries"][number];
+
+const LEGACY_ASM = /^org\.ow2\.asm:asm-all:4\./;
+const LAUNCHWRAPPER = "net.minecraft:launchwrapper:";
+
+export const JAR_MOD_ASM: ManifestLibrary = {
+  name: "org.ow2.asm:asm-all:5.0.3",
+  downloads: {
+    artifact: {
+      path: "org/ow2/asm/asm-all/5.0.3/asm-all-5.0.3.jar",
+      url: "https://libraries.minecraft.net/org/ow2/asm/asm-all/5.0.3/asm-all-5.0.3.jar",
+      sha1: "4333508b8dd8ee72aa4e39afa713b3a74579b773",
+      size: 241639,
+    },
+  },
+};
 
 const pendingBuilds = new Map<string, Promise<void>>();
 
@@ -47,6 +65,24 @@ export function skipsBaseEntry(name: string): boolean {
 
 export function skipsModEntry(name: string): boolean {
   return SIGNATURE_ENTRY.test(name);
+}
+
+export function hasActiveJarMods(
+  conf: Pick<IVersionConf, "jarMods" | "mainJar">,
+): boolean {
+  return (
+    (conf.jarMods ?? []).some((mod) => mod.enabled) ||
+    conf.mainJar?.enabled === true
+  );
+}
+
+export function withJarModAsm(
+  libraries: ManifestLibrary[],
+  conf: IVersionConf,
+): ManifestLibrary[] {
+  if (conf.loader.name !== "vanilla" || !hasActiveJarMods(conf)) return libraries;
+  if (!libraries.some((lib) => lib.name.startsWith(LAUNCHWRAPPER))) return libraries;
+  return libraries.map((lib) => (LEGACY_ASM.test(lib.name) ? JAR_MOD_ASM : lib));
 }
 
 export function gameJarInputs(conf: IVersionConf): {

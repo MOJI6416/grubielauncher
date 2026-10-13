@@ -1667,7 +1667,9 @@
         "cyan": "Teal",
         "pink": "Pink",
         "graphite": "Graphite"
-      }
+      },
+      "seasonalDecor": "Holiday decorations",
+      "seasonalDecorDescription": "Themed touches on holidays. Halloween runs {{start}} – {{end}}."
     },
     "voice": {
       "devicesDescription": "Devices are shared with the in-call panel. Test the microphone before joining."
@@ -1874,6 +1876,11 @@
         "title": "Accent color",
         "description": "The color of buttons and selections",
         "keywords": "color colour theme accent customize appearance palette"
+      },
+      "seasonalDecor": {
+        "title": "Holiday decorations",
+        "description": "Halloween bats, pumpkins and cobwebs",
+        "keywords": "halloween holiday season event theme decorations pumpkin bats new year christmas"
       },
       "closeToTray": {
         "title": "Minimize to tray on close",
@@ -5554,6 +5561,15 @@
       "chosenHint": "Pick Java again in the instance settings or set it back to automatic.",
       "openSettings": "Instance settings",
       "notInstalled": "Java {{major}} is not installed — run the integrity check"
+    }
+  },
+  "seasonal": {
+    "turnOff": "Turn off decorations",
+    "turnOffHint": "You can bring them back in interface settings",
+    "halloween": {
+      "title": "Halloween in Grubie",
+      "peakTitle": "Happy Halloween!",
+      "description": "Bats, pumpkins and cobwebs until {{end}}. Click the pumpkin to scare up more bats."
     }
   }
 }

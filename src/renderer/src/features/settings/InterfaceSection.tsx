@@ -20,8 +20,23 @@ import {
 import { SettingRow, SettingsGroup, Segmented } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
 import { SHORTCUT_GROUPS, shortcutKey } from "./shortcuts";
+import {
+  eventDate,
+  eventRange,
+  formatMonthDay,
+} from "@renderer/features/seasonal/calendar";
 
 const SORTS: InstancesSort[] = ["activity", "playtime", "name", "manual"];
+
+function halloweenRange(language: string): { start: string; end: string } {
+  const range = eventRange("halloween");
+  if (!range) return { start: "", end: "" };
+  const year = new Date().getFullYear();
+  return {
+    start: formatMonthDay(eventDate(range.start, year), language),
+    end: formatMonthDay(eventDate(range.end, year), language),
+  };
+}
 
 function Keys({ combos }: { combos: string[][] }) {
   return (
@@ -58,7 +73,7 @@ export function InterfaceSection({
   isChanged: (id: SettingsEntryId) => boolean;
   reset: (id: SettingsEntryId) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const selected = LANGUAGES.find((item) => item.code === settings.lang);
 
   return (
@@ -138,6 +153,27 @@ export function InterfaceSection({
                 );
               })}
             </div>
+          }
+        />
+      )}
+
+      {visible("seasonalDecor") && (
+        <SettingRow
+          htmlFor="settings-seasonal-decor"
+          title={t("settings.interface.seasonalDecor")}
+          description={t(
+            "settings.interface.seasonalDecorDescription",
+            halloweenRange(i18n.language),
+          )}
+          query={query}
+          changed={isChanged("seasonalDecor")}
+          onReset={() => reset("seasonalDecor")}
+          control={
+            <Switch
+              id="settings-seasonal-decor"
+              checked={settings.seasonalDecor}
+              onCheckedChange={(value) => commit({ seasonalDecor: value })}
+            />
           }
         />
       )}

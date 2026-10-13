@@ -62,6 +62,22 @@ describe("uploadJarMods", () => {
     });
     expect(result.mods[1].url).toContain("/modpacks/code/jarmods/kept.jar");
     expect(result.main?.url).toContain("/modpacks/code/jarmods/m.jar");
+    expect(result.launch).toBeNull();
+  });
+
+  it("publishes the launch target along with the jar mods", async () => {
+    const launch = {
+      mainClass: "com.mojang.minecraft.client.Minecraft",
+      minecraftArguments: "${auth_player_name} ${auth_session}",
+    };
+
+    const result = await uploadJarMods("token", root, "code", {
+      mods: [{ file: "a.jar", name: "NSSS", enabled: true }],
+      main: null,
+      launch,
+    });
+
+    expect(result.launch).toEqual(launch);
   });
 
   it("re-uploads a copy that belongs to another build", async () => {

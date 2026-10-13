@@ -175,5 +175,9 @@ export async function uploadJarMods(
   const mods: IJarMod[] = []
   for (const mod of jar.mods) mods.push(await upload(mod))
 
-  return { mods, main: jar.main ? await upload(jar.main) : null }
+  return {
+    mods,
+    main: jar.main ? await upload(jar.main) : null,
+    launch: jar.launch ?? null
+  }
 }

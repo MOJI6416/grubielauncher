@@ -44,6 +44,12 @@ export function legacyAssetsDir(
   return null;
 }
 
+export function legacySortJvmArguments(type: string | undefined): string[] {
+  return type === "old_alpha" || type === "old_beta"
+    ? ["-Djava.util.Arrays.useLegacyMergeSort=true"]
+    : [];
+}
+
 export function usesLegacyWorkDir(minecraftArguments?: string): boolean {
   return !!minecraftArguments?.trimStart().startsWith("${auth_player_name}");
 }

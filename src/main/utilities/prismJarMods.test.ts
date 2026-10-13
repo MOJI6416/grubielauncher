@@ -1,6 +1,7 @@
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
+import AdmZip from "adm-zip";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readPrismJarMods } from "./prismJarMods";
 
@@ -106,6 +107,89 @@ describe("readPrismJarMods", () => {
 
     expect(result.btaVersion).toBe("v7.3_04");
     expect(result.jarMods).toEqual([]);
+  });
+
+  it("reads the BTA 8 version the official instance writes with underscores", async () => {
+    await fs.outputFile(path.join(root, "jarmods", "bta.jar"), "bta");
+    await patch("custom.jarmod.bta", {
+      version: "8_0_1",
+      jarMods: [{ "MMC-filename": "bta.jar", name: "custom.jarmods:bta:1" }],
+    });
+
+    const result = await readPrismJarMods(
+      root,
+      [{ uid: "custom.jarmod.bta", cachedVersion: "8_0_1" }],
+      overrides,
+    );
+
+    expect(result.btaVersion).toBe("v8.0.1");
+    expect(result.jarMods).toEqual([]);
+  });
+
+  it("recognises the BTA updater instead of importing it as a jar mod", async () => {
+    const installer = new AdmZip();
+    installer.addFile("b100/installer/Main.class", Buffer.from("x"));
+    await fs.ensureDir(path.join(root, "jarmods"));
+    installer.writeZip(path.join(root, "jarmods", "updater.jar"));
+    await patch("org.multimc.jarmod.updater", {
+      jarMods: [{ "MMC-filename": "updater.jar", name: "org.multimc.jarmods:updater:1" }],
+    });
+
+    const result = await readPrismJarMods(
+      root,
+      [{ uid: "org.multimc.jarmod.updater", cachedName: "installer (jar mod)" }],
+      overrides,
+    );
+
+    expect(result.btaInstaller).toBe(true);
+    expect(result.jarMods).toEqual([]);
+  });
+
+  it("takes jar mods and the launch target from a customised Minecraft patch", async () => {
+    await fs.outputFile(path.join(root, "jarmods", "a1.1.12.jar"), "nsss");
+    await patch("net.minecraft", {
+      type: "old_alpha",
+      mainClass: "com.mojang.minecraft.client.Minecraft",
+      minecraftArguments: "${auth_player_name} ${auth_session}",
+      mainJar: { name: "com.mojang:minecraft:a1.1.2_01:client" },
+      jarMods: [
+        {
+          "MMC-displayname": "a1.1.12",
+          "MMC-filename": "a1.1.12.jar",
+          "MMC-hint": "local",
+          name: "org.multimc.jarmods:a1.1.12:1",
+        },
+      ],
+    });
+
+    const result = await readPrismJarMods(
+      root,
+      [{ uid: "net.minecraft", version: "a1.1.2_01" }],
+      overrides,
+    );
+
+    expect(result.jarMods.map((mod) => mod.name)).toEqual(["a1.1.12"]);
+    expect(result.mainJar).toBeUndefined();
+    expect(result.launch).toEqual({
+      mainClass: "com.mojang.minecraft.client.Minecraft",
+      minecraftArguments: "${auth_player_name} ${auth_session}",
+    });
+  });
+
+  it("keeps the launch target of modern versions to the launcher", async () => {
+    await patch("net.minecraft", {
+      type: "release",
+      mainClass: "net.minecraft.client.main.Main",
+      minecraftArguments: "--username ${auth_player_name}",
+    });
+
+    const result = await readPrismJarMods(
+      root,
+      [{ uid: "net.minecraft", version: "1.20.1" }],
+      overrides,
+    );
+
+    expect(result.launch).toBeUndefined();
   });
 
   it("keeps an old BTA as an ordinary jar mod", async () => {

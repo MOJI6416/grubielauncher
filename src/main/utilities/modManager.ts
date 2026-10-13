@@ -58,6 +58,8 @@ import {
   isMirrorDisabled,
 } from "./mirrorState";
 import { readPrismJarMods } from "./prismJarMods";
+import { VersionsService } from "../services/Versions";
+import { BTA_MINECRAFT_VERSION } from "@/shared/btaLoader";
 import {
   fabricFamilyFor,
   ornitheIntermediaryGeneration,
@@ -1648,6 +1650,14 @@ async function copyForeignInstanceOverrides(
   }
 }
 
+async function latestBtaVersion(): Promise<string | undefined> {
+  const versions = await VersionsService.getLoaderVersions(
+    "bta-babric",
+    BTA_MINECRAFT_VERSION,
+  ).catch(() => []);
+  return versions[0]?.id;
+}
+
 async function prismModpackToModpack(
   mmcPackPath: string,
 ): Promise<IModpack | null> {
@@ -1704,13 +1714,17 @@ async function prismModpackToModpack(
       instanceCfg.ManagedPackName ||
       path.basename(instanceRoot),
     version: minecraftVersion,
-    loader: jarImport.btaVersion ? "bta-babric" : loader,
-    loaderVersion: jarImport.btaVersion ?? loaderVersion,
+    loader:
+      jarImport.btaVersion || jarImport.btaInstaller ? "bta-babric" : loader,
+    loaderVersion: jarImport.btaInstaller
+      ? await latestBtaVersion()
+      : (jarImport.btaVersion ?? loaderVersion),
     mods: [...indexedMods.values()],
     folderPath: "",
     image,
     ...(jarImport.jarMods.length > 0 ? { jarMods: jarImport.jarMods } : {}),
     ...(jarImport.mainJar ? { mainJar: jarImport.mainJar } : {}),
+    ...(jarImport.launch ? { launchOverride: jarImport.launch } : {}),
   };
 
   const flameManifestPath = await findFileInRootOrOneChild(
