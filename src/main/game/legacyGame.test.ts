@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs-extra";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  directLegacyLaunch,
   legacyAssetsDir,
   legacyFmlDownloads,
   legacyForgeJvmArguments,
@@ -154,6 +155,45 @@ describe("usesLegacyWorkDir", () => {
       ),
     ).toBe(false);
     expect(usesLegacyWorkDir(undefined)).toBe(false);
+  });
+});
+
+describe("directLegacyLaunch", () => {
+  const launchwrapper = "net.minecraft.launchwrapper.Launch";
+
+  it("starts the client class launchwrapper would start for beta and 1.0–1.5", () => {
+    expect(
+      directLegacyLaunch({
+        mainClass: launchwrapper,
+        minecraftArguments:
+          "${auth_player_name} ${auth_session} --gameDir ${game_directory} --assetsDir ${game_assets}",
+      }),
+    ).toEqual({
+      mainClass: "net.minecraft.client.Minecraft",
+      minecraftArguments: "${auth_player_name} ${auth_session}",
+    });
+  });
+
+  it("leaves alpha tweakers, modern arguments and other main classes alone", () => {
+    expect(
+      directLegacyLaunch({
+        mainClass: launchwrapper,
+        minecraftArguments:
+          "${auth_player_name} ${auth_session} --gameDir ${game_directory} --tweakClass net.minecraft.launchwrapper.AlphaVanillaTweaker",
+      }),
+    ).toBeNull();
+    expect(
+      directLegacyLaunch({
+        mainClass: launchwrapper,
+        minecraftArguments: "--username ${auth_player_name} --session ${auth_session}",
+      }),
+    ).toBeNull();
+    expect(
+      directLegacyLaunch({
+        mainClass: "net.minecraft.client.main.Main",
+        minecraftArguments: "${auth_player_name} ${auth_session}",
+      }),
+    ).toBeNull();
   });
 });
 

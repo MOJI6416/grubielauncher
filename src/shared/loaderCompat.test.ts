@@ -38,6 +38,13 @@ describe("compareLoaderVersions", () => {
   it("ignores build metadata", () => {
     expect(compareLoaderVersions("0.7.2+build.174", "0.7.2")).toBe(0);
   });
+
+  it("orders numbered pre-releases written without a separator", () => {
+    expect(compareLoaderVersions("2.0-alpha40", "2.0-alpha9")).toBe(1);
+    expect(compareLoaderVersions("2.0-alpha9", "2.0-alpha10")).toBe(-1);
+    expect(compareLoaderVersions("2.0-alpha40", "2.0-beta1")).toBe(-1);
+    expect(compareLoaderVersions("1.0.0-rc2", "1.0.0-rc10")).toBe(-1);
+  });
 });
 
 describe("isStableLoaderVersion", () => {
@@ -52,6 +59,12 @@ describe("isStableLoaderVersion", () => {
     expect(isStableLoaderVersion("47.4.23")).toBe(true);
     expect(isStableLoaderVersion("0.7.2+build.174")).toBe(true);
     expect(isStableLoaderVersion("10.13.4.1614-1.7.10")).toBe(true);
+  });
+
+  it("trusts FoxLoader builds, which are all published as alphas", () => {
+    expect(isStableLoaderVersion("2.0-alpha40", "foxloader")).toBe(true);
+    expect(isStableLoaderVersion("2.0-alpha40")).toBe(false);
+    expect(isStableLoaderVersion("0.26.0-beta.1", "fabric")).toBe(false);
   });
 });
 

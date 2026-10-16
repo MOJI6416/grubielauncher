@@ -3,6 +3,7 @@ import fs from "fs-extra";
 import { createHash } from "crypto";
 
 const NON_ASCII = /[^ -~\t\r\n]/;
+const JAR_URL_SEPARATOR = /![\\/]|!$/;
 const EXTENDED_PATH_PREFIX = /^\\\\\?\\/;
 
 export const LAUNCH_ALIAS_FOLDER = "launch";
@@ -11,11 +12,17 @@ export function hasNonAsciiPath(target: string): boolean {
   return NON_ASCII.test(target);
 }
 
+export function breaksJarUrls(target: string): boolean {
+  return JAR_URL_SEPARATOR.test(target);
+}
+
 export function needsLaunchAlias(
   target: string,
   platform: NodeJS.Platform = process.platform,
 ): boolean {
-  return platform === "win32" && hasNonAsciiPath(target);
+  return (
+    breaksJarUrls(target) || (platform === "win32" && hasNonAsciiPath(target))
+  );
 }
 
 export function buildLaunchAliasName(target: string): string {
@@ -62,9 +69,9 @@ export async function resolveLaunchPath(
   if (!needsLaunchAlias(target)) return target;
 
   const basePath = path.join(launcherPath, LAUNCH_ALIAS_FOLDER);
-  if (hasNonAsciiPath(basePath)) {
+  if (needsLaunchAlias(basePath)) {
     console.warn(
-      `[launch:alias] cannot build an ASCII path for ${target}: the launcher folder itself is not ASCII`,
+      `[launch:alias] cannot build a safe path for ${target}: the launcher folder itself needs one`,
     );
     return target;
   }
@@ -83,7 +90,7 @@ export async function resolveLaunchPath(
     await fs.symlink(resolvedTarget, aliasPath, "junction");
   } catch (error) {
     console.error(
-      `[launch:alias] failed to create an ASCII path for ${target}:`,
+      `[launch:alias] failed to create a safe path for ${target}:`,
       error,
     );
     return target;

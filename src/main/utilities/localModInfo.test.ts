@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   fromFabricManifest,
+  fromFoxLoaderManifest,
   fromModsToml,
   fromQuiltManifest,
   packDescription,
@@ -154,5 +155,43 @@ describe("packDescription", () => {
   it("returns an empty string for anything else", () => {
     expect(packDescription({ description: 5 })).toBe("");
     expect(packDescription(null)).toBe("");
+  });
+});
+
+describe("fromFoxLoaderManifest", () => {
+  it("reads the FoxLoader attributes of the main section", () => {
+    expect(
+      fromFoxLoaderManifest(
+        [
+          "Manifest-Version: 1.0",
+          "ModId: stackem",
+          "ModName: Stack Em",
+          "ModVersion: 1.2.0",
+          "ModDesc: Stacked texturepacks\tand item swaps",
+          "ModWebsite: https://modrinth.com/mod/stack-em",
+          "ModIcon: /assets/stackem/ic",
+          " on.png",
+          "",
+          "Name: net/example/Other.class",
+          "ModId: ignored",
+          "",
+        ].join("\r\n"),
+        "stackem.jar",
+      ),
+    ).toEqual({
+      id: "stackem",
+      name: "Stack Em",
+      description: "Stacked texturepacks\nand item swaps",
+      url: "https://modrinth.com/mod/stack-em",
+      version: "1.2.0",
+      icon: "assets/stackem/icon.png",
+    });
+  });
+
+  it("ignores jars that are not FoxLoader mods", () => {
+    expect(
+      fromFoxLoaderManifest("Manifest-Version: 1.0\nMain-Class: a.B\n", "a.jar"),
+    ).toBeNull();
+    expect(fromFoxLoaderManifest(undefined, "a.jar")).toBeNull();
   });
 });

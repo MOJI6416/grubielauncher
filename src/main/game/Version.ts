@@ -1,4 +1,8 @@
-import { IVersionConf, VersionDeleteResult } from "@/types/IVersion";
+import {
+  ILaunchOverride,
+  IVersionConf,
+  VersionDeleteResult,
+} from "@/types/IVersion";
 import { IVersionManifest } from "@/types/IVersionManifest";
 import { IAssetIndex } from "@/types/IAssetIndex";
 import { LANGUAGES, TSettings } from "@/types/Settings";
@@ -83,6 +87,7 @@ import {
   versionLibraryPaths,
 } from "./loaderInstallerSeed";
 import {
+  directLegacyLaunch,
   legacyAssetsDir,
   legacyFmlDownloads,
   legacyForgeJvmArguments,
@@ -108,6 +113,7 @@ import {
 } from "./profileLoaderManifest";
 import {
   JAR_MOD_ASM,
+  bundlesModLoader,
   jarModDownloads,
   prepareGameJar,
   withJarModAsm,
@@ -123,6 +129,11 @@ import {
   readTurnipInstance,
   turnipInstanceUrls,
 } from "./btaBabric";
+import {
+  applyFoxLoaderLayer,
+  assertFoxLoaderBuild,
+  hasFoxLoaderLayer,
+} from "./foxLoader";
 
 type VersionInstallRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
@@ -197,6 +208,7 @@ export class Version {
   public isQuickPlaySingleplayer: boolean = false;
   private manifestPath: string = "";
   private launchVersionPath: string = "";
+  private modLoaderLaunch: ILaunchOverride | null = null;
 
   private downloader: Downloader = new Downloader(6);
   private initPromise: Promise<void> | null = null;
@@ -442,6 +454,9 @@ export class Version {
         hasBabricLayer(this.manifest)
       );
     }
+    if (this.version.loader.name === "foxloader") {
+      return hasFoxLoaderLayer(this.manifest, this.version.loader.version.id);
+    }
 
     const markers = LOADER_LIBRARY_MARKERS[this.version.loader.name];
     if (!markers) return true;
@@ -511,6 +526,16 @@ export class Version {
         this.version.loader.version.id,
         downloadSignal,
       );
+      await this.installCheckpoint();
+    }
+
+    if (
+      isNewManifest &&
+      this.version.loader.name === "foxloader" &&
+      this.version.loader.version
+    ) {
+      this.sendInstallProgress("loader", 14, true);
+      await this.applyFoxLoader(this.version.loader.version);
       await this.installCheckpoint();
     }
 
@@ -1236,7 +1261,7 @@ export class Version {
   }
 
   private launchTarget(manifest: IVersionManifest) {
-    const override = this.version.launchOverride;
+    const override = this.version.launchOverride ?? this.modLoaderLaunch;
     const applies =
       !!override &&
       this.version.loader.name === "vanilla" &&
@@ -1249,6 +1274,18 @@ export class Version {
         ? override.minecraftArguments
         : manifest.minecraftArguments,
     };
+  }
+
+  private async resolveModLoaderLaunch(gameJar: string) {
+    if (!this.manifest || this.version.loader.name !== "vanilla") return null;
+    if (this.version.launchOverride) return null;
+
+    const direct = directLegacyLaunch(this.manifest);
+    if (!direct) return null;
+
+    return (await bundlesModLoader(path.join(this.versionPath, gameJar)))
+      ? direct
+      : null;
   }
 
   private async ensureJarModAsm() {
@@ -1646,6 +1683,9 @@ export class Version {
         game: [],
       };
 
+    const gameJar = await prepareGameJar(this.versionPath, this.version);
+    this.modLoaderLaunch = await this.resolveModLoaderLaunch(gameJar);
+
     const platform = getOS();
     const separator = platform?.os == "windows" ? ";" : ":";
 
@@ -1747,7 +1787,6 @@ export class Version {
     jvm = jvm.filter((arg) => arg !== "");
     game = game.filter((arg) => arg !== "");
 
-    const gameJar = await prepareGameJar(this.versionPath, this.version);
     const paths = [
       ...this.getLibraries(account).paths,
       path.join(launchVersionPath, gameJar),
@@ -2151,6 +2190,17 @@ export class Version {
     } finally {
       await fs.remove(archivePath).catch(() => {});
     }
+  }
+
+  private async applyFoxLoader(build: { id: string; url: string }) {
+    assertFoxLoaderBuild(build);
+    if (!this.manifest) return;
+
+    await fs.remove(
+      path.join(this.versionPath, `${this.version.version.id}.jar`),
+    );
+    this.manifest = applyFoxLoaderLayer(this.manifest, build);
+    await this.writeManifest();
   }
 
   private async seedLoaderInstaller(

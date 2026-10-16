@@ -69,12 +69,17 @@ export function CustomForm({
     [state.versions],
   );
   const counts = useMemo(() => countVersionKinds(entries), [entries]);
+  // Babric/BTA and FoxLoader offer only b1.7.3: with no releases there is
+  // nothing to filter, so the list shows everything and the filters are hidden.
+  const hasNoReleases = entries.length > 0 && counts.release === 0;
   const activeKinds = useMemo(
     () =>
-      state.showSnapshots || counts.release === 0
-        ? kinds
-        : ["release" as VersionKind],
-    [counts.release, kinds, state.showSnapshots],
+      hasNoReleases
+        ? KIND_FILTERS
+        : state.showSnapshots
+          ? kinds
+          : ["release" as VersionKind],
+    [hasNoReleases, kinds, state.showSnapshots],
   );
 
   const visibleEntries = useMemo(
@@ -214,66 +219,72 @@ export function CustomForm({
               dispatch({ type: "selectVersion", version: entry.version });
           }}
           filters={
-            <>
-              <button
-                type="button"
-                aria-pressed={!state.showSnapshots}
-                data-indicator-active={!state.showSnapshots}
-                onClick={() => dispatch({ type: "setSnapshots", value: false })}
-                className="relative flex h-6 items-center gap-1.5 rounded-md px-2 text-[0.7rem] text-muted-foreground transition-colors not-aria-pressed:hover:bg-surface-3 aria-pressed:text-foreground"
-              >
-                {t("newInstance.versionKind.release")}
-                <span className="font-mono text-[0.65rem] tabular-nums text-faint">
-                  {counts.release}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                aria-pressed={state.showSnapshots}
-                data-indicator-active={state.showSnapshots}
-                onClick={() => dispatch({ type: "setSnapshots", value: true })}
-                className="relative flex h-6 items-center gap-1.5 rounded-md px-2 text-[0.7rem] text-muted-foreground transition-colors not-aria-pressed:hover:bg-surface-3 aria-pressed:text-foreground"
-              >
-                {t("newInstance.allVersions")}
-                {state.showSnapshots && (
+            hasNoReleases ? undefined : (
+              <>
+                <button
+                  type="button"
+                  aria-pressed={!state.showSnapshots}
+                  data-indicator-active={!state.showSnapshots}
+                  onClick={() =>
+                    dispatch({ type: "setSnapshots", value: false })
+                  }
+                  className="relative flex h-6 items-center gap-1.5 rounded-md px-2 text-[0.7rem] text-muted-foreground transition-colors not-aria-pressed:hover:bg-surface-3 aria-pressed:text-foreground"
+                >
+                  {t("newInstance.versionKind.release")}
                   <span className="font-mono text-[0.65rem] tabular-nums text-faint">
-                    {counts.release + counts.snapshot + counts.old}
+                    {counts.release}
                   </span>
-                )}
-              </button>
+                </button>
 
-              {state.showSnapshots && (
-                <div className="ml-auto flex items-center gap-1">
-                  {KIND_FILTERS.filter((kind) => counts[kind] > 0).map(
-                    (kind) => (
-                      <button
-                        key={kind}
-                        type="button"
-                        aria-pressed={activeKinds.includes(kind)}
-                        onClick={() =>
-                          setKinds((prev) =>
-                            prev.includes(kind)
-                              ? prev.length === 1
-                                ? prev
-                                : prev.filter((item) => item !== kind)
-                              : [...prev, kind],
-                          )
-                        }
-                        className={cn(
-                          "flex h-6 items-center rounded-md px-1.5 text-[0.65rem] transition-colors",
-                          activeKinds.includes(kind)
-                            ? "bg-surface-3 text-foreground"
-                            : "text-faint hover:text-muted-foreground",
-                        )}
-                      >
-                        {t(`newInstance.versionKind.${kind}`)}
-                      </button>
-                    ),
+                <button
+                  type="button"
+                  aria-pressed={state.showSnapshots}
+                  data-indicator-active={state.showSnapshots}
+                  onClick={() =>
+                    dispatch({ type: "setSnapshots", value: true })
+                  }
+                  className="relative flex h-6 items-center gap-1.5 rounded-md px-2 text-[0.7rem] text-muted-foreground transition-colors not-aria-pressed:hover:bg-surface-3 aria-pressed:text-foreground"
+                >
+                  {t("newInstance.allVersions")}
+                  {state.showSnapshots && (
+                    <span className="font-mono text-[0.65rem] tabular-nums text-faint">
+                      {counts.release + counts.snapshot + counts.old}
+                    </span>
                   )}
-                </div>
-              )}
-            </>
+                </button>
+
+                {state.showSnapshots && (
+                  <div className="ml-auto flex items-center gap-1">
+                    {KIND_FILTERS.filter((kind) => counts[kind] > 0).map(
+                      (kind) => (
+                        <button
+                          key={kind}
+                          type="button"
+                          aria-pressed={activeKinds.includes(kind)}
+                          onClick={() =>
+                            setKinds((prev) =>
+                              prev.includes(kind)
+                                ? prev.length === 1
+                                  ? prev
+                                  : prev.filter((item) => item !== kind)
+                                : [...prev, kind],
+                            )
+                          }
+                          className={cn(
+                            "flex h-6 items-center rounded-md px-1.5 text-[0.65rem] transition-colors",
+                            activeKinds.includes(kind)
+                              ? "bg-surface-3 text-foreground"
+                              : "text-faint hover:text-muted-foreground",
+                          )}
+                        >
+                          {t(`newInstance.versionKind.${kind}`)}
+                        </button>
+                      ),
+                    )}
+                  </div>
+                )}
+              </>
+            )
           }
         />
 

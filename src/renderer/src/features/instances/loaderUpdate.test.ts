@@ -197,3 +197,29 @@ describe("Ornithe generations", () => {
     expect(findLoaderUpdate(ornithe, "0.19.5+gen1")).toBeUndefined();
   });
 });
+
+describe("FoxLoader builds", () => {
+  const foxCatalog = ["2.0-alpha40", "2.0-alpha39", "2.0-alpha9"].map((id) => ({ id }));
+
+  it("lists every build as usable and the newest one as latest", () => {
+    const options = buildLoaderVersionOptions({
+      versions: foxCatalog,
+      currentId: "2.0-alpha9",
+      loader: "foxloader",
+    });
+
+    expect(options.map((option) => option.id)).toEqual([
+      "2.0-alpha40",
+      "2.0-alpha39",
+      "2.0-alpha9",
+    ]);
+    expect(options.every((option) => option.stable)).toBe(true);
+    expect(options.find((option) => option.isLatest)?.id).toBe("2.0-alpha40");
+    expect(pickSuggestedLoaderVersion(options)).toBe("2.0-alpha40");
+  });
+
+  it("offers the newest build as an update", () => {
+    expect(findLoaderUpdate(foxCatalog, "2.0-alpha39", "foxloader")).toBe("2.0-alpha40");
+    expect(findLoaderUpdate(foxCatalog, "2.0-alpha40", "foxloader")).toBeUndefined();
+  });
+});

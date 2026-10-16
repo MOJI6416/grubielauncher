@@ -215,6 +215,7 @@ export function InstanceScreen({
   const loaderUpdate = findLoaderUpdate(
     loaderCatalog.versions ?? [],
     version?.version.loader.version?.id,
+    loaderName,
   );
   const modTitles = useMemo(() => {
     const titles = new Map<string, string>();

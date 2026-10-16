@@ -310,6 +310,12 @@ export function runJar(
 const SERVER_INSTALL_TIMEOUT_MS = 15 * 60 * 1000;
 const INSTALLER_TAIL_LINES = 6;
 const INSTALLER_LINE_LIMIT = 160;
+const GAME_READY_MARKERS = [
+  "Setting gameDir",
+  "Setting user",
+  "Starting up SoundSystem",
+];
+
 const SERVER_READY_MARKERS = [
   "EULA",
   'For help, type "help"',
@@ -675,14 +681,12 @@ export function runGame(
       message,
     });
 
-    if (
-      !launchAnnounced &&
-      (message.includes("Setting gameDir") || message.includes("Setting user"))
-    ) {
+    const readyMarker = launchAnnounced
+      ? undefined
+      : GAME_READY_MARKERS.find((marker) => message.includes(marker));
+    if (readyMarker) {
       launchAnnounced = true;
-      watch.ready(
-        message.includes("Setting gameDir") ? "Setting gameDir" : "Setting user",
-      );
+      watch.ready(readyMarker);
       markSessionReady(versionName, instance);
       safeTaskbarProgress("none");
       safeMinimize();

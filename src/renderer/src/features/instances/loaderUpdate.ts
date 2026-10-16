@@ -50,12 +50,14 @@ export function buildLoaderVersionOptions({
   rollbackId,
   requirements,
   minecraftVersion,
+  loader,
 }: {
   versions: { id: string }[];
   currentId?: string;
   rollbackId?: string;
   requirements?: LoaderRequirement[] | null;
   minecraftVersion?: string;
+  loader?: string;
 }): LoaderVersionOption[] {
   const ids = [
     ...new Set(
@@ -67,13 +69,13 @@ export function buildLoaderVersionOptions({
 
   const latest = ids.find(
     (id) =>
-      isStableLoaderVersion(id) &&
+      isStableLoaderVersion(id, loader) &&
       (!currentId || generationOf(id) === generationOf(currentId)),
   );
 
   return ids.map((id) => ({
     id,
-    stable: isStableLoaderVersion(id),
+    stable: isStableLoaderVersion(id, loader),
     isCurrent: id === currentId,
     isLatest: id === latest,
     isRollback: !!rollbackId && id === rollbackId && id !== currentId,
@@ -94,13 +96,14 @@ export function buildLoaderVersionOptions({
 export function findLoaderUpdate(
   versions: { id: string }[],
   currentId: string | undefined,
+  loader?: string,
 ): string | undefined {
   if (!currentId) return undefined;
 
   let newest: string | undefined;
 
   for (const { id } of versions) {
-    if (!isStableLoaderVersion(id)) continue;
+    if (!isStableLoaderVersion(id, loader)) continue;
     if (generationOf(id) !== generationOf(currentId)) continue;
     if (compareLoaderVersions(id, currentId) <= 0) continue;
     if (!newest || compareLoaderVersions(id, newest) > 0) newest = id;

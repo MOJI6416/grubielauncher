@@ -35,6 +35,7 @@ export interface PrismJarImport {
   mainJar?: IJarMod;
   btaVersion?: string;
   btaInstaller?: boolean;
+  foxLoaderVersion?: string;
   launch?: ILaunchOverride;
 }
 
@@ -44,6 +45,8 @@ const BTA_JAR_MOD =
   /^(?:custom\.jarmods:bta:|org\.multimc\.jarmods:bta:|net\.betterthanadventure:)/;
 const BTA_INSTALLER_CLASS = "b100/installer/Main.class";
 const LEGACY_TYPE = /^old_(?:alpha|beta)$/;
+const FOXLOADER_UID = "com.fox2code.foxloader";
+const FOXLOADER_VERSION = /^[0-9A-Za-z][0-9A-Za-z._+-]{0,127}$/;
 
 function storedFileName(
   entry: PrismJarEntry,
@@ -69,6 +72,18 @@ function btaVersionOf(component: PrismComponent, patch: PrismPatch | null) {
   if (!raw) return undefined;
   const id = raw.startsWith("v") ? raw : `v${raw}`;
   return id.includes(".") ? id : id.replace(/_/g, ".");
+}
+
+export function foxLoaderVersionOf(
+  component: PrismComponent,
+  patch: PrismPatch | null,
+): string | undefined {
+  const [, artifact, fromJar] = (patch?.mainJar?.name ?? "").split(":");
+  const fromName = /-FoxLoader-([^-].*)$/i.exec(
+    component.version ?? component.cachedVersion ?? "",
+  )?.[1];
+  const version = artifact === "foxloader" ? fromJar : fromName;
+  return version && FOXLOADER_VERSION.test(version) ? version : undefined;
 }
 
 function launchOverrideOf(patch: PrismPatch | null): ILaunchOverride | undefined {
@@ -114,6 +129,11 @@ export async function readPrismJarMods(
     const enabled = component.disabled !== true;
 
     if (uid === "net.minecraft") result.launch = launchOverrideOf(patch);
+
+    if (uid === FOXLOADER_UID) {
+      if (enabled) result.foxLoaderVersion = foxLoaderVersionOf(component, patch);
+      continue;
+    }
 
     const isBta =
       uid.endsWith("jarmod.bta") ||

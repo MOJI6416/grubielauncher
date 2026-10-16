@@ -28,6 +28,7 @@ files:
   - '!docs/*'
   - '!electron.vite.config.*'
   - '!.claude/**'
+  - '!release-notes/**'
   - '!*.tsbuildinfo'
   - '!{eslint.config.mjs,postcss.config.js,components.json}'
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'

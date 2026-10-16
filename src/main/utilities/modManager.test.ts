@@ -532,6 +532,61 @@ describe("checkModpack Prism/MultiMC imports", () => {
     expect(result?.jarMods).toBeUndefined();
   });
 
+  it("imports the official FoxLoader instance as ReIndev on FoxLoader", async () => {
+    const instanceRoot = await makeTempRoot();
+    await fs.outputJSON(path.join(instanceRoot, "mmc-pack.json"), {
+      components: [
+        { uid: "org.lwjgl", version: "2.9.4-nightly-20150209", dependencyOnly: true },
+        {
+          uid: "com.fox2code.foxloader",
+          version: "ReIndev-2.9_03-FoxLoader-2.0-alpha40",
+          important: true,
+        },
+        { uid: "net.minecraft", version: "no-op", disabled: true },
+        { uid: "net.minecraftforge", version: "no-op", disabled: true },
+      ],
+      formatVersion: 1,
+    });
+    await fs.outputJSON(
+      path.join(instanceRoot, "patches", "com.fox2code.foxloader.json"),
+      {
+        mainJar: {
+          "MMC-displayname": "foxloader-2.0-alpha40",
+          "MMC-hint": "local",
+          name: "custom:foxloader:2.0-alpha40",
+        },
+        mainClass: "com.fox2code.foxloader.launcher.ClientMain",
+        type: "old_beta",
+        uid: "com.fox2code.foxloader",
+      },
+    );
+    await fs.outputJSON(path.join(instanceRoot, "patches", "net.minecraft.json"), {
+      type: "old_beta",
+      uid: "net.minecraft",
+      version: "no-op",
+    });
+    await fs.outputFile(
+      path.join(instanceRoot, "libraries", "foxloader-2.0-alpha40.jar"),
+      "fox",
+    );
+    await fs.writeFile(
+      path.join(instanceRoot, "instance.cfg"),
+      "[General]\nInstanceType=OneSix\niconKey=fox\nname=FoxLoader 2.0-alpha40\nJvmArgs=#jvm_args#\n",
+    );
+
+    const result = await checkModpack(instanceRoot);
+
+    expect(result).toMatchObject({
+      name: "FoxLoader 2.0-alpha40",
+      version: "b1.7.3",
+      loader: "foxloader",
+      loaderVersion: "2.0-alpha40",
+    });
+    expect(result?.mainJar).toBeUndefined();
+    expect(result?.jarMods).toBeUndefined();
+    expect(result?.launchOverride).toBeUndefined();
+  });
+
   it("imports the jar mod and launch target an NSSS instance keeps in its Minecraft patch", async () => {
     const instanceRoot = await makeTempRoot();
     await fs.outputJSON(path.join(instanceRoot, "mmc-pack.json"), {

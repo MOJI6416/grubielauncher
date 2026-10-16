@@ -124,8 +124,9 @@ export function LoaderVersionPanel({
         rollbackId,
         requirements: scan?.requirements,
         minecraftVersion: conf.version.id,
+        loader,
       }),
-    [versions, currentId, rollbackId, scan, conf.version.id],
+    [versions, currentId, rollbackId, scan, conf.version.id, loader],
   );
 
   useEffect(() => {

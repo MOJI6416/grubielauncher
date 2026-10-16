@@ -9,6 +9,7 @@ import quiltIcon from "@renderer/assets/loaders/quilt.svg";
 import legacyFabricIcon from "@renderer/assets/loaders/legacy-fabric.png";
 import ornitheIcon from "@renderer/assets/loaders/ornithe.png";
 import btaIcon from "@renderer/assets/loaders/bta.png";
+import foxLoaderIcon from "@renderer/assets/loaders/foxloader.png";
 import { LEGACY_LOADERS } from "@/shared/profileLoaders";
 import { Hint } from "@renderer/components/Hint";
 
@@ -44,9 +45,18 @@ export const loaders = {
     dot: "bg-loader-bta",
     icon: btaIcon,
   },
+  foxloader: {
+    name: "ReIndev (FoxLoader)",
+    dot: "bg-loader-foxloader",
+    icon: foxLoaderIcon,
+  },
 } satisfies Record<Loader, LoaderInfo> as Record<Loader, LoaderInfo>;
 
-const OLD_VERSION_LOADERS: Loader[] = [...LEGACY_LOADERS, "bta-babric"];
+const OLD_VERSION_LOADERS: Loader[] = [
+  ...LEGACY_LOADERS,
+  "bta-babric",
+  "foxloader",
+];
 
 export const LOADER_ORDER: Loader[] = [
   "vanilla",

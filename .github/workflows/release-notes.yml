@@ -1,0 +1,35 @@
+name: Release Notes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-notes/**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-notes
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Apply notes changes to published releases
+        run: node .github/scripts/release-notes.mjs sync --since "${{ github.event.before }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_AGENT_TOKEN: ${{ secrets.RELEASE_AGENT_TOKEN }}

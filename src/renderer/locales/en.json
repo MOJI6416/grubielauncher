@@ -692,7 +692,7 @@
     "noDependencies": "No dependencies",
     "dependenciesFailed": "Could not load dependencies",
     "dependenciesUnresolved": "The source did not answer about this mod's dependencies. Check them manually or try again later.",
-    "quarantinedTitle": "{{count}} file(s) do not belong to this instance and were moved to quarantine",
+    "quarantinedTitle": "{{count}} file(s) no longer in this instance were moved to quarantine",
     "quarantinedHint": "Open the content manager to restore them",
     "trashCount": "Recently deleted: {{count}}",
     "trashHint": "Files are kept for {{days}} days, then removed for good",
@@ -1998,7 +1998,8 @@
       "legacy-fabric": "Fabric for 1.3–1.13.2",
       "babric": "Fabric for Beta 1.7.3",
       "ornithe": "Fabric for alpha, beta and versions up to 1.14.4",
-      "bta-babric": "Better than Adventure with Babric mods"
+      "bta-babric": "Better than Adventure with Babric mods",
+      "foxloader": "ReIndev with FoxLoader mods"
     },
     "updated": "Instance updated",
     "share": "Share",

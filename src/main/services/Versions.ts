@@ -30,6 +30,13 @@ import {
   btaManifestUrl,
   listBtaVersions
 } from '@/shared/btaLoader'
+import {
+  FOXLOADER_MAVEN_METADATA_URL,
+  FOXLOADER_MINECRAFT_VERSION,
+  FOXLOADER_RELEASES_URL,
+  foxLoaderMavenVersion,
+  listFoxLoaderVersions
+} from '@/shared/foxLoader'
 
 export interface IVersionsManifest {
   latest: {
@@ -120,6 +127,8 @@ export class VersionsService {
         versions = await VersionsService.getVersionsLegacy(loader)
       } else if (loader == 'bta-babric') {
         versions = await VersionsService.getVersionsBta()
+      } else if (loader == 'foxloader') {
+        versions = await VersionsService.getVersionsFoxLoader()
       }
 
       return versions
@@ -141,6 +150,8 @@ export class VersionsService {
         versions = await VersionsService.getLoadersLegacy(loader, versionId)
       } else if (loader == 'bta-babric') {
         versions = await VersionsService.getLoadersBta(versionId)
+      } else if (loader == 'foxloader') {
+        versions = await VersionsService.getLoadersFoxLoader(versionId)
       }
 
       return versions
@@ -435,5 +446,31 @@ export class VersionsService {
       id,
       url: btaManifestUrl(id)
     }))
+  }
+
+  private static async getVersionsFoxLoader(): Promise<IVersion[]> {
+    const versionsVanilla = await this.getVersionsVanilla(true)
+
+    return versionsVanilla
+      .filter((version) => version.id === FOXLOADER_MINECRAFT_VERSION)
+      .map((version) => ({ ...version, serverManager: false }))
+  }
+
+  private static async getLoadersFoxLoader(version: string): Promise<LoaderVersion[]> {
+    if (version !== FOXLOADER_MINECRAFT_VERSION) return []
+
+    try {
+      const response = await this.mirroredGet<unknown>(FOXLOADER_RELEASES_URL)
+      const versions = listFoxLoaderVersions(response.data)
+      if (versions.length > 0) return versions
+    } catch (error) {
+      console.warn('[versions] FoxLoader releases are unavailable, using its maven:', error)
+    }
+
+    const response = await this.mirroredGet<string>(FOXLOADER_MAVEN_METADATA_URL, {
+      responseType: 'text'
+    })
+    const latest = foxLoaderMavenVersion(response.data)
+    return latest ? [latest] : []
   }
 }

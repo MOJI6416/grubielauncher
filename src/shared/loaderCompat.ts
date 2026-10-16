@@ -30,13 +30,17 @@ export const LOADER_DEPENDENCY_IDS: Record<ModdedLoader, string> = {
   babric: "fabricloader",
   ornithe: "fabricloader",
   "bta-babric": "bta",
+  foxloader: "foxloader",
 };
 
 export const LOADERS_WITHOUT_CURSEFORGE_MODS: ReadonlySet<string> = new Set([
   "babric",
   "ornithe",
   "bta-babric",
+  "foxloader",
 ]);
+
+const LOADERS_RELEASING_PRERELEASES: ReadonlySet<string> = new Set(["foxloader"]);
 
 export const LOADER_VERSION_ID_PATTERN =/^[0-9A-Za-z][0-9A-Za-z._+-]{0,127}$/;
 
@@ -49,7 +53,8 @@ export function isModdedLoader(loader: unknown): loader is ModdedLoader {
 
 const PRERELEASE_MARKER = /-(alpha|beta|pre|rc|snapshot)/i;
 
-export function isStableLoaderVersion(id: string): boolean {
+export function isStableLoaderVersion(id: string, loader?: string): boolean {
+  if (loader && LOADERS_RELEASING_PRERELEASES.has(loader)) return true;
   return !PRERELEASE_MARKER.test(id);
 }
 
@@ -118,11 +123,26 @@ function comparePre(left: string[], right: string[]): number {
     if (aNumeric) return -1;
     if (bNumeric) return 1;
 
-    const order = a.toLowerCase().localeCompare(b.toLowerCase());
-    if (order !== 0) return order < 0 ? -1 : 1;
+    const order = compareWords(a.toLowerCase(), b.toLowerCase());
+    if (order !== 0) return order;
   }
 
   return 0;
+}
+
+function compareWords(left: string, right: string): number {
+  const a = left.match(/\d+|\D+/g) ?? [];
+  const b = right.match(/\d+|\D+/g) ?? [];
+
+  for (let index = 0; index < Math.min(a.length, b.length); index++) {
+    const numeric = /^\d/.test(a[index]) && /^\d/.test(b[index]);
+    const order = numeric
+      ? Number(a[index]) - Number(b[index])
+      : a[index].localeCompare(b[index]);
+    if (order !== 0) return order < 0 ? -1 : 1;
+  }
+
+  return Math.sign(a.length - b.length);
 }
 
 function compareParsed(left: ParsedVersion, right: ParsedVersion): number {

@@ -13,7 +13,7 @@ import {
 import { writeJsonAtomic } from "../utilities/atomicJson";
 import { assertSafeFileSegment } from "./serverScriptSafety";
 import { Version } from "./Version";
-import { shipsOwnClientJar } from "@/shared/btaLoader";
+import { replacesClientJar } from "@/shared/foxLoader";
 
 export type LoaderBuild = NonNullable<ILoader["version"]>;
 
@@ -44,7 +44,7 @@ export function getLoaderStateFiles(conf: IVersionConf): string[] {
     `${conf.version.id}.json`,
     `${conf.loader.name}.json`,
     `${conf.loader.name}.jar`,
-    ...(shipsOwnClientJar(conf.loader.name) ? [`${conf.version.id}.jar`] : []),
+    ...(replacesClientJar(conf.loader.name) ? [`${conf.version.id}.jar`] : []),
   ];
 }
 
@@ -96,7 +96,7 @@ async function seedStaging(
   await fs.remove(stagingPath);
   await fs.ensureDir(stagingPath);
 
-  const seeded = shipsOwnClientJar(conf.loader.name)
+  const seeded = replacesClientJar(conf.loader.name)
     ? ["natives"]
     : [`${conf.version.id}.jar`, "natives"];
   for (const entry of seeded) {

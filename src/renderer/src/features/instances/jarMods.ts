@@ -39,5 +39,6 @@ export function summarizeJarMods(conf: IVersionConf) {
 
 export function showsJarModsCard(conf: IVersionConf): boolean {
   if ((conf.jarMods?.length ?? 0) > 0 || conf.mainJar) return true;
+  if (conf.loader.name === "foxloader") return false;
   return mcVersionToJavaMajor(conf.version.id) <= 8;
 }

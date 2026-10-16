@@ -695,7 +695,7 @@
     "noDependencies": "Нет зависимостей",
     "dependenciesFailed": "Не удалось загрузить зависимости",
     "dependenciesUnresolved": "Источник не ответил про зависимости этого мода. Проверьте их вручную или повторите позже.",
-    "quarantinedTitle": "Файлов не из этой сборки: {{count}} — перемещены в карантин",
+    "quarantinedTitle": "Больше не в сборке, перемещены в карантин: {{count}}",
     "quarantinedHint": "Откройте менеджер содержимого, чтобы вернуть их",
     "trashCount": "Недавно удалено: {{count}}",
     "trashHint": "Файлы хранятся {{days}} дней, потом удаляются насовсем",
@@ -2023,7 +2023,8 @@
       "legacy-fabric": "Fabric для 1.3–1.13.2",
       "babric": "Fabric для Beta 1.7.3",
       "ornithe": "Fabric для альф, бет и версий до 1.14.4",
-      "bta-babric": "Better than Adventure с модами на Babric"
+      "bta-babric": "Better than Adventure с модами на Babric",
+      "foxloader": "ReIndev с модами на FoxLoader"
     },
     "updated": "Сборка обновлена",
     "share": "Поделиться",

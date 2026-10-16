@@ -21,6 +21,7 @@ type ManifestLibrary = IVersionManifest["libraries"][number];
 
 const LEGACY_ASM = /^org\.ow2\.asm:asm-all:4\./;
 const LAUNCHWRAPPER = "net.minecraft:launchwrapper:";
+const MODLOADER_ENTRY = "ModLoader.class";
 
 export const JAR_MOD_ASM: ManifestLibrary = {
   name: "org.ow2.asm:asm-all:5.0.3",
@@ -83,6 +84,11 @@ export function withJarModAsm(
   if (conf.loader.name !== "vanilla" || !hasActiveJarMods(conf)) return libraries;
   if (!libraries.some((lib) => lib.name.startsWith(LAUNCHWRAPPER))) return libraries;
   return libraries.map((lib) => (LEGACY_ASM.test(lib.name) ? JAR_MOD_ASM : lib));
+}
+
+export async function bundlesModLoader(jarPath: string): Promise<boolean> {
+  const archive = await openArchive(jarPath).catch(() => null);
+  return !!archive?.getEntry(MODLOADER_ENTRY);
 }
 
 export function gameJarInputs(conf: IVersionConf): {

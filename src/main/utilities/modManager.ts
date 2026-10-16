@@ -48,6 +48,7 @@ import { resolveDownloadCandidates } from "./mirrors";
 import {
   LocalModMetadata,
   fromFabricManifest,
+  fromFoxLoaderManifest,
   fromModsToml,
   fromQuiltManifest,
   packDescription,
@@ -60,6 +61,7 @@ import {
 import { readPrismJarMods } from "./prismJarMods";
 import { VersionsService } from "../services/Versions";
 import { BTA_MINECRAFT_VERSION } from "@/shared/btaLoader";
+import { FOXLOADER_MINECRAFT_VERSION } from "@/shared/foxLoader";
 import {
   fabricFamilyFor,
   ornitheIntermediaryGeneration,
@@ -716,6 +718,12 @@ async function readLocalModInfo(
     );
     if (tomlMeta) return await toModInfo(tomlMeta);
   }
+
+  const foxLoaderMeta = fromFoxLoaderManifest(
+    (await readEntry("META-INF/MANIFEST.MF"))?.toString("utf-8"),
+    fileName,
+  );
+  if (foxLoaderMeta) return await toModInfo(foxLoaderMeta);
 
   const entryNames = archive.getEntries().map((entry) => entry.entryName);
   if (isJavaArchive(fileName, entryNames)) return fallback;
@@ -1708,17 +1716,23 @@ async function prismModpackToModpack(
     path.join(instanceRoot, "overrides"),
   );
 
+  const isFoxLoader = !!jarImport.foxLoaderVersion;
   const baseModpack: IModpack = {
     name:
       instanceCfg.name ||
       instanceCfg.ManagedPackName ||
       path.basename(instanceRoot),
-    version: minecraftVersion,
-    loader:
-      jarImport.btaVersion || jarImport.btaInstaller ? "bta-babric" : loader,
-    loaderVersion: jarImport.btaInstaller
-      ? await latestBtaVersion()
-      : (jarImport.btaVersion ?? loaderVersion),
+    version: isFoxLoader ? FOXLOADER_MINECRAFT_VERSION : minecraftVersion,
+    loader: isFoxLoader
+      ? "foxloader"
+      : jarImport.btaVersion || jarImport.btaInstaller
+        ? "bta-babric"
+        : loader,
+    loaderVersion: isFoxLoader
+      ? jarImport.foxLoaderVersion
+      : jarImport.btaInstaller
+        ? await latestBtaVersion()
+        : (jarImport.btaVersion ?? loaderVersion),
     mods: [...indexedMods.values()],
     folderPath: "",
     image,

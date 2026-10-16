@@ -1,0 +1,34 @@
+{
+  "version": "2.1.3",
+  "isMilestone": false,
+  "en": {
+    "subtitle": "ReIndev with FoxLoader and fixes for old versions.",
+    "highlights": [
+      "Added ReIndev with FoxLoader: create an instance, switch FoxLoader versions and import official ReIndev archives for MultiMC and Prism Launcher."
+    ],
+    "fixes": [
+      "Beta and 1.0–1.5.2 instances with ModLoader no longer crash on launch.",
+      "Instances with “!” at the end of their name now start."
+    ]
+  },
+  "ru": {
+    "subtitle": "ReIndev с FoxLoader и исправления для старых версий.",
+    "highlights": [
+      "Добавлен ReIndev с FoxLoader: создавайте сборку, меняйте версию FoxLoader и импортируйте официальные архивы ReIndev для MultiMC и Prism Launcher."
+    ],
+    "fixes": [
+      "Сборки на Beta и 1.0–1.5.2 с ModLoader больше не вылетают при запуске.",
+      "Сборки с «!» в конце названия теперь запускаются."
+    ]
+  },
+  "uk": {
+    "subtitle": "ReIndev з FoxLoader і виправлення для старих версій.",
+    "highlights": [
+      "Додано ReIndev з FoxLoader: створюйте збірку, змінюйте версію FoxLoader та імпортуйте офіційні архіви ReIndev для MultiMC і Prism Launcher."
+    ],
+    "fixes": [
+      "Збірки на Beta та 1.0–1.5.2 з ModLoader більше не вилітають під час запуску.",
+      "Збірки з «!» наприкінці назви тепер запускаються."
+    ]
+  }
+}

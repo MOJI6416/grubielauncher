@@ -8,6 +8,7 @@ import { classifyError } from "@/shared/errors";
 import {
   JAR_MOD_ASM,
   PATCHED_JAR_FOLDER,
+  bundlesModLoader,
   gameJarInputs,
   importJarMods,
   jarModDownloads,
@@ -283,6 +284,23 @@ describe("withJarModAsm", () => {
 
     const modern = legacy.slice(1);
     expect(withJarModAsm(modern, conf({ jarMods: [jarMod] }))).toBe(modern);
+  });
+});
+
+describe("bundlesModLoader", () => {
+  it("finds ModLoader merged into the game jar", async () => {
+    const jar = path.join(root, "patched.jar");
+    writeZip(jar, { "ModLoader.class": "ml", "a.class": "vanilla-a" });
+
+    expect(await bundlesModLoader(jar)).toBe(true);
+  });
+
+  it("ignores jars without ModLoader at the root and unreadable files", async () => {
+    const jar = path.join(root, "plain.jar");
+    writeZip(jar, { "mods/ModLoader.class": "ml", "a.class": "vanilla-a" });
+
+    expect(await bundlesModLoader(jar)).toBe(false);
+    expect(await bundlesModLoader(path.join(root, "missing.jar"))).toBe(false);
   });
 });
 

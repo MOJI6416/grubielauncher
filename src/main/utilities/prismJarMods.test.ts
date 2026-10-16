@@ -224,3 +224,42 @@ describe("readPrismJarMods", () => {
     expect(result.jarMods).toEqual([]);
   });
 });
+
+describe("FoxLoader instances", () => {
+  it("takes the FoxLoader build instead of a custom Minecraft.jar", async () => {
+    await fs.outputFile(path.join(root, "libraries", "foxloader-2.0-alpha40.jar"), "fox");
+    await patch("com.fox2code.foxloader", {
+      mainJar: {
+        "MMC-displayname": "foxloader-2.0-alpha40",
+        "MMC-hint": "local",
+        name: "custom:foxloader:2.0-alpha40",
+      },
+      mainClass: "com.fox2code.foxloader.launcher.ClientMain",
+    });
+    await patch("net.minecraft", { type: "old_beta", uid: "net.minecraft", version: "no-op" });
+
+    const result = await readPrismJarMods(
+      root,
+      [
+        { uid: "org.lwjgl", version: "2.9.4-nightly-20150209" },
+        { uid: "com.fox2code.foxloader", version: "ReIndev-2.9_03-FoxLoader-2.0-alpha40" },
+        { uid: "net.minecraft", version: "no-op", disabled: true },
+      ],
+      overrides,
+    );
+
+    expect(result.foxLoaderVersion).toBe("2.0-alpha40");
+    expect(result.mainJar).toBeUndefined();
+    expect(result.launch).toBeUndefined();
+  });
+
+  it("falls back to the version written in the component", async () => {
+    const result = await readPrismJarMods(
+      root,
+      [{ uid: "com.fox2code.foxloader", version: "ReIndev-2.9_02-FoxLoader-2.0-alpha39" }],
+      overrides,
+    );
+
+    expect(result.foxLoaderVersion).toBe("2.0-alpha39");
+  });
+});

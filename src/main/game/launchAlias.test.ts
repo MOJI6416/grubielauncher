@@ -3,6 +3,7 @@ import fs from "fs-extra";
 import os from "os";
 import path from "path";
 import {
+  breaksJarUrls,
   buildLaunchAliasName,
   hasNonAsciiPath,
   needsLaunchAlias,
@@ -30,6 +31,28 @@ describe("launch alias", () => {
     expect(needsLaunchAlias("C:\\pack\\整合包", "win32")).toBe(true);
     expect(needsLaunchAlias("C:\\pack\\Vanilla", "win32")).toBe(false);
     expect(needsLaunchAlias("/home/user/整合包", "linux")).toBe(false);
+  });
+
+  it("aliases a folder ending with ! that java reads as a jar separator", () => {
+    expect(
+      needsLaunchAlias("C:\\versions\\Better than Adventure!", "win32"),
+    ).toBe(true);
+    expect(
+      needsLaunchAlias("C:\\versions\\Better than Adventure!\\mods", "win32"),
+    ).toBe(true);
+    expect(needsLaunchAlias("/home/user/versions/Pack!/mods", "linux")).toBe(
+      true,
+    );
+    expect(needsLaunchAlias("C:\\versions\\Hi!there", "win32")).toBe(false);
+    expect(
+      needsLaunchAlias("C:\\versions\\Better than Adventure! (Managed)", "win32"),
+    ).toBe(false);
+  });
+
+  it("keeps a readable name for a folder ending with !", () => {
+    expect(
+      buildLaunchAliasName("C:\\versions\\Better than Adventure!"),
+    ).toMatch(/^BetterthanAdvent-[0-9a-f]{12}$/);
   });
 
   it("builds a stable ascii alias name", () => {
@@ -87,6 +110,22 @@ describe("launch alias", () => {
       });
     },
   );
+
+  it("gives a folder ending with ! a path java can load jars from", async () => {
+    await withTempDir(async (dir) => {
+      const target = path.join(dir, "minecraft", "versions", "Pack!");
+      await fs.ensureDir(path.join(target, "mods"));
+      await fs.writeFile(path.join(target, "mods", "mod.jar"), "jar");
+
+      const aliased = await resolveLaunchPath(target, dir);
+
+      expect(aliased).not.toBe(target);
+      expect(breaksJarUrls(path.join(aliased, "mods", "mod.jar"))).toBe(false);
+      expect(
+        await fs.readFile(path.join(aliased, "mods", "mod.jar"), "utf8"),
+      ).toBe("jar");
+    });
+  });
 
   it.runIf(isWindows)("repoints an alias left over from a rename", async () => {
     await withTempDir(async (dir) => {

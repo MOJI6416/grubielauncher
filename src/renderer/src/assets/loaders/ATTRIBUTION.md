@@ -8,6 +8,7 @@ Loader logo sources used in the renderer UI, retrieved on March 29, 2026.
 - Babric: uses the Fabric logo, which is also the logo on https://babric.github.io/assets/logo.png
 - Ornithe: cropped from https://raw.githubusercontent.com/OrnitheMC/ornithe-installer-rs/main/res/icon.png (rounded corners), retrieved on October 4, 2026
 - Better than Adventure: trimmed from https://www.betterthanadventure.net/apple-touch-icon.png, retrieved on October 4, 2026
+- FoxLoader: https://github.com/Fox2Code/FoxLoader/blob/reindev2.9/loader/src/main/resources/assets/foxloader/icon.png, retrieved on October 15, 2026
 
 Reference licenses:
 
@@ -17,5 +18,7 @@ Reference licenses:
   https://github.com/QuiltMC/quiltmc.org/blob/main/LICENSE.md
 - NeoForged websites repository: CC BY 4.0
   https://github.com/neoforged/websites/blob/main/LICENSE.txt
+- FoxLoader repository: MIT
+  https://github.com/Fox2Code/FoxLoader/blob/reindev2.9/LICENSE
 
 Forge, Legacy Fabric, Ornithe and Better than Adventure branding remains the property of its respective owners.

@@ -3,6 +3,8 @@ import path from "path";
 import fs from "fs-extra";
 import type { IAssetIndex } from "@/types/IAssetIndex";
 import type { DownloadItem } from "@/types/Downloader";
+import type { ILaunchOverride } from "@/types/IVersion";
+import type { IVersionManifest } from "@/types/IVersionManifest";
 import {
   buildLaunchAliasName,
   hasNonAsciiPath,
@@ -52,6 +54,19 @@ export function legacySortJvmArguments(type: string | undefined): string[] {
 
 export function usesLegacyWorkDir(minecraftArguments?: string): boolean {
   return !!minecraftArguments?.trimStart().startsWith("${auth_player_name}");
+}
+
+export function directLegacyLaunch(
+  manifest: Pick<IVersionManifest, "mainClass" | "minecraftArguments">,
+): ILaunchOverride | null {
+  const args = manifest.minecraftArguments;
+  if (manifest.mainClass !== "net.minecraft.launchwrapper.Launch") return null;
+  if (!usesLegacyWorkDir(args) || args?.includes("--tweakClass")) return null;
+
+  return {
+    mainClass: "net.minecraft.client.Minecraft",
+    minecraftArguments: "${auth_player_name} ${auth_session}",
+  };
 }
 
 export function legacyHomeBase(

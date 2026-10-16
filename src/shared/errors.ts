@@ -128,6 +128,7 @@ const HOST_SIDES: Array<[string, FailureSide]> = [
   ["glass-launcher.net", "loader"],
   ["ornithemc.net", "loader"],
   ["betterthanadventure.net", "loader"],
+  ["fox2code.com", "loader"],
   ["papermc.io", "loader"],
   ["purpurmc.org", "loader"],
   ["spigotmc.org", "loader"],

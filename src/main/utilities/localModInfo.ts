@@ -114,6 +114,49 @@ export function fromModsToml(
   );
 }
 
+function manifestAttributes(manifest: string): Map<string, string> {
+  const attributes = new Map<string, string>();
+  let last = "";
+
+  for (const line of manifest.split(/\r?\n/)) {
+    if (!line) break;
+    if (line.startsWith(" ") && last) {
+      attributes.set(last, attributes.get(last) + line.slice(1));
+      continue;
+    }
+
+    const separator = line.indexOf(": ");
+    if (separator <= 0) continue;
+    last = line.slice(0, separator);
+    attributes.set(last, line.slice(separator + 2));
+  }
+
+  return attributes;
+}
+
+export function fromFoxLoaderManifest(
+  manifest: unknown,
+  fileName: string,
+): LocalModMetadata | null {
+  if (typeof manifest !== "string") return null;
+
+  const attributes = manifestAttributes(manifest);
+  const id = text(attributes.get("ModId"));
+  if (!id) return null;
+
+  return withFallbacks(
+    {
+      id,
+      name: text(attributes.get("ModName")),
+      description: text(attributes.get("ModDesc")?.replace(/\t/g, "\n")),
+      url: text(attributes.get("ModWebsite")),
+      version: text(attributes.get("ModVersion")),
+      icon: text(attributes.get("ModIcon")).replace(/^\/+/, ""),
+    },
+    fileName,
+  );
+}
+
 export function packDescription(pack: unknown): string {
   const description = record(pack)?.description;
   if (typeof description === "string") return description.trim();
