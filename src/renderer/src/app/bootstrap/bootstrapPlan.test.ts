@@ -9,10 +9,23 @@ describe("resolveBootstrapLanguage", () => {
   it("takes the system locale when it is supported", () => {
     expect(resolveBootstrapLanguage("ru-RU", "en")).toBe("ru");
     expect(resolveBootstrapLanguage("uk", "en")).toBe("uk");
+    expect(resolveBootstrapLanguage("de-DE", "en")).toBe("de");
+    expect(resolveBootstrapLanguage("pt-PT", "en")).toBe("pt");
+    expect(resolveBootstrapLanguage("es-419", "en")).toBe("es");
+  });
+
+  it("matches the language part only, not a substring", () => {
+    expect(resolveBootstrapLanguage("lt-LT", "en")).toBe("en");
+    expect(resolveBootstrapLanguage("ja-JP", "uk")).toBe("uk");
+  });
+
+  it("opens in Russian for systems whose players read it", () => {
+    expect(resolveBootstrapLanguage("kk-KZ", "en")).toBe("ru");
+    expect(resolveBootstrapLanguage("be", "en")).toBe("ru");
   });
 
   it("falls back when the system locale is unknown", () => {
-    expect(resolveBootstrapLanguage("de-DE", "en")).toBe("en");
+    expect(resolveBootstrapLanguage("ja-JP", "en")).toBe("en");
     expect(resolveBootstrapLanguage("", "ru")).toBe("ru");
   });
 });

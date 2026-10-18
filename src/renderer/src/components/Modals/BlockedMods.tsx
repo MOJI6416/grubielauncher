@@ -28,11 +28,6 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Hint } from "@renderer/components/Hint";
 import { cn } from "@/lib/utils";
 import { IProject, Provider, ProjectType } from "@/types/ModManager";
@@ -593,84 +588,61 @@ export function BlockedMods({
                       <div className="flex shrink-0 items-center gap-1">
                         {state === "missing" && (
                           <>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="icon-sm"
-                                  variant="secondary"
-                                  aria-label={t("game.download")}
-                                  onClick={async () => {
-                                    try {
-                                      await api.shell.openExternal(mod.url);
-                                    } catch (error) {
-                                      console.error(
-                                        "Error opening URL:",
-                                        error,
-                                      );
-                                    }
-                                  }}
-                                >
-                                  <ExternalLink />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {t("game.download")}
-                              </TooltipContent>
-                            </Tooltip>
+                            <Hint content={t("game.download")}>
+                              <Button
+                                size="icon-sm"
+                                variant="secondary"
+                                aria-label={t("game.download")}
+                                onClick={async () => {
+                                  try {
+                                    await api.shell.openExternal(mod.url);
+                                  } catch (error) {
+                                    console.error("Error opening URL:", error);
+                                  }
+                                }}
+                              >
+                                <ExternalLink />
+                              </Button>
+                            </Hint>
 
                             {onSubstitute && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="icon-sm"
-                                    variant="ghost"
-                                    aria-expanded={isSubstitutePanelOpen}
-                                    aria-label={t("blockedMods.substitute")}
-                                    onClick={() => handleOpenSubstitute(mod)}
-                                  >
-                                    <Replace />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {t("blockedMods.substitute")}
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-
-                            <Tooltip>
-                              <TooltipTrigger asChild>
+                              <Hint content={t("blockedMods.substitute")}>
                                 <Button
                                   size="icon-sm"
                                   variant="ghost"
-                                  aria-label={t("blockedMods.skip")}
-                                  onClick={() => handleSkip(mod)}
+                                  aria-expanded={isSubstitutePanelOpen}
+                                  aria-label={t("blockedMods.substitute")}
+                                  onClick={() => handleOpenSubstitute(mod)}
                                 >
-                                  <SkipForward />
+                                  <Replace />
                                 </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {t("blockedMods.skip")}
-                              </TooltipContent>
-                            </Tooltip>
+                              </Hint>
+                            )}
+
+                            <Hint content={t("blockedMods.skip")}>
+                              <Button
+                                size="icon-sm"
+                                variant="ghost"
+                                aria-label={t("blockedMods.skip")}
+                                onClick={() => handleSkip(mod)}
+                              >
+                                <SkipForward />
+                              </Button>
+                            </Hint>
                           </>
                         )}
 
                         {state === "skipped" && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="icon-sm"
-                                variant="ghost"
-                                aria-label={t("blockedMods.undoSkip")}
-                                onClick={() => handleUndoSkip(mod)}
-                              >
-                                <Undo2 />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {t("blockedMods.undoSkip")}
-                            </TooltipContent>
-                          </Tooltip>
+                          <Hint content={t("blockedMods.undoSkip")}>
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              aria-label={t("blockedMods.undoSkip")}
+                              onClick={() => handleUndoSkip(mod)}
+                            >
+                              <Undo2 />
+                            </Button>
+                          </Hint>
                         )}
                       </div>
                     </div>

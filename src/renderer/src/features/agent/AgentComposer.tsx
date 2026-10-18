@@ -1,15 +1,52 @@
 import { RefObject, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
-import { KeyRound, Loader2, Send, Square, Wrench } from "lucide-react";
+import { Heart, KeyRound, Loader2, Send, Square, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { AiProviderProfile } from "@/types/Agent";
+import { AgentBuiltinStatus, AiProviderProfile } from "@/types/Agent";
 import { Hint } from "@renderer/components/Hint";
 import { abortAgentRun, agentChatAtom, MAX_STEPS } from "@renderer/agent/store";
+import { cn } from "@/lib/utils";
 import { hasOpenOverlay } from "./overlayLayer";
+import { agentBuiltinStatusAtom, isBuiltinLocked } from "./builtinStatus";
 import { activeToolLabel } from "./timelineGroups";
 import { AgentModelPicker } from "./AgentModelPicker";
+
+function BuiltinQuota({ status }: { status: AgentBuiltinStatus | null }) {
+  const { t } = useTranslation();
+
+  if (!status || !status.allowed || status.limit === 0) return null;
+
+  const reset = status.resetAt
+    ? new Date(status.resetAt).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+
+  return (
+    <Hint
+      content={
+        reset
+          ? t("agent.builtin.quotaHintReset", {
+              limit: status.limit,
+              time: reset,
+            })
+          : t("agent.builtin.quotaHint", { limit: status.limit })
+      }
+    >
+      <span
+        className={cn(
+          "shrink-0 font-mono text-[0.65rem] tabular-nums",
+          status.remaining === 0 ? "text-warning" : "text-faint",
+        )}
+      >
+        {t("agent.builtin.remaining", { count: status.remaining })}
+      </span>
+    </Hint>
+  );
+}
 
 export function AgentComposer({
   draft,
@@ -30,11 +67,13 @@ export function AgentComposer({
   blocked: boolean;
   toolCount: number;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const chat = useAtomValue(agentChatAtom);
 
   const running = chat.running;
-  const hasKey = Boolean(provider?.hasKey);
+  const builtinStatus = useAtomValue(agentBuiltinStatusAtom);
+  const locked = isBuiltinLocked(provider?.builtin, builtinStatus);
+  const hasKey = Boolean(provider?.hasKey) && !locked;
   const canSend = hasKey && !running && !blocked && draft.trim() !== "";
 
   useEffect(() => {
@@ -77,7 +116,34 @@ export function AgentComposer({
         </div>
       )}
 
-      {!hasKey && (
+      {locked && (
+        <div className="mb-2 flex items-center gap-2 rounded-lg border border-primary/40 bg-primary-soft px-2.5 py-1.5">
+          <Heart className="size-3.5 shrink-0 text-primary" />
+          <span className="min-w-0 flex-1 text-xs text-foreground">
+            {t("agent.builtin.locked")}
+          </span>
+          <Button variant="outline" size="xs" onClick={onOpenProviders}>
+            <KeyRound />
+            {t("agent.builtin.ownKey")}
+          </Button>
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={() =>
+              void window.api.shell
+                .openExternal(
+                  `https://grubielauncher.com/${i18n.resolvedLanguage ?? "en"}/donate`,
+                )
+                .catch(() => undefined)
+            }
+          >
+            <Heart />
+            {t("agent.builtin.support")}
+          </Button>
+        </div>
+      )}
+
+      {!hasKey && !locked && (
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-warning/40 bg-surface-2 px-2.5 py-1.5">
           <KeyRound className="size-3.5 shrink-0 text-warning" />
           <span className="min-w-0 flex-1 text-xs text-warning">
@@ -143,6 +209,7 @@ export function AgentComposer({
             <span className="font-mono tabular-nums">{toolCount}</span>
           </span>
         </Hint>
+        {provider?.builtin && <BuiltinQuota status={builtinStatus} />}
         <span className="ml-auto min-w-0 truncate text-[0.65rem] text-faint">
           {t("agent.sendHint")}
         </span>

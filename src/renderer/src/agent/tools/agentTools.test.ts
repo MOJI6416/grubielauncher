@@ -52,9 +52,10 @@ const { Version } = await import("@renderer/classes/Version");
 const atoms = await import("@renderer/stores/atoms");
 const { getInstance } = await import("./instances");
 const { readLauncherSettings } = await import("./system");
-const { setMemory, setRunArguments, deleteInstance, setInstanceJava } =
+const { setMemory, setRunArguments, deleteInstance, setInstanceJava, removeMods } =
   await import("./mutations");
 const { readGameLog, getLastCrash } = await import("./diagnostics");
+const { toggleMods } = await import("./repair");
 
 const store = getDefaultStore();
 
@@ -540,5 +541,125 @@ describe("delete_instance", () => {
     expect(result.ok).toBe(false);
     expect(store.get(atoms.versionsAtom)).toHaveLength(1);
     spy.mockRestore();
+  });
+});
+
+describe("permission previews", () => {
+  const rows = (preview: any) =>
+    Object.fromEntries(preview.rows.map((row: any) => [row.key, row]));
+
+  it("shows the memory of one instance as before and after", async () => {
+    store.set(atoms.versionsAtom, [makeVersion("Fabric 26.2", { xmx: 6144 })]);
+
+    const preview = await setMemory.preview!({
+      instance: "Fabric 26.2",
+      memoryMb: 8192,
+    });
+
+    expect(rows(preview).instance.value).toBe("Fabric 26.2");
+    expect(rows(preview).memory.from).toMatch(/^6\b/);
+    expect(rows(preview).memory.value).toMatch(/^8\b/);
+    expect(rows(preview).optimizedJvm).toBeUndefined();
+  });
+
+  it("names the instances a global memory change will not reach", async () => {
+    store.set(atoms.versionsAtom, [
+      makeVersion("Own", { xmx: 6144 }),
+      makeVersion("Default"),
+    ]);
+
+    const preview = await setMemory.preview!({ memoryMb: 8192 });
+
+    expect(rows(preview).memory.from).toMatch(/^4\b/);
+    expect(rows(preview).keepOwn.value).toBe("Own");
+  });
+
+  it("lists the arguments the launcher will drop", async () => {
+    store.set(atoms.versionsAtom, [makeVersion("Fabric 26.2")]);
+
+    const preview = await setRunArguments.preview!({
+      instance: "Fabric 26.2",
+      jvm: "-Xss4M -javaagent:evil.jar",
+    });
+
+    expect(rows(preview).jvm).toMatchObject({ from: "—", value: "-Xss4M" });
+    expect(rows(preview).rejected.value).toContain("-javaagent:evil.jar");
+    expect(rows(preview).game).toBeUndefined();
+  });
+
+  it("shows which mods a removal takes and which titles it does not know", async () => {
+    store.set(atoms.versionsAtom, [makeVersion("Fabric 26.2")]);
+
+    const preview = await removeMods.preview!({
+      instance: "Fabric 26.2",
+      titles: ["Sodium", "Lithium"],
+    });
+
+    expect(rows(preview).remove.value).toBe("Sodium");
+    expect(rows(preview).notInstalled.value).toBe("Lithium");
+  });
+
+  it("shows which mods get turned off", async () => {
+    store.set(atoms.versionsAtom, [makeVersion("Fabric 26.2")]);
+
+    const preview = await toggleMods.preview!({
+      instance: "Fabric 26.2",
+      titles: ["Sodium"],
+      enabled: false,
+    });
+
+    expect(rows(preview).disable.value).toBe("Sodium");
+  });
+});
+
+describe("undo", () => {
+  it("puts the previous memory override back", async () => {
+    const { runUndo } = await import("../undo");
+    const version = makeVersion("Fabric 26.2", { xmx: 6144, highPriority: true });
+    store.set(atoms.versionsAtom, [version]);
+
+    const result = await setMemory.run({
+      instance: "Fabric 26.2",
+      memoryMb: 8192,
+    });
+    expect(result.undo).toEqual({
+      op: "overrides",
+      instance: "Fabric 26.2",
+      values: { xmx: 6144 },
+    });
+
+    expect((await runUndo(result.undo!)).ok).toBe(true);
+    expect(version.version.overrides).toEqual({ xmx: 6144, highPriority: true });
+  });
+
+  it("clears an override that did not exist before", async () => {
+    const { runUndo } = await import("../undo");
+    const version = makeVersion("Fabric 26.2");
+    store.set(atoms.versionsAtom, [version]);
+
+    const result = await setInstanceJava.run({
+      instance: "Fabric 26.2",
+      mode: "major",
+      major: 17,
+    });
+    expect(result.ok).toBe(true);
+
+    await runUndo(result.undo!);
+    expect(version.version.overrides).toBeUndefined();
+  });
+
+  it("restores the previous run arguments", async () => {
+    const { runUndo } = await import("../undo");
+    const version = makeVersion("Fabric 26.2");
+    version.version.runArguments = { jvm: "-Xss2M", game: "" };
+    store.set(atoms.versionsAtom, [version]);
+
+    const result = await setRunArguments.run({
+      instance: "Fabric 26.2",
+      jvm: "-Xss4M",
+    });
+
+    await runUndo(result.undo!);
+    expect(version.version.runArguments).toEqual({ jvm: "-Xss2M", game: "" });
   });
 });

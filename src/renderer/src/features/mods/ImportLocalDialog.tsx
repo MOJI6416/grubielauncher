@@ -18,8 +18,15 @@ import {
   PackageCheck,
   PowerOff,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  type SelectionGesture,
+  applySelectionGesture,
+  nextSelectionAnchor,
+  preventShiftTextSelection,
+  readSelectionGesture,
+} from "@renderer/utilities/rangeSelection";
 import { formatDate } from "./format";
 import { ProjectIcon } from "./ProjectIcon";
 import { withEnabledFiles } from "./localImport";
@@ -89,14 +96,23 @@ export function ImportLocalDialog({
     [enableDisabled, projects, selected],
   );
 
-  const toggle = useCallback((index: number) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
-  }, []);
+  const anchorRef = useRef<number | null>(null);
+
+  const toggle = useCallback(
+    (index: number, gesture: SelectionGesture) => {
+      const anchor = anchorRef.current;
+      anchorRef.current = nextSelectionAnchor(
+        validIndexes,
+        anchor,
+        index,
+        gesture,
+      );
+      setSelected((prev) =>
+        applySelectionGesture(prev, validIndexes, anchor, index, gesture),
+      );
+    },
+    [validIndexes],
+  );
 
   const toggleAll = useCallback(() => {
     setSelected((prev) =>
@@ -208,7 +224,10 @@ export function ImportLocalDialog({
                   type="button"
                   aria-pressed={isSelected}
                   disabled={!isValid || isLoading}
-                  onClick={() => toggle(index)}
+                  onMouseDown={preventShiftTextSelection}
+                  onClick={(event) =>
+                    toggle(index, readSelectionGesture(event, true))
+                  }
                   className="flex h-14 w-full min-w-0 items-center gap-2.5 rounded-lg bg-surface-2 px-2.5 text-left transition-colors hover:bg-surface-3 disabled:cursor-default disabled:opacity-60 disabled:hover:bg-surface-2"
                 >
                   <Checkbox

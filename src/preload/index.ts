@@ -79,6 +79,7 @@ import {
   AgentSyncPush,
   AgentSyncResult,
   AiModelInfo,
+  AgentBuiltinStatus,
   AiProviderInput,
   AiProvidersState,
   AiProviderTestResult,
@@ -1251,6 +1252,9 @@ export interface IElectronAPI {
     models: {
       list: (providerId: string) => Promise<AiModelInfo[]>;
     };
+    builtin: {
+      status: (accessToken: string) => Promise<AgentBuiltinStatus | null>;
+    };
     chat: {
       start: (runId: string, request: AgentStreamRequest) => Promise<boolean>;
       abort: (runId: string) => Promise<boolean>;
@@ -2402,6 +2406,10 @@ export const api: IElectronAPI = {
     },
     models: {
       list: (providerId: string) => invoke("agent:models:list", providerId),
+    },
+    builtin: {
+      status: (accessToken: string) =>
+        invoke("agent:builtin:status", accessToken),
     },
     chat: {
       start: (runId: string, request: AgentStreamRequest) =>

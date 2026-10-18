@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   isInstanceRunning,
   nextInstanceNumber,
+  readModpackCheck,
   resolveLaunchBlock,
+  shouldCheckModpack,
 } from "./launchPlan";
 
 const ready = {
@@ -126,5 +128,57 @@ describe("isInstanceRunning", () => {
     expect(
       isInstanceRunning([{ versionName: "a", status: "running" }], "b"),
     ).toBe(false);
+  });
+});
+
+describe("shouldCheckModpack", () => {
+  const downloaded = {
+    shareCode: "037640008ceea631e15f4e20",
+    downloadedVersion: true,
+    isNetwork: true,
+  };
+
+  it("checks a downloaded pack while the backend answers, without the online socket", () => {
+    expect(shouldCheckModpack(downloaded)).toBe(true);
+  });
+
+  it("skips the check when the backend is offline", () => {
+    expect(shouldCheckModpack({ ...downloaded, isNetwork: false })).toBe(false);
+  });
+
+  it("skips the check after the player chose to run without updating", () => {
+    expect(shouldCheckModpack({ ...downloaded, skipUpdate: true })).toBe(false);
+  });
+
+  it("skips own and unshared instances", () => {
+    expect(shouldCheckModpack({ ...downloaded, downloadedVersion: false })).toBe(
+      false,
+    );
+    expect(shouldCheckModpack({ ...downloaded, shareCode: undefined })).toBe(
+      false,
+    );
+  });
+});
+
+describe("readModpackCheck", () => {
+  it("compares when the server returned the pack", () => {
+    expect(readModpackCheck({ status: "success", data: { build: 16 } })).toBe(
+      "compare",
+    );
+  });
+
+  it("forgets the share code when the pack is gone", () => {
+    expect(readModpackCheck({ status: "not_found", data: null })).toBe(
+      "unpublished",
+    );
+  });
+
+  it("asks the player when the request failed", () => {
+    expect(readModpackCheck({ status: "error", data: null })).toBe("failed");
+  });
+
+  it("asks the player when the answer is empty", () => {
+    expect(readModpackCheck({ status: "success", data: null })).toBe("failed");
+    expect(readModpackCheck(undefined)).toBe("failed");
   });
 });

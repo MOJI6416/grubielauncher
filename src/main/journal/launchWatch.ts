@@ -146,7 +146,7 @@ export class LaunchWatch {
     };
 
     if (killedByUser || code === 0) {
-      this.span.ok(summary);
+      this.span.ok({ ...summary, tail: [...this.tail] });
       return;
     }
 

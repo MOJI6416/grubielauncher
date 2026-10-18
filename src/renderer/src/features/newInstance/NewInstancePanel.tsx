@@ -868,6 +868,8 @@ export function NewInstancePanel({
   }, [
     contentSummary.bytes,
     isBackendOnline,
+    state.loader,
+    state.loaderVersion?.id,
     state.minecraftVersion,
     state.mods,
     state.pack?.shareCode,

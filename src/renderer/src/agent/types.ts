@@ -1,4 +1,5 @@
 import { AgentChatMessage, AgentUsage } from "@/types/Agent";
+import { ILocalProject } from "@/types/ModManager";
 
 export type AgentRisk = "read" | "write" | "destructive";
 
@@ -7,13 +8,48 @@ export type ToolStepLabel = {
   params?: Record<string, unknown>;
 };
 
+export type AgentUndo =
+  | { op: "mods"; instance: string; put: ILocalProject[]; drop: string[] }
+  | { op: "toggle"; instance: string; titles: string[]; enabled: boolean }
+  | {
+      op: "overrides";
+      instance: string;
+      values: Partial<
+        Record<"xmx" | "optimizedJvm" | "java", unknown | null>
+      >;
+    }
+  | { op: "settings"; values: { xmx?: number; optimizedJvm?: boolean } }
+  | {
+      op: "runArguments";
+      instance: string;
+      runArguments: { jvm: string; game: string };
+    }
+  | { op: "worldName"; instance: string; worldFolder: string; name: string }
+  | { op: "skin"; skinId: string }
+  | { op: "gameOptions"; instance: string; values: Record<string, string> }
+  | {
+      op: "configFile";
+      instance: string;
+      file: string;
+      text: string;
+      expectHash: string;
+    };
+
+export type UndoState = "running" | "done" | "failed";
+
 export type ToolResult = {
   ok: boolean;
   data?: unknown;
   error?: string;
+  undo?: AgentUndo;
 };
 
-export type ToolPreviewRow = { key: string; value: string };
+export type ToolPreviewRow = {
+  key: string;
+  value: string;
+  from?: string;
+  label?: string;
+};
 
 export type ToolPreview = {
   rows: ToolPreviewRow[];
@@ -55,6 +91,9 @@ export type TimelineItem =
       input?: string;
       output?: string;
       error?: string;
+      undo?: AgentUndo;
+      undoState?: UndoState;
+      undoError?: string;
     }
   | {
       kind: "permission";
@@ -76,6 +115,14 @@ export type TimelineItem =
       answer: string | null;
     }
   | { kind: "plan"; id: string; steps: PlanStep[] }
+  | {
+      kind: "compacted";
+      id: string;
+      upto: number;
+      summary: string;
+      status: "running" | "done" | "failed";
+      tokensBefore: number;
+    }
   | { kind: "stopped"; id: string }
   | { kind: "error"; id: string; message: string; code?: string };
 

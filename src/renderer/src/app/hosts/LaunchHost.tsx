@@ -10,6 +10,7 @@ import {
   blockedModsAtom,
   blockedModsOpenAtom,
   blockedModsResumeAtom,
+  launchCheckFailedAtom,
   launchServersAtom,
   launchUpdateDiffAtom,
   launchUpdateOpenAtom,
@@ -33,7 +34,10 @@ import {
   reportShareSyncInterruption,
   syncShare,
 } from "@renderer/utilities/version";
-import { showFailureToast } from "@renderer/utilities/failures";
+import {
+  describeFailure,
+  showFailureToast,
+} from "@renderer/utilities/failures";
 
 const api = window.api;
 
@@ -48,6 +52,7 @@ export function LaunchHost() {
   const pendingDiff = useAtomValue(launchUpdateDiffAtom);
   const setPendingDiff = useSetAtom(launchUpdateDiffAtom);
   const remoteServers = useAtomValue(launchUpdateRemoteServersAtom);
+  const [checkFailed, setCheckFailed] = useAtom(launchCheckFailedAtom);
   const [isLoading, setIsLoading] = useState(false);
   const [localServers, setLocalServers] = useState<IServer[] | null>([]);
 
@@ -87,6 +92,10 @@ export function LaunchHost() {
     [localServers, remoteServers],
   );
 
+  const checkFailure = checkFailed?.failure
+    ? describeFailure(checkFailed.failure)
+    : null;
+
   const takePendingLaunch = () => {
     const store = getDefaultStore();
     const pending = store.get(pendingLaunchAtom);
@@ -96,6 +105,35 @@ export function LaunchHost() {
 
   return (
     <>
+      {checkFailed && (
+        <Confirmation
+          onClose={() => setCheckFailed(null)}
+          title={t("versions.updateCheckFailed")}
+          content={[
+            { color: "warning", text: t("versions.updateCheckFailedHint") },
+            ...(checkFailure ? [{ text: checkFailure.reason }] : []),
+            ...(checkFailure?.hint ? [{ text: checkFailure.hint }] : []),
+          ]}
+          buttons={[
+            {
+              text: t("common.retry"),
+              color: "primary",
+              onClick: async () => {
+                setCheckFailed(null);
+                await runGame(checkFailed.params);
+              },
+            },
+            {
+              text: t("versions.runWithoutUpdating"),
+              onClick: async () => {
+                setCheckFailed(null);
+                await runGame({ ...checkFailed.params, skipUpdate: true });
+              },
+            },
+          ]}
+        />
+      )}
+
       {isUpdateOpen && (
         <Confirmation
           onClose={() => {

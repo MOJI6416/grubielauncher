@@ -48,14 +48,14 @@ describe("classifyAgentError", () => {
     expect(report.recovery).toBe("retry");
   });
 
-  it("suggests a new chat when the context window overflows", () => {
+  it("offers to compact the chat when the context window overflows", () => {
     const report = classifyAgentError({
       message: "This model's maximum context length is 8192 tokens",
       code: "AI-400",
     });
 
     expect(report.kind).toBe("context");
-    expect(report.recovery).toBe("newChat");
+    expect(report.recovery).toBe("compact");
   });
 
   it("suggests another model when the provider refuses tools", () => {
@@ -141,5 +141,44 @@ describe("classifyAgentError", () => {
 
     expect(report.detail).toHaveLength(241);
     expect(report.detail?.endsWith("…")).toBe(true);
+  });
+});
+
+describe("built-in assistant errors", () => {
+  it("points to the player's own key when the day is used up", () => {
+    const report = classifyAgentError({
+      message: "The daily limit of the built-in assistant is used up",
+      code: "AI-429",
+    });
+
+    expect(report.kind).toBe("dailyLimit");
+    expect(report.recovery).toBe("providers");
+  });
+
+  it("recognises the relay refusing an oversized chat", () => {
+    const report = classifyAgentError({
+      message: "The conversation is too long for the built-in assistant",
+      code: "AI-413",
+    });
+
+    expect(report.recovery).toBe("compact");
+  });
+
+  it("knows the relay can be switched off", () => {
+    expect(
+      classifyAgentError({
+        message: "The built-in assistant is turned off",
+        code: "AI-503",
+      }).kind,
+    ).toBe("builtinOff");
+  });
+
+  it("explains that Grubie is for the supporters of the project", () => {
+    expect(
+      classifyAgentError({
+        message: "The built-in assistant is available to the supporters of the project",
+        code: "AI-403",
+      }),
+    ).toMatchObject({ kind: "supportersOnly", recovery: "providers" });
   });
 });

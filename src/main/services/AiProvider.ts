@@ -271,6 +271,7 @@ export async function streamChat(
   model: string,
   request: AgentStreamRequest,
   emit: (event: AgentStreamEvent) => void,
+  options: { chatOnly?: boolean } = {},
 ): Promise<void> {
   abortRun(runId);
 
@@ -295,7 +296,8 @@ export async function streamChat(
   try {
     armIdleTimer();
     const useResponses =
-      Boolean(request.tools?.length) || Boolean(request.reasoningEffort);
+      !options.chatOnly &&
+      (Boolean(request.tools?.length) || Boolean(request.reasoningEffort));
     let api: "chat" | "responses" = useResponses ? "responses" : "chat";
     let errorBody: string | undefined;
     let response = await fetch(

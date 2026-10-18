@@ -24,8 +24,14 @@
 
 Інтерфейс — постійна бічна панель і повноцінні екрани замість стосу діалогів. <kbd>Ctrl</kbd>+<kbd>K</kbd> відкриває палітру команд, з якої доступні будь-яка збірка, екран і налаштування, <kbd>Ctrl</kbd>+<kbd>I</kbd> відкриває асистента, а <kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> ходять історією, як у браузері.
 
-<kbd>[<img title="English" alt="English" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Flag_of_the_United_Kingdom_%281-2%29.svg/330px-Flag_of_the_United_Kingdom_%281-2%29.svg.png" width="22">](https://github.com/MOJI6416/grubielauncher/blob/main/README.md)</kbd>
-<kbd>[<img title="Russia" alt="Russia" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Flag_of_Russia.svg/1280px-Flag_of_Russia.svg.png" width="22">](https://github.com/MOJI6416/grubielauncher/blob/main/docs/README.ru.md)</kbd>
+<kbd>[<img title="English" alt="English" src="flags/en.png" height="16">](../README.md)</kbd>
+<kbd>[<img title="Русский" alt="Русский" src="flags/ru.png" height="16">](README.ru.md)</kbd>
+<kbd>[<img title="Deutsch" alt="Deutsch" src="flags/de.png" height="16">](README.de.md)</kbd>
+<kbd>[<img title="Español" alt="Español" src="flags/es.png" height="16">](README.es.md)</kbd>
+<kbd>[<img title="Français" alt="Français" src="flags/fr.png" height="16">](README.fr.md)</kbd>
+<kbd>[<img title="Polski" alt="Polski" src="flags/pl.png" height="16">](README.pl.md)</kbd>
+<kbd>[<img title="Português (Brasil)" alt="Português (Brasil)" src="flags/pt.png" height="16">](README.pt.md)</kbd>
+<kbd>[<img title="Türkçe" alt="Türkçe" src="flags/tr.png" height="16">](README.tr.md)</kbd>
 
 # Знімки екрана
 

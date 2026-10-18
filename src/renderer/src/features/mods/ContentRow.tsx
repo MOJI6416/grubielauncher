@@ -24,15 +24,16 @@ import {
 import { Provider } from "@/types/ModManager";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Hint } from "@renderer/components/Hint";
 import { formatBytes } from "@renderer/utilities/file";
 import { formatRelative } from "@renderer/utilities/date";
 import { LoaderLabel } from "@renderer/components/Loaders";
+import {
+  type SelectionGesture,
+  hasSelectionModifier,
+  preventShiftTextSelection,
+  readSelectionGesture,
+} from "@renderer/utilities/rangeSelection";
 import { ContentEntry } from "./entries";
 import { formatCompactNumber } from "./format";
 import { ProjectIcon } from "./ProjectIcon";
@@ -42,7 +43,7 @@ export const ROW_HEIGHT = 56;
 
 export interface ContentRowActions {
   onOpen: (entry: ContentEntry) => void;
-  onToggleSelected: (entry: ContentEntry) => void;
+  onSelect: (entry: ContentEntry, gesture: SelectionGesture) => void;
   onInstall: (entry: ContentEntry) => void;
   onUpdate: (entry: ContentEntry) => void;
   onDelete: (entry: ContentEntry) => void;
@@ -138,7 +139,14 @@ export const ContentRow = memo(function ContentRow({
       tabIndex={-1}
       data-active={isActive || undefined}
       data-open={isDetailOpen || undefined}
-      onClick={() => actions.onOpen(entry)}
+      onMouseDown={isSelectable ? preventShiftTextSelection : undefined}
+      onClick={(event) => {
+        if (isSelectable && hasSelectionModifier(event)) {
+          actions.onSelect(entry, readSelectionGesture(event));
+          return;
+        }
+        actions.onOpen(entry);
+      }}
       className="group flex h-14 min-w-0 cursor-pointer items-center gap-2.5 rounded-lg px-2 transition-colors hover:bg-surface-2 data-[active]:bg-surface-2 data-[open]:bg-surface-3"
     >
       {isSelectable ? (
@@ -146,7 +154,7 @@ export const ContentRow = memo(function ContentRow({
           className="flex size-5 shrink-0 items-center justify-center"
           onClick={(event) => {
             event.stopPropagation();
-            actions.onToggleSelected(entry);
+            actions.onSelect(entry, readSelectionGesture(event, true));
           }}
         >
           <Checkbox
@@ -190,18 +198,18 @@ export const ContentRow = memo(function ContentRow({
           )}
 
           {isPinned && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex size-4 shrink-0 items-center justify-center text-primary">
-                  <Pin className="size-3" />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-64">
-                {heldVersion
+            <Hint
+              content={
+                heldVersion
                   ? t("modManager.pinnedWithUpdate", { version: heldVersion })
-                  : t("modManager.pinned")}
-              </TooltipContent>
-            </Tooltip>
+                  : t("modManager.pinned")
+              }
+              className="max-w-64"
+            >
+              <span className="flex size-4 shrink-0 items-center justify-center text-primary">
+                <Pin className="size-3" />
+              </span>
+            </Hint>
           )}
 
           {hasUpdate && (
@@ -211,32 +219,28 @@ export const ContentRow = memo(function ContentRow({
           )}
 
           {isUnavailable && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex size-4 shrink-0 items-center justify-center rounded-sm text-destructive">
-                  <Ban className="size-3.5" />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-72">
-                {gameVersion && PROVIDER_NAMES[entry.provider]
+            <Hint
+              content={
+                gameVersion && PROVIDER_NAMES[entry.provider]
                   ? t("modManager.incompatibleOn", {
                       provider: PROVIDER_NAMES[entry.provider],
                       version: gameVersion,
                     })
-                  : t("modManager.incompatible")}
-              </TooltipContent>
-            </Tooltip>
+                  : t("modManager.incompatible")
+              }
+            >
+              <span className="flex size-4 shrink-0 items-center justify-center rounded-sm text-destructive">
+                <Ban className="size-3.5" />
+              </span>
+            </Hint>
           )}
 
           {isUnchecked && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex size-4 shrink-0 items-center justify-center rounded-sm text-faint">
-                  <CloudOff className="size-3.5" />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{t("modManager.notChecked")}</TooltipContent>
-            </Tooltip>
+            <Hint content={t("modManager.notChecked")}>
+              <span className="flex size-4 shrink-0 items-center justify-center rounded-sm text-faint">
+                <CloudOff className="size-3.5" />
+              </span>
+            </Hint>
           )}
 
           {foreignLoader && (
@@ -247,21 +251,19 @@ export const ContentRow = memo(function ContentRow({
           )}
 
           {duplicate && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex shrink-0 items-center gap-1 rounded-sm bg-warning/15 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-warning">
-                  <Copy className="size-2.5" />
-                  {t("modManager.duplicateBadge")}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-64">
-                {t(
-                  duplicate === "extra"
-                    ? "modManager.duplicateHint"
-                    : "modManager.duplicateReviewHint",
-                )}
-              </TooltipContent>
-            </Tooltip>
+            <Hint
+              content={t(
+                duplicate === "extra"
+                  ? "modManager.duplicateHint"
+                  : "modManager.duplicateReviewHint",
+              )}
+              className="max-w-64"
+            >
+              <span className="flex shrink-0 items-center gap-1 rounded-sm bg-warning/15 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-warning">
+                <Copy className="size-2.5" />
+                {t("modManager.duplicateBadge")}
+              </span>
+            </Hint>
           )}
 
           {!isLibrary && installed && (
@@ -335,86 +337,76 @@ export const ContentRow = memo(function ContentRow({
         onClick={(event) => event.stopPropagation()}
       >
         {entry.pendingRemoved ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon-sm"
-                variant="secondary"
-                disabled={isBusy}
-                aria-label={t("modManager.restore")}
-                onClick={() => actions.onRestore(entry)}
-              >
-                <Undo2 className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t("modManager.restore")}</TooltipContent>
-          </Tooltip>
+          <Hint content={t("modManager.restore")}>
+            <Button
+              size="icon-sm"
+              variant="secondary"
+              disabled={isBusy}
+              aria-label={t("modManager.restore")}
+              onClick={() => actions.onRestore(entry)}
+            >
+              <Undo2 className="size-4" />
+            </Button>
+          </Hint>
         ) : isLibrary ? (
           <>
             {hasUpdate && canEdit && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    className="text-warning hover:bg-warning/15 hover:text-warning"
-                    disabled={isBusy}
-                    aria-label={t("common.update")}
-                    onClick={() => actions.onUpdate(entry)}
-                  >
-                    <CircleArrowUp className="size-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t("common.update")}</TooltipContent>
-              </Tooltip>
+              <Hint content={t("common.update")}>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="text-warning hover:bg-warning/15 hover:text-warning"
+                  disabled={isBusy}
+                  aria-label={t("common.update")}
+                  onClick={() => actions.onUpdate(entry)}
+                >
+                  <CircleArrowUp className="size-4" />
+                </Button>
+              </Hint>
             )}
 
             {canToggle && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    className={
-                      isEnabled
-                        ? "text-faint hover:text-foreground"
-                        : "text-warning hover:bg-warning/15 hover:text-warning"
-                    }
-                    disabled={isBusy || fileMissing}
-                    aria-label={t(
-                      isEnabled ? "modManager.disable" : "modManager.enable",
-                    )}
-                    onClick={() => actions.onToggleEnabled(entry, !isEnabled)}
-                  >
-                    {isEnabled ? (
-                      <Power className="size-4" />
-                    ) : (
-                      <PowerOff className="size-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t(isEnabled ? "modManager.disable" : "modManager.enable")}
-                </TooltipContent>
-              </Tooltip>
+              <Hint
+                content={t(
+                  isEnabled ? "modManager.disable" : "modManager.enable",
+                )}
+              >
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className={
+                    isEnabled
+                      ? "text-faint hover:text-foreground"
+                      : "text-warning hover:bg-warning/15 hover:text-warning"
+                  }
+                  disabled={isBusy || fileMissing}
+                  aria-label={t(
+                    isEnabled ? "modManager.disable" : "modManager.enable",
+                  )}
+                  onClick={() => actions.onToggleEnabled(entry, !isEnabled)}
+                >
+                  {isEnabled ? (
+                    <Power className="size-4" />
+                  ) : (
+                    <PowerOff className="size-4" />
+                  )}
+                </Button>
+              </Hint>
             )}
 
             {canEdit && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    className="text-faint hover:bg-destructive/15 hover:text-destructive"
-                    disabled={isBusy}
-                    aria-label={t("common.delete")}
-                    onClick={() => actions.onDelete(entry)}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t("common.delete")}</TooltipContent>
-              </Tooltip>
+              <Hint content={t("common.delete")}>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="text-faint hover:bg-destructive/15 hover:text-destructive"
+                  disabled={isBusy}
+                  aria-label={t("common.delete")}
+                  onClick={() => actions.onDelete(entry)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </Hint>
             )}
           </>
         ) : canEdit && !installed ? (

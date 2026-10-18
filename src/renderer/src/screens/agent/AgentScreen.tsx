@@ -53,8 +53,11 @@ import { AgentComposer } from "@renderer/features/agent/AgentComposer";
 import { AgentHistoryRail } from "@renderer/features/agent/AgentHistoryRail";
 import { AgentContextRail } from "@renderer/features/agent/AgentContextRail";
 import { AgentProvidersModal } from "@renderer/features/agent/AgentProvidersModal";
-import { AgentSetupCard } from "@renderer/features/agent/AgentSetupCard";
 import { AgentEmptyState } from "@renderer/features/agent/AgentEmptyState";
+import {
+  isBuiltinLocked,
+  useBuiltinStatus,
+} from "@renderer/features/agent/builtinStatus";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 
 const api = window.api;
@@ -122,6 +125,13 @@ export function AgentScreen({ chatId }: { chatId?: string }) {
     (provider) => provider.id === providers.selectedId,
   );
 
+  const builtinStatus = useBuiltinStatus(
+    Boolean(active?.builtin),
+    chat.running,
+  );
+  const canUse =
+    Boolean(active?.hasKey) && !isBuiltinLocked(active?.builtin, builtinStatus);
+
   const blocked = pendingInteraction(chat.timeline) !== null;
 
   const chatTitle =
@@ -133,14 +143,22 @@ export function AgentScreen({ chatId }: { chatId?: string }) {
   }, [loadProviders]);
 
   const submit = useCallback(async () => {
-    if (!active?.hasKey || chat.running || draft.trim() === "") return;
+    if (!active || !canUse || chat.running || draft.trim() === "") return;
 
     if (!currentChatId) startNewChat();
 
     const text = draft;
     setDraft("");
     await sendAgentMessage(active.id, text, model);
-  }, [active, chat.running, currentChatId, draft, model]);
+  }, [active, canUse, chat.running, currentChatId, draft, model]);
+
+  const reply = useCallback(
+    (text: string) => {
+      if (!active || !canUse || chat.running) return;
+      void sendAgentMessage(active.id, text, model);
+    },
+    [active, canUse, chat.running, model],
+  );
 
   const newChat = useCallback(async () => {
     await leaveRunningChat(true);
@@ -161,6 +179,21 @@ export function AgentScreen({ chatId }: { chatId?: string }) {
         openConnectivityCheck();
         return;
       }
+      if (recovery === "compact") {
+        const lastCompaction = chat.timeline.findLast(
+          (item) => item.kind === "compacted",
+        );
+        if (
+          lastCompaction?.kind === "compacted" &&
+          lastCompaction.status === "failed"
+        ) {
+          void newChat();
+          return;
+        }
+        if (active)
+          void retryLastTurn(active.id, model, { forceCompact: true });
+        return;
+      }
       if (recovery === "newChat") {
         void newChat();
         return;
@@ -175,7 +208,7 @@ export function AgentScreen({ chatId }: { chatId?: string }) {
           ?.click();
       }
     },
-    [active, model, newChat],
+    [active, chat.timeline, model, newChat],
   );
 
   const toggleRail = () => {
@@ -220,26 +253,6 @@ export function AgentScreen({ chatId }: { chatId?: string }) {
         <Skeleton className="h-full w-52 rounded-xl" />
         <Skeleton className="h-full flex-1 rounded-xl" />
       </div>
-    );
-  }
-
-  if (providers.providers.length === 0) {
-    return (
-      <>
-        <AgentSetupCard
-          toolNames={toolNames}
-          onStart={() => setIsProvidersOpen(true)}
-        />
-
-        {isProvidersOpen && (
-          <AgentProvidersModal
-            onClose={() => {
-              setIsProvidersOpen(false);
-              reloadProviders();
-            }}
-          />
-        )}
-      </>
     );
   }
 
@@ -316,7 +329,7 @@ export function AgentScreen({ chatId }: { chatId?: string }) {
 
           {chat.timeline.length === 0 ? (
             <AgentEmptyState
-              disabled={!active?.hasKey}
+              disabled={!canUse}
               instanceCount={versions.length}
               toolCount={toolNames.length}
               onPickSuggestion={(text) => {
@@ -325,7 +338,12 @@ export function AgentScreen({ chatId }: { chatId?: string }) {
               }}
             />
           ) : (
-            <AgentTimeline items={chat.timeline} onRecover={recover} />
+            <AgentTimeline
+              items={chat.timeline}
+              onRecover={recover}
+              running={chat.running}
+              onReply={reply}
+            />
           )}
 
           <AgentComposer

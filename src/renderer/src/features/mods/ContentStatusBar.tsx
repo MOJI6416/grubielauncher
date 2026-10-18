@@ -18,11 +18,7 @@ import { ProjectType } from "@/types/ModManager";
 import { Loader } from "@/types/Loader";
 import { Button } from "@/components/ui/button";
 import { Collapse } from "@/components/ui/collapse";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Hint } from "@renderer/components/Hint";
 import { getLoaderInfo } from "@renderer/components/Loaders";
 import { ContentEntry, canToggleType } from "./entries";
 import { LibraryFacet } from "./filters";
@@ -204,18 +200,13 @@ export function ContentStatusBar({
         ) : bar === "foreign" ? (
           <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5">
             <FolderInput className="size-4 shrink-0 text-faint" />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                  {t("modManager.foreignFiles", {
-                    count: foreignFiles.length,
-                  })}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-72">
-                {t("modManager.foreignHint")}
-              </TooltipContent>
-            </Tooltip>
+            <Hint content={t("modManager.foreignHint")}>
+              <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                {t("modManager.foreignFiles", {
+                  count: foreignFiles.length,
+                })}
+              </span>
+            </Hint>
             <Button
               size="sm"
               variant="ghost"
@@ -302,18 +293,13 @@ export function ContentStatusBar({
         ) : bar === "duplicates" ? (
           <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-warning/40 bg-surface-2 px-2.5">
             <Copy className="size-4 shrink-0 text-warning" />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                  {t("modManager.duplicatesFound", {
-                    count: duplicates.groups,
-                  })}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-72">
-                {t("modManager.duplicatesHint")}
-              </TooltipContent>
-            </Tooltip>
+            <Hint content={t("modManager.duplicatesHint")}>
+              <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                {t("modManager.duplicatesFound", {
+                  count: duplicates.groups,
+                })}
+              </span>
+            </Hint>
             {!libraryFacets.includes("duplicate") && (
               <Button
                 size="sm"

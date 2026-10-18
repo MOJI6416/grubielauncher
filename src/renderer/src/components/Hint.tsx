@@ -1,8 +1,8 @@
 import {
   useState,
-  type PointerEvent,
   type ReactElement,
   type ReactNode,
+  type SyntheticEvent,
 } from "react";
 import {
   Tooltip,
@@ -11,6 +11,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { TITLEBAR_HEIGHT } from "@/shared/titlebar";
+
+const EDGE_PADDING = 8;
+
+const COLLISION_PADDING = {
+  top: TITLEBAR_HEIGHT + EDGE_PADDING,
+  right: EDGE_PADDING,
+  bottom: EDGE_PADDING,
+  left: EDGE_PADDING,
+};
 
 export const HINT_DELAY = {
   control: 250,
@@ -63,7 +73,7 @@ export function Hint({
     return children;
   }
 
-  const measure = (event: PointerEvent<HTMLElement>) => {
+  const measure = (event: SyntheticEvent<HTMLElement>) => {
     setReadable(!hasClippedText(event.currentTarget));
   };
 
@@ -81,6 +91,7 @@ export function Hint({
       <TooltipTrigger
         asChild
         onPointerEnter={truncatedOnly ? measure : undefined}
+        onFocus={truncatedOnly ? measure : undefined}
       >
         {trigger}
       </TooltipTrigger>
@@ -88,8 +99,8 @@ export function Hint({
         side={side}
         align={align}
         sideOffset={6}
-        collisionPadding={8}
-        className={cn("pointer-events-none max-w-72", className)}
+        collisionPadding={COLLISION_PADDING}
+        className={cn("max-w-72", className)}
       >
         {content}
       </TooltipContent>

@@ -14,10 +14,14 @@ import {
   AiProviderInput,
   AiProviderTestResult,
   AiProvidersState,
+  AgentBuiltinStatus,
+  BUILTIN_AGENT_CONTEXT_TOKENS,
+  BUILTIN_AGENT_MODEL,
   RemoteAiChatMessage,
 } from "@/types/Agent";
 import {
   deleteProvider,
+  isBuiltinProvider,
   listProviders,
   resolveProvider,
   saveProvider,
@@ -161,8 +165,24 @@ function normalizeRequest(value: any): AgentStreamRequest {
     request.model = value.model.trim();
   }
 
+  if (typeof value.accessToken === "string" && value.accessToken !== "") {
+    if (value.accessToken.length > 8192) {
+      throw new IpcArgumentError("Access token is too long");
+    }
+    request.accessToken = value.accessToken;
+  }
+
   return request;
 }
+
+const BUILTIN_MODELS: AiModelInfo[] = [
+  {
+    id: BUILTIN_AGENT_MODEL,
+    label: "Grubie",
+    supportsTools: true,
+    contextLength: BUILTIN_AGENT_CONTEXT_TOKENS,
+  },
+];
 
 export function registerAgentIpc() {
   handleSafe<AiProvidersState | null>("agent:providers:list", null, () =>
@@ -201,6 +221,10 @@ export function registerAgentIpc() {
       let baseUrl = typeof payload?.baseUrl === "string" ? payload.baseUrl : "";
       let apiKey = typeof payload?.apiKey === "string" ? payload.apiKey : "";
 
+      if (payload?.id && isBuiltinProvider(payload.id)) {
+        return { ok: true, models: BUILTIN_MODELS };
+      }
+
       if (payload?.id) {
         const resolved = await resolveProvider(payload.id);
         if (!resolved) return { ok: false, message: "unknownProvider" };
@@ -227,10 +251,18 @@ export function registerAgentIpc() {
     [],
     [check.nonEmptyString(128)],
     async (_, providerId: string) => {
+      if (isBuiltinProvider(providerId)) return BUILTIN_MODELS;
       const resolved = await resolveProvider(providerId);
       if (!resolved) return [];
       return await listModels(resolved.profile.baseUrl, resolved.apiKey);
     },
+  );
+
+  handleSafe<AgentBuiltinStatus | null>(
+    "agent:builtin:status",
+    null,
+    [check.nonEmptyString(8192)],
+    (_, accessToken: string) => new Backend(accessToken).getAgentStatus(),
   );
 
   handleSafe<boolean>(
@@ -252,12 +284,15 @@ export function registerAgentIpc() {
         return false;
       }
 
-      if (!resolved.apiKey) {
+      const builtin = isBuiltinProvider(resolved.profile.id);
+      const apiKey = builtin ? (request.accessToken ?? "") : resolved.apiKey;
+
+      if (!apiKey) {
         emit({
           runId,
           type: "error",
-          message: "missingApiKey",
-          code: "AI-NOKEY",
+          message: builtin ? "missingAccount" : "missingApiKey",
+          code: builtin ? "AI-NOACCOUNT" : "AI-NOKEY",
         });
         return false;
       }
@@ -265,10 +300,13 @@ export function registerAgentIpc() {
       await streamChat(
         runId,
         resolved.profile.baseUrl,
-        resolved.apiKey,
-        request.model || resolved.profile.model,
+        apiKey,
+        builtin
+          ? BUILTIN_AGENT_MODEL
+          : request.model || resolved.profile.model,
         request,
         emit,
+        { chatOnly: builtin },
       );
 
       return true;

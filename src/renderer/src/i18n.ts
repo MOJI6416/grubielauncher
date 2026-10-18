@@ -7,7 +7,13 @@ export const defaultNS = 'ns'
 
 const localeLoaders: Record<string, () => Promise<{ default: unknown }>> = {
   ru: () => import('../locales/ru.json'),
-  uk: () => import('../locales/uk.json')
+  uk: () => import('../locales/uk.json'),
+  de: () => import('../locales/de.json'),
+  es: () => import('../locales/es.json'),
+  fr: () => import('../locales/fr.json'),
+  pl: () => import('../locales/pl.json'),
+  pt: () => import('../locales/pt.json'),
+  tr: () => import('../locales/tr.json')
 }
 
 i18n.use(initReactI18next).init({

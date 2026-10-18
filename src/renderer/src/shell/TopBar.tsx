@@ -135,7 +135,7 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
         </span>
       </div>
 
-      <div className="app-no-drag flex items-center gap-0.5">
+      <div className="app-no-drag flex shrink-0 items-center gap-0.5">
         <Hint content={`${t("shell.back")} · Alt ←`} side="bottom">
           <Button
             size="icon-sm"
@@ -160,12 +160,12 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
         </Hint>
       </div>
 
-      <div className="ml-1.5 flex min-w-0 items-baseline gap-2 text-sm">
+      <div className="ml-1.5 flex min-w-0 flex-1 items-baseline gap-2 text-sm">
         {kind && <span className="shrink-0 text-faint">{kind}</span>}
         <span className="truncate font-medium text-foreground">{title}</span>
       </div>
 
-      <div className="app-no-drag ml-auto flex items-center pr-2 pl-3">
+      <div className="app-no-drag ml-auto flex shrink-0 items-center pr-2 pl-3">
         <CollapseInline show={Boolean(problem)}>
           {problem ? (
             <Hint content={status} variant="text" side="bottom">
@@ -221,7 +221,7 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
         <button
           type="button"
           onClick={onOpenPalette}
-          className="flex h-7 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5 text-xs text-faint transition-colors hover:border-input hover:text-muted-foreground"
+          className="flex h-7 shrink-0 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5 text-xs whitespace-nowrap text-faint transition-colors hover:border-input hover:text-muted-foreground"
         >
           <Search className="size-3.5" />
           {t("shell.searchHint")}

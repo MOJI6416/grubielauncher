@@ -10,6 +10,9 @@ export type AgentErrorKind =
   | "server"
   | "stepLimit"
   | "emptyTurn"
+  | "dailyLimit"
+  | "builtinOff"
+  | "supportersOnly"
   | "unknown";
 
 export type AgentErrorRecovery =
@@ -18,6 +21,7 @@ export type AgentErrorRecovery =
   | "retry"
   | "continue"
   | "newChat"
+  | "compact"
   | "connectivity"
   | "none";
 
@@ -42,6 +46,7 @@ const INTERNAL: Record<
   emptyTurnMidRun: { kind: "emptyTurn", recovery: "retry" },
   unknownProvider: { kind: "auth", recovery: "providers" },
   missingApiKey: { kind: "auth", recovery: "providers" },
+  missingAccount: { kind: "auth", recovery: "none" },
 };
 
 function statusOf(code: string | null): number | null {
@@ -67,8 +72,20 @@ function detailOf(message: string): string | null {
 function matchText(
   text: string,
 ): { kind: AgentErrorKind; recovery: AgentErrorRecovery } | null {
+  if (/daily limit of the built-in assistant/.test(text)) {
+    return { kind: "dailyLimit", recovery: "providers" };
+  }
+  if (/available to the supporters of the project/.test(text)) {
+    return { kind: "supportersOnly", recovery: "providers" };
+  }
+  if (/built-in assistant is turned off/.test(text)) {
+    return { kind: "builtinOff", recovery: "providers" };
+  }
+  if (/too long for the built-in assistant/.test(text)) {
+    return { kind: "context", recovery: "compact" };
+  }
   if (/context (length|window)|maximum context|too many tokens|context_length/.test(text)) {
-    return { kind: "context", recovery: "newChat" };
+    return { kind: "context", recovery: "compact" };
   }
   if (/(tool|function)[^.]{0,40}(not supported|unsupported|does not support)/.test(text)) {
     return { kind: "noTools", recovery: "model" };

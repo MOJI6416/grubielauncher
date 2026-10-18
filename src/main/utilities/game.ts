@@ -12,6 +12,7 @@ import { rpc } from "../rpc";
 import { parseMinecraftServerConnectionLine } from "./gameConnection";
 import { journal, type JournalSpan } from "../journal/journal";
 import { LaunchWatch, launchStallHint } from "../journal/launchWatch";
+import { GameOutputLog, gameOutputDir } from "../journal/gameOutputLog";
 import { childProcessEnv } from "./childEnv";
 import {
   classifyConsoleStream,
@@ -520,6 +521,13 @@ export function runGame(
     },
   });
 
+  const outputLog = GameOutputLog.open({
+    dir: gameOutputDir(),
+    versionPath,
+    instance,
+    header: { versionName, instance, launch: span.id },
+  });
+
   span.step("spawning", {
     cwd: workingDirectory || versionPath,
     highPriority,
@@ -674,6 +682,7 @@ export function runGame(
 
   const stdoutReader = createLineReader((message) => {
     watch.line("out", message);
+    outputLog?.line("out", message);
     gameRuntime.emitStdout({
       key: instanceKey,
       versionName,
@@ -704,6 +713,7 @@ export function runGame(
 
   const stderrReader = createLineReader((message) => {
     watch.line("err", message);
+    outputLog?.line("err", message);
     gameRuntime.emitStderr({
       key: instanceKey,
       versionName,
@@ -736,6 +746,7 @@ export function runGame(
     if (intervalId) clearInterval(intervalId);
     finalizeConsole();
     watch.failedToStart(err);
+    void outputLog?.close({ error: (err as Error)?.message || String(err) });
 
     void endSession(versionName, instance, 1).finally(() =>
       safeSend("playtimeRecorded"),
@@ -786,6 +797,11 @@ export function runGame(
     if (signal == "SIGTERM" || killedByUser) code = 0;
 
     watch.exited(code, signal ?? null, killedByUser);
+    void outputLog?.close({
+      code,
+      signal: signal ?? undefined,
+      killedByUser: killedByUser || undefined,
+    });
 
     void endSession(versionName, instance, code).finally(() =>
       safeSend("playtimeRecorded"),

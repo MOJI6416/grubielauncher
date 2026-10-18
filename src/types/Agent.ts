@@ -1,3 +1,7 @@
+export const BUILTIN_AGENT_PROVIDER_ID = "grubie";
+export const BUILTIN_AGENT_MODEL = "grubie";
+export const BUILTIN_AGENT_CONTEXT_TOKENS = 48000;
+
 export type AiProviderProfile = {
   id: string;
   label: string;
@@ -5,6 +9,17 @@ export type AiProviderProfile = {
   model: string;
   hasKey: boolean;
   keyHint: string;
+  builtin?: boolean;
+};
+
+export type AgentBuiltinStatus = {
+  enabled: boolean;
+  allowed: boolean;
+  donor: boolean;
+  used: number;
+  limit: number;
+  remaining: number;
+  resetAt: string | null;
 };
 
 export type AiProviderInput = {
@@ -62,6 +77,7 @@ export type AgentStreamRequest = {
   temperature?: number;
   maxTokens?: number;
   model?: string;
+  accessToken?: string;
 };
 
 export type AgentUsage = {

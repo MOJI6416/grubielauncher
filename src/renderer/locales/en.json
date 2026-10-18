@@ -1729,8 +1729,8 @@
       },
       "language": {
         "title": "Interface language",
-        "description": "English, Russian or Ukrainian",
-        "keywords": "language locale english russian ukrainian"
+        "description": "Interface language. New instances start the game in the same language.",
+        "keywords": "language locale english russian ukrainian русский українська deutsch español français polski português türkçe"
       },
       "sounds": {
         "title": "Notification sounds",
@@ -2021,6 +2021,8 @@
     "updateAheadHint": "Likely published from another device: publishing from here replaces the server copy with this instance.",
     "hostChanged": "Host changed the instance",
     "runWithoutUpdating": "Run without updating",
+    "updateCheckFailed": "Couldn't check for an instance update",
+    "updateCheckFailedHint": "The launcher got no answer from the server, so it's unknown whether the host updated this instance. Try again or run the version you already have.",
     "publicUpdate": "You shared this instance, do you want to update it for everyone?",
     "publicUpdateTitle": "Updating the publication",
     "notSavedTitle": "Unsaved changes",
@@ -2288,6 +2290,8 @@
     "startupError": "Startup error",
     "authlibUnavailable": "Couldn't load the authentication component. Connect to the internet and try again.",
     "authlibDownloadFailed": "Failed to download the authentication component. Check your connection and try again.",
+    "jarUrlNameTitle": "This instance can't start because its name ends with \"!\"",
+    "jarUrlNameHint": "Fabric and loaders built on it can't read files from a folder whose name ends with \"!\". Remove the \"!\" from the instance name.",
     "sponsored": "Ad",
     "hideAd": "Hide ad",
     "adHidden": "Ad hidden",
@@ -4064,7 +4068,7 @@
       },
       "context": {
         "title": "The chat no longer fits the model",
-        "hint": "The conversation grew past the model context window. Start a new chat — the launcher state is added back automatically."
+        "hint": "The conversation grew past the model context window. Summarize the earlier part and the assistant continues from the summary."
       },
       "timeout": {
         "title": "The provider stopped answering",
@@ -4081,6 +4085,22 @@
       "unknown": {
         "title": "The request failed",
         "hint": "The provider returned an error the launcher does not recognise. The raw text is below."
+      },
+      "dailyLimit": {
+        "title": "Today's Grubie questions are used up",
+        "hint": "They come back within a day. To keep going now, connect your own AI key — it has no limit."
+      },
+      "builtinOff": {
+        "title": "Grubie is switched off for now",
+        "hint": "The built-in assistant is temporarily unavailable. Connect your own provider or try later."
+      },
+      "missingAccount": {
+        "title": "Grubie needs a launcher account",
+        "hint": "Sign in with an online account to use the built-in assistant."
+      },
+      "supportersOnly": {
+        "title": "Grubie is for the project's supporters",
+        "hint": "The built-in assistant is available to those who supported Grubie Launcher. Connect your own AI key — it has no limits."
       }
     },
     "permission": {
@@ -4157,11 +4177,16 @@
       "importSkinByNickname": "Fetching the skin of {{name}}",
       "createInstance": "Creating the instance “{{name}}” on {{version}}",
       "setInstanceJava": "Setting Java {{major}} for “{{name}}”",
-      "setInstanceJavaAuto": "Setting Java back to automatic for “{{name}}”"
+      "setInstanceJavaAuto": "Setting Java back to automatic for “{{name}}”",
+      "readGameOptions": "Reading the video settings of “{{name}}”",
+      "setGameOptions": "Changing the video settings of “{{name}}”",
+      "listModConfigs": "Looking through the configs of “{{name}}”",
+      "readModConfig": "Reading {{name}}",
+      "setModConfigValues": "Changing {{name}}"
     },
     "providers": {
       "title": "AI providers",
-      "description": "The agent runs on your own API key. The key is stored on this computer, encrypted by the operating system, and is sent only to the provider you specify.",
+      "description": "Grubie works without a key for those who supported the project, with a daily limit of questions. Your own provider is available to everyone and has no limit: its key is stored on this computer, encrypted by the operating system, and is sent only to the provider you specify.",
       "settingsRowOpen": "Configure",
       "empty": "No providers yet. Add one to start using the agent.",
       "add": "Add provider",
@@ -4211,7 +4236,8 @@
       "loadFailed": "Could not read the provider list",
       "loadFailedHint": "The launcher failed to read ai-providers.json. Your providers are still there — retry, and check that the file is readable.",
       "deleteFailed": "The provider was not deleted",
-      "selectFailed": "The provider was not switched"
+      "selectFailed": "The provider was not switched",
+      "builtinHint": "Built into the launcher · no key · for supporters"
     },
     "searchChats": "Search chats",
     "syncFailed": "Chats are not synced — retry",
@@ -4264,17 +4290,14 @@
         "account": "Needs a signed-in account"
       }
     },
-    "setup": {
-      "title": "Connect a provider to start",
-      "description": "The assistant runs on your own key from any provider with a compatible API. Pick a model that supports tool calling — otherwise it will only be able to talk.",
-      "action": "Connect a provider",
-      "privacy": "The key is kept on this computer, encrypted by the system, and is sent only to the provider you name."
-    },
     "suggestions": {
       "crash": "Why did my instance crash?",
       "optimize": "Find mods that improve FPS",
       "cleanup": "What is eating my disk space?",
-      "compare": "Compare my instances"
+      "compare": "Compare my instances",
+      "crashNamed": "Why did “{{name}}” crash?",
+      "updateNamed": "What changes if I update “{{name}}”?",
+      "optimizeNamed": "Find FPS mods for “{{name}}”"
     },
     "recovery": {
       "providers": "Provider settings",
@@ -4283,7 +4306,8 @@
       "continue": "Continue",
       "newChat": "Start a new chat",
       "connectivity": "Check the connection",
-      "none": "Close"
+      "none": "Close",
+      "compact": "Summarize and continue"
     },
     "args": {
       "instance": "Instance",
@@ -4318,7 +4342,10 @@
       "versionId": "Version",
       "path": "Path",
       "force": "Force",
-      "worldFolder": "World folder"
+      "worldFolder": "World folder",
+      "file": "File",
+      "values": "Values",
+      "changes": "Changes"
     },
     "toolNames": {
       "list_instances": "List instances",
@@ -4357,7 +4384,12 @@
       "set_memory": "Change game memory",
       "ask_user": "Ask you a question",
       "update_plan": "Keep a plan",
-      "set_instance_java": "Change an instance's Java"
+      "set_instance_java": "Change an instance's Java",
+      "read_game_options": "Read video settings",
+      "set_game_options": "Change video settings",
+      "list_mod_configs": "List mod configs",
+      "read_mod_config": "Read a mod config",
+      "set_mod_config_values": "Change a mod config"
     },
     "stopped": "Stopped",
     "emptyContextInstances_one": "{{count}} instance",
@@ -4376,7 +4408,61 @@
       "instanceLossWorlds_one": "{{count}} world goes with it. The folder goes to the system trash; the launcher forgets the instance either way.",
       "instanceLossWorlds_other": "{{count}} worlds go with it. The folder goes to the system trash; the launcher forgets the instance either way.",
       "restoreLoss": "Everything played since {{date}} is replaced. The launcher keeps a safety copy of the current world first.",
-      "backupLoss": "This restore point is gone for good. The world itself stays untouched."
+      "backupLoss": "This restore point is gone for good. The world itself stays untouched.",
+      "install": "Install",
+      "dependencies": "Dependencies",
+      "alreadyInstalled": "Already installed",
+      "noVersion": "No compatible version",
+      "remove": "Remove",
+      "alsoRemoved": "Removed along",
+      "blockedBy": "Needed by",
+      "notInstalled": "Not installed",
+      "jvm": "JVM arguments",
+      "game": "Game arguments",
+      "rejected": "Refused by the launcher",
+      "scope": "Applies to",
+      "allInstances": "Every instance without its own value",
+      "memory": "Memory",
+      "optimizedJvm": "JVM optimization",
+      "keepOwn": "Keep their own value",
+      "on": "On",
+      "off": "Off",
+      "java": "Java",
+      "javaAuto": "Automatic (Java {{major}})",
+      "javaMajor": "Java {{major}}",
+      "javaManual": "Picked by hand (Java {{major}})",
+      "enable": "Turn on",
+      "disable": "Turn off",
+      "updates": "Updates",
+      "nothingToCheck": "Nothing to check",
+      "allCurrent": "Everything is up to date",
+      "keepBackups": "Backups kept",
+      "name": "Name",
+      "skin": "Skin",
+      "loader": "Loader",
+      "newestBuild": "latest version",
+      "file": "File",
+      "skipped": "Will not change"
+    },
+    "undo": {
+      "action": "Undo",
+      "running": "Undoing…",
+      "done": "Undone",
+      "retry": "Undo again"
+    },
+    "compaction": {
+      "running": "Summarizing the earlier part of the chat…",
+      "done": "The earlier part of the chat is summarized for the model",
+      "failed": "Could not summarize the earlier part of the chat"
+    },
+    "builtin": {
+      "remaining_one": "{{count}} question left",
+      "remaining_other": "{{count}} questions left",
+      "quotaHint": "Questions to Grubie per day: {{limit}}.",
+      "quotaHintReset": "Questions to Grubie per day: {{limit}}. The count resets at {{time}}.",
+      "locked": "Grubie is for those who supported the project. Connect your own AI key or support Grubie Launcher.",
+      "ownKey": "Own key",
+      "support": "Support"
     }
   },
   "shell": {
@@ -5291,7 +5377,7 @@
       "settings": "Launcher settings",
       "accounts": "Accounts: type and nickname, without passwords or tokens",
       "instances": "Instances and the mod list of the selected one",
-      "gameLogs": "Game logs and crash reports of the selected instance",
+      "gameLogs": "Game output, logs and crash reports of the selected instance",
       "connectivity": "Connection check results"
     },
     "privacy": "Passwords and tokens are removed. The report is kept for 30 days and only the developers can open it.",
@@ -5572,5 +5658,13 @@
       "peakTitle": "Happy Halloween!",
       "description": "Bats, pumpkins and cobwebs until {{end}}. Click the pumpkin to scare up more bats."
     }
+  },
+  "crashFix": {
+    "title": "Fix:",
+    "disableMod": "Turn off “{{name}}”",
+    "disabledMod": "“{{name}}” is off",
+    "memory": "Memory {{from}} → {{to}}",
+    "memoryDone": "Memory set to {{to}}",
+    "failed": "The fix did not apply"
   }
 }

@@ -26,7 +26,7 @@ vi.mock("electron", () => ({
   },
 }));
 
-import { listProviders, saveProvider } from "./aiKeys";
+import { listProviders, saveProvider, selectProvider } from "./aiKeys";
 
 const launcherDir = path.join(TMP, ".grubielauncher");
 const secretsPath = path.join(launcherDir, "ai-providers.secrets.json");
@@ -49,10 +49,11 @@ describe("aiKeys hasKey", () => {
     });
 
     const state = await listProviders();
+    const own = state.providers.filter((provider) => !provider.builtin);
 
-    expect(state.providers).toHaveLength(1);
-    expect(state.providers[0].hasKey).toBe(true);
-    expect(state.providers[0].keyHint).toBe("…cdef");
+    expect(own).toHaveLength(1);
+    expect(own[0].hasKey).toBe(true);
+    expect(own[0].keyHint).toBe("…cdef");
   });
 
   it("does not claim a key the launcher can no longer decrypt", async () => {
@@ -76,6 +77,32 @@ describe("aiKeys hasKey", () => {
 
     const state = await listProviders();
 
-    expect(state.providers[0].hasKey).toBe(false);
+    expect(state.providers.find((provider) => !provider.builtin)?.hasKey).toBe(
+      false,
+    );
+  });
+});
+
+describe("aiKeys built-in provider", () => {
+  it("is listed first and selected when the player has no provider of their own", async () => {
+    const state = await listProviders();
+
+    expect(state.providers[0]).toMatchObject({ id: "grubie", builtin: true });
+    expect(state.selectedId).toBe("grubie");
+  });
+
+  it("switches to a provider the player adds, and back on request", async () => {
+    const saved = await saveProvider({
+      label: "Provider",
+      baseUrl: "https://example.test/api/v1",
+      model: "some/model",
+      apiKey: "sk-abcdef",
+    });
+    const own = saved.providers.find((provider) => !provider.builtin)!;
+    expect(saved.selectedId).toBe(own.id);
+
+    const back = await selectProvider("grubie");
+    expect(back.selectedId).toBe("grubie");
+    expect((await listProviders()).selectedId).toBe("grubie");
   });
 });

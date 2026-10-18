@@ -6,6 +6,7 @@ import {
   IAiLogAnalysis,
   IAiLogRequest,
 } from "@/types/AiAnalysis";
+import { LANGUAGES } from "@/types/Settings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +40,7 @@ import { askAgent } from "@renderer/features/agent/openAgent";
 import { agentBlockReason } from "@renderer/navigation/access";
 import { Hint } from "@renderer/components/Hint";
 import { CrashCard } from "@renderer/features/logs/CrashCard";
+import { CrashFixes } from "@renderer/features/logs/CrashFixes";
 import { describeExitCode } from "@renderer/features/logs/runs";
 import { formatBytes } from "@renderer/utilities/file";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
@@ -98,7 +100,9 @@ export function AiCrashAnalysis({
 
       setStage("loading");
 
-      const locale = ["en", "ru", "uk"].includes(i18n.resolvedLanguage || "")
+      const locale = LANGUAGES.some(
+        (language) => language.code === i18n.resolvedLanguage,
+      )
         ? (i18n.resolvedLanguage as string)
         : "en";
 
@@ -492,6 +496,13 @@ export function AiCrashAnalysis({
                 title={analysis.cause}
                 exit={exit}
                 culprits={analysis.suspects}
+                fixes={
+                  <CrashFixes
+                    versionName={versionName}
+                    ruleId={null}
+                    culprits={analysis.suspects}
+                  />
+                }
                 actions={
                   <>
                     <Hint content={t("aiCrash.copyAnalysis")}>

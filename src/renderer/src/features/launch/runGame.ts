@@ -17,6 +17,7 @@ import {
   friendSocketAtom,
   installActiveAtom,
   isRunningAtom,
+  networkAtom,
   ownPresenceAtom,
   pathsAtom,
   selectedVersionAtom,
@@ -27,24 +28,33 @@ import {
   isAccountSessionRefreshError,
 } from "@renderer/utilities/accountSession";
 import { showErrorToast } from "@renderer/utilities/errorToast";
-import { showFailureToast } from "@renderer/utilities/failures";
+import {
+  consumeRecentFailure,
+  showFailureToast,
+} from "@renderer/utilities/failures";
 import { uiJournal } from "@renderer/utilities/journal";
-import { isOnlineSocketConnected } from "@renderer/utilities/onlineSocket";
 import { checkDiffenceUpdateData, isOwner } from "@renderer/utilities/version";
 import {
+  launchCheckFailedAtom,
   launchServersAtom,
   launchUpdateDiffAtom,
   launchUpdateOpenAtom,
   launchUpdateRemoteServersAtom,
   pendingLaunchAtom,
 } from "./atoms";
-import { nextInstanceNumber, resolveLaunchBlock } from "./launchPlan";
+import {
+  nextInstanceNumber,
+  readModpackCheck,
+  resolveLaunchBlock,
+  shouldCheckModpack,
+} from "./launchPlan";
 import {
   beginLaunchProgress,
   planLaunchStages,
   setLaunchStage,
 } from "./launchProgress";
 import { checkOrnitheGeneration } from "./ornitheGeneration";
+import { checkJarUrlName } from "./jarUrlName";
 import { prepareJavaForLaunch } from "@renderer/features/java/javaLaunch";
 import type { RunGameParams } from "./types";
 
@@ -82,6 +92,7 @@ export async function runGame(params: RunGameParams): Promise<void> {
   }
 
   if (!launchVersion || !a0 || !s0) return;
+  if (!checkJarUrlName(launchVersion)) return;
 
   const _instance =
     instance ??
@@ -109,11 +120,12 @@ export async function runGame(params: RunGameParams): Promise<void> {
   launchInFlight = true;
   store.set(isRunningAtom, true);
 
-  const checksModpack =
-    !skipUpdate &&
-    Boolean(launchVersion.version.shareCode) &&
-    Boolean(launchVersion.version.downloadedVersion) &&
-    isOnlineSocketConnected();
+  const checksModpack = shouldCheckModpack({
+    skipUpdate,
+    shareCode: launchVersion.version.shareCode,
+    downloadedVersion: launchVersion.version.downloadedVersion,
+    isNetwork: store.get(networkAtom),
+  });
   beginLaunchProgress({
     versionName: launchVersion.version.name,
     instance: _instance,
@@ -185,7 +197,26 @@ export async function runGame(params: RunGameParams): Promise<void> {
         ms: since(),
       });
 
-      if (modpackData.status == "not_found") {
+      const outcome = readModpackCheck(modpackData);
+      if (outcome === "failed") {
+        const failure = consumeRecentFailure({
+          channels: ["backend:getModpack"],
+        });
+        uiJournal.warn("launch", "modpack update check failed", {
+          status: modpackData?.status,
+          cause: failure?.cause,
+          code: failure?.code,
+          ms: since(),
+        });
+        store.set(launchCheckFailedAtom, {
+          params: { ...params, version: launchVersion, instance: _instance },
+          failure,
+        });
+        store.set(isRunningAtom, false);
+        return;
+      }
+
+      if (outcome === "unpublished") {
         launchVersion.version.shareCode = undefined;
         launchVersion.version.downloadedVersion = false;
         await launchVersion.save();

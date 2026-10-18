@@ -1,3 +1,4 @@
+import { splitReplies } from "./replies";
 import { TimelineItem } from "./types";
 
 export function chatToMarkdown(title: string, items: TimelineItem[]): string {
@@ -9,9 +10,11 @@ export function chatToMarkdown(title: string, items: TimelineItem[]): string {
         lines.push(`**>** ${item.text}`, "");
         break;
 
-      case "assistant":
-        if (item.text.trim() !== "") lines.push(item.text, "");
+      case "assistant": {
+        const text = splitReplies(item.text).text;
+        if (text.trim() !== "") lines.push(text, "");
         break;
+      }
 
       case "tool":
         lines.push(
@@ -40,6 +43,12 @@ export function chatToMarkdown(title: string, items: TimelineItem[]): string {
 
       case "stopped":
         lines.push("- stopped by the user", "");
+        break;
+
+      case "compacted":
+        if (item.status === "done") {
+          lines.push("- earlier messages were summarized for the model", "");
+        }
         break;
 
       case "error":

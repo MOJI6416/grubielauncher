@@ -125,6 +125,17 @@ const CATALOG: ToolDescriptor[] = [
     need: "account",
   },
 
+  { name: "read_game_options", group: "instances", risk: "read", need: "none" },
+  { name: "set_game_options", group: "instances", risk: "write", need: "none" },
+  { name: "list_mod_configs", group: "content", risk: "read", need: "none" },
+  { name: "read_mod_config", group: "content", risk: "read", need: "none" },
+  {
+    name: "set_mod_config_values",
+    group: "content",
+    risk: "write",
+    need: "none",
+  },
+
   { name: "read_game_log", group: "diagnostics", risk: "read", need: "none" },
   { name: "get_last_crash", group: "diagnostics", risk: "read", need: "none" },
   { name: "list_servers", group: "diagnostics", risk: "read", need: "none" },

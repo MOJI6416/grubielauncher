@@ -24,8 +24,9 @@ import {
   readAccountsConfig,
 } from "../utilities/accounts";
 import { runConnectivityTests } from "../utilities/connectivityTest";
+import { findGameOutputFiles, gameOutputDir } from "./gameOutputLog";
 import { gameRuntime } from "../utilities/runtime";
-import type { IVersionConf } from "@/types/IVersion";
+import type { IJarMod, IVersionConf } from "@/types/IVersion";
 import type { ILocalProject } from "@/types/ModManager";
 import type { ConnectivityCheckResult } from "@/types/Connectivity";
 import type {
@@ -56,7 +57,17 @@ const ATTACHMENT_LIMITS = {
   debugLog: 1024 * 1024,
   crashReport: 400 * 1024,
   nativeDump: 300 * 1024,
+  gameOutput: 6 * 1024 * 1024,
+  previousGameOutput: 1024 * 1024,
+  loaderLog: 1024 * 1024,
 };
+
+const LOADER_LOGS = [
+  "ModLoader.txt",
+  "ForgeModLoader-client-0.log",
+  path.join("logs", "fml-client-latest.log"),
+];
+const MAX_GAME_OUTPUTS = 2;
 
 interface PreparedReport {
   gz: Buffer;
@@ -144,6 +155,17 @@ function summarizeMod(mod: ILocalProject): Record<string, unknown> {
   };
 }
 
+function summarizeJarMod(mod: IJarMod): Record<string, unknown> {
+  return {
+    name: mod.name,
+    file: mod.file,
+    enabled: mod.enabled,
+    size: mod.size,
+    sha1: mod.sha1,
+    remote: mod.url ? true : undefined,
+  };
+}
+
 function summarizeInstance(conf: IVersionConf): SupportBundleInstance {
   return {
     name: conf.name,
@@ -212,9 +234,10 @@ async function listFolder(
   return entries;
 }
 
-async function collectAttachments(
+export async function collectAttachments(
   versionPath: string,
   label: string,
+  outputDir: string | null = gameOutputDir(),
 ): Promise<SupportBundleAttachment[]> {
   const attachments: SupportBundleAttachment[] = [];
 
@@ -244,6 +267,20 @@ async function collectAttachments(
     await add(dump.path, dump.name, ATTACHMENT_LIMITS.nativeDump);
   }
 
+  for (const name of LOADER_LOGS) {
+    await add(path.join(versionPath, name), name.replace(/\\/g, "/"), ATTACHMENT_LIMITS.loaderLog);
+  }
+
+  const outputs = outputDir ? await findGameOutputFiles(outputDir, versionPath) : [];
+  for (const [index, output] of outputs.slice(0, MAX_GAME_OUTPUTS).entries()) {
+    const suffix = `${output.instance > 0 ? `-${output.instance}` : ""}${output.previous ? ".prev" : ""}`;
+    await add(
+      output.path,
+      `game-output${suffix}.log`,
+      index === 0 ? ATTACHMENT_LIMITS.gameOutput : ATTACHMENT_LIMITS.previousGameOutput,
+    );
+  }
+
   return attachments;
 }
 
@@ -270,6 +307,9 @@ async function collectTarget(
     quickServer: conf.quickServer,
     runArguments: conf.runArguments,
     overrides: conf.overrides,
+    jarMods: conf.jarMods?.map(summarizeJarMod),
+    mainJar: conf.mainJar ? summarizeJarMod(conf.mainJar) : undefined,
+    launchOverride: conf.launchOverride,
     otherFiles: conf.loader?.other
       ? { paths: conf.loader.other.paths?.length, size: conf.loader.other.size }
       : undefined,
@@ -285,6 +325,7 @@ async function collectTarget(
     modsTruncated: mods.length > MAX_MODS_LISTED || undefined,
     folders: {
       mods: await listFolder(path.join(versionPath, "mods"), MAX_MODS_LISTED),
+      jarmods: await listFolder(path.join(versionPath, "jarmods"), 200),
       root: await listFolder(versionPath, 200),
     },
     running: [...gameRuntime.processes.values()]

@@ -28,6 +28,7 @@ import {
   updateMojangReachableFromConnectivity
 } from '../utilities/mirrorState'
 import { MirrorState } from '@/shared/mirrorMode'
+import { getSystemLocale } from '../utilities/systemLocale'
 import { DownloadSource } from '@/types/Settings'
 import { rpc } from '../rpc'
 import { RpcRendererContext } from '@/types/Rpc'
@@ -250,7 +251,7 @@ export function registerOtherIpc() {
   })
 
   handleSafe<string>('other:getLocale', 'en', () => {
-    return app.getLocale()
+    return getSystemLocale()
   })
 
   handleSafe<

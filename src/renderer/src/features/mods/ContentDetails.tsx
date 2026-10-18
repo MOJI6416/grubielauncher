@@ -34,11 +34,6 @@ import { Button } from "@/components/ui/button";
 import { Collapse } from "@/components/ui/collapse";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Hint } from "@renderer/components/Hint";
 import { ContentEntry } from "./entries";
 import { formatCompactNumber, formatDate } from "./format";
@@ -237,29 +232,28 @@ export function ContentDetails({
       style={{ width }}
       className="relative flex shrink-0 flex-col overflow-hidden border-l border-border bg-surface-1"
     >
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div
-            role="separator"
-            aria-orientation="vertical"
-            aria-label={t("modManager.detailResize")}
-            tabIndex={0}
-            onPointerDown={startResize}
-            onDoubleClick={onResetWidth}
-            onKeyDown={(event) => {
-              if (event.key === "ArrowLeft") onResizeEnd(width + 24);
-              else if (event.key === "ArrowRight") onResizeEnd(width - 24);
-              else if (event.key === "Home") onResetWidth();
-              else return;
-              event.preventDefault();
-            }}
-            className="absolute inset-y-0 left-0 z-20 w-1.5 cursor-col-resize transition-colors hover:bg-primary/40 focus-visible:bg-primary/40 focus-visible:outline-none"
-          />
-        </TooltipTrigger>
-        <TooltipContent side="left" className="max-w-56">
-          {t("modManager.detailResizeHint")}
-        </TooltipContent>
-      </Tooltip>
+      <Hint
+        content={t("modManager.detailResizeHint")}
+        side="left"
+        className="max-w-56"
+      >
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={t("modManager.detailResize")}
+          tabIndex={0}
+          onPointerDown={startResize}
+          onDoubleClick={onResetWidth}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowLeft") onResizeEnd(width + 24);
+            else if (event.key === "ArrowRight") onResizeEnd(width - 24);
+            else if (event.key === "Home") onResetWidth();
+            else return;
+            event.preventDefault();
+          }}
+          className="absolute inset-y-0 left-0 z-20 w-1.5 cursor-col-resize transition-colors hover:bg-primary/40 focus-visible:bg-primary/40 focus-visible:outline-none"
+        />
+      </Hint>
       <header className="flex h-11 shrink-0 items-center gap-1 border-b border-border px-2">
         {canGoBack && (
           <Button
@@ -277,39 +271,33 @@ export function ContentDetails({
           </span>
         </Hint>
         {detail?.url ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                aria-label={t("modManager.goToWebsite")}
-                onClick={() => api.shell.openExternal(detail.url)}
-              >
-                <ExternalLink className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t("modManager.goToWebsite")}</TooltipContent>
-          </Tooltip>
+          <Hint content={t("modManager.goToWebsite")}>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label={t("modManager.goToWebsite")}
+              onClick={() => api.shell.openExternal(detail.url)}
+            >
+              <ExternalLink className="size-4" />
+            </Button>
+          </Hint>
         ) : null}
         {canTranslate && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                disabled={isTranslating}
-                aria-label={t("modManager.translate")}
-                onClick={onTranslate}
-              >
-                {isTranslating ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Languages className="size-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t("modManager.translate")}</TooltipContent>
-          </Tooltip>
+          <Hint content={t("modManager.translate")}>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              disabled={isTranslating}
+              aria-label={t("modManager.translate")}
+              onClick={onTranslate}
+            >
+              {isTranslating ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Languages className="size-4" />
+              )}
+            </Button>
+          </Hint>
         )}
         <Button
           size="icon-sm"
@@ -431,56 +419,40 @@ export function ContentDetails({
                 </Button>
 
                 {isInstalled && !isModpacks && canPin && onTogglePin && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        aria-pressed={isPinned}
-                        className={
-                          isPinned
-                            ? "size-9 border-primary/50 text-primary hover:text-primary"
-                            : "size-9"
-                        }
-                        disabled={isBusy}
-                        aria-label={t(
-                          isPinned ? "modManager.unpin" : "modManager.pin",
-                        )}
-                        onClick={onTogglePin}
-                      >
-                        {isPinned ? (
-                          <PinOff className="size-4" />
-                        ) : (
-                          <Pin className="size-4" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-60">
-                      {t(
+                  <Hint
+                    content={t(
+                      isPinned ? "modManager.unpinHint" : "modManager.pinHint",
+                    )}
+                    className="max-w-60"
+                  >
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      aria-pressed={isPinned}
+                      className={
                         isPinned
-                          ? "modManager.unpinHint"
-                          : "modManager.pinHint",
+                          ? "size-9 border-primary/50 text-primary hover:text-primary"
+                          : "size-9"
+                      }
+                      disabled={isBusy}
+                      aria-label={t(
+                        isPinned ? "modManager.unpin" : "modManager.pin",
                       )}
-                    </TooltipContent>
-                  </Tooltip>
+                      onClick={onTogglePin}
+                    >
+                      {isPinned ? (
+                        <PinOff className="size-4" />
+                      ) : (
+                        <Pin className="size-4" />
+                      )}
+                    </Button>
+                  </Hint>
                 )}
 
                 {isInstalled && !isModpacks && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="size-9 border-destructive/40 text-destructive hover:bg-destructive/15 hover:text-destructive"
-                        disabled={isBusy}
-                        aria-label={t("common.delete")}
-                        onClick={onDelete}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-56">
-                      {deletionBlockers.length > 0
+                  <Hint
+                    content={
+                      deletionBlockers.length > 0
                         ? `${t("modManager.requiredBy")}: ${deletionBlockers
                             .map((item) => item.title)
                             .join(", ")}`
@@ -488,9 +460,21 @@ export function ContentDetails({
                           ? `${t("modManager.alsoRemoves")}: ${alsoRemoves
                               .map((item) => item.title)
                               .join(", ")}`
-                          : t("common.delete")}
-                    </TooltipContent>
-                  </Tooltip>
+                          : t("common.delete")
+                    }
+                    className="max-w-56"
+                  >
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="size-9 border-destructive/40 text-destructive hover:bg-destructive/15 hover:text-destructive"
+                      disabled={isBusy}
+                      aria-label={t("common.delete")}
+                      onClick={onDelete}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </Hint>
                 )}
               </div>
             )}

@@ -1,5 +1,6 @@
 import { getDefaultStore } from "jotai";
 import { TSettings } from "@/types/Settings";
+import { ILocalProject } from "@/types/ModManager";
 import {
   installActiveAtom,
   isRunningAtom,
@@ -23,6 +24,54 @@ export function previewSize(bytes: number): string {
 
 export function previewDate(time: number): string {
   return formatDate(new Date(time));
+}
+
+const PREVIEW_LIST_MAX = 6;
+
+export function previewList(items: string[]): string {
+  const shown = items.slice(0, PREVIEW_LIST_MAX).join(", ");
+  const more = items.length - PREVIEW_LIST_MAX;
+
+  return more > 0
+    ? `${shown} ${i18n.t("agent.moreItems", { count: more })}`
+    : shown;
+}
+
+export function previewMemory(megabytes: number): string {
+  return previewSize(megabytes * 1024 * 1024);
+}
+
+export function previewToggle(enabled: boolean): string {
+  return i18n.t(enabled ? "agent.preview.on" : "agent.preview.off");
+}
+
+export function previewText(value: string): string {
+  return value.trim() === "" ? "—" : value;
+}
+
+const PLAN_TTL_MS = 5 * 60 * 1000;
+
+export function createPlanCache<T>() {
+  let entry: { key: string; plan: T; at: number } | null = null;
+
+  return {
+    remember(key: string, plan: T): void {
+      entry = { key, plan, at: Date.now() };
+    },
+    take(key: string): T | null {
+      const current = entry;
+      if (!current || current.key !== key) return null;
+
+      entry = null;
+      return Date.now() - current.at < PLAN_TTL_MS ? current.plan : null;
+    },
+  };
+}
+
+export function modsFingerprint(mods: ILocalProject[]): string {
+  return mods
+    .map((mod) => `${mod.provider}:${mod.id}:${mod.version?.id ?? ""}`)
+    .join("|");
 }
 
 export function settings(): TSettings {

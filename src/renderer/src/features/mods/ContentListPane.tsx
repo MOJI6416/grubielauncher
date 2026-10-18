@@ -24,11 +24,7 @@ import { Loader } from "@/types/Loader";
 import { Button } from "@/components/ui/button";
 import { Collapse } from "@/components/ui/collapse";
 import { Progress } from "@/components/ui/progress";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Hint } from "@renderer/components/Hint";
 import { MatchableProject } from "@renderer/utilities/mod";
 import {
   ContentEntry,
@@ -57,6 +53,7 @@ import type { ILocalAccount } from "@/types/Account";
 import type { CatalogState } from "./useCatalogSearch";
 import type { DeletionPlan } from "@renderer/utilities/mod";
 import type { ModFileStates } from "./useModFileStates";
+import type { SelectionGesture } from "@renderer/utilities/rangeSelection";
 import type { ReactVirtualizer, VirtualItem } from "@tanstack/react-virtual";
 
 const api = window.api;
@@ -129,7 +126,7 @@ export interface ContentListPaneProps {
   restoreTrash: () => Promise<void>;
   rowActions: {
     onOpen: (entry: ContentEntry) => void;
-    onToggleSelected: (entry: ContentEntry) => void;
+    onSelect: (entry: ContentEntry, gesture: SelectionGesture) => void;
     onInstall: (entry: ContentEntry) => undefined;
     onUpdate: (entry: ContentEntry) => void;
     onDelete: (entry: ContentEntry) => Promise<void>;
@@ -469,51 +466,43 @@ export function ContentListPane({
                 >
                   {t("modManager.trashRestore")}
                 </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      className="size-7"
-                      aria-label={t("modManager.trashOpen")}
-                      onClick={() => void openTrashFolder()}
-                    >
-                      <FolderOpen className="size-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t("modManager.trashOpen")}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      className="size-7 text-destructive hover:bg-destructive/15 hover:text-destructive"
-                      disabled={isBusy}
-                      aria-label={t("modManager.trashClear")}
-                      onClick={() => setIsClearTrashOpen(true)}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t("modManager.trashClear")}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      className="size-7"
-                      aria-label={t("modManager.trashHide")}
-                      onClick={hideTrashBar}
-                    >
-                      <EyeOff className="size-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-60">
-                    {t("modManager.trashHideHint")}
-                  </TooltipContent>
-                </Tooltip>
+                <Hint content={t("modManager.trashOpen")}>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    className="size-7"
+                    aria-label={t("modManager.trashOpen")}
+                    onClick={() => void openTrashFolder()}
+                  >
+                    <FolderOpen className="size-3.5" />
+                  </Button>
+                </Hint>
+                <Hint content={t("modManager.trashClear")}>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    className="size-7 text-destructive hover:bg-destructive/15 hover:text-destructive"
+                    disabled={isBusy}
+                    aria-label={t("modManager.trashClear")}
+                    onClick={() => setIsClearTrashOpen(true)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </Hint>
+                <Hint
+                  content={t("modManager.trashHideHint")}
+                  className="max-w-60"
+                >
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    className="size-7"
+                    aria-label={t("modManager.trashHide")}
+                    onClick={hideTrashBar}
+                  >
+                    <EyeOff className="size-3.5" />
+                  </Button>
+                </Hint>
               </div>
             </div>
           )}

@@ -26,11 +26,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Hint } from "@renderer/components/Hint";
 import { cn } from "@/lib/utils";
 import type { ShareVisibility } from "@/types/Share";
@@ -687,45 +682,39 @@ export function LanShareModal({
                   visibility.effective === "public" && (
                     <span className="flex items-center gap-1">
                       {!redact.active && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon-xs"
-                              variant="ghost"
-                              aria-label={
-                                isAddressRevealed
-                                  ? t("share.panel.address.hide")
-                                  : t("share.panel.address.reveal")
-                              }
-                              onClick={() =>
-                                setIsAddressRevealed((prev) => !prev)
-                              }
-                            >
-                              {isAddressRevealed ? <EyeOff /> : <Eye />}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {isAddressRevealed
+                        <Hint
+                          content={
+                            isAddressRevealed
                               ? t("share.panel.address.hide")
-                              : t("share.panel.address.reveal")}
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
+                              : t("share.panel.address.reveal")
+                          }
+                        >
                           <Button
                             size="icon-xs"
                             variant="ghost"
-                            aria-label={t("share.panel.address.copy")}
-                            onClick={() => void handleCopyAddress()}
+                            aria-label={
+                              isAddressRevealed
+                                ? t("share.panel.address.hide")
+                                : t("share.panel.address.reveal")
+                            }
+                            onClick={() =>
+                              setIsAddressRevealed((prev) => !prev)
+                            }
                           >
-                            <Copy />
+                            {isAddressRevealed ? <EyeOff /> : <Eye />}
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {t("share.panel.address.copy")}
-                        </TooltipContent>
-                      </Tooltip>
+                        </Hint>
+                      )}
+                      <Hint content={t("share.panel.address.copy")}>
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          aria-label={t("share.panel.address.copy")}
+                          onClick={() => void handleCopyAddress()}
+                        >
+                          <Copy />
+                        </Button>
+                      </Hint>
                     </span>
                   )
                 }
@@ -745,27 +734,27 @@ export function LanShareModal({
             )}
 
             {(health.isDegraded || health.isHeartbeatLost || diagnostic) && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex shrink-0 items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-2.5 py-2 text-left">
-                    <AlertTriangle className="mt-px size-3.5 shrink-0 text-warning" />
-                    <p className="min-w-0 text-xs leading-4 text-warning">
-                      {health.isHeartbeatLost
-                        ? t("share.panel.health.heartbeatLost")
-                        : health.isDegraded
-                          ? t("share.panel.health.degraded")
-                          : t("share.panel.health.streamDropped")}
-                    </p>
-                  </div>
-                </TooltipTrigger>
-                {diagnostic && (
-                  <TooltipContent className="max-w-64">
-                    {t(`share.streamDiagnostic.reasons.${diagnostic.reason}`, {
-                      defaultValue: diagnostic.reason.replace(/[_-]+/g, " "),
-                    })}
-                  </TooltipContent>
-                )}
-              </Tooltip>
+              <Hint
+                content={
+                  diagnostic
+                    ? t(`share.streamDiagnostic.reasons.${diagnostic.reason}`, {
+                        defaultValue: diagnostic.reason.replace(/[_-]+/g, " "),
+                      })
+                    : undefined
+                }
+                className="max-w-64"
+              >
+                <div className="flex shrink-0 items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-2.5 py-2 text-left">
+                  <AlertTriangle className="mt-px size-3.5 shrink-0 text-warning" />
+                  <p className="min-w-0 text-xs leading-4 text-warning">
+                    {health.isHeartbeatLost
+                      ? t("share.panel.health.heartbeatLost")
+                      : health.isDegraded
+                        ? t("share.panel.health.degraded")
+                        : t("share.panel.health.streamDropped")}
+                  </p>
+                </div>
+              </Hint>
             )}
 
             {(isOpenForGuests || guestRows.length > 0) && (

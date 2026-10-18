@@ -1,7 +1,7 @@
 import { getDefaultStore } from "jotai";
 import { SkinsData } from "@/types/SkinManager";
 import { accountAtom, authDataAtom, pathsAtom } from "@renderer/stores/atoms";
-import { AgentTool } from "../types";
+import { AgentTool, ToolPreview } from "../types";
 import { limitList, wrapUntrusted } from "../untrusted";
 
 const api = window.api;
@@ -99,12 +99,36 @@ export const selectSkin: AgentTool = {
     key: "agent.tools.selectSkin",
     params: { id: input?.skinId },
   }),
+  preview: async (input): Promise<ToolPreview | null> => {
+    const context = skinContext();
+    if (typeof context === "string") return null;
+
+    const data = await loadSkins(context);
+    const skins = data?.skins?.skins ?? [];
+    const target = skins.find((skin) => skin.id === String(input?.skinId ?? ""));
+    if (!target) return null;
+
+    const current = skins.find((skin) => skin.id === data?.selectedSkin);
+
+    return {
+      rows: [
+        {
+          key: "skin",
+          ...(current ? { from: current.name || current.id } : {}),
+          value: target.name || target.id,
+        },
+      ],
+    };
+  },
   run: async (input) => {
     const context = skinContext();
     if (typeof context === "string") return { ok: false, error: context };
 
     const skinId = String(input?.skinId ?? "").trim();
     if (skinId === "") return { ok: false, error: "skinId is required" };
+
+    const previous = (await loadSkins(context).catch(() => null))
+      ?.selectedSkin;
 
     const data = await api.skins.selectSkin(
       context.uuid,
@@ -114,7 +138,13 @@ export const selectSkin: AgentTool = {
 
     if (!data) return { ok: false, error: "The launcher refused the skin" };
 
-    return { ok: true, data: serialize(data) };
+    return {
+      ok: true,
+      data: serialize(data),
+      ...(previous && previous !== skinId
+        ? { undo: { op: "skin" as const, skinId: previous } }
+        : {}),
+    };
   },
 };
 

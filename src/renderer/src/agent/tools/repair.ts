@@ -1,17 +1,35 @@
 import { getDefaultStore } from "jotai";
 import { Loader } from "@/types/Loader";
-import { ILocalProject, ProjectType, Provider } from "@/types/ModManager";
+import {
+  ILocalProject,
+  IVersion,
+  ProjectType,
+  Provider,
+} from "@/types/ModManager";
 import { accountAtom, settingsAtom } from "@renderer/stores/atoms";
-import { AgentTool } from "../types";
+import type { Version } from "@renderer/classes/Version";
+import i18n from "@renderer/i18n";
+import { AgentTool, ToolPreview } from "../types";
+import { projectKey } from "../modsDelta";
 import { forgetAllModFiles } from "@renderer/features/mods/modFiles";
 import { localTitle } from "@renderer/features/mods/entries";
 import { findInstance } from "./instances";
-import { busyError, refreshVersions, saveInstance, syncMods } from "./shared";
+import {
+  busyError,
+  createPlanCache,
+  modsFingerprint,
+  previewList,
+  refreshVersions,
+  saveInstance,
+  syncMods,
+} from "./shared";
 
 const api = window.api;
 
 const UNTOGGLEABLE = [ProjectType.WORLD, ProjectType.DATAPACK];
 const MAX_UPDATE_CHECKS = 60;
+const MAX_PREVIEW_UPDATES = 8;
+const UPDATE_CONCURRENCY = 4;
 
 function findProject(
   mods: ILocalProject[],
@@ -21,6 +39,126 @@ function findProject(
     .trim()
     .toLowerCase();
   return mods.find((mod) => localTitle(mod).toLowerCase() === needle);
+}
+
+type UpdateEntry = {
+  title: string;
+  from: string | null;
+  to: string;
+  fromLabel: string | null;
+  toLabel: string;
+};
+
+type UpdatePlan = {
+  candidates: number;
+  next: ILocalProject[];
+  updated: UpdateEntry[];
+};
+
+const updatePlans = createPlanCache<UpdatePlan>();
+
+function updateKey(version: Version, titles: unknown): string {
+  return [
+    version.versionPath,
+    JSON.stringify(Array.isArray(titles) ? titles : null),
+    modsFingerprint(version.version.loader.mods),
+  ].join("\n");
+}
+
+function versionLabel(latest: IVersion): string {
+  return (
+    latest.versionNumber ||
+    latest.name ||
+    latest.files[0]?.filename ||
+    latest.id
+  );
+}
+
+async function planUpdates(
+  version: Version,
+  titles: unknown,
+): Promise<UpdatePlan> {
+  const conf = version.version;
+  const loader: Loader = conf.loader.name;
+  const wanted = Array.isArray(titles) ? titles : null;
+  const before = [...conf.loader.mods];
+
+  const candidates = before
+    .filter((mod) => mod.provider !== Provider.LOCAL)
+    .filter(
+      (mod) =>
+        !wanted ||
+        wanted.some(
+          (title) =>
+            String(title).toLowerCase() === localTitle(mod).toLowerCase(),
+        ),
+    )
+    .slice(0, MAX_UPDATE_CHECKS);
+
+  const latest: (IVersion | null)[] = new Array(candidates.length).fill(null);
+  let cursor = 0;
+
+  await Promise.all(
+    Array.from(
+      { length: Math.min(UPDATE_CONCURRENCY, candidates.length) },
+      async () => {
+        while (cursor < candidates.length) {
+          const index = cursor++;
+          const mod = candidates[index];
+          const versions = await api.modManager.getVersions(
+            mod.provider,
+            mod.id,
+            {
+              loader,
+              version: conf.version.id,
+              projectType: mod.projectType,
+              modUrl: mod.url,
+            },
+          );
+          latest[index] = versions[0] ?? null;
+        }
+      },
+    ),
+  );
+
+  const next = [...before];
+  const updated: UpdateEntry[] = [];
+
+  candidates.forEach((mod, candidateIndex) => {
+    const newest = latest[candidateIndex];
+    if (!newest || newest.id === mod.version?.id) return;
+
+    const index = next.findIndex(
+      (entry) => entry.provider === mod.provider && entry.id === mod.id,
+    );
+    if (index < 0) return;
+
+    next[index] = {
+      ...mod,
+      version: {
+        id: newest.id,
+        files: newest.files.map((file) => ({
+          filename: file.filename,
+          size: file.size,
+          isServer: file.isServer,
+          isClient: file.isClient,
+          url: file.url,
+          sha1: file.sha1,
+        })),
+        dependencies: mod.version?.dependencies ?? [],
+      },
+    };
+
+    updated.push({
+      title: mod.title,
+      from: mod.version?.id ?? null,
+      to: newest.id,
+      fromLabel: mod.version?.files?.[0]?.filename ?? null,
+      toLabel: versionLabel(newest),
+    });
+  });
+
+  return { candidates: candidates.length, next, updated };
 }
 
 export const toggleMods: AgentTool = {
@@ -51,6 +189,39 @@ export const toggleMods: AgentTool = {
       name: input?.instance,
     },
   }),
+  preview: async (input): Promise<ToolPreview | null> => {
+    const version = findInstance(input?.instance);
+    if (!version) return null;
+
+    const titles: unknown[] = Array.isArray(input?.titles) ? input.titles : [];
+    const found = titles
+      .map((title) => findProject(version.version.loader.mods, String(title)))
+      .filter((mod): mod is ILocalProject => Boolean(mod));
+    const toggleable = found.filter(
+      (mod) => !UNTOGGLEABLE.includes(mod.projectType),
+    );
+    const missing = titles.filter(
+      (title) => !findProject(version.version.loader.mods, String(title)),
+    );
+    const enabled = input?.enabled === true;
+
+    return {
+      rows: [
+        { key: "instance", value: version.version.name },
+        ...(toggleable.length
+          ? [
+              {
+                key: enabled ? "enable" : "disable",
+                value: previewList(toggleable.map((mod) => mod.title)),
+              },
+            ]
+          : []),
+        ...(missing.length
+          ? [{ key: "notInstalled", value: previewList(missing.map(String)) }]
+          : []),
+      ],
+    };
+  },
   run: async (input) => {
     const version = findInstance(input?.instance);
     if (!version) {
@@ -128,7 +299,16 @@ export const toggleMods: AgentTool = {
       };
     }
 
-    return { ok: true, data: { enabled, changed, skipped } };
+    return {
+      ok: true,
+      data: { enabled, changed, skipped },
+      undo: {
+        op: "toggle",
+        instance: version.version.name,
+        titles: changed,
+        enabled: !enabled,
+      },
+    };
   },
 };
 
@@ -153,6 +333,53 @@ export const updateMods: AgentTool = {
     key: "agent.tools.updateMods",
     params: { name: input?.instance },
   }),
+  preview: async (input): Promise<ToolPreview | null> => {
+    const version = findInstance(input?.instance);
+    if (!version) return null;
+
+    const plan = await planUpdates(version, input?.titles);
+    updatePlans.remember(updateKey(version, input?.titles), plan);
+
+    if (plan.updated.length === 0) {
+      return {
+        rows: [
+          { key: "instance", value: version.version.name },
+          {
+            key: "updates",
+            value: i18n.t(
+              plan.candidates === 0
+                ? "agent.preview.nothingToCheck"
+                : "agent.preview.allCurrent",
+            ),
+          },
+        ],
+      };
+    }
+
+    const shown = plan.updated.slice(0, MAX_PREVIEW_UPDATES);
+    const more = plan.updated.length - shown.length;
+
+    return {
+      rows: [
+        { key: "instance", value: version.version.name },
+        ...shown.map((entry, index) => ({
+          key: `update-${index}`,
+          label: entry.title,
+          ...(entry.fromLabel ? { from: entry.fromLabel } : {}),
+          value: entry.toLabel,
+        })),
+        ...(more > 0
+          ? [
+              {
+                key: "updatesMore",
+                label: "",
+                value: i18n.t("agent.moreItems", { count: more }),
+              },
+            ]
+          : []),
+      ],
+    };
+  },
   run: async (input) => {
     const version = findInstance(input?.instance);
     if (!version) {
@@ -163,67 +390,21 @@ export const updateMods: AgentTool = {
     if (busy) return { ok: false, error: busy };
 
     const conf = version.version;
-    const loader: Loader = conf.loader.name;
-    const wanted = Array.isArray(input?.titles) ? input.titles : null;
     const before = [...conf.loader.mods];
+    const plan =
+      updatePlans.take(updateKey(version, input?.titles)) ??
+      (await planUpdates(version, input?.titles));
 
-    const candidates = before
-      .filter((mod) => mod.provider !== Provider.LOCAL)
-      .filter(
-        (mod) =>
-          !wanted ||
-          wanted.some(
-            (title) =>
-              String(title).toLowerCase() === localTitle(mod).toLowerCase(),
-          ),
-      )
-      .slice(0, MAX_UPDATE_CHECKS);
-
-    if (candidates.length === 0) {
+    if (plan.candidates === 0) {
       return { ok: false, error: "Nothing to update in this instance" };
     }
 
-    const updated: { title: string; from: string | null; to: string }[] = [];
-    const next = [...before];
-
-    for (const mod of candidates) {
-      const versions = await api.modManager.getVersions(mod.provider, mod.id, {
-        loader,
-        version: conf.version.id,
-        projectType: mod.projectType,
-        modUrl: mod.url,
-      });
-
-      const latest = versions[0];
-      if (!latest || latest.id === mod.version?.id) continue;
-
-      const index = next.findIndex(
-        (entry) => entry.provider === mod.provider && entry.id === mod.id,
-      );
-      if (index < 0) continue;
-
-      next[index] = {
-        ...mod,
-        version: {
-          id: latest.id,
-          files: latest.files.map((file) => ({
-            filename: file.filename,
-            size: file.size,
-            isServer: file.isServer,
-            isClient: file.isClient,
-            url: file.url,
-            sha1: file.sha1,
-          })),
-          dependencies: mod.version?.dependencies ?? [],
-        },
-      };
-
-      updated.push({
-        title: mod.title,
-        from: mod.version?.id ?? null,
-        to: latest.id,
-      });
-    }
+    const next = plan.next;
+    const updated = plan.updated.map(({ title, from, to }) => ({
+      title,
+      from,
+      to,
+    }));
 
     if (updated.length === 0) {
       return { ok: true, data: { updated: [], note: "Everything is current" } };
@@ -245,7 +426,25 @@ export const updateMods: AgentTool = {
 
     refreshVersions();
 
-    return { ok: true, data: { updated } };
+    const nextVersions = new Map(
+      next.map((mod) => [projectKey(mod), mod.version?.id]),
+    );
+    const replaced = before.filter(
+      (mod) =>
+        nextVersions.has(projectKey(mod)) &&
+        nextVersions.get(projectKey(mod)) !== mod.version?.id,
+    );
+
+    return {
+      ok: true,
+      data: { updated },
+      undo: {
+        op: "mods",
+        instance: conf.name,
+        put: replaced,
+        drop: [],
+      },
+    };
   },
 };
 

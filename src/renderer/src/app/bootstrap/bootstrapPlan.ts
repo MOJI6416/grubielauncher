@@ -1,4 +1,4 @@
-import { LANGUAGES } from "@/types/Settings";
+import { matchLanguage } from "@/types/Settings";
 import {
   AccountLike,
   findAccountByIdentity,
@@ -8,11 +8,7 @@ export function resolveBootstrapLanguage(
   systemLocale: string,
   fallback: string,
 ): string {
-  const match = LANGUAGES.find((language) =>
-    String(systemLocale || "").includes(language.code),
-  );
-
-  return match?.code || fallback;
+  return matchLanguage(systemLocale) ?? fallback;
 }
 
 export interface AccountBootstrap<T> {

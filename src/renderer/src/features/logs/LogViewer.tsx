@@ -21,11 +21,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Hint } from "@renderer/components/Hint";
 import { LOG_LEVELS, LogEntry, LogLevel, entryText } from "./logParse";
 import {
@@ -250,30 +245,23 @@ export function LogViewer({
               className="rounded-md bg-surface-1 shadow-xs"
             />
             {sources.map((source) => (
-              <Tooltip key={source.id}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={source.id === sourceId}
-                    data-indicator-active={source.id === sourceId}
-                    onClick={() => onSourceChange(source.id)}
-                    className={cn(
-                      "relative max-w-44 truncate rounded-md px-2 py-1 text-xs font-medium transition-colors",
-                      source.id === sourceId
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {source.label}
-                  </button>
-                </TooltipTrigger>
-                {source.hint && (
-                  <TooltipContent className="max-w-64">
-                    {source.hint}
-                  </TooltipContent>
-                )}
-              </Tooltip>
+              <Hint key={source.id} content={source.hint} className="max-w-64">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={source.id === sourceId}
+                  data-indicator-active={source.id === sourceId}
+                  onClick={() => onSourceChange(source.id)}
+                  className={cn(
+                    "relative max-w-44 truncate rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                    source.id === sourceId
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {source.label}
+                </button>
+              </Hint>
             ))}
           </div>
         )}
@@ -338,51 +326,42 @@ export function LogViewer({
           )}
         </div>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              size="icon-sm"
-              variant={onlyMatches ? "secondary" : "ghost"}
-              className="size-8 shrink-0"
-              aria-pressed={onlyMatches}
-              onClick={() => setOnlyMatches((value) => !value)}
-            >
-              <Filter className="size-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t("logs.onlyMatches")}</TooltipContent>
-        </Tooltip>
+        <Hint content={t("logs.onlyMatches")}>
+          <Button
+            size="icon-sm"
+            variant={onlyMatches ? "secondary" : "ghost"}
+            className="size-8 shrink-0"
+            aria-pressed={onlyMatches}
+            onClick={() => setOnlyMatches((value) => !value)}
+          >
+            <Filter className="size-3.5" />
+          </Button>
+        </Hint>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              size="icon-sm"
-              variant={wrap ? "secondary" : "ghost"}
-              className="size-8 shrink-0"
-              aria-pressed={wrap}
-              onClick={() => setWrap((value) => !value)}
-            >
-              <WrapText className="size-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t("logs.wrap")}</TooltipContent>
-        </Tooltip>
+        <Hint content={t("logs.wrap")}>
+          <Button
+            size="icon-sm"
+            variant={wrap ? "secondary" : "ghost"}
+            className="size-8 shrink-0"
+            aria-pressed={wrap}
+            onClick={() => setWrap((value) => !value)}
+          >
+            <WrapText className="size-3.5" />
+          </Button>
+        </Hint>
 
         {onFollowChange && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon-sm"
-                variant={follow ? "secondary" : "ghost"}
-                className="size-8 shrink-0"
-                aria-pressed={follow}
-                onClick={() => onFollowChange(!follow)}
-              >
-                <ArrowDownToLine className="size-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t("logs.follow")}</TooltipContent>
-          </Tooltip>
+          <Hint content={t("logs.follow")}>
+            <Button
+              size="icon-sm"
+              variant={follow ? "secondary" : "ghost"}
+              className="size-8 shrink-0"
+              aria-pressed={follow}
+              onClick={() => onFollowChange(!follow)}
+            >
+              <ArrowDownToLine className="size-3.5" />
+            </Button>
+          </Hint>
         )}
 
         {actions}
@@ -434,25 +413,22 @@ export function LogViewer({
           </span>
 
           {problems.length > 0 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 gap-1 px-1.5 text-[0.65rem] text-destructive"
-                  onClick={() => {
-                    const target = nextProblem(problems, problemCursor, 1);
-                    if (target < 0) return;
-                    setProblemCursor(target);
-                    virtualizer.scrollToIndex(target, { align: "center" });
-                  }}
-                >
-                  <ArrowDownToLine className="size-3" />
-                  {t("logs.jumpToError")}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t("logs.jumpToErrorHint")}</TooltipContent>
-            </Tooltip>
+            <Hint content={t("logs.jumpToErrorHint")}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 gap-1 px-1.5 text-[0.65rem] text-destructive"
+                onClick={() => {
+                  const target = nextProblem(problems, problemCursor, 1);
+                  if (target < 0) return;
+                  setProblemCursor(target);
+                  virtualizer.scrollToIndex(target, { align: "center" });
+                }}
+              >
+                <ArrowDownToLine className="size-3" />
+                {t("logs.jumpToError")}
+              </Button>
+            </Hint>
           )}
         </div>
       </div>

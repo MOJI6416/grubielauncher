@@ -55,5 +55,119 @@
       "downloading": "{{progress}}% завантажено",
       "downloadingFile": "{{progress}}% - {{file}}"
     }
+  },
+  "de": {
+    "playing": "Spielt",
+    "buttons": {
+      "download": "Herunterladen",
+      "discord": "Discord"
+    },
+    "details": {
+      "launcher": "Grubie Launcher",
+      "downloading": "Lädt Dateien herunter"
+    },
+    "states": {
+      "idle": "Im Launcher",
+      "launching": "Startet Minecraft",
+      "playing": "Spielt Minecraft",
+      "playingServer": "Server: {{server}}",
+      "downloading": "{{progress}}% heruntergeladen",
+      "downloadingFile": "{{progress}}% - {{file}}"
+    }
+  },
+  "es": {
+    "playing": "Jugando",
+    "buttons": {
+      "download": "Descargar",
+      "discord": "Discord"
+    },
+    "details": {
+      "launcher": "Grubie Launcher",
+      "downloading": "Descargando archivos"
+    },
+    "states": {
+      "idle": "En el launcher",
+      "launching": "Iniciando Minecraft",
+      "playing": "Jugando Minecraft",
+      "playingServer": "Servidor: {{server}}",
+      "downloading": "{{progress}}% descargado",
+      "downloadingFile": "{{progress}}% - {{file}}"
+    }
+  },
+  "fr": {
+    "playing": "Joue à",
+    "buttons": {
+      "download": "Télécharger",
+      "discord": "Discord"
+    },
+    "details": {
+      "launcher": "Grubie Launcher",
+      "downloading": "Télécharge des fichiers"
+    },
+    "states": {
+      "idle": "Dans le launcher",
+      "launching": "Lance Minecraft",
+      "playing": "Joue à Minecraft",
+      "playingServer": "Serveur : {{server}}",
+      "downloading": "{{progress}} % téléchargé",
+      "downloadingFile": "{{progress}} % - {{file}}"
+    }
+  },
+  "pl": {
+    "playing": "Gra w",
+    "buttons": {
+      "download": "Pobierz",
+      "discord": "Discord"
+    },
+    "details": {
+      "launcher": "Grubie Launcher",
+      "downloading": "Pobiera pliki"
+    },
+    "states": {
+      "idle": "W launcherze",
+      "launching": "Uruchamia Minecraft",
+      "playing": "Gra w Minecraft",
+      "playingServer": "Serwer: {{server}}",
+      "downloading": "Pobrano {{progress}}%",
+      "downloadingFile": "{{progress}}% - {{file}}"
+    }
+  },
+  "pt": {
+    "playing": "Jogando",
+    "buttons": {
+      "download": "Baixar",
+      "discord": "Discord"
+    },
+    "details": {
+      "launcher": "Grubie Launcher",
+      "downloading": "Baixando arquivos"
+    },
+    "states": {
+      "idle": "No launcher",
+      "launching": "Iniciando o Minecraft",
+      "playing": "Jogando Minecraft",
+      "playingServer": "Servidor: {{server}}",
+      "downloading": "{{progress}}% baixado",
+      "downloadingFile": "{{progress}}% - {{file}}"
+    }
+  },
+  "tr": {
+    "playing": "Oynuyor",
+    "buttons": {
+      "download": "İndir",
+      "discord": "Discord"
+    },
+    "details": {
+      "launcher": "Grubie Launcher",
+      "downloading": "Dosyaları indiriyor"
+    },
+    "states": {
+      "idle": "Başlatıcıda",
+      "launching": "Minecraft’ı başlatıyor",
+      "playing": "Minecraft oynuyor",
+      "playingServer": "Sunucu: {{server}}",
+      "downloading": "%{{progress}} indirildi",
+      "downloadingFile": "%{{progress}} - {{file}}"
+    }
   }
 }

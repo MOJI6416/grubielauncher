@@ -9,6 +9,12 @@ export const LANGUAGE_NAMES: Record<string, string> = {
   ru: "Russian",
   uk: "Ukrainian",
   en: "English",
+  de: "German",
+  es: "Latin American Spanish",
+  fr: "French",
+  pl: "Polish",
+  pt: "Brazilian Portuguese",
+  tr: "Turkish",
 };
 
 export const TRANSLATION_BATCH_CHARS = 6000;

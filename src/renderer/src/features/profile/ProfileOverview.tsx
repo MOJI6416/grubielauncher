@@ -12,11 +12,6 @@ import {
   Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Hint } from "@renderer/components/Hint";
 import { IAchievementStats } from "@/types/Achievements";
 import { versionsAtom } from "@renderer/stores/atoms";
@@ -230,35 +225,39 @@ function ShowcaseTile({
       : reachPercentParts(row.percent);
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div className="flex min-w-0 flex-col items-center gap-1.5 rounded-lg bg-surface-1 p-2">
-          <span
-            className={`flex size-11 items-center justify-center rounded-lg border ${RARITY_TILE[row.rarity]}`}
-          >
-            <Icon className="size-5" />
-          </span>
-          <span className="w-full truncate text-center text-[11px] leading-tight text-muted-foreground">
+    <Hint
+      className="max-w-64"
+      content={
+        <>
+          <p className="font-medium">
             {t(`achievements.items.${row.id}.name`)}
-          </span>
-          <span
-            className={`truncate font-mono text-[10px] tabular-nums ${RARITY_TEXT[row.rarity]}`}
-          >
-            {parts
-              ? `${parts.belowFloor ? "<" : ""}${formatNumber(parts.value)}%`
-              : `+${row.points}`}
-          </span>
-        </div>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-64">
-        <p className="font-medium">{t(`achievements.items.${row.id}.name`)}</p>
-        <p className="opacity-70">
-          {t(achievementDescriptionKey(row.id, isOwner), {
-            goal: formatNumber(displayMetric(row.goal, row.unit)),
-          })}
-        </p>
-      </TooltipContent>
-    </Tooltip>
+          </p>
+          <p className="opacity-70">
+            {t(achievementDescriptionKey(row.id, isOwner), {
+              goal: formatNumber(displayMetric(row.goal, row.unit)),
+            })}
+          </p>
+        </>
+      }
+    >
+      <div className="flex min-w-0 flex-col items-center gap-1.5 rounded-lg bg-surface-1 p-2">
+        <span
+          className={`flex size-11 items-center justify-center rounded-lg border ${RARITY_TILE[row.rarity]}`}
+        >
+          <Icon className="size-5" />
+        </span>
+        <span className="w-full truncate text-center text-[11px] leading-tight text-muted-foreground">
+          {t(`achievements.items.${row.id}.name`)}
+        </span>
+        <span
+          className={`truncate font-mono text-[10px] tabular-nums ${RARITY_TEXT[row.rarity]}`}
+        >
+          {parts
+            ? `${parts.belowFloor ? "<" : ""}${formatNumber(parts.value)}%`
+            : `+${row.points}`}
+        </span>
+      </div>
+    </Hint>
   );
 }
 

@@ -12,7 +12,8 @@ import {
   versionsAtom,
 } from "@renderer/stores/atoms";
 import { Version } from "@renderer/classes/Version";
-import { AgentTool } from "../types";
+import i18n from "@renderer/i18n";
+import { AgentTool, ToolPreview } from "../types";
 import { busyError, refreshVersions, SAVE_FAILED, settings } from "./shared";
 
 const api = window.api;
@@ -62,6 +63,30 @@ export const createInstance: AgentTool = {
     key: "agent.tools.createInstance",
     params: { name: input?.name, version: input?.minecraftVersion },
   }),
+  preview: async (input): Promise<ToolPreview | null> => {
+    const name = String(input?.name ?? "").trim();
+    const minecraftVersion = String(input?.minecraftVersion ?? "").trim();
+    if (name === "" || minecraftVersion === "") return null;
+
+    const loader: Loader = LOADERS.includes(input?.loader)
+      ? input.loader
+      : "vanilla";
+    const loaderVersion = String(input?.loaderVersion ?? "").trim();
+
+    return {
+      rows: [
+        { key: "name", value: name },
+        { key: "minecraft", value: minecraftVersion },
+        {
+          key: "loader",
+          value:
+            loader === "vanilla"
+              ? "vanilla"
+              : `${loader} ${loaderVersion || i18n.t("agent.preview.newestBuild")}`,
+        },
+      ],
+    };
+  },
   run: async (input) => {
     const store = getDefaultStore();
     const account = store.get(accountAtom);

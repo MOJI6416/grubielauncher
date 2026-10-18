@@ -33,6 +33,15 @@ import { Loader } from "@/types/Loader";
 import { cn } from "@/lib/utils";
 import { motionTransition } from "@/lib/motion";
 import { formatBytes } from "@renderer/utilities/file";
+import {
+  type SelectionGesture,
+  TOGGLE_GESTURE,
+  hasSelectionModifier,
+  nextSelectionAnchor,
+  preventShiftTextSelection,
+  readSelectionGesture,
+  selectionRange,
+} from "@renderer/utilities/rangeSelection";
 import { isOtherOverLimit } from "./publishPlan";
 import {
   buildShareTrail,
@@ -372,6 +381,39 @@ export function SelectPathsPanel({
     [forbiddenSet],
   );
 
+  const selectionAnchorRef = useRef<string | null>(null);
+
+  const selectEntry = useCallback(
+    (entry: BrowserEntry, gesture: SelectionGesture) => {
+      if (entry.blocked) return;
+
+      const target = entry.relativePath;
+      const anchor = selectionAnchorRef.current;
+      selectionAnchorRef.current = nextSelectionAnchor(
+        selectablePaths,
+        anchor,
+        target,
+        gesture,
+      );
+
+      if (!gesture.range) {
+        toggleEntry(entry);
+        return;
+      }
+
+      const span = selectionRange(selectablePaths, anchor, target);
+      setPaths((prev) =>
+        prev.includes(target)
+          ? span.reduce(
+              (next, pathName) => unselectShareFolderPath(next, pathName),
+              prev,
+            )
+          : selectSharePaths(prev, span, forbiddenSet),
+      );
+    },
+    [forbiddenSet, selectablePaths, toggleEntry],
+  );
+
   const goUp = useCallback(() => {
     if (!currentPath) return;
     setQuery("");
@@ -403,14 +445,14 @@ export function SelectPathsPanel({
         return;
       case " ":
         event.preventDefault();
-        if (rows[activeIndex]) toggleEntry(rows[activeIndex]);
+        if (rows[activeIndex]) selectEntry(rows[activeIndex], TOGGLE_GESTURE);
         return;
       case "Enter": {
         event.preventDefault();
         const entry = rows[activeIndex];
         if (!entry || entry.blocked) return;
         if (entry.type === "folder") openFolder(entry.relativePath);
-        else toggleEntry(entry);
+        else selectEntry(entry, TOGGLE_GESTURE);
         return;
       }
       case "ArrowRight": {
@@ -499,12 +541,13 @@ export function SelectPathsPanel({
         aria-selected={isSelected}
         tabIndex={index === activeIndex ? 0 : -1}
         onFocus={() => setActiveIndex(index)}
-        onClick={() => {
-          if (entry.type === "folder") {
+        onMouseDown={preventShiftTextSelection}
+        onClick={(event) => {
+          if (entry.type === "folder" && !hasSelectionModifier(event)) {
             openFolder(entry.relativePath);
             return;
           }
-          toggleEntry(entry);
+          selectEntry(entry, readSelectionGesture(event, true));
         }}
         className={cn(
           "flex h-8 cursor-pointer items-center gap-2.5 rounded-md px-2 text-sm outline-none transition-colors",
@@ -514,7 +557,10 @@ export function SelectPathsPanel({
       >
         <span
           className="flex shrink-0 items-center"
-          onClick={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            selectEntry(entry, readSelectionGesture(event, true));
+          }}
         >
           <Checkbox
             tabIndex={-1}
@@ -522,7 +568,6 @@ export function SelectPathsPanel({
             checked={
               isSelected ? true : insideCount > 0 ? "indeterminate" : false
             }
-            onCheckedChange={() => toggleEntry(entry)}
           />
         </span>
 

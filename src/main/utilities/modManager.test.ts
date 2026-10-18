@@ -465,6 +465,52 @@ describe("checkModpack Prism/MultiMC imports", () => {
     ).resolves.toBe(true);
   });
 
+  it("keeps mod data folders from .minecraft and drops logs and launcher files", async () => {
+    const instanceRoot = await makeTempRoot();
+    await createPrismInstance(instanceRoot);
+    const gameRoot = path.join(instanceRoot, ".minecraft");
+    await fs.outputFile(path.join(gameRoot, "millenaire", "parchments", "parchment_1.txt"), "text");
+    await fs.outputFile(path.join(gameRoot, "resources", "mod", "streaming", "song.ogg"), "ogg");
+    await fs.outputFile(path.join(gameRoot, "airship.properties"), "speed=1");
+    await fs.outputFile(path.join(gameRoot, "servers.dat"), "servers");
+    await fs.outputFile(path.join(gameRoot, "logs", "latest.log"), "log");
+    await fs.outputFile(path.join(gameRoot, "screenshots", "shot.png"), "png");
+    await fs.outputFile(path.join(gameRoot, "version.json"), "{}");
+    await fs.outputFile(path.join(gameRoot, "natives", "lwjgl.dll"), "dll");
+
+    await checkModpack(instanceRoot);
+
+    const overrides = path.join(instanceRoot, "overrides");
+    for (const kept of [
+      "millenaire/parchments/parchment_1.txt",
+      "resources/mod/streaming/song.ogg",
+      "airship.properties",
+      "servers.dat",
+      "config/example.toml",
+    ]) {
+      await expect(fs.pathExists(path.join(overrides, kept))).resolves.toBe(true);
+    }
+    for (const dropped of ["logs", "screenshots", "version.json", "natives"]) {
+      await expect(fs.pathExists(path.join(overrides, dropped))).resolves.toBe(false);
+    }
+  });
+
+  it("copies only game folders when the export has no .minecraft", async () => {
+    const instanceRoot = await makeTempRoot();
+    await fs.outputJSON(path.join(instanceRoot, "mmc-pack.json"), {
+      components: [{ uid: "net.minecraft", version: "1.20.1" }],
+    });
+    await fs.outputFile(path.join(instanceRoot, "mods", "example.jar"), "local mod");
+    await fs.outputFile(path.join(instanceRoot, "patches", "custom.json"), "{}");
+
+    await checkModpack(instanceRoot);
+
+    const overrides = path.join(instanceRoot, "overrides");
+    await expect(fs.pathExists(path.join(overrides, "mods", "example.jar"))).resolves.toBe(true);
+    await expect(fs.pathExists(path.join(overrides, "patches"))).resolves.toBe(false);
+    await expect(fs.pathExists(path.join(overrides, "mmc-pack.json"))).resolves.toBe(false);
+  });
+
   it.each([
     ["net.ornithemc:calamus-intermediary:1.12.2", "0.19.5+gen1"],
     ["net.ornithemc:calamus-intermediary-gen2:1.12.2", "0.19.5"],

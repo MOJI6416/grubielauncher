@@ -34,6 +34,7 @@ import { planDeletion } from "@renderer/utilities/mod";
 import i18n from "@renderer/i18n";
 import { AgentTool, ToolPreview } from "../types";
 import { wrapUntrusted } from "../untrusted";
+import { projectKey } from "../modsDelta";
 import {
   describeInstanceJava,
   findInstance,
@@ -41,9 +42,16 @@ import {
 } from "./instances";
 import { isValidJavaMajor, javaFit } from "@/shared/javaRuntime";
 import { instanceRequiredJava } from "@renderer/features/java/javaChoices";
+import type { Version } from "@renderer/classes/Version";
 import {
   busyError,
+  createPlanCache,
+  modsFingerprint,
+  previewList,
+  previewMemory,
   previewSize,
+  previewText,
+  previewToggle,
   refreshVersions,
   saveInstance,
   settings,
@@ -56,6 +64,86 @@ const PROVIDERS = [Provider.MODRINTH, Provider.CURSEFORGE];
 
 function splitArguments(value: string): string[] {
   return value.split(/\s+/).filter((part) => part !== "");
+}
+
+type AdditionPlan = {
+  added: ILocalProject[];
+  rootKeys: Set<string>;
+  missing: string[];
+  alreadyInstalled: string[];
+  dependenciesUnavailable: boolean;
+};
+
+const additionPlans = createPlanCache<AdditionPlan>();
+
+function requestedProjects(input: any): any[] {
+  return Array.isArray(input?.projects) ? input.projects : [];
+}
+
+function additionKey(version: Version, requested: any[]): string {
+  return [
+    version.versionPath,
+    JSON.stringify(requested),
+    modsFingerprint(version.version.loader.mods),
+  ].join("\n");
+}
+
+async function planAdditions(
+  version: Version,
+  requested: any[],
+): Promise<AdditionPlan> {
+  const conf = version.version;
+  const loader: Loader = conf.loader.name;
+  const installed = [...conf.loader.mods];
+  const plan: AdditionPlan = {
+    added: [],
+    rootKeys: new Set(),
+    missing: [],
+    alreadyInstalled: [],
+    dependenciesUnavailable: false,
+  };
+
+  for (const entry of requested) {
+    const project = await api.modManager.getProject(
+      entry?.provider === Provider.CURSEFORGE
+        ? Provider.CURSEFORGE
+        : Provider.MODRINTH,
+      String(entry?.projectId ?? ""),
+    );
+
+    if (!project) {
+      plan.missing.push(String(entry?.projectId ?? ""));
+      continue;
+    }
+
+    const resolved = await resolveInstallPlan({
+      root: project,
+      installed: [...installed, ...plan.added],
+      minecraftVersion: conf.version.id,
+      resolveLoader: () => loader,
+    });
+
+    if (resolved.dependenciesUnavailable) {
+      return { ...plan, dependenciesUnavailable: true };
+    }
+
+    if (resolved.rootMissingVersion) {
+      plan.missing.push(project.title);
+      continue;
+    }
+
+    const rootKey = `${project.provider}:${project.id}`;
+    if (
+      !resolved.added.some((mod) => `${mod.provider}:${mod.id}` === rootKey)
+    ) {
+      plan.alreadyInstalled.push(project.title);
+    }
+
+    plan.rootKeys.add(rootKey);
+    plan.added.push(...resolved.added);
+  }
+
+  return plan;
 }
 
 export const addMods: AgentTool = {
@@ -89,6 +177,46 @@ export const addMods: AgentTool = {
       name: input?.instance,
     },
   }),
+  preview: async (input): Promise<ToolPreview | null> => {
+    const version = findInstance(input?.instance);
+    const requested = requestedProjects(input);
+    if (!version || requested.length === 0) return null;
+
+    const plan = await planAdditions(version, requested);
+    if (plan.dependenciesUnavailable) return null;
+
+    additionPlans.remember(additionKey(version, requested), plan);
+
+    const roots = plan.added.filter((mod) =>
+      plan.rootKeys.has(`${mod.provider}:${mod.id}`),
+    );
+    const dependencies = plan.added.filter(
+      (mod) => !plan.rootKeys.has(`${mod.provider}:${mod.id}`),
+    );
+
+    return {
+      rows: [
+        { key: "instance", value: version.version.name },
+        ...(roots.length
+          ? [{ key: "install", value: previewList(roots.map((mod) => mod.title)) }]
+          : []),
+        ...(dependencies.length
+          ? [
+              {
+                key: "dependencies",
+                value: previewList(dependencies.map((mod) => mod.title)),
+              },
+            ]
+          : []),
+        ...(plan.alreadyInstalled.length
+          ? [{ key: "alreadyInstalled", value: previewList(plan.alreadyInstalled) }]
+          : []),
+        ...(plan.missing.length
+          ? [{ key: "noVersion", value: previewList(plan.missing) }]
+          : []),
+      ],
+    };
+  },
   run: async (input) => {
     const version = findInstance(input?.instance);
     if (!version) {
@@ -98,52 +226,27 @@ export const addMods: AgentTool = {
     const busy = busyError();
     if (busy) return { ok: false, error: busy };
 
-    const requested = Array.isArray(input?.projects) ? input.projects : [];
+    const requested = requestedProjects(input);
     if (requested.length === 0) {
       return { ok: false, error: "projects must not be empty" };
     }
 
     const conf = version.version;
-    const loader: Loader = conf.loader.name;
     const installed = [...conf.loader.mods];
-    const addedAll: ILocalProject[] = [];
-    const missing: string[] = [];
+    const plan =
+      additionPlans.take(additionKey(version, requested)) ??
+      (await planAdditions(version, requested));
 
-    for (const entry of requested) {
-      const project = await api.modManager.getProject(
-        entry?.provider === Provider.CURSEFORGE
-          ? Provider.CURSEFORGE
-          : Provider.MODRINTH,
-        String(entry?.projectId ?? ""),
-      );
-
-      if (!project) {
-        missing.push(String(entry?.projectId ?? ""));
-        continue;
-      }
-
-      const plan = await resolveInstallPlan({
-        root: project,
-        installed: [...installed, ...addedAll],
-        minecraftVersion: conf.version.id,
-        resolveLoader: () => loader,
-      });
-
-      if (plan.dependenciesUnavailable) {
-        return {
-          ok: false,
-          error:
-            "Could not read the dependency list from the mod provider. Nothing was installed — try again when the connection is back.",
-        };
-      }
-
-      if (plan.rootMissingVersion) {
-        missing.push(project.title);
-        continue;
-      }
-
-      addedAll.push(...plan.added);
+    if (plan.dependenciesUnavailable) {
+      return {
+        ok: false,
+        error:
+          "Could not read the dependency list from the mod provider. Nothing was installed — try again when the connection is back.",
+      };
     }
+
+    const addedAll = plan.added;
+    const missing = plan.missing;
 
     if (addedAll.length === 0) {
       return {
@@ -187,15 +290,41 @@ export const addMods: AgentTool = {
           blocked.map((mod) => mod.title).join("\n"),
         ),
       },
+      undo: {
+        op: "mods",
+        instance: conf.name,
+        put: [],
+        drop: addedAll.map(projectKey),
+      },
     };
   },
 };
+
+function planRemoval(mods: ILocalProject[], rawTitles: unknown) {
+  const titles = Array.isArray(rawTitles) ? rawTitles : [];
+  const targets: ILocalProject[] = [];
+  const notFound: string[] = [];
+
+  for (const rawTitle of titles) {
+    const title = String(rawTitle ?? "").toLowerCase();
+    const target = mods.find((mod) => localTitle(mod).toLowerCase() === title);
+
+    if (!target) {
+      notFound.push(String(rawTitle ?? ""));
+      continue;
+    }
+
+    targets.push(target);
+  }
+
+  return { targets, notFound, ...planDeletion(mods, targets) };
+}
 
 export const removeMods: AgentTool = {
   name: "remove_mods",
   risk: "write",
   description:
-    "Remove installed projects from an instance by title. Dependencies that nothing else needs are removed too. If another installed mod still requires the target, the removal is refused and the blockers are reported.",
+    "Remove installed projects from an instance by title. Dependencies that nothing else needs are removed too. If another installed mod still requires the target, the removal is refused and the blockers are reported. Use it only when the user asked to remove something: to fix a crash or test a suspect, disable the mod with toggle_mods instead, which keeps the file and can be undone at no cost.",
   parameters: {
     type: "object",
     properties: {
@@ -215,6 +344,46 @@ export const removeMods: AgentTool = {
       name: input?.instance,
     },
   }),
+  preview: async (input): Promise<ToolPreview | null> => {
+    const version = findInstance(input?.instance);
+    if (!version) return null;
+
+    const plan = planRemoval(version.version.loader.mods, input?.titles);
+    const targetKeys = new Set(
+      plan.targets.map((mod) => `${mod.provider}:${mod.id}`),
+    );
+    const extra = plan.remove.filter(
+      (mod) => !targetKeys.has(`${mod.provider}:${mod.id}`),
+    );
+
+    return {
+      rows: [
+        { key: "instance", value: version.version.name },
+        ...(plan.blockers.length === 0 && plan.targets.length
+          ? [
+              {
+                key: "remove",
+                value: previewList(plan.targets.map((mod) => mod.title)),
+              },
+            ]
+          : []),
+        ...(plan.blockers.length === 0 && extra.length
+          ? [{ key: "alsoRemoved", value: previewList(extra.map((mod) => mod.title)) }]
+          : []),
+        ...(plan.blockers.length
+          ? [
+              {
+                key: "blockedBy",
+                value: previewList(plan.blockers.map((mod) => mod.title)),
+              },
+            ]
+          : []),
+        ...(plan.notFound.length
+          ? [{ key: "notInstalled", value: previewList(plan.notFound) }]
+          : []),
+      ],
+    };
+  },
   run: async (input) => {
     const version = findInstance(input?.instance);
     if (!version) {
@@ -224,31 +393,15 @@ export const removeMods: AgentTool = {
     const busy = busyError();
     if (busy) return { ok: false, error: busy };
 
-    const titles = Array.isArray(input?.titles) ? input.titles : [];
     const conf = version.version;
     const before = [...conf.loader.mods];
 
     const removed: string[] = [];
     const blocked: { title: string; requiredBy: string[] }[] = [];
-    const notFound: string[] = [];
     let current = [...before];
-    const targets: ILocalProject[] = [];
 
-    for (const rawTitle of titles) {
-      const title = String(rawTitle ?? "").toLowerCase();
-      const target = before.find(
-        (mod) => localTitle(mod).toLowerCase() === title,
-      );
-
-      if (!target) {
-        notFound.push(String(rawTitle ?? ""));
-        continue;
-      }
-
-      targets.push(target);
-    }
-
-    const plan = planDeletion(before, targets);
+    const plan = planRemoval(before, input?.titles);
+    const { targets, notFound } = plan;
     if (plan.blockers.length > 0) {
       blocked.push({ title: targets.map((mod) => mod.title).join(", "), requiredBy: plan.blockers.map((mod) => mod.title) });
     } else {
@@ -287,6 +440,13 @@ export const removeMods: AgentTool = {
 
     refreshVersions();
 
+    const restorable = plan.remove.filter(
+      (mod) => mod.provider !== Provider.LOCAL,
+    );
+    const lostForGood = plan.remove.filter(
+      (mod) => mod.provider === Provider.LOCAL,
+    );
+
     return {
       ok: true,
       data: {
@@ -298,10 +458,38 @@ export const removeMods: AgentTool = {
             .join("\n"),
         ),
         notFound: wrapUntrusted(notFound.join("\n")),
+        ...(lostForGood.length
+          ? {
+              localFilesTheUndoButtonCannotBringBack: wrapUntrusted(
+                lostForGood.map((mod) => mod.title).join("\n"),
+              ),
+            }
+          : {}),
       },
+      ...(restorable.length
+        ? {
+            undo: {
+              op: "mods" as const,
+              instance: conf.name,
+              put: restorable,
+              drop: [],
+            },
+          }
+        : {}),
     };
   },
 };
+
+function filterRequestedArguments(version: Version, input: any) {
+  const current = version.version.runArguments;
+  const jvm = typeof input?.jvm === "string" ? input.jvm : current.jvm;
+  const game = typeof input?.game === "string" ? input.game : current.game;
+
+  return {
+    jvmResult: filterRunArguments(splitArguments(jvm), "jvm"),
+    gameResult: filterRunArguments(splitArguments(game), "game"),
+  };
+}
 
 export const setRunArguments: AgentTool = {
   name: "set_run_arguments",
@@ -321,6 +509,31 @@ export const setRunArguments: AgentTool = {
     key: "agent.tools.setRunArguments",
     params: { name: input?.instance },
   }),
+  preview: async (input): Promise<ToolPreview | null> => {
+    const version = findInstance(input?.instance);
+    if (!version) return null;
+
+    const current = version.version.runArguments;
+    const { jvmResult, gameResult } = filterRequestedArguments(version, input);
+    const nextJvm = jvmResult.safe.join(" ");
+    const nextGame = gameResult.safe.join(" ");
+    const rejected = [...jvmResult.rejected, ...gameResult.rejected];
+
+    return {
+      rows: [
+        { key: "instance", value: version.version.name },
+        ...(nextJvm !== current.jvm
+          ? [{ key: "jvm", from: previewText(current.jvm), value: previewText(nextJvm) }]
+          : []),
+        ...(nextGame !== current.game
+          ? [{ key: "game", from: previewText(current.game), value: previewText(nextGame) }]
+          : []),
+        ...(rejected.length
+          ? [{ key: "rejected", value: previewList(rejected) }]
+          : []),
+      ],
+    };
+  },
   run: async (input) => {
     const version = findInstance(input?.instance);
     if (!version) {
@@ -328,13 +541,7 @@ export const setRunArguments: AgentTool = {
     }
 
     const conf = version.version;
-    const jvm =
-      typeof input?.jvm === "string" ? input.jvm : conf.runArguments.jvm;
-    const game =
-      typeof input?.game === "string" ? input.game : conf.runArguments.game;
-
-    const jvmResult = filterRunArguments(splitArguments(jvm), "jvm");
-    const gameResult = filterRunArguments(splitArguments(game), "game");
+    const { jvmResult, gameResult } = filterRequestedArguments(version, input);
 
     const previousArguments = conf.runArguments;
     conf.runArguments = {
@@ -358,6 +565,11 @@ export const setRunArguments: AgentTool = {
           jvm: jvmResult.rejected,
           game: gameResult.rejected,
         },
+      },
+      undo: {
+        op: "runArguments",
+        instance: conf.name,
+        runArguments: previousArguments,
       },
     };
   },
@@ -398,6 +610,59 @@ export const setMemory: AgentTool = {
       : "agent.tools.setMemory",
     params: { value: input?.memoryMb, name: input?.instance },
   }),
+  preview: async (input): Promise<ToolPreview | null> => {
+    const requestedInstance =
+      typeof input?.instance === "string" && input.instance.trim() !== ""
+        ? input.instance
+        : null;
+    const version = requestedInstance ? findInstance(requestedInstance) : null;
+    if (requestedInstance && !version) return null;
+
+    const inherit = input?.inherit === true && Boolean(version);
+    const global = settings();
+    const current = version
+      ? resolveInstanceSettings(global, version.version.overrides)
+      : { xmx: global.xmx, optimizedJvm: global.optimizedJvm };
+    const nextXmx = inherit ? global.xmx : Math.round(Number(input?.memoryMb));
+    if (!Number.isFinite(nextXmx) || nextXmx < 1024) return null;
+
+    const nextOptimized = inherit
+      ? global.optimizedJvm
+      : typeof input?.optimizedJvm === "boolean"
+        ? input.optimizedJvm
+        : current.optimizedJvm;
+    const keepOwn = version
+      ? []
+      : getDefaultStore()
+          .get(versionsAtom)
+          .filter((entry) => isOverridden(entry.version.overrides, "xmx"))
+          .map((entry) => entry.version.name);
+
+    return {
+      rows: [
+        version
+          ? { key: "instance", value: version.version.name }
+          : { key: "scope", value: i18n.t("agent.preview.allInstances") },
+        {
+          key: "memory",
+          from: previewMemory(current.xmx),
+          value: previewMemory(nextXmx),
+        },
+        ...(nextOptimized !== current.optimizedJvm
+          ? [
+              {
+                key: "optimizedJvm",
+                from: previewToggle(current.optimizedJvm),
+                value: previewToggle(nextOptimized),
+              },
+            ]
+          : []),
+        ...(keepOwn.length
+          ? [{ key: "keepOwn", value: previewList(keepOwn) }]
+          : []),
+      ],
+    };
+  },
   run: async (input) => {
     const requestedInstance =
       typeof input?.instance === "string" && input.instance.trim() !== ""
@@ -447,6 +712,14 @@ export const setMemory: AgentTool = {
           overriddenKeys: overriddenKeysOf(version),
           appliesToNextLaunch: true,
         },
+        undo: {
+          op: "overrides",
+          instance: conf.name,
+          values: {
+            xmx: previousOverrides?.xmx ?? null,
+            optimizedJvm: previousOverrides?.optimizedJvm ?? null,
+          },
+        },
       };
     }
 
@@ -494,9 +767,20 @@ export const setMemory: AgentTool = {
           totalMemoryMb: totalMb,
           appliesToNextLaunch: true,
         },
+        undo: {
+          op: "overrides",
+          instance: conf.name,
+          values: {
+            xmx: previousOverrides?.xmx ?? null,
+            ...(typeof input?.optimizedJvm === "boolean"
+              ? { optimizedJvm: previousOverrides?.optimizedJvm ?? null }
+              : {}),
+          },
+        },
       };
     }
 
+    const previousSettings = settings();
     const patch: Partial<TSettings> = { xmx: requested };
     if (typeof input?.optimizedJvm === "boolean") {
       patch.optimizedJvm = input.optimizedJvm;
@@ -517,6 +801,15 @@ export const setMemory: AgentTool = {
         totalMemoryMb: totalMb,
         instancesKeepingTheirOwnMemory: unaffected,
         appliesToNextLaunch: true,
+      },
+      undo: {
+        op: "settings",
+        values: {
+          xmx: previousSettings.xmx,
+          ...(typeof input?.optimizedJvm === "boolean"
+            ? { optimizedJvm: previousSettings.optimizedJvm }
+            : {}),
+        },
       },
     };
   },
@@ -546,6 +839,38 @@ export const setInstanceJava: AgentTool = {
         : "agent.tools.setInstanceJavaAuto",
     params: { name: input?.instance, major: input?.major },
   }),
+  preview: async (input): Promise<ToolPreview | null> => {
+    const version = findInstance(input?.instance);
+    if (!version) return null;
+
+    const major = Math.round(Number(input?.major));
+    if (input?.mode !== "auto" && !(input?.mode === "major" && isValidJavaMajor(major))) {
+      return null;
+    }
+
+    const chosen = version.version.overrides?.java;
+    const running = version.java?.major;
+    const from = !chosen
+      ? i18n.t("agent.preview.javaAuto", {
+          major: running ?? instanceRequiredJava(version),
+        })
+      : "major" in chosen
+        ? i18n.t("agent.preview.javaMajor", { major: chosen.major })
+        : i18n.t("agent.preview.javaManual", { major: running ?? "?" });
+    const value =
+      input.mode === "auto"
+        ? i18n.t("agent.preview.javaAuto", {
+            major: instanceRequiredJava(version),
+          })
+        : i18n.t("agent.preview.javaMajor", { major });
+
+    return {
+      rows: [
+        { key: "instance", value: version.version.name },
+        { key: "java", from, value },
+      ],
+    };
+  },
   run: async (input) => {
     const version = findInstance(input?.instance);
     if (!version) {
@@ -591,6 +916,11 @@ export const setInstanceJava: AgentTool = {
         fit: mode === "auto" ? "recommended" : javaFit(recommended, major),
         launchesWith: describeInstanceJava(version).launchesWith,
         appliesToNextLaunch: true,
+      },
+      undo: {
+        op: "overrides",
+        instance: conf.name,
+        values: { java: previousOverrides?.java ?? null },
       },
     };
   },

@@ -14,6 +14,7 @@ const readyJava = {
   version: "21.0.5",
 };
 const javaPrepare = vi.fn(async (): Promise<any> => ({ ok: true, java: readyJava }));
+const getModpack = vi.fn(async (): Promise<any> => ({ status: "success", data: null }));
 
 beforeAll(() => {
   (globalThis as any).localStorage = {
@@ -32,7 +33,7 @@ beforeAll(() => {
       path: { join: async (...parts: string[]) => parts.join("/") },
       fs: { pathExists: async () => false },
       servers: { read: async () => [] },
-      backend: { getModpack: async () => ({ status: "ok", data: null }) },
+      backend: { getModpack },
       events: { onConsoleMessage: () => () => {} },
       java: { prepare: javaPrepare },
     },
@@ -62,6 +63,7 @@ vi.mock("@renderer/utilities/failures", () => ({
   showFailureToast: vi.fn(),
   reportIpcFailure: vi.fn(),
   pushIpcFailure: vi.fn(),
+  consumeRecentFailure: vi.fn(() => null),
 }));
 
 vi.mock("@renderer/utilities/onlineSocket", () => ({
@@ -71,6 +73,10 @@ vi.mock("@renderer/utilities/onlineSocket", () => ({
 vi.mock("@renderer/utilities/version", () => ({
   checkDiffenceUpdateData: vi.fn(async () => false),
   isOwner: () => true,
+}));
+
+vi.mock("@renderer/features/instances/openInstanceScreen", () => ({
+  openInstanceScreen: vi.fn(),
 }));
 
 type Fake = {
@@ -121,6 +127,7 @@ describe("runGame", () => {
     store.set(atoms.accountAtom, account);
     store.set(atoms.accountsAtom, [account]);
     store.set(atoms.authDataAtom, null);
+    store.set(atoms.networkAtom, true);
     store.set(atoms.selectedVersionAtom, undefined);
     store.set(atoms.pathsAtom, {
       launcher: "C:/launcher",
@@ -130,6 +137,8 @@ describe("runGame", () => {
     accountsSave.mockClear();
     javaPrepare.mockClear();
     javaPrepare.mockImplementation(async () => ({ ok: true, java: readyJava }));
+    getModpack.mockReset();
+    getModpack.mockImplementation(async () => ({ status: "success", data: null }));
   });
 
   it("never raises the running flag when an install holds the lock", async () => {
@@ -186,6 +195,55 @@ describe("runGame", () => {
     expect(javaPrepare).toHaveBeenCalledTimes(1);
     expect(instance.run).not.toHaveBeenCalled();
     expect(store.get(atoms.isRunningAtom)).toBe(false);
+  });
+
+  it("stops a Fabric-family instance whose folder ends with ! and offers a rename", async () => {
+    const { runGame, atoms, store } = await load();
+    const { toast } = await import("sonner");
+    const { openInstanceScreen } = await import(
+      "@renderer/features/instances/openInstanceScreen"
+    );
+    const { consumeRenameOffer } = await import(
+      "@renderer/features/instances/renameOffer"
+    );
+    vi.mocked(toast.error).mockClear();
+
+    const instance = fakeInstance({
+      version: {
+        ...fakeInstance().version,
+        name: "Better than Adventure!",
+        loader: { name: "bta-babric", mods: [] },
+      },
+      versionPath: "C:/launcher/minecraft/versions/Better than Adventure!",
+    });
+
+    await runGame({ version: instance as any });
+
+    expect(instance.run).not.toHaveBeenCalled();
+    expect(javaPrepare).not.toHaveBeenCalled();
+    expect(store.get(atoms.isRunningAtom)).toBe(false);
+
+    const [title, options] = vi.mocked(toast.error).mock.calls[0] as [string, any];
+    expect(title).toBe("app.jarUrlNameTitle");
+
+    options.action.onClick();
+    expect(openInstanceScreen).toHaveBeenCalledWith(instance, account);
+    expect(consumeRenameOffer(instance.versionPath)).toBe("Better than Adventure");
+  });
+
+  it("still starts a vanilla instance whose name ends with !", async () => {
+    const { runGame } = await load();
+    const instance = fakeInstance({
+      version: {
+        ...fakeInstance().version,
+        name: "ML Test!",
+        loader: { name: "vanilla", mods: [] },
+      },
+    });
+
+    await runGame({ version: instance as any });
+
+    expect(instance.run).toHaveBeenCalledTimes(1);
   });
 
   it("hands the prepared Java to the instance before starting", async () => {
@@ -262,5 +320,80 @@ describe("runGame", () => {
       1,
       undefined,
     );
+  });
+
+  describe("modpack update check", () => {
+    const shareCode = "037640008ceea631e15f4e20";
+    const downloadedPack = () =>
+      fakeInstance({
+        version: {
+          ...fakeInstance().version,
+          name: "Thaumaturge Horizon",
+          shareCode,
+          downloadedVersion: true,
+          build: 15,
+        },
+      });
+
+    it("checks over HTTP while the backend answers, even with the online socket down", async () => {
+      const { runGame } = await load();
+      getModpack.mockImplementation(async () => ({
+        status: "success",
+        data: {
+          _id: shareCode,
+          shareCode,
+          build: 16,
+          conf: { loader: { mods: [] }, servers: [] },
+        },
+      }));
+      const instance = downloadedPack();
+
+      await runGame({ version: instance as any });
+
+      expect(getModpack).toHaveBeenCalledWith("", shareCode);
+      expect(instance.run).toHaveBeenCalledTimes(1);
+    });
+
+    it("asks the player instead of starting the old build when the check fails", async () => {
+      const { runGame, atoms, launchAtoms, store } = await load();
+      const failures = await import("@renderer/utilities/failures");
+      const timeout = { cause: "timeout", code: "NET-TIMEOUT" } as any;
+      vi.mocked(failures.consumeRecentFailure).mockReturnValueOnce(timeout);
+      getModpack.mockImplementation(async () => ({ status: "error", data: null }));
+      const instance = downloadedPack();
+
+      await runGame({ version: instance as any });
+
+      expect(instance.run).not.toHaveBeenCalled();
+      expect(instance.version.shareCode).toBe(shareCode);
+      expect(store.get(atoms.isRunningAtom)).toBe(false);
+      expect(store.get(launchAtoms.launchCheckFailedAtom)).toEqual({
+        params: { version: instance, instance: 0 },
+        failure: timeout,
+      });
+      store.set(launchAtoms.launchCheckFailedAtom, null);
+    });
+
+    it("runs the installed build once the player skips the update", async () => {
+      const { runGame } = await load();
+      getModpack.mockImplementation(async () => ({ status: "error", data: null }));
+      const instance = downloadedPack();
+
+      await runGame({ version: instance as any, skipUpdate: true });
+
+      expect(getModpack).not.toHaveBeenCalled();
+      expect(instance.run).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not wait on the server while the backend is offline", async () => {
+      const { runGame, atoms, store } = await load();
+      store.set(atoms.networkAtom, false);
+      const instance = downloadedPack();
+
+      await runGame({ version: instance as any });
+
+      expect(getModpack).not.toHaveBeenCalled();
+      expect(instance.run).toHaveBeenCalledTimes(1);
+    });
   });
 });

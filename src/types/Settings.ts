@@ -9,7 +9,23 @@ export const LANGUAGES = [
   { code: "en", label: "English", country: "GB" },
   { code: "ru", label: "Русский", country: "RU" },
   { code: "uk", label: "Українська", country: "UA" },
+  { code: "de", label: "Deutsch", country: "DE" },
+  { code: "es", label: "Español", country: "MX" },
+  { code: "fr", label: "Français", country: "FR" },
+  { code: "pl", label: "Polski", country: "PL" },
+  { code: "pt", label: "Português (Brasil)", country: "BR" },
+  { code: "tr", label: "Türkçe", country: "TR" },
 ];
+
+const RUSSIAN_READING_LOCALES = ["be", "kk", "ky", "tg", "uz"];
+
+export function matchLanguage(locale: string): string | null {
+  const prefix = String(locale || "")
+    .toLowerCase()
+    .split(/[-_]/)[0];
+  if (LANGUAGES.some((language) => language.code === prefix)) return prefix;
+  return RUSSIAN_READING_LOCALES.includes(prefix) ? "ru" : null;
+}
 
 export type DownloadSource = "auto" | "official" | "mirror";
 

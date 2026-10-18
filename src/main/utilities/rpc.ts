@@ -7,7 +7,7 @@ import { gameRuntime } from './runtime'
 import { linkDiscordIpcSocket } from './discordIpcSocket'
 import { getApiBaseUrl } from './apiHost'
 
-type SupportedRpcLanguage = 'en' | 'ru' | 'uk'
+type SupportedRpcLanguage = 'en' | 'ru' | 'uk' | 'de' | 'es' | 'fr' | 'pl' | 'pt' | 'tr'
 
 type RpcLocale = {
   buttons: {
@@ -49,7 +49,13 @@ type PublicShareActivity = {
 const rpcLocales: Record<SupportedRpcLanguage, RpcLocale> = {
   en: rpcLocaleData.en,
   ru: rpcLocaleData.ru,
-  uk: rpcLocaleData.uk
+  uk: rpcLocaleData.uk,
+  de: rpcLocaleData.de,
+  es: rpcLocaleData.es,
+  fr: rpcLocaleData.fr,
+  pl: rpcLocaleData.pl,
+  pt: rpcLocaleData.pt,
+  tr: rpcLocaleData.tr
 }
 
 const MAX_ACTIVITY_TEXT_LENGTH = 128
@@ -58,8 +64,9 @@ const MAX_RECONNECT_ATTEMPTS = 8
 
 function normalizeLanguage(lang?: string): SupportedRpcLanguage {
   const normalized = (lang || 'en').toLowerCase().split('-')[0]
-  if (normalized === 'ru' || normalized === 'uk') return normalized
-  return 'en'
+  return Object.prototype.hasOwnProperty.call(rpcLocales, normalized)
+    ? (normalized as SupportedRpcLanguage)
+    : 'en'
 }
 
 function truncateText(value?: string, maxLength = MAX_ACTIVITY_TEXT_LENGTH): string | undefined {

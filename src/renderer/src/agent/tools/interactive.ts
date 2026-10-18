@@ -38,7 +38,7 @@ export const askUser: AgentTool = {
   name: "ask_user",
   risk: "read",
   description:
-    'Ask the user a clarifying question and wait for their answer. Call this BEFORE any other tool when the request does not say which instance, which mod or which Minecraft version it means — for example "install a mod for me" or "fix my build". Do not resolve the ambiguity yourself by listing instances and picking one. Offer concrete options when you can; the user can also type a free answer.',
+    'Ask the user a clarifying question and wait for their answer. Call this BEFORE any other tool when the request does not say which instance, which mod or which Minecraft version it means — for example "install a mod for me" or "fix my build". Do not resolve the ambiguity yourself by listing instances and picking one. The one exception is a question about a crash when exactly one entry under "Recent game sessions" in the system prompt crashed: that instance is the one meant, so read its log instead of asking. Never ask for the Minecraft version or loader of an instance the user already named — they are in the instance list. Offer concrete options when you can; the user can also type a free answer.',
   parameters: {
     type: "object",
     properties: {
@@ -95,7 +95,7 @@ export const updatePlan: AgentTool = {
   name: "update_plan",
   risk: "read",
   description:
-    "Show or update a checklist of the steps you are going to take, so the user can follow along. Call it once at the start of any task that needs more than two or three tool calls, then call it again to mark steps done as you go. Keep the same step titles between calls.",
+    "Show or update a checklist of the steps you are going to take, so the user can follow along. Use it only for a task that needs five or more tool calls. Call it at most twice — at the start and when the work is done — and always together with another tool call in the same turn. Keep the same step titles between calls.",
   parameters: {
     type: "object",
     properties: {

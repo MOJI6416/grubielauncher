@@ -1,9 +1,8 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { LANGUAGES } from "@/types/Settings";
 import en from "./en.json";
-import ru from "./ru.json";
-import uk from "./uk.json";
 
 type Bundle = Record<string, unknown>;
 
@@ -12,6 +11,15 @@ const STATIC_CALL = /\bt\(\s*"([a-zA-Z0-9_.]+)"/g;
 const TEMPLATE_CALL = /\bt\(\s*`([a-zA-Z0-9_.]+)\.\$\{/g;
 
 const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
+
+const TRANSLATIONS = LANGUAGES.filter((language) => language.code !== "en").map(
+  (language) => ({
+    code: language.code,
+    bundle: JSON.parse(
+      readFileSync(join(__dirname, `${language.code}.json`), "utf-8"),
+    ) as Bundle,
+  }),
+);
 
 function flatten(bundle: Bundle, prefix = ""): string[] {
   const keys: string[] = [];
@@ -93,20 +101,59 @@ function isKnown(key: string): boolean {
   return enKeys.has(key) || enBases.has(pluralBase(key));
 }
 
+const pluralBases = new Set(
+  [...enKeys].filter((key) => PLURAL_SUFFIX.test(key)).map(pluralBase),
+);
+
+const SAMPLE_COUNTS = [
+  ...Array.from({ length: 200 }, (_, index) => index),
+  1_000_000,
+  2_000_000,
+];
+
+function integerPluralForms(code: string): string[] {
+  const rules = new Intl.PluralRules(code);
+  return [...new Set(SAMPLE_COUNTS.map((count) => rules.select(count)))];
+}
+
 describe("locale bundles", () => {
-  it("keeps ru and uk in parity with en", () => {
-    const ruKeys = flatten(ru as Bundle);
-    const ukKeys = flatten(uk as Bundle);
-    const base = [...enKeys];
-
-    const ruBases = new Set(ruKeys.map(pluralBase));
-    const ukBases = new Set(ukKeys.map(pluralBase));
-
-    expect(base.filter((key) => !ruBases.has(pluralBase(key)))).toEqual([]);
-    expect(ruKeys.filter((key) => !isKnown(key))).toEqual([]);
-    expect(base.filter((key) => !ukBases.has(pluralBase(key)))).toEqual([]);
-    expect(ukKeys.filter((key) => !isKnown(key))).toEqual([]);
+  it("translates ru and uk in full", () => {
+    for (const code of ["ru", "uk"]) {
+      const translation = TRANSLATIONS.find((item) => item.code === code);
+      expect(Object.keys(translation?.bundle ?? {}).length).toBeGreaterThan(0);
+    }
   });
+
+  it.each(TRANSLATIONS.map((item) => [item.code, item.bundle] as const))(
+    "keeps %s in parity with en once it is started",
+    (_code, bundle) => {
+      if (Object.keys(bundle).length === 0) return;
+
+      const keys = flatten(bundle);
+      const bases = new Set(keys.map(pluralBase));
+
+      expect([...enKeys].filter((key) => !bases.has(pluralBase(key)))).toEqual(
+        [],
+      );
+      expect(keys.filter((key) => !isKnown(key))).toEqual([]);
+    },
+  );
+
+  it.each(TRANSLATIONS.map((item) => [item.code, item.bundle] as const))(
+    "gives every plural key of %s each form a count can select",
+    (code, bundle) => {
+      if (Object.keys(bundle).length === 0) return;
+
+      const keys = new Set(flatten(bundle));
+      const missing = [...pluralBases].flatMap((base) =>
+        integerPluralForms(code)
+          .map((category) => `${base}_${category}`)
+          .filter((key) => !keys.has(key)),
+      );
+
+      expect(missing).toEqual([]);
+    },
+  );
 
   it("resolves every statically written t(\"...\") key", () => {
     const missing: string[] = [];

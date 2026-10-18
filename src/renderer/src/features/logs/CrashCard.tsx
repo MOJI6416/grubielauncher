@@ -16,6 +16,7 @@ export function CrashCard({
   exit,
   culprits,
   actions,
+  fixes,
 }: {
   tone: CrashTone;
   title: string;
@@ -23,6 +24,7 @@ export function CrashCard({
   exit: { code: number | null; info: ExitCodeInfo } | null;
   culprits: string[];
   actions: ReactNode;
+  fixes?: ReactNode;
 }) {
   const { t } = useTranslation();
   const redact = useRedact();
@@ -104,6 +106,8 @@ export function CrashCard({
 
         <div className="flex shrink-0 items-center gap-1.5">{actions}</div>
       </div>
+
+      {fixes}
     </div>
   );
 }

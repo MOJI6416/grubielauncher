@@ -1,7 +1,7 @@
 import { getDefaultStore } from "jotai";
 import i18n from "@renderer/i18n";
 import { IWorldBackup } from "@/types/WorldBackup";
-import { settingsAtom } from "@renderer/stores/atoms";
+import { accountAtom, settingsAtom } from "@renderer/stores/atoms";
 import { AgentTool, ToolPreview } from "../types";
 import { findInstance } from "./instances";
 import { busyError, previewDate, previewSize } from "./shared";
@@ -82,6 +82,15 @@ function describe(code: string): string {
   return BACKUP_ERRORS[code] ?? code;
 }
 
+async function worldDisplayName(path: string, folder: string): Promise<string> {
+  const account = getDefaultStore().get(accountAtom);
+  const world = account
+    ? await api.worlds.readWorld(path, account).catch(() => null)
+    : null;
+
+  return world?.name || folder;
+}
+
 export const createWorldBackup: AgentTool = {
   name: "create_world_backup",
   risk: "write",
@@ -102,6 +111,27 @@ export const createWorldBackup: AgentTool = {
     key: "agent.tools.createWorldBackup",
     params: { name: input?.worldFolder },
   }),
+  preview: async (input): Promise<ToolPreview | null> => {
+    const resolved = await resolveWorldPath(
+      input?.instance,
+      input?.worldFolder,
+    );
+    if ("error" in resolved) return null;
+
+    const bytes = (await api.file.getTotalSizes([resolved.path])) ?? 0;
+
+    return {
+      rows: [
+        {
+          key: "world",
+          value: await worldDisplayName(resolved.path, String(input.worldFolder)),
+        },
+        { key: "instance", value: String(input.instance) },
+        ...(bytes > 0 ? [{ key: "size", value: previewSize(bytes) }] : []),
+        { key: "keepBackups", value: String(keepCount()) },
+      ],
+    };
+  },
   run: async (input) => {
     const resolved = await resolveWorldPath(
       input?.instance,
@@ -294,6 +324,27 @@ export const renameWorld: AgentTool = {
     key: "agent.tools.renameWorld",
     params: { name: input?.worldFolder },
   }),
+  preview: async (input): Promise<ToolPreview | null> => {
+    const resolved = await resolveWorldPath(
+      input?.instance,
+      input?.worldFolder,
+    );
+    if ("error" in resolved) return null;
+
+    const name = String(input?.name ?? "").trim();
+    if (name === "") return null;
+
+    return {
+      rows: [
+        { key: "instance", value: String(input.instance) },
+        {
+          key: "name",
+          from: await worldDisplayName(resolved.path, String(input.worldFolder)),
+          value: name,
+        },
+      ],
+    };
+  },
   run: async (input) => {
     const resolved = await resolveWorldPath(
       input?.instance,
@@ -307,6 +358,8 @@ export const renameWorld: AgentTool = {
     const busy = busyError();
     if (busy) return { ok: false, error: busy };
 
+    const folder = String(input.worldFolder).trim();
+    const previous = await worldDisplayName(resolved.path, folder);
     const applied = await api.worlds.writeName(resolved.path, name);
     if (!applied) {
       return {
@@ -315,6 +368,19 @@ export const renameWorld: AgentTool = {
       };
     }
 
-    return { ok: true, data: { name: applied } };
+    return {
+      ok: true,
+      data: { name: applied },
+      ...(previous !== applied
+        ? {
+            undo: {
+              op: "worldName" as const,
+              instance: String(input.instance),
+              worldFolder: folder,
+              name: previous,
+            },
+          }
+        : {}),
+    };
   },
 };

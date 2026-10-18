@@ -1,18 +1,22 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Archive,
+  ArrowRight,
   Brain,
   Check,
   ChevronRight,
   CircleAlert,
   CircleDot,
   CircleSlash,
+  CornerDownRight,
   KeyRound,
   Loader2,
   RefreshCw,
   Settings2,
   ShieldAlert,
   SquarePlus,
+  Undo2,
   Wifi,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,6 +24,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Markdown } from "@renderer/utilities/markdown";
 import { answerUser } from "@renderer/agent/pending";
+import { splitReplies } from "@renderer/agent/replies";
+import { undoToolCall } from "@renderer/agent/undo";
 import { TimelineItem, ToolPreview } from "@renderer/agent/types";
 import {
   describeArguments,
@@ -97,7 +103,50 @@ function ArgumentRows({ input }: { input?: string }) {
   );
 }
 
-function ToolRow({ item }: { item: ToolItem }) {
+function UndoControl({
+  item,
+  running,
+}: {
+  item: ToolItem;
+  running: boolean;
+}) {
+  const { t } = useTranslation();
+
+  if (item.status !== "ok" || !item.undo) return null;
+
+  if (item.undoState === "done") {
+    return (
+      <span className="flex shrink-0 items-center gap-1 pr-2.5 text-[0.65rem] text-faint">
+        <Undo2 className="size-3" />
+        {t("agent.undo.done")}
+      </span>
+    );
+  }
+
+  if (item.undoState === "running") {
+    return (
+      <span className="flex shrink-0 items-center gap-1 pr-2.5 text-[0.65rem] text-muted-foreground">
+        <Loader2 className="size-3 animate-spin" />
+        {t("agent.undo.running")}
+      </span>
+    );
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="mr-1 h-6 shrink-0 px-2 text-[0.7rem]"
+      disabled={running}
+      onClick={() => void undoToolCall(item.id)}
+    >
+      <Undo2 className="size-3" />
+      {item.undoState === "failed" ? t("agent.undo.retry") : t("agent.undo.action")}
+    </Button>
+  );
+}
+
+function ToolRow({ item, running }: { item: ToolItem; running: boolean }) {
   const { t } = useTranslation();
   const redact = useRedact();
   const [expanded, setExpanded] = useState(false);
@@ -109,27 +158,40 @@ function ToolRow({ item }: { item: ToolItem }) {
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={() => setExpanded((value) => !value)}
-        className="flex h-8 w-full items-center gap-2 px-2.5 text-left transition-colors hover:bg-surface-3/60"
-      >
-        <StatusGlyph status={item.status} />
-        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-          {label}
-        </span>
-        {item.status === "error" && item.error && (
-          <span className="max-w-[45%] shrink-0 truncate text-[0.65rem] text-destructive">
-            {redact.text(item.error)}
+      <div className="flex items-center transition-colors hover:bg-surface-3/60">
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="flex h-8 min-w-0 flex-1 items-center gap-2 px-2.5 text-left"
+        >
+          <StatusGlyph status={item.status} />
+          <span
+            className={cn(
+              "min-w-0 flex-1 truncate text-xs text-muted-foreground",
+              item.undoState === "done" && "line-through decoration-faint",
+            )}
+          >
+            {label}
           </span>
-        )}
-        <ChevronRight
-          className={cn(
-            "size-3 shrink-0 text-faint transition-transform",
-            expanded && "rotate-90",
+          {item.status === "error" && item.error && (
+            <span className="max-w-[45%] shrink-0 truncate text-[0.65rem] text-destructive">
+              {redact.text(item.error)}
+            </span>
           )}
-        />
-      </button>
+          {item.undoState === "failed" && item.undoError && (
+            <span className="max-w-[40%] shrink-0 truncate text-[0.65rem] text-destructive">
+              {redact.text(item.undoError)}
+            </span>
+          )}
+          <ChevronRight
+            className={cn(
+              "size-3 shrink-0 text-faint transition-transform",
+              expanded && "rotate-90",
+            )}
+          />
+        </button>
+        <UndoControl item={item} running={running} />
+      </div>
 
       {expanded && (
         <div className="space-y-2 border-t border-border px-2.5 py-2">
@@ -140,6 +202,11 @@ function ToolRow({ item }: { item: ToolItem }) {
           {item.error && (
             <p className="text-[0.7rem] text-destructive">
               {redact.text(item.error)}
+            </p>
+          )}
+          {item.undoError && (
+            <p className="text-[0.7rem] text-destructive">
+              {redact.text(item.undoError)}
             </p>
           )}
           {item.output && (
@@ -153,7 +220,13 @@ function ToolRow({ item }: { item: ToolItem }) {
   );
 }
 
-function ToolGroup({ items }: { items: ToolItem[] }) {
+function ToolGroup({
+  items,
+  running,
+}: {
+  items: ToolItem[];
+  running: boolean;
+}) {
   const status = toolGroupStatus(items);
 
   return (
@@ -164,7 +237,7 @@ function ToolGroup({ items }: { items: ToolItem[] }) {
       )}
     >
       {items.map((item) => (
-        <ToolRow key={item.id} item={item} />
+        <ToolRow key={item.id} item={item} running={running} />
       ))}
     </div>
   );
@@ -216,9 +289,19 @@ function PreviewRows({ preview }: { preview: ToolPreview }) {
         {preview.rows.map((row) => (
           <div key={row.key} className="contents">
             <dt className="truncate text-faint">
-              {t(`agent.preview.${row.key}`, { defaultValue: row.key })}
+              {row.label !== undefined
+                ? redact.text(row.label)
+                : t(`agent.preview.${row.key}`, { defaultValue: row.key })}
             </dt>
             <dd className="min-w-0 break-words text-foreground">
+              {row.from !== undefined && (
+                <>
+                  <span className="text-muted-foreground">
+                    {redact.text(row.from)}
+                  </span>
+                  <ArrowRight className="mx-1 inline size-3 align-[-0.125em] text-faint" />
+                </>
+              )}
               {redact.text(row.value)}
             </dd>
           </div>
@@ -482,6 +565,52 @@ function PlanCard({ item }: { item: Extract<TimelineItem, { kind: "plan" }> }) {
   );
 }
 
+function CompactedRow({
+  item,
+}: {
+  item: Extract<TimelineItem, { kind: "compacted" }>;
+}) {
+  const { t } = useTranslation();
+  const redact = useRedact();
+  const [expanded, setExpanded] = useState(false);
+  const canExpand = item.status === "done" && item.summary !== "";
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-dashed border-border">
+      <button
+        type="button"
+        disabled={!canExpand}
+        className="flex h-8 w-full items-center gap-2 px-2.5 text-left disabled:cursor-default"
+        onClick={() => setExpanded((value) => !value)}
+      >
+        {item.status === "running" ? (
+          <Loader2 className="size-3.5 shrink-0 animate-spin text-faint" />
+        ) : item.status === "failed" ? (
+          <CircleAlert className="size-3.5 shrink-0 text-warning" />
+        ) : (
+          <Archive className="size-3.5 shrink-0 text-faint" />
+        )}
+        <span className="min-w-0 flex-1 truncate text-xs text-faint">
+          {t(`agent.compaction.${item.status}`)}
+        </span>
+        {canExpand && (
+          <ChevronRight
+            className={cn(
+              "size-3 shrink-0 text-faint transition-transform",
+              expanded && "rotate-90",
+            )}
+          />
+        )}
+      </button>
+      {expanded && (
+        <p className="border-t border-border px-2.5 py-2 text-[0.7rem] whitespace-pre-wrap text-muted-foreground">
+          {redact.text(item.summary)}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function StoppedRow() {
   const { t } = useTranslation();
 
@@ -499,6 +628,7 @@ const RECOVERY_ICON: Record<AgentErrorRecovery, typeof RefreshCw> = {
   retry: RefreshCw,
   continue: RefreshCw,
   newChat: SquarePlus,
+  compact: Archive,
   connectivity: Wifi,
   none: RefreshCw,
 };
@@ -574,20 +704,23 @@ const Row = memo(function Row({
         </div>
       );
 
-    case "assistant":
+    case "assistant": {
+      const body = splitReplies(item.text, item.streaming).text;
+
       return (
         <div className="max-w-full text-sm">
-          {item.text === "" && item.streaming ? (
+          {body === "" && item.streaming ? (
             <Loader2 className="size-4 animate-spin text-faint" />
           ) : (
             <Markdown
-              body={redact.text(item.text)}
+              body={redact.text(body)}
               fallback={null}
               keepPrevious={item.streaming}
             />
           )}
         </div>
       );
+    }
 
     case "reasoning":
       return <ReasoningCard item={item} />;
@@ -604,6 +737,9 @@ const Row = memo(function Row({
     case "stopped":
       return <StoppedRow />;
 
+    case "compacted":
+      return <CompactedRow item={item} />;
+
     case "error":
       return <ErrorCard item={item} onRecover={onRecover} />;
 
@@ -612,17 +748,56 @@ const Row = memo(function Row({
   }
 });
 
+function ReplyChips({
+  replies,
+  onReply,
+}: {
+  replies: string[];
+  onReply: (text: string) => void;
+}) {
+  const redact = useRedact();
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {replies.map((reply) => (
+        <Button
+          key={reply}
+          variant="outline"
+          size="sm"
+          className="h-7 max-w-full text-xs"
+          onClick={() => onReply(reply)}
+        >
+          <CornerDownRight className="size-3.5 text-faint" />
+          <span className="truncate">{redact.text(reply)}</span>
+        </Button>
+      ))}
+    </div>
+  );
+}
+
 export function AgentTimeline({
   items,
   onRecover,
+  running,
+  onReply,
 }: {
   items: TimelineItem[];
   onRecover: (recovery: AgentErrorRecovery) => void;
+  running: boolean;
+  onReply: (text: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const pinnedToBottomRef = useRef(true);
   const blocks = useMemo(() => groupTimeline(items), [items]);
+  const replies = useMemo(() => {
+    if (running) return [];
+
+    const last = items[items.length - 1];
+    if (!last || last.kind !== "assistant" || last.streaming) return [];
+
+    return splitReplies(last.text).replies;
+  }, [items, running]);
 
   useEffect(() => {
     const node = containerRef.current;
@@ -663,12 +838,15 @@ export function AgentTimeline({
             }
           >
             {block.kind === "tools" ? (
-              <ToolGroup items={block.items} />
+              <ToolGroup items={block.items} running={running} />
             ) : (
               <Row item={block.item} onRecover={onRecover} />
             )}
           </div>
         ))}
+        {replies.length > 0 && (
+          <ReplyChips replies={replies} onReply={onReply} />
+        )}
       </div>
     </div>
   );

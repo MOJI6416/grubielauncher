@@ -1,5 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  type SelectionGesture,
+  applySelectionGesture,
+  nextSelectionAnchor,
+  preventShiftTextSelection,
+  readSelectionGesture,
+} from "@renderer/utilities/rangeSelection";
 import { SiCurseforge, SiModrinth } from "react-icons/si";
 import { ArrowRight, CircleAlert, FileBox } from "lucide-react";
 import { ILocalIdentifyMatch, Provider } from "@/types/ModManager";
@@ -54,13 +61,16 @@ export function IdentifyLocalDialog({
     .filter(Boolean)
     .join(", ");
 
-  const toggle = (key: string) =>
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+  const anchorRef = useRef<string | null>(null);
+
+  const toggle = (key: string, gesture: SelectionGesture) => {
+    const order = report.matches.map((match) => match.key);
+    const anchor = anchorRef.current;
+    anchorRef.current = nextSelectionAnchor(order, anchor, key, gesture);
+    setSelected((prev) =>
+      applySelectionGesture(prev, order, anchor, key, gesture),
+    );
+  };
 
   return (
     <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
@@ -104,7 +114,10 @@ export function IdentifyLocalDialog({
                   key={match.key}
                   type="button"
                   aria-pressed={isSelected}
-                  onClick={() => toggle(match.key)}
+                  onMouseDown={preventShiftTextSelection}
+                  onClick={(event) =>
+                    toggle(match.key, readSelectionGesture(event, true))
+                  }
                   className="flex h-14 w-full min-w-0 items-center gap-2.5 rounded-lg bg-surface-2 px-2.5 text-left transition-colors hover:bg-surface-3"
                 >
                   <Checkbox

@@ -3,9 +3,14 @@ import {
   AgentStreamEvent,
   AgentToolCall,
   AgentUsage,
+  BUILTIN_AGENT_PROVIDER_ID,
 } from "@/types/Agent";
+import { accountAtom } from "@renderer/stores/atoms";
+import { getDefaultStore } from "jotai";
 import {
   abortAgentRun,
+  agentModelsAtom,
+  agentProvidersAtom,
   bindRunToCurrentChat,
   MAX_STEPS,
   nextId,
@@ -27,11 +32,28 @@ import { cancelAllWaiters, STOP_ANSWER, waitForUser } from "./pending";
 import { persistCurrentChat, syncChats } from "./history";
 import { AgentTool } from "./types";
 import { truncate } from "./untrusted";
+import { planToolBatches } from "./toolBatches";
+import {
+  activeCompaction,
+  COMPACTION_PROMPT,
+  DEFAULT_CONTEXT_TOKENS,
+  planCompaction,
+  renderTranscript,
+  wireMessages,
+} from "./compaction";
+
+const MIN_CONTEXT_TOKENS = 4000;
 
 const api = window.api;
 
 const MAX_TOOL_RESULT_CHARS = 8000;
 const STREAM_SETTLE_TIMEOUT_MS = 1500;
+
+function builtinAuth(providerId: string): { accessToken?: string } {
+  if (providerId !== BUILTIN_AGENT_PROVIDER_ID) return {};
+  const accessToken = getDefaultStore().get(accountAtom)?.accessToken;
+  return accessToken ? { accessToken } : {};
+}
 
 function newRunId(): string {
   return `run${Math.random().toString(36).slice(2, 12)}`;
@@ -168,6 +190,7 @@ async function streamTurn(
       messages,
       tools: toolSpecs(tools),
       ...(model ? { model } : {}),
+      ...builtinAuth(providerId),
     });
 
     await Promise.race([
@@ -334,6 +357,7 @@ async function runToolCall(
             status: result.ok ? "ok" : "error",
             output: result.ok ? content : undefined,
             error: result.ok ? undefined : result.error,
+            ...(result.ok && result.undo ? { undo: result.undo } : {}),
           }
         : item,
     );
@@ -356,14 +380,147 @@ async function runToolCall(
   }
 }
 
+async function runToolCalls(
+  calls: AgentToolCall[],
+  tools: AgentTool[],
+): Promise<AgentChatMessage[]> {
+  const results: AgentChatMessage[] = [];
+
+  for (const batch of planToolBatches(calls, tools)) {
+    if (readState().stopping) {
+      results.push(...batch.map(stoppedToolResult));
+      continue;
+    }
+
+    results.push(
+      ...(await Promise.all(batch.map((call) => runToolCall(call, tools)))),
+    );
+  }
+
+  return results;
+}
+
+function contextWindow(providerId: string, model: string | null): number {
+  const store = getDefaultStore();
+  const id =
+    model ??
+    store
+      .get(agentProvidersAtom)
+      ?.providers.find((provider) => provider.id === providerId)?.model ??
+    null;
+  const info = id
+    ? store.get(agentModelsAtom)[providerId]?.find((entry) => entry.id === id)
+    : undefined;
+
+  return info?.contextLength && info.contextLength >= MIN_CONTEXT_TOKENS
+    ? info.contextLength
+    : DEFAULT_CONTEXT_TOKENS;
+}
+
+async function completeText(
+  providerId: string,
+  model: string | null,
+  messages: AgentChatMessage[],
+): Promise<string | null> {
+  const runId = newRunId();
+  let text = "";
+  let failed = false;
+
+  let settle: (() => void) | null = null;
+  const settled = new Promise<void>((resolve) => {
+    settle = resolve;
+  });
+
+  const unsubscribe = api.events.onAgentStream((event) => {
+    if (event.runId !== runId) return;
+    if (event.type === "text") text += event.delta;
+    if (event.type === "done") settle?.();
+    if (event.type === "error") {
+      failed = true;
+      settle?.();
+    }
+  });
+
+  update((state) => ({ ...state, runId }));
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    await api.agent.chat.start(runId, {
+      providerId,
+      messages,
+      ...(model ? { model } : {}),
+      ...builtinAuth(providerId),
+    });
+    await Promise.race([
+      settled,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, STREAM_SETTLE_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+    unsubscribe();
+    update((state) => ({ ...state, runId: null }));
+  }
+
+  const summary = text.trim();
+  return failed || summary === "" ? null : summary;
+}
+
+async function maybeCompact(
+  providerId: string,
+  model: string | null,
+  force: boolean,
+): Promise<void> {
+  const state = readState();
+  const current = activeCompaction(state.timeline, state.messages);
+  const plan = planCompaction(
+    state.messages,
+    current,
+    contextWindow(providerId, model),
+    force,
+  );
+  if (!plan) return;
+
+  const itemId = nextId("compacted");
+  pushTimeline({
+    kind: "compacted",
+    id: itemId,
+    upto: plan.upto,
+    summary: "",
+    status: "running",
+    tokensBefore: plan.tokensBefore,
+  });
+
+  const transcript = renderTranscript(
+    state.messages.slice(plan.from, plan.upto),
+    current?.summary ?? null,
+  );
+  const summary = await completeText(providerId, model, [
+    { role: "system", content: COMPACTION_PROMPT },
+    { role: "user", content: transcript },
+  ]).catch(() => null);
+
+  patchTimelineItem(itemId, (item) =>
+    item.kind === "compacted"
+      ? summary
+        ? { ...item, summary, status: "done" }
+        : { ...item, status: "failed" }
+      : item,
+  );
+}
+
 let activeRun: Promise<void> | null = null;
+
+export type SendOptions = { forceCompact?: boolean };
 
 export function sendAgentMessage(
   providerId: string,
   userText: string,
   model: string | null = null,
+  options: SendOptions = {},
 ): Promise<void> {
-  const run = runConversation(providerId, userText, model).finally(() => {
+  const run = runConversation(providerId, userText, model, options).finally(() => {
     if (activeRun === run) {
       activeRun = null;
       releaseRunOwner();
@@ -385,15 +542,13 @@ async function runConversation(
   providerId: string,
   userText: string,
   model: string | null,
+  options: SendOptions,
 ): Promise<void> {
   const text = userText.trim();
   if (text === "" || readState().running) return;
 
   const tools = buildToolList();
-  const hasSystemPrompt = readState().messages.some(
-    (message) => message.role === "system",
-  );
-  const systemPrompt = hasSystemPrompt ? null : await buildSystemPrompt();
+  const systemPrompt = await buildSystemPrompt();
 
   bindRunToCurrentChat();
 
@@ -403,10 +558,8 @@ async function runConversation(
     stopping: false,
     steps: 0,
     messages: [
-      ...(systemPrompt
-        ? [{ role: "system" as const, content: systemPrompt }]
-        : []),
-      ...state.messages,
+      { role: "system" as const, content: systemPrompt },
+      ...state.messages.filter((message) => message.role !== "system"),
       { role: "user" as const, content: text },
     ],
     timeline: [
@@ -419,9 +572,20 @@ async function runConversation(
     for (let step = 0; step < MAX_STEPS; step++) {
       update((state) => ({ ...state, steps: step + 1 }));
 
+      await maybeCompact(
+        providerId,
+        model,
+        step === 0 && options.forceCompact === true,
+      );
+      if (readState().stopping) return;
+
+      const current = readState();
       const outcome = await streamTurn(
         providerId,
-        readState().messages,
+        wireMessages(
+          current.messages,
+          activeCompaction(current.timeline, current.messages),
+        ),
         tools,
         model,
       );
@@ -491,14 +655,7 @@ async function runConversation(
         return;
       }
 
-      const results: AgentChatMessage[] = [];
-      for (const call of outcome.toolCalls) {
-        results.push(
-          readState().stopping
-            ? stoppedToolResult(call)
-            : await runToolCall(call, tools),
-        );
-      }
+      const results = await runToolCalls(outcome.toolCalls, tools);
 
       update((state) => ({
         ...state,
@@ -536,6 +693,7 @@ async function runConversation(
 export async function retryLastTurn(
   providerId: string,
   model: string | null = null,
+  options: SendOptions = {},
 ): Promise<void> {
   const state = readState();
   if (state.running) return;
@@ -562,5 +720,5 @@ export async function retryLastTurn(
     planItemId: null,
   }));
 
-  await sendAgentMessage(providerId, lastUser.content, model);
+  await sendAgentMessage(providerId, lastUser.content, model, options);
 }

@@ -55,6 +55,32 @@ export function resolveLaunchBlock(
   return null;
 }
 
+export interface ModpackCheckContext {
+  skipUpdate?: boolean;
+  shareCode?: string;
+  downloadedVersion?: boolean;
+  isNetwork: boolean;
+}
+
+export function shouldCheckModpack(context: ModpackCheckContext): boolean {
+  return (
+    !context.skipUpdate &&
+    Boolean(context.shareCode) &&
+    Boolean(context.downloadedVersion) &&
+    context.isNetwork
+  );
+}
+
+export type ModpackCheckOutcome = "unpublished" | "compare" | "failed";
+
+export function readModpackCheck(
+  result: { status?: string; data?: unknown } | null | undefined,
+): ModpackCheckOutcome {
+  if (result?.status === "not_found") return "unpublished";
+  if (result?.data) return "compare";
+  return "failed";
+}
+
 export function nextInstanceNumber(
   consoles: Pick<IConsole, "versionName" | "status" | "instance">[],
   versionName: string,

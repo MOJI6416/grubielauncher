@@ -17,11 +17,6 @@ import {
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Hint } from "@renderer/components/Hint";
 import { ILoader } from "@/types/Loader";
 import type { IJarModSet } from "@/types/IVersion";
@@ -1056,7 +1051,7 @@ export function Share({
     toast.success(t("ownModpacks.deleted"));
   }, [selectedVersion, account, authData, versions, closeModal, t]);
 
-  const handlePublish = useCallback(async () => {
+  async function handlePublish() {
     if (!selectedVersion || !account || !authData) return;
 
     if (shareType === "update" && selectedVersion.version.shareCode) {
@@ -1156,18 +1151,7 @@ export function Share({
       setLoadingType(undefined);
       if (isPublished) closeModal();
     }
-  }, [
-    account,
-    authData,
-    closeModal,
-    isCatalogPublic,
-    nextDescription,
-    onPublished,
-    selectedVersion,
-    shareType,
-    t,
-    versions,
-  ]);
+  }
 
   const shareUrl = selectedVersion?.version.shareCode
     ? buildPackShareUrl(selectedVersion.version.shareCode)
@@ -1398,21 +1382,18 @@ export function Share({
                     <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
                       {redact.value(shareUrl)}
                     </span>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon-xs"
-                          variant="ghost"
-                          aria-label={t("common.copy")}
-                          onClick={async () => {
-                            await copyWithFeedback(shareUrl);
-                          }}
-                        >
-                          <Copy />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{t("common.copy")}</TooltipContent>
-                    </Tooltip>
+                    <Hint content={t("common.copy")}>
+                      <Button
+                        size="icon-xs"
+                        variant="ghost"
+                        aria-label={t("common.copy")}
+                        onClick={async () => {
+                          await copyWithFeedback(shareUrl);
+                        }}
+                      >
+                        <Copy />
+                      </Button>
+                    </Hint>
                   </div>
                 )}
 

@@ -1,5 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  type SelectionGesture,
+  applySelectionGesture,
+  nextSelectionAnchor,
+  preventShiftTextSelection,
+  readSelectionGesture,
+} from "@renderer/utilities/rangeSelection";
 import { useAtomValue } from "jotai";
 import { Download } from "lucide-react";
 import { IServer } from "@/types/ServersList";
@@ -84,6 +91,21 @@ export function ServerImport({
     [candidates, picked],
   );
 
+  const anchorRef = useRef<string | null>(null);
+
+  const pick = (key: string, gesture: SelectionGesture) => {
+    const order = (candidates ?? []).map((entry) => entry.key);
+    const anchor = anchorRef.current;
+    anchorRef.current = nextSelectionAnchor(order, anchor, key, gesture);
+    setPicked((prev) => {
+      const current = new Set(order.filter((entryKey) => prev[entryKey]));
+      const next = applySelectionGesture(current, order, anchor, key, gesture);
+      return Object.fromEntries(
+        order.map((entryKey) => [entryKey, next.has(entryKey)]),
+      );
+    });
+  };
+
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
@@ -127,17 +149,14 @@ export function ServerImport({
               {candidates.map((entry) => (
                 <label
                   key={entry.key}
+                  onMouseDown={preventShiftTextSelection}
+                  onClickCapture={(event) => {
+                    event.preventDefault();
+                    pick(entry.key, readSelectionGesture(event, true));
+                  }}
                   className="flex min-w-0 cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent/40"
                 >
-                  <Checkbox
-                    checked={picked[entry.key] === true}
-                    onCheckedChange={(checked) =>
-                      setPicked((prev) => ({
-                        ...prev,
-                        [entry.key]: checked === true,
-                      }))
-                    }
-                  />
+                  <Checkbox checked={picked[entry.key] === true} />
                   <ServerFavicon icon={entry.server.icon} size={28} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm">

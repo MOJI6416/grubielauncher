@@ -94,6 +94,32 @@ describe("LaunchWatch", () => {
     expect(calls.at(-1)).toMatchObject({ kind: "ok", data: { ready: true } });
   });
 
+  it("keeps the output tail when the game exits with code 0", () => {
+    const { span, calls } = fakeSpan();
+    const watch = new LaunchWatch({
+      span,
+      isAlive: () => false,
+      now: () => 0,
+      tickMs: 0,
+    });
+
+    watch.spawned(1);
+    watch.line("out", "Starting up SoundSystem...");
+    watch.ready("Starting up SoundSystem");
+    watch.line("err", "java.io.FileNotFoundException: http://s3.amazonaws.com/MinecraftResources/");
+    watch.exited(0, null, false);
+
+    expect(calls.at(-1)).toMatchObject({
+      kind: "ok",
+      data: {
+        tail: [
+          "Starting up SoundSystem...",
+          "java.io.FileNotFoundException: http://s3.amazonaws.com/MinecraftResources/",
+        ],
+      },
+    });
+  });
+
   it("fails the span with the tail when the game exits before it is ready", () => {
     const { span, calls } = fakeSpan();
     const watch = new LaunchWatch({

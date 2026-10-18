@@ -62,6 +62,7 @@ import { readPrismJarMods } from "./prismJarMods";
 import { VersionsService } from "../services/Versions";
 import { BTA_MINECRAFT_VERSION } from "@/shared/btaLoader";
 import { FOXLOADER_MINECRAFT_VERSION } from "@/shared/foxLoader";
+import { isExcludedInstancePath } from "@/shared/instancePrivacy";
 import {
   fabricFamilyFor,
   ornitheIntermediaryGeneration,
@@ -1623,6 +1624,35 @@ async function readPrismModIndexProjects(
   return result;
 }
 
+const ROOT_LEVEL_GAME_ENTRIES = [
+  "mods",
+  "resourcepacks",
+  "shaderpacks",
+  "datapacks",
+  "config",
+  "defaultconfigs",
+  "kubejs",
+  "scripts",
+  "saves",
+  "options.txt",
+  "servers.dat",
+];
+
+const SKIPPED_GAME_ROOT_ENTRIES = new Set([
+  "version.json",
+  "assets",
+  "libraries",
+  "versions",
+  "bin",
+  ".mixin.out",
+]);
+
+function copiesGameRootEntry(entry: string): boolean {
+  const name = entry.toLowerCase();
+  if (SKIPPED_GAME_ROOT_ENTRIES.has(name)) return false;
+  return name === "servers.dat" || !isExcludedInstancePath(entry);
+}
+
 async function copyForeignInstanceOverrides(
   instanceRoot: string,
   gameRoot: string,
@@ -1630,19 +1660,10 @@ async function copyForeignInstanceOverrides(
   const overridesPath = path.join(instanceRoot, "overrides");
   if (await fs.pathExists(overridesPath)) return;
 
-  const entriesToCopy = [
-    "mods",
-    "resourcepacks",
-    "shaderpacks",
-    "datapacks",
-    "config",
-    "defaultconfigs",
-    "kubejs",
-    "scripts",
-    "saves",
-    "options.txt",
-    "servers.dat",
-  ];
+  const entriesToCopy =
+    path.resolve(gameRoot) === path.resolve(instanceRoot)
+      ? ROOT_LEVEL_GAME_ENTRIES
+      : (await fs.readdir(gameRoot)).filter(copiesGameRootEntry);
 
   let copied = false;
   for (const entry of entriesToCopy) {

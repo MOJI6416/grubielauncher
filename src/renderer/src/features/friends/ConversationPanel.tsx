@@ -17,11 +17,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { ILocalAccount } from "@/types/Account";
 import type { IModpack } from "@/types/Backend";
@@ -33,6 +28,7 @@ import {
   parsePackShareCode,
 } from "@renderer/utilities/packShare";
 import { groupInitials } from "@renderer/features/voice/groupList";
+import { Hint } from "@renderer/components/Hint";
 import { LoaderLabel } from "@renderer/components/Loaders";
 import { ChatSurface, type SenderView } from "./ChatSurface";
 import { useDirectChat } from "./useDirectChat";
@@ -192,34 +188,28 @@ export function ConversationPanel({
             </Button>
           )}
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                disabled={!friend.isOnline || isCallDisabled}
-                aria-label={t("voiceCall.start")}
-                onClick={onStartCall}
-              >
-                <PhoneCall className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t("voiceCall.start")}</TooltipContent>
-          </Tooltip>
+          <Hint content={t("voiceCall.start")}>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              disabled={!friend.isOnline || isCallDisabled}
+              aria-label={t("voiceCall.start")}
+              onClick={onStartCall}
+            >
+              <PhoneCall className="size-4" />
+            </Button>
+          </Hint>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                aria-label={t("accountInfo.viewAccount")}
-                onClick={onViewProfile}
-              >
-                <User className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t("accountInfo.viewAccount")}</TooltipContent>
-          </Tooltip>
+          <Hint content={t("accountInfo.viewAccount")}>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label={t("accountInfo.viewAccount")}
+              onClick={onViewProfile}
+            >
+              <User className="size-4" />
+            </Button>
+          </Hint>
 
           <Button
             size="icon-sm"

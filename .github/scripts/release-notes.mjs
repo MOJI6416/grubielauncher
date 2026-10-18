@@ -10,8 +10,8 @@ const API_URL = (process.env.GRUBIE_API_URL || "https://api.grubielauncher.com")
 
 const GUILD_ID = "1229487451916210236";
 const BUG_REPORTS_CHANNEL = "1463718142533566588";
-const LOCALES = ["en", "ru", "uk"];
-const THREAD_LOCALES = ["ru", "uk"];
+const LOCALES = ["en", "ru", "uk", "de", "es", "fr", "pl", "pt", "tr"];
+const REQUIRED_LOCALES = ["en", "ru", "uk"];
 const DISCORD_LIMIT = 2000;
 
 const DISCORD = {
@@ -35,24 +35,82 @@ const DISCORD = {
     fixes: "Виправлено:",
     report: `*Якщо помітите проблему після оновлення — пишіть у <#${BUG_REPORTS_CHANNEL}>.*`,
     role: "1417283822101467216"
+  },
+  de: {
+    available: (version) => `**Grubie Launcher ${version} ist verfügbar.**`,
+    highlights: "Neu:",
+    fixes: "Behoben:",
+    report: `*Wenn Ihnen nach dem Update ein Problem auffällt, melden Sie es bitte in <#${BUG_REPORTS_CHANNEL}>.*`,
+    role: "1561151650222309396"
+  },
+  es: {
+    available: (version) => `**Grubie Launcher ${version} ya está disponible.**`,
+    highlights: "Novedades:",
+    fixes: "Corregido:",
+    report: `*Si nota algún problema después de actualizar, avísenos en <#${BUG_REPORTS_CHANNEL}>.*`,
+    role: "1561151710557372457"
+  },
+  fr: {
+    available: (version) => `**Grubie Launcher ${version} est disponible.**`,
+    highlights: "Nouveautés :",
+    fixes: "Corrigé :",
+    report: `*Si vous remarquez un problème après la mise à jour, signalez-le dans <#${BUG_REPORTS_CHANNEL}>.*`,
+    role: "1561151743553703986"
+  },
+  pl: {
+    available: (version) => `**Grubie Launcher ${version} jest już dostępny.**`,
+    highlights: "Co nowego:",
+    fixes: "Naprawiono:",
+    report: `*Problemy po aktualizacji prosimy zgłaszać na <#${BUG_REPORTS_CHANNEL}>.*`,
+    role: "1561151852350021713"
+  },
+  pt: {
+    available: (version) => `**Grubie Launcher ${version} já está disponível.**`,
+    highlights: "Novidades:",
+    fixes: "Corrigido:",
+    report: `*Se notar algum problema depois de atualizar, avise em <#${BUG_REPORTS_CHANNEL}>.*`,
+    role: "1561151854442848277"
+  },
+  tr: {
+    available: (version) => `**Grubie Launcher ${version} yayında.**`,
+    highlights: "Yenilikler:",
+    fixes: "Düzeltildi:",
+    report: `*Güncellemeden sonra bir sorun fark ederseniz lütfen <#${BUG_REPORTS_CHANNEL}> kanalına bildirin.*`,
+    role: "1561151855600607272"
   }
 };
 
 const WHATS_NEW = {
   en: { title: "Title", subtitle: "Subtitle", highlights: "Highlights", fixes: "Fixed" },
   ru: { title: "Заголовок", subtitle: "Подзаголовок", highlights: "Главное", fixes: "Исправлено" },
-  uk: { title: "Заголовок", subtitle: "Підзаголовок", highlights: "Головне", fixes: "Виправлено" }
+  uk: { title: "Заголовок", subtitle: "Підзаголовок", highlights: "Головне", fixes: "Виправлено" },
+  de: { title: "Titel", subtitle: "Untertitel", highlights: "Das Wichtigste", fixes: "Behoben" },
+  es: { title: "Título", subtitle: "Subtítulo", highlights: "Lo principal", fixes: "Corregido" },
+  fr: { title: "Titre", subtitle: "Sous-titre", highlights: "L’essentiel", fixes: "Corrigé" },
+  pl: { title: "Tytuł", subtitle: "Podtytuł", highlights: "Najważniejsze", fixes: "Naprawiono" },
+  pt: { title: "Título", subtitle: "Subtítulo", highlights: "Destaques", fixes: "Corrigido" },
+  tr: { title: "Başlık", subtitle: "Alt başlık", highlights: "Öne çıkanlar", fixes: "Düzeltildi" }
 };
 
 const FIX_PREFIX = {
   en: /^fix(ed|es)?\b/i,
   ru: /^исправлен[аоы]?(?![а-яё])/i,
-  uk: /^виправлен[аоі]?(?![а-яґєії'])/i
+  uk: /^виправлен[аоі]?(?![а-яґєії'])/i,
+  de: /^(behoben|korrigiert)(?![a-zäöüß])/i,
+  es: /^(corregid|arreglad)[oa]s?(?![a-záéíóúñü])/i,
+  fr: /^corrigée?s?(?![a-zàâçéèêëîïôûùüÿœ])/i,
+  pl: /^naprawion[oaey]?(?![a-ząćęłńóśźż])/i,
+  pt: /^corrigid[oa]s?(?![a-záâãàçéêíóôõú])/i,
+  tr: /^düzeltil(di|en|miş)(?![a-zçğıöşü])/i
 };
 
 const INFORMAL = {
   ru: /(^|[^а-яё])(ты|тебя|тебе|тобой|твой|твоя|твоё|твое|твои|твоих|твоим)(?![а-яё])/i,
-  uk: /(^|[^а-яґєії'])(ти|тебе|тобі|тобою|твій|твоя|твоє|твої|твоїх|твоїм)(?![а-яґєії'])/i
+  uk: /(^|[^а-яґєії'])(ти|тебе|тобі|тобою|твій|твоя|твоє|твої|твоїх|твоїм)(?![а-яґєії'])/i,
+  de: /(^|[^a-zäöüß])(du|dich|dir|dein|deine|deinen|deinem|deiner|deines)(?![a-zäöüß])/i,
+  es: /(^|[^a-záéíóúñü])(tú|tu|tus|te|ti|contigo)(?![a-záéíóúñü])/i,
+  fr: /(^|[^a-zàâçéèêëîïôûùüÿœ])(tu|toi|ton|ta|tes)(?![a-zàâçéèêëîïôûùüÿœ])/i,
+  tr: /(^|[^a-zçğıöşü])(sen|seni|sana|senin|sende)(?![a-zçğıöşü])/i
 };
 
 const INTERNAL = /(\.(tsx?|jsx?|mjs|cjs|json)\b|\bsrc\/|\bIPC\b|\brenderer\b|\b[a-z]+[A-Z][A-Za-z]*\(?)/;
@@ -96,13 +154,21 @@ function bulletList(items, separator) {
     .join("\n");
 }
 
+function notesLocales(notes) {
+  return LOCALES.filter((locale) => REQUIRED_LOCALES.includes(locale) || notes[locale] !== undefined);
+}
+
+function threadLocales(notes) {
+  return notesLocales(notes).filter((locale) => locale !== "en");
+}
+
 function renderDiscord(notes, locale) {
   const template = DISCORD[locale];
   const content = notes[locale];
   const parts = [template.available(notes.version)];
   if (content.highlights.length) parts.push(`${template.highlights}\n${bulletList(content.highlights, true)}`);
   if (content.fixes.length) parts.push(`${template.fixes}\n${bulletList(content.fixes, true)}`);
-  parts.push(template.report, `<@&${template.role}>`);
+  parts.push(template.role ? `${template.report}\n\n<@&${template.role}>` : template.report);
   return parts.join("\n\n");
 }
 
@@ -150,6 +216,7 @@ function validate(notes, version) {
 
   for (const locale of LOCALES) {
     const content = notes[locale];
+    if (content === undefined && !REQUIRED_LOCALES.includes(locale)) continue;
     if (!content || typeof content !== "object" || Array.isArray(content)) {
       errors.push(`Нет блока «${locale}»`);
       continue;
@@ -196,19 +263,20 @@ function validate(notes, version) {
 
   if (errors.length) return { errors, warnings };
 
+  const locales = notesLocales(notes);
   for (const field of ["highlights", "fixes"]) {
-    const counts = LOCALES.map((locale) => notes[locale][field].length);
+    const counts = locales.map((locale) => notes[locale][field].length);
     if (new Set(counts).size > 1) {
-      errors.push(`${field}: разное число пунктов в языках (${LOCALES.map((l, i) => `${l} ${counts[i]}`).join(", ")})`);
+      errors.push(`${field}: разное число пунктов в языках (${locales.map((l, i) => `${l} ${counts[i]}`).join(", ")})`);
     }
   }
-  if (LOCALES.every((locale) => !notes[locale].highlights.length && !notes[locale].fixes.length)) {
+  if (locales.every((locale) => !notes[locale].highlights.length && !notes[locale].fixes.length)) {
     errors.push("Нет ни одного пункта");
   }
   if (notes.en.highlights.length > 6) warnings.push(`highlights: ${notes.en.highlights.length} пунктов — длинный список, сгруппируйте связанные изменения`);
   if (notes.en.fixes.length > 5) warnings.push(`fixes: ${notes.en.fixes.length} пунктов — длинный список, сгруппируйте связанные изменения`);
 
-  for (const locale of LOCALES) {
+  for (const locale of locales) {
     const length = renderDiscord(notes, locale).length;
     if (length > DISCORD_LIMIT) errors.push(`Discord ${locale}: ${length} символов при лимите ${DISCORD_LIMIT}`);
   }
@@ -226,7 +294,7 @@ function load(version) {
 
 function apiPayload(notes, editOnly) {
   const content = {};
-  for (const locale of LOCALES) {
+  for (const locale of notesLocales(notes)) {
     const { title, subtitle, highlights, fixes } = notes[locale];
     content[locale] = { ...(title ? { title } : {}), subtitle, highlights, fixes };
   }
@@ -236,7 +304,7 @@ function apiPayload(notes, editOnly) {
     discord: {
       message: renderDiscord(notes, "en"),
       threadName: threadName(notes),
-      threadMessages: THREAD_LOCALES.map((locale) => ({ key: locale, content: renderDiscord(notes, locale) })),
+      threadMessages: threadLocales(notes).map((locale) => ({ key: locale, content: renderDiscord(notes, locale) })),
       editOnly
     }
   };
@@ -334,12 +402,12 @@ function changedVersions(base) {
 function printPreview(notes) {
   const section = (title, text) => console.log(`\n===== ${title} =====\n${text}`);
   section("GitHub-релиз (EN)", renderGithub(notes));
-  for (const locale of LOCALES) section(`Что нового — ${locale.toUpperCase()}`, renderWhatsNew(notes, locale));
+  for (const locale of notesLocales(notes)) section(`Что нового — ${locale.toUpperCase()}`, renderWhatsNew(notes, locale));
   section(
     `Discord #⚙・change-log (EN) — ${renderDiscord(notes, "en").length}/${DISCORD_LIMIT}`,
     renderDiscord(notes, "en")
   );
-  for (const locale of THREAD_LOCALES) {
+  for (const locale of threadLocales(notes)) {
     const text = renderDiscord(notes, locale);
     section(`Discord ветка «${threadName(notes)}», заблокирована (${locale.toUpperCase()}) — ${text.length}/${DISCORD_LIMIT}`, text);
   }

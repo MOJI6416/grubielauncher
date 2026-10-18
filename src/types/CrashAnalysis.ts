@@ -2,6 +2,12 @@ export interface CrashRuleMessages {
   en: string
   ru: string
   uk: string
+  de?: string
+  es?: string
+  fr?: string
+  pl?: string
+  pt?: string
+  tr?: string
 }
 
 export interface CrashRule {

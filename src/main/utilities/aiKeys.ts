@@ -5,7 +5,10 @@ import {
   AiProviderInput,
   AiProviderProfile,
   AiProvidersState,
+  BUILTIN_AGENT_MODEL,
+  BUILTIN_AGENT_PROVIDER_ID,
 } from "@/types/Agent";
+import { BACKEND_URL } from "@/shared/config";
 import { writeJsonAtomic } from "./atomicJson";
 import { getDataRoot } from "./dataRoot";
 import { decodeSecret, encodeSecret, StoredSecrets } from "./secretStore";
@@ -18,6 +21,19 @@ type PersistedState = {
 };
 
 const MAX_PROVIDERS = 12;
+
+export const BUILTIN_PROVIDER: PersistedProvider = {
+  id: BUILTIN_AGENT_PROVIDER_ID,
+  label: "Grubie",
+  baseUrl: `${BACKEND_URL}/ai/agent`,
+  model: BUILTIN_AGENT_MODEL,
+  keyHint: "",
+  builtin: true,
+};
+
+export function isBuiltinProvider(id: string): boolean {
+  return id === BUILTIN_AGENT_PROVIDER_ID;
+}
 const MAX_LABEL_LENGTH = 64;
 const MAX_MODEL_LENGTH = 200;
 const MAX_URL_LENGTH = 512;
@@ -126,7 +142,8 @@ async function readPersistedState(): Promise<PersistedState> {
 
   const selectedId =
     typeof data?.selectedId === "string" &&
-    providers.some((item: PersistedProvider) => item.id === data.selectedId)
+    (isBuiltinProvider(data.selectedId) ||
+      providers.some((item: PersistedProvider) => item.id === data.selectedId))
       ? data.selectedId
       : (providers[0]?.id ?? null);
 
@@ -160,11 +177,14 @@ function toPublicState(
   secrets: StoredSecrets,
 ): AiProvidersState {
   return {
-    providers: state.providers.map((provider) => ({
-      ...provider,
-      hasKey: decodeSecret(secrets[provider.id]) !== undefined,
-    })),
-    selectedId: state.selectedId,
+    providers: [
+      { ...BUILTIN_PROVIDER, hasKey: true },
+      ...state.providers.map((provider) => ({
+        ...provider,
+        hasKey: decodeSecret(secrets[provider.id]) !== undefined,
+      })),
+    ],
+    selectedId: state.selectedId ?? BUILTIN_AGENT_PROVIDER_ID,
   };
 }
 
@@ -255,7 +275,10 @@ export function selectProvider(id: string): Promise<AiProvidersState> {
       readSecrets(),
     ]);
 
-    if (!state.providers.some((provider) => provider.id === id)) {
+    if (
+      !isBuiltinProvider(id) &&
+      !state.providers.some((provider) => provider.id === id)
+    ) {
       throw new AiProviderError("Unknown provider");
     }
 
@@ -276,6 +299,8 @@ export function resolveProvider(id: string): Promise<ResolvedProvider | null> {
       readPersistedState(),
       readSecrets(),
     ]);
+
+    if (isBuiltinProvider(id)) return { profile: BUILTIN_PROVIDER, apiKey: "" };
 
     const profile = state.providers.find((provider) => provider.id === id);
     if (!profile) return null;

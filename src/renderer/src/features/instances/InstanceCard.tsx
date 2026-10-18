@@ -4,11 +4,6 @@ import { useTranslation } from "react-i18next";
 import { CopyPlus, Play } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Version } from "@renderer/classes/Version";
 import { Hint } from "@renderer/components/Hint";
@@ -61,21 +56,16 @@ function OwnerMark({
   const { t } = useTranslation();
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Avatar
-          className={cn("size-4 bg-surface-3 ring-2 ring-surface-2", className)}
-        >
-          {image && <AvatarImage src={image} alt={nickname} />}
-          <AvatarFallback className="text-[0.5rem]">
-            {nickname.slice(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-      </TooltipTrigger>
-      <TooltipContent>
-        {t("versions.ownerTooltip", { nickname })}
-      </TooltipContent>
-    </Tooltip>
+    <Hint content={t("versions.ownerTooltip", { nickname })}>
+      <Avatar
+        className={cn("size-4 bg-surface-3 ring-2 ring-surface-2", className)}
+      >
+        {image && <AvatarImage src={image} alt={nickname} />}
+        <AvatarFallback className="text-[0.5rem]">
+          {nickname.slice(0, 2).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+    </Hint>
   );
 }
 

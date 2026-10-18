@@ -45,6 +45,13 @@ import {
   sharesFile,
 } from "@renderer/utilities/mod";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { useLatestRef } from "@renderer/utilities/useLatestRef";
+import {
+  type SelectionGesture,
+  TOGGLE_GESTURE,
+  applySelectionGesture,
+  nextSelectionAnchor,
+} from "@renderer/utilities/rangeSelection";
 import {
   getLocalPathFromFileUrl,
   toFileUrl,
@@ -1929,24 +1936,40 @@ export function ContentManager({
 
   const canSelectRows = scope === "library" && canEdit && !isModpacks;
 
-  const toggleSelected = useCallback(
-    (entry: ContentEntry) => {
+  const rowsRef = useLatestRef(rows);
+  const selectionAnchorRef = useRef<string | null>(null);
+
+  const selectRow = useCallback(
+    (entry: ContentEntry, gesture: SelectionGesture) => {
       if (!canSelectRows) return;
 
-      setSelection((prev) => {
-        const next = new Set(prev);
-        if (next.has(entry.key)) next.delete(entry.key);
-        else next.add(entry.key);
-        return next;
-      });
+      const order = rowsRef.current.map((item) => item.key);
+      const anchor = selectionAnchorRef.current;
+      selectionAnchorRef.current = nextSelectionAnchor(
+        order,
+        anchor,
+        entry.key,
+        gesture,
+      );
+      setSelection((prev) =>
+        applySelectionGesture(prev, order, anchor, entry.key, gesture),
+      );
     },
-    [canSelectRows],
+    [canSelectRows, rowsRef],
+  );
+
+  const openRow = useCallback(
+    (entry: ContentEntry) => {
+      selectionAnchorRef.current = entry.key;
+      openDetail(entry);
+    },
+    [openDetail],
   );
 
   const rowActions = useMemo(
     () => ({
-      onOpen: openDetail,
-      onToggleSelected: toggleSelected,
+      onOpen: openRow,
+      onSelect: selectRow,
       onInstall: (entry: ContentEntry) => void installProject(entry),
       onUpdate: (entry: ContentEntry) => applyUpdateFor([entry.key]),
       onDelete: (entry: ContentEntry) => removeEntries([entry]),
@@ -1957,11 +1980,11 @@ export function ContentManager({
     [
       applyUpdateFor,
       installProject,
-      openDetail,
+      openRow,
       removeEntries,
       restoreEntry,
+      selectRow,
       setEnabledFor,
-      toggleSelected,
     ],
   );
 
@@ -1996,16 +2019,16 @@ export function ContentManager({
 
       if (event.key === "Enter" && rows[activeIndex]) {
         event.preventDefault();
-        openDetail(rows[activeIndex]);
+        openRow(rows[activeIndex]);
         return;
       }
 
       if (event.key === " " && rows[activeIndex]) {
         event.preventDefault();
-        toggleSelected(rows[activeIndex]);
+        selectRow(rows[activeIndex], TOGGLE_GESTURE);
       }
     },
-    [activeIndex, openDetail, rows, rowVirtualizer, toggleSelected],
+    [activeIndex, openRow, rows, rowVirtualizer, selectRow],
   );
 
   useEffect(() => {

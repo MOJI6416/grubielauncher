@@ -16,11 +16,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Version } from "@renderer/classes/Version";
 import { Hint } from "@renderer/components/Hint";
@@ -428,14 +423,11 @@ export function HomeHero({
             </button>
           ) : (
             !isBackendOnline && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="ml-1 cursor-default text-xs text-faint">
-                    {t("home.offline")}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{t("home.offlineHint")}</TooltipContent>
-              </Tooltip>
+              <Hint content={t("home.offlineHint")}>
+                <span className="ml-1 cursor-default text-xs text-faint">
+                  {t("home.offline")}
+                </span>
+              </Hint>
             )
           )}
         </div>

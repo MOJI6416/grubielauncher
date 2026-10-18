@@ -2,7 +2,7 @@ import { is } from "@electron-toolkit/utils";
 import { app, BrowserWindow, dialog } from "electron";
 import fs from "fs-extra";
 import path from "path";
-import { LANGUAGES } from "@/types/Settings";
+import { LANGUAGES, matchLanguage } from "@/types/Settings";
 import type {
   DataLocationFile,
   DataLocationWindowAction,
@@ -28,6 +28,7 @@ import {
 } from "../utilities/dataMove";
 import { getSystemRoots } from "../utilities/safePath";
 import { rebaseShortcutIcons } from "../utilities/shortcut";
+import { getSystemLocale } from "../utilities/systemLocale";
 
 const WINDOW_WIDTH = 440;
 const WINDOW_HEIGHT = 320;
@@ -56,8 +57,7 @@ function resolveWindowLanguage(root: string | null): string {
     } catch {}
   }
 
-  const locale = app.getLocale().toLowerCase();
-  return codes.find((code) => locale.startsWith(code)) ?? "en";
+  return matchLanguage(getSystemLocale()) ?? "en";
 }
 
 function setState(next: DataLocationWindowState): void {

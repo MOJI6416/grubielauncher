@@ -37,6 +37,13 @@ import {
 } from "./worldBackups";
 import { importSkinByNickname, listSkins, selectSkin } from "./skins";
 import { createInstance } from "./createInstance";
+import {
+  listModConfigs,
+  readGameOptions,
+  readModConfig,
+  setGameOptions,
+  setModConfigValues,
+} from "./configs";
 
 const LOCAL_TOOLS: AgentTool[] = [
   askUser,
@@ -56,6 +63,11 @@ const LOCAL_TOOLS: AgentTool[] = [
   setMemory,
   setInstanceJava,
   deleteInstance,
+  readGameOptions,
+  setGameOptions,
+  listModConfigs,
+  readModConfig,
+  setModConfigValues,
 ];
 
 const ONLINE_TOOLS: AgentTool[] = [

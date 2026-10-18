@@ -24,8 +24,14 @@ A desktop Minecraft launcher for Windows and Linux. It installs game versions an
 
 The interface is a permanent sidebar with full screens instead of stacked dialogs. <kbd>Ctrl</kbd>+<kbd>K</kbd> opens a command palette that reaches any instance, screen or setting, <kbd>Ctrl</kbd>+<kbd>I</kbd> opens the assistant, and <kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> walk the history like a browser.
 
-<kbd>[<img title="Ukraine" alt="Ukraine" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Flag_of_Ukraine.svg/1280px-Flag_of_Ukraine.svg.png" width="22">](https://github.com/MOJI6416/grubielauncher/blob/main/docs/README.uk.md)</kbd>
-<kbd>[<img title="Russia" alt="Russia" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Flag_of_Russia.svg/1280px-Flag_of_Russia.svg.png" width="22">](https://github.com/MOJI6416/grubielauncher/blob/main/docs/README.ru.md)</kbd>
+<kbd>[<img title="Русский" alt="Русский" src="docs/flags/ru.png" height="16">](docs/README.ru.md)</kbd>
+<kbd>[<img title="Українська" alt="Українська" src="docs/flags/uk.png" height="16">](docs/README.uk.md)</kbd>
+<kbd>[<img title="Deutsch" alt="Deutsch" src="docs/flags/de.png" height="16">](docs/README.de.md)</kbd>
+<kbd>[<img title="Español" alt="Español" src="docs/flags/es.png" height="16">](docs/README.es.md)</kbd>
+<kbd>[<img title="Français" alt="Français" src="docs/flags/fr.png" height="16">](docs/README.fr.md)</kbd>
+<kbd>[<img title="Polski" alt="Polski" src="docs/flags/pl.png" height="16">](docs/README.pl.md)</kbd>
+<kbd>[<img title="Português (Brasil)" alt="Português (Brasil)" src="docs/flags/pt.png" height="16">](docs/README.pt.md)</kbd>
+<kbd>[<img title="Türkçe" alt="Türkçe" src="docs/flags/tr.png" height="16">](docs/README.tr.md)</kbd>
 
 # Screenshots
 

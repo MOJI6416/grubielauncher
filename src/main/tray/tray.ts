@@ -9,9 +9,10 @@ import {
   Tray,
 } from "electron";
 import icon from "../../../resources/icon.png?asset";
-import { resolveCloseToTray } from "@/types/Settings";
+import { matchLanguage, resolveCloseToTray } from "@/types/Settings";
 import { TrayModel } from "@/types/Tray";
 import { getLauncherPaths } from "../utilities/other";
+import { getSystemLocale } from "../utilities/systemLocale";
 import { installDownloadedUpdate } from "../utilities/backgroundUpdates";
 import {
   destroyTrayPopup,
@@ -43,6 +44,12 @@ const FALLBACK_LABELS: Record<string, { open: string; quit: string }> = {
   en: { open: "Open Grubie Launcher", quit: "Quit" },
   ru: { open: "Открыть Grubie Launcher", quit: "Выйти" },
   uk: { open: "Відкрити Grubie Launcher", quit: "Вийти" },
+  de: { open: "Grubie Launcher öffnen", quit: "Beenden" },
+  es: { open: "Abrir Grubie Launcher", quit: "Salir" },
+  fr: { open: "Ouvrir Grubie Launcher", quit: "Quitter" },
+  pl: { open: "Otwórz Grubie Launcher", quit: "Zakończ" },
+  pt: { open: "Abrir o Grubie Launcher", quit: "Sair" },
+  tr: { open: "Grubie Launcher’ı aç", quit: "Çıkış" },
 };
 
 let tray: Tray | null = null;
@@ -144,7 +151,7 @@ function toTemplate(entries: TrayMenuEntry[]): MenuItemConstructorOptions[] {
 }
 
 function fallbackMenu(): TrayMenuEntry[] {
-  const locale = app.getLocale().slice(0, 2);
+  const locale = matchLanguage(getSystemLocale()) ?? "en";
   const labels = FALLBACK_LABELS[locale] ?? FALLBACK_LABELS.en;
   return [
     { kind: "item", label: labels.open, command: { type: "open" } },

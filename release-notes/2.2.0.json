@@ -1,0 +1,139 @@
+{
+  "version": "2.2.0",
+  "isMilestone": false,
+  "en": {
+    "subtitle": "Six new languages, the built-in Grubie assistant and one-click crash fixes.",
+    "highlights": [
+      "Added German, Spanish, French, Polish, Brazilian Portuguese and Turkish as interface languages.",
+      "Added Grubie, a built-in assistant that needs no AI key of your own. It is available to those who supported the project, with a daily limit of questions.",
+      "Improved the assistant: it shows what will change before you confirm, can undo its actions, summarizes long chats and can now adjust video settings and mod configs.",
+      "Added one-click fixes when the game crashes: turn off the mod that caused it, give the game more memory or check integrity.",
+      "Added Shift and Ctrl selection in the Mod Manager library, when choosing files to publish an instance and in other lists with checkboxes."
+    ],
+    "fixes": [
+      "If the launcher can't check an instance shared by another player for updates, it now says so and offers to retry or run without updating instead of silently starting the old version.",
+      "Fabric, Quilt and similar instances whose name ends with “!” now explain why they can't start and offer to rename them.",
+      "Instances imported from Prism Launcher and MultiMC now keep all mod data from the game folder, not just mods, configs and worlds."
+    ]
+  },
+  "ru": {
+    "subtitle": "Шесть новых языков, встроенный ассистент Grubie и починка вылетов в один клик.",
+    "highlights": [
+      "Добавлены языки интерфейса: немецкий, испанский, французский, польский, португальский (Бразилия) и турецкий.",
+      "Добавлен Grubie — встроенный ассистент, которому не нужен ваш ключ ИИ. Он доступен тем, кто поддержал проект, с дневным лимитом вопросов.",
+      "Улучшен ассистент: до подтверждения показывает, что изменится, умеет отменять свои действия, сжимает длинные чаты и теперь меняет настройки графики и конфиги модов.",
+      "Добавлена починка вылетов в один клик: отключить мод-виновник, выделить игре больше памяти или проверить целостность.",
+      "Добавлено выделение с Shift и Ctrl в библиотеке мод-менеджера, при выборе файлов для публикации сборки и в других списках с галочками."
+    ],
+    "fixes": [
+      "Если не удалось проверить обновление сборки от другого игрока, лаунчер теперь сообщает об этом и предлагает повторить или запустить без обновления, а не запускает старую версию молча.",
+      "Сборки на Fabric, Quilt и похожих загрузчиках с «!» в конце названия теперь объясняют, почему не запускаются, и предлагают их переименовать.",
+      "Сборки, импортированные из Prism Launcher и MultiMC, теперь сохраняют все данные модов из папки игры, а не только моды, конфиги и миры."
+    ]
+  },
+  "uk": {
+    "subtitle": "Шість нових мов, вбудований асистент Grubie і виправлення вильотів в один клік.",
+    "highlights": [
+      "Додано мови інтерфейсу: німецьку, іспанську, французьку, польську, португальську (Бразилія) і турецьку.",
+      "Додано Grubie — вбудований асистент, якому не потрібен ваш ключ ШІ. Він доступний тим, хто підтримав проєкт, з денним лімітом запитань.",
+      "Покращено асистента: ще до підтвердження показує, що зміниться, вміє скасовувати свої дії, стискає довгі чати й тепер змінює налаштування графіки та конфіги модів.",
+      "Додано виправлення вильотів в один клік: вимкнути мод, через який гра вилетіла, виділити грі більше пам’яті або перевірити цілісність.",
+      "Додано виділення з Shift і Ctrl у бібліотеці менеджера модифікацій, під час вибору файлів для публікації збірки та в інших списках із позначками."
+    ],
+    "fixes": [
+      "Якщо перевірити оновлення збірки від іншого гравця не вдалося, лаунчер тепер повідомляє про це й пропонує повторити або запустити без оновлення, а не запускає стару версію мовчки.",
+      "Збірки на Fabric, Quilt і схожих завантажувачах із «!» наприкінці назви тепер пояснюють, чому не запускаються, і пропонують їх перейменувати.",
+      "Збірки, імпортовані з Prism Launcher і MultiMC, тепер зберігають усі дані модів із теки гри, а не лише моди, конфіги й світи."
+    ]
+  },
+  "de": {
+    "subtitle": "Sechs neue Sprachen, der eingebaute Assistent Grubie und Absturz-Korrekturen mit einem Klick.",
+    "highlights": [
+      "Neu als Sprachen der Oberfläche: Deutsch, Spanisch, Französisch, Polnisch, brasilianisches Portugiesisch und Türkisch.",
+      "Neu: Grubie, ein eingebauter Assistent, der keinen eigenen KI-Schlüssel braucht. Er steht allen zur Verfügung, die das Projekt unterstützt haben – mit einem Tageslimit an Fragen.",
+      "Der Assistent zeigt vor der Bestätigung, was sich ändert, kann seine Aktionen rückgängig machen, fasst lange Chats zusammen und passt jetzt Grafikeinstellungen und Mod-Konfigurationen an.",
+      "Neu nach einem Absturz: Korrekturen mit einem Klick – den verursachenden Mod deaktivieren, dem Spiel mehr Arbeitsspeicher geben oder die Integrität prüfen.",
+      "Neu: Auswahl mit Shift und Ctrl in der Bibliothek des Mod-Managers, bei der Dateiauswahl zum Veröffentlichen einer Instanz und in anderen Listen mit Kontrollkästchen."
+    ],
+    "fixes": [
+      "Kann der Launcher Updates einer von einem anderen Spieler geteilten Instanz nicht prüfen, meldet er das jetzt und bietet einen neuen Versuch oder den Start ohne Update an, statt still die alte Version zu starten.",
+      "Instanzen mit Fabric, Quilt und ähnlichen Loadern, deren Name auf „!“ endet, erklären jetzt, warum sie nicht starten, und bieten eine Umbenennung an.",
+      "Aus Prism Launcher und MultiMC importierte Instanzen behalten jetzt alle Mod-Daten aus dem Spielordner, nicht nur Mods, Konfigurationen und Welten."
+    ]
+  },
+  "es": {
+    "subtitle": "Seis idiomas nuevos, el asistente integrado Grubie y arreglos de fallos con un clic.",
+    "highlights": [
+      "Se agregaron alemán, español, francés, polaco, portugués de Brasil y turco como idiomas de la interfaz.",
+      "Se agregó Grubie, un asistente integrado que no necesita su propia clave de IA. Está disponible para quienes apoyaron el proyecto, con un límite diario de preguntas.",
+      "Se mejoró el asistente: muestra qué cambiará antes de que usted confirme, puede deshacer sus acciones, resume los chats largos y ahora ajusta la configuración de video y de los mods.",
+      "Se agregaron arreglos con un clic cuando el juego falla: desactivar el mod que causó el fallo, darle más memoria al juego o comprobar la integridad.",
+      "Se agregó la selección con Shift y Ctrl en la biblioteca del gestor de mods, al elegir archivos para publicar una instancia y en otras listas con casillas."
+    ],
+    "fixes": [
+      "Si el launcher no logra buscar actualizaciones de una instancia compartida por otro jugador, ahora lo avisa y ofrece reintentar o iniciar sin actualizar, en vez de abrir la versión anterior sin avisar.",
+      "Las instancias con Fabric, Quilt y cargadores similares cuyo nombre termina en «!» ahora explican por qué no inician y ofrecen renombrarlas.",
+      "Las instancias importadas de Prism Launcher y MultiMC ahora conservan todos los datos de los mods de la carpeta del juego, no solo mods, configuraciones y mundos."
+    ]
+  },
+  "fr": {
+    "subtitle": "Six nouvelles langues, l’assistant intégré Grubie et des corrections de plantage en un clic.",
+    "highlights": [
+      "Ajout de l’allemand, de l’espagnol, du français, du polonais, du portugais du Brésil et du turc comme langues de l’interface.",
+      "Ajout de Grubie, un assistant intégré qui ne demande pas votre propre clé d’IA. Il est réservé aux personnes qui ont soutenu le projet, avec une limite de questions par jour.",
+      "Assistant amélioré : il montre ce qui va changer avant votre confirmation, peut annuler ses actions, résume les longues conversations et règle désormais les paramètres vidéo et les configurations des mods.",
+      "Ajout de corrections en un clic après un plantage : désactiver le mod responsable, donner plus de mémoire au jeu ou vérifier l’intégrité.",
+      "Ajout de la sélection avec Shift et Ctrl dans la bibliothèque du gestionnaire de mods, lors du choix des fichiers à publier avec une instance et dans d’autres listes à cases."
+    ],
+    "fixes": [
+      "Si la vérification des mises à jour d’une instance partagée par un autre joueur échoue, le launcher le signale et propose de réessayer ou de lancer sans mise à jour, au lieu de lancer l’ancienne version en silence.",
+      "Les instances Fabric, Quilt et assimilées dont le nom se termine par « ! » expliquent désormais pourquoi elles ne démarrent pas et proposent de les renommer.",
+      "Les instances importées depuis Prism Launcher et MultiMC conservent désormais toutes les données des mods du dossier du jeu, pas seulement les mods, les configurations et les mondes."
+    ]
+  },
+  "pl": {
+    "subtitle": "Sześć nowych języków, wbudowany asystent Grubie i naprawa awarii jednym kliknięciem.",
+    "highlights": [
+      "Dodano języki interfejsu: niemiecki, hiszpański, francuski, polski, portugalski (Brazylia) i turecki.",
+      "Dodano Grubie — wbudowanego asystenta, który nie wymaga własnego klucza AI. Jest dostępny dla osób, które wsparły projekt, z dziennym limitem pytań.",
+      "Ulepszono asystenta: przed potwierdzeniem pokazuje, co się zmieni, potrafi cofać swoje działania, streszcza długie czaty i teraz zmienia ustawienia grafiki oraz konfiguracje modów.",
+      "Dodano naprawę jednym kliknięciem po awarii gry: wyłączenie moda, który ją spowodował, przydzielenie grze więcej pamięci lub sprawdzenie integralności.",
+      "Dodano zaznaczanie z Shift i Ctrl w bibliotece menedżera modów, przy wyborze plików do publikacji instancji i w innych listach z polami wyboru."
+    ],
+    "fixes": [
+      "Jeśli launcher nie może sprawdzić aktualizacji instancji udostępnionej przez innego gracza, teraz o tym informuje i proponuje ponowną próbę lub uruchomienie bez aktualizacji, zamiast po cichu włączać starą wersję.",
+      "Instancje z Fabric, Quilt i podobnymi loaderami, których nazwa kończy się na „!”, wyjaśniają teraz, dlaczego się nie uruchamiają, i proponują zmianę nazwy.",
+      "Instancje zaimportowane z Prism Launcher i MultiMC zachowują teraz wszystkie dane modów z folderu gry, a nie tylko mody, konfiguracje i światy."
+    ]
+  },
+  "pt": {
+    "subtitle": "Seis novos idiomas, o assistente integrado Grubie e correções de crash com um clique.",
+    "highlights": [
+      "Adicionados alemão, espanhol, francês, polonês, português do Brasil e turco como idiomas da interface.",
+      "Adicionado o Grubie, um assistente integrado que dispensa sua própria chave de IA. Ele está disponível para quem apoiou o projeto, com um limite diário de perguntas.",
+      "Melhorado o assistente: mostra o que vai mudar antes de você confirmar, pode desfazer suas ações, resume conversas longas e agora ajusta as configurações de vídeo e as configs dos mods.",
+      "Adicionadas correções com um clique quando o jogo crasha: desativar o mod que causou o crash, dar mais memória ao jogo ou verificar a integridade.",
+      "Adicionada a seleção com Shift e Ctrl na biblioteca do gerenciador de mods, ao escolher arquivos para publicar uma instância e em outras listas com caixas de seleção."
+    ],
+    "fixes": [
+      "Se o launcher não conseguir verificar atualizações de uma instância compartilhada por outro jogador, agora ele avisa e oferece tentar de novo ou iniciar sem atualizar, em vez de abrir a versão antiga sem avisar.",
+      "Instâncias com Fabric, Quilt e loaders parecidos cujo nome termina em “!” agora explicam por que não iniciam e oferecem renomeá-las.",
+      "Instâncias importadas do Prism Launcher e do MultiMC agora mantêm todos os dados dos mods da pasta do jogo, não só mods, configs e mundos."
+    ]
+  },
+  "tr": {
+    "subtitle": "Altı yeni dil, yerleşik asistan Grubie ve tek tıkla çökme düzeltmeleri.",
+    "highlights": [
+      "Arayüze Almanca, İspanyolca, Fransızca, Lehçe, Brezilya Portekizcesi ve Türkçe eklendi.",
+      "Kendi yapay zekâ anahtarınızı gerektirmeyen yerleşik asistan Grubie eklendi. Projeyi destekleyenler kullanabilir; günlük soru sınırı vardır.",
+      "Asistan geliştirildi: onaylamadan önce neyin değişeceğini gösterir, işlemlerini geri alabilir, uzun sohbetleri özetler ve artık görüntü ayarlarını ve mod yapılandırmalarını değiştirebilir.",
+      "Oyun çöktüğünde tek tıkla düzeltmeler eklendi: çökmeye neden olan modu kapatmak, oyuna daha fazla bellek vermek veya bütünlüğü denetlemek.",
+      "Mod yöneticisi kütüphanesinde, bir kurulumu yayımlarken dosya seçiminde ve onay kutulu diğer listelerde Shift ve Ctrl ile seçim eklendi."
+    ],
+    "fixes": [
+      "Başlatıcı, başka bir oyuncunun paylaştığı kurulumun güncellemelerini denetleyemezse artık bunu bildirir ve eski sürümü sessizce başlatmak yerine yeniden denemeyi veya güncellemeden başlatmayı önerir.",
+      "Fabric, Quilt ve benzeri yükleyicilerle çalışan, adı “!” ile biten kurulumlar artık neden başlamadıklarını açıklar ve yeniden adlandırmayı önerir.",
+      "Prism Launcher ve MultiMC’den içe aktarılan kurulumlar artık yalnızca modları, yapılandırmaları ve dünyaları değil, oyun klasöründeki tüm mod verilerini korur."
+    ]
+  }
+}

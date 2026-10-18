@@ -69,6 +69,7 @@ import {
   publishOfferKeyAtom,
   requestPublishOffer,
 } from "./publishOffer";
+import { consumeRenameOffer, renameOfferAtom } from "./renameOffer";
 import { readInstanceServers } from "./instanceServers";
 import { formatRunCommandForClipboard } from "./runCommand";
 import { readInstanceStatistics } from "./stats";
@@ -109,6 +110,7 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
   const pendingNavigation = useAtomValue(pendingNavigationAtom);
   const consoleMetas = useAtomValue(consolesMetaAtom);
   const publishOfferKey = useAtomValue(publishOfferKeyAtom);
+  const renameOffer = useAtomValue(renameOfferAtom);
   const setConsoles = useSetAtom(consolesAtom);
   const setInstanceFlags = useSetAtom(instanceFlagsAtom);
 
@@ -883,6 +885,16 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     isInternetOnline,
     isNetwork,
   });
+
+  useEffect(() => {
+    if (!version) return;
+
+    const name = consumeRenameOffer(instanceKey(version));
+    if (name === null || !flags.canRenameVersion || isVersionRunning) return;
+
+    draft.setName(name);
+    draft.setEditName(true);
+  }, [version, renameOffer]);
 
   return {
     version,

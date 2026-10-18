@@ -160,49 +160,59 @@ function ProviderRow({
             )}
           </span>
 
-          <span className="flex min-w-0 items-center gap-2 text-[0.7rem] text-faint">
-            <Hint content={provider.model} variant="text" truncatedOnly>
-              <span className="min-w-0 truncate font-mono">
-                {provider.model}
-              </span>
-            </Hint>
-            <span className="shrink-0">·</span>
-            {provider.hasKey ? (
-              <span className="shrink-0 font-mono">{provider.keyHint}</span>
-            ) : (
-              <span className="shrink-0 text-warning">
-                {t("agent.providers.keyMissing")}
-              </span>
-            )}
-            <span className="shrink-0">·</span>
-            <span className="shrink-0 font-mono">
-              {hostOf(provider.baseUrl)}
+          {provider.builtin ? (
+            <span className="min-w-0 truncate text-[0.7rem] text-faint">
+              {t("agent.providers.builtinHint")}
             </span>
-          </span>
+          ) : (
+            <span className="flex min-w-0 items-center gap-2 text-[0.7rem] text-faint">
+              <Hint content={provider.model} variant="text" truncatedOnly>
+                <span className="min-w-0 truncate font-mono">
+                  {provider.model}
+                </span>
+              </Hint>
+              <span className="shrink-0">·</span>
+              {provider.hasKey ? (
+                <span className="shrink-0 font-mono">{provider.keyHint}</span>
+              ) : (
+                <span className="shrink-0 text-warning">
+                  {t("agent.providers.keyMissing")}
+                </span>
+              )}
+              <span className="shrink-0">·</span>
+              <span className="shrink-0 font-mono">
+                {hostOf(provider.baseUrl)}
+              </span>
+            </span>
+          )}
         </span>
       </button>
 
-      <Hint content={t("agent.providers.edit")}>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`${t("agent.providers.edit")} — ${provider.label}`}
-          onClick={onEdit}
-        >
-          <Pencil />
-        </Button>
-      </Hint>
-      <Hint content={t("agent.providers.delete")}>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="text-faint hover:text-destructive"
-          aria-label={`${t("agent.providers.delete")} — ${provider.label}`}
-          onClick={onAskDelete}
-        >
-          <Trash2 />
-        </Button>
-      </Hint>
+      {!provider.builtin && (
+        <>
+          <Hint content={t("agent.providers.edit")}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`${t("agent.providers.edit")} — ${provider.label}`}
+              onClick={onEdit}
+            >
+              <Pencil />
+            </Button>
+          </Hint>
+          <Hint content={t("agent.providers.delete")}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="text-faint hover:text-destructive"
+              aria-label={`${t("agent.providers.delete")} — ${provider.label}`}
+              onClick={onAskDelete}
+            >
+              <Trash2 />
+            </Button>
+          </Hint>
+        </>
+      )}
     </div>
   );
 }

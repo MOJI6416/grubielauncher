@@ -50,7 +50,11 @@ import {
   IAiLogRequest,
 } from "@/types/AiAnalysis";
 import { IAuthlib } from "@/types/IAuthlib";
-import { RemoteAiChat, RemoteAiChatMessage } from "@/types/Agent";
+import {
+  AgentBuiltinStatus,
+  RemoteAiChat,
+  RemoteAiChatMessage,
+} from "@/types/Agent";
 import {
   ILauncherReleaseNote,
   ILauncherReleasePage,
@@ -896,6 +900,26 @@ export class Backend extends BaseService {
       },
     );
     return response.data.completion;
+  }
+
+  async getAgentStatus(): Promise<AgentBuiltinStatus | null> {
+    try {
+      const response = await this.api.get(`${this.baseUrl}/ai/agent/status`);
+      const data = response.data;
+      if (!data || typeof data !== "object" || !data.day) return null;
+
+      return {
+        enabled: data.enabled !== false,
+        allowed: data.allowed === true,
+        donor: data.donor === true,
+        used: Number(data.day.used) || 0,
+        limit: Number(data.day.limit) || 0,
+        remaining: Number(data.day.remaining) || 0,
+        resetAt: typeof data.day.resetAt === "string" ? data.day.resetAt : null,
+      };
+    } catch {
+      return null;
+    }
   }
 
   async listAiChats(): Promise<RemoteAiChat[] | null> {

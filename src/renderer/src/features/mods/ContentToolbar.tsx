@@ -29,11 +29,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Hint } from "@renderer/components/Hint";
 import { LoaderLabel } from "@renderer/components/Loaders";
 import { AskAgentButton } from "@renderer/features/agent/AskAgentButton";
 import { ContentEntry } from "./entries";
@@ -355,36 +351,35 @@ export function ContentToolbar({
         )}
 
         {scope !== "library" && loaderOptions.length > 0 && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="shrink-0">
-                <Select
-                  value={browseLoader ?? loaderOptions[0]}
-                  onValueChange={(value: Loader) =>
-                    setCatalogLoader(value === loader ? null : value)
-                  }
+          <Hint
+            content={t(catalogLoaderHintKey(loader))}
+            side="bottom"
+            className="max-w-64"
+          >
+            <div className="shrink-0">
+              <Select
+                value={browseLoader ?? loaderOptions[0]}
+                onValueChange={(value: Loader) =>
+                  setCatalogLoader(value === loader ? null : value)
+                }
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="w-fit min-w-32"
+                  aria-label={t("modManager.catalogLoader")}
                 >
-                  <SelectTrigger
-                    size="sm"
-                    className="w-fit min-w-32"
-                    aria-label={t("modManager.catalogLoader")}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {loaderOptions.map((item) => (
-                      <SelectItem key={item} value={item}>
-                        <LoaderLabel loader={item} />
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="max-w-64">
-              {t(catalogLoaderHintKey(loader))}
-            </TooltipContent>
-          </Tooltip>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {loaderOptions.map((item) => (
+                    <SelectItem key={item} value={item}>
+                      <LoaderLabel loader={item} />
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </Hint>
         )}
 
         <Popover>
@@ -505,23 +500,18 @@ export function ContentToolbar({
         </Popover>
 
         {canEdit && !isModpacks && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon-sm"
-                variant="outline"
-                className="size-8 shrink-0"
-                disabled={isBusy}
-                aria-label={t("modManager.selectLocals")}
-                onClick={pickLocalFiles}
-              >
-                <FilePlus2 className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              {t("modManager.selectLocals")}
-            </TooltipContent>
-          </Tooltip>
+          <Hint content={t("modManager.selectLocals")} side="bottom">
+            <Button
+              size="icon-sm"
+              variant="outline"
+              className="size-8 shrink-0"
+              disabled={isBusy}
+              aria-label={t("modManager.selectLocals")}
+              onClick={pickLocalFiles}
+            >
+              <FilePlus2 className="size-4" />
+            </Button>
+          </Hint>
         )}
 
         {scope === "library" &&
@@ -529,53 +519,48 @@ export function ContentToolbar({
           !isModpacks &&
           isOnline &&
           identifiable.length > 0 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon-sm"
-                  variant="outline"
-                  className="size-8 shrink-0"
-                  disabled={isBusy || isIdentifying}
-                  aria-label={t("modManager.identifyAction")}
-                  onClick={() => void identifyLocal()}
-                >
-                  {isIdentifying ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <ScanSearch className="size-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                {isIdentifying
+            <Hint
+              content={
+                isIdentifying
                   ? t("modManager.identifySearching")
-                  : t("modManager.identifyAction")}
-              </TooltipContent>
-            </Tooltip>
-          )}
-
-        {scope === "library" && canEdit && !isModpacks && (
-          <Tooltip>
-            <TooltipTrigger asChild>
+                  : t("modManager.identifyAction")
+              }
+              side="bottom"
+            >
               <Button
                 size="icon-sm"
                 variant="outline"
                 className="size-8 shrink-0"
-                disabled={isBusy || updateCheck.isChecking}
-                aria-label={t("modManager.checkUpdates")}
-                onClick={() => updateCheck.check(true)}
+                disabled={isBusy || isIdentifying}
+                aria-label={t("modManager.identifyAction")}
+                onClick={() => void identifyLocal()}
               >
-                {updateCheck.isChecking ? (
+                {isIdentifying ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <RotateCw className="size-4" />
+                  <ScanSearch className="size-4" />
                 )}
               </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              {t("modManager.checkUpdates")}
-            </TooltipContent>
-          </Tooltip>
+            </Hint>
+          )}
+
+        {scope === "library" && canEdit && !isModpacks && (
+          <Hint content={t("modManager.checkUpdates")} side="bottom">
+            <Button
+              size="icon-sm"
+              variant="outline"
+              className="size-8 shrink-0"
+              disabled={isBusy || updateCheck.isChecking}
+              aria-label={t("modManager.checkUpdates")}
+              onClick={() => updateCheck.check(true)}
+            >
+              {updateCheck.isChecking ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RotateCw className="size-4" />
+              )}
+            </Button>
+          </Hint>
         )}
 
         {!isModpacks && (
