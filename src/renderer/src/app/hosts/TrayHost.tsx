@@ -10,6 +10,7 @@ import {
   readyVersion,
 } from "@renderer/features/appUpdate/appUpdate";
 import { runGame } from "@renderer/features/launch/runGame";
+import { navigate } from "@renderer/navigation/navigate";
 import {
   consolesAtom,
   friendSocketAtom,
@@ -182,6 +183,9 @@ export function TrayHost() {
             break;
           case "declineCall":
             answerCall("voiceCallDecline");
+            break;
+          case "openSettings":
+            navigate({ name: "settings" });
             break;
         }
       }),

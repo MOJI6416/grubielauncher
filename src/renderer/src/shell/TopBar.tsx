@@ -34,6 +34,7 @@ import { openAgent } from "@renderer/features/agent/openAgent";
 import { agentBlockReason, blockReasonKey } from "@renderer/navigation/access";
 import { accountAtom } from "@renderer/stores/atoms";
 import { AGENT_SHORTCUT_LABEL } from "./shortcuts";
+import { ALT_KEY, MOD_KEY } from "@renderer/utilities/platform";
 import { TITLEBAR_HEIGHT } from "@/shared/titlebar";
 import { BrandMark } from "./BrandMark";
 
@@ -88,7 +89,8 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
   const { kind, title } = useCrumbs(route);
   const { t } = useTranslation();
 
-  const isWindows = api.platform === "win32";
+  const hasWindowControls =
+    api.platform === "win32" || api.platform === "darwin";
   const problem = getConnectivityProblems({
     isInternetOnline,
     isBackendOnline,
@@ -104,16 +106,24 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
   return (
     <header
       className={`flex shrink-0 items-center border-b border-border bg-background select-none ${
-        isWindows ? "app-drag" : ""
+        hasWindowControls ? "app-drag" : ""
       }`}
       style={{
         height: TITLEBAR_HEIGHT,
-        ...(isWindows
-          ? { paddingRight: "calc(100vw - env(titlebar-area-width, 100vw))" }
+        ...(hasWindowControls
+          ? {
+              paddingRight:
+                "calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw))",
+            }
           : {}),
       }}
     >
-      <div className="flex w-62 shrink-0 items-center gap-2.5 pl-3.5">
+      <div
+        className="flex w-62 shrink-0 items-center gap-2.5"
+        style={{
+          paddingLeft: "max(0.875rem, calc(env(titlebar-area-x, 0px) + 0.25rem))",
+        }}
+      >
         <span className="relative flex size-3.5 items-center justify-center">
           <BrandMark className="size-3.5 text-foreground" />
           <Hint content={status} side="bottom">
@@ -136,7 +146,7 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
       </div>
 
       <div className="app-no-drag flex shrink-0 items-center gap-0.5">
-        <Hint content={`${t("shell.back")} · Alt ←`} side="bottom">
+        <Hint content={`${t("shell.back")} · ${ALT_KEY} ←`} side="bottom">
           <Button
             size="icon-sm"
             variant="ghost"
@@ -147,7 +157,7 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
             <ChevronLeft />
           </Button>
         </Hint>
-        <Hint content={`${t("shell.forward")} · Alt →`} side="bottom">
+        <Hint content={`${t("shell.forward")} · ${ALT_KEY} →`} side="bottom">
           <Button
             size="icon-sm"
             variant="ghost"
@@ -225,7 +235,7 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
         >
           <Search className="size-3.5" />
           {t("shell.searchHint")}
-          <kbd className="font-mono text-[0.65rem]">Ctrl K</kbd>
+          <kbd className="font-mono text-[0.65rem]">{MOD_KEY} K</kbd>
         </button>
       </div>
     </header>

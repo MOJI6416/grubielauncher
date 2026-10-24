@@ -89,6 +89,7 @@ import { ConfigFileList, ConfigSearchMode } from "./ConfigFileList";
 import { ConfigTextEditor, ConfigTextEditorHandle } from "./ConfigTextEditor";
 import { ConfigFormView } from "./ConfigFormView";
 import { ConfigDiffView } from "./ConfigDiffView";
+import { MOD_KEY } from "@renderer/utilities/platform";
 
 const api = window.api;
 
@@ -974,12 +975,12 @@ export function ConfigsPanel({
               )}
 
             {activeMode === "text" && !isMissing && !isTranslatedView && (
-              <Hint content={t("configs.findHint")}>
+              <Hint content={t("configs.findHint", { mod: MOD_KEY })}>
                 <Button
                   size="icon-sm"
                   variant="ghost"
                   className="size-7 text-faint"
-                  aria-label={t("configs.findHint")}
+                  aria-label={t("configs.findHint", { mod: MOD_KEY })}
                   disabled={!!view}
                   onClick={() => editorRef.current?.openFind()}
                 >

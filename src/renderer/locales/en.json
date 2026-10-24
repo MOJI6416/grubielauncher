@@ -64,7 +64,7 @@
     "playingAs": "Playing as",
     "manage": "Manage accounts",
     "addSection": "Add account",
-    "switchShortcut": "Ctrl + 1…9 switches accounts",
+    "switchShortcut": "{{mod}} + 1…9 switches accounts",
     "emptyTitle": "No account selected",
     "emptyDescription": "Pick an account on the left or add a new one.",
     "use": "Use",
@@ -1232,7 +1232,9 @@
     "errorGeneric": "Could not join voice",
     "speakingCount_one": "{{count}} speaking",
     "speakingCount_other": "{{count}} speaking",
-    "deviceSwitchFailed": "Could not switch the device"
+    "deviceSwitchFailed": "Could not switch the device",
+    "pttPermission": "Allow Grubie Launcher to use Accessibility",
+    "pttPermissionHint": "macOS lets apps read hotkeys outside their window only with this permission. Turn on Grubie Launcher in Privacy & Security → Accessibility, then assign the key again."
   },
   "groups": {
     "tab": "Groups",
@@ -1522,7 +1524,7 @@
       "rootHint": "everything the launcher downloaded"
     },
     "devModeDescription": "Run-command copying and extra debugging tools",
-    "voiceMicTestErrorHint": "No access to the microphone. Check Windows permissions and the selected device.",
+    "voiceMicTestErrorHint": "No access to the microphone. Check {{os}} permissions and the selected device.",
     "autoWorldBackup": "Automatic world backups",
     "autoWorldBackupDescription": "Save a copy of the world after a play session if it changed",
     "worldBackupKeep": "Keep backups",
@@ -1557,7 +1559,7 @@
         "heavy": "Heavy modpack"
       },
       "advice": {
-        "balanced": "Leaves {{free}} GB for Windows and the launcher — a healthy split.",
+        "balanced": "Leaves {{free}} GB for {{os}} and the launcher — a healthy split.",
         "tight": "Only {{free}} GB is left for the system. With preallocation on, the game grabs it all at startup: if it won't start or the PC stutters, lower the allocation.",
         "critical": "Only {{free}} GB is left for the system. The game will most likely fail to start.",
         "excessive": "Above 12 GB the garbage collector pauses get longer, not shorter. Most modpacks are happy with 6–8 GB."
@@ -1835,7 +1837,7 @@
       "folders": {
         "title": "Folders",
         "description": "Launcher, Minecraft and Java locations",
-        "keywords": "folder path directory open explorer"
+        "keywords": "folder path directory open explorer finder"
       },
       "systemReport": {
         "title": "System info",
@@ -2873,7 +2875,7 @@
     "catalogSource": "Source: {{site}}",
     "catalogAdded": "Added to the catalog",
     "legacyFormat": "64×32",
-    "pasteHint": "or paste an image with Ctrl+V",
+    "pasteHint": "or paste an image with {{mod}}+V",
     "dropAnywhere": "Release the PNG to add it",
     "pickAnother": "Choose another",
     "clearFile": "Clear the chosen file",
@@ -3964,7 +3966,8 @@
       "cancelled": "The operation was cancelled.",
       "unknown": "The cause of the error could not be determined.",
       "pathPolicy": "The file is outside the folders the launcher may use.",
-      "invalidArgument": "The launcher refused the request: the data did not pass validation."
+      "invalidArgument": "The launcher refused the request: the data did not pass validation.",
+      "rosettaMissing": "Rosetta 2 is not installed on this Mac."
     },
     "hint": {
       "offline": "Check your internet connection and try again.",
@@ -3993,7 +3996,8 @@
       "javaMissing": "Pick Java in the instance settings or let the launcher download it.",
       "unknown": "Copy the details and attach them to your support request.",
       "pathPolicy": "Open the file through the launcher's file picker so it gets access to it.",
-      "invalidArgument": "This is a launcher safeguard. Copy the code and send it to support."
+      "invalidArgument": "This is a launcher safeguard. Copy the code and send it to support.",
+      "rosettaMissing": "Start the game once — the launcher will offer to install it — or run softwareupdate --install-rosetta in Terminal."
     },
     "serverCode": "Server response: {{code}}"
   },
@@ -4569,7 +4573,7 @@
     "findNone": "none",
     "findPrevious": "Previous (Shift+Enter)",
     "findNext": "Next (Enter)",
-    "findHint": "Find in file (Ctrl+F)",
+    "findHint": "Find in file ({{mod}}+F)",
     "history": "Version history",
     "backupsHint": "Click a version to compare it with the current file before restoring.",
     "showInFolder": "Show in folder",
@@ -5647,7 +5651,14 @@
       "untrusted": "The Java chosen for this instance is not in the launcher's list",
       "chosenHint": "Pick Java again in the instance settings or set it back to automatic.",
       "openSettings": "Instance settings",
-      "notInstalled": "Java {{major}} is not installed — run the integrity check"
+      "notInstalled": "Java {{major}} is not installed — run the integrity check",
+      "rosettaMissing": "This version needs Rosetta 2 on Apple Silicon",
+      "rosettaHint": "Older Minecraft versions have no libraries for M-series chips, so the game runs through Apple's translator. Installing it takes a minute and asks for your Mac password.",
+      "installRosetta": "Install Rosetta",
+      "rosettaInstalling": "Installing Rosetta 2…",
+      "rosettaPrompt": "Grubie Launcher wants to install Rosetta 2 to run older Minecraft versions.",
+      "rosettaInstalled": "Rosetta 2 is installed — start the game again",
+      "rosettaFailed": "Rosetta 2 was not installed. You can install it in Terminal: softwareupdate --install-rosetta"
     }
   },
   "seasonal": {

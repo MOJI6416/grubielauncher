@@ -42,6 +42,7 @@ import {
   isNicknameValid,
 } from "./addSkin";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { MOD_KEY } from "@renderer/utilities/platform";
 
 const api = window.api;
 
@@ -445,7 +446,7 @@ export function AddSkinDialog({
                   </span>
                   <span className="mt-1 inline-flex items-center gap-1 text-xs text-faint">
                     <ClipboardPaste className="size-3" />
-                    {t("manageSkins.pasteHint")}
+                    {t("manageSkins.pasteHint", { mod: MOD_KEY })}
                   </span>
                 </button>
               )

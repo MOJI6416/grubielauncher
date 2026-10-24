@@ -39,7 +39,8 @@ export type VoicePttCaptureReason =
   | "captured"
   | "cancelled"
   | "timeout"
-  | "unavailable";
+  | "unavailable"
+  | "permission";
 
 export type VoicePttCapture = {
   reason: VoicePttCaptureReason;

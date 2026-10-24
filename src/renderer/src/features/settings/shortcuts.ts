@@ -1,3 +1,5 @@
+import { ALT_KEY, MOD_KEY, SHIFT_KEY } from "@renderer/utilities/platform";
+
 export type ShortcutGroupId =
   | "global"
   | "palette"
@@ -19,13 +21,13 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
     id: "global",
     items: [
-      { id: "palette", combos: [["Ctrl", "K"]] },
-      { id: "paletteActions", combos: [["Ctrl", "Shift", "P"]] },
-      { id: "assistant", combos: [["Ctrl", "I"]] },
-      { id: "search", combos: [["Ctrl", "F"]] },
-      { id: "account", combos: [["Ctrl", "1…9"]] },
-      { id: "back", combos: [["Alt", "←"]] },
-      { id: "forward", combos: [["Alt", "→"]] },
+      { id: "palette", combos: [[MOD_KEY, "K"]] },
+      { id: "paletteActions", combos: [[MOD_KEY, SHIFT_KEY, "P"]] },
+      { id: "assistant", combos: [[MOD_KEY, "I"]] },
+      { id: "search", combos: [[MOD_KEY, "F"]] },
+      { id: "account", combos: [[MOD_KEY, "1…9"]] },
+      { id: "back", combos: [[ALT_KEY, "←"]] },
+      { id: "forward", combos: [[ALT_KEY, "→"]] },
       { id: "close", combos: [["Esc"]] },
     ],
   },

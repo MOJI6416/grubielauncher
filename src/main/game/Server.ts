@@ -41,6 +41,7 @@ import { mcVersionToJavaMajor } from "@/shared/javaVersions";
 import { createLineReader } from "../utilities/consoleLog";
 import { getDataRoot } from "../utilities/dataRoot";
 import { childProcessEnv } from "../utilities/childEnv";
+import { assertRosettaFor } from "../utilities/rosetta";
 import {
   ServerRunResult,
   ServerRunState,
@@ -993,6 +994,9 @@ export class ServerGame {
         );
 
       javaServerPath = java.javaServerPath;
+      await assertRosettaFor(java.translatedArch);
+    } else {
+      await assertRosettaFor(chosenJava.arch);
     }
 
     if (!this.version || !this.account) {

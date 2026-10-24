@@ -40,6 +40,7 @@ export type FailureCause =
   | "fileBusy"
   | "fileMissing"
   | "javaMissing"
+  | "rosettaMissing"
   | "pathPolicy"
   | "invalidArgument"
   | "cancelled"
@@ -106,6 +107,7 @@ const CAUSE_CODES: Record<FailureCause, string> = {
   fileBusy: "BUSY",
   fileMissing: "MISSING",
   javaMissing: "JAVA",
+  rosettaMissing: "ROSETTA",
   pathPolicy: "PATHPOLICY",
   invalidArgument: "BADARG",
   cancelled: "CANCELLED",
@@ -305,6 +307,7 @@ function causeFromMessage(message: string): FailureCause | undefined {
     return "downloadFailed";
   }
   if (text.includes("network error")) return "offline";
+  if (text.includes("rosetta")) return "rosettaMissing";
   if (text.includes("timeout of") || text.includes("timed out"))
     return "timeout";
   if (
@@ -363,7 +366,9 @@ export function classifyError(
     if (guessed) {
       cause = guessed;
       if (guessed === "offline") side = "network";
-      if (guessed === "javaMissing") side = "game";
+      if (guessed === "javaMissing" || guessed === "rosettaMissing") {
+        side = "game";
+      }
       if (guessed === "untrusted" || guessed === "pathPolicy") {
         side = "launcher";
       }

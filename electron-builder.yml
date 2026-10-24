@@ -42,7 +42,7 @@ files:
   - '!**/node_modules/**/build/config.gypi'
   - '!**/node_modules/uiohook-napi/{libuiohook,src}/**'
   - '!**/node_modules/uiohook-napi/binding.gyp'
-  - '!**/node_modules/uiohook-napi/prebuilds/{darwin-arm64,darwin-x64,linux-arm64,linux-loong64,win32-arm64}/**'
+  - '!**/node_modules/uiohook-napi/prebuilds/{linux-arm64,linux-loong64,win32-arm64}/**'
 
 asarUnpack:
   - resources/**
@@ -57,6 +57,8 @@ win:
   target: nsis
   artifactName: ${name}-${version}-setup.${ext}
   executableName: Grubie Launcher
+  files:
+    - '!**/node_modules/uiohook-napi/prebuilds/{darwin-arm64,darwin-x64,linux-x64}/**'
 
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
@@ -72,6 +74,48 @@ linux:
   maintainer: grubielauncher.com
   category: Utility
   artifactName: ${name}-${version}.${ext}
+  files:
+    - '!**/node_modules/uiohook-napi/prebuilds/{darwin-arm64,darwin-x64,win32-x64}/**'
   desktop:
     entry:
       StartupWMClass: grubie-launcher
+
+mac:
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  artifactName: ${name}-${version}-${arch}.${ext}
+  category: public.app-category.games
+  minimumSystemVersion: '12.0'
+  darkModeSupport: true
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  electronLanguages:
+    - en
+    - en_GB
+    - ru
+    - uk
+    - de
+    - es
+    - fr
+    - pl
+    - pt_BR
+    - tr
+  extendInfo:
+    NSMicrophoneUsageDescription: Grubie Launcher uses the microphone for voice chat with friends.
+    LSMultipleInstancesProhibited: true
+  extraResources:
+    - from: build/mac
+      to: .
+      filter:
+        - '**/InfoPlist.strings'
+  files:
+    - '!**/node_modules/uiohook-napi/prebuilds/{linux-x64,win32-x64}/**'
+
+dmg:
+  artifactName: ${name}-${version}-${arch}.${ext}
+  writeUpdateInfo: false

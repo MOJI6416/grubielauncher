@@ -3,6 +3,7 @@ import os from 'os'
 import path from 'path'
 import { execFile } from 'child_process'
 import { IPlatform } from '@/types/OS'
+import { binaryRunsAs } from './javaArch'
 
 const WINDOWS_VENDOR_DIRS = [
   'Java',
@@ -183,12 +184,17 @@ export async function findSystemJava(
     const paths = binaryPaths(resolved, platform)
     const detected = await probeMajor(paths.server)
     if (detected !== major) continue
+    if (platform.os === 'osx' && !(await binaryRunsAs(paths.server, platform.arch))) continue
 
     return { root: resolved, client: paths.client, server: paths.server, major: detected }
   }
 
   const onPath = await probeMajor('java')
-  if (onPath === major) return await resolveJavaOnPath(major, platform)
+  if (onPath !== major) return null
 
-  return null
+  const found = await resolveJavaOnPath(major, platform)
+  if (found && platform.os === 'osx' && !(await binaryRunsAs(found.server, platform.arch))) {
+    return null
+  }
+  return found
 }

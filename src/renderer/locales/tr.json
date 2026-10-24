@@ -64,7 +64,7 @@
     "playingAs": "Oynayan hesap",
     "manage": "Hesapları yönet",
     "addSection": "Hesap ekle",
-    "switchShortcut": "Ctrl + 1…9 hesap değiştirir",
+    "switchShortcut": "{{mod}} + 1…9 hesap değiştirir",
     "emptyTitle": "Hesap seçilmedi",
     "emptyDescription": "Soldan bir hesap seçin veya yeni bir hesap ekleyin.",
     "use": "Kullan",
@@ -1232,7 +1232,9 @@
     "errorGeneric": "Sese katılınamadı",
     "speakingCount_one": "{{count}} kişi konuşuyor",
     "speakingCount_other": "{{count}} kişi konuşuyor",
-    "deviceSwitchFailed": "Cihaz değiştirilemedi"
+    "deviceSwitchFailed": "Cihaz değiştirilemedi",
+    "pttPermission": "Grubie Launcher'a Erişilebilirlik izni verin",
+    "pttPermissionHint": "macOS, uygulamaların pencereleri dışındaki kısayolları yalnızca bu izinle okumasına izin verir. Gizlilik ve Güvenlik → Erişilebilirlik bölümünde Grubie Launcher'ı açın ve tuşu yeniden atayın."
   },
   "groups": {
     "tab": "Gruplar",
@@ -1522,7 +1524,7 @@
       "rootHint": "başlatıcının indirdiği her şey"
     },
     "devModeDescription": "Çalıştırma komutunu kopyalama ve ek hata ayıklama araçları",
-    "voiceMicTestErrorHint": "Mikrofona erişim yok. Windows izinlerini ve seçili cihazı kontrol edin.",
+    "voiceMicTestErrorHint": "Mikrofona erişim yok. {{os}} izinlerini ve seçili cihazı kontrol edin.",
     "autoWorldBackup": "Otomatik dünya yedekleri",
     "autoWorldBackupDescription": "Dünya değiştiyse oyun oturumundan sonra bir kopyasını kaydeder",
     "worldBackupKeep": "Saklanacak yedek",
@@ -1557,7 +1559,7 @@
         "heavy": "Ağır mod paketi"
       },
       "advice": {
-        "balanced": "Windows ve başlatıcı için {{free}} GB bırakır — sağlıklı bir dağılım.",
+        "balanced": "{{os}} ve başlatıcı için {{free}} GB bırakır — sağlıklı bir dağılım.",
         "tight": "Sisteme yalnızca {{free}} GB kalıyor. Ön ayırma açıkken oyun başlangıçta hepsini alır: oyun açılmazsa veya bilgisayar takılırsa ayrılan belleği azaltın.",
         "critical": "Sisteme yalnızca {{free}} GB kalıyor. Oyun büyük olasılıkla açılmayacak.",
         "excessive": "12 GB’ın üzerinde çöp toplayıcı duraklamaları kısalmaz, uzar. Çoğu mod paketi 6–8 GB ile gayet iyi çalışır."
@@ -1835,7 +1837,7 @@
       "folders": {
         "title": "Klasörler",
         "description": "Başlatıcı, Minecraft ve Java konumları",
-        "keywords": "klasör yol dizin aç gezgin"
+        "keywords": "klasör yol dizin aç gezgin finder"
       },
       "systemReport": {
         "title": "Sistem bilgisi",
@@ -2873,7 +2875,7 @@
     "catalogSource": "Kaynak: {{site}}",
     "catalogAdded": "Kataloğa eklendi",
     "legacyFormat": "64×32",
-    "pasteHint": "veya Ctrl+V ile bir görsel yapıştırın",
+    "pasteHint": "veya {{mod}}+V ile bir görsel yapıştırın",
     "dropAnywhere": "Eklemek için PNG’yi bırakın",
     "pickAnother": "Başkasını seç",
     "clearFile": "Seçilen dosyayı temizle",
@@ -3964,7 +3966,8 @@
       "cancelled": "İşlem iptal edildi.",
       "unknown": "Hatanın nedeni belirlenemedi.",
       "pathPolicy": "Dosya, başlatıcının kullanabileceği klasörlerin dışında.",
-      "invalidArgument": "Başlatıcı isteği reddetti: veriler doğrulamayı geçemedi."
+      "invalidArgument": "Başlatıcı isteği reddetti: veriler doğrulamayı geçemedi.",
+      "rosettaMissing": "Bu Mac'te Rosetta 2 yüklü değil."
     },
     "hint": {
       "offline": "İnternet bağlantınızı kontrol edip tekrar deneyin.",
@@ -3993,7 +3996,8 @@
       "javaMissing": "Kurulum ayarlarından Java seçin veya başlatıcının indirmesine izin verin.",
       "unknown": "Ayrıntıları kopyalayıp destek talebinize ekleyin.",
       "pathPolicy": "Erişim alabilmesi için dosyayı başlatıcının dosya seçicisiyle açın.",
-      "invalidArgument": "Bu bir başlatıcı güvenlik önlemidir. Kodu kopyalayıp desteğe gönderin."
+      "invalidArgument": "Bu bir başlatıcı güvenlik önlemidir. Kodu kopyalayıp desteğe gönderin.",
+      "rosettaMissing": "Oyunu başlatın (başlatıcı yüklemeyi önerecek) ya da Terminal'de softwareupdate --install-rosetta komutunu çalıştırın."
     },
     "serverCode": "Sunucu yanıtı: {{code}}"
   },
@@ -4569,7 +4573,7 @@
     "findNone": "yok",
     "findPrevious": "Önceki (Shift+Enter)",
     "findNext": "Sonraki (Enter)",
-    "findHint": "Dosyada bul (Ctrl+F)",
+    "findHint": "Dosyada bul ({{mod}}+F)",
     "history": "Sürüm geçmişi",
     "backupsHint": "Geri yüklemeden önce mevcut dosyayla karşılaştırmak için bir sürüme tıklayın.",
     "showInFolder": "Klasörde göster",
@@ -5647,7 +5651,14 @@
       "untrusted": "Bu kurulum için seçilen Java başlatıcının listesinde değil",
       "chosenHint": "Kurulum ayarlarından Java’yı yeniden seçin veya otomatiğe alın.",
       "openSettings": "Kurulum ayarları",
-      "notInstalled": "Java {{major}} kurulu değil — bütünlük denetimini çalıştırın"
+      "notInstalled": "Java {{major}} kurulu değil — bütünlük denetimini çalıştırın",
+      "rosettaMissing": "Bu sürüm Apple Silicon'da Rosetta 2 gerektirir",
+      "rosettaHint": "Eski Minecraft sürümlerinde M serisi çipler için kütüphane yoktur, bu yüzden oyun Apple'ın çeviricisiyle çalışır. Kurulum bir dakika sürer ve Mac parolanızı ister.",
+      "installRosetta": "Rosetta'yı yükle",
+      "rosettaInstalling": "Rosetta 2 yükleniyor…",
+      "rosettaPrompt": "Grubie Launcher, eski Minecraft sürümlerini çalıştırmak için Rosetta 2'yi yüklemek istiyor.",
+      "rosettaInstalled": "Rosetta 2 yüklendi — oyunu yeniden başlatın",
+      "rosettaFailed": "Rosetta 2 yüklenemedi. Terminal'de yükleyebilirsiniz: softwareupdate --install-rosetta"
     }
   },
   "seasonal": {

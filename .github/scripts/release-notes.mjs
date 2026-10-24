@@ -336,7 +336,9 @@ async function updateGithub(release, notes, publish) {
   const patch = { body: renderGithub(notes) };
   if (publish && release.draft) {
     const names = new Set(release.assets.map((asset) => asset.name));
-    const missing = ["latest.yml", "latest-linux.yml"].filter((name) => !names.has(name));
+    const required = ["latest.yml", "latest-linux.yml"];
+    if (process.env.REQUIRE_MAC_ASSETS === "true") required.push("latest-mac.yml");
+    const missing = required.filter((name) => !names.has(name));
     if (missing.length) fail(`В черновике ${notes.version} нет ${missing.join(", ")} — сборка выложила не всё`);
     patch.draft = false;
   }

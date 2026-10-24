@@ -64,7 +64,7 @@
     "playingAs": "Grasz jako",
     "manage": "Zarządzaj kontami",
     "addSection": "Dodaj konto",
-    "switchShortcut": "Ctrl + 1…9 przełącza konta",
+    "switchShortcut": "{{mod}} + 1…9 przełącza konta",
     "emptyTitle": "Nie wybrano konta",
     "emptyDescription": "Wybierz konto po lewej lub dodaj nowe.",
     "use": "Użyj",
@@ -1260,7 +1260,9 @@
     "speakingCount_few": "Mówią {{count}} osoby",
     "speakingCount_many": "Mówi {{count}} osób",
     "speakingCount_other": "Mówi {{count}} osoby",
-    "deviceSwitchFailed": "Nie udało się przełączyć urządzenia"
+    "deviceSwitchFailed": "Nie udało się przełączyć urządzenia",
+    "pttPermission": "Zezwól Grubie Launcher na dostęp w Dostępności",
+    "pttPermissionHint": "macOS pozwala aplikacjom odczytywać skróty poza ich oknem tylko z tym uprawnieniem. Włącz Grubie Launcher w Prywatność i ochrona → Dostępność i przypisz klawisz ponownie."
   },
   "groups": {
     "tab": "Grupy",
@@ -1552,7 +1554,7 @@
       "rootHint": "wszystko, co pobrał launcher"
     },
     "devModeDescription": "Kopiowanie polecenia uruchomienia i dodatkowe narzędzia debugowania",
-    "voiceMicTestErrorHint": "Brak dostępu do mikrofonu. Sprawdź uprawnienia Windows i wybrane urządzenie.",
+    "voiceMicTestErrorHint": "Brak dostępu do mikrofonu. Sprawdź uprawnienia {{os}} i wybrane urządzenie.",
     "autoWorldBackup": "Automatyczne kopie zapasowe światów",
     "autoWorldBackupDescription": "Zapisuje kopię świata po sesji gry, jeśli się zmienił",
     "worldBackupKeep": "Przechowuj kopie",
@@ -1587,7 +1589,7 @@
         "heavy": "Ciężki modpack"
       },
       "advice": {
-        "balanced": "Zostawia {{free}} GB dla Windows i launchera — zdrowy podział.",
+        "balanced": "Zostawia {{free}} GB dla {{os}} i launchera — zdrowy podział.",
         "tight": "Dla systemu zostaje tylko {{free}} GB. Przy włączonej prealokacji gra zajmie wszystko na starcie: jeśli się nie uruchamia albo komputer się przycina, zmniejsz przydział.",
         "critical": "Dla systemu zostaje tylko {{free}} GB. Gra najprawdopodobniej się nie uruchomi.",
         "excessive": "Powyżej 12 GB pauzy odśmiecacza pamięci są dłuższe, a nie krótsze. Większości modpacków wystarcza 6–8 GB."
@@ -1865,7 +1867,7 @@
       "folders": {
         "title": "Foldery",
         "description": "Lokalizacje launchera, Minecrafta i Javy",
-        "keywords": "folder ścieżka katalog otwórz eksplorator"
+        "keywords": "folder ścieżka katalog otwórz eksplorator finder"
       },
       "systemReport": {
         "title": "Informacje o systemie",
@@ -2913,7 +2915,7 @@
     "catalogSource": "Źródło: {{site}}",
     "catalogAdded": "Dodano do katalogu",
     "legacyFormat": "64×32",
-    "pasteHint": "lub wklej obraz przez Ctrl+V",
+    "pasteHint": "lub wklej obraz przez {{mod}}+V",
     "dropAnywhere": "Puść plik PNG, aby go dodać",
     "pickAnother": "Wybierz inny",
     "clearFile": "Wyczyść wybrany plik",
@@ -4028,7 +4030,8 @@
       "cancelled": "Operację anulowano.",
       "unknown": "Nie udało się ustalić przyczyny błędu.",
       "pathPolicy": "Plik leży poza folderami, których launcher może używać.",
-      "invalidArgument": "Launcher odrzucił żądanie: dane nie przeszły weryfikacji."
+      "invalidArgument": "Launcher odrzucił żądanie: dane nie przeszły weryfikacji.",
+      "rosettaMissing": "Na tym Macu nie ma Rosetty 2."
     },
     "hint": {
       "offline": "Sprawdź połączenie z internetem i spróbuj ponownie.",
@@ -4057,7 +4060,8 @@
       "javaMissing": "Wybierz Javę w ustawieniach instancji albo pozwól launcherowi ją pobrać.",
       "unknown": "Skopiuj szczegóły i dołącz je do zgłoszenia do pomocy technicznej.",
       "pathPolicy": "Otwórz plik przez okno wyboru plików launchera, aby uzyskał do niego dostęp.",
-      "invalidArgument": "To zabezpieczenie launchera. Skopiuj kod i wyślij go do pomocy technicznej."
+      "invalidArgument": "To zabezpieczenie launchera. Skopiuj kod i wyślij go do pomocy technicznej.",
+      "rosettaMissing": "Uruchom grę — launcher zaproponuje instalację — albo wykonaj w Terminalu softwareupdate --install-rosetta."
     },
     "serverCode": "Odpowiedź serwera: {{code}}"
   },
@@ -4641,7 +4645,7 @@
     "findNone": "brak",
     "findPrevious": "Poprzednie (Shift+Enter)",
     "findNext": "Następne (Enter)",
-    "findHint": "Znajdź w pliku (Ctrl+F)",
+    "findHint": "Znajdź w pliku ({{mod}}+F)",
     "history": "Historia wersji",
     "backupsHint": "Kliknij wersję, aby przed przywróceniem porównać ją z obecnym plikiem.",
     "showInFolder": "Pokaż w folderze",
@@ -5743,7 +5747,14 @@
       "untrusted": "Javy wybranej dla tej instancji nie ma na liście launchera",
       "chosenHint": "Wybierz Javę ponownie w ustawieniach instancji lub przywróć wybór automatyczny.",
       "openSettings": "Ustawienia instancji",
-      "notInstalled": "Java {{major}} nie jest zainstalowana — sprawdź integralność"
+      "notInstalled": "Java {{major}} nie jest zainstalowana — sprawdź integralność",
+      "rosettaMissing": "Ta wersja wymaga Rosetty 2 na Apple Silicon",
+      "rosettaHint": "Starsze wersje Minecrafta nie mają bibliotek dla układów serii M, więc gra działa przez tłumacz Apple. Instalacja zajmie minutę i poprosi o hasło do Maca.",
+      "installRosetta": "Zainstaluj Rosettę",
+      "rosettaInstalling": "Instalowanie Rosetty 2…",
+      "rosettaPrompt": "Grubie Launcher chce zainstalować Rosettę 2, aby uruchamiać starsze wersje Minecrafta.",
+      "rosettaInstalled": "Rosetta 2 zainstalowana — uruchom grę ponownie",
+      "rosettaFailed": "Nie zainstalowano Rosetty 2. Możesz ją zainstalować w Terminalu: softwareupdate --install-rosetta"
     }
   },
   "seasonal": {

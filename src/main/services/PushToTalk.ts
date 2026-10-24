@@ -1,4 +1,4 @@
-import { BrowserWindow } from "electron";
+import { BrowserWindow, systemPreferences } from "electron";
 import { uIOhook, UiohookKey } from "uiohook-napi";
 import { VoicePttCapture } from "@/types/Settings";
 
@@ -16,6 +16,7 @@ const KEY_LABELS = new Map<number, string>(
 
 let listenersAttached = false;
 let hookStarted = false;
+let inputAccessDenied = false;
 let activeBind: PttInput | null = null;
 let isPressed = false;
 let captureResolve: ((result: VoicePttCapture) => void) | null = null;
@@ -103,9 +104,19 @@ function attachListeners() {
   });
 }
 
+function hasInputAccess(): boolean {
+  inputAccessDenied = false;
+  if (process.platform !== "darwin") return true;
+  if (systemPreferences.isTrustedAccessibilityClient(false)) return true;
+  systemPreferences.isTrustedAccessibilityClient(true);
+  inputAccessDenied = true;
+  return false;
+}
+
 function ensureHook(): boolean {
-  attachListeners();
   if (hookStarted) return true;
+  if (!hasInputAccess()) return false;
+  attachListeners();
 
   try {
     uIOhook.start();
@@ -157,7 +168,10 @@ export function capturePttBind(): Promise<VoicePttCapture> {
   if (captureResolve) finishCapture({ reason: "cancelled", bind: null });
 
   if (!ensureHook()) {
-    return Promise.resolve({ reason: "unavailable", bind: null });
+    return Promise.resolve({
+      reason: inputAccessDenied ? "permission" : "unavailable",
+      bind: null,
+    });
   }
 
   return new Promise((resolve) => {

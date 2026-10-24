@@ -34,10 +34,12 @@ function reposition(): void {
 
   const point = anchor ?? screen.getCursorScreenPoint();
   const display = screen.getDisplayNearestPoint(point);
-  const { x, y } = placeTrayPopup(point, display, {
-    width: TRAY_POPUP_WIDTH,
-    height,
-  });
+  const { x, y } = placeTrayPopup(
+    point,
+    display,
+    { width: TRAY_POPUP_WIDTH, height },
+    process.platform === "darwin" ? "top" : undefined,
+  );
 
   popup.setBounds({ x, y, width: TRAY_POPUP_WIDTH, height });
 }

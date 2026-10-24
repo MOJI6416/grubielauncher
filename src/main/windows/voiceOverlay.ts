@@ -97,6 +97,9 @@ function create(): BrowserWindow {
   });
 
   window.setAlwaysOnTop(true, "screen-saver");
+  if (process.platform === "darwin") {
+    window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  }
   window.setIgnoreMouseEvents(true);
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event) => event.preventDefault());

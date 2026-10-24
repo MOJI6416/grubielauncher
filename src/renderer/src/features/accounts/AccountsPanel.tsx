@@ -45,6 +45,7 @@ import { addAccountRequestAtom } from "./addAccountRequest";
 import { loadAccounts } from "./loadAccounts";
 import { useAccountsController } from "./useAccountsController";
 import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
+import { MOD_KEY } from "@renderer/utilities/platform";
 
 const SEARCH_THRESHOLD = 6;
 
@@ -283,7 +284,7 @@ export function AccountsPanel() {
 
             {accounts.length > 1 && (
               <p className="px-1.5 pb-0.5 text-[0.65rem] text-faint">
-                {t("accounts.switchShortcut")}
+                {t("accounts.switchShortcut", { mod: MOD_KEY })}
               </p>
             )}
           </div>

@@ -64,7 +64,7 @@
     "playingAs": "Jogando como",
     "manage": "Gerenciar contas",
     "addSection": "Adicionar conta",
-    "switchShortcut": "Ctrl + 1…9 troca de conta",
+    "switchShortcut": "{{mod}} + 1…9 troca de conta",
     "emptyTitle": "Nenhuma conta selecionada",
     "emptyDescription": "Escolha uma conta à esquerda ou adicione uma nova.",
     "use": "Usar",
@@ -1246,7 +1246,9 @@
     "speakingCount_one": "{{count}} falando",
     "speakingCount_many": "{{count}} falando",
     "speakingCount_other": "{{count}} falando",
-    "deviceSwitchFailed": "Não foi possível trocar o dispositivo"
+    "deviceSwitchFailed": "Não foi possível trocar o dispositivo",
+    "pttPermission": "Permita que o Grubie Launcher use a Acessibilidade",
+    "pttPermissionHint": "O macOS só deixa apps lerem atalhos fora da janela com esta permissão. Ative o Grubie Launcher em Privacidade e Segurança → Acessibilidade e atribua a tecla de novo."
   },
   "groups": {
     "tab": "Grupos",
@@ -1537,7 +1539,7 @@
       "rootHint": "tudo o que o launcher baixou"
     },
     "devModeDescription": "Cópia do comando de execução e ferramentas extras de depuração",
-    "voiceMicTestErrorHint": "Sem acesso ao microfone. Confira as permissões do Windows e o dispositivo escolhido.",
+    "voiceMicTestErrorHint": "Sem acesso ao microfone. Confira as permissões do {{os}} e o dispositivo escolhido.",
     "autoWorldBackup": "Backups automáticos de mundos",
     "autoWorldBackupDescription": "Salva uma cópia do mundo depois de uma sessão de jogo, se ele mudou",
     "worldBackupKeep": "Manter backups",
@@ -1572,7 +1574,7 @@
         "heavy": "Modpack pesado"
       },
       "advice": {
-        "balanced": "Deixa {{free}} GB para o Windows e o launcher — uma divisão saudável.",
+        "balanced": "Deixa {{free}} GB para o {{os}} e o launcher — uma divisão saudável.",
         "tight": "Só sobram {{free}} GB para o sistema. Com a pré-alocação ativada, o jogo pega tudo ao iniciar: se ele não iniciar ou o PC travar, diminua a alocação.",
         "critical": "Só sobram {{free}} GB para o sistema. O jogo provavelmente não vai iniciar.",
         "excessive": "Acima de 12 GB, as pausas do coletor de lixo ficam mais longas, não mais curtas. A maioria dos modpacks fica bem com 6–8 GB."
@@ -1850,7 +1852,7 @@
       "folders": {
         "title": "Pastas",
         "description": "Locais do launcher, do Minecraft e do Java",
-        "keywords": "pasta caminho diretório abrir explorador"
+        "keywords": "pasta caminho diretório abrir explorador finder"
       },
       "systemReport": {
         "title": "Informações do sistema",
@@ -2893,7 +2895,7 @@
     "catalogSource": "Origem: {{site}}",
     "catalogAdded": "Adicionada ao catálogo",
     "legacyFormat": "64×32",
-    "pasteHint": "ou cole uma imagem com Ctrl+V",
+    "pasteHint": "ou cole uma imagem com {{mod}}+V",
     "dropAnywhere": "Solte o PNG para adicioná-lo",
     "pickAnother": "Escolher outro",
     "clearFile": "Limpar o arquivo escolhido",
@@ -3996,7 +3998,8 @@
       "cancelled": "A operação foi cancelada.",
       "unknown": "Não foi possível determinar a causa do erro.",
       "pathPolicy": "O arquivo está fora das pastas que o launcher pode usar.",
-      "invalidArgument": "O launcher recusou o pedido: os dados não passaram na validação."
+      "invalidArgument": "O launcher recusou o pedido: os dados não passaram na validação.",
+      "rosettaMissing": "O Rosetta 2 não está instalado neste Mac."
     },
     "hint": {
       "offline": "Verifique a conexão com a internet e tente de novo.",
@@ -4025,7 +4028,8 @@
       "javaMissing": "Escolha o Java nas configurações da instância ou deixe o launcher baixá-lo.",
       "unknown": "Copie os detalhes e anexe-os ao seu pedido de suporte.",
       "pathPolicy": "Abra o arquivo pelo seletor de arquivos do launcher para que ele ganhe acesso.",
-      "invalidArgument": "É uma proteção do launcher. Copie o código e envie ao suporte."
+      "invalidArgument": "É uma proteção do launcher. Copie o código e envie ao suporte.",
+      "rosettaMissing": "Inicie o jogo (o launcher vai oferecer a instalação) ou rode softwareupdate --install-rosetta no Terminal."
     },
     "serverCode": "Resposta do servidor: {{code}}"
   },
@@ -4605,7 +4609,7 @@
     "findNone": "nenhum",
     "findPrevious": "Anterior (Shift+Enter)",
     "findNext": "Próximo (Enter)",
-    "findHint": "Buscar no arquivo (Ctrl+F)",
+    "findHint": "Buscar no arquivo ({{mod}}+F)",
     "history": "Histórico de versões",
     "backupsHint": "Clique em uma versão para compará-la com o arquivo atual antes de restaurar.",
     "showInFolder": "Mostrar na pasta",
@@ -5691,7 +5695,14 @@
       "untrusted": "O Java escolhido para esta instância não está na lista do launcher",
       "chosenHint": "Escolha o Java de novo nas configurações da instância ou volte para automático.",
       "openSettings": "Configurações da instância",
-      "notInstalled": "O Java {{major}} não está instalado — execute a verificação de integridade"
+      "notInstalled": "O Java {{major}} não está instalado — execute a verificação de integridade",
+      "rosettaMissing": "Esta versão precisa do Rosetta 2 no Apple Silicon",
+      "rosettaHint": "As versões antigas do Minecraft não têm bibliotecas para chips da série M, então o jogo roda pelo tradutor da Apple. A instalação leva um minuto e pede a senha do seu Mac.",
+      "installRosetta": "Instalar o Rosetta",
+      "rosettaInstalling": "Instalando o Rosetta 2…",
+      "rosettaPrompt": "O Grubie Launcher quer instalar o Rosetta 2 para rodar versões antigas do Minecraft.",
+      "rosettaInstalled": "Rosetta 2 instalado — inicie o jogo de novo",
+      "rosettaFailed": "O Rosetta 2 não foi instalado. Você pode instalá-lo no Terminal: softwareupdate --install-rosetta"
     }
   },
   "seasonal": {

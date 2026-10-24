@@ -1,4 +1,7 @@
 import type { MirrorMode } from "@/shared/mirrorMode";
+import { platformName } from "@renderer/utilities/platform";
+
+export { platformName };
 
 export interface SystemReportInput {
   appVersion: string;
@@ -16,15 +19,6 @@ export interface SystemReportInput {
   storageTotal: string;
 }
 
-const PLATFORM_NAMES: Record<string, string> = {
-  win32: "Windows",
-  darwin: "macOS",
-  linux: "Linux",
-};
-
-export function platformName(platform: string): string {
-  return PLATFORM_NAMES[platform] ?? platform;
-}
 
 export function buildSystemReport(input: SystemReportInput): string {
   const lines = [

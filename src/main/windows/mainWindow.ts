@@ -47,6 +47,7 @@ function openIfTrusted(url: string): void {
   } catch {}
 }
 
+let mainWindowCreated = false;
 let pendingShow = true;
 let isReadyToShow = false;
 let shouldMaximizeOnShow = false;
@@ -214,8 +215,13 @@ function saveWindowState(window: BrowserWindow): void {
   } catch {}
 }
 
+export function wasMainWindowCreated(): boolean {
+  return mainWindowCreated;
+}
+
 export function createMainWindow(options: { deferShow?: boolean } = {}): void {
   const savedState = readWindowState();
+  mainWindowCreated = true;
 
   pendingShow = !options.deferShow;
   isReadyToShow = false;
@@ -238,6 +244,13 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): void {
       ? {
           titleBarStyle: "hidden" as const,
           titleBarOverlay: { ...TITLEBAR_OVERLAY },
+        }
+      : {}),
+    ...(process.platform === "darwin"
+      ? {
+          titleBarStyle: "hidden" as const,
+          titleBarOverlay: { height: TITLEBAR_OVERLAY.height },
+          backgroundColor: TITLEBAR_OVERLAY.color,
         }
       : {}),
     webPreferences: {

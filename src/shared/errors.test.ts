@@ -125,6 +125,18 @@ describe("classifyError", () => {
     expect(info.cause).toBe("fileMissing");
   });
 
+  it("recognizes a Mac without Rosetta as its own cause", () => {
+    const info = classifyError(
+      new Error(
+        "Rosetta 2 is not installed: this Java runs on Apple Silicon only through it",
+      ),
+    );
+
+    expect(info.cause).toBe("rosettaMissing");
+    expect(info.side).toBe("game");
+    expect(info.code).toBe("GAME-ROSETTA");
+  });
+
   it("keeps cancellations recognizable", () => {
     expect(classifyError(new Error("AbortError")).cause).toBe("cancelled");
   });

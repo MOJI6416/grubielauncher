@@ -1,7 +1,6 @@
-const api = window.api;
+import { MOD_KEY } from "@renderer/utilities/platform";
 
-export const AGENT_SHORTCUT_LABEL =
-  api.platform === "darwin" ? "⌘ I" : "Ctrl I";
+export const AGENT_SHORTCUT_LABEL = `${MOD_KEY} I`;
 
 export function isAgentShortcut(event: KeyboardEvent): boolean {
   return (

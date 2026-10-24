@@ -64,7 +64,7 @@
     "playingAs": "Vous jouez en tant que",
     "manage": "Gérer les comptes",
     "addSection": "Ajouter un compte",
-    "switchShortcut": "Ctrl + 1…9 pour changer de compte",
+    "switchShortcut": "{{mod}} + 1…9 pour changer de compte",
     "emptyTitle": "Aucun compte sélectionné",
     "emptyDescription": "Choisissez un compte à gauche ou ajoutez-en un nouveau.",
     "use": "Utiliser",
@@ -1246,7 +1246,9 @@
     "speakingCount_one": "{{count}} parle",
     "speakingCount_many": "{{count}} parlent",
     "speakingCount_other": "{{count}} parlent",
-    "deviceSwitchFailed": "Impossible de changer de périphérique"
+    "deviceSwitchFailed": "Impossible de changer de périphérique",
+    "pttPermission": "Autorisez Grubie Launcher dans Accessibilité",
+    "pttPermissionHint": "macOS n’autorise les apps à lire les raccourcis hors de leur fenêtre qu’avec cette autorisation. Activez Grubie Launcher dans Confidentialité et sécurité → Accessibilité, puis attribuez de nouveau la touche."
   },
   "groups": {
     "tab": "Groupes",
@@ -1537,7 +1539,7 @@
       "rootHint": "tout ce que le launcher a téléchargé"
     },
     "devModeDescription": "Copie de la commande de lancement et outils de débogage supplémentaires",
-    "voiceMicTestErrorHint": "Pas d’accès au micro. Vérifiez les autorisations de Windows et le périphérique choisi.",
+    "voiceMicTestErrorHint": "Pas d’accès au micro. Vérifiez les autorisations de {{os}} et le périphérique choisi.",
     "autoWorldBackup": "Sauvegardes automatiques des mondes",
     "autoWorldBackupDescription": "Enregistrer une copie du monde après une session de jeu s’il a changé",
     "worldBackupKeep": "Sauvegardes à conserver",
@@ -1572,7 +1574,7 @@
         "heavy": "Gros modpack"
       },
       "advice": {
-        "balanced": "Laisse {{free}} Go à Windows et au launcher — un bon équilibre.",
+        "balanced": "Laisse {{free}} Go à {{os}} et au launcher — un bon équilibre.",
         "tight": "Il ne reste que {{free}} Go au système. Avec la préallocation activée, le jeu prend tout au démarrage : s’il ne démarre pas ou si le PC saccade, réduisez l’allocation.",
         "critical": "Il ne reste que {{free}} Go au système. Le jeu ne démarrera très probablement pas.",
         "excessive": "Au-delà de 12 Go, les pauses du ramasse-miettes s’allongent au lieu de raccourcir. La plupart des modpacks se contentent de 6 à 8 Go."
@@ -1850,7 +1852,7 @@
       "folders": {
         "title": "Dossiers",
         "description": "Emplacements du launcher, de Minecraft et de Java",
-        "keywords": "dossier chemin répertoire ouvrir explorateur"
+        "keywords": "dossier chemin répertoire ouvrir explorateur finder"
       },
       "systemReport": {
         "title": "Infos système",
@@ -2893,7 +2895,7 @@
     "catalogSource": "Source : {{site}}",
     "catalogAdded": "Ajouté au catalogue",
     "legacyFormat": "64×32",
-    "pasteHint": "ou collez une image avec Ctrl+V",
+    "pasteHint": "ou collez une image avec {{mod}}+V",
     "dropAnywhere": "Relâchez le PNG pour l’ajouter",
     "pickAnother": "Choisir un autre",
     "clearFile": "Effacer le fichier choisi",
@@ -3996,7 +3998,8 @@
       "cancelled": "L’opération a été annulée.",
       "unknown": "La cause de l’erreur n’a pas pu être déterminée.",
       "pathPolicy": "Le fichier se trouve hors des dossiers que le launcher peut utiliser.",
-      "invalidArgument": "Le launcher a refusé la requête : les données n’ont pas passé la validation."
+      "invalidArgument": "Le launcher a refusé la requête : les données n’ont pas passé la validation.",
+      "rosettaMissing": "Rosetta 2 n’est pas installé sur ce Mac."
     },
     "hint": {
       "offline": "Vérifiez votre connexion Internet et réessayez.",
@@ -4025,7 +4028,8 @@
       "javaMissing": "Choisissez Java dans les paramètres de l’instance ou laissez le launcher le télécharger.",
       "unknown": "Copiez les détails et joignez-les à votre demande au support.",
       "pathPolicy": "Ouvrez le fichier via le sélecteur de fichiers du launcher pour qu’il y ait accès.",
-      "invalidArgument": "C’est une protection du launcher. Copiez le code et envoyez-le au support."
+      "invalidArgument": "C’est une protection du launcher. Copiez le code et envoyez-le au support.",
+      "rosettaMissing": "Lancez le jeu (le launcher proposera de l’installer) ou exécutez softwareupdate --install-rosetta dans le Terminal."
     },
     "serverCode": "Réponse du serveur : {{code}}"
   },
@@ -4605,7 +4609,7 @@
     "findNone": "aucun",
     "findPrevious": "Précédent (Maj+Entrée)",
     "findNext": "Suivant (Entrée)",
-    "findHint": "Rechercher dans le fichier (Ctrl+F)",
+    "findHint": "Rechercher dans le fichier ({{mod}}+F)",
     "history": "Historique des versions",
     "backupsHint": "Cliquez sur une version pour la comparer au fichier actuel avant de la restaurer.",
     "showInFolder": "Afficher dans le dossier",
@@ -5695,7 +5699,14 @@
       "untrusted": "Le Java choisi pour cette instance ne figure pas dans la liste du launcher",
       "chosenHint": "Choisissez à nouveau Java dans les paramètres de l’instance ou remettez-le en automatique.",
       "openSettings": "Paramètres de l’instance",
-      "notInstalled": "Java {{major}} n’est pas installé — lancez la vérification de l’intégrité"
+      "notInstalled": "Java {{major}} n’est pas installé — lancez la vérification de l’intégrité",
+      "rosettaMissing": "Cette version a besoin de Rosetta 2 sur Apple Silicon",
+      "rosettaHint": "Les anciennes versions de Minecraft n’ont pas de bibliothèques pour les puces de la série M : le jeu passe donc par le traducteur d’Apple. L’installation prend une minute et demande le mot de passe de votre Mac.",
+      "installRosetta": "Installer Rosetta",
+      "rosettaInstalling": "Installation de Rosetta 2…",
+      "rosettaPrompt": "Grubie Launcher souhaite installer Rosetta 2 pour lancer d’anciennes versions de Minecraft.",
+      "rosettaInstalled": "Rosetta 2 est installé — relancez le jeu",
+      "rosettaFailed": "Rosetta 2 n’a pas été installé. Vous pouvez l’installer dans le Terminal : softwareupdate --install-rosetta"
     }
   },
   "seasonal": {

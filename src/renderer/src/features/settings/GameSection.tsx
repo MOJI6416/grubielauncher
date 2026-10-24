@@ -33,6 +33,7 @@ import {
 } from "./memory";
 import type { SettingsEntryId } from "./catalog";
 import { JavaSettingsGroup } from "@renderer/features/java/JavaSettingsGroup";
+import { OS_NAME } from "@renderer/utilities/platform";
 
 const KEEP_OPTIONS = [1, 3, 5, 10, 20];
 
@@ -204,6 +205,7 @@ export function GameSection({
                 <span>
                   {t(`settings.game.advice.${advice.key}`, {
                     free: formatGb(advice.headroomMb),
+                    os: OS_NAME,
                   })}
                 </span>
               </p>

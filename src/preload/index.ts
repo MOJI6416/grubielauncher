@@ -306,6 +306,9 @@ export interface IElectronAPI {
   platform: string;
   os: {
     totalmem: () => Promise<number>;
+    openPrivacySettings: (
+      pane: "microphone" | "accessibility",
+    ) => Promise<boolean>;
   };
   java: {
     list: (rescan?: boolean) => Promise<JavaRuntimeList>;
@@ -320,6 +323,7 @@ export interface IElectronAPI {
       requiredMajor: number,
       override: JavaOverride | null,
     ) => Promise<JavaPrepareResult>;
+    installRosetta: (prompt: string) => Promise<boolean>;
   };
   storage: {
     getBreakdown: () => Promise<StorageBreakdown>;
@@ -1433,6 +1437,8 @@ export const api: IElectronAPI = {
   platform: process.platform,
   os: {
     totalmem: () => invoke("os:totalmem"),
+    openPrivacySettings: (pane: "microphone" | "accessibility") =>
+      invoke("os:openPrivacySettings", pane),
   },
   java: {
     list: (rescan?: boolean) => invoke("java:list", rescan),
@@ -1443,6 +1449,7 @@ export const api: IElectronAPI = {
     prepare: (conf: IVersionConf) => invoke("java:prepare", conf),
     ensure: (requiredMajor: number, override: JavaOverride | null) =>
       invoke("java:ensure", requiredMajor, override),
+    installRosetta: (prompt: string) => invoke("java:installRosetta", prompt),
   },
   storage: {
     getBreakdown: () => invoke("storage:getBreakdown"),

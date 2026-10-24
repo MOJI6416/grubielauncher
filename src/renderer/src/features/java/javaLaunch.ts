@@ -8,6 +8,19 @@ import { uiJournal } from "@renderer/utilities/journal";
 
 const api = window.api;
 
+async function installRosettaFromToast(): Promise<void> {
+  const t = i18n.t.bind(i18n);
+  const toastId = toast.loading(t("java.launch.rosettaInstalling"));
+  const installed = await api.java
+    .installRosetta(t("java.launch.rosettaPrompt"))
+    .catch(() => false);
+  toast.dismiss(toastId);
+
+  uiJournal.info("launch", "rosetta install finished", { installed });
+  if (installed) toast.success(t("java.launch.rosettaInstalled"));
+  else toast.error(t("java.launch.rosettaFailed"));
+}
+
 export async function prepareJavaForLaunch(version: Version): Promise<boolean> {
   const t = i18n.t.bind(i18n);
   const downloading = version.java?.problem === "not_installed";
@@ -52,6 +65,16 @@ export async function prepareJavaForLaunch(version: Version): Promise<boolean> {
         t("java.launch.downloadFailedHint"),
         t("common.copy"),
       );
+      break;
+    case "rosetta_missing":
+      toast.error(t("java.launch.rosettaMissing"), {
+        description: t("java.launch.rosettaHint"),
+        duration: 30000,
+        action: {
+          label: t("java.launch.installRosetta"),
+          onClick: () => void installRosettaFromToast(),
+        },
+      });
       break;
     case "missing":
     case "untrusted":

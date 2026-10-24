@@ -21,6 +21,8 @@ jobs:
             build_command: npm run build:linux -- --publish never
           - os: windows-2022
             build_command: npm run build:win -- --publish never
+          - os: macos-14
+            build_command: npm run build:mac -- --publish never -c.mac.identity=- -c.mac.hardenedRuntime=false -c.mac.notarize=false
     runs-on: ${{ matrix.os }}
 
     steps:

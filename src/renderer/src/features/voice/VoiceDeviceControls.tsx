@@ -47,6 +47,7 @@ import {
   voiceGetSavedDevice,
   voiceSwitchDevice,
 } from "@renderer/utilities/voiceClient";
+import { OS_NAME } from "@renderer/utilities/platform";
 
 const METER_SEGMENTS = 18;
 const SILENCE_HINT_MS = 4000;
@@ -305,7 +306,7 @@ export function MicLevelTest() {
       const issue = micIssueFromError(error);
       showFailureToast(t(micIssueTitleKey(issue)), error, {
         context: { side: "launcher" },
-        fallbackDescription: t("settings.voiceMicTestErrorHint"),
+        fallbackDescription: t("settings.voiceMicTestErrorHint", { os: OS_NAME }),
       });
     } finally {
       if (isMountedRef.current) setStarting(false);

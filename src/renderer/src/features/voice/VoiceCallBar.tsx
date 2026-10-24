@@ -71,12 +71,6 @@ const LEVEL_BARS = 4;
 const FULL_CHIP_LIMIT = 3;
 const COMPACT_CHIP_LIMIT = 8;
 
-const MIC_SETTINGS_URL: Record<string, string> = {
-  win32: "ms-settings:privacy-microphone",
-  darwin:
-    "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone",
-};
-
 function QualityBars({ rank }: { rank: number }) {
   return (
     <span className="flex items-end gap-[2px]" aria-hidden>
@@ -189,7 +183,7 @@ export function VoiceCallBar({ inline = false }: { inline?: boolean } = {}) {
     isCompactRoster ? COMPACT_CHIP_LIMIT : FULL_CHIP_LIMIT,
   );
   const micIssueTitle = micIssueTitleKey(session.micIssue);
-  const systemMicSettingsUrl = MIC_SETTINGS_URL[api.platform] ?? "";
+  const hasMicSettings = api.platform === "win32" || api.platform === "darwin";
 
   const handleCopyInvite = async () => {
     if (!currentGroup) return;
@@ -353,14 +347,12 @@ export function VoiceCallBar({ inline = false }: { inline?: boolean } = {}) {
                 {t(micIssueHintKey(session.micIssue))}
               </p>
             </div>
-            {session.micIssue === "denied" && systemMicSettingsUrl && (
+            {session.micIssue === "denied" && hasMicSettings && (
               <Button
                 size="sm"
                 variant="outline"
                 className="h-7 shrink-0"
-                onClick={() =>
-                  void api.shell.openExternal(systemMicSettingsUrl)
-                }
+                onClick={() => void api.os.openPrivacySettings("microphone")}
               >
                 {t("voice.micOpenSettings")}
               </Button>

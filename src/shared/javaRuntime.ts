@@ -35,6 +35,7 @@ export interface ResolvedJava {
   server: string
   vendor: string | null
   version: string | null
+  arch?: 'x64' | 'arm64'
   problem?: JavaProblem
 }
 
@@ -44,7 +45,11 @@ export type JavaAddResult =
 
 export type JavaPrepareResult =
   | { ok: true; java: ResolvedJava }
-  | { ok: false; problem: JavaProblem | 'busy' | 'download_failed'; java: ResolvedJava | null }
+  | {
+      ok: false
+      problem: JavaProblem | 'busy' | 'download_failed' | 'rosetta_missing'
+      java: ResolvedJava | null
+    }
 
 export const MANAGED_JAVA_MAJORS = [8, 17, 21, 25] as const
 

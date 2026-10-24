@@ -1,7 +1,7 @@
 import fs from 'fs-extra'
 import path from 'path'
 import { execFile } from 'child_process'
-import type { IPlatform } from '@/types/OS'
+import type { IArch, IPlatform } from '@/types/OS'
 import {
   JavaAddResult,
   JavaOverride,
@@ -21,6 +21,7 @@ import { getOS } from '../utilities/other'
 import { writeJsonAtomic } from '../utilities/atomicJson'
 import { systemJavaDirs } from './systemJava'
 import { Java } from './Java'
+import { normalizeJavaArch } from './javaArch'
 
 const REGISTRY_FILE = 'runtimes.json'
 const PROBE_TIMEOUT_MS = 10000
@@ -555,6 +556,7 @@ async function fromRuntime(
   via: ResolvedJava['via']
 ): Promise<ResolvedJava> {
   const { client, server } = javaBinaries(runtime.home)
+  const arch = process.platform === 'darwin' ? normalizeJavaArch(runtime.arch) : null
 
   return {
     requiredMajor,
@@ -565,16 +567,18 @@ async function fromRuntime(
     client: (await fs.pathExists(client)) ? client : server,
     server,
     vendor: runtime.vendor,
-    version: runtime.version
+    version: runtime.version,
+    ...(arch ? { arch } : {})
   }
 }
 
 async function resolveManaged(
   major: number,
   requiredMajor: number,
-  via: ResolvedJava['via']
+  via: ResolvedJava['via'],
+  arch?: IArch
 ): Promise<ResolvedJava> {
-  const java = new Java(major)
+  const java = new Java(major, arch)
   await java.init()
   if (!java.javaPath) await java.useSystemJava()
 
@@ -589,6 +593,7 @@ async function resolveManaged(
       server: '',
       vendor: null,
       version: null,
+      ...(java.translatedArch ? { arch: java.translatedArch } : {}),
       problem: 'not_installed'
     }
   }
@@ -605,36 +610,45 @@ async function resolveManaged(
     client: java.javaPath,
     server: java.javaServerPath || java.javaPath,
     vendor: managed?.vendor ?? null,
-    version: managed?.version ?? null
+    version: managed?.version ?? null,
+    ...(java.translatedArch ? { arch: java.translatedArch } : {})
   }
+}
+
+function runsAs(runtime: JavaRuntimeInfo, arch: IArch | undefined): boolean {
+  if (!arch) return true
+  const actual = normalizeJavaArch(runtime.arch)
+  return actual === null || actual === arch
 }
 
 export async function resolveMajorJava(
   major: number,
   requiredMajor: number,
-  via: 'auto' | 'instance'
+  via: 'auto' | 'instance',
+  arch?: IArch
 ): Promise<ResolvedJava> {
   const registry = await readRegistry()
   const preferred = registry.defaults[String(major)]
 
   if (preferred) {
     const runtime = await findTrustedJava(preferred)
-    if (runtime && runtime.major === major) {
+    if (runtime && runtime.major === major && runsAs(runtime, arch)) {
       return await fromRuntime(runtime, requiredMajor, via === 'auto' ? 'default' : via)
     }
     console.warn(
-      `[java] the chosen Java ${major} at ${preferred} is unavailable, using the launcher's own`
+      `[java] the chosen Java ${major} at ${preferred} is unavailable${arch ? ` for ${arch}` : ''}, using the launcher's own`
     )
   }
 
-  return resolveManaged(major, requiredMajor, via)
+  return resolveManaged(major, requiredMajor, via, arch)
 }
 
 export async function resolveJava(options: {
   requiredMajor: number
   override?: JavaOverride
+  arch?: IArch
 }): Promise<ResolvedJava> {
-  const { requiredMajor } = options
+  const { requiredMajor, arch } = options
   const override = normalizeJavaOverride(options.override)
 
   if (override && 'home' in override) {
@@ -657,10 +671,10 @@ export async function resolveJava(options: {
   }
 
   if (override && 'major' in override) {
-    return resolveMajorJava(override.major, requiredMajor, 'instance')
+    return resolveMajorJava(override.major, requiredMajor, 'instance', arch)
   }
 
-  return resolveMajorJava(requiredMajor, requiredMajor, 'auto')
+  return resolveMajorJava(requiredMajor, requiredMajor, 'auto', arch)
 }
 
 export async function collectJavaForReport(): Promise<Record<string, unknown>> {

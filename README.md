@@ -9,7 +9,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/v/release/MOJI6416/grubielauncher" alt="Version">
   <img src="https://img.shields.io/github/license/MOJI6416/grubielauncher" alt="License">
-  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blue" alt="Platforms">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue" alt="Platforms">
   <br/>
   <a href="https://discord.com/invite/URrKha9hk7" target="_blank">
     <img src="https://img.shields.io/discord/1229487451916210236?label=Discord&logo=discord&color=7289DA" alt="Discord">
@@ -20,7 +20,7 @@
 
 # Grubie Launcher
 
-A desktop Minecraft launcher for Windows and Linux. It installs game versions and mod loaders, downloads the matching Java itself, and keeps every instance — mods, worlds, configs, launch settings — in one place. Two things set it apart from a plain launcher: when the game crashes it reads the report and tells you what broke, and your friends live in the same window — chat, voice, and joining each other's worlds without port forwarding or a rented server.
+A desktop Minecraft launcher for Windows, macOS and Linux. It installs game versions and mod loaders, downloads the matching Java itself, and keeps every instance — mods, worlds, configs, launch settings — in one place. Two things set it apart from a plain launcher: when the game crashes it reads the report and tells you what broke, and your friends live in the same window — chat, voice, and joining each other's worlds without port forwarding or a rented server.
 
 The interface is a permanent sidebar with full screens instead of stacked dialogs. <kbd>Ctrl</kbd>+<kbd>K</kbd> opens a command palette that reaches any instance, screen or setting, <kbd>Ctrl</kbd>+<kbd>I</kbd> opens the assistant, and <kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> walk the history like a browser.
 
@@ -113,7 +113,7 @@ The interface is a permanent sidebar with full screens instead of stacked dialog
 # Installation
 
 1. Download the latest build from [Releases](https://github.com/MOJI6416/grubielauncher/releases).
-2. **Windows** — run the `-setup.exe` installer. **Linux** — run the `.AppImage`, or install the `.deb`.
+2. **Windows** — run the `-setup.exe` installer. **macOS** (12 or later) — open the `.dmg` for your Mac (`arm64` for Apple Silicon, `x64` for Intel) and drag the app to Applications. **Linux** — run the `.AppImage`, or install the `.deb`.
 3. Sign in with an account, or create an offline one, and pick a version.
 
 The launcher updates itself; new versions arrive without a re-install.

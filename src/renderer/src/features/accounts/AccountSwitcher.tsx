@@ -36,6 +36,7 @@ import { countBrokenSessions, readAccountSession } from "./session";
 import { switchAccount } from "./switchAccount";
 import { openAccounts, openAddAccount } from "./addAccountRequest";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { MOD_KEY } from "@renderer/utilities/platform";
 
 export function AccountSwitcher() {
   const { t } = useTranslation();
@@ -192,7 +193,7 @@ export function AccountSwitcher() {
 
               {shortcutIndex >= 0 && shortcutIndex < 9 && (
                 <kbd className="shrink-0 font-mono text-[0.6rem] text-faint">
-                  Ctrl {shortcutIndex + 1}
+                  {MOD_KEY} {shortcutIndex + 1}
                 </kbd>
               )}
 

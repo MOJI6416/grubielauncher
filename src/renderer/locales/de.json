@@ -64,7 +64,7 @@
     "playingAs": "Spielt als",
     "manage": "Konten verwalten",
     "addSection": "Konto hinzufügen",
-    "switchShortcut": "Ctrl + 1…9 wechselt das Konto",
+    "switchShortcut": "{{mod}} + 1…9 wechselt das Konto",
     "emptyTitle": "Kein Konto ausgewählt",
     "emptyDescription": "Wählen Sie links ein Konto oder fügen Sie ein neues hinzu.",
     "use": "Verwenden",
@@ -1232,7 +1232,9 @@
     "errorGeneric": "Beitritt zum Sprachchat fehlgeschlagen",
     "speakingCount_one": "{{count}} spricht",
     "speakingCount_other": "{{count}} sprechen",
-    "deviceSwitchFailed": "Gerät konnte nicht gewechselt werden"
+    "deviceSwitchFailed": "Gerät konnte nicht gewechselt werden",
+    "pttPermission": "Erlauben Sie Grubie Launcher die Bedienungshilfen",
+    "pttPermissionHint": "macOS erlaubt Apps nur mit dieser Berechtigung, Tastenkürzel außerhalb ihres Fensters zu lesen. Aktivieren Sie Grubie Launcher unter „Datenschutz & Sicherheit“ → „Bedienungshilfen“ und weisen Sie die Taste erneut zu."
   },
   "groups": {
     "tab": "Gruppen",
@@ -1522,7 +1524,7 @@
       "rootHint": "alles, was der Launcher heruntergeladen hat"
     },
     "devModeDescription": "Kopieren des Startbefehls und zusätzliche Debug-Werkzeuge",
-    "voiceMicTestErrorHint": "Kein Zugriff auf das Mikrofon. Prüfen Sie die Windows-Berechtigungen und das gewählte Gerät.",
+    "voiceMicTestErrorHint": "Kein Zugriff auf das Mikrofon. Prüfen Sie die {{os}}-Berechtigungen und das gewählte Gerät.",
     "autoWorldBackup": "Automatische Welt-Backups",
     "autoWorldBackupDescription": "Nach einer Spielsitzung eine Kopie der Welt speichern, wenn sie sich geändert hat",
     "worldBackupKeep": "Backups behalten",
@@ -1557,7 +1559,7 @@
         "heavy": "Großes Modpack"
       },
       "advice": {
-        "balanced": "Lässt {{free}} GB für Windows und den Launcher – eine gesunde Aufteilung.",
+        "balanced": "Lässt {{free}} GB für {{os}} und den Launcher – eine gesunde Aufteilung.",
         "tight": "Für das System bleiben nur {{free}} GB. Mit Vorabreservierung belegt das Spiel beim Start alles: Wenn es nicht startet oder der PC ruckelt, verringern Sie die Zuweisung.",
         "critical": "Für das System bleiben nur {{free}} GB. Das Spiel wird höchstwahrscheinlich nicht starten.",
         "excessive": "Über 12 GB werden die Pausen des Garbage Collectors länger, nicht kürzer. Den meisten Modpacks reichen 6–8 GB."
@@ -1835,7 +1837,7 @@
       "folders": {
         "title": "Ordner",
         "description": "Speicherorte von Launcher, Minecraft und Java",
-        "keywords": "ordner pfad verzeichnis öffnen explorer"
+        "keywords": "ordner pfad verzeichnis öffnen explorer finder"
       },
       "systemReport": {
         "title": "Systeminfo",
@@ -2873,7 +2875,7 @@
     "catalogSource": "Quelle: {{site}}",
     "catalogAdded": "Zum Katalog hinzugefügt",
     "legacyFormat": "64×32",
-    "pasteHint": "oder fügen Sie ein Bild mit Ctrl+V ein",
+    "pasteHint": "oder fügen Sie ein Bild mit {{mod}}+V ein",
     "dropAnywhere": "PNG loslassen, um es hinzuzufügen",
     "pickAnother": "Andere wählen",
     "clearFile": "Gewählte Datei entfernen",
@@ -3964,7 +3966,8 @@
       "cancelled": "Der Vorgang wurde abgebrochen.",
       "unknown": "Die Fehlerursache konnte nicht ermittelt werden.",
       "pathPolicy": "Die Datei liegt außerhalb der Ordner, die der Launcher nutzen darf.",
-      "invalidArgument": "Der Launcher hat die Anfrage abgelehnt: Die Daten haben die Prüfung nicht bestanden."
+      "invalidArgument": "Der Launcher hat die Anfrage abgelehnt: Die Daten haben die Prüfung nicht bestanden.",
+      "rosettaMissing": "Auf diesem Mac ist Rosetta 2 nicht installiert."
     },
     "hint": {
       "offline": "Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
@@ -3993,7 +3996,8 @@
       "javaMissing": "Wählen Sie Java in den Instanzeinstellungen oder lassen Sie es vom Launcher herunterladen.",
       "unknown": "Kopieren Sie die Details und hängen Sie sie an Ihre Support-Anfrage an.",
       "pathPolicy": "Öffnen Sie die Datei über die Dateiauswahl des Launchers, damit er Zugriff darauf erhält.",
-      "invalidArgument": "Das ist eine Schutzfunktion des Launchers. Kopieren Sie den Code und senden Sie ihn an den Support."
+      "invalidArgument": "Das ist eine Schutzfunktion des Launchers. Kopieren Sie den Code und senden Sie ihn an den Support.",
+      "rosettaMissing": "Starten Sie das Spiel – der Launcher bietet die Installation an – oder führen Sie im Terminal softwareupdate --install-rosetta aus."
     },
     "serverCode": "Serverantwort: {{code}}"
   },
@@ -4569,7 +4573,7 @@
     "findNone": "keine",
     "findPrevious": "Vorheriger (Shift+Enter)",
     "findNext": "Nächster (Enter)",
-    "findHint": "In Datei suchen (Ctrl+F)",
+    "findHint": "In Datei suchen ({{mod}}+F)",
     "history": "Versionsverlauf",
     "backupsHint": "Klicken Sie auf eine Fassung, um sie vor dem Wiederherstellen mit der aktuellen Datei zu vergleichen.",
     "showInFolder": "Im Ordner zeigen",
@@ -5647,7 +5651,14 @@
       "untrusted": "Das für diese Instanz gewählte Java ist nicht in der Liste des Launchers",
       "chosenHint": "Wählen Sie Java in den Instanzeinstellungen erneut oder stellen Sie es wieder auf automatisch.",
       "openSettings": "Instanzeinstellungen",
-      "notInstalled": "Java {{major}} ist nicht installiert – führen Sie die Integritätsprüfung aus"
+      "notInstalled": "Java {{major}} ist nicht installiert – führen Sie die Integritätsprüfung aus",
+      "rosettaMissing": "Diese Version braucht auf Apple Silicon Rosetta 2",
+      "rosettaHint": "Ältere Minecraft-Versionen haben keine Bibliotheken für Chips der M-Serie, daher läuft das Spiel über Apples Übersetzer. Die Installation dauert eine Minute und fragt nach dem Passwort Ihres Mac.",
+      "installRosetta": "Rosetta installieren",
+      "rosettaInstalling": "Rosetta 2 wird installiert …",
+      "rosettaPrompt": "Grubie Launcher möchte Rosetta 2 installieren, um ältere Minecraft-Versionen zu starten.",
+      "rosettaInstalled": "Rosetta 2 ist installiert – starten Sie das Spiel erneut",
+      "rosettaFailed": "Rosetta 2 wurde nicht installiert. Sie können es im Terminal installieren: softwareupdate --install-rosetta"
     }
   },
   "seasonal": {

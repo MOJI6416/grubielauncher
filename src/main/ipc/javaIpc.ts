@@ -22,6 +22,11 @@ import { Java } from "../game/Java";
 import { Version } from "../game/Version";
 import { tryBeginInstallOperation } from "./installLock";
 import { resumeDownloads } from "../utilities/downloader";
+import {
+  installRosetta,
+  isRosettaInstalled,
+  needsRosetta,
+} from "../utilities/rosetta";
 
 const EMPTY_LIST: JavaRuntimeList = { runtimes: [], defaults: {}, scannedAt: 0 };
 
@@ -60,7 +65,7 @@ async function installMissing(
   resumeDownloads();
 
   try {
-    await new Java(java.major).install(lock.controller.signal, label);
+    await new Java(java.major, java.arch).install(lock.controller.signal, label);
     const next = await resolve();
     return next.problem
       ? { ok: false, problem: next.problem, java: next }
@@ -80,7 +85,11 @@ async function prepareJava(conf: IVersionConf): Promise<JavaPrepareResult> {
   if (!vm.manifest) return { ok: false, problem: "not_installed", java: null };
 
   const java = vm.java ?? (await vm.resolveJavaRuntime());
-  return installMissing(java, conf.name, () => vm.resolveJavaRuntime());
+  const result = await installMissing(java, conf.name, () => vm.resolveJavaRuntime());
+  if (result.ok && needsRosetta(result.java.arch) && !(await isRosettaInstalled())) {
+    return { ok: false, problem: "rosetta_missing", java: result.java };
+  }
+  return result;
 }
 
 async function ensureJava(
@@ -148,5 +157,12 @@ export function registerJavaIpc() {
     { ok: false, problem: "not_installed", java: null },
     [check.object()],
     (_, conf) => prepareJava(conf),
+  );
+
+  handleSafe<boolean, [string]>(
+    "java:installRosetta",
+    false,
+    [check.string()],
+    (_, prompt) => installRosetta(prompt),
   );
 }

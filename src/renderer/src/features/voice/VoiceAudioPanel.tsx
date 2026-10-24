@@ -83,6 +83,17 @@ export function VoiceAudioPanel() {
         save({ voicePttBind: result.bind });
         return;
       }
+      if (result?.reason === "permission") {
+        toast.error(t("voice.pttPermission"), {
+          description: t("voice.pttPermissionHint"),
+          duration: 15000,
+          action: {
+            label: t("voice.micOpenSettings"),
+            onClick: () => void api.os.openPrivacySettings("accessibility"),
+          },
+        });
+        return;
+      }
       if (result?.reason === "unavailable") {
         toast.error(t("voice.pttUnavailable"), {
           description: t("settings.voicePttCaptureUnavailable"),

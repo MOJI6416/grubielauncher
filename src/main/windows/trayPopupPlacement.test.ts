@@ -43,6 +43,18 @@ describe("placeTrayPopup", () => {
     });
   });
 
+  it("hangs below the macOS menu bar even when the Dock reserves more", () => {
+    const display = {
+      bounds: screen,
+      workArea: { x: 0, y: 25, width: 1920, height: 985 },
+    };
+
+    expect(placeTrayPopup({ x: 1700, y: 12 }, display, size, "top")).toEqual({
+      x: 1380,
+      y: 33,
+    });
+  });
+
   it("sits beside a taskbar on the right edge", () => {
     const display = {
       bounds: screen,

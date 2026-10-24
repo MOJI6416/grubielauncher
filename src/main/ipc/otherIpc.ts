@@ -55,6 +55,7 @@ import {
 import { BlessedPathInfo } from '@/types/AllowedPath'
 import { isSafeRemoteFetchUrl } from '../utilities/safeUrl'
 import { createInstanceShortcut, getImageBase64 } from '../utilities/shortcut'
+import { installAppMenu } from '../windows/macApp'
 import { assertSafeVersionName } from '@/shared/versionName'
 
 let activeConnectivityRun: Promise<ConnectivityCheckResult[]> | null = null
@@ -394,6 +395,7 @@ export function registerOtherIpc() {
 
   handleSafe<void, [RpcRendererContext]>('rpc:syncContext', undefined, async (_, context) => {
     if (!context || typeof context !== 'object' || Array.isArray(context)) return
+    if (typeof context.lang === 'string') installAppMenu(context.lang)
     await rpc.syncContext(context)
   })
 

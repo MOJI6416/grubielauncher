@@ -58,11 +58,12 @@ export function placeTrayPopup(
   anchor: Point,
   display: { bounds: Box; workArea: Box },
   size: { width: number; height: number },
+  fixedEdge?: TaskbarEdge,
 ): { x: number; y: number } {
   const area = display.workArea;
   const right = area.x + area.width;
   const bottom = area.y + area.height;
-  const edge = taskbarEdge(display.bounds, area, anchor);
+  const edge = fixedEdge ?? taskbarEdge(display.bounds, area, anchor);
 
   let x: number;
   let y: number;

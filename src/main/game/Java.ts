@@ -1,4 +1,4 @@
-import { IPlatform } from '@/types/OS'
+import { IArch, IPlatform } from '@/types/OS'
 import axios from 'axios'
 import { execFile } from 'child_process'
 import { app } from 'electron'
@@ -14,6 +14,7 @@ import {
   isMirrorDisabled
 } from '../utilities/mirrorState'
 import { getOS } from '../utilities/other'
+import { managedJavaArch } from './javaArch'
 import { getDataRoot } from '../utilities/dataRoot'
 
 const JAVA_VERIFIED_MARKER = '.grubie-java-verified'
@@ -58,13 +59,19 @@ export class Java {
 
   public usingSystemJava = false
 
+  public readonly translatedArch: IArch | undefined
+  private readonly translated: boolean
   private resolvedAsset: IJavaAsset | null = null
   private static readonly apiUrl = 'https://api.adoptium.net/v3/assets/latest'
   private static readonly preferredImageTypes: IAdoptiumImageType[] = ['jre', 'jdk']
 
-  constructor(version: number) {
+  constructor(version: number, arch?: IArch) {
     this.majorVersion = version
-    this.platform = getOS()
+    const host = getOS()
+    const target = managedJavaArch(version, arch, host)
+    this.platform = host && target ? { ...host, arch: target } : host
+    this.translated = !!host && !!target && host.arch !== target
+    this.translatedArch = this.translated ? target : undefined
   }
 
   async init(signal?: AbortSignal) {
@@ -437,7 +444,11 @@ export class Java {
 
           const killed = (error as NodeJS.ErrnoException & { killed?: boolean }).killed
           const code = (error as NodeJS.ErrnoException).code
-          resolve(killed || code === 'ETIMEDOUT' || code === 'EACCES' ? 'inconclusive' : 'broken')
+          resolve(
+            killed || code === 'ETIMEDOUT' || code === 'EACCES' || this.translated
+              ? 'inconclusive'
+              : 'broken'
+          )
         })
       } catch {
         resolve('broken')
@@ -487,7 +498,8 @@ export class Java {
   }
 
   private getJavaBaseDir(): string {
-    return path.join(getDataRoot(), 'java')
+    const base = path.join(getDataRoot(), 'java')
+    return this.translated && this.platform ? path.join(base, this.platform.arch) : base
   }
 
   private getCachePath(): string | null {

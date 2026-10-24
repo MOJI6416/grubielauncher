@@ -120,9 +120,11 @@ export function consumeHiddenStart(argv: string[]): boolean {
     relaunch = false;
   }
 
+  const loginItem =
+    process.platform === "darwin" ? app.getLoginItemSettings() : null;
   const openedAsHidden =
-    process.platform === "darwin" &&
-    app.getLoginItemSettings().wasOpenedAsHidden === true;
+    loginItem?.wasOpenedAtLogin === true ||
+    loginItem?.wasOpenedAsHidden === true;
 
   return relaunch || openedAsHidden || argv.includes(HIDDEN_START_FLAG);
 }

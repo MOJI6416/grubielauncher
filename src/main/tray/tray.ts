@@ -9,6 +9,8 @@ import {
   Tray,
 } from "electron";
 import icon from "../../../resources/icon.png?asset";
+import trayTemplate from "../../../resources/trayTemplate.png?asset";
+import trayTemplate2x from "../../../resources/trayTemplate@2x.png?asset";
 import { matchLanguage, resolveCloseToTray } from "@/types/Settings";
 import { TrayModel } from "@/types/Tray";
 import { getLauncherPaths } from "../utilities/other";
@@ -79,12 +81,29 @@ function readInitialState(): void {
   }
 }
 
+function macTrayIcon(): Electron.NativeImage {
+  const image = nativeImage.createEmpty();
+  for (const [scaleFactor, file] of [
+    [1, trayTemplate],
+    [2, trayTemplate2x],
+  ] as const) {
+    const rendition = nativeImage.createFromPath(file);
+    if (rendition.isEmpty()) continue;
+    image.addRepresentation({
+      scaleFactor,
+      width: 16 * scaleFactor,
+      height: 16 * scaleFactor,
+      buffer: rendition.toPNG(),
+    });
+  }
+  image.setTemplateImage(true);
+  return image;
+}
+
 function trayIcon(): Electron.NativeImage {
+  if (process.platform === "darwin") return macTrayIcon();
   const base = nativeImage.createFromPath(icon);
   if (base.isEmpty()) return base;
-  if (process.platform === "darwin") {
-    return base.resize({ width: 16, height: 16, quality: "best" });
-  }
 
   const image = nativeImage.createEmpty();
   for (const [scaleFactor, size] of [

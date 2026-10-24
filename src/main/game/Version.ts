@@ -9,6 +9,8 @@ import { LANGUAGES, TSettings } from "@/types/Settings";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { Java } from "./Java";
 import { resolveJava } from "./javaRuntimes";
+import { gameJavaArch } from "./javaArch";
+import { assertRosettaFor } from "../utilities/rosetta";
 import type { ResolvedJava } from "@/shared/javaRuntime";
 import { buildQuickPlayArguments } from "./quickPlayArgs";
 import { IFabricManifest } from "@/types/IFabricManifest";
@@ -274,6 +276,7 @@ export class Version {
     this.java = await resolveJava({
       requiredMajor: this.requiredJavaMajor(),
       override: this.version.overrides?.java,
+      arch: gameJavaArch(getOS(), this.manifest?.libraries),
     });
     this.javaPath = this.java.client;
     return this.java;
@@ -572,13 +575,14 @@ export class Version {
         await this.installCheckpoint();
         installerJavaPath = java.javaPath;
       }
+      await assertRosettaFor(installerJava.arch);
     }
 
     const gameJava = await this.resolveJavaRuntime();
     await this.installCheckpoint();
 
     if (gameJava.problem === "not_installed") {
-      const java = new Java(gameJava.major);
+      const java = new Java(gameJava.major, gameJava.arch);
       const javaItem = await java.prepareInstallItem(downloadSignal);
       await this.installCheckpoint();
 
@@ -2095,6 +2099,8 @@ export class Version {
         return false;
       }
 
+      await assertRosettaFor(this.java?.arch);
+
       const target = this.launchTarget(this.manifest);
       span.step("command built", {
         javaMajor: this.java?.major ?? this.requiredJavaMajor(),
@@ -2102,6 +2108,7 @@ export class Version {
         javaVia: this.java?.via,
         javaSource: this.java?.source,
         javaVendor: this.java?.vendor,
+        javaArch: this.java?.arch,
         ...(await describeLaunchCommand(command, target.mainClass).catch(
           (error) => ({ describeError: String(error) }),
         )),

@@ -13,8 +13,11 @@ import { lanShareService } from "./share";
 import {
   createMainWindow,
   mainWindow,
+  revealMainWindow,
   showMainWindow,
+  wasMainWindowCreated,
 } from "./windows/mainWindow";
+import { installAppMenu, offerMoveToApplications } from "./windows/macApp";
 import { createUpdaterWindow, updaterWindow } from "./windows/updaterWindow";
 import { rpc } from "./rpc";
 import { stopOAuthServer } from "./utilities/authServer";
@@ -70,7 +73,7 @@ crashReporter.start({
   compress: true,
 });
 
-Menu.setApplicationMenu(null);
+if (process.platform !== "darwin") Menu.setApplicationMenu(null);
 
 const APP_SCHEME = "app";
 const APP_BUNDLE_HOST = "bundle";
@@ -440,7 +443,9 @@ if (!gotTheLock) {
 
   app.whenReady().then(async () => {
     electronApp.setAppUserModelId("com.grubielauncher");
+    installAppMenu();
     const startHidden = consumeHiddenStart(process.argv);
+    if (!startHidden && (await offerMoveToApplications())) return;
     const updateAttemptDir = app.getPath("userData");
     const updateAttempt = is.dev
       ? null
@@ -725,9 +730,13 @@ if (!gotTheLock) {
   });
 
   app.on("activate", () => {
-    if (process.platform === "darwin" && !mainWindow) {
-      createMainWindow();
+    if (process.platform !== "darwin" || !app.isReady()) return;
+    if (updaterWindow && !updaterWindow.isDestroyed()) {
+      updaterWindow.focus();
+      return;
     }
+    if (mainWindow) revealMainWindow();
+    else if (wasMainWindowCreated()) createMainWindow();
   });
 
   app.on("before-quit", (event) => {

@@ -50,7 +50,8 @@ export type TrayAction =
   | { type: "toggleDeafen" }
   | { type: "leaveVoice" }
   | { type: "acceptCall" }
-  | { type: "declineCall" };
+  | { type: "declineCall" }
+  | { type: "openSettings" };
 
 export type TrayCommand =
   | TrayAction
