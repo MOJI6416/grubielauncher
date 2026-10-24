@@ -19,7 +19,7 @@ jobs:
   build:
     name: Build for ${{ matrix.os }}
     if: ${{ !inputs.sign_mac }}
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -29,7 +29,7 @@ jobs:
           - os: windows-2022
             build_command: npm run build:win -- --publish never
           - os: macos-14
-            build_command: npm run build:mac -- --publish never -c.mac.identity=- -c.mac.hardenedRuntime=false -c.mac.notarize=false
+            build_command: bash .github/scripts/retry-mac-build.sh npm run build:mac -- --publish never -c.mac.identity=- -c.mac.hardenedRuntime=false -c.mac.notarize=false
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -76,7 +76,7 @@ jobs:
     name: Signed and notarized macOS build
     if: ${{ inputs.sign_mac }}
     runs-on: macos-14
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository
@@ -107,7 +107,7 @@ jobs:
         run: npm ci
 
       - name: Build, sign and notarize
-        run: npm run build:mac -- --publish never
+        run: bash .github/scripts/retry-mac-build.sh npm run build:mac -- --publish never
         env:
           CSC_LINK: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}

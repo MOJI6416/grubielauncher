@@ -78,7 +78,7 @@ jobs:
     needs: notes
     if: vars.MACOS_RELEASE == 'true'
     runs-on: macos-14
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
@@ -112,7 +112,7 @@ jobs:
         run: npm run typecheck
 
       - name: Build, sign, notarize and publish
-        run: npm run build:mac -- --publish always
+        run: bash .github/scripts/retry-mac-build.sh npm run build:mac -- --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
