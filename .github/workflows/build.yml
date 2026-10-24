@@ -15,6 +15,7 @@ jobs:
     name: Build for ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
