@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      sign_mac:
+        description: Only build the macOS app, signed and notarized (nothing is published)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -13,6 +18,7 @@ permissions:
 jobs:
   build:
     name: Build for ${{ matrix.os }}
+    if: ${{ !inputs.sign_mac }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -65,3 +71,73 @@ jobs:
         with:
           name: ${{ matrix.os }}-build
           path: dist/
+
+  signed-mac:
+    name: Signed and notarized macOS build
+    if: ${{ inputs.sign_mac }}
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Check signing secrets
+        run: |
+          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::The repository secret $name is missing."
+              exit 1
+            fi
+          done
+        env:
+          CSC_LINK: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build, sign and notarize
+        run: npm run build:mac -- --publish never
+        env:
+          CSC_LINK: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Verify signature, notarization and Gatekeeper
+        run: |
+          shopt -s nullglob
+          apps=(dist/mac*/*.app)
+          if [ ${#apps[@]} -eq 0 ]; then
+            echo "::error::No .app bundle was built."
+            exit 1
+          fi
+          for app in "${apps[@]}"; do
+            echo "== $app"
+            lipo -archs "$app/Contents/MacOS/Grubie Launcher"
+            codesign --verify --deep --strict --verbose=2 "$app"
+            codesign -dvv "$app" 2>&1 | grep -E "^(Authority|TeamIdentifier|Runtime Version|Timestamp)="
+            spctl --assess --type execute --verbose=4 "$app"
+            xcrun stapler validate "$app"
+          done
+
+      - name: Upload signed installers
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-signed
+          retention-days: 7
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/latest-mac.yml
