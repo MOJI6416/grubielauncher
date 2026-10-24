@@ -1,0 +1,85 @@
+{
+  "version": "2.3.0",
+  "isMilestone": false,
+  "en": {
+    "subtitle": "Grubie Launcher now runs on macOS.",
+    "highlights": [
+      "Added macOS support for Apple Silicon and Intel Macs on macOS 12 or later. Versions before 1.19 run on Apple Silicon through Rosetta 2, which the launcher offers to install."
+    ],
+    "fixes": [
+      "The “System settings” button next to “Microphone access denied” in voice chat now opens the microphone privacy settings."
+    ]
+  },
+  "ru": {
+    "subtitle": "Grubie Launcher теперь работает на macOS.",
+    "highlights": [
+      "Добавлена поддержка macOS: компьютеры Mac с Apple Silicon и Intel, macOS 12 и новее. Версии до 1.19 на Apple Silicon запускаются через Rosetta 2 — лаунчер сам предложит её установить."
+    ],
+    "fixes": [
+      "Кнопка «Настройки системы» рядом с «Доступ к микрофону запрещён» в голосовом чате теперь открывает настройки конфиденциальности микрофона."
+    ]
+  },
+  "uk": {
+    "subtitle": "Grubie Launcher тепер працює на macOS.",
+    "highlights": [
+      "Додано підтримку macOS: комп’ютери Mac з Apple Silicon та Intel, macOS 12 і новіші. Версії до 1.19 на Apple Silicon запускаються через Rosetta 2 — лаунчер сам запропонує її встановити."
+    ],
+    "fixes": [
+      "Кнопка «Налаштування системи» поруч із «Доступ до мікрофона заборонено» в голосовому чаті тепер відкриває налаштування конфіденційності мікрофона."
+    ]
+  },
+  "de": {
+    "subtitle": "Grubie Launcher läuft jetzt auf macOS.",
+    "highlights": [
+      "Neu: Unterstützung für macOS 12 und neuer auf Macs mit Apple Silicon und Intel. Versionen vor 1.19 laufen auf Apple Silicon über Rosetta 2 – der Launcher bietet die Installation an."
+    ],
+    "fixes": [
+      "Die Schaltfläche „Systemeinstellungen“ neben „Mikrofonzugriff verweigert“ im Sprachchat öffnet jetzt die Datenschutzeinstellungen des Mikrofons."
+    ]
+  },
+  "es": {
+    "subtitle": "Grubie Launcher ahora funciona en macOS.",
+    "highlights": [
+      "Se agregó compatibilidad con macOS 12 o posterior en Mac con Apple Silicon e Intel. En Apple Silicon, las versiones anteriores a 1.19 se ejecutan con Rosetta 2, y el launcher ofrece instalarlo."
+    ],
+    "fixes": [
+      "El botón «Configuración del sistema» junto a «Se denegó el acceso al micrófono» en el chat de voz ahora abre la configuración de privacidad del micrófono."
+    ]
+  },
+  "fr": {
+    "subtitle": "Grubie Launcher fonctionne désormais sur macOS.",
+    "highlights": [
+      "Ajout de la prise en charge de macOS 12 ou ultérieur sur les Mac Apple Silicon et Intel. Sur Apple Silicon, les versions antérieures à 1.19 passent par Rosetta 2, que le launcher propose d’installer."
+    ],
+    "fixes": [
+      "Le bouton « Paramètres système » à côté de « Accès au micro refusé » dans le chat vocal ouvre désormais les réglages de confidentialité du micro."
+    ]
+  },
+  "pl": {
+    "subtitle": "Grubie Launcher działa teraz na macOS.",
+    "highlights": [
+      "Dodano obsługę macOS 12 lub nowszego na komputerach Mac z Apple Silicon i Intel. Wersje sprzed 1.19 działają na Apple Silicon przez Rosettę 2, a launcher proponuje jej instalację."
+    ],
+    "fixes": [
+      "Przycisk „Ustawienia systemu” obok komunikatu „Odmowa dostępu do mikrofonu” w czacie głosowym otwiera teraz ustawienia prywatności mikrofonu."
+    ]
+  },
+  "pt": {
+    "subtitle": "O Grubie Launcher agora funciona no macOS.",
+    "highlights": [
+      "Adicionado suporte ao macOS 12 ou mais recente em Macs com Apple Silicon e Intel. No Apple Silicon, versões anteriores à 1.19 rodam pelo Rosetta 2, que o launcher oferece para instalar."
+    ],
+    "fixes": [
+      "O botão “Configurações do sistema” ao lado de “Acesso ao microfone negado” no chat de voz agora abre as configurações de privacidade do microfone."
+    ]
+  },
+  "tr": {
+    "subtitle": "Grubie Launcher artık macOS’ta çalışıyor.",
+    "highlights": [
+      "Apple Silicon ve Intel işlemcili Mac’lerde macOS 12 ve sonrası için destek eklendi. Apple Silicon’da 1.19 öncesi sürümler Rosetta 2 ile çalışır ve başlatıcı onu kurmayı önerir."
+    ],
+    "fixes": [
+      "Sesli sohbette “Mikrofon erişimi reddedildi” yanındaki “Sistem ayarları” düğmesi artık mikrofon gizlilik ayarlarını açıyor."
+    ]
+  }
+}
