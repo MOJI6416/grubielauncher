@@ -1,3 +1,4 @@
+import os from 'os'
 import path from 'path'
 import { app } from 'electron'
 import fs from 'fs-extra'
@@ -28,6 +29,7 @@ const MAX_BLESSED_ENTRIES = 64
 const MAX_SESSION_FILE_GRANTS = 4096
 const DOWNLOADS_READABLE_EXTENSIONS = new Set(['.jar', '.zip', '.mrpack', '.litemod'])
 const JAVA_ARCHIVE_NAME = /\.(?:zip|tar|tgz|gz|xz|bz2)(?:\.part)?$/i
+const TRANSLATED_JAVA_DIRS = ['x64']
 const OPENABLE_FILE_EXTENSIONS = new Set(['.txt', '.log', '.json'])
 
 const blessedEntries = new Map<string, BlessedEntry>()
@@ -154,9 +156,20 @@ export function getSystemRoots(): string[] {
   ].map((root) => path.resolve(root))
 }
 
+function isInsideTempDir(resolved: string): boolean {
+  const temp = canonicalize(os.tmpdir())
+  const target = canonicalize(resolved)
+  return !!temp && !!target && isInside(target, temp)
+}
+
 function isBlessableTarget(resolved: string): boolean {
   if (!path.parse(resolved).base) return false
-  if (getSystemRoots().some((root) => isInside(resolved, root))) return false
+  if (
+    !isInsideTempDir(resolved) &&
+    getSystemRoots().some((root) => isInside(resolved, root))
+  ) {
+    return false
+  }
 
   try {
     if (isInside(path.resolve(app.getPath('home')), resolved)) return false
@@ -344,6 +357,13 @@ function isSamePath(left: string, right: string): boolean {
   return left === right
 }
 
+function managedJavaRoots(): string[] {
+  const base = path.join(getLauncherDataRoot(), 'java')
+  return [base, ...TRANSLATED_JAVA_DIRS.map((dir) => path.join(base, dir))]
+    .map((root) => canonicalizeRoot(root))
+    .filter((root): root is string => root !== null)
+}
+
 function isProtectedWritePath(resolved: string): boolean {
   const canonicalTarget = canonicalize(resolved)
   if (!canonicalTarget) return true
@@ -355,7 +375,8 @@ function isProtectedWritePath(resolved: string): boolean {
   if (!javaRoot) return false
   if (!isInside(canonicalTarget, javaRoot)) return false
 
-  if (!isSamePath(path.dirname(canonicalTarget), javaRoot)) return true
+  const parent = path.dirname(canonicalTarget)
+  if (!managedJavaRoots().some((root) => isSamePath(parent, root))) return true
 
   return !JAVA_ARCHIVE_NAME.test(path.basename(canonicalTarget))
 }
@@ -387,9 +408,7 @@ export function isExtractablePath(target: unknown): target is string {
   const canonicalTarget = canonicalize(resolved)
   if (!canonicalTarget) return false
 
-  const javaRoot = canonicalizeRoot(path.join(getLauncherDataRoot(), 'java'))
-
-  return Boolean(javaRoot && isSamePath(canonicalTarget, javaRoot))
+  return managedJavaRoots().some((root) => isSamePath(canonicalTarget, root))
 }
 
 export function assertExtractablePath(target: string, label = 'path'): string {

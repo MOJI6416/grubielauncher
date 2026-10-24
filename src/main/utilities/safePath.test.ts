@@ -279,6 +279,18 @@ describe('safePath.isExtractablePath', () => {
     expect(isExtractablePath(javaRoot)).toBe(true)
   })
 
+  it('allows the x64 folder Apple Silicon installs Rosetta Java into', () => {
+    const x64 = path.join(javaRoot, 'x64')
+
+    expect(isExtractablePath(x64)).toBe(true)
+    expect(isWritablePath(path.join(x64, 'OpenJDK8U-jre_x64_mac_hotspot.tar.gz'))).toBe(true)
+    expect(isExtractablePath(path.join(x64, 'jdk8u504-b01-jre'))).toBe(false)
+    expect(
+      isWritablePath(path.join(x64, 'jdk8u504-b01-jre', 'Contents', 'Home', 'bin', 'java')),
+    ).toBe(false)
+    expect(isWritablePath(path.join(x64, 'java'))).toBe(false)
+  })
+
   it('refuses to unpack over an installed runtime or outside the launcher', () => {
     expect(isExtractablePath(path.join(javaRoot, 'jdk-21.0.5+11'))).toBe(false)
     expect(isExtractablePath(path.join(javaRoot, 'jdk-21.0.5+11', 'bin'))).toBe(false)

@@ -157,7 +157,13 @@ beforeEach(async () => {
   hoisted.downloads = [];
   versionPath = path.join(root, ".grubielauncher", "minecraft", "versions", "BtaStand");
 
-  const javaRoot = path.join(root, ".grubielauncher", "java", "jdk8u504-b01-jre");
+  const javaRoot = path.join(
+    root,
+    ".grubielauncher",
+    "java",
+    ...(process.platform === "darwin" && process.arch === "arm64" ? ["x64"] : []),
+    "jdk8u504-b01-jre",
+  );
   const binDir = path.join(
     javaRoot,
     process.platform === "darwin" ? path.join("Contents", "Home", "bin") : "bin",

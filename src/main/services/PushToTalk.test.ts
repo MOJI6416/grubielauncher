@@ -2,9 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const start = vi.fn();
 const stop = vi.fn();
+const trusted = vi.fn((_prompt: boolean) => true);
 
 vi.mock("electron", () => ({
   BrowserWindow: { getAllWindows: () => [] },
+  systemPreferences: {
+    isTrustedAccessibilityClient: (prompt: boolean) => trusted(prompt),
+  },
 }));
 
 vi.mock("uiohook-napi", () => ({
@@ -16,14 +20,21 @@ vi.mock("uiohook-napi", () => ({
   UiohookKey: { KeyA: 30 },
 }));
 
-import { setPttBind } from "./PushToTalk";
+import { capturePttBind, setPttBind } from "./PushToTalk";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  trusted.mockReturnValue(true);
   setPttBind(null);
   start.mockReset();
   stop.mockReset();
 });
+
+function onPlatform(platform: NodeJS.Platform, run: () => Promise<void>) {
+  const original = Object.getOwnPropertyDescriptor(process, "platform")!;
+  Object.defineProperty(process, "platform", { value: platform });
+  return run().finally(() => Object.defineProperty(process, "platform", original));
+}
 
 describe("setPttBind", () => {
   it("reports success when the global hook starts", () => {
@@ -62,4 +73,24 @@ describe("setPttBind", () => {
     expect(setPttBind(null)).toBe(true);
     expect(stop).toHaveBeenCalledTimes(1);
   });
+});
+
+describe("capturePttBind on macOS", () => {
+  it("asks for Accessibility instead of starting a hook that cannot see keys", () =>
+    onPlatform("darwin", async () => {
+      trusted.mockReturnValue(false);
+
+      await expect(capturePttBind()).resolves.toEqual({
+        reason: "permission",
+        bind: null,
+      });
+      expect(trusted).toHaveBeenCalledWith(true);
+      expect(start).not.toHaveBeenCalled();
+    }));
+
+  it("hooks keys once Accessibility is granted", () =>
+    onPlatform("darwin", async () => {
+      expect(setPttBind({ type: "key", code: 30 })).toBe(true);
+      expect(start).toHaveBeenCalledTimes(1);
+    }));
 });
