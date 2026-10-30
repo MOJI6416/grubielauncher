@@ -327,6 +327,8 @@ export function loaderToCfLoader(loader: Loader | ServerCore): ModLoaderType {
 }
 
 export function cfModToProject(mod: IMod): IProject {
+  const author = mod.authors?.find((item) => item?.id && item.name);
+
   return {
     url: mod.links?.websiteUrl ?? "",
     description: mod.summary,
@@ -346,6 +348,9 @@ export function cfModToProject(mod: IMod): IProject {
       dateCreated: mod.dateCreated,
       dateModified: mod.dateModified,
     },
+    ...(author
+      ? { author: { id: String(author.id), name: author.name } }
+      : {}),
   };
 }
 
@@ -400,6 +405,9 @@ export function mrProjectToProject(
       dateCreated: raw.date_created ?? raw.published,
       dateModified: raw.date_modified ?? raw.updated,
     },
+    ...(typeof raw.author === "string" && raw.author
+      ? { author: { id: raw.author, name: raw.author } }
+      : {}),
   };
 }
 

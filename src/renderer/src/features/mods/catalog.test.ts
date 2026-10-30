@@ -36,12 +36,13 @@ describe("requestSignature", () => {
     expect(requestSignature(request({ gameVersion: "1.21.5" }))).not.toBe(base);
     expect(requestSignature(request({ loader: "forge" }))).not.toBe(base);
     expect(requestSignature(request({ filters: ["a"] }))).not.toBe(base);
+    expect(requestSignature(request({ author: "jellysquid3" }))).not.toBe(base);
   });
 
   it("treats a missing version and loader as empty", () => {
     expect(
       requestSignature(request({ gameVersion: undefined, loader: undefined })),
-    ).toBe("modrinth|mod|sodium|relevance|a+b||");
+    ).toBe("modrinth|mod|sodium|relevance|a+b|||");
   });
 });
 

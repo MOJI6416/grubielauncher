@@ -6,6 +6,7 @@ import {
   catalogFilterKey,
   catalogFilterLabel,
   categoryLocaleKey,
+  countLibraryCategories,
   countLibraryFacets,
   humanizeFilterName,
   filterLibraryEntries,
@@ -280,6 +281,69 @@ describe("findDuplicates", () => {
     });
 
     expect(counts.duplicate).toBe(1);
+  });
+});
+
+describe("library categories", () => {
+  const sodium = entry({ id: "sodium", title: "Sodium" });
+  const api = entry({ id: "fabric-api", title: "Fabric API" });
+  const jei = entry({
+    id: "238222",
+    provider: Provider.CURSEFORGE,
+    title: "JEI",
+  });
+  const local = entry({ id: "local", provider: Provider.LOCAL, title: "Local" });
+  const all = [sodium, api, jei, local];
+  const categories = new Map<string, string[]>([
+    [sodium.key, ["optimization"]],
+    [api.key, ["library"]],
+    [jei.key, ["utility", "library"]],
+  ]);
+  const marks = {
+    updatable: new Set<string>(),
+    disabled: new Set<string>(),
+    categories,
+  };
+  const titles = (list: ContentEntry[]) => list.map((item) => item.title);
+
+  it("counts categories by use and libraries that are nothing else", () => {
+    expect(countLibraryCategories(all, categories)).toEqual({
+      categories: [
+        { slug: "library", count: 2 },
+        { slug: "optimization", count: 1 },
+        { slug: "utility", count: 1 },
+      ],
+      libraries: 1,
+    });
+  });
+
+  it("hides only pure libraries and keeps mods without known categories", () => {
+    expect(
+      titles(
+        filterLibraryEntries(
+          all,
+          { query: "", facets: [], sort: "name", hideLibraries: true },
+          marks,
+        ),
+      ),
+    ).toEqual(["Sodium", "JEI", "Local"]);
+  });
+
+  it("keeps a mod that has any of the chosen categories", () => {
+    expect(
+      titles(
+        filterLibraryEntries(
+          all,
+          {
+            query: "",
+            facets: [],
+            sort: "name",
+            categories: ["optimization", "utility"],
+          },
+          marks,
+        ),
+      ),
+    ).toEqual(["Sodium", "JEI"]);
   });
 });
 

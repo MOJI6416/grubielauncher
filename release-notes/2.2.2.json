@@ -1,0 +1,112 @@
+{
+  "version": "2.2.2",
+  "isMilestone": false,
+  "en": {
+    "subtitle": "Move an instance to another version, save mods as sets and sort them into groups.",
+    "highlights": [
+      "Added “Move to another version…” to the instance menu: it makes a copy for another Minecraft version or loader with matching mod versions and can bring settings, mod configs and worlds along.",
+      "Added mod sets: save the mods of an instance as a set, then add it to any instance or pick it when creating a new one. Mod versions are picked for that instance’s Minecraft and loader.",
+      "Added your own mod groups to the Mod Manager library: collapse them and turn a whole group on or off at once.",
+      "Added categories and “Hide libraries” to the library filters.",
+      "Added search by author: click the author of a mod or modpack to see all of their projects.",
+      "Added art for every launcher version: it is shown in “What’s new”, in the news and in the version history."
+    ],
+    "fixes": []
+  },
+  "ru": {
+    "subtitle": "Сборку теперь можно перенести на другую версию, а моды — сохранить в набор и разложить по группам.",
+    "highlights": [
+      "Добавлен пункт «Перенести на другую версию…» в меню сборки: лаунчер создаст копию под другую версию Minecraft или загрузчик, подберёт версии модов и перенесёт настройки, конфиги и, по желанию, миры.",
+      "Добавлены наборы модов: моды сборки можно сохранить как набор, а потом добавить его в любую сборку или выбрать при создании новой. Версии модов подберутся под её Minecraft и загрузчик.",
+      "Добавлены свои группы модов в библиотеке мод-менеджера: их можно сворачивать, а всю группу — включать и выключать разом.",
+      "Добавлены категории и «Скрыть библиотеки» в фильтры библиотеки.",
+      "Добавлен поиск по автору: нажмите на автора мода или модпака, чтобы увидеть все его проекты.",
+      "Добавлен арт к каждой версии лаунчера: он появляется в «Что нового», в новостях и в истории версий."
+    ],
+    "fixes": []
+  },
+  "uk": {
+    "subtitle": "Збірку тепер можна перенести на іншу версію, а моди — зберегти в набір і розкласти по групах.",
+    "highlights": [
+      "Додано пункт «Перенести на іншу версію…» в меню збірки: лаунчер створить копію під іншу версію Minecraft або завантажувач, підбере версії модів і перенесе налаштування, конфіги та, за бажанням, світи.",
+      "Додано набори модів: моди збірки можна зберегти як набір, а потім додати його в будь-яку збірку або вибрати під час створення нової. Версії модів підберуться під її Minecraft і завантажувач.",
+      "Додано власні групи модів у бібліотеці менеджера модифікацій: їх можна згортати, а всю групу — вмикати й вимикати разом.",
+      "Додано категорії та «Сховати бібліотеки» у фільтри бібліотеки.",
+      "Додано пошук за автором: натисніть на автора мода чи модпака, щоб побачити всі його проєкти.",
+      "Додано арт до кожної версії лаунчера: він з’являється у «Що нового», у новинах та в історії версій."
+    ],
+    "fixes": []
+  },
+  "de": {
+    "subtitle": "Instanzen auf andere Versionen übertragen, Mods als Sets speichern und in Gruppen ordnen.",
+    "highlights": [
+      "Neu: „Auf andere Version übertragen…“ im Instanzmenü – eine Kopie für eine andere Minecraft-Version oder einen anderen Loader, mit passenden Mod-Versionen, Einstellungen, Mod-Konfigurationen und auf Wunsch Welten.",
+      "Neu: Mod-Sets. Speichern Sie die Mods einer Instanz als Set und fügen Sie es jeder Instanz hinzu, auch beim Erstellen einer neuen. Die Mod-Versionen passen sich an deren Minecraft und Loader an.",
+      "Neu: eigene Mod-Gruppen in der Bibliothek des Mod-Managers. Gruppen lassen sich einklappen und komplett ein- oder ausschalten.",
+      "Neu: Kategorien und „Bibliotheken ausblenden“ in den Filtern der Bibliothek.",
+      "Neu: Suche nach Autor. Ein Klick auf den Autor eines Mods oder Modpacks zeigt alle seine Projekte.",
+      "Neu: ein Bild zu jeder Launcher-Version in „Was ist neu“, in den Neuigkeiten und im Versionsverlauf."
+    ],
+    "fixes": []
+  },
+  "es": {
+    "subtitle": "Pase una instancia a otra versión, guarde mods como conjuntos y ordénelos en grupos.",
+    "highlights": [
+      "Se agregó «Pasar a otra versión…» al menú de la instancia: crea una copia para otra versión de Minecraft u otro cargador, busca versiones compatibles de los mods y lleva los ajustes y, si lo desea, los mundos.",
+      "Se agregaron los conjuntos de mods: guarde los mods de una instancia como conjunto y agréguelo a cualquier instancia o elíjalo al crear una nueva. Las versiones se eligen según su Minecraft y cargador.",
+      "Se agregaron grupos de mods propios en la biblioteca del gestor de mods: puede contraerlos y activar o desactivar todo un grupo a la vez.",
+      "Se agregaron categorías y «Ocultar bibliotecas» a los filtros de la biblioteca.",
+      "Se agregó la búsqueda por autor: haga clic en el autor de un mod o modpack para ver todos sus proyectos.",
+      "Se agregó una ilustración para cada versión del launcher en «Novedades», en las noticias y en el historial de versiones."
+    ],
+    "fixes": []
+  },
+  "fr": {
+    "subtitle": "Passez une instance à une autre version, enregistrez vos mods en ensembles et rangez-les en groupes.",
+    "highlights": [
+      "Ajout de « Passer à une autre version… » dans le menu de l’instance : une copie pour une autre version de Minecraft ou un autre chargeur, avec les bonnes versions des mods, vos réglages et, au besoin, vos mondes.",
+      "Ajout des ensembles de mods : enregistrez les mods d’une instance en ensemble, puis ajoutez-le à n’importe quelle instance ou choisissez-le à la création. Les versions suivent son Minecraft et son chargeur.",
+      "Ajout de groupes de mods personnels dans la bibliothèque du gestionnaire de mods : repliez-les et activez ou désactivez tout un groupe d’un coup.",
+      "Ajout des catégories et de « Masquer les bibliothèques » dans les filtres de la bibliothèque.",
+      "Ajout de la recherche par auteur : cliquez sur l’auteur d’un mod ou d’un modpack pour voir tous ses projets.",
+      "Ajout d’une illustration pour chaque version du launcher dans « Nouveautés », les actualités et l’historique des versions."
+    ],
+    "fixes": []
+  },
+  "pl": {
+    "subtitle": "Przenoszenie instancji na inną wersję, zestawy modów i własne grupy.",
+    "highlights": [
+      "Dodano „Przenieś na inną wersję…” w menu instancji: launcher tworzy kopię dla innej wersji Minecrafta lub loadera, dobiera wersje modów i przenosi ustawienia, konfiguracje oraz, w razie potrzeby, światy.",
+      "Dodano zestawy modów: mody instancji można zapisać jako zestaw, a potem dodać go do dowolnej instancji lub wybrać przy tworzeniu nowej. Wersje modów są dobierane pod jej Minecrafta i loader.",
+      "Dodano własne grupy modów w bibliotece menedżera modów: grupy można zwijać, a całą grupę włączać i wyłączać naraz.",
+      "Dodano kategorie i „Ukryj biblioteki” w filtrach biblioteki.",
+      "Dodano wyszukiwanie po autorze: kliknięcie autora moda lub modpacka pokazuje wszystkie jego projekty.",
+      "Dodano grafikę do każdej wersji launchera w „Co nowego”, w aktualnościach i w historii wersji."
+    ],
+    "fixes": []
+  },
+  "pt": {
+    "subtitle": "Passe instâncias para outra versão, salve mods como conjuntos e organize-os em grupos.",
+    "highlights": [
+      "Adicionada a opção “Passar para outra versão…” no menu da instância: ela cria uma cópia para outra versão do Minecraft ou outro loader, com versões compatíveis dos mods, as configurações e, se quiser, os mundos.",
+      "Adicionados os conjuntos de mods: salve os mods de uma instância como conjunto e adicione-o a qualquer instância ou escolha-o ao criar uma nova. As versões são escolhidas para o Minecraft e o loader dela.",
+      "Adicionados grupos de mods próprios na biblioteca do gerenciador de mods: recolha os grupos e ative ou desative um grupo inteiro de uma vez.",
+      "Adicionadas categorias e “Ocultar bibliotecas” aos filtros da biblioteca.",
+      "Adicionada a busca por autor: clique no autor de um mod ou modpack para ver todos os projetos dele.",
+      "Adicionada uma arte para cada versão do launcher em “Novidades”, nas notícias e no histórico de versões."
+    ],
+    "fixes": []
+  },
+  "tr": {
+    "subtitle": "Kurulumları başka bir sürüme taşıyın, modları set olarak kaydedin ve gruplara ayırın.",
+    "highlights": [
+      "Başka bir Minecraft sürümü veya yükleyici için uygun mod sürümleriyle kopya oluşturan, ayarları ve isterseniz dünyaları da taşıyan “Başka bir sürüme taşı…” seçeneği kurulum menüsüne eklendi.",
+      "Mod setleri eklendi: bir kurulumun modlarını set olarak kaydedip herhangi bir kuruluma ekleyebilir veya yeni kurulum oluştururken seçebilirsiniz. Mod sürümleri o kurulumun Minecraft’ına ve yükleyicisine göre seçilir.",
+      "Mod yöneticisinin kütüphanesine kendi mod gruplarınız eklendi: grupları daraltabilir, bir grubun tamamını tek seferde açıp kapatabilirsiniz.",
+      "Kütüphane filtrelerine kategoriler ve “Kütüphaneleri gizle” eklendi.",
+      "Yazara göre arama eklendi: bir modun veya mod paketinin yazarına tıklayarak tüm projelerini görebilirsiniz.",
+      "“Yenilikler”, haberler ve sürüm geçmişinde başlatıcının her sürümüne bir görsel eklendi."
+    ],
+    "fixes": []
+  }
+}

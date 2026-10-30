@@ -5,6 +5,9 @@ import {
   CloudOff,
   Copy,
   FolderInput,
+  FolderPlus,
+  FolderTree,
+  Layers,
   ListFilter,
   ListRestart,
   Pin,
@@ -26,6 +29,14 @@ import type { TFunction } from "i18next";
 import type { UpdateCheckResult } from "./useUpdateCheck";
 
 import type { CatalogFilterChip, DuplicateMarks } from "./filters";
+import { type ModGroup, UNGROUPED_ID } from "./modGroups";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export interface ContentStatusBarProps {
   addForeignFiles: () => Promise<void>;
@@ -51,6 +62,11 @@ export interface ContentStatusBarProps {
   removeDuplicateRecords: (targets: ContentEntry[]) => void;
   removeEntries: (targets: ContentEntry[]) => Promise<void>;
   removeFilterChip: (key: string) => void;
+  saveToSet: (entries: ContentEntry[]) => void;
+  canGroup: boolean;
+  groups: ModGroup[];
+  moveToGroup: (entries: ContentEntry[], groupId: string) => void;
+  createGroupFor: (entries: ContentEntry[]) => void;
   selectedCheckable: ContentEntry[];
   selectedEntries: ContentEntry[];
   selection: Set<string>;
@@ -73,6 +89,11 @@ export function ContentStatusBar({
   addForeignFiles,
   applyUpdateFor,
   bar,
+  saveToSet,
+  canGroup,
+  groups,
+  moveToGroup,
+  createGroupFor,
   clearFilterChips,
   duplicates,
   filterChips,
@@ -124,6 +145,65 @@ export function ContentStatusBar({
                 <CircleArrowUp className="size-3.5" />
                 {t("common.update")}
               </Button>
+
+              {canGroup && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      disabled={isBusy}
+                    >
+                      <FolderTree className="size-3.5" />
+                      {t("modGroups.toGroup")}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="max-h-72">
+                    {groups.map((group) => (
+                      <DropdownMenuItem
+                        key={group.id}
+                        onSelect={() => moveToGroup(selectedEntries, group.id)}
+                      >
+                        <FolderTree />
+                        <span className="min-w-0 truncate">{group.name}</span>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuItem
+                      onSelect={() => createGroupFor(selectedEntries)}
+                    >
+                      <FolderPlus />
+                      {t("modGroups.newGroup")}
+                    </DropdownMenuItem>
+                    {groups.length > 0 && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onSelect={() =>
+                            moveToGroup(selectedEntries, UNGROUPED_ID)
+                          }
+                        >
+                          <X />
+                          {t("modGroups.ungroup")}
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+              {selectedCheckable.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  disabled={isBusy}
+                  onClick={() => saveToSet(selectedCheckable)}
+                >
+                  <Layers className="size-3.5" />
+                  {t("modSets.toSet")}
+                </Button>
+              )}
 
               {selectedCheckable.length > 0 && (
                 <Button

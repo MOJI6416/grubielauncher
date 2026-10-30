@@ -72,6 +72,7 @@ export class Modrinth {
       projectType: ProjectType
       category?: string[]
       sort?: SortValue
+      author?: string
     },
     pagination: {
       offset: number
@@ -79,7 +80,7 @@ export class Modrinth {
     }
   ) {
     try {
-      const { version, versions, loader, projectType, category, sort } = options
+      const { version, versions, loader, projectType, category, sort, author } = options
       const params = new URLSearchParams()
 
       params.append('query', query)
@@ -105,6 +106,8 @@ export class Modrinth {
       if (category && category.length > 0) {
         facets.push(...category.map((c) => [`categories:${c.replace(/\+/g, '')}`]))
       }
+
+      if (author) facets.push([`author:${author}`])
 
       params.append('facets', JSON.stringify(facets))
       params.append('limit', pagination.limit.toString())
@@ -167,6 +170,21 @@ export class Modrinth {
       return response.data
     } catch (error) {
       this.logAxiosError('Error getting Modrinth project', error)
+      return null
+    }
+  }
+
+  static async getAuthor(projectId: string): Promise<string | null> {
+    try {
+      const params = new URLSearchParams()
+      params.append('facets', JSON.stringify([[`project_id:${projectId}`]]))
+      params.append('limit', '1')
+
+      const response = await this.api.get<IResult>('/search', { params })
+      const author = response.data?.hits?.[0]?.author
+      return typeof author === 'string' && author ? author : null
+    } catch (error) {
+      this.logAxiosError('Error getting Modrinth project author', error)
       return null
     }
   }

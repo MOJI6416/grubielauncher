@@ -38,6 +38,7 @@ function context(
     onPlayAnother: () => undefined,
     onManageTags: () => undefined,
     onDuplicate: () => undefined,
+    onPort: () => undefined,
     ...overrides,
   };
 }
@@ -61,6 +62,7 @@ describe("buildInstanceActions", () => {
     expect(groups[0].map((action) => action.id)).toEqual(["play"]);
     expect(groups[2].map((action) => action.id)).toEqual([
       "duplicate",
+      "port",
       "folder",
       "shortcut",
       "tags",

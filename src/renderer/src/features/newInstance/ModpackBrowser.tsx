@@ -19,6 +19,8 @@ import {
   Package,
   RotateCw,
   Search,
+  UserRound,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +38,7 @@ import type { Loader } from "@/types/Loader";
 import type { IVersion as IGameVersion } from "@/types/IVersion";
 import {
   IProject,
+  IProjectAuthor,
   IVersion as IProjectVersion,
   ProjectType,
   Provider,
@@ -106,6 +109,7 @@ export function ModpackBrowser({
   const [sort, setSort] = useState("");
   const [gameVersion, setGameVersion] = useState("");
   const [loader, setLoader] = useState<Loader | undefined>();
+  const [author, setAuthor] = useState<IProjectAuthor | null>(null);
   const [gameVersions, setGameVersions] = useState<IGameVersion[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [detail, setDetail] = useState<DetailState>(EMPTY_DETAIL);
@@ -164,6 +168,7 @@ export function ModpackBrowser({
       filters: [],
       gameVersion: gameVersion || undefined,
       loader,
+      author: author?.id,
     },
     meta.isReady,
   );
@@ -236,7 +241,13 @@ export function ModpackBrowser({
     detailRequestRef.current += 1;
     setActiveId(null);
     setDetail(EMPTY_DETAIL);
-  }, [provider, query, gameVersion, loader, sort]);
+  }, [provider, query, gameVersion, loader, sort, author]);
+
+  const filterByAuthor = (next: IProjectAuthor) => {
+    setAuthor(next);
+    setRawQuery("");
+    setQuery("");
+  };
 
   const selectedVersion = useMemo(
     () => detail.versions.find((item) => item.id === detail.selectedId) ?? null,
@@ -254,6 +265,7 @@ export function ModpackBrowser({
               aria-pressed={provider === item}
               disabled={isBusy}
               onClick={() => {
+                if (item !== provider) setAuthor(null);
                 setProvider(item);
                 if (
                   item !== Provider.MODRINTH &&
@@ -346,6 +358,20 @@ export function ModpackBrowser({
           </SelectContent>
         </Select>
       </div>
+
+      {author && (
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            disabled={isBusy}
+            className="flex h-6 shrink-0 items-center gap-1 rounded-md bg-surface-2 px-2 text-xs text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground disabled:opacity-50"
+            onClick={() => setAuthor(null)}
+          >
+            {t("modManager.authorFilter", { name: author.name })}
+            <X className="size-3" />
+          </button>
+        </div>
+      )}
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_20rem] gap-3">
         <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-surface-1">
@@ -443,6 +469,11 @@ export function ModpackBrowser({
                           {project.title}
                         </span>
                         <span className="truncate text-xs text-muted-foreground">
+                          {project.author && (
+                            <span className="text-faint">
+                              {project.author.name} ·{" "}
+                            </span>
+                          )}
                           {project.description}
                         </span>
                       </span>
@@ -543,6 +574,28 @@ export function ModpackBrowser({
                         <SiCurseforge className="size-3 text-[#f16436]" />
                       ) : (
                         <SiModrinth className="size-3 text-[#1bd96a]" />
+                      )}
+                      {detail.project.author && (
+                        <Hint
+                          content={t("modManager.authorProjects", {
+                            name: detail.project.author.name,
+                          })}
+                          className="max-w-64"
+                        >
+                          <button
+                            type="button"
+                            className="flex max-w-36 min-w-0 items-center gap-1 rounded-sm transition-colors hover:text-foreground"
+                            onClick={() => {
+                              const next = detail.project?.author;
+                              if (next && !isBusy) filterByAuthor(next);
+                            }}
+                          >
+                            <UserRound className="size-3 shrink-0" />
+                            <span className="truncate">
+                              {detail.project.author.name}
+                            </span>
+                          </button>
+                        </Hint>
                       )}
                       {formatCompactNumber(
                         detail.project.stats?.downloads,

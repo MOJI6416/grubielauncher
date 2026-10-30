@@ -33,6 +33,7 @@ import {
   buildForgeCdnUrls,
   cacheModIcon,
   migrateInlineModIcons,
+  cfModToProject,
   cfModpackToModpack,
   checkLocalMod,
   checkModpack,
@@ -42,6 +43,7 @@ import {
   getModDescriptor,
   getModEnvironment,
   modrinthRunsOnClient,
+  mrProjectToProject,
   sortVersionsByDate,
 } from "./modManager";
 
@@ -1531,6 +1533,48 @@ describe("computeServerModExclusions", () => {
     ]);
 
     expect(excluded.has("createbetterfps.jar")).toBe(true);
+  });
+});
+
+describe("project authors", () => {
+  it("takes the first named CurseForge author with its numeric id", () => {
+    const project = cfModToProject({
+      id: 238222,
+      name: "JEI",
+      summary: "",
+      classId: 6,
+      authors: [
+        { id: 0, name: "", url: "" },
+        { id: 17072, name: "mezz", url: "https://www.curseforge.com/members/mezz" },
+      ],
+    } as never);
+
+    expect(project.author).toEqual({ id: "17072", name: "mezz" });
+  });
+
+  it("leaves the author out when CurseForge sends none", () => {
+    const project = cfModToProject({
+      id: 1,
+      name: "x",
+      summary: "",
+      classId: 6,
+    } as never);
+
+    expect("author" in project).toBe(false);
+  });
+
+  it("uses the Modrinth search username as both id and name", () => {
+    const hit = mrProjectToProject(
+      { project_id: "AANobbMI", slug: "sodium", author: "jellysquid3" } as never,
+      ProjectType.MOD,
+    );
+    const full = mrProjectToProject(
+      { id: "AANobbMI", slug: "sodium", team: "t" } as never,
+      ProjectType.MOD,
+    );
+
+    expect(hit.author).toEqual({ id: "jellysquid3", name: "jellysquid3" });
+    expect("author" in full).toBe(false);
   });
 });
 

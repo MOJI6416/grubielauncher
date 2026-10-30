@@ -19,6 +19,7 @@ import {
   LocalModDependencyIndex,
   IModpack,
   IProject,
+  IProjectAuthor,
   IVersion as ModVersion,
   IVersionDependency,
   ProjectType,
@@ -68,15 +69,37 @@ import {
   withInstalled,
 } from "./entries";
 import {
+  AUTHOR_CHIP_KEY,
+  CATEGORY_CHIP_PREFIX,
+  HIDE_LIBRARIES_CHIP_KEY,
   LibraryFacet,
   LibrarySort,
   buildCatalogChips,
+  categoryLocaleKey,
+  countLibraryCategories,
   countLibraryFacets,
   filterLibraryEntries,
   findDuplicates,
+  humanizeFilterName,
   sortLibraryEntries,
   toggleValue,
 } from "./filters";
+import { useModCategories } from "./useModCategories";
+import { useModGroups } from "./useModGroups";
+import {
+  type DisplayItem,
+  UNGROUPED_ID,
+  addGroup,
+  assignToGroup,
+  groupRows,
+  removeGroup,
+  renameGroup,
+  toggleGroupCollapsed,
+} from "./modGroups";
+import {
+  ModSetsDialog,
+  type ModSetsDialogMode,
+} from "@renderer/features/modSets/ModSetsDialog";
 import {
   applyUpdates,
   isCheckableProject,
@@ -106,6 +129,8 @@ import { TrashEntry, listTrash, trashFolder, trashPaths } from "./trash";
 import { useDetailPanelWidth } from "./detailWidth";
 import { installQueue } from "@renderer/features/install/installQueue";
 import { ROW_HEIGHT } from "./ContentRow";
+import { GROUP_HEADER_HEIGHT, type GroupHeaderActions } from "./GroupHeader";
+import { ModGroupDialog } from "./ModGroupDialog";
 import { DetailProgress } from "./ContentDetails";
 import { withExtractProgress } from "@renderer/utilities/archiveProgress";
 import { ImportMode } from "./ImportLocalDialog";
@@ -296,9 +321,15 @@ export function ContentManager({
     () => projectTypes[0] ?? ProjectType.MOD,
   );
 
+  const [catalogAuthor, setCatalogAuthor] = useState<{
+    provider: Provider;
+    author: IProjectAuthor;
+  } | null>(null);
+
   const changeScope = useCallback(
     (next: Scope) => {
       setScope(next);
+      setCatalogAuthor((prev) => (prev && prev.provider === next ? prev : null));
       const types = typesForScope(next);
       if (types.length > 0 && !types.includes(projectType)) {
         setProjectType(types[0]);
@@ -319,6 +350,8 @@ export function ContentManager({
   const [query, setQuery] = useState("");
   const [librarySort, setLibrarySort] = useState<LibrarySort>("name");
   const [libraryFacets, setLibraryFacets] = useState<LibraryFacet[]>([]);
+  const [libraryCategories, setLibraryCategories] = useState<string[]>([]);
+  const [hideLibraries, setHideLibraries] = useState(false);
   const [catalogSort, setCatalogSort] = useState("");
   const [catalogFilters, setCatalogFilters] = useState<string[]>([]);
   const [catalogLoader, setCatalogLoader] = useState<Loader | null>(null);
@@ -447,6 +480,29 @@ export function ContentManager({
   const catalogProvider =
     scope === "library" ? Provider.CURSEFORGE : (scope as Provider);
 
+  const activeAuthor =
+    scope !== "library" && catalogAuthor?.provider === catalogProvider
+      ? catalogAuthor.author
+      : null;
+
+  const canFilterByAuthor = useCallback(
+    (provider: Provider) =>
+      canBrowse && visibleProviders.includes(provider as CatalogProvider),
+    [canBrowse, visibleProviders],
+  );
+
+  const filterByAuthor = useCallback(
+    (provider: Provider, author: IProjectAuthor) => {
+      if (!canFilterByAuthor(provider)) return;
+      setCatalogAuthor({ provider, author });
+      setRawQuery("");
+      setQuery("");
+      setCatalogFilters([]);
+      changeScope(provider as CatalogProvider);
+    },
+    [canFilterByAuthor, changeScope],
+  );
+
   const meta = useCatalogMeta(
     catalogProvider,
     projectType,
@@ -491,6 +547,7 @@ export function ContentManager({
       filters: catalogFilters,
       gameVersion: version?.id,
       loader: browseLoader,
+      author: activeAuthor?.id,
     },
     scope !== "library" && isCatalogReady,
   );
@@ -557,19 +614,40 @@ export function ContentManager({
     [libraryEntries, loader],
   );
 
+  const modCategories = useModCategories(
+    libraryEntries,
+    scope === "library" && isOnline,
+  );
+
+  useEffect(() => {
+    setLibraryCategories([]);
+  }, [projectType]);
+
   const libraryMarks = useMemo(
     () => ({
       updatable: updateCheck.updatable,
       disabled: fileStates.disabled,
       duplicates: duplicates.all,
       foreign: foreignKeys,
+      categories: modCategories.categories,
     }),
-    [duplicates, fileStates.disabled, foreignKeys, updateCheck.updatable],
+    [
+      duplicates,
+      fileStates.disabled,
+      foreignKeys,
+      modCategories.categories,
+      updateCheck.updatable,
+    ],
   );
 
   const facetCounts = useMemo(
     () => countLibraryFacets(libraryEntries, libraryMarks),
     [libraryEntries, libraryMarks],
+  );
+
+  const categoryCounts = useMemo(
+    () => countLibraryCategories(libraryEntries, modCategories.categories),
+    [libraryEntries, modCategories.categories],
   );
 
   const [fileTimes, setFileTimes] = useState<Record<string, number>>({});
@@ -608,41 +686,90 @@ export function ContentManager({
     return times;
   }, [fileTimes, libraryEntries, needsFileTimes]);
 
-  const rows = useMemo<ContentEntry[]>(() => {
+  const modGroups = useModGroups(
+    !isModpacks && canEdit ? instancePath : undefined,
+  );
+
+  const listing = useMemo<{ rows: ContentEntry[]; items: DisplayItem[] }>(() => {
     if (scope === "library") {
       const filtered = filterLibraryEntries(
         libraryEntries,
-        { query, facets: libraryFacets, sort: librarySort },
+        {
+          query,
+          facets: libraryFacets,
+          sort: librarySort,
+          categories: libraryCategories,
+          hideLibraries,
+        },
         libraryMarks,
       );
-      return sortLibraryEntries(
-        filtered,
-        librarySort,
-        updateCheck.updatable,
-        changedAt,
+      return groupRows(
+        sortLibraryEntries(
+          filtered,
+          librarySort,
+          updateCheck.updatable,
+          changedAt,
+        ),
+        modGroups.groups,
+        query.length > 0 ||
+          libraryFacets.length > 0 ||
+          libraryCategories.length > 0 ||
+          hideLibraries,
       );
     }
 
-    return catalog.items.map((project) =>
+    const catalogRows = catalog.items.map((project) =>
       fromCatalogProject(project, findInstalled(project) ?? null),
     );
+    return {
+      rows: catalogRows,
+      items: catalogRows.map((entry, rowIndex) => ({
+        kind: "row" as const,
+        entry,
+        rowIndex,
+      })),
+    };
   }, [
     scope,
     libraryEntries,
     query,
     libraryFacets,
     librarySort,
+    libraryCategories,
+    hideLibraries,
     libraryMarks,
     updateCheck.updatable,
     changedAt,
     catalog.items,
     findInstalled,
+    modGroups.groups,
   ]);
 
+  const rows = listing.rows;
+  const displayItems = listing.items;
+  const displayIndexOfRow = useMemo(() => {
+    const indexes: number[] = [];
+    displayItems.forEach((item, index) => {
+      if (item.kind === "row") indexes[item.rowIndex] = index;
+    });
+    return indexes;
+  }, [displayItems]);
+
+  const itemKey = useCallback(
+    (index: number) => {
+      const item = displayItems[index];
+      if (!item) return index;
+      return item.kind === "header" ? `group:${item.groupId}` : item.entry.key;
+    },
+    [displayItems],
+  );
+
   const rowVirtualizer = useVirtualizer({
-    count: rows.length,
+    count: displayItems.length,
     getScrollElement: () => listElement,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: (index) =>
+      displayItems[index]?.kind === "header" ? GROUP_HEADER_HEIGHT : ROW_HEIGHT,
+    getItemKey: itemKey,
     overscan: 8,
   });
 
@@ -656,7 +783,7 @@ export function ContentManager({
     catalog.loadMore();
   }, [scope, catalog, lastVisibleIndex, rows.length]);
 
-  const scopeSignature = `${scope}|${projectType}|${query}|${catalogSort}|${catalogFilters.join(",")}|${librarySort}|${libraryFacets.join(",")}`;
+  const scopeSignature = `${scope}|${projectType}|${query}|${catalogSort}|${catalogFilters.join(",")}|${librarySort}|${libraryFacets.join(",")}|${libraryCategories.join(",")}|${hideLibraries}`;
 
   useEffect(() => {
     setActiveIndex(-1);
@@ -664,7 +791,7 @@ export function ContentManager({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scopeSignature]);
 
-  const membershipSignature = `${query}|${libraryFacets.join(",")}`;
+  const membershipSignature = `${query}|${libraryFacets.join(",")}|${libraryCategories.join(",")}|${hideLibraries}`;
 
   useEffect(() => {
     setSelection((prev) => (prev.size === 0 ? prev : new Set()));
@@ -1976,9 +2103,14 @@ export function ContentManager({
       onRestore: restoreEntry,
       onToggleEnabled: (entry: ContentEntry, enabled: boolean) =>
         void setEnabledFor([entry], enabled),
+      onAuthor: (entry: ContentEntry) => {
+        const author = entry.project?.author;
+        if (author) filterByAuthor(entry.provider, author);
+      },
     }),
     [
       applyUpdateFor,
+      filterByAuthor,
       installProject,
       openRow,
       removeEntries,
@@ -2003,6 +2135,127 @@ export function ContentManager({
     selectedCheckable.length > 0 &&
     selectedCheckable.every((entry) => entry.installed?.pinned === true);
 
+  const [setsDialog, setSetsDialog] = useState<ModSetsDialogMode | null>(null);
+  const setsTarget =
+    version?.id && loader
+      ? { minecraftVersion: version.id, loader }
+      : null;
+
+  const openSets = useCallback(
+    (kind: "save" | "apply") => {
+      setSetsDialog(
+        kind === "apply"
+          ? { kind: "apply" }
+          : {
+              kind: "save",
+              mods,
+              defaultName: instancePath ? api.path.basename(instancePath) : "",
+            },
+      );
+    },
+    [instancePath, mods],
+  );
+
+  const saveToSet = useCallback((entries: ContentEntry[]) => {
+    setSetsDialog({
+      kind: "save",
+      mods: entries.flatMap((entry) => (entry.installed ? [entry.installed] : [])),
+      defaultName: "",
+    });
+  }, []);
+
+  const [groupDialog, setGroupDialog] = useState<
+    | { kind: "create"; keys: string[] }
+    | { kind: "rename"; id: string; name: string }
+    | null
+  >(null);
+  const canGroup = scope === "library" && !isModpacks && canEdit && !!instancePath;
+  const { updateGroups } = modGroups;
+
+  const saveGroups = useCallback(
+    async (
+      change: Parameters<typeof updateGroups>[0],
+      message?: string,
+    ) => {
+      if (!(await updateGroups(change))) {
+        toast.error(t("modGroups.saveFailed"));
+      } else if (message) {
+        toast.success(message);
+      }
+    },
+    [t, updateGroups],
+  );
+
+  const groupActions = useMemo<GroupHeaderActions>(
+    () => ({
+      onToggleCollapsed: (groupId) => {
+        if (groupId !== UNGROUPED_ID) {
+          void saveGroups((file) => toggleGroupCollapsed(file, groupId));
+        }
+      },
+      onSetEnabled: (entries, enabled) => void setEnabledFor(entries, enabled),
+      onRename: (id, name) => setGroupDialog({ kind: "rename", id, name }),
+      onDelete: (id, name) =>
+        void saveGroups(
+          (file) => removeGroup(file, id),
+          t("modGroups.deleted", { name }),
+        ),
+    }),
+    [saveGroups, setEnabledFor, t],
+  );
+
+  const moveToGroup = useCallback(
+    (entries: ContentEntry[], groupId: string) => {
+      const name =
+        groupId === UNGROUPED_ID
+          ? t("modGroups.ungrouped")
+          : (modGroups.groups.groups.find((group) => group.id === groupId)
+              ?.name ?? "");
+      void saveGroups(
+        (file) =>
+          assignToGroup(
+            file,
+            entries.map((entry) => entry.key),
+            groupId,
+          ),
+        t("modGroups.moved", { name, count: entries.length }),
+      );
+      setSelection(new Set());
+    },
+    [modGroups.groups.groups, saveGroups, t],
+  );
+
+  const createGroupFor = useCallback((entries: ContentEntry[]) => {
+    setGroupDialog({ kind: "create", keys: entries.map((entry) => entry.key) });
+  }, []);
+
+  const submitGroupDialog = (name: string) => {
+    if (!groupDialog) return;
+
+    if (groupDialog.kind === "rename") {
+      void saveGroups((file) => renameGroup(file, groupDialog.id, name));
+      return;
+    }
+
+    const id = crypto.randomUUID();
+    const { keys } = groupDialog;
+    void saveGroups(
+      (file) => assignToGroup(addGroup(file, name, id), keys, id),
+      t("modGroups.moved", { name, count: keys.length }),
+    );
+    setSelection(new Set());
+  };
+
+  const addFromSet = useCallback(
+    (projects: ILocalProject[]) => {
+      if (projects.length === 0) return;
+      setMods([...mods, ...projects]);
+      for (const project of projects) forgetRemoved(project);
+      toast.success(t("modSets.added", { count: projects.length }));
+    },
+    [forgetRemoved, mods, setMods, t],
+  );
+
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -2013,7 +2266,9 @@ export function ContentManager({
           Math.max(rows.length - 1, 0),
         );
         setActiveIndex(next);
-        rowVirtualizer.scrollToIndex(next, { align: "auto" });
+        rowVirtualizer.scrollToIndex(displayIndexOfRow[next] ?? next, {
+          align: "auto",
+        });
         return;
       }
 
@@ -2028,7 +2283,7 @@ export function ContentManager({
         selectRow(rows[activeIndex], TOGGLE_GESTURE);
       }
     },
-    [activeIndex, openRow, rows, rowVirtualizer, selectRow],
+    [activeIndex, displayIndexOfRow, openRow, rows, rowVirtualizer, selectRow],
   );
 
   useEffect(() => {
@@ -2091,25 +2346,73 @@ export function ContentManager({
   const filterChips = useMemo(
     () =>
       scope === "library"
-        ? libraryFacets.map((facet) => ({
-            key: facet,
-            label: t(`modManager.facets.${facet}`),
-          }))
-        : activeFilterChips,
-    [activeFilterChips, libraryFacets, scope, t],
+        ? [
+            ...libraryFacets.map((facet) => ({
+              key: facet as string,
+              label: t(`modManager.facets.${facet}`),
+            })),
+            ...(hideLibraries
+              ? [
+                  {
+                    key: HIDE_LIBRARIES_CHIP_KEY,
+                    label: t("modManager.hideLibraries"),
+                  },
+                ]
+              : []),
+            ...libraryCategories.map((slug) => ({
+              key: `${CATEGORY_CHIP_PREFIX}${slug}`,
+              label: translateCategory(
+                categoryLocaleKey(slug),
+                humanizeFilterName(slug),
+              ),
+            })),
+          ]
+        : activeAuthor
+          ? [
+              {
+                key: AUTHOR_CHIP_KEY,
+                label: t("modManager.authorFilter", {
+                  name: activeAuthor.name,
+                }),
+              },
+              ...activeFilterChips,
+            ]
+          : activeFilterChips,
+    [
+      activeAuthor,
+      activeFilterChips,
+      hideLibraries,
+      libraryCategories,
+      libraryFacets,
+      scope,
+      t,
+      translateCategory,
+    ],
   );
 
   const removeFilterChip = (key: string) => {
     if (scope === "library") {
-      setLibraryFacets((prev) => prev.filter((facet) => facet !== key));
+      if (key === HIDE_LIBRARIES_CHIP_KEY) setHideLibraries(false);
+      else if (key.startsWith(CATEGORY_CHIP_PREFIX)) {
+        const slug = key.slice(CATEGORY_CHIP_PREFIX.length);
+        setLibraryCategories((prev) => prev.filter((item) => item !== slug));
+      } else setLibraryFacets((prev) => prev.filter((facet) => facet !== key));
+    } else if (key === AUTHOR_CHIP_KEY) {
+      setCatalogAuthor(null);
     } else {
       setCatalogFilters((prev) => toggleValue(prev, key));
     }
   };
 
   const clearFilterChips = () => {
-    if (scope === "library") setLibraryFacets([]);
-    else setCatalogFilters([]);
+    if (scope === "library") {
+      setLibraryFacets([]);
+      setLibraryCategories([]);
+      setHideLibraries(false);
+    } else {
+      setCatalogFilters([]);
+      setCatalogAuthor(null);
+    }
   };
 
   const filterGroups = useMemo(() => {
@@ -2162,18 +2465,26 @@ export function ContentManager({
     scope === "library" &&
     libraryEntries.length === 0 &&
     !query &&
-    libraryFacets.length === 0;
+    libraryFacets.length === 0 &&
+    libraryCategories.length === 0 &&
+    !hideLibraries;
 
   const hasActiveFilters =
     scope === "library"
-      ? libraryFacets.length > 0 || query.length > 0
-      : catalogFilters.length > 0 || query.length > 0;
+      ? libraryFacets.length > 0 ||
+        libraryCategories.length > 0 ||
+        hideLibraries ||
+        query.length > 0
+      : catalogFilters.length > 0 || query.length > 0 || activeAuthor !== null;
 
   const resetFilters = () => {
     setRawQuery("");
     setQuery("");
     setLibraryFacets([]);
+    setLibraryCategories([]);
+    setHideLibraries(false);
     setCatalogFilters([]);
+    setCatalogAuthor(null);
   };
 
   const updatableCount = updateCheck.updatable.size;
@@ -2220,6 +2531,12 @@ export function ContentManager({
           catalogProvider={catalogProvider}
           catalogSort={catalogSort}
           facetCounts={facetCounts}
+          categoryCounts={categoryCounts}
+          categoriesLoading={modCategories.isLoading}
+          libraryCategories={libraryCategories}
+          setLibraryCategories={setLibraryCategories}
+          hideLibraries={hideLibraries}
+          setHideLibraries={setHideLibraries}
           filterGroups={filterGroups}
           filterQuery={filterQuery}
           gameVersions={gameVersions}
@@ -2237,6 +2554,8 @@ export function ContentManager({
           loaderOptions={loaderOptions}
           meta={meta}
           pickLocalFiles={pickLocalFiles}
+          openSets={openSets}
+          canApplySet={setsTarget !== null}
           projectType={projectType}
           projectTypes={projectTypes}
           providers={visibleProviders}
@@ -2279,6 +2598,11 @@ export function ContentManager({
           removeDuplicateRecords={removeDuplicateRecords}
           removeEntries={removeEntries}
           removeFilterChip={removeFilterChip}
+          saveToSet={saveToSet}
+          canGroup={canGroup}
+          groups={modGroups.groups.groups}
+          moveToGroup={moveToGroup}
+          createGroupFor={createGroupFor}
           selectedCheckable={selectedCheckable}
           selectedEntries={selectedEntries}
           selection={selection}
@@ -2303,6 +2627,7 @@ export function ContentManager({
           busyKey={busyKey}
           canBrowse={canBrowse}
           canEdit={canEdit}
+          canFilterByAuthor={canFilterByAuthor}
           canSelectRows={canSelectRows}
           catalog={catalog}
           changedAt={changedAt}
@@ -2313,8 +2638,11 @@ export function ContentManager({
           detailSelectedVersion={detailSelectedVersion}
           detailStack={detailStack}
           detailWidth={detailWidth}
+          displayItems={displayItems}
+          groupActions={groupActions}
           duplicates={duplicates}
           fileStates={fileStates}
+          filterByAuthor={filterByAuthor}
           findInstalled={findInstalled}
           handleKeyDown={handleKeyDown}
           hasActiveFilters={hasActiveFilters}
@@ -2367,6 +2695,25 @@ export function ContentManager({
           virtualItems={virtualItems}
         />
       </div>
+
+      {groupDialog && (
+        <ModGroupDialog
+          initialName={groupDialog.kind === "rename" ? groupDialog.name : ""}
+          isRename={groupDialog.kind === "rename"}
+          onSubmit={submitGroupDialog}
+          onClose={() => setGroupDialog(null)}
+        />
+      )}
+
+      {setsDialog && (
+        <ModSetsDialog
+          mode={setsDialog}
+          target={setsTarget}
+          installed={mods}
+          onAdd={addFromSet}
+          onClose={() => setSetsDialog(null)}
+        />
+      )}
 
       <ContentDialogs
         applyDeletion={applyDeletion}

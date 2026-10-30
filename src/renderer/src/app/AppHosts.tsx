@@ -12,6 +12,7 @@ import { FriendsSocketHost } from "./hosts/FriendsSocketHost";
 import { GameInviteHost } from "./hosts/GameInviteHost";
 import { InstallHost } from "./hosts/InstallHost";
 import { LaunchHost } from "./hosts/LaunchHost";
+import { PortHost } from "./hosts/PortHost";
 import { PresenceHost } from "./hosts/PresenceHost";
 import { RpcHost } from "./hosts/RpcHost";
 import { ShareHost } from "./hosts/ShareHost";
@@ -55,6 +56,7 @@ export function AppHosts() {
       <DeepLinkHost />
       <FileDropHost />
       <UnsavedCloseHost />
+      <PortHost />
       <Onboarding />
       <WhatsNewHost />
       <WebLoginPrompt />

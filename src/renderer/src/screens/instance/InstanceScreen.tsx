@@ -2,6 +2,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
+  ArrowRightLeft,
   CircleCheck,
   Copy,
   CopySlash,
@@ -52,6 +53,7 @@ import {
 } from "@renderer/features/instances/InstanceBanner";
 import { InstanceLaunchProfileCard } from "@renderer/features/instances/InstanceLaunchProfileCard";
 import { duplicateInstance } from "@renderer/features/instances/duplicateInstance";
+import { openPortDialog } from "@renderer/features/port/portStore";
 import { getDeleteCopy } from "@renderer/features/instances/deleteGates";
 import {
   InstanceOverviewTab,
@@ -534,6 +536,13 @@ export function InstanceScreen({
                 >
                   <Copy />
                   {t("versions.duplicate")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={isLoading || !version}
+                  onSelect={() => version && openPortDialog(version)}
+                >
+                  <ArrowRightLeft />
+                  {t("versions.port")}
                 </DropdownMenuItem>
 
                 <DropdownMenuSeparator />

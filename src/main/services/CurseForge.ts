@@ -65,6 +65,7 @@ export class CurseForge {
       modType: ModTypeClassIds
       category: string[]
       sortField?: ModsSearchSortField
+      authorId?: string
     },
     pagination: {
       offset: number
@@ -72,7 +73,7 @@ export class CurseForge {
     }
   ): Promise<ISearchModsResponse | null> {
     try {
-      const { version, loader, modType, category, sortField } = options
+      const { version, loader, modType, category, sortField, authorId } = options
       const params = new URLSearchParams()
 
       params.append('query', query)
@@ -84,6 +85,7 @@ export class CurseForge {
       if (version) params.append('version', version)
       if (loader !== undefined) params.append('loader', loader.toString())
       if (sortField !== undefined) params.append('sortField', sortField.toString())
+      if (authorId) params.append('authorId', authorId)
 
       category.forEach((cat) => params.append('category', cat))
 

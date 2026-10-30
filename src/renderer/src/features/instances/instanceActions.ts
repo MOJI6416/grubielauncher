@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  ArrowRightLeft,
   Boxes,
   ChartArea,
   Copy,
@@ -45,6 +46,7 @@ export interface InstanceActionContext {
   onPlayAnother: () => void;
   onManageTags: () => void;
   onDuplicate: () => void;
+  onPort: () => void;
 }
 
 export async function createDesktopShortcut(
@@ -169,6 +171,12 @@ export function buildInstanceActions(
       icon: Copy,
       disabled: context.isRunningInstance,
       onSelect: context.onDuplicate,
+    },
+    {
+      id: "port",
+      label: t("versions.port"),
+      icon: ArrowRightLeft,
+      onSelect: context.onPort,
     },
     {
       id: "folder",

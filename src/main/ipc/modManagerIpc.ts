@@ -87,6 +87,7 @@ export function registerModManagerIpc() {
         projectType: ProjectType;
         sort: string;
         filter: string[];
+        author?: string;
       },
       pagination: {
         offset: number;
@@ -213,6 +214,17 @@ export function registerModManagerIpc() {
       assertReadablePath(versionPath, "modManager:managedFiles");
       return await readManagedFiles(versionPath);
     },
+  );
+
+  handleSafe<Record<string, string[]>, [string[], string[]]>(
+    "modManager:projectCategories",
+    {},
+    [
+      check.arrayOf(check.nonEmptyString(64), 5000),
+      check.arrayOf(check.nonEmptyString(64), 5000),
+    ],
+    async (_, modrinthIds: string[], curseforgeIds: string[]) =>
+      await ModManager.projectCategories(modrinthIds, curseforgeIds),
   );
 
   handleSafe<Record<string, boolean> | null, [string[]]>(

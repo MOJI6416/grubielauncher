@@ -1,4 +1,5 @@
 import { IFilterGroup, Provider } from "@/types/ModManager";
+import { isLibraryOnly } from "@/shared/modCategories";
 import { normalizeProjectTitle } from "@renderer/utilities/mod";
 import { ContentEntry } from "./entries";
 import { displayTitle } from "./titles";
@@ -124,6 +125,8 @@ export interface LibraryQuery {
   query: string;
   facets: LibraryFacet[];
   sort: LibrarySort;
+  categories?: string[];
+  hideLibraries?: boolean;
 }
 
 export interface LibraryMarks {
@@ -131,6 +134,37 @@ export interface LibraryMarks {
   disabled: ReadonlySet<string>;
   duplicates?: ReadonlySet<string>;
   foreign?: ReadonlySet<string>;
+  categories?: ReadonlyMap<string, string[]>;
+}
+
+export const HIDE_LIBRARIES_CHIP_KEY = "@hideLibraries";
+export const CATEGORY_CHIP_PREFIX = "@category:";
+
+export interface CategoryCount {
+  slug: string;
+  count: number;
+}
+
+export function countLibraryCategories(
+  entries: ContentEntry[],
+  categories: ReadonlyMap<string, string[]>,
+): { categories: CategoryCount[]; libraries: number } {
+  const counts = new Map<string, number>();
+  let libraries = 0;
+
+  for (const entry of entries) {
+    const own = categories.get(entry.key);
+    if (!own) continue;
+    if (isLibraryOnly(own)) libraries += 1;
+    for (const slug of own) counts.set(slug, (counts.get(slug) ?? 0) + 1);
+  }
+
+  return {
+    categories: [...counts]
+      .map(([slug, count]) => ({ slug, count }))
+      .sort((a, b) => b.count - a.count || a.slug.localeCompare(b.slug)),
+    libraries,
+  };
 }
 
 function matchesFacet(
@@ -207,6 +241,14 @@ export function filterLibraryEntries(
 
     for (const facet of query.facets) {
       if (!matchesFacet(entry, facet, marks)) return false;
+    }
+
+    const own = marks.categories?.get(entry.key);
+    if (query.hideLibraries && isLibraryOnly(own)) return false;
+
+    const wanted = query.categories ?? [];
+    if (wanted.length > 0 && !own?.some((slug) => wanted.includes(slug))) {
+      return false;
     }
 
     return true;
@@ -295,6 +337,8 @@ export function catalogFilterLabel(
   if (!translate) return fallback;
   return translate(categoryLocaleKey(item.name), fallback);
 }
+
+export const AUTHOR_CHIP_KEY = "@author";
 
 export interface CatalogFilterChip {
   key: string;

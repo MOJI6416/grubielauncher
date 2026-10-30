@@ -90,6 +90,7 @@ import { GroupDialog } from "./GroupDialog";
 import { InstanceRow, InstanceTile } from "./InstanceCard";
 import { OrphanFolders, useOrphanFolders } from "./OrphanFolders";
 import { duplicateInstance } from "./duplicateInstance";
+import { openPortDialog } from "@renderer/features/port/portStore";
 import { buildInstanceActions } from "./instanceActions";
 import { instanceFlagsAtom } from "./atoms";
 import {
@@ -399,6 +400,7 @@ export function InstanceLibrary({
       onPlayAnother: () => play(instance),
       onManageTags: () => onManageTags(itemKey, instance.version.name),
       onDuplicate: () => void duplicateInstance(instance),
+      onPort: () => openPortDialog(instance),
     });
   };
 

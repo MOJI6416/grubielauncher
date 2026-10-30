@@ -16,8 +16,10 @@ import {
 } from "lucide-react";
 import {
   ILocalProject,
+  IProjectAuthor,
   IVersion as ModVersion,
   ProjectType,
+  Provider,
 } from "@/types/ModManager";
 import { IVersion } from "@/types/IVersion";
 import { Loader } from "@/types/Loader";
@@ -35,6 +37,8 @@ import {
 import { isCheckableProject } from "./updates";
 import { TRASH_MAX_AGE_DAYS, TrashEntry } from "./trash";
 import { ContentRow } from "./ContentRow";
+import { GroupHeader, type GroupHeaderActions } from "./GroupHeader";
+import type { DisplayItem } from "./modGroups";
 import { ContentDetails, DetailProgress } from "./ContentDetails";
 import { ImportMode } from "./ImportLocalDialog";
 import { isImportableFileName } from "./localImport";
@@ -64,6 +68,7 @@ export interface ContentListPaneProps {
   busyKey: string | null;
   canBrowse: boolean;
   canEdit: boolean;
+  canFilterByAuthor: (provider: Provider) => boolean;
   canSelectRows: boolean;
   catalog: CatalogState & {
     reload: () => void;
@@ -76,6 +81,7 @@ export interface ContentListPaneProps {
   detailEntry: ContentEntry | null;
   detailSelectedVersion: ModVersion | null;
   detailStack: ContentEntry[];
+  displayItems: DisplayItem[];
   detailWidth: {
     width: number;
     isDefault: boolean;
@@ -85,7 +91,9 @@ export interface ContentListPaneProps {
   };
   duplicates: DuplicateMarks;
   fileStates: ModFileStates;
+  filterByAuthor: (provider: Provider, author: IProjectAuthor) => void;
   findInstalled: (project: MatchableProject) => ILocalProject | undefined;
+  groupActions: GroupHeaderActions;
   handleKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
   hasActiveFilters: boolean;
   hideTrashBar: () => void;
@@ -132,6 +140,7 @@ export interface ContentListPaneProps {
     onDelete: (entry: ContentEntry) => Promise<void>;
     onRestore: (entry: ContentEntry) => void;
     onToggleEnabled: (entry: ContentEntry, enabled: boolean) => undefined;
+    onAuthor: (entry: ContentEntry) => void;
   };
   rows: ContentEntry[];
   rowVirtualizer: ReactVirtualizer<HTMLDivElement, Element>;
@@ -162,6 +171,7 @@ export function ContentListPane({
   busyKey,
   canBrowse,
   canEdit,
+  canFilterByAuthor,
   canSelectRows,
   catalog,
   changedAt,
@@ -172,9 +182,12 @@ export function ContentListPane({
   detailSelectedVersion,
   detailStack,
   detailWidth,
+  displayItems,
   duplicates,
   fileStates,
+  filterByAuthor,
   findInstalled,
+  groupActions,
   handleKeyDown,
   hasActiveFilters,
   hideTrashBar,
@@ -281,8 +294,47 @@ export function ContentListPane({
                 }}
               >
                 {virtualItems.map((virtualRow) => {
-                  const entry = rows[virtualRow.index];
-                  if (!entry) return null;
+                  const item = displayItems[virtualRow.index];
+                  if (!item) return null;
+
+                  if (item.kind === "header") {
+                    return (
+                      <div
+                        key={`group:${item.groupId}`}
+                        role="presentation"
+                        className="absolute top-0 left-0 w-full"
+                        style={{
+                          height: `${virtualRow.size}px`,
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                      >
+                        <GroupHeader
+                          groupId={item.groupId}
+                          name={item.name}
+                          count={item.count}
+                          collapsed={item.collapsed}
+                          entries={item.entries}
+                          allDisabled={item.entries.every((member) =>
+                            fileStates.ready
+                              ? fileStates.disabled.has(member.key)
+                              : member.markedDisabled,
+                          )}
+                          canToggle={
+                            canEdit &&
+                            canToggleType(projectType) &&
+                            Boolean(instancePath) &&
+                            item.entries.some((member) =>
+                              fileStates.present.has(member.key),
+                            )
+                          }
+                          isBusy={isBusy}
+                          actions={groupActions}
+                        />
+                      </div>
+                    );
+                  }
+
+                  const entry = item.entry;
 
                   return (
                     <div
@@ -303,7 +355,7 @@ export function ContentListPane({
                         lang={lang}
                         sizeUnits={sizeUnits}
                         isLibrary={scope === "library"}
-                        isActive={virtualRow.index === activeIndex}
+                        isActive={item.rowIndex === activeIndex}
                         isSelected={selection.has(entry.key)}
                         isDetailOpen={detail?.entry.key === entry.key}
                         isSelectable={canSelectRows}
@@ -571,6 +623,11 @@ export function ContentListPane({
                 true,
               );
             }}
+            onAuthor={
+              canFilterByAuthor(detailEntry.provider)
+                ? (author) => filterByAuthor(detailEntry.provider, author)
+                : undefined
+            }
             onTranslate={() => void translateDetail()}
             onRetry={() => void loadDetail(detailEntry, true)}
             width={detailWidth.width}

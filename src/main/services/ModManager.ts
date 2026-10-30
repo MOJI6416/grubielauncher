@@ -12,6 +12,7 @@ import {
   Provider
 } from '@/types/ModManager'
 import { isSourceUnreachable } from '@/shared/errors'
+import { curseForgeCategories, modrinthCategories } from '@/shared/modCategories'
 import { LOADERS_WITHOUT_CURSEFORGE_MODS } from '@/shared/loaderCompat'
 import type { IModpackSource } from '@/types/ModpackSource'
 import type { ModrinthServerPack } from '@/types/ModrinthServers'
@@ -78,6 +79,7 @@ export class ModManager {
       projectType: ProjectType
       sort: string
       filter: string[]
+      author?: string
     },
     pagination: {
       offset: number
@@ -85,6 +87,10 @@ export class ModManager {
     }
   ): Promise<ISearchData> {
     const { version, loader, projectType, sort, filter } = options
+    const author =
+      typeof options.author === 'string' && options.author.trim()
+        ? options.author.trim()
+        : undefined
 
     const data: ISearchData = {
       projects: [],
@@ -116,7 +122,8 @@ export class ModManager {
             versions,
             projectType,
             sort: sort != '' ? SortValue[sort] : undefined,
-            category: filter
+            category: filter,
+            author
           },
           pagination
         )
@@ -145,7 +152,8 @@ export class ModManager {
             version: version,
             modType: ModTypeClassIds[projectType],
             sortField: cfSortField,
-            category: filter
+            category: filter,
+            authorId: author && /^\d+$/.test(author) ? author : undefined
           },
           {
             offset: pagination.offset,
@@ -172,7 +180,8 @@ export class ModManager {
             projectType,
             version: version,
             sort: sort != '' ? SortValue[sort] : undefined,
-            category: filter
+            category: filter,
+            author
           },
           {
             offset: pagination.offset,
@@ -259,11 +268,15 @@ export class ModManager {
 
         return { ...cfModToProject(mod), body: description || '' }
       } else if (provider == Provider.MODRINTH) {
-        const project = await Modrinth.get(projectId)
+        const [project, author] = await Promise.all([
+          Modrinth.get(projectId),
+          Modrinth.getAuthor(projectId)
+        ])
 
         if (!project) return null
 
-        return mrProjectToProject(project, project.project_type as ProjectType)
+        const mapped = mrProjectToProject(project, project.project_type as ProjectType)
+        return author ? { ...mapped, author: { id: author, name: author } } : mapped
       }
 
       return null
@@ -374,6 +387,41 @@ export class ModManager {
       publishedAt: match.version.datePublished,
       releaseType: match.version.releaseType
     }
+  }
+
+  static async projectCategories(
+    modrinthIds: string[],
+    curseforgeIds: string[]
+  ): Promise<Record<string, string[]>> {
+    const result: Record<string, string[]> = {}
+
+    const modrinth = [...new Set(modrinthIds)]
+    for (const batch of chunk(modrinth, MODRINTH_PROJECT_BATCH)) {
+      const projects = await Modrinth.getProjects(batch)
+      if (!projects) continue
+
+      const wanted = new Set(batch)
+      for (const id of batch) result[`${Provider.MODRINTH}:${id}`] = []
+      for (const project of projects) {
+        const categories = modrinthCategories(project.categories)
+        for (const id of [project.id, project.slug]) {
+          if (id && wanted.has(id)) result[`${Provider.MODRINTH}:${id}`] = categories
+        }
+      }
+    }
+
+    const curseforge = [...new Set(curseforgeIds)].filter((id) => /^\d+$/.test(id))
+    if (curseforge.length > 0) {
+      const mods = await CurseForge.getMods(curseforge.map(Number))
+      if (mods) {
+        for (const id of curseforge) result[`${Provider.CURSEFORGE}:${id}`] = []
+        for (const mod of mods) {
+          result[`${Provider.CURSEFORGE}:${mod.id}`] = curseForgeCategories(mod.categories)
+        }
+      }
+    }
+
+    return result
   }
 
   static async modrinthClientSides(ids: string[]): Promise<Record<string, boolean> | null> {

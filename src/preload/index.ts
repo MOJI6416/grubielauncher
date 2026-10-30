@@ -1040,6 +1040,7 @@ export interface IElectronAPI {
         projectType: ProjectType;
         sort: string;
         filter: string[];
+        author?: string;
       },
       pagination: {
         offset: number;
@@ -1102,6 +1103,10 @@ export interface IElectronAPI {
     modrinthClientSides: (
       ids: string[],
     ) => Promise<Record<string, boolean> | null>;
+    projectCategories: (
+      modrinthIds: string[],
+      curseforgeIds: string[],
+    ) => Promise<Record<string, string[]>>;
     checkModpack: (
       modpackPath: string,
       pack?: IProject,
@@ -2250,6 +2255,8 @@ export const api: IElectronAPI = {
       invoke("modManager:identifyLocal", requests),
     modrinthClientSides: (ids: string[]) =>
       invoke("modManager:modrinthClientSides", ids),
+    projectCategories: (modrinthIds: string[], curseforgeIds: string[]) =>
+      invoke("modManager:projectCategories", modrinthIds, curseforgeIds),
     checkModpack: (
       modpackPath: string,
       pack?: any,

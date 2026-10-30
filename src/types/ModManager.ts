@@ -43,6 +43,12 @@ export interface IProject {
   }[];
   body: string;
   stats?: IProjectStats;
+  author?: IProjectAuthor;
+}
+
+export interface IProjectAuthor {
+  id: string;
+  name: string;
 }
 
 export interface IProjectStats {

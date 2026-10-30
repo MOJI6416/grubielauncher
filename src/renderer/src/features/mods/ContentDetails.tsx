@@ -20,12 +20,14 @@ import {
   PinOff,
   Plus,
   Trash2,
+  UserRound,
   X,
 } from "lucide-react";
 import {
   DependencyType,
   ILocalProject,
   IProject,
+  IProjectAuthor,
   IVersion as ModVersion,
   Provider,
   VersionReleaseType,
@@ -112,6 +114,7 @@ export function ContentDetails({
   isPinned = false,
   canPin = false,
   onTogglePin,
+  onAuthor,
 }: {
   entry: ContentEntry;
   project: IProject | null;
@@ -139,6 +142,7 @@ export function ContentDetails({
   isPinned?: boolean;
   canPin?: boolean;
   onTogglePin?: () => void;
+  onAuthor?: (author: IProjectAuthor) => void;
   onBack: () => void;
   onClose: () => void;
   onSelectVersion: (version: ModVersion) => void;
@@ -160,6 +164,7 @@ export function ContentDetails({
     [detail],
   );
   const stats = detail?.stats ?? entry.stats;
+  const author = project?.author ?? entry.project?.author;
   const changelog = useVersionChangelog({
     provider: entry.provider,
     projectId: entry.id,
@@ -364,6 +369,29 @@ export function ContentDetails({
                       <Package className="size-3" />
                     )}
                   </span>
+                  {author &&
+                    (onAuthor ? (
+                      <Hint
+                        content={t("modManager.authorProjects", {
+                          name: author.name,
+                        })}
+                        className="max-w-64"
+                      >
+                        <button
+                          type="button"
+                          className="flex max-w-40 min-w-0 items-center gap-1 rounded-sm transition-colors hover:text-foreground"
+                          onClick={() => onAuthor(author)}
+                        >
+                          <UserRound className="size-3 shrink-0" />
+                          <span className="truncate">{author.name}</span>
+                        </button>
+                      </Hint>
+                    ) : (
+                      <span className="flex max-w-40 min-w-0 items-center gap-1">
+                        <UserRound className="size-3 shrink-0" />
+                        <span className="truncate">{author.name}</span>
+                      </span>
+                    ))}
                   {downloads && (
                     <span className="flex items-center gap-1 tabular-nums">
                       <Download className="size-3" />

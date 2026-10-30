@@ -27,6 +27,7 @@ import {
 import type { NewInstanceAction, NewInstanceState } from "./state";
 import type { VersionCatalogState } from "./useVersionCatalog";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { ModSetPicker } from "@renderer/features/modSets/ModSetPicker";
 
 const KIND_FILTERS: VersionKind[] = ["release", "snapshot", "old"];
 
@@ -330,6 +331,14 @@ export function CustomForm({
             warnings={warnings}
             className={isModded ? "shrink-0" : "min-h-0 flex-1"}
           >
+            {isModded && (
+              <ModSetPicker
+                minecraftVersion={selected?.id}
+                loader={state.loader}
+                onMods={(mods) => dispatch({ type: "setMods", mods })}
+              />
+            )}
+
             {!isModded && (
               <>
                 <p className="border-t border-border/60 p-2.5 text-[0.7rem] leading-snug text-muted-foreground">

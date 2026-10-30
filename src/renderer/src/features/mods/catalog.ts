@@ -11,6 +11,7 @@ export interface CatalogRequest {
   filters: string[];
   gameVersion: string | undefined;
   loader: Loader | undefined;
+  author?: string;
 }
 
 export function requestSignature(request: CatalogRequest): string {
@@ -22,5 +23,6 @@ export function requestSignature(request: CatalogRequest): string {
     [...request.filters].sort().join("+"),
     request.gameVersion ?? "",
     request.loader ?? "",
+    request.author ?? "",
   ].join("|");
 }

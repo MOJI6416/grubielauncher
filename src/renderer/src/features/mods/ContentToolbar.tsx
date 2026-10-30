@@ -2,6 +2,7 @@ import { Dispatch, SetStateAction } from "react";
 import { SiCurseforge, SiModrinth } from "react-icons/si";
 import {
   FilePlus2,
+  Layers,
   Library,
   Loader2,
   Package,
@@ -24,6 +25,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { VirtualizedSelect } from "@/components/ui/virtualized-select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Popover,
   PopoverContent,
@@ -54,28 +61,33 @@ import {
 
 import type { RefObject } from "react";
 import type { TFunction } from "i18next";
-import type { LibraryFacetCounts } from "./filters";
+import type { CategoryCount, LibraryFacetCounts } from "./filters";
 import type { IFilterGroup } from "@/types/ModManager";
 import type { UpdateCheckResult } from "./useUpdateCheck";
 import type { IndicatorBox } from "@renderer/utilities/useSlidingIndicator";
 
 export interface ContentToolbarProps {
   browseLoader: Loader | undefined;
+  canApplySet: boolean;
   canBrowse: boolean;
   canEdit: boolean;
   catalogFilters: string[];
   catalogProvider: Provider;
   catalogSort: string;
+  categoriesLoading: boolean;
+  categoryCounts: { categories: CategoryCount[]; libraries: number };
   facetCounts: LibraryFacetCounts;
   filterGroups: IFilterGroup[];
   filterQuery: string;
   gameVersions: IVersion[];
+  hideLibraries: boolean;
   identifiable: ContentEntry[];
   identifyLocal: (onlyKeys?: ReadonlySet<string>) => Promise<void>;
   isBusy: boolean;
   isIdentifying: boolean;
   isModpacks: boolean;
   isOnline: boolean;
+  libraryCategories: string[];
   libraryEntries: ContentEntry[];
   libraryFacets: LibraryFacet[];
   librarySort: LibrarySort;
@@ -83,6 +95,7 @@ export interface ContentToolbarProps {
   loader: Loader | undefined;
   loaderOptions: Loader[];
   meta: { sorts: string[]; filters: IFilterGroup[]; isReady: boolean };
+  openSets: (kind: "save" | "apply") => void;
   pickLocalFiles: () => Promise<void>;
   projectType: ProjectType;
   projectTypes: ProjectType[];
@@ -100,6 +113,8 @@ export interface ContentToolbarProps {
   setCatalogLoader: Dispatch<SetStateAction<Loader | null>>;
   setCatalogSort: Dispatch<SetStateAction<string>>;
   setFilterQuery: Dispatch<SetStateAction<string>>;
+  setHideLibraries: Dispatch<SetStateAction<boolean>>;
+  setLibraryCategories: Dispatch<SetStateAction<string[]>>;
   setLibraryFacets: Dispatch<SetStateAction<LibraryFacet[]>>;
   setLibrarySort: Dispatch<SetStateAction<LibrarySort>>;
   setLoader: (loader: Loader | undefined) => void;
@@ -122,21 +137,26 @@ export interface ContentToolbarProps {
 
 export function ContentToolbar({
   browseLoader,
+  canApplySet,
   canBrowse,
   canEdit,
   catalogFilters,
   catalogProvider,
   catalogSort,
+  categoriesLoading,
+  categoryCounts,
   facetCounts,
   filterGroups,
   filterQuery,
   gameVersions,
+  hideLibraries,
   identifiable,
   identifyLocal,
   isBusy,
   isIdentifying,
   isModpacks,
   isOnline,
+  libraryCategories,
   libraryEntries,
   libraryFacets,
   librarySort,
@@ -144,6 +164,7 @@ export function ContentToolbar({
   loader,
   loaderOptions,
   meta,
+  openSets,
   pickLocalFiles,
   projectType,
   projectTypes,
@@ -156,6 +177,8 @@ export function ContentToolbar({
   setCatalogLoader,
   setCatalogSort,
   setFilterQuery,
+  setHideLibraries,
+  setLibraryCategories,
   setLibraryFacets,
   setLibrarySort,
   setLoader,
@@ -170,6 +193,9 @@ export function ContentToolbar({
   updateCheck,
   version,
 }: ContentToolbarProps) {
+  const libraryFilterCount =
+    libraryFacets.length + libraryCategories.length + (hideLibraries ? 1 : 0);
+
   return (
     <>
       <div className="@container flex shrink-0 flex-wrap items-center gap-2 pb-2.5">
@@ -395,11 +421,11 @@ export function ContentToolbar({
                 {t("modManager.filter")}
               </span>
               {(scope === "library"
-                ? libraryFacets.length
+                ? libraryFilterCount
                 : catalogFilters.length) > 0 && (
                 <span className="ml-0.5 rounded-sm bg-primary-soft px-1 font-mono text-[0.625rem] tabular-nums">
                   {scope === "library"
-                    ? libraryFacets.length
+                    ? libraryFilterCount
                     : catalogFilters.length}
                 </span>
               )}
@@ -407,7 +433,7 @@ export function ContentToolbar({
           </PopoverTrigger>
           <PopoverContent align="end" className="w-72 p-0">
             {scope === "library" ? (
-              <div className="max-h-80 overflow-y-auto p-1.5">
+              <div className="max-h-[min(30rem,calc(100vh-12rem))] overflow-y-auto p-1.5">
                 {LIBRARY_FACETS.map((facet) => (
                   <button
                     key={facet}
@@ -434,6 +460,66 @@ export function ContentToolbar({
                     </span>
                   </button>
                 ))}
+
+                {(categoryCounts.categories.length > 0 ||
+                  hideLibraries ||
+                  categoriesLoading) && (
+                  <div className="mt-1 border-t border-border pt-1">
+                    <p className="flex items-center gap-1.5 px-2 py-1 text-[0.6875rem] font-medium text-faint uppercase">
+                      {translateCategory(
+                        "modManager.categories.categories",
+                        "Categories",
+                      )}
+                      {categoriesLoading && (
+                        <Loader2 className="size-3 animate-spin" />
+                      )}
+                    </p>
+
+                    {(categoryCounts.libraries > 0 || hideLibraries) && (
+                      <button
+                        type="button"
+                        onClick={() => setHideLibraries((prev) => !prev)}
+                        className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-surface-3"
+                      >
+                        <Checkbox
+                          checked={hideLibraries}
+                          className="pointer-events-none"
+                        />
+                        <span className="min-w-0 flex-1 truncate">
+                          {t("modManager.hideLibraries")}
+                        </span>
+                        <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
+                          {categoryCounts.libraries}
+                        </span>
+                      </button>
+                    )}
+
+                    {categoryCounts.categories.map(({ slug, count }) => (
+                      <button
+                        key={slug}
+                        type="button"
+                        onClick={() =>
+                          setLibraryCategories((prev) => toggleValue(prev, slug))
+                        }
+                        className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-surface-3"
+                      >
+                        <Checkbox
+                          checked={libraryCategories.includes(slug)}
+                          className="pointer-events-none"
+                        />
+                        <span className="min-w-0 flex-1 truncate">
+                          {translateCategory(
+                            categoryLocaleKey(slug),
+                            humanizeFilterName(slug),
+                          )}
+                        </span>
+                        <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
+                          {count}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <>
@@ -543,6 +629,37 @@ export function ContentToolbar({
               </Button>
             </Hint>
           )}
+
+        {scope === "library" && canEdit && !isModpacks && (
+          <DropdownMenu>
+            <Hint content={t("modSets.title")} side="bottom">
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  className="size-8 shrink-0"
+                  disabled={isBusy}
+                  aria-label={t("modSets.title")}
+                >
+                  <Layers className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+            </Hint>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                disabled={!canApplySet}
+                onSelect={() => openSets("apply")}
+              >
+                <Layers />
+                {t("modSets.apply")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => openSets("save")}>
+                <FilePlus2 />
+                {t("modSets.saveAll")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {scope === "library" && canEdit && !isModpacks && (
           <Hint content={t("modManager.checkUpdates")} side="bottom">

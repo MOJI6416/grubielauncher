@@ -59,6 +59,7 @@ export function useCatalogSearch(
             projectType: current.projectType,
             sort: current.sort,
             filter: current.filters.filter(Boolean),
+            author: current.author,
           },
           { offset, limit: CATALOG_PAGE_SIZE },
         )

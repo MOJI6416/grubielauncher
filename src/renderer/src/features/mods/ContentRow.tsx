@@ -19,6 +19,7 @@ import {
   Server,
   Trash2,
   Undo2,
+  UserRound,
   Loader2,
 } from "lucide-react";
 import { Provider } from "@/types/ModManager";
@@ -49,6 +50,7 @@ export interface ContentRowActions {
   onDelete: (entry: ContentEntry) => void;
   onRestore: (entry: ContentEntry) => void;
   onToggleEnabled: (entry: ContentEntry, enabled: boolean) => void;
+  onAuthor: (entry: ContentEntry) => void;
 }
 
 const PROVIDER_NAMES: Partial<Record<Provider, string>> = {
@@ -131,6 +133,7 @@ export const ContentRow = memo(function ContentRow({
     entry.provider === Provider.MODRINTH
       ? formatCompactNumber(entry.stats?.follows, lang)
       : null;
+  const author = isLibrary ? undefined : entry.project?.author;
 
   return (
     <div
@@ -306,6 +309,24 @@ export const ContentRow = memo(function ContentRow({
             </>
           ) : (
             <>
+              {author && (
+                <Hint
+                  content={t("modManager.authorProjects", { name: author.name })}
+                  className="max-w-64"
+                >
+                  <button
+                    type="button"
+                    className="flex max-w-32 min-w-0 shrink-0 items-center gap-1 rounded-sm transition-colors hover:text-foreground"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      actions.onAuthor(entry);
+                    }}
+                  >
+                    <UserRound className="size-3 shrink-0" />
+                    <span className="truncate">{author.name}</span>
+                  </button>
+                </Hint>
+              )}
               {downloads && (
                 <span className="flex shrink-0 items-center gap-1 tabular-nums">
                   <Download className="size-3 shrink-0" />
