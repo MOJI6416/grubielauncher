@@ -41,6 +41,17 @@ describe("releaseToNewsItem", () => {
     );
   });
 
+  it("shows the release art as the card image", () => {
+    const url =
+      "https://cdn.grubielauncher.com/launcher-releases/1.9.3/cover-0123456789abcdef.webp";
+
+    expect(
+      releaseToNewsItem(note({ cover: { url, ogUrl: "" } }), "en")!.image,
+    ).toBe(url);
+    expect(releaseToNewsItem(note(), "en")!.image).toBe("");
+    expect(releaseToNewsItem(note({ cover: null }), "en")!.image).toBe("");
+  });
+
   it("survives a release without a date", () => {
     expect(releaseToNewsItem(note({ publishedAt: null }), "en")!.time).toBe(0);
   });

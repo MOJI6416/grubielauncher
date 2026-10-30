@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ExternalLink, MessageCircle, Sparkles, Wrench } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
@@ -32,6 +33,9 @@ export function WhatsNewModal({
   const hasRelease = Boolean(release);
   const discordUrl = release?.discordUrl || DEFAULT_DISCORD_URL;
   const isMilestone = release?.isMilestone === true;
+  const coverUrl = release?.cover?.url ?? "";
+  const [failedCover, setFailedCover] = useState("");
+  const showCover = Boolean(coverUrl) && failedCover !== coverUrl;
 
   const publishedAt = release?.publishedAt
     ? new Date(release.publishedAt)
@@ -57,32 +61,60 @@ export function WhatsNewModal({
       >
         {isMilestone && <MilestoneBeam />}
 
-        <DialogHeader className="gap-1.5 border-b border-border px-5 py-4 pr-12">
-          <span className="flex min-w-0 items-center gap-2 text-[0.7rem] text-faint">
-            <Sparkles className="size-3.5 shrink-0 text-primary" />
-            <span className="font-mono tracking-[0.09em] tabular-nums">
-              v{version}
-            </span>
-            {publishedLabel && (
-              <>
-                <span aria-hidden>·</span>
-                <span className="truncate tabular-nums">{publishedLabel}</span>
-              </>
-            )}
-            {isMilestone && (
-              <span className="flex h-4.5 shrink-0 items-center rounded border border-primary/40 bg-primary-soft-raised px-1.5 text-[0.6rem] font-medium tracking-wide text-foreground uppercase">
-                {t("whatsNew.milestone")}
-              </span>
-            )}
-          </span>
-
-          <DialogTitle className="pr-0 text-lg leading-6">{title}</DialogTitle>
-
-          {subtitle && (
-            <p className="text-sm leading-5 text-muted-foreground">
-              {subtitle}
-            </p>
+        <DialogHeader
+          className={cn(
+            "relative border-b border-border px-5 py-4 pr-12",
+            showCover && "aspect-[2/1] justify-end overflow-hidden",
           )}
+        >
+          {showCover && (
+            <>
+              <img
+                src={coverUrl}
+                alt=""
+                aria-hidden
+                draggable={false}
+                onError={() => setFailedCover(coverUrl)}
+                className="absolute inset-0 size-full bg-surface-2 object-cover object-[50%_35%] select-none"
+              />
+              <span
+                aria-hidden
+                className="absolute inset-0 bg-gradient-to-t from-popover from-10% via-popover/75 via-35% to-transparent to-65%"
+              />
+            </>
+          )}
+
+          <div className="relative grid gap-1.5">
+            <span className="flex min-w-0 items-center gap-2 text-[0.7rem] text-faint">
+              <Sparkles className="size-3.5 shrink-0 text-primary" />
+              <span className="font-mono tracking-[0.09em] tabular-nums">
+                v{version}
+              </span>
+              {publishedLabel && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span className="truncate tabular-nums">
+                    {publishedLabel}
+                  </span>
+                </>
+              )}
+              {isMilestone && (
+                <span className="flex h-4.5 shrink-0 items-center rounded border border-primary/40 bg-primary-soft-raised px-1.5 text-[0.6rem] font-medium tracking-wide text-foreground uppercase">
+                  {t("whatsNew.milestone")}
+                </span>
+              )}
+            </span>
+
+            <DialogTitle className="pr-0 text-lg leading-6">
+              {title}
+            </DialogTitle>
+
+            {subtitle && (
+              <p className="text-sm leading-5 text-muted-foreground">
+                {subtitle}
+              </p>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="relative min-h-0">

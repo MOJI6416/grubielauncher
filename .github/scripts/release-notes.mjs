@@ -5,6 +5,9 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const NOTES_DIR = path.join(ROOT, "release-notes");
+const COVERS_DIR = path.join(NOTES_DIR, "covers");
+const COVER_MAX_BYTES = 2 * 1024 * 1024;
+const COVER_FILES = { webp: "webp", jpeg: "jpg" };
 const REPO = process.env.GITHUB_REPOSITORY || "MOJI6416/grubielauncher";
 const API_URL = (process.env.GRUBIE_API_URL || "https://api.grubielauncher.com").replace(/\/+$/, "");
 
@@ -144,6 +147,40 @@ function readNotes(version) {
   }
 }
 
+function coverPath(version, format) {
+  return path.join(COVERS_DIR, `${version}.${COVER_FILES[format]}`);
+}
+
+function coverErrors(version) {
+  const present = Object.keys(COVER_FILES).filter((format) => fs.existsSync(coverPath(version, format)));
+  if (!present.length) return null;
+  const errors = [];
+  for (const format of Object.keys(COVER_FILES)) {
+    const name = `release-notes/covers/${version}.${COVER_FILES[format]}`;
+    if (!present.includes(format)) {
+      errors.push(`Нет ${name}: обложка — это пара .webp и .jpg, их делает скилл grubie-news-cover`);
+      continue;
+    }
+    const image = fs.readFileSync(coverPath(version, format));
+    if (image.length > COVER_MAX_BYTES) errors.push(`${name}: больше 2 МБ`);
+    const matches =
+      format === "webp"
+        ? image.toString("ascii", 0, 4) === "RIFF" && image.toString("ascii", 8, 12) === "WEBP"
+        : image[0] === 0xff && image[1] === 0xd8 && image[2] === 0xff;
+    if (!matches) errors.push(`${name}: внутри не ${format.toUpperCase()}`);
+  }
+  return errors;
+}
+
+function readCover(version) {
+  const errors = coverErrors(version);
+  if (errors === null) return null;
+  if (errors.length) throw new NotesError(errors.map((error) => `- ${error}`).join("\n"));
+  return Object.fromEntries(
+    Object.keys(COVER_FILES).map((format) => [format, fs.readFileSync(coverPath(version, format)).toString("base64")])
+  );
+}
+
 function stripPeriod(item) {
   return item.replace(/(?<!\.)\.$/, "");
 }
@@ -172,9 +209,10 @@ function renderDiscord(notes, locale) {
   return parts.join("\n\n");
 }
 
-function renderGithub(notes) {
+function renderGithub(notes, coverUrl) {
   const content = notes.en;
   const parts = [`## Grubie Launcher ${notes.version}`, content.subtitle];
+  if (coverUrl) parts.unshift(`![Grubie Launcher ${notes.version}](${coverUrl})`);
   if (content.highlights.length) parts.push(`### Highlights\n${bulletList(content.highlights, false)}`);
   if (content.fixes.length) parts.push(`### Fixed\n${bulletList(content.fixes, false)}`);
   return parts.join("\n\n");
@@ -281,6 +319,10 @@ function validate(notes, version) {
     if (length > DISCORD_LIMIT) errors.push(`Discord ${locale}: ${length} символов при лимите ${DISCORD_LIMIT}`);
   }
 
+  const cover = coverErrors(version);
+  if (cover === null) warnings.push(`Нет обложки release-notes/covers/${version}.webp — её делает скилл grubie-news-cover, без неё релиз выйдет с карточкой без арта`);
+  else errors.push(...cover);
+
   return { errors, warnings };
 }
 
@@ -298,9 +340,11 @@ function apiPayload(notes, editOnly) {
     const { title, subtitle, highlights, fixes } = notes[locale];
     content[locale] = { ...(title ? { title } : {}), subtitle, highlights, fixes };
   }
+  const cover = readCover(notes.version);
   return {
     isMilestone: notes.isMilestone === true,
     content,
+    ...(cover ? { cover } : {}),
     discord: {
       message: renderDiscord(notes, "en"),
       threadName: threadName(notes),
@@ -332,8 +376,8 @@ async function findRelease(version) {
   return releases.find((release) => release.tag_name === version) ?? null;
 }
 
-async function updateGithub(release, notes, publish) {
-  const patch = { body: renderGithub(notes) };
+async function updateGithub(release, notes, publish, coverUrl) {
+  const patch = { body: renderGithub(notes, coverUrl) };
   if (publish && release.draft) {
     const names = new Set(release.assets.map((asset) => asset.name));
     const required = ["latest.yml", "latest-linux.yml"];
@@ -352,10 +396,10 @@ function agentToken() {
   return token;
 }
 
-async function publishToApi(notes, editOnly) {
+async function agentPut(pathname, payload, { allowMissing = false } = {}) {
   const token = agentToken();
-  const url = `${API_URL}/agent/launcher-releases/${encodeURIComponent(notes.version)}`;
-  const body = JSON.stringify(apiPayload(notes, editOnly));
+  const url = `${API_URL}/agent/launcher-releases/${pathname}`;
+  const body = JSON.stringify(payload);
   let lastError = "";
   for (let attempt = 1; attempt <= 4; attempt++) {
     try {
@@ -366,24 +410,43 @@ async function publishToApi(notes, editOnly) {
         signal: AbortSignal.timeout(60_000)
       });
       const text = await response.text();
-      if (response.ok) {
-        const result = JSON.parse(text);
-        console.log(`Что нового: опубликовано для ${notes.version}`);
-        if (result.discord) {
-          console.log(`Discord: https://discord.com/channels/${GUILD_ID}/${result.discord.channelId}/${result.discord.messageId}`);
-        } else {
-          console.log("Discord: анонса этого релиза нет, новый не публикуется");
-        }
-        return;
-      }
+      if (response.ok) return JSON.parse(text);
+      if (response.status === 404 && allowMissing) return null;
       lastError = `${response.status} ${text}`;
-      if (response.status < 500) break;
+      if (response.status < 500 && response.status !== 429) break;
     } catch (error) {
       lastError = error.message;
     }
     if (attempt < 4) await new Promise((resolve) => setTimeout(resolve, attempt * 10_000));
   }
   fail(`api: ${lastError}`);
+}
+
+async function publishToApi(notes, editOnly) {
+  const result = await agentPut(encodeURIComponent(notes.version), apiPayload(notes, editOnly));
+  console.log(`Что нового: опубликовано для ${notes.version}`);
+  const coverUrl = result.release?.cover?.url ?? null;
+  console.log(coverUrl ? `Обложка: ${coverUrl}` : "Обложка: нет");
+  if (result.discord) {
+    console.log(`Discord: https://discord.com/channels/${GUILD_ID}/${result.discord.channelId}/${result.discord.messageId}`);
+  } else {
+    console.log("Discord: анонса этого релиза нет, новый не публикуется");
+  }
+  return coverUrl;
+}
+
+async function publishCoverToApi(version) {
+  const cover = readCover(version);
+  if (!cover) {
+    console.log(`${version}: обложки нет — пропуск`);
+    return;
+  }
+  const result = await agentPut(`${encodeURIComponent(version)}/cover`, cover, { allowMissing: true });
+  if (!result) {
+    console.log(`${version}: такого релиза нет в «Что нового» — обложка подождёт публикации`);
+    return;
+  }
+  console.log(`${version}: обложка — ${result.release.cover.url}`);
 }
 
 function changedVersions(base) {
@@ -395,14 +458,20 @@ function changedVersions(base) {
     from = "";
   }
   const output = git("diff", "--name-only", "--diff-filter=AM", from || "HEAD~1", "HEAD", "--", "release-notes");
-  return output
+  const versions = output
     .split("\n")
-    .map((line) => line.match(/^release-notes\/(\d+\.\d+\.\d+)\.json$/)?.[1])
+    .map((line) => line.match(/^release-notes\/(?:covers\/)?(\d+\.\d+\.\d+)\.(?:json|webp|jpg)$/)?.[1])
     .filter(Boolean);
+  return [...new Set(versions)];
 }
 
 function printPreview(notes) {
   const section = (title, text) => console.log(`\n===== ${title} =====\n${text}`);
+  const cover = coverPath(notes.version, "webp");
+  section(
+    "Обложка",
+    fs.existsSync(cover) ? `${path.relative(ROOT, cover)} (${Math.round(fs.statSync(cover).size / 1024)} КБ)` : "нет"
+  );
   section("GitHub-релиз (EN)", renderGithub(notes));
   for (const locale of notesLocales(notes)) section(`Что нового — ${locale.toUpperCase()}`, renderWhatsNew(notes, locale));
   section(
@@ -442,7 +511,8 @@ async function main() {
     const release = await findRelease(version);
     if (!release) fail(`На GitHub нет релиза ${version} — сборка его не создала`);
     await updateGithub(release, notes, true);
-    await publishToApi(notes, false);
+    const coverUrl = await publishToApi(notes, false);
+    if (coverUrl) await updateGithub(release, notes, false, coverUrl);
     return;
   }
 
@@ -454,14 +524,18 @@ async function main() {
       return;
     }
     for (const changed of versions) {
+      if (!fs.existsSync(notesPath(changed))) {
+        await publishCoverToApi(changed);
+        continue;
+      }
       const notes = load(changed);
       const release = await findRelease(changed);
       if (!release || release.draft) {
         console.log(`${changed}: релиз ещё не опубликован — тексты выпустит Release Launcher`);
         continue;
       }
-      await updateGithub(release, notes, false);
-      await publishToApi(notes, true);
+      const coverUrl = await publishToApi(notes, true);
+      await updateGithub(release, notes, false, coverUrl);
     }
     return;
   }
@@ -470,7 +544,9 @@ async function main() {
   node .github/scripts/release-notes.mjs check [версия] [--tag <тег>]   проверить release-notes/<версия>.json
   node .github/scripts/release-notes.mjs preview [версия]               показать тексты всех каналов
   node .github/scripts/release-notes.mjs publish [версия]               CI: опубликовать GitHub-релиз, «Что нового» и Discord
-  node .github/scripts/release-notes.mjs sync --since <sha>             CI: применить правки заметок к опубликованным релизам
+  node .github/scripts/release-notes.mjs sync --since <sha>             CI: применить правки заметок и обложек к опубликованным релизам
+
+Обложка версии — release-notes/covers/<версия>.webp и .jpg; у старых версий может быть без файла заметок.
 
 Без версии берётся version из package.json.`);
   process.exit(command ? 1 : 0);

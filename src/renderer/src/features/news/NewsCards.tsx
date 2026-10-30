@@ -184,7 +184,7 @@ function Cover({
   className?: string;
   size?: CoverSize;
 }) {
-  if (card.release) {
+  if (card.release && (!card.item.image || failed)) {
     return (
       <div
         className={cn(

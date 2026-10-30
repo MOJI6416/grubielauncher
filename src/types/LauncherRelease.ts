@@ -1,3 +1,8 @@
+export interface ILauncherReleaseCover {
+  url: string;
+  ogUrl: string;
+}
+
 export interface ILauncherReleaseNote {
   version: string;
   title: string;
@@ -7,6 +12,7 @@ export interface ILauncherReleaseNote {
   discordCta: string;
   discordUrl: string;
   isMilestone: boolean;
+  cover?: ILauncherReleaseCover | null;
   publishedAt: string | null;
 }
 

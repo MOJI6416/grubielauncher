@@ -33,7 +33,7 @@ export function releaseToNewsItem(
     title: release.title || `Grubie Launcher ${version}`,
     url: releaseNewsUrl(version, locale),
     author: "",
-    image: "",
+    image: release.cover?.url ?? "",
     imageAltText: "",
     description: release.subtitle || "",
     time: releaseTime(release),

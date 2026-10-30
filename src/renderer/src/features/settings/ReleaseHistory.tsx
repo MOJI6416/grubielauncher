@@ -60,6 +60,8 @@ function ReleaseRow({
   const { t } = useTranslation();
   const published = release.publishedAt ? new Date(release.publishedAt) : null;
   const day = published ? formatDay(published) : "";
+  const coverUrl = release.cover?.url ?? "";
+  const [failedCover, setFailedCover] = useState("");
 
   return (
     <div className="relative">
@@ -109,6 +111,18 @@ function ReleaseRow({
 
       <Collapse show={isOpen}>
         <div className="grid gap-2.5 px-3.5 pb-3">
+          {coverUrl && failedCover !== coverUrl && (
+            <img
+              src={coverUrl}
+              alt=""
+              aria-hidden
+              loading="lazy"
+              draggable={false}
+              onError={() => setFailedCover(coverUrl)}
+              className="aspect-[2/1] w-full max-w-sm rounded-lg bg-surface-3 object-cover object-[50%_35%] select-none"
+            />
+          )}
+
           {release.highlights.length > 0 && (
             <section className="grid gap-1">
               <h4 className="text-[0.6rem] font-semibold tracking-[0.09em] text-faint uppercase">
