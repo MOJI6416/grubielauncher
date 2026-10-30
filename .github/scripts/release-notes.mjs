@@ -169,7 +169,21 @@ function coverErrors(version) {
         : image[0] === 0xff && image[1] === 0xd8 && image[2] === 0xff;
     if (!matches) errors.push(`${name}: внутри не ${format.toUpperCase()}`);
   }
+  const github = path.join(COVERS_DIR, `${version}.github.webp`);
+  if (fs.existsSync(github)) {
+    const image = fs.readFileSync(github);
+    if (image.toString("ascii", 0, 4) !== "RIFF" || image.toString("ascii", 8, 12) !== "WEBP") {
+      errors.push(`release-notes/covers/${version}.github.webp: внутри не WEBP`);
+    }
+  }
   return errors;
+}
+
+function githubCover(version) {
+  const file = path.join(COVERS_DIR, `${version}.github.webp`);
+  if (!fs.existsSync(file)) return null;
+  const commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim();
+  return `https://raw.githubusercontent.com/${REPO}/${commit}/release-notes/covers/${version}.github.webp`;
 }
 
 function readCover(version) {
@@ -460,7 +474,7 @@ function changedVersions(base) {
   const output = git("diff", "--name-only", "--diff-filter=AM", from || "HEAD~1", "HEAD", "--", "release-notes");
   const versions = output
     .split("\n")
-    .map((line) => line.match(/^release-notes\/(?:covers\/)?(\d+\.\d+\.\d+)\.(?:json|webp|jpg)$/)?.[1])
+    .map((line) => line.match(/^release-notes\/(?:covers\/)?(\d+\.\d+\.\d+)(?:\.github)?\.(?:json|webp|jpg)$/)?.[1])
     .filter(Boolean);
   return [...new Set(versions)];
 }
@@ -512,7 +526,8 @@ async function main() {
     if (!release) fail(`На GitHub нет релиза ${version} — сборка его не создала`);
     await updateGithub(release, notes, true);
     const coverUrl = await publishToApi(notes, false);
-    if (coverUrl) await updateGithub(release, notes, false, coverUrl);
+    const image = githubCover(version) ?? coverUrl;
+    if (image) await updateGithub(release, notes, false, image);
     return;
   }
 
@@ -535,7 +550,7 @@ async function main() {
         continue;
       }
       const coverUrl = await publishToApi(notes, true);
-      await updateGithub(release, notes, false, coverUrl);
+      await updateGithub(release, notes, false, githubCover(changed) ?? coverUrl);
     }
     return;
   }
