@@ -212,7 +212,7 @@ function renderDiscord(notes, locale) {
 function renderGithub(notes, coverUrl) {
   const content = notes.en;
   const parts = [`## Grubie Launcher ${notes.version}`, content.subtitle];
-  if (coverUrl) parts.unshift(`![Grubie Launcher ${notes.version}](${coverUrl})`);
+  if (coverUrl) parts.unshift(`<img src="${coverUrl}" alt="Grubie Launcher ${notes.version}" width="480">`);
   if (content.highlights.length) parts.push(`### Highlights\n${bulletList(content.highlights, false)}`);
   if (content.fixes.length) parts.push(`### Fixed\n${bulletList(content.fixes, false)}`);
   return parts.join("\n\n");
