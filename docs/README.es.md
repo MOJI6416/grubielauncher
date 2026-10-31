@@ -9,7 +9,8 @@
 <p align="center">
   <img src="https://img.shields.io/github/v/release/MOJI6416/grubielauncher" alt="Version">
   <img src="https://img.shields.io/github/license/MOJI6416/grubielauncher" alt="License">
-  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blue" alt="Platforms">
+  <img src="https://img.shields.io/github/downloads/MOJI6416/grubielauncher/total" alt="Downloads">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue" alt="Platforms">
   <br/>
   <a href="https://discord.com/invite/URrKha9hk7" target="_blank">
     <img src="https://img.shields.io/discord/1229487451916210236?label=Discord&logo=discord&color=7289DA" alt="Discord">
@@ -20,7 +21,7 @@
 
 # Grubie Launcher
 
-Un launcher de Minecraft para Windows y Linux. Instala versiones del juego y cargadores de mods, descarga por sí mismo el Java adecuado y guarda cada instancia —mods, mundos, configuraciones, ajustes de inicio— en un solo lugar. Dos cosas lo distinguen de un launcher común: cuando el juego falla, lee el informe y le dice qué se rompió, y sus amigos están en la misma ventana: chat, voz y la posibilidad de unirse a los mundos de los demás sin abrir puertos ni rentar un servidor.
+Un launcher de Minecraft para Windows, macOS y Linux. Instala versiones del juego y cargadores de mods, descarga por sí mismo el Java adecuado y guarda cada instancia —mods, mundos, configuraciones, ajustes de inicio— en un solo lugar. Dos cosas lo distinguen de un launcher común: cuando el juego falla, lee el informe y le dice qué se rompió, y sus amigos están en la misma ventana: chat, voz y la posibilidad de unirse a los mundos de los demás sin abrir puertos ni rentar un servidor.
 
 La interfaz es una barra lateral fija con pantallas completas en lugar de diálogos apilados. <kbd>Ctrl</kbd>+<kbd>K</kbd> abre una paleta de comandos que llega a cualquier instancia, pantalla o ajuste, <kbd>Ctrl</kbd>+<kbd>I</kbd> abre el asistente y <kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> recorren el historial como en un navegador.
 
@@ -57,10 +58,12 @@ La interfaz es una barra lateral fija con pantallas completas en lugar de diálo
 
 - Versiones oficiales de Minecraft: lanzamientos, snapshots y versiones alfa y beta antiguas.
 - Cargadores de mods: **Forge**, **NeoForge**, **Fabric**, **Quilt**.
+- También versiones antiguas: **Legacy Fabric**, **Babric**, **Ornithe**, **Better than Adventure** con Babric, **ReIndev** con FoxLoader y mods jar.
 - Java se descarga automáticamente y se elige según la versión del juego.
 - Cuentas: **Microsoft**, **Ely.by**, **Discord** y sin conexión. Varias a la vez, se cambian desde la barra lateral.
 - Biblioteca de instancias con vista de lista y de cuadrícula, grupos, etiquetas y notas.
 - Continúe donde lo dejó: entre directamente a un mundo o a un servidor desde la pantalla de la instancia.
+- Catálogo de servidores de Modrinth: encuentre un servidor que encaje con su instancia o cree una instancia para cualquier servidor del catálogo.
 - La memoria, los flags de la JVM y la prioridad del proceso se configuran de forma global y se pueden cambiar para cada instancia.
 - Puede crear un acceso directo en el escritorio para una sola instancia.
 
@@ -71,6 +74,10 @@ La interfaz es una barra lateral fija con pantallas completas en lugar de diálo
 - Importación desde archivo: paquetes de Grubie, CurseForge, Modrinth (`.mrpack`), Prism y MultiMC; solo arrastre el archivo a la ventana.
 - Exportación de una instancia a un archivo comprimido; la copia incluye mods, configuraciones y mundos.
 - Publique una instancia y comparta el código: todos los que la instalaron verán su próxima actualización, con las diferencias de lo que cambia, y la sincronizarán con un clic.
+- Una instancia instalada desde un modpack de CurseForge o Modrinth queda vinculada a él: actualice a una versión más nueva con una vista previa de los cambios y vuelva a la anterior si algo se rompe.
+- Pase una instancia a otra versión de Minecraft o a otro cargador: el launcher crea una copia con versiones de mods compatibles y puede llevar los ajustes, las configuraciones de los mods y los mundos.
+- Conjuntos de mods: guarde los mods de una instancia como un conjunto y luego agréguelo a cualquier instancia o elíjalo al crear una nueva.
+- Sus propios grupos de mods: se pueden contraer, y un grupo entero se activa o desactiva de una vez.
 - Catálogo comunitario de instancias públicas, dentro del launcher y en [grubielauncher.com/packs](https://grubielauncher.com/es/packs).
 - Comprobación de integridad que vuelve a descargar los archivos dañados o faltantes.
 - Editor de configuraciones con búsqueda, autocompletado y versiones guardadas para volver atrás.
@@ -113,7 +120,7 @@ La interfaz es una barra lateral fija con pantallas completas en lugar de diálo
 # Instalación
 
 1. Descargue la última versión desde [Releases](https://github.com/MOJI6416/grubielauncher/releases).
-2. **Windows**: ejecute el instalador `-setup.exe`. **Linux**: ejecute el `.AppImage` o instale el `.deb`.
+2. **Windows**: ejecute el instalador `-setup.exe`. **macOS** (12 o posterior): abra el `.dmg` para su Mac (`arm64` para Apple Silicon, `x64` para Intel) y arrastre la aplicación a Aplicaciones. **Linux**: ejecute el `.AppImage` o instale el `.deb`.
 3. Inicie sesión con una cuenta o cree una sin conexión, y elija una versión.
 
 El launcher se actualiza solo; las versiones nuevas llegan sin reinstalar.

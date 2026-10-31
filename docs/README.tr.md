@@ -9,7 +9,8 @@
 <p align="center">
   <img src="https://img.shields.io/github/v/release/MOJI6416/grubielauncher" alt="Version">
   <img src="https://img.shields.io/github/license/MOJI6416/grubielauncher" alt="License">
-  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blue" alt="Platforms">
+  <img src="https://img.shields.io/github/downloads/MOJI6416/grubielauncher/total" alt="Downloads">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue" alt="Platforms">
   <br/>
   <a href="https://discord.com/invite/URrKha9hk7" target="_blank">
     <img src="https://img.shields.io/discord/1229487451916210236?label=Discord&logo=discord&color=7289DA" alt="Discord">
@@ -20,7 +21,7 @@
 
 # Grubie Launcher
 
-Windows ve Linux için bir Minecraft başlatıcısı. Oyun sürümlerini ve mod yükleyicilerini kurar, uygun Java’yı kendisi indirir ve her kurulumu — modlar, dünyalar, yapılandırmalar, başlatma ayarları — tek bir yerde tutar. Onu sıradan bir başlatıcıdan ayıran iki şey var: Oyun çöktüğünde raporu okur ve neyin bozulduğunu söyler; arkadaşlarınız da aynı pencerede — sohbet, sesli konuşma ve port yönlendirmesi ya da kiralık sunucu olmadan birbirinizin dünyasına katılma.
+Windows, macOS ve Linux için bir Minecraft başlatıcısı. Oyun sürümlerini ve mod yükleyicilerini kurar, uygun Java’yı kendisi indirir ve her kurulumu — modlar, dünyalar, yapılandırmalar, başlatma ayarları — tek bir yerde tutar. Onu sıradan bir başlatıcıdan ayıran iki şey var: Oyun çöktüğünde raporu okur ve neyin bozulduğunu söyler; arkadaşlarınız da aynı pencerede — sohbet, sesli konuşma ve port yönlendirmesi ya da kiralık sunucu olmadan birbirinizin dünyasına katılma.
 
 Arayüz, üst üste açılan pencereler yerine sabit bir kenar çubuğundan ve tam ekranlardan oluşur. <kbd>Ctrl</kbd>+<kbd>K</kbd> herhangi bir kuruluma, ekrana veya ayara ulaşan komut paletini açar, <kbd>Ctrl</kbd>+<kbd>I</kbd> asistanı açar, <kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> ise tarayıcıdaki gibi geçmişte gezinir.
 
@@ -57,10 +58,12 @@ Arayüz, üst üste açılan pencereler yerine sabit bir kenar çubuğundan ve t
 
 - Resmî Minecraft sürümleri: yayın sürümleri, snapshot’lar ve eski alfa/beta sürümleri.
 - Mod yükleyicileri: **Forge**, **NeoForge**, **Fabric**, **Quilt**.
+- Eski sürümler de: **Legacy Fabric**, **Babric**, **Ornithe**, Babric ile **Better than Adventure**, FoxLoader ile **ReIndev** ve jar modları.
 - Java otomatik olarak indirilir ve oyun sürümüne göre seçilir.
 - Hesaplar: **Microsoft**, **Ely.by**, **Discord** ve çevrimdışı. Aynı anda birkaç tane, kenar çubuğundan değiştirilir.
 - Liste ve ızgara görünümlü kurulum kütüphanesi; gruplar, etiketler ve notlar.
 - Kaldığınız yerden devam edin: kurulum ekranından doğrudan bir dünyaya veya sunucuya girin.
+- Modrinth sunucu kataloğu: kurulumunuza uyan bir sunucu bulun veya katalogdaki herhangi bir sunucu için kurulum oluşturun.
 - Bellek, JVM bayrakları ve işlem önceliği genel olarak ayarlanır, her kurulum için ayrıca değiştirilebilir.
 - Tek bir kurulum için masaüstü kısayolu oluşturulabilir.
 
@@ -71,6 +74,10 @@ Arayüz, üst üste açılan pencereler yerine sabit bir kenar çubuğundan ve t
 - Dosyadan içe aktarma: Grubie, CurseForge, Modrinth (`.mrpack`), Prism ve MultiMC paketleri — arşivi pencereye sürüklemeniz yeterli.
 - Bir kurulumu arşive dışa aktarma; kopya modları, yapılandırmaları ve dünyaları taşır.
 - Bir kurulumu yayımlayın ve kodu paylaşın: Onu kuran herkes bir sonraki güncellemenizi değişikliklerin farkıyla görür ve tek tıkla eşitler.
+- CurseForge veya Modrinth mod paketinden kurulan bir kurulum ona bağlı kalır: değişikliklerin önizlemesiyle daha yeni bir sürüme güncelleyin, bir şey bozulursa öncekine dönün.
+- Bir kurulumu başka bir Minecraft sürümüne veya mod yükleyicisine taşıyın: başlatıcı, uyumlu mod sürümleriyle bir kopya oluşturur ve ayarları, mod yapılandırmalarını ve dünyaları da taşıyabilir.
+- Mod setleri: bir kurulumun modlarını set olarak kaydedin, sonra herhangi bir kuruluma ekleyin veya yeni bir kurulum oluştururken seçin.
+- Kendi mod gruplarınız: daraltılabilir, bütün bir grup tek seferde açılıp kapatılabilir.
 - Herkese açık kurulumların topluluk kataloğu, başlatıcının içinde ve [grubielauncher.com/packs](https://grubielauncher.com/tr/packs) adresinde.
 - Hasarlı veya eksik dosyaları yeniden indiren bütünlük denetimi.
 - Arama, otomatik tamamlama ve geri dönmek için kayıtlı sürümlerle yapılandırma düzenleyicisi.
@@ -113,7 +120,7 @@ Arayüz, üst üste açılan pencereler yerine sabit bir kenar çubuğundan ve t
 # Yükleme
 
 1. En son sürümü [Releases](https://github.com/MOJI6416/grubielauncher/releases) sayfasından indirin.
-2. **Windows** — `-setup.exe` yükleyicisini çalıştırın. **Linux** — `.AppImage` dosyasını çalıştırın veya `.deb` paketini yükleyin.
+2. **Windows** — `-setup.exe` yükleyicisini çalıştırın. **macOS** (12 veya üzeri) — Mac’iniz için `.dmg` dosyasını açın (Apple Silicon için `arm64`, Intel için `x64`) ve uygulamayı Uygulamalar klasörüne sürükleyin. **Linux** — `.AppImage` dosyasını çalıştırın veya `.deb` paketini yükleyin.
 3. Bir hesapla giriş yapın veya çevrimdışı bir hesap oluşturun ve bir sürüm seçin.
 
 Başlatıcı kendini günceller; yeni sürümler yeniden yükleme gerekmeden gelir.

@@ -1,0 +1,20 @@
+name: Idea
+description: Suggest a feature or an improvement
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        You can write in English, Russian or Ukrainian. Можно писать по-русски или по-украински.
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you would like
+      description: What you want to do and what gets in the way now.
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples
+      description: Screenshots, or how another launcher or mod does it.

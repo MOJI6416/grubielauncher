@@ -9,6 +9,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/v/release/MOJI6416/grubielauncher" alt="Version">
   <img src="https://img.shields.io/github/license/MOJI6416/grubielauncher" alt="License">
+  <img src="https://img.shields.io/github/downloads/MOJI6416/grubielauncher/total" alt="Downloads">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue" alt="Platforms">
   <br/>
   <a href="https://discord.com/invite/URrKha9hk7" target="_blank">
@@ -57,10 +58,12 @@ The interface is a permanent sidebar with full screens instead of stacked dialog
 
 - Official Minecraft versions: releases, snapshots and old alpha/beta builds.
 - Mod loaders: **Forge**, **NeoForge**, **Fabric**, **Quilt**.
+- Old versions too: **Legacy Fabric**, **Babric**, **Ornithe**, **Better than Adventure** with Babric, **ReIndev** with FoxLoader, and jar mods.
 - Java is downloaded automatically and matched to the game version.
 - Accounts: **Microsoft**, **Ely.by**, **Discord** and offline. Several at once, switched from the sidebar.
 - Instance library with list and grid views, groups, tags and notes.
 - Continue where you left off: launch straight into a world or onto a server from the instance screen.
+- Server catalog from Modrinth: find a server that fits your instance, or create an instance for any server in it.
 - Memory, JVM flags and process priority are set globally and can be overridden per instance.
 - A desktop shortcut can be created for a single instance.
 
@@ -71,6 +74,10 @@ The interface is a permanent sidebar with full screens instead of stacked dialog
 - Import from a file: Grubie, CurseForge, Modrinth (`.mrpack`), Prism and MultiMC packs — drag the archive onto the window.
 - Export an instance to an archive; the copy carries mods, configs and worlds.
 - Publish an instance and share the code: everyone who installed it sees your next update, with a diff of what changes, and syncs it in one click.
+- An instance installed from a CurseForge or Modrinth modpack stays linked to it: update to a newer version with a preview of what changes, and return the previous one if something breaks.
+- Move an instance to another Minecraft version or loader: the launcher makes a copy with matching mod versions and can bring settings, mod configs and worlds along.
+- Mod sets: save the mods of an instance as a set, then add it to any instance or pick it when creating a new one.
+- Your own mod groups: collapse them and turn a whole group on or off at once.
 - Community catalog of public instances, both inside the launcher and on [grubielauncher.com/packs](https://grubielauncher.com/packs).
 - Integrity check that re-downloads damaged or missing files.
 - Config editor with search, completion and saved versions to roll back to.

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Discord
+    url: https://discord.com/invite/URrKha9hk7
+    about: Questions, help with setup and chat with other players.
+  - name: Security vulnerability
+    url: https://github.com/MOJI6416/grubielauncher/security/advisories/new
+    about: Report it privately here, not in a public issue.

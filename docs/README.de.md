@@ -9,7 +9,8 @@
 <p align="center">
   <img src="https://img.shields.io/github/v/release/MOJI6416/grubielauncher" alt="Version">
   <img src="https://img.shields.io/github/license/MOJI6416/grubielauncher" alt="License">
-  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blue" alt="Platforms">
+  <img src="https://img.shields.io/github/downloads/MOJI6416/grubielauncher/total" alt="Downloads">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue" alt="Platforms">
   <br/>
   <a href="https://discord.com/invite/URrKha9hk7" target="_blank">
     <img src="https://img.shields.io/discord/1229487451916210236?label=Discord&logo=discord&color=7289DA" alt="Discord">
@@ -20,7 +21,7 @@
 
 # Grubie Launcher
 
-Ein Minecraft-Launcher für Windows und Linux. Er installiert Spielversionen und Mod-Loader, lädt die passende Java-Version selbst herunter und hält jede Instanz – Mods, Welten, Konfigs, Starteinstellungen – an einem Ort. Zwei Dinge unterscheiden ihn von einem einfachen Launcher: Wenn das Spiel abstürzt, liest er den Bericht und sagt Ihnen, was kaputt ist, und Ihre Freunde sind im selben Fenster – Chat, Sprachchat und gegenseitiges Beitreten zu Welten ohne Portweiterleitung oder gemieteten Server.
+Ein Minecraft-Launcher für Windows, macOS und Linux. Er installiert Spielversionen und Mod-Loader, lädt die passende Java-Version selbst herunter und hält jede Instanz – Mods, Welten, Konfigs, Starteinstellungen – an einem Ort. Zwei Dinge unterscheiden ihn von einem einfachen Launcher: Wenn das Spiel abstürzt, liest er den Bericht und sagt Ihnen, was kaputt ist, und Ihre Freunde sind im selben Fenster – Chat, Sprachchat und gegenseitiges Beitreten zu Welten ohne Portweiterleitung oder gemieteten Server.
 
 Die Oberfläche besteht aus einer festen Seitenleiste und ganzen Bildschirmen statt übereinandergestapelter Dialoge. <kbd>Ctrl</kbd>+<kbd>K</kbd> öffnet eine Befehlspalette, die jede Instanz, jeden Bildschirm und jede Einstellung erreicht, <kbd>Ctrl</kbd>+<kbd>I</kbd> öffnet den Assistenten, und <kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> blättern wie im Browser durch den Verlauf.
 
@@ -57,10 +58,12 @@ Die Oberfläche besteht aus einer festen Seitenleiste und ganzen Bildschirmen st
 
 - Offizielle Minecraft-Versionen: Releases, Snapshots und alte Alpha-/Beta-Versionen.
 - Mod-Loader: **Forge**, **NeoForge**, **Fabric**, **Quilt**.
+- Auch für alte Versionen: **Legacy Fabric**, **Babric**, **Ornithe**, **Better than Adventure** mit Babric, **ReIndev** mit FoxLoader sowie Jar-Mods.
 - Java wird automatisch heruntergeladen und passend zur Spielversion gewählt.
 - Konten: **Microsoft**, **Ely.by**, **Discord** und offline. Mehrere gleichzeitig, umschaltbar in der Seitenleiste.
 - Instanzbibliothek mit Listen- und Rasteransicht, Gruppen, Tags und Notizen.
 - Weiterspielen, wo Sie aufgehört haben: direkt aus dem Instanzbildschirm in eine Welt oder auf einen Server starten.
+- Modrinth-Serverkatalog: Finden Sie einen Server, der zu Ihrer Instanz passt, oder erstellen Sie eine Instanz für einen beliebigen Server daraus.
 - Arbeitsspeicher, JVM-Flags und Prozesspriorität werden global festgelegt und lassen sich pro Instanz überschreiben.
 - Für eine einzelne Instanz lässt sich eine Desktopverknüpfung anlegen.
 
@@ -71,6 +74,10 @@ Die Oberfläche besteht aus einer festen Seitenleiste und ganzen Bildschirmen st
 - Import aus einer Datei: Grubie-, CurseForge-, Modrinth- (`.mrpack`), Prism- und MultiMC-Pakete – ziehen Sie das Archiv einfach ins Fenster.
 - Export einer Instanz in ein Archiv; die Kopie enthält Mods, Konfigs und Welten.
 - Veröffentlichen Sie eine Instanz und teilen Sie den Code: Alle, die sie installiert haben, sehen Ihr nächstes Update mit einem Vergleich der Änderungen und synchronisieren es mit einem Klick.
+- Eine aus einem CurseForge- oder Modrinth-Modpack installierte Instanz bleibt mit ihm verknüpft: Updates auf neuere Versionen mit einer Vorschau der Änderungen und Rückkehr zur vorherigen Version, falls etwas kaputtgeht.
+- Eine Instanz auf eine andere Minecraft-Version oder einen anderen Loader übertragen: Der Launcher erstellt eine Kopie mit passenden Mod-Versionen und kann Einstellungen, Mod-Konfigs und Welten mitnehmen.
+- Mod-Sets: Speichern Sie die Mods einer Instanz als Set und fügen Sie es dann einer beliebigen Instanz hinzu oder wählen Sie es beim Erstellen einer neuen aus.
+- Eigene Mod-Gruppen, die sich einklappen und als Ganzes ein- oder ausschalten lassen.
 - Community-Katalog öffentlicher Instanzen, im Launcher und auf [grubielauncher.com/packs](https://grubielauncher.com/de/packs).
 - Integritätsprüfung, die beschädigte oder fehlende Dateien neu herunterlädt.
 - Konfig-Editor mit Suche, Autovervollständigung und gespeicherten Versionen zum Zurücksetzen.
@@ -113,7 +120,7 @@ Die Oberfläche besteht aus einer festen Seitenleiste und ganzen Bildschirmen st
 # Installation
 
 1. Laden Sie die neueste Version unter [Releases](https://github.com/MOJI6416/grubielauncher/releases) herunter.
-2. **Windows** – starten Sie das Installationsprogramm `-setup.exe`. **Linux** – starten Sie die `.AppImage` oder installieren Sie das `.deb`-Paket.
+2. **Windows** – starten Sie das Installationsprogramm `-setup.exe`. **macOS** (12 oder neuer) – öffnen Sie die `.dmg` für Ihren Mac (`arm64` für Apple Silicon, `x64` für Intel) und ziehen Sie die App in den Ordner Programme. **Linux** – starten Sie die `.AppImage` oder installieren Sie das `.deb`-Paket.
 3. Melden Sie sich mit einem Konto an oder erstellen Sie ein Offline-Konto und wählen Sie eine Version.
 
 Der Launcher aktualisiert sich selbst; neue Versionen kommen ohne Neuinstallation.

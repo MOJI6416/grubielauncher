@@ -9,7 +9,8 @@
 <p align="center">
   <img src="https://img.shields.io/github/v/release/MOJI6416/grubielauncher" alt="Version">
   <img src="https://img.shields.io/github/license/MOJI6416/grubielauncher" alt="License">
-  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blue" alt="Platforms">
+  <img src="https://img.shields.io/github/downloads/MOJI6416/grubielauncher/total" alt="Downloads">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue" alt="Platforms">
   <br/>
   <a href="https://discord.com/invite/URrKha9hk7" target="_blank">
     <img src="https://img.shields.io/discord/1229487451916210236?label=Discord&logo=discord&color=7289DA" alt="Discord">
@@ -20,7 +21,7 @@
 
 # Grubie Launcher
 
-Launcher Minecrafta na Windows i Linux. Instaluje wersje gry i loadery modów, sam pobiera pasującą Javę i trzyma każdą instancję — mody, światy, konfiguracje, ustawienia uruchamiania — w jednym miejscu. Od zwykłego launchera odróżniają go dwie rzeczy: gdy gra ulegnie awarii, czyta raport i mówi, co się zepsuło, a znajomi są w tym samym oknie — czat, głos i dołączanie do swoich światów bez przekierowania portów i wynajmowania serwera.
+Launcher Minecrafta na Windows, macOS i Linux. Instaluje wersje gry i loadery modów, sam pobiera pasującą Javę i trzyma każdą instancję — mody, światy, konfiguracje, ustawienia uruchamiania — w jednym miejscu. Od zwykłego launchera odróżniają go dwie rzeczy: gdy gra ulegnie awarii, czyta raport i mówi, co się zepsuło, a znajomi są w tym samym oknie — czat, głos i dołączanie do swoich światów bez przekierowania portów i wynajmowania serwera.
 
 Interfejs to stały pasek boczny i pełne ekrany zamiast piętrzących się okien. <kbd>Ctrl</kbd>+<kbd>K</kbd> otwiera paletę poleceń, która prowadzi do każdej instancji, ekranu i ustawienia, <kbd>Ctrl</kbd>+<kbd>I</kbd> otwiera asystenta, a <kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> przechodzą po historii jak w przeglądarce.
 
@@ -57,10 +58,12 @@ Interfejs to stały pasek boczny i pełne ekrany zamiast piętrzących się okie
 
 - Oficjalne wersje Minecrafta: wydania, snapshoty i stare wersje alfa/beta.
 - Loadery modów: **Forge**, **NeoForge**, **Fabric**, **Quilt**.
+- Również stare wersje: **Legacy Fabric**, **Babric**, **Ornithe**, **Better than Adventure** z Babric, **ReIndev** z FoxLoaderem i mody jar.
 - Java pobiera się automatycznie i jest dobierana do wersji gry.
 - Konta: **Microsoft**, **Ely.by**, **Discord** i offline. Kilka naraz, przełączane z paska bocznego.
 - Biblioteka instancji w widoku listy i siatki, z grupami, tagami i notatkami.
 - Kontynuacja tam, gdzie skończyła się gra: wejście prosto do świata lub na serwer z ekranu instancji.
+- Katalog serwerów z Modrinth: znajdź serwer pasujący do instancji albo utwórz instancję pod dowolny serwer z katalogu.
 - Pamięć, flagi JVM i priorytet procesu ustawia się globalnie, a dla każdej instancji można je nadpisać.
 - Dla pojedynczej instancji można utworzyć skrót na pulpicie.
 
@@ -71,6 +74,10 @@ Interfejs to stały pasek boczny i pełne ekrany zamiast piętrzących się okie
 - Import z pliku: paczki Grubie, CurseForge, Modrinth (`.mrpack`), Prism i MultiMC — wystarczy przeciągnąć archiwum na okno.
 - Eksport instancji do archiwum; kopia zawiera mody, konfiguracje i światy.
 - Publikacja instancji i udostępnienie kodu: każdy, kto ją zainstalował, zobaczy kolejną aktualizację z listą zmian i zsynchronizuje ją jednym kliknięciem.
+- Instancja zainstalowana z modpacka CurseForge lub Modrinth pozostaje z nim powiązana: aktualizacja do nowszej wersji z podglądem zmian i powrót do poprzedniej, jeśli coś się zepsuje.
+- Przeniesienie instancji na inną wersję Minecrafta lub inny loader: launcher tworzy kopię z pasującymi wersjami modów i może przenieść ustawienia, konfiguracje modów i światy.
+- Zestawy modów: mody instancji można zapisać jako zestaw, a potem dodać go do dowolnej instancji lub wybrać przy tworzeniu nowej.
+- Własne grupy modów: można je zwijać, a całą grupę włączać lub wyłączać naraz.
 - Katalog społeczności z publicznymi instancjami, w launcherze i na [grubielauncher.com/packs](https://grubielauncher.com/pl/packs).
 - Sprawdzanie integralności, które ponownie pobiera uszkodzone lub brakujące pliki.
 - Edytor konfiguracji z wyszukiwaniem, podpowiedziami i zapisanymi wersjami do przywrócenia.
@@ -113,7 +120,7 @@ Interfejs to stały pasek boczny i pełne ekrany zamiast piętrzących się okie
 # Instalacja
 
 1. Pobierz najnowszą wersję z [Releases](https://github.com/MOJI6416/grubielauncher/releases).
-2. **Windows** — uruchom instalator `-setup.exe`. **Linux** — uruchom plik `.AppImage` lub zainstaluj paczkę `.deb`.
+2. **Windows** — uruchom instalator `-setup.exe`. **macOS** (12 lub nowszy) — otwórz plik `.dmg` dla swojego Maca (`arm64` dla Apple Silicon, `x64` dla Intela) i przeciągnij aplikację do folderu Aplikacje. **Linux** — uruchom plik `.AppImage` lub zainstaluj paczkę `.deb`.
 3. Zaloguj się kontem lub utwórz konto offline i wybierz wersję.
 
 Launcher aktualizuje się sam; nowe wersje przychodzą bez ponownej instalacji.
