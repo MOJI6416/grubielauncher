@@ -4,6 +4,7 @@
   "description": "Nextgen Minecraft Launcher",
   "main": "./out/main/index.js",
   "author": "MOJI",
+  "license": "GPL-3.0-only",
   "homepage": "https://grubielauncher.com/",
   "repository": "https://github.com/MOJI6416/grubielauncher",
   "scripts": {

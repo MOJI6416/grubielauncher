@@ -127,7 +127,9 @@ Le launcher se met à jour tout seul ; les nouvelles versions arrivent sans ré
 
 # Licence
 
-**MIT** — voir [LICENSE](../LICENSE).
+**GPL-3.0** — voir [LICENSE](../LICENSE).
+
+Le nom Grubie Launcher et le logo ne sont pas couverts par cette licence. Les forks sont les bienvenus, mais ils doivent avoir leur propre nom et leur propre logo et ne pas se présenter comme le launcher officiel.
 
 # Liens
 

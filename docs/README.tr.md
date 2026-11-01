@@ -127,7 +127,9 @@ Başlatıcı kendini günceller; yeni sürümler yeniden yükleme gerekmeden gel
 
 # Lisans
 
-**MIT** — bkz. [LICENSE](../LICENSE).
+**GPL-3.0** — bkz. [LICENSE](../LICENSE).
+
+Grubie Launcher adı ve logosu bu lisansın kapsamında değildir. Fork'lar memnuniyetle karşılanır, ancak kendi adları ve logoları olmalı ve kendilerini resmî başlatıcı olarak tanıtmamalıdır.
 
 # Bağlantılar
 

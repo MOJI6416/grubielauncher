@@ -127,7 +127,9 @@ Launcher aktualizuje się sam; nowe wersje przychodzą bez ponownej instalacji.
 
 # Licencja
 
-**MIT** — zobacz [LICENSE](../LICENSE).
+**GPL-3.0** — zobacz [LICENSE](../LICENSE).
+
+Nazwa Grubie Launcher i logo nie są objęte tą licencją. Forki są mile widziane, ale muszą mieć własną nazwę i własne logo i nie mogą podawać się za oficjalny launcher.
 
 # Linki
 
