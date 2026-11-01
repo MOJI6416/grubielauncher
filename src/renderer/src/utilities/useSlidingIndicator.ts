@@ -75,18 +75,32 @@ export function useSlidingIndicator<T extends HTMLElement>({
   const observerRef = useRef<ResizeObserver | null>(null);
   const measureRef = useRef(measure);
   measureRef.current = measure;
+  const measuredRef = useRef<{ active: Element | null; count: number } | null>(
+    null,
+  );
 
   useLayoutEffect(() => {
-    measure();
-
     const container = containerRef.current;
-    if (!container) return;
+    if (!container) {
+      measuredRef.current = null;
+      return;
+    }
+
+    const items = container.querySelectorAll<HTMLElement>(itemSelector);
+    const active = container.querySelector(activeSelector);
+    const measured = measuredRef.current;
+    if (
+      !measured ||
+      measured.active !== active ||
+      measured.count !== items.length
+    ) {
+      measuredRef.current = { active, count: items.length };
+      measure();
+    }
 
     observerRef.current ??= new ResizeObserver(() => measureRef.current());
     observerRef.current.observe(container);
-    container
-      .querySelectorAll<HTMLElement>(itemSelector)
-      .forEach((item) => observerRef.current?.observe(item));
+    items.forEach((item) => observerRef.current?.observe(item));
   });
 
   useEffect(() => () => observerRef.current?.disconnect(), []);

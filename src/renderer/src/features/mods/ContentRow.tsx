@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { type DragEvent, memo } from "react";
 import { useTranslation } from "react-i18next";
 import { SiCurseforge, SiModrinth } from "react-icons/si";
 import {
@@ -51,6 +51,8 @@ export interface ContentRowActions {
   onRestore: (entry: ContentEntry) => void;
   onToggleEnabled: (entry: ContentEntry, enabled: boolean) => void;
   onAuthor: (entry: ContentEntry) => void;
+  onDragStart?: (entry: ContentEntry, event: DragEvent<HTMLDivElement>) => void;
+  onDragEnd?: () => void;
 }
 
 const PROVIDER_NAMES: Partial<Record<Provider, string>> = {
@@ -95,6 +97,8 @@ export const ContentRow = memo(function ContentRow({
   changedAt,
   isBusy,
   isWorking = false,
+  isDraggable = false,
+  isDragged = false,
   actions,
 }: {
   entry: ContentEntry;
@@ -119,6 +123,8 @@ export const ContentRow = memo(function ContentRow({
   changedAt?: number;
   isBusy: boolean;
   isWorking?: boolean;
+  isDraggable?: boolean;
+  isDragged?: boolean;
   actions: ContentRowActions;
 }) {
   const { t } = useTranslation();
@@ -142,6 +148,12 @@ export const ContentRow = memo(function ContentRow({
       tabIndex={-1}
       data-active={isActive || undefined}
       data-open={isDetailOpen || undefined}
+      data-dragged={isDragged || undefined}
+      draggable={isDraggable || undefined}
+      onDragStart={
+        isDraggable ? (event) => actions.onDragStart?.(entry, event) : undefined
+      }
+      onDragEnd={isDraggable ? actions.onDragEnd : undefined}
       onMouseDown={isSelectable ? preventShiftTextSelection : undefined}
       onClick={(event) => {
         if (isSelectable && hasSelectionModifier(event)) {
@@ -150,7 +162,7 @@ export const ContentRow = memo(function ContentRow({
         }
         actions.onOpen(entry);
       }}
-      className="group flex h-14 min-w-0 cursor-pointer items-center gap-2.5 rounded-lg px-2 transition-colors hover:bg-surface-2 data-[active]:bg-surface-2 data-[open]:bg-surface-3"
+      className="group flex h-14 min-w-0 cursor-pointer items-center gap-2.5 rounded-lg px-2 transition-colors hover:bg-surface-2 data-[active]:bg-surface-2 data-[dragged]:opacity-50 data-[open]:bg-surface-3"
     >
       {isSelectable ? (
         <div

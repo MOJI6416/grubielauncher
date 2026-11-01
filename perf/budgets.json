@@ -1,0 +1,86 @@
+{
+  "startup": {
+    "cold": {
+      "appReady": 1300,
+      "shell": 1650,
+      "home": 2000,
+      "mainToHome": 650,
+      "startupTbt": 80,
+      "privateMB": 420,
+      "heapMB": 14
+    },
+    "warm": {
+      "appReady": 1300,
+      "shell": 1550,
+      "home": 1900,
+      "mainToHome": 600,
+      "startupTbt": 60,
+      "privateMB": 400,
+      "heapMB": 14
+    }
+  },
+  "memory": {
+    "idle": { "privateMB": 420, "heapMB": 14, "nodes": 1000, "listeners": 400 },
+    "afterLastTour": { "heapMB": 30, "nodes": 1500, "listeners": 600 },
+    "growth": { "privateMB": 150, "heapMB": 6, "nodes": 300, "listeners": 60 }
+  },
+  "defaults": {
+    "nav": {
+      "cold": { "ready": 200, "settle": 300, "inp": 150, "tbt": 100, "maxFrame": 150 },
+      "warm": { "ready": 100, "settle": 150, "inp": 80, "tbt": 30, "maxFrame": 100 }
+    },
+    "typing": {
+      "cold": { "settle": 100, "inp": 100, "tbt": 50 },
+      "warm": { "settle": 60, "inp": 50, "tbt": 30 }
+    },
+    "frames": {
+      "cold": { "p95Frame": 20, "over33Pct": 2 },
+      "warm": { "p95Frame": 17, "over33Pct": 1, "tbt": 30 }
+    }
+  },
+  "steps": {
+    "nav.home": {
+      "cold": { "ready": 80, "settle": 800 },
+      "warm": { "ready": 60, "settle": 800 }
+    },
+    "palette.open": {
+      "warm": { "ready": 60, "inp": 60 }
+    },
+    "nav.people": {
+      "warm": { "ready": 60 }
+    },
+    "nav.instance": {
+      "cold": { "settle": 250 },
+      "warm": { "settle": 120 }
+    },
+    "instance.servers": {
+      "cold": { "ready": 5000, "settle": 5000 },
+      "warm": { "ready": 800, "settle": 800 }
+    },
+    "instance.configs": {
+      "cold": { "settle": 250 }
+    },
+    "settings.storage": {
+      "cold": { "settle": 250 }
+    },
+    "profile.skins": {
+      "cold": { "ready": 300, "settle": 500, "tbt": 150, "maxFrame": 200 },
+      "warm": { "ready": 80, "settle": 150 }
+    },
+    "content.search": {
+      "warm": { "settle": 40 }
+    },
+    "heavy.search": {
+      "warm": { "settle": 50 }
+    },
+    "heavy.content": {
+      "warm": { "ready": 80, "settle": 80 }
+    },
+    "heavy.searchClear": {
+      "warm": { "settle": 80 }
+    },
+    "content.searchClear": {
+      "warm": { "settle": 60 }
+    }
+  }
+}

@@ -183,6 +183,8 @@ export function CommandPalette({
   const isAgentBlocked = agentBlocked !== null;
 
   const items = useMemo<PaletteItem[]>(() => {
+    if (!open) return [];
+
     const list: PaletteItem[] = [
       {
         id: "nav:home",
@@ -370,6 +372,7 @@ export function CommandPalette({
     agentBlocked,
     isAgentBlocked,
     isRunning,
+    open,
     runGame,
     selected,
     selectedIdentity,

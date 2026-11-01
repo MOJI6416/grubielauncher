@@ -125,7 +125,7 @@ export function WhatsNewModal({
                   <h3 className="text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
                     {t("whatsNew.highlights")}
                   </h3>
-                  <ul className="grid gap-1">
+                  <ul className="grid gap-1 select-text">
                     {highlights.map((item, index) => (
                       <li
                         key={`${item}-${index}`}
@@ -145,7 +145,7 @@ export function WhatsNewModal({
                     <Wrench className="size-3" />
                     {t("whatsNew.fixes")}
                   </h3>
-                  <ul className="grid gap-1 text-xs leading-4 text-muted-foreground">
+                  <ul className="grid gap-1 text-xs leading-4 text-muted-foreground select-text">
                     {fixes.map((item, index) => (
                       <li key={`${item}-${index}`} className="flex gap-2">
                         <span className="mt-1.5 size-1 shrink-0 rounded-full bg-faint" />

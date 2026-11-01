@@ -1657,6 +1657,7 @@
           "move": "Navegar por mods, instâncias, mundos, servidores",
           "open": "Abrir o item selecionado; na lista de servidores, inicia o jogo",
           "mark": "Marcar o mod sob o cursor",
+          "removeContent": "Excluir os mods marcados ou o mod sob o cursor",
           "removeServer": "Remover o servidor da lista",
           "moveServer": "Mover o servidor para cima ou para baixo",
           "tab": "Aba vizinha da instância",
@@ -2578,6 +2579,39 @@
       "title_many": "{{count}} argumentos serão descartados na inicialização",
       "title_other": "{{count}} argumentos serão descartados na inicialização",
       "hint": "O launcher recusa argumentos que podem carregar código de terceiros ou sobrescrever arquivos."
+    }
+  },
+  "jvmFlags": {
+    "title": "O que a otimização da JVM faz",
+    "intro": "Um conjunto ajustado de flags do coletor de lixo (Aikar's flags), muito usado em servidores e grandes modpacks de Minecraft. O Java libera memória em pequenas etapas, então o jogo trava menos. Cada flag abaixo é adicionada ao comando de inicialização.",
+    "whatsInside": "O que inclui",
+    "groups": {
+      "memory": "Memória",
+      "collector": "Coletor de lixo G1",
+      "young": "Objetos novos",
+      "old": "Dados de longa duração",
+      "service": "Flags de serviço"
+    },
+    "flags": {
+      "heap": "A memória inicial é igual à máxima: o Java reserva logo toda a memória alocada e não pausa para aumentá-la.",
+      "AlwaysPreTouch": "Toca cada página dessa memória na inicialização. O jogo demora um pouco mais para abrir, mas não engasga quando usa memória nova pela primeira vez.",
+      "UseG1GC": "Usa o coletor G1: ele limpa a memória em pequenas regiões em vez de congelar o jogo numa única varredura longa.",
+      "MaxGCPauseMillis": "Pede ao G1 que cada pausa dure menos de 200 ms.",
+      "ParallelRefProcEnabled": "Processa as referências entre objetos em várias threads, o que encurta as pausas.",
+      "DisableExplicitGC": "Ignora as limpezas completas que os próprios mods pedem (System.gc()), uma causa comum de travamentos.",
+      "G1NewSizePercent": "Reserva pelo menos 30% da memória para objetos novos. O Minecraft cria milhares deles a cada tick, e uma área espaçosa enche com menos frequência.",
+      "G1MaxNewSizePercent": "Deixa essa área crescer até 40% da memória.",
+      "SurvivorRatio": "Reduz a área intermediária (survivor): os objetos do Minecraft costumam deixar de ser usados logo ou viver muito.",
+      "MaxTenuringThreshold": "Um objeto que sobrevive a uma limpeza vai direto para os dados de longa duração, em vez de ser copiado de um lado para o outro.",
+      "InitiatingHeapOccupancyPercent": "Começa a marcar em segundo plano os dados de longa duração quando a memória está 15% cheia: com antecedência, não no último instante.",
+      "G1MixedGCCountTarget": "Divide a limpeza dos dados de longa duração em 4 passadas, para que cada uma seja curta.",
+      "G1MixedGCLiveThresholdPercent": "Limpa regiões com menos de 90% de dados vivos, liberando mais espaço a cada passada.",
+      "G1HeapWastePercent": "Tolera até 5% de lixo restante para não fazer limpezas extras por migalhas.",
+      "G1ReservePercent": "Mantém 20% da memória de reserva para picos. Sem ela, o Java pode ficar sem espaço e fazer uma limpeza completa longa.",
+      "G1HeapRegionSize": "Divide a memória em regiões de 8 MB, para que objetos grandes, como dados de chunks, sejam tratados menos vezes como \"enormes\" e pelo caminho lento.",
+      "G1RSetUpdatingPauseTimePercent": "Gasta no máximo 5% de uma pausa com a contabilidade de referências; o resto é feito em segundo plano.",
+      "UnlockExperimentalVMOptions": "Permite flags experimentais: sem ela, as duas flags de tamanho da área de objetos novos não funcionariam.",
+      "PerfDisableSharedMem": "Impede o Java de gravar estatísticas de desempenho num arquivo no disco, o que causa travamentos raros em discos lentos."
     }
   },
   "selectPaths": {
@@ -4614,8 +4648,7 @@
       "newInstance": "Nova instância",
       "instance": "Instância",
       "people": "Pessoas",
-      "profile": "Perfil",
-      "profileOffline": "O perfil não está disponível para uma conta offline — entre com Microsoft, Discord ou Ely.by."
+      "profile": "Perfil"
     },
     "palette": {
       "label": "Busca e comandos",

@@ -259,7 +259,7 @@ export function PackConfirm({
             <span className="text-[0.7rem] font-semibold tracking-[0.08em] text-faint uppercase">
               {t("addVersion.preview.authorNote")}
             </span>
-            <p className="max-h-20 overflow-y-auto pr-1 text-xs leading-4 whitespace-pre-line text-muted-foreground">
+            <p className="max-h-20 overflow-y-auto pr-1 text-xs leading-4 whitespace-pre-line text-muted-foreground select-text">
               {pack.description}
             </p>
           </section>

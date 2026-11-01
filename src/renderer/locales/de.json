@@ -1642,6 +1642,7 @@
           "move": "Durch Mods, Instanzen, Welten, Server bewegen",
           "open": "Gewähltes Element öffnen; in der Serverliste startet es das Spiel",
           "mark": "Mod unter dem Cursor ankreuzen",
+          "removeContent": "Angekreuzte Mods oder den Mod unter dem Cursor löschen",
           "removeServer": "Server aus der Liste entfernen",
           "moveServer": "Server nach oben oder unten verschieben",
           "tab": "Benachbarter Instanz-Tab",
@@ -2558,6 +2559,39 @@
       "title_one": "{{count}} Argument wird beim Start verworfen",
       "title_other": "{{count}} Argumente werden beim Start verworfen",
       "hint": "Der Launcher lehnt Argumente ab, die fremden Code laden oder Dateien überschreiben können."
+    }
+  },
+  "jvmFlags": {
+    "title": "Was die JVM-Optimierung bewirkt",
+    "intro": "Ein abgestimmter Satz von Garbage-Collector-Flags (Aikar's flags), verbreitet auf Minecraft-Servern und in großen Modpacks. Java gibt Speicher in kleinen Schritten frei, dadurch ruckelt das Spiel seltener. Jedes Flag unten wird dem Startbefehl hinzugefügt.",
+    "whatsInside": "Was enthalten ist",
+    "groups": {
+      "memory": "Speicher",
+      "collector": "G1-Garbage-Collector",
+      "young": "Neue Objekte",
+      "old": "Langlebige Daten",
+      "service": "Hilfsflags"
+    },
+    "flags": {
+      "heap": "Der Startspeicher entspricht dem Maximum: Java belegt sofort den gesamten zugewiesenen Speicher und muss ihn später nicht vergrößern.",
+      "AlwaysPreTouch": "Berührt beim Start jede Seite dieses Speichers. Der Start dauert etwas länger, dafür gibt es keine Hänger, wenn das Spiel erstmals neuen Speicher nutzt.",
+      "UseG1GC": "Verwendet den G1-Collector: Er räumt den Speicher in kleinen Bereichen auf, statt das Spiel für einen langen Durchgang anzuhalten.",
+      "MaxGCPauseMillis": "Bittet G1, jede Pause unter 200 ms zu halten.",
+      "ParallelRefProcEnabled": "Verarbeitet Referenzen zwischen Objekten in mehreren Threads, was Pausen verkürzt.",
+      "DisableExplicitGC": "Ignoriert vollständige Bereinigungen, die Mods selbst anfordern (System.gc()), eine häufige Ursache für Hänger.",
+      "G1NewSizePercent": "Reserviert mindestens 30 % des Speichers für neue Objekte. Minecraft erzeugt davon in jedem Tick Tausende, ein großzügiger Bereich läuft seltener voll.",
+      "G1MaxNewSizePercent": "Lässt diesen Bereich auf bis zu 40 % des Speichers wachsen.",
+      "SurvivorRatio": "Verkleinert den Zwischenbereich (Survivor): Minecraft-Objekte werden meist sofort überflüssig oder leben lange.",
+      "MaxTenuringThreshold": "Ein Objekt, das eine Bereinigung übersteht, wandert sofort zu den langlebigen Daten, statt hin und her kopiert zu werden.",
+      "InitiatingHeapOccupancyPercent": "Beginnt die Hintergrundmarkierung langlebiger Daten, sobald der Speicher zu 15 % belegt ist: frühzeitig statt im letzten Moment.",
+      "G1MixedGCCountTarget": "Verteilt die Bereinigung langlebiger Daten auf 4 Durchgänge, damit jeder kurz bleibt.",
+      "G1MixedGCLiveThresholdPercent": "Räumt Bereiche mit weniger als 90 % lebenden Daten auf, so wird pro Durchgang mehr Platz frei.",
+      "G1HeapWastePercent": "Duldet bis zu 5 % liegengebliebenen Müll, damit keine zusätzlichen Bereinigungen für Kleinigkeiten laufen.",
+      "G1ReservePercent": "Hält 20 % des Speichers als Reserve für Lastspitzen. Ohne Reserve kann Java an die Grenze stoßen und eine lange Vollbereinigung starten.",
+      "G1HeapRegionSize": "Teilt den Speicher in Bereiche zu 8 MB, damit große Objekte wie Chunk-Daten seltener als „riesig“ gelten und langsam behandelt werden.",
+      "G1RSetUpdatingPauseTimePercent": "Verwendet höchstens 5 % einer Pause für die Buchführung über Referenzen, der Rest läuft im Hintergrund.",
+      "UnlockExperimentalVMOptions": "Erlaubt experimentelle Flags: Ohne es würden die beiden Größenflags für neue Objekte nicht greifen.",
+      "PerfDisableSharedMem": "Verhindert, dass Java Leistungsstatistiken in eine Datei auf der Festplatte schreibt, was auf langsamen Laufwerken seltene Hänger verursacht."
     }
   },
   "selectPaths": {
@@ -4578,8 +4612,7 @@
       "newInstance": "Neue Instanz",
       "instance": "Instanz",
       "people": "Leute",
-      "profile": "Profil",
-      "profileOffline": "Das Profil ist für ein Offline-Konto nicht verfügbar – melden Sie sich mit Microsoft, Discord oder Ely.by an."
+      "profile": "Profil"
     },
     "palette": {
       "label": "Suche und Befehle",

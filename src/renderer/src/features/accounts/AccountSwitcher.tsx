@@ -37,6 +37,7 @@ import { switchAccount } from "./switchAccount";
 import { openAccounts, openAddAccount } from "./addAccountRequest";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { MOD_KEY } from "@renderer/utilities/platform";
+import { Hint } from "@renderer/components/Hint";
 
 export function AccountSwitcher() {
   const { t } = useTranslation();
@@ -128,38 +129,80 @@ export function AccountSwitcher() {
     );
   }
 
+  const canOpenProfile = selectedAccount.type !== "plain";
+  const isOwnProfile =
+    route.name === "profile" && route.userId === OWN_PROFILE_ID;
+
+  const identity = (
+    <>
+      <span className="relative shrink-0">
+        <AccountHead account={selectedAccount} size={30} />
+        {broken > 0 && (
+          <SessionDot
+            state="expired"
+            className="absolute -right-0.5 -bottom-0.5"
+          />
+        )}
+      </span>
+
+      <span className="grid min-w-0 flex-1">
+        <span className="truncate text-[0.7rem] leading-4 text-faint">
+          {t("accounts.playingAs")}
+        </span>
+        <span className="truncate text-sm leading-4 font-medium">
+          {selectedAccount.nickname}
+        </span>
+      </span>
+    </>
+  );
+
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={t("accounts.accounts")}
-          className="flex h-11 w-full items-center gap-2.5 rounded-lg px-1.5 text-left transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
-          <span className="relative shrink-0">
-            <AccountHead account={selectedAccount} size={30} />
-            {broken > 0 && (
-              <SessionDot
-                state="expired"
-                className="absolute -right-0.5 -bottom-0.5"
-              />
-            )}
-          </span>
+      {canOpenProfile ? (
+        <div className="flex h-11 w-full items-center gap-0.5">
+          <Hint content={t("shell.nav.profile")} side="top">
+            <button
+              type="button"
+              aria-current={isOwnProfile}
+              onClick={() =>
+                navigate({ name: "profile", userId: OWN_PROFILE_ID })
+              }
+              className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1.5 text-left transition-colors not-aria-[current=true]:hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-[current=true]:bg-primary-soft"
+            >
+              {identity}
+            </button>
+          </Hint>
 
-          <span className="grid min-w-0 flex-1">
-            <span className="truncate text-[0.7rem] leading-4 text-faint">
-              {t("accounts.playingAs")}
-            </span>
-            <span className="truncate text-sm leading-4 font-medium">
-              {selectedAccount.nickname}
-            </span>
-          </span>
+          <Hint content={t("accounts.accounts")} side="top">
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label={t("accounts.accounts")}
+                className="flex h-11 w-7 shrink-0 items-center justify-center rounded-lg text-faint transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-expanded:bg-sidebar-accent aria-expanded:text-foreground"
+              >
+                <ChevronsUpDown className="size-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+          </Hint>
+        </div>
+      ) : (
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={t("accounts.accounts")}
+            className="flex h-11 w-full items-center gap-2.5 rounded-lg px-1.5 text-left transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            {identity}
+            <ChevronsUpDown className="size-3.5 shrink-0 text-faint" />
+          </button>
+        </DropdownMenuTrigger>
+      )}
 
-          <ChevronsUpDown className="size-3.5 shrink-0 text-faint" />
-        </button>
-      </DropdownMenuTrigger>
-
-      <DropdownMenuContent align="start" side="top" className="w-60">
+      <DropdownMenuContent
+        align={canOpenProfile ? "end" : "start"}
+        side="top"
+        className="w-60"
+      >
         <DropdownMenuLabel className="text-faint">
           {t("accounts.accounts")}
         </DropdownMenuLabel>

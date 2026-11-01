@@ -386,15 +386,6 @@ ${describeFailure(failure).text}`,
 
         await version.init();
 
-        let isUpdated = false;
-
-        if (!conf.owner && !conf.ownerId && account) {
-          Object.assign(version.version, ownerRecordFor(account));
-          isUpdated = true;
-        }
-
-        if (isUpdated) await version.save();
-
         return version;
       } catch (error) {
         console.error(`[versions] failed to read version ${directory}`, error);
@@ -409,7 +400,28 @@ ${describeFailure(failure).text}`,
     }),
   );
 
-  return results.filter((version): version is Version => version !== null);
+  const versions = results.filter(
+    (version): version is Version => version !== null,
+  );
+  await claimUnownedInstances(versions, account);
+  return versions;
+}
+
+export async function claimUnownedInstances(
+  versions: Version[],
+  account: ILocalAccount | null,
+) {
+  if (!account) return;
+
+  await Promise.all(
+    versions.map(async (version) => {
+      if (version.version.owner || version.version.ownerId) return;
+      Object.assign(version.version, ownerRecordFor(account));
+      await version.save().catch((error) =>
+        console.error(`[versions] failed to save the owner of ${version.version.name}`, error),
+      );
+    }),
+  );
 }
 
 export async function reloadInstanceLibrary(): Promise<boolean> {

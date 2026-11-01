@@ -7,7 +7,6 @@ import {
   prepareLegacyLocalStorageDump,
   registerLegacyLocalStorageIpc,
 } from "./utilities/localStorageMigration";
-import { autoUpdater } from "electron-updater";
 import * as ipcHandlers from "./ipc";
 import { lanShareService } from "./share";
 import {
@@ -45,6 +44,7 @@ import { initTray } from "./tray/tray";
 import { startBackgroundUpdateChecks } from "./utilities/backgroundUpdates";
 import { recoverWindowsStartup } from "./utilities/windowsStartup";
 import { scheduleUpdateInstall } from "./utilities/updateInstall";
+import { loadAutoUpdater } from "./utilities/autoUpdater";
 import { getDataRoot } from "./utilities/dataRoot";
 import { prepareDataRoot } from "./windows/dataLocationWindow";
 import {
@@ -526,6 +526,7 @@ if (!gotTheLock) {
     if (!startHidden) createUpdaterWindow();
     createMainWindow({ deferShow: true });
 
+    const autoUpdater = await loadAutoUpdater();
     autoUpdater.disableDifferentialDownload = true;
     autoUpdater.autoInstallOnAppQuit = false;
 

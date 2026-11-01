@@ -1,7 +1,9 @@
 import {
+  type DragEvent,
   Dispatch,
   SetStateAction,
   useCallback,
+  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -47,6 +49,9 @@ import {
 } from "@renderer/utilities/mod";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
+import { parseProjectLink } from "./projectLinks";
+import { startContentDrag } from "./contentDrag";
+import { displayTitle } from "./titles";
 import {
   type SelectionGesture,
   TOGGLE_GESTURE,
@@ -91,6 +96,7 @@ import {
   UNGROUPED_ID,
   addGroup,
   assignToGroup,
+  groupOf,
   groupRows,
   removeGroup,
   renameGroup,
@@ -347,7 +353,9 @@ export function ContentManager({
     visibleProviders[0] ??
     Provider.MODRINTH;
   const [rawQuery, setRawQuery] = useState("");
-  const [query, setQuery] = useState("");
+  const [catalogQuery, setQuery] = useState("");
+  const libraryQuery = useDeferredValue(rawQuery);
+  const query = scope === "library" ? libraryQuery : catalogQuery;
   const [librarySort, setLibrarySort] = useState<LibrarySort>("name");
   const [libraryFacets, setLibraryFacets] = useState<LibraryFacet[]>([]);
   const [libraryCategories, setLibraryCategories] = useState<string[]>([]);
@@ -2085,6 +2093,43 @@ export function ContentManager({
     [canSelectRows, rowsRef],
   );
 
+  const [dragKeys, setDragKeys] = useState<string[] | null>(null);
+  const selectionRef = useLatestRef(selection);
+
+  const startRowDrag = useCallback(
+    (entry: ContentEntry, event: DragEvent<HTMLDivElement>) => {
+      const selected = selectionRef.current;
+      const keys = selected.has(entry.key)
+        ? rowsRef.current
+            .filter((row) => selected.has(row.key))
+            .map((row) => row.key)
+        : [entry.key];
+      const title = displayTitle(entry.title);
+      startContentDrag(
+        event,
+        keys,
+        keys.length > 1 ? `${title} +${keys.length - 1}` : title,
+      );
+      setDragKeys(keys);
+    },
+    [rowsRef, selectionRef],
+  );
+
+  const endRowDrag = useCallback(() => setDragKeys(null), []);
+
+  useEffect(() => {
+    if (!dragKeys) return;
+    const clear = () => setDragKeys(null);
+    document.addEventListener("dragend", clear);
+    document.addEventListener("drop", clear);
+    document.addEventListener("pointerdown", clear, true);
+    return () => {
+      document.removeEventListener("dragend", clear);
+      document.removeEventListener("drop", clear);
+      document.removeEventListener("pointerdown", clear, true);
+    };
+  }, [dragKeys]);
+
   const openRow = useCallback(
     (entry: ContentEntry) => {
       selectionAnchorRef.current = entry.key;
@@ -2107,9 +2152,12 @@ export function ContentManager({
         const author = entry.project?.author;
         if (author) filterByAuthor(entry.provider, author);
       },
+      onDragStart: startRowDrag,
+      onDragEnd: endRowDrag,
     }),
     [
       applyUpdateFor,
+      endRowDrag,
       filterByAuthor,
       installProject,
       openRow,
@@ -2117,6 +2165,7 @@ export function ContentManager({
       restoreEntry,
       selectRow,
       setEnabledFor,
+      startRowDrag,
     ],
   );
 
@@ -2186,24 +2235,6 @@ export function ContentManager({
     [t, updateGroups],
   );
 
-  const groupActions = useMemo<GroupHeaderActions>(
-    () => ({
-      onToggleCollapsed: (groupId) => {
-        if (groupId !== UNGROUPED_ID) {
-          void saveGroups((file) => toggleGroupCollapsed(file, groupId));
-        }
-      },
-      onSetEnabled: (entries, enabled) => void setEnabledFor(entries, enabled),
-      onRename: (id, name) => setGroupDialog({ kind: "rename", id, name }),
-      onDelete: (id, name) =>
-        void saveGroups(
-          (file) => removeGroup(file, id),
-          t("modGroups.deleted", { name }),
-        ),
-    }),
-    [saveGroups, setEnabledFor, t],
-  );
-
   const moveToGroup = useCallback(
     (entries: ContentEntry[], groupId: string) => {
       const name =
@@ -2223,6 +2254,57 @@ export function ContentManager({
       setSelection(new Set());
     },
     [modGroups.groups.groups, saveGroups, t],
+  );
+
+  const dragState = useMemo(
+    () =>
+      dragKeys
+        ? {
+            keys: new Set(dragKeys),
+            hasGrouped: dragKeys.some(
+              (key) => groupOf(modGroups.groups, key) !== UNGROUPED_ID,
+            ),
+          }
+        : null,
+    [dragKeys, modGroups.groups],
+  );
+
+  const dropDragged = useCallback(
+    (groupId: string) => {
+      const keys = new Set(dragKeys ?? []);
+      setDragKeys(null);
+      const moving = libraryEntries.filter(
+        (entry) =>
+          keys.has(entry.key) && groupOf(modGroups.groups, entry.key) !== groupId,
+      );
+      if (moving.length > 0) moveToGroup(moving, groupId);
+    },
+    [dragKeys, libraryEntries, modGroups.groups, moveToGroup],
+  );
+
+  const dropToNewGroup = useCallback(() => {
+    const keys = dragKeys ?? [];
+    setDragKeys(null);
+    if (keys.length > 0) setGroupDialog({ kind: "create", keys });
+  }, [dragKeys]);
+
+  const groupActions = useMemo<GroupHeaderActions>(
+    () => ({
+      onToggleCollapsed: (groupId) => {
+        if (groupId !== UNGROUPED_ID) {
+          void saveGroups((file) => toggleGroupCollapsed(file, groupId));
+        }
+      },
+      onSetEnabled: (entries, enabled) => void setEnabledFor(entries, enabled),
+      onRename: (id, name) => setGroupDialog({ kind: "rename", id, name }),
+      onDelete: (id, name) =>
+        void saveGroups(
+          (file) => removeGroup(file, id),
+          t("modGroups.deleted", { name }),
+        ),
+      onDrop: dropDragged,
+    }),
+    [dropDragged, saveGroups, setEnabledFor, t],
   );
 
   const createGroupFor = useCallback((entries: ContentEntry[]) => {
@@ -2245,6 +2327,35 @@ export function ContentManager({
     );
     setSelection(new Set());
   };
+
+  const detailRef = useLatestRef(detail);
+
+  const openProjectLink = useCallback(
+    async (href: string) => {
+      const link = parseProjectLink(href);
+      if (!link || !isOnline) return false;
+
+      const project = await api.modManager.resolveLink(
+        link.provider,
+        link.ref,
+        link.projectType,
+      );
+      const current = detailRef.current?.entry;
+      if (!project || !current) return false;
+      if (entryKey(project.provider, project.id) === current.key) return false;
+      if (!typesForScope(link.provider).includes(project.projectType)) {
+        return false;
+      }
+
+      setDetailStack((prev) => [...prev, current]);
+      void loadDetail(
+        fromCatalogProject(project, findInstalled(project) ?? null),
+        true,
+      );
+      return true;
+    },
+    [detailRef, findInstalled, isOnline, loadDetail, typesForScope],
+  );
 
   const addFromSet = useCallback(
     (projects: ILocalProject[]) => {
@@ -2286,6 +2397,24 @@ export function ContentManager({
     [activeIndex, displayIndexOfRow, openRow, rows, rowVirtualizer, selectRow],
   );
 
+  const deleteByKey = useLatestRef(() => {
+    if (!canSelectRows) return false;
+    const focused = rows[activeIndex];
+    const targets =
+      selectedEntries.length > 0
+        ? selectedEntries
+        : focused && listElement?.contains(document.activeElement)
+          ? [focused]
+          : [];
+    const removable = targets.filter(
+      (entry) => entry.installed && !entry.pendingRemoved,
+    );
+    if (removable.length === 0) return false;
+    void removeEntries(removable);
+    setSelection(new Set());
+    return true;
+  });
+
   useEffect(() => {
     const isCoveredByLayer = () => {
       const root = rootRef.current;
@@ -2300,7 +2429,14 @@ export function ContentManager({
       const target = event.target as HTMLElement | null;
       const isTyping =
         target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement;
+        target instanceof HTMLTextAreaElement ||
+        Boolean(target?.isContentEditable);
+
+      if (event.key === "Delete" && !isTyping && !event.repeat) {
+        if (isCoveredByLayer()) return;
+        if (deleteByKey.current()) event.preventDefault();
+        return;
+      }
 
       if (event.key === "Escape" && !isTyping) {
         if (isCoveredByLayer()) return;
@@ -2330,7 +2466,7 @@ export function ContentManager({
 
     document.addEventListener("keydown", onGlobalKey, true);
     return () => document.removeEventListener("keydown", onGlobalKey, true);
-  }, [closeDetail, detail, detailStack, loadDetail, selection.size]);
+  }, [closeDetail, deleteByKey, detail, detailStack, loadDetail, selection.size]);
 
   const activeFilterChips = useMemo(
     () =>
@@ -2414,20 +2550,6 @@ export function ContentManager({
       setCatalogAuthor(null);
     }
   };
-
-  const filterGroups = useMemo(() => {
-    const needle = filterQuery.trim().toLowerCase();
-    if (!needle) return meta.filters;
-
-    return meta.filters
-      .map((group) => ({
-        ...group,
-        items: group.items.filter((item) =>
-          item.name.toLowerCase().includes(needle),
-        ),
-      }))
-      .filter((group) => group.items.length > 0);
-  }, [filterQuery, meta.filters]);
 
   const detailBase = detail?.entry ?? null;
 
@@ -2537,7 +2659,6 @@ export function ContentManager({
           setLibraryCategories={setLibraryCategories}
           hideLibraries={hideLibraries}
           setHideLibraries={setHideLibraries}
-          filterGroups={filterGroups}
           filterQuery={filterQuery}
           gameVersions={gameVersions}
           identifiable={identifiable}
@@ -2640,6 +2761,9 @@ export function ContentManager({
           detailWidth={detailWidth}
           displayItems={displayItems}
           groupActions={groupActions}
+          canDragRows={canGroup}
+          dragState={dragState}
+          dropToNewGroup={dropToNewGroup}
           duplicates={duplicates}
           fileStates={fileStates}
           filterByAuthor={filterByAuthor}
@@ -2690,6 +2814,7 @@ export function ContentManager({
           splitRef={splitRef}
           t={t}
           translateDetail={translateDetail}
+          openProjectLink={openProjectLink}
           updateCheck={updateCheck}
           version={version}
           virtualItems={virtualItems}

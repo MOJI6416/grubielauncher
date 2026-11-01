@@ -1,4 +1,11 @@
-import { type CSSProperties, Dispatch, SetStateAction } from "react";
+import {
+  type CSSProperties,
+  type DragEvent,
+  Dispatch,
+  type ReactNode,
+  SetStateAction,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -6,6 +13,7 @@ import {
   EyeOff,
   FilePlus2,
   FolderOpen,
+  FolderPlus,
   ListRestart,
   Loader2,
   Package,
@@ -13,6 +21,7 @@ import {
   Search,
   Trash2,
   Undo2,
+  X,
 } from "lucide-react";
 import {
   ILocalProject,
@@ -38,7 +47,8 @@ import { isCheckableProject } from "./updates";
 import { TRASH_MAX_AGE_DAYS, TrashEntry } from "./trash";
 import { ContentRow } from "./ContentRow";
 import { GroupHeader, type GroupHeaderActions } from "./GroupHeader";
-import type { DisplayItem } from "./modGroups";
+import { type DisplayItem, UNGROUPED_ID } from "./modGroups";
+import { isFileDrag } from "./contentDrag";
 import { ContentDetails, DetailProgress } from "./ContentDetails";
 import { ImportMode } from "./ImportLocalDialog";
 import { isImportableFileName } from "./localImport";
@@ -94,6 +104,9 @@ export interface ContentListPaneProps {
   filterByAuthor: (provider: Provider, author: IProjectAuthor) => void;
   findInstalled: (project: MatchableProject) => ILocalProject | undefined;
   groupActions: GroupHeaderActions;
+  canDragRows: boolean;
+  dragState: { keys: ReadonlySet<string>; hasGrouped: boolean } | null;
+  dropToNewGroup: () => void;
   handleKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
   hasActiveFilters: boolean;
   hideTrashBar: () => void;
@@ -160,6 +173,7 @@ export interface ContentListPaneProps {
   splitRef: RefObject<HTMLDivElement | null>;
   t: TFunction<"translation", undefined>;
   translateDetail: () => Promise<void>;
+  openProjectLink: (href: string) => Promise<boolean>;
   updateCheck: UpdateCheckResult;
   version: IVersion | undefined;
   virtualItems: VirtualItem[];
@@ -188,6 +202,9 @@ export function ContentListPane({
   filterByAuthor,
   findInstalled,
   groupActions,
+  canDragRows,
+  dragState,
+  dropToNewGroup,
   handleKeyDown,
   hasActiveFilters,
   hideTrashBar,
@@ -234,6 +251,7 @@ export function ContentListPane({
   splitRef,
   t,
   translateDetail,
+  openProjectLink,
   updateCheck,
   version,
   virtualItems,
@@ -247,12 +265,12 @@ export function ContentListPane({
         <div
           className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
           onDragEnter={(event) => {
-            if (!canEdit || isModpacks) return;
+            if (!canEdit || isModpacks || !isFileDrag(event)) return;
             event.preventDefault();
             setIsDropActive(true);
           }}
           onDragOver={(event) => {
-            if (!canEdit || isModpacks) return;
+            if (!canEdit || isModpacks || !isFileDrag(event)) return;
             event.preventDefault();
             event.dataTransfer.dropEffect = "copy";
           }}
@@ -262,7 +280,7 @@ export function ContentListPane({
             setIsDropActive(false);
           }}
           onDrop={async (event) => {
-            if (!canEdit || isModpacks) return;
+            if (!canEdit || isModpacks || !isFileDrag(event)) return;
             event.preventDefault();
             setIsDropActive(false);
 
@@ -328,6 +346,7 @@ export function ContentListPane({
                             )
                           }
                           isBusy={isBusy}
+                          canDrop={dragState !== null}
                           actions={groupActions}
                         />
                       </div>
@@ -402,6 +421,8 @@ export function ContentListPane({
                         }
                         isBusy={busyKey === entry.key || isBusy}
                         isWorking={busyKey === entry.key}
+                        isDraggable={canDragRows}
+                        isDragged={dragState?.keys.has(entry.key) ?? false}
                         actions={rowActions}
                       />
                     </div>
@@ -559,6 +580,23 @@ export function ContentListPane({
             </div>
           )}
 
+          {dragState && (
+            <div className="absolute right-3 bottom-3 left-3 z-10 flex gap-2">
+              <GroupDropZone
+                icon={<FolderPlus className="size-4" />}
+                label={t("modGroups.newGroup")}
+                onDrop={dropToNewGroup}
+              />
+              {dragState.hasGrouped && (
+                <GroupDropZone
+                  icon={<X className="size-4" />}
+                  label={t("modGroups.ungroup")}
+                  onDrop={() => groupActions.onDrop(UNGROUPED_ID)}
+                />
+              )}
+            </div>
+          )}
+
           {isDropActive && (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary bg-primary-veil text-sm font-medium text-foreground">
               <FilePlus2 className="size-4" />
@@ -628,6 +666,7 @@ export function ContentListPane({
                 ? (author) => filterByAuthor(detailEntry.provider, author)
                 : undefined
             }
+            onOpenLink={openProjectLink}
             onTranslate={() => void translateDetail()}
             onRetry={() => void loadDetail(detailEntry, true)}
             width={detailWidth.width}
@@ -649,5 +688,42 @@ export function ContentListPane({
         )}
       </div>
     </>
+  );
+}
+
+function GroupDropZone({
+  icon,
+  label,
+  onDrop,
+}: {
+  icon: ReactNode;
+  label: string;
+  onDrop: () => void;
+}) {
+  const [isOver, setIsOver] = useState(false);
+
+  return (
+    <div
+      data-over={isOver || undefined}
+      onDragOver={(event: DragEvent) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        setIsOver(true);
+      }}
+      onDragLeave={(event: DragEvent) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+        setIsOver(false);
+      }}
+      onDrop={(event: DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsOver(false);
+        onDrop();
+      }}
+      className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-primary/50 bg-popover/95 px-3 text-xs font-medium text-muted-foreground shadow-lg transition-colors data-[over]:border-primary data-[over]:bg-primary-soft data-[over]:text-foreground"
+    >
+      {icon}
+      <span className="truncate">{label}</span>
+    </div>
   );
 }

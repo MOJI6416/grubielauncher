@@ -125,6 +125,15 @@ export function registerModManagerIpc() {
     },
   );
 
+  handleSafe<IProject | null>(
+    "modManager:resolveLink",
+    null,
+    [isProvider, isProjectId, check.optional(isProjectType)],
+    async (_, provider: Provider, ref: string, projectType?: ProjectType) => {
+      return await ModManager.resolveLink(provider, ref, projectType);
+    },
+  );
+
   handleSafe<IVersion[]>(
     "modManager:getVersions",
     [],

@@ -1,7 +1,7 @@
 import { app } from "electron";
-import { autoUpdater } from "electron-updater";
 import { clearUpdateAttempt, writeUpdateAttempt } from "./updateLoopGuard";
 import { clearHiddenRelaunch, markHiddenRelaunch } from "./launchAtLogin";
+import { loadAutoUpdater } from "./autoUpdater";
 
 let installing = false;
 
@@ -14,6 +14,7 @@ export async function scheduleUpdateInstall(options: {
 }): Promise<boolean> {
   if (installing) return false;
   installing = true;
+  const autoUpdater = await loadAutoUpdater();
   const pending: { timer?: NodeJS.Timeout; failed: boolean } = {
     failed: false,
   };

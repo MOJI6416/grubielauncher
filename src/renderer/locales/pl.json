@@ -1672,6 +1672,7 @@
           "move": "Poruszaj się po modach, instancjach, światach, serwerach",
           "open": "Otwórz wybrany element; na liście serwerów uruchamia grę",
           "mark": "Zaznacz mod pod kursorem",
+          "removeContent": "Usuń zaznaczone mody lub mod pod kursorem",
           "removeServer": "Usuń serwer z listy",
           "moveServer": "Przesuń serwer w górę lub w dół",
           "tab": "Sąsiednia zakładka instancji",
@@ -2598,6 +2599,39 @@
       "title_many": "{{count}} argumentów zostanie pominiętych przy uruchomieniu",
       "title_other": "{{count}} argumentu zostanie pominięte przy uruchomieniu",
       "hint": "Launcher odrzuca argumenty, które mogą wczytać cudzy kod lub nadpisać pliki."
+    }
+  },
+  "jvmFlags": {
+    "title": "Co robi optymalizacja JVM",
+    "intro": "Dopracowany zestaw flag odśmiecacza pamięci (Aikar's flags), popularny na serwerach i w dużych modpackach Minecrafta. Java zwalnia pamięć małymi porcjami, więc gra rzadziej się przycina. Każda flaga poniżej trafia do polecenia uruchomienia.",
+    "whatsInside": "Co zawiera",
+    "groups": {
+      "memory": "Pamięć",
+      "collector": "Odśmiecacz pamięci G1",
+      "young": "Nowe obiekty",
+      "old": "Dane długowieczne",
+      "service": "Flagi pomocnicze"
+    },
+    "flags": {
+      "heap": "Początkowa pamięć równa się maksymalnej: Java od razu zajmuje całą przydzieloną pamięć i nie robi przerw na jej powiększanie.",
+      "AlwaysPreTouch": "Przy starcie dotyka każdej strony tej pamięci. Uruchamianie trwa trochę dłużej, ale gra nie przycina się, gdy po raz pierwszy sięga po nową pamięć.",
+      "UseG1GC": "Włącza odśmiecacz G1: sprząta pamięć małymi regionami, zamiast zatrzymywać grę na jedno długie sprzątanie.",
+      "MaxGCPauseMillis": "Prosi G1, by każda przerwa trwała krócej niż 200 ms.",
+      "ParallelRefProcEnabled": "Przetwarza referencje między obiektami w kilku wątkach, co skraca przerwy.",
+      "DisableExplicitGC": "Ignoruje pełne sprzątanie, o które mody proszą same (System.gc()) — częstą przyczynę zacięć.",
+      "G1NewSizePercent": "Przeznacza na nowe obiekty co najmniej 30% pamięci. Minecraft tworzy ich tysiące w każdym ticku, a obszerny obszar rzadziej się zapełnia.",
+      "G1MaxNewSizePercent": "Pozwala temu obszarowi urosnąć do 40% pamięci.",
+      "SurvivorRatio": "Zmniejsza obszar pośredni (survivor): obiekty Minecrafta zwykle od razu przestają być potrzebne albo żyją długo.",
+      "MaxTenuringThreshold": "Obiekt, który przetrwa jedno sprzątanie, od razu trafia do danych długowiecznych, zamiast być kopiowany tam i z powrotem.",
+      "InitiatingHeapOccupancyPercent": "Zaczyna oznaczanie danych długowiecznych w tle, gdy pamięć jest zajęta w 15% — z wyprzedzeniem, a nie w ostatniej chwili.",
+      "G1MixedGCCountTarget": "Rozkłada sprzątanie danych długowiecznych na 4 przebiegi, by każdy był krótki.",
+      "G1MixedGCLiveThresholdPercent": "Sprząta regiony, w których żywych danych jest mniej niż 90% — każdy przebieg zwalnia więcej miejsca.",
+      "G1HeapWastePercent": "Toleruje do 5% pozostawionych śmieci, by nie uruchamiać dodatkowych sprzątań dla drobiazgów.",
+      "G1ReservePercent": "Trzyma 20% pamięci w rezerwie na skoki zapotrzebowania. Bez niej Javie może zabraknąć miejsca i uruchomi długie pełne sprzątanie.",
+      "G1HeapRegionSize": "Dzieli pamięć na regiony po 8 MB, by duże obiekty, takie jak dane chunków, rzadziej uznawano za „ogromne” i obsługiwano wolniejszą drogą.",
+      "G1RSetUpdatingPauseTimePercent": "Poświęca na ewidencję referencji najwyżej 5% przerwy, resztę robi w tle.",
+      "UnlockExperimentalVMOptions": "Pozwala na flagi eksperymentalne — bez niej dwie flagi rozmiaru obszaru nowych obiektów by nie działały.",
+      "PerfDisableSharedMem": "Zabrania Javie zapisywania statystyk wydajności do pliku na dysku — na wolnym dysku powoduje to rzadkie zacięcia."
     }
   },
   "selectPaths": {
@@ -4650,8 +4684,7 @@
       "newInstance": "Nowa instancja",
       "instance": "Instancja",
       "people": "Ludzie",
-      "profile": "Profil",
-      "profileOffline": "Profil jest niedostępny dla konta offline — zaloguj się przez Microsoft, Discord lub Ely.by."
+      "profile": "Profil"
     },
     "palette": {
       "label": "Wyszukiwanie i polecenia",

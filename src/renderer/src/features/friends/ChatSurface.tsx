@@ -1215,7 +1215,7 @@ function ChatSurfaceComponent({
                           ) : (
                             <div
                               className={cn(
-                                "w-fit max-w-full rounded-lg border px-3 py-2 text-xs leading-5 whitespace-pre-wrap wrap-anywhere",
+                                "w-fit max-w-full rounded-lg border px-3 py-2 text-xs leading-5 whitespace-pre-wrap select-text wrap-anywhere",
                                 isOwn
                                   ? "border-primary/30 bg-primary-soft-raised"
                                   : "border-border bg-surface-3",

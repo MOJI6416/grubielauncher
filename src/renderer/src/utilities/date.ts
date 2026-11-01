@@ -4,11 +4,41 @@ function currentLocale(): string {
   return i18n.resolvedLanguage || i18n.language || "en";
 }
 
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
+const relativeFormatters = new Map<string, Intl.RelativeTimeFormat>();
+
+function dateFormatter(
+  kind: string,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  const locale = currentLocale();
+  const key = `${locale}|${kind}`;
+  let formatter = dateFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    dateFormatters.set(key, formatter);
+  }
+  return formatter;
+}
+
+function relativeFormatter(): Intl.RelativeTimeFormat {
+  const locale = currentLocale();
+  let formatter = relativeFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.RelativeTimeFormat(locale, {
+      numeric: "auto",
+      style: "short",
+    });
+    relativeFormatters.set(locale, formatter);
+  }
+  return formatter;
+}
+
 export function formatDate(date: Date) {
   if (Number.isNaN(date.getTime())) return "";
 
   try {
-    return new Intl.DateTimeFormat(currentLocale(), {
+    return dateFormatter("dateTime", {
       dateStyle: "short",
       timeStyle: "short",
     }).format(date);
@@ -21,9 +51,7 @@ export function formatDay(date: Date) {
   if (Number.isNaN(date.getTime())) return "";
 
   try {
-    return new Intl.DateTimeFormat(currentLocale(), {
-      dateStyle: "short",
-    }).format(date);
+    return dateFormatter("day", { dateStyle: "short" }).format(date);
   } catch {
     return date.toLocaleDateString();
   }
@@ -33,9 +61,7 @@ export function formatClock(date: Date) {
   if (Number.isNaN(date.getTime())) return "";
 
   try {
-    return new Intl.DateTimeFormat(currentLocale(), {
-      timeStyle: "short",
-    }).format(date);
+    return dateFormatter("clock", { timeStyle: "short" }).format(date);
   } catch {
     return date.toLocaleTimeString();
   }
@@ -69,10 +95,7 @@ export function formatRelative(date: Date, now = Date.now()): string {
   const absolute = Math.abs(diff);
 
   try {
-    const formatter = new Intl.RelativeTimeFormat(currentLocale(), {
-      numeric: "auto",
-      style: "short",
-    });
+    const formatter = relativeFormatter();
 
     if (absolute < MINUTE_MS) return formatter.format(0, "minute");
     if (absolute < HOUR_MS) {

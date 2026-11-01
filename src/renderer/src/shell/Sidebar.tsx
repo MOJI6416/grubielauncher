@@ -1,13 +1,7 @@
 import { ReactNode, Suspense, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAtom, useAtomValue } from "jotai";
-import {
-  BookUser,
-  Newspaper,
-  Play,
-  Settings as LSettings,
-  UserRound,
-} from "lucide-react";
+import { BookUser, Newspaper, Play, Settings as LSettings } from "lucide-react";
 import {
   accountAtom,
   friendsAtom,
@@ -18,6 +12,7 @@ import {
   networkAtom,
   shareOwnerAccountKeyAtom,
   shareStateAtom,
+  versionsLoadedAtom,
 } from "@renderer/stores/atoms";
 import { AccountSwitcher } from "@renderer/features/accounts/AccountSwitcher";
 import { ErrorLog } from "@renderer/components/ErrorLog";
@@ -33,11 +28,12 @@ import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 import { currentRouteAtom } from "@renderer/navigation/store";
 import { navigate } from "@renderer/navigation/navigate";
 import { Route } from "@renderer/navigation/routes";
-import { OWN_PROFILE_ID } from "@renderer/features/profile/loadProfileUser";
 import {
+  LazyAgentScreen,
   LazyInstanceScreen,
   LazySettingsScreen,
 } from "@renderer/screens/lazyScreens";
+import { preloadProfileScreen } from "@renderer/screens/profile/ProfileScreen";
 import { InstanceDock } from "./InstanceDock";
 import { NowBlock } from "./NowBlock";
 import { VoicePanel } from "./VoicePanel";
@@ -113,6 +109,7 @@ export function Sidebar() {
   const shareState = useAtomValue(shareStateAtom);
   const shareOwnerAccountKey = useAtomValue(shareOwnerAccountKeyAtom);
   const route = useAtomValue(currentRouteAtom);
+  const versionsLoaded = useAtomValue(versionsLoadedAtom);
   const { t } = useTranslation();
   const navIndicator = useSlidingIndicator<HTMLDivElement>();
 
@@ -123,7 +120,6 @@ export function Sidebar() {
   const canUseBackend = canUseBackendFeature(connectivity);
   const isFriendsDisabled =
     !selectedAccount || selectedAccount.type === "plain";
-  const isProfileDisabled = isFriendsDisabled;
   const friendsHint = !canUseBackend
     ? t("app.backendUnavailable")
     : isFriendsConnected
@@ -149,11 +145,17 @@ export function Sidebar() {
   }, [shouldShowShareButton]);
 
   useEffect(() => {
+    if (!versionsLoaded) return;
     return schedulePreload(
-      [LazySettingsScreen.preload, LazyInstanceScreen.preload],
+      [
+        LazySettingsScreen.preload,
+        LazyInstanceScreen.preload,
+        LazyAgentScreen.preload,
+        preloadProfileScreen,
+      ],
       2500,
     );
-  }, []);
+  }, [versionsLoaded]);
 
   useEffect(() => {
     if (!shouldShowShareButton) return;
@@ -195,21 +197,6 @@ export function Sidebar() {
                 ) : undefined
               }
               onSelect={() => navigate({ name: "people" })}
-            />
-
-            <NavRow
-              icon={<UserRound className="size-4" />}
-              label={t("shell.nav.profile")}
-              current={isRoute(route, "profile")}
-              disabled={isProfileDisabled}
-              hint={
-                selectedAccount
-                  ? t("shell.nav.profileOffline")
-                  : t("accounts.signIn")
-              }
-              onSelect={() =>
-                navigate({ name: "profile", userId: OWN_PROFILE_ID })
-              }
             />
 
             <NavRow

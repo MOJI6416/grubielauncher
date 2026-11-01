@@ -168,7 +168,7 @@ export function DataLocationWindow() {
             {t(`dataLocation.failures.${state.reason}`)}
           </p>
           {state.detail && (
-            <p className="line-clamp-3 font-mono text-[0.7rem] break-all text-faint">
+            <p className="line-clamp-3 font-mono text-[0.7rem] break-all text-faint select-text">
               {state.detail}
             </p>
           )}

@@ -48,6 +48,7 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { id: "move", combos: [["↑"], ["↓"]] },
       { id: "open", combos: [["Enter"]] },
       { id: "mark", combos: [["Space"]] },
+      { id: "removeContent", combos: [["Delete"]] },
       { id: "removeServer", combos: [["Delete"]] },
       { id: "moveServer", combos: [["Alt", "↑"], ["Alt", "↓"]] },
       { id: "tab", combos: [["←"], ["→"]] },

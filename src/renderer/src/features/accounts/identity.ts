@@ -22,17 +22,28 @@ export function isLauncherSessionToken(payload: unknown): payload is IAuth {
   return typeof auth.expiresAt === "number" && Number.isFinite(auth.expiresAt);
 }
 
+const decodedTokens = new Map<string, IAuth | null>();
+const DECODED_TOKENS_LIMIT = 16;
+
 export function decodeAccountToken(token?: string): IAuth | null {
   if (!token) return null;
+
+  const cached = decodedTokens.get(token);
+  if (cached !== undefined) return cached;
 
   let payload: unknown;
   try {
     payload = jwtDecode(token);
   } catch {
-    return null;
+    payload = null;
   }
 
-  return isLauncherSessionToken(payload) ? payload : null;
+  const decoded = isLauncherSessionToken(payload) ? payload : null;
+  if (decodedTokens.size >= DECODED_TOKENS_LIMIT) {
+    decodedTokens.delete(decodedTokens.keys().next().value as string);
+  }
+  decodedTokens.set(token, decoded);
+  return decoded;
 }
 
 export function accountSubject(account: AccountLike): string | null {

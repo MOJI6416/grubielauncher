@@ -31,6 +31,7 @@ import {
   toTotalMemoryMb,
 } from "@renderer/features/settings/memory";
 import { OPTIMIZED_GC_FLAGS } from "@/shared/jvmDefaults";
+import { JvmFlagsInfo } from "@renderer/components/JvmFlagsInfo";
 import {
   InstanceSettingsOverrides,
   OverridableKey,
@@ -54,7 +55,7 @@ function OverrideRow({
 }: {
   icon: typeof Gauge;
   title: string;
-  hint?: string;
+  hint?: React.ReactNode;
   overridden: boolean;
   disabled?: boolean;
   onToggle: () => void;
@@ -287,9 +288,18 @@ export function InstanceSettingsPanel({
         <OverrideRow
           icon={Zap}
           title={t("settings.optimizedJvm")}
-          hint={t("instanceSettings.optimizedHint", {
-            flags: OPTIMIZED_GC_FLAGS.length,
-          })}
+          hint={
+            <JvmFlagsInfo>
+              <button
+                type="button"
+                className="max-w-full truncate rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-muted-foreground"
+              >
+                {t("instanceSettings.optimizedHint", {
+                  flags: OPTIMIZED_GC_FLAGS.length,
+                })}
+              </button>
+            </JvmFlagsInfo>
+          }
           overridden={isOverridden(overrides, "optimizedJvm")}
           disabled={disabled}
           onToggle={() => toggle("optimizedJvm", resolved.optimizedJvm)}

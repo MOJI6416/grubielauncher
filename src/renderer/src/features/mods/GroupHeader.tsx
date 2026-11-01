@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronRight,
@@ -26,6 +27,7 @@ export interface GroupHeaderActions {
   onSetEnabled: (entries: ContentEntry[], enabled: boolean) => void;
   onRename: (groupId: string, name: string) => void;
   onDelete: (groupId: string, name: string) => void;
+  onDrop: (groupId: string) => void;
 }
 
 export function GroupHeader({
@@ -37,6 +39,7 @@ export function GroupHeader({
   allDisabled,
   canToggle,
   isBusy,
+  canDrop = false,
   actions,
 }: {
   groupId: string;
@@ -47,15 +50,44 @@ export function GroupHeader({
   allDisabled: boolean;
   canToggle: boolean;
   isBusy: boolean;
+  canDrop?: boolean;
   actions: GroupHeaderActions;
 }) {
   const { t } = useTranslation();
   const isUngrouped = groupId === UNGROUPED_ID;
   const title = isUngrouped ? t("modGroups.ungrouped") : name;
   const toggleLabel = t(allDisabled ? "modGroups.enableAll" : "modGroups.disableAll");
+  const [isOver, setIsOver] = useState(false);
 
   return (
-    <div className="flex h-9 min-w-0 items-center gap-1 border-b border-border/60 px-1">
+    <div
+      data-drop-target={canDrop || undefined}
+      data-drop-over={(canDrop && isOver) || undefined}
+      onDragOver={
+        canDrop
+          ? (event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              setIsOver(true);
+            }
+          : undefined
+      }
+      onDragLeave={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+        setIsOver(false);
+      }}
+      onDrop={
+        canDrop
+          ? (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setIsOver(false);
+              actions.onDrop(groupId);
+            }
+          : undefined
+      }
+      className="flex h-9 min-w-0 items-center gap-1 rounded-md border-b border-border/60 px-1 transition-colors data-[drop-over]:bg-primary-soft data-[drop-target]:outline-1 data-[drop-target]:-outline-offset-1 data-[drop-target]:outline-primary/30 data-[drop-target]:outline-dashed data-[drop-over]:outline-primary"
+    >
       <button
         type="button"
         disabled={isUngrouped}

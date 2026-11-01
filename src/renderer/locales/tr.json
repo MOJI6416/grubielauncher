@@ -1642,6 +1642,7 @@
           "move": "Modlar, kurulumlar, dünyalar, sunucular arasında gezin",
           "open": "Seçili öğeyi aç; sunucu listesinde oyunu başlatır",
           "mark": "İmlecin altındaki modu işaretle",
+          "removeContent": "İşaretli modları ya da imlecin altındaki modu sil",
           "removeServer": "Sunucuyu listeden kaldır",
           "moveServer": "Sunucuyu yukarı veya aşağı taşı",
           "tab": "Komşu kurulum sekmesi",
@@ -2558,6 +2559,39 @@
       "title_one": "{{count}} argüman başlatmada atılacak",
       "title_other": "{{count}} argüman başlatmada atılacak",
       "hint": "Başlatıcı, yabancı kod yükleyebilen veya dosyaların üzerine yazabilen argümanları reddeder."
+    }
+  },
+  "jvmFlags": {
+    "title": "JVM optimizasyonu ne yapar",
+    "intro": "Minecraft sunucularında ve büyük mod paketlerinde yaygın olan, ayarlanmış bir çöp toplayıcı bayrakları seti (Aikar's flags). Java belleği küçük adımlarla boşaltır, bu yüzden oyun daha az takılır. Aşağıdaki her bayrak başlatma komutuna eklenir.",
+    "whatsInside": "Neler içerir",
+    "groups": {
+      "memory": "Bellek",
+      "collector": "G1 çöp toplayıcı",
+      "young": "Yeni nesneler",
+      "old": "Uzun ömürlü veriler",
+      "service": "Yardımcı bayraklar"
+    },
+    "flags": {
+      "heap": "Başlangıç belleği en büyük değere eşittir: Java ayrılan belleğin tamamını hemen alır ve büyütmek için duraklamaz.",
+      "AlwaysPreTouch": "Başlangıçta bu belleğin her sayfasına dokunur. Açılış biraz uzar ama oyun yeni belleği ilk kez kullanırken takılmaz.",
+      "UseG1GC": "G1 toplayıcısını kullanır: oyunu tek ve uzun bir temizlik için dondurmak yerine belleği küçük bölgeler halinde temizler.",
+      "MaxGCPauseMillis": "G1'den her duraklamayı 200 ms'nin altında tutmasını ister.",
+      "ParallelRefProcEnabled": "Nesneler arası referansları birkaç iş parçacığında işler, bu da duraklamaları kısaltır.",
+      "DisableExplicitGC": "Modların kendilerinin istediği tam temizlikleri (System.gc()) yok sayar; bunlar donmaların sık bir nedenidir.",
+      "G1NewSizePercent": "Belleğin en az %30'unu yeni nesnelere ayırır. Minecraft her tick'te binlercesini oluşturur ve geniş bir alan daha seyrek dolar.",
+      "G1MaxNewSizePercent": "Bu alanın belleğin %40'ına kadar büyümesine izin verir.",
+      "SurvivorRatio": "Ara alanı (survivor) küçültür: Minecraft nesneleri genellikle ya hemen gereksiz olur ya da uzun yaşar.",
+      "MaxTenuringThreshold": "Bir temizlikten sağ çıkan nesne, ileri geri kopyalanmak yerine hemen uzun ömürlü verilere taşınır.",
+      "InitiatingHeapOccupancyPercent": "Bellek %15 dolduğunda uzun ömürlü verileri arka planda işaretlemeye başlar: son anda değil, önceden.",
+      "G1MixedGCCountTarget": "Uzun ömürlü verilerin temizliğini 4 geçişe yayar, böylece her biri kısa olur.",
+      "G1MixedGCLiveThresholdPercent": "Canlı verisi %90'ın altında olan bölgeleri temizler, böylece her geçişte daha fazla yer açılır.",
+      "G1HeapWastePercent": "Kırıntılar için ek temizlik başlatmamak adına %5'e kadar kalan çöpe göz yumar.",
+      "G1ReservePercent": "Ani artışlar için belleğin %20'sini yedekte tutar. Yedek olmadan Java'nın yeri dolabilir ve uzun bir tam temizlik yapabilir.",
+      "G1HeapRegionSize": "Belleği 8 MB'lık bölgelere ayırır; böylece chunk verileri gibi büyük nesneler daha seyrek \"devasa\" sayılıp yavaş yoldan işlenir.",
+      "G1RSetUpdatingPauseTimePercent": "Bir duraklamanın en fazla %5'ini referans kayıtlarına harcar, gerisi arka planda yapılır.",
+      "UnlockExperimentalVMOptions": "Deneysel bayraklara izin verir: o olmadan yeni nesne alanının iki boyut bayrağı çalışmazdı.",
+      "PerfDisableSharedMem": "Java'nın performans istatistiklerini diskteki bir dosyaya yazmasını engeller; yavaş bir diskte bu, nadir donmalara yol açar."
     }
   },
   "selectPaths": {
@@ -4578,8 +4612,7 @@
       "newInstance": "Yeni kurulum",
       "instance": "Kurulum",
       "people": "Kişiler",
-      "profile": "Profil",
-      "profileOffline": "Profil çevrim dışı hesap için kullanılamaz — Microsoft, Discord veya Ely.by ile giriş yapın."
+      "profile": "Profil"
     },
     "palette": {
       "label": "Arama ve komutlar",

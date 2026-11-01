@@ -1056,6 +1056,11 @@ export interface IElectronAPI {
       provider: Provider,
       projectId: string,
     ) => Promise<IProject | null>;
+    resolveLink: (
+      provider: Provider,
+      ref: string,
+      projectType?: ProjectType,
+    ) => Promise<IProject | null>;
     getVersions: (
       provider: Provider,
       projectId: string,
@@ -2226,6 +2231,8 @@ export const api: IElectronAPI = {
       invoke("modManager:getFilter", provider, projectType),
     getProject: (provider: Provider, projectId: string) =>
       invoke("modManager:getProject", provider, projectId),
+    resolveLink: (provider: Provider, ref: string, projectType?: ProjectType) =>
+      invoke("modManager:resolveLink", provider, ref, projectType),
     getVersions: (provider: Provider, projectId: string, options: any) =>
       invoke("modManager:getVersions", provider, projectId, options),
     getDependencies: (provider: Provider, projectId: string, deps: any[]) =>

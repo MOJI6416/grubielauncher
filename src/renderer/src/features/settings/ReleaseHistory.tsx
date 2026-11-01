@@ -128,7 +128,7 @@ function ReleaseRow({
               <h4 className="text-[0.6rem] font-semibold tracking-[0.09em] text-faint uppercase">
                 {t("whatsNew.highlights")}
               </h4>
-              <ul className="grid gap-1">
+              <ul className="grid gap-1 select-text">
                 {release.highlights.map((item, index) => (
                   <li
                     key={`${item}-${index}`}
@@ -148,7 +148,7 @@ function ReleaseRow({
                 <Wrench className="size-2.5" />
                 {t("whatsNew.fixes")}
               </h4>
-              <ul className="grid gap-1">
+              <ul className="grid gap-1 select-text">
                 {release.fixes.map((item, index) => (
                   <li
                     key={`${item}-${index}`}

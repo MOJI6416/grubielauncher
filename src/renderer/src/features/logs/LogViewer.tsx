@@ -515,7 +515,7 @@ export function LogViewer({
                       <span className="w-3.5 shrink-0" />
                     )}
 
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 select-text">
                       <Hint
                         variant="text"
                         truncatedOnly

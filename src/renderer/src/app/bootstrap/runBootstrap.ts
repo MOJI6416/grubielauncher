@@ -22,6 +22,7 @@ import {
 import { showFailureToast } from "@renderer/utilities/failures";
 import { patchSettings } from "@renderer/utilities/persistSettings";
 import {
+  claimUnownedInstances,
   InstanceLibraryUnreadableError,
   readVerions,
 } from "@renderer/utilities/version";
@@ -74,6 +75,13 @@ export async function runBootstrap(
 
     store.set(pathsAtom, paths);
 
+    const versionsPath = await api.path.join(paths.minecraft, "versions");
+    const versionsEnsured = api.fs.ensure(versionsPath);
+    const versionsRead = versionsEnsured.then(() =>
+      readVerions(paths.launcher, null),
+    );
+    versionsRead.catch(() => {});
+
     const [settingsData] = await Promise.all([
       loadSettings(paths.launcher),
       loadAccounts(),
@@ -90,15 +98,11 @@ export async function runBootstrap(
     }
     forgetLegacyViewPrefs();
 
-    const versionsPath = await api.path.join(paths.minecraft, "versions");
-
-    await api.fs.ensure(versionsPath);
+    await versionsEnsured;
 
     try {
-      const instances = await readVerions(
-        paths.launcher,
-        store.get(accountAtom) ?? null,
-      );
+      const instances = await versionsRead;
+      await claimUnownedInstances(instances, store.get(accountAtom) ?? null);
       await migrateInstanceConfs(paths.launcher, instances).catch(() => 0);
       if (!isCancelled()) {
         store.set(versionsUnreadableAtom, null);

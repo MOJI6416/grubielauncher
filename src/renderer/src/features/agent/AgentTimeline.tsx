@@ -271,7 +271,7 @@ function ReasoningCard({
         />
       </button>
       {expanded && (
-        <p className="border-t border-border px-2.5 py-2 text-[0.7rem] whitespace-pre-wrap text-muted-foreground">
+        <p className="border-t border-border px-2.5 py-2 text-[0.7rem] whitespace-pre-wrap text-muted-foreground select-text">
           {redact.text(item.text)}
         </p>
       )}
@@ -603,7 +603,7 @@ function CompactedRow({
         )}
       </button>
       {expanded && (
-        <p className="border-t border-border px-2.5 py-2 text-[0.7rem] whitespace-pre-wrap text-muted-foreground">
+        <p className="border-t border-border px-2.5 py-2 text-[0.7rem] whitespace-pre-wrap text-muted-foreground select-text">
           {redact.text(item.summary)}
         </p>
       )}
@@ -698,7 +698,7 @@ const Row = memo(function Row({
     case "user":
       return (
         <div className="flex justify-end">
-          <div className="max-w-[80%] rounded-xl rounded-br-sm bg-surface-3 px-3 py-2 text-sm whitespace-pre-wrap text-foreground">
+          <div className="max-w-[80%] rounded-xl rounded-br-sm bg-surface-3 px-3 py-2 text-sm whitespace-pre-wrap text-foreground select-text">
             {redact.text(item.text)}
           </div>
         </div>

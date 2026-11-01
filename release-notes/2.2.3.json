@@ -1,0 +1,130 @@
+{
+  "version": "2.2.3",
+  "isMilestone": false,
+  "en": {
+    "subtitle": "Drag mods into groups, follow project links inside the Mod Manager and start the launcher faster.",
+    "highlights": [
+      "Added drag and drop into groups and the Delete key to the Mod Manager library: drop a mod on a group, “New group…” or “Remove from group”; Delete removes the ticked mods or the one under the cursor.",
+      "Added search to the Mod Manager filters: type part of a name, pick an option with the arrow keys and press Enter to tick it.",
+      "Added in-app links: Modrinth and CurseForge links in mod descriptions and changelogs open right in the Mod Manager, with a way back. Ctrl- or Shift-click opens them in the browser.",
+      "Added an explanation of every JVM optimization flag: click the info icon next to “JVM optimization” in Settings → Game or in the instance settings.",
+      "Improved the account block in the sidebar: click your nickname to open your profile, or the arrow to switch accounts.",
+      "Improved speed: the launcher starts faster, search in the Mod Manager library responds instantly even with hundreds of mods, and the assistant, profile and instance logs open without a delay."
+    ],
+    "fixes": [
+      "Selecting text no longer highlights buttons and menus: only text such as mod descriptions, logs, the server console, chat and “What’s new” can be selected and copied."
+    ]
+  },
+  "ru": {
+    "subtitle": "Моды можно перетаскивать в группы, ссылки на проекты открываются прямо в мод-менеджере, а лаунчер стал быстрее.",
+    "highlights": [
+      "Добавлены перетаскивание модов в группы и клавиша Delete в библиотеке мод-менеджера: перетащите мод на группу, «Новая группа…» или «Убрать из группы»; Delete удаляет отмеченные моды или мод под курсором.",
+      "Добавлен поиск в фильтрах мод-менеджера: введите часть названия, выберите пункт стрелками и нажмите Enter, чтобы отметить его.",
+      "Добавлены ссылки внутри лаунчера: ссылки на Modrinth и CurseForge в описаниях и списках изменений модов открываются прямо в мод-менеджере, с возвратом назад. Ctrl- или Shift-клик откроет браузер.",
+      "Добавлено описание каждого флага оптимизации JVM: нажмите на значок «i» рядом с «Оптимизация JVM» в Настройки → Игра или в настройках сборки.",
+      "Улучшен блок аккаунта в боковой панели: нажмите на ник, чтобы открыть свой профиль, или на стрелку, чтобы сменить аккаунт.",
+      "Улучшена скорость: лаунчер быстрее запускается, поиск в библиотеке мод-менеджера срабатывает мгновенно даже на сотнях модов, а ассистент, профиль и логи сборки открываются без задержки."
+    ],
+    "fixes": [
+      "Выделение текста больше не захватывает кнопки и меню: выделить и скопировать можно только текст — описания модов, логи, консоль сервера, чат и «Что нового»."
+    ]
+  },
+  "uk": {
+    "subtitle": "Моди можна перетягувати в групи, посилання на проєкти відкриваються просто в менеджері модифікацій, а лаунчер став швидшим.",
+    "highlights": [
+      "Додано перетягування модів у групи та клавішу Delete в бібліотеці менеджера модифікацій: перетягніть мод на групу, «Нова група…» або «Прибрати з групи»; Delete видаляє позначені моди або мод під курсором.",
+      "Додано пошук у фільтрах менеджера модифікацій: введіть частину назви, виберіть пункт стрілками й натисніть Enter, щоб позначити його.",
+      "Додано посилання всередині лаунчера: посилання на Modrinth і CurseForge в описах і списках змін модів відкриваються просто в менеджері модифікацій, з поверненням назад. Ctrl- або Shift-клік відкриє браузер.",
+      "Додано опис кожного прапорця оптимізації JVM: натисніть на значок «i» поруч з «Оптимізація JVM» у Налаштування → Гра або в налаштуваннях збірки.",
+      "Покращено блок акаунта на бічній панелі: натисніть на нік, щоб відкрити свій профіль, або на стрілку, щоб змінити акаунт.",
+      "Покращено швидкість: лаунчер швидше запускається, пошук у бібліотеці менеджера модифікацій спрацьовує миттєво навіть на сотнях модів, а асистент, профіль і логи збірки відкриваються без затримки."
+    ],
+    "fixes": [
+      "Виділення тексту більше не захоплює кнопки й меню: виділити та скопіювати можна лише текст — описи модів, логи, консоль сервера, чат і «Що нового»."
+    ]
+  },
+  "de": {
+    "subtitle": "Mods in Gruppen ziehen, Projektlinks direkt im Mod-Manager öffnen – und der Launcher startet schneller.",
+    "highlights": [
+      "Neu: In der Bibliothek des Mod-Managers lassen sich Mods auf eine Gruppe, „Neue Gruppe…“ oder „Aus der Gruppe entfernen“ ziehen; Delete löscht die markierten Mods oder den Mod unter dem Mauszeiger.",
+      "Neu: Suche in den Filtern des Mod-Managers. Geben Sie einen Teil des Namens ein, wählen Sie mit den Pfeiltasten und markieren Sie mit Enter.",
+      "Neu: Links zu Modrinth und CurseForge in Mod-Beschreibungen und Changelogs öffnen sich direkt im Mod-Manager, mit Weg zurück. Ctrl- oder Shift-Klick öffnet den Browser.",
+      "Neu: eine Erklärung zu jedem Flag der JVM-Optimierung. Klicken Sie auf das Info-Symbol neben „JVM-Optimierung“ unter Einstellungen → Spiel oder in den Instanzeinstellungen.",
+      "Ein Klick auf Ihren Spielernamen im Kontobereich der Seitenleiste öffnet jetzt Ihr Profil, der Pfeil daneben wechselt das Konto.",
+      "Der Launcher startet jetzt schneller, die Suche in der Bibliothek des Mod-Managers reagiert auch bei Hunderten Mods sofort, und Assistent, Profil und Instanz-Logs öffnen sich ohne Verzögerung."
+    ],
+    "fixes": [
+      "Beim Markieren von Text werden Schaltflächen und Menüs nicht mehr mit ausgewählt: Markieren und kopieren lässt sich nur Text wie Mod-Beschreibungen, Logs, die Serverkonsole, der Chat und „Was ist neu“."
+    ]
+  },
+  "es": {
+    "subtitle": "Arrastre mods a grupos, abra enlaces de proyectos dentro del gestor de mods y use un launcher más rápido.",
+    "highlights": [
+      "Se agregaron el arrastre a grupos y la tecla Delete en la biblioteca del gestor de mods: suelte un mod sobre un grupo, «Nuevo grupo…» o «Quitar del grupo»; Delete elimina los mods marcados o el que está bajo el cursor.",
+      "Se agregó la búsqueda en los filtros del gestor de mods: escriba parte del nombre, elija una opción con las flechas y presione Enter para marcarla.",
+      "Se agregaron enlaces internos: los enlaces de Modrinth y CurseForge en las descripciones y los cambios de los mods se abren en el gestor de mods, con opción de volver. Ctrl o Shift + clic abre el navegador.",
+      "Se agregó una explicación de cada flag de la optimización de la JVM: haga clic en el ícono de información junto a «Optimización de la JVM» en Configuración → Juego o en la configuración de la instancia.",
+      "Se mejoró el bloque de la cuenta en la barra lateral: haga clic en su nombre de usuario para abrir su perfil o en la flecha para cambiar de cuenta.",
+      "Se mejoró la velocidad: el launcher inicia más rápido, buscar en la biblioteca del gestor de mods es instantáneo aun con cientos de mods, y el asistente, el perfil y los registros de la instancia abren sin demora."
+    ],
+    "fixes": [
+      "Al seleccionar texto ya no se seleccionan botones ni menús: solo se puede seleccionar y copiar texto, como descripciones de mods, registros, la consola del servidor, el chat y «Novedades»."
+    ]
+  },
+  "fr": {
+    "subtitle": "Glissez vos mods dans des groupes, ouvrez les liens de projets dans le gestionnaire de mods et profitez d’un launcher plus rapide.",
+    "highlights": [
+      "Ajout du glisser-déposer dans la bibliothèque du gestionnaire de mods : déposez un mod sur un groupe, « Nouveau groupe… » ou « Retirer du groupe ». La touche Delete supprime les mods cochés ou celui survolé.",
+      "Ajout d’une recherche dans les filtres du gestionnaire de mods : tapez une partie du nom, choisissez une option avec les flèches et appuyez sur Entrée pour la cocher.",
+      "Ajout des liens internes : les liens Modrinth et CurseForge des descriptions et journaux des modifications s’ouvrent dans le gestionnaire de mods, avec retour possible. Ctrl ou Shift + clic ouvre le navigateur.",
+      "Ajout d’une explication pour chaque flag de l’optimisation de la JVM : cliquez sur l’icône d’info à côté de « Optimisation de la JVM » dans Paramètres → Jeu ou dans les paramètres de l’instance.",
+      "Bloc du compte amélioré dans la barre latérale : cliquez sur votre pseudo pour ouvrir votre profil, ou sur la flèche pour changer de compte.",
+      "Vitesse améliorée : le launcher démarre plus vite, la recherche dans la bibliothèque est instantanée même avec des centaines de mods, et l’assistant, le profil et les journaux de l’instance s’ouvrent sans délai."
+    ],
+    "fixes": [
+      "La sélection de texte n’englobe plus les boutons et les menus : seul le texte, comme les descriptions de mods, les journaux, la console du serveur, le chat et « Nouveautés », se sélectionne et se copie."
+    ]
+  },
+  "pl": {
+    "subtitle": "Przeciąganie modów do grup, linki do projektów w menedżerze modów i szybszy launcher.",
+    "highlights": [
+      "Dodano przeciąganie modów do grup i klawisz Delete w bibliotece menedżera modów: mod można upuścić na grupę, „Nowa grupa…” lub „Usuń z grupy”, a Delete usuwa zaznaczone mody lub ten pod kursorem.",
+      "Dodano wyszukiwanie w filtrach menedżera modów: wystarczy wpisać część nazwy, wybrać opcję strzałkami i nacisnąć Enter, aby ją zaznaczyć.",
+      "Dodano linki wewnętrzne: linki do Modrinth i CurseForge w opisach i listach zmian modów otwierają się w menedżerze modów z możliwością powrotu. Ctrl lub Shift + klik otwiera przeglądarkę.",
+      "Dodano opis każdej flagi optymalizacji JVM: wystarczy kliknąć ikonę informacji obok „Optymalizacja JVM” w Ustawienia → Gra lub w ustawieniach instancji.",
+      "Ulepszono blok konta na pasku bocznym: kliknięcie nicku otwiera profil, a strzałka – listę kont.",
+      "Ulepszono szybkość: launcher uruchamia się szybciej, wyszukiwanie w bibliotece menedżera modów reaguje natychmiast nawet przy setkach modów, a asystent, profil i logi instancji otwierają się bez opóźnienia."
+    ],
+    "fixes": [
+      "Zaznaczanie tekstu nie obejmuje już przycisków i menu: zaznaczyć i skopiować można tylko tekst, np. opisy modów, logi, konsolę serwera, czat i „Co nowego”."
+    ]
+  },
+  "pt": {
+    "subtitle": "Arraste mods para grupos, abra links de projetos dentro do gerenciador de mods e tenha um launcher mais rápido.",
+    "highlights": [
+      "Adicionados o arrastar para grupos e a tecla Delete na biblioteca do gerenciador de mods: solte um mod em um grupo, “Novo grupo…” ou “Tirar do grupo”; Delete exclui os mods marcados ou o que está sob o cursor.",
+      "Adicionada a busca nos filtros do gerenciador de mods: digite parte do nome, escolha uma opção com as setas e pressione Enter para marcá-la.",
+      "Adicionados links internos: links do Modrinth e do CurseForge nas descrições e nos changelogs dos mods abrem no próprio gerenciador de mods, com opção de voltar. Ctrl ou Shift + clique abre o navegador.",
+      "Adicionada uma explicação de cada flag da otimização da JVM: clique no ícone de informação ao lado de “Otimização da JVM” em Configurações → Jogo ou nas configurações da instância.",
+      "Melhorado o bloco da conta na barra lateral: clique no seu apelido para abrir seu perfil ou na seta para trocar de conta.",
+      "Melhorada a velocidade: o launcher abre mais rápido, a busca na biblioteca do gerenciador de mods responde na hora mesmo com centenas de mods, e o assistente, o perfil e os logs da instância abrem sem demora."
+    ],
+    "fixes": [
+      "Selecionar texto não pega mais botões e menus: só é possível selecionar e copiar texto, como descrições de mods, logs, o console do servidor, o chat e “Novidades”."
+    ]
+  },
+  "tr": {
+    "subtitle": "Modları gruplara sürükleyin, proje bağlantılarını mod yöneticisinde açın; başlatıcı da artık daha hızlı açılıyor.",
+    "highlights": [
+      "Mod yöneticisinin kütüphanesine gruplara sürükle-bırak ve Delete tuşu eklendi: bir modu gruba, “Yeni grup…” veya “Gruptan çıkar” alanına bırakabilirsiniz; Delete işaretli modları ya da imlecin altındakini siler.",
+      "Mod yöneticisi filtrelerine arama eklendi: adın bir kısmını yazın, ok tuşlarıyla bir seçenek seçin ve işaretlemek için Enter’a basın.",
+      "Uygulama içi bağlantılar eklendi: mod açıklamalarındaki ve değişiklik günlüklerindeki Modrinth ve CurseForge bağlantıları, geri dönme imkânıyla mod yöneticisinde açılır. Ctrl veya Shift ile tıklamak tarayıcıyı açar.",
+      "JVM optimizasyonunun her bayrağı için açıklama eklendi: Ayarlar → Oyun bölümünde veya kurulum ayarlarında “JVM optimizasyonu” seçeneğinin yanındaki bilgi simgesine tıklayın.",
+      "Kenar çubuğundaki hesap bloğu geliştirildi: profilinizi açmak için kullanıcı adınıza, hesap değiştirmek için oka tıklayın.",
+      "Başlatıcının hızı geliştirildi: daha hızlı açılıyor, mod yöneticisinin kütüphanesinde arama yüzlerce modda bile anında sonuç veriyor, asistan, profil ve kurulum günlükleri de beklemeden açılıyor."
+    ],
+    "fixes": [
+      "Metin seçerken artık düğmeler ve menüler seçilmiyor: yalnızca mod açıklamaları, günlükler, sunucu konsolu, sohbet ve “Yenilikler” gibi metinler seçilip kopyalanabiliyor."
+    ]
+  }
+}

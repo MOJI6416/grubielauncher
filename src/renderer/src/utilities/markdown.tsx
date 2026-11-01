@@ -4,7 +4,15 @@ import parse, {
   Element as HtmlElement,
 } from "html-react-parser";
 import { marked } from "marked";
-import { JSX, ReactNode, useEffect, useMemo, useState } from "react";
+import {
+  JSX,
+  ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const api = window.api;
@@ -175,6 +183,41 @@ function BodyImage({
   );
 }
 
+type MarkdownLinkHandler = (href: string) => Promise<boolean>;
+
+const MarkdownLinkContext = createContext<MarkdownLinkHandler | null>(null);
+
+function MarkdownLink({ href, children }: { href: string; children: ReactNode }) {
+  const onLink = useContext(MarkdownLinkContext);
+  const [isPending, setIsPending] = useState(false);
+
+  return (
+    <a
+      href={href}
+      aria-busy={isPending || undefined}
+      className="font-medium text-primary underline underline-offset-4 transition-colors hover:text-primary/80 aria-busy:cursor-progress aria-busy:opacity-60"
+      rel="noreferrer"
+      onClick={async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!href || isPending) return;
+
+        const forceExternal = event.ctrlKey || event.metaKey || event.shiftKey;
+        if (onLink && !forceExternal) {
+          setIsPending(true);
+          const handled = await onLink(href).catch(() => false);
+          setIsPending(false);
+          if (handled) return;
+        }
+
+        await api.shell.openExternal(href);
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
 export function transformNode(domNode: DOMNode): JSX.Element | void {
   if (domNode.type === "tag") {
     const node = domNode as HtmlElement;
@@ -214,22 +257,10 @@ export function transformNode(domNode: DOMNode): JSX.Element | void {
     }
 
     if (node.name === "a") {
-      const href = node.attribs?.href || "";
-
       return (
-        <a
-          href={href}
-          className="font-medium text-primary underline underline-offset-4 transition-colors hover:text-primary/80"
-          rel="noreferrer"
-          onClick={async (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            if (!href) return;
-            await api.shell.openExternal(href);
-          }}
-        >
+        <MarkdownLink href={node.attribs?.href || ""}>
           {domToReact(node.children as DOMNode[], { replace: transformNode })}
-        </a>
+        </MarkdownLink>
       );
     }
 
@@ -303,12 +334,14 @@ export const Markdown = ({
   className = MARKDOWN_PROSE_CLASS,
   fallback = defaultFallback,
   keepPrevious = false,
+  onLink,
 }: {
   body: string;
   baseUrl?: string;
   className?: string;
   fallback?: ReactNode;
   keepPrevious?: boolean;
+  onLink?: MarkdownLinkHandler;
 }) => {
   const content = useMarkdownHtml(body, baseUrl, keepPrevious);
 
@@ -318,6 +351,10 @@ export const Markdown = ({
   );
 
   return (
-    <div className={className}>{content === null ? fallback : rendered}</div>
+    <div className={className ? `select-text ${className}` : "select-text"}>
+      <MarkdownLinkContext.Provider value={onLink ?? null}>
+        {content === null ? fallback : rendered}
+      </MarkdownLinkContext.Provider>
+    </div>
   );
 };

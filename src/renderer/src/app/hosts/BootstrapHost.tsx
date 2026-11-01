@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import { useAtomValue } from "jotai";
+import { versionsLoadedAtom } from "@renderer/stores/atoms";
 import { preload, schedulePreload } from "@renderer/utilities/lazyPreload";
 import {
   LazyNewInstanceScreen,
@@ -10,6 +12,8 @@ import { runBootstrap } from "../bootstrap/runBootstrap";
 const api = window.api;
 
 export function BootstrapHost() {
+  const versionsLoaded = useAtomValue(versionsLoadedAtom);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -21,6 +25,8 @@ export function BootstrapHost() {
   }, []);
 
   useEffect(() => {
+    if (!versionsLoaded) return;
+
     const addVersionPreload = window.setTimeout(() => {
       preload(LazyNewInstanceScreen.preload);
     }, 0);
@@ -38,7 +44,7 @@ export function BootstrapHost() {
       window.clearTimeout(addVersionPreload);
       cancelScheduledPreload();
     };
-  }, []);
+  }, [versionsLoaded]);
 
   return null;
 }

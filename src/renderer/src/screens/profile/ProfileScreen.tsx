@@ -27,6 +27,8 @@ const loadAccountInfo = () =>
 
 const LazyAccountInfo = lazyWithPreload(loadAccountInfo);
 
+export const preloadProfileScreen = LazyAccountInfo.preload;
+
 function ProfilePlaceholder() {
   return (
     <div aria-busy className="flex h-full gap-4">

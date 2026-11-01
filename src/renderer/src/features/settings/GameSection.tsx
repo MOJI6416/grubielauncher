@@ -33,6 +33,7 @@ import {
 } from "./memory";
 import type { SettingsEntryId } from "./catalog";
 import { JavaSettingsGroup } from "@renderer/features/java/JavaSettingsGroup";
+import { JvmFlagsInfo } from "@renderer/components/JvmFlagsInfo";
 import { OS_NAME } from "@renderer/utilities/platform";
 
 const KEEP_OPTIONS = [1, 3, 5, 10, 20];
@@ -232,7 +233,9 @@ export function GameSection({
                 onCheckedChange={(value) => commit({ optimizedJvm: value })}
               />
             }
-          />
+          >
+            <JvmFlagsInfo />
+          </SettingRow>
         )}
 
         {visible("highPriority") && (

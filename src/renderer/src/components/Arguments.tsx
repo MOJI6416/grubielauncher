@@ -52,6 +52,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Hint } from "./Hint";
+import { JvmFlagsInfo } from "./JvmFlagsInfo";
 import { Label } from "@/components/ui/label";
 import { TSettings } from "@/types/Settings";
 import { cn } from "@/lib/utils";
@@ -233,14 +234,16 @@ function ArgEditor({
             {memoryLabel}
           </code>
           {settings.optimizedJvm ? (
-            <Hint content={t("arguments.optimizedHint")}>
-              <Badge variant="secondary" className="cursor-default gap-1">
-                <Sparkles className="size-3" />
-                {t("arguments.optimizedOn", {
-                  count: OPTIMIZED_GC_FLAGS.length,
-                })}
+            <JvmFlagsInfo hint={t("arguments.optimizedHint")}>
+              <Badge asChild variant="secondary" className="gap-1">
+                <button type="button">
+                  <Sparkles className="size-3" />
+                  {t("arguments.optimizedOn", {
+                    count: OPTIMIZED_GC_FLAGS.length,
+                  })}
+                </button>
               </Badge>
-            </Hint>
+            </JvmFlagsInfo>
           ) : (
             <span>· {t("arguments.optimizedOff")}</span>
           )}

@@ -1642,6 +1642,7 @@
           "move": "Move through mods, instances, worlds, servers",
           "open": "Open the selected item; in the server list it starts the game",
           "mark": "Tick the mod under the cursor",
+          "removeContent": "Delete the ticked mods, or the one under the cursor",
           "removeServer": "Remove the server from the list",
           "moveServer": "Move the server up or down",
           "tab": "Neighbouring instance tab",
@@ -2558,6 +2559,39 @@
       "title_one": "{{count}} argument will be dropped at launch",
       "title_other": "{{count}} arguments will be dropped at launch",
       "hint": "The launcher refuses arguments that can load foreign code or overwrite files."
+    }
+  },
+  "jvmFlags": {
+    "title": "What the JVM optimization does",
+    "intro": "A tuned set of garbage collector flags (Aikar's flags), widely used on Minecraft servers and in big modpacks. Java frees memory in small steps, so the game stutters less. Every flag below is added to the launch command.",
+    "whatsInside": "What's inside",
+    "groups": {
+      "memory": "Memory",
+      "collector": "G1 garbage collector",
+      "young": "New objects",
+      "old": "Long-lived data",
+      "service": "Service flags"
+    },
+    "flags": {
+      "heap": "The starting heap equals the maximum: Java takes all the allocated memory right away and never pauses to grow it.",
+      "AlwaysPreTouch": "Touches every page of that memory at launch. Startup takes a bit longer, but there are no hitches when the game first uses new memory.",
+      "UseG1GC": "Uses the G1 collector: it cleans memory in small regions instead of freezing the game for one long sweep.",
+      "MaxGCPauseMillis": "Asks G1 to keep each pause under 200 ms.",
+      "ParallelRefProcEnabled": "Processes references between objects in several threads, which shortens pauses.",
+      "DisableExplicitGC": "Ignores full collections that mods request themselves (System.gc()), a common cause of freezes.",
+      "G1NewSizePercent": "Gives at least 30% of the memory to new objects. Minecraft creates thousands of them every tick, and a roomy area fills up less often.",
+      "G1MaxNewSizePercent": "Lets that area grow up to 40% of the memory.",
+      "SurvivorRatio": "Shrinks the in-between survivor area: Minecraft objects are usually either dropped at once or kept for a long time.",
+      "MaxTenuringThreshold": "An object that survives one collection moves to long-lived data at once instead of being copied back and forth.",
+      "InitiatingHeapOccupancyPercent": "Starts marking long-lived data in the background once memory is 15% full: early, not at the last moment.",
+      "G1MixedGCCountTarget": "Spreads the cleanup of long-lived data over 4 passes so each one stays short.",
+      "G1MixedGCLiveThresholdPercent": "Cleans regions with less than 90% live data, so each pass frees more space.",
+      "G1HeapWastePercent": "Tolerates up to 5% of leftover garbage, so no extra collections run for crumbs.",
+      "G1ReservePercent": "Keeps 20% of the memory in reserve for spikes. Without it, Java can hit the ceiling and run a long full collection.",
+      "G1HeapRegionSize": "Splits memory into 8 MB regions, so big objects like chunk data are less often treated as \"huge\" and handled the slow way.",
+      "G1RSetUpdatingPauseTimePercent": "Spends at most 5% of a pause on bookkeeping of references; the rest happens in the background.",
+      "UnlockExperimentalVMOptions": "Allows experimental flags: without it, the two size flags for new objects would not work.",
+      "PerfDisableSharedMem": "Stops Java from writing performance stats to a file on disk, which causes rare freezes on a slow drive."
     }
   },
   "selectPaths": {
@@ -4578,8 +4612,7 @@
       "newInstance": "New instance",
       "instance": "Instance",
       "people": "People",
-      "profile": "Profile",
-      "profileOffline": "The profile is unavailable for an offline account — sign in with Microsoft, Discord or Ely.by."
+      "profile": "Profile"
     },
     "palette": {
       "label": "Search and commands",

@@ -286,6 +286,31 @@ export class ModManager {
     }
   }
 
+  static async resolveLink(
+    provider: Provider,
+    ref: string,
+    projectType?: ProjectType
+  ): Promise<IProject | null> {
+    if (provider == Provider.MODRINTH || /^\d+$/.test(ref)) {
+      return await ModManager.getProject(provider, ref)
+    }
+
+    if (provider != Provider.CURSEFORGE || !projectType) return null
+
+    try {
+      const found = await CurseForge.search(
+        '',
+        { modType: ModTypeClassIds[projectType], category: [], slug: ref },
+        { offset: 0, limit: 1 }
+      )
+      const mod = found?.data.find((item) => item.slug?.toLowerCase() === ref.toLowerCase())
+      return mod ? cfModToProject(mod) : null
+    } catch (error) {
+      if (isSourceUnreachable(error)) throw error
+      return null
+    }
+  }
+
   static async getVersions(
     provider: Provider,
     projectId: string,

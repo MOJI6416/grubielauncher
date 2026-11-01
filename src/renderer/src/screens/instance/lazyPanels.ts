@@ -77,6 +77,7 @@ export function useInstancePanelPreload() {
         LazyServerControl.preload,
         LazyDeleteVersion.preload,
         LazyWorlds.preload,
+        LazyLogs.preload,
       ],
       900,
     );

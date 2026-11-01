@@ -12,7 +12,7 @@ vi.mock("fs-extra", () => ({
   readdir,
 }));
 
-import { findSystemJava } from "./systemJava";
+import { clearSystemJavaCache, findSystemJava } from "./systemJava";
 
 const bin = (root: string) => path.join(path.resolve(root), "bin", "java");
 
@@ -38,6 +38,7 @@ function respondWith(map: Record<string, string | null>) {
 
 afterEach(() => {
   vi.clearAllMocks();
+  clearSystemJavaCache();
   delete process.env.JAVA_HOME;
 });
 
@@ -110,6 +111,24 @@ describe("findSystemJava", () => {
     respondWith({ java: 'openjdk version "21.0.5"' });
 
     await expect(findSystemJava(21, linux)).resolves.toBeNull();
+  });
+
+  it("runs one scan for concurrent callers of the same major", async () => {
+    process.env.JAVA_HOME = "/opt/jdk21";
+    pathExists.mockResolvedValue(true);
+    readdir.mockResolvedValue([]);
+    respondWith({ [bin("/opt/jdk21")]: 'openjdk version "21.0.3" 2024-04-16' });
+
+    const results = await Promise.all([
+      findSystemJava(21, linux),
+      findSystemJava(21, linux),
+      findSystemJava(21, linux),
+    ]);
+
+    expect(results.map((found) => found?.root)).toEqual(
+      Array(3).fill(path.resolve("/opt/jdk21")),
+    );
+    expect(execFile).toHaveBeenCalledTimes(1);
   });
 
   it("returns null when no runtime answers", async () => {

@@ -16,7 +16,6 @@ import { IVersion } from "@/types/IVersion";
 import { Loader } from "@/types/Loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -53,6 +52,7 @@ import {
   toggleValue,
 } from "./filters";
 import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { FilterOptionList, type FilterSection } from "./FilterOptionList";
 import {
   PROJECT_TYPE_ICONS,
   type Scope,
@@ -77,7 +77,6 @@ export interface ContentToolbarProps {
   categoriesLoading: boolean;
   categoryCounts: { categories: CategoryCount[]; libraries: number };
   facetCounts: LibraryFacetCounts;
-  filterGroups: IFilterGroup[];
   filterQuery: string;
   gameVersions: IVersion[];
   hideLibraries: boolean;
@@ -146,7 +145,6 @@ export function ContentToolbar({
   categoriesLoading,
   categoryCounts,
   facetCounts,
-  filterGroups,
   filterQuery,
   gameVersions,
   hideLibraries,
@@ -195,6 +193,94 @@ export function ContentToolbar({
 }: ContentToolbarProps) {
   const libraryFilterCount =
     libraryFacets.length + libraryCategories.length + (hideLibraries ? 1 : 0);
+
+  const filterSectionsForScope: FilterSection[] =
+    scope === "library"
+      ? [
+          {
+            key: "facets",
+            options: LIBRARY_FACETS.map((facet) => ({
+              key: facet,
+              label: t(`modManager.facets.${facet}`),
+              count: facetCounts[facet],
+              checked: libraryFacets.includes(facet),
+              disabled:
+                facetCounts[facet] === 0 && !libraryFacets.includes(facet),
+              onToggle: () =>
+                setLibraryFacets(
+                  (prev) => toggleValue(prev, facet) as LibraryFacet[],
+                ),
+            })),
+          },
+          ...(categoryCounts.categories.length > 0 ||
+          hideLibraries ||
+          categoriesLoading
+            ? [
+                {
+                  key: "categories",
+                  divided: true,
+                  title: (
+                    <>
+                      {translateCategory(
+                        "modManager.categories.categories",
+                        "Categories",
+                      )}
+                      {categoriesLoading && (
+                        <Loader2 className="size-3 animate-spin" />
+                      )}
+                    </>
+                  ),
+                  options: [
+                    ...(categoryCounts.libraries > 0 || hideLibraries
+                      ? [
+                          {
+                            key: "@hideLibraries",
+                            label: t("modManager.hideLibraries"),
+                            count: categoryCounts.libraries,
+                            checked: hideLibraries,
+                            onToggle: () => setHideLibraries((prev) => !prev),
+                          },
+                        ]
+                      : []),
+                    ...categoryCounts.categories.map(({ slug, count }) => ({
+                      key: slug,
+                      label: translateCategory(
+                        categoryLocaleKey(slug),
+                        humanizeFilterName(slug),
+                      ),
+                      keywords: slug,
+                      count,
+                      checked: libraryCategories.includes(slug),
+                      onToggle: () =>
+                        setLibraryCategories((prev) => toggleValue(prev, slug)),
+                    })),
+                  ],
+                },
+              ]
+            : []),
+        ]
+      : meta.filters.map((group) => ({
+          key: group.title,
+          title: translateCategory(
+            categoryLocaleKey(group.title),
+            humanizeFilterName(group.title),
+          ),
+          options: group.items.map((item) => {
+            const key = catalogFilterKey(item, catalogProvider);
+            return {
+              key,
+              label: catalogFilterLabel(
+                item,
+                catalogProvider,
+                translateCategory,
+              ),
+              keywords: item.name,
+              checked: catalogFilters.includes(key),
+              onToggle: () =>
+                setCatalogFilters((prev) => toggleValue(prev, key)),
+            };
+          }),
+        }));
 
   return (
     <>
@@ -408,7 +494,7 @@ export function ContentToolbar({
           </Hint>
         )}
 
-        <Popover>
+        <Popover onOpenChange={(open) => !open && setFilterQuery("")}>
           <PopoverTrigger asChild>
             <Button
               size="sm"
@@ -432,156 +518,14 @@ export function ContentToolbar({
             </Button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-72 p-0">
-            {scope === "library" ? (
-              <div className="max-h-[min(30rem,calc(100vh-12rem))] overflow-y-auto p-1.5">
-                {LIBRARY_FACETS.map((facet) => (
-                  <button
-                    key={facet}
-                    type="button"
-                    disabled={
-                      facetCounts[facet] === 0 && !libraryFacets.includes(facet)
-                    }
-                    onClick={() =>
-                      setLibraryFacets(
-                        (prev) => toggleValue(prev, facet) as LibraryFacet[],
-                      )
-                    }
-                    className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-surface-3 disabled:opacity-40"
-                  >
-                    <Checkbox
-                      checked={libraryFacets.includes(facet)}
-                      className="pointer-events-none"
-                    />
-                    <span className="min-w-0 flex-1 truncate">
-                      {t(`modManager.facets.${facet}`)}
-                    </span>
-                    <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
-                      {facetCounts[facet]}
-                    </span>
-                  </button>
-                ))}
-
-                {(categoryCounts.categories.length > 0 ||
-                  hideLibraries ||
-                  categoriesLoading) && (
-                  <div className="mt-1 border-t border-border pt-1">
-                    <p className="flex items-center gap-1.5 px-2 py-1 text-[0.6875rem] font-medium text-faint uppercase">
-                      {translateCategory(
-                        "modManager.categories.categories",
-                        "Categories",
-                      )}
-                      {categoriesLoading && (
-                        <Loader2 className="size-3 animate-spin" />
-                      )}
-                    </p>
-
-                    {(categoryCounts.libraries > 0 || hideLibraries) && (
-                      <button
-                        type="button"
-                        onClick={() => setHideLibraries((prev) => !prev)}
-                        className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-surface-3"
-                      >
-                        <Checkbox
-                          checked={hideLibraries}
-                          className="pointer-events-none"
-                        />
-                        <span className="min-w-0 flex-1 truncate">
-                          {t("modManager.hideLibraries")}
-                        </span>
-                        <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
-                          {categoryCounts.libraries}
-                        </span>
-                      </button>
-                    )}
-
-                    {categoryCounts.categories.map(({ slug, count }) => (
-                      <button
-                        key={slug}
-                        type="button"
-                        onClick={() =>
-                          setLibraryCategories((prev) => toggleValue(prev, slug))
-                        }
-                        className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-surface-3"
-                      >
-                        <Checkbox
-                          checked={libraryCategories.includes(slug)}
-                          className="pointer-events-none"
-                        />
-                        <span className="min-w-0 flex-1 truncate">
-                          {translateCategory(
-                            categoryLocaleKey(slug),
-                            humanizeFilterName(slug),
-                          )}
-                        </span>
-                        <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
-                          {count}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="border-b border-border p-1.5">
-                  <Input
-                    value={filterQuery}
-                    className="h-8"
-                    placeholder={t("common.search")}
-                    onChange={(event) => setFilterQuery(event.target.value)}
-                  />
-                </div>
-                <div className="max-h-72 overflow-y-auto p-1.5">
-                  {!meta.isReady ? (
-                    <div className="flex h-20 items-center justify-center">
-                      <Loader2 className="size-4 animate-spin text-faint" />
-                    </div>
-                  ) : filterGroups.length === 0 ? (
-                    <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-                      {t("common.notFound")}
-                    </p>
-                  ) : (
-                    filterGroups.map((group) => (
-                      <div key={group.title} className="mb-1">
-                        <p className="px-2 py-1 text-[0.6875rem] font-medium text-faint uppercase">
-                          {translateCategory(
-                            categoryLocaleKey(group.title),
-                            humanizeFilterName(group.title),
-                          )}
-                        </p>
-                        {group.items.map((item) => {
-                          const key = catalogFilterKey(item, catalogProvider);
-                          return (
-                            <button
-                              key={key}
-                              type="button"
-                              onClick={() =>
-                                setCatalogFilters((prev) =>
-                                  toggleValue(prev, key),
-                                )
-                              }
-                              className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-surface-3"
-                            >
-                              <Checkbox
-                                checked={catalogFilters.includes(key)}
-                                className="pointer-events-none"
-                              />
-                              <span className="min-w-0 flex-1 truncate">
-                                {catalogFilterLabel(
-                                  item,
-                                  catalogProvider,
-                                  translateCategory,
-                                )}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </>
-            )}
+            <FilterOptionList
+              sections={filterSectionsForScope}
+              query={filterQuery}
+              onQueryChange={setFilterQuery}
+              placeholder={t("common.search")}
+              emptyText={t("common.notFound")}
+              isLoading={scope !== "library" && !meta.isReady}
+            />
           </PopoverContent>
         </Popover>
 

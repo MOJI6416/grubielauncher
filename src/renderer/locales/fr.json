@@ -1657,6 +1657,7 @@
           "move": "Parcourir mods, instances, mondes, serveurs",
           "open": "Ouvrir l’élément choisi ; dans la liste des serveurs, lance le jeu",
           "mark": "Cocher le mod sous le curseur",
+          "removeContent": "Supprimer les mods cochés ou le mod sous le curseur",
           "removeServer": "Retirer le serveur de la liste",
           "moveServer": "Monter ou descendre le serveur",
           "tab": "Onglet d’instance voisin",
@@ -2578,6 +2579,39 @@
       "title_many": "{{count}} arguments seront ignorés au lancement",
       "title_other": "{{count}} arguments seront ignorés au lancement",
       "hint": "Le launcher refuse les arguments qui peuvent charger du code étranger ou écraser des fichiers."
+    }
+  },
+  "jvmFlags": {
+    "title": "Ce que fait l'optimisation de la JVM",
+    "intro": "Un ensemble réglé de flags du ramasse-miettes (Aikar's flags), très utilisé sur les serveurs et les gros modpacks Minecraft. Java libère la mémoire par petites étapes, le jeu saccade donc moins. Chaque flag ci-dessous est ajouté à la commande de lancement.",
+    "whatsInside": "Ce qu'il contient",
+    "groups": {
+      "memory": "Mémoire",
+      "collector": "Ramasse-miettes G1",
+      "young": "Nouveaux objets",
+      "old": "Données à longue durée de vie",
+      "service": "Flags techniques"
+    },
+    "flags": {
+      "heap": "La mémoire de départ est égale au maximum : Java réserve tout de suite toute la mémoire allouée et ne s'interrompt pas pour l'agrandir.",
+      "AlwaysPreTouch": "Touche chaque page de cette mémoire au lancement. Le démarrage est un peu plus long, mais il n'y a pas d'à-coups quand le jeu utilise de la nouvelle mémoire.",
+      "UseG1GC": "Utilise le ramasse-miettes G1 : il nettoie la mémoire par petites régions au lieu de figer le jeu pour un long passage.",
+      "MaxGCPauseMillis": "Demande à G1 de garder chaque pause sous 200 ms.",
+      "ParallelRefProcEnabled": "Traite les références entre objets sur plusieurs threads, ce qui raccourcit les pauses.",
+      "DisableExplicitGC": "Ignore les nettoyages complets que les mods demandent eux-mêmes (System.gc()), une cause fréquente de blocages.",
+      "G1NewSizePercent": "Réserve au moins 30 % de la mémoire aux nouveaux objets. Minecraft en crée des milliers à chaque tick, et une zone spacieuse se remplit moins souvent.",
+      "G1MaxNewSizePercent": "Laisse cette zone grandir jusqu'à 40 % de la mémoire.",
+      "SurvivorRatio": "Réduit la zone intermédiaire (survivor) : les objets de Minecraft deviennent inutiles tout de suite ou vivent longtemps.",
+      "MaxTenuringThreshold": "Un objet qui survit à un nettoyage passe aussitôt dans les données à longue durée de vie au lieu d'être copié dans les deux sens.",
+      "InitiatingHeapOccupancyPercent": "Commence le marquage en arrière-plan des données à longue durée de vie dès que la mémoire est pleine à 15 % : en avance, pas au dernier moment.",
+      "G1MixedGCCountTarget": "Répartit le nettoyage des données à longue durée de vie sur 4 passages pour que chacun reste court.",
+      "G1MixedGCLiveThresholdPercent": "Nettoie les régions contenant moins de 90 % de données vivantes, ce qui libère plus d'espace à chaque passage.",
+      "G1HeapWastePercent": "Tolère jusqu'à 5 % de déchets restants pour ne pas lancer de nettoyages inutiles pour des miettes.",
+      "G1ReservePercent": "Garde 20 % de la mémoire en réserve pour les pics. Sans elle, Java peut manquer de place et lancer un long nettoyage complet.",
+      "G1HeapRegionSize": "Découpe la mémoire en régions de 8 Mo, pour que les gros objets comme les données de chunks soient moins souvent traités comme « énormes », par la voie lente.",
+      "G1RSetUpdatingPauseTimePercent": "Consacre au plus 5 % d'une pause à la comptabilité des références ; le reste se fait en arrière-plan.",
+      "UnlockExperimentalVMOptions": "Autorise les flags expérimentaux : sans lui, les deux flags de taille de la zone des nouveaux objets ne fonctionneraient pas.",
+      "PerfDisableSharedMem": "Empêche Java d'écrire des statistiques de performance dans un fichier sur le disque, ce qui provoque de rares blocages sur un disque lent."
     }
   },
   "selectPaths": {
@@ -4614,8 +4648,7 @@
       "newInstance": "Nouvelle instance",
       "instance": "Instance",
       "people": "Personnes",
-      "profile": "Profil",
-      "profileOffline": "Le profil n’est pas disponible pour un compte hors ligne — connectez-vous avec Microsoft, Discord ou Ely.by."
+      "profile": "Profil"
     },
     "palette": {
       "label": "Recherche et commandes",

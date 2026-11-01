@@ -170,7 +170,25 @@ async function candidateRoots(platform: IPlatform): Promise<string[]> {
   return roots
 }
 
-export async function findSystemJava(
+const SCAN_TTL_MS = 60_000
+
+const scans = new Map<string, { at: number; result: Promise<ISystemJava | null> }>()
+
+export function clearSystemJavaCache(): void {
+  scans.clear()
+}
+
+export function findSystemJava(major: number, platform: IPlatform): Promise<ISystemJava | null> {
+  const key = `${major}|${platform.os}|${platform.arch}`
+  const cached = scans.get(key)
+  if (cached && Date.now() - cached.at < SCAN_TTL_MS) return cached.result
+
+  const result = scanSystemJava(major, platform).catch(() => null)
+  scans.set(key, { at: Date.now(), result })
+  return result
+}
+
+async function scanSystemJava(
   major: number,
   platform: IPlatform
 ): Promise<ISystemJava | null> {

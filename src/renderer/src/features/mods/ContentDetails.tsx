@@ -105,6 +105,7 @@ export function ContentDetails({
   onInstall,
   onDelete,
   onOpenDependency,
+  onOpenLink,
   onTranslate,
   onRetry,
   width,
@@ -149,6 +150,7 @@ export function ContentDetails({
   onInstall: (version: ModVersion) => void;
   onDelete: () => void;
   onOpenDependency: (project: IProject) => void;
+  onOpenLink: (href: string) => Promise<boolean>;
   onTranslate: () => void;
   onRetry: () => void;
 }) {
@@ -271,7 +273,7 @@ export function ContentDetails({
           </Button>
         )}
         <Hint content={title} variant="text" truncatedOnly>
-          <span className="min-w-0 flex-1 truncate px-1 text-sm font-medium">
+          <span className="min-w-0 flex-1 truncate px-1 text-sm font-medium select-text">
             {title}
           </span>
         </Hint>
@@ -355,7 +357,7 @@ export function ContentDetails({
               </div>
 
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <p className="line-clamp-2 text-xs leading-4 text-muted-foreground [overflow-wrap:anywhere]">
+                <p className="line-clamp-2 text-xs leading-4 text-muted-foreground select-text [overflow-wrap:anywhere]">
                   {description}
                 </p>
 
@@ -593,6 +595,7 @@ export function ContentDetails({
                         key={`changelog-${changelog.key}-${changelogText.isTranslated}`}
                         body={changelogText.text}
                         baseUrl={detail?.url}
+                        onLink={onOpenLink}
                       />
                     )}
                   </div>
@@ -604,6 +607,7 @@ export function ContentDetails({
                   key={`body-${entry.key}-${body.length}`}
                   body={body}
                   baseUrl={detail?.url}
+                  onLink={onOpenLink}
                 />
               ) : (
                 <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">

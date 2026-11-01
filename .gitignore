@@ -12,3 +12,4 @@ out
 !.gitignore
 !.github
 *.tsbuildinfo
+perf/results

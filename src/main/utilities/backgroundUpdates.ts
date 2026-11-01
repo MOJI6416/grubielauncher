@@ -1,9 +1,9 @@
 import { app } from "electron";
-import { autoUpdater } from "electron-updater";
 import { AppUpdateState } from "@/types/AppUpdate";
 import { mainWindow } from "../windows/mainWindow";
 import { scheduleUpdateInstall } from "./updateInstall";
 import { gameRuntime } from "./runtime";
+import { loadAutoUpdater } from "./autoUpdater";
 
 export const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 export const FIRST_UPDATE_CHECK_DELAY_MS = 20 * 60 * 1000;
@@ -41,6 +41,7 @@ async function check(): Promise<void> {
   checking = true;
 
   try {
+    const autoUpdater = await loadAutoUpdater();
     await autoUpdater.checkForUpdates();
   } catch (error) {
     console.warn(
@@ -60,17 +61,19 @@ export function startBackgroundUpdateChecks(options: {
   started = true;
   onInstall = options.onInstall;
 
-  autoUpdater.on("update-available", (info) => {
-    if (state.status === "ready") return;
-    publish({ status: "downloading", version: info.version });
-  });
+  void loadAutoUpdater().then((autoUpdater) => {
+    autoUpdater.on("update-available", (info) => {
+      if (state.status === "ready") return;
+      publish({ status: "downloading", version: info.version });
+    });
 
-  autoUpdater.on("update-downloaded", (info) => {
-    publish({ status: "ready", version: info.version });
-  });
+    autoUpdater.on("update-downloaded", (info) => {
+      publish({ status: "ready", version: info.version });
+    });
 
-  autoUpdater.on("error", () => {
-    if (state.status === "downloading") publish({ status: "idle" });
+    autoUpdater.on("error", () => {
+      if (state.status === "downloading") publish({ status: "idle" });
+    });
   });
 
   const schedule = (delay: number) => {
