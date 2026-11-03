@@ -466,7 +466,13 @@ export async function createZipArchive(
     const safeReject = (err: unknown) => {
       if (settled) return;
       settled = true;
-      reject(err);
+      archive.abort();
+      if (output.closed) {
+        reject(err);
+        return;
+      }
+      output.once("close", () => reject(err));
+      output.destroy();
     };
 
     output.on("close", safeResolve);

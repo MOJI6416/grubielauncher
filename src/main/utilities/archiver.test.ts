@@ -2,7 +2,7 @@ import fs from "fs-extra";
 import os from "os";
 import path from "path";
 import zip from "adm-zip";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createZipArchive,
   extractZip,
@@ -330,5 +330,51 @@ describe("createZipArchive with an entry filter", () => {
     expect(names).toContain("server/server.properties");
     expect(names).not.toContain("server/usercache.json");
     expect(names.some((name) => name.startsWith("server/logs/"))).toBe(false);
+  });
+});
+
+describe("createZipArchive when archiving fails", () => {
+  let root = "";
+
+  beforeEach(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), "grubie-archive-fail-"));
+    await fs.outputFile(path.join(root, "world", "level.dat"), "level");
+    await fs.outputFile(path.join(root, "world", "region", "r.0.0.mca"), "region");
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await fs.remove(root);
+  });
+
+  it("closes the half-written archive before it rejects", async () => {
+    const original = fs.createWriteStream.bind(fs);
+    const outputs: fs.WriteStream[] = [];
+    vi.spyOn(fs, "createWriteStream").mockImplementation(((...args: Parameters<typeof original>) => {
+      const stream = original(...args);
+      outputs.push(stream);
+      return stream;
+    }) as typeof fs.createWriteStream);
+
+    const zipPath = path.join(root, "backup.zip");
+    let calls = 0;
+    const failing = createZipArchive(
+      [path.join(root, "world", "level.dat"), path.join(root, "world", "region", "r.0.0.mca")],
+      zipPath,
+      path.join(root, "world"),
+      9,
+      () => {
+        calls += 1;
+        if (calls > 1) throw new Error("unreadable world file");
+        return false;
+      },
+    );
+
+    await expect(failing).rejects.toThrow("unreadable world file");
+    expect(outputs).toHaveLength(1);
+    expect(outputs[0].closed).toBe(true);
+
+    await fs.remove(zipPath);
+    expect(await fs.pathExists(zipPath)).toBe(false);
   });
 });
