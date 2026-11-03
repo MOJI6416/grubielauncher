@@ -95,7 +95,7 @@ describe("changedEntryIds", () => {
 
   it("counts changes per section", () => {
     const counts = changedCountBySection(
-      settings({ xmx: 8192, optimizedJvm: false, devMode: true }),
+      settings({ xmx: 8192, optimizedJvm: true, devMode: true }),
     );
 
     expect(counts.game).toBe(2);

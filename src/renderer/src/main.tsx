@@ -7,9 +7,11 @@ import './i18n'
 import { preloadAppLanguage } from './app/bootstrap/preloadLanguage'
 import { installUiErrorCapture, uiJournal } from './utilities/journal'
 import { installFocusRingGuard } from './utilities/focusRingGuard'
+import { installMotionPreference } from '@/lib/motionPreference'
 
 installUiErrorCapture()
 installFocusRingGuard()
+installMotionPreference()
 uiJournal.info('app', 'main window script started')
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)

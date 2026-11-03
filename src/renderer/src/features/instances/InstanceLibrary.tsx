@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   List,
   ListFilter,
+  Rows4,
   PackagePlus,
   Search,
   SearchX,
@@ -30,6 +31,7 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuShortcut,
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
@@ -44,6 +46,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -63,6 +66,7 @@ import { LoaderLabel, getLoaderInfo } from "@renderer/components/Loaders";
 import {
   accountAtom,
   accountsAtom,
+  installActiveAtom,
   isRunningAtom,
   internetAtom,
   networkAtom,
@@ -92,6 +96,7 @@ import { OrphanFolders, useOrphanFolders } from "./OrphanFolders";
 import { duplicateInstance } from "./duplicateInstance";
 import { openPortDialog } from "@renderer/features/port/portStore";
 import { buildInstanceActions } from "./instanceActions";
+import { requestInstanceDelete } from "./deleteStore";
 import { instanceFlagsAtom } from "./atoms";
 import {
   instanceGroupsAtom,
@@ -144,6 +149,12 @@ import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 
 const api = window.api;
 
+const VIEW_LABELS: Record<InstancesView, string> = {
+  list: "versions.viewList",
+  compact: "versions.viewCompact",
+  grid: "versions.viewGrid",
+};
+
 export function InstanceLibrary({
   runGame,
   onManageTags,
@@ -161,6 +172,7 @@ export function InstanceLibrary({
   const account = useAtomValue(accountAtom);
   const accounts = useAtomValue(accountsAtom);
   const isLaunching = useAtomValue(isRunningAtom);
+  const isInstallActive = useAtomValue(installActiveAtom);
   const isNetwork = useAtomValue(networkAtom);
   const isInternetOnline = useAtomValue(internetAtom);
   const modpackUpdates = useAtomValue(modpackUpdatesAtom);
@@ -401,6 +413,10 @@ export function InstanceLibrary({
       onManageTags: () => onManageTags(itemKey, instance.version.name),
       onDuplicate: () => void duplicateInstance(instance),
       onPort: () => openPortDialog(instance),
+      onDelete: () => requestInstanceDelete(instance),
+      account,
+      isBusy: isLaunching || isInstallActive,
+      deleteShortcut: "Del",
     });
   };
 
@@ -606,13 +622,8 @@ export function InstanceLibrary({
                 variant="fill"
                 className="rounded-md bg-secondary"
               />
-              {(["list", "grid"] as InstancesView[]).map((mode) => (
-                <Hint
-                  key={mode}
-                  content={t(
-                    mode === "list" ? "versions.viewList" : "versions.viewGrid",
-                  )}
-                >
+              {(["list", "compact", "grid"] as InstancesView[]).map((mode) => (
+                <Hint key={mode} content={t(VIEW_LABELS[mode])}>
                   <Button
                     size="icon-sm"
                     variant="ghost"
@@ -623,11 +634,7 @@ export function InstanceLibrary({
                         ? "text-foreground hover:bg-transparent"
                         : "text-muted-foreground",
                     )}
-                    aria-label={t(
-                      mode === "list"
-                        ? "versions.viewList"
-                        : "versions.viewGrid",
-                    )}
+                    aria-label={t(VIEW_LABELS[mode])}
                     onClick={() =>
                       void patchSettings({ instancesView: mode }).catch(
                         (error) =>
@@ -639,6 +646,8 @@ export function InstanceLibrary({
                   >
                     {mode === "list" ? (
                       <List className="size-4" />
+                    ) : mode === "compact" ? (
+                      <Rows4 className="size-4" />
                     ) : (
                       <LayoutGrid className="size-4" />
                     )}
@@ -705,15 +714,21 @@ export function InstanceLibrary({
             "pr-2.5",
             view === "grid"
               ? "grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3"
-              : "flex flex-col gap-1.5",
+              : view === "compact"
+                ? "flex flex-col gap-1"
+                : "flex flex-col gap-1.5",
           )}
         >
           {Array.from({ length: view === "grid" ? 8 : 6 }).map((_, index) => (
             <Skeleton
               key={index}
               className={cn(
-                "w-full rounded-xl",
-                view === "grid" ? "h-38" : "h-14",
+                "w-full",
+                view === "grid"
+                  ? "h-38 rounded-xl"
+                  : view === "compact"
+                    ? "h-9 rounded-lg"
+                    : "h-14 rounded-xl",
               )}
             />
           ))}
@@ -941,6 +956,9 @@ export function InstanceLibrary({
                   : undefined;
 
                 const actions = renderMenu(instance, itemKey);
+                const deleteAction = actions
+                  .flat()
+                  .find((action) => action.id === "delete");
 
                 const menu = (
                   <DropdownMenu>
@@ -967,11 +985,19 @@ export function InstanceLibrary({
                           {group.map((action) => (
                             <DropdownMenuItem
                               key={action.id}
+                              variant={
+                                action.destructive ? "destructive" : "default"
+                              }
                               disabled={action.disabled}
                               onSelect={action.onSelect}
                             >
                               <action.icon />
                               <span>{action.label}</span>
+                              {action.shortcut && (
+                                <DropdownMenuShortcut>
+                                  {action.shortcut}
+                                </DropdownMenuShortcut>
+                              )}
                             </DropdownMenuItem>
                           ))}
                         </div>
@@ -1005,6 +1031,10 @@ export function InstanceLibrary({
                   onSelect: () => select(instance),
                   onOpen: () => open(instance),
                   onPlay: () => play(instance),
+                  onDelete:
+                    deleteAction && !deleteAction.disabled
+                      ? deleteAction.onSelect
+                      : undefined,
                   dragProps: dragProps(itemKey),
                 };
 
@@ -1014,7 +1044,10 @@ export function InstanceLibrary({
                       {view === "grid" ? (
                         <InstanceTile {...cardProps} />
                       ) : (
-                        <InstanceRow {...cardProps} />
+                        <InstanceRow
+                          {...cardProps}
+                          compact={view === "compact"}
+                        />
                       )}
                     </ContextMenuTrigger>
                     <ContextMenuContent className="w-56">
@@ -1024,25 +1057,34 @@ export function InstanceLibrary({
                           {group.map((action) => (
                             <ContextMenuItem
                               key={action.id}
+                              variant={
+                                action.destructive ? "destructive" : "default"
+                              }
                               disabled={action.disabled}
                               onSelect={action.onSelect}
                             >
                               <action.icon />
                               <span>{action.label}</span>
+                              {action.shortcut && (
+                                <ContextMenuShortcut>
+                                  {action.shortcut}
+                                </ContextMenuShortcut>
+                              )}
                             </ContextMenuItem>
                           ))}
+                          {index === 2 && (
+                            <ContextMenuSub>
+                              <ContextMenuSubTrigger>
+                                <FolderPlus />
+                                <span>{t("versions.groups.addTo")}</span>
+                              </ContextMenuSubTrigger>
+                              <ContextMenuSubContent>
+                                {groupItems(itemKey)}
+                              </ContextMenuSubContent>
+                            </ContextMenuSub>
+                          )}
                         </div>
                       ))}
-                      <ContextMenuSeparator />
-                      <ContextMenuSub>
-                        <ContextMenuSubTrigger>
-                          <FolderPlus />
-                          <span>{t("versions.groups.addTo")}</span>
-                        </ContextMenuSubTrigger>
-                        <ContextMenuSubContent>
-                          {groupItems(itemKey)}
-                        </ContextMenuSubContent>
-                      </ContextMenuSub>
                     </ContextMenuContent>
                   </ContextMenu>
                 );
@@ -1055,7 +1097,11 @@ export function InstanceLibrary({
                   aria-label={section.header?.name}
                   className={cn(
                     "flex flex-col",
-                    view === "grid" ? "gap-3" : "gap-1.5",
+                    view === "grid"
+                      ? "gap-3"
+                      : view === "compact"
+                        ? "gap-1"
+                        : "gap-1.5",
                   )}
                 >
                   {section.header && renderEntry(section.header)}

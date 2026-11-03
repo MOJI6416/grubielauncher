@@ -48,14 +48,19 @@ import { forgetInstanceKey } from "@/shared/instancesFile";
 import { forgetUpdateCache } from "@renderer/features/mods/useUpdateCheck";
 import { forgetInstanceUpdates } from "@renderer/features/instances/updateCheck";
 import { forgetInstance } from "@renderer/navigation/navigate";
+import type { Version } from "@renderer/classes/Version";
+import { instanceKey } from "@renderer/features/instances/selectors";
 const api = window.api;
 
 export function DeleteVersion({
+  instance,
   close,
 }: {
+  instance?: Version;
   close: (isDeleted?: boolean) => void;
 }) {
-  const [version] = useAtom(selectedVersionAtom);
+  const [selected] = useAtom(selectedVersionAtom);
+  const version = instance ?? selected;
   const [isLoading, setIsLoading] = useState(false);
   const { size, isUnknown: isSizeUnknown } = useInstanceDiskUsage(
     version?.versionPath,
@@ -148,7 +153,7 @@ export function DeleteVersion({
       forgetUpdateCache();
       forgetInstanceUpdates(key);
       forgetInstance(key);
-      clearInstanceSelection();
+      if (!selected || instanceKey(selected) === key) clearInstanceSelection();
 
       updateInstancesFile((file) => forgetInstanceKey(file, key));
 

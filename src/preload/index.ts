@@ -54,7 +54,12 @@ import {
   IUpdateUser,
   IUser,
 } from "@/types/IUser";
-import { IGroup, IVoiceTokenResponse, VoiceOverlayState } from "@/types/Voice";
+import {
+  IGroup,
+  IVoiceTokenResponse,
+  OverlayDisplay,
+  VoiceOverlayState,
+} from "@/types/Voice";
 import { INews, INewsPage, ISponsoredNewsAd } from "@/types/News";
 import { IUpdateCheckRequest, IUpdateCheckResponse } from "@/types/Updates";
 import {
@@ -177,6 +182,17 @@ import type { OrnitheModsCheck } from "@/shared/profileLoaders";
 import { NotificationClickAction } from "@/types/Notification";
 import { LauncherDeepLink } from "@/types/DeepLink";
 import type { FailureInfo } from "@/shared/errors";
+import type { UiScaleState } from "@/shared/uiScale";
+import type { ThemeFileManifest } from "@/shared/themeFile";
+import type {
+  GalleryPage,
+  GalleryQuery,
+  GalleryTheme,
+  PublishImages,
+  PublishPayload,
+  PublishResult,
+  PublishedTheme,
+} from "@/shared/themeGallery";
 import {
   ConnectivityCheckPlanEntry,
   ConnectivityCheckResult,
@@ -721,6 +737,27 @@ export interface IElectronAPI {
     aiComplete: (at: string, prompt: string) => Promise<string | null>;
     checkHealth: () => Promise<boolean>;
   };
+  theme: {
+    exportFile: (
+      manifest: ThemeFileManifest,
+      backdropPath: string | null,
+    ) => Promise<"saved" | "cancelled" | "failed">;
+    importFile: (
+      sourcePath?: string,
+    ) => Promise<{ manifest: unknown; backdropPath: string | null } | null>;
+    galleryList: (query: GalleryQuery) => Promise<GalleryPage | null>;
+    galleryGet: (id: string) => Promise<GalleryTheme | null>;
+    galleryInstall: (
+      id: string,
+    ) => Promise<{ theme: GalleryTheme; backdropPath: string | null } | null>;
+    publish: (
+      token: string,
+      payload: PublishPayload,
+      images: PublishImages | null,
+    ) => Promise<PublishResult>;
+    mine: (token: string) => Promise<PublishedTheme[] | null>;
+    unpublish: (token: string, id: string) => Promise<boolean>;
+  };
   voice: {
     setPtt: (
       bind: { type: "key" | "mouse"; code: number } | null,
@@ -730,6 +767,7 @@ export interface IElectronAPI {
     onPttDown: (callback: () => void) => () => void;
     onPttUp: (callback: () => void) => () => void;
     updateOverlay: (state: VoiceOverlayState) => Promise<void>;
+    overlayDisplays: () => Promise<OverlayDisplay[]>;
     onOverlayState: (
       callback: (state: VoiceOverlayState) => void,
     ) => () => void;
@@ -841,6 +879,8 @@ export interface IElectronAPI {
     restoreWindow: () => Promise<void>;
     setUnsavedGuard: (value: boolean) => Promise<void>;
     confirmClose: () => Promise<void>;
+    getUiScale: () => Promise<UiScaleState>;
+    setUiScale: (scale: number) => Promise<UiScaleState>;
     onCloseRequested: (
       callback: (reason: {
         unsaved: boolean;
@@ -1840,6 +1880,18 @@ export const api: IElectronAPI = {
       invoke("backend:aiComplete", at, prompt),
     checkHealth: () => invoke("backend:checkHealth"),
   },
+  theme: {
+    exportFile: (manifest: ThemeFileManifest, backdropPath: string | null) =>
+      invoke("theme:export", manifest, backdropPath),
+    importFile: (sourcePath?: string) => invoke("theme:import", sourcePath),
+    galleryList: (query: GalleryQuery) => invoke("theme:galleryList", query),
+    galleryGet: (id: string) => invoke("theme:galleryGet", id),
+    galleryInstall: (id: string) => invoke("theme:galleryInstall", id),
+    publish: (token: string, payload: PublishPayload, images: PublishImages | null) =>
+      invoke("theme:publish", token, payload, images),
+    mine: (token: string) => invoke("theme:mine", token),
+    unpublish: (token: string, id: string) => invoke("theme:unpublish", token, id),
+  },
   voice: {
     setPtt: (bind: { type: "key" | "mouse"; code: number } | null) =>
       invoke("voice:setPtt", bind),
@@ -1858,6 +1910,7 @@ export const api: IElectronAPI = {
     },
     updateOverlay: (state: VoiceOverlayState) =>
       invoke("voice:overlayUpdate", state),
+    overlayDisplays: () => invoke("voice:overlayDisplays"),
     onOverlayState: (callback: (state: VoiceOverlayState) => void) => {
       const listener = (
         _: Electron.IpcRendererEvent,
@@ -1949,6 +2002,8 @@ export const api: IElectronAPI = {
     restoreWindow: () => invoke("other:restoreWindow"),
     setUnsavedGuard: (value: boolean) => invoke("other:setUnsavedGuard", value),
     confirmClose: () => invoke("other:confirmClose"),
+    getUiScale: () => invoke("other:getUiScale"),
+    setUiScale: (scale: number) => invoke("other:setUiScale", scale),
     onCloseRequested: (
       callback: (reason: {
         unsaved: boolean;

@@ -17,6 +17,10 @@ export type LauncherDeepLink =
       id: string;
     }
   | {
+      type: "theme";
+      id: string;
+    }
+  | {
       type: "friend";
       userId: string;
     }

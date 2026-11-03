@@ -13,6 +13,7 @@ import { GameInviteHost } from "./hosts/GameInviteHost";
 import { InstallHost } from "./hosts/InstallHost";
 import { LaunchHost } from "./hosts/LaunchHost";
 import { PortHost } from "./hosts/PortHost";
+import { InstanceDeleteHost } from "./hosts/InstanceDeleteHost";
 import { PresenceHost } from "./hosts/PresenceHost";
 import { RpcHost } from "./hosts/RpcHost";
 import { ShareHost } from "./hosts/ShareHost";
@@ -21,7 +22,10 @@ import { UnsavedCloseHost } from "./hosts/UnsavedCloseHost";
 import { VoiceCallHost } from "./hosts/VoiceCallHost";
 import { VoiceOverlayHost } from "./hosts/VoiceOverlayHost";
 import { WhatsNewHost } from "./hosts/WhatsNewHost";
-import { AccentHost } from "./hosts/AccentHost";
+import { ThemeHost } from "./hosts/ThemeHost";
+import { UiScaleHost } from "./hosts/UiScaleHost";
+import { AppearanceHost } from "./hosts/AppearanceHost";
+import { StartScreenHost } from "./hosts/StartScreenHost";
 import { SeasonalHost } from "./hosts/SeasonalHost";
 import { TrayHost } from "./hosts/TrayHost";
 import { AppUpdateHost } from "./hosts/AppUpdateHost";
@@ -33,7 +37,9 @@ export function AppHosts() {
     <>
       <BootstrapHost />
       <StreamerModeHost />
-      <AccentHost />
+      <ThemeHost />
+      <UiScaleHost />
+      <AppearanceHost />
       <SeasonalHost />
       <AppUpdateHost />
       <TrayHost />
@@ -54,9 +60,11 @@ export function AppHosts() {
       <AchievementsHost />
       <SystemEventsHost />
       <DeepLinkHost />
+      <StartScreenHost />
       <FileDropHost />
       <UnsavedCloseHost />
       <PortHost />
+      <InstanceDeleteHost />
       <Onboarding />
       <WhatsNewHost />
       <WebLoginPrompt />

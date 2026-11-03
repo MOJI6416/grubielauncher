@@ -104,6 +104,16 @@ export const instanceGroupsAtom = atom(
   (get) => get(instancesFileAtom).groups,
 );
 
+const NO_KEYS: string[] = [];
+
+export const instancePinnedAtom = atom(
+  (get) => get(instancesFileAtom).pinned ?? NO_KEYS,
+);
+
+export const instanceDockHiddenAtom = atom(
+  (get) => get(instancesFileAtom).dockHidden ?? NO_KEYS,
+);
+
 export const ungroupedCollapsedAtom = atom(
   (get) => get(instancesFileAtom).ungroupedCollapsed === true,
 );

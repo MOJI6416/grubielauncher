@@ -29,6 +29,7 @@ import {
 import { getSystemRoots } from "../utilities/safePath";
 import { rebaseShortcutIcons } from "../utilities/shortcut";
 import { getSystemLocale } from "../utilities/systemLocale";
+import { appPageUrl } from "./appPages";
 
 const WINDOW_WIDTH = 440;
 const WINDOW_HEIGHT = 320;
@@ -146,7 +147,7 @@ function ensureWindow(): BrowserWindow {
       `${process.env["ELECTRON_RENDERER_URL"]}/datalocation`,
     );
   } else {
-    void created.loadURL("app://bundle/datalocation.html");
+    void created.loadURL(appPageUrl("setup", "datalocation.html"));
   }
 
   window = created;

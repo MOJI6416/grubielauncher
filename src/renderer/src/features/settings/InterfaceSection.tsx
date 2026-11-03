@@ -1,9 +1,8 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReactCountryFlag from "react-country-flag";
-import { Check, LayoutGrid, Rows3 } from "lucide-react";
-import { ACCENT_IDS, ACCENTS } from "@/shared/accents";
-import { Hint } from "@renderer/components/Hint";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -13,10 +12,12 @@ import {
 } from "@/components/ui/select";
 import {
   LANGUAGES,
-  type InstancesSort,
-  type InstancesView,
+  LOG_FONT_SIZES,
+  MOTION_SETTINGS,
+  type MotionSetting,
   type TSettings,
 } from "@/types/Settings";
+import { formatUiScale, UI_SCALES, type UiScaleOption } from "@/shared/uiScale";
 import { SettingRow, SettingsGroup, Segmented } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
 import { SHORTCUT_GROUPS, shortcutKey } from "./shortcuts";
@@ -25,8 +26,27 @@ import {
   eventRange,
   formatMonthDay,
 } from "@renderer/features/seasonal/calendar";
+import { previewSound } from "@renderer/utilities/sounds";
 
-const SORTS: InstancesSort[] = ["activity", "playtime", "name", "manual"];
+const api = window.api;
+
+function useUiScaleOptions(): UiScaleOption[] {
+  const [options, setOptions] = useState<UiScaleOption[]>(() =>
+    UI_SCALES.map((value) => ({ value, fits: true })),
+  );
+
+  useEffect(() => {
+    let isActive = true;
+    void api.other.getUiScale().then((state) => {
+      if (isActive) setOptions(state.options);
+    });
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  return options;
+}
 
 function halloweenRange(language: string): { start: string; end: string } {
   const range = eventRange("halloween");
@@ -58,6 +78,45 @@ function Keys({ combos }: { combos: string[][] }) {
   );
 }
 
+function VolumeSlider({
+  value,
+  label,
+  onCommit,
+}: {
+  value: number;
+  label: string;
+  onCommit: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => setDraft(value), [value]);
+
+  return (
+    <div className="mt-2.5 flex items-center gap-3">
+      <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
+      <Slider
+        min={0}
+        max={100}
+        step={5}
+        value={[draft]}
+        onValueChange={([next]) => {
+          if (typeof next === "number") setDraft(next);
+        }}
+        onValueCommit={([next]) => {
+          if (typeof next !== "number") return;
+          onCommit(next);
+          previewSound(next);
+        }}
+        aria-label={label}
+        className="flex-1"
+      />
+      <span className="w-9 shrink-0 text-right font-mono text-xs tabular-nums text-foreground">
+        {draft}%
+      </span>
+    </div>
+  );
+}
+
 export function InterfaceSection({
   settings,
   commit,
@@ -75,175 +134,232 @@ export function InterfaceSection({
 }) {
   const { t, i18n } = useTranslation();
   const selected = LANGUAGES.find((item) => item.code === settings.lang);
+  const scaleOptions = useUiScaleOptions();
+  const fittingScales = scaleOptions.filter((option) => option.fits);
+  const largestFitting = fittingScales.at(-1);
+  const isScaleLimited = fittingScales.length < scaleOptions.length;
+  const shownScale =
+    fittingScales.find((option) => option.value === settings.uiScale)?.value ??
+    largestFitting?.value ??
+    settings.uiScale;
 
   return (
     <div className="flex flex-col gap-4">
-    <SettingsGroup title={t("settings.sections.interface")}>
-      {visible("language") && (
-        <SettingRow
-          title={t("settings.language")}
-          description={t("settings.interface.languageDescription")}
-          query={query}
-          changed={isChanged("language")}
-          onReset={() => reset("language")}
-          control={
-            <Select
-              value={settings.lang}
-              onValueChange={(value) => value && commit({ lang: value })}
-            >
-              <SelectTrigger className="w-44">
-                <SelectValue>
-                  {selected && (
-                    <span className="flex min-w-0 items-center gap-2">
-                      <ReactCountryFlag svg countryCode={selected.country} />
-                      <span className="truncate">{selected.label}</span>
-                    </span>
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {LANGUAGES.map((item) => (
-                  <SelectItem key={item.code} value={item.code}>
-                    <span className="flex items-center gap-2">
-                      <ReactCountryFlag svg countryCode={item.country} />
-                      {item.label}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          }
-        />
-      )}
-
-      {visible("accent") && (
-        <SettingRow
-          title={t("settings.interface.accent")}
-          description={t("settings.interface.accentDescription")}
-          query={query}
-          changed={isChanged("accent")}
-          onReset={() => reset("accent")}
-          control={
-            <div
-              role="radiogroup"
-              aria-label={t("settings.interface.accent")}
-              className="flex items-center gap-1.5"
-            >
-              {ACCENT_IDS.map((id) => {
-                const isActive = settings.accent === id;
-                return (
-                  <Hint key={id} content={t(`settings.interface.accents.${id}`)}>
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={isActive}
-                      aria-label={t(`settings.interface.accents.${id}`)}
-                      onClick={() => commit({ accent: id })}
-                      style={{ backgroundColor: ACCENTS[id].primary }}
-                      className="flex size-7 items-center justify-center rounded-full ring-offset-2 ring-offset-surface-2 transition-shadow hover:ring-2 hover:ring-border aria-checked:ring-2 aria-checked:ring-foreground/70 focus-visible:ring-2 focus-visible:ring-foreground focus-visible:outline-none"
-                    >
-                      {isActive && (
-                        <Check
-                          className="size-3.5"
-                          style={{ color: ACCENTS[id].foreground }}
-                        />
-                      )}
-                    </button>
-                  </Hint>
-                );
-              })}
-            </div>
-          }
-        />
-      )}
-
-      {visible("seasonalDecor") && (
-        <SettingRow
-          htmlFor="settings-seasonal-decor"
-          title={t("settings.interface.seasonalDecor")}
-          description={t(
-            "settings.interface.seasonalDecorDescription",
-            halloweenRange(i18n.language),
-          )}
-          query={query}
-          changed={isChanged("seasonalDecor")}
-          onReset={() => reset("seasonalDecor")}
-          control={
-            <Switch
-              id="settings-seasonal-decor"
-              checked={settings.seasonalDecor}
-              onCheckedChange={(value) => commit({ seasonalDecor: value })}
-            />
-          }
-        />
-      )}
-
-      {visible("instancesView") && (
-        <SettingRow
-          title={t("settings.interface.instancesView")}
-          description={t("settings.interface.instancesViewDescription")}
-          query={query}
-          changed={isChanged("instancesView")}
-          onReset={() => reset("instancesView")}
-          control={
-            <div className="flex items-center gap-2">
+      <SettingsGroup title={t("settings.sections.interface")}>
+        {visible("language") && (
+          <SettingRow
+            title={t("settings.language")}
+            description={t("settings.interface.languageDescription")}
+            query={query}
+            changed={isChanged("language")}
+            onReset={() => reset("language")}
+            control={
               <Select
-                value={settings.instancesSort}
-                onValueChange={(value) =>
-                  value && commit({ instancesSort: value as InstancesSort })
-                }
+                value={settings.lang}
+                onValueChange={(value) => value && commit({ lang: value })}
               >
-                <SelectTrigger size="sm" className="w-44">
-                  <SelectValue />
+                <SelectTrigger className="w-44">
+                  <SelectValue>
+                    {selected && (
+                      <span className="flex min-w-0 items-center gap-2">
+                        <ReactCountryFlag svg countryCode={selected.country} />
+                        <span className="truncate">{selected.label}</span>
+                      </span>
+                    )}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {SORTS.map((sort) => (
-                    <SelectItem key={sort} value={sort}>
-                      {t(`settings.interface.sorts.${sort}`)}
+                  {LANGUAGES.map((item) => (
+                    <SelectItem key={item.code} value={item.code}>
+                      <span className="flex items-center gap-2">
+                        <ReactCountryFlag svg countryCode={item.country} />
+                        {item.label}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Segmented<InstancesView>
-                ariaLabel={t("settings.interface.instancesView")}
-                value={settings.instancesView}
-                onChange={(value) => commit({ instancesView: value })}
-                options={[
-                  {
-                    value: "list",
-                    label: t("settings.interface.viewList"),
-                    icon: <Rows3 className="size-3.5" />,
-                  },
-                  {
-                    value: "grid",
-                    label: t("settings.interface.viewGrid"),
-                    icon: <LayoutGrid className="size-3.5" />,
-                  },
-                ]}
-              />
-            </div>
-          }
-        />
-      )}
+            }
+          />
+        )}
 
-      {visible("sounds") && (
-        <SettingRow
-          htmlFor="settings-sounds"
-          title={t("settings.sounds")}
-          description={t("settings.soundsDescription")}
-          query={query}
-          changed={isChanged("sounds")}
-          onReset={() => reset("sounds")}
-          control={
-            <Switch
-              id="settings-sounds"
-              checked={settings.sounds}
-              onCheckedChange={(value) => commit({ sounds: value })}
-            />
-          }
-        />
-      )}
-    </SettingsGroup>
+        {visible("uiScale") && (
+          <SettingRow
+            title={t("settings.interface.uiScale")}
+            description={t("settings.interface.uiScaleDescription")}
+            query={query}
+            changed={isChanged("uiScale")}
+            onReset={() => reset("uiScale")}
+            control={
+              <Segmented<string>
+                ariaLabel={t("settings.interface.uiScale")}
+                value={String(shownScale)}
+                onChange={(value) => commit({ uiScale: Number(value) })}
+                options={scaleOptions.map((option) => ({
+                  value: String(option.value),
+                  label: formatUiScale(option.value),
+                  disabled: !option.fits,
+                }))}
+              />
+            }
+          >
+            {isScaleLimited && largestFitting && (
+              <p className="mt-1.5 text-xs text-faint">
+                {t("settings.interface.uiScaleLimited", {
+                  value: formatUiScale(largestFitting.value),
+                })}
+              </p>
+            )}
+          </SettingRow>
+        )}
+
+        {visible("highContrast") && (
+          <SettingRow
+            htmlFor="settings-highContrast"
+            title={t("settings.interface.highContrast")}
+            description={t("settings.interface.highContrastDescription")}
+            query={query}
+            changed={isChanged("highContrast")}
+            onReset={() => reset("highContrast")}
+            control={
+              <Switch
+                id="settings-highContrast"
+                checked={settings.highContrast}
+                onCheckedChange={(value) => commit({ highContrast: value })}
+              />
+            }
+          />
+        )}
+      </SettingsGroup>
+
+      <SettingsGroup title={t("settings.interface.groups.effects")}>
+        {visible("motion") && (
+          <SettingRow
+            title={t("settings.interface.motion")}
+            description={t("settings.interface.motionDescription")}
+            query={query}
+            changed={isChanged("motion")}
+            onReset={() => reset("motion")}
+            control={
+              <Segmented<MotionSetting>
+                ariaLabel={t("settings.interface.motion")}
+                value={settings.motion}
+                onChange={(value) => commit({ motion: value })}
+                options={MOTION_SETTINGS.map((value) => ({
+                  value,
+                  label: t(`settings.interface.motionModes.${value}`),
+                }))}
+              />
+            }
+          />
+        )}
+
+        {visible("ambientTint") && (
+          <SettingRow
+            htmlFor="settings-ambientTint"
+            title={t("settings.interface.ambientTint")}
+            description={t("settings.interface.ambientTintDescription")}
+            query={query}
+            changed={isChanged("ambientTint")}
+            onReset={() => reset("ambientTint")}
+            control={
+              <Switch
+                id="settings-ambientTint"
+                checked={settings.ambientTint}
+                onCheckedChange={(value) => commit({ ambientTint: value })}
+              />
+            }
+          />
+        )}
+
+        {visible("backgroundGrain") && (
+          <SettingRow
+            htmlFor="settings-backgroundGrain"
+            title={t("settings.interface.backgroundGrain")}
+            description={t("settings.interface.backgroundGrainDescription")}
+            query={query}
+            changed={isChanged("backgroundGrain")}
+            onReset={() => reset("backgroundGrain")}
+            control={
+              <Switch
+                id="settings-backgroundGrain"
+                checked={settings.backgroundGrain}
+                onCheckedChange={(value) => commit({ backgroundGrain: value })}
+              />
+            }
+          />
+        )}
+
+        {visible("seasonalDecor") && (
+          <SettingRow
+            htmlFor="settings-seasonal-decor"
+            title={t("settings.interface.seasonalDecor")}
+            description={t(
+              "settings.interface.seasonalDecorDescription",
+              halloweenRange(i18n.language),
+            )}
+            query={query}
+            changed={isChanged("seasonalDecor")}
+            onReset={() => reset("seasonalDecor")}
+            control={
+              <Switch
+                id="settings-seasonal-decor"
+                checked={settings.seasonalDecor}
+                onCheckedChange={(value) => commit({ seasonalDecor: value })}
+              />
+            }
+          />
+        )}
+      </SettingsGroup>
+
+      <SettingsGroup title={t("settings.interface.groups.soundAndLogs")}>
+        {visible("sounds") && (
+          <SettingRow
+            htmlFor="settings-sounds"
+            title={t("settings.sounds")}
+            description={t("settings.soundsDescription")}
+            query={query}
+            changed={isChanged("sounds")}
+            onReset={() => reset("sounds")}
+            control={
+              <Switch
+                id="settings-sounds"
+                checked={settings.sounds}
+                onCheckedChange={(value) => commit({ sounds: value })}
+              />
+            }
+          >
+            {settings.sounds && (
+              <VolumeSlider
+                value={settings.soundVolume}
+                label={t("settings.interface.soundVolume")}
+                onCommit={(value) => commit({ soundVolume: value })}
+              />
+            )}
+          </SettingRow>
+        )}
+
+        {visible("logFontSize") && (
+          <SettingRow
+            title={t("settings.interface.logFontSize")}
+            description={t("settings.interface.logFontSizeDescription")}
+            query={query}
+            changed={isChanged("logFontSize")}
+            onReset={() => reset("logFontSize")}
+            control={
+              <Segmented<string>
+                ariaLabel={t("settings.interface.logFontSize")}
+                value={String(settings.logFontSize)}
+                onChange={(value) => commit({ logFontSize: Number(value) })}
+                options={LOG_FONT_SIZES.map((size) => ({
+                  value: String(size),
+                  label: String(size),
+                }))}
+              />
+            }
+          />
+        )}
+      </SettingsGroup>
 
       {visible("shortcuts") && (
         <>

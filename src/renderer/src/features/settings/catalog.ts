@@ -4,6 +4,8 @@ export type SettingsSectionId =
   | "game"
   | "downloads"
   | "interface"
+  | "themes"
+  | "layout"
   | "system"
   | "voice"
   | "privacy"
@@ -20,8 +22,26 @@ export type SettingsEntryId =
   | "downloadSource"
   | "mirrorRouting"
   | "language"
+  | "theme"
+  | "uiScale"
+  | "logFontSize"
   | "accent"
+  | "highContrast"
+  | "motion"
+  | "ambientTint"
+  | "backgroundGrain"
   | "seasonalDecor"
+  | "sidebarCollapsed"
+  | "layoutPresets"
+  | "layoutCustomize"
+  | "layoutSidebar"
+  | "layoutDock"
+  | "layoutHome"
+  | "layoutInstanceTab"
+  | "layoutTabs"
+  | "layoutOverview"
+  | "startScreen"
+  | "gameWindow"
   | "closeToTray"
   | "launchAtLogin"
   | "sounds"
@@ -68,6 +88,8 @@ export const SETTINGS_SECTIONS: SettingsSectionId[] = [
   "game",
   "downloads",
   "interface",
+  "themes",
+  "layout",
   "system",
   "voice",
   "privacy",
@@ -87,16 +109,39 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "downloadLimit", section: "downloads", keys: ["downloadLimit"] },
   { id: "mirrorRouting", section: "downloads", keys: [] },
   { id: "language", section: "interface", keys: ["lang"], neutral: true },
-  { id: "accent", section: "interface", keys: ["accent"] },
+  { id: "uiScale", section: "interface", keys: ["uiScale"] },
+  { id: "theme", section: "themes", keys: ["themeId"] },
+  { id: "accent", section: "themes", keys: ["accent"] },
+  { id: "highContrast", section: "interface", keys: ["highContrast"] },
+  { id: "motion", section: "interface", keys: ["motion"] },
+  { id: "ambientTint", section: "interface", keys: ["ambientTint"] },
+  { id: "backgroundGrain", section: "interface", keys: ["backgroundGrain"] },
   { id: "seasonalDecor", section: "interface", keys: ["seasonalDecor"] },
-  { id: "sounds", section: "interface", keys: ["sounds"] },
+  { id: "sounds", section: "interface", keys: ["sounds", "soundVolume"] },
+  { id: "logFontSize", section: "interface", keys: ["logFontSize"] },
+
+  { id: "shortcuts", section: "interface", keys: [] },
+  { id: "layoutPresets", section: "layout", keys: [] },
+  { id: "layoutCustomize", section: "layout", keys: ["interface"] },
+  { id: "sidebarCollapsed", section: "layout", keys: ["sidebarCollapsed"] },
+  { id: "layoutSidebar", section: "layout", keys: [] },
+  { id: "layoutDock", section: "layout", keys: [] },
   {
     id: "instancesView",
-    section: "interface",
+    section: "layout",
     keys: ["instancesView", "instancesSort"],
   },
-  { id: "shortcuts", section: "interface", keys: [] },
+  { id: "layoutHome", section: "layout", keys: [] },
+  { id: "layoutInstanceTab", section: "layout", keys: [] },
+  { id: "layoutTabs", section: "layout", keys: [] },
+  { id: "layoutOverview", section: "layout", keys: [] },
   { id: "closeToTray", section: "system", keys: ["closeToTray"] },
+  { id: "startScreen", section: "system", keys: ["startScreen"] },
+  {
+    id: "gameWindow",
+    section: "system",
+    keys: ["gameWindow", "restoreAfterGame"],
+  },
   { id: "launchAtLogin", section: "system", keys: [] },
   { id: "voiceDevices", section: "voice", keys: [] },
   { id: "voicePtt", section: "voice", keys: ["voicePtt", "voicePttBind"] },
@@ -116,7 +161,11 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
     section: "voice",
     keys: ["voiceGate", "voiceGateThreshold"],
   },
-  { id: "voiceOverlay", section: "voice", keys: ["voiceOverlay"] },
+  {
+    id: "voiceOverlay",
+    section: "voice",
+    keys: ["voiceOverlay", "voiceOverlayCorner", "voiceOverlayDisplay"],
+  },
   { id: "streamerMode", section: "privacy", keys: ["streamerMode"] },
   { id: "streamerModeAuto", section: "privacy", keys: ["streamerModeAuto"] },
   { id: "notifications", section: "privacy", keys: [] },

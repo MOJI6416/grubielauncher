@@ -9,6 +9,7 @@ import icon from "./assets/icon.png";
 import { changeAppLanguage } from "./i18n";
 import { LANGUAGES, normalizeSettings, TSettings } from "@/types/Settings";
 import { Progress } from "@/components/ui/progress";
+import { installMotionPreference } from "@/lib/motionPreference";
 
 const api = window.api;
 
@@ -198,6 +199,8 @@ const App = () => {
     </div>
   );
 };
+
+installMotionPreference();
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>

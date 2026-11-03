@@ -279,6 +279,81 @@ fixture("GET", "/share/me/remote-stats", () => ({ body: [] }));
 fixture("GET", "/groups", () => ({ body: [] }));
 fixture("GET", "/share/friends/active", () => ({ body: [] }));
 
+const coverWebp = (version) => fs.readFileSync(new URL(`../release-notes/covers/${version}.webp`, import.meta.url));
+const galleryTheme = (n, name, mode, colors, cover, author, downloads, age) => ({
+  id: `64f0000000000000000000${String(n).padStart(2, "0")}`,
+  name,
+  mode,
+  colors,
+  backdrop: cover
+    ? {
+        dim: 50,
+        blur: 4,
+        panelOpacity: 86,
+        url: `https://cdn.grubielauncher.com/theme-media/${cover}.webp`,
+        thumbUrl: `https://cdn.grubielauncher.com/theme-media/${cover}.webp`,
+      }
+    : null,
+  authorName: author,
+  downloads,
+  createdAt: iso(age * day),
+});
+const galleryThemes = [
+  galleryTheme(1, "Лесная тропа", "dark", { background: "#0d120c", surface: "#182016", foreground: "#eef3ea", accent: "#9bd35a" }, "2.2.2", "Alex", 1290, 14),
+  galleryTheme(2, "Мятная ночь", "dark", { background: "#0b1412", surface: "#13201d", foreground: "#e8f5f1", accent: "#3ddc97" }, null, "Mint", 412, 9),
+  galleryTheme(3, "Бумага", "light", { background: "#f1ece3", surface: "#fffaf2", foreground: "#1d1a16", accent: "#c2410c" }, null, "Lumavia", 167, 6),
+  galleryTheme(4, "Северное сияние", "dark", { background: "#07101a", surface: "#0f1c2b", foreground: "#e6f1fb", accent: "#38bdf8" }, "2.2.1", "Aurora", 88, 2),
+  galleryTheme(5, "Закат над рекой", "dark", { background: "#140d12", surface: "#22161e", foreground: "#f6eef2", accent: "#ff7a45" }, "2.2.4", "Steve_Builder", 41, 1),
+  galleryTheme(6, "Неоновый город", "dark", { background: "#090b14", surface: "#121626", foreground: "#eef1ff", accent: null }, "2.2.0", "pixelfox", 23, 0.5),
+];
+const myThemes = [];
+let lastThemePublish = null;
+fixture("GET", /^[^/]+\/themes$/, ({ url }) => {
+  const mode = url.searchParams.get("mode");
+  const search = (url.searchParams.get("search") || "").toLowerCase();
+  let items = galleryThemes.filter((theme) => !mode || theme.mode === mode);
+  if (search) items = items.filter((theme) => `${theme.name} ${theme.authorName}`.toLowerCase().includes(search));
+  if (url.searchParams.get("sort") === "downloads") items = [...items].sort((a, b) => b.downloads - a.downloads);
+  return { body: { items, total: items.length, page: 1, pageSize: 24 } };
+});
+fixture("GET", /^[^/]+\/themes\/mine$/, () => ({ body: { items: myThemes } }));
+fixture("GET", /^[^/]+\/themes\/([0-9a-f]{24})$/, ({ match }) => {
+  const theme = galleryThemes.find((item) => item.id === match[1]);
+  return theme ? { body: theme } : { status: 404, body: { message: "Not Found" } };
+});
+fixture("POST", /^[^/]+\/themes\/([0-9a-f]{24})\/download$/, ({ match }) => {
+  const theme = galleryThemes.find((item) => item.id === match[1]);
+  if (theme) theme.downloads += 1;
+  return { status: 201, body: { downloads: theme?.downloads ?? 0 } };
+});
+fixture("POST", /^[^/]+\/themes$/, ({ body, req }) => {
+  const field = (name) => body.match(new RegExp(`name="${name}"\\r\\n\\r\\n([^\\r]*)`))?.[1] ?? null;
+  lastThemePublish = {
+    auth: Boolean(req.headers.authorization),
+    name: field("name"),
+    mode: field("mode"),
+    colors: field("colors"),
+    backdrop: body.match(/name="backdrop"\r\n\r\n(\{[^\r]*)/)?.[1] ?? null,
+    backdropFile: body.includes('filename="backdrop.webp"'),
+    thumbFile: body.includes('filename="thumb.webp"'),
+    bytes: body.length,
+  };
+  const theme = {
+    ...galleryTheme(90 + myThemes.length, lastThemePublish.name || "", lastThemePublish.mode || "dark", JSON.parse(lastThemePublish.colors || "{}"), null, "Lumavia", 0, 0),
+    status: "pending",
+    rejectionReason: null,
+  };
+  myThemes.unshift(theme);
+  return { status: 201, body: theme };
+});
+fixture("DELETE", /^[^/]+\/themes\/([0-9a-f]{24})$/, ({ match }) => {
+  const index = myThemes.findIndex((item) => item.id === match[1]);
+  if (index >= 0) myThemes.splice(index, 1);
+  return { body: { ok: true } };
+});
+fixture("GET", /^[^/]+\/theme-media\/([\d.]+)\.webp$/, ({ match }) => ({ body: coverWebp(match[1]), type: "image/webp" }));
+fixture("GET", "/__perf/themes/last-publish", () => ({ body: lastThemePublish ?? {} }));
+
 function send(res, status, body, type = "application/json") {
   const payload = typeof body === "string" || Buffer.isBuffer(body) ? body : JSON.stringify(body);
   res.writeHead(status, {

@@ -1,13 +1,14 @@
 import { is } from "@electron-toolkit/utils";
 import { BrowserWindow } from "electron";
 import path from "path";
+import { appPageUrl } from "./appPages";
 
 export let updaterWindow: BrowserWindow | null = null;
 
 function blockUpdaterNavigation(event: Electron.Event, url: string): void {
   const devUrl = process.env["ELECTRON_RENDERER_URL"];
   const isAllowed =
-    url.startsWith("app://bundle/") || (!!devUrl && url.startsWith(devUrl));
+    url.startsWith(appPageUrl("updater", "")) || (!!devUrl && url.startsWith(devUrl));
   if (isAllowed) return;
 
   event.preventDefault();
@@ -48,6 +49,6 @@ export function createUpdaterWindow() {
   if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
     updaterWindow.loadURL(process.env["ELECTRON_RENDERER_URL"] + "/updater");
   } else {
-    updaterWindow.loadURL("app://bundle/updater.html");
+    updaterWindow.loadURL(appPageUrl("updater", "updater.html"));
   }
 }

@@ -20,7 +20,9 @@ const SOUND_URLS: Record<SoundKind, string> = {
   error: errorUrl,
 };
 
-const SOUND_VOLUME = 0.4;
+function soundVolume(): number {
+  return getDefaultStore().get(settingsAtom).soundVolume / 100;
+}
 const SOUND_COOLDOWN_MS = 1500;
 
 const lastPlayedAt = new Map<SoundKind, number>();
@@ -34,7 +36,13 @@ export function playSound(kind: SoundKind) {
   lastPlayedAt.set(kind, now);
 
   const audio = new Audio(SOUND_URLS[kind]);
-  audio.volume = SOUND_VOLUME;
+  audio.volume = soundVolume();
+  void audio.play().catch(() => {});
+}
+
+export function previewSound(volume: number) {
+  const audio = new Audio(SOUND_URLS.notify);
+  audio.volume = Math.min(1, Math.max(0, volume / 100));
   void audio.play().catch(() => {});
 }
 
@@ -77,7 +85,7 @@ export function playVoiceSound(
   }
 
   const audio = new Audio(VOICE_SOUND_URLS[kind]);
-  audio.volume = SOUND_VOLUME;
+  audio.volume = soundVolume();
   applySavedAudioOutput(audio);
   void audio.play().catch(() => {});
 }
@@ -93,6 +101,6 @@ export function playAchievementSound() {
   achievementLastPlayedAt = now;
 
   const audio = new Audio(achievementUrl);
-  audio.volume = SOUND_VOLUME;
+  audio.volume = soundVolume();
   void audio.play().catch(() => {});
 }

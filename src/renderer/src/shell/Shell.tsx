@@ -1,9 +1,10 @@
 import { ReactNode, useCallback, useEffect, useState } from "react";
-import { getDefaultStore } from "jotai";
+import { getDefaultStore, useAtomValue } from "jotai";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import i18n from "@renderer/i18n";
 import { agentBlockReason, blockReasonKey } from "@renderer/navigation/access";
-import { accountAtom } from "@renderer/stores/atoms";
+import { accountAtom, settingsAtom } from "@renderer/stores/atoms";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { CommandPalette } from "./CommandPalette";
@@ -15,7 +16,9 @@ import {
   SeasonalBats,
 } from "@renderer/features/seasonal/SeasonalDecor";
 import { goBack, goForward } from "@renderer/navigation/navigate";
-import { isAgentShortcut } from "./shortcuts";
+import { isAgentShortcut, isSidebarShortcut } from "./shortcuts";
+import { toggleSidebar } from "./sidebarCollapse";
+import { LayoutEditBar } from "@renderer/features/layout/LayoutEditBar";
 
 export function Shell({
   runGame,
@@ -27,6 +30,7 @@ export function Shell({
   aside?: ReactNode;
 }) {
   const [isPaletteOpen, setPaletteOpen] = useState(false);
+  const settings = useAtomValue(settingsAtom);
   const [paletteQuery, setPaletteQuery] = useState("");
 
   useEffect(() => {
@@ -44,6 +48,12 @@ export function Shell({
         event.preventDefault();
         setPaletteQuery(">");
         setPaletteOpen(true);
+        return;
+      }
+
+      if (isSidebarShortcut(event)) {
+        event.preventDefault();
+        toggleSidebar();
         return;
       }
 
@@ -95,16 +105,22 @@ export function Shell({
   }, []);
 
   return (
-    <div className="app-grain flex h-screen w-full flex-col overflow-hidden">
+    <div
+      className={cn(
+        "flex h-screen w-full flex-col overflow-hidden",
+        settings.backgroundGrain && "app-grain",
+      )}
+    >
       <TopBar onOpenPalette={openPalette} />
 
       <div className="flex min-h-0 flex-1">
-        <Sidebar />
+        <Sidebar runGame={runGame} />
 
         <main className="relative isolate min-h-0 min-w-0 flex-1 overflow-hidden px-4 py-3">
-          <AmbientTint />
+          {settings.ambientTint && <AmbientTint />}
           <SeasonalBackdrop />
           {children}
+          <LayoutEditBar />
         </main>
         {aside}
       </div>

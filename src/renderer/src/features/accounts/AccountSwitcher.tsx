@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Check, ChevronsUpDown, LogIn, Settings2, UserPlus } from "lucide-react";
 import type { ILocalAccount } from "@/types/Account";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +40,11 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { MOD_KEY } from "@renderer/utilities/platform";
 import { Hint } from "@renderer/components/Hint";
 
-export function AccountSwitcher() {
+export function AccountSwitcher({
+  collapsed = false,
+}: {
+  collapsed?: boolean;
+}) {
   const { t } = useTranslation();
   const selectedAccount = useAtomValue(accountAtom);
   const accounts = useAtomValue(accountsAtom);
@@ -113,6 +118,26 @@ export function AccountSwitcher() {
   }, [switchTo]);
 
   if (!selectedAccount) {
+    if (collapsed) {
+      return (
+        <Hint content={t("accounts.signIn")} side="right">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="mx-auto size-11"
+            aria-label={t("accounts.signIn")}
+            onClick={() =>
+              accounts.length === 0 && !accountsUnreadable
+                ? openAddAccount()
+                : openAccounts()
+            }
+          >
+            <LogIn className="size-4" />
+          </Button>
+        </Hint>
+      );
+    }
+
     return (
       <Button
         variant="secondary"
@@ -133,17 +158,21 @@ export function AccountSwitcher() {
   const isOwnProfile =
     route.name === "profile" && route.userId === OWN_PROFILE_ID;
 
+  const avatar = (
+    <span className="relative shrink-0">
+      <AccountHead account={selectedAccount} size={30} />
+      {broken > 0 && (
+        <SessionDot
+          state="expired"
+          className="absolute -right-0.5 -bottom-0.5"
+        />
+      )}
+    </span>
+  );
+
   const identity = (
     <>
-      <span className="relative shrink-0">
-        <AccountHead account={selectedAccount} size={30} />
-        {broken > 0 && (
-          <SessionDot
-            state="expired"
-            className="absolute -right-0.5 -bottom-0.5"
-          />
-        )}
-      </span>
+      {avatar}
 
       <span className="grid min-w-0 flex-1">
         <span className="truncate text-[0.7rem] leading-4 text-faint">
@@ -156,9 +185,52 @@ export function AccountSwitcher() {
     </>
   );
 
+  const accountsTrigger = (
+    <Hint content={t("accounts.accounts")} side={collapsed ? "right" : "top"}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={t("accounts.accounts")}
+          className={cn(
+            "flex shrink-0 items-center justify-center rounded-lg text-faint transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-expanded:bg-sidebar-accent aria-expanded:text-foreground",
+            collapsed ? "h-5 w-full" : "h-11 w-7",
+          )}
+        >
+          <ChevronsUpDown className="size-3.5" />
+        </button>
+      </DropdownMenuTrigger>
+    </Hint>
+  );
+
   return (
     <DropdownMenu>
-      {canOpenProfile ? (
+      {collapsed ? (
+        <div className="flex w-full flex-col items-center gap-0.5">
+          <Hint
+            content={`${t("accounts.playingAs")} ${selectedAccount.nickname}`}
+            side="right"
+          >
+            <button
+              type="button"
+              aria-current={canOpenProfile && isOwnProfile}
+              aria-label={selectedAccount.nickname}
+              onClick={() =>
+                canOpenProfile &&
+                navigate({ name: "profile", userId: OWN_PROFILE_ID })
+              }
+              className={cn(
+                "flex size-11 items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-[current=true]:bg-primary-soft",
+                canOpenProfile
+                  ? "not-aria-[current=true]:hover:bg-sidebar-accent"
+                  : "cursor-default",
+              )}
+            >
+              {avatar}
+            </button>
+          </Hint>
+          {accountsTrigger}
+        </div>
+      ) : canOpenProfile ? (
         <div className="flex h-11 w-full items-center gap-0.5">
           <Hint content={t("shell.nav.profile")} side="top">
             <button
@@ -173,17 +245,7 @@ export function AccountSwitcher() {
             </button>
           </Hint>
 
-          <Hint content={t("accounts.accounts")} side="top">
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label={t("accounts.accounts")}
-                className="flex h-11 w-7 shrink-0 items-center justify-center rounded-lg text-faint transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-expanded:bg-sidebar-accent aria-expanded:text-foreground"
-              >
-                <ChevronsUpDown className="size-3.5" />
-              </button>
-            </DropdownMenuTrigger>
-          </Hint>
+          {accountsTrigger}
         </div>
       ) : (
         <DropdownMenuTrigger asChild>
@@ -199,8 +261,8 @@ export function AccountSwitcher() {
       )}
 
       <DropdownMenuContent
-        align={canOpenProfile ? "end" : "start"}
-        side="top"
+        align={canOpenProfile && !collapsed ? "end" : "start"}
+        side={collapsed ? "right" : "top"}
         className="w-60"
       >
         <DropdownMenuLabel className="text-faint">

@@ -3,8 +3,10 @@ import { handleSafe } from "../utilities/ipc";
 import { capturePttBind, setPttBind } from "../services/PushToTalk";
 import {
   destroyVoiceOverlay,
+  listOverlayDisplays,
   updateVoiceOverlay,
 } from "../windows/voiceOverlay";
+import type { OverlayDisplay } from "@/types/Voice";
 
 let powerSaveBlockerId: number | null = null;
 
@@ -14,6 +16,10 @@ export function registerVoiceIpc() {
   handleSafe("voice:overlayUpdate", undefined, async (_, state: unknown) => {
     updateVoiceOverlay(state);
   });
+
+  handleSafe<OverlayDisplay[]>("voice:overlayDisplays", [], () =>
+    listOverlayDisplays(),
+  );
 
   handleSafe(
     "voice:setPtt",

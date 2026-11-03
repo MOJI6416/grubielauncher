@@ -7,6 +7,7 @@ import {
   resolveTrayAnchor,
   type Point,
 } from "./trayPopupPlacement";
+import { appPageUrl } from "./appPages";
 
 const MIN_HEIGHT = 120;
 const MAX_HEIGHT = 640;
@@ -92,7 +93,7 @@ function create(): BrowserWindow {
   if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
     void window.loadURL(`${process.env["ELECTRON_RENDERER_URL"]}/tray`);
   } else {
-    void window.loadURL("app://bundle/tray.html");
+    void window.loadURL(appPageUrl("tray", "tray.html"));
   }
 
   return window;

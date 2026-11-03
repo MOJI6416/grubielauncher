@@ -1,7 +1,13 @@
 import i18n, { changeAppLanguage } from "@renderer/i18n";
 import { normalizeSettings, TSettings } from "@/types/Settings";
 import { resolveBootstrapLanguage } from "./bootstrapPlan";
-import { applyAccent } from "../theme/accent";
+import { getDefaultStore } from "jotai";
+import { BUILT_IN_THEMES, findTheme } from "@/shared/themes";
+import {
+  hydrateUserThemes,
+  userThemesAtom,
+} from "@renderer/features/theme/themesStore";
+import { applyThemeVariables } from "@renderer/features/theme/applyTheme";
 
 const api = window.api;
 
@@ -15,12 +21,19 @@ export async function preloadAppLanguage(): Promise<void> {
       : null;
 
     const systemLocale = await api.other.getLocale();
-    const { lang, accent } = normalizeSettings(
+    const { lang, accent, themeId, highContrast } = normalizeSettings(
       raw,
       resolveBootstrapLanguage(systemLocale, i18n.language),
     );
 
-    applyAccent(accent);
+    if (!BUILT_IN_THEMES.some((theme) => theme.id === themeId)) {
+      await hydrateUserThemes(paths.launcher);
+    }
+    applyThemeVariables(
+      findTheme(themeId, getDefaultStore().get(userThemesAtom)),
+      accent,
+      highContrast,
+    );
     await changeAppLanguage(lang);
   } catch {}
 }

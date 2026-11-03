@@ -12,6 +12,7 @@ import {
 } from "@renderer/features/launch/deepLaunch";
 import { runGame } from "@renderer/features/launch/runGame";
 import { resolveDeepLink } from "@renderer/navigation/deepLinkRoutes";
+import { galleryFocusAtom } from "@renderer/features/theme/gallery";
 import { navigate } from "@renderer/navigation/navigate";
 import {
   accountAtom,
@@ -118,6 +119,12 @@ export function DeepLinkHost() {
 
       if (intent.kind === "skin") {
         setPendingSkinDeepLink(intent.skinId);
+        return;
+      }
+
+      if (intent.kind === "theme") {
+        getDefaultStore().set(galleryFocusAtom, intent.themeId);
+        navigate({ name: "settings", section: "themes" });
         return;
       }
 

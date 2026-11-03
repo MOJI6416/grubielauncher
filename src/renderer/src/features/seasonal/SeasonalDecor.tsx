@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAtomValue } from "jotai";
-import { useReducedMotion } from "motion/react";
+import { useReducedMotionPreference } from "@/lib/motionPreference";
 import { cn } from "@/lib/utils";
 import {
   BAT_DOWN,
@@ -201,7 +201,7 @@ function Bat({ flight }: { flight: BatFlight }) {
 export function SeasonalBats() {
   const event = useAtomValue(seasonalEventAtom);
   const request = useAtomValue(batFlockRequestAtom);
-  const reducedMotion = useReducedMotion() === true;
+  const reducedMotion = useReducedMotionPreference() === true;
   const [flocks, setFlocks] = useState<Flock[]>([]);
   const nextId = useRef(0);
   const timers = useRef(new Set<number>());

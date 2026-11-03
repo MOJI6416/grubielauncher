@@ -98,3 +98,28 @@ describe("sameOverlayState", () => {
     expect(sameOverlayState(a, { ...a, visible: false })).toBe(false);
   });
 });
+
+describe("overlay placement", () => {
+  it("carries the chosen corner and screen", () => {
+    const state = buildOverlayState(
+      { state: "connected", participants },
+      true,
+      true,
+      () => null,
+      { corner: "bottom-right", displayId: 7 },
+    );
+    expect(state).toMatchObject({ corner: "bottom-right", displayId: 7 });
+  });
+
+  it("treats a moved overlay as a change", () => {
+    const top = buildOverlayState(
+      { state: "connected", participants },
+      true,
+      true,
+      () => null,
+      { corner: "top-left", displayId: 0 },
+    );
+    expect(sameOverlayState(top, { ...top, corner: "bottom-left" })).toBe(false);
+    expect(sameOverlayState(top, { ...top, displayId: 3 })).toBe(false);
+  });
+});

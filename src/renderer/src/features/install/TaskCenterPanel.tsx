@@ -5,8 +5,8 @@ import {
   LazyMotion,
   domAnimation,
   m,
-  useReducedMotion,
 } from "motion/react";
+import { useReducedMotionPreference } from "@/lib/motionPreference";
 import {
   AlertTriangle,
   Ban,
@@ -377,7 +377,7 @@ function StageLog() {
   const log = useAtomValue(installStageLogAtom);
   const progress = useAtomValue(installProgressAtom);
   const stages = usePacedStageLog(log);
-  const transition = motionTransition(useReducedMotion());
+  const transition = motionTransition(useReducedMotionPreference());
   const format = useInstallFormatters();
   const { t } = useTranslation();
 

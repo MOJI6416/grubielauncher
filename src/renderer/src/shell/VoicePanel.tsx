@@ -44,6 +44,7 @@ import {
 } from "@renderer/utilities/voiceClient";
 import { currentRouteAtom } from "@renderer/navigation/store";
 import { navigate } from "@renderer/navigation/navigate";
+import { useSidebarCollapsed } from "./sidebarCollapse";
 
 export function VoicePanel() {
   const session = useAtomValue(voiceSessionAtom);
@@ -58,6 +59,7 @@ export function VoicePanel() {
 }
 
 function VoiceMiniPanel({ session }: { session: IVoiceSessionState }) {
+  const collapsed = useSidebarCollapsed();
   const groups = useAtomValue(groupsAtom);
   const { t } = useTranslation();
 
@@ -92,6 +94,124 @@ function VoiceMiniPanel({ session }: { session: IVoiceSessionState }) {
       section: roomKind === "direct" ? "friends" : "groups",
     });
 
+  const hintSide = collapsed ? ("right" as const) : undefined;
+  const statusText = micIssueTitle
+    ? t(micIssueTitle)
+    : t(voiceStatusKey(session.state));
+
+  const micButton = (
+    <Hint
+      side={hintSide ?? "top"}
+      content={
+        micIssueTitle
+          ? `${t(micIssueTitle)} — ${t("voice.micRetry")}`
+          : session.isMicMuted
+            ? t("voice.unmute")
+            : t("voice.mute")
+      }
+    >
+      <Button
+        size="icon-sm"
+        variant={
+          micState === "muted" || micState === "deafened"
+            ? "destructive"
+            : "ghost"
+        }
+        className={cn(
+          micState === "broken" && "text-warning",
+          micState === "ptt-active" && "ring-2 ring-success",
+        )}
+        onClick={() =>
+          micState === "broken"
+            ? void voiceRetryMic()
+            : void voiceSetMicMuted(!session.isMicMuted)
+        }
+        aria-label={
+          micState === "broken"
+            ? t("voice.micRetry")
+            : session.isMicMuted
+              ? t("voice.unmute")
+              : t("voice.mute")
+        }
+      >
+        {micState === "broken" ? (
+          <TriangleAlert className="size-3.5" />
+        ) : session.isMicMuted ? (
+          <MicOff className="size-3.5" />
+        ) : (
+          <Mic className="size-3.5" />
+        )}
+      </Button>
+    </Hint>
+  );
+
+  const deafenButton = (
+    <Hint
+      side={hintSide}
+      content={session.isDeafened ? t("voice.undeafen") : t("voice.deafen")}
+    >
+      <Button
+        size="icon-sm"
+        variant={session.isDeafened ? "destructive" : "ghost"}
+        onClick={() => void voiceSetDeafened(!session.isDeafened)}
+        aria-label={
+          session.isDeafened ? t("voice.undeafen") : t("voice.deafen")
+        }
+      >
+        {session.isDeafened ? (
+          <HeadphoneOff className="size-3.5" />
+        ) : (
+          <Headphones className="size-3.5" />
+        )}
+      </Button>
+    </Hint>
+  );
+
+  const disconnectButton = (
+    <Hint side={hintSide} content={t("voice.disconnect")}>
+      <Button
+        size="icon-sm"
+        variant="destructive"
+        onClick={() => void voiceDisconnect()}
+        aria-label={t("voice.disconnect")}
+      >
+        <PhoneOff className="size-3.5" />
+      </Button>
+    </Hint>
+  );
+
+  if (collapsed) {
+    return (
+      <section
+        aria-label={t("voice.title")}
+        className={cn(
+          "mb-1.5 flex flex-col items-center gap-1 rounded-lg border bg-surface-2 py-1.5",
+          tone === "live" ? "border-border" : "border-warning/40",
+        )}
+      >
+        <Hint content={`${roomTitle} · ${statusText}`} side="right">
+          <button
+            type="button"
+            onClick={openRoom}
+            aria-label={roomTitle}
+            className="relative flex size-7 items-center justify-center rounded-md text-faint transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            <Headphones className="size-3.5" />
+            <span
+              className={cn(
+                "absolute top-0.5 right-0.5 size-1.5 rounded-full",
+                tone === "live" ? "bg-success" : "animate-pulse bg-warning",
+              )}
+            />
+          </button>
+        </Hint>
+        {micButton}
+        {deafenButton}
+        {disconnectButton}
+      </section>
+    );
+  }
+
   return (
     <section
       aria-label={t("voice.title")}
@@ -113,7 +233,7 @@ function VoiceMiniPanel({ session }: { session: IVoiceSessionState }) {
             tone === "live" ? "text-success" : "text-warning",
           )}
         >
-          {micIssueTitle ? t(micIssueTitle) : t(voiceStatusKey(session.state))}
+          {statusText}
         </span>
 
         {isLive && session.connectedAt > 0 && (
@@ -186,68 +306,9 @@ function VoiceMiniPanel({ session }: { session: IVoiceSessionState }) {
       </div>
 
       <div className="flex items-center gap-1">
-        <Hint
-          side="top"
-          content={
-            micIssueTitle
-              ? `${t(micIssueTitle)} — ${t("voice.micRetry")}`
-              : session.isMicMuted
-                ? t("voice.unmute")
-                : t("voice.mute")
-          }
-        >
-          <Button
-            size="icon-sm"
-            variant={
-              micState === "muted" || micState === "deafened"
-                ? "destructive"
-                : "ghost"
-            }
-            className={cn(
-              micState === "broken" && "text-warning",
-              micState === "ptt-active" && "ring-2 ring-success",
-            )}
-            onClick={() =>
-              micState === "broken"
-                ? void voiceRetryMic()
-                : void voiceSetMicMuted(!session.isMicMuted)
-            }
-            aria-label={
-              micState === "broken"
-                ? t("voice.micRetry")
-                : session.isMicMuted
-                  ? t("voice.unmute")
-                  : t("voice.mute")
-            }
-          >
-            {micState === "broken" ? (
-              <TriangleAlert className="size-3.5" />
-            ) : session.isMicMuted ? (
-              <MicOff className="size-3.5" />
-            ) : (
-              <Mic className="size-3.5" />
-            )}
-          </Button>
-        </Hint>
+        {micButton}
 
-        <Hint
-          content={session.isDeafened ? t("voice.undeafen") : t("voice.deafen")}
-        >
-          <Button
-            size="icon-sm"
-            variant={session.isDeafened ? "destructive" : "ghost"}
-            onClick={() => void voiceSetDeafened(!session.isDeafened)}
-            aria-label={
-              session.isDeafened ? t("voice.undeafen") : t("voice.deafen")
-            }
-          >
-            {session.isDeafened ? (
-              <HeadphoneOff className="size-3.5" />
-            ) : (
-              <Headphones className="size-3.5" />
-            )}
-          </Button>
-        </Hint>
+        {deafenButton}
 
         <span className="min-w-0 flex-1 truncate px-0.5 text-[0.65rem] text-faint">
           {speaking > 0
@@ -257,16 +318,7 @@ function VoiceMiniPanel({ session }: { session: IVoiceSessionState }) {
               : ""}
         </span>
 
-        <Hint content={t("voice.disconnect")}>
-          <Button
-            size="icon-sm"
-            variant="destructive"
-            onClick={() => void voiceDisconnect()}
-            aria-label={t("voice.disconnect")}
-          >
-            <PhoneOff className="size-3.5" />
-          </Button>
-        </Hint>
+        {disconnectButton}
       </div>
     </section>
   );

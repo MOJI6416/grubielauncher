@@ -23,7 +23,10 @@ import {
 export function VoiceOverlayHost() {
   const session = useAtomValue(voiceSessionAtom);
   const consoles = useAtomValue(consolesMetaAtom);
-  const isEnabled = useAtomValue(settingsAtom).voiceOverlay;
+  const settings = useAtomValue(settingsAtom);
+  const isEnabled = settings.voiceOverlay;
+  const corner = settings.voiceOverlayCorner;
+  const displayId = settings.voiceOverlayDisplay;
   const account = useAtomValue(accountAtom);
   const skinVersion = useAtomValue(rpcSkinVersionAtom);
   const faceOf = useFaceLookup();
@@ -47,11 +50,12 @@ export function VoiceOverlayHost() {
       isGameRunning,
       isEnabled,
       headUrlOf,
+      { corner, displayId },
     );
     if (sameOverlayState(sentRef.current, next)) return;
     sentRef.current = next;
     void window.api.voice.updateOverlay(next).catch(() => undefined);
-  }, [session, isGameRunning, isEnabled, headUrlOf]);
+  }, [session, isGameRunning, isEnabled, headUrlOf, corner, displayId]);
 
   return null;
 }

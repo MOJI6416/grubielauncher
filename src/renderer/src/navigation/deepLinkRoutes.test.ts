@@ -78,6 +78,12 @@ describe("resolveDeepLink", () => {
     });
   });
 
+  it("opens a gallery theme without an account", () => {
+    expect(
+      resolveDeepLink({ type: "theme", id: "64f0000000000000000000aa" }, signedOut),
+    ).toEqual({ kind: "theme", themeId: "64f0000000000000000000aa" });
+  });
+
   it("passes web login through without an account", () => {
     expect(
       resolveDeepLink({ type: "webLogin", requestId: "r1" }, signedOut),

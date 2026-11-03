@@ -11,6 +11,7 @@ export type DeepLinkIntent =
   | { kind: "launch"; versionName: string; instance: number }
   | { kind: "groupJoin"; code: string }
   | { kind: "skin"; skinId: string }
+  | { kind: "theme"; themeId: string }
   | { kind: "webLogin"; requestId: string }
   | { kind: "friendRequest"; userId: string }
   | { kind: "pack"; shareCode: string }
@@ -61,6 +62,9 @@ export function resolveDeepLink(
         };
       }
       return { kind: "skin", skinId: payload.id };
+
+    case "theme":
+      return { kind: "theme", themeId: payload.id };
 
     case "webLogin":
       return { kind: "webLogin", requestId: payload.requestId };

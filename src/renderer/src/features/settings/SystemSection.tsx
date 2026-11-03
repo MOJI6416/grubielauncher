@@ -2,8 +2,19 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Switch } from "@/components/ui/switch";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   defaultCloseToTray,
+  GAME_WINDOW_MODES,
   resolveCloseToTray,
+  START_SCREENS,
+  type GameWindowMode,
+  type StartScreen,
   type TSettings,
 } from "@/types/Settings";
 import { showFailureToast } from "@renderer/utilities/failures";
@@ -111,6 +122,80 @@ export function SystemSection({
             />
           }
         />
+      )}
+
+      {visible("startScreen") && (
+        <SettingRow
+          title={t("settings.system.startScreen")}
+          description={t("settings.system.startScreenDescription")}
+          query={query}
+          changed={isChanged("startScreen")}
+          onReset={() => reset("startScreen")}
+          control={
+            <Select
+              value={settings.startScreen}
+              onValueChange={(value) =>
+                value && commit({ startScreen: value as StartScreen })
+              }
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {START_SCREENS.map((screen) => (
+                  <SelectItem key={screen} value={screen}>
+                    {t(`settings.system.startScreens.${screen}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+        />
+      )}
+
+      {visible("gameWindow") && (
+        <SettingRow
+          title={t("settings.system.gameWindow")}
+          description={t("settings.system.gameWindowDescription")}
+          query={query}
+          changed={isChanged("gameWindow")}
+          onReset={() => reset("gameWindow")}
+          control={
+            <Select
+              value={settings.gameWindow}
+              onValueChange={(value) =>
+                value && commit({ gameWindow: value as GameWindowMode })
+              }
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {GAME_WINDOW_MODES.map((mode) => (
+                  <SelectItem key={mode} value={mode}>
+                    {t(`settings.system.gameWindowModes.${mode}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+        >
+          {settings.gameWindow !== "keep" && (
+            <label
+              htmlFor="settings-restore-after-game"
+              className="mt-2.5 flex cursor-pointer items-center gap-2.5 text-xs text-muted-foreground"
+            >
+              <Switch
+                id="settings-restore-after-game"
+                checked={settings.restoreAfterGame}
+                onCheckedChange={(value) =>
+                  commit({ restoreAfterGame: value })
+                }
+              />
+              {t("settings.system.restoreAfterGame")}
+            </label>
+          )}
+        </SettingRow>
       )}
     </SettingsGroup>
   );

@@ -83,6 +83,21 @@ export function parseLauncherDeepLink(rawUrl: string): LauncherDeepLink | null {
     };
   }
 
+  if (url.hostname === "theme") {
+    let id: string;
+    try {
+      id = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+    } catch {
+      return null;
+    }
+    if (!/^[a-f0-9]{24}$/.test(id)) return null;
+
+    return {
+      type: "theme",
+      id,
+    };
+  }
+
   if (url.hostname === "friend") {
     let userId: string;
     try {

@@ -25,6 +25,15 @@ describe("launcher deep links", () => {
     expect(parseLauncherDeepLink("grubielauncher://pack/bad-code")).toBeNull();
   });
 
+  it("parses theme links and rejects anything but a gallery id", () => {
+    expect(
+      parseLauncherDeepLink("grubielauncher://theme/64f0000000000000000000aa"),
+    ).toEqual({ type: "theme", id: "64f0000000000000000000aa" });
+    expect(parseLauncherDeepLink("grubielauncher://theme/..%2F..%2Fetc")).toBeNull();
+    expect(parseLauncherDeepLink("grubielauncher://theme/64F0000000000000000000AA")).toBeNull();
+    expect(parseLauncherDeepLink("grubielauncher://theme/")).toBeNull();
+  });
+
   it("parses friend links and rejects malformed ids", () => {
     expect(
       parseLauncherDeepLink(

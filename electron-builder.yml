@@ -29,6 +29,8 @@ files:
   - '!perf/**'
   - '!electron.vite.config.*'
   - '!.claude/**'
+  - '!.git/**'
+  - '!.github/**'
   - '!release-notes/**'
   - '!*.tsbuildinfo'
   - '!{eslint.config.mjs,postcss.config.js,components.json}'

@@ -2,6 +2,7 @@ import type {
   IVoiceParticipantState,
   IVoiceSessionState,
   VoiceOverlayState,
+  VoiceOverlayPlacement,
 } from "@/types/Voice";
 import { HIDDEN_VOICE_OVERLAY } from "@/types/Voice";
 import { isVoiceLive } from "./roomModel";
@@ -13,6 +14,7 @@ export function buildOverlayState(
   isEnabled: boolean,
   headUrlOf: (participant: IVoiceParticipantState) => string | null = () =>
     null,
+  placement?: VoiceOverlayPlacement,
 ): VoiceOverlayState {
   if (!isEnabled || !isGameRunning || !isVoiceLive(session.state)) {
     return HIDDEN_VOICE_OVERLAY;
@@ -34,6 +36,7 @@ export function buildOverlayState(
         headUrl: headUrlOf(participant),
         isLocal: participant.isLocal,
       })),
+    ...(placement ?? {}),
   };
 }
 
@@ -42,6 +45,7 @@ export function sameOverlayState(
   b: VoiceOverlayState,
 ): boolean {
   if (a.visible !== b.visible) return false;
+  if (a.corner !== b.corner || a.displayId !== b.displayId) return false;
   if (a.speakers.length !== b.speakers.length) return false;
   return a.speakers.every((speaker, index) => {
     const other = b.speakers[index];

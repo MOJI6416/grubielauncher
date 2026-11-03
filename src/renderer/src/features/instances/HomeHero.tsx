@@ -22,6 +22,7 @@ import { Hint } from "@renderer/components/Hint";
 import { LoaderLabel } from "@renderer/components/Loaders";
 import {
   accountAtom,
+  installActiveAtom,
   isRunningAtom,
   networkAtom,
 } from "@renderer/stores/atoms";
@@ -44,6 +45,7 @@ import { countMods, instanceLastLaunch } from "./contentCounts";
 import { duplicateInstance } from "./duplicateInstance";
 import { openPortDialog } from "@renderer/features/port/portStore";
 import { buildInstanceActions } from "./instanceActions";
+import { requestInstanceDelete } from "./deleteStore";
 import { instanceFlagsAtom } from "./atoms";
 import { instanceStatsAtom, runningSessionsAtom } from "./instanceStats";
 import { instanceTagsAtom } from "./instancesStore";
@@ -53,6 +55,8 @@ import { formatPlaytime, formatSessionClock } from "./playtime";
 import { resolveInstanceStatuses } from "./instanceStatus";
 import { openInstanceScreen } from "./openInstanceScreen";
 import { instanceKey } from "./selectors";
+import { isSlotHidden, slotId } from "@renderer/features/layout/layout";
+import { useLayout } from "@renderer/features/layout/useLayout";
 
 const HERO_BUTTONS = new Set(["overview", "folder"]);
 
@@ -83,6 +87,7 @@ export function HomeHero({
 }) {
   const account = useAtomValue(accountAtom);
   const isLaunching = useAtomValue(isRunningAtom);
+  const isInstallActive = useAtomValue(installActiveAtom);
   const isBackendOnline = useAtomValue(networkAtom);
   const sessions = useAtomValue(runningSessionsAtom);
   const stats = useAtomValue(instanceStatsAtom);
@@ -94,6 +99,9 @@ export function HomeHero({
   const installingVersion = useAtomValue(installingVersionAtom);
   const [now, setNow] = useState(() => Date.now());
   const { t } = useTranslation();
+  const layout = useLayout();
+  const showStats = !isSlotHidden(layout, slotId.home("stats"));
+  const showContinue = !isSlotHidden(layout, slotId.home("continue"));
 
   const key = instanceKey(instance);
   const session = useMemo(
@@ -143,6 +151,9 @@ export function HomeHero({
     onManageTags: () => onManageTags(key, instance.version.name),
     onDuplicate: () => void duplicateInstance(instance),
     onPort: () => openPortDialog(instance),
+    onDelete: () => requestInstanceDelete(instance),
+    account,
+    isBusy: isLaunching || isInstallActive,
   });
 
   const menuGroups = actions
@@ -316,7 +327,7 @@ export function HomeHero({
           <LaunchStageStrip progress={launchHere} />
         ) : installingHere ? (
           <InstallStageStrip />
-        ) : (
+        ) : !showStats ? null : (
           <div className="flex min-w-0 gap-6">
             {cells.map((cell) => (
               <div key={cell.id} className="flex min-w-0 flex-col gap-0.5">
@@ -403,6 +414,7 @@ export function HomeHero({
                   {group.map((action) => (
                     <DropdownMenuItem
                       key={action.id}
+                      variant={action.destructive ? "destructive" : "default"}
                       disabled={action.disabled}
                       onSelect={action.onSelect}
                     >
@@ -435,18 +447,20 @@ export function HomeHero({
         </div>
       </div>
 
-      <div className="relative w-72 shrink-0">
-        {waiting ? (
-          <div className="size-full animate-in duration-500 fade-in">
-            <LaunchCompanion
-              instance={instance}
-              caption={launchHere ? t("launchStage.minimizeHint") : undefined}
-            />
-          </div>
-        ) : (
-          <ContinuePanel instance={instance} runGame={runGame} />
-        )}
-      </div>
+      {(waiting || showContinue) && (
+        <div className="relative w-72 shrink-0">
+          {waiting ? (
+            <div className="size-full animate-in duration-500 fade-in">
+              <LaunchCompanion
+                instance={instance}
+                caption={launchHere ? t("launchStage.minimizeHint") : undefined}
+              />
+            </div>
+          ) : (
+            <ContinuePanel instance={instance} runGame={runGame} />
+          )}
+        </div>
+      )}
     </section>
   );
 }

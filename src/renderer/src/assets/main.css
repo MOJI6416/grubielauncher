@@ -6,6 +6,8 @@
 @source "../../../components/**/*.{js,ts,jsx,tsx}";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant motion-safe (&:where(:root[data-motion="on"] *));
+@custom-variant motion-reduce (&:where(:root[data-motion="off"] *));
 
 @font-face {
   font-family: "Rubik";
@@ -184,6 +186,14 @@
   --spot-light: oklch(1 0 0 / 9%);
   --sheen-light: oklch(1 0 0 / 22%);
   --grain-opacity: 0.035;
+}
+
+:root[data-contrast="more"] {
+  --muted-foreground: oklch(0.83 0.004 265);
+  --faint: oklch(0.77 0.004 265);
+  --border: oklch(1 0 0 / 18%);
+  --input: oklch(1 0 0 / 26%);
+  --sidebar-border: oklch(1 0 0 / 16%);
 }
 
 @layer base {
@@ -373,12 +383,10 @@ body {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .milestone-marker::after {
-    opacity: 0;
-    animation-name: none;
-    transition: none;
-  }
+:root[data-motion="off"] .milestone-marker::after {
+  opacity: 0;
+  animation-name: none;
+  transition: none;
 }
 
 .progress-sweep [data-slot="progress-indicator"] {
@@ -394,10 +402,8 @@ body {
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .progress-sweep [data-slot="progress-indicator"] {
-    animation: progress-sweep-slide 1.5s ease-in-out infinite;
-  }
+:root[data-motion="on"] .progress-sweep [data-slot="progress-indicator"] {
+  animation: progress-sweep-slide 1.5s ease-in-out infinite;
 }
 
 .app-grain::after {
@@ -457,11 +463,9 @@ body {
   transform: translateX(-120%);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .btn-sheen:hover:not(:disabled)::after {
-    transform: translateX(120%);
-    transition: transform 700ms var(--ease-swift);
-  }
+:root[data-motion="on"] .btn-sheen:hover:not(:disabled)::after {
+  transform: translateX(120%);
+  transition: transform 700ms var(--ease-swift);
 }
 
 @keyframes hero-drift {
@@ -639,31 +643,28 @@ body {
   color: var(--success);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hero-drift,
-  .launch-glow,
-  .slide-drift,
-  .stage-sweep::after,
-  .copied-flash {
-    animation: none;
-  }
-
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation: none !important;
-  }
+:root[data-motion="off"] .hero-drift,
+:root[data-motion="off"] .launch-glow,
+:root[data-motion="off"] .slide-drift,
+:root[data-motion="off"] .stage-sweep::after,
+:root[data-motion="off"] .copied-flash {
+  animation: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+:root[data-motion="off"]::view-transition-group(*),
+:root[data-motion="off"]::view-transition-old(*),
+:root[data-motion="off"]::view-transition-new(*) {
+  animation: none !important;
+}
+
+:root[data-motion="off"],
+:root[data-motion="off"] *,
+:root[data-motion="off"] *::before,
+:root[data-motion="off"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
 
 [data-ring-inset] {
@@ -816,17 +817,15 @@ body {
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .halloween-fog-far {
-    animation: fog-drift-far 150s linear infinite;
-  }
+:root[data-motion="on"] .halloween-fog-far {
+  animation: fog-drift-far 150s linear infinite;
+}
 
-  .halloween-fog-near {
-    animation: fog-drift-near 95s linear infinite;
-  }
+:root[data-motion="on"] .halloween-fog-near {
+  animation: fog-drift-near 95s linear infinite;
+}
 
-  .halloween-pill[data-peak="true"] svg,
-  .halloween-pumpkin-glow {
-    animation: candle-flicker 2.8s linear infinite;
-  }
+:root[data-motion="on"] .halloween-pill[data-peak="true"] svg,
+:root[data-motion="on"] .halloween-pumpkin-glow {
+  animation: candle-flicker 2.8s linear infinite;
 }

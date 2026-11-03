@@ -54,6 +54,7 @@ import {
 } from "./utilities/launchAtLogin";
 import { LauncherDeepLink } from "@/types/DeepLink";
 import { journal } from "./journal/journal";
+import { isAppPageHost } from "./windows/appPages";
 import path from "path";
 import fs from "fs-extra";
 
@@ -76,7 +77,6 @@ crashReporter.start({
 if (process.platform !== "darwin") Menu.setApplicationMenu(null);
 
 const APP_SCHEME = "app";
-const APP_BUNDLE_HOST = "bundle";
 const APP_MEDIA_HOST = "media";
 
 protocol.registerSchemesAsPrivileged([
@@ -282,7 +282,7 @@ function registerAppProtocol() {
       }
     }
 
-    if (url.host !== APP_BUNDLE_HOST) {
+    if (!isAppPageHost(url.host)) {
       return new Response(null, { status: 403 });
     }
 

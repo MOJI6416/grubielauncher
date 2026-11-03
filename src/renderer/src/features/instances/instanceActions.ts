@@ -15,13 +15,16 @@ import {
   ServerCog,
   SlidersHorizontal,
   Tag,
+  Trash,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { TFunction } from "i18next";
+import type { ILocalAccount } from "@/types/Account";
 import { Version } from "@renderer/classes/Version";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { navigate } from "@renderer/navigation/navigate";
 import type { InstanceTab } from "@renderer/navigation/routes";
+import { getDeleteCopy, isForeignPublication } from "./deleteGates";
 import { instanceKey } from "./selectors";
 
 const api = window.api;
@@ -31,6 +34,8 @@ export interface InstanceAction {
   label: string;
   icon: LucideIcon;
   disabled?: boolean;
+  destructive?: boolean;
+  shortcut?: string;
   onSelect: () => void;
 }
 
@@ -44,9 +49,13 @@ export interface InstanceActionContext {
   hasStatistics: boolean;
   onPlay: () => void;
   onPlayAnother: () => void;
-  onManageTags: () => void;
+  onManageTags?: () => void;
   onDuplicate: () => void;
   onPort: () => void;
+  onDelete?: () => void;
+  account?: ILocalAccount | null;
+  isBusy?: boolean;
+  deleteShortcut?: string;
 }
 
 export async function createDesktopShortcut(
@@ -190,13 +199,37 @@ export function buildInstanceActions(
       icon: MonitorDown,
       onSelect: () => void createDesktopShortcut(instance, t),
     },
-    {
+  ];
+
+  if (context.onManageTags) {
+    tools.push({
       id: "tags",
       label: t("versions.tags.manage"),
       icon: Tag,
       onSelect: context.onManageTags,
+    });
+  }
+
+  if (!context.onDelete) return [launch, sections, tools];
+
+  const foreignPublication = isForeignPublication({
+    shareCode: instance.version.shareCode,
+    owner: instance.version.owner,
+    ownerId: instance.version.ownerId,
+    account: context.account,
+  });
+
+  const danger: InstanceAction[] = [
+    {
+      id: "delete",
+      label: t(getDeleteCopy({ foreignPublication }).menuKey),
+      icon: Trash,
+      destructive: true,
+      shortcut: context.deleteShortcut,
+      disabled: context.isRunningInstance || context.isBusy === true,
+      onSelect: context.onDelete,
     },
   ];
 
-  return [launch, sections, tools];
+  return [launch, sections, tools, danger];
 }

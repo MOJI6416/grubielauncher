@@ -1,0 +1,121 @@
+{
+  "version": "2.2.5",
+  "isMilestone": false,
+  "en": {
+    "subtitle": "Make the launcher your own: themes and a theme gallery, interface scale, your own layout and deleting an instance from the menu.",
+    "highlights": [
+      "Added themes in Settings → Themes: the built-in OLED and Light, or your own from four colours and a background picture. A readability check keeps text legible.",
+      "Added the theme gallery: install a player’s theme in one click or publish yours from its card’s “…” menu; a moderator checks every theme. Themes can also be shared as a file or a code.",
+      "Added Interface scale from 80% to 150% in Settings → Interface (also Ctrl+=, Ctrl+−, Ctrl+0 and Ctrl+mouse wheel) and a separate Log text size for game logs and the server console.",
+      "Added Settings → Layout: hide and reorder sidebar items, collapse the sidebar to icons with Ctrl+B, choose the Play screen blocks and instance tabs, or pick a ready-made set.",
+      "Added Animations, High contrast, Background grain, Cover glow, notification volume, Start screen and what the launcher does when the game starts; Who’s talking can now pick its corner and monitor.",
+      "Added “Delete instance” to the right-click menu of instances in the library and the sidebar and to the “…” menu on the Play screen; the Delete key works in the library too.",
+      "Improved memory use: JVM optimization is now off by default for new players, so the game takes about 1 GB less RAM. It can be turned on in Settings → Game."
+    ],
+    "fixes": []
+  },
+  "ru": {
+    "subtitle": "Лаунчер под себя: темы и галерея тем, масштаб интерфейса, своё расположение и удаление сборки из меню.",
+    "highlights": [
+      "Добавлены темы в Настройки → Темы: встроенные OLED и «Светлая» или своя из четырёх цветов и картинки на фоне. Проверка читаемости бережёт текст.",
+      "Добавлена галерея тем: чужую тему можно поставить в один клик, а свою — опубликовать через меню «…» на её карточке; каждую тему проверяет модератор. Делиться можно и файлом или кодом.",
+      "Добавлен «Масштаб интерфейса» от 80 до 150% в Настройки → Интерфейс (также Ctrl+=, Ctrl+−, Ctrl+0 и Ctrl+колесо мыши) и отдельный «Размер текста в логах» игры и консоли сервера.",
+      "Добавлен раздел Настройки → Расположение: пункты боковой панели можно скрыть и переставить, панель — свернуть до иконок (Ctrl+B), выбрать блоки «Играть», вкладки сборки или готовый набор.",
+      "Добавлены «Анимации», «Повышенная контрастность», «Зерно на фоне», «Подсветка от обложки», громкость звуков, «Экран при запуске» и поведение при старте игры; «Кто говорит» выбирает угол и монитор.",
+      "Добавлен пункт «Удалить сборку» в меню правой кнопки у сборок в библиотеке и боковой панели и в меню «…» на экране «Играть»; в библиотеке работает и клавиша Delete.",
+      "Улучшено потребление памяти: у новых игроков «Оптимизация JVM» теперь выключена по умолчанию, и игра занимает примерно на 1 ГБ меньше ОЗУ. Включить её можно в Настройки → Игра."
+    ],
+    "fixes": []
+  },
+  "uk": {
+    "subtitle": "Лаунчер під себе: теми й галерея тем, масштаб інтерфейсу, власне розташування та видалення збірки з меню.",
+    "highlights": [
+      "Додано теми в Налаштування → Теми: вбудовані OLED і «Світла» або власна з чотирьох кольорів і картинки на тлі. Перевірка читабельності береже текст.",
+      "Додано галерею тем: чужу тему можна встановити в один клік, а свою — опублікувати через меню «…» на її картці; кожну тему перевіряє модератор. Ділитися можна й файлом або кодом.",
+      "Додано «Масштаб інтерфейсу» від 80 до 150% у Налаштування → Інтерфейс (також Ctrl+=, Ctrl+−, Ctrl+0 і Ctrl+коліщатко миші) та окремий «Розмір тексту в логах» гри й консолі сервера.",
+      "Додано розділ Налаштування → Розташування: пункти бічної панелі можна сховати й переставити, панель — згорнути до іконок (Ctrl+B), вибрати блоки «Грати», вкладки збірки або готовий набір.",
+      "Додано «Анімації», «Підвищену контрастність», «Зерно на тлі», «Підсвічування від обкладинки», гучність звуків, «Екран під час запуску» й поведінку під час старту гри; «Хто говорить» обирає кут і монітор.",
+      "Додано пункт «Видалити збірку» в меню правої кнопки у збірок у бібліотеці та бічній панелі й у меню «…» на екрані «Грати»; у бібліотеці працює і клавіша Delete.",
+      "Покращено споживання пам’яті: у нових гравців «Оптимізація JVM» тепер вимкнена за замовчуванням, і гра займає приблизно на 1 ГБ менше ОЗП. Увімкнути її можна в Налаштування → Гра."
+    ],
+    "fixes": []
+  },
+  "de": {
+    "subtitle": "Der Launcher nach Ihrem Geschmack: Designs und eine Design-Galerie, Skalierung, eigene Anordnung und Instanzen direkt im Menü löschen.",
+    "highlights": [
+      "Neu: Designs unter Einstellungen → Designs – die eingebauten OLED und Hell oder ein eigenes aus vier Farben und einem Hintergrundbild. Eine Lesbarkeitsprüfung schützt den Text.",
+      "Neu: die Design-Galerie – fremde Designs mit einem Klick installieren oder das eigene über das Menü „…“ seiner Karte veröffentlichen; jedes prüft ein Moderator. Teilen geht auch per Datei oder Code.",
+      "Neu: Oberflächenskalierung von 80 bis 150 % unter Einstellungen → Oberfläche (auch Ctrl+=, Ctrl+−, Ctrl+0 und Ctrl+Mausrad) und eine eigene Textgröße in Logs und der Serverkonsole.",
+      "Neu: Einstellungen → Anordnung – Seitenleiste ausblenden und umsortieren, mit Ctrl+B auf Symbole einklappen, Blöcke von „Spielen“ und Instanz-Tabs wählen oder ein fertiges Set nehmen.",
+      "Neu: Animationen, Hoher Kontrast, Hintergrundkörnung, Leuchten vom Cover, Lautstärke der Töne, Startbildschirm und das Verhalten beim Spielstart; „Wer spricht“ lässt Ecke und Monitor wählen.",
+      "Neu: „Instanz löschen“ im Rechtsklickmenü der Instanzen in der Bibliothek und der Seitenleiste sowie im Menü „…“ auf „Spielen“; in der Bibliothek funktioniert auch die Entf-Taste.",
+      "Das Spiel braucht jetzt weniger Speicher: Die JVM-Optimierung ist für neue Spieler standardmäßig aus, das spart etwa 1 GB RAM. Einschalten lässt sie sich unter Einstellungen → Spiel."
+    ],
+    "fixes": []
+  },
+  "es": {
+    "subtitle": "El launcher a su gusto: temas y una galería de temas, escala de la interfaz, su propia distribución y eliminar instancias desde el menú.",
+    "highlights": [
+      "Se agregaron temas en Ajustes → Temas: los integrados OLED y Claro, o uno propio con cuatro colores y una imagen de fondo. Una prueba de legibilidad protege el texto.",
+      "Se agregó la galería de temas: instale el tema de otro jugador con un clic o publique el suyo desde el menú «…» de su tarjeta; un moderador revisa cada tema. También se comparten por archivo o código.",
+      "Se agregó la escala de la interfaz del 80 al 150 % en Ajustes → Interfaz (también Ctrl+=, Ctrl+−, Ctrl+0 y Ctrl+rueda del mouse) y un tamaño propio para el texto de los registros y la consola del servidor.",
+      "Se agregó Ajustes → Distribución: oculte y reordene la barra lateral, contráigala a íconos con Ctrl+B, elija los bloques de «Jugar» y las pestañas de la instancia, o un conjunto listo.",
+      "Se agregaron Animaciones, Alto contraste, Grano de fondo, Brillo de la portada, volumen de los sonidos, Pantalla de inicio y qué hace el launcher al iniciar el juego; «Quién habla» elige esquina y monitor.",
+      "Se agregó «Eliminar instancia» al menú del clic derecho de las instancias en la biblioteca y la barra lateral, y al menú «…» de la pantalla «Jugar»; en la biblioteca también funciona la tecla Supr.",
+      "Se mejoró el uso de memoria: la optimización de la JVM ahora viene desactivada para los jugadores nuevos, así el juego usa cerca de 1 GB menos de RAM. Puede activarla en Ajustes → Juego."
+    ],
+    "fixes": []
+  },
+  "fr": {
+    "subtitle": "Un launcher à votre image : thèmes et galerie de thèmes, échelle de l’interface, disposition personnelle et suppression d’une instance depuis le menu.",
+    "highlights": [
+      "Ajout des thèmes dans Paramètres → Thèmes : les intégrés OLED et Clair, ou le vôtre avec quatre couleurs et une image de fond. Un contrôle de lisibilité protège le texte.",
+      "Ajout de la galerie de thèmes : installez le thème d’un joueur en un clic ou publiez le vôtre depuis le menu « … » de sa carte ; un modérateur vérifie chaque thème. Partage aussi par fichier ou code.",
+      "Ajout de l’échelle de l’interface de 80 à 150 % dans Paramètres → Interface (aussi Ctrl+=, Ctrl+−, Ctrl+0 et Ctrl+molette) et d’une taille de texte séparée pour les journaux et la console du serveur.",
+      "Ajout de Paramètres → Disposition : masquez et réorganisez la barre latérale, réduisez-la aux icônes avec Ctrl+B, choisissez les blocs de « Jouer », les onglets d’instance ou un ensemble prêt.",
+      "Ajout des Animations, du Contraste élevé, du Grain de fond, du Halo de la couverture, du volume des sons, de l’Écran au démarrage et du comportement au lancement du jeu ; « Qui parle » choisit son coin et son écran.",
+      "Ajout de « Supprimer l’instance » au menu du clic droit des instances dans la bibliothèque et la barre latérale, et au menu « … » de l’écran « Jouer » ; la touche Suppr marche aussi dans la bibliothèque.",
+      "Mémoire améliorée : l’optimisation de la JVM est désormais désactivée par défaut pour les nouveaux joueurs, le jeu utilise environ 1 Go de RAM en moins. Elle s’active dans Paramètres → Jeu."
+    ],
+    "fixes": []
+  },
+  "pl": {
+    "subtitle": "Launcher po swojemu: motywy i galeria motywów, skala interfejsu, własny układ i usuwanie instancji z menu.",
+    "highlights": [
+      "Dodano motywy w Ustawienia → Motywy: wbudowane OLED i Jasny albo własny z czterech kolorów i obrazu w tle. Test czytelności chroni tekst.",
+      "Dodano galerię motywów: motyw innego gracza instaluje się jednym kliknięciem, a własny publikuje z menu „…” jego karty; każdy motyw sprawdza moderator. Motywy można też przekazać plikiem lub kodem.",
+      "Dodano skalę interfejsu od 80 do 150% w Ustawienia → Interfejs (także Ctrl+=, Ctrl+−, Ctrl+0 i Ctrl+kółko myszy) oraz osobny rozmiar tekstu w logach gry i konsoli serwera.",
+      "Dodano Ustawienia → Układ: elementy panelu bocznego można ukryć i przestawić, panel zwinąć do ikon (Ctrl+B), wybrać bloki ekranu „Graj”, karty instancji albo gotowy zestaw.",
+      "Dodano Animacje, Wysoki kontrast, Ziarno w tle, Poświatę okładki, głośność dźwięków, Ekran startowy i zachowanie po uruchomieniu gry; „Kto mówi” pozwala wybrać róg i monitor.",
+      "Dodano „Usuń instancję” do menu prawego przycisku instancji w bibliotece i panelu bocznym oraz do menu „…” na ekranie „Graj”; w bibliotece działa też klawisz Delete.",
+      "Ulepszono zużycie pamięci: optymalizacja JVM jest teraz domyślnie wyłączona dla nowych graczy, więc gra zajmuje około 1 GB RAM mniej. Można ją włączyć w Ustawienia → Gra."
+    ],
+    "fixes": []
+  },
+  "pt": {
+    "subtitle": "O launcher do seu jeito: temas e uma galeria de temas, escala da interface, seu próprio layout e excluir instâncias pelo menu.",
+    "highlights": [
+      "Adicionados temas em Configurações → Temas: os integrados OLED e Claro, ou o seu com quatro cores e uma imagem de fundo. Uma verificação de legibilidade protege o texto.",
+      "Adicionada a galeria de temas: instale o tema de outro jogador com um clique ou publique o seu pelo menu “…” do cartão dele; um moderador verifica cada tema. Também dá para compartilhar por arquivo ou código.",
+      "Adicionada a escala da interface de 80% a 150% em Configurações → Interface (também Ctrl+=, Ctrl+−, Ctrl+0 e Ctrl+roda do mouse) e um tamanho próprio para o texto dos logs e do console do servidor.",
+      "Adicionado Configurações → Layout: oculte e reordene a barra lateral, recolha-a para ícones com Ctrl+B, escolha os blocos da tela “Jogar”, as abas da instância ou um conjunto pronto.",
+      "Adicionados Animações, Alto contraste, Granulado no fundo, Brilho da capa, volume dos sons, Tela inicial e o que o launcher faz quando o jogo inicia; “Quem está falando” escolhe canto e monitor.",
+      "Adicionado “Excluir instância” ao menu do botão direito das instâncias na biblioteca e na barra lateral e ao menu “…” da tela “Jogar”; na biblioteca a tecla Delete também funciona.",
+      "Melhorado o uso de memória: a otimização da JVM agora vem desligada por padrão para novos jogadores, então o jogo usa cerca de 1 GB a menos de RAM. Você pode ligá-la em Configurações → Jogo."
+    ],
+    "fixes": []
+  },
+  "tr": {
+    "subtitle": "Başlatıcıyı kendinize göre ayarlayın: temalar ve tema galerisi, arayüz ölçeği, kendi yerleşiminiz ve kurulumu menüden silme.",
+    "highlights": [
+      "Ayarlar → Temalar bölümüne temalar eklendi: hazır OLED ve Açık ya da dört renk ve bir arka plan resminden kendi temanız. Okunabilirlik kontrolü metni korur.",
+      "Tema galerisi eklendi: başka bir oyuncunun temasını tek tıkla kurun veya kendinizinkini kartındaki “…” menüsünden yayınlayın; her temayı bir moderatör kontrol eder. Dosya veya kodla da paylaşılabilir.",
+      "Ayarlar → Arayüz bölümüne %80’den %150’ye arayüz ölçeği (Ctrl+=, Ctrl+−, Ctrl+0 ve Ctrl+fare tekerleği ile de) ve oyun günlükleri ile sunucu konsolu için ayrı bir metin boyutu eklendi.",
+      "Ayarlar → Yerleşim eklendi: kenar çubuğu öğelerini gizleyip sıralayın, çubuğu Ctrl+B ile simgelere daraltın, “Oyna” ekranının bloklarını, kurulum sekmelerini ya da hazır bir seti seçin.",
+      "Animasyonlar, Yüksek kontrast, Arka plan greni, Kapak parıltısı, ses düzeyi, Açılış ekranı ve oyun başladığında başlatıcının ne yapacağı eklendi; “Kim konuşuyor” artık köşe ve monitör seçebiliyor.",
+      "Kütüphanedeki ve kenar çubuğundaki kurulumların sağ tık menüsüne ve “Oyna” ekranındaki “…” menüsüne “Kurulumu sil” eklendi; kütüphanede Delete tuşu da çalışır.",
+      "Bellek kullanımı geliştirildi: JVM optimizasyonu artık yeni oyuncular için varsayılan olarak kapalı, böylece oyun yaklaşık 1 GB daha az RAM kullanır. Ayarlar → Oyun bölümünden açılabilir."
+    ],
+    "fixes": []
+  }
+}

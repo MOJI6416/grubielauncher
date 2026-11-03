@@ -3,6 +3,7 @@ import type { AnimationItem } from "lottie-web";
 import { cn } from "@/lib/utils";
 import type { StickerItem } from "./catalog";
 import { loadLottie, loadStickerData, stickerPoster } from "./stickerData";
+import { isMotionReduced } from "@/lib/motionPreference";
 
 const EMOJI_FONT =
   '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
@@ -17,7 +18,7 @@ function restFrame(animation: AnimationItem, position: number) {
 }
 
 function prefersReducedMotion() {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return isMotionReduced();
 }
 
 function StickerViewComponent({

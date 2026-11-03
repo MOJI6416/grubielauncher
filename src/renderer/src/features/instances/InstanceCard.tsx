@@ -35,6 +35,7 @@ export interface InstanceCardProps {
   onSelect: () => void;
   onOpen: () => void;
   onPlay: () => void;
+  onDelete?: () => void;
   dragProps: {
     draggable?: boolean;
     onDragStart?: (event: DragEvent<HTMLElement>) => void;
@@ -156,7 +157,10 @@ function Meta({
   );
 }
 
-export function InstanceRow(props: InstanceCardProps) {
+export function InstanceRow({
+  compact = false,
+  ...props
+}: InstanceCardProps & { compact?: boolean }) {
   const { t } = useTranslation();
   const isRunning = props.statuses.includes("running");
   const playLabel = isRunning
@@ -181,15 +185,25 @@ export function InstanceRow(props: InstanceCardProps) {
           event.preventDefault();
           props.onSelect();
         }
+        if (event.key === "Delete" && props.onDelete) {
+          event.preventDefault();
+          props.onDelete();
+        }
       }}
       className={cn(
-        "spotlight group relative flex h-14 cursor-pointer items-center gap-3 overflow-hidden rounded-xl px-2.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        "spotlight group relative flex cursor-pointer items-center overflow-hidden px-2.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        compact ? "h-9 gap-2.5 rounded-lg" : "h-14 gap-3 rounded-xl",
         props.active ? "bg-primary-soft" : "bg-surface-2 hover:bg-surface-3",
       )}
       {...props.dragProps}
     >
       {props.active && (
-        <span className="absolute top-3 bottom-3 left-0 w-0.75 rounded-full bg-primary" />
+        <span
+          className={cn(
+            "absolute left-0 w-0.75 rounded-full bg-primary",
+            compact ? "top-2 bottom-2" : "top-3 bottom-3",
+          )}
+        />
       )}
 
       <div className="relative shrink-0">
@@ -197,7 +211,11 @@ export function InstanceRow(props: InstanceCardProps) {
           morph={`library:${props.itemKey}`}
           name={props.instance.version.name}
           image={props.instance.version.image}
-          className="size-10 rounded-lg text-xs"
+          className={
+            compact
+              ? "size-6 rounded-md text-[0.55rem]"
+              : "size-10 rounded-lg text-xs"
+          }
         />
         {props.ownerNickname && (
           <OwnerMark
@@ -208,7 +226,12 @@ export function InstanceRow(props: InstanceCardProps) {
         )}
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <div
+        className={cn(
+          "flex min-w-0 flex-1",
+          compact ? "items-center gap-3" : "flex-col gap-0.5",
+        )}
+      >
         <Hint
           content={props.instance.version.name}
           variant="text"
@@ -293,6 +316,10 @@ export function InstanceTile(props: InstanceCardProps) {
         if (event.key === " ") {
           event.preventDefault();
           props.onSelect();
+        }
+        if (event.key === "Delete" && props.onDelete) {
+          event.preventDefault();
+          props.onDelete();
         }
       }}
       className={cn(

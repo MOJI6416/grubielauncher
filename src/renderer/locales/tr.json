@@ -1440,6 +1440,8 @@
     "sections": {
       "game": "Oyun",
       "interface": "Arayüz",
+      "themes": "Temalar",
+      "layout": "Yerleşim",
       "voice": "Sesli sohbet",
       "storage": "Depolama",
       "downloads": "İndirmeler",
@@ -1464,7 +1466,17 @@
     "voiceGateDescription": "Mikrofon yalnızca eşikten daha yüksek sesle konuştuğunuzda ses gönderir. Bas-konuş olmadan konuşmak için: klavye ve arka plan gürültüsü dışarıda kalır",
     "voiceGateThreshold": "Eşik: {{value}} dB",
     "voiceOverlay": "Oyun üzerinde kim konuşuyor",
-    "voiceOverlayDescription": "Oynarken sol üst köşe kimin konuştuğunu gösterir. Özel tam ekranın üzerinde görünmez",
+    "voiceOverlayDescription": "Oynarken ekranın bir köşesi kimin konuştuğunu gösterir. Özel tam ekranın üzerinde görünmez",
+    "voiceOverlayCorner": "Ekran köşesi",
+    "voiceOverlayCorners": {
+      "top-left": "Sol üst",
+      "top-right": "Sağ üst",
+      "bottom-left": "Sol alt",
+      "bottom-right": "Sağ alt"
+    },
+    "voiceOverlayPrimary": "Ana monitör",
+    "voiceOverlayScreen": "Monitör {{index}}",
+    "voiceOverlayPreview": "Örneği göster",
     "voiceDevices": "Ses cihazları",
     "voiceMicTestStart": "Test et",
     "voiceMicTestStop": "Durdur",
@@ -1599,9 +1611,21 @@
     },
     "interface": {
       "languageDescription": "Hemen uygulanır, yeniden başlatma gerekmez",
+      "groups": {
+        "effects": "Animasyonlar ve efektler",
+        "layout": "Yerleşim",
+        "soundAndLogs": "Ses ve günlükler"
+      },
+      "uiScale": "Arayüz ölçeği",
+      "uiScaleDescription": "Metin, düğme ve boşlukların boyutu. Ctrl + fare tekerleğiyle de değişir.",
+      "uiScaleLimited": "{{value}} üzeri bu ekrana sığmıyor",
+      "uiScaleToast": "Arayüz ölçeği: {{value}}",
+      "logFontSize": "Günlüklerde metin boyutu",
+      "logFontSizeDescription": "Oyun günlükleri ve sunucu konsolu",
       "instancesView": "Kurulum listesi",
       "instancesViewDescription": "Oyna ekranındaki listenin nasıl sıralandığı ve düzenlendiği",
       "viewList": "Liste",
+      "viewCompact": "Sıkı",
       "viewGrid": "Izgara",
       "sorts": {
         "activity": "Etkinliğe göre",
@@ -1625,6 +1649,9 @@
           "paletteActions": "Palet, yalnızca işlemler",
           "assistant": "Asistan",
           "search": "Geçerli ekranda ara: modlar, ayarlar",
+          "sidebar": "Kenar çubuğunu daralt veya genişlet",
+          "zoom": "Arayüzü büyüt veya küçült",
+          "zoomReset": "Ölçeği %100’e döndür",
           "account": "1…9 numaralı hesaba geç",
           "back": "Geçmişte geri git",
           "forward": "Geçmişte ileri git",
@@ -1667,6 +1694,22 @@
       },
       "accent": "Vurgu rengi",
       "accentDescription": "Oyna düğmesinin, seçimlerin ve etkin denetimlerin rengi. Mor, markanın rengidir.",
+      "highContrast": "Yüksek kontrast",
+      "highContrastDescription": "İkincil metinler ve kenarlıklar daha parlak olur. Vurgu rengi değişmez.",
+      "motion": "Animasyonlar",
+      "motionDescription": "Animasyonlar kapalıyken arayüz anında tepki verir ve oyun açıkken bilgisayarı daha az yorar.",
+      "motionModes": {
+        "system": "Sistemdeki gibi",
+        "on": "Açık",
+        "off": "Kapalı"
+      },
+      "ambientTint": "Kapak parıltısı",
+      "ambientTintDescription": "Arka plan, seçili kurulumun kapağının rengini alır",
+      "backgroundGrain": "Arka plan greni",
+      "backgroundGrainDescription": "Tüm pencerenin üzerinde hafif bir parazit",
+      "sidebarCollapsed": "Daraltılmış kenar çubuğu",
+      "sidebarCollapsedDescription": "Yalnızca simgeler, içeriğe daha fazla yer",
+      "soundVolume": "Ses düzeyi",
       "accents": {
         "violet": "Mor (marka)",
         "blue": "Mavi",
@@ -1738,10 +1781,25 @@
         "description": "Arayüz dili. Yeni kurulumlar oyunu aynı dilde başlatır.",
         "keywords": "dil language locale türkçe ingilizce rusça ukraynaca english русский українська deutsch español français polski português"
       },
+      "theme": {
+        "title": "Arayüz teması",
+        "description": "Hazır temalar veya kendi renkleriniz ve resminiz",
+        "keywords": "tema koyu açık oled arka plan resim duvar kağıdı renk görünüm"
+      },
+      "uiScale": {
+        "title": "Arayüz ölçeği",
+        "description": "Daha büyük veya daha küçük metin ve düğmeler",
+        "keywords": "zoom ölçek boyut yazı tipi metin büyük küçük"
+      },
       "sounds": {
         "title": "Bildirim sesleri",
         "description": "Kurulum bitti, çökme, arkadaş davetleri",
-        "keywords": "ses sound bildirim sessiz"
+        "keywords": "ses sound bildirim sessiz ses düzeyi"
+      },
+      "logFontSize": {
+        "title": "Günlüklerde metin boyutu",
+        "description": "Oyun günlüklerinde ve sunucu konsolunda yazı tipi boyutu",
+        "keywords": "yazı tipi boyut günlük log konsol metin"
       },
       "instancesView": {
         "title": "Kurulum listesi",
@@ -1781,7 +1839,7 @@
       "voiceOverlay": {
         "title": "Oyun üzerinde kim konuşuyor",
         "description": "Ekran köşesinde konuşanların adları",
-        "keywords": "kaplama overlay konuşma oyun ekran köşe"
+        "keywords": "kaplama overlay konuşma oyun ekran köşe köşe monitör ekran konum"
       },
       "streamerMode": {
         "title": "Yayıncı modu",
@@ -1883,15 +1941,90 @@
         "description": "Düğmelerin ve seçimlerin rengi",
         "keywords": "renk tema vurgu özelleştir görünüm palet"
       },
+      "highContrast": {
+        "title": "Yüksek kontrast",
+        "description": "Daha parlak metin ve kenarlıklar",
+        "keywords": "kontrast erişilebilirlik okunabilirlik parlaklık metin kenarlık"
+      },
+      "motion": {
+        "title": "Animasyonlar",
+        "description": "Sistemdeki gibi, açık veya kapalı",
+        "keywords": "animasyon hareket geçiş efekt kapat akıcılık"
+      },
+      "ambientTint": {
+        "title": "Kapak parıltısı",
+        "description": "Kurulum kapağı renginde arka plan",
+        "keywords": "parıltı renk arka plan kapak efekt"
+      },
+      "backgroundGrain": {
+        "title": "Arka plan greni",
+        "description": "Pencere üzerinde hafif parazit",
+        "keywords": "gren parazit arka plan doku efekt"
+      },
       "seasonalDecor": {
         "title": "Bayram süslemeleri",
         "description": "Cadılar Bayramı yarasaları, balkabakları ve örümcek ağları",
         "keywords": "cadılar bayramı halloween bayram sezon etkinlik tema süsleme balkabağı yarasa yılbaşı noel"
       },
+      "sidebarCollapsed": {
+        "title": "Daraltılmış kenar çubuğu",
+        "description": "Kenar panelinde yalnızca simgeler",
+        "keywords": "kenar çubuğu panel daralt sıkı simge dar"
+      },
+      "layoutPresets": {
+        "title": "Hazır setler",
+        "description": "Standart, sıkı veya sade yerleşim",
+        "keywords": "set ön ayar yerleşim sıkı sade standart hızlı"
+      },
+      "layoutCustomize": {
+        "title": "Arayüzü özelleştir",
+        "description": "Doğrudan ekranda sürükle ve gizle",
+        "keywords": "yerleşim özelleştir düzenle sürükle gizle sıra arayüz"
+      },
+      "layoutSidebar": {
+        "title": "Kenar çubuğu öğeleri",
+        "description": "Öğeleri gizle ve yeniden sırala",
+        "keywords": "kenar çubuğu menü öğe sıra gizle kişiler haberler kurulumlar"
+      },
+      "layoutDock": {
+        "title": "Kenar çubuğundaki kurulumlar",
+        "description": "Kenar çubuğunun kaç kurulum gösterdiği",
+        "keywords": "kenar çubuğu kurulum sınır sabitle gizle"
+      },
+      "layoutHome": {
+        "title": "“Oyna” ekranı blokları",
+        "description": "Kart, istatistikler, “Devam et”",
+        "keywords": "ana ekran oyna kart istatistik devam gizle"
+      },
+      "layoutInstanceTab": {
+        "title": "Açılışta sekme",
+        "description": "Kurulumun hangi sekmesi önce açılır",
+        "keywords": "kurulum sekme varsayılan genel bakış içerik aç"
+      },
+      "layoutTabs": {
+        "title": "Kurulum sekmeleri",
+        "description": "Az kullanılan sekmeleri gizle",
+        "keywords": "sekmeler kurulum gizle günlük istatistik yapılandırma dünya sunucu"
+      },
+      "layoutOverview": {
+        "title": "Genel bakış kartları",
+        "description": "Ekran görüntüsü, not veya oturumları gizle",
+        "keywords": "genel bakış kart ekran görüntüsü not oturum gizle"
+      },
       "closeToTray": {
         "title": "Kapatınca tepsiye küçült",
         "description": "Kapatmak pencereyi gizler, aramalar ve oyunlar sürer",
         "keywords": "tepsi kapat arka plan küçült arama"
+      },
+      "startScreen": {
+        "title": "Açılış ekranı",
+        "description": "Başlatıcı açıldığında ne gösterilsin",
+        "keywords": "başlangıç açılış ekran aç başlatıcı"
+      },
+      "gameWindow": {
+        "title": "Oyun başladığında",
+        "description": "Küçült, tepsiye gizle veya başlatıcıyı açık bırak",
+        "keywords": "oyun başlat pencere küçült tepsi gizle geri getir"
       },
       "launchAtLogin": {
         "title": "Sistemle başlat",
@@ -1928,6 +2061,22 @@
     "system": {
       "closeToTray": "Kapatınca tepsiye küçült",
       "closeToTrayDescription": "Kapat düğmesi pencereyi gizler ve başlatıcı çalışmaya devam eder: aramalar bağlı kalır, arkadaşlar sizi çevrim içi görür, oyunlar ve indirmeler sürer. Tepsi simgesinden çıkış yapın.",
+      "startScreen": "Açılış ekranı",
+      "startScreenDescription": "Başlatıcı açıldığında ne gösterilsin",
+      "startScreens": {
+        "home": "“Oyna”",
+        "lastInstance": "Son oynanan kurulum",
+        "people": "Kişiler",
+        "news": "Haberler"
+      },
+      "gameWindow": "Oyun başladığında",
+      "gameWindowDescription": "Oyun penceresi açıldığında başlatıcı penceresine ne olsun",
+      "gameWindowModes": {
+        "minimize": "Simge durumuna küçült",
+        "tray": "Tepsiye gizle",
+        "keep": "Açık bırak"
+      },
+      "restoreAfterGame": "Oyun kapanınca başlatıcıyı geri getir",
       "launchAtLogin": "Sistemle başlat",
       "launchAtLoginDescription": "Başlatıcı pencere açmadan doğrudan tepside başlar — arkadaşlar sizi çevrim içi görür ve arayabilir.",
       "launchAtLoginUnsupported": "Başlatıcının kurulu sürümünde kullanılabilir.",
@@ -2101,6 +2250,7 @@
       "needsUpdate": "Paket güncellemesi"
     },
     "viewList": "Liste",
+    "viewCompact": "Sıkı",
     "viewGrid": "Izgara",
     "noResults": "Hiçbir şey bulunamadı",
     "clearFilters": "Filtreleri temizle",
@@ -4650,7 +4800,9 @@
     "offline": {
       "internet": "Ağ yok",
       "backend": "Hizmetler kapalı"
-    }
+    },
+    "sidebarCollapse": "Kenar çubuğunu daralt",
+    "sidebarExpand": "Kenar çubuğunu genişlet"
   },
   "instanceSettings": {
     "title": "Kurulum ayarları",
@@ -5809,5 +5961,221 @@
     "memory": "Bellek {{from}} → {{to}}",
     "memoryDone": "Bellek: {{to}}",
     "failed": "Düzeltme uygulanamadı"
+  },
+  "layout": {
+    "show": "“{{name}}” göster",
+    "hide": "“{{name}}” gizle",
+    "alwaysVisible": "Her zaman görünür, yalnızca taşınabilir",
+    "hideFromSidebar": "Kenar çubuğundan gizle",
+    "customize": "Arayüzü özelleştir",
+    "customizeAction": "Özelleştir",
+    "customizeDescription": "Kenar çubuğu öğelerini doğrudan ekranda sürükleyin ve gereksizleri gizleyin",
+    "editHint": "Kenar çubuğu öğelerini sürükleyin, göz simgesi gereksizleri gizler. Ana ekran blokları “Oyna” ekranında.",
+    "moreSettings": "Diğer ayarlar",
+    "reset": "Yerleşimi sıfırla",
+    "done": "Bitti",
+    "pin": "Kenar çubuğuna sabitle",
+    "unpin": "Sabitlemeyi kaldır",
+    "dockMore": "{{count}} tane daha",
+    "dockMoreHint": "Tüm kurulumlar “Oyna” ekranında",
+    "nowHint": "İndirmeler, hatalar ve dünya paylaşımı burada görünür",
+    "moveUp": "“{{name}}” yukarı taşı",
+    "moveDown": "“{{name}}” aşağı taşı",
+    "groups": {
+      "sidebar": "Kenar çubuğu",
+      "home": "“Oyna” ekranı",
+      "instance": "Kurulum ekranı"
+    },
+    "sidebar": {
+      "title": "Öğeler ve sıra",
+      "description": "“Oyna” ve “Ayarlar” gizlenemez",
+      "dock": "Kurulumlar",
+      "now": "Şimdi"
+    },
+    "dock": {
+      "title": "Kenar çubuğundaki kurulumlar",
+      "description": "Sabitlenenler her zaman görünür, diğerleri son açılışa göre",
+      "all": "Tümü",
+      "hiddenCount": "Kenar çubuğundan gizlenen: {{count}}",
+      "showAll": "Tümünü göster"
+    },
+    "home": {
+      "title": "“Oyna” ekranı",
+      "rowTitle": "“Oyna” ekranı blokları",
+      "description": "Listenin üstündeki son kurulum kartı",
+      "hero": "Kurulum kartı",
+      "stats": "İstatistikler",
+      "continue": "“Devam et”"
+    },
+    "instance": {
+      "defaultTab": "Açılışta sekme",
+      "defaultTabDescription": "Kurulumda bu sekme yoksa “Genel bakış” açılır",
+      "tabs": "Sekmeler",
+      "tabsDescription": "Gizli sekme yine de bağlantıdan veya menüden açılır",
+      "overview": "Genel bakış kartları",
+      "overviewDescription": "Diğer kartlar boşalan yeri kaplar"
+    },
+    "overview": {
+      "screenshots": "Ekran görüntüleri",
+      "notes": "Notlar",
+      "sessions": "Oturumlar"
+    },
+    "presets": {
+      "title": "Hazır setler",
+      "description": "Hızlı bir başlangıç, sonra her şeyi değiştirebilirsiniz",
+      "custom": "Şu an size ait bir yerleşim var: bir set onu değiştirir ama geri alınabilir",
+      "applied": "“{{name}}” seti uygulandı",
+      "undo": "Geri al",
+      "command": "Arayüz seti: {{name}}",
+      "standard": {
+        "title": "Standart",
+        "description": "Kurulumdan sonraki gibi"
+      },
+      "compact": {
+        "title": "Sıkı",
+        "description": "Küçük ekranlar için: dar kenar çubuğu, yoğun liste"
+      },
+      "minimal": {
+        "title": "Sade",
+        "description": "Tek başına oynamak için: Kişiler, Haberler ve efektler yok"
+      }
+    }
+  },
+  "theme": {
+    "title": "Arayüz teması",
+    "description": "Grubie, markanın koyu teması. Kendi renklerinizden ve bir resimden kendi temanızı oluşturabilirsiniz",
+    "newTheme": "Yeni tema",
+    "newName": "Temam",
+    "copyName": "{{name}} kopyası",
+    "edit": "Düzenle",
+    "duplicate": "Kopyasını oluştur",
+    "delete": "Temayı sil",
+    "deleteConfirm": "“{{name}}” teması kalıcı olarak silinecek. Arka plan resmi temalar klasöründe kalır.",
+    "saved": "“{{name}}” teması kaydedildi",
+    "limit": "En fazla {{count}} tema saklayabilirsiniz",
+    "accentByTheme": "Vurgu rengini şu an “{{name}}” teması belirliyor",
+    "command": "Tema: {{name}}",
+    "builtIn": {
+      "grubie": "Grubie",
+      "oled": "OLED",
+      "light": "Açık"
+    },
+    "editor": {
+      "title": "Tema düzenleyici",
+      "livePreview": "kaydedene veya iptal edene kadar değişiklikler tüm başlatıcıda hemen görünür",
+      "name": "Ad",
+      "mode": "Temel",
+      "modeDescription": "Koyu veya açık durum renkleri: başarı, uyarılar, hatalar",
+      "modes": {
+        "dark": "Koyu",
+        "light": "Açık"
+      },
+      "colors": "Renkler",
+      "background": "Arka plan",
+      "surface": "Paneller",
+      "foreground": "Metin",
+      "accent": "Vurgu",
+      "ownAccent": "Kendi vurgu rengim",
+      "picture": "Arka plan resmi",
+      "pictureDescription": "PNG, JPG veya WEBP. Resim bu bilgisayarda kalır",
+      "pick": "Resim seç",
+      "change": "Değiştir",
+      "remove": "Kaldır",
+      "dim": "Karartma",
+      "blur": "Bulanıklık",
+      "panelOpacity": "Panel opaklığı",
+      "readability": "Okunabilirlik",
+      "readabilityDescription": "Resimsiz kontrol edilir: karartma üzerindeki metni okunur tutar",
+      "blocked": "Kırmızı maddeleri düzeltin: bu renklerle metin okunamaz",
+      "save": "Temayı kaydet"
+    },
+    "checks": {
+      "text": "Paneldeki metin",
+      "background": "Arka plandaki metin",
+      "muted": "İkincil metin",
+      "faint": "Etiketler",
+      "accent": "Paneldeki vurgu",
+      "accentText": "Düğme yazısı"
+    },
+    "transfer": {
+      "export": "Dosyaya kaydet",
+      "copyCode": "Kodu kopyala",
+      "openFile": "Tema dosyası aç",
+      "pasteCode": "Kod yapıştır",
+      "dropHint": "veya bir .grubietheme dosyasını pencereye sürükleyin",
+      "pasteTitle": "Tema kodu yapıştır",
+      "pasteDescription": "Kod, temanın renklerini taşır. Arka plan resmi bu yolla aktarılamaz; bunun için tema dosyası gerekir",
+      "add": "Temayı ekle",
+      "imported": "“{{name}}” teması eklendi",
+      "exported": "“{{name}}” teması dosyaya kaydedildi",
+      "exportFailed": "Tema dosyaya kaydedilemedi",
+      "badFile": "Bu bir Grubie tema dosyası değil veya bozuk",
+      "badCode": "Tema kodu tanınmadı",
+      "unreadable": "Tema okunabilirlik kontrolünden geçemedi: bu renklerle metin okunamaz",
+      "codeCopied": "Tema kodu kopyalandı",
+      "codeNoPicture": "Arka plan resmi koda dahil değil. Paylaşmak için temayı dosyaya kaydedin"
+    },
+    "gallery": {
+      "tabs": "Tema kaynağı",
+      "tabMine": "Temalarım",
+      "tab": "Galeri",
+      "publish": "Galeride yayınla",
+      "publishTitle": "“{{name}}” yayınlansın mı?",
+      "publishBody": "Tema bir moderatörün kontrolüne gider. Onaylandıktan sonra launcher galerisinde ve sitede herkes görür; yazar olarak takma adınız gösterilir.",
+      "publishPicture": "Arka plan resmi 1920×1080 boyutuna sıkıştırılır.",
+      "publishAction": "Yayınla",
+      "signIn": "Galeride tema yayınlamak için hesabınıza giriş yapın",
+      "published": "“{{name}}” kontrole gönderildi",
+      "publishedHint": "Durumunu Galeri sekmesinde görebilirsiniz",
+      "search": "Tema ara",
+      "modeLabel": "Temel",
+      "sortLabel": "Sıralama",
+      "untitled": "Adsız",
+      "unknownAuthor": "Bilinmeyen yazar",
+      "withPicture": "Arka plan resimli",
+      "install": "Kur",
+      "apply": "Uygula",
+      "active": "Etkin",
+      "more": "{{count}} tane daha göster",
+      "empty": "Galeride henüz tema yok",
+      "emptyFiltered": "Bu aramaya uygun tema yok",
+      "emptyHint": "Kendi temanızı hazırlayıp kartındaki “…” menüsünden yayınlayın",
+      "mine": "Yayınlarım",
+      "unpublish": "Galeriden kaldır",
+      "unpublishConfirm": "“{{name}}” galeriden kalkar. Onu zaten kurmuş olanlarda kalmaya devam eder.",
+      "unpublished": "“{{name}}” galeriden kaldırıldı",
+      "installTitle": "“{{name}}” teması kurulsun mu?",
+      "installBy": "Yazar: {{author}}. Tema temalarınıza eklenir ve hemen etkinleşir.",
+      "installHint": "Tema temalarınıza eklenir ve hemen etkinleşir.",
+      "mode": {
+        "all": "Tümü",
+        "dark": "Koyu",
+        "light": "Açık"
+      },
+      "sort": {
+        "new": "Yeni",
+        "downloads": "Popüler"
+      },
+      "status": {
+        "pending": "Kontrolde",
+        "approved": "Galeride",
+        "rejected": "Reddedildi"
+      },
+      "errors": {
+        "bad_picture": "Arka plan resmi hazırlanamadı: en az 360 px boyutunda PNG, JPG veya WEBP olmalı",
+        "duplicate": "Bu tema zaten galeride veya kontrol bekliyor",
+        "duplicateRejected": "Bu tema daha önce reddedildi; nedeni aşağıda",
+        "publish_banned": "Hesabınız için galeride yayınlama kapalı",
+        "unreadable": "Tema okunabilirlik kontrolünden geçemedi: bu renklerle metin okunamaz",
+        "pending_limit": "Kontrolde zaten 5 temanız var. Onlarla ilgili kararı bekleyin",
+        "name_required": "Temanın bir adı olmalı",
+        "offline": "Sunucuya bağlanılamıyor. İnternetinizi kontrol edip tekrar deneyin",
+        "failed": "Tema yayınlanamadı. Daha sonra tekrar deneyin",
+        "install": "Tema galeriden kurulamadı",
+        "unpublish": "Tema galeriden kaldırılamadı",
+        "load": "Galeri yüklenmedi. Bağlantınızı kontrol edin",
+        "notFound": "Tema bulunamadı: yazar onu kaldırmış olabilir"
+      }
+    }
   }
 }

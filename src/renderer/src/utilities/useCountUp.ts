@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { useReducedMotion } from "motion/react";
+import { useReducedMotionPreference } from "@/lib/motionPreference";
 
 const MIN_FRAME_MS = 15;
 
 export function useCountUp(target: number, durationMs = 700): number {
-  const reducedMotion = useReducedMotion() === true;
+  const reducedMotion = useReducedMotionPreference() === true;
   const [value, setValue] = useState(() => (reducedMotion ? target : 0));
   const valueRef = useRef(value);
 

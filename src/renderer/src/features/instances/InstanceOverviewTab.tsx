@@ -44,6 +44,8 @@ import {
   useInstanceScreenshots,
   useInstanceSessions,
 } from "./useInstanceInsights";
+import { isSlotHidden, slotId } from "@renderer/features/layout/layout";
+import { useLayout } from "@renderer/features/layout/useLayout";
 
 export interface OverviewAction {
   id: string;
@@ -134,6 +136,7 @@ export function InstanceOverviewTab(props: InstanceOverviewProps) {
 
 function InstanceOverviewBody(props: InstanceOverviewProps) {
   const { t } = useTranslation();
+  const layout = useLayout();
   const { instance, statistics } = props;
 
   const { size, isUnknown: isSizeUnknown } = useInstanceDiskUsage(
@@ -226,6 +229,21 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
     },
   ];
 
+  const showScreenshots = !isSlotHidden(layout, slotId.card("screenshots"));
+  const showNotes = !isSlotHidden(layout, slotId.card("notes"));
+  const showSessions = !isSlotHidden(layout, slotId.card("sessions"));
+  const screenshotsShown = showScreenshots && hasScreenshots;
+  const leftBottom = !screenshotsShown && showNotes ? "notes" : null;
+  const rightBottom = screenshotsShown
+    ? showNotes
+      ? "notes"
+      : showSessions
+        ? "sessions"
+        : null
+    : showSessions
+      ? "sessions"
+      : null;
+
   return (
     <>
       <div className="mb-3 shrink-0">
@@ -266,17 +284,21 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
           {isFresh ? (
             <HintsCard className="shrink-0" hints={hints} />
           ) : (
-            <ScreenshotsCard
-              className={
-                hasScreenshots ? "min-h-[150px] flex-1" : "h-28 shrink-0"
-              }
-              screenshots={screenshots}
-              folder={folder}
-              onUseAsCover={props.onUseScreenshotAsCover}
-            />
+            showScreenshots && (
+              <ScreenshotsCard
+                className={
+                  screenshotsShown || leftBottom !== "notes"
+                    ? "min-h-[150px] flex-1"
+                    : "h-28 shrink-0"
+                }
+                screenshots={screenshots}
+                folder={folder}
+                onUseAsCover={props.onUseScreenshotAsCover}
+              />
+            )
           )}
 
-          {!hasScreenshots && (
+          {leftBottom === "notes" && (
             <SectionCard
               title={t("versions.notes.title")}
               icon={NotebookPen}
@@ -404,7 +426,7 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
 
           {props.publishing}
 
-          {hasScreenshots ? (
+          {rightBottom === "notes" && (
             <SectionCard
               title={t("versions.notes.title")}
               icon={NotebookPen}
@@ -412,7 +434,8 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
             >
               <InstanceNotes versionPath={instance.versionPath} />
             </SectionCard>
-          ) : (
+          )}
+          {rightBottom === "sessions" && (
             <SessionsCard
               className="min-h-[72px] flex-1"
               sessions={sessions}

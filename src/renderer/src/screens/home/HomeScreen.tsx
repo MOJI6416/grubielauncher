@@ -6,8 +6,8 @@ import {
   LazyMotion,
   domAnimation,
   m,
-  useReducedMotion,
 } from "motion/react";
+import { useReducedMotionPreference } from "@/lib/motionPreference";
 import { LayoutGrid } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motionTransition } from "@/lib/motion";
@@ -23,6 +23,12 @@ import { TagsDialog } from "@renderer/features/instances/TagsDialog";
 import { instanceKey } from "@renderer/features/instances/selectors";
 import { useInstanceStatsSync } from "@renderer/features/instances/instanceStats";
 import type { RunGameParams } from "@renderer/features/launch/types";
+import { isSlotHidden, slotId } from "@renderer/features/layout/layout";
+import {
+  useLayout,
+  useLayoutEditing,
+} from "@renderer/features/layout/useLayout";
+import { HomeLayoutBar } from "@renderer/features/layout/HomeLayoutBar";
 
 const HERO_HEIGHT = 190;
 
@@ -54,7 +60,7 @@ export function HomeScreen({
   const versions = useAtomValue(versionsAtom);
   const versionsLoaded = useAtomValue(versionsLoadedAtom);
   const selected = useAtomValue(selectedVersionAtom);
-  const transition = motionTransition(useReducedMotion());
+  const transition = motionTransition(useReducedMotionPreference());
   const [tagsEditor, setTagsEditor] = useState<{
     key: string;
     name: string;
@@ -66,7 +72,11 @@ export function HomeScreen({
   const manageTags = (key: string, name: string) =>
     setTagsEditor({ key, name });
 
-  const hasHero = !versionsLoaded || versions.length > 0;
+  const layout = useLayout();
+  const editing = useLayoutEditing();
+  const hasHero =
+    (!versionsLoaded || versions.length > 0) &&
+    !isSlotHidden(layout, slotId.home("hero"));
   const slotKey = !versionsLoaded
     ? "loading"
     : selected
@@ -75,6 +85,8 @@ export function HomeScreen({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
+      {editing && <HomeLayoutBar />}
+
       {hasHero && (
         <LazyMotion features={domAnimation}>
           <div

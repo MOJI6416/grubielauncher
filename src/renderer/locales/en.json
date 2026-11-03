@@ -1440,6 +1440,8 @@
     "sections": {
       "game": "Game",
       "interface": "Interface",
+      "themes": "Themes",
+      "layout": "Layout",
       "voice": "Voice chat",
       "storage": "Storage",
       "downloads": "Downloads",
@@ -1464,7 +1466,17 @@
     "voiceGateDescription": "The mic only sends sound while you are louder than the threshold. For talking without push-to-talk: keyboard and background noise stay out",
     "voiceGateThreshold": "Threshold: {{value}} dB",
     "voiceOverlay": "Who's talking over the game",
-    "voiceOverlayDescription": "While you play, the top-left corner shows who is talking. Does not show over exclusive fullscreen",
+    "voiceOverlayDescription": "While you play, a corner of the screen shows who is talking. Does not show over exclusive fullscreen",
+    "voiceOverlayCorner": "Screen corner",
+    "voiceOverlayCorners": {
+      "top-left": "Top left",
+      "top-right": "Top right",
+      "bottom-left": "Bottom left",
+      "bottom-right": "Bottom right"
+    },
+    "voiceOverlayPrimary": "Main monitor",
+    "voiceOverlayScreen": "Monitor {{index}}",
+    "voiceOverlayPreview": "Show preview",
     "voiceDevices": "Audio devices",
     "voiceMicTestStart": "Test",
     "voiceMicTestStop": "Stop",
@@ -1599,9 +1611,21 @@
     },
     "interface": {
       "languageDescription": "Applies immediately, no restart needed",
+      "groups": {
+        "effects": "Animations and effects",
+        "layout": "Layout",
+        "soundAndLogs": "Sound and logs"
+      },
+      "uiScale": "Interface scale",
+      "uiScaleDescription": "Size of text, buttons and spacing. Also works with Ctrl + mouse wheel.",
+      "uiScaleLimited": "Larger than {{value}} doesn't fit on this screen",
+      "uiScaleToast": "Interface scale: {{value}}",
+      "logFontSize": "Log text size",
+      "logFontSizeDescription": "Game logs and the server console",
       "instancesView": "Instance list",
       "instancesViewDescription": "How the list on the Play screen is sorted and laid out",
       "viewList": "List",
+      "viewCompact": "Compact",
       "viewGrid": "Grid",
       "sorts": {
         "activity": "By activity",
@@ -1625,6 +1649,9 @@
           "paletteActions": "Palette, actions only",
           "assistant": "Assistant",
           "search": "Search on the current screen: mods, settings",
+          "sidebar": "Collapse or expand the sidebar",
+          "zoom": "Make the interface bigger or smaller",
+          "zoomReset": "Reset the interface scale to 100%",
           "account": "Switch to account 1…9",
           "back": "Back through history",
           "forward": "Forward through history",
@@ -1667,6 +1694,22 @@
       },
       "accent": "Accent color",
       "accentDescription": "The color of the Play button, selections and active controls. Violet is the brand color.",
+      "highContrast": "High contrast",
+      "highContrastDescription": "Brighter secondary text and borders. The accent color stays the same.",
+      "motion": "Animations",
+      "motionDescription": "Without animations the interface responds instantly and puts less load on the PC next to the game.",
+      "motionModes": {
+        "system": "Follow system",
+        "on": "On",
+        "off": "Off"
+      },
+      "ambientTint": "Cover glow",
+      "ambientTintDescription": "The background takes the color of the selected instance's cover",
+      "backgroundGrain": "Background grain",
+      "backgroundGrainDescription": "Light noise over the whole window",
+      "sidebarCollapsed": "Collapsed sidebar",
+      "sidebarCollapsedDescription": "Icons only, more room for content",
+      "soundVolume": "Volume",
       "accents": {
         "violet": "Violet (brand)",
         "blue": "Blue",
@@ -1738,10 +1781,25 @@
         "description": "Interface language. New instances start the game in the same language.",
         "keywords": "language locale english russian ukrainian русский українська deutsch español français polski português türkçe"
       },
+      "theme": {
+        "title": "Interface theme",
+        "description": "Built-in themes or your own colours and picture",
+        "keywords": "theme dark light oled background picture wallpaper colors appearance"
+      },
+      "uiScale": {
+        "title": "Interface scale",
+        "description": "Bigger or smaller text and buttons",
+        "keywords": "zoom scale size font text bigger smaller dpi"
+      },
       "sounds": {
         "title": "Notification sounds",
         "description": "Install finished, crash, friend invites",
-        "keywords": "sound audio notification mute"
+        "keywords": "sound audio notification mute volume loudness"
+      },
+      "logFontSize": {
+        "title": "Log text size",
+        "description": "Font size in game logs and the server console",
+        "keywords": "font size logs console text monospace"
       },
       "instancesView": {
         "title": "Instance list",
@@ -1781,7 +1839,7 @@
       "voiceOverlay": {
         "title": "Who's talking over the game",
         "description": "Speaker names in the screen corner",
-        "keywords": "overlay talking game screen corner"
+        "keywords": "overlay talking game screen corner corner monitor screen position"
       },
       "streamerMode": {
         "title": "Streamer mode",
@@ -1883,15 +1941,90 @@
         "description": "The color of buttons and selections",
         "keywords": "color colour theme accent customize appearance palette"
       },
+      "highContrast": {
+        "title": "High contrast",
+        "description": "Brighter text and borders",
+        "keywords": "contrast accessibility readability bright text borders"
+      },
+      "motion": {
+        "title": "Animations",
+        "description": "Follow system, on or off",
+        "keywords": "animation motion transitions effects reduce smooth"
+      },
+      "ambientTint": {
+        "title": "Cover glow",
+        "description": "Background tinted by the instance cover",
+        "keywords": "glow tint background cover color effects"
+      },
+      "backgroundGrain": {
+        "title": "Background grain",
+        "description": "Light noise over the window",
+        "keywords": "grain noise background texture effects"
+      },
       "seasonalDecor": {
         "title": "Holiday decorations",
         "description": "Halloween bats, pumpkins and cobwebs",
         "keywords": "halloween holiday season event theme decorations pumpkin bats new year christmas"
       },
+      "sidebarCollapsed": {
+        "title": "Collapsed sidebar",
+        "description": "Icons only in the side panel",
+        "keywords": "sidebar panel collapse compact icons narrow"
+      },
+      "layoutPresets": {
+        "title": "Ready-made sets",
+        "description": "Standard, compact or minimal layout",
+        "keywords": "preset set layout compact minimal standard quick"
+      },
+      "layoutCustomize": {
+        "title": "Customize interface",
+        "description": "Drag and hide items right on screen",
+        "keywords": "layout customize edit drag hide reorder interface"
+      },
+      "layoutSidebar": {
+        "title": "Sidebar items",
+        "description": "Hide and reorder sidebar items",
+        "keywords": "sidebar menu items order hide people news dock"
+      },
+      "layoutDock": {
+        "title": "Instances in the sidebar",
+        "description": "How many instances the sidebar shows",
+        "keywords": "sidebar dock instances limit pinned hidden"
+      },
+      "layoutHome": {
+        "title": "Play screen blocks",
+        "description": "Instance card, statistics, Continue",
+        "keywords": "home play hero card statistics continue hide"
+      },
+      "layoutInstanceTab": {
+        "title": "Tab to open",
+        "description": "Which instance tab opens first",
+        "keywords": "instance tab default overview content open"
+      },
+      "layoutTabs": {
+        "title": "Instance tabs",
+        "description": "Hide rarely used tabs",
+        "keywords": "instance tabs hide logs statistics configs worlds servers"
+      },
+      "layoutOverview": {
+        "title": "Overview cards",
+        "description": "Hide screenshots, notes or sessions",
+        "keywords": "overview cards screenshots notes sessions hide"
+      },
       "closeToTray": {
         "title": "Minimize to tray on close",
         "description": "Closing hides the window, calls and games keep going",
         "keywords": "tray close background minimize call"
+      },
+      "startScreen": {
+        "title": "Start screen",
+        "description": "What opens when the launcher starts",
+        "keywords": "start startup home screen open launch"
+      },
+      "gameWindow": {
+        "title": "When the game starts",
+        "description": "Minimize, hide to tray or keep the launcher open",
+        "keywords": "game launch window minimize tray hide restore"
       },
       "launchAtLogin": {
         "title": "Start with the system",
@@ -1928,6 +2061,22 @@
     "system": {
       "closeToTray": "Minimize to tray on close",
       "closeToTrayDescription": "The close button hides the window and the launcher keeps running: calls stay connected, friends see you online, games and downloads carry on. Quit from the tray icon.",
+      "startScreen": "Start screen",
+      "startScreenDescription": "What opens when the launcher starts",
+      "startScreens": {
+        "home": "Play",
+        "lastInstance": "Last played instance",
+        "people": "People",
+        "news": "News"
+      },
+      "gameWindow": "When the game starts",
+      "gameWindowDescription": "What happens to the launcher window once the game window appears",
+      "gameWindowModes": {
+        "minimize": "Minimize",
+        "tray": "Hide to tray",
+        "keep": "Keep open"
+      },
+      "restoreAfterGame": "Bring the launcher back after the game closes",
       "launchAtLogin": "Start with the system",
       "launchAtLoginDescription": "The launcher starts straight in the tray, with no window — friends see you online and can call you.",
       "launchAtLoginUnsupported": "Available in the installed version of the launcher.",
@@ -2101,6 +2250,7 @@
       "needsUpdate": "Pack update"
     },
     "viewList": "List",
+    "viewCompact": "Compact",
     "viewGrid": "Grid",
     "noResults": "Nothing found",
     "clearFilters": "Clear filters",
@@ -4650,7 +4800,9 @@
     "offline": {
       "internet": "No network",
       "backend": "Services down"
-    }
+    },
+    "sidebarCollapse": "Collapse sidebar",
+    "sidebarExpand": "Expand sidebar"
   },
   "instanceSettings": {
     "title": "Instance settings",
@@ -5809,5 +5961,221 @@
     "memory": "Memory {{from}} → {{to}}",
     "memoryDone": "Memory set to {{to}}",
     "failed": "The fix did not apply"
+  },
+  "layout": {
+    "show": "Show “{{name}}”",
+    "hide": "Hide “{{name}}”",
+    "alwaysVisible": "Always shown — can only be moved",
+    "hideFromSidebar": "Hide from the sidebar",
+    "customize": "Customize interface",
+    "customizeAction": "Customize",
+    "customizeDescription": "Drag sidebar items and hide what you don't need, right on screen",
+    "editHint": "Drag sidebar items, the eye hides what you don't need. Home blocks are on the Play screen.",
+    "moreSettings": "More settings",
+    "reset": "Reset layout",
+    "done": "Done",
+    "pin": "Pin to the sidebar",
+    "unpin": "Unpin",
+    "dockMore": "{{count}} more",
+    "dockMoreHint": "All instances are on the Play screen",
+    "nowHint": "Downloads, errors and world sharing show up here",
+    "moveUp": "Move “{{name}}” up",
+    "moveDown": "Move “{{name}}” down",
+    "groups": {
+      "sidebar": "Sidebar",
+      "home": "Play screen",
+      "instance": "Instance screen"
+    },
+    "sidebar": {
+      "title": "Items and order",
+      "description": "Play and Settings can't be hidden",
+      "dock": "Instances",
+      "now": "Now"
+    },
+    "dock": {
+      "title": "Instances in the sidebar",
+      "description": "Pinned ones are always shown, the rest by last launch",
+      "all": "All",
+      "hiddenCount": "Hidden from the sidebar: {{count}}",
+      "showAll": "Show all"
+    },
+    "home": {
+      "title": "Play screen",
+      "rowTitle": "Play screen blocks",
+      "description": "The card of the last instance above the list",
+      "hero": "Instance card",
+      "stats": "Statistics",
+      "continue": "Continue"
+    },
+    "instance": {
+      "defaultTab": "Tab to open",
+      "defaultTabDescription": "If the instance has no such tab, Overview opens",
+      "tabs": "Tabs",
+      "tabsDescription": "A hidden tab still opens from a link or a menu",
+      "overview": "Overview cards",
+      "overviewDescription": "The other cards take the freed space"
+    },
+    "overview": {
+      "screenshots": "Screenshots",
+      "notes": "Notes",
+      "sessions": "Sessions"
+    },
+    "presets": {
+      "title": "Ready-made sets",
+      "description": "A quick start — you can change anything afterwards",
+      "custom": "Right now it's your own setup: picking a set replaces it, and you can undo that",
+      "applied": "“{{name}}” set applied",
+      "undo": "Undo",
+      "command": "Interface set: {{name}}",
+      "standard": {
+        "title": "Standard",
+        "description": "As after installation"
+      },
+      "compact": {
+        "title": "Compact",
+        "description": "For small screens: narrow sidebar, dense list"
+      },
+      "minimal": {
+        "title": "Minimal",
+        "description": "For playing solo: no People, News or effects"
+      }
+    }
+  },
+  "theme": {
+    "title": "Interface theme",
+    "description": "Grubie is the signature dark theme. You can build your own from your colours and a picture",
+    "newTheme": "New theme",
+    "newName": "My theme",
+    "copyName": "{{name}} copy",
+    "edit": "Edit",
+    "duplicate": "Make a copy",
+    "delete": "Delete theme",
+    "deleteConfirm": "The “{{name}}” theme will be deleted for good. Its background picture stays in the themes folder.",
+    "saved": "“{{name}}” theme saved",
+    "limit": "You can keep up to {{count}} themes",
+    "accentByTheme": "The accent colour is set by the “{{name}}” theme right now",
+    "command": "Theme: {{name}}",
+    "builtIn": {
+      "grubie": "Grubie",
+      "oled": "OLED",
+      "light": "Light"
+    },
+    "editor": {
+      "title": "Theme editor",
+      "livePreview": "changes show across the launcher right away, until you save or cancel",
+      "name": "Name",
+      "mode": "Base",
+      "modeDescription": "Dark or light semantic colours: success, warnings, errors",
+      "modes": {
+        "dark": "Dark",
+        "light": "Light"
+      },
+      "colors": "Colours",
+      "background": "Background",
+      "surface": "Panels",
+      "foreground": "Text",
+      "accent": "Accent",
+      "ownAccent": "Own accent colour",
+      "picture": "Background picture",
+      "pictureDescription": "PNG, JPG or WEBP. The picture stays on this computer",
+      "pick": "Choose picture",
+      "change": "Replace",
+      "remove": "Remove",
+      "dim": "Dimming",
+      "blur": "Blur",
+      "panelOpacity": "Panel opacity",
+      "readability": "Readability",
+      "readabilityDescription": "Checked without the picture: dimming keeps text readable over it",
+      "blocked": "Fix the red items: text can't be read with these colours",
+      "save": "Save theme"
+    },
+    "checks": {
+      "text": "Text on panels",
+      "background": "Text on background",
+      "muted": "Secondary text",
+      "faint": "Labels and captions",
+      "accent": "Accent on panels",
+      "accentText": "Button label"
+    },
+    "transfer": {
+      "export": "Save to file",
+      "copyCode": "Copy code",
+      "openFile": "Open theme file",
+      "pasteCode": "Paste code",
+      "dropHint": "or drop a .grubietheme file onto the window",
+      "pasteTitle": "Paste a theme code",
+      "pasteDescription": "A code carries the theme's colours. The background picture can't travel this way: share a theme file for that",
+      "add": "Add theme",
+      "imported": "“{{name}}” theme added",
+      "exported": "“{{name}}” theme saved to a file",
+      "exportFailed": "Couldn't save the theme to a file",
+      "badFile": "This isn't a Grubie theme file, or it's damaged",
+      "badCode": "Couldn't recognise the theme code",
+      "unreadable": "The theme failed the readability check: text can't be read with these colours",
+      "codeCopied": "Theme code copied",
+      "codeNoPicture": "The background picture isn't part of the code. Save the theme to a file to share it"
+    },
+    "gallery": {
+      "tabs": "Theme source",
+      "tabMine": "My themes",
+      "tab": "Gallery",
+      "publish": "Publish to the gallery",
+      "publishTitle": "Publish “{{name}}”?",
+      "publishBody": "The theme goes to a moderator for review. Once approved, everyone will see it in the launcher's gallery and on the website, with your nickname as the author.",
+      "publishPicture": "The background picture will be compressed to 1920×1080.",
+      "publishAction": "Publish",
+      "signIn": "Sign in to publish themes to the gallery",
+      "published": "“{{name}}” sent for review",
+      "publishedHint": "You can see its status on the Gallery tab",
+      "search": "Search themes",
+      "modeLabel": "Base",
+      "sortLabel": "Sort",
+      "untitled": "Untitled",
+      "unknownAuthor": "Unknown author",
+      "withPicture": "With a background picture",
+      "install": "Install",
+      "apply": "Apply",
+      "active": "Active",
+      "more": "Show {{count}} more",
+      "empty": "The gallery has no themes yet",
+      "emptyFiltered": "No themes match this search",
+      "emptyHint": "Make your own theme and publish it from the “…” menu on its card",
+      "mine": "My publications",
+      "unpublish": "Remove from the gallery",
+      "unpublishConfirm": "“{{name}}” will disappear from the gallery. Anyone who has already installed it keeps it.",
+      "unpublished": "“{{name}}” removed from the gallery",
+      "installTitle": "Install the “{{name}}” theme?",
+      "installBy": "By {{author}}. The theme will join your themes and switch on right away.",
+      "installHint": "The theme will join your themes and switch on right away.",
+      "mode": {
+        "all": "All",
+        "dark": "Dark",
+        "light": "Light"
+      },
+      "sort": {
+        "new": "New",
+        "downloads": "Popular"
+      },
+      "status": {
+        "pending": "In review",
+        "approved": "In the gallery",
+        "rejected": "Rejected"
+      },
+      "errors": {
+        "bad_picture": "Couldn't prepare the background picture: it needs to be a PNG, JPG or WEBP of at least 360 px",
+        "duplicate": "This theme is already in the gallery or awaiting review",
+        "duplicateRejected": "This theme was already rejected — the reason is below",
+        "publish_banned": "Publishing to the gallery is closed for your account",
+        "unreadable": "The theme failed the readability check: text can't be read with these colours",
+        "pending_limit": "You already have 5 themes in review. Wait for a decision on them",
+        "name_required": "The theme needs a name",
+        "offline": "Can't reach the server. Check your connection and try again",
+        "failed": "Couldn't publish the theme. Please try again later",
+        "install": "Couldn't install the theme from the gallery",
+        "unpublish": "Couldn't remove the theme from the gallery",
+        "load": "The gallery didn't load. Check your connection",
+        "notFound": "Theme not found: the author may have removed it"
+      }
+    }
   }
 }

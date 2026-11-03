@@ -28,6 +28,7 @@ import {
   requestAppQuit,
   revealMainWindow,
   setHideToTrayHandler,
+  setTrayHider,
 } from "../windows/mainWindow";
 import {
   buildTrayMenu,
@@ -216,6 +217,15 @@ function showHintOnce(): void {
   notification.show();
 }
 
+function hideForGame(): boolean {
+  if (!tray || tray.isDestroyed()) return false;
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+
+  mainWindow.hide();
+  applyThrottling();
+  return true;
+}
+
 function hideToTray(): boolean {
   if (!tray || tray.isDestroyed() || !closeToTray) return false;
   if (!mainWindow || mainWindow.isDestroyed()) return false;
@@ -249,10 +259,12 @@ export function initTray(): void {
     tray.on("right-click", () => toggleTrayPopup(tray?.getBounds() ?? null));
   }
   setHideToTrayHandler(hideToTray);
+  setTrayHider(hideForGame);
   render();
 
   app.on("before-quit", () => {
     setHideToTrayHandler(null);
+    setTrayHider(null);
     destroyTrayPopup();
     tray?.destroy();
     tray = null;

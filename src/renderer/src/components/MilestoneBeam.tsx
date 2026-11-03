@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useReducedMotion } from "motion/react";
+import { useReducedMotionPreference } from "@/lib/motionPreference";
 import { cn } from "@/lib/utils";
 import {
   nextMilestoneBeam,
@@ -17,7 +17,7 @@ export function MilestoneBeam({
   className?: string;
   runMs?: number;
 }) {
-  const reducedMotion = useReducedMotion() === true;
+  const reducedMotion = useReducedMotionPreference() === true;
   const [state, setState] = useState<MilestoneBeamState>(() =>
     startMilestoneBeam(reducedMotion),
   );

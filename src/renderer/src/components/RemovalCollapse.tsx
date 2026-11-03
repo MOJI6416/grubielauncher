@@ -4,8 +4,8 @@ import {
   LazyMotion,
   domAnimation,
   m,
-  useReducedMotion,
 } from "motion/react";
+import { useReducedMotionPreference } from "@/lib/motionPreference";
 import { MOTION_DURATION_FAST, MOTION_DURATION_SLOW } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +20,7 @@ export function RemovalList({
   sourceKeys: ReadonlySet<string>;
   children: ReactNode;
 }) {
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotionPreference();
 
   return (
     <LazyMotion features={domAnimation}>

@@ -12,10 +12,15 @@ import {
   Folder,
   Hash,
   Info,
+  LayoutTemplate,
   ListPlus,
   PackageOpen,
+  Paintbrush,
+  PanelLeftClose,
+  PanelLeftOpen,
   Play,
   Radio,
+  RotateCcw,
   ScrollText,
   Search,
   Server,
@@ -31,6 +36,7 @@ import {
   accountsAtom,
   isRunningAtom,
   selectedVersionAtom,
+  settingsAtom,
   versionsAtom,
 } from "@renderer/stores/atoms";
 import { DialogTitle } from "@/components/ui/dialog";
@@ -68,7 +74,19 @@ import {
   type Rankable,
 } from "./commands";
 import { readPaletteUsage, recordPaletteUse } from "./paletteUsage";
-import { AGENT_SHORTCUT_LABEL } from "./shortcuts";
+import { AGENT_SHORTCUT_LABEL, SIDEBAR_SHORTCUT_LABEL } from "./shortcuts";
+import { toggleSidebar } from "./sidebarCollapse";
+import { isLayoutCustomized } from "@renderer/features/layout/layout";
+import {
+  applyPreset,
+  resetLayout,
+  startLayoutEditing,
+} from "@renderer/features/layout/useLayout";
+import { LAYOUT_PRESETS, matchPreset } from "@renderer/features/layout/presets";
+import { BUILT_IN_THEMES } from "@/shared/themes";
+import { userThemesAtom } from "@renderer/features/theme/themesStore";
+import { themeName } from "@renderer/features/theme/ThemeCard";
+import { patchSettings } from "@renderer/utilities/persistSettings";
 
 const api = window.api;
 
@@ -168,6 +186,8 @@ export function CommandPalette({
   const selected = useAtomValue(selectedVersionAtom);
   const [raw, setRaw] = useState(initialQuery);
   const streamer = useStreamerState();
+  const settings = useAtomValue(settingsAtom);
+  const userThemes = useAtomValue(userThemesAtom);
   const { t } = useTranslation();
 
   useFocusReturn(open);
@@ -261,6 +281,61 @@ export function CommandPalette({
         icon: <Radio className="size-4 text-faint" />,
         run: () => void setStreamerMode(!streamer.active),
       },
+      {
+        id: "action:toggle-sidebar",
+        section: "actions",
+        title: settings.sidebarCollapsed
+          ? t("shell.sidebarExpand")
+          : t("shell.sidebarCollapse"),
+        hint: SIDEBAR_SHORTCUT_LABEL,
+        keywords:
+          "sidebar panel collapse expand сайдбар панель свернуть развернуть бічна згорнути",
+        icon: settings.sidebarCollapsed ? (
+          <PanelLeftOpen className="size-4 text-faint" />
+        ) : (
+          <PanelLeftClose className="size-4 text-faint" />
+        ),
+        run: toggleSidebar,
+      },
+      {
+        id: "action:customize-layout",
+        section: "actions",
+        title: t("layout.customize"),
+        keywords:
+          "layout customize hide reorder расположение настроить скрыть порядок розташування",
+        icon: <LayoutTemplate className="size-4 text-faint" />,
+        run: startLayoutEditing,
+      },
+      {
+        id: "action:reset-layout",
+        section: "actions",
+        title: t("layout.reset"),
+        keywords: "layout reset расположение сбросить розташування скинути",
+        icon: <RotateCcw className="size-4 text-faint" />,
+        disabled: !isLayoutCustomized(settings.interface),
+        run: resetLayout,
+      },
+      ...LAYOUT_PRESETS.map((id) => ({
+        id: `action:layout-preset-${id}`,
+        section: "actions" as const,
+        title: t("layout.presets.command", {
+          name: t(`layout.presets.${id}.title`),
+        }),
+        keywords:
+          "preset layout compact minimal standard набор пресет компактный минимальный стандарт",
+        icon: <LayoutTemplate className="size-4 text-faint" />,
+        disabled: matchPreset(settings) === id,
+        run: () => applyPreset(id),
+      })),
+      ...[...BUILT_IN_THEMES, ...userThemes].map((theme) => ({
+        id: `action:theme-${theme.id}`,
+        section: "actions" as const,
+        title: t("theme.command", { name: themeName(theme, t) }),
+        keywords: "theme тема тёмная светлая oled фон оформление dark light",
+        icon: <Paintbrush className="size-4 text-faint" />,
+        disabled: settings.themeId === theme.id,
+        run: () => void patchSettings({ themeId: theme.id }).catch(() => undefined),
+      })),
     ];
 
     if (selected) {
@@ -376,6 +451,8 @@ export function CommandPalette({
     runGame,
     selected,
     selectedIdentity,
+    settings,
+    userThemes,
     streamer.active,
     t,
     versions,

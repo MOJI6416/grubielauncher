@@ -10,7 +10,9 @@ import {
   Info,
   LifeBuoy,
   Loader2,
+  Paintbrush,
   Palette,
+  PanelsTopLeft,
   RotateCcw,
   Search,
   Shield,
@@ -52,6 +54,8 @@ import { useSystemFacts } from "@renderer/features/settings/useSystemFacts";
 import { GameSection } from "@renderer/features/settings/GameSection";
 import { DownloadsSection } from "@renderer/features/settings/DownloadsSection";
 import { InterfaceSection } from "@renderer/features/settings/InterfaceSection";
+import { LayoutSection } from "@renderer/features/settings/LayoutSection";
+import { ThemeSection } from "@renderer/features/settings/ThemeSection";
 import { VoiceSection } from "@renderer/features/settings/VoiceSection";
 import { SystemSection } from "@renderer/features/settings/SystemSection";
 import { PrivacySection } from "@renderer/features/settings/PrivacySection";
@@ -65,6 +69,8 @@ const SECTION_ICON: Record<SettingsSectionId, LucideIcon> = {
   game: Cpu,
   downloads: Download,
   interface: Palette,
+  themes: Paintbrush,
+  layout: PanelsTopLeft,
   system: AppWindow,
   voice: Headphones,
   privacy: Shield,
@@ -318,6 +324,8 @@ export function SettingsScreen({
               )}
               {active === "downloads" && <DownloadsSection {...sectionProps} />}
               {active === "interface" && <InterfaceSection {...sectionProps} />}
+              {active === "themes" && <ThemeSection {...sectionProps} />}
+              {active === "layout" && <LayoutSection {...sectionProps} />}
               {active === "system" && <SystemSection {...sectionProps} />}
               {active === "voice" && <VoiceSection {...sectionProps} />}
               {active === "privacy" && <PrivacySection {...sectionProps} />}

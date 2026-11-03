@@ -139,6 +139,54 @@ describe("buildInstanceActions", () => {
     expect(disabled).toEqual(["play"]);
   });
 
+  it("leaves delete out unless the surface can handle it", async () => {
+    const { buildInstanceActions } = await loadActions();
+
+    expect(ids(buildInstanceActions(context()))).not.toContain("delete");
+  });
+
+  it("puts delete alone in the last group as a destructive action", async () => {
+    const { buildInstanceActions } = await loadActions();
+    const onDelete = vi.fn();
+    const groups = buildInstanceActions(
+      context({ onDelete, deleteShortcut: "Del" }),
+    );
+
+    expect(groups).toHaveLength(4);
+    expect(groups[3]).toHaveLength(1);
+    expect(groups[3][0]).toMatchObject({
+      id: "delete",
+      label: "versions.deleteInstance",
+      destructive: true,
+      shortcut: "Del",
+      disabled: false,
+    });
+
+    groups[3][0].onSelect();
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocks delete while the instance runs or the launcher is busy", async () => {
+    const { buildInstanceActions } = await loadActions();
+    const onDelete = () => undefined;
+
+    const running = buildInstanceActions(
+      context({ onDelete, isRunningInstance: true }),
+    );
+    const busy = buildInstanceActions(context({ onDelete, isBusy: true }));
+
+    expect(running[3][0].disabled).toBe(true);
+    expect(busy[3][0].disabled).toBe(true);
+  });
+
+  it("skips tag management where no tag dialog is available", async () => {
+    const { buildInstanceActions } = await loadActions();
+
+    expect(
+      ids(buildInstanceActions(context({ onManageTags: undefined }))),
+    ).not.toContain("tags");
+  });
+
   it("routes every section entry to its own tab", async () => {
     const { buildInstanceActions } = await loadActions();
     const groups = buildInstanceActions(

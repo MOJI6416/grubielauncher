@@ -13,9 +13,12 @@ import {
 import { Downloader } from '../utilities/downloader'
 import {
   confirmWindowClose,
+  getUiScaleState,
   mainWindow,
+  setUiScale,
   setUnsavedChangesGuard
 } from '../windows/mainWindow'
+import { UI_SCALES, type UiScaleState } from '@/shared/uiScale'
 import { getLauncherPaths } from '../utilities/other'
 import { GAME_TEXTURE_ENTRY, GameTextures, readGameTextures } from '../utilities/gameTextures'
 import { getConnectivityPlan, runConnectivityTests } from '../utilities/connectivityTest'
@@ -460,6 +463,21 @@ export function registerOtherIpc() {
   handleSafe<void>('other:confirmClose', undefined, () => {
     confirmWindowClose()
   })
+
+  const uiScaleFallback: UiScaleState = {
+    scale: 1,
+    effective: 1,
+    options: UI_SCALES.map((value) => ({ value, fits: value <= 1 }))
+  }
+
+  handleSafe<UiScaleState>('other:getUiScale', uiScaleFallback, () => getUiScaleState())
+
+  handleSafe<UiScaleState, [number]>(
+    'other:setUiScale',
+    uiScaleFallback,
+    [check.number()],
+    async (_, scale) => setUiScale(scale)
+  )
 
   handleSafe<ConnectivityCheckPlanEntry[]>('connectivity:plan', [], () =>
     getConnectivityPlan()

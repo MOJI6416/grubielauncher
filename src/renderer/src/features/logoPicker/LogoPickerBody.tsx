@@ -6,7 +6,7 @@ import {
   type PointerEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { useReducedMotion } from "motion/react";
+import { useReducedMotionPreference } from "@/lib/motionPreference";
 import {
   Dices,
   ImageUp,
@@ -216,7 +216,7 @@ export function LogoPickerBody({
   onRemove?: () => void;
 }) {
   const { t } = useTranslation();
-  const reducedMotion = useReducedMotion() === true;
+  const reducedMotion = useReducedMotionPreference() === true;
   const categoryIndicator = useSlidingIndicator<HTMLDivElement>();
   const packState = useTexturePack();
   const isReady = packState.status === "ready";

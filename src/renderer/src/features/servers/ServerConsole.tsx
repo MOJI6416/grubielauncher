@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useAtomValue } from "jotai";
 import { ChevronRight, Copy, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
@@ -7,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { settingsAtom } from "@renderer/stores/atoms";
 
 const LEVEL_CLASS: { pattern: RegExp; className: string }[] = [
   {
@@ -36,6 +38,7 @@ export function ServerConsole({
 }) {
   const { t } = useTranslation();
   const redact = useRedact();
+  const logFontSize = useAtomValue(settingsAtom).logFontSize;
   const [value, setValue] = useState("");
   const [history, setHistory] = useState<string[]>([]);
   const [cursor, setCursor] = useState<number | null>(null);
@@ -86,7 +89,10 @@ export function ServerConsole({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
         {lines.length ? (
-          <div className="font-mono text-[11px] leading-4 select-text">
+          <div
+            className="font-mono leading-[1.45] select-text"
+            style={{ fontSize: logFontSize }}
+          >
             {lines.map((line, index) => (
               <p
                 key={index}

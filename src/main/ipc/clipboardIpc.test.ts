@@ -47,7 +47,9 @@ vi.mock("../../../resources/icon.png?asset", () => ({ default: "" }));
 vi.mock("../utilities/downloader", () => ({ Downloader: class {} }));
 vi.mock("../windows/mainWindow", () => ({
   confirmWindowClose: vi.fn(),
+  getUiScaleState: vi.fn(),
   mainWindow: null,
+  setUiScale: vi.fn(),
   setUnsavedChangesGuard: vi.fn(),
 }));
 vi.mock("../utilities/other", () => ({ getLauncherPaths: vi.fn() }));

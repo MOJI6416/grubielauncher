@@ -11,6 +11,8 @@ import {
   renameGroup,
   renameInstanceKey,
   reorderGroups,
+  setDockHidden,
+  setInstancePinned,
   toggleGroup,
   toggleUngrouped,
 } from "./instancesFile";
@@ -195,5 +197,49 @@ describe("groups", () => {
     expect(
       normalizeInstancesFile({ ungroupedCollapsed: "yes" }).ungroupedCollapsed,
     ).toBeUndefined();
+  });
+});
+
+describe("dock pins and hidden instances", () => {
+  it("keeps pins in the order they were added and stores nothing when empty", () => {
+    const pinned = setInstancePinned(
+      setInstancePinned(EMPTY_INSTANCES_FILE, "b", true),
+      "a",
+      true,
+    );
+    expect(pinned.pinned).toEqual(["b", "a"]);
+    expect(setInstancePinned(setInstancePinned(pinned, "a", false), "b", false))
+      .not.toHaveProperty("pinned");
+  });
+
+  it("never keeps an instance pinned and hidden at once", () => {
+    const hidden = setDockHidden(
+      setInstancePinned(EMPTY_INSTANCES_FILE, "a", true),
+      "a",
+      true,
+    );
+    expect(hidden.pinned).toBeUndefined();
+    expect(hidden.dockHidden).toEqual(["a"]);
+    expect(setInstancePinned(hidden, "a", true).dockHidden).toBeUndefined();
+  });
+
+  it("follows renames and forgets deleted instances", () => {
+    const file = fileWith({ pinned: ["old", "x"], dockHidden: ["old"] });
+    const renamed = renameInstanceKey(file, "old", "new");
+    expect(renamed.pinned).toEqual(["new", "x"]);
+    expect(renamed.dockHidden).toEqual(["new"]);
+
+    const forgotten = forgetInstanceKey(renamed, "new");
+    expect(forgotten.pinned).toEqual(["x"]);
+    expect(forgotten.dockHidden).toBeUndefined();
+  });
+
+  it("drops junk while reading the file", () => {
+    const file = normalizeInstancesFile({
+      pinned: ["a", 3, "a", ""],
+      dockHidden: "b",
+    });
+    expect(file.pinned).toEqual(["a"]);
+    expect(file.dockHidden).toBeUndefined();
   });
 });

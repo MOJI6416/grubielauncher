@@ -1455,6 +1455,8 @@
     "sections": {
       "game": "Jeu",
       "interface": "Interface",
+      "themes": "Thèmes",
+      "layout": "Disposition",
       "voice": "Chat vocal",
       "storage": "Stockage",
       "downloads": "Téléchargements",
@@ -1479,7 +1481,17 @@
     "voiceGateDescription": "Le micro n’envoie le son que lorsque vous êtes plus fort que le seuil. Pour parler sans Appuyer pour parler : le clavier et le bruit de fond restent dehors",
     "voiceGateThreshold": "Seuil : {{value}} dB",
     "voiceOverlay": "Qui parle, par-dessus le jeu",
-    "voiceOverlayDescription": "Pendant que vous jouez, le coin supérieur gauche indique qui parle. Ne s’affiche pas en plein écran exclusif",
+    "voiceOverlayDescription": "Pendant que vous jouez, un coin de l’écran indique qui parle. Ne s’affiche pas en plein écran exclusif",
+    "voiceOverlayCorner": "Coin de l’écran",
+    "voiceOverlayCorners": {
+      "top-left": "En haut à gauche",
+      "top-right": "En haut à droite",
+      "bottom-left": "En bas à gauche",
+      "bottom-right": "En bas à droite"
+    },
+    "voiceOverlayPrimary": "Écran principal",
+    "voiceOverlayScreen": "Écran {{index}}",
+    "voiceOverlayPreview": "Voir un aperçu",
     "voiceDevices": "Périphériques audio",
     "voiceMicTestStart": "Tester",
     "voiceMicTestStop": "Arrêter",
@@ -1614,9 +1626,21 @@
     },
     "interface": {
       "languageDescription": "S’applique immédiatement, sans redémarrage",
+      "groups": {
+        "effects": "Animations et effets",
+        "layout": "Disposition",
+        "soundAndLogs": "Son et journaux"
+      },
+      "uiScale": "Échelle de l’interface",
+      "uiScaleDescription": "Taille du texte, des boutons et des espacements. Fonctionne aussi avec Ctrl + molette de la souris.",
+      "uiScaleLimited": "Au-delà de {{value}}, l’interface ne tient pas sur cet écran",
+      "uiScaleToast": "Échelle de l’interface : {{value}}",
+      "logFontSize": "Taille du texte des journaux",
+      "logFontSizeDescription": "Journaux du jeu et console du serveur",
       "instancesView": "Liste des instances",
       "instancesViewDescription": "Tri et disposition de la liste sur l’écran Jouer",
       "viewList": "Liste",
+      "viewCompact": "Compacte",
       "viewGrid": "Grille",
       "sorts": {
         "activity": "Par activité",
@@ -1640,6 +1664,9 @@
           "paletteActions": "Palette, actions uniquement",
           "assistant": "Assistant",
           "search": "Rechercher sur l’écran actuel : mods, paramètres",
+          "sidebar": "Réduire ou déployer la barre latérale",
+          "zoom": "Agrandir ou réduire l’interface",
+          "zoomReset": "Remettre l’échelle à 100 %",
           "account": "Passer au compte 1…9",
           "back": "Reculer dans l’historique",
           "forward": "Avancer dans l’historique",
@@ -1682,6 +1709,22 @@
       },
       "accent": "Couleur d’accent",
       "accentDescription": "La couleur du bouton Jouer, des sélections et des contrôles actifs. Le violet est la couleur de la marque.",
+      "highContrast": "Contraste élevé",
+      "highContrastDescription": "Le texte secondaire et les bordures sont plus clairs. La couleur d’accent ne change pas.",
+      "motion": "Animations",
+      "motionDescription": "Sans animations, l’interface réagit instantanément et sollicite moins le PC pendant le jeu.",
+      "motionModes": {
+        "system": "Comme le système",
+        "on": "Activées",
+        "off": "Désactivées"
+      },
+      "ambientTint": "Halo de la couverture",
+      "ambientTintDescription": "Le fond prend la couleur de la couverture de l’instance sélectionnée",
+      "backgroundGrain": "Grain de fond",
+      "backgroundGrainDescription": "Léger bruit sur toute la fenêtre",
+      "sidebarCollapsed": "Barre latérale réduite",
+      "sidebarCollapsedDescription": "Icônes seules, plus de place pour le contenu",
+      "soundVolume": "Volume",
       "accents": {
         "violet": "Violet (marque)",
         "blue": "Bleu",
@@ -1753,10 +1796,25 @@
         "description": "Langue de l’interface. Les nouvelles instances lancent le jeu dans la même langue.",
         "keywords": "langue locale anglais russe ukrainien français language english русский українська deutsch español polski português türkçe"
       },
+      "theme": {
+        "title": "Thème de l’interface",
+        "description": "Thèmes intégrés ou vos couleurs et une image",
+        "keywords": "thème sombre clair oled fond image couleurs apparence"
+      },
+      "uiScale": {
+        "title": "Échelle de l’interface",
+        "description": "Texte et boutons plus grands ou plus petits",
+        "keywords": "zoom échelle taille police texte plus grand plus petit"
+      },
       "sounds": {
         "title": "Sons des notifications",
         "description": "Fin d’installation, plantage, invitations d’amis",
-        "keywords": "son audio notification muet"
+        "keywords": "son audio notification muet volume"
+      },
+      "logFontSize": {
+        "title": "Taille du texte des journaux",
+        "description": "Taille de police des journaux du jeu et de la console du serveur",
+        "keywords": "police taille journaux logs console texte"
       },
       "instancesView": {
         "title": "Liste des instances",
@@ -1796,7 +1854,7 @@
       "voiceOverlay": {
         "title": "Qui parle, par-dessus le jeu",
         "description": "Noms de ceux qui parlent dans le coin de l’écran",
-        "keywords": "overlay parle jeu écran coin"
+        "keywords": "overlay parle jeu écran coin coin écran moniteur position"
       },
       "streamerMode": {
         "title": "Mode streamer",
@@ -1898,15 +1956,90 @@
         "description": "La couleur des boutons et des sélections",
         "keywords": "couleur thème accent personnaliser apparence palette"
       },
+      "highContrast": {
+        "title": "Contraste élevé",
+        "description": "Texte et bordures plus clairs",
+        "keywords": "contraste accessibilité lisibilité clarté texte bordures"
+      },
+      "motion": {
+        "title": "Animations",
+        "description": "Comme le système, activées ou désactivées",
+        "keywords": "animation mouvement transitions effets désactiver fluidité"
+      },
+      "ambientTint": {
+        "title": "Halo de la couverture",
+        "description": "Fond de la couleur de la couverture",
+        "keywords": "halo couleur fond couverture effets"
+      },
+      "backgroundGrain": {
+        "title": "Grain de fond",
+        "description": "Léger bruit sur la fenêtre",
+        "keywords": "grain bruit fond texture effets"
+      },
       "seasonalDecor": {
         "title": "Décorations de fête",
         "description": "Chauves-souris, citrouilles et toiles d’araignée d’Halloween",
         "keywords": "halloween fête saison événement thème décorations citrouille chauves-souris nouvel an noël"
       },
+      "sidebarCollapsed": {
+        "title": "Barre latérale réduite",
+        "description": "Icônes seules dans le panneau latéral",
+        "keywords": "barre latérale panneau réduire compacte icônes étroite"
+      },
+      "layoutPresets": {
+        "title": "Ensembles prêts",
+        "description": "Disposition standard, compacte ou minimale",
+        "keywords": "ensemble préréglage disposition compact minimal standard rapide"
+      },
+      "layoutCustomize": {
+        "title": "Personnaliser l’interface",
+        "description": "Déplacer et masquer directement à l’écran",
+        "keywords": "disposition personnaliser modifier déplacer masquer ordre interface"
+      },
+      "layoutSidebar": {
+        "title": "Éléments de la barre latérale",
+        "description": "Masquer et réordonner les éléments",
+        "keywords": "barre latérale menu éléments ordre masquer personnes actualités instances"
+      },
+      "layoutDock": {
+        "title": "Instances dans la barre",
+        "description": "Combien d’instances la barre affiche",
+        "keywords": "barre latérale instances limite épingler masquer"
+      },
+      "layoutHome": {
+        "title": "Blocs de « Jouer »",
+        "description": "Carte, statistiques, « Continuer »",
+        "keywords": "accueil jouer carte statistiques continuer masquer"
+      },
+      "layoutInstanceTab": {
+        "title": "Onglet à l’ouverture",
+        "description": "Quel onglet de l’instance s’ouvre d’abord",
+        "keywords": "instance onglet défaut aperçu contenu ouvrir"
+      },
+      "layoutTabs": {
+        "title": "Onglets d’instance",
+        "description": "Masquer les onglets peu utilisés",
+        "keywords": "onglets instance masquer journaux statistiques configs mondes serveurs"
+      },
+      "layoutOverview": {
+        "title": "Cartes de l’aperçu",
+        "description": "Masquer captures, notes ou sessions",
+        "keywords": "aperçu cartes captures notes sessions masquer"
+      },
       "closeToTray": {
         "title": "Réduire dans la zone de notification",
         "description": "La fermeture masque la fenêtre, les appels et les parties continuent",
         "keywords": "zone de notification tray fermer arrière-plan réduire appel"
+      },
+      "startScreen": {
+        "title": "Écran au démarrage",
+        "description": "Ce qui s’ouvre au lancement du launcher",
+        "keywords": "démarrage lancement écran ouvrir launcher"
+      },
+      "gameWindow": {
+        "title": "Au lancement du jeu",
+        "description": "Réduire, masquer ou laisser le launcher ouvert",
+        "keywords": "jeu lancement fenêtre réduire notification masquer restaurer"
       },
       "launchAtLogin": {
         "title": "Démarrer avec le système",
@@ -1944,6 +2077,22 @@
     "system": {
       "closeToTray": "Réduire dans la zone de notification",
       "closeToTrayDescription": "Le bouton de fermeture masque la fenêtre et le launcher continue de tourner : les appels restent connectés, vos amis vous voient en ligne, les parties et les téléchargements se poursuivent. Quittez depuis l’icône de la zone de notification.",
+      "startScreen": "Écran au démarrage",
+      "startScreenDescription": "Ce qui s’ouvre au lancement du launcher",
+      "startScreens": {
+        "home": "« Jouer »",
+        "lastInstance": "Dernière instance jouée",
+        "people": "Personnes",
+        "news": "Actualités"
+      },
+      "gameWindow": "Au lancement du jeu",
+      "gameWindowDescription": "Ce que devient la fenêtre du launcher quand celle du jeu apparaît",
+      "gameWindowModes": {
+        "minimize": "Réduire",
+        "tray": "Masquer dans la zone de notification",
+        "keep": "Laisser ouverte"
+      },
+      "restoreAfterGame": "Réafficher le launcher après la fermeture du jeu",
       "launchAtLogin": "Démarrer avec le système",
       "launchAtLoginDescription": "Le launcher démarre directement dans la zone de notification, sans fenêtre — vos amis vous voient en ligne et peuvent vous appeler.",
       "launchAtLoginUnsupported": "Disponible dans la version installée du launcher.",
@@ -2118,6 +2267,7 @@
       "needsUpdate": "Mise à jour du pack"
     },
     "viewList": "Liste",
+    "viewCompact": "Compacte",
     "viewGrid": "Grille",
     "noResults": "Aucun résultat",
     "clearFilters": "Effacer les filtres",
@@ -4686,7 +4836,9 @@
     "offline": {
       "internet": "Pas de réseau",
       "backend": "Services en panne"
-    }
+    },
+    "sidebarCollapse": "Réduire la barre latérale",
+    "sidebarExpand": "Déployer la barre latérale"
   },
   "instanceSettings": {
     "title": "Paramètres de l’instance",
@@ -5857,5 +6009,221 @@
     "memory": "Mémoire {{from}} → {{to}}",
     "memoryDone": "Mémoire : {{to}}",
     "failed": "La correction n’a pas été appliquée"
+  },
+  "layout": {
+    "show": "Afficher « {{name}} »",
+    "hide": "Masquer « {{name}} »",
+    "alwaysVisible": "Toujours affiché : on peut seulement le déplacer",
+    "hideFromSidebar": "Masquer de la barre latérale",
+    "customize": "Personnaliser l’interface",
+    "customizeAction": "Personnaliser",
+    "customizeDescription": "Déplacez les éléments de la barre latérale et masquez le superflu directement à l’écran",
+    "editHint": "Déplacez les éléments de la barre latérale, l’œil masque le superflu. Les blocs d’accueil sont sur « Jouer ».",
+    "moreSettings": "Plus de réglages",
+    "reset": "Réinitialiser la disposition",
+    "done": "Terminé",
+    "pin": "Épingler dans la barre latérale",
+    "unpin": "Désépingler",
+    "dockMore": "{{count}} de plus",
+    "dockMoreHint": "Toutes les instances sont sur « Jouer »",
+    "nowHint": "Les téléchargements, erreurs et partages de monde apparaissent ici",
+    "moveUp": "Monter « {{name}} »",
+    "moveDown": "Descendre « {{name}} »",
+    "groups": {
+      "sidebar": "Barre latérale",
+      "home": "Écran « Jouer »",
+      "instance": "Écran d’instance"
+    },
+    "sidebar": {
+      "title": "Éléments et ordre",
+      "description": "« Jouer » et « Paramètres » ne peuvent pas être masqués",
+      "dock": "Instances",
+      "now": "En cours"
+    },
+    "dock": {
+      "title": "Instances dans la barre",
+      "description": "Les épinglées restent visibles, les autres par dernier lancement",
+      "all": "Toutes",
+      "hiddenCount": "Masquées de la barre : {{count}}",
+      "showAll": "Tout afficher"
+    },
+    "home": {
+      "title": "Écran « Jouer »",
+      "rowTitle": "Blocs de « Jouer »",
+      "description": "La carte de la dernière instance au-dessus de la liste",
+      "hero": "Carte d’instance",
+      "stats": "Statistiques",
+      "continue": "« Continuer »"
+    },
+    "instance": {
+      "defaultTab": "Onglet à l’ouverture",
+      "defaultTabDescription": "Si l’instance n’a pas cet onglet, l’aperçu s’ouvre",
+      "tabs": "Onglets",
+      "tabsDescription": "Un onglet masqué s’ouvre quand même depuis un lien ou un menu",
+      "overview": "Cartes de l’aperçu",
+      "overviewDescription": "Les autres cartes occupent la place libérée"
+    },
+    "overview": {
+      "screenshots": "Captures",
+      "notes": "Notes",
+      "sessions": "Sessions"
+    },
+    "presets": {
+      "title": "Ensembles prêts",
+      "description": "Un démarrage rapide : tout reste modifiable ensuite",
+      "custom": "Votre disposition actuelle est personnalisée : un ensemble la remplace, mais c’est annulable",
+      "applied": "Ensemble « {{name}} » appliqué",
+      "undo": "Annuler",
+      "command": "Ensemble d’interface : {{name}}",
+      "standard": {
+        "title": "Standard",
+        "description": "Comme après l’installation"
+      },
+      "compact": {
+        "title": "Compact",
+        "description": "Pour petits écrans : barre étroite, liste dense"
+      },
+      "minimal": {
+        "title": "Minimal",
+        "description": "Pour jouer seul : sans Personnes, Actualités ni effets"
+      }
+    }
+  },
+  "theme": {
+    "title": "Thème de l’interface",
+    "description": "Grubie est le thème sombre de la marque. Vous pouvez créer le vôtre avec vos couleurs et une image",
+    "newTheme": "Nouveau thème",
+    "newName": "Mon thème",
+    "copyName": "{{name}} (copie)",
+    "edit": "Modifier",
+    "duplicate": "Faire une copie",
+    "delete": "Supprimer le thème",
+    "deleteConfirm": "Le thème « {{name}} » sera supprimé définitivement. L’image de fond reste dans le dossier des thèmes.",
+    "saved": "Thème « {{name}} » enregistré",
+    "limit": "Vous pouvez garder jusqu’à {{count}} thèmes",
+    "accentByTheme": "La couleur d’accent est définie par le thème « {{name}} »",
+    "command": "Thème : {{name}}",
+    "builtIn": {
+      "grubie": "Grubie",
+      "oled": "OLED",
+      "light": "Clair"
+    },
+    "editor": {
+      "title": "Éditeur de thème",
+      "livePreview": "les changements s’affichent tout de suite dans le launcher, jusqu’à l’enregistrement ou l’annulation",
+      "name": "Nom",
+      "mode": "Base",
+      "modeDescription": "Couleurs d’état sombres ou claires : succès, avertissements, erreurs",
+      "modes": {
+        "dark": "Sombre",
+        "light": "Clair"
+      },
+      "colors": "Couleurs",
+      "background": "Fond",
+      "surface": "Panneaux",
+      "foreground": "Texte",
+      "accent": "Accent",
+      "ownAccent": "Couleur d’accent propre",
+      "picture": "Image de fond",
+      "pictureDescription": "PNG, JPG ou WEBP. L’image reste sur cet ordinateur",
+      "pick": "Choisir une image",
+      "change": "Remplacer",
+      "remove": "Retirer",
+      "dim": "Assombrir",
+      "blur": "Flou",
+      "panelOpacity": "Opacité des panneaux",
+      "readability": "Lisibilité",
+      "readabilityDescription": "Vérifiée sans l’image : l’assombrissement garde le texte lisible par-dessus",
+      "blocked": "Corrigez les points en rouge : ce texte serait illisible",
+      "save": "Enregistrer le thème"
+    },
+    "checks": {
+      "text": "Texte sur les panneaux",
+      "background": "Texte sur le fond",
+      "muted": "Texte secondaire",
+      "faint": "Libellés",
+      "accent": "Accent sur les panneaux",
+      "accentText": "Texte du bouton"
+    },
+    "transfer": {
+      "export": "Enregistrer dans un fichier",
+      "copyCode": "Copier le code",
+      "openFile": "Ouvrir un fichier de thème",
+      "pasteCode": "Coller un code",
+      "dropHint": "ou déposez un fichier .grubietheme dans la fenêtre",
+      "pasteTitle": "Coller un code de thème",
+      "pasteDescription": "Un code transporte les couleurs du thème. L’image de fond ne passe pas ainsi : il faut un fichier de thème",
+      "add": "Ajouter le thème",
+      "imported": "Thème « {{name}} » ajouté",
+      "exported": "Thème « {{name}} » enregistré dans un fichier",
+      "exportFailed": "Impossible d’enregistrer le thème dans un fichier",
+      "badFile": "Ce n’est pas un fichier de thème Grubie, ou il est endommagé",
+      "badCode": "Code de thème non reconnu",
+      "unreadable": "Le thème n’a pas passé le contrôle de lisibilité : ce texte serait illisible",
+      "codeCopied": "Code du thème copié",
+      "codeNoPicture": "L’image de fond n’est pas dans le code. Enregistrez le thème dans un fichier pour la partager"
+    },
+    "gallery": {
+      "tabs": "Source des thèmes",
+      "tabMine": "Mes thèmes",
+      "tab": "Galerie",
+      "publish": "Publier dans la galerie",
+      "publishTitle": "Publier « {{name}} » ?",
+      "publishBody": "Le thème sera vérifié par un modérateur. Une fois approuvé, tout le monde le verra dans la galerie du launcher et sur le site, avec votre pseudo comme auteur.",
+      "publishPicture": "L’image de fond sera compressée en 1920×1080.",
+      "publishAction": "Publier",
+      "signIn": "Connectez-vous pour publier des thèmes dans la galerie",
+      "published": "« {{name}} » envoyé pour vérification",
+      "publishedHint": "Son statut s’affiche dans l’onglet Galerie",
+      "search": "Rechercher un thème",
+      "modeLabel": "Base",
+      "sortLabel": "Tri",
+      "untitled": "Sans nom",
+      "unknownAuthor": "Auteur inconnu",
+      "withPicture": "Avec image de fond",
+      "install": "Installer",
+      "apply": "Appliquer",
+      "active": "Actif",
+      "more": "Afficher {{count}} de plus",
+      "empty": "La galerie n’a pas encore de thèmes",
+      "emptyFiltered": "Aucun thème pour cette recherche",
+      "emptyHint": "Créez votre thème et publiez-le depuis le menu « … » de sa carte",
+      "mine": "Mes publications",
+      "unpublish": "Retirer de la galerie",
+      "unpublishConfirm": "« {{name}} » disparaîtra de la galerie. Ceux qui l’ont déjà installé le gardent.",
+      "unpublished": "« {{name}} » retiré de la galerie",
+      "installTitle": "Installer le thème « {{name}} » ?",
+      "installBy": "Par {{author}}. Le thème rejoindra vos thèmes et s’activera aussitôt.",
+      "installHint": "Le thème rejoindra vos thèmes et s’activera aussitôt.",
+      "mode": {
+        "all": "Tous",
+        "dark": "Sombres",
+        "light": "Clairs"
+      },
+      "sort": {
+        "new": "Nouveaux",
+        "downloads": "Populaires"
+      },
+      "status": {
+        "pending": "En vérification",
+        "approved": "Dans la galerie",
+        "rejected": "Refusé"
+      },
+      "errors": {
+        "bad_picture": "Impossible de préparer l’image de fond : il faut un PNG, JPG ou WEBP d’au moins 360 px",
+        "duplicate": "Ce thème est déjà dans la galerie ou en attente de vérification",
+        "duplicateRejected": "Ce thème a déjà été refusé — la raison est indiquée ci-dessous",
+        "publish_banned": "La publication dans la galerie est fermée pour votre compte",
+        "unreadable": "Le thème n’a pas passé le contrôle de lisibilité : ce texte serait illisible",
+        "pending_limit": "Vous avez déjà 5 thèmes en vérification. Attendez une décision",
+        "name_required": "Le thème doit avoir un nom",
+        "offline": "Pas de connexion au serveur. Vérifiez Internet et réessayez",
+        "failed": "Impossible de publier le thème. Réessayez plus tard",
+        "install": "Impossible d’installer le thème depuis la galerie",
+        "unpublish": "Impossible de retirer le thème de la galerie",
+        "load": "La galerie ne s’est pas chargée. Vérifiez votre connexion",
+        "notFound": "Thème introuvable : l’auteur l’a peut-être supprimé"
+      }
+    }
   }
 }

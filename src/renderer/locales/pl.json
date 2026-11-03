@@ -1470,6 +1470,8 @@
     "sections": {
       "game": "Gra",
       "interface": "Interfejs",
+      "themes": "Motywy",
+      "layout": "Układ",
       "voice": "Czat głosowy",
       "storage": "Pamięć",
       "downloads": "Pobieranie",
@@ -1494,7 +1496,17 @@
     "voiceGateDescription": "Mikrofon wysyła dźwięk tylko wtedy, gdy mówisz głośniej niż próg. Do rozmowy bez „naciśnij, aby mówić”: klawiatura i szum tła nie przechodzą",
     "voiceGateThreshold": "Próg: {{value}} dB",
     "voiceOverlay": "Kto mówi — nad grą",
-    "voiceOverlayDescription": "Podczas gry w lewym górnym rogu widać, kto mówi. Nie działa nad pełnym ekranem na wyłączność",
+    "voiceOverlayDescription": "Podczas gry w rogu ekranu widać, kto mówi. Nie działa nad pełnym ekranem na wyłączność",
+    "voiceOverlayCorner": "Róg ekranu",
+    "voiceOverlayCorners": {
+      "top-left": "Lewy górny",
+      "top-right": "Prawy górny",
+      "bottom-left": "Lewy dolny",
+      "bottom-right": "Prawy dolny"
+    },
+    "voiceOverlayPrimary": "Główny monitor",
+    "voiceOverlayScreen": "Monitor {{index}}",
+    "voiceOverlayPreview": "Pokaż przykład",
     "voiceDevices": "Urządzenia audio",
     "voiceMicTestStart": "Testuj",
     "voiceMicTestStop": "Zatrzymaj",
@@ -1629,9 +1641,21 @@
     },
     "interface": {
       "languageDescription": "Działa od razu, bez ponownego uruchamiania",
+      "groups": {
+        "effects": "Animacje i efekty",
+        "layout": "Układ",
+        "soundAndLogs": "Dźwięk i logi"
+      },
+      "uiScale": "Skala interfejsu",
+      "uiScaleDescription": "Rozmiar tekstu, przycisków i odstępów. Działa też z Ctrl + kółko myszy.",
+      "uiScaleLimited": "Więcej niż {{value}} nie mieści się na tym ekranie",
+      "uiScaleToast": "Skala interfejsu: {{value}}",
+      "logFontSize": "Rozmiar tekstu w logach",
+      "logFontSizeDescription": "Logi gry i konsola serwera",
       "instancesView": "Lista instancji",
       "instancesViewDescription": "Jak lista na ekranie „Graj” jest sortowana i układana",
       "viewList": "Lista",
+      "viewCompact": "Kompaktowo",
       "viewGrid": "Siatka",
       "sorts": {
         "activity": "Według aktywności",
@@ -1655,6 +1679,9 @@
           "paletteActions": "Paleta, tylko czynności",
           "assistant": "Asystent",
           "search": "Szukaj na bieżącym ekranie: mody, ustawienia",
+          "sidebar": "Zwiń lub rozwiń panel boczny",
+          "zoom": "Powiększ lub pomniejsz interfejs",
+          "zoomReset": "Przywróć skalę 100%",
           "account": "Przełącz na konto 1…9",
           "back": "Wstecz w historii",
           "forward": "Dalej w historii",
@@ -1697,6 +1724,22 @@
       },
       "accent": "Kolor akcentu",
       "accentDescription": "Kolor przycisku „Graj”, zaznaczeń i aktywnych kontrolek. Fioletowy to kolor marki.",
+      "highContrast": "Wysoki kontrast",
+      "highContrastDescription": "Tekst pomocniczy i ramki są jaśniejsze. Kolor akcentu się nie zmienia.",
+      "motion": "Animacje",
+      "motionDescription": "Bez animacji interfejs reaguje natychmiast i mniej obciąża komputer obok gry.",
+      "motionModes": {
+        "system": "Jak w systemie",
+        "on": "Włączone",
+        "off": "Wyłączone"
+      },
+      "ambientTint": "Poświata okładki",
+      "ambientTintDescription": "Tło przyjmuje kolor okładki wybranej instancji",
+      "backgroundGrain": "Ziarno w tle",
+      "backgroundGrainDescription": "Lekki szum na całym oknie",
+      "sidebarCollapsed": "Zwinięty panel boczny",
+      "sidebarCollapsedDescription": "Tylko ikony — więcej miejsca na treść",
+      "soundVolume": "Głośność",
       "accents": {
         "violet": "Fioletowy (marka)",
         "blue": "Niebieski",
@@ -1768,10 +1811,25 @@
         "description": "Język interfejsu. Nowe instancje uruchamiają grę w tym samym języku.",
         "keywords": "język language locale polski angielski rosyjski ukraiński english русский українська deutsch español français português türkçe"
       },
+      "theme": {
+        "title": "Motyw interfejsu",
+        "description": "Wbudowane motywy albo własne kolory i obraz",
+        "keywords": "motyw ciemny jasny oled tło obraz tapeta kolory wygląd"
+      },
+      "uiScale": {
+        "title": "Skala interfejsu",
+        "description": "Większy lub mniejszy tekst i przyciski",
+        "keywords": "zoom skala rozmiar czcionka tekst większy mniejszy"
+      },
       "sounds": {
         "title": "Dźwięki powiadomień",
         "description": "Koniec instalacji, awaria, zaproszenia od znajomych",
-        "keywords": "dźwięk audio powiadomienie wycisz"
+        "keywords": "dźwięk audio powiadomienie wycisz głośność"
+      },
+      "logFontSize": {
+        "title": "Rozmiar tekstu w logach",
+        "description": "Rozmiar czcionki w logach gry i konsoli serwera",
+        "keywords": "czcionka rozmiar logi konsola tekst"
       },
       "instancesView": {
         "title": "Lista instancji",
@@ -1811,7 +1869,7 @@
       "voiceOverlay": {
         "title": "Kto mówi — nad grą",
         "description": "Nazwy mówiących w rogu ekranu",
-        "keywords": "nakładka overlay mówi gra ekran róg"
+        "keywords": "nakładka overlay mówi gra ekran róg róg monitor ekran pozycja"
       },
       "streamerMode": {
         "title": "Tryb streamera",
@@ -1913,15 +1971,90 @@
         "description": "Kolor przycisków i zaznaczeń",
         "keywords": "kolor motyw akcent dostosuj wygląd paleta"
       },
+      "highContrast": {
+        "title": "Wysoki kontrast",
+        "description": "Jaśniejszy tekst i ramki",
+        "keywords": "kontrast dostępność czytelność jasność tekst ramki"
+      },
+      "motion": {
+        "title": "Animacje",
+        "description": "Jak w systemie, włączone lub wyłączone",
+        "keywords": "animacje ruch przejścia efekty wyłącz płynność"
+      },
+      "ambientTint": {
+        "title": "Poświata okładki",
+        "description": "Tło w kolorze okładki instancji",
+        "keywords": "poświata kolor tło okładka efekty"
+      },
+      "backgroundGrain": {
+        "title": "Ziarno w tle",
+        "description": "Lekki szum na oknie",
+        "keywords": "ziarno szum tło tekstura efekty"
+      },
       "seasonalDecor": {
         "title": "Świąteczne dekoracje",
         "description": "Halloweenowe nietoperze, dynie i pajęczyny",
         "keywords": "halloween święto sezon wydarzenie motyw dekoracje dynia nietoperze nowy rok boże narodzenie"
       },
+      "sidebarCollapsed": {
+        "title": "Zwinięty panel boczny",
+        "description": "Tylko ikony w panelu bocznym",
+        "keywords": "panel boczny zwiń kompaktowy ikony wąski"
+      },
+      "layoutPresets": {
+        "title": "Gotowe zestawy",
+        "description": "Układ standardowy, kompaktowy lub minimalny",
+        "keywords": "zestaw preset układ kompaktowy minimalny standardowy szybko"
+      },
+      "layoutCustomize": {
+        "title": "Dostosuj interfejs",
+        "description": "Przeciągaj i ukrywaj bezpośrednio na ekranie",
+        "keywords": "układ dostosuj edycja przeciągnij ukryj kolejność interfejs"
+      },
+      "layoutSidebar": {
+        "title": "Elementy panelu bocznego",
+        "description": "Ukryj i zmień kolejność elementów",
+        "keywords": "panel boczny menu elementy kolejność ukryj ludzie aktualności instancje"
+      },
+      "layoutDock": {
+        "title": "Instancje w panelu",
+        "description": "Ile instancji pokazuje panel boczny",
+        "keywords": "panel boczny instancje limit przypnij ukryj"
+      },
+      "layoutHome": {
+        "title": "Bloki ekranu „Graj”",
+        "description": "Karta, statystyki, „Kontynuuj”",
+        "keywords": "strona główna graj karta statystyki kontynuuj ukryj"
+      },
+      "layoutInstanceTab": {
+        "title": "Karta przy otwarciu",
+        "description": "Która karta instancji otwiera się pierwsza",
+        "keywords": "instancja karta domyślna przegląd zawartość otwórz"
+      },
+      "layoutTabs": {
+        "title": "Karty instancji",
+        "description": "Ukryj rzadko używane karty",
+        "keywords": "karty instancji ukryj logi statystyki konfiguracje światy serwery"
+      },
+      "layoutOverview": {
+        "title": "Karty przeglądu",
+        "description": "Ukryj zrzuty, notatki lub sesje",
+        "keywords": "przegląd karty zrzuty notatki sesje ukryj"
+      },
       "closeToTray": {
         "title": "Zamykaj do zasobnika",
         "description": "Zamknięcie ukrywa okno, rozmowy i gry trwają dalej",
         "keywords": "zasobnik tray zamknij tło minimalizuj rozmowa"
+      },
+      "startScreen": {
+        "title": "Ekran startowy",
+        "description": "Co otwiera się po uruchomieniu launchera",
+        "keywords": "start uruchomienie ekran otwórz launcher"
+      },
+      "gameWindow": {
+        "title": "Po uruchomieniu gry",
+        "description": "Zminimalizuj, schowaj do zasobnika lub zostaw otwarty launcher",
+        "keywords": "gra uruchomienie okno zminimalizuj zasobnik schowaj przywróć"
       },
       "launchAtLogin": {
         "title": "Uruchamiaj z systemem",
@@ -1960,6 +2093,22 @@
     "system": {
       "closeToTray": "Zamykaj do zasobnika",
       "closeToTrayDescription": "Przycisk zamknięcia ukrywa okno, a launcher działa dalej: rozmowy trwają, znajomi widzą Cię online, gry i pobierania toczą się dalej. Wyjście — z ikony w zasobniku.",
+      "startScreen": "Ekran startowy",
+      "startScreenDescription": "Co otwiera się po uruchomieniu launchera",
+      "startScreens": {
+        "home": "„Graj”",
+        "lastInstance": "Ostatnio grana instancja",
+        "people": "Ludzie",
+        "news": "Aktualności"
+      },
+      "gameWindow": "Po uruchomieniu gry",
+      "gameWindowDescription": "Co zrobić z oknem launchera, gdy pojawi się okno gry",
+      "gameWindowModes": {
+        "minimize": "Zminimalizuj",
+        "tray": "Schowaj do zasobnika",
+        "keep": "Zostaw otwarte"
+      },
+      "restoreAfterGame": "Przywróć launcher po zamknięciu gry",
       "launchAtLogin": "Uruchamiaj z systemem",
       "launchAtLoginDescription": "Launcher startuje od razu w zasobniku, bez okna — znajomi widzą Cię online i mogą zadzwonić.",
       "launchAtLoginUnsupported": "Dostępne w zainstalowanej wersji launchera.",
@@ -2135,6 +2284,7 @@
       "needsUpdate": "Aktualizacja paczki"
     },
     "viewList": "Lista",
+    "viewCompact": "Kompaktowo",
     "viewGrid": "Siatka",
     "noResults": "Nic nie znaleziono",
     "clearFilters": "Wyczyść filtry",
@@ -4722,7 +4872,9 @@
     "offline": {
       "internet": "Brak sieci",
       "backend": "Usługi niedostępne"
-    }
+    },
+    "sidebarCollapse": "Zwiń panel",
+    "sidebarExpand": "Rozwiń panel"
   },
   "instanceSettings": {
     "title": "Ustawienia instancji",
@@ -5905,5 +6057,221 @@
     "memory": "Pamięć {{from}} → {{to}}",
     "memoryDone": "Pamięć: {{to}}",
     "failed": "Poprawka nie została zastosowana"
+  },
+  "layout": {
+    "show": "Pokaż „{{name}}”",
+    "hide": "Ukryj „{{name}}”",
+    "alwaysVisible": "Zawsze widoczne — można tylko przenieść",
+    "hideFromSidebar": "Ukryj w panelu bocznym",
+    "customize": "Dostosuj interfejs",
+    "customizeAction": "Dostosuj",
+    "customizeDescription": "Przeciągaj elementy panelu bocznego i ukrywaj zbędne bezpośrednio na ekranie",
+    "editHint": "Przeciągaj elementy panelu bocznego, oko ukrywa zbędne. Bloki strony głównej są na ekranie „Graj”.",
+    "moreSettings": "Więcej ustawień",
+    "reset": "Przywróć układ",
+    "done": "Gotowe",
+    "pin": "Przypnij w panelu",
+    "unpin": "Odepnij",
+    "dockMore": "Jeszcze {{count}}",
+    "dockMoreHint": "Wszystkie instancje są na ekranie „Graj”",
+    "nowHint": "Tu pojawiają się pobierania, błędy i udostępnianie świata",
+    "moveUp": "Przesuń „{{name}}” wyżej",
+    "moveDown": "Przesuń „{{name}}” niżej",
+    "groups": {
+      "sidebar": "Panel boczny",
+      "home": "Ekran „Graj”",
+      "instance": "Ekran instancji"
+    },
+    "sidebar": {
+      "title": "Elementy i kolejność",
+      "description": "„Graj” i „Ustawień” nie da się ukryć",
+      "dock": "Instancje",
+      "now": "Teraz"
+    },
+    "dock": {
+      "title": "Instancje w panelu",
+      "description": "Przypięte widać zawsze, resztę według ostatniego uruchomienia",
+      "all": "Wszystkie",
+      "hiddenCount": "Ukryte w panelu: {{count}}",
+      "showAll": "Pokaż wszystkie"
+    },
+    "home": {
+      "title": "Ekran „Graj”",
+      "rowTitle": "Bloki ekranu „Graj”",
+      "description": "Karta ostatniej instancji nad listą",
+      "hero": "Karta instancji",
+      "stats": "Statystyki",
+      "continue": "„Kontynuuj”"
+    },
+    "instance": {
+      "defaultTab": "Karta przy otwarciu",
+      "defaultTabDescription": "Jeśli instancja nie ma tej karty, otworzy się „Przegląd”",
+      "tabs": "Karty",
+      "tabsDescription": "Ukryta karta i tak otworzy się z linku lub menu",
+      "overview": "Karty przeglądu",
+      "overviewDescription": "Pozostałe karty zajmą zwolnione miejsce"
+    },
+    "overview": {
+      "screenshots": "Zrzuty ekranu",
+      "notes": "Notatki",
+      "sessions": "Sesje"
+    },
+    "presets": {
+      "title": "Gotowe zestawy",
+      "description": "Szybki start — potem można zmienić wszystko",
+      "custom": "Teraz masz własny układ: zestaw go zastąpi, ale można to cofnąć",
+      "applied": "Zastosowano zestaw „{{name}}”",
+      "undo": "Cofnij",
+      "command": "Zestaw interfejsu: {{name}}",
+      "standard": {
+        "title": "Standardowy",
+        "description": "Jak po instalacji"
+      },
+      "compact": {
+        "title": "Kompaktowy",
+        "description": "Na małe ekrany: wąski panel, gęsta lista"
+      },
+      "minimal": {
+        "title": "Minimalny",
+        "description": "Do gry w pojedynkę: bez Ludzi, Aktualności i efektów"
+      }
+    }
+  },
+  "theme": {
+    "title": "Motyw interfejsu",
+    "description": "Grubie to firmowy ciemny motyw. Możesz zbudować własny z własnych kolorów i obrazu",
+    "newTheme": "Nowy motyw",
+    "newName": "Mój motyw",
+    "copyName": "{{name}} — kopia",
+    "edit": "Edytuj",
+    "duplicate": "Utwórz kopię",
+    "delete": "Usuń motyw",
+    "deleteConfirm": "Motyw „{{name}}” zostanie usunięty na zawsze. Obraz tła zostanie w folderze motywów.",
+    "saved": "Zapisano motyw „{{name}}”",
+    "limit": "Możesz zapisać do {{count}} motywów",
+    "accentByTheme": "Kolor akcentu ustala teraz motyw „{{name}}”",
+    "command": "Motyw: {{name}}",
+    "builtIn": {
+      "grubie": "Grubie",
+      "oled": "OLED",
+      "light": "Jasny"
+    },
+    "editor": {
+      "title": "Edytor motywu",
+      "livePreview": "zmiany od razu widać w całym launcherze, dopóki nie zapiszesz lub nie anulujesz",
+      "name": "Nazwa",
+      "mode": "Podstawa",
+      "modeDescription": "Ciemne lub jasne kolory stanów: sukces, ostrzeżenia, błędy",
+      "modes": {
+        "dark": "Ciemny",
+        "light": "Jasny"
+      },
+      "colors": "Kolory",
+      "background": "Tło",
+      "surface": "Panele",
+      "foreground": "Tekst",
+      "accent": "Akcent",
+      "ownAccent": "Własny kolor akcentu",
+      "picture": "Obraz w tle",
+      "pictureDescription": "PNG, JPG lub WEBP. Obraz zostaje na tym komputerze",
+      "pick": "Wybierz obraz",
+      "change": "Zamień",
+      "remove": "Usuń",
+      "dim": "Przyciemnienie",
+      "blur": "Rozmycie",
+      "panelOpacity": "Krycie paneli",
+      "readability": "Czytelność",
+      "readabilityDescription": "Sprawdzane bez obrazu: przyciemnienie utrzymuje czytelność tekstu na nim",
+      "blocked": "Popraw czerwone punkty: z tymi kolorami tekstu nie da się przeczytać",
+      "save": "Zapisz motyw"
+    },
+    "checks": {
+      "text": "Tekst na panelach",
+      "background": "Tekst na tle",
+      "muted": "Tekst pomocniczy",
+      "faint": "Podpisy i etykiety",
+      "accent": "Akcent na panelach",
+      "accentText": "Napis na przycisku"
+    },
+    "transfer": {
+      "export": "Zapisz do pliku",
+      "copyCode": "Kopiuj kod",
+      "openFile": "Otwórz plik motywu",
+      "pasteCode": "Wklej kod",
+      "dropHint": "albo przeciągnij plik .grubietheme do okna",
+      "pasteTitle": "Wklej kod motywu",
+      "pasteDescription": "Kod przenosi kolory motywu. Obrazu tła tak nie przekażesz — do tego potrzebny jest plik motywu",
+      "add": "Dodaj motyw",
+      "imported": "Dodano motyw „{{name}}”",
+      "exported": "Zapisano motyw „{{name}}” do pliku",
+      "exportFailed": "Nie udało się zapisać motywu do pliku",
+      "badFile": "To nie jest plik motywu Grubie albo jest uszkodzony",
+      "badCode": "Nie rozpoznano kodu motywu",
+      "unreadable": "Motyw nie przeszedł testu czytelności: z tymi kolorami tekstu nie da się przeczytać",
+      "codeCopied": "Skopiowano kod motywu",
+      "codeNoPicture": "Obraz tła nie trafia do kodu. Zapisz motyw do pliku, aby go udostępnić"
+    },
+    "gallery": {
+      "tabs": "Źródło motywów",
+      "tabMine": "Moje motywy",
+      "tab": "Galeria",
+      "publish": "Opublikuj w galerii",
+      "publishTitle": "Opublikować „{{name}}”?",
+      "publishBody": "Motyw trafi do sprawdzenia przez moderatora. Po akceptacji wszyscy zobaczą go w galerii launchera i na stronie, a jako autor pojawi się twój nick.",
+      "publishPicture": "Obraz tła zostanie skompresowany do 1920×1080.",
+      "publishAction": "Opublikuj",
+      "signIn": "Zaloguj się, aby publikować motywy w galerii",
+      "published": "Wysłano „{{name}}” do sprawdzenia",
+      "publishedHint": "Status zobaczysz w karcie „Galeria”",
+      "search": "Szukaj motywów",
+      "modeLabel": "Baza",
+      "sortLabel": "Sortowanie",
+      "untitled": "Bez nazwy",
+      "unknownAuthor": "Nieznany autor",
+      "withPicture": "Z obrazem w tle",
+      "install": "Zainstaluj",
+      "apply": "Zastosuj",
+      "active": "Włączony",
+      "more": "Pokaż jeszcze {{count}}",
+      "empty": "W galerii nie ma jeszcze motywów",
+      "emptyFiltered": "Brak motywów dla tego wyszukiwania",
+      "emptyHint": "Stwórz własny motyw i opublikuj go z menu „…” na jego karcie",
+      "mine": "Moje publikacje",
+      "unpublish": "Usuń z galerii",
+      "unpublishConfirm": "„{{name}}” zniknie z galerii. Kto już go zainstalował, zachowa go.",
+      "unpublished": "Usunięto „{{name}}” z galerii",
+      "installTitle": "Zainstalować motyw „{{name}}”?",
+      "installBy": "Autor: {{author}}. Motyw dołączy do twoich motywów i od razu się włączy.",
+      "installHint": "Motyw dołączy do twoich motywów i od razu się włączy.",
+      "mode": {
+        "all": "Wszystkie",
+        "dark": "Ciemne",
+        "light": "Jasne"
+      },
+      "sort": {
+        "new": "Nowe",
+        "downloads": "Popularne"
+      },
+      "status": {
+        "pending": "W sprawdzaniu",
+        "approved": "W galerii",
+        "rejected": "Odrzucony"
+      },
+      "errors": {
+        "bad_picture": "Nie udało się przygotować obrazu tła: potrzebny PNG, JPG lub WEBP o boku co najmniej 360 px",
+        "duplicate": "Ten motyw już jest w galerii albo czeka na sprawdzenie",
+        "duplicateRejected": "Ten motyw już odrzucono — powód poniżej",
+        "publish_banned": "Publikowanie w galerii jest zablokowane dla twojego konta",
+        "unreadable": "Motyw nie przeszedł testu czytelności: z tymi kolorami tekstu nie da się przeczytać",
+        "pending_limit": "Masz już 5 motywów w sprawdzaniu. Poczekaj na decyzję",
+        "name_required": "Motyw musi mieć nazwę",
+        "offline": "Brak połączenia z serwerem. Sprawdź internet i spróbuj ponownie",
+        "failed": "Nie udało się opublikować motywu. Spróbuj później",
+        "install": "Nie udało się zainstalować motywu z galerii",
+        "unpublish": "Nie udało się usunąć motywu z galerii",
+        "load": "Galeria się nie wczytała. Sprawdź połączenie",
+        "notFound": "Nie znaleziono motywu: możliwe, że autor go usunął"
+      }
+    }
   }
 }

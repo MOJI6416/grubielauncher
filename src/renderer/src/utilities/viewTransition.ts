@@ -1,4 +1,5 @@
 import { flushSync } from "react-dom";
+import { isMotionReduced } from "@/lib/motionPreference";
 
 const MORPH_NAME = "morph-art";
 const POLL_MS = 16;
@@ -34,9 +35,7 @@ export function morphTransition({
   timeoutMs?: number;
 }): void {
   const from = document.querySelector<HTMLElement>(source);
-  const reducedMotion = window.matchMedia(
-    "(prefers-reduced-motion: reduce)",
-  ).matches;
+  const reducedMotion = isMotionReduced();
 
   if (!from || reducedMotion || typeof document.startViewTransition !== "function") {
     update();

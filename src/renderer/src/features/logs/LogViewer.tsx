@@ -35,6 +35,7 @@ import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
 import { useAtomValue } from "jotai";
 import { streamerActiveAtom } from "@renderer/features/streamer/streamerMode";
+import { settingsAtom } from "@renderer/stores/atoms";
 import { redactText } from "@renderer/features/streamer/redact";
 
 const LEVEL_TEXT: Record<LogLevel, string> = {
@@ -115,6 +116,7 @@ export function LogViewer({
   const { t } = useTranslation();
   const sourceIndicator = useSlidingIndicator<HTMLDivElement>();
   const isStreaming = useAtomValue(streamerActiveAtom);
+  const logFontSize = useAtomValue(settingsAtom).logFontSize;
   const entries = useMemo(
     () => (isStreaming ? sourceEntries.map(redactEntry) : sourceEntries),
     [isStreaming, sourceEntries],
@@ -140,7 +142,7 @@ export function LogViewer({
   const virtualizer = useVirtualizer({
     count: view.entries.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 22,
+    estimateSize: () => logFontSize * 2,
     overscan: 20,
     getItemKey: (index) => view.entries[index].id,
   });
@@ -476,10 +478,11 @@ export function LogViewer({
                 >
                   <div
                     className={cn(
-                      "flex min-w-0 gap-2 border-l-2 px-2 py-0.5 font-mono text-[0.7rem] leading-[1.55]",
+                      "flex min-w-0 gap-2 border-l-2 px-2 py-0.5 font-mono leading-[1.55]",
                       LEVEL_BORDER[entry.level],
                       active ? "bg-primary-soft" : "hover:bg-surface-2/60",
                     )}
+                    style={{ fontSize: logFontSize }}
                   >
                     {entry.time && (
                       <span className="w-[3.6rem] shrink-0 tabular-nums text-faint">

@@ -3,6 +3,7 @@ import i18n, { changeAppLanguage } from "@renderer/i18n";
 import { normalizeSettings, TSettings } from "@/types/Settings";
 import { loadAccounts } from "@renderer/features/accounts/loadAccounts";
 import { hydrateInstancesFile } from "@renderer/features/instances/instancesStore";
+import { hydrateUserThemes } from "@renderer/features/theme/themesStore";
 import {
   forgetLegacyViewPrefs,
   migrateInstancesViewPrefs,
@@ -86,6 +87,7 @@ export async function runBootstrap(
       loadSettings(paths.launcher),
       loadAccounts(),
       hydrateInstancesFile(paths.launcher),
+      hydrateUserThemes(paths.launcher),
     ]);
     if (isCancelled()) return;
 

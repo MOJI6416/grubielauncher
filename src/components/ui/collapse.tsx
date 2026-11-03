@@ -4,8 +4,8 @@ import {
   LazyMotion,
   domAnimation,
   m,
-  useReducedMotion,
 } from "motion/react";
+import { useReducedMotionPreference } from "@/lib/motionPreference";
 
 import { cn } from "@/lib/utils";
 import { motionTransition } from "@/lib/motion";
@@ -19,7 +19,7 @@ export function Collapse({
   children: ReactNode;
   className?: string;
 }) {
-  const transition = motionTransition(useReducedMotion());
+  const transition = motionTransition(useReducedMotionPreference());
   const node = useRef<HTMLDivElement | null>(null);
   const isOpen = useRef(show);
   isOpen.current = show;
@@ -63,7 +63,7 @@ export function CollapseInline({
   children: ReactNode;
   className?: string;
 }) {
-  const transition = motionTransition(useReducedMotion());
+  const transition = motionTransition(useReducedMotionPreference());
 
   return (
     <LazyMotion features={domAnimation}>

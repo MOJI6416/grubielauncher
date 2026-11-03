@@ -13,6 +13,8 @@ import {
   installActiveAtom,
 } from "@renderer/stores/atoms";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
+import { THEME_FILE_EXTENSION } from "@/shared/themeFile";
+import { importThemeFromFile } from "@renderer/features/theme/themeTransfer";
 
 const api = window.api;
 
@@ -107,6 +109,13 @@ export function FileDropHost() {
       if (!file) return;
 
       const name = file.name.toLowerCase();
+      if (name.endsWith(`.${THEME_FILE_EXTENSION}`)) {
+        const themePath = api.other.getPathForFile(file);
+        if (themePath) void importThemeFromFile(themePath);
+        else toast.warning(tRef.current("addVersion.dropNoPath"));
+        return;
+      }
+
       if (!name.endsWith(".zip") && !name.endsWith(".mrpack")) {
         toast.warning(tRef.current("addVersion.dropUnsupported"));
         return;

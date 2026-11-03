@@ -1455,6 +1455,8 @@
     "sections": {
       "game": "Jogo",
       "interface": "Interface",
+      "themes": "Temas",
+      "layout": "Layout",
       "voice": "Chat de voz",
       "storage": "Armazenamento",
       "downloads": "Downloads",
@@ -1479,7 +1481,17 @@
     "voiceGateDescription": "O microfone só envia som enquanto você estiver mais alto que o limite. Para falar sem apertar para falar: teclado e ruído de fundo ficam de fora",
     "voiceGateThreshold": "Limite: {{value}} dB",
     "voiceOverlay": "Quem está falando por cima do jogo",
-    "voiceOverlayDescription": "Enquanto você joga, o canto superior esquerdo mostra quem está falando. Não aparece sobre tela cheia exclusiva",
+    "voiceOverlayDescription": "Enquanto você joga, um canto da tela mostra quem está falando. Não aparece sobre tela cheia exclusiva",
+    "voiceOverlayCorner": "Canto da tela",
+    "voiceOverlayCorners": {
+      "top-left": "Superior esquerdo",
+      "top-right": "Superior direito",
+      "bottom-left": "Inferior esquerdo",
+      "bottom-right": "Inferior direito"
+    },
+    "voiceOverlayPrimary": "Monitor principal",
+    "voiceOverlayScreen": "Monitor {{index}}",
+    "voiceOverlayPreview": "Ver exemplo",
     "voiceDevices": "Dispositivos de áudio",
     "voiceMicTestStart": "Testar",
     "voiceMicTestStop": "Parar",
@@ -1614,9 +1626,21 @@
     },
     "interface": {
       "languageDescription": "Vale na hora, sem reiniciar",
+      "groups": {
+        "effects": "Animações e efeitos",
+        "layout": "Layout",
+        "soundAndLogs": "Som e logs"
+      },
+      "uiScale": "Escala da interface",
+      "uiScaleDescription": "Tamanho do texto, dos botões e dos espaçamentos. Também funciona com Ctrl + roda do mouse.",
+      "uiScaleLimited": "Acima de {{value}} não cabe nesta tela",
+      "uiScaleToast": "Escala da interface: {{value}}",
+      "logFontSize": "Tamanho do texto dos logs",
+      "logFontSizeDescription": "Logs do jogo e console do servidor",
       "instancesView": "Lista de instâncias",
       "instancesViewDescription": "Como a lista da tela Jogar é ordenada e organizada",
       "viewList": "Lista",
+      "viewCompact": "Compacta",
       "viewGrid": "Grade",
       "sorts": {
         "activity": "Por atividade",
@@ -1640,6 +1664,9 @@
           "paletteActions": "Paleta, só ações",
           "assistant": "Assistente",
           "search": "Buscar na tela atual: mods, configurações",
+          "sidebar": "Recolher ou expandir a barra lateral",
+          "zoom": "Aumentar ou diminuir a interface",
+          "zoomReset": "Voltar a escala para 100%",
           "account": "Trocar para a conta 1…9",
           "back": "Voltar no histórico",
           "forward": "Avançar no histórico",
@@ -1682,6 +1709,22 @@
       },
       "accent": "Cor de destaque",
       "accentDescription": "A cor do botão Jogar, das seleções e dos controles ativos. O violeta é a cor da marca.",
+      "highContrast": "Alto contraste",
+      "highContrastDescription": "Texto secundário e bordas ficam mais claros. A cor de destaque não muda.",
+      "motion": "Animações",
+      "motionDescription": "Sem animações, a interface responde na hora e exige menos do PC enquanto você joga.",
+      "motionModes": {
+        "system": "Como no sistema",
+        "on": "Ativadas",
+        "off": "Desativadas"
+      },
+      "ambientTint": "Brilho da capa",
+      "ambientTintDescription": "O fundo ganha a cor da capa da instância selecionada",
+      "backgroundGrain": "Granulado no fundo",
+      "backgroundGrainDescription": "Ruído leve sobre a janela inteira",
+      "sidebarCollapsed": "Barra lateral recolhida",
+      "sidebarCollapsedDescription": "Só ícones, mais espaço para o conteúdo",
+      "soundVolume": "Volume",
       "accents": {
         "violet": "Violeta (marca)",
         "blue": "Azul",
@@ -1753,10 +1796,25 @@
         "description": "Idioma da interface. Novas instâncias iniciam o jogo no mesmo idioma.",
         "keywords": "idioma língua português inglês russo ucraniano language english русский українська deutsch español français polski türkçe"
       },
+      "theme": {
+        "title": "Tema da interface",
+        "description": "Temas prontos ou suas cores e imagem",
+        "keywords": "tema escuro claro oled fundo imagem papel de parede cores aparência"
+      },
+      "uiScale": {
+        "title": "Escala da interface",
+        "description": "Texto e botões maiores ou menores",
+        "keywords": "zoom escala tamanho fonte texto maior menor"
+      },
       "sounds": {
         "title": "Sons de notificação",
         "description": "Instalação concluída, crash, convites de amigos",
-        "keywords": "som áudio notificação silenciar sound"
+        "keywords": "som áudio notificação silenciar sound volume"
+      },
+      "logFontSize": {
+        "title": "Tamanho do texto dos logs",
+        "description": "Tamanho da fonte nos logs do jogo e no console do servidor",
+        "keywords": "fonte tamanho logs console texto"
       },
       "instancesView": {
         "title": "Lista de instâncias",
@@ -1796,7 +1854,7 @@
       "voiceOverlay": {
         "title": "Quem está falando por cima do jogo",
         "description": "Nomes de quem fala no canto da tela",
-        "keywords": "overlay falando jogo tela canto"
+        "keywords": "overlay falando jogo tela canto canto monitor tela posição"
       },
       "streamerMode": {
         "title": "Modo streamer",
@@ -1898,15 +1956,90 @@
         "description": "A cor dos botões e das seleções",
         "keywords": "cor tema destaque personalizar aparência paleta"
       },
+      "highContrast": {
+        "title": "Alto contraste",
+        "description": "Texto e bordas mais claros",
+        "keywords": "contraste acessibilidade legibilidade brilho texto bordas"
+      },
+      "motion": {
+        "title": "Animações",
+        "description": "Como no sistema, ativadas ou desativadas",
+        "keywords": "animação movimento transições efeitos desativar suavidade"
+      },
+      "ambientTint": {
+        "title": "Brilho da capa",
+        "description": "Fundo na cor da capa da instância",
+        "keywords": "brilho cor fundo capa efeitos"
+      },
+      "backgroundGrain": {
+        "title": "Granulado no fundo",
+        "description": "Ruído leve sobre a janela",
+        "keywords": "granulado ruído fundo textura efeitos"
+      },
       "seasonalDecor": {
         "title": "Decoração de feriados",
         "description": "Morcegos, abóboras e teias de aranha no Halloween",
         "keywords": "halloween feriado temporada evento tema decoração abóbora morcegos ano novo natal"
       },
+      "sidebarCollapsed": {
+        "title": "Barra lateral recolhida",
+        "description": "Só ícones no painel lateral",
+        "keywords": "barra lateral painel recolher compacta ícones estreita"
+      },
+      "layoutPresets": {
+        "title": "Conjuntos prontos",
+        "description": "Layout padrão, compacto ou mínimo",
+        "keywords": "conjunto predefinição layout compacto mínimo padrão rápido"
+      },
+      "layoutCustomize": {
+        "title": "Personalizar a interface",
+        "description": "Arrastar e ocultar direto na tela",
+        "keywords": "layout personalizar editar arrastar ocultar ordem interface"
+      },
+      "layoutSidebar": {
+        "title": "Itens da barra lateral",
+        "description": "Ocultar e reordenar itens",
+        "keywords": "barra lateral menu itens ordem ocultar pessoas notícias instâncias"
+      },
+      "layoutDock": {
+        "title": "Instâncias na barra",
+        "description": "Quantas instâncias a barra lateral mostra",
+        "keywords": "barra lateral instâncias limite fixar ocultar"
+      },
+      "layoutHome": {
+        "title": "Blocos da tela “Jogar”",
+        "description": "Cartão, estatísticas, “Continuar”",
+        "keywords": "início jogar cartão estatísticas continuar ocultar"
+      },
+      "layoutInstanceTab": {
+        "title": "Aba ao abrir",
+        "description": "Qual aba da instância abre primeiro",
+        "keywords": "instância aba padrão visão geral conteúdo abrir"
+      },
+      "layoutTabs": {
+        "title": "Abas da instância",
+        "description": "Ocultar abas pouco usadas",
+        "keywords": "abas instância ocultar logs estatísticas configs mundos servidores"
+      },
+      "layoutOverview": {
+        "title": "Cartões da visão geral",
+        "description": "Ocultar capturas, notas ou sessões",
+        "keywords": "visão geral cartões capturas notas sessões ocultar"
+      },
       "closeToTray": {
         "title": "Minimizar para a bandeja ao fechar",
         "description": "Fechar oculta a janela; chamadas e jogos continuam",
         "keywords": "bandeja fechar segundo plano minimizar chamada tray"
+      },
+      "startScreen": {
+        "title": "Tela inicial",
+        "description": "O que abre quando o launcher inicia",
+        "keywords": "início inicialização tela abrir launcher"
+      },
+      "gameWindow": {
+        "title": "Quando o jogo iniciar",
+        "description": "Minimizar, esconder na bandeja ou deixar o launcher aberto",
+        "keywords": "jogo início janela minimizar bandeja esconder restaurar"
       },
       "launchAtLogin": {
         "title": "Iniciar com o sistema",
@@ -1944,6 +2077,22 @@
     "system": {
       "closeToTray": "Minimizar para a bandeja ao fechar",
       "closeToTrayDescription": "O botão de fechar oculta a janela e o launcher continua rodando: as chamadas continuam, os amigos veem você on-line, jogos e downloads seguem. Para sair, use o ícone da bandeja.",
+      "startScreen": "Tela inicial",
+      "startScreenDescription": "O que abre quando o launcher inicia",
+      "startScreens": {
+        "home": "“Jogar”",
+        "lastInstance": "Última instância jogada",
+        "people": "Pessoas",
+        "news": "Notícias"
+      },
+      "gameWindow": "Quando o jogo iniciar",
+      "gameWindowDescription": "O que fazer com a janela do launcher quando a janela do jogo aparecer",
+      "gameWindowModes": {
+        "minimize": "Minimizar",
+        "tray": "Esconder na bandeja",
+        "keep": "Deixar aberta"
+      },
+      "restoreAfterGame": "Mostrar o launcher de novo quando o jogo fechar",
       "launchAtLogin": "Iniciar com o sistema",
       "launchAtLoginDescription": "O launcher inicia direto na bandeja, sem janela — os amigos veem você on-line e podem ligar para você.",
       "launchAtLoginUnsupported": "Disponível na versão instalada do launcher.",
@@ -2118,6 +2267,7 @@
       "needsUpdate": "Atualizar pacote"
     },
     "viewList": "Lista",
+    "viewCompact": "Compacta",
     "viewGrid": "Grade",
     "noResults": "Nada encontrado",
     "clearFilters": "Limpar filtros",
@@ -4686,7 +4836,9 @@
     "offline": {
       "internet": "Sem rede",
       "backend": "Serviços fora do ar"
-    }
+    },
+    "sidebarCollapse": "Recolher barra lateral",
+    "sidebarExpand": "Expandir barra lateral"
   },
   "instanceSettings": {
     "title": "Configurações da instância",
@@ -5853,5 +6005,221 @@
     "memory": "Memória {{from}} → {{to}}",
     "memoryDone": "Memória: {{to}}",
     "failed": "A correção não foi aplicada"
+  },
+  "layout": {
+    "show": "Mostrar “{{name}}”",
+    "hide": "Ocultar “{{name}}”",
+    "alwaysVisible": "Sempre visível — só dá para mover",
+    "hideFromSidebar": "Ocultar da barra lateral",
+    "customize": "Personalizar a interface",
+    "customizeAction": "Personalizar",
+    "customizeDescription": "Arraste itens da barra lateral e oculte o que não precisa, direto na tela",
+    "editHint": "Arraste os itens da barra lateral; o olho oculta o que sobra. Os blocos da tela inicial ficam em “Jogar”.",
+    "moreSettings": "Mais configurações",
+    "reset": "Redefinir layout",
+    "done": "Pronto",
+    "pin": "Fixar na barra lateral",
+    "unpin": "Desafixar",
+    "dockMore": "Mais {{count}}",
+    "dockMoreHint": "Todas as instâncias ficam em “Jogar”",
+    "nowHint": "Downloads, erros e compartilhamento de mundo aparecem aqui",
+    "moveUp": "Subir “{{name}}”",
+    "moveDown": "Descer “{{name}}”",
+    "groups": {
+      "sidebar": "Barra lateral",
+      "home": "Tela “Jogar”",
+      "instance": "Tela da instância"
+    },
+    "sidebar": {
+      "title": "Itens e ordem",
+      "description": "“Jogar” e “Configurações” não podem ser ocultados",
+      "dock": "Instâncias",
+      "now": "Agora"
+    },
+    "dock": {
+      "title": "Instâncias na barra",
+      "description": "As fixadas aparecem sempre; o resto, pelo último início",
+      "all": "Todas",
+      "hiddenCount": "Ocultas da barra: {{count}}",
+      "showAll": "Mostrar todas"
+    },
+    "home": {
+      "title": "Tela “Jogar”",
+      "rowTitle": "Blocos da tela “Jogar”",
+      "description": "O cartão da última instância acima da lista",
+      "hero": "Cartão da instância",
+      "stats": "Estatísticas",
+      "continue": "“Continuar”"
+    },
+    "instance": {
+      "defaultTab": "Aba ao abrir",
+      "defaultTabDescription": "Se a instância não tiver essa aba, abre a “Visão geral”",
+      "tabs": "Abas",
+      "tabsDescription": "Uma aba oculta ainda abre por um link ou menu",
+      "overview": "Cartões da visão geral",
+      "overviewDescription": "Os outros cartões ocupam o espaço livre"
+    },
+    "overview": {
+      "screenshots": "Capturas",
+      "notes": "Notas",
+      "sessions": "Sessões"
+    },
+    "presets": {
+      "title": "Conjuntos prontos",
+      "description": "Um começo rápido — depois dá para mudar qualquer coisa",
+      "custom": "Agora o layout é seu: um conjunto o substitui, mas dá para desfazer",
+      "applied": "Conjunto “{{name}}” aplicado",
+      "undo": "Desfazer",
+      "command": "Conjunto de interface: {{name}}",
+      "standard": {
+        "title": "Padrão",
+        "description": "Como depois da instalação"
+      },
+      "compact": {
+        "title": "Compacto",
+        "description": "Para telas pequenas: barra estreita, lista densa"
+      },
+      "minimal": {
+        "title": "Mínimo",
+        "description": "Para jogar sozinho: sem Pessoas, Notícias e efeitos"
+      }
+    }
+  },
+  "theme": {
+    "title": "Tema da interface",
+    "description": "Grubie é o tema escuro da marca. Você pode montar o seu com suas cores e uma imagem",
+    "newTheme": "Novo tema",
+    "newName": "Meu tema",
+    "copyName": "{{name}} (cópia)",
+    "edit": "Editar",
+    "duplicate": "Fazer uma cópia",
+    "delete": "Excluir tema",
+    "deleteConfirm": "O tema “{{name}}” será excluído de vez. A imagem de fundo fica na pasta de temas.",
+    "saved": "Tema “{{name}}” salvo",
+    "limit": "Você pode guardar até {{count}} temas",
+    "accentByTheme": "A cor de destaque agora é definida pelo tema “{{name}}”",
+    "command": "Tema: {{name}}",
+    "builtIn": {
+      "grubie": "Grubie",
+      "oled": "OLED",
+      "light": "Claro"
+    },
+    "editor": {
+      "title": "Editor de tema",
+      "livePreview": "as mudanças aparecem na hora em todo o launcher até você salvar ou cancelar",
+      "name": "Nome",
+      "mode": "Base",
+      "modeDescription": "Cores de estado escuras ou claras: sucesso, avisos, erros",
+      "modes": {
+        "dark": "Escuro",
+        "light": "Claro"
+      },
+      "colors": "Cores",
+      "background": "Fundo",
+      "surface": "Painéis",
+      "foreground": "Texto",
+      "accent": "Destaque",
+      "ownAccent": "Cor de destaque própria",
+      "picture": "Imagem de fundo",
+      "pictureDescription": "PNG, JPG ou WEBP. A imagem fica neste computador",
+      "pick": "Escolher imagem",
+      "change": "Substituir",
+      "remove": "Remover",
+      "dim": "Escurecer",
+      "blur": "Desfoque",
+      "panelOpacity": "Opacidade dos painéis",
+      "readability": "Legibilidade",
+      "readabilityDescription": "Verificada sem a imagem: escurecer mantém o texto legível por cima",
+      "blocked": "Corrija os itens em vermelho: com essas cores o texto fica ilegível",
+      "save": "Salvar tema"
+    },
+    "checks": {
+      "text": "Texto nos painéis",
+      "background": "Texto no fundo",
+      "muted": "Texto secundário",
+      "faint": "Legendas e rótulos",
+      "accent": "Destaque nos painéis",
+      "accentText": "Texto do botão"
+    },
+    "transfer": {
+      "export": "Salvar em arquivo",
+      "copyCode": "Copiar código",
+      "openFile": "Abrir arquivo de tema",
+      "pasteCode": "Colar código",
+      "dropHint": "ou solte um arquivo .grubietheme na janela",
+      "pasteTitle": "Colar código de tema",
+      "pasteDescription": "O código leva as cores do tema. A imagem de fundo não vai assim: para isso é preciso o arquivo do tema",
+      "add": "Adicionar tema",
+      "imported": "Tema “{{name}}” adicionado",
+      "exported": "Tema “{{name}}” salvo em arquivo",
+      "exportFailed": "Não foi possível salvar o tema em arquivo",
+      "badFile": "Não é um arquivo de tema do Grubie ou está danificado",
+      "badCode": "Código de tema não reconhecido",
+      "unreadable": "O tema não passou na verificação de legibilidade: com essas cores o texto fica ilegível",
+      "codeCopied": "Código do tema copiado",
+      "codeNoPicture": "A imagem de fundo não entra no código. Salve o tema em arquivo para compartilhá-la"
+    },
+    "gallery": {
+      "tabs": "Origem dos temas",
+      "tabMine": "Meus temas",
+      "tab": "Galeria",
+      "publish": "Publicar na galeria",
+      "publishTitle": "Publicar “{{name}}”?",
+      "publishBody": "O tema vai para a verificação de um moderador. Depois da aprovação, todos o verão na galeria do launcher e no site, com o seu nick como autor.",
+      "publishPicture": "A imagem de fundo será comprimida para 1920×1080.",
+      "publishAction": "Publicar",
+      "signIn": "Entre na conta para publicar temas na galeria",
+      "published": "“{{name}}” enviado para verificação",
+      "publishedHint": "O status aparece na aba Galeria",
+      "search": "Buscar temas",
+      "modeLabel": "Base",
+      "sortLabel": "Ordenar",
+      "untitled": "Sem nome",
+      "unknownAuthor": "Autor desconhecido",
+      "withPicture": "Com imagem de fundo",
+      "install": "Instalar",
+      "apply": "Aplicar",
+      "active": "Ativo",
+      "more": "Mostrar mais {{count}}",
+      "empty": "A galeria ainda não tem temas",
+      "emptyFiltered": "Nenhum tema para esta busca",
+      "emptyHint": "Crie o seu tema e publique pelo menu “…” no cartão dele",
+      "mine": "Minhas publicações",
+      "unpublish": "Retirar da galeria",
+      "unpublishConfirm": "“{{name}}” vai sumir da galeria. Quem já instalou continua com ele.",
+      "unpublished": "“{{name}}” retirado da galeria",
+      "installTitle": "Instalar o tema “{{name}}”?",
+      "installBy": "Por {{author}}. O tema entra nos seus temas e liga na hora.",
+      "installHint": "O tema entra nos seus temas e liga na hora.",
+      "mode": {
+        "all": "Todos",
+        "dark": "Escuros",
+        "light": "Claros"
+      },
+      "sort": {
+        "new": "Novos",
+        "downloads": "Populares"
+      },
+      "status": {
+        "pending": "Em verificação",
+        "approved": "Na galeria",
+        "rejected": "Recusado"
+      },
+      "errors": {
+        "bad_picture": "Não foi possível preparar a imagem de fundo: precisa ser PNG, JPG ou WEBP com pelo menos 360 px",
+        "duplicate": "Este tema já está na galeria ou aguardando verificação",
+        "duplicateRejected": "Este tema já foi recusado — o motivo está abaixo",
+        "publish_banned": "A publicação na galeria está bloqueada para a sua conta",
+        "unreadable": "O tema não passou na verificação de legibilidade: com essas cores o texto fica ilegível",
+        "pending_limit": "Você já tem 5 temas em verificação. Aguarde a decisão",
+        "name_required": "O tema precisa de um nome",
+        "offline": "Sem conexão com o servidor. Verifique a internet e tente de novo",
+        "failed": "Não foi possível publicar o tema. Tente mais tarde",
+        "install": "Não foi possível instalar o tema da galeria",
+        "unpublish": "Não foi possível retirar o tema da galeria",
+        "load": "A galeria não carregou. Verifique a conexão",
+        "notFound": "Tema não encontrado: talvez o autor o tenha removido"
+      }
+    }
   }
 }

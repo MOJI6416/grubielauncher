@@ -7,11 +7,21 @@ import fs from "fs-extra";
 import { writeJsonAtomicSync } from "../utilities/atomicJson";
 import { getDataRoot } from "../utilities/dataRoot";
 import { TITLEBAR_OVERLAY } from "@/shared/titlebar";
+import {
+  DEFAULT_UI_SCALE,
+  fitUiScale,
+  normalizeUiScale,
+  scaledSize,
+  UI_SCALES,
+  uiScaleOptions,
+  type UiScaleState,
+} from "@/shared/uiScale";
 
 export let mainWindow: BrowserWindow | null = null;
 
 const MIN_WIDTH = 1280;
 const MIN_HEIGHT = 720;
+const BASE_SIZE = { width: MIN_WIDTH, height: MIN_HEIGHT };
 
 const AUTO_OPEN_HOST_SUFFIXES = [
   "grubielauncher.com",
@@ -56,9 +66,21 @@ let isCloseConfirmed = false;
 let runningServersProbe: (() => boolean) | null = null;
 let installActiveProbe: (() => boolean) | null = null;
 let hideToTrayHandler: (() => boolean) | null = null;
+let trayHider: (() => boolean) | null = null;
+let requestedUiScale = DEFAULT_UI_SCALE;
+let appliedUiScale = DEFAULT_UI_SCALE;
+let isDisplayWatchInstalled = false;
 
 export function setHideToTrayHandler(handler: (() => boolean) | null): void {
   hideToTrayHandler = handler;
+}
+
+export function setTrayHider(hider: (() => boolean) | null): void {
+  trayHider = hider;
+}
+
+export function hideMainWindowToTray(): boolean {
+  return probe(trayHider);
 }
 
 export function setUnsavedChangesGuard(value: boolean): void {
@@ -167,8 +189,9 @@ function readWindowState(): WindowState | null {
       return null;
     }
 
-    let width = Math.max(MIN_WIDTH, Math.round(state.width));
-    let height = Math.max(MIN_HEIGHT, Math.round(state.height));
+    const floor = scaledSize(UI_SCALES[0], BASE_SIZE);
+    let width = Math.max(floor.width, Math.round(state.width));
+    let height = Math.max(floor.height, Math.round(state.height));
 
     let x: number | undefined;
     let y: number | undefined;
@@ -215,6 +238,98 @@ function saveWindowState(window: BrowserWindow): void {
   } catch {}
 }
 
+function readSavedUiScale(): number {
+  try {
+    const settings = fs.readJSONSync(join(getDataRoot(), "settings.json"), {
+      throws: false,
+    });
+    return normalizeUiScale(settings?.uiScale);
+  } catch {
+    return DEFAULT_UI_SCALE;
+  }
+}
+
+function windowWorkArea(window: BrowserWindow): Electron.Rectangle {
+  return screen.getDisplayMatching(window.getBounds()).workArea;
+}
+
+function titleBarOverlayFor(scale: number) {
+  return {
+    ...TITLEBAR_OVERLAY,
+    height: Math.round(TITLEBAR_OVERLAY.height * scale),
+  };
+}
+
+function keepInsideWorkArea(window: BrowserWindow): void {
+  const area = windowWorkArea(window);
+  const bounds = window.getBounds();
+  const x = Math.min(
+    Math.max(bounds.x, area.x),
+    area.x + Math.max(0, area.width - bounds.width),
+  );
+  const y = Math.min(
+    Math.max(bounds.y, area.y),
+    area.y + Math.max(0, area.height - bounds.height),
+  );
+  if (x !== bounds.x || y !== bounds.y) window.setPosition(x, y);
+}
+
+function applyUiScale(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  const window = mainWindow;
+  const effective = fitUiScale(
+    requestedUiScale,
+    windowWorkArea(window),
+    BASE_SIZE,
+  );
+  const min = scaledSize(effective, BASE_SIZE);
+
+  window.setMinimumSize(min.width, min.height);
+  if (!window.isMaximized() && !window.isFullScreen()) {
+    const [width, height] = window.getSize();
+    if (width < min.width || height < min.height) {
+      window.setSize(Math.max(width, min.width), Math.max(height, min.height));
+      keepInsideWorkArea(window);
+    }
+  }
+
+  if (process.platform === "win32") {
+    window.setTitleBarOverlay(titleBarOverlayFor(effective));
+  }
+  window.webContents.setZoomFactor(effective);
+  appliedUiScale = effective;
+}
+
+function watchDisplays(): void {
+  if (isDisplayWatchInstalled) return;
+  isDisplayWatchInstalled = true;
+
+  const refit = () => applyUiScale();
+  screen.on("display-metrics-changed", refit);
+  screen.on("display-added", refit);
+  screen.on("display-removed", refit);
+}
+
+export function setUiScale(scale: number): UiScaleState {
+  requestedUiScale = normalizeUiScale(scale);
+  applyUiScale();
+  return getUiScaleState();
+}
+
+export function getUiScaleState(): UiScaleState {
+  const area =
+    mainWindow && !mainWindow.isDestroyed()
+      ? windowWorkArea(mainWindow)
+      : screen.getPrimaryDisplay().workArea;
+
+  return {
+    scale: requestedUiScale,
+    effective: appliedUiScale,
+    options: uiScaleOptions(area, BASE_SIZE),
+  };
+}
+
 export function wasMainWindowCreated(): boolean {
   return mainWindowCreated;
 }
@@ -223,15 +338,24 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): void {
   const savedState = readWindowState();
   mainWindowCreated = true;
 
+  requestedUiScale = readSavedUiScale();
+  const targetArea =
+    savedState?.x !== undefined && savedState?.y !== undefined
+      ? screen.getDisplayNearestPoint({ x: savedState.x, y: savedState.y })
+          .workArea
+      : screen.getPrimaryDisplay().workArea;
+  appliedUiScale = fitUiScale(requestedUiScale, targetArea, BASE_SIZE);
+  const minSize = scaledSize(appliedUiScale, BASE_SIZE);
+
   pendingShow = !options.deferShow;
   isReadyToShow = false;
   shouldMaximizeOnShow = savedState?.isMaximized === true;
 
   mainWindow = new BrowserWindow({
-    minHeight: MIN_HEIGHT,
-    minWidth: MIN_WIDTH,
-    width: savedState?.width ?? MIN_WIDTH,
-    height: savedState?.height ?? MIN_HEIGHT,
+    minHeight: minSize.height,
+    minWidth: minSize.width,
+    width: Math.max(savedState?.width ?? 0, minSize.width),
+    height: Math.max(savedState?.height ?? 0, minSize.height),
     ...(savedState?.x !== undefined && savedState?.y !== undefined
       ? { x: savedState.x, y: savedState.y }
       : {}),
@@ -243,7 +367,7 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): void {
     ...(process.platform === "win32"
       ? {
           titleBarStyle: "hidden" as const,
-          titleBarOverlay: { ...TITLEBAR_OVERLAY },
+          titleBarOverlay: titleBarOverlayFor(appliedUiScale),
         }
       : {}),
     ...(process.platform === "darwin"
@@ -262,8 +386,13 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): void {
       contextIsolation: true,
       spellcheck: false,
       v8CacheOptions: "bypassHeatCheck",
+      zoomFactor: appliedUiScale,
     },
   });
+
+  watchDisplays();
+  mainWindow.on("moved", applyUiScale);
+  mainWindow.webContents.on("did-finish-load", applyUiScale);
 
   mainWindow.on("close", (event) => {
     if (!isCloseConfirmed && mainWindow && !mainWindow.isDestroyed()) {

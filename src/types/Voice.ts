@@ -120,9 +120,37 @@ export interface VoiceOverlaySpeaker {
   isLocal: boolean;
 }
 
+export type OverlayCorner =
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right";
+
+export const OVERLAY_CORNERS: OverlayCorner[] = [
+  "top-left",
+  "top-right",
+  "bottom-left",
+  "bottom-right",
+];
+
+export interface VoiceOverlayPlacement {
+  corner: OverlayCorner;
+  displayId: number;
+}
+
 export interface VoiceOverlayState {
   visible: boolean;
   speakers: VoiceOverlaySpeaker[];
+  corner?: OverlayCorner;
+  displayId?: number;
+}
+
+export interface OverlayDisplay {
+  id: number;
+  label: string;
+  primary: boolean;
+  width: number;
+  height: number;
 }
 
 export const HIDDEN_VOICE_OVERLAY: VoiceOverlayState = {

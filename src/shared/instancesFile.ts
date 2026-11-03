@@ -11,6 +11,8 @@ export interface InstancesFile {
   order: string[];
   groups: InstanceGroup[];
   ungroupedCollapsed?: boolean;
+  pinned?: string[];
+  dockHidden?: string[];
 }
 
 export const EMPTY_INSTANCES_FILE: InstancesFile = {
@@ -83,7 +85,47 @@ export function normalizeInstancesFile(raw: unknown): InstancesFile {
     order: stringList(source.order),
     groups: normalizeGroups(source.groups),
     ...(source.ungroupedCollapsed === true ? { ungroupedCollapsed: true } : {}),
+    ...optionalList("pinned", stringList(source.pinned)),
+    ...optionalList("dockHidden", stringList(source.dockHidden)),
   };
+}
+
+function optionalList<K extends "pinned" | "dockHidden">(
+  key: K,
+  list: string[],
+): Partial<Record<K, string[]>> {
+  return list.length ? ({ [key]: list } as Partial<Record<K, string[]>>) : {};
+}
+
+function withList(
+  file: InstancesFile,
+  key: "pinned" | "dockHidden",
+  list: string[],
+): InstancesFile {
+  const next = { ...file };
+  if (list.length) next[key] = list;
+  else delete next[key];
+  return next;
+}
+
+export function setInstancePinned(
+  file: InstancesFile,
+  key: string,
+  pinned: boolean,
+): InstancesFile {
+  const current = (file.pinned ?? []).filter((item) => item !== key);
+  const next = withList(file, "pinned", pinned ? [...current, key] : current);
+  return pinned ? setDockHidden(next, key, false) : next;
+}
+
+export function setDockHidden(
+  file: InstancesFile,
+  key: string,
+  hidden: boolean,
+): InstancesFile {
+  const current = (file.dockHidden ?? []).filter((item) => item !== key);
+  const next = withList(file, "dockHidden", hidden ? [...current, key] : current);
+  return hidden ? setInstancePinned(next, key, false) : next;
 }
 
 export function mergeLegacyOrganize(
@@ -113,14 +155,18 @@ export function renameInstanceKey(
     delete tags[oldKey];
   }
 
+  const rename = (key: string) => (key === oldKey ? newKey : key);
+
   return {
     ...file,
     tags,
-    order: file.order.map((key) => (key === oldKey ? newKey : key)),
+    order: file.order.map(rename),
     groups: file.groups.map((group) => ({
       ...group,
-      keys: group.keys.map((key) => (key === oldKey ? newKey : key)),
+      keys: group.keys.map(rename),
     })),
+    ...(file.pinned ? { pinned: file.pinned.map(rename) } : {}),
+    ...(file.dockHidden ? { dockHidden: file.dockHidden.map(rename) } : {}),
   };
 }
 
@@ -133,7 +179,7 @@ export function forgetInstanceKey(
   const tags = { ...file.tags };
   delete tags[key];
 
-  return {
+  const next = {
     ...file,
     tags,
     order: file.order.filter((item) => item !== key),
@@ -142,6 +188,16 @@ export function forgetInstanceKey(
       keys: group.keys.filter((item) => item !== key),
     })),
   };
+
+  return withList(
+    withList(
+      next,
+      "pinned",
+      (file.pinned ?? []).filter((item) => item !== key),
+    ),
+    "dockHidden",
+    (file.dockHidden ?? []).filter((item) => item !== key),
+  );
 }
 
 export function createGroup(

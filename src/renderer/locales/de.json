@@ -1440,6 +1440,8 @@
     "sections": {
       "game": "Spiel",
       "interface": "Oberfläche",
+      "themes": "Designs",
+      "layout": "Anordnung",
       "voice": "Sprachchat",
       "storage": "Speicher",
       "downloads": "Downloads",
@@ -1464,7 +1466,17 @@
     "voiceGateDescription": "Das Mikrofon sendet nur, solange Sie lauter als die Schwelle sind. Für Sprechen ohne Push-to-Talk: Tastatur und Hintergrundgeräusche bleiben draußen",
     "voiceGateThreshold": "Schwelle: {{value}} dB",
     "voiceOverlay": "Wer spricht – im Spiel",
-    "voiceOverlayDescription": "Während Sie spielen, zeigt die linke obere Ecke, wer spricht. Nicht sichtbar im exklusiven Vollbild",
+    "voiceOverlayDescription": "Während Sie spielen, zeigt eine Bildschirmecke, wer spricht. Nicht sichtbar im exklusiven Vollbild",
+    "voiceOverlayCorner": "Bildschirmecke",
+    "voiceOverlayCorners": {
+      "top-left": "Oben links",
+      "top-right": "Oben rechts",
+      "bottom-left": "Unten links",
+      "bottom-right": "Unten rechts"
+    },
+    "voiceOverlayPrimary": "Hauptmonitor",
+    "voiceOverlayScreen": "Monitor {{index}}",
+    "voiceOverlayPreview": "Vorschau zeigen",
     "voiceDevices": "Audiogeräte",
     "voiceMicTestStart": "Testen",
     "voiceMicTestStop": "Stoppen",
@@ -1599,9 +1611,21 @@
     },
     "interface": {
       "languageDescription": "Gilt sofort, kein Neustart nötig",
+      "groups": {
+        "effects": "Animationen und Effekte",
+        "layout": "Anordnung",
+        "soundAndLogs": "Ton und Logs"
+      },
+      "uiScale": "Oberflächenskalierung",
+      "uiScaleDescription": "Größe von Text, Schaltflächen und Abständen. Geht auch mit Strg + Mausrad.",
+      "uiScaleLimited": "Größer als {{value}} passt nicht auf diesen Bildschirm",
+      "uiScaleToast": "Oberflächenskalierung: {{value}}",
+      "logFontSize": "Textgröße in Logs",
+      "logFontSizeDescription": "Spiel-Logs und Serverkonsole",
       "instancesView": "Instanzliste",
       "instancesViewDescription": "Wie die Liste auf dem Bildschirm „Spielen“ sortiert und angeordnet ist",
       "viewList": "Liste",
+      "viewCompact": "Kompakt",
       "viewGrid": "Raster",
       "sorts": {
         "activity": "Nach Aktivität",
@@ -1625,6 +1649,9 @@
           "paletteActions": "Palette, nur Aktionen",
           "assistant": "Assistent",
           "search": "Suche im aktuellen Bildschirm: Mods, Einstellungen",
+          "sidebar": "Seitenleiste ein- oder ausklappen",
+          "zoom": "Oberfläche vergrößern oder verkleinern",
+          "zoomReset": "Skalierung auf 100 % zurücksetzen",
           "account": "Zu Konto 1…9 wechseln",
           "back": "Im Verlauf zurück",
           "forward": "Im Verlauf vorwärts",
@@ -1667,6 +1694,22 @@
       },
       "accent": "Akzentfarbe",
       "accentDescription": "Die Farbe der Schaltfläche „Spielen“, von Auswahlen und aktiven Elementen. Violett ist die Markenfarbe.",
+      "highContrast": "Hoher Kontrast",
+      "highContrastDescription": "Nebentexte und Rahmen werden heller. Die Akzentfarbe bleibt gleich.",
+      "motion": "Animationen",
+      "motionDescription": "Ohne Animationen reagiert die Oberfläche sofort und belastet den PC neben dem Spiel weniger.",
+      "motionModes": {
+        "system": "Wie im System",
+        "on": "An",
+        "off": "Aus"
+      },
+      "ambientTint": "Leuchten vom Cover",
+      "ambientTintDescription": "Der Hintergrund nimmt die Farbe des Covers der gewählten Instanz an",
+      "backgroundGrain": "Hintergrundkörnung",
+      "backgroundGrainDescription": "Leichtes Rauschen über dem ganzen Fenster",
+      "sidebarCollapsed": "Eingeklappte Seitenleiste",
+      "sidebarCollapsedDescription": "Nur Symbole – mehr Platz für Inhalte",
+      "soundVolume": "Lautstärke",
       "accents": {
         "violet": "Violett (Marke)",
         "blue": "Blau",
@@ -1738,10 +1781,25 @@
         "description": "Sprache der Oberfläche. Neue Instanzen starten das Spiel in derselben Sprache.",
         "keywords": "sprache language locale deutsch englisch russisch ukrainisch english русский українська español français polski português türkçe"
       },
+      "theme": {
+        "title": "Design der Oberfläche",
+        "description": "Eingebaute Designs oder eigene Farben und Bild",
+        "keywords": "design thema dunkel hell oled hintergrund bild farben aussehen"
+      },
+      "uiScale": {
+        "title": "Oberflächenskalierung",
+        "description": "Text und Schaltflächen größer oder kleiner",
+        "keywords": "zoom skalierung größe schrift text größer kleiner"
+      },
       "sounds": {
         "title": "Benachrichtigungstöne",
         "description": "Installation fertig, Absturz, Einladungen von Freunden",
-        "keywords": "ton sound audio benachrichtigung stumm"
+        "keywords": "ton sound audio benachrichtigung stumm lautstärke"
+      },
+      "logFontSize": {
+        "title": "Textgröße in Logs",
+        "description": "Schriftgröße in Spiel-Logs und Serverkonsole",
+        "keywords": "schrift größe logs konsole text"
       },
       "instancesView": {
         "title": "Instanzliste",
@@ -1781,7 +1839,7 @@
       "voiceOverlay": {
         "title": "Wer spricht – im Spiel",
         "description": "Namen der Sprechenden in der Bildschirmecke",
-        "keywords": "overlay sprechen spiel bildschirm ecke"
+        "keywords": "overlay sprechen spiel bildschirm ecke ecke monitor bildschirm position"
       },
       "streamerMode": {
         "title": "Streamer-Modus",
@@ -1883,15 +1941,90 @@
         "description": "Die Farbe von Schaltflächen und Auswahlen",
         "keywords": "farbe thema akzent anpassen aussehen palette"
       },
+      "highContrast": {
+        "title": "Hoher Kontrast",
+        "description": "Hellere Texte und Rahmen",
+        "keywords": "kontrast barrierefreiheit lesbarkeit hell text rahmen"
+      },
+      "motion": {
+        "title": "Animationen",
+        "description": "Wie im System, an oder aus",
+        "keywords": "animation bewegung übergänge effekte aus flüssig"
+      },
+      "ambientTint": {
+        "title": "Leuchten vom Cover",
+        "description": "Hintergrund in der Farbe des Covers",
+        "keywords": "leuchten farbe hintergrund cover effekte"
+      },
+      "backgroundGrain": {
+        "title": "Hintergrundkörnung",
+        "description": "Leichtes Rauschen über dem Fenster",
+        "keywords": "körnung rauschen hintergrund textur effekte"
+      },
       "seasonalDecor": {
         "title": "Festtagsdekoration",
         "description": "Fledermäuse, Kürbisse und Spinnweben zu Halloween",
         "keywords": "halloween feiertag saison event thema dekoration kürbis fledermäuse neujahr weihnachten"
       },
+      "sidebarCollapsed": {
+        "title": "Eingeklappte Seitenleiste",
+        "description": "Nur Symbole in der Seitenleiste",
+        "keywords": "seitenleiste einklappen kompakt symbole schmal"
+      },
+      "layoutPresets": {
+        "title": "Fertige Sets",
+        "description": "Standard-, kompakte oder minimale Anordnung",
+        "keywords": "set vorlage anordnung kompakt minimal standard schnell"
+      },
+      "layoutCustomize": {
+        "title": "Oberfläche anpassen",
+        "description": "Direkt am Bildschirm verschieben und ausblenden",
+        "keywords": "anordnung anpassen bearbeiten verschieben ausblenden reihenfolge oberfläche"
+      },
+      "layoutSidebar": {
+        "title": "Einträge der Seitenleiste",
+        "description": "Einträge ausblenden und umsortieren",
+        "keywords": "seitenleiste menü einträge reihenfolge ausblenden leute neuigkeiten instanzen"
+      },
+      "layoutDock": {
+        "title": "Instanzen in der Seitenleiste",
+        "description": "Wie viele Instanzen die Seitenleiste zeigt",
+        "keywords": "seitenleiste dock instanzen limit anheften ausblenden"
+      },
+      "layoutHome": {
+        "title": "Blöcke auf „Spielen“",
+        "description": "Instanzkarte, Statistik, Weiterspielen",
+        "keywords": "startseite spielen karte statistik weiterspielen ausblenden"
+      },
+      "layoutInstanceTab": {
+        "title": "Tab beim Öffnen",
+        "description": "Welcher Tab einer Instanz zuerst öffnet",
+        "keywords": "instanz tab standard übersicht inhalt öffnen"
+      },
+      "layoutTabs": {
+        "title": "Tabs der Instanz",
+        "description": "Selten genutzte Tabs ausblenden",
+        "keywords": "instanz tabs ausblenden logs statistik konfigs welten server"
+      },
+      "layoutOverview": {
+        "title": "Karten der Übersicht",
+        "description": "Screenshots, Notizen oder Sitzungen ausblenden",
+        "keywords": "übersicht karten screenshots notizen sitzungen ausblenden"
+      },
       "closeToTray": {
         "title": "Beim Schließen in den Infobereich",
         "description": "Schließen verbirgt das Fenster, Anrufe und Spiele laufen weiter",
         "keywords": "infobereich tray schließen hintergrund minimieren anruf"
+      },
+      "startScreen": {
+        "title": "Startbildschirm",
+        "description": "Was beim Start des Launchers geöffnet wird",
+        "keywords": "start startbildschirm öffnen launcher"
+      },
+      "gameWindow": {
+        "title": "Beim Spielstart",
+        "description": "Minimieren, in den Infobereich oder geöffnet lassen",
+        "keywords": "spiel start fenster minimieren infobereich tray ausblenden"
       },
       "launchAtLogin": {
         "title": "Mit dem System starten",
@@ -1928,6 +2061,22 @@
     "system": {
       "closeToTray": "Beim Schließen in den Infobereich",
       "closeToTrayDescription": "Die Schließen-Schaltfläche verbirgt das Fenster, und der Launcher läuft weiter: Anrufe bleiben verbunden, Freunde sehen Sie online, Spiele und Downloads laufen weiter. Beenden über das Symbol im Infobereich.",
+      "startScreen": "Startbildschirm",
+      "startScreenDescription": "Was beim Start des Launchers geöffnet wird",
+      "startScreens": {
+        "home": "„Spielen“",
+        "lastInstance": "Zuletzt gespielte Instanz",
+        "people": "Leute",
+        "news": "Neuigkeiten"
+      },
+      "gameWindow": "Beim Spielstart",
+      "gameWindowDescription": "Was mit dem Launcher-Fenster passiert, sobald das Spielfenster erscheint",
+      "gameWindowModes": {
+        "minimize": "Minimieren",
+        "tray": "In den Infobereich",
+        "keep": "Geöffnet lassen"
+      },
+      "restoreAfterGame": "Launcher nach dem Spiel wieder anzeigen",
       "launchAtLogin": "Mit dem System starten",
       "launchAtLoginDescription": "Der Launcher startet direkt im Infobereich, ohne Fenster – Freunde sehen Sie online und können Sie anrufen.",
       "launchAtLoginUnsupported": "In der installierten Version des Launchers verfügbar.",
@@ -2101,6 +2250,7 @@
       "needsUpdate": "Paket-Update"
     },
     "viewList": "Liste",
+    "viewCompact": "Kompakt",
     "viewGrid": "Raster",
     "noResults": "Nichts gefunden",
     "clearFilters": "Filter zurücksetzen",
@@ -4650,7 +4800,9 @@
     "offline": {
       "internet": "Kein Netzwerk",
       "backend": "Dienste ausgefallen"
-    }
+    },
+    "sidebarCollapse": "Seitenleiste einklappen",
+    "sidebarExpand": "Seitenleiste ausklappen"
   },
   "instanceSettings": {
     "title": "Instanzeinstellungen",
@@ -5809,5 +5961,221 @@
     "memory": "Speicher {{from}} → {{to}}",
     "memoryDone": "Speicher: {{to}}",
     "failed": "Die Korrektur wurde nicht angewendet"
+  },
+  "layout": {
+    "show": "„{{name}}“ anzeigen",
+    "hide": "„{{name}}“ ausblenden",
+    "alwaysVisible": "Immer sichtbar – lässt sich nur verschieben",
+    "hideFromSidebar": "Aus der Seitenleiste ausblenden",
+    "customize": "Oberfläche anpassen",
+    "customizeAction": "Anpassen",
+    "customizeDescription": "Einträge der Seitenleiste direkt am Bildschirm verschieben und ausblenden",
+    "editHint": "Einträge der Seitenleiste verschieben, das Auge blendet Unnötiges aus. Blöcke der Startseite gibt es auf „Spielen“.",
+    "moreSettings": "Weitere Einstellungen",
+    "reset": "Anordnung zurücksetzen",
+    "done": "Fertig",
+    "pin": "In der Seitenleiste anheften",
+    "unpin": "Lösen",
+    "dockMore": "{{count}} weitere",
+    "dockMoreHint": "Alle Instanzen findest du auf „Spielen“",
+    "nowHint": "Hier erscheinen Downloads, Fehler und Weltfreigabe",
+    "moveUp": "„{{name}}“ nach oben",
+    "moveDown": "„{{name}}“ nach unten",
+    "groups": {
+      "sidebar": "Seitenleiste",
+      "home": "„Spielen“",
+      "instance": "Instanz"
+    },
+    "sidebar": {
+      "title": "Einträge und Reihenfolge",
+      "description": "„Spielen“ und „Einstellungen“ lassen sich nicht ausblenden",
+      "dock": "Instanzen",
+      "now": "Jetzt"
+    },
+    "dock": {
+      "title": "Instanzen in der Seitenleiste",
+      "description": "Angeheftete sind immer sichtbar, der Rest nach letztem Start",
+      "all": "Alle",
+      "hiddenCount": "Ausgeblendet: {{count}}",
+      "showAll": "Alle anzeigen"
+    },
+    "home": {
+      "title": "„Spielen“",
+      "rowTitle": "Blöcke auf „Spielen“",
+      "description": "Karte der letzten Instanz über der Liste",
+      "hero": "Instanzkarte",
+      "stats": "Statistik",
+      "continue": "„Weiterspielen“"
+    },
+    "instance": {
+      "defaultTab": "Tab beim Öffnen",
+      "defaultTabDescription": "Fehlt der Instanz dieser Tab, öffnet sich die Übersicht",
+      "tabs": "Tabs",
+      "tabsDescription": "Ein ausgeblendeter Tab öffnet sich trotzdem über Links oder Menüs",
+      "overview": "Karten der Übersicht",
+      "overviewDescription": "Die übrigen Karten nutzen den frei gewordenen Platz"
+    },
+    "overview": {
+      "screenshots": "Screenshots",
+      "notes": "Notizen",
+      "sessions": "Sitzungen"
+    },
+    "presets": {
+      "title": "Fertige Sets",
+      "description": "Schneller Start – danach lässt sich alles ändern",
+      "custom": "Gerade ist es Ihre eigene Anordnung: Ein Set ersetzt sie, lässt sich aber rückgängig machen",
+      "applied": "Set „{{name}}“ angewendet",
+      "undo": "Rückgängig",
+      "command": "Oberflächen-Set: {{name}}",
+      "standard": {
+        "title": "Standard",
+        "description": "Wie nach der Installation"
+      },
+      "compact": {
+        "title": "Kompakt",
+        "description": "Für kleine Bildschirme: schmale Seitenleiste, dichte Liste"
+      },
+      "minimal": {
+        "title": "Minimal",
+        "description": "Für Solospiel: ohne Leute, Neuigkeiten und Effekte"
+      }
+    }
+  },
+  "theme": {
+    "title": "Design der Oberfläche",
+    "description": "Grubie ist das dunkle Markendesign. Sie können ein eigenes aus Ihren Farben und einem Bild bauen",
+    "newTheme": "Neues Design",
+    "newName": "Mein Design",
+    "copyName": "{{name}} – Kopie",
+    "edit": "Bearbeiten",
+    "duplicate": "Kopie erstellen",
+    "delete": "Design löschen",
+    "deleteConfirm": "Das Design „{{name}}“ wird endgültig gelöscht. Das Hintergrundbild bleibt im Designs-Ordner.",
+    "saved": "Design „{{name}}“ gespeichert",
+    "limit": "Sie können bis zu {{count}} Designs speichern",
+    "accentByTheme": "Die Akzentfarbe bestimmt gerade das Design „{{name}}“",
+    "command": "Design: {{name}}",
+    "builtIn": {
+      "grubie": "Grubie",
+      "oled": "OLED",
+      "light": "Hell"
+    },
+    "editor": {
+      "title": "Design-Editor",
+      "livePreview": "Änderungen sind sofort im ganzen Launcher sichtbar, bis Sie speichern oder abbrechen",
+      "name": "Name",
+      "mode": "Grundlage",
+      "modeDescription": "Dunkle oder helle Bedeutungsfarben: Erfolg, Warnungen, Fehler",
+      "modes": {
+        "dark": "Dunkel",
+        "light": "Hell"
+      },
+      "colors": "Farben",
+      "background": "Hintergrund",
+      "surface": "Flächen",
+      "foreground": "Text",
+      "accent": "Akzent",
+      "ownAccent": "Eigene Akzentfarbe",
+      "picture": "Hintergrundbild",
+      "pictureDescription": "PNG, JPG oder WEBP. Das Bild bleibt auf diesem Computer",
+      "pick": "Bild wählen",
+      "change": "Ersetzen",
+      "remove": "Entfernen",
+      "dim": "Abdunkeln",
+      "blur": "Unschärfe",
+      "panelOpacity": "Deckkraft der Flächen",
+      "readability": "Lesbarkeit",
+      "readabilityDescription": "Ohne Bild geprüft: Das Abdunkeln hält Text darüber lesbar",
+      "blocked": "Beheben Sie die roten Punkte: Mit diesen Farben ist Text nicht lesbar",
+      "save": "Design speichern"
+    },
+    "checks": {
+      "text": "Text auf Flächen",
+      "background": "Text auf Hintergrund",
+      "muted": "Nebentext",
+      "faint": "Beschriftungen",
+      "accent": "Akzent auf Flächen",
+      "accentText": "Schrift auf Schaltflächen"
+    },
+    "transfer": {
+      "export": "Als Datei speichern",
+      "copyCode": "Code kopieren",
+      "openFile": "Design-Datei öffnen",
+      "pasteCode": "Code einfügen",
+      "dropHint": "oder eine .grubietheme-Datei ins Fenster ziehen",
+      "pasteTitle": "Design-Code einfügen",
+      "pasteDescription": "Ein Code überträgt die Farben des Designs. Das Hintergrundbild geht so nicht – dafür braucht es eine Design-Datei",
+      "add": "Design hinzufügen",
+      "imported": "Design „{{name}}“ hinzugefügt",
+      "exported": "Design „{{name}}“ als Datei gespeichert",
+      "exportFailed": "Design konnte nicht als Datei gespeichert werden",
+      "badFile": "Das ist keine Grubie-Design-Datei oder sie ist beschädigt",
+      "badCode": "Design-Code nicht erkannt",
+      "unreadable": "Das Design hat die Lesbarkeitsprüfung nicht bestanden: Mit diesen Farben ist Text nicht lesbar",
+      "codeCopied": "Design-Code kopiert",
+      "codeNoPicture": "Das Hintergrundbild ist nicht im Code. Speichern Sie das Design als Datei, um es zu teilen"
+    },
+    "gallery": {
+      "tabs": "Design-Quelle",
+      "tabMine": "Meine Designs",
+      "tab": "Galerie",
+      "publish": "In der Galerie veröffentlichen",
+      "publishTitle": "„{{name}}“ veröffentlichen?",
+      "publishBody": "Das Design geht zur Prüfung an einen Moderator. Nach der Freigabe sehen es alle in der Galerie des Launchers und auf der Website – mit Ihrem Nicknamen als Autor.",
+      "publishPicture": "Das Hintergrundbild wird auf 1920×1080 komprimiert.",
+      "publishAction": "Veröffentlichen",
+      "signIn": "Melden Sie sich an, um Designs in der Galerie zu veröffentlichen",
+      "published": "„{{name}}“ zur Prüfung gesendet",
+      "publishedHint": "Den Status sehen Sie im Tab „Galerie“",
+      "search": "Designs suchen",
+      "modeLabel": "Basis",
+      "sortLabel": "Sortierung",
+      "untitled": "Ohne Namen",
+      "unknownAuthor": "Unbekannter Autor",
+      "withPicture": "Mit Hintergrundbild",
+      "install": "Installieren",
+      "apply": "Anwenden",
+      "active": "Aktiv",
+      "more": "{{count}} weitere zeigen",
+      "empty": "In der Galerie gibt es noch keine Designs",
+      "emptyFiltered": "Zu dieser Suche gibt es keine Designs",
+      "emptyHint": "Erstellen Sie Ihr eigenes Design und veröffentlichen Sie es über das Menü „…“ auf seiner Karte",
+      "mine": "Meine Veröffentlichungen",
+      "unpublish": "Aus der Galerie entfernen",
+      "unpublishConfirm": "„{{name}}“ verschwindet aus der Galerie. Wer es schon installiert hat, behält es.",
+      "unpublished": "„{{name}}“ aus der Galerie entfernt",
+      "installTitle": "Design „{{name}}“ installieren?",
+      "installBy": "Von {{author}}. Das Design kommt zu Ihren Designs und wird sofort aktiviert.",
+      "installHint": "Das Design kommt zu Ihren Designs und wird sofort aktiviert.",
+      "mode": {
+        "all": "Alle",
+        "dark": "Dunkel",
+        "light": "Hell"
+      },
+      "sort": {
+        "new": "Neu",
+        "downloads": "Beliebt"
+      },
+      "status": {
+        "pending": "In Prüfung",
+        "approved": "In der Galerie",
+        "rejected": "Abgelehnt"
+      },
+      "errors": {
+        "bad_picture": "Das Hintergrundbild konnte nicht vorbereitet werden: Es muss ein PNG, JPG oder WEBP mit mindestens 360 px sein",
+        "duplicate": "Dieses Design ist schon in der Galerie oder wartet auf Prüfung",
+        "duplicateRejected": "Dieses Design wurde bereits abgelehnt – der Grund steht unten",
+        "publish_banned": "Das Veröffentlichen in der Galerie ist für Ihr Konto gesperrt",
+        "unreadable": "Das Design hat die Lesbarkeitsprüfung nicht bestanden: Mit diesen Farben ist Text nicht lesbar",
+        "pending_limit": "Sie haben schon 5 Designs in Prüfung. Warten Sie auf eine Entscheidung",
+        "name_required": "Das Design braucht einen Namen",
+        "offline": "Keine Verbindung zum Server. Prüfen Sie die Internetverbindung und versuchen Sie es erneut",
+        "failed": "Das Design konnte nicht veröffentlicht werden. Bitte später erneut versuchen",
+        "install": "Das Design konnte nicht aus der Galerie installiert werden",
+        "unpublish": "Das Design konnte nicht aus der Galerie entfernt werden",
+        "load": "Die Galerie wurde nicht geladen. Prüfen Sie die Internetverbindung",
+        "notFound": "Design nicht gefunden: Vielleicht hat der Autor es entfernt"
+      }
+    }
   }
 }

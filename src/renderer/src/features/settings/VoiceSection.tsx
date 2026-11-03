@@ -11,6 +11,7 @@ import {
   SpeakerTest,
 } from "@renderer/features/voice/VoiceDeviceControls";
 import type { TSettings } from "@/types/Settings";
+import { OverlayPlacementControls } from "@renderer/features/voice/OverlayPlacementControls";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
 
@@ -201,7 +202,11 @@ export function VoiceSection({
               onCheckedChange={(value) => commit({ voiceOverlay: value })}
             />
           }
-        />
+        >
+          {settings.voiceOverlay && (
+            <OverlayPlacementControls settings={settings} commit={commit} />
+          )}
+        </SettingRow>
       )}
 
       {visible("voiceAutoGain") && (

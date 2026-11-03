@@ -6,8 +6,8 @@ import {
   LazyMotion,
   domAnimation,
   m,
-  useReducedMotion,
 } from "motion/react";
+import { useReducedMotionPreference } from "@/lib/motionPreference";
 import { Check, Loader2, Pause, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -94,7 +94,7 @@ export function InstallView({
   const [isConfirmOpen, setConfirmOpen] = useState(false);
   const [isStopping, setStopping] = useState(false);
   const stages = usePacedStageLog(stageLog);
-  const transition = motionTransition(useReducedMotion());
+  const transition = motionTransition(useReducedMotionPreference());
   const format = useInstallFormatters();
   const { t } = useTranslation();
 

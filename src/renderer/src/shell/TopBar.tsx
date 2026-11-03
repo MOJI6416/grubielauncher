@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
   ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
   Search,
   Sparkles,
   WifiOff,
@@ -33,7 +35,9 @@ import { agentChatsAtom, agentCurrentChatAtom } from "@renderer/agent/store";
 import { openAgent } from "@renderer/features/agent/openAgent";
 import { agentBlockReason, blockReasonKey } from "@renderer/navigation/access";
 import { accountAtom } from "@renderer/stores/atoms";
-import { AGENT_SHORTCUT_LABEL } from "./shortcuts";
+import { AGENT_SHORTCUT_LABEL, SIDEBAR_SHORTCUT_LABEL } from "./shortcuts";
+import { toggleSidebar, useSidebarCollapsed } from "./sidebarCollapse";
+import { cn } from "@/lib/utils";
 import { ALT_KEY, MOD_KEY } from "@renderer/utilities/platform";
 import { TITLEBAR_HEIGHT } from "@/shared/titlebar";
 import { BrandMark } from "./BrandMark";
@@ -88,6 +92,10 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
   const account = useAtomValue(accountAtom);
   const { kind, title } = useCrumbs(route);
   const { t } = useTranslation();
+  const isSidebarCollapsed = useSidebarCollapsed();
+  const sidebarLabel = isSidebarCollapsed
+    ? t("shell.sidebarExpand")
+    : t("shell.sidebarCollapse");
 
   const hasWindowControls =
     api.platform === "win32" || api.platform === "darwin";
@@ -119,7 +127,10 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
       }}
     >
       <div
-        className="flex w-62 shrink-0 items-center gap-2.5"
+        className={cn(
+          "flex shrink-0 items-center gap-2.5",
+          isSidebarCollapsed ? "min-w-16" : "w-62",
+        )}
         style={{
           paddingLeft: "max(0.875rem, calc(env(titlebar-area-x, 0px) + 0.25rem))",
         }}
@@ -140,12 +151,28 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
             />
           </Hint>
         </span>
-        <span className="truncate text-xs font-medium tracking-wide text-muted-foreground">
-          Grubie Launcher
-        </span>
+        {!isSidebarCollapsed && (
+          <span className="truncate text-xs font-medium tracking-wide text-muted-foreground">
+            Grubie Launcher
+          </span>
+        )}
       </div>
 
       <div className="app-no-drag flex shrink-0 items-center gap-0.5">
+        <Hint
+          content={`${sidebarLabel} · ${SIDEBAR_SHORTCUT_LABEL}`}
+          side="bottom"
+        >
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label={sidebarLabel}
+            aria-pressed={isSidebarCollapsed}
+            onClick={toggleSidebar}
+          >
+            {isSidebarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+          </Button>
+        </Hint>
         <Hint content={`${t("shell.back")} · ${ALT_KEY} ←`} side="bottom">
           <Button
             size="icon-sm"

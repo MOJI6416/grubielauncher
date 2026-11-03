@@ -4,8 +4,8 @@ import {
   LazyMotion,
   domAnimation,
   m,
-  useReducedMotion,
 } from "motion/react";
+import { useReducedMotionPreference } from "@/lib/motionPreference";
 import { motionTransition } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import {
@@ -47,20 +47,30 @@ function OverlayHead({ speaker }: { speaker: VoiceOverlaySpeaker }) {
 
 export function VoiceOverlay() {
   const [state, setState] = useState<VoiceOverlayState>(HIDDEN_VOICE_OVERLAY);
-  const transition = motionTransition(useReducedMotion());
+  const transition = motionTransition(useReducedMotionPreference());
 
   useEffect(() => window.api.voice.onOverlayState(setState), []);
 
+  const corner = state.corner ?? "top-left";
+  const fromRight = corner.endsWith("right");
+  const offset = fromRight ? 8 : -8;
+
   return (
     <LazyMotion features={domAnimation}>
-      <div className="flex flex-col items-start gap-1.5 p-1">
+      <div
+        className={cn(
+          "flex h-screen flex-col gap-1.5 p-1",
+          fromRight ? "items-end" : "items-start",
+          corner.startsWith("bottom") ? "justify-end" : "justify-start",
+        )}
+      >
         <AnimatePresence initial={false}>
           {state.speakers.map((speaker) => (
             <m.div
               key={speaker.id}
-              initial={{ opacity: 0, x: -8 }}
+              initial={{ opacity: 0, x: offset }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
+              exit={{ opacity: 0, x: offset }}
               transition={transition}
               className="flex max-w-60 items-center gap-2 rounded-full bg-black/60 py-1 pr-3 pl-1 shadow-lg shadow-black/30"
             >

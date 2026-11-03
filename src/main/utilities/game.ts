@@ -26,6 +26,7 @@ import {
   setSessionServer,
   type SessionContext,
 } from "./statistics";
+import { hideWindowForGame, returnWindowAfterGame } from "./gameWindow";
 
 function safeSend(channel: string, ...args: any[]) {
   if (
@@ -40,13 +41,6 @@ function safeSend(channel: string, ...args: any[]) {
 }
 
 const SIGNAL_EXIT_BASE = 128;
-
-function safeMinimize() {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  try {
-    mainWindow.minimize();
-  } catch {}
-}
 
 function safeTaskbarProgress(mode: "indeterminate" | "none") {
   if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -698,7 +692,7 @@ export function runGame(
       watch.ready(readyMarker);
       markSessionReady(versionName, instance);
       safeTaskbarProgress("none");
-      safeMinimize();
+      hideWindowForGame();
       safeSend("launch");
     }
 
@@ -862,7 +856,7 @@ export function runGame(
     });
 
     safeTaskbarProgress("none");
-    safeRestoreIfMinimized();
+    returnWindowAfterGame({ force: code !== 0 });
 
     safeSend("launch");
     rpc.clearGameContext(versionName, instance);

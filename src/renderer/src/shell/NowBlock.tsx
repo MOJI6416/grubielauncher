@@ -25,6 +25,15 @@ import {
 import { instanceKey } from "@renderer/features/instances/selectors";
 import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 import { navigate } from "@renderer/navigation/navigate";
+import { useSidebarCollapsed } from "./sidebarCollapse";
+import { cn } from "@/lib/utils";
+import { isSlotHidden, slotId } from "@renderer/features/layout/layout";
+import {
+  toggleSlot,
+  useLayout,
+  useLayoutEditing,
+} from "@renderer/features/layout/useLayout";
+import { SlotToggle } from "@renderer/features/layout/SlotToggle";
 import { clampPercent } from "@renderer/features/install/progressModel";
 import {
   installProgressAtom,
@@ -46,6 +55,35 @@ function NowRow({
   progress?: number | null;
   onClick: () => void;
 }) {
+  const collapsed = useSidebarCollapsed();
+
+  if (collapsed) {
+    return (
+      <Hint content={detail ? `${label} · ${detail}` : label} side="right">
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={label}
+          className="flex h-9 w-full flex-col items-center justify-center gap-1 rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+        >
+          <span className={tone}>{icon}</span>
+          {progress !== undefined && (
+            <span className="block h-0.5 w-6 overflow-hidden rounded-full bg-surface-3">
+              <span
+                className={`block h-full rounded-full bg-primary transition-[width] duration-300 ease-swift ${
+                  progress === null ? "w-1/3 animate-pulse" : ""
+                }`}
+                style={
+                  progress === null ? undefined : { width: `${progress}%` }
+                }
+              />
+            </span>
+          )}
+        </button>
+      </Hint>
+    );
+  }
+
   return (
     <button
       type="button"
@@ -79,6 +117,9 @@ function NowRow({
 }
 
 export function NowBlock({ onOpenErrors }: { onOpenErrors: () => void }) {
+  const collapsed = useSidebarCollapsed();
+  const editing = useLayoutEditing();
+  const isSectionHidden = isSlotHidden(useLayout(), slotId.section("now"));
   const consoleMetas = useAtomValue(consolesMetaAtom);
   const versions = useAtomValue(versionsAtom);
   const errorLog = useAtomValue(errorLogAtom);
@@ -202,13 +243,48 @@ export function NowBlock({ onOpenErrors }: { onOpenErrors: () => void }) {
     );
   }
 
+  if (editing) {
+    return (
+      <div className="mt-3 border-t border-border pt-2.5">
+        <div className="flex items-center gap-1.5 pr-1 pl-2.5">
+          <span
+            className={cn(
+              "text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase",
+              isSectionHidden && "opacity-45",
+            )}
+          >
+            {t("shell.now")}
+          </span>
+          <SlotToggle
+            hidden={isSectionHidden}
+            label={t("shell.now")}
+            onToggle={() =>
+              toggleSlot(slotId.section("now"), !isSectionHidden)
+            }
+            className="ml-auto"
+          />
+        </div>
+        {!isSectionHidden &&
+          (rows.length > 0 ? (
+            <div className="flex flex-col gap-0.5">{rows}</div>
+          ) : (
+            <p className="px-2.5 pt-0.5 text-[0.7rem] leading-snug text-faint">
+              {t("layout.nowHint")}
+            </p>
+          ))}
+      </div>
+    );
+  }
+
   return (
     <Collapse show={rows.length > 0}>
       {rows.length > 0 ? (
         <div className="mt-3 border-t border-border pt-2.5">
-          <span className="block px-2.5 pb-1 text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
-            {t("shell.now")}
-          </span>
+          {!collapsed && (
+            <span className="block px-2.5 pb-1 text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+              {t("shell.now")}
+            </span>
+          )}
           <div className="flex flex-col gap-0.5">{rows}</div>
         </div>
       ) : null}

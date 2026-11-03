@@ -28,7 +28,8 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
+import { LazyMotion, domAnimation, m } from "motion/react";
+import { useReducedMotionPreference } from "@/lib/motionPreference";
 import { Loader } from "@/types/Loader";
 import { cn } from "@/lib/utils";
 import { motionTransition } from "@/lib/motion";
@@ -138,7 +139,7 @@ export function SelectPathsPanel({
   const hasAutoFocused = useRef(false);
 
   const { t } = useTranslation();
-  const transition = motionTransition(useReducedMotion());
+  const transition = motionTransition(useReducedMotionPreference());
 
   const sizeLabels = useMemo(
     () => [

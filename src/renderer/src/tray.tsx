@@ -7,9 +7,11 @@ import { TrayPopup } from "./features/tray/TrayPopup";
 import { HintProvider } from "./components/Hint";
 import { installUiErrorCapture } from "./utilities/journal";
 import { installFocusRingGuard } from "./utilities/focusRingGuard";
+import { installMotionPreference } from "@/lib/motionPreference";
 
 installUiErrorCapture();
 installFocusRingGuard();
+installMotionPreference();
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>

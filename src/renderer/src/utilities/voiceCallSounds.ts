@@ -1,5 +1,6 @@
 import { getDefaultStore } from "jotai";
 import { settingsAtom } from "@renderer/stores/atoms";
+import { DEFAULT_SOUND_VOLUME } from "@/types/Settings";
 import { applySavedAudioOutput } from "./voiceDevices";
 import incomingUrl from "../assets/sounds/call-incoming.ogg";
 import outgoingUrl from "../assets/sounds/call-outgoing.ogg";
@@ -16,7 +17,10 @@ export function startCallSound(kind: "incoming" | "outgoing") {
 
   const audio = new Audio(kind === "incoming" ? incomingUrl : outgoingUrl);
   audio.loop = true;
-  audio.volume = CALL_SOUND_VOLUME;
+  audio.volume = Math.min(
+    1,
+    (CALL_SOUND_VOLUME * settings.soundVolume) / DEFAULT_SOUND_VOLUME,
+  );
   applySavedAudioOutput(audio);
   activeAudio = audio;
   void audio.play().catch(() => {});

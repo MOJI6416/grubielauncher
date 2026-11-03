@@ -118,6 +118,11 @@ import {
   LazyWorlds,
   useInstancePanelPreload,
 } from "./lazyPanels";
+import {
+  resolveDefaultTab,
+  visibleTabs,
+} from "@renderer/features/layout/layout";
+import { useLayout } from "@renderer/features/layout/useLayout";
 
 const api = window.api;
 
@@ -153,7 +158,7 @@ export function InstanceScreen({
     navigate({
       name: "instance",
       id: currentRoute.id,
-      tab: tab === "overview" ? undefined : tab,
+      tab: tab === defaultTab ? undefined : tab,
     });
   };
 
@@ -261,7 +266,13 @@ export function InstanceScreen({
     ],
   );
 
-  const activeTab = resolveActiveTab(tabs, routeTab);
+  const layout = useLayout();
+  const defaultTab = resolveDefaultTab(
+    tabs.map((tab) => tab.id),
+    layout,
+  );
+  const activeTab = resolveActiveTab(tabs, routeTab ?? defaultTab);
+  const shownTabs = visibleTabs(tabs, layout, activeTab);
 
   const saveBlockedReason = !isNameValid
     ? t("versions.saveBlocked.invalidName")
@@ -438,7 +449,7 @@ export function InstanceScreen({
       <section className="flex h-full min-h-0 flex-col overflow-hidden">
         <div className="flex h-11 shrink-0 items-center gap-1 border-b border-border">
           <InstanceTabBar
-            items={tabs}
+            items={shownTabs}
             active={activeTab}
             onSelect={setActiveTab}
           />
