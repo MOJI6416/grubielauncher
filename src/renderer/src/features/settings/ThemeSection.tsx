@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getDefaultStore, useAtom, useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
-import { Check, ClipboardPaste, FolderOpen, Plus } from "lucide-react";
+import { Check, ClipboardPaste, FolderOpen, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ACCENT_IDS, ACCENTS, DEFAULT_ACCENT, isAccentId } from "@/shared/accents";
@@ -63,6 +63,7 @@ export function ThemeSection({
   const accentId = isAccentId(settings.accent) ? settings.accent : DEFAULT_ACCENT;
   const accent = ACCENTS[accentId].primary;
   const active = findTheme(settings.themeId, userThemes);
+  const shown = draft ?? active;
   const isEditingExisting = !!draft && userThemes.some((theme) => theme.id === draft.id);
 
   useEffect(() => () => getDefaultStore().set(themeDraftAtom, null), []);
@@ -223,18 +224,42 @@ export function ThemeSection({
           </SettingRow>
         )}
 
-        {visible("accent") && (
+        {visible("accent") && (tab === "mine" || !!query) && (
           <SettingRow
             title={t("settings.interface.accent")}
             description={
-              active.colors.accent
-                ? t("theme.accentByTheme", { name: themeName(active, t) })
+              shown.colors.accent
+                ? t("theme.accentByTheme", { name: draft ? draft.name : themeName(active, t) })
                 : t("settings.interface.accentDescription")
             }
             query={query}
             changed={isChanged("accent")}
             onReset={() => reset("accent")}
             control={
+              shown.colors.accent ? (
+                <div className="flex items-center gap-2">
+                  {!draft && !BUILT_IN_THEMES.includes(active) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setTab("mine");
+                        setDraft({ ...active, colors: { ...active.colors } });
+                      }}
+                    >
+                      <Pencil />
+                      {t("theme.edit")}
+                    </Button>
+                  )}
+                  <span
+                    role="img"
+                    aria-label={t("theme.card.ownAccent")}
+                    className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-foreground/70 ring-offset-2 ring-offset-surface-2"
+                  >
+                    <Check className="size-3.5" />
+                  </span>
+                </div>
+              ) : (
               <div
                 role="radiogroup"
                 aria-label={t("settings.interface.accent")}
@@ -264,6 +289,7 @@ export function ThemeSection({
                   );
                 })}
               </div>
+              )
             }
           />
         )}

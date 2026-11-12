@@ -48,16 +48,16 @@ import {
   ServerRunStatus,
 } from "@/types/Server";
 
-function patchLauncherScript(
+export function patchLauncherScript(
   data: string,
   javaCmd: string,
   argsToken: string,
 ): string {
-  const javaLine = /^java\b/m;
+  const javaLine = /^((?:exec\s+)?)java\b/m;
   let patched = data;
 
   if (javaLine.test(patched)) {
-    patched = patched.replace(javaLine, javaCmd);
+    patched = patched.replace(javaLine, (_line, exec: string) => `${exec}${javaCmd}`);
   } else if (!patched.includes(javaCmd)) {
     throw new Error(
       "Loader run script has an unexpected format, the launcher could not point it at its own Java",
@@ -420,6 +420,7 @@ export function parseRunScript(
     const tokens = tokenizeRunScriptLine(line, posix).filter(
       (token) => !RUN_SCRIPT_PASSTHROUGH.has(token),
     );
+    if (posix && tokens[0] === "exec") tokens.shift();
     const [command, ...args] = tokens;
     if (!command) continue;
     if (!RUN_SCRIPT_EXECUTABLES.has(runScriptBasename(command).toLowerCase())) {

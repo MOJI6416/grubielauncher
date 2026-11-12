@@ -17,7 +17,7 @@ const THEMED_VARIABLES = new Set([
     themeVariables(
       {
         ...BUILT_IN_THEMES.find((theme) => theme.mode === "light")!,
-        backdrop: { path: "x", dim: 0, blur: 0, panelOpacity: 90 },
+        backdrop: { path: "x", dim: 0, blur: 0, panelOpacity: 90, fit: "cover", focusX: 50, focusY: 50 },
       },
       ACCENTS[DEFAULT_ACCENT].primary,
     ),

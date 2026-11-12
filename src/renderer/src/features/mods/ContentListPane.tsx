@@ -4,6 +4,7 @@ import {
   Dispatch,
   type ReactNode,
   SetStateAction,
+  useRef,
   useState,
 } from "react";
 import { toast } from "sonner";
@@ -12,6 +13,7 @@ import {
   CircleAlert,
   EyeOff,
   FilePlus2,
+  Folder,
   FolderOpen,
   FolderPlus,
   ListRestart,
@@ -19,6 +21,7 @@ import {
   Package,
   PackageOpen,
   Search,
+  Sparkles,
   Trash2,
   Undo2,
   X,
@@ -32,6 +35,7 @@ import {
 } from "@/types/ModManager";
 import { IVersion } from "@/types/IVersion";
 import { Loader } from "@/types/Loader";
+import type { ShaderSupport } from "./shaderSupport";
 import { Button } from "@/components/ui/button";
 import { Collapse } from "@/components/ui/collapse";
 import { Progress } from "@/components/ui/progress";
@@ -47,8 +51,9 @@ import { isCheckableProject } from "./updates";
 import { TRASH_MAX_AGE_DAYS, TrashEntry } from "./trash";
 import { ContentRow } from "./ContentRow";
 import { GroupHeader, type GroupHeaderActions } from "./GroupHeader";
-import { type DisplayItem, UNGROUPED_ID } from "./modGroups";
+import { type DisplayItem, type ModGroup, UNGROUPED_ID } from "./modGroups";
 import { isFileDrag } from "./contentDrag";
+import { useDragAutoScroll } from "@renderer/utilities/useDragAutoScroll";
 import { ContentDetails, DetailProgress } from "./ContentDetails";
 import { ImportMode } from "./ImportLocalDialog";
 import { isImportableFileName } from "./localImport";
@@ -105,7 +110,11 @@ export interface ContentListPaneProps {
   findInstalled: (project: MatchableProject) => ILocalProject | undefined;
   groupActions: GroupHeaderActions;
   canDragRows: boolean;
-  dragState: { keys: ReadonlySet<string>; hasGrouped: boolean } | null;
+  dragState: {
+    keys: ReadonlySet<string>;
+    hasGrouped: boolean;
+    groups: ModGroup[];
+  } | null;
   dropToNewGroup: () => void;
   handleKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
   hasActiveFilters: boolean;
@@ -164,6 +173,7 @@ export interface ContentListPaneProps {
   setDetailStack: Dispatch<SetStateAction<ContentEntry[]>>;
   setIsClearTrashOpen: Dispatch<SetStateAction<boolean>>;
   setIsDropActive: Dispatch<SetStateAction<boolean>>;
+  listElement: HTMLDivElement | null;
   setListElement: Dispatch<SetStateAction<HTMLDivElement | null>>;
   setPinnedFor: (targets: ContentEntry[], pinned: boolean) => void;
   setScope: (scope: Scope) => void;
@@ -177,6 +187,9 @@ export interface ContentListPaneProps {
   updateCheck: UpdateCheckResult;
   version: IVersion | undefined;
   virtualItems: VirtualItem[];
+  shaderSupport: ShaderSupport | null;
+  onOpenShaderLoader: (slug: string) => void;
+  canInstallShaderLoader: boolean;
 }
 
 export function ContentListPane({
@@ -241,6 +254,7 @@ export function ContentListPane({
   setDetailStack,
   setIsClearTrashOpen,
   setIsDropActive,
+  listElement,
   setListElement,
   setPinnedFor,
   setScope,
@@ -255,7 +269,17 @@ export function ContentListPane({
   updateCheck,
   version,
   virtualItems,
+  shaderSupport,
+  onOpenShaderLoader,
+  canInstallShaderLoader,
 }: ContentListPaneProps) {
+  const dropPanelRef = useRef<HTMLDivElement | null>(null);
+  useDragAutoScroll(
+    dragState !== null,
+    () => listElement,
+    () => dropPanelRef.current,
+  );
+
   return (
     <>
       <div
@@ -296,6 +320,27 @@ export function ContentListPane({
             await readLocalFiles(filePaths);
           }}
         >
+          {shaderSupport && shaderSupport.state !== "ready" && (
+            <div className="flex min-h-10 shrink-0 items-center gap-2.5 border-b border-border px-3 py-1.5 text-xs">
+              <Sparkles className="size-3.5 shrink-0 text-warning" />
+              <span className="min-w-0 flex-1 leading-snug text-muted-foreground">
+                {shaderSupport.state === "missing"
+                  ? t("modManager.shaderLoader.missing", { loader: shaderSupport.title })
+                  : t("modManager.shaderLoader.unsupported")}
+              </span>
+              {shaderSupport.state === "missing" && canInstallShaderLoader && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 shrink-0 px-2.5 text-xs"
+                  onClick={() => onOpenShaderLoader(shaderSupport.slug)}
+                >
+                  {t("modManager.shaderLoader.install", { loader: shaderSupport.title })}
+                </Button>
+              )}
+            </div>
+          )}
+
           <div
             ref={setListElement}
             tabIndex={0}
@@ -581,19 +626,36 @@ export function ContentListPane({
           )}
 
           {dragState && (
-            <div className="absolute right-3 bottom-3 left-3 z-10 flex gap-2">
-              <GroupDropZone
-                icon={<FolderPlus className="size-4" />}
-                label={t("modGroups.newGroup")}
-                onDrop={dropToNewGroup}
-              />
-              {dragState.hasGrouped && (
-                <GroupDropZone
-                  icon={<X className="size-4" />}
-                  label={t("modGroups.ungroup")}
-                  onDrop={() => groupActions.onDrop(UNGROUPED_ID)}
-                />
+            <div
+              ref={dropPanelRef}
+              className="absolute right-3 bottom-3 left-3 z-10 flex max-h-[45%] flex-col gap-2 overflow-y-auto rounded-xl border border-border bg-popover/95 p-2 shadow-lg"
+            >
+              {dragState.groups.length > 0 && (
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-2">
+                  {dragState.groups.map((group) => (
+                    <GroupDropZone
+                      key={group.id}
+                      icon={<Folder className="size-4" />}
+                      label={group.name}
+                      onDrop={() => groupActions.onDrop(group.id)}
+                    />
+                  ))}
+                </div>
               )}
+              <div className="flex shrink-0 gap-2">
+                <GroupDropZone
+                  icon={<FolderPlus className="size-4" />}
+                  label={t("modGroups.newGroup")}
+                  onDrop={dropToNewGroup}
+                />
+                {dragState.hasGrouped && (
+                  <GroupDropZone
+                    icon={<X className="size-4" />}
+                    label={t("modGroups.ungroup")}
+                    onDrop={() => groupActions.onDrop(UNGROUPED_ID)}
+                  />
+                )}
+              </div>
             </div>
           )}
 
@@ -720,10 +782,10 @@ function GroupDropZone({
         setIsOver(false);
         onDrop();
       }}
-      className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-primary/50 bg-popover/95 px-3 text-xs font-medium text-muted-foreground shadow-lg transition-colors data-[over]:border-primary data-[over]:bg-primary-soft data-[over]:text-foreground"
+      className="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-primary/50 px-3 text-xs font-medium text-muted-foreground transition-colors data-[over]:border-primary data-[over]:bg-primary-soft data-[over]:text-foreground [&>svg]:shrink-0"
     >
       {icon}
-      <span className="truncate">{label}</span>
+      <span className="min-w-0 truncate">{label}</span>
     </div>
   );
 }

@@ -163,6 +163,7 @@ import { ContentToolbar } from "./ContentToolbar";
 import { ContentStatusBar } from "./ContentStatusBar";
 import { ContentDialogs } from "./ContentDialogs";
 import { ContentListPane } from "./ContentListPane";
+import { shaderSupport } from "./shaderSupport";
 
 const api = window.api;
 
@@ -2256,18 +2257,19 @@ export function ContentManager({
     [modGroups.groups.groups, saveGroups, t],
   );
 
-  const dragState = useMemo(
-    () =>
-      dragKeys
-        ? {
-            keys: new Set(dragKeys),
-            hasGrouped: dragKeys.some(
-              (key) => groupOf(modGroups.groups, key) !== UNGROUPED_ID,
-            ),
-          }
-        : null,
-    [dragKeys, modGroups.groups],
-  );
+  const dragState = useMemo(() => {
+    if (!dragKeys) return null;
+    const sources = new Set(
+      dragKeys.map((key) => groupOf(modGroups.groups, key)),
+    );
+    return {
+      keys: new Set(dragKeys),
+      hasGrouped: [...sources].some((id) => id !== UNGROUPED_ID),
+      groups: modGroups.groups.groups.filter(
+        (group) => !(sources.size === 1 && sources.has(group.id)),
+      ),
+    };
+  }, [dragKeys, modGroups.groups]);
 
   const dropDragged = useCallback(
     (groupId: string) => {
@@ -2329,6 +2331,38 @@ export function ContentManager({
   };
 
   const detailRef = useLatestRef(detail);
+
+  const shaderState = useMemo(
+    () =>
+      projectType === ProjectType.SHADER && !isModpacks
+        ? shaderSupport({
+            loader,
+            mods,
+            jarMods:
+              selectedVersion && selectedVersion.versionPath === versionPath
+                ? selectedVersion.version.jarMods
+                : undefined,
+            disabled: fileStates.ready ? fileStates.disabled : undefined,
+          })
+        : null,
+    [projectType, isModpacks, loader, mods, selectedVersion, versionPath, fileStates],
+  );
+
+  const openShaderLoader = useCallback(
+    async (slug: string) => {
+      if (!isOnline) return;
+      const project = await api.modManager
+        .resolveLink(Provider.MODRINTH, slug, ProjectType.MOD)
+        .catch(() => null);
+      if (!project) {
+        toast.error(t("modManager.shaderLoader.notFound"));
+        return;
+      }
+      setDetailStack([]);
+      void loadDetail(fromCatalogProject(project, findInstalled(project) ?? null), false);
+    },
+    [findInstalled, isOnline, loadDetail, t],
+  );
 
   const openProjectLink = useCallback(
     async (href: string) => {
@@ -2743,6 +2777,9 @@ export function ContentManager({
         />
 
         <ContentListPane
+          shaderSupport={shaderState}
+          onOpenShaderLoader={(slug) => void openShaderLoader(slug)}
+          canInstallShaderLoader={canEdit && isOnline}
           account={account}
           activeIndex={activeIndex}
           busyKey={busyKey}
@@ -2804,6 +2841,7 @@ export function ContentManager({
           setDetailStack={setDetailStack}
           setIsClearTrashOpen={setIsClearTrashOpen}
           setIsDropActive={setIsDropActive}
+          listElement={listElement}
           setListElement={setListElement}
           setPinnedFor={setPinnedFor}
           setScope={changeScope}

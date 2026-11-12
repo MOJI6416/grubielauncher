@@ -14,18 +14,25 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import {
+  BACKDROP_FITS,
   BACKDROP_LIMITS,
+  DEFAULT_BACKDROP_FRAME,
   MAX_THEME_NAME,
+  THEME_ZONES,
   contrastReport,
+  themePalette,
+  type BackdropFit,
   type ThemeBackdrop,
   type ThemeColors,
   type ThemeDefinition,
   type ThemeMode,
+  type ThemeZone,
 } from "@/shared/themes";
 import { SettingRow, SettingsGroup, Segmented } from "@renderer/features/settings/SettingsPrimitives";
-import { backdropUrl, pickBackdrop } from "./themesStore";
+import { pickBackdrop } from "./themesStore";
+import { BackdropFramer } from "./BackdropFramer";
 
-type ColorKey = keyof ThemeColors;
+type ColorKey = "background" | "surface" | "foreground" | "accent";
 
 const COLOR_KEYS: ColorKey[] = ["background", "surface", "foreground", "accent"];
 
@@ -122,6 +129,18 @@ export function ThemeEditor({
   const setColor = (key: ColorKey, value: string | null) =>
     onChange({ ...draft, colors: { ...draft.colors, [key]: value } });
 
+  const zoneDefaults: Record<ThemeZone, string> = {
+    sidebar: themePalette(draft, accent).surface1,
+    topbar: draft.colors.background,
+  };
+
+  const setZone = (zone: ThemeZone, value: string | null) => {
+    const colors: ThemeColors = { ...draft.colors };
+    if (value) colors[zone] = value;
+    else delete colors[zone];
+    onChange({ ...draft, colors });
+  };
+
   const setBackdrop = (patch: Partial<ThemeBackdrop> | null) =>
     onChange({
       ...draft,
@@ -138,6 +157,9 @@ export function ThemeEditor({
       ...draft,
       backdrop: {
         path,
+        fit: draft.backdrop?.fit ?? DEFAULT_BACKDROP_FRAME.fit,
+        focusX: DEFAULT_BACKDROP_FRAME.focusX,
+        focusY: DEFAULT_BACKDROP_FRAME.focusY,
         dim: draft.backdrop?.dim ?? BACKDROP_LIMITS.dim.initial,
         blur: draft.backdrop?.blur ?? BACKDROP_LIMITS.blur.initial,
         panelOpacity: draft.backdrop?.panelOpacity ?? BACKDROP_LIMITS.panelOpacity.initial,
@@ -197,6 +219,30 @@ export function ThemeEditor({
         </label>
       </SettingRow>
 
+      <SettingRow title={t("theme.editor.zones")} description={t("theme.editor.zonesDescription")}>
+        <div className="mt-2.5 grid grid-cols-4 gap-2">
+          {THEME_ZONES.map((zone) => (
+            <div key={zone} className="flex flex-col gap-2">
+              <ColorField
+                label={t(`theme.editor.zone.${zone}`)}
+                value={draft.colors[zone] ?? zoneDefaults[zone]}
+                disabled={!draft.colors[zone]}
+                onChange={(value) => setZone(zone, value)}
+              />
+              <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                <Checkbox
+                  checked={!!draft.colors[zone]}
+                  onCheckedChange={(checked) =>
+                    setZone(zone, checked === true ? zoneDefaults[zone] : null)
+                  }
+                />
+                {t("theme.editor.zoneOwn")}
+              </label>
+            </div>
+          ))}
+        </div>
+      </SettingRow>
+
       <SettingRow
         title={t("theme.editor.picture")}
         description={t("theme.editor.pictureDescription")}
@@ -216,13 +262,26 @@ export function ThemeEditor({
         }
       >
         {draft.backdrop && (
-          <div className="mt-2.5 flex items-center gap-4">
-            <span
-              aria-hidden
-              className="h-16 w-28 shrink-0 rounded-md border border-border bg-cover bg-center"
-              style={{ backgroundImage: `url("${backdropUrl(draft.backdrop.path)}")` }}
-            />
+          <div className="mt-2.5 flex items-start gap-4">
+            <BackdropFramer backdrop={draft.backdrop} onChange={(frame) => setBackdrop(frame)} />
             <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <span className="w-40 shrink-0 text-xs text-muted-foreground">
+                  {t("theme.editor.fit")}
+                </span>
+                <Segmented<BackdropFit>
+                  ariaLabel={t("theme.editor.fit")}
+                  value={draft.backdrop.fit}
+                  onChange={(fit) => setBackdrop({ fit })}
+                  options={BACKDROP_FITS.map((fit) => ({
+                    value: fit,
+                    label: t(`theme.editor.fits.${fit}`),
+                  }))}
+                />
+              </div>
+              <p className="pl-43 text-[0.7rem] leading-snug text-faint">
+                {t(`theme.editor.fitHints.${draft.backdrop.fit}`)}
+              </p>
               <BackdropSlider
                 label={t("theme.editor.dim")}
                 value={draft.backdrop.dim}

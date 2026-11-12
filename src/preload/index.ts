@@ -881,6 +881,7 @@ export interface IElectronAPI {
     confirmClose: () => Promise<void>;
     getUiScale: () => Promise<UiScaleState>;
     setUiScale: (scale: number) => Promise<UiScaleState>;
+    setTitleBarColors: (color: string, symbolColor: string) => Promise<void>;
     onCloseRequested: (
       callback: (reason: {
         unsaved: boolean;
@@ -2004,6 +2005,8 @@ export const api: IElectronAPI = {
     confirmClose: () => invoke("other:confirmClose"),
     getUiScale: () => invoke("other:getUiScale"),
     setUiScale: (scale: number) => invoke("other:setUiScale", scale),
+    setTitleBarColors: (color: string, symbolColor: string) =>
+      invoke("other:setTitleBarColors", color, symbolColor),
     onCloseRequested: (
       callback: (reason: {
         unsaved: boolean;

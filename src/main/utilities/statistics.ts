@@ -3,6 +3,8 @@ import path from "path";
 import fs from "fs-extra";
 import {
   IPlaytimeSyncEntry,
+  ISessionConfig,
+  ISessionResources,
   IVersionSession,
   IVersionStatistics,
 } from "@/types/VersionStatistics";
@@ -14,6 +16,11 @@ type VersionAggregate = Omit<IVersionStatistics, "lastLaunched"> & {
   lastLaunched: string;
 };
 
+export type SessionConfigInput = Omit<
+  ISessionConfig,
+  "mods" | "modsAdded" | "modsRemoved" | "modsAddedCount" | "modsRemovedCount" | "modSet"
+> & { mods: { key: string; title: string }[] };
+
 export interface SessionContext {
   versionName: string;
   versionPath: string;
@@ -21,6 +28,44 @@ export interface SessionContext {
   trackStatistics: boolean;
   accountSub: string | null;
   accountLabel?: string;
+  config?: SessionConfigInput;
+}
+
+const MOD_DIFF_TITLES = 12;
+
+export function attachSessionConfig(
+  sessions: IVersionSession[],
+  input: SessionConfigInput,
+): ISessionConfig {
+  const { mods, ...rest } = input;
+  const modSet: Record<string, string> = {};
+  for (const mod of mods) modSet[mod.key] = mod.title || mod.key;
+  const config: ISessionConfig = { ...rest, mods: Object.keys(modSet).length, modSet };
+
+  for (let index = sessions.length - 1; index >= 0; index--) {
+    const previous = sessions[index].config;
+    if (!previous?.modSet) continue;
+
+    const before = previous.modSet;
+    const added = Object.keys(modSet).filter((key) => !(key in before));
+    const removed = Object.keys(before).filter((key) => !(key in modSet));
+
+    if (added.length) {
+      config.modsAddedCount = added.length;
+      config.modsAdded = added.slice(0, MOD_DIFF_TITLES).map((key) => modSet[key]);
+    }
+    if (removed.length) {
+      config.modsRemovedCount = removed.length;
+      config.modsRemoved = removed.slice(0, MOD_DIFF_TITLES).map((key) => before[key]);
+    }
+
+    const kept = { ...previous };
+    delete kept.modSet;
+    sessions[index] = { ...sessions[index], config: kept };
+    break;
+  }
+
+  return config;
 }
 
 interface ActiveSession extends SessionContext {
@@ -239,7 +284,8 @@ function writeMarker(session: ActiveSession, lastSeen: number): Promise<void> {
   const next = previous.then(async () => {
     if (endedSessionIds.has(session.id)) return;
 
-    const marker: PendingMarker = { ...session, lastSeen };
+    const { config: _config, ...rest } = session;
+    const marker: PendingMarker = { ...rest, lastSeen };
     try {
       await atomicWriteJSON(markerPath(session.id), marker);
     } catch {}
@@ -314,6 +360,9 @@ async function recordSession(
       sessionsPath(ctx.versionPath),
     );
     if (!sessions.writable) return;
+    if (ctx.config) {
+      session.config = attachSessionConfig(sessions.value, ctx.config);
+    }
     sessions.value.push(session);
     await tryWriteJSON(
       sessionsPath(ctx.versionPath),
@@ -359,12 +408,34 @@ export async function endSession(
   versionName: string,
   instance: number,
   exitCode: number,
-  options?: { recovered?: boolean },
+  options?: { recovered?: boolean; resources?: ISessionResources | null },
 ): Promise<void> {
+  await finishSession(detachSession(versionName, instance), exitCode, options);
+}
+
+export type DetachedSession = ActiveSession & {
+  detachedAt: number;
+  detachedMono: number;
+};
+
+export function detachSession(
+  versionName: string,
+  instance: number,
+): DetachedSession | null {
   const key = makeKey(versionName, instance);
   const session = activeSessions.get(key);
   activeSessions.delete(key);
   stopHeartbeatIfIdle();
+  return session
+    ? { ...session, detachedAt: Date.now(), detachedMono: performance.now() }
+    : null;
+}
+
+export async function finishSession(
+  session: DetachedSession | null,
+  exitCode: number,
+  options?: { recovered?: boolean; resources?: ISessionResources | null },
+): Promise<void> {
   if (!session) return;
 
   endedSessionIds.add(session.id);
@@ -379,13 +450,13 @@ export async function endSession(
     endedSessionIds.delete(session.id);
   }
 
-  const endedAtMs = Date.now();
+  const endedAtMs = session.detachedAt;
   const reached = session.readyAt != null;
   const startMs = session.readyAt ?? session.spawnedAt;
 
   const elapsedSec = Math.max(
     0,
-    Math.floor((performance.now() - (session.readyMono ?? session.spawnedMono)) / 1000),
+    Math.floor((session.detachedMono - (session.readyMono ?? session.spawnedMono)) / 1000),
   );
   const rawDurationSec = reached
     ? elapsedSec
@@ -402,6 +473,7 @@ export async function endSession(
     recovered: options?.recovered ? true : undefined,
     account: session.accountLabel,
     server: session.server,
+    resources: options?.resources ?? undefined,
   });
 }
 

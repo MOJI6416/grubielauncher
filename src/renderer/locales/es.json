@@ -935,7 +935,13 @@
     "restoredCount": "Restaurados: {{n}}",
     "addedElsewhere": "Algunos archivos fueron a otras pestañas: {{types}}",
     "catalogLoaderHintQuilt": "Quilt ejecuta la mayoría de los mods de Fabric, así que también puede buscarlos aquí. Sus actualizaciones también se buscan para Quilt.",
-    "catalogLoaderHintLegacyFabric": "Algunos mods de Legacy Fabric en Modrinth están etiquetados como Fabric a secas. Cambie aquí para encontrarlos también."
+    "catalogLoaderHintLegacyFabric": "Algunos mods de Legacy Fabric en Modrinth están etiquetados como Fabric a secas. Cambie aquí para encontrarlos también.",
+    "shaderLoader": {
+      "missing": "Los shaders solo funcionan con {{loader}}. No está en esta instancia y sin él no se activarán.",
+      "unsupported": "En esta instancia los shaders no tienen con qué funcionar: necesitan Fabric, Quilt o NeoForge con Iris (o Forge con Oculus).",
+      "install": "Instalar {{loader}}",
+      "notFound": "No se pudo abrir la página del mod. Revisa la conexión y vuelve a intentarlo."
+    }
   },
   "nav": {
     "play": "Jugar"
@@ -2644,7 +2650,72 @@
     "jumps": "Saltos",
     "km": "km",
     "loadFailed": "No se pudieron leer las estadísticas",
-    "loadFailedHint": "El archivo statistics.json existe, pero no se pudo abrir. Vuelva a intentarlo; si el juego está abierto, espere a que se cierre."
+    "loadFailedHint": "El archivo statistics.json existe, pero no se pudo abrir. Vuelva a intentarlo; si el juego está abierto, espere a que se cierre.",
+    "resources": {
+      "viewLabel": "Qué mostrar",
+      "viewGame": "Juego",
+      "viewResources": "Recursos",
+      "empty": "Aún no hay mediciones",
+      "emptyHint": "Aparecerán tras el próximo inicio: el launcher registrará cuánta memoria ocupó el juego, cuánto tardó en cargar y si el recolector de basura causó tirones.",
+      "heap": "Memoria del juego",
+      "heapHint": "Memoria ocupada tras la recolección de basura: lo que el juego con todos sus mods necesita de verdad. El valor habitual del último inicio.",
+      "heapPeak": "Pico de memoria",
+      "ofAllocated": "de {{allocated}}",
+      "process": "RAM del proceso",
+      "processHint": "Cuánta memoria del equipo ocupó el juego entero, como en el Administrador de tareas. Con la optimización de la JVM casi siempre es toda la asignada.",
+      "load": "Carga",
+      "loadHint": "Del inicio al menú principal: el tiempo que el juego tardó en cargar mods y texturas",
+      "pauses": "Tirones",
+      "pausesHint": "Pausas del recolector de basura de más de 100 ms tras la carga. En esos momentos el juego se congela una fracción de segundo.",
+      "pausesNone": "no",
+      "pausesLongest": "hasta {{value}}",
+      "mods": "Mods",
+      "memoryChart": "Memoria por inicio",
+      "legendTypical": "habitual",
+      "legendPeak": "pico",
+      "legendAllocated": "asignada",
+      "hintHeap": "Habitual {{typical}}, pico {{peak}}, asignada {{allocated}}",
+      "adviceTitle": "Consejo de memoria",
+      "adviceNone": "El consejo aparecerá cuando haya mediciones de memoria.",
+      "advicePauses_one": "En los últimos inicios hubo hasta {{count}} tirón notable del recolector de basura. Activa «Optimización de la JVM» en los ajustes del juego: acorta las pausas.",
+      "advicePauses_many": "En los últimos inicios hubo hasta {{count}} tirones notables del recolector de basura. Activa «Optimización de la JVM» en los ajustes del juego: acorta las pausas.",
+      "advicePauses_other": "En los últimos inicios hubo hasta {{count}} tirones notables del recolector de basura. Activa «Optimización de la JVM» en los ajustes del juego: acorta las pausas.",
+      "advice": {
+        "tight": "El juego ocupó hasta {{peak}} de los {{allocated}} asignados: la memoria va justa, el recolector de basura trabaja más a menudo y el juego da tirones. Asigna {{suggest}} a la instancia.",
+        "tightMax": "El juego ocupó hasta {{peak}} de los {{allocated}} asignados: la memoria va justa y este equipo no puede dar más. Ayudarán mods más ligeros o menos distancia de renderizado.",
+        "excess": "Al juego le bastan unos {{peak}}, pero tiene asignados {{allocated}}. El resto no se usa: puedes bajarlo a {{suggest}} y dejar la memoria al sistema.",
+        "ok": "{{allocated}} asignados, el juego ocupó hasta {{peak}}. El margen es correcto: no hace falta cambiar nada."
+      },
+      "basedOn_one": "Según {{count}} inicio",
+      "basedOn_many": "Según {{count}} inicios",
+      "basedOn_other": "Según {{count}} inicios",
+      "about": "Medir no ralentiza el juego: el launcher lee el registro del recolector de basura de Java y mira la memoria del proceso cada 15 segundos. Los FPS no se pueden medir así: para eso hace falta un mod dentro del juego.",
+      "changesTitle": "Qué cambió",
+      "changesEmpty": "Desde la primera medición los mods y los ajustes no han cambiado.",
+      "loadChart": "Carga por inicio",
+      "effectHeap": "memoria {{value}}",
+      "effectLoad": "carga {{value}}",
+      "change": {
+        "modsAdded_one": "{{count}} mod añadido",
+        "modsAdded_many": "{{count}} mods añadidos",
+        "modsAdded_other": "{{count}} mods añadidos",
+        "modsRemoved_one": "{{count}} mod quitado",
+        "modsRemoved_many": "{{count}} mods quitados",
+        "modsRemoved_other": "{{count}} mods quitados",
+        "memory": "Memoria {{from}} → {{to}}",
+        "java": "Java {{from}} → {{to}}",
+        "loader": "Cargador {{from}} → {{to}}",
+        "minecraft": "Minecraft {{from}} → {{to}}",
+        "optimizedOn": "Optimización de la JVM activada",
+        "optimizedOff": "Optimización de la JVM desactivada"
+      },
+      "units": {
+        "mb": "MB",
+        "gb": "GB",
+        "sec": "s",
+        "ms": "ms"
+      }
+    }
   },
   "accountInfo": {
     "error": "Error al cargar la información de la cuenta",
@@ -6097,12 +6168,15 @@
     "deleteConfirm": "El tema «{{name}}» se eliminará para siempre. La imagen de fondo queda en la carpeta de temas.",
     "saved": "Tema «{{name}}» guardado",
     "limit": "Puedes guardar hasta {{count}} temas",
-    "accentByTheme": "Ahora el color de acento lo define el tema «{{name}}»",
+    "accentByTheme": "El tema «{{name}}» define el acento. Para elegir un color aquí, desactive «Color de acento propio» en el editor del tema",
     "command": "Tema: {{name}}",
     "builtIn": {
       "grubie": "Grubie",
       "oled": "OLED",
       "light": "Claro"
+    },
+    "card": {
+      "ownAccent": "Color de acento propio del tema"
     },
     "editor": {
       "title": "Editor de tema",
@@ -6131,7 +6205,28 @@
       "readability": "Legibilidad",
       "readabilityDescription": "Se comprueba sin la imagen: oscurecer mantiene el texto legible encima",
       "blocked": "Corrige los puntos en rojo: con estos colores el texto no se lee",
-      "save": "Guardar tema"
+      "save": "Guardar tema",
+      "fit": "Colocación",
+      "fits": {
+        "cover": "Rellenar",
+        "contain": "Completa",
+        "stretch": "Estirar"
+      },
+      "fitHints": {
+        "cover": "La imagen llena toda la ventana y se recortan los bordes que sobran",
+        "contain": "La imagen se ve completa, con una copia desenfocada en los bordes",
+        "stretch": "La imagen se estira a la ventana y puede verse deformada"
+      },
+      "framing": "Parte visible de la imagen",
+      "framingHint": "Arrastre para elegir la parte visible",
+      "framingCenter": "Centrar",
+      "zones": "Colores de los paneles",
+      "zonesDescription": "La barra lateral y la barra superior pueden tener su propio color. El color del texto se ajusta solo",
+      "zone": {
+        "sidebar": "Barra lateral",
+        "topbar": "Barra superior"
+      },
+      "zoneOwn": "Color propio"
     },
     "checks": {
       "text": "Texto en paneles",
@@ -6139,7 +6234,9 @@
       "muted": "Texto secundario",
       "faint": "Etiquetas",
       "accent": "Acento en paneles",
-      "accentText": "Texto del botón"
+      "accentText": "Texto del botón",
+      "sidebar": "Texto en la barra lateral",
+      "topbar": "Texto en la barra superior"
     },
     "transfer": {
       "export": "Guardar en archivo",

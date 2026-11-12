@@ -3,6 +3,7 @@ import {
   backdropUrl,
   useActiveTheme,
 } from "@renderer/features/theme/themesStore";
+import { BackdropPicture } from "./BackdropPicture";
 
 export function Background({ children }: { children: ReactNode }) {
   const backdrop = useActiveTheme().backdrop;
@@ -15,13 +16,10 @@ export function Background({ children }: { children: ReactNode }) {
       >
         {backdrop && (
           <>
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{
-                backgroundImage: `url("${backdropUrl(backdrop.path)}")`,
-                filter: backdrop.blur ? `blur(${backdrop.blur}px)` : undefined,
-                transform: backdrop.blur ? "scale(1.06)" : undefined,
-              }}
+            <BackdropPicture
+              url={backdropUrl(backdrop.path)}
+              frame={backdrop}
+              blur={backdrop.blur}
             />
             <div
               className="absolute inset-0"

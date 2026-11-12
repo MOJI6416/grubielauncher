@@ -935,7 +935,13 @@
     "restoredCount": "Restaurés : {{n}}",
     "addedElsewhere": "Certains fichiers sont allés dans d’autres onglets : {{types}}",
     "catalogLoaderHintQuilt": "Quilt fait tourner la plupart des mods Fabric, vous pouvez donc aussi les chercher ici. Leurs mises à jour sont également vérifiées pour Quilt.",
-    "catalogLoaderHintLegacyFabric": "Sur Modrinth, certains mods Legacy Fabric sont marqués simplement Fabric. Basculez pour les trouver aussi."
+    "catalogLoaderHintLegacyFabric": "Sur Modrinth, certains mods Legacy Fabric sont marqués simplement Fabric. Basculez pour les trouver aussi.",
+    "shaderLoader": {
+      "missing": "Les shaders ne fonctionnent qu’avec {{loader}}. Il manque dans cette instance, donc ils ne s’activeront pas sans lui.",
+      "unsupported": "Dans cette instance, les shaders n’ont rien pour tourner : il leur faut Fabric, Quilt ou NeoForge avec Iris (ou Forge avec Oculus).",
+      "install": "Installer {{loader}}",
+      "notFound": "Impossible d’ouvrir la page du mod. Vérifiez la connexion et réessayez."
+    }
   },
   "nav": {
     "play": "Jouer"
@@ -2644,7 +2650,72 @@
     "jumps": "Sauts",
     "km": "km",
     "loadFailed": "Impossible de lire les statistiques",
-    "loadFailedHint": "Le fichier statistics.json existe mais n’a pas pu être ouvert. Réessayez — si le jeu est lancé, attendez qu’il se ferme."
+    "loadFailedHint": "Le fichier statistics.json existe mais n’a pas pu être ouvert. Réessayez — si le jeu est lancé, attendez qu’il se ferme.",
+    "resources": {
+      "viewLabel": "Afficher",
+      "viewGame": "Jeu",
+      "viewResources": "Ressources",
+      "empty": "Pas encore de mesures",
+      "emptyHint": "Elles apparaîtront après le prochain lancement : le launcher notera la mémoire occupée par le jeu, la durée du chargement et les saccades dues au ramasse-miettes.",
+      "heap": "Mémoire du jeu",
+      "heapHint": "Mémoire occupée après le passage du ramasse-miettes : ce dont le jeu a vraiment besoin avec tous ses mods. La valeur habituelle du dernier lancement.",
+      "heapPeak": "Pic de mémoire",
+      "ofAllocated": "sur {{allocated}}",
+      "process": "RAM du processus",
+      "processHint": "La mémoire de l’ordinateur occupée par le jeu entier, comme dans le Gestionnaire des tâches. Avec l’optimisation de la JVM, c’est presque toujours toute l’allocation.",
+      "load": "Chargement",
+      "loadHint": "Du lancement au menu principal : le temps passé à charger les mods et les textures",
+      "pauses": "Saccades",
+      "pausesHint": "Pauses du ramasse-miettes de plus de 100 ms après le chargement. À ces moments, le jeu se fige une fraction de seconde.",
+      "pausesNone": "aucune",
+      "pausesLongest": "jusqu’à {{value}}",
+      "mods": "Mods",
+      "memoryChart": "Mémoire par lancement",
+      "legendTypical": "habituel",
+      "legendPeak": "pic",
+      "legendAllocated": "alloué",
+      "hintHeap": "Habituel {{typical}}, pic {{peak}}, alloué {{allocated}}",
+      "adviceTitle": "Conseil mémoire",
+      "adviceNone": "Le conseil apparaîtra quand il y aura des mesures de mémoire.",
+      "advicePauses_one": "Les derniers lancements ont connu jusqu’à {{count}} saccade notable du ramasse-miettes. Activez « Optimisation de la JVM » dans les paramètres du jeu : elle raccourcit les pauses.",
+      "advicePauses_many": "Les derniers lancements ont connu jusqu’à {{count}} saccades notables du ramasse-miettes. Activez « Optimisation de la JVM » dans les paramètres du jeu : elle raccourcit les pauses.",
+      "advicePauses_other": "Les derniers lancements ont connu jusqu’à {{count}} saccades notables du ramasse-miettes. Activez « Optimisation de la JVM » dans les paramètres du jeu : elle raccourcit les pauses.",
+      "advice": {
+        "tight": "Le jeu a occupé jusqu’à {{peak}} sur {{allocated}} alloués : la mémoire est juste, le ramasse-miettes tourne plus souvent et le jeu saccade. Allouez {{suggest}} à l’instance.",
+        "tightMax": "Le jeu a occupé jusqu’à {{peak}} sur {{allocated}} alloués : la mémoire est juste et cet ordinateur ne peut pas donner plus. Des mods plus légers ou une distance d’affichage réduite aideront.",
+        "excess": "Le jeu se contente d’environ {{peak}}, mais {{allocated}} sont alloués. Le reste ne sert pas : vous pouvez descendre à {{suggest}} et laisser la mémoire au système.",
+        "ok": "{{allocated}} alloués, le jeu a occupé jusqu’à {{peak}}. La marge est correcte : rien à changer."
+      },
+      "basedOn_one": "D’après {{count}} lancement",
+      "basedOn_many": "D’après {{count}} lancements",
+      "basedOn_other": "D’après {{count}} lancements",
+      "about": "La mesure ne ralentit pas le jeu : le launcher lit le journal du ramasse-miettes de Java et regarde la mémoire du processus toutes les 15 secondes. Les FPS ne se mesurent pas ainsi : il faut un mod dans le jeu.",
+      "changesTitle": "Ce qui a changé",
+      "changesEmpty": "Les mods et les réglages n’ont pas changé depuis la première mesure.",
+      "loadChart": "Chargement par lancement",
+      "effectHeap": "mémoire {{value}}",
+      "effectLoad": "chargement {{value}}",
+      "change": {
+        "modsAdded_one": "{{count}} mod ajouté",
+        "modsAdded_many": "{{count}} mods ajoutés",
+        "modsAdded_other": "{{count}} mods ajoutés",
+        "modsRemoved_one": "{{count}} mod retiré",
+        "modsRemoved_many": "{{count}} mods retirés",
+        "modsRemoved_other": "{{count}} mods retirés",
+        "memory": "Mémoire {{from}} → {{to}}",
+        "java": "Java {{from}} → {{to}}",
+        "loader": "Chargeur {{from}} → {{to}}",
+        "minecraft": "Minecraft {{from}} → {{to}}",
+        "optimizedOn": "Optimisation de la JVM activée",
+        "optimizedOff": "Optimisation de la JVM désactivée"
+      },
+      "units": {
+        "mb": "Mo",
+        "gb": "Go",
+        "sec": "s",
+        "ms": "ms"
+      }
+    }
   },
   "accountInfo": {
     "error": "Erreur de chargement des informations du compte",
@@ -6101,12 +6172,15 @@
     "deleteConfirm": "Le thème « {{name}} » sera supprimé définitivement. L’image de fond reste dans le dossier des thèmes.",
     "saved": "Thème « {{name}} » enregistré",
     "limit": "Vous pouvez garder jusqu’à {{count}} thèmes",
-    "accentByTheme": "La couleur d’accent est définie par le thème « {{name}} »",
+    "accentByTheme": "Le thème « {{name}} » définit l’accent. Pour choisir une couleur ici, désactivez « Couleur d’accent propre » dans l’éditeur du thème",
     "command": "Thème : {{name}}",
     "builtIn": {
       "grubie": "Grubie",
       "oled": "OLED",
       "light": "Clair"
+    },
+    "card": {
+      "ownAccent": "Couleur d’accent propre au thème"
     },
     "editor": {
       "title": "Éditeur de thème",
@@ -6135,7 +6209,28 @@
       "readability": "Lisibilité",
       "readabilityDescription": "Vérifiée sans l’image : l’assombrissement garde le texte lisible par-dessus",
       "blocked": "Corrigez les points en rouge : ce texte serait illisible",
-      "save": "Enregistrer le thème"
+      "save": "Enregistrer le thème",
+      "fit": "Disposition",
+      "fits": {
+        "cover": "Remplir",
+        "contain": "En entier",
+        "stretch": "Étirer"
+      },
+      "fitHints": {
+        "cover": "L'image remplit toute la fenêtre, les bords qui dépassent sont rognés",
+        "contain": "L'image est visible en entier, avec une copie floue sur les bords",
+        "stretch": "L'image est étirée à la taille de la fenêtre et peut être déformée"
+      },
+      "framing": "Partie visible de l'image",
+      "framingHint": "Faites glisser pour choisir la partie visible",
+      "framingCenter": "Centrer",
+      "zones": "Couleurs des panneaux",
+      "zonesDescription": "La barre latérale et la barre du haut peuvent avoir leur propre couleur. La couleur du texte s'adapte toute seule",
+      "zone": {
+        "sidebar": "Barre latérale",
+        "topbar": "Barre du haut"
+      },
+      "zoneOwn": "Couleur propre"
     },
     "checks": {
       "text": "Texte sur les panneaux",
@@ -6143,7 +6238,9 @@
       "muted": "Texte secondaire",
       "faint": "Libellés",
       "accent": "Accent sur les panneaux",
-      "accentText": "Texte du bouton"
+      "accentText": "Texte du bouton",
+      "sidebar": "Texte de la barre latérale",
+      "topbar": "Texte de la barre du haut"
     },
     "transfer": {
       "export": "Enregistrer dans un fichier",

@@ -39,7 +39,10 @@ import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
 import { FactRow, FactRows } from "@renderer/components/FactRows";
 import { formatDay } from "@renderer/utilities/date";
+import { Segmented } from "@renderer/features/settings/SettingsPrimitives";
 import { readInstanceStatistics } from "./stats";
+import { Fact, Panel } from "./statisticsParts";
+import { InstanceResourcesView } from "./InstanceResourcesView";
 import { dailyPlaytime, recentSessions } from "./instanceOverview";
 import { useInstanceDataRevision } from "./instanceRevision";
 import { formatPlaytime } from "./playtime";
@@ -54,68 +57,6 @@ import {
 } from "./statistics";
 
 const api = window.api;
-
-function Fact({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-2 rounded-xl border border-border bg-card px-2.5 py-2">
-      <Icon className="size-4 shrink-0 text-faint" />
-      <div className="flex min-w-0 flex-col">
-        <span className="truncate text-[0.62rem] leading-tight text-faint">
-          {label}
-        </span>
-        <span className="truncate text-sm font-semibold tabular-nums">
-          {value}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function Panel({
-  title,
-  icon: Icon,
-  hint,
-  className,
-  bodyClassName,
-  children,
-}: {
-  title: string;
-  icon: LucideIcon;
-  hint?: string;
-  className?: string;
-  bodyClassName?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card",
-        className,
-      )}
-    >
-      <header className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-3">
-        <Icon className="size-3.5 shrink-0 text-faint" />
-        <span className="min-w-0 flex-1 truncate text-[0.68rem] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-          {title}
-        </span>
-        {hint && (
-          <span className="shrink-0 font-mono text-[0.65rem] text-faint">
-            {hint}
-          </span>
-        )}
-      </header>
-      <div className={cn("min-h-0 flex-1", bodyClassName)}>{children}</div>
-    </section>
-  );
-}
 
 function JournalRow({ label, value }: { label: string; value: string }) {
   return (
@@ -178,6 +119,7 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [isSessionsLoaded, setIsSessionsLoaded] = useState(false);
+  const [view, setView] = useState<"game" | "resources">("game");
   const revision = useInstanceDataRevision();
   const contents = useInstanceContents(instance.versionPath);
   const { t } = useTranslation();
@@ -375,6 +317,22 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
+      <div className="flex shrink-0 items-center gap-2">
+        <Segmented
+          value={view}
+          onChange={setView}
+          ariaLabel={t("versionStatistics.resources.viewLabel")}
+          options={[
+            { value: "game", label: t("versionStatistics.resources.viewGame") },
+            { value: "resources", label: t("versionStatistics.resources.viewResources") },
+          ]}
+        />
+      </div>
+
+      {view === "resources" ? (
+        <InstanceResourcesView sessions={sessions} />
+      ) : (
+      <>
       <div className="grid shrink-0 grid-cols-6 gap-2">
         {facts.map((fact) => (
           <Fact
@@ -617,6 +575,8 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
             </Panel>
           </div>
         </>
+      )}
+      </>
       )}
     </div>
   );

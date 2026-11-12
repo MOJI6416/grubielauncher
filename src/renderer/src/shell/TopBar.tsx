@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils";
 import { ALT_KEY, MOD_KEY } from "@renderer/utilities/platform";
 import { TITLEBAR_HEIGHT } from "@/shared/titlebar";
 import { BrandMark } from "./BrandMark";
+import { useZoneStyle } from "@renderer/features/theme/zoneStyle";
 
 const api = window.api;
 
@@ -93,6 +94,7 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
   const { kind, title } = useCrumbs(route);
   const { t } = useTranslation();
   const isSidebarCollapsed = useSidebarCollapsed();
+  const zoneStyle = useZoneStyle("topbar");
   const sidebarLabel = isSidebarCollapsed
     ? t("shell.sidebarExpand")
     : t("shell.sidebarCollapse");
@@ -113,10 +115,11 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
 
   return (
     <header
-      className={`flex shrink-0 items-center border-b border-border bg-background select-none ${
+      className={`flex shrink-0 items-center border-b border-border bg-background text-foreground select-none ${
         hasWindowControls ? "app-drag" : ""
       }`}
       style={{
+        ...zoneStyle,
         height: TITLEBAR_HEIGHT,
         ...(hasWindowControls
           ? {

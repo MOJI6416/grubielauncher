@@ -10,9 +10,14 @@ import {
   normalizeThemesFile,
   textOn,
   themeVariables,
+  titleBarColors,
   visibleAccent,
+  zonePalette,
+  zoneVariables,
   type ThemeDefinition,
 } from "./themes";
+import { contrastRatio } from "./accents";
+import { TITLEBAR_OVERLAY } from "./titlebar";
 
 const VIOLET = "#7c5cff";
 
@@ -41,7 +46,17 @@ describe("themeVariables", () => {
 
   it("makes panels see-through over a background picture but keeps popovers solid", () => {
     const vars = themeVariables(
-      custom({ backdrop: { path: "C:/bg.png", dim: 50, blur: 4, panelOpacity: 80 } }),
+      custom({
+        backdrop: {
+          path: "C:/bg.png",
+          dim: 50,
+          blur: 4,
+          panelOpacity: 80,
+          fit: "cover",
+          focusX: 50,
+          focusY: 50,
+        },
+      }),
       VIOLET,
     );
     expect(vars["--card"]).toMatch(/\/ 80%\)$/);
@@ -130,9 +145,112 @@ describe("normalizeThemesFile", () => {
 
   it("clamps background picture settings", () => {
     const file = normalizeThemesFile({
-      themes: [custom({ backdrop: { path: "a.png", dim: 400, blur: -3, panelOpacity: 10 } })],
+      themes: [
+        {
+          ...custom(),
+          backdrop: { path: "a.png", dim: 400, blur: -3, panelOpacity: 10, focusX: 140, focusY: -5 },
+        },
+      ],
     });
-    expect(file.themes[0].backdrop).toEqual({ path: "a.png", dim: 90, blur: 0, panelOpacity: 70 });
+    expect(file.themes[0].backdrop).toEqual({
+      path: "a.png",
+      dim: 90,
+      blur: 0,
+      panelOpacity: 70,
+      fit: "cover",
+      focusX: 100,
+      focusY: 0,
+    });
+  });
+
+  it("keeps a known picture fit and drops an unknown one", () => {
+    const backdrop = { path: "a.png", dim: 40, blur: 0, panelOpacity: 90 };
+    const fitOf = (fit: unknown) =>
+      normalizeThemesFile({ themes: [{ ...custom(), backdrop: { ...backdrop, fit } }] }).themes[0]
+        .backdrop?.fit;
+    expect(fitOf("contain")).toBe("contain");
+    expect(fitOf("stretch")).toBe("stretch");
+    expect(fitOf("tile")).toBe("cover");
+  });
+
+  it("keeps valid panel colours and drops broken ones", () => {
+    const theme = normalizeTheme({
+      ...custom(),
+      colors: { ...custom().colors, sidebar: "#2A1B4D", topbar: "red" },
+    });
+    expect(theme?.colors.sidebar).toBe("#2a1b4d");
+    expect(theme?.colors).not.toHaveProperty("topbar");
+  });
+});
+
+describe("panel colours", () => {
+  it("changes nothing for a theme without its own panel colours", () => {
+    expect(zoneVariables(custom(), "sidebar", VIOLET)).toBeNull();
+    expect(zonePalette(custom(), "topbar", VIOLET)).toBeNull();
+    expect(contrastReport(custom(), VIOLET).map((check) => check.id)).not.toContain("sidebar");
+  });
+
+  it("paints the sidebar in its own colour and picks readable text for it", () => {
+    const theme = custom({ colors: { ...custom().colors, sidebar: "#f2e6c9" } });
+    const vars = zoneVariables(theme, "sidebar", VIOLET)!;
+    expect(vars["--sidebar"]).toBe("#f2e6c9");
+    expect(contrastRatio(vars["--foreground"], "#f2e6c9")).toBeGreaterThanOrEqual(4.5);
+    expect(vars["--primary-soft"]).toContain("var(--primary)");
+    expect(contrastReport(theme, VIOLET).find((check) => check.id === "sidebar")?.level).toBe("ok");
+  });
+
+  it("keeps the theme text when it already reads on the panel", () => {
+    const theme = custom({ colors: { ...custom().colors, topbar: "#0a0d10" } });
+    expect(zonePalette(theme, "topbar", VIOLET)?.foreground).toBe("#eef2f6");
+  });
+
+  it("makes the sidebar see-through over a picture like the other panels", () => {
+    const theme = custom({
+      colors: { ...custom().colors, sidebar: "#2a1b4d", topbar: "#2a1b4d" },
+      backdrop: {
+        path: "a.png",
+        dim: 40,
+        blur: 0,
+        panelOpacity: 80,
+        fit: "cover",
+        focusX: 50,
+        focusY: 50,
+      },
+    });
+    expect(zoneVariables(theme, "sidebar", VIOLET)?.["--sidebar"]).toMatch(/\/ 80%\)$/);
+    expect(zoneVariables(theme, "topbar", VIOLET)?.["--background"]).toBe("#2a1b4d");
+  });
+
+  it("blocks a mid-tone panel whose secondary text cannot be read", () => {
+    const theme = custom({ colors: { ...custom().colors, sidebar: "#ce28c8" } });
+    expect(contrastReport(theme, VIOLET).find((check) => check.id === "sidebar")?.level).toBe(
+      "fail",
+    );
+    expect(isThemeReadable(theme, VIOLET)).toBe(false);
+  });
+
+  it("ignores panel colours on the built-in Grubie theme", () => {
+    const grubie = { ...findTheme(DEFAULT_THEME_ID, []) };
+    grubie.colors = { ...grubie.colors, sidebar: "#ff0000" };
+    expect(zoneVariables(grubie, "sidebar", VIOLET)).toBeNull();
+  });
+});
+
+describe("titleBarColors", () => {
+  it("keeps the window buttons of Grubie exactly as before", () => {
+    expect(titleBarColors(findTheme(DEFAULT_THEME_ID, []))).toEqual({
+      color: TITLEBAR_OVERLAY.color,
+      symbolColor: TITLEBAR_OVERLAY.symbolColor,
+    });
+  });
+
+  it("follows the top bar of a light theme and of a theme with its own top bar", () => {
+    const light = titleBarColors(findTheme("light", []));
+    expect(light.color).toBe("#eceef2");
+    expect(contrastRatio(light.symbolColor, light.color)).toBeGreaterThan(3);
+    expect(titleBarColors(custom({ colors: { ...custom().colors, topbar: "#123456" } })).color).toBe(
+      "#123456",
+    );
   });
 });
 

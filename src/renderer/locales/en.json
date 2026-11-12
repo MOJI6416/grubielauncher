@@ -924,7 +924,13 @@
     "restoredCount": "Restored: {{n}}",
     "addedElsewhere": "Some files went to other tabs: {{types}}",
     "catalogLoaderHintQuilt": "Quilt runs most Fabric mods, so you can look for them here too. Their updates are checked for Quilt as well.",
-    "catalogLoaderHintLegacyFabric": "Some Legacy Fabric mods on Modrinth are tagged plain Fabric. Switch to find them as well."
+    "catalogLoaderHintLegacyFabric": "Some Legacy Fabric mods on Modrinth are tagged plain Fabric. Switch to find them as well.",
+    "shaderLoader": {
+      "missing": "Shaders only work through {{loader}}. It isn't in this instance, so they won't turn on without it.",
+      "unsupported": "Shaders have nothing to run on in this instance: they need Fabric, Quilt or NeoForge with Iris (or Forge with Oculus).",
+      "install": "Install {{loader}}",
+      "notFound": "Couldn't open the mod's page. Check your connection and try again."
+    }
   },
   "nav": {
     "play": "Play"
@@ -2626,7 +2632,68 @@
     "jumps": "Jumps",
     "km": "km",
     "loadFailed": "Statistics could not be read",
-    "loadFailedHint": "The statistics.json file exists but could not be opened. Try again — if the game is running, wait until it exits."
+    "loadFailedHint": "The statistics.json file exists but could not be opened. Try again — if the game is running, wait until it exits.",
+    "resources": {
+      "viewLabel": "What to show",
+      "viewGame": "Game",
+      "viewResources": "Resources",
+      "empty": "No measurements yet",
+      "emptyHint": "They appear after the next launch: the launcher records how much memory the game took, how long it loaded and whether the garbage collector caused stutters.",
+      "heap": "Game memory",
+      "heapHint": "Memory in use after garbage collection — what the game with all its mods actually needs. The usual value during the last launch.",
+      "heapPeak": "Memory peak",
+      "ofAllocated": "of {{allocated}}",
+      "process": "Process RAM",
+      "processHint": "How much of the computer's memory the whole game took, as in Task Manager. With JVM optimization this is almost always the full allocation.",
+      "load": "Loading",
+      "loadHint": "From launch to the main menu: the time the game spent loading mods and textures",
+      "pauses": "Stutters",
+      "pausesHint": "Garbage collector pauses longer than 100 ms after loading. At those moments the game freezes for a split second.",
+      "pausesNone": "none",
+      "pausesLongest": "up to {{value}}",
+      "mods": "Mods",
+      "memoryChart": "Memory by launch",
+      "legendTypical": "usual",
+      "legendPeak": "peak",
+      "legendAllocated": "allocated",
+      "hintHeap": "Usually {{typical}}, peak {{peak}}, allocated {{allocated}}",
+      "adviceTitle": "Memory advice",
+      "adviceNone": "Advice appears once there are memory measurements.",
+      "advicePauses_one": "Recent launches had up to {{count}} noticeable garbage collector stutter. Turn on “JVM optimization” in the game settings — it shortens the pauses.",
+      "advicePauses_other": "Recent launches had up to {{count}} noticeable garbage collector stutters. Turn on “JVM optimization” in the game settings — it shortens the pauses.",
+      "advice": {
+        "tight": "The game used up to {{peak}} of the {{allocated}} allocated — memory is tight, so the garbage collector runs more often and the game stutters. Give the instance {{suggest}}.",
+        "tightMax": "The game used up to {{peak}} of the {{allocated}} allocated — memory is tight, and this computer can't give more. Lighter mods or a shorter render distance will help.",
+        "excess": "The game needs about {{peak}}, but {{allocated}} is allocated. The rest sits idle — you can lower it to {{suggest}} and leave the memory to the system.",
+        "ok": "{{allocated}} allocated, the game used up to {{peak}}. That's a healthy margin — nothing to change."
+      },
+      "basedOn_one": "Based on {{count}} launch",
+      "basedOn_other": "Based on {{count}} launches",
+      "about": "Measuring doesn't slow the game down: the launcher reads Java's garbage collector log and checks the process memory every 15 seconds. FPS can't be measured this way — that needs a mod inside the game.",
+      "changesTitle": "What changed",
+      "changesEmpty": "Mods and settings haven't changed since the first measurement.",
+      "loadChart": "Loading by launch",
+      "effectHeap": "memory {{value}}",
+      "effectLoad": "loading {{value}}",
+      "change": {
+        "modsAdded_one": "Added {{count}} mod",
+        "modsAdded_other": "Added {{count}} mods",
+        "modsRemoved_one": "Removed {{count}} mod",
+        "modsRemoved_other": "Removed {{count}} mods",
+        "memory": "Memory {{from}} → {{to}}",
+        "java": "Java {{from}} → {{to}}",
+        "loader": "Loader {{from}} → {{to}}",
+        "minecraft": "Minecraft {{from}} → {{to}}",
+        "optimizedOn": "JVM optimization turned on",
+        "optimizedOff": "JVM optimization turned off"
+      },
+      "units": {
+        "mb": "MB",
+        "gb": "GB",
+        "sec": "s",
+        "ms": "ms"
+      }
+    }
   },
   "accountInfo": {
     "error": "Account information loading error",
@@ -6053,12 +6120,15 @@
     "deleteConfirm": "The “{{name}}” theme will be deleted for good. Its background picture stays in the themes folder.",
     "saved": "“{{name}}” theme saved",
     "limit": "You can keep up to {{count}} themes",
-    "accentByTheme": "The accent colour is set by the “{{name}}” theme right now",
+    "accentByTheme": "The “{{name}}” theme sets the accent. To pick a colour here, turn off “Own accent colour” in the theme editor",
     "command": "Theme: {{name}}",
     "builtIn": {
       "grubie": "Grubie",
       "oled": "OLED",
       "light": "Light"
+    },
+    "card": {
+      "ownAccent": "The theme's own accent colour"
     },
     "editor": {
       "title": "Theme editor",
@@ -6087,7 +6157,28 @@
       "readability": "Readability",
       "readabilityDescription": "Checked without the picture: dimming keeps text readable over it",
       "blocked": "Fix the red items: text can't be read with these colours",
-      "save": "Save theme"
+      "save": "Save theme",
+      "fit": "Placement",
+      "fits": {
+        "cover": "Fill",
+        "contain": "Whole",
+        "stretch": "Stretch"
+      },
+      "fitHints": {
+        "cover": "The picture fills the whole window, and the edges that don't fit are cropped",
+        "contain": "The whole picture is visible, with a blurred copy of it along the edges",
+        "stretch": "The picture is stretched to the window and may look distorted"
+      },
+      "framing": "Visible part of the picture",
+      "framingHint": "Drag to choose the visible part",
+      "framingCenter": "Center",
+      "zones": "Panel colours",
+      "zonesDescription": "The sidebar and the top bar can have their own colours. Text on them adjusts automatically",
+      "zone": {
+        "sidebar": "Sidebar",
+        "topbar": "Top bar"
+      },
+      "zoneOwn": "Own colour"
     },
     "checks": {
       "text": "Text on panels",
@@ -6095,7 +6186,9 @@
       "muted": "Secondary text",
       "faint": "Labels and captions",
       "accent": "Accent on panels",
-      "accentText": "Button label"
+      "accentText": "Button label",
+      "sidebar": "Text on the sidebar",
+      "topbar": "Text on the top bar"
     },
     "transfer": {
       "export": "Save to file",

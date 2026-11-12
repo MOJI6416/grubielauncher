@@ -70,6 +70,10 @@ let trayHider: (() => boolean) | null = null;
 let requestedUiScale = DEFAULT_UI_SCALE;
 let appliedUiScale = DEFAULT_UI_SCALE;
 let isDisplayWatchInstalled = false;
+let titleBarColors: { color: string; symbolColor: string } = {
+  color: TITLEBAR_OVERLAY.color,
+  symbolColor: TITLEBAR_OVERLAY.symbolColor,
+};
 
 export function setHideToTrayHandler(handler: (() => boolean) | null): void {
   hideToTrayHandler = handler;
@@ -255,9 +259,21 @@ function windowWorkArea(window: BrowserWindow): Electron.Rectangle {
 
 function titleBarOverlayFor(scale: number) {
   return {
-    ...TITLEBAR_OVERLAY,
+    ...titleBarColors,
     height: Math.round(TITLEBAR_OVERLAY.height * scale),
   };
+}
+
+export function setTitleBarColors(colors: { color: string; symbolColor: string }): void {
+  if (
+    colors.color === titleBarColors.color &&
+    colors.symbolColor === titleBarColors.symbolColor
+  ) {
+    return;
+  }
+  titleBarColors = { color: colors.color, symbolColor: colors.symbolColor };
+  if (process.platform !== "win32" || !mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.setTitleBarOverlay(titleBarOverlayFor(appliedUiScale));
 }
 
 function keepInsideWorkArea(window: BrowserWindow): void {

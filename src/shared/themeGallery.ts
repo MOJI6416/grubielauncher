@@ -1,7 +1,10 @@
 import {
   BACKDROP_LIMITS,
+  THEME_ZONES,
   isHexColor,
+  normalizeBackdropFrame,
   normalizeTheme,
+  type BackdropFrame,
   type ThemeColors,
   type ThemeDefinition,
   type ThemeMode,
@@ -10,7 +13,7 @@ import {
 export type GallerySort = "new" | "downloads";
 export type PublishedStatus = "pending" | "approved" | "rejected";
 
-export interface GalleryBackdrop {
+export interface GalleryBackdrop extends BackdropFrame {
   dim: number;
   blur: number;
   panelOpacity: number;
@@ -49,7 +52,7 @@ export interface PublishPayload {
   name: string;
   mode: ThemeMode;
   colors: ThemeColors;
-  backdrop: { dim: number; blur: number; panelOpacity: number } | null;
+  backdrop: ({ dim: number; blur: number; panelOpacity: number } & BackdropFrame) | null;
 }
 
 export interface PublishImages {
@@ -119,10 +122,17 @@ export function normalizeGalleryTheme(value: unknown): GalleryTheme | null {
       surface: colors.surface.toLowerCase(),
       foreground: colors.foreground.toLowerCase(),
       accent: isHexColor(colors.accent) ? colors.accent.toLowerCase() : null,
+      ...Object.fromEntries(
+        THEME_ZONES.flatMap((zone) => {
+          const value = colors[zone];
+          return isHexColor(value) ? [[zone, value.toLowerCase()]] : [];
+        }),
+      ),
     },
     backdrop:
       backdrop && url
         ? {
+            ...normalizeBackdropFrame(backdrop),
             dim: percent(backdrop.dim, dim.min, dim.max, dim.initial),
             blur: percent(backdrop.blur, blur.min, blur.max, blur.initial),
             panelOpacity: percent(
@@ -172,6 +182,9 @@ export function galleryThemeToDefinition(
             dim: item.backdrop.dim,
             blur: item.backdrop.blur,
             panelOpacity: item.backdrop.panelOpacity,
+            fit: item.backdrop.fit,
+            focusX: item.backdrop.focusX,
+            focusY: item.backdrop.focusY,
           }
         : null,
     galleryId: item.id,
@@ -188,6 +201,9 @@ export function publishPayload(theme: ThemeDefinition): PublishPayload {
           dim: theme.backdrop.dim,
           blur: theme.backdrop.blur,
           panelOpacity: theme.backdrop.panelOpacity,
+          fit: theme.backdrop.fit,
+          focusX: theme.backdrop.focusX,
+          focusY: theme.backdrop.focusY,
         }
       : null,
   };

@@ -21,12 +21,15 @@ import {
 } from "./consoleLog";
 import {
   beginSession,
+  detachSession,
   endSession,
+  finishSession,
   markSessionReady,
   setSessionServer,
   type SessionContext,
 } from "./statistics";
 import { hideWindowForGame, returnWindowAfterGame } from "./gameWindow";
+import { GameMetricsRecorder } from "./gameMetrics";
 
 function safeSend(channel: string, ...args: any[]) {
   if (
@@ -478,8 +481,8 @@ export function runGame(
   serverAddress?: string,
   stats?: Pick<
     SessionContext,
-    "trackStatistics" | "accountSub" | "accountLabel"
-  >,
+    "trackStatistics" | "accountSub" | "accountLabel" | "config"
+  > & { gcLogPath?: string | null },
   highPriority: boolean = false,
   workingDirectory?: string,
   trace?: JournalSpan,
@@ -532,9 +535,14 @@ export function runGame(
     cwd: workingDirectory || versionPath,
     env: { ...childProcessEnv(), ...extraEnv },
   });
+  const metrics = new GameMetricsRecorder({
+    pid: javaProcess.pid,
+    gcLogPath: stats?.trackStatistics ? (stats.gcLogPath ?? null) : null,
+  });
 
   javaProcess.once("spawn", () => {
     watch.spawned(javaProcess.pid);
+    if (stats?.trackStatistics) metrics.start();
     safeTaskbarProgress("indeterminate");
     if (highPriority && javaProcess.pid) {
       try {
@@ -571,6 +579,7 @@ export function runGame(
       trackStatistics: stats.trackStatistics,
       accountSub: stats.accountSub,
       accountLabel: stats.accountLabel,
+      config: stats.config,
     });
   }
 
@@ -677,6 +686,7 @@ export function runGame(
   const stdoutReader = createLineReader((message) => {
     watch.line("out", message);
     outputLog?.line("out", message);
+    metrics.line(message);
     gameRuntime.emitStdout({
       key: instanceKey,
       versionName,
@@ -738,6 +748,7 @@ export function runGame(
     processFinalized = true;
 
     if (intervalId) clearInterval(intervalId);
+    metrics.stop();
     finalizeConsole();
     watch.failedToStart(err);
     void outputLog?.close({ error: (err as Error)?.message || String(err) });
@@ -797,9 +808,12 @@ export function runGame(
       killedByUser: killedByUser || undefined,
     });
 
-    void endSession(versionName, instance, code).finally(() =>
-      safeSend("playtimeRecorded"),
-    );
+    const endedSession = detachSession(versionName, instance);
+    void metrics
+      .finish()
+      .catch(() => null)
+      .then((resources) => finishSession(endedSession, code, { resources }))
+      .finally(() => safeSend("playtimeRecorded"));
 
     const msg: IConsoleMessage = {
       type: "info",

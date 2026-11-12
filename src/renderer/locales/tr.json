@@ -924,7 +924,13 @@
     "restoredCount": "Geri yüklendi: {{n}}",
     "addedElsewhere": "Bazı dosyalar başka sekmelere gitti: {{types}}",
     "catalogLoaderHintQuilt": "Quilt çoğu Fabric modunu çalıştırır, bu yüzden onları burada da arayabilirsiniz. Güncellemeleri Quilt için de denetlenir.",
-    "catalogLoaderHintLegacyFabric": "Modrinth’teki bazı Legacy Fabric modları düz Fabric olarak etiketlenmiş. Onları da bulmak için geçiş yapın."
+    "catalogLoaderHintLegacyFabric": "Modrinth’teki bazı Legacy Fabric modları düz Fabric olarak etiketlenmiş. Onları da bulmak için geçiş yapın.",
+    "shaderLoader": {
+      "missing": "Gölgelendiriciler yalnızca {{loader}} ile çalışır. Bu kurulumda yok, o olmadan açılmazlar.",
+      "unsupported": "Bu kurulumda gölgelendiricilerin çalışacağı bir temel yok: Iris ile Fabric, Quilt veya NeoForge (ya da Oculus ile Forge) gerekir.",
+      "install": "{{loader}} kur",
+      "notFound": "Modun sayfası açılamadı. İnternetinizi kontrol edip tekrar deneyin."
+    }
   },
   "nav": {
     "play": "Oyna"
@@ -2626,7 +2632,68 @@
     "jumps": "Zıplamalar",
     "km": "km",
     "loadFailed": "İstatistikler okunamadı",
-    "loadFailedHint": "statistics.json dosyası var ama açılamadı. Tekrar deneyin — oyun çalışıyorsa kapanmasını bekleyin."
+    "loadFailedHint": "statistics.json dosyası var ama açılamadı. Tekrar deneyin — oyun çalışıyorsa kapanmasını bekleyin.",
+    "resources": {
+      "viewLabel": "Gösterilecek",
+      "viewGame": "Oyun",
+      "viewResources": "Kaynaklar",
+      "empty": "Henüz ölçüm yok",
+      "emptyHint": "Bir sonraki başlatmadan sonra görünürler: launcher oyunun ne kadar bellek kullandığını, ne kadar sürede yüklendiğini ve çöp toplayıcının takılmalara yol açıp açmadığını kaydeder.",
+      "heap": "Oyun belleği",
+      "heapHint": "Çöp toplamadan sonra dolu kalan bellek: oyunun tüm modlarıyla gerçekten ihtiyaç duyduğu miktar. Son başlatmadaki olağan değer.",
+      "heapPeak": "Bellek zirvesi",
+      "ofAllocated": "/ {{allocated}}",
+      "process": "İşlem RAM'i",
+      "processHint": "Oyunun tamamının bilgisayar belleğinden ne kadar kullandığı, Görev Yöneticisi'ndeki gibi. JVM optimizasyonu açıkken bu neredeyse her zaman ayrılan miktarın tamamıdır.",
+      "load": "Yükleme",
+      "loadHint": "Başlatmadan ana menüye kadar: oyunun modları ve dokuları yüklediği süre",
+      "pauses": "Takılmalar",
+      "pausesHint": "Yüklemeden sonra çöp toplayıcının 100 ms'den uzun duraklamaları. Bu anlarda oyun saniyenin bir kesri kadar donar.",
+      "pausesNone": "yok",
+      "pausesLongest": "en fazla {{value}}",
+      "mods": "Modlar",
+      "memoryChart": "Başlatmalara göre bellek",
+      "legendTypical": "olağan",
+      "legendPeak": "zirve",
+      "legendAllocated": "ayrılan",
+      "hintHeap": "Olağan {{typical}}, zirve {{peak}}, ayrılan {{allocated}}",
+      "adviceTitle": "Bellek önerisi",
+      "adviceNone": "Bellek ölçümleri biriktiğinde öneri görünür.",
+      "advicePauses_one": "Son başlatmalarda çöp toplayıcıdan kaynaklanan en fazla {{count}} belirgin takılma oldu. Oyun ayarlarında “JVM optimizasyonu”nu açın: duraklamaları kısaltır.",
+      "advicePauses_other": "Son başlatmalarda çöp toplayıcıdan kaynaklanan en fazla {{count}} belirgin takılma oldu. Oyun ayarlarında “JVM optimizasyonu”nu açın: duraklamaları kısaltır.",
+      "advice": {
+        "tight": "Oyun ayrılan {{allocated}} belleğin {{peak}} kadarını kullandı: bellek sınırda, çöp toplayıcı daha sık çalışıyor ve oyun takılıyor. Kuruluma {{suggest}} ayırın.",
+        "tightMax": "Oyun ayrılan {{allocated}} belleğin {{peak}} kadarını kullandı: bellek sınırda ve bu bilgisayar daha fazlasını veremez. Daha hafif modlar veya daha kısa görüş mesafesi yardımcı olur.",
+        "excess": "Oyuna yaklaşık {{peak}} yetiyor, ama {{allocated}} ayrılmış. Gerisi boşta duruyor: {{suggest}} değerine düşürüp belleği sisteme bırakabilirsiniz.",
+        "ok": "{{allocated}} ayrıldı, oyun en fazla {{peak}} kullandı. Pay yeterli: değiştirecek bir şey yok."
+      },
+      "basedOn_one": "{{count}} başlatmaya göre",
+      "basedOn_other": "{{count}} başlatmaya göre",
+      "about": "Ölçüm oyunu yavaşlatmaz: launcher Java'nın çöp toplayıcı günlüğünü okur ve 15 saniyede bir işlemin belleğine bakar. FPS bu yolla ölçülemez: bunun için oyunun içinde bir mod gerekir.",
+      "changesTitle": "Neler değişti",
+      "changesEmpty": "İlk ölçümden bu yana modlar ve ayarlar değişmedi.",
+      "loadChart": "Başlatmalara göre yükleme",
+      "effectHeap": "bellek {{value}}",
+      "effectLoad": "yükleme {{value}}",
+      "change": {
+        "modsAdded_one": "{{count}} mod eklendi",
+        "modsAdded_other": "{{count}} mod eklendi",
+        "modsRemoved_one": "{{count}} mod kaldırıldı",
+        "modsRemoved_other": "{{count}} mod kaldırıldı",
+        "memory": "Bellek {{from}} → {{to}}",
+        "java": "Java {{from}} → {{to}}",
+        "loader": "Yükleyici {{from}} → {{to}}",
+        "minecraft": "Minecraft {{from}} → {{to}}",
+        "optimizedOn": "JVM optimizasyonu açıldı",
+        "optimizedOff": "JVM optimizasyonu kapatıldı"
+      },
+      "units": {
+        "mb": "MB",
+        "gb": "GB",
+        "sec": "sn",
+        "ms": "ms"
+      }
+    }
   },
   "accountInfo": {
     "error": "Hesap bilgileri yükleme hatası",
@@ -6053,12 +6120,15 @@
     "deleteConfirm": "“{{name}}” teması kalıcı olarak silinecek. Arka plan resmi temalar klasöründe kalır.",
     "saved": "“{{name}}” teması kaydedildi",
     "limit": "En fazla {{count}} tema saklayabilirsiniz",
-    "accentByTheme": "Vurgu rengini şu an “{{name}}” teması belirliyor",
+    "accentByTheme": "Vurgu rengini “{{name}}” teması belirliyor. Burada renk seçmek için tema düzenleyicisinde “Kendi vurgu rengim” seçeneğini kapatın",
     "command": "Tema: {{name}}",
     "builtIn": {
       "grubie": "Grubie",
       "oled": "OLED",
       "light": "Açık"
+    },
+    "card": {
+      "ownAccent": "Temanın kendi vurgu rengi"
     },
     "editor": {
       "title": "Tema düzenleyici",
@@ -6087,7 +6157,28 @@
       "readability": "Okunabilirlik",
       "readabilityDescription": "Resimsiz kontrol edilir: karartma üzerindeki metni okunur tutar",
       "blocked": "Kırmızı maddeleri düzeltin: bu renklerle metin okunamaz",
-      "save": "Temayı kaydet"
+      "save": "Temayı kaydet",
+      "fit": "Yerleşim",
+      "fits": {
+        "cover": "Doldur",
+        "contain": "Tamamı",
+        "stretch": "Uzat"
+      },
+      "fitHints": {
+        "cover": "Resim tüm pencereyi doldurur, kenarlarda taşan kısımlar kırpılır",
+        "contain": "Resmin tamamı görünür, kenarlarda bulanık bir kopyası yer alır",
+        "stretch": "Resim pencereye göre uzatılır ve bozuk görünebilir"
+      },
+      "framing": "Resmin görünen kısmı",
+      "framingHint": "Görünen kısmı seçmek için sürükleyin",
+      "framingCenter": "Ortala",
+      "zones": "Panel renkleri",
+      "zonesDescription": "Kenar çubuğu ve üst çubuk kendi renklerine sahip olabilir. Üzerlerindeki yazı rengi kendiliğinden ayarlanır",
+      "zone": {
+        "sidebar": "Kenar çubuğu",
+        "topbar": "Üst çubuk"
+      },
+      "zoneOwn": "Kendi rengi"
     },
     "checks": {
       "text": "Paneldeki metin",
@@ -6095,7 +6186,9 @@
       "muted": "İkincil metin",
       "faint": "Etiketler",
       "accent": "Paneldeki vurgu",
-      "accentText": "Düğme yazısı"
+      "accentText": "Düğme yazısı",
+      "sidebar": "Kenar çubuğundaki yazı",
+      "topbar": "Üst çubuktaki yazı"
     },
     "transfer": {
       "export": "Dosyaya kaydet",

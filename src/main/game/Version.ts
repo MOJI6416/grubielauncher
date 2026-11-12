@@ -36,6 +36,8 @@ import {
 } from "../utilities/other";
 import { app, shell } from "electron";
 import { runGame, runJar } from "../utilities/game";
+import { gcLogArguments, prepareGcLog } from "../utilities/gameMetrics";
+import { ProjectType } from "@/types/ModManager";
 import { getAuthlibCached } from "../utilities/authlib";
 import {
   AUTHLIB_PREFETCHED_PROPERTY,
@@ -2115,6 +2117,17 @@ export class Version {
       });
 
       const launchVersionPath = await this.resolveLaunchVersionPath();
+      const javaMajor = this.java?.major ?? this.requiredJavaMajor();
+      const gcArguments = gcLogArguments({
+        javaMajor,
+        javaVendor: this.java?.vendor,
+        jvm: command.slice(1, command.indexOf(target.mainClass)),
+      });
+      const gcLogPath = gcArguments.length
+        ? await prepareGcLog(launchVersionPath)
+        : null;
+      if (gcLogPath) command.splice(1, 0, ...gcArguments);
+
       const legacyHome = usesLegacyWorkDir(target.minecraftArguments)
         ? await prepareLegacyHome({
             dataRoot: getDataRoot(),
@@ -2134,6 +2147,25 @@ export class Version {
           trackStatistics: true,
           accountSub: authData?.sub ?? null,
           accountLabel: account.nickname,
+          gcLogPath,
+          config: {
+            minecraft: this.version.version.id,
+            loader: this.version.loader.name,
+            loaderVersion: this.version.loader.version?.id,
+            xmxMb: settings.xmx,
+            optimizedJvm: settings.optimizedJvm,
+            javaMajor: javaMajor || undefined,
+            mods: (this.version.loader.mods ?? [])
+              .filter(
+                (mod) =>
+                  mod.projectType === ProjectType.MOD &&
+                  !(mod.version?.files ?? []).every((file) => file.disabled),
+              )
+              .map((mod) => ({
+                key: `${mod.provider}:${mod.id}`,
+                title: mod.title,
+              })),
+          },
         },
         settings.highPriority,
         launchVersionPath,

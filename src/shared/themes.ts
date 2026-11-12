@@ -1,15 +1,32 @@
-import { contrastRatio } from "./accents";
+import { contrastRatio, relativeLuminance } from "./accents";
+import { TITLEBAR_OVERLAY } from "./titlebar";
 
 export type ThemeMode = "dark" | "light";
+
+export type ThemeZone = "sidebar" | "topbar";
+
+export const THEME_ZONES: ThemeZone[] = ["sidebar", "topbar"];
 
 export interface ThemeColors {
   background: string;
   surface: string;
   foreground: string;
   accent: string | null;
+  sidebar?: string;
+  topbar?: string;
 }
 
-export interface ThemeBackdrop {
+export type BackdropFit = "cover" | "contain" | "stretch";
+
+export const BACKDROP_FITS: BackdropFit[] = ["cover", "contain", "stretch"];
+
+export interface BackdropFrame {
+  fit: BackdropFit;
+  focusX: number;
+  focusY: number;
+}
+
+export interface ThemeBackdrop extends BackdropFrame {
   path: string;
   dim: number;
   blur: number;
@@ -39,6 +56,8 @@ export const BACKDROP_LIMITS = {
   blur: { min: 0, max: 24, initial: 6 },
   panelOpacity: { min: 70, max: 100, initial: 88 },
 } as const;
+
+export const DEFAULT_BACKDROP_FRAME: BackdropFrame = { fit: "cover", focusX: 50, focusY: 50 };
 
 export const GRUBIE_COLORS: ThemeColors = {
   background: "#0b0c0d",
@@ -95,6 +114,24 @@ function clamp(value: unknown, min: number, max: number, fallback: number): numb
   return Math.min(max, Math.max(min, Math.round(number)));
 }
 
+export function normalizeBackdropFrame(raw: Record<string, unknown>): BackdropFrame {
+  const fit = BACKDROP_FITS.find((value) => value === raw.fit) ?? DEFAULT_BACKDROP_FRAME.fit;
+  return {
+    fit,
+    focusX: clamp(raw.focusX, 0, 100, DEFAULT_BACKDROP_FRAME.focusX),
+    focusY: clamp(raw.focusY, 0, 100, DEFAULT_BACKDROP_FRAME.focusY),
+  };
+}
+
+function normalizeZoneColors(raw: Record<string, unknown>): Pick<ThemeColors, ThemeZone> {
+  const zones: Pick<ThemeColors, ThemeZone> = {};
+  for (const zone of THEME_ZONES) {
+    const value = raw[zone];
+    if (isHexColor(value)) zones[zone] = value.toLowerCase();
+  }
+  return zones;
+}
+
 function normalizeBackdrop(value: unknown): ThemeBackdrop | null {
   if (!value || typeof value !== "object") return null;
   const raw = value as Record<string, unknown>;
@@ -103,6 +140,7 @@ function normalizeBackdrop(value: unknown): ThemeBackdrop | null {
 
   return {
     path: raw.path,
+    ...normalizeBackdropFrame(raw),
     dim: clamp(raw.dim, dim.min, dim.max, dim.initial),
     blur: clamp(raw.blur, blur.min, blur.max, blur.initial),
     panelOpacity: clamp(
@@ -143,6 +181,7 @@ export function normalizeTheme(value: unknown): ThemeDefinition | null {
       surface: colors.surface.toLowerCase(),
       foreground: colors.foreground.toLowerCase(),
       accent: isHexColor(colors.accent) ? colors.accent.toLowerCase() : null,
+      ...normalizeZoneColors(colors),
     },
     backdrop: normalizeBackdrop(raw.backdrop),
     ...(galleryId ? { galleryId } : {}),
@@ -314,15 +353,102 @@ export function themeVariables(
   };
 }
 
+export function zoneForeground(color: string, foreground: string): string {
+  return contrastRatio(foreground, color) >= 4.5 ? foreground : textOn(color);
+}
+
+function zoneColor(theme: ThemeDefinition, zone: ThemeZone): string | undefined {
+  return theme.id === DEFAULT_THEME_ID ? undefined : theme.colors[zone];
+}
+
+function zoneTheme(theme: ThemeDefinition, color: string): ThemeDefinition {
+  const foreground = zoneForeground(color, theme.colors.foreground);
+  return {
+    ...theme,
+    mode: relativeLuminance(foreground) < relativeLuminance(color) ? "light" : "dark",
+    colors: {
+      background: color,
+      surface: mixHex(color, foreground, 0.05),
+      foreground,
+      accent: theme.colors.accent,
+    },
+  };
+}
+
+export interface ZonePalette extends ThemePalette {
+  color: string;
+  foreground: string;
+}
+
+export function zonePalette(
+  theme: ThemeDefinition,
+  zone: ThemeZone,
+  accent: string,
+  highContrast = false,
+): ZonePalette | null {
+  const color = zoneColor(theme, zone);
+  if (!color) return null;
+  const local = zoneTheme(theme, color);
+  return {
+    ...themePalette(local, accent, highContrast),
+    color,
+    foreground: local.colors.foreground,
+  };
+}
+
+const ZONE_DERIVED: Record<string, string> = {
+  "--card-foreground": "var(--foreground)",
+  "--popover-foreground": "var(--foreground)",
+  "--secondary-foreground": "var(--foreground)",
+  "--accent-foreground": "var(--foreground)",
+  "--sidebar-foreground": "var(--foreground)",
+  "--sidebar-accent-foreground": "var(--foreground)",
+  "--sidebar-primary": "var(--primary)",
+  "--sidebar-primary-foreground": "var(--primary-foreground)",
+  "--sidebar-ring": "var(--primary)",
+  "--primary-soft": "color-mix(in oklab, var(--primary) 22%, var(--surface-2))",
+  "--primary-soft-raised": "color-mix(in oklab, var(--primary) 22%, var(--surface-3))",
+  "--primary-veil": "color-mix(in oklab, var(--primary) 16%, transparent)",
+};
+
+export function zoneVariables(
+  theme: ThemeDefinition,
+  zone: ThemeZone,
+  accent: string,
+  highContrast = false,
+): Record<string, string> | null {
+  const color = zoneColor(theme, zone);
+  if (!color) return null;
+  const opacity = theme.backdrop?.panelOpacity ?? 100;
+
+  return {
+    ...themeVariables(zoneTheme(theme, color), accent, highContrast),
+    ...ZONE_DERIVED,
+    "--background": color,
+    "--sidebar": zone === "sidebar" && opacity < 100 ? alpha(color, opacity) : color,
+  };
+}
+
+export function titleBarColors(theme: ThemeDefinition): { color: string; symbolColor: string } {
+  if (theme.id === DEFAULT_THEME_ID) {
+    return { color: TITLEBAR_OVERLAY.color, symbolColor: TITLEBAR_OVERLAY.symbolColor };
+  }
+  const color = zoneColor(theme, "topbar") ?? theme.colors.background;
+  const foreground = zoneForeground(color, theme.colors.foreground);
+  return { color, symbolColor: mixHex(color, foreground, 0.65) };
+}
+
 export type ContrastLevel = "ok" | "warn" | "fail";
 
+type BaseCheckId = "text" | "background" | "muted" | "faint" | "accent" | "accentText";
+
 export interface ContrastCheck {
-  id: "text" | "background" | "muted" | "faint" | "accent" | "accentText";
+  id: BaseCheckId | ThemeZone;
   ratio: number;
   level: ContrastLevel;
 }
 
-const CONTRAST_RULES: Record<ContrastCheck["id"], { fail: number; warn: number }> = {
+const CONTRAST_RULES: Record<BaseCheckId, { fail: number; warn: number }> = {
   text: { fail: 4.5, warn: 7 },
   background: { fail: 4.5, warn: 7 },
   muted: { fail: 3, warn: 4.5 },
@@ -337,7 +463,7 @@ export function contrastReport(
 ): ContrastCheck[] {
   const palette = themePalette(theme, accent);
   const { background, surface, foreground } = theme.colors;
-  const ratios: Record<ContrastCheck["id"], number> = {
+  const ratios: Record<BaseCheckId, number> = {
     text: contrastRatio(foreground, surface),
     background: contrastRatio(foreground, background),
     muted: contrastRatio(palette.muted, surface),
@@ -346,15 +472,20 @@ export function contrastReport(
     accentText: contrastRatio(palette.primaryText, palette.primary),
   };
 
-  return (Object.keys(CONTRAST_RULES) as ContrastCheck["id"][]).map((id) => {
-    const ratio = ratios[id];
-    const rule = CONTRAST_RULES[id];
-    return {
-      id,
-      ratio: Math.round(ratio * 10) / 10,
-      level: ratio < rule.fail ? "fail" : ratio < rule.warn ? "warn" : "ok",
-    };
+  const check = (id: ContrastCheck["id"], ratio: number, rule: { fail: number; warn: number }): ContrastCheck => ({
+    id,
+    ratio: Math.round(ratio * 10) / 10,
+    level: ratio < rule.fail ? "fail" : ratio < rule.warn ? "warn" : "ok",
   });
+
+  const base = (Object.keys(CONTRAST_RULES) as BaseCheckId[]).map((id) =>
+    check(id, ratios[id], CONTRAST_RULES[id]),
+  );
+  const zones = THEME_ZONES.flatMap((zone) => {
+    const zoned = zonePalette(theme, zone, accent);
+    return zoned ? [check(zone, contrastRatio(zoned.muted, zoned.color), CONTRAST_RULES.muted)] : [];
+  });
+  return [...base, ...zones];
 }
 
 export function isThemeReadable(theme: ThemeDefinition, accent: string): boolean {

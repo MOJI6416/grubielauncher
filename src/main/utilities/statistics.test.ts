@@ -14,6 +14,8 @@ const {
   beginSession,
   markSessionReady,
   endSession,
+  detachSession,
+  finishSession,
   readSyncQueue,
   resolveSyncEntries,
 } = await import("./statistics");
@@ -204,5 +206,75 @@ describe("statistics survive a damaged store", () => {
     expect(sessions.every((s: { recovered?: boolean }) => s.recovered)).toBe(
       true,
     );
+  });
+});
+
+describe("sessions remember the setup and what it cost", () => {
+  beforeEach(async () => {
+    await fs.remove(TMP);
+    await fs.ensureDir(versionPath);
+  });
+
+  afterAll(async () => {
+    await fs.remove(TMP);
+  });
+
+  const setup = (mods: [string, string][], xmxMb = 4096) => ({
+    minecraft: "1.21.1",
+    loader: "fabric",
+    loaderVersion: "0.16.9",
+    xmxMb,
+    optimizedJvm: true,
+    javaMajor: 21,
+    mods: mods.map(([key, title]) => ({ key, title })),
+  });
+
+  async function playWith(config: ReturnType<typeof setup>, heap: number) {
+    beginSession({
+      versionName: "Repro",
+      versionPath,
+      instance: 0,
+      trackStatistics: true,
+      accountSub: null,
+      config,
+    });
+    markSessionReady("Repro", 0);
+    await finishSession(detachSession("Repro", 0), 0, {
+      resources: { heapTypicalMb: heap, loadSec: 40 },
+    });
+  }
+
+  it("keeps the mod list only on the latest session and records what changed", async () => {
+    await playWith(setup([["modrinth:AANobbMI", "Sodium"], ["modrinth:P7dR8mSH", "Fabric API"]]), 900);
+    await playWith(
+      setup(
+        [
+          ["modrinth:P7dR8mSH", "Fabric API"],
+          ["modrinth:YL57xq9U", "Iris"],
+          ["local:dh.jar", "Distant Horizons"],
+        ],
+        6144,
+      ),
+      2100,
+    );
+
+    const sessions = await fs.readJSON(sessionsFile);
+    expect(sessions).toHaveLength(2);
+    expect(sessions[0].config.modSet).toBeUndefined();
+    expect(sessions[0].config.mods).toBe(2);
+    expect(sessions[0].resources).toEqual({ heapTypicalMb: 900, loadSec: 40 });
+
+    expect(sessions[1].config).toMatchObject({
+      mods: 3,
+      xmxMb: 6144,
+      modsAdded: ["Iris", "Distant Horizons"],
+      modsAddedCount: 2,
+      modsRemoved: ["Sodium"],
+      modsRemovedCount: 1,
+    });
+    expect(Object.keys(sessions[1].config.modSet)).toHaveLength(3);
+
+    const markers = await fs.readdir(path.join(TMP, ".grubielauncher", "playtime", "pending")).catch(() => []);
+    expect(markers).toEqual([]);
   });
 });

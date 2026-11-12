@@ -4,6 +4,7 @@ import {
   Copy,
   Ellipsis,
   FileDown,
+  Image as ImageIcon,
   Link2,
   Pencil,
   Trash2,
@@ -18,12 +19,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import {
-  BUILT_IN_THEMES,
-  themePalette,
-  type ThemeDefinition,
-} from "@/shared/themes";
-import { backdropUrl } from "./themesStore";
+import { BUILT_IN_THEMES, type ThemeDefinition } from "@/shared/themes";
+import { Hint } from "@renderer/components/Hint";
+import { ThemeMiniature } from "./ThemeMiniature";
 
 export function themeName(
   theme: ThemeDefinition,
@@ -34,45 +32,31 @@ export function themeName(
     : theme.name;
 }
 
-export function ThemeSwatch({
+export function ThemeTraits({
   theme,
-  accent,
-  imageUrl,
-  className,
 }: {
-  theme: ThemeDefinition;
-  accent: string;
-  imageUrl?: string;
-  className?: string;
+  theme: Pick<ThemeDefinition, "colors"> & { backdrop: unknown };
 }) {
-  const palette = themePalette(theme, accent);
+  const { t } = useTranslation();
 
   return (
-    <span
-      aria-hidden
-      className={cn("relative flex overflow-hidden rounded-md border border-border", className)}
-      style={{ background: theme.colors.background }}
-    >
-      {theme.backdrop && (
-        <span
-          className="absolute inset-0 bg-cover bg-center opacity-70"
-          style={{
-            backgroundImage: `url("${imageUrl ?? backdropUrl(theme.backdrop.path)}")`,
-          }}
-        />
+    <>
+      {!!theme.backdrop && (
+        <Hint content={t("theme.gallery.withPicture")}>
+          <ImageIcon className="size-3 shrink-0" aria-label={t("theme.gallery.withPicture")} />
+        </Hint>
       )}
-      <span className="relative w-1/4 shrink-0" style={{ background: palette.surface1 }} />
-      <span className="relative flex min-w-0 flex-1 p-1.5">
-        <span
-          className="flex flex-1 flex-col justify-center gap-1 rounded-sm px-1.5"
-          style={{ background: palette.surface2 }}
-        >
-          <span className="h-1 w-3/4 rounded-full" style={{ background: theme.colors.foreground }} />
-          <span className="h-1 w-1/2 rounded-full" style={{ background: palette.muted }} />
-          <span className="h-1.5 w-6 rounded-full" style={{ background: palette.primary }} />
-        </span>
-      </span>
-    </span>
+      {theme.colors.accent && (
+        <Hint content={t("theme.card.ownAccent")}>
+          <span
+            role="img"
+            aria-label={t("theme.card.ownAccent")}
+            className="size-2.5 shrink-0 rounded-full ring-1 ring-border"
+            style={{ background: theme.colors.accent }}
+          />
+        </Hint>
+      )}
+    </>
   );
 }
 
@@ -119,71 +103,88 @@ export function ThemeCard({
         }
       }}
       className={cn(
-        "group relative flex cursor-pointer flex-col gap-2 rounded-lg border p-2 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        "group flex cursor-pointer flex-col gap-2 rounded-lg border p-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         active
-          ? "border-primary/50 bg-primary-soft"
+          ? "border-primary/60 bg-primary-soft"
           : "border-border bg-surface-2 hover:bg-surface-3",
       )}
     >
-      <ThemeSwatch theme={theme} accent={accent} className="h-14" />
-      <span className="flex min-w-0 items-center gap-1.5 pr-6">
-        {active && <Check className="size-3.5 shrink-0 text-primary" />}
-        <span className="truncate text-sm font-medium text-foreground">{name}</span>
-      </span>
+      <ThemeMiniature
+        theme={theme}
+        accent={accent}
+        className={cn(
+          "rounded-md ring-1 transition-shadow",
+          active ? "ring-primary/60" : "ring-border",
+        )}
+      />
+      <div className="flex min-w-0 items-center gap-1 pl-1">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1">
+            {active && <Check className="size-3.5 shrink-0 text-primary" />}
+            <Hint content={name} truncatedOnly>
+              <span className="truncate text-sm font-medium text-foreground">{name}</span>
+            </Hint>
+          </div>
+          <div className="flex min-w-0 items-center gap-1.5 text-xs text-faint">
+            <span className="truncate">{t(`theme.editor.modes.${theme.mode}`)}</span>
+            <ThemeTraits theme={theme} />
+          </div>
+        </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`${t("common.more")} — ${name}`}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`${t("common.more")} — ${name}`}
+              onClick={(event) => event.stopPropagation()}
+              className="size-7 shrink-0 text-faint"
+            >
+              <Ellipsis />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="w-48"
             onClick={(event) => event.stopPropagation()}
-            className="absolute right-1.5 bottom-1.5 size-6 text-faint"
           >
-            <Ellipsis />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          className="w-48"
-          onClick={(event) => event.stopPropagation()}
-        >
-          {!isBuiltIn && (
-            <DropdownMenuItem onSelect={onEdit}>
-              <Pencil />
-              <span>{t("theme.edit")}</span>
+            {!isBuiltIn && (
+              <DropdownMenuItem onSelect={onEdit}>
+                <Pencil />
+                <span>{t("theme.edit")}</span>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={onDuplicate}>
+              <Copy />
+              <span>{t("theme.duplicate")}</span>
             </DropdownMenuItem>
-          )}
-          <DropdownMenuItem onSelect={onDuplicate}>
-            <Copy />
-            <span>{t("theme.duplicate")}</span>
-          </DropdownMenuItem>
-          {!isBuiltIn && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={onExport}>
-                <FileDown />
-                <span>{t("theme.transfer.export")}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onCopyCode}>
-                <Link2 />
-                <span>{t("theme.transfer.copyCode")}</span>
-              </DropdownMenuItem>
-              {!theme.galleryId && (
-                <DropdownMenuItem onSelect={onPublish}>
-                  <Upload />
-                  <span>{t("theme.gallery.publish")}</span>
+            {!isBuiltIn && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={onExport}>
+                  <FileDown />
+                  <span>{t("theme.transfer.export")}</span>
                 </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-                <Trash2 />
-                <span>{t("theme.delete")}</span>
-              </DropdownMenuItem>
-            </>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+                <DropdownMenuItem onSelect={onCopyCode}>
+                  <Link2 />
+                  <span>{t("theme.transfer.copyCode")}</span>
+                </DropdownMenuItem>
+                {!theme.galleryId && (
+                  <DropdownMenuItem onSelect={onPublish}>
+                    <Upload />
+                    <span>{t("theme.gallery.publish")}</span>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+                  <Trash2 />
+                  <span>{t("theme.delete")}</span>
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 }

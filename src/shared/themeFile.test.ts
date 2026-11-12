@@ -13,7 +13,15 @@ const theme: ThemeDefinition = {
   name: "Морская",
   mode: "dark",
   colors: { background: "#06141a", surface: "#0d2630", foreground: "#eef6ff", accent: "#ff7a45" },
-  backdrop: { path: "C:/data/themes/backdrops/abc.jpeg", dim: 40, blur: 8, panelOpacity: 82 },
+  backdrop: {
+    path: "C:/data/themes/backdrops/abc.jpeg",
+    dim: 40,
+    blur: 8,
+    panelOpacity: 82,
+    fit: "contain",
+    focusX: 30,
+    focusY: 70,
+  },
 };
 
 describe("theme file", () => {
@@ -66,6 +74,13 @@ describe("theme code", () => {
     const decoded = decodeThemeCode(`Лови тему: ${code} 🙂`, "y");
     expect(decoded?.mode).toBe("light");
     expect(decoded?.colors.accent).toBeNull();
+  });
+
+  it("carries panel colours", () => {
+    const withTopBar = { ...theme, colors: { ...theme.colors, topbar: "#1d3a46" } };
+    const decoded = decodeThemeCode(encodeThemeCode(withTopBar), "w");
+    expect(decoded?.colors.topbar).toBe("#1d3a46");
+    expect(decoded?.colors).not.toHaveProperty("sidebar");
   });
 
   it("rejects garbage", () => {

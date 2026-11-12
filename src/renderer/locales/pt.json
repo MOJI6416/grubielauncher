@@ -935,7 +935,13 @@
     "restoredCount": "Restaurados: {{n}}",
     "addedElsewhere": "Alguns arquivos foram para outras abas: {{types}}",
     "catalogLoaderHintQuilt": "O Quilt roda a maioria dos mods de Fabric, então você também pode procurá-los aqui. As atualizações deles também são verificadas para o Quilt.",
-    "catalogLoaderHintLegacyFabric": "Alguns mods de Legacy Fabric no Modrinth estão marcados só como Fabric. Ative para encontrá-los também."
+    "catalogLoaderHintLegacyFabric": "Alguns mods de Legacy Fabric no Modrinth estão marcados só como Fabric. Ative para encontrá-los também.",
+    "shaderLoader": {
+      "missing": "Os shaders só funcionam com o {{loader}}. Ele não está nesta instância, então sem ele os shaders não ligam.",
+      "unsupported": "Nesta instância os shaders não têm onde rodar: precisam de Fabric, Quilt ou NeoForge com Iris (ou Forge com Oculus).",
+      "install": "Instalar {{loader}}",
+      "notFound": "Não foi possível abrir a página do mod. Verifique a internet e tente de novo."
+    }
   },
   "nav": {
     "play": "Jogar"
@@ -2644,7 +2650,72 @@
     "jumps": "Saltos",
     "km": "km",
     "loadFailed": "Não foi possível ler as estatísticas",
-    "loadFailedHint": "O arquivo statistics.json existe, mas não pôde ser aberto. Tente de novo — se o jogo estiver rodando, espere ele fechar."
+    "loadFailedHint": "O arquivo statistics.json existe, mas não pôde ser aberto. Tente de novo — se o jogo estiver rodando, espere ele fechar.",
+    "resources": {
+      "viewLabel": "O que mostrar",
+      "viewGame": "Jogo",
+      "viewResources": "Recursos",
+      "empty": "Ainda não há medições",
+      "emptyHint": "Elas aparecem depois do próximo início: o launcher vai registrar quanta memória o jogo ocupou, quanto tempo levou para carregar e se o coletor de lixo causou travadas.",
+      "heap": "Memória do jogo",
+      "heapHint": "Memória ocupada depois da coleta de lixo: o que o jogo com todos os mods realmente precisa. O valor habitual do último início.",
+      "heapPeak": "Pico de memória",
+      "ofAllocated": "de {{allocated}}",
+      "process": "RAM do processo",
+      "processHint": "Quanta memória do computador o jogo inteiro ocupou, como no Gerenciador de Tarefas. Com a otimização da JVM, quase sempre é toda a alocação.",
+      "load": "Carregamento",
+      "loadHint": "Do início ao menu principal: o tempo que o jogo levou carregando mods e texturas",
+      "pauses": "Travadas",
+      "pausesHint": "Pausas do coletor de lixo acima de 100 ms depois do carregamento. Nesses momentos o jogo congela por uma fração de segundo.",
+      "pausesNone": "nenhuma",
+      "pausesLongest": "até {{value}}",
+      "mods": "Mods",
+      "memoryChart": "Memória por início",
+      "legendTypical": "habitual",
+      "legendPeak": "pico",
+      "legendAllocated": "alocada",
+      "hintHeap": "Habitual {{typical}}, pico {{peak}}, alocada {{allocated}}",
+      "adviceTitle": "Dica de memória",
+      "adviceNone": "A dica aparece quando houver medições de memória.",
+      "advicePauses_one": "Os últimos inícios tiveram até {{count}} travada perceptível do coletor de lixo. Ative “Otimização da JVM” nas configurações do jogo: ela encurta as pausas.",
+      "advicePauses_many": "Os últimos inícios tiveram até {{count}} travadas perceptíveis do coletor de lixo. Ative “Otimização da JVM” nas configurações do jogo: ela encurta as pausas.",
+      "advicePauses_other": "Os últimos inícios tiveram até {{count}} travadas perceptíveis do coletor de lixo. Ative “Otimização da JVM” nas configurações do jogo: ela encurta as pausas.",
+      "advice": {
+        "tight": "O jogo ocupou até {{peak}} dos {{allocated}} alocados: a memória está no limite, o coletor de lixo roda com mais frequência e o jogo trava. Aloque {{suggest}} para a instância.",
+        "tightMax": "O jogo ocupou até {{peak}} dos {{allocated}} alocados: a memória está no limite e este computador não tem mais para dar. Mods mais leves ou menor distância de renderização ajudam.",
+        "excess": "O jogo precisa de cerca de {{peak}}, mas tem {{allocated}} alocados. O resto fica parado: dá para baixar para {{suggest}} e deixar a memória para o sistema.",
+        "ok": "{{allocated}} alocados, o jogo ocupou até {{peak}}. A margem está boa: não precisa mudar nada."
+      },
+      "basedOn_one": "Com base em {{count}} início",
+      "basedOn_many": "Com base em {{count}} inícios",
+      "basedOn_other": "Com base em {{count}} inícios",
+      "about": "As medições não deixam o jogo mais lento: o launcher lê o registro do coletor de lixo do Java e olha a memória do processo a cada 15 segundos. FPS não dá para medir assim: para isso é preciso um mod dentro do jogo.",
+      "changesTitle": "O que mudou",
+      "changesEmpty": "Desde a primeira medição, os mods e as configurações não mudaram.",
+      "loadChart": "Carregamento por início",
+      "effectHeap": "memória {{value}}",
+      "effectLoad": "carregamento {{value}}",
+      "change": {
+        "modsAdded_one": "{{count}} mod adicionado",
+        "modsAdded_many": "{{count}} mods adicionados",
+        "modsAdded_other": "{{count}} mods adicionados",
+        "modsRemoved_one": "{{count}} mod removido",
+        "modsRemoved_many": "{{count}} mods removidos",
+        "modsRemoved_other": "{{count}} mods removidos",
+        "memory": "Memória {{from}} → {{to}}",
+        "java": "Java {{from}} → {{to}}",
+        "loader": "Loader {{from}} → {{to}}",
+        "minecraft": "Minecraft {{from}} → {{to}}",
+        "optimizedOn": "Otimização da JVM ativada",
+        "optimizedOff": "Otimização da JVM desativada"
+      },
+      "units": {
+        "mb": "MB",
+        "gb": "GB",
+        "sec": "s",
+        "ms": "ms"
+      }
+    }
   },
   "accountInfo": {
     "error": "Erro ao carregar as informações da conta",
@@ -6097,12 +6168,15 @@
     "deleteConfirm": "O tema “{{name}}” será excluído de vez. A imagem de fundo fica na pasta de temas.",
     "saved": "Tema “{{name}}” salvo",
     "limit": "Você pode guardar até {{count}} temas",
-    "accentByTheme": "A cor de destaque agora é definida pelo tema “{{name}}”",
+    "accentByTheme": "O tema “{{name}}” define o destaque. Para escolher uma cor aqui, desative “Cor de destaque própria” no editor do tema",
     "command": "Tema: {{name}}",
     "builtIn": {
       "grubie": "Grubie",
       "oled": "OLED",
       "light": "Claro"
+    },
+    "card": {
+      "ownAccent": "Cor de destaque própria do tema"
     },
     "editor": {
       "title": "Editor de tema",
@@ -6131,7 +6205,28 @@
       "readability": "Legibilidade",
       "readabilityDescription": "Verificada sem a imagem: escurecer mantém o texto legível por cima",
       "blocked": "Corrija os itens em vermelho: com essas cores o texto fica ilegível",
-      "save": "Salvar tema"
+      "save": "Salvar tema",
+      "fit": "Posicionamento",
+      "fits": {
+        "cover": "Preencher",
+        "contain": "Inteira",
+        "stretch": "Esticar"
+      },
+      "fitHints": {
+        "cover": "A imagem preenche toda a janela e as bordas que sobram são cortadas",
+        "contain": "A imagem aparece inteira, com uma cópia desfocada nas bordas",
+        "stretch": "A imagem é esticada para a janela e pode ficar distorcida"
+      },
+      "framing": "Parte visível da imagem",
+      "framingHint": "Arraste para escolher a parte visível",
+      "framingCenter": "Centralizar",
+      "zones": "Cores dos painéis",
+      "zonesDescription": "A barra lateral e a barra superior podem ter cores próprias. A cor do texto se ajusta sozinha",
+      "zone": {
+        "sidebar": "Barra lateral",
+        "topbar": "Barra superior"
+      },
+      "zoneOwn": "Cor própria"
     },
     "checks": {
       "text": "Texto nos painéis",
@@ -6139,7 +6234,9 @@
       "muted": "Texto secundário",
       "faint": "Legendas e rótulos",
       "accent": "Destaque nos painéis",
-      "accentText": "Texto do botão"
+      "accentText": "Texto do botão",
+      "sidebar": "Texto na barra lateral",
+      "topbar": "Texto na barra superior"
     },
     "transfer": {
       "export": "Salvar em arquivo",

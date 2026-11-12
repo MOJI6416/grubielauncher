@@ -946,7 +946,13 @@
     "restoredCount": "Przywrócono: {{n}}",
     "addedElsewhere": "Część plików trafiła do innych zakładek: {{types}}",
     "catalogLoaderHintQuilt": "Quilt uruchamia większość modów Fabric, więc można ich szukać również tutaj. Ich aktualizacje też są sprawdzane dla Quilt.",
-    "catalogLoaderHintLegacyFabric": "Część modów Legacy Fabric na Modrinth jest oznaczona jako zwykły Fabric. Przełącz, aby je też znaleźć."
+    "catalogLoaderHintLegacyFabric": "Część modów Legacy Fabric na Modrinth jest oznaczona jako zwykły Fabric. Przełącz, aby je też znaleźć.",
+    "shaderLoader": {
+      "missing": "Shadery działają tylko przez {{loader}}. Nie ma go w tej instancji, więc bez niego się nie włączą.",
+      "unsupported": "W tej instancji shadery nie mają na czym działać: potrzebują Fabric, Quilt albo NeoForge z Iris (albo Forge z Oculus).",
+      "install": "Zainstaluj {{loader}}",
+      "notFound": "Nie udało się otworzyć strony moda. Sprawdź internet i spróbuj ponownie."
+    }
   },
   "nav": {
     "play": "Graj"
@@ -2662,7 +2668,76 @@
     "jumps": "Skoki",
     "km": "km",
     "loadFailed": "Nie udało się odczytać statystyk",
-    "loadFailedHint": "Plik statistics.json istnieje, ale nie udało się go otworzyć. Spróbuj ponownie — jeśli gra działa, poczekaj, aż się zamknie."
+    "loadFailedHint": "Plik statistics.json istnieje, ale nie udało się go otworzyć. Spróbuj ponownie — jeśli gra działa, poczekaj, aż się zamknie.",
+    "resources": {
+      "viewLabel": "Co pokazać",
+      "viewGame": "Gra",
+      "viewResources": "Zasoby",
+      "empty": "Nie ma jeszcze pomiarów",
+      "emptyHint": "Pojawią się po następnym uruchomieniu: launcher zapisze, ile pamięci zajęła gra, jak długo się wczytywała i czy odśmiecacz powodował przycięcia.",
+      "heap": "Pamięć gry",
+      "heapHint": "Pamięć zajęta po odśmiecaniu — tyle gra ze wszystkimi modami naprawdę potrzebuje. Zwykła wartość z ostatniego uruchomienia.",
+      "heapPeak": "Szczyt pamięci",
+      "ofAllocated": "z {{allocated}}",
+      "process": "RAM procesu",
+      "processHint": "Ile pamięci komputera zajęła cała gra, jak w Menedżerze zadań. Z optymalizacją JVM to prawie zawsze cały przydział.",
+      "load": "Wczytywanie",
+      "loadHint": "Od uruchomienia do menu głównego: czas wczytywania modów i tekstur",
+      "pauses": "Przycięcia",
+      "pausesHint": "Przerwy odśmiecacza dłuższe niż 100 ms po wczytaniu. W takich chwilach gra zamiera na ułamek sekundy.",
+      "pausesNone": "brak",
+      "pausesLongest": "do {{value}}",
+      "mods": "Mody",
+      "memoryChart": "Pamięć według uruchomień",
+      "legendTypical": "zwykle",
+      "legendPeak": "szczyt",
+      "legendAllocated": "przydzielono",
+      "hintHeap": "Zwykle {{typical}}, szczyt {{peak}}, przydzielono {{allocated}}",
+      "adviceTitle": "Porada dotycząca pamięci",
+      "adviceNone": "Porada pojawi się, gdy zbiorą się pomiary pamięci.",
+      "advicePauses_one": "W ostatnich uruchomieniach było do {{count}} zauważalnego przycięcia od odśmiecacza. Włącz „Optymalizacja JVM” w ustawieniach gry — skraca przerwy.",
+      "advicePauses_few": "W ostatnich uruchomieniach było do {{count}} zauważalnych przycięć od odśmiecacza. Włącz „Optymalizacja JVM” w ustawieniach gry — skraca przerwy.",
+      "advicePauses_many": "W ostatnich uruchomieniach było do {{count}} zauważalnych przycięć od odśmiecacza. Włącz „Optymalizacja JVM” w ustawieniach gry — skraca przerwy.",
+      "advicePauses_other": "W ostatnich uruchomieniach było do {{count}} zauważalnego przycięcia od odśmiecacza. Włącz „Optymalizacja JVM” w ustawieniach gry — skraca przerwy.",
+      "advice": {
+        "tight": "Gra zajmowała do {{peak}} z przydzielonych {{allocated}} — pamięci jest na styk: odśmiecacz działa częściej, a gra przycina. Przydziel instancji {{suggest}}.",
+        "tightMax": "Gra zajmowała do {{peak}} z przydzielonych {{allocated}} — pamięci jest na styk, a ten komputer nie da więcej. Pomogą lżejsze mody albo mniejszy zasięg renderowania.",
+        "excess": "Grze wystarcza około {{peak}}, a przydzielono {{allocated}}. Reszta leży odłogiem — możesz zmniejszyć do {{suggest}} i zostawić pamięć systemowi.",
+        "ok": "Przydzielono {{allocated}}, gra zajmowała do {{peak}}. Zapas jest w porządku — nic nie trzeba zmieniać."
+      },
+      "basedOn_one": "Na podstawie {{count}} uruchomienia",
+      "basedOn_few": "Na podstawie {{count}} uruchomień",
+      "basedOn_many": "Na podstawie {{count}} uruchomień",
+      "basedOn_other": "Na podstawie {{count}} uruchomienia",
+      "about": "Pomiary nie spowalniają gry: launcher czyta dziennik odśmiecacza Javy i co 15 sekund sprawdza pamięć procesu. FPS tak nie zmierzysz — do tego potrzebny jest mod w grze.",
+      "changesTitle": "Co się zmieniło",
+      "changesEmpty": "Od pierwszego pomiaru mody i ustawienia się nie zmieniły.",
+      "loadChart": "Wczytywanie według uruchomień",
+      "effectHeap": "pamięć {{value}}",
+      "effectLoad": "wczytywanie {{value}}",
+      "change": {
+        "modsAdded_one": "Dodano {{count}} mod",
+        "modsAdded_few": "Dodano {{count}} mody",
+        "modsAdded_many": "Dodano {{count}} modów",
+        "modsAdded_other": "Dodano {{count}} moda",
+        "modsRemoved_one": "Usunięto {{count}} mod",
+        "modsRemoved_few": "Usunięto {{count}} mody",
+        "modsRemoved_many": "Usunięto {{count}} modów",
+        "modsRemoved_other": "Usunięto {{count}} moda",
+        "memory": "Pamięć {{from}} → {{to}}",
+        "java": "Java {{from}} → {{to}}",
+        "loader": "Loader {{from}} → {{to}}",
+        "minecraft": "Minecraft {{from}} → {{to}}",
+        "optimizedOn": "Włączono optymalizację JVM",
+        "optimizedOff": "Wyłączono optymalizację JVM"
+      },
+      "units": {
+        "mb": "MB",
+        "gb": "GB",
+        "sec": "s",
+        "ms": "ms"
+      }
+    }
   },
   "accountInfo": {
     "error": "Błąd wczytywania informacji o koncie",
@@ -6149,12 +6224,15 @@
     "deleteConfirm": "Motyw „{{name}}” zostanie usunięty na zawsze. Obraz tła zostanie w folderze motywów.",
     "saved": "Zapisano motyw „{{name}}”",
     "limit": "Możesz zapisać do {{count}} motywów",
-    "accentByTheme": "Kolor akcentu ustala teraz motyw „{{name}}”",
+    "accentByTheme": "Akcent ustala motyw „{{name}}”. Aby wybrać kolor tutaj, wyłącz „Własny kolor akcentu” w edytorze motywu",
     "command": "Motyw: {{name}}",
     "builtIn": {
       "grubie": "Grubie",
       "oled": "OLED",
       "light": "Jasny"
+    },
+    "card": {
+      "ownAccent": "Własny kolor akcentu motywu"
     },
     "editor": {
       "title": "Edytor motywu",
@@ -6183,7 +6261,28 @@
       "readability": "Czytelność",
       "readabilityDescription": "Sprawdzane bez obrazu: przyciemnienie utrzymuje czytelność tekstu na nim",
       "blocked": "Popraw czerwone punkty: z tymi kolorami tekstu nie da się przeczytać",
-      "save": "Zapisz motyw"
+      "save": "Zapisz motyw",
+      "fit": "Ułożenie",
+      "fits": {
+        "cover": "Wypełnij",
+        "contain": "Całość",
+        "stretch": "Rozciągnij"
+      },
+      "fitHints": {
+        "cover": "Obraz wypełnia całe okno, nadmiar przy krawędziach jest przycinany",
+        "contain": "Obraz jest widoczny w całości, przy krawędziach jego rozmyta kopia",
+        "stretch": "Obraz jest rozciągany do okna i może być zniekształcony"
+      },
+      "framing": "Widoczna część obrazu",
+      "framingHint": "Przeciągnij, aby wybrać widoczną część",
+      "framingCenter": "Wyśrodkuj",
+      "zones": "Kolory paneli",
+      "zonesDescription": "Pasek boczny i górny pasek mogą mieć własne kolory. Kolor tekstu dobiera się sam",
+      "zone": {
+        "sidebar": "Pasek boczny",
+        "topbar": "Górny pasek"
+      },
+      "zoneOwn": "Własny kolor"
     },
     "checks": {
       "text": "Tekst na panelach",
@@ -6191,7 +6290,9 @@
       "muted": "Tekst pomocniczy",
       "faint": "Podpisy i etykiety",
       "accent": "Akcent na panelach",
-      "accentText": "Napis na przycisku"
+      "accentText": "Napis na przycisku",
+      "sidebar": "Tekst na pasku bocznym",
+      "topbar": "Tekst na górnym pasku"
     },
     "transfer": {
       "export": "Zapisz do pliku",

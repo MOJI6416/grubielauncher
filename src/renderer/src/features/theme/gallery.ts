@@ -20,6 +20,7 @@ const api = window.api;
 
 const MIN_SIDE = 360;
 const MAX_SIDE = 3840;
+const THUMB_MAX_SIDE = 960;
 const QUALITIES = [0.86, 0.76, 0.64];
 
 export const galleryFocusAtom = atom<string | null>(null);
@@ -69,14 +70,15 @@ export async function prepareGalleryImages(path: string): Promise<PublishImages 
       GALLERY_BACKDROP.maxBytes,
     );
 
-    const ratio = GALLERY_THUMB.width / GALLERY_THUMB.height;
-    const cropWidth = Math.min(width, height * ratio);
-    const cropHeight = cropWidth / ratio;
+    const thumbScale = Math.min(
+      Math.max(GALLERY_THUMB.width / width, GALLERY_THUMB.height / height),
+      THUMB_MAX_SIDE / Math.max(width, height),
+    );
     const thumb = await encodeWebp(
       bitmap,
-      { x: (width - cropWidth) / 2, y: (height - cropHeight) / 2, width: cropWidth, height: cropHeight },
-      GALLERY_THUMB.width,
-      GALLERY_THUMB.height,
+      { x: 0, y: 0, width, height },
+      Math.max(1, Math.round(width * thumbScale)),
+      Math.max(1, Math.round(height * thumbScale)),
       GALLERY_THUMB.maxBytes,
     );
 

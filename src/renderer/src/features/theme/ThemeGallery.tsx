@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
-import { Check, Download, Image as ImageIcon, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Check, Download, RefreshCw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,8 @@ import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { accountAtom } from "@renderer/stores/atoms";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { Segmented } from "@renderer/features/settings/SettingsPrimitives";
-import { ThemeSwatch } from "./ThemeCard";
+import { ThemeTraits } from "./ThemeCard";
+import { ThemeMiniature } from "./ThemeMiniature";
 import {
   galleryFocusAtom,
   installGalleryTheme,
@@ -42,6 +43,9 @@ function asDefinition(item: GalleryTheme): ThemeDefinition {
           dim: item.backdrop.dim,
           blur: item.backdrop.blur,
           panelOpacity: item.backdrop.panelOpacity,
+          fit: item.backdrop.fit,
+          focusX: item.backdrop.focusX,
+          focusY: item.backdrop.focusY,
         }
       : null,
   };
@@ -64,26 +68,33 @@ function GalleryCard({
   const formatter = new Intl.NumberFormat(undefined, { notation: "compact" });
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-2 p-2">
-      <ThemeSwatch
+    <div
+      className={cn(
+        "flex flex-col gap-2 rounded-lg border p-1.5",
+        state === "active" ? "border-primary/60 bg-primary-soft" : "border-border bg-surface-2",
+      )}
+    >
+      <ThemeMiniature
         theme={asDefinition(item)}
         accent={accent}
         imageUrl={item.backdrop?.thumbUrl}
-        className="h-16"
+        className={cn("rounded-md ring-1", state === "active" ? "ring-primary/60" : "ring-border")}
       />
-      <div className="min-w-0">
+      <div className="min-w-0 px-1">
         <Hint content={item.name} truncatedOnly>
           <div className="truncate text-sm font-medium text-foreground">
             {item.name || t("theme.gallery.untitled")}
           </div>
         </Hint>
         <div className="flex items-center gap-1.5 text-xs text-faint">
-          <span className="truncate">{item.authorName ?? t("theme.gallery.unknownAuthor")}</span>
+          <Hint content={item.authorName ?? ""} truncatedOnly>
+            <span className="truncate">{item.authorName ?? t("theme.gallery.unknownAuthor")}</span>
+          </Hint>
           <span className="inline-flex shrink-0 items-center gap-0.5 font-mono tabular-nums">
             <Download className="size-3" />
             {formatter.format(item.downloads)}
           </span>
-          {item.backdrop && <ImageIcon className="size-3 shrink-0" aria-label={t("theme.gallery.withPicture")} />}
+          <ThemeTraits theme={item} />
         </div>
       </div>
       <Button
@@ -262,11 +273,11 @@ function FocusedTheme({
         },
       ]}
     >
-      <ThemeSwatch
+      <ThemeMiniature
         theme={asDefinition(item)}
         accent={accent}
         imageUrl={item.backdrop?.thumbUrl}
-        className="h-28"
+        className="rounded-md ring-1 ring-border"
       />
     </Confirmation>
   );
@@ -388,7 +399,7 @@ export function ThemeGallery({
       ) : status === "loading" && items.length === 0 ? (
         <div className="grid grid-cols-4 gap-2">
           {Array.from({ length: 8 }, (_, index) => (
-            <Skeleton key={index} className="h-36 rounded-lg" />
+            <Skeleton key={index} className="h-48 rounded-lg" />
           ))}
         </div>
       ) : items.length === 0 ? (

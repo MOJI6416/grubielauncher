@@ -1,0 +1,148 @@
+{
+  "version": "2.2.6",
+  "isMilestone": false,
+  "en": {
+    "subtitle": "Theme pictures placed the way you want, coloured panels, resource metrics for instances and easier drag and drop in the Mod Manager.",
+    "highlights": [
+      "Added Placement for the theme picture: Fill, with the visible part chosen by dragging the preview, Whole, with a blurred copy along the edges, or Stretch.",
+      "Added Panel colours to the theme editor: the sidebar and the top bar can have their own colour, and the text on them adjusts automatically.",
+      "Added Resources to an instance’s Statistics tab: game memory, process RAM, loading time and stutters for every launch, what changed between launches and memory advice.",
+      "Added a hint on the Shaders tab of the Mod Manager when the instance has no Iris or Oculus, with a button to install it.",
+      "Improved drag and drop in the Mod Manager library: the list scrolls when a mod reaches its edge, and all your groups appear at the bottom as drop targets.",
+      "Improved theme cards: each one now shows a small copy of the launcher in the theme’s colours and picture."
+    ],
+    "fixes": [
+      "The window buttons on Windows now follow the theme instead of staying dark in the Light theme.",
+      "My server on NeoForge 26.1 now starts on Linux and macOS.",
+      "Publishing an instance whose icon is a web link no longer stops at the logo upload."
+    ]
+  },
+  "ru": {
+    "subtitle": "Картинка темы так, как вам нужно, цветные панели, метрика ресурсов сборки и удобное перетаскивание в мод-менеджере.",
+    "highlights": [
+      "Добавлено «Размещение» картинки темы: «Заполнить» с выбором видимой части перетаскиванием превью, «Целиком» с размытой копией по краям или «Растянуть».",
+      "Добавлены «Цвета панелей» в редакторе темы: боковую и верхнюю панель можно покрасить отдельно, а цвет текста на них подбирается сам.",
+      "Добавлены «Ресурсы» на вкладке «Статистика» сборки: память игры, ОЗУ процесса, загрузка и рывки за каждый запуск, что менялось между запусками и совет по памяти.",
+      "Добавлена подсказка на вкладке «Шейдеры» в мод-менеджере, если в сборке нет Iris или Oculus, — с кнопкой установки.",
+      "Улучшено перетаскивание в библиотеке мод-менеджера: список сам прокручивается у края, а внизу появляются все ваши группы, куда можно бросить мод.",
+      "Улучшены карточки тем: на каждой теперь мини-копия лаунчера в цветах и с картинкой темы."
+    ],
+    "fixes": [
+      "Кнопки окна в Windows теперь следуют теме и больше не остаются тёмными в «Светлой».",
+      "«Свой сервер» на NeoForge 26.1 теперь запускается на Linux и macOS.",
+      "Публикация сборки с иконкой по ссылке больше не обрывается на загрузке логотипа."
+    ]
+  },
+  "uk": {
+    "subtitle": "Картинка теми так, як вам потрібно, кольорові панелі, метрика ресурсів збірки та зручне перетягування в менеджері модифікацій.",
+    "highlights": [
+      "Додано «Розміщення» картинки теми: «Заповнити» з вибором видимої частини перетягуванням прев’ю, «Повністю» з розмитою копією по краях або «Розтягнути».",
+      "Додано «Кольори панелей» у редакторі теми: бічну та верхню панель можна пофарбувати окремо, а колір тексту на них підбирається сам.",
+      "Додано «Ресурси» на вкладці «Статистика» збірки: пам’ять гри, ОЗП процесу, завантаження й ривки за кожен запуск, що змінювалося між запусками, і порада щодо пам’яті.",
+      "Додано підказку на вкладці «Шейдери» в менеджері модифікацій, якщо у збірці немає Iris або Oculus, — з кнопкою встановлення.",
+      "Покращено перетягування в бібліотеці менеджера модифікацій: список сам прокручується біля краю, а внизу з’являються всі ваші групи, куди можна кинути мод.",
+      "Покращено картки тем: на кожній тепер мінікопія лаунчера в кольорах і з картинкою теми."
+    ],
+    "fixes": [
+      "Кнопки вікна у Windows тепер слідують темі й більше не лишаються темними у «Світлій».",
+      "«Свій сервер» на NeoForge 26.1 тепер запускається на Linux і macOS.",
+      "Публікація збірки з іконкою за посиланням більше не обривається на завантаженні логотипа."
+    ]
+  },
+  "de": {
+    "subtitle": "Design-Bilder so platziert, wie Sie es möchten, farbige Leisten, Ressourcen-Messung für Instanzen und einfacheres Ziehen im Mod-Manager.",
+    "highlights": [
+      "Neu: Platzierung für das Design-Bild – Füllen mit wählbarem Ausschnitt durch Ziehen der Vorschau, Ganz mit einer unscharfen Kopie an den Rändern oder Strecken.",
+      "Neu: Farben der Leisten im Design-Editor – Seitenleiste und obere Leiste bekommen eigene Farben, die Textfarbe darauf passt sich automatisch an.",
+      "Neu: Ressourcen im Tab „Statistik“ einer Instanz – Spielspeicher, Prozess-RAM, Ladezeit und Ruckler jedes Starts, Änderungen zwischen den Starts und ein Speichertipp.",
+      "Neu: ein Hinweis im Tab „Shader“ des Mod-Managers, wenn der Instanz Iris oder Oculus fehlt – mit einer Schaltfläche zum Installieren.",
+      "Ziehen in der Bibliothek des Mod-Managers ist einfacher: Die Liste scrollt am Rand von selbst, und unten erscheinen alle Ihre Gruppen als Ablageziele.",
+      "Design-Karten zeigen jetzt eine kleine Kopie des Launchers in den Farben und mit dem Bild des Designs."
+    ],
+    "fixes": [
+      "Die Fensterschaltflächen unter Windows folgen jetzt dem Design und bleiben im Design „Hell“ nicht mehr dunkel.",
+      "„Mein Server“ mit NeoForge 26.1 startet jetzt unter Linux und macOS.",
+      "Das Veröffentlichen einer Instanz, deren Symbol ein Weblink ist, bricht beim Hochladen des Logos nicht mehr ab."
+    ]
+  },
+  "es": {
+    "subtitle": "La imagen del tema colocada como usted quiera, paneles de color, métricas de recursos de la instancia y un arrastre más cómodo en el gestor de mods.",
+    "highlights": [
+      "Se agregó Colocación para la imagen del tema: Rellenar, eligiendo la parte visible al arrastrar la vista previa; Completa, con una copia desenfocada en los bordes; o Estirar.",
+      "Se agregaron Colores de los paneles al editor de tema: la barra lateral y la barra superior pueden tener su propio color, y el color del texto se ajusta solo.",
+      "Se agregaron Recursos en la pestaña «Estadísticas» de la instancia: memoria del juego, RAM del proceso, carga y tirones de cada inicio, qué cambió entre inicios y un consejo de memoria.",
+      "Se agregó un aviso en la pestaña «Shaders» del gestor de mods cuando la instancia no tiene Iris ni Oculus, con un botón para instalarlo.",
+      "Se mejoró el arrastre en la biblioteca del gestor de mods: la lista se desplaza sola en el borde y abajo aparecen todos sus grupos para soltar el mod.",
+      "Se mejoraron las tarjetas de temas: cada una muestra ahora una copia pequeña del launcher con los colores y la imagen del tema."
+    ],
+    "fixes": [
+      "Los botones de la ventana en Windows ahora siguen el tema y ya no quedan oscuros en el tema Claro.",
+      "«Mi servidor» con NeoForge 26.1 ahora se inicia en Linux y macOS.",
+      "Publicar una instancia cuyo ícono es un enlace ya no se detiene al subir el logotipo."
+    ]
+  },
+  "fr": {
+    "subtitle": "L’image du thème placée à votre guise, des panneaux colorés, les ressources des instances et un glisser-déposer plus simple.",
+    "highlights": [
+      "Ajout de la Disposition de l’image du thème : Remplir, avec la partie visible choisie en faisant glisser l’aperçu, En entier, avec une copie floue sur les bords, ou Étirer.",
+      "Ajout des Couleurs des panneaux dans l’éditeur de thème : la barre latérale et la barre du haut peuvent avoir leur propre couleur, et le texte s’adapte tout seul.",
+      "Ajout des Ressources dans l’onglet « Statistiques » d’une instance : mémoire du jeu, RAM du processus, chargement et saccades de chaque lancement, changements entre lancements et conseil mémoire.",
+      "Ajout d’un avis dans l’onglet « Shaders » du gestionnaire de mods quand l’instance n’a ni Iris ni Oculus, avec un bouton pour l’installer.",
+      "Glisser-déposer amélioré dans la bibliothèque du gestionnaire de mods : la liste défile seule au bord, et tous vos groupes apparaissent en bas pour y déposer le mod.",
+      "Cartes de thème améliorées : chacune montre maintenant une petite copie du launcher aux couleurs et avec l’image du thème."
+    ],
+    "fixes": [
+      "Les boutons de la fenêtre sous Windows suivent maintenant le thème et ne restent plus sombres dans le thème Clair.",
+      "« Mon serveur » avec NeoForge 26.1 démarre maintenant sous Linux et macOS.",
+      "La publication d’une instance dont l’icône est un lien ne s’arrête plus à l’envoi du logo."
+    ]
+  },
+  "pl": {
+    "subtitle": "Obraz motywu ułożony na kilka sposobów, kolorowe panele, pomiar zasobów instancji i wygodniejsze przeciąganie w menedżerze modów.",
+    "highlights": [
+      "Dodano Ułożenie obrazu motywu: Wypełnij z wyborem widocznej części przez przeciągnięcie podglądu, Całość z rozmytą kopią przy krawędziach albo Rozciągnij.",
+      "Dodano Kolory paneli w edytorze motywu: pasek boczny i górny pasek mogą mieć własny kolor, a kolor tekstu dobiera się sam.",
+      "Dodano Zasoby na karcie „Statystyki” instancji: pamięć gry, RAM procesu, wczytywanie i przycięcia z każdego uruchomienia, zmiany między uruchomieniami i porada dotycząca pamięci.",
+      "Dodano podpowiedź na karcie „Shadery” menedżera modów, gdy w instancji brakuje Iris lub Oculus, z przyciskiem instalacji.",
+      "Ulepszono przeciąganie w bibliotece menedżera modów: lista sama się przewija przy krawędzi, a na dole pojawiają się wszystkie grupy, do których można upuścić mod.",
+      "Ulepszono karty motywów: każda pokazuje teraz małą kopię launchera w kolorach i z obrazem motywu."
+    ],
+    "fixes": [
+      "Przyciski okna w Windows podążają teraz za motywem i nie zostają już ciemne w motywie Jasny.",
+      "„Mój serwer” z NeoForge 26.1 uruchamia się teraz w systemach Linux i macOS.",
+      "Publikowanie instancji, której ikona jest linkiem, nie zatrzymuje się już na wysyłaniu logo."
+    ]
+  },
+  "pt": {
+    "subtitle": "A imagem do tema posicionada do jeito que você quiser, painéis coloridos, métricas de recursos da instância e arrastar mais fácil no gerenciador de mods.",
+    "highlights": [
+      "Adicionado Posicionamento para a imagem do tema: Preencher, escolhendo a parte visível ao arrastar a prévia; Inteira, com uma cópia desfocada nas bordas; ou Esticar.",
+      "Adicionadas Cores dos painéis no editor de tema: a barra lateral e a barra superior podem ter cor própria, e a cor do texto se ajusta sozinha.",
+      "Adicionados Recursos na aba “Estatísticas” da instância: memória do jogo, RAM do processo, carregamento e travadas de cada execução, o que mudou entre execuções e uma dica de memória.",
+      "Adicionado um aviso na aba “Shaders” do gerenciador de mods quando a instância não tem Iris nem Oculus, com um botão para instalar.",
+      "Melhorado o arrastar na biblioteca do gerenciador de mods: a lista rola sozinha na borda e todos os seus grupos aparecem embaixo para soltar o mod.",
+      "Melhorados os cartões de tema: cada um agora mostra uma cópia pequena do launcher com as cores e a imagem do tema."
+    ],
+    "fixes": [
+      "Os botões da janela no Windows agora seguem o tema e não ficam mais escuros no tema Claro.",
+      "“Meu servidor” com NeoForge 26.1 agora inicia no Linux e no macOS.",
+      "Publicar uma instância cujo ícone é um link não para mais no envio do logo."
+    ]
+  },
+  "tr": {
+    "subtitle": "Tema resmi istediğiniz gibi yerleşiyor, paneller renkleniyor, kurulumların kaynak kullanımı ölçülüyor ve mod yöneticisinde sürüklemek kolaylaşıyor.",
+    "highlights": [
+      "Tema resmine Yerleşim eklendi: önizlemeyi sürükleyerek görünen kısmı seçebileceğiniz Doldur, kenarlarda bulanık kopyasıyla Tamamı ya da Uzat.",
+      "Tema düzenleyiciye Panel renkleri eklendi: kenar çubuğu ve üst çubuk kendi renklerine sahip olabilir, üzerlerindeki yazı rengi kendiliğinden ayarlanır.",
+      "Kurulumun “İstatistikler” sekmesine Kaynaklar eklendi: her açılışın oyun belleği, işlem RAM’i, yükleme süresi ve takılmaları, açılışlar arasındaki değişiklikler ve bellek önerisi.",
+      "Kurulumda Iris veya Oculus yoksa mod yöneticisinin “Gölgelendiriciler” sekmesine, kurma düğmesiyle birlikte bir uyarı eklendi.",
+      "Mod yöneticisi kütüphanesinde sürükleme geliştirildi: liste kenara gelince kendiliğinden kayar ve modu bırakabileceğiniz tüm gruplarınız altta görünür.",
+      "Tema kartları geliştirildi: her kart artık temanın renkleri ve resmiyle başlatıcının küçük bir kopyasını gösteriyor."
+    ],
+    "fixes": [
+      "Windows’taki pencere düğmeleri artık temaya uyuyor ve Açık temada koyu kalmıyor.",
+      "NeoForge 26.1 ile “Sunucum” artık Linux ve macOS’ta başlıyor.",
+      "Simgesi bir bağlantı olan kurulumu yayınlamak artık logo yüklemesinde durmuyor."
+    ]
+  }
+}

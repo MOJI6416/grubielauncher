@@ -840,15 +840,19 @@ export function Share({
           ) {
             throw new Error("logo_failed");
           }
-        } else {
-          const response = await fetch(selectedVersion.version.image);
-          if (!response.ok) throw new Error("logo_failed");
-          const buffer = new Uint8Array(
-            await (await response.blob()).arrayBuffer(),
-          );
-          if (!(await api.fs.writeFile(tmpPath, buffer))) {
-            throw new Error("logo_failed");
-          }
+        } else if (
+          !(await api.file.download(
+            [
+              {
+                url: selectedVersion.version.image,
+                destination: tmpPath,
+                group: "other",
+              },
+            ],
+            1,
+          ))
+        ) {
+          throw new Error("logo_failed");
         }
 
         const upload = await api.backend.uploadFileFromPath(

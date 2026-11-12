@@ -21,6 +21,7 @@ import {
   isLoaderManagedJvmArgument,
   isTrustedServerJavaCommand,
   parseRunScript,
+  patchLauncherScript,
   resolveRunScriptJava,
   tokenizeArgfileContent,
   tokenizeRunScriptLine,
@@ -503,5 +504,85 @@ describe("resolveRunScriptJava", () => {
     expect(resolveRunScriptJava(path.resolve("/opt/gone/bin/java"), "")).toBe(
       null,
     );
+  });
+});
+
+describe("patchLauncherScript", () => {
+  const neoforgeSh = [
+    "#!/usr/bin/env sh",
+    "# Forge requires a configured set of both JVM and program arguments.",
+    "# Add custom JVM arguments to the user_jvm_args.txt",
+    '# Add custom program arguments {such as nogui} to this file in the next line before the "$@" or',
+    "#  pass them to this script directly",
+    'exec java @user_jvm_args.txt @libraries/net/neoforged/neoforge/26.1.2.126/unix_args.txt "$@"',
+    "",
+  ].join("\n");
+
+  const neoforgeBat = [
+    "@echo off",
+    "REM Forge requires a configured set of both JVM and program arguments.",
+    "REM Add custom JVM arguments to the user_jvm_args.txt",
+    "REM Add custom program arguments {such as nogui} to this file in the next line before the %* or",
+    "REM  pass them to this script directly",
+    "java @user_jvm_args.txt @libraries/net/neoforged/neoforge/26.1.2.126/win_args.txt %*",
+    "pause",
+    "",
+  ].join("\n");
+
+  it("points the neoforge 26.1 run.sh with exec at the launcher java", () => {
+    const patched = patchLauncherScript(neoforgeSh, "'/opt/java/bin/java'", '"$@"');
+
+    expect(patched).toContain(
+      `exec '/opt/java/bin/java' @user_jvm_args.txt @libraries/net/neoforged/neoforge/26.1.2.126/unix_args.txt nogui "$@"`,
+    );
+    expect(parseRunScript(patched, true)).toEqual({
+      command: "/opt/java/bin/java",
+      args: [
+        "@user_jvm_args.txt",
+        "@libraries/net/neoforged/neoforge/26.1.2.126/unix_args.txt",
+        "nogui",
+      ],
+    });
+  });
+
+  it("points the neoforge 26.1 run.bat at the launcher java", () => {
+    const patched = patchLauncherScript(
+      neoforgeBat,
+      `"C:\\java\\bin\\java.exe"`,
+      "%*",
+    );
+
+    expect(parseRunScript(patched, false)).toEqual({
+      command: "C:\\java\\bin\\java.exe",
+      args: [
+        "@user_jvm_args.txt",
+        "@libraries/net/neoforged/neoforge/26.1.2.126/win_args.txt",
+        "nogui",
+      ],
+    });
+  });
+
+  it("still patches the older forge run.sh without exec", () => {
+    const patched = patchLauncherScript(
+      'java @user_jvm_args.txt @libraries/net/minecraftforge/forge/1.20.1-47.2.0/unix_args.txt "$@"\n',
+      "'/opt/java/bin/java'",
+      '"$@"',
+    );
+
+    expect(patched).toBe(
+      `'/opt/java/bin/java' @user_jvm_args.txt @libraries/net/minecraftforge/forge/1.20.1-47.2.0/unix_args.txt nogui "$@"\n`,
+    );
+  });
+
+  it("keeps a java path with dollar signs intact", () => {
+    const patched = patchLauncherScript(neoforgeSh, "'/opt/$&/java'", '"$@"');
+
+    expect(patched).toContain("exec '/opt/$&/java' @user_jvm_args.txt");
+  });
+
+  it("leaves an already patched script alone", () => {
+    const once = patchLauncherScript(neoforgeSh, "'/opt/java/bin/java'", '"$@"');
+
+    expect(patchLauncherScript(once, "'/opt/java/bin/java'", '"$@"')).toBe(once);
   });
 });

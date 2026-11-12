@@ -15,6 +15,7 @@ import {
   confirmWindowClose,
   getUiScaleState,
   mainWindow,
+  setTitleBarColors,
   setUiScale,
   setUnsavedChangesGuard
 } from '../windows/mainWindow'
@@ -477,6 +478,15 @@ export function registerOtherIpc() {
     uiScaleFallback,
     [check.number()],
     async (_, scale) => setUiScale(scale)
+  )
+
+  const hexColor = check.pattern(/^#[0-9a-f]{6}$/i, 7)
+
+  handleSafe<void, [string, string]>(
+    'other:setTitleBarColors',
+    undefined,
+    [hexColor, hexColor],
+    (_, color, symbolColor) => setTitleBarColors({ color, symbolColor })
   )
 
   handleSafe<ConnectivityCheckPlanEntry[]>('connectivity:plan', [], () =>

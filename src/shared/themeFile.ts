@@ -1,6 +1,8 @@
 import {
+  THEME_ZONES,
   isHexColor,
   normalizeTheme,
+  type BackdropFrame,
   type ThemeDefinition,
   type ThemeMode,
 } from "./themes";
@@ -16,7 +18,9 @@ export interface ThemeFileManifest {
   name: string;
   mode: ThemeMode;
   colors: ThemeDefinition["colors"];
-  backdrop: { file: string; dim: number; blur: number; panelOpacity: number } | null;
+  backdrop:
+    | ({ file: string; dim: number; blur: number; panelOpacity: number } & BackdropFrame)
+    | null;
 }
 
 export function backdropEntryName(path: string): string {
@@ -37,6 +41,9 @@ export function themeManifest(theme: ThemeDefinition): ThemeFileManifest {
           dim: theme.backdrop.dim,
           blur: theme.backdrop.blur,
           panelOpacity: theme.backdrop.panelOpacity,
+          fit: theme.backdrop.fit,
+          focusX: theme.backdrop.focusX,
+          focusY: theme.backdrop.focusY,
         }
       : null,
   };
@@ -77,10 +84,13 @@ function fromBase64Url(code: string): string {
 
 export function encodeThemeCode(theme: ThemeDefinition): string {
   const { background, surface, foreground, accent } = theme.colors;
+  const zones = THEME_ZONES.map((zone) => theme.colors[zone] ?? "");
+  const colors = [background, surface, foreground, accent ?? "", ...zones];
+  while (colors.length > 4 && !colors[colors.length - 1]) colors.pop();
   const payload = {
     n: theme.name,
     m: theme.mode === "light" ? "l" : "d",
-    c: [background, surface, foreground, accent ?? ""].map((color) => color.replace("#", "")),
+    c: colors.map((color) => color.replace("#", "")),
   };
   return `${THEME_CODE_PREFIX}${toBase64Url(JSON.stringify(payload))}`;
 }
@@ -96,7 +106,7 @@ export function decodeThemeCode(text: string, id: string): ThemeDefinition | nul
       c?: unknown;
     };
     if (!Array.isArray(payload.c) || payload.c.length < 3) return null;
-    const [background, surface, foreground, accent] = payload.c.map((value) =>
+    const [background, surface, foreground, accent, ...zones] = payload.c.map((value) =>
       typeof value === "string" ? `#${value}` : "",
     );
 
@@ -109,6 +119,7 @@ export function decodeThemeCode(text: string, id: string): ThemeDefinition | nul
         surface,
         foreground,
         accent: isHexColor(accent) ? accent : null,
+        ...Object.fromEntries(THEME_ZONES.map((zone, index) => [zone, zones[index]])),
       },
       backdrop: null,
     });

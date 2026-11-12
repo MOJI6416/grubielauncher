@@ -7,6 +7,37 @@ export interface IVersionStatistics {
   crashes?: number
 }
 
+export interface ISessionResources {
+  loadSec?: number
+  gc?: string
+  heapTypicalMb?: number
+  heapPeakMb?: number
+  heapCapacityMb?: number
+  pauses?: {
+    count: number
+    long: number
+    longestMs: number
+    totalMs: number
+  }
+  processPeakMb?: number
+  processTypicalMb?: number
+}
+
+export interface ISessionConfig {
+  minecraft: string
+  loader: string
+  loaderVersion?: string
+  xmxMb: number
+  optimizedJvm: boolean
+  javaMajor?: number
+  mods: number
+  modsAdded?: string[]
+  modsRemoved?: string[]
+  modsAddedCount?: number
+  modsRemovedCount?: number
+  modSet?: Record<string, string>
+}
+
 export interface IVersionSession {
   id: string
   startedAt: string
@@ -17,6 +48,8 @@ export interface IVersionSession {
   recovered?: boolean
   account?: string
   server?: string
+  config?: ISessionConfig
+  resources?: ISessionResources
 }
 
 export interface IPlaytimeSyncEntry {

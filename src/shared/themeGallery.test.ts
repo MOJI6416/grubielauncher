@@ -73,7 +73,40 @@ describe("galleryThemeToDefinition", () => {
     const theme = galleryThemeToDefinition(normalizeGalleryTheme(RAW)!, "custom-1", "C:/x.webp")!;
     const payload = publishPayload(theme);
 
-    expect(payload.backdrop).toEqual({ dim: 55, blur: 6, panelOpacity: 88 });
+    expect(payload.backdrop).toEqual({
+      dim: 55,
+      blur: 6,
+      panelOpacity: 88,
+      fit: "cover",
+      focusX: 50,
+      focusY: 50,
+    });
     expect(JSON.stringify(payload)).not.toContain("C:/x.webp");
+  });
+
+  it("carries the picture placement and panel colours both ways", () => {
+    const raw = {
+      ...RAW,
+      colors: { ...RAW.colors, sidebar: "#2A1B4D", topbar: "nope" },
+      backdrop: { ...RAW.backdrop, fit: "contain", focusX: 20, focusY: 80 },
+    };
+    const item = normalizeGalleryTheme(raw)!;
+    expect(item.colors.sidebar).toBe("#2a1b4d");
+    expect(item.colors).not.toHaveProperty("topbar");
+
+    const theme = galleryThemeToDefinition(item, "custom-2", "C:/y.webp")!;
+    expect(theme.backdrop).toMatchObject({ fit: "contain", focusX: 20, focusY: 80 });
+    expect(publishPayload(theme)).toMatchObject({
+      colors: { sidebar: "#2a1b4d" },
+      backdrop: { fit: "contain", focusX: 20, focusY: 80 },
+    });
+  });
+
+  it("reads a theme published before placement existed as filling the window", () => {
+    expect(normalizeGalleryTheme(RAW)?.backdrop).toMatchObject({
+      fit: "cover",
+      focusX: 50,
+      focusY: 50,
+    });
   });
 });

@@ -924,7 +924,13 @@
     "restoredCount": "Wiederhergestellt: {{n}}",
     "addedElsewhere": "Einige Dateien landeten in anderen Tabs: {{types}}",
     "catalogLoaderHintQuilt": "Quilt führt die meisten Fabric-Mods aus, daher können Sie auch hier nach ihnen suchen. Ihre Updates werden ebenfalls für Quilt geprüft.",
-    "catalogLoaderHintLegacyFabric": "Einige Legacy-Fabric-Mods auf Modrinth sind als einfaches Fabric markiert. Wechseln Sie, um auch diese zu finden."
+    "catalogLoaderHintLegacyFabric": "Einige Legacy-Fabric-Mods auf Modrinth sind als einfaches Fabric markiert. Wechseln Sie, um auch diese zu finden.",
+    "shaderLoader": {
+      "missing": "Shader funktionieren nur über {{loader}}. Es fehlt in dieser Instanz, ohne es lassen sie sich nicht einschalten.",
+      "unsupported": "In dieser Instanz fehlt die Grundlage für Shader: Sie brauchen Fabric, Quilt oder NeoForge mit Iris (oder Forge mit Oculus).",
+      "install": "{{loader}} installieren",
+      "notFound": "Die Seite der Mod ließ sich nicht öffnen. Prüfen Sie die Verbindung und versuchen Sie es erneut."
+    }
   },
   "nav": {
     "play": "Spielen"
@@ -2626,7 +2632,68 @@
     "jumps": "Sprünge",
     "km": "km",
     "loadFailed": "Statistiken konnten nicht gelesen werden",
-    "loadFailedHint": "Die Datei statistics.json existiert, ließ sich aber nicht öffnen. Versuchen Sie es erneut – wenn das Spiel läuft, warten Sie, bis es beendet ist."
+    "loadFailedHint": "Die Datei statistics.json existiert, ließ sich aber nicht öffnen. Versuchen Sie es erneut – wenn das Spiel läuft, warten Sie, bis es beendet ist.",
+    "resources": {
+      "viewLabel": "Anzeige",
+      "viewGame": "Spiel",
+      "viewResources": "Ressourcen",
+      "empty": "Noch keine Messungen",
+      "emptyHint": "Sie erscheinen nach dem nächsten Start: Der Launcher hält fest, wie viel Speicher das Spiel belegt hat, wie lange es geladen hat und ob der Garbage Collector Ruckler verursacht hat.",
+      "heap": "Spielspeicher",
+      "heapHint": "Belegter Speicher nach der Garbage Collection — so viel braucht das Spiel mit allen Mods wirklich. Der übliche Wert beim letzten Start.",
+      "heapPeak": "Speicherspitze",
+      "ofAllocated": "von {{allocated}}",
+      "process": "Prozess-RAM",
+      "processHint": "Wie viel Arbeitsspeicher des Computers das ganze Spiel belegt hat, wie im Task-Manager. Mit JVM-Optimierung ist das fast immer die volle Zuweisung.",
+      "load": "Laden",
+      "loadHint": "Vom Start bis zum Hauptmenü: die Zeit, in der das Spiel Mods und Texturen geladen hat",
+      "pauses": "Ruckler",
+      "pausesHint": "Pausen des Garbage Collectors über 100 ms nach dem Laden. In diesen Momenten friert das Spiel für einen Sekundenbruchteil ein.",
+      "pausesNone": "keine",
+      "pausesLongest": "bis {{value}}",
+      "mods": "Mods",
+      "memoryChart": "Speicher pro Start",
+      "legendTypical": "üblich",
+      "legendPeak": "Spitze",
+      "legendAllocated": "zugewiesen",
+      "hintHeap": "Üblich {{typical}}, Spitze {{peak}}, zugewiesen {{allocated}}",
+      "adviceTitle": "Speichertipp",
+      "adviceNone": "Der Tipp erscheint, sobald Speichermessungen vorliegen.",
+      "advicePauses_one": "Bei den letzten Starts gab es bis zu {{count}} spürbaren Ruckler durch den Garbage Collector. Schalten Sie „JVM-Optimierung“ in den Spieleinstellungen ein — sie verkürzt die Pausen.",
+      "advicePauses_other": "Bei den letzten Starts gab es bis zu {{count}} spürbare Ruckler durch den Garbage Collector. Schalten Sie „JVM-Optimierung“ in den Spieleinstellungen ein — sie verkürzt die Pausen.",
+      "advice": {
+        "tight": "Das Spiel belegte bis zu {{peak}} von {{allocated}} — der Speicher ist knapp, der Garbage Collector läuft öfter und das Spiel ruckelt. Weisen Sie der Instanz {{suggest}} zu.",
+        "tightMax": "Das Spiel belegte bis zu {{peak}} von {{allocated}} — der Speicher ist knapp, und mehr kann dieser Computer nicht geben. Leichtere Mods oder eine kürzere Sichtweite helfen.",
+        "excess": "Das Spiel kommt mit etwa {{peak}} aus, zugewiesen sind {{allocated}}. Der Rest liegt brach — Sie können auf {{suggest}} senken und den Speicher dem System lassen.",
+        "ok": "{{allocated}} zugewiesen, das Spiel belegte bis zu {{peak}}. Der Spielraum passt — nichts zu ändern."
+      },
+      "basedOn_one": "Basierend auf {{count}} Start",
+      "basedOn_other": "Basierend auf {{count}} Starts",
+      "about": "Die Messung bremst das Spiel nicht: Der Launcher liest das Garbage-Collector-Log von Java und prüft alle 15 Sekunden den Speicher des Prozesses. FPS lassen sich so nicht messen — dafür braucht es eine Mod im Spiel.",
+      "changesTitle": "Was sich geändert hat",
+      "changesEmpty": "Seit der ersten Messung haben sich Mods und Einstellungen nicht geändert.",
+      "loadChart": "Laden pro Start",
+      "effectHeap": "Speicher {{value}}",
+      "effectLoad": "Laden {{value}}",
+      "change": {
+        "modsAdded_one": "{{count}} Mod hinzugefügt",
+        "modsAdded_other": "{{count}} Mods hinzugefügt",
+        "modsRemoved_one": "{{count}} Mod entfernt",
+        "modsRemoved_other": "{{count}} Mods entfernt",
+        "memory": "Speicher {{from}} → {{to}}",
+        "java": "Java {{from}} → {{to}}",
+        "loader": "Loader {{from}} → {{to}}",
+        "minecraft": "Minecraft {{from}} → {{to}}",
+        "optimizedOn": "JVM-Optimierung eingeschaltet",
+        "optimizedOff": "JVM-Optimierung ausgeschaltet"
+      },
+      "units": {
+        "mb": "MB",
+        "gb": "GB",
+        "sec": "s",
+        "ms": "ms"
+      }
+    }
   },
   "accountInfo": {
     "error": "Fehler beim Laden der Kontoinformationen",
@@ -6053,12 +6120,15 @@
     "deleteConfirm": "Das Design „{{name}}“ wird endgültig gelöscht. Das Hintergrundbild bleibt im Designs-Ordner.",
     "saved": "Design „{{name}}“ gespeichert",
     "limit": "Sie können bis zu {{count}} Designs speichern",
-    "accentByTheme": "Die Akzentfarbe bestimmt gerade das Design „{{name}}“",
+    "accentByTheme": "Das Design „{{name}}“ bestimmt die Akzentfarbe. Um hier eine Farbe zu wählen, schalten Sie „Eigene Akzentfarbe“ im Design-Editor aus",
     "command": "Design: {{name}}",
     "builtIn": {
       "grubie": "Grubie",
       "oled": "OLED",
       "light": "Hell"
+    },
+    "card": {
+      "ownAccent": "Eigene Akzentfarbe des Designs"
     },
     "editor": {
       "title": "Design-Editor",
@@ -6087,7 +6157,28 @@
       "readability": "Lesbarkeit",
       "readabilityDescription": "Ohne Bild geprüft: Das Abdunkeln hält Text darüber lesbar",
       "blocked": "Beheben Sie die roten Punkte: Mit diesen Farben ist Text nicht lesbar",
-      "save": "Design speichern"
+      "save": "Design speichern",
+      "fit": "Platzierung",
+      "fits": {
+        "cover": "Füllen",
+        "contain": "Ganz",
+        "stretch": "Strecken"
+      },
+      "fitHints": {
+        "cover": "Das Bild füllt das ganze Fenster, überstehende Ränder werden abgeschnitten",
+        "contain": "Das Bild ist vollständig zu sehen, an den Rändern eine unscharfe Kopie davon",
+        "stretch": "Das Bild wird auf das Fenster gestreckt und kann verzerrt wirken"
+      },
+      "framing": "Sichtbarer Bildausschnitt",
+      "framingHint": "Ziehen Sie, um den sichtbaren Ausschnitt zu wählen",
+      "framingCenter": "Zentrieren",
+      "zones": "Farben der Leisten",
+      "zonesDescription": "Seitenleiste und obere Leiste können eigene Farben haben. Die Textfarbe passt sich automatisch an",
+      "zone": {
+        "sidebar": "Seitenleiste",
+        "topbar": "Obere Leiste"
+      },
+      "zoneOwn": "Eigene Farbe"
     },
     "checks": {
       "text": "Text auf Flächen",
@@ -6095,7 +6186,9 @@
       "muted": "Nebentext",
       "faint": "Beschriftungen",
       "accent": "Akzent auf Flächen",
-      "accentText": "Schrift auf Schaltflächen"
+      "accentText": "Schrift auf Schaltflächen",
+      "sidebar": "Text in der Seitenleiste",
+      "topbar": "Text in der oberen Leiste"
     },
     "transfer": {
       "export": "Als Datei speichern",

@@ -66,6 +66,7 @@ import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 import { SeasonalSidebarWeb } from "@renderer/features/seasonal/SeasonalDecor";
 import { cn } from "@/lib/utils";
 import { useSidebarCollapsed } from "./sidebarCollapse";
+import { useZoneStyle } from "@renderer/features/theme/zoneStyle";
 import {
   isNavFixed,
   isSlotHidden,
@@ -231,6 +232,7 @@ export function Sidebar({
   const shareOwnerAccountKey = useAtomValue(shareOwnerAccountKeyAtom);
   const route = useAtomValue(currentRouteAtom);
   const versionsLoaded = useAtomValue(versionsLoadedAtom);
+  const zoneStyle = useZoneStyle("sidebar");
   const { t } = useTranslation();
   const navIndicator = useSlidingIndicator<HTMLDivElement>();
   const collapsed = useSidebarCollapsed();
@@ -358,9 +360,10 @@ export function Sidebar({
     <>
       <aside
         className={cn(
-          "relative isolate flex shrink-0 flex-col border-r border-border bg-sidebar",
+          "relative isolate flex shrink-0 flex-col border-r border-border bg-sidebar text-foreground",
           collapsed ? "w-16" : "w-62",
         )}
+        style={zoneStyle}
       >
         <SeasonalSidebarWeb />
         <div className="flex min-h-0 flex-1 flex-col p-2.5">
