@@ -6516,5 +6516,11 @@
     "description": "Instance « {{name}} ». Le compte sélectionné dans le launcher ne change pas.",
     "current": "{{provider}} · sélectionné",
     "sessionBroken": "Reconnectez-vous"
+  },
+  "deepLinkLaunch": {
+    "title": "Rejoindre un serveur depuis un lien ?",
+    "body": "Un lien demande de lancer « {{instance}} » et de se connecter à {{server}}.",
+    "hint": "Les raccourcis créés par le launcher s’ouvrent sans cette question. Continuez uniquement si vous faites confiance à la source du lien.",
+    "confirm": "Lancer et rejoindre"
   }
 }

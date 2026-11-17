@@ -1,5 +1,6 @@
 import { LauncherDeepLink } from "@/types/DeepLink";
 import { readLaunchTarget } from "@/shared/launchLink";
+import { isLaunchSignatureShape } from "./launchSignature";
 
 const PACK_CODE_PATTERN = /^[a-fA-F0-9]{24}$/;
 const GROUP_CODE_PATTERN = /^[a-zA-Z0-9]{4}-?[a-zA-Z0-9]{4}$/;
@@ -61,12 +62,17 @@ export function parseLauncherDeepLink(rawUrl: string): LauncherDeepLink | null {
 
     const instanceRaw = url.searchParams.get("instance");
     const instance = instanceRaw ? Number.parseInt(instanceRaw, 10) : 0;
+    const target = readLaunchTarget(url.searchParams);
+    const signature = url.searchParams.get("sig");
 
     return {
       type: "launch",
       versionName,
       instance: Number.isInteger(instance) && instance >= 0 ? instance : 0,
-      ...readLaunchTarget(url.searchParams),
+      ...target,
+      ...("server" in target && isLaunchSignatureShape(signature)
+        ? { signature }
+        : {}),
     };
   }
 

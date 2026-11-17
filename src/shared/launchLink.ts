@@ -27,13 +27,15 @@ export function buildLaunchDeepLink(
   versionName: string,
   instance: number,
   target?: LaunchShortcutTarget,
+  signature?: string,
 ): string {
   const base = `grubielauncher://launch/${encodeURIComponent(
     versionName,
   )}?instance=${instance}`;
   if (target?.world) return `${base}&world=${encodeURIComponent(target.world)}`;
   if (target?.server) {
-    return `${base}&server=${encodeURIComponent(target.server)}`;
+    const signed = signature ? `&sig=${signature}` : "";
+    return `${base}&server=${encodeURIComponent(target.server)}${signed}`;
   }
   return base;
 }

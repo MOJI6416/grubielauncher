@@ -9,6 +9,7 @@ import { isSafeRemoteFetchUrl } from "./safeUrl";
 import { isReadablePath } from "./safePath";
 import { isInsidePath } from "./dataRoot";
 import { assertSafeVersionName } from "@/shared/versionName";
+import { signLaunchServer } from "./launchSignature";
 import {
   buildLaunchDeepLink,
   isSafeQuickServer,
@@ -251,7 +252,15 @@ export async function createInstanceShortcut(
     return { success: false, error: "invalid shortcut target" };
   }
 
-  const deepLink = buildLaunchDeepLink(versionName, instance, target);
+  const signature = target?.server
+    ? await signLaunchServer(
+        app.getPath("userData"),
+        versionName,
+        instance,
+        target.server,
+      )
+    : undefined;
+  const deepLink = buildLaunchDeepLink(versionName, instance, target, signature);
   const desktop = app.getPath("desktop");
   const displayName = shortcutDisplayName(versionName, target);
   const fileBase = sanitizeShortcutName(displayName);

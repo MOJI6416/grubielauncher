@@ -14,6 +14,7 @@ export type DeepLinkIntent =
       instance: number;
       world?: string;
       server?: string;
+      confirm?: boolean;
     }
   | { kind: "groupJoin"; code: string }
   | { kind: "skin"; skinId: string }
@@ -35,6 +36,7 @@ export function resolveDeepLink(
         instance: payload.instance,
         ...(payload.world ? { world: payload.world } : {}),
         ...(payload.server ? { server: payload.server } : {}),
+        ...(payload.server && payload.confirm ? { confirm: true } : {}),
       };
 
     case "groupJoin":

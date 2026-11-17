@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { getDefaultStore, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -38,6 +39,8 @@ export function DeepLinkHost() {
   const setPendingWebLogin = useSetAtom(pendingWebLoginAtom);
   const setPendingFriendRequest = useSetAtom(pendingFriendRequestAtom);
   const pendingRef = useRef<PendingDeepLaunch | null>(null);
+  const [launchToConfirm, setLaunchToConfirm] =
+    useState<PendingDeepLaunch | null>(null);
   const queuedLinksRef = useRef<LauncherDeepLink[]>([]);
   const isBootstrappedRef = useRef(false);
 
@@ -100,12 +103,17 @@ export function DeepLinkHost() {
       }
 
       if (intent.kind === "launch") {
-        pendingRef.current = {
+        const launch: PendingDeepLaunch = {
           versionName: intent.versionName,
           instance: intent.instance,
           world: intent.world,
           server: intent.server,
         };
+        if (intent.confirm) {
+          setLaunchToConfirm(launch);
+          return;
+        }
+        pendingRef.current = launch;
         tryDeepLaunchRef.current();
         return;
       }
@@ -191,5 +199,35 @@ export function DeepLinkHost() {
     tRef,
   ]);
 
-  return null;
+  if (!launchToConfirm) return null;
+
+  const closeLaunchConfirm = () => setLaunchToConfirm(null);
+
+  return (
+    <Confirmation
+      onClose={closeLaunchConfirm}
+      title={t("deepLinkLaunch.title")}
+      content={[
+        {
+          text: t("deepLinkLaunch.body", {
+            instance: launchToConfirm.versionName,
+            server: launchToConfirm.server ?? "",
+          }),
+        },
+        { text: t("deepLinkLaunch.hint") },
+      ]}
+      buttons={[
+        { text: t("common.cancel"), onClick: closeLaunchConfirm },
+        {
+          text: t("deepLinkLaunch.confirm"),
+          color: "warning",
+          onClick: () => {
+            pendingRef.current = launchToConfirm;
+            setLaunchToConfirm(null);
+            tryDeepLaunchRef.current();
+          },
+        },
+      ]}
+    />
+  );
 }

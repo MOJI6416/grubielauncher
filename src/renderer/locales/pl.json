@@ -6569,5 +6569,11 @@
     "description": "Instancja „{{name}}”. Wybrane konto w launcherze się nie zmieni.",
     "current": "{{provider}} · wybrane teraz",
     "sessionBroken": "Zaloguj się ponownie"
+  },
+  "deepLinkLaunch": {
+    "title": "Dołączyć do serwera z linku?",
+    "body": "Link chce uruchomić „{{instance}}” i połączyć się z {{server}}.",
+    "hint": "Skróty utworzone przez launcher otwierają się bez tego pytania. Kontynuuj tylko, jeśli ufasz źródłu linku.",
+    "confirm": "Uruchom i dołącz"
   }
 }

@@ -100,6 +100,34 @@ describe("launcher deep links", () => {
     ).toEqual({ type: "launch", versionName: "Pack", instance: 0 });
   });
 
+  it("keeps a well-formed signature only on server launch links", () => {
+    const sig = "a".repeat(64);
+    expect(
+      parseLauncherDeepLink(
+        `grubielauncher://launch/Pack?instance=0&server=mc.example.org&sig=${sig}`,
+      ),
+    ).toEqual({
+      type: "launch",
+      versionName: "Pack",
+      instance: 0,
+      server: "mc.example.org",
+      signature: sig,
+    });
+    expect(
+      parseLauncherDeepLink(
+        "grubielauncher://launch/Pack?instance=0&server=mc.example.org&sig=bad",
+      ),
+    ).toEqual({
+      type: "launch",
+      versionName: "Pack",
+      instance: 0,
+      server: "mc.example.org",
+    });
+    expect(
+      parseLauncherDeepLink(`grubielauncher://launch/Pack?instance=0&sig=${sig}`),
+    ).toEqual({ type: "launch", versionName: "Pack", instance: 0 });
+  });
+
   it("rejects launch links without a version name", () => {
     expect(parseLauncherDeepLink("grubielauncher://launch/")).toBeNull();
     expect(parseLauncherDeepLink("grubielauncher://launch")).toBeNull();

@@ -6463,5 +6463,11 @@
     "description": "“{{name}}” kurulumu. Başlatıcıda seçili hesap değişmez.",
     "current": "{{provider}} · şu an seçili",
     "sessionBroken": "Yeniden giriş yapın"
+  },
+  "deepLinkLaunch": {
+    "title": "Bağlantıdan bir sunucuya katılınsın mı?",
+    "body": "Bir bağlantı “{{instance}}” kurulumunu başlatıp {{server}} sunucusuna bağlanmak istiyor.",
+    "hint": "Başlatıcının oluşturduğu kısayollar bu soru olmadan açılır. Yalnızca bağlantının kaynağına güveniyorsanız devam edin.",
+    "confirm": "Başlat ve katıl"
   }
 }

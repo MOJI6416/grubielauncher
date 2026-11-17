@@ -25,6 +25,7 @@ import {
   extractLauncherDeepLink,
   parseLauncherDeepLink,
 } from "./utilities/deepLink";
+import { isSignedLaunchServer } from "./utilities/launchSignature";
 import { initMirrorState } from "./utilities/mirrorState";
 import { scheduleApiRouteProbe } from "./utilities/apiRouteProbe";
 import {
@@ -384,6 +385,21 @@ function focusMainWindow() {
   mainWindow.focus();
 }
 
+async function prepareDeepLinkForRenderer(
+  link: LauncherDeepLink,
+): Promise<LauncherDeepLink> {
+  if (link.type !== "launch" || !link.server) return link;
+  const { signature, ...rest } = link;
+  const trusted = await isSignedLaunchServer(
+    app.getPath("userData"),
+    link.versionName,
+    link.instance,
+    link.server,
+    signature,
+  );
+  return { ...rest, confirm: !trusted };
+}
+
 function sendDeepLinkToRenderer(link: LauncherDeepLink) {
   openMainWindowOnce();
   if (!mainWindow) return;
@@ -391,7 +407,9 @@ function sendDeepLinkToRenderer(link: LauncherDeepLink) {
   focusMainWindow();
 
   const send = () => {
-    mainWindow?.webContents.send("app:deepLink", link);
+    void prepareDeepLinkForRenderer(link).then((prepared) => {
+      mainWindow?.webContents.send("app:deepLink", prepared);
+    });
   };
 
   if (mainWindow.webContents.isLoading()) {

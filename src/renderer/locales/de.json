@@ -6463,5 +6463,11 @@
     "description": "Instanz „{{name}}“. Das im Launcher gewählte Konto ändert sich nicht.",
     "current": "{{provider}} · gerade gewählt",
     "sessionBroken": "Erneut anmelden"
+  },
+  "deepLinkLaunch": {
+    "title": "Über einen Link einem Server beitreten?",
+    "body": "Ein Link möchte „{{instance}}“ starten und sich mit {{server}} verbinden.",
+    "hint": "Vom Launcher erstellte Verknüpfungen öffnen sich ohne diese Frage. Fahren Sie nur fort, wenn Sie der Quelle des Links vertrauen.",
+    "confirm": "Starten und beitreten"
   }
 }

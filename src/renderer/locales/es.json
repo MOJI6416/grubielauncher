@@ -6512,5 +6512,11 @@
     "description": "Instancia «{{name}}». La cuenta seleccionada del launcher no cambia.",
     "current": "{{provider}} · seleccionada ahora",
     "sessionBroken": "Inicie sesión de nuevo"
+  },
+  "deepLinkLaunch": {
+    "title": "¿Entrar a un servidor desde un enlace?",
+    "body": "Un enlace quiere iniciar «{{instance}}» y conectarse a {{server}}.",
+    "hint": "Los accesos directos creados por el launcher se abren sin esta pregunta. Continúe solo si confía en el origen del enlace.",
+    "confirm": "Iniciar y entrar"
   }
 }

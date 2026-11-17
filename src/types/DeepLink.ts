@@ -9,6 +9,8 @@ export type LauncherDeepLink =
       instance: number;
       world?: string;
       server?: string;
+      signature?: string;
+      confirm?: boolean;
     }
   | {
       type: "groupJoin";

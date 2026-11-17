@@ -6463,5 +6463,11 @@
     "description": "Instance “{{name}}”. The launcher's selected account does not change.",
     "current": "{{provider}} · selected now",
     "sessionBroken": "Sign in again"
+  },
+  "deepLinkLaunch": {
+    "title": "Join a server from a link?",
+    "body": "A link asks to launch “{{instance}}” and connect to {{server}}.",
+    "hint": "Shortcuts made by the launcher open without this question. Continue only if you trust where the link came from.",
+    "confirm": "Launch and join"
   }
 }
