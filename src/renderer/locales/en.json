@@ -4988,6 +4988,29 @@
       "manual": "manual"
     }
   },
+  "modTranslations": {
+    "title": "Translate mods",
+    "hintOff": "Community translation packs first, AI on the Grubie server fills in the rest",
+    "scanning": "Reading mods: {{done}} of {{total}}",
+    "packs": "Picking community translation packs",
+    "translating": "Checking translations on the Grubie server",
+    "building": "Building the translation resource pack",
+    "deferred": "The translation updates after you close the game",
+    "nothing": "Nothing to translate: the mods are already translated",
+    "packsCount_one": "{{count}} community pack",
+    "packsCount_other": "{{count}} community packs",
+    "aiCount_one": "AI translated {{count}} mod",
+    "aiCount_other": "AI translated {{count}} mods",
+    "waiting": "{{count}} more queued for AI",
+    "needsAccount": "sign in to your Grubie account for AI to translate the rest",
+    "errorUnavailable": "The Grubie server does not translate mods yet",
+    "errorNetwork": "Can't reach the Grubie server — kept what was already downloaded",
+    "errorQuota": "Today's AI translation limit is used up — it continues tomorrow",
+    "errorInternal": "Couldn't update the translation",
+    "toggleFailed": "Couldn't switch mod translation",
+    "packsHint": "Community packs sit above the AI translation and below your own resource packs:",
+    "packLine": "{{title}} — {{author}}, {{license}}"
+  },
   "configs": {
     "emptyTitle": "No configuration files",
     "emptyHint": "This instance has no config folder yet — it appears after the first launch with mods.",

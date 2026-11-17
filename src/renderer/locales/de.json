@@ -4988,6 +4988,29 @@
       "manual": "manuell"
     }
   },
+  "modTranslations": {
+    "title": "Mods übersetzen",
+    "hintOff": "Zuerst Übersetzungspakete der Community, den Rest übersetzt KI auf dem Grubie-Server",
+    "scanning": "Mods werden gelesen: {{done}} von {{total}}",
+    "packs": "Übersetzungspakete der Community werden ausgewählt",
+    "translating": "Übersetzungen werden auf dem Grubie-Server geprüft",
+    "building": "Ressourcenpaket mit der Übersetzung wird erstellt",
+    "deferred": "Die Übersetzung wird nach dem Schließen des Spiels aktualisiert",
+    "nothing": "Nichts zu übersetzen: Die Mods sind bereits übersetzt",
+    "packsCount_one": "{{count}} Community-Paket",
+    "packsCount_other": "{{count}} Community-Pakete",
+    "aiCount_one": "KI hat {{count}} Mod übersetzt",
+    "aiCount_other": "KI hat {{count}} Mods übersetzt",
+    "waiting": "noch {{count}} in der KI-Warteschlange",
+    "needsAccount": "Melden Sie sich bei Grubie an, damit KI den Rest übersetzt",
+    "errorUnavailable": "Der Grubie-Server übersetzt noch keine Mods",
+    "errorNetwork": "Keine Verbindung zum Grubie-Server — bereits Heruntergeladenes bleibt",
+    "errorQuota": "Das heutige Limit für KI-Übersetzungen ist erreicht — morgen geht es weiter",
+    "errorInternal": "Die Übersetzung konnte nicht aktualisiert werden",
+    "toggleFailed": "Die Mod-Übersetzung konnte nicht umgeschaltet werden",
+    "packsHint": "Community-Pakete liegen über der KI-Übersetzung und unter Ihren eigenen Ressourcenpaketen:",
+    "packLine": "{{title}} — {{author}}, {{license}}"
+  },
   "configs": {
     "emptyTitle": "Keine Konfigurationsdateien",
     "emptyHint": "Diese Instanz hat noch keinen Ordner config – er erscheint nach dem ersten Start mit Mods.",

@@ -500,7 +500,6 @@ interface PackSource {
   identity: string;
 }
 
-// Zip packs the player enabled themselves, in their own order.
 async function playerPacks(versionPath: string): Promise<PackSource[]> {
   const folder = packsDir(versionPath);
   const options = await fs
@@ -520,8 +519,6 @@ async function playerPacks(versionPath: string): Promise<PackSource[]> {
   return sources;
 }
 
-// Keys translated by the community packs we installed and by every zip pack
-// the player enabled themselves.
 async function coveredKeys(
   locale: string,
   folder: string,
@@ -951,9 +948,6 @@ export async function refreshModTranslations(
   return getModTranslationStatus(versionPath, context);
 }
 
-// Before the game starts: whatever is ready within the budget goes in, the
-// rest keeps translating and lands on the next launch. An instance with the
-// toggle off costs one small file read.
 export async function prepareModTranslationsForLaunch(
   versionPath: string,
   context: TranslationContext,

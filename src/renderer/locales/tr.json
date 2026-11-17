@@ -4988,6 +4988,29 @@
       "manual": "elle"
     }
   },
+  "modTranslations": {
+    "title": "Modları çevir",
+    "hintOff": "Önce topluluğun çeviri paketleri, eksikleri Grubie sunucusunda yapay zekâ çevirir",
+    "scanning": "Modlar okunuyor: {{done}}/{{total}}",
+    "packs": "Topluluk çeviri paketleri seçiliyor",
+    "translating": "Çeviriler Grubie sunucusunda denetleniyor",
+    "building": "Çeviri kaynak paketi hazırlanıyor",
+    "deferred": "Çeviri oyunu kapattıktan sonra güncellenecek",
+    "nothing": "Çevrilecek bir şey yok: modlar zaten çevrilmiş",
+    "packsCount_one": "{{count}} topluluk paketi",
+    "packsCount_other": "{{count}} topluluk paketi",
+    "aiCount_one": "Yapay zekâ {{count}} mod çevirdi",
+    "aiCount_other": "Yapay zekâ {{count}} mod çevirdi",
+    "waiting": "{{count}} tanesi daha yapay zekâ sırasında",
+    "needsAccount": "kalanını yapay zekânın çevirmesi için Grubie hesabınıza giriş yapın",
+    "errorUnavailable": "Grubie sunucusu henüz mod çevirmiyor",
+    "errorNetwork": "Grubie sunucusuna bağlanılamadı — indirilmiş olanlar korundu",
+    "errorQuota": "Günlük yapay zekâ çeviri sınırı doldu — yarın devam edecek",
+    "errorInternal": "Çeviri güncellenemedi",
+    "toggleFailed": "Mod çevirisi açılıp kapatılamadı",
+    "packsHint": "Topluluk paketleri yapay zekâ çevirisinin üstünde, kendi kaynak paketlerinizin altında durur:",
+    "packLine": "{{title}} — {{author}}, {{license}}"
+  },
   "configs": {
     "emptyTitle": "Yapılandırma dosyası yok",
     "emptyHint": "Bu kurulumda henüz config klasörü yok — modlarla ilk başlatmadan sonra belirir.",

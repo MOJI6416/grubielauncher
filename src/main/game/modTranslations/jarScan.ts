@@ -146,9 +146,6 @@ async function collect(
   }
 }
 
-// English strings of every namespace a jar (and the jars nested in it, one
-// level, as Fabric and Forge load them) ships, with the keys it already
-// translates into the target language.
 export async function scanJarLang(
   jarPath: string,
   targetLocale: string,
@@ -178,8 +175,6 @@ export async function scanJarLang(
   return result.sort((a, b) => a.namespace.localeCompare(b.namespace));
 }
 
-// Keys a resource pack translates into the target language, across all of its
-// namespaces: the game merges lang files from every pack into one table.
 export async function scanPackKeys(
   packPath: string,
   targetLocale: string,

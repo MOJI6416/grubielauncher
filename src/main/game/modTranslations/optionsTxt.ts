@@ -59,9 +59,7 @@ export function readOptionList(text: string, key: string): string[] | null {
 
 export interface TranslationOptions {
   mcVersion: string;
-  // Our packs in install order, lowest precedence first.
   packFiles: string[];
-  // Game locale to switch to when the game still shows English.
   locale: string | null;
 }
 
@@ -70,12 +68,6 @@ export interface OptionsResult {
   changed: boolean;
 }
 
-// Our packs go directly above the built-in ones (vanilla, the mods' own
-// resources) and below every pack the player enabled, in the player's order:
-// a texture or translation pack they chose always wins over ours. They are
-// also listed as accepted-incompatible, which is how the game itself keeps a
-// pack whose pack_format is for another version enabled instead of dropping
-// it from the list on load.
 export function applyTranslationOptions(
   source: string | null,
   options: TranslationOptions,
@@ -183,10 +175,6 @@ export function legacyPackFormat(mcVersion: string): number | null {
   return format;
 }
 
-// Up to 1.20.1 only pack_format is read, so it is the version's own number.
-// Newer games read supported_formats (1.20.2+) or min/max_format (1.21.9+);
-// this is the shape the big community packs ship and it holds for every
-// version since.
 export function packMcmeta(mcVersion: string, description: string): string {
   const legacy = legacyPackFormat(mcVersion);
   const pack =

@@ -95,6 +95,7 @@ describe("local mod dependencies", () => {
     expect(index["addon.jar"]).toEqual({
       provides: ["addon", "bundled"],
       requires: ["external"],
+      embedded: ["bundled"],
     });
     expect(index["library.jar"]).toEqual({
       provides: ["external"],

@@ -5066,6 +5066,33 @@
       "manual": "ręcznie"
     }
   },
+  "modTranslations": {
+    "title": "Tłumacz mody",
+    "hintOff": "Najpierw paczki tłumaczeń społeczności, resztę przetłumaczy AI na serwerze Grubie",
+    "scanning": "Odczyt modów: {{done}} z {{total}}",
+    "packs": "Dobieramy paczki tłumaczeń społeczności",
+    "translating": "Sprawdzamy tłumaczenia na serwerze Grubie",
+    "building": "Tworzymy paczkę zasobów z tłumaczeniem",
+    "deferred": "Tłumaczenie odświeży się po zamknięciu gry",
+    "nothing": "Nie ma czego tłumaczyć: mody są już przetłumaczone",
+    "packsCount_one": "{{count}} paczka społeczności",
+    "packsCount_few": "{{count}} paczki społeczności",
+    "packsCount_many": "{{count}} paczek społeczności",
+    "packsCount_other": "{{count}} paczki społeczności",
+    "aiCount_one": "AI przetłumaczyło {{count}} mod",
+    "aiCount_few": "AI przetłumaczyło {{count}} mody",
+    "aiCount_many": "AI przetłumaczyło {{count}} modów",
+    "aiCount_other": "AI przetłumaczyło {{count}} modu",
+    "waiting": "jeszcze {{count}} w kolejce AI",
+    "needsAccount": "zaloguj się na konto Grubie, aby AI przetłumaczyło resztę",
+    "errorUnavailable": "Serwer Grubie jeszcze nie tłumaczy modów",
+    "errorNetwork": "Brak połączenia z serwerem Grubie — zostawiono to, co już pobrane",
+    "errorQuota": "Dzienny limit tłumaczeń AI wyczerpany — jutro ciąg dalszy",
+    "errorInternal": "Nie udało się odświeżyć tłumaczenia",
+    "toggleFailed": "Nie udało się przełączyć tłumaczenia modów",
+    "packsHint": "Paczki społeczności są nad tłumaczeniem AI i pod Twoimi paczkami zasobów:",
+    "packLine": "{{title}} — {{author}}, {{license}}"
+  },
   "configs": {
     "emptyTitle": "Brak plików konfiguracji",
     "emptyHint": "Ta instancja nie ma jeszcze folderu config — pojawi się po pierwszym uruchomieniu z modami.",

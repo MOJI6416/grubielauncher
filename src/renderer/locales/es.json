@@ -5027,6 +5027,31 @@
       "manual": "manual"
     }
   },
+  "modTranslations": {
+    "title": "Traducir mods",
+    "hintOff": "Primero paquetes de traducción de la comunidad; lo que falte lo traduce la IA en el servidor de Grubie",
+    "scanning": "Leyendo mods: {{done}} de {{total}}",
+    "packs": "Eligiendo paquetes de traducción de la comunidad",
+    "translating": "Comprobando traducciones en el servidor de Grubie",
+    "building": "Creando el paquete de recursos con la traducción",
+    "deferred": "La traducción se actualizará al cerrar el juego",
+    "nothing": "No hay nada que traducir: los mods ya están traducidos",
+    "packsCount_one": "{{count}} paquete de la comunidad",
+    "packsCount_many": "{{count}} paquetes de la comunidad",
+    "packsCount_other": "{{count}} paquetes de la comunidad",
+    "aiCount_one": "La IA tradujo {{count}} mod",
+    "aiCount_many": "La IA tradujo {{count}} mods",
+    "aiCount_other": "La IA tradujo {{count}} mods",
+    "waiting": "{{count}} más en la cola de la IA",
+    "needsAccount": "inicie sesión en Grubie para que la IA traduzca el resto",
+    "errorUnavailable": "El servidor de Grubie todavía no traduce mods",
+    "errorNetwork": "Sin conexión con el servidor de Grubie: se conserva lo ya descargado",
+    "errorQuota": "Se agotó el límite diario de traducción con IA: seguirá mañana",
+    "errorInternal": "No se pudo actualizar la traducción",
+    "toggleFailed": "No se pudo cambiar la traducción de mods",
+    "packsHint": "Los paquetes de la comunidad quedan por encima de la traducción con IA y por debajo de sus paquetes de recursos:",
+    "packLine": "{{title}} — {{author}}, {{license}}"
+  },
   "configs": {
     "emptyTitle": "No hay archivos de configuración",
     "emptyHint": "Esta instancia todavía no tiene carpeta config: aparece después del primer inicio con mods.",

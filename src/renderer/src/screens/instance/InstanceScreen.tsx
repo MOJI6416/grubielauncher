@@ -41,10 +41,13 @@ import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { BlockedMods } from "@renderer/components/Modals/BlockedMods";
 import { CreateServer } from "@renderer/features/servers/CreateServer";
 import {
+  accountsAtom,
   isRunningAtom,
   pathsAtom,
   versionsAtom,
 } from "@renderer/stores/atoms";
+import { playAsVersionAtom } from "@renderer/features/launch/atoms";
+import { hasShaderLoader } from "@/shared/shaderLoaders";
 import { navigate } from "@renderer/navigation/navigate";
 import { openAccounts } from "@renderer/features/accounts/addAccountRequest";
 import { getBlockingIds } from "@renderer/navigation/guards";
@@ -66,6 +69,7 @@ import {
 } from "@renderer/features/instances/InstanceOverviewTab";
 import { InstancePublishingCard } from "@renderer/features/instances/InstancePublishingCard";
 import { InstanceSettingsPanel } from "@renderer/features/instances/InstanceSettingsPanel";
+import { ModTranslationRow } from "@renderer/features/instances/ModTranslationRow";
 import {
   effectiveJava,
   instanceRequiredJava,
@@ -203,6 +207,8 @@ export function InstanceScreen({
   const contents = useInstanceContents(version?.versionPath);
   const modpackState = useModpackSource(version, isInternetOnline);
   const setVersions = useSetAtom(versionsAtom);
+  const accountCount = useAtomValue(accountsAtom).length;
+  const setPlayAsVersion = useSetAtom(playAsVersionAtom);
   const updateDetails = useInstanceUpdateDetails(version);
   const syncGuard = useSyncGuard({
     versionPath: version?.versionPath,
@@ -392,6 +398,18 @@ export function InstanceScreen({
           hint: t("versions.shortcutHint"),
           onSelect: () => void editor.createShortcut(),
         },
+        ...(accountCount > 1
+          ? [
+              {
+                id: "play-as",
+                label: t("playAs.menu"),
+                icon: CircleUserRound,
+                disabled: isLoading || !account || isInstallActive,
+                hint: t("playAs.hint"),
+                onSelect: () => setPlayAsVersion(version),
+              },
+            ]
+          : []),
       ]
     : [];
 
@@ -731,6 +749,21 @@ export function InstanceScreen({
                         : undefined
                   }
                   onChange={draft.setOverrides}
+                  minecraftVersion={version.version.version.id}
+                  shaderLoader={hasShaderLoader({
+                    mods: draft.mods,
+                    jarMods: version.version.jarMods,
+                  })}
+                  extraRows={
+                    <ModTranslationRow
+                      versionPath={version.versionPath}
+                      mcVersion={version.version.version.id}
+                      loader={version.version.loader.name}
+                      disabled={
+                        isLoading || isVersionRunning || isForeignInstance
+                      }
+                    />
+                  }
                 />
 
                 <InstanceLaunchProfileCard

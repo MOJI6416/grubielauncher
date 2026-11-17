@@ -85,6 +85,7 @@ async function readDescriptors(
   const provides = new Set<string>();
   const requires = new Set<string>();
   const nested = new Set<string>();
+  const embedded = new Set<string>();
   for (const name of [
     "fabric.mod.json",
     "quilt.mod.json",
@@ -122,6 +123,7 @@ async function readDescriptors(
         if (typeof jar?.path === "string") nested.add(jar.path);
     } catch {}
   }
+  const own = new Set(provides);
   if (depth < 2)
     for (const name of nested) {
       const entry = archive.getEntry(name);
@@ -131,7 +133,10 @@ async function readDescriptors(
         const nestedArchive = await openArchiveBuffer(await readEntryData(entry));
         try {
           const info = await readDescriptors(nestedArchive, depth + 1, budget);
-          info.provides.forEach((id) => provides.add(id));
+          info.provides.forEach((id) => {
+            provides.add(id);
+            embedded.add(id);
+          });
           info.requires.forEach((id) => requires.add(id));
         } finally {
           nestedArchive.close();
@@ -141,6 +146,9 @@ async function readDescriptors(
   return {
     provides: [...provides],
     requires: [...requires].filter((id) => !provides.has(id)),
+    ...(embedded.size > 0
+      ? { embedded: [...embedded].filter((id) => !own.has(id)) }
+      : {}),
   };
 }
 

@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/select";
 import { versionsAtom } from "@renderer/stores/atoms";
 import { navigate } from "@renderer/navigation/navigate";
+import { Hint } from "@renderer/components/Hint";
+import { onRadioKeyDown, radioFocusIndex } from "@renderer/utilities/radioKeys";
 import { instanceKey } from "@renderer/features/instances/selectors";
 import { countOverrides } from "@/shared/instanceSettings";
 import { normalizeWorldBackupKeep } from "@/types/WorldBackup";
@@ -34,7 +36,13 @@ import {
 import type { SettingsEntryId } from "./catalog";
 import { JavaSettingsGroup } from "@renderer/features/java/JavaSettingsGroup";
 import { JvmFlagsInfo } from "@renderer/components/JvmFlagsInfo";
-import { OS_NAME } from "@renderer/utilities/platform";
+import { OS_NAME, PLATFORM } from "@renderer/utilities/platform";
+import { supportsGpuPreference } from "@/shared/gpuPreference";
+import {
+  GpuPreferenceControl,
+  LinuxLaunchFields,
+  useLinuxLaunchTools,
+} from "@renderer/features/launch/LaunchSettingsControls";
 
 const KEEP_OPTIONS = [1, 3, 5, 10, 20];
 
@@ -68,6 +76,8 @@ export function GameSection({
   const { t } = useTranslation();
   const versions = useAtomValue(versionsAtom);
   const [draft, setDraft] = useState(settings.xmx);
+  const isLinux = PLATFORM === "linux";
+  const linuxTools = useLinuxLaunchTools(isLinux);
 
   useEffect(() => setDraft(settings.xmx), [settings.xmx]);
 
@@ -84,6 +94,13 @@ export function GameSection({
     const next = clampMemory(value, totalMemoryMb);
     setDraft(next);
     if (next !== settings.xmx) commit({ xmx: next });
+  };
+
+  const presetIds = presets.map((preset) => preset.id);
+  const presetFocus = radioFocusIndex(presetIds, active);
+  const selectPreset = (id: string) => {
+    const preset = presets.find((item) => item.id === id);
+    if (preset) applyMemory(preset.mb);
   };
 
   const Advice = advice ? ADVICE_STYLE[advice.tone].icon : Info;
@@ -113,14 +130,24 @@ export function GameSection({
               </span>
             }
           >
-            <div className="flex flex-wrap items-center gap-1.5">
-              {presets.map((preset) => (
+            <div
+              role="radiogroup"
+              aria-label={t("settings.memory")}
+              onKeyDown={(event) =>
+                onRadioKeyDown(event, presetIds, active, selectPreset)
+              }
+              className="flex flex-wrap items-center gap-1.5"
+            >
+              {presets.map((preset, index) => (
                 <button
                   key={preset.id}
                   type="button"
+                  role="radio"
+                  aria-checked={active === preset.id}
+                  tabIndex={index === presetFocus ? 0 : -1}
                   onClick={() => applyMemory(preset.mb)}
                   className={cn(
-                    "flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs transition-colors",
+                    "flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                     active === preset.id
                       ? "border-primary/50 bg-primary-soft text-foreground"
                       : "border-border bg-surface-2 text-muted-foreground hover:text-foreground",
@@ -160,7 +187,7 @@ export function GameSection({
                   />
                 ))}
               </div>
-              <div className="mt-1.5 flex items-center justify-between font-mono text-[0.65rem] tabular-nums text-faint">
+              <div className="mt-1.5 flex items-center justify-between font-mono text-3xs tabular-nums text-faint">
                 <span>1 {t("settings.game.gb")}</span>
                 <span>
                   {formatGb(max)} {t("settings.game.gb")}
@@ -172,23 +199,24 @@ export function GameSection({
               <div className="mt-3 rounded-lg bg-surface-2 px-2.5 py-2">
                 <div className="flex h-2 w-full overflow-hidden rounded-full bg-surface-3">
                   <span
-                    className="h-full bg-primary"
+                    className="h-full bg-info"
                     style={{ width: `${gameShare}%` }}
                   />
                 </div>
-                <div className="mt-1.5 flex items-center justify-between text-[0.7rem]">
+                <div className="mt-1.5 flex items-center justify-between text-2xs">
                   <span className="flex items-center gap-1.5 text-muted-foreground">
-                    <span className="size-1.5 rounded-[2px] bg-primary" />
+                    <span className="size-1.5 rounded-[2px] bg-info" />
                     {t("settings.game.splitGame")}
                     <span className="font-mono tabular-nums text-faint">
-                      {formatGb(draft)}
+                      {formatGb(draft)} {t("settings.game.gb")}
                     </span>
                   </span>
                   <span className="flex items-center gap-1.5 text-muted-foreground">
                     <span className="size-1.5 rounded-[2px] bg-surface-3" />
                     {t("settings.game.splitSystem")}
                     <span className="font-mono tabular-nums text-faint">
-                      {formatGb(Math.max(0, totalMemoryMb - draft))}
+                      {formatGb(Math.max(0, totalMemoryMb - draft))}{" "}
+                      {t("settings.game.gb")}
                     </span>
                   </span>
                 </div>
@@ -212,7 +240,7 @@ export function GameSection({
               </p>
             )}
 
-            <p className="mt-2 font-mono text-[0.65rem] text-faint">
+            <p className="mt-2 font-mono text-3xs text-faint">
               {memoryArgsPreview(draft, settings.optimizedJvm)}
             </p>
           </SettingRow>
@@ -238,7 +266,7 @@ export function GameSection({
           </SettingRow>
         )}
 
-        {visible("highPriority") && (
+        {visible("highPriority") && PLATFORM === "win32" && (
           <SettingRow
             htmlFor="settings-high-priority"
             title={t("settings.highPriority")}
@@ -255,7 +283,43 @@ export function GameSection({
             }
           />
         )}
+
+        {visible("gpuPreference") && supportsGpuPreference(PLATFORM) && (
+          <SettingRow
+            title={t("launchSettings.gpu.title")}
+            description={t("launchSettings.gpu.description")}
+            query={query}
+            changed={isChanged("gpuPreference")}
+            onReset={() => reset("gpuPreference")}
+            control={
+              <GpuPreferenceControl
+                value={settings.gpuPreference}
+                onChange={(gpuPreference) => commit({ gpuPreference })}
+              />
+            }
+          />
+        )}
       </SettingsGroup>
+
+      {isLinux &&
+        (visible("linuxTools") ||
+          visible("wrapperCommand") ||
+          visible("launchEnv") ||
+          visible("launchHooks")) && (
+          <SettingsGroup
+            title={t("launchSettings.linux.title")}
+            hint={t("launchSettings.linux.hint")}
+          >
+            <div className="px-3.5 py-3">
+              <LinuxLaunchFields
+                idPrefix="settings-linux"
+                values={settings}
+                tools={linuxTools}
+                onChange={(patch) => commit(patch)}
+              />
+            </div>
+          </SettingsGroup>
+        )}
 
       {visible("java") && <JavaSettingsGroup query={query} />}
 
@@ -331,12 +395,14 @@ export function GameSection({
                   tab: "settings",
                 })
               }
-              className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left transition-colors hover:bg-surface-3"
+              className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left transition-colors hover:bg-row-hover"
             >
               <SlidersHorizontal className="size-3.5 shrink-0 text-faint" />
-              <span className="min-w-0 flex-1 truncate text-sm text-foreground">
-                {version.version.name}
-              </span>
+              <Hint content={version.version.name} variant="text" truncatedOnly>
+                <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                  {version.version.name}
+                </span>
+              </Hint>
               <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
                 {version.version.overrides?.xmx
                   ? `${formatGb(version.version.overrides.xmx)} ${t("settings.game.gb")}`

@@ -21,11 +21,6 @@ export function modNamespaces(jars: NamespaceLang[][]): string[] {
   return [...names].sort();
 }
 
-// What is left for the AI: every English string no mod translates itself and
-// no installed pack covers. Keys are global in the game's language table, so a
-// key translated anywhere — another jar, a community pack, the player's own
-// pack — counts as translated everywhere. Vanilla's namespace is left alone:
-// Mojang's own translation must not be overridden by a machine one.
 export function planUnits(
   jars: NamespaceLang[][],
   coveredByPacks: ReadonlySet<string>,
@@ -72,9 +67,6 @@ export interface PackFile {
   data: Buffer;
 }
 
-// One lang file per namespace, in the format the game version reads. Units of
-// the same namespace (a mod and its addon) are merged; the order is fixed so
-// the same translations always produce the same bytes.
 export function translationPackFiles(
   units: Array<{ namespace: string; entries: LangEntries }>,
   locale: string,

@@ -5027,6 +5027,31 @@
       "manual": "manuel"
     }
   },
+  "modTranslations": {
+    "title": "Traduire les mods",
+    "hintOff": "D'abord les packs de traduction de la communauté, l'IA du serveur Grubie traduit le reste",
+    "scanning": "Lecture des mods : {{done}} sur {{total}}",
+    "packs": "Choix des packs de traduction de la communauté",
+    "translating": "Vérification des traductions sur le serveur Grubie",
+    "building": "Création du pack de ressources de traduction",
+    "deferred": "La traduction sera mise à jour après la fermeture du jeu",
+    "nothing": "Rien à traduire : les mods sont déjà traduits",
+    "packsCount_one": "{{count}} pack de la communauté",
+    "packsCount_many": "{{count}} packs de la communauté",
+    "packsCount_other": "{{count}} packs de la communauté",
+    "aiCount_one": "L'IA a traduit {{count}} mod",
+    "aiCount_many": "L'IA a traduit {{count}} mods",
+    "aiCount_other": "L'IA a traduit {{count}} mods",
+    "waiting": "encore {{count}} dans la file de l'IA",
+    "needsAccount": "connectez-vous à votre compte Grubie pour que l'IA traduise le reste",
+    "errorUnavailable": "Le serveur Grubie ne traduit pas encore les mods",
+    "errorNetwork": "Pas de connexion au serveur Grubie : ce qui est déjà téléchargé est conservé",
+    "errorQuota": "La limite quotidienne de traduction par IA est atteinte : reprise demain",
+    "errorInternal": "Impossible de mettre à jour la traduction",
+    "toggleFailed": "Impossible de changer la traduction des mods",
+    "packsHint": "Les packs de la communauté passent au-dessus de la traduction par IA et sous vos propres packs de ressources :",
+    "packLine": "{{title}} — {{author}}, {{license}}"
+  },
   "configs": {
     "emptyTitle": "Aucun fichier de configuration",
     "emptyHint": "Cette instance n’a pas encore de dossier config — il apparaît après le premier lancement avec des mods.",

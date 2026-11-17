@@ -192,6 +192,7 @@ import type { UiScaleState } from "@/shared/uiScale";
 import type { LaunchOutcome, LinuxLaunchTools } from "@/shared/launchCommand";
 import type { LaunchShortcutTarget } from "@/shared/launchLink";
 import type { ThemeFileManifest } from "@/shared/themeFile";
+import type { ModTranslationStatus } from "@/types/ModTranslations";
 import type {
   GalleryPage,
   GalleryQuery,
@@ -1295,6 +1296,20 @@ export interface IElectronAPI {
   statistics: {
     getSyncQueue: () => Promise<IPlaytimeSyncEntry[]>;
     resolveSyncEntries: (ids: string[]) => Promise<boolean>;
+  };
+  modTranslations: {
+    status: (
+      versionPath: string,
+      launcherLang: string,
+      token?: string,
+    ) => Promise<ModTranslationStatus>;
+    setEnabled: (
+      versionPath: string,
+      enabled: boolean,
+      launcherLang: string,
+      token?: string,
+    ) => Promise<ModTranslationStatus>;
+    onStatus: (callback: (status: ModTranslationStatus) => void) => () => void;
   };
   ai: {
     prepareCrashReport: (
@@ -2487,6 +2502,33 @@ export const api: IElectronAPI = {
     getSyncQueue: () => invoke("statistics:getSyncQueue"),
     resolveSyncEntries: (ids: string[]) =>
       invoke("statistics:resolveSyncEntries", ids),
+  },
+  modTranslations: {
+    status: (versionPath: string, launcherLang: string, token?: string) =>
+      invoke("modTranslations:status", versionPath, launcherLang, token),
+    setEnabled: (
+      versionPath: string,
+      enabled: boolean,
+      launcherLang: string,
+      token?: string,
+    ) =>
+      invoke(
+        "modTranslations:setEnabled",
+        versionPath,
+        enabled,
+        launcherLang,
+        token,
+      ),
+    onStatus: (callback: (status: ModTranslationStatus) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        status: ModTranslationStatus,
+      ) => {
+        callback(status);
+      };
+      ipcRenderer.on("modTranslations:status", listener);
+      return () => ipcRenderer.off("modTranslations:status", listener);
+    },
   },
   ai: {
     prepareCrashReport: (
