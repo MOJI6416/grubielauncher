@@ -5,6 +5,7 @@ import {
   ProjectType,
   Provider,
 } from "@/types/ModManager";
+import { isManagedTranslationPack } from "@/types/ModTranslations";
 import { localTitle } from "./entries";
 
 export const LOCAL_IMPORT_EXTENSIONS = ["jar", "zip", "disabled"];
@@ -234,6 +235,7 @@ export function findForeignFiles({
     .filter(
       (name) =>
         isImportableFileName(name) &&
+        !isManagedTranslationPack(name) &&
         !known.has(splitDisabledName(name).fileName),
     )
     .sort((a, b) => a.localeCompare(b));

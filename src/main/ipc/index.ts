@@ -14,6 +14,7 @@ export { registerSkinsIpc } from "./skinsIpc";
 export { registerVersionIpc } from "./versionIpc";
 export { registerModManagerIpc } from "./modManagerIpc";
 export { registerModpackIpc } from "./modpackIpc";
+export { registerModTranslationsIpc } from "./modTranslationsIpc";
 export { registerOsIpc } from "./osIpc";
 export { registerWorldIpc } from "./worldIpc";
 export { registerWorldChunksIpc } from "./worldChunksIpc";

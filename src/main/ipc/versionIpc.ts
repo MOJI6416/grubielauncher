@@ -68,6 +68,7 @@ import {
   removeUnusedJarModFiles,
 } from "../game/jarMods";
 import { checkOrnitheMods, ensureOrnitheMapping } from "../game/ornitheMods";
+import { prepareModTranslationsForLaunch } from "../game/modTranslations/sync";
 import { assertSafeFileSegment } from "../game/serverScriptSafety";
 import { getDataRoot } from "../utilities/dataRoot";
 import type { OrnitheModsCheck } from "@/shared/profileLoaders";
@@ -518,6 +519,10 @@ export function registerVersionIpc() {
     ) => {
       const vm = new Version(versionConf);
       await vm.init();
+      await prepareModTranslationsForLaunch(vm.versionPath, {
+        launcherLang: settings.lang,
+        token: account?.accessToken,
+      }).catch(() => undefined);
       return await vm.run(account, settings, authData, instance, quick);
     },
   );
