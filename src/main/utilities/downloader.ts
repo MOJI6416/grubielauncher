@@ -25,7 +25,12 @@ import {
   shouldReportDownloadFailures,
   shouldThrowDownloadFailures,
 } from "./downloaderPure";
-import { MIRROR_BASE, resolveDownloadCandidates } from "./mirrors";
+import {
+  MIRROR_BASE,
+  isForgeCdnUrl,
+  resolveDownloadCandidates,
+  withForgeCdnKeyFallback,
+} from "./mirrors";
 import {
   getDownloadSource,
   getMojangReachable,
@@ -773,13 +778,14 @@ export class Downloader {
     }
 
     const partialPath = getPartialDownloadPath(destination);
-    const candidates = resolveDownloadCandidates(
+    let candidates = resolveDownloadCandidates(
       originalUrl,
       getDownloadSource(),
       getMojangReachable(),
       isMirrorDisabled(),
     );
     let candidateError: Error | null = null;
+    let forgeCdnAuthError: Error | null = null;
 
     for (
       let candidateIndex = 0;
@@ -1086,10 +1092,23 @@ export class Downloader {
           throw error;
         }
         candidateError = error as Error;
+
+        if (
+          axios.isAxiosError(error) &&
+          error.response?.status === 401 &&
+          isForgeCdnUrl(url)
+        ) {
+          forgeCdnAuthError ??= candidateError;
+          candidates = withForgeCdnKeyFallback(originalUrl, candidates);
+        }
       }
     }
 
-    throw candidateError ?? new Error(`Failed to download ${originalUrl}`);
+    throw (
+      forgeCdnAuthError ??
+      candidateError ??
+      new Error(`Failed to download ${originalUrl}`)
+    );
   };
 
   private findPresentItems = async (

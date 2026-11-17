@@ -63,6 +63,26 @@ describe("classifyError", () => {
     expect(info.code).toBe("CF-403");
   });
 
+  it("reads a CurseForge 401 as a key wall, not as the player's sign-in", () => {
+    const info = classifyError(
+      axiosError(401, "https://edge.forgecdn.net/files/1/2/mod.jar"),
+    );
+
+    expect(info.side).toBe("curseforge");
+    expect(info.cause).toBe("keyRequired");
+    expect(info.code).toBe("CF-401");
+
+    const fromBatch = classifyError("Request failed with status code 401", {
+      url: "https://edge.forgecdn.net/files/1/2/mod.jar",
+    });
+    expect(fromBatch.cause).toBe("keyRequired");
+
+    expect(
+      classifyError(axiosError(401, "https://api.grubielauncher.com/users/me"))
+        .cause,
+    ).toBe("unauthorized");
+  });
+
   it("treats dns failures as a network problem", () => {
     const info = classifyError({
       code: "ENOTFOUND",

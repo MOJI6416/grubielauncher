@@ -24,6 +24,7 @@ export type FailureCause =
   | "reset"
   | "tls"
   | "unauthorized"
+  | "keyRequired"
   | "forbidden"
   | "notFound"
   | "rateLimited"
@@ -92,6 +93,7 @@ const CAUSE_CODES: Record<FailureCause, string> = {
   reset: "RESET",
   tls: "TLS",
   unauthorized: "401",
+  keyRequired: "KEY",
   forbidden: "403",
   notFound: "404",
   rateLimited: "429",
@@ -364,6 +366,9 @@ export function classifyError(
   } else if (status !== undefined) {
     cause = causeFromStatus(status);
     side = side || "external";
+    if (cause === "unauthorized" && side === "curseforge") {
+      cause = "keyRequired";
+    }
   } else {
     const guessed = causeFromMessage(message);
     if (guessed) {

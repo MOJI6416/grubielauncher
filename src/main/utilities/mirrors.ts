@@ -94,3 +94,27 @@ export function resolveDownloadCandidates(
   const direct = toMirrorUrl(rawUrl, MIRROR_BASE_DIRECT);
   return direct ? [...ordered, direct] : ordered;
 }
+
+const FORGE_CDN_HOSTS = new Set(["edge.forgecdn.net", "mediafilez.forgecdn.net"]);
+
+export function isForgeCdnUrl(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl);
+    return url.protocol === "https:" && FORGE_CDN_HOSTS.has(url.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
+export function withForgeCdnKeyFallback(
+  rawUrl: string,
+  candidates: string[],
+): string[] {
+  if (!isForgeCdnUrl(rawUrl)) return candidates;
+
+  const extra = [toMirrorUrl(rawUrl), toMirrorUrl(rawUrl, MIRROR_BASE_DIRECT)].filter(
+    (url): url is string => url !== null && !candidates.includes(url),
+  );
+
+  return extra.length > 0 ? [...candidates, ...extra] : candidates;
+}

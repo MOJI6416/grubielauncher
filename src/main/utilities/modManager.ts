@@ -44,7 +44,11 @@ import { createHash, randomUUID } from "crypto";
 import { pathToFileURL } from "url";
 import { parseCurseForgeLoaderId } from "@/shared/loaderVersions";
 import type { LoaderRequirementSyntax } from "@/shared/loaderCompat";
-import { resolveDownloadCandidates } from "./mirrors";
+import {
+  isForgeCdnUrl,
+  resolveDownloadCandidates,
+  withForgeCdnKeyFallback,
+} from "./mirrors";
 import {
   LocalModMetadata,
   fromFabricManifest,
@@ -121,7 +125,9 @@ async function headForgeCdnCandidates(
     ),
   );
 
-  for (const url of Array.from(new Set(candidates))) {
+  const queue = Array.from(new Set(candidates));
+  for (let index = 0; index < queue.length; index++) {
+    const url = queue[index];
     try {
       const response = await axios.head(url, {
         timeout: 6000,
@@ -129,6 +135,9 @@ async function headForgeCdnCandidates(
         validateStatus: () => true,
       });
       if (response.status >= 200 && response.status < 300) return url;
+      if (response.status === 401 && isForgeCdnUrl(url)) {
+        queue.push(...withForgeCdnKeyFallback(url, queue).slice(queue.length));
+      }
     } catch {
       continue;
     }

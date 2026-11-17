@@ -5,6 +5,8 @@ import {
   MIRROR_BASE,
   MIRROR_BASE_DIRECT,
   toStorageUploadUrl,
+  isForgeCdnUrl,
+  withForgeCdnKeyFallback,
 } from "./mirrors";
 
 describe("toMirrorUrl", () => {
@@ -216,6 +218,35 @@ describe("resolveDownloadCandidates", () => {
         `${MIRROR_BASE_DIRECT}/meta-fabric/v2/versions/loader/26.2/0.19.3/profile/json`,
       ]);
     }
+  });
+});
+
+describe("withForgeCdnKeyFallback", () => {
+  const edge =
+    "https://edge.forgecdn.net/files/9575/423/jei-26.3-neoforge-31.17.0.113.jar";
+  const mirror = `${MIRROR_BASE}/forgecdn/files/9575/423/jei-26.3-neoforge-31.17.0.113.jar`;
+  const direct = `${MIRROR_BASE_DIRECT}/forgecdn/files/9575/423/jei-26.3-neoforge-31.17.0.113.jar`;
+
+  it("recognises only the two CurseForge file hosts over https", () => {
+    expect(isForgeCdnUrl(edge)).toBe(true);
+    expect(isForgeCdnUrl("https://mediafilez.forgecdn.net/files/1/2/a.jar")).toBe(true);
+    expect(isForgeCdnUrl("http://edge.forgecdn.net/files/1/2/a.jar")).toBe(false);
+    expect(isForgeCdnUrl("https://media.forgecdn.net/avatars/1.png")).toBe(false);
+    expect(isForgeCdnUrl("not a url")).toBe(false);
+  });
+
+  it("sends a 401 on the official source to the mirror, which holds the key", () => {
+    expect(withForgeCdnKeyFallback(edge, [edge])).toEqual([edge, mirror, direct]);
+  });
+
+  it("adds nothing the candidate list already tries", () => {
+    const auto = resolveDownloadCandidates(edge, "auto", true);
+    expect(withForgeCdnKeyFallback(edge, auto)).toBe(auto);
+  });
+
+  it("leaves every other host alone", () => {
+    const lib = "https://libraries.minecraft.net/a.jar";
+    expect(withForgeCdnKeyFallback(lib, [lib])).toEqual([lib]);
   });
 });
 
