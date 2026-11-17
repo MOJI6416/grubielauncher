@@ -9,6 +9,7 @@ import { playSound } from "@renderer/utilities/sounds";
 import { joinFriendWorld } from "@renderer/features/launch/joinFriendWorld";
 import { mutedFriendIds } from "./muteFriend";
 import { pickNewShares } from "./shareSessions";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -62,7 +63,7 @@ export async function checkFriendShares(): Promise<void> {
     if (!document.hasFocus()) {
       void api.other
         .notify({ title: "Grubie Launcher", body: message })
-        .catch(() => {});
+        .catch(ignoreFailure);
     }
   }
 }

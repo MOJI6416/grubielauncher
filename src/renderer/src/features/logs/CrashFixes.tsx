@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { Check, Layers, Loader2, Undo2, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +24,8 @@ import {
   locateDuplicates,
   planCrashFixes,
 } from "./crashFixPlan";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { showFailureToast } from "@renderer/utilities/failures";
 
 const api = window.api;
 
@@ -92,9 +93,10 @@ export function CrashFixes({
 
     void api.modManager
       .localDependencies(versionPath)
-      .catch(() => ({}))
-      .then((index) => {
+      .catch(ignoreFailure)
+      .then((result) => {
         if (cancelled) return;
+        const index = result ?? {};
         setIdentities(modIdentities(mods, index));
         setDependencyIndex(index);
       });
@@ -109,8 +111,10 @@ export function CrashFixes({
 
     void api.os
       .totalmem()
-      .catch(() => 0)
-      .then((bytes) => setTotalMemoryMb(Math.round(bytes / (1024 * 1024))));
+      .catch(ignoreFailure)
+      .then((bytes) =>
+        setTotalMemoryMb(Math.round((bytes ?? 0) / (1024 * 1024))),
+      );
   }, [ruleId]);
 
   const duplicates = useMemo<DuplicatePlacement[]>(
@@ -234,7 +238,9 @@ export function CrashFixes({
 
     if (!result.ok) {
       setState(key, null);
-      toast.error(t("crashFix.failed"), { description: result.error });
+      showFailureToast(t("crashFix.failed"), new Error(result.error), {
+        fallbackDescription: result.error,
+      });
       return;
     }
 
@@ -254,7 +260,9 @@ export function CrashFixes({
 
     if (!result.ok) {
       setState(key, state);
-      toast.error(t("crashFix.failed"), { description: result.error });
+      showFailureToast(t("crashFix.failed"), new Error(result.error), {
+        fallbackDescription: result.error,
+      });
       return;
     }
 
@@ -293,12 +301,14 @@ export function CrashFixes({
                   className="flex h-7 min-w-0 items-center gap-1 rounded-md border border-success/40 pl-2 text-xs text-success"
                 >
                   <Check className="size-3.5 shrink-0" />
-                  <span className="min-w-0 truncate">{doneLabel(fix)}</span>
+                  <Hint content={doneLabel(fix)} variant="text" truncatedOnly>
+                    <span className="min-w-0 truncate">{doneLabel(fix)}</span>
+                  </Hint>
                   {state.undo && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 px-1.5 text-[0.7rem] text-muted-foreground"
+                      className="h-6 px-1.5 text-2xs text-muted-foreground"
                       disabled={state.phase === "undoing"}
                       onClick={() => void undo(fix, state)}
                     >
@@ -326,11 +336,21 @@ export function CrashFixes({
                 {state?.phase === "running" && (
                   <Loader2 className="size-3.5 animate-spin" />
                 )}
-                <span className="min-w-0 truncate">
-                  {state?.phase === "undone"
-                    ? `${label(fix)} · ${t("agent.undo.done")}`
-                    : label(fix)}
-                </span>
+                <Hint
+                  content={
+                    state?.phase === "undone"
+                      ? `${label(fix)} · ${t("agent.undo.done")}`
+                      : label(fix)
+                  }
+                  variant="text"
+                  truncatedOnly
+                >
+                  <span className="min-w-0 truncate">
+                    {state?.phase === "undone"
+                      ? `${label(fix)} · ${t("agent.undo.done")}`
+                      : label(fix)}
+                  </span>
+                </Hint>
               </Button>
             );
           })}

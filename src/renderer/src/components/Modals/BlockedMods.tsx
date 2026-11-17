@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Empty, EmptyDescription } from "@/components/ui/empty";
 import { Hint } from "@renderer/components/Hint";
 import { cn } from "@/lib/utils";
 import { IProject, Provider, ProjectType } from "@/types/ModManager";
@@ -490,9 +491,11 @@ export function BlockedMods({
       >
         <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3">
           <ShieldAlert className="size-4 shrink-0 text-warning" />
-          <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
-            {t("blockedMods.title")}
-          </DialogTitle>
+          <Hint content={t("blockedMods.title")} variant="text" truncatedOnly>
+            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+              {t("blockedMods.title")}
+            </DialogTitle>
+          </Hint>
         </DialogHeader>
 
         <div className="grid gap-2.5 border-b border-border bg-surface-2 px-4 py-3">
@@ -522,13 +525,22 @@ export function BlockedMods({
         <ScrollArea className="min-h-0">
           <div className="grid gap-2 px-4 py-3">
             <div className="flex h-6 items-center gap-2">
-              <span className="text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+              <span className="text-3xs font-semibold tracking-[0.09em] text-faint uppercase">
                 {t("blockedMods.files")}
               </span>
               <Button
                 size="xs"
                 variant="ghost"
                 className="ml-auto"
+                onClick={handleSkipAllMissing}
+                disabled={missingCount === 0}
+              >
+                <SkipForward />
+                {t("blockedMods.skipAll")}
+              </Button>
+              <Button
+                size="xs"
+                variant="ghost"
                 disabled={handledCount === 0}
                 onClick={() =>
                   setViewMode((prev) =>
@@ -569,20 +581,30 @@ export function BlockedMods({
                             {mod.modTitle || mod.fileName}
                           </span>
                         </Hint>
-                        <span
-                          className={cn(
-                            "min-w-0 truncate text-[0.7rem]",
+                        <Hint
+                          content={
                             state === "missing"
-                              ? "text-faint"
-                              : state === "skipped"
-                                ? "text-warning"
-                                : "text-success",
-                          )}
+                              ? mod.fileName
+                              : stateLabel(state)
+                          }
+                          variant="text"
+                          truncatedOnly
                         >
-                          {state === "missing"
-                            ? mod.fileName
-                            : stateLabel(state)}
-                        </span>
+                          <span
+                            className={cn(
+                              "min-w-0 truncate text-2xs",
+                              state === "missing"
+                                ? "text-faint"
+                                : state === "skipped"
+                                  ? "text-warning"
+                                  : "text-success",
+                            )}
+                          >
+                            {state === "missing"
+                              ? mod.fileName
+                              : stateLabel(state)}
+                          </span>
+                        </Hint>
                       </div>
 
                       <div className="flex shrink-0 items-center gap-1">
@@ -686,7 +708,7 @@ export function BlockedMods({
                               <button
                                 key={project.id}
                                 type="button"
-                                className="flex h-8 items-center gap-2 rounded-md px-1.5 text-left transition-colors hover:bg-surface-3 disabled:opacity-60"
+                                className="flex h-8 items-center gap-2 rounded-md px-1.5 text-left transition-colors hover:bg-row-hover disabled:opacity-60"
                                 disabled={substituting?.key === key}
                                 onClick={() =>
                                   void handlePickSubstitute(mod, project)
@@ -701,9 +723,15 @@ export function BlockedMods({
                                 ) : (
                                   <span className="size-5 shrink-0 rounded bg-surface-3" />
                                 )}
-                                <span className="min-w-0 flex-1 truncate text-xs">
-                                  {project.title}
-                                </span>
+                                <Hint
+                                  content={project.title}
+                                  variant="text"
+                                  truncatedOnly
+                                >
+                                  <span className="min-w-0 flex-1 truncate text-xs">
+                                    {project.title}
+                                  </span>
+                                </Hint>
                                 {substituting?.key === key &&
                                   substituting.projectId === project.id && (
                                     <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
@@ -715,7 +743,7 @@ export function BlockedMods({
                           !isSearching && (
                             <p
                               className={cn(
-                                "px-1 text-[0.7rem] leading-4",
+                                "px-1 text-2xs leading-4",
                                 searchOutcome === "failed"
                                   ? "text-destructive"
                                   : searchOutcome === "empty"
@@ -741,15 +769,19 @@ export function BlockedMods({
 
               {filteredMods.length === 0 &&
                 (skippedCount > 0 ? (
-                  <div className="flex h-20 items-center justify-center gap-2 rounded-lg border border-dashed border-border text-xs text-muted-foreground">
+                  <Empty className="h-20 flex-row gap-2 rounded-lg border border-dashed border-border p-0">
                     <SkipForward className="size-4 shrink-0 text-warning" />
-                    {t("blockedMods.emptySkipped", { count: skippedCount })}
-                  </div>
+                    <EmptyDescription className="text-xs">
+                      {t("blockedMods.emptySkipped", { count: skippedCount })}
+                    </EmptyDescription>
+                  </Empty>
                 ) : (
-                  <div className="flex h-20 items-center justify-center gap-2 rounded-lg border border-dashed border-border text-xs text-muted-foreground">
-                    <CheckCircle2 className="size-4 text-success" />
-                    {t("blockedMods.empty")}
-                  </div>
+                  <Empty className="h-20 flex-row gap-2 rounded-lg border border-dashed border-border p-0">
+                    <CheckCircle2 className="size-4 shrink-0 text-success" />
+                    <EmptyDescription className="text-xs">
+                      {t("blockedMods.empty")}
+                    </EmptyDescription>
+                  </Empty>
                 ))}
             </div>
 
@@ -765,7 +797,7 @@ export function BlockedMods({
                   <span className="text-xs">
                     {t("blockedMods.watchedFolders")}
                   </span>
-                  <span className="font-mono text-[0.7rem] tabular-nums text-faint">
+                  <span className="font-mono text-2xs tabular-nums text-faint">
                     {watchedFolders.length}
                   </span>
                 </button>
@@ -792,20 +824,22 @@ export function BlockedMods({
                       variant="text"
                       truncatedOnly
                     >
-                      <span className="min-w-0 flex-1 truncate font-mono text-[0.7rem] text-muted-foreground">
+                      <span className="min-w-0 flex-1 truncate font-mono text-2xs text-muted-foreground">
                         {redact.path(folder.path)}
                       </span>
                     </Hint>
                     {folder.removable ? (
-                      <Button
-                        size="icon-xs"
-                        variant="ghost"
-                        className="shrink-0"
-                        aria-label={t("blockedMods.removeFolder")}
-                        onClick={() => handleRemoveFolder(folder.path)}
-                      >
-                        <X />
-                      </Button>
+                      <Hint content={t("blockedMods.removeFolder")}>
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          className="shrink-0"
+                          aria-label={t("blockedMods.removeFolder")}
+                          onClick={() => handleRemoveFolder(folder.path)}
+                        >
+                          <X />
+                        </Button>
+                      </Hint>
                     ) : (
                       <Lock
                         className="size-3 shrink-0 text-faint"
@@ -815,7 +849,7 @@ export function BlockedMods({
                   </div>
                 ))}
 
-              <p className="text-[0.7rem] leading-4 text-faint">
+              <p className="text-2xs leading-4 text-faint">
                 {t("blockedMods.dropHint")}
               </p>
             </div>
@@ -830,23 +864,13 @@ export function BlockedMods({
             </p>
           )}
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Button
               variant="ghost"
               className="text-destructive hover:text-destructive"
               onClick={() => onClose(null)}
             >
               {t("blockedMods.cancelInstall")}
-            </Button>
-
-            <Button
-              variant="ghost"
-              className="ml-auto"
-              onClick={handleSkipAllMissing}
-              disabled={missingCount === 0}
-            >
-              <SkipForward />
-              {t("blockedMods.skipAll")}
             </Button>
 
             {missingCount === 0 ? (

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bell, ChevronRight, FolderOpen, Radio } from "lucide-react";
+import { Bell, ChevronRight, FolderOpen, MonitorPlay } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
 import { Switch } from "@/components/ui/switch";
 import type { BlessedPathInfo } from "@/types/AllowedPath";
 import type { TSettings } from "@/types/Settings";
 import { navigate } from "@renderer/navigation/navigate";
+import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
+import { showFailureToast } from "@renderer/utilities/failures";
 import { OWN_PROFILE_ID } from "@renderer/features/profile/loadProfileUser";
 import {
   setStreamerMode,
@@ -50,6 +52,19 @@ export function PrivacySection({
     void load();
   }, [load]);
 
+  const revoke = async (path: string) => {
+    try {
+      if (!(await api.allowedPaths.revoke(path))) throw new Error("revoke");
+    } catch (error) {
+      showFailureToast(t("settings.allowedPaths.revokeFailed"), error, {
+        channels: ["safepath:revoke"],
+      });
+    }
+    await load();
+  };
+
+  const allowedKeys = new Set(allowed.map((entry) => entry.path));
+
   return (
     <div className="flex flex-col gap-4">
       <SettingsGroup title={t("settings.streamer.title")}>
@@ -73,7 +88,7 @@ export function PrivacySection({
           >
             {streamer.app && streamer.reason !== "manual" && (
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Radio className="size-3.5 shrink-0 text-faint" />
+                <MonitorPlay className="size-3.5 shrink-0 text-faint" />
                 {streamer.active
                   ? t("settings.streamer.autoActive", { app: streamer.app })
                   : t("settings.streamer.autoDismissed", { app: streamer.app })}
@@ -108,16 +123,28 @@ export function PrivacySection({
             onClick={() =>
               navigate({ name: "profile", userId: OWN_PROFILE_ID })
             }
-            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-surface-3"
+            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-row-hover"
           >
             <Bell className="size-3.5 shrink-0 text-faint" />
             <span className="grid min-w-0 flex-1 gap-0.5">
-              <span className="truncate text-sm text-foreground">
-                {t("settings.notifications.telegram")}
-              </span>
-              <span className="truncate text-xs text-muted-foreground">
-                {t("settings.notifications.telegramDescription")}
-              </span>
+              <Hint
+                content={t("settings.notifications.telegram")}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="truncate text-sm text-foreground">
+                  {t("settings.notifications.telegram")}
+                </span>
+              </Hint>
+              <Hint
+                content={t("settings.notifications.telegramDescription")}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="truncate text-xs text-muted-foreground">
+                  {t("settings.notifications.telegramDescription")}
+                </span>
+              </Hint>
             </span>
             <span className="shrink-0 text-xs text-muted-foreground">
               {t("settings.notifications.openProfile")}
@@ -232,34 +259,32 @@ export function PrivacySection({
               {t("settings.allowedPaths.empty")}
             </p>
           ) : (
-            allowed.map((entry) => (
-              <div
-                key={entry.path}
-                className="flex items-center gap-3 px-3.5 py-2"
-              >
-                <FolderOpen className="size-3.5 shrink-0 text-faint" />
-                <Hint
-                  content={redact.path(entry.path)}
-                  variant="text"
-                  truncatedOnly
-                >
-                  <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
-                    {redact.path(entry.path)}
-                  </span>
-                </Hint>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0 text-destructive hover:text-destructive"
-                  onClick={async () => {
-                    await api.allowedPaths.revoke(entry.path);
-                    await load();
-                  }}
-                >
-                  {t("settings.allowedPaths.revoke")}
-                </Button>
-              </div>
-            ))
+            <RemovalList sourceKeys={allowedKeys}>
+              {allowed.map((entry) => (
+                <RemovalItem key={entry.path} itemKey={entry.path}>
+                  <div className="flex items-center gap-3 px-3.5 py-2">
+                    <FolderOpen className="size-3.5 shrink-0 text-faint" />
+                    <Hint
+                      content={redact.path(entry.path)}
+                      variant="text"
+                      truncatedOnly
+                    >
+                      <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
+                        {redact.path(entry.path)}
+                      </span>
+                    </Hint>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 text-destructive hover:text-destructive"
+                      onClick={() => void revoke(entry.path)}
+                    >
+                      {t("settings.allowedPaths.revoke")}
+                    </Button>
+                  </div>
+                </RemovalItem>
+              ))}
+            </RemovalList>
           )}
         </SettingsGroup>
       )}

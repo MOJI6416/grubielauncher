@@ -1,3 +1,4 @@
+import { ignoreFailure } from "./ignoreFailure";
 import { getApiBase } from "./apiBase";
 
 const LIMITS = {
@@ -28,7 +29,7 @@ export function reportLauncherError(
 
   void (async () => {
     const api = window.api;
-    const release = await api?.other.getVersion().catch(() => undefined);
+    const release = await api?.other.getVersion().catch(ignoreFailure);
 
     await fetch(`${getApiBase()}/client-errors`, {
       method: "POST",
@@ -44,5 +45,5 @@ export function reportLauncherError(
         platform: trim(api?.platform, LIMITS.platform),
       }),
     });
-  })().catch(() => {});
+  })().catch(ignoreFailure);
 }

@@ -1,16 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, Lock, RefreshCw, Search, Trophy, TriangleAlert } from "lucide-react";
+import {
+  LayoutGrid,
+  Lock,
+  RefreshCw,
+  Search,
+  SearchX,
+  Trophy,
+  TriangleAlert,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Hint } from "@renderer/components/Hint";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Hint } from "@renderer/components/Hint";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { SortMenu } from "@renderer/components/SortMenu";
+import { formatNumber } from "@renderer/utilities/numbers";
 import { IUser } from "@/types/IUser";
 import {
   EMPTY_ACHIEVEMENT_STATS,
@@ -42,8 +54,6 @@ import {
 } from "./achievementVisuals";
 import { reachPercentParts } from "./profileMetrics";
 import { ensureFreshAccount } from "./loadProfileUser";
-import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
-import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 
 const api = window.api;
 
@@ -96,14 +106,11 @@ export function ProfileAchievements({
     "all" | (typeof CATEGORY_ORDER)[number]
   >("all");
   const [status, setStatus] = useState<AchievementStatus>("all");
-  const statusIndicator = useSlidingIndicator<HTMLDivElement>();
   const [sort, setSort] = useState<AchievementSort>(
     isOwner ? "progress" : "rarity",
   );
   const [query, setQuery] = useState("");
 
-  const formatNumber = (value: number) =>
-    new Intl.NumberFormat(i18n.resolvedLanguage || i18n.language).format(value);
   const nameOf = (id: string) => t(`achievements.items.${id}.name`);
 
   const summary = useMemo(() => summarizeAchievements(rows), [rows]);
@@ -136,6 +143,11 @@ export function ProfileAchievements({
   const isFiltered =
     category !== "all" || status !== "all" || query.trim() !== "";
 
+  const activeTally = tally.find((entry) => entry.category === category);
+  const activeCategoryLabel = activeTally
+    ? `${t(`achievements.categories.${activeTally.category}`)} · ${activeTally.unlocked}/${activeTally.total}`
+    : `${t("achievements.filter.all")} · ${summary.unlocked}/${summary.total}`;
+
   const resetFilters = () => {
     setCategory("all");
     setStatus("all");
@@ -147,18 +159,36 @@ export function ProfileAchievements({
       <div className="flex shrink-0 items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5">
         <CompletionRing value={summary.completion} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">
-            {t("achievements.unlockedOf", {
+          <Hint
+            content={t("achievements.unlockedOf", {
               unlocked: formatNumber(summary.unlocked),
               total: formatNumber(summary.total),
             })}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {t("achievements.pointsOf", {
+            variant="text"
+            truncatedOnly
+          >
+            <p className="truncate text-sm font-medium">
+              {t("achievements.unlockedOf", {
+                unlocked: formatNumber(summary.unlocked),
+                total: formatNumber(summary.total),
+              })}
+            </p>
+          </Hint>
+          <Hint
+            content={t("achievements.pointsOf", {
               points: formatNumber(summary.points),
               total: formatNumber(summary.totalPoints),
             })}
-          </p>
+            variant="text"
+            truncatedOnly
+          >
+            <p className="truncate text-xs text-muted-foreground">
+              {t("achievements.pointsOf", {
+                points: formatNumber(summary.points),
+                total: formatNumber(summary.totalPoints),
+              })}
+            </p>
+          </Hint>
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
@@ -180,7 +210,7 @@ export function ProfileAchievements({
                       })
                 }
               >
-                <div className="flex h-11 w-16 flex-col items-center justify-center rounded-lg bg-surface-1">
+                <div className="flex h-11 min-w-16 flex-col items-center justify-center rounded-lg bg-surface-1 px-2">
                   <span
                     className={`font-mono text-sm tabular-nums ${RARITY_TEXT[rarity]}`}
                   >
@@ -189,7 +219,7 @@ export function ProfileAchievements({
                       /{formatNumber(entry.total)}
                     </span>
                   </span>
-                  <span className="text-[10px] text-faint">
+                  <span className="text-3xs text-faint">
                     {t(`achievements.rarity.${rarity}`)}
                   </span>
                 </div>
@@ -211,77 +241,58 @@ export function ProfileAchievements({
             />
           </div>
 
-          <div
-            ref={statusIndicator.containerRef}
-            className="relative flex h-9 shrink-0 items-center gap-0.5 rounded-lg bg-surface-1 p-1"
-          >
-            <SlidingIndicator
-              indicator={statusIndicator}
-              variant="fill"
-              className="rounded-md bg-surface-3"
-            />
-            {(["all", "unlocked", "locked"] as AchievementStatus[]).map(
-              (value) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={status === value}
-                  data-indicator-active={status === value}
-                  onClick={() => setStatus(value)}
-                  className="relative rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground aria-pressed:text-foreground"
-                >
-                  {t(`achievements.filter.${value}`)}
-                </button>
-              ),
+          <SegmentedControl
+            value={status}
+            ariaLabel={t("achievements.statusFilter")}
+            options={(["all", "unlocked", "locked"] as AchievementStatus[]).map(
+              (value) => ({
+                value,
+                label: t(`achievements.filter.${value}`),
+              }),
             )}
-          </div>
+            onChange={setStatus}
+          />
 
-          <Select
+          <SortMenu
             value={sort}
-            onValueChange={(value) => setSort(value as AchievementSort)}
-          >
-            <SelectTrigger className="w-40 shrink-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ACHIEVEMENT_SORTS.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {t(`achievements.sort.${value}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={ACHIEVEMENT_SORTS.map((value) => ({
+              value,
+              label: t(`achievements.sort.${value}`),
+            }))}
+            onChange={setSort}
+          />
         </div>
 
-        <div
-          className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1"
-          onWheel={(event) => {
-            if (event.deltaY === 0) return;
-            event.currentTarget.scrollLeft += event.deltaY;
-          }}
-        >
-          <CategoryChip
-            active={category === "all"}
-            onClick={() => setCategory("all")}
-            label={t("achievements.filter.all")}
-            title={t("achievements.filter.all")}
-            count={summary.unlocked}
-            total={summary.total}
+        <div className="flex min-w-0 items-center gap-2.5">
+          <SegmentedControl
+            value={category}
+            iconOnly
+            ariaLabel={t("achievements.categoryFilter")}
+            options={[
+              {
+                value: "all" as const,
+                label: t("achievements.filter.all"),
+                icon: <LayoutGrid />,
+                hint: `${t("achievements.filter.all")} · ${summary.unlocked}/${summary.total}`,
+              },
+              ...tally.map((entry) => {
+                const Icon = CATEGORY_ICON[entry.category];
+                const label = t(`achievements.categories.${entry.category}`);
+                return {
+                  value: entry.category,
+                  label,
+                  icon: <Icon />,
+                  hint: `${label} · ${entry.unlocked}/${entry.total}`,
+                };
+              }),
+            ]}
+            onChange={setCategory}
           />
-          {tally.map((entry) => {
-            const Icon = CATEGORY_ICON[entry.category];
-            return (
-              <CategoryChip
-                key={entry.category}
-                active={category === entry.category}
-                onClick={() => setCategory(entry.category)}
-                title={t(`achievements.categories.${entry.category}`)}
-                count={entry.unlocked}
-                total={entry.total}
-                icon={<Icon className="size-3.5" />}
-              />
-            );
-          })}
+          <Hint content={activeCategoryLabel} variant="text" truncatedOnly>
+            <span className="min-w-0 truncate text-xs text-muted-foreground">
+              {activeCategoryLabel}
+            </span>
+          </Hint>
         </div>
       </div>
 
@@ -309,14 +320,37 @@ export function ProfileAchievements({
 
       <div className="-mr-1 min-h-0 flex-1 overflow-y-auto pr-1">
         {isLoading ? (
-          <div className="flex h-40 flex-col items-center justify-center gap-2 text-muted-foreground">
-            <Loader2 className="size-5 animate-spin" />
-            <p className="text-sm">{t("achievements.loading")}</p>
+          <div aria-busy className="grid grid-cols-2 gap-2">
+            <span className="sr-only">{t("achievements.loading")}</span>
+            {Array.from({ length: 8 }, (_, index) => (
+              <div
+                key={index}
+                className="flex h-16 min-w-0 items-center gap-2.5 rounded-lg bg-surface-1 p-2.5"
+              >
+                <Skeleton className="size-10 shrink-0 rounded-lg" />
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <Skeleton className="h-3 w-2/5 rounded" />
+                  <Skeleton className="h-2.5 w-3/5 rounded" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : visible.length === 0 ? (
-          <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">
-            {t("achievements.empty")}
-          </div>
+          <Empty className="h-40 flex-none rounded-xl border border-border">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                {isFiltered ? <SearchX /> : <Trophy />}
+              </EmptyMedia>
+              <EmptyTitle>{t("achievements.empty")}</EmptyTitle>
+            </EmptyHeader>
+            {isFiltered && (
+              <EmptyContent>
+                <Button variant="outline" size="sm" onClick={resetFilters}>
+                  {t("achievements.resetFilters")}
+                </Button>
+              </EmptyContent>
+            )}
+          </Empty>
         ) : (
           <div className="grid grid-cols-2 gap-2">
             {visible.map((row) => (
@@ -334,12 +368,21 @@ export function ProfileAchievements({
 
       {isFiltered && !isLoading && (
         <div className="flex h-9 shrink-0 items-center gap-3 rounded-lg bg-surface-1 px-3">
-          <span className="min-w-0 truncate text-xs text-muted-foreground">
-            {t("achievements.filtered", {
+          <Hint
+            content={t("achievements.filtered", {
               shown: formatNumber(visible.length),
               total: formatNumber(rows.length),
             })}
-          </span>
+            variant="text"
+            truncatedOnly
+          >
+            <span className="min-w-0 truncate text-xs text-muted-foreground">
+              {t("achievements.filtered", {
+                shown: formatNumber(visible.length),
+                total: formatNumber(rows.length),
+              })}
+            </span>
+          </Hint>
           <button
             type="button"
             onClick={resetFilters}
@@ -431,49 +474,13 @@ function CompletionRing({ value }: { value: number }) {
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className="stroke-primary transition-[stroke-dashoffset] duration-500"
+          className="stroke-info transition-[stroke-dashoffset] duration-500"
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center font-mono text-[11px] font-semibold tabular-nums">
+      <span className="absolute inset-0 flex items-center justify-center font-mono text-2xs font-semibold tabular-nums">
         {value}%
       </span>
     </div>
-  );
-}
-
-function CategoryChip({
-  active,
-  onClick,
-  label,
-  title,
-  count,
-  total,
-  icon,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label?: string;
-  title: string;
-  count: number;
-  total: number;
-  icon?: React.ReactNode;
-}) {
-  return (
-    <Hint content={title}>
-      <button
-        type="button"
-        onClick={onClick}
-        aria-pressed={active}
-        aria-label={title}
-        className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface-1 px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground aria-pressed:border-primary/40 aria-pressed:bg-primary/10 aria-pressed:text-foreground"
-      >
-        {icon}
-        {label}
-        <span className="font-mono tabular-nums text-faint">
-          {count}/{total}
-        </span>
-      </button>
-    </Hint>
   );
 }
 
@@ -515,7 +522,7 @@ export function AchievementCard({
       >
         <Icon className="size-5" />
         {!row.unlocked && (
-          <Lock className="absolute -right-1 -top-1 size-3.5 rounded-full bg-background p-0.5 text-faint" />
+          <Lock className="absolute -right-1 -top-1 size-3.5 rounded-full bg-surface-3 p-0.5 text-faint" />
         )}
       </div>
 
@@ -556,7 +563,7 @@ export function AchievementCard({
                 style={{ width: `${Math.round(row.ratio * 100)}%` }}
               />
             </div>
-            <span className="shrink-0 font-mono text-[10px] tabular-nums text-faint">
+            <span className="shrink-0 font-mono text-3xs tabular-nums text-faint">
               {formatNumber(current)}/{formatNumber(goal)}
             </span>
           </div>
@@ -567,15 +574,13 @@ export function AchievementCard({
 }
 
 function RarityMark({ row }: { row: AchievementRow }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const rarity = t(`achievements.rarity.${row.rarity}`);
   const hasPercent = row.percent !== null && row.percent > 0;
   const parts = hasPercent ? reachPercentParts(row.percent as number) : null;
   const reach = parts
-    ? `${parts.belowFloor ? "<" : ""}${new Intl.NumberFormat(
-        i18n.resolvedLanguage || i18n.language,
-      ).format(parts.value)}`
+    ? `${parts.belowFloor ? "<" : ""}${formatNumber(parts.value)}`
     : "";
 
   return (

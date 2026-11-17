@@ -266,7 +266,7 @@ export function AgentScreen({ chatId }: { chatId?: string }) {
 
         <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-border bg-surface-1">
           <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-3">
-            <Sparkles className="size-4 shrink-0 text-primary" />
+            <Sparkles className="size-4 shrink-0 text-faint" />
             <Hint content={chatTitle} variant="text" truncatedOnly>
               <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                 {chatTitle}

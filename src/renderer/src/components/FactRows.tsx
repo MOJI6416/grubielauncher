@@ -92,7 +92,7 @@ export function FactRow({
     <button
       type="button"
       onClick={onSelect}
-      className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset focus-visible:outline-none"
+      className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left transition-colors hover:bg-row-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset focus-visible:outline-none"
     >
       {body}
     </button>

@@ -34,6 +34,7 @@ import {
 import { nextSelectionAfterRemoval } from "./list";
 import { switchAccount } from "./switchAccount";
 import type { OnlineProvider } from "./providers";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -129,7 +130,7 @@ export function useAccountsController() {
   const cancelAuth = useCallback(() => {
     sessionRef.current++;
     setProgress(null);
-    void api.auth.stopServer().catch(() => undefined);
+    void api.auth.stopServer().catch(ignoreFailure);
   }, []);
 
   const upsertAccount = useCallback(
@@ -193,7 +194,7 @@ export function useAccountsController() {
       });
 
       const waitForOAuth = api.auth.startServer(state);
-      waitForOAuth.catch(() => undefined);
+      waitForOAuth.catch(ignoreFailure);
 
       try {
         await api.shell.openExternal(authUrl);

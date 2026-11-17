@@ -50,7 +50,7 @@ const STAGE_ROW_HEIGHT = 24;
 
 function StageMark({ state }: { state: StageRow["state"] }) {
   if (state === "running") {
-    return <Loader2 className="size-3 shrink-0 animate-spin text-primary" />;
+    return <Loader2 className="size-3 shrink-0 animate-spin text-info" />;
   }
 
   if (state === "done") {
@@ -67,10 +67,14 @@ function StageMark({ state }: { state: StageRow["state"] }) {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-lg bg-surface-2 px-2.5 py-1.5">
-      <p className="truncate text-[0.65rem] text-faint">{label}</p>
-      <p className="truncate font-mono text-xs tabular-nums text-foreground">
-        {value}
-      </p>
+      <Hint content={label} variant="text" truncatedOnly>
+        <p className="truncate text-3xs text-faint">{label}</p>
+      </Hint>
+      <Hint content={value} variant="text" truncatedOnly>
+        <p className="truncate font-mono text-xs tabular-nums text-foreground">
+          {value}
+        </p>
+      </Hint>
     </div>
   );
 }
@@ -158,7 +162,7 @@ export function InstallView({
               {name}
             </span>
           </Hint>
-          <span className="shrink-0 text-[0.7rem] text-faint">
+          <span className="shrink-0 text-2xs text-faint">
             {t("installationProgress.overallLabel")}
           </span>
           <span className="shrink-0 font-mono text-sm tabular-nums text-muted-foreground">
@@ -183,17 +187,19 @@ export function InstallView({
             ) : (
               <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
             )}
-            <span className="min-w-0 flex-1 truncate text-sm text-foreground">
-              {isQueuedBehind
-                ? t("newInstance.queuedBehind", {
-                    name: progress.versionName,
-                  })
-                : isPausedView
-                  ? pauseState === "pending"
-                    ? t("installationProgress.pausing")
-                    : t("installationProgress.paused")
-                  : t(stageLabelKey(currentStage ?? "preparing", operation))}
-            </span>
+            <Hint content={isQueuedBehind ? t("newInstance.queuedBehind", { name: progress.versionName }) : isPausedView ? pauseState === "pending" ? t("installationProgress.pausing") : t("installationProgress.paused") : t(stageLabelKey(currentStage ?? "preparing", operation))} variant="text" truncatedOnly>
+              <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                {isQueuedBehind
+                  ? t("newInstance.queuedBehind", {
+                      name: progress.versionName,
+                    })
+                  : isPausedView
+                    ? pauseState === "pending"
+                      ? t("installationProgress.pausing")
+                      : t("installationProgress.paused")
+                    : t(stageLabelKey(currentStage ?? "preparing", operation))}
+              </span>
+            </Hint>
             {eta !== null && eta > 0 && !isPausedView && (
               <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
                 {t("taskCenter.remaining")} {format.seconds(eta)}
@@ -203,12 +209,12 @@ export function InstallView({
 
           <p className="flex h-4 min-w-0 items-center gap-1.5">
             {fileName && (
-              <span className="shrink-0 text-[0.65rem] tracking-[0.06em] text-faint uppercase">
+              <span className="shrink-0 text-3xs tracking-[0.06em] text-faint uppercase">
                 {t("installationProgress.nowDownloading")}
               </span>
             )}
             {groupLabel && (
-              <span className="shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-[0.65rem] text-muted-foreground">
+              <span className="shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-3xs text-muted-foreground">
                 {groupLabel}
               </span>
             )}
@@ -217,7 +223,7 @@ export function InstallView({
               variant="text"
               truncatedOnly
             >
-              <span className="min-w-0 flex-1 truncate font-mono text-[0.7rem] text-faint">
+              <span className="min-w-0 flex-1 truncate font-mono text-2xs text-faint">
                 {fileName || subDetails || details || ""}
               </span>
             </Hint>
@@ -226,12 +232,14 @@ export function InstallView({
           {showInstaller && sub ? (
             <div className="grid gap-1.5 rounded-lg bg-surface-2 px-2.5 py-2">
               <div className="flex min-w-0 items-center gap-2">
-                <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-                  {t(
-                    sub.titleKey ||
-                      `installationProgress.subProgress.${sub.kind}.title`,
-                  )}
-                </span>
+                <Hint content={t(sub.titleKey || `installationProgress.subProgress.${sub.kind}.title`)} variant="text" truncatedOnly>
+                  <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                    {t(
+                      sub.titleKey ||
+                        `installationProgress.subProgress.${sub.kind}.title`,
+                    )}
+                  </span>
+                </Hint>
                 {!sub.isIndeterminate && (
                   <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
                     {clampPercent(sub.progressPercent)}%
@@ -294,19 +302,21 @@ export function InstallView({
                 className="flex shrink-0 items-center gap-2 px-1 text-xs"
               >
                 <StageMark state={row.state} />
-                <span
-                  className={cn(
-                    "min-w-0 flex-1 truncate",
-                    row.state === "running"
-                      ? "text-foreground"
-                      : row.state === "done"
-                        ? "text-muted-foreground"
-                        : "text-faint",
-                  )}
-                >
-                  {t(stageLabelKey(row.stage, operation))}
-                </span>
-                <span className="shrink-0 font-mono text-[0.7rem] tabular-nums text-faint">
+                <Hint content={t(stageLabelKey(row.stage, operation))} variant="text" truncatedOnly>
+                  <span
+                    className={cn(
+                      "min-w-0 flex-1 truncate",
+                      row.state === "running"
+                        ? "text-foreground"
+                        : row.state === "done"
+                          ? "text-muted-foreground"
+                          : "text-faint",
+                    )}
+                  >
+                    {t(stageLabelKey(row.stage, operation))}
+                  </span>
+                </Hint>
+                <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
                   {row.event
                     ? format.elapsed(stageElapsed(row.event, now))
                     : ""}

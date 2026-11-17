@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAtomValue } from "jotai";
 import { pathsAtom, versionsAtom } from "@renderer/stores/atoms";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -16,7 +17,9 @@ export function useInstanceFolderNames(): string[] {
 
     void (async () => {
       const versionsPath = await api.path.join(paths.minecraft, "versions");
-      const list = await api.fs.getDirectories(versionsPath).catch(() => []);
+      const list = await api.fs
+        .getDirectories(versionsPath)
+        .catch(ignoreFailure);
       if (!cancelled) setNames(Array.isArray(list) ? list : []);
     })();
 

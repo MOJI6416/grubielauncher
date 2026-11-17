@@ -49,7 +49,7 @@ const LINE_TONE: Record<string, string> = {
 
 function Keycap({ children }: { children: ReactNode }) {
   return (
-    <kbd className="ml-1 rounded border border-border bg-background/40 px-1 font-mono text-[0.6rem] leading-4 text-faint">
+    <kbd className="ml-1 rounded border border-border bg-background/40 px-1 font-mono text-3xs leading-4 text-faint">
       {children}
     </kbd>
   );
@@ -65,7 +65,7 @@ export function Confirmation({
   wide = false,
 }: {
   onClose: () => void;
-  title?: string;
+  title: string;
   children?: ReactNode;
   reversible?: boolean;
   wide?: boolean;
@@ -148,7 +148,7 @@ export function Confirmation({
             </span>
             <div className="grid min-w-0 flex-1 gap-1.5 [overflow-wrap:anywhere]">
               <AlertDialogTitle className="text-sm leading-5">
-                {title || t("common.confirmation")}
+                {title}
               </AlertDialogTitle>
 
               {content.map((item, index) =>
@@ -184,7 +184,7 @@ export function Confirmation({
               {reversible !== undefined && (
                 <p
                   className={cn(
-                    "flex items-center gap-1.5 text-[0.7rem]",
+                    "flex items-center gap-1.5 text-2xs",
                     reversible ? "text-faint" : "text-destructive",
                   )}
                 >

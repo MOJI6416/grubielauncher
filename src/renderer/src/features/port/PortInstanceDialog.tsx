@@ -50,6 +50,7 @@ import { analyzePort } from "./analyzePort";
 import type { PortItem } from "./portPlan";
 import { PortPreview } from "./PortPreview";
 import { PORT_VERSION_FAILED, runPort } from "./runPort";
+import { Hint } from "@renderer/components/Hint";
 
 const api = window.api;
 
@@ -234,9 +235,11 @@ export function PortInstanceDialog({
         <DialogHeader className="min-w-0">
           <DialogTitle className="flex min-w-0 items-center gap-2">
             <ArrowRightLeft className="size-5 shrink-0" />
-            <span className="truncate">
-              {t("port.title", { name: source.version.name })}
-            </span>
+            <Hint content={t("port.title", { name: source.version.name })} variant="text" truncatedOnly>
+              <span className="truncate">
+                {t("port.title", { name: source.version.name })}
+              </span>
+            </Hint>
           </DialogTitle>
           <DialogDescription>{t("port.description")}</DialogDescription>
         </DialogHeader>

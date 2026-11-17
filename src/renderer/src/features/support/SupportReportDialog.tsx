@@ -42,6 +42,9 @@ import {
 } from "@renderer/stores/atoms";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { uiJournal } from "@renderer/utilities/journal";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { showFailureToast } from "@renderer/utilities/failures";
+import { Hint } from "@renderer/components/Hint";
 import {
   collectSupportUiState,
   formatReportBytes,
@@ -102,7 +105,14 @@ export function SupportReportDialog({
   const send = async (prepared: SupportReportPrepared) => {
     setStage({ kind: "sending", prepared });
     const token = account && account.type !== "plain" ? account.accessToken : null;
-    const result = await api.support.send(prepared.id, token ?? null);
+    const result = await api.support
+      .send(prepared.id, token ?? null)
+      .catch(ignoreFailure);
+
+    if (!result) {
+      setStage({ kind: "failed", reason: "network", prepared });
+      return;
+    }
 
     if (result.ok) {
       uiJournal.info("support", "report sent", { code: result.code });
@@ -128,7 +138,7 @@ export function SupportReportDialog({
         runConnectivity: checkConnectivity,
         ui: collectSupportUiState(),
       })
-      .catch(() => null);
+      .catch(ignoreFailure);
 
     if (!prepared) {
       setStage({ kind: "failed", reason: "prepare", prepared: null });
@@ -139,8 +149,15 @@ export function SupportReportDialog({
   };
 
   const saveToFile = async (prepared: SupportReportPrepared) => {
-    const saved = await api.support.save(prepared.id);
-    if (saved) toast.success(t("supportReport.saved"));
+    try {
+      if (await api.support.save(prepared.id)) {
+        toast.success(t("supportReport.saved"));
+      }
+    } catch (error) {
+      showFailureToast(t("supportReport.saveFailed"), error, {
+        channels: ["support:save"],
+      });
+    }
   };
 
   const copyCode = async (code: string) => {
@@ -172,9 +189,11 @@ export function SupportReportDialog({
               <LifeBuoy className="size-4" />
             </div>
             <div className="min-w-0 flex-1 pr-8">
-              <DialogTitle className="truncate text-sm">
-                {t("supportReport.title")}
-              </DialogTitle>
+              <Hint content={t("supportReport.title")} variant="text" truncatedOnly>
+                <DialogTitle className="truncate text-sm">
+                  {t("supportReport.title")}
+                </DialogTitle>
+              </Hint>
               <DialogDescription className="mt-0.5 text-xs">
                 {t("supportReport.description")}
               </DialogDescription>

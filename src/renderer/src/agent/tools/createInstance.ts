@@ -1,3 +1,4 @@
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { getDefaultStore } from "jotai";
 import { LOADERS as ALL_LOADERS, Loader } from "@/types/Loader";
 import { IVersionConf } from "@/types/IVersion";
@@ -184,7 +185,7 @@ export const createInstance: AgentTool = {
       });
       if (!(await instance.save())) throw new Error(SAVE_FAILED);
     } catch (error) {
-      await api.fs.rimraf(versionPath).catch(() => undefined);
+      await api.fs.rimraf(versionPath).catch(ignoreFailure);
       return {
         ok: false,
         error: error instanceof Error ? error.message : String(error),

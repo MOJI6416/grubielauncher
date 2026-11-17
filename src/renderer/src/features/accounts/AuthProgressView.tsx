@@ -4,7 +4,7 @@ import { Copy, ExternalLink, Loader2, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
 import { ProviderIcon, providerName } from "./ProviderMark";
-import { formatCountdown } from "./session";
+import { formatClock } from "@renderer/utilities/duration";
 import { OAUTH_WINDOW_MS, type AuthProgress } from "./useAccountsController";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 
@@ -75,7 +75,7 @@ export function AuthProgressView({
 
       {!failed && progress.stage === "waiting" && (
         <p className="font-mono text-xs tabular-nums text-faint">
-          {t("accounts.oauthTimeLeft", { time: formatCountdown(msLeft) })}
+          {t("accounts.oauthTimeLeft", { time: formatClock(msLeft) })}
         </p>
       )}
 

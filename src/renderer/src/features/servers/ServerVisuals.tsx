@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Hint } from "@renderer/components/Hint";
 import { MotdSpan, motdColorVariable, motdLines } from "./motd";
 import { latencyBars, latencyTone } from "./ping";
 import { serverIconDataUrl } from "./serverIcon";
@@ -68,22 +69,29 @@ export function MotdText({
   return (
     <span className={cn("block min-w-0", className)}>
       {rows.map((row, rowIndex) => (
-        <span key={rowIndex} className="block min-w-0 truncate">
-          {row.map((span, index) => (
-            <span
-              key={index}
-              style={{ color: motdColorVariable(span.color) }}
-              className={cn(
-                span.bold && "font-semibold",
-                span.italic && "italic",
-                span.underline && "underline",
-                span.strikethrough && "line-through",
-              )}
-            >
-              {span.text}
-            </span>
-          ))}
-        </span>
+        <Hint
+          key={rowIndex}
+          content={row.map((span) => span.text).join("")}
+          variant="text"
+          truncatedOnly
+        >
+          <span className="block min-w-0 truncate">
+            {row.map((span, index) => (
+              <span
+                key={index}
+                style={{ color: motdColorVariable(span.color) }}
+                className={cn(
+                  span.bold && "font-semibold",
+                  span.italic && "italic",
+                  span.underline && "underline",
+                  span.strikethrough && "line-through",
+                )}
+              >
+                {span.text}
+              </span>
+            ))}
+          </span>
+        </Hint>
       ))}
     </span>
   );

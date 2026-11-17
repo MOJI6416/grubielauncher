@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
-import { Radio, Settings } from "lucide-react";
+import { MonitorPlay, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -27,7 +27,7 @@ export function StreamerPill() {
           type="button"
           className="mr-1.5 flex h-7 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-2 text-xs font-medium whitespace-nowrap text-muted-foreground transition-colors hover:border-input hover:text-foreground"
         >
-          <Radio className="size-3.5 text-primary" />
+          <MonitorPlay className="size-3.5" />
           {t("streamer.pill")}
         </button>
       </PopoverTrigger>

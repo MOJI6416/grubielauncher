@@ -162,9 +162,11 @@ export function WebLoginPrompt() {
       >
         <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
           <ShieldQuestion className="size-4 shrink-0 text-faint" />
-          <DialogTitle className="min-w-0 flex-1 truncate text-sm">
-            {t("webLogin.title")}
-          </DialogTitle>
+          <Hint content={t("webLogin.title")} variant="text" truncatedOnly>
+            <DialogTitle className="min-w-0 flex-1 truncate text-sm">
+              {t("webLogin.title")}
+            </DialogTitle>
+          </Hint>
         </DialogHeader>
 
         <div className="flex flex-col gap-3 p-4">
@@ -174,12 +176,16 @@ export function WebLoginPrompt() {
 
           {candidates.length > 1 ? (
             <div className="flex flex-col gap-1.5">
-              <p className="text-[0.7rem] font-medium tracking-wide text-faint uppercase">
+              <p className="text-2xs font-medium tracking-wide text-faint uppercase">
                 {t("webLogin.selectAccount")}
               </p>
 
               <ScrollArea className="max-h-40 rounded-lg border border-border bg-surface-1">
-                <div className="flex flex-col gap-1 p-1.5">
+                <div
+                  role="radiogroup"
+                  aria-label={t("webLogin.selectAccount")}
+                  className="flex flex-col gap-1 p-1.5"
+                >
                   {candidates.map((entry) => {
                     const key = accountKey(entry);
                     const isChosen =
@@ -189,11 +195,12 @@ export function WebLoginPrompt() {
                       <button
                         key={key}
                         type="button"
-                        aria-current={isChosen}
+                        role="radio"
+                        aria-checked={isChosen}
                         disabled={isApproving || isDeclining}
                         className={cn(
-                          "flex h-12 min-w-0 items-center gap-2.5 rounded-lg border border-transparent px-2 text-left transition-colors outline-none hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
-                          isChosen && "border-primary/45 bg-primary-soft",
+                          "flex h-12 min-w-0 items-center gap-2.5 rounded-lg border border-transparent px-2 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+                          isChosen ? "bg-row-selected" : "hover:bg-row-hover",
                         )}
                         onClick={() => setChosenKey(key)}
                       >
@@ -209,16 +216,22 @@ export function WebLoginPrompt() {
                               {entry.nickname}
                             </span>
                           </Hint>
-                          <span className="flex min-w-0 items-center gap-1 text-[0.7rem] text-faint">
+                          <span className="flex min-w-0 items-center gap-1 text-2xs text-faint">
                             <ProviderIcon type={entry.type} size={10} />
-                            <span className="truncate">
-                              {providerName(entry.type, t)}
-                            </span>
+                            <Hint
+                              content={providerName(entry.type, t)}
+                              variant="text"
+                              truncatedOnly
+                            >
+                              <span className="truncate">
+                                {providerName(entry.type, t)}
+                              </span>
+                            </Hint>
                           </span>
                         </span>
 
                         {isChosen && (
-                          <Check className="size-4 shrink-0 text-primary" />
+                          <Check className="size-4 shrink-0 text-foreground" />
                         )}
                       </button>
                     );
@@ -244,11 +257,17 @@ export function WebLoginPrompt() {
                     {chosenAccount.nickname}
                   </span>
                 </Hint>
-                <span className="flex min-w-0 items-center gap-1 text-[0.7rem] text-faint">
+                <span className="flex min-w-0 items-center gap-1 text-2xs text-faint">
                   <ProviderIcon type={chosenAccount.type} size={10} />
-                  <span className="truncate">
-                    {providerName(chosenAccount.type, t)}
-                  </span>
+                  <Hint
+                    content={providerName(chosenAccount.type, t)}
+                    variant="text"
+                    truncatedOnly
+                  >
+                    <span className="truncate">
+                      {providerName(chosenAccount.type, t)}
+                    </span>
+                  </Hint>
                 </span>
               </span>
             </div>
@@ -257,13 +276,13 @@ export function WebLoginPrompt() {
           <div className="flex flex-col items-center gap-1.5 rounded-lg border border-warning/40 bg-surface-2 px-3 py-2.5">
             {code ? (
               <>
-                <span className="text-[0.65rem] font-medium tracking-wide text-warning uppercase">
+                <span className="text-3xs font-medium tracking-wide text-warning uppercase">
                   {t("webLogin.codeLabel")}
                 </span>
                 <span className="font-mono text-2xl leading-none font-semibold tracking-[0.25em] tabular-nums select-all">
                   {code}
                 </span>
-                <span className="text-center text-[0.7rem] leading-4 text-muted-foreground">
+                <span className="text-center text-2xs leading-4 text-muted-foreground">
                   {t("webLogin.codeHint")}
                 </span>
               </>

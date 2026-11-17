@@ -5,11 +5,15 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { normalizeGroupName } from "./modGroups";
+import { Hint } from "@renderer/components/Hint";
+
+const MOD_GROUP_FORM_ID = "mod-group-form";
 
 export function ModGroupDialog({
   initialName,
@@ -33,13 +37,24 @@ export function ModGroupDialog({
         <DialogHeader className="min-w-0">
           <DialogTitle className="flex min-w-0 items-center gap-2">
             <Icon className="size-5 shrink-0" />
-            <span className="truncate">
-              {t(isRename ? "modGroups.renameTitle" : "modGroups.createTitle")}
-            </span>
+            <Hint
+              content={t(
+                isRename ? "modGroups.renameTitle" : "modGroups.createTitle",
+              )}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="truncate">
+                {t(
+                  isRename ? "modGroups.renameTitle" : "modGroups.createTitle",
+                )}
+              </span>
+            </Hint>
           </DialogTitle>
         </DialogHeader>
 
         <form
+          id={MOD_GROUP_FORM_ID}
           className="flex flex-col gap-3"
           onSubmit={(event) => {
             event.preventDefault();
@@ -56,10 +71,16 @@ export function ModGroupDialog({
             placeholder={t("modGroups.namePlaceholder")}
             onChange={(event) => setDraft(event.target.value)}
           />
-          <Button type="submit" disabled={!name}>
+        </form>
+
+        <DialogFooter>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+          <Button type="submit" form={MOD_GROUP_FORM_ID} disabled={!name}>
             {t(isRename ? "common.save" : "modGroups.create")}
           </Button>
-        </form>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

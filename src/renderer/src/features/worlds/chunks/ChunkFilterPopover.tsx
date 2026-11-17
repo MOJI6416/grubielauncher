@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Hint } from "@renderer/components/Hint";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
 import {
   CHUNK_FILTER_KINDS,
   ChunkFilter,
@@ -123,7 +124,7 @@ export function ChunkFilterPopover({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-[0.65rem] leading-4 text-muted-foreground">
+            <p className="text-3xs leading-4 text-muted-foreground">
               {t(`worldChunks.filter.hints.${kind}`)}
             </p>
           </div>
@@ -178,23 +179,20 @@ export function ChunkFilterPopover({
 
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">{t("worldChunks.filter.mode")}</Label>
-            <div className="flex gap-1">
-              {MODES.map((entry) => (
-                <button
-                  key={entry}
-                  type="button"
-                  aria-pressed={mode === entry}
-                  onClick={() => setMode(entry)}
-                  className="rounded-md bg-surface-3 px-2 py-1 text-[0.65rem] text-muted-foreground transition-colors hover:text-foreground aria-pressed:bg-primary-soft-raised aria-pressed:text-foreground"
-                >
-                  {t(`worldChunks.filter.modes.${entry}`)}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              value={mode}
+              stretch
+              ariaLabel={t("worldChunks.filter.mode")}
+              options={MODES.map((entry) => ({
+                value: entry,
+                label: t(`worldChunks.filter.modes.${entry}`),
+              }))}
+              onChange={setMode}
+            />
           </div>
 
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[0.65rem] text-faint">
+            <span className="text-3xs text-faint">
               {matched === null
                 ? t("worldChunks.filter.scannedOnly")
                 : t("worldChunks.filter.matched", { count: matched })}

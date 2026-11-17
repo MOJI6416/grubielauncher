@@ -1,4 +1,4 @@
-import { Database, Earth, Palette, Plug, Puzzle, Sparkles } from "lucide-react";
+import { Database, Earth, Palette, Plug, Puzzle, SunMoon } from "lucide-react";
 import {
   IProject,
   IVersion as ModVersion,
@@ -11,7 +11,7 @@ import { ContentEntry } from "./entries";
 export const PROJECT_TYPE_ICONS: Partial<Record<ProjectType, typeof Puzzle>> = {
   [ProjectType.MOD]: Puzzle,
   [ProjectType.RESOURCEPACK]: Palette,
-  [ProjectType.SHADER]: Sparkles,
+  [ProjectType.SHADER]: SunMoon,
   [ProjectType.DATAPACK]: Database,
   [ProjectType.WORLD]: Earth,
   [ProjectType.PLUGIN]: Plug,
@@ -70,36 +70,11 @@ export function ScopeButton({
           </span>
         )}
         {active && count != null && (
-          <span className="rounded-sm bg-surface-1 px-1 font-mono text-[0.6875rem] leading-4 tabular-nums text-foreground">
+          <span className="rounded-sm bg-surface-1 px-1 font-mono text-2xs leading-4 tabular-nums text-foreground">
             {count}
           </span>
         )}
       </button>
     </Hint>
-  );
-}
-
-export function EmptyState({
-  icon,
-  title,
-  description,
-  action,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="flex h-full min-h-0 w-full flex-col items-center justify-center px-8 text-center">
-      <div className="flex size-12 items-center justify-center rounded-xl bg-surface-3">
-        {icon}
-      </div>
-      <p className="mt-3 text-sm font-medium text-foreground">{title}</p>
-      <p className="mt-1 max-w-80 text-xs leading-5 text-balance text-muted-foreground">
-        {description}
-      </p>
-      {action && <div className="mt-4">{action}</div>}
-    </div>
   );
 }

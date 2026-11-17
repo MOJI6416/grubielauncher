@@ -1,3 +1,4 @@
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import {
   clearOverride,
   InstanceSettingsOverrides,
@@ -84,7 +85,7 @@ async function undoOverrides(
     return { ok: false, error: saveError };
   }
 
-  if ("java" in undo.values) await version.init().catch(() => {});
+  if ("java" in undo.values) await version.init().catch(ignoreFailure);
   refreshVersions();
   return { ok: true };
 }

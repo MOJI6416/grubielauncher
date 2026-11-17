@@ -47,7 +47,7 @@ function ProgressRing({ percent }: { percent: number | null }) {
         fill="none"
         strokeWidth="2"
         strokeLinecap="round"
-        className="stroke-primary transition-[stroke-dashoffset] duration-300 ease-swift"
+        className="stroke-info transition-[stroke-dashoffset] duration-300 ease-swift"
         strokeDasharray={
           percent === null ? `${dash} ${circumference}` : circumference
         }
@@ -86,14 +86,16 @@ export function TaskCenter() {
       ) : (
         <ProgressRing percent={percent} />
       )}
-      <span className="min-w-0 flex-1 truncate text-left text-xs text-muted-foreground">
-        {progress.versionName}
-      </span>
+      <Hint content={progress.versionName} variant="text" truncatedOnly>
+        <span className="min-w-0 flex-1 truncate text-left text-xs text-muted-foreground">
+          {progress.versionName}
+        </span>
+      </Hint>
       <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
         {percent === null ? "…" : `${percent}%`}
       </span>
       {queued.length > 0 && (
-        <span className="shrink-0 rounded bg-surface-3 px-1 font-mono text-[10px] tabular-nums text-faint">
+        <span className="shrink-0 rounded bg-surface-3 px-1 font-mono text-3xs tabular-nums text-faint">
           +{queued.length}
         </span>
       )}

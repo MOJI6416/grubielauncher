@@ -25,6 +25,7 @@ import {
   MicLevelTest,
   SpeakerTest,
 } from "./VoiceDeviceControls";
+import { Hint } from "@renderer/components/Hint";
 
 const api = window.api;
 
@@ -50,7 +51,7 @@ function Row({
             {title}
           </p>
           {description && (
-            <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+            <p className="mt-0.5 text-2xs leading-4 text-muted-foreground">
               {description}
             </p>
           )}
@@ -112,7 +113,7 @@ export function VoiceAudioPanel() {
   return (
     <div className="min-w-0 space-y-3">
       <div className="space-y-1.5">
-        <p className="flex items-center gap-2 text-[11px] font-medium tracking-wide text-faint uppercase">
+        <p className="flex items-center gap-2 text-2xs font-medium tracking-wide text-faint uppercase">
           <Mic className="size-3" />
           {t("voice.microphone")}
         </p>
@@ -121,7 +122,7 @@ export function VoiceAudioPanel() {
       </div>
 
       <div className="space-y-1.5">
-        <p className="flex items-center gap-2 text-[11px] font-medium tracking-wide text-faint uppercase">
+        <p className="flex items-center gap-2 text-2xs font-medium tracking-wide text-faint uppercase">
           <Speaker className="size-3" />
           {t("voice.speakers")}
         </p>
@@ -144,16 +145,26 @@ export function VoiceAudioPanel() {
         >
           {settings.voicePtt && (
             <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-2.5 py-1.5">
-              <span
-                className={cn(
-                  "min-w-0 truncate font-mono text-[11px]",
-                  settings.voicePttBind ? "text-foreground" : "text-warning",
-                )}
+              <Hint
+                content={
+                  settings.voicePttBind
+                    ? settings.voicePttBind.label
+                    : t("settings.voicePttKeyNone")
+                }
+                variant="text"
+                truncatedOnly
               >
-                {settings.voicePttBind
-                  ? settings.voicePttBind.label
-                  : t("settings.voicePttKeyNone")}
-              </span>
+                <span
+                  className={cn(
+                    "min-w-0 truncate font-mono text-2xs",
+                    settings.voicePttBind ? "text-foreground" : "text-warning",
+                  )}
+                >
+                  {settings.voicePttBind
+                    ? settings.voicePttBind.label
+                    : t("settings.voicePttKeyNone")}
+                </span>
+              </Hint>
               <Button
                 variant="outline"
                 size="xs"

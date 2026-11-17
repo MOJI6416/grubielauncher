@@ -29,6 +29,7 @@ import {
 import { SectionCard } from "./SectionCard";
 import { bumpInstanceDataRevision } from "./instanceRevision";
 import { moveJarMod, setJarModEnabled, withoutJarMod } from "./jarMods";
+import { Empty, EmptyDescription, EmptyMedia } from "@/components/ui/empty";
 
 const api = window.api;
 
@@ -224,14 +225,16 @@ export function JarModsPanel({
     <div className="flex h-full min-h-0 flex-col gap-2">
       <div className="flex h-7 shrink-0 items-center gap-2">
         <FileArchive className="size-3.5 shrink-0 text-faint" />
-        <span className="min-w-0 flex-1 truncate text-[0.68rem] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-          {t("jarMods.title")}
-        </span>
+        <Hint content={t("jarMods.title")} variant="text" truncatedOnly>
+          <span className="min-w-0 flex-1 truncate text-2xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
+            {t("jarMods.title")}
+          </span>
+        </Hint>
         <Button
           type="button"
           size="sm"
           variant="ghost"
-          className="h-6 px-2 text-[0.7rem] text-faint"
+          className="h-6 px-2 text-2xs text-faint"
           onClick={onClose}
         >
           <X />
@@ -246,7 +249,7 @@ export function JarModsPanel({
           action={
             <>
               {mods.length > 0 && (
-                <span className="shrink-0 font-mono text-[0.7rem] tabular-nums text-faint">
+                <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
                   {activeCount}/{mods.length}
                 </span>
               )}
@@ -269,20 +272,22 @@ export function JarModsPanel({
           bodyClassName="overflow-y-auto p-1.5"
         >
           {mods.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-              <FileArchive className="size-6 text-faint" />
-              <p className="max-w-80 text-xs leading-snug text-muted-foreground">
+            <Empty className="h-full gap-2 px-6">
+              <EmptyMedia variant="icon">
+                <FileArchive />
+              </EmptyMedia>
+              <EmptyDescription className="max-w-80 text-xs leading-snug">
                 {t("jarMods.list.empty")}
-              </p>
-            </div>
+              </EmptyDescription>
+            </Empty>
           ) : (
             <ol className="grid gap-px">
               {mods.map((mod, index) => (
                 <li
                   key={mod.file}
-                  className="flex h-10 min-w-0 items-center gap-2.5 rounded-md px-2 transition-colors hover:bg-surface-2"
+                  className="flex h-10 min-w-0 items-center gap-2.5 rounded-md px-2 transition-colors hover:bg-row-hover"
                 >
-                  <span className="w-5 shrink-0 text-right font-mono text-[0.7rem] tabular-nums text-faint">
+                  <span className="w-5 shrink-0 text-right font-mono text-2xs tabular-nums text-faint">
                     {index + 1}
                   </span>
                   <Switch
@@ -310,7 +315,7 @@ export function JarModsPanel({
                     </span>
                   </Hint>
                   {isMissing(mod) && (
-                    <span className="flex shrink-0 items-center gap-1 text-[0.7rem] text-destructive">
+                    <span className="flex shrink-0 items-center gap-1 text-2xs text-destructive">
                       <FileX className="size-3" />
                       {t("jarMods.list.missing")}
                     </span>
@@ -376,15 +381,29 @@ export function JarModsPanel({
                     {baseTitle}
                   </span>
                 </Hint>
-                <span className="truncate text-[0.7rem] text-muted-foreground">
-                  {mainJar
-                    ? isMissing(mainJar)
-                      ? t("jarMods.list.missing")
-                      : mainJar.enabled
-                        ? t("jarMods.base.replacing")
-                        : t("jarMods.base.replacementOff")
-                    : t("jarMods.base.vanillaHint")}
-                </span>
+                <Hint
+                  content={
+                    mainJar
+                      ? isMissing(mainJar)
+                        ? t("jarMods.list.missing")
+                        : mainJar.enabled
+                          ? t("jarMods.base.replacing")
+                          : t("jarMods.base.replacementOff")
+                      : t("jarMods.base.vanillaHint")
+                  }
+                  variant="text"
+                  truncatedOnly
+                >
+                  <span className="truncate text-2xs text-muted-foreground">
+                    {mainJar
+                      ? isMissing(mainJar)
+                        ? t("jarMods.list.missing")
+                        : mainJar.enabled
+                          ? t("jarMods.base.replacing")
+                          : t("jarMods.base.replacementOff")
+                      : t("jarMods.base.vanillaHint")}
+                  </span>
+                </Hint>
               </div>
               {mainJar && (
                 <Switch
@@ -415,7 +434,13 @@ export function JarModsPanel({
                 ) : (
                   <Replace />
                 )}
-                <span className="truncate">{t("jarMods.base.replace")}</span>
+                <Hint
+                  content={t("jarMods.base.replace")}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <span className="truncate">{t("jarMods.base.replace")}</span>
+                </Hint>
               </Button>
               {mainJar && (
                 <Button
@@ -427,7 +452,15 @@ export function JarModsPanel({
                   onClick={() => void restoreVanilla()}
                 >
                   <Undo2 />
-                  <span className="truncate">{t("jarMods.base.restore")}</span>
+                  <Hint
+                    content={t("jarMods.base.restore")}
+                    variant="text"
+                    truncatedOnly
+                  >
+                    <span className="truncate">
+                      {t("jarMods.base.restore")}
+                    </span>
+                  </Hint>
                 </Button>
               )}
             </div>

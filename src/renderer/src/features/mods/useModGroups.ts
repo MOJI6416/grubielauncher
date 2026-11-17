@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EMPTY_GROUPS, type ModGroupsFile, parseGroupsFile } from "./modGroups";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -25,7 +26,7 @@ export function useModGroups(instancePath: string | undefined): {
 
     void (async () => {
       const raw = (await api.fs.pathExists(file))
-        ? await api.fs.readJSON(file).catch(() => null)
+        ? ((await api.fs.readJSON(file).catch(ignoreFailure)) ?? null)
         : null;
       if (!cancelled) setGroups(parseGroupsFile(raw));
     })();
@@ -45,8 +46,8 @@ export function useModGroups(instancePath: string | undefined): {
 
       const { folder, file } = groupsPaths(instancePath);
       const saved =
-        (await api.fs.ensure(folder).catch(() => false)) &&
-        (await api.fs.writeJSON(file, next).catch(() => false));
+        (await api.fs.ensure(folder).catch(ignoreFailure)) === true &&
+        (await api.fs.writeJSON(file, next).catch(ignoreFailure)) === true;
       return saved;
     },
     [instancePath],

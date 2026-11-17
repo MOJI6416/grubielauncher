@@ -35,7 +35,6 @@ import {
   aiCrashesAtom,
   settingsAtom,
 } from "@renderer/stores/atoms";
-import { toast } from "sonner";
 import { askAgent } from "@renderer/features/agent/openAgent";
 import { agentBlockReason } from "@renderer/navigation/access";
 import { Hint } from "@renderer/components/Hint";
@@ -45,6 +44,9 @@ import { describeExitCode } from "@renderer/features/logs/runs";
 import { formatBytes } from "@renderer/utilities/file";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { showFailureToast } from "@renderer/utilities/failures";
+import { formatNumber } from "@renderer/utilities/numbers";
 
 const api = window.api;
 
@@ -122,7 +124,7 @@ export function AiCrashAnalysis({
               crash.versionName,
               crash.instance,
             )
-            .catch(() => null);
+            .catch(ignoreFailure);
 
           if (refreshed) {
             setRequest(refreshed);
@@ -241,7 +243,7 @@ export function AiCrashAnalysis({
         versionName,
         instance,
       )
-      .catch(() => null);
+      .catch(ignoreFailure);
 
     if (!prepared) {
       setErrorReason("noLog");
@@ -278,7 +280,9 @@ export function AiCrashAnalysis({
     if (sent.counted || sent.ok) return;
 
     setFeedback(null);
-    toast.error(t("aiCrash.feedbackFailed"));
+    showFailureToast(t("aiCrash.feedbackFailed"), undefined, {
+      channels: ["ai:"],
+    });
   };
 
   const copyAnalysis = useCallback(async () => {
@@ -313,7 +317,7 @@ export function AiCrashAnalysis({
     const rows: { label: string; value: string }[] = [
       {
         label: t("aiCrash.fact.chars"),
-        value: request.log.length.toLocaleString(i18n.resolvedLanguage || "en"),
+        value: formatNumber(request.log.length, i18n.resolvedLanguage || "en"),
       },
       {
         label: t("aiCrash.fact.mods"),
@@ -385,9 +389,11 @@ export function AiCrashAnalysis({
             </div>
 
             <div className="min-w-0 flex-1">
-              <DialogTitle className="truncate text-sm">
-                {t("aiCrash.title")}
-              </DialogTitle>
+              <Hint content={t("aiCrash.title")} variant="text" truncatedOnly>
+                <DialogTitle className="truncate text-sm">
+                  {t("aiCrash.title")}
+                </DialogTitle>
+              </Hint>
 
               <div className="mt-0.5 flex min-w-0 items-center gap-1.5 pr-10">
                 <Hint content={versionName} variant="text" truncatedOnly>
@@ -400,7 +406,7 @@ export function AiCrashAnalysis({
                   <Badge
                     variant="outline"
                     className={cn(
-                      "shrink-0 text-[0.65rem] font-normal",
+                      "shrink-0 text-3xs font-normal",
                       CONFIDENCE_TONE[analysis.confidence],
                     )}
                   >
@@ -423,7 +429,7 @@ export function AiCrashAnalysis({
               </div>
 
               <div className="shrink-0 rounded-xl border border-border bg-surface-2 p-3">
-                <h3 className="mb-2 text-[0.7rem] font-medium tracking-wide text-faint uppercase">
+                <h3 className="mb-2 text-2xs font-medium tracking-wide text-faint uppercase">
                   {t("aiCrash.sentItems")}
                 </h3>
 
@@ -540,7 +546,7 @@ export function AiCrashAnalysis({
                           </Hint>
                         </>
                       ) : (
-                        <span className="text-[0.7rem] text-faint">
+                        <span className="text-2xs text-faint">
                           {t("aiCrash.feedbackSent")}
                         </span>
                       )
@@ -551,13 +557,13 @@ export function AiCrashAnalysis({
 
               {analysis.steps.length > 0 && (
                 <div className="grid min-w-0 shrink-0 gap-2 rounded-xl border border-border bg-surface-2 p-3">
-                  <h3 className="text-[0.7rem] font-medium tracking-wide text-faint uppercase">
+                  <h3 className="text-2xs font-medium tracking-wide text-faint uppercase">
                     {t("aiCrash.steps")}
                   </h3>
                   <ol className="grid min-w-0 gap-1.5">
                     {analysis.steps.map((step, index) => (
                       <li key={index} className="flex min-w-0 gap-2">
-                        <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border border-border font-mono text-[0.65rem] tabular-nums text-faint">
+                        <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border border-border font-mono text-3xs tabular-nums text-faint">
                           {index + 1}
                         </span>
                         <span className="min-w-0 flex-1 text-sm leading-snug [overflow-wrap:anywhere] hyphens-auto">
@@ -569,30 +575,62 @@ export function AiCrashAnalysis({
                 </div>
               )}
 
-              <p className="shrink-0 text-[0.7rem] text-faint">
+              <p className="shrink-0 text-2xs text-faint">
                 {t("aiCrash.disclaimer")}
               </p>
             </>
           )}
 
+          {((request && stage !== "loading") ||
+            request?.reportPath ||
+            (stage !== "result" && versionName && !agentBlocked)) && (
+            <div className="flex shrink-0 flex-wrap items-center gap-1">
+              {request && stage !== "loading" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-1.5 text-2xs text-faint"
+                  onClick={() => setShowLog((value) => !value)}
+                >
+                  <FileText className="size-3.5" />
+                  {showLog
+                    ? t("aiCrash.hideLog")
+                    : stage === "consent"
+                      ? t("aiCrash.showLog")
+                      : t("aiCrash.showSentLog")}
+                </Button>
+              )}
+
+              {request?.reportPath && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-1.5 text-2xs text-faint"
+                  onClick={() => void api.shell.openPath(request.reportPath!)}
+                >
+                  <FileText className="size-3.5" />
+                  {t("crash.openReport")}
+                </Button>
+              )}
+
+              {stage !== "result" && versionName && !agentBlocked && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-1.5 text-2xs text-faint"
+                  onClick={handOverToAgent}
+                >
+                  <Sparkles className="size-3.5" />
+                  {t("aiCrash.askAgent")}
+                </Button>
+              )}
+            </div>
+          )}
+
           {request && stage !== "loading" && (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 shrink-0 self-start px-1.5 text-[0.7rem] text-faint"
-                onClick={() => setShowLog((value) => !value)}
-              >
-                <FileText className="size-3.5" />
-                {showLog
-                  ? t("aiCrash.hideLog")
-                  : stage === "consent"
-                    ? t("aiCrash.showLog")
-                    : t("aiCrash.showSentLog")}
-              </Button>
-
               {showLog && (
-                <pre className="max-h-44 shrink-0 overflow-auto rounded-lg border border-border bg-surface-1 p-2.5 font-mono text-[0.65rem] leading-relaxed break-all whitespace-pre-wrap text-muted-foreground">
+                <pre className="max-h-44 shrink-0 overflow-auto rounded-lg border border-border bg-surface-1 p-2.5 font-mono text-3xs leading-relaxed break-all whitespace-pre-wrap text-muted-foreground">
                   {redact.text(request.log)}
                 </pre>
               )}
@@ -600,33 +638,7 @@ export function AiCrashAnalysis({
           )}
         </div>
 
-        <DialogFooter className="m-0 shrink-0 flex-row flex-wrap items-center gap-2 border-t border-border bg-surface-1 px-4 py-3 sm:justify-between">
-          <div className="flex min-w-0 items-center gap-1">
-            {request?.reportPath && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground"
-                onClick={() => void api.shell.openPath(request.reportPath!)}
-              >
-                <FileText className="size-3.5" />
-                {t("crash.openReport")}
-              </Button>
-            )}
-
-            {stage !== "result" && versionName && !agentBlocked && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground"
-                onClick={handOverToAgent}
-              >
-                <Sparkles className="size-3.5" />
-                {t("aiCrash.askAgent")}
-              </Button>
-            )}
-          </div>
-
+        <DialogFooter className="m-0 shrink-0 flex-row flex-wrap items-center justify-end gap-2 border-t border-border bg-surface-1 px-4 py-3">
           <div className="flex items-center gap-2">
             <Button variant="secondary" className="min-w-24" onClick={onClose}>
               {t("common.close")}

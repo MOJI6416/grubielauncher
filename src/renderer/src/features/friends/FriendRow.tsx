@@ -3,7 +3,6 @@ import type { TFunction } from "i18next";
 import {
   CalendarClock,
   Copy,
-  Gamepad2,
   Headphones,
   PhoneCall,
   Play,
@@ -147,8 +146,8 @@ function FriendRowComponent({
         <div
           className={cn(
             "group flex h-12 w-full min-w-0 items-center gap-2 rounded-lg border border-transparent px-2 transition-colors",
-            isActive ? "border-primary/40 bg-surface-3" : "hover:bg-surface-3",
-            "has-[[data-state=open]]:bg-surface-3",
+            isActive ? "bg-row-selected" : "hover:bg-row-hover",
+            "has-[[data-state=open]]:bg-row-hover",
           )}
         >
           <button
@@ -205,7 +204,7 @@ function FriendRowComponent({
               <Hint content={detail} variant="text" truncatedOnly>
                 <span
                   className={cn(
-                    "min-w-0 truncate text-[11px] leading-4",
+                    "min-w-0 truncate text-2xs leading-4",
                     detailKind === "typing"
                       ? "text-foreground"
                       : detailKind === "preview" && unread > 0
@@ -246,7 +245,7 @@ function FriendRowComponent({
             )}
             {unread > 0 && (
               <span
-                className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-soft-raised px-1 font-mono text-[10px] leading-none tabular-nums text-primary"
+                className="flex h-4 min-w-4 items-center justify-center rounded-full bg-info/15 px-1 font-mono text-3xs leading-none tabular-nums text-info"
                 aria-label={t("friends.newMessage")}
               >
                 {unread > 99 ? "99+" : unread}
@@ -269,7 +268,7 @@ function FriendRowComponent({
 
         {presence.hasJoinTarget && (
           <ContextMenuItem disabled={!canJoin} onSelect={() => onJoin(id)}>
-            <Gamepad2 size={18} />
+            <Play size={18} />
             {t("friends.join")}
           </ContextMenuItem>
         )}

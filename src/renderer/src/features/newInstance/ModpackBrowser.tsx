@@ -9,7 +9,6 @@ import {
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { SiCurseforge, SiModrinth } from "react-icons/si";
 import {
   CircleAlert,
   Download,
@@ -49,15 +48,26 @@ import {
   useCatalogMeta,
   useCatalogSearch,
 } from "@renderer/features/mods/useCatalogSearch";
-import {
-  formatCompactNumber,
-  formatDate,
-} from "@renderer/features/mods/format";
+import { formatDate } from "@renderer/features/mods/format";
+import { formatCompactNumber } from "@renderer/utilities/numbers";
 import { cn } from "@/lib/utils";
 import type { ModpackDownloadStage } from "./downloadModpack";
 import { PackStageProgress } from "./PackStageProgress";
 import { useEntranceWave } from "@renderer/utilities/useEntranceWave";
 import { ListSkeleton } from "@renderer/components/ListSkeleton";
+import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { SortMenu } from "@renderer/components/SortMenu";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const api = window.api;
 
@@ -83,6 +93,10 @@ const EMPTY_DETAIL: DetailState = {
   failed: false,
   loadFailed: false,
 };
+
+function providerName(provider: Provider): string {
+  return provider === Provider.CURSEFORGE ? "CurseForge" : "Modrinth";
+}
 
 export function ModpackBrowser({
   isBusy,
@@ -152,7 +166,7 @@ export function ModpackBrowser({
       .then((list) => {
         if (!cancelled) setGameVersions(list ?? []);
       })
-      .catch(() => undefined);
+      .catch(ignoreFailure);
 
     return () => {
       cancelled = true;
@@ -214,10 +228,12 @@ export function ModpackBrowser({
             version: gameVersion || undefined,
             modUrl: project.url,
           })
-          .catch(() => [] as IProjectVersion[]),
+          .catch(ignoreFailure)
+          .then((list): IProjectVersion[] => list ?? []),
         api.modManager
           .getProject(project.provider, project.id)
-          .catch(() => null),
+          .catch(ignoreFailure)
+          .then((value) => value ?? null),
       ]);
 
       if (requestId !== detailRequestRef.current) return;
@@ -257,36 +273,27 @@ export function ModpackBrowser({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
       <div className="flex shrink-0 items-center gap-2">
-        <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5">
-          {[Provider.CURSEFORGE, Provider.MODRINTH].map((item) => (
-            <button
-              key={item}
-              type="button"
-              aria-pressed={provider === item}
-              disabled={isBusy}
-              onClick={() => {
-                if (item !== provider) setAuthor(null);
-                setProvider(item);
-                if (
-                  item !== Provider.MODRINTH &&
-                  loader &&
-                  MODRINTH_ONLY_LOADERS.includes(loader)
-                ) {
-                  setLoader(undefined);
-                }
-              }}
-              className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:text-foreground aria-pressed:bg-surface-3 aria-pressed:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {item === Provider.CURSEFORGE ? (
-                <SiCurseforge className="size-4" />
-              ) : (
-                <SiModrinth className="size-4" />
-              )}
-              {provider === item &&
-                (item === Provider.CURSEFORGE ? "CurseForge" : "Modrinth")}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          value={provider}
+          disabled={isBusy}
+          ariaLabel={t("modManager.source")}
+          options={[Provider.CURSEFORGE, Provider.MODRINTH].map((item) => ({
+            value: item,
+            label: providerName(item),
+            icon: <ContentProviderIcon provider={item} className="size-4" />,
+          }))}
+          onChange={(item) => {
+            if (item !== provider) setAuthor(null);
+            setProvider(item);
+            if (
+              item !== Provider.MODRINTH &&
+              loader &&
+              MODRINTH_ONLY_LOADERS.includes(loader)
+            ) {
+              setLoader(undefined);
+            }
+          }}
+        />
 
         <div className="relative min-w-28 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-faint" />
@@ -345,18 +352,15 @@ export function ModpackBrowser({
           </SelectContent>
         </Select>
 
-        <Select value={sort} disabled={isBusy} onValueChange={setSort}>
-          <SelectTrigger size="sm" className="w-40 shrink-0">
-            <SelectValue placeholder={t("modManager.sort")} />
-          </SelectTrigger>
-          <SelectContent>
-            {meta.sorts.map((value) => (
-              <SelectItem key={value} value={value}>
-                {t(`modManager.sorts.${value}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SortMenu
+          value={sort}
+          disabled={isBusy || meta.sorts.length === 0}
+          options={meta.sorts.map((value) => ({
+            value,
+            label: t(`modManager.sorts.${value}`),
+          }))}
+          onChange={setSort}
+        />
       </div>
 
       {author && (
@@ -388,34 +392,46 @@ export function ModpackBrowser({
                 iconClassName="size-11 rounded-lg"
               />
             ) : items.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
-                <span className="flex size-11 items-center justify-center rounded-xl bg-surface-2">
-                  {catalog.error || offlineReason ? (
-                    <CircleAlert className="size-5 text-destructive" />
-                  ) : (
-                    <Search className="size-5 text-faint" />
-                  )}
-                </span>
-                <p className="text-sm font-medium text-foreground">
-                  {offlineReason
-                    ? t("shell.offline.internet")
-                    : catalog.error
-                      ? t("modManager.searchFailedTitle")
-                      : t("common.notFound")}
-                </p>
-                <p className="max-w-64 text-xs text-muted-foreground">
-                  {offlineReason ??
-                    (catalog.error
-                      ? t("modManager.searchFailed")
-                      : t("modManager.notFoundHint"))}
-                </p>
+              <Empty className="h-full px-8">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    {catalog.error || offlineReason ? (
+                      <CircleAlert className="text-destructive" />
+                    ) : (
+                      <Search />
+                    )}
+                  </EmptyMedia>
+                  <EmptyTitle>
+                    {offlineReason
+                      ? t("shell.offline.internet")
+                      : catalog.error
+                        ? t("modManager.searchFailedSource", {
+                            source: providerName(provider),
+                          })
+                        : t("common.notFound")}
+                  </EmptyTitle>
+                  <EmptyDescription className="max-w-64 text-xs">
+                    {offlineReason ??
+                      (catalog.error
+                        ? t("modManager.searchFailedSourceHint")
+                        : query.trim() || author
+                          ? t("modManager.notFoundHint")
+                          : t("newInstance.modpacksNoneForFilters"))}
+                  </EmptyDescription>
+                </EmptyHeader>
                 {catalog.error && !offlineReason && (
-                  <Button size="sm" variant="outline" onClick={catalog.reload}>
-                    <RotateCw />
-                    {t("common.retry")}
-                  </Button>
+                  <EmptyContent>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={catalog.reload}
+                    >
+                      <RotateCw />
+                      {t("common.retry")}
+                    </Button>
+                  </EmptyContent>
                 )}
-              </div>
+              </Empty>
             ) : (
               <div
                 className={cn("relative w-full", isResultWave && "result-wave")}
@@ -449,7 +465,7 @@ export function ModpackBrowser({
                         } as CSSProperties
                       }
                       onClick={() => void openDetail(project)}
-                      className="absolute top-0 left-0 flex w-full items-center gap-2.5 rounded-xl px-2 text-left transition-colors hover:bg-surface-2 aria-selected:bg-primary-soft disabled:cursor-not-allowed"
+                      className="absolute top-0 left-0 flex w-full items-center gap-2.5 rounded-xl px-2 text-left transition-colors hover:bg-row-hover aria-selected:bg-row-selected disabled:cursor-not-allowed"
                     >
                       <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-surface-2">
                         {project.iconUrl ? (
@@ -464,21 +480,34 @@ export function ModpackBrowser({
                         )}
                       </span>
 
-                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate text-sm font-medium text-foreground">
-                          {project.title}
+                      <Hint
+                        variant="text"
+                        truncatedOnly
+                        content={
+                          <span className="flex flex-col gap-0.5">
+                            <span className="font-medium">{project.title}</span>
+                            {project.description && (
+                              <span>{project.description}</span>
+                            )}
+                          </span>
+                        }
+                      >
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="truncate text-sm font-medium text-foreground">
+                            {project.title}
+                          </span>
+                          <span className="truncate text-xs text-muted-foreground">
+                            {project.author && (
+                              <span className="text-faint">
+                                {project.author.name} ·{" "}
+                              </span>
+                            )}
+                            {project.description}
+                          </span>
                         </span>
-                        <span className="truncate text-xs text-muted-foreground">
-                          {project.author && (
-                            <span className="text-faint">
-                              {project.author.name} ·{" "}
-                            </span>
-                          )}
-                          {project.description}
-                        </span>
-                      </span>
+                      </Hint>
 
-                      <span className="flex shrink-0 flex-col items-end gap-0.5 text-[0.7rem] text-faint">
+                      <span className="flex shrink-0 flex-col items-end gap-0.5 text-2xs text-faint">
                         {downloads && (
                           <span className="flex items-center gap-1 font-mono tabular-nums">
                             <Download className="size-3" />
@@ -495,7 +524,7 @@ export function ModpackBrowser({
           </div>
 
           {catalog.isLoadingMore && (
-            <div className="flex h-7 shrink-0 items-center justify-center gap-2 border-t border-border text-[0.7rem] text-muted-foreground">
+            <div className="flex h-7 shrink-0 items-center justify-center gap-2 border-t border-border text-2xs text-muted-foreground">
               <Loader2 className="size-3 animate-spin" />
               {t("common.searching")}
             </div>
@@ -504,12 +533,16 @@ export function ModpackBrowser({
 
         <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-surface-1">
           {!detail.project ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-              <Package className="size-6 text-faint" />
-              <p className="text-xs text-muted-foreground">
-                {t("newInstance.pickModpackHint")}
-              </p>
-            </div>
+            <Empty className="h-full px-6">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Package />
+                </EmptyMedia>
+                <EmptyDescription className="text-xs">
+                  {t("newInstance.pickModpackHint")}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
             <>
               <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -527,7 +560,7 @@ export function ModpackBrowser({
                       className="size-full object-cover transition-opacity group-hover:opacity-85"
                     />
                     {detail.project.gallery.length > 1 && (
-                      <span className="absolute right-2 bottom-2 flex items-center gap-1 rounded-md border border-border bg-surface-1/90 px-1.5 py-0.5 text-[0.65rem] text-muted-foreground">
+                      <span className="absolute right-2 bottom-2 flex items-center gap-1 rounded-md border border-border bg-surface-1/90 px-1.5 py-0.5 text-3xs text-muted-foreground">
                         <Images className="size-3" />
                         <span className="font-mono tabular-nums">
                           {detail.project.gallery.length}
@@ -569,12 +602,11 @@ export function ModpackBrowser({
                         {detail.project.title}
                       </span>
                     </Hint>
-                    <span className="flex items-center gap-2 text-[0.7rem] text-faint">
-                      {detail.project.provider === Provider.CURSEFORGE ? (
-                        <SiCurseforge className="size-3 text-[#f16436]" />
-                      ) : (
-                        <SiModrinth className="size-3 text-[#1bd96a]" />
-                      )}
+                    <span className="flex items-center gap-2 text-2xs text-faint">
+                      <ContentProviderIcon
+                        provider={detail.project.provider}
+                        className="size-3"
+                      />
                       {detail.project.author && (
                         <Hint
                           content={t("modManager.authorProjects", {
@@ -656,9 +688,11 @@ export function ModpackBrowser({
                         <dt className="shrink-0 text-xs text-muted-foreground">
                           {row.label}
                         </dt>
-                        <dd className="ml-auto min-w-0 truncate font-mono text-xs tabular-nums text-foreground">
-                          {row.value}
-                        </dd>
+                        <Hint content={row.value} variant="text" truncatedOnly>
+                          <dd className="ml-auto min-w-0 truncate font-mono text-xs tabular-nums text-foreground">
+                            {row.value}
+                          </dd>
+                        </Hint>
                       </div>
                     ))}
                 </dl>
@@ -666,8 +700,9 @@ export function ModpackBrowser({
 
               <div className="shrink-0 border-t border-border p-2.5">
                 {detail.isLoading ? (
-                  <div className="flex h-16 items-center justify-center">
-                    <Loader2 className="size-4 animate-spin text-faint" />
+                  <div aria-hidden className="grid gap-2">
+                    <Skeleton className="h-8 w-full rounded-lg" />
+                    <Skeleton className="h-9 w-full rounded-lg" />
                   </div>
                 ) : detail.failed ? (
                   <div className="grid gap-2">
@@ -727,9 +762,15 @@ export function ModpackBrowser({
                         }}
                       >
                         <HardDriveDownload />
-                        <span className="min-w-0 truncate">
-                          {t("newInstance.useModpack")}
-                        </span>
+                        <Hint
+                          content={t("newInstance.useModpack")}
+                          variant="text"
+                          truncatedOnly
+                        >
+                          <span className="min-w-0 truncate">
+                            {t("newInstance.useModpack")}
+                          </span>
+                        </Hint>
                       </Button>
                     )}
                   </div>

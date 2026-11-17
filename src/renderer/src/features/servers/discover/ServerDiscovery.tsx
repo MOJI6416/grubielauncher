@@ -47,7 +47,16 @@ import { LoaderLabel } from "@renderer/components/Loaders";
 import { ListSkeleton } from "@renderer/components/ListSkeleton";
 import { useEntranceWave } from "@renderer/utilities/useEntranceWave";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
-import { formatCompactNumber } from "@renderer/features/mods/format";
+import { formatCompactNumber, formatNumber } from "@renderer/utilities/numbers";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { SortMenu } from "@renderer/components/SortMenu";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { PingBars, StatusDot } from "../ServerVisuals";
 import { useServerStatuses } from "../useServerStatuses";
 import {
@@ -119,7 +128,7 @@ export function ServerDiscovery({
       .then((list) => {
         if (!cancelled) setGameVersions(list ?? []);
       })
-      .catch(() => undefined);
+      .catch(ignoreFailure);
 
     return () => {
       cancelled = true;
@@ -209,7 +218,7 @@ export function ServerDiscovery({
         if (cancelled || !images) return;
         setGalleries((prev) => ({ ...prev, [activeServerId]: images }));
       })
-      .catch(() => undefined);
+      .catch(ignoreFailure);
 
     return () => {
       cancelled = true;
@@ -311,22 +320,15 @@ export function ServerDiscovery({
           />
         </div>
 
-        <Select
+        <SortMenu
           value={sort}
           disabled={isBusy}
-          onValueChange={(value) => setSort(value as ModrinthServerSort)}
-        >
-          <SelectTrigger size="sm" className="w-40 shrink-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {MODRINTH_SERVER_SORTS.map((value) => (
-              <SelectItem key={value} value={value}>
-                {t(`servers.discover.sort.${value}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          options={MODRINTH_SERVER_SORTS.map((value) => ({
+            value,
+            label: t(`servers.discover.sort.${value}`),
+          }))}
+          onChange={setSort}
+        />
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_20rem] gap-3">
@@ -347,31 +349,33 @@ export function ServerDiscovery({
                 iconClassName="size-10 rounded-lg"
               />
             ) : items.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
-                <span className="flex size-11 items-center justify-center rounded-xl bg-surface-2">
-                  {discovery.error || offlineReason ? (
-                    <CircleAlert className="size-5 text-destructive" />
-                  ) : (
-                    <Search className="size-5 text-faint" />
-                  )}
-                </span>
-                <p className="text-sm font-medium text-foreground">
-                  {offlineReason
-                    ? t("shell.offline.internet")
-                    : discovery.error
-                      ? t("servers.discover.failedTitle")
-                      : t("servers.discover.emptyTitle")}
-                </p>
-                <p className="max-w-72 text-xs text-muted-foreground">
-                  {offlineReason ??
-                    (discovery.error
-                      ? t("servers.discover.failedHint")
-                      : isCompatible && instance
-                        ? t("servers.discover.compatibleEmptyHint", {
-                            version: instance.gameVersion,
-                          })
-                        : t("servers.discover.emptyHint"))}
-                </p>
+              <Empty className="h-full border-0 bg-transparent">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    {discovery.error || offlineReason ? (
+                      <CircleAlert className="text-destructive" />
+                    ) : (
+                      <Search />
+                    )}
+                  </EmptyMedia>
+                  <EmptyTitle>
+                    {offlineReason
+                      ? t("shell.offline.internet")
+                      : discovery.error
+                        ? t("servers.discover.failedTitle")
+                        : t("servers.discover.emptyTitle")}
+                  </EmptyTitle>
+                  <EmptyDescription>
+                    {offlineReason ??
+                      (discovery.error
+                        ? t("servers.discover.failedHintSource")
+                        : isCompatible && instance
+                          ? t("servers.discover.compatibleEmptyHint", {
+                              version: instance.gameVersion,
+                            })
+                          : t("servers.discover.emptyHint"))}
+                  </EmptyDescription>
+                </EmptyHeader>
                 {discovery.error && !offlineReason ? (
                   <Button
                     size="sm"
@@ -392,7 +396,7 @@ export function ServerDiscovery({
                     </Button>
                   )
                 )}
-              </div>
+              </Empty>
             ) : (
               <div
                 role="listbox"
@@ -423,10 +427,7 @@ export function ServerDiscovery({
                       }
                       onClick={() => setActiveId(server.id)}
                       className={cn(
-                        "absolute top-0 left-0 flex w-full items-center gap-2.5 rounded-lg px-2 text-left transition-colors aria-selected:bg-primary-soft",
-                        tone === "card"
-                          ? "hover:bg-surface-3"
-                          : "hover:bg-surface-2",
+                        "absolute top-0 left-0 flex w-full items-center gap-2.5 rounded-lg px-2 text-left transition-colors hover:bg-row-hover aria-selected:bg-row-selected",
                       )}
                     >
                       <ServerArt
@@ -437,24 +438,34 @@ export function ServerDiscovery({
 
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span className="flex min-w-0 items-center gap-1.5">
-                          <span className="min-w-0 truncate text-sm font-medium text-foreground">
-                            {server.name}
-                          </span>
+                          <Hint content={server.name} variant="text" truncatedOnly>
+                            <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                              {server.name}
+                            </span>
+                          </Hint>
                           {server.content.kind === "modpack" && (
-                            <span className="shrink-0 rounded bg-surface-3 px-1.5 text-[0.65rem] leading-4 text-muted-foreground">
+                            <span className="shrink-0 rounded bg-surface-3 px-1.5 text-3xs leading-4 text-muted-foreground">
                               {t("servers.discover.modpack")}
                             </span>
                           )}
                           {fit && fit !== "ready" && (
-                            <TriangleAlert
-                              className="size-3 shrink-0 text-warning"
-                              aria-label={t(`servers.discover.fitShort.${fit}`)}
-                            />
+                            <Hint content={t(`servers.discover.fitShort.${fit}`)}>
+                              <TriangleAlert
+                                className="size-3 shrink-0 text-warning"
+                                aria-label={t(`servers.discover.fitShort.${fit}`)}
+                              />
+                            </Hint>
                           )}
                         </span>
-                        <span className="truncate text-xs text-muted-foreground">
-                          {server.summary || server.address}
-                        </span>
+                        <Hint
+                          content={server.summary || server.address}
+                          variant="text"
+                          truncatedOnly
+                        >
+                          <span className="truncate text-xs text-muted-foreground">
+                            {server.summary || server.address}
+                          </span>
+                        </Hint>
                       </span>
 
                       <span className="flex shrink-0 flex-col items-end gap-1">
@@ -482,7 +493,7 @@ export function ServerDiscovery({
           </div>
 
           {discovery.isLoadingMore && (
-            <div className="flex h-7 shrink-0 items-center justify-center gap-2 border-t border-border text-[0.7rem] text-muted-foreground">
+            <div className="flex h-7 shrink-0 items-center justify-center gap-2 border-t border-border text-2xs text-muted-foreground">
               <Loader2 className="size-3 animate-spin" />
               {t("common.searching")}
             </div>
@@ -496,12 +507,16 @@ export function ServerDiscovery({
           )}
         >
           {!active ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-              <ServerIcon className="size-6 text-faint" />
-              <p className="text-xs text-muted-foreground">
-                {t("servers.discover.pickHint")}
-              </p>
-            </div>
+            <Empty className="h-full border-0 bg-transparent">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <ServerIcon />
+                </EmptyMedia>
+                <EmptyDescription>
+                  {t("servers.discover.pickHint")}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
             <>
               <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -519,7 +534,7 @@ export function ServerDiscovery({
                       className="size-full object-cover transition-opacity group-hover:opacity-85"
                     />
                     {activeGallery.length > 1 && (
-                      <span className="absolute right-2 bottom-2 flex items-center gap-1 rounded-md border border-border bg-surface-1/90 px-1.5 py-0.5 text-[0.65rem] text-muted-foreground">
+                      <span className="absolute right-2 bottom-2 flex items-center gap-1 rounded-md border border-border bg-surface-1/90 px-1.5 py-0.5 text-3xs text-muted-foreground">
                         <Images className="size-3" />
                         <span className="font-mono tabular-nums">
                           {activeGallery.length}
@@ -556,7 +571,7 @@ export function ServerDiscovery({
                         variant="text"
                         truncatedOnly
                       >
-                        <span className="min-w-0 truncate font-mono text-[0.7rem] text-muted-foreground">
+                        <span className="min-w-0 truncate font-mono text-2xs text-muted-foreground">
                           {active.address}
                         </span>
                       </Hint>
@@ -600,7 +615,7 @@ export function ServerDiscovery({
                       <span
                         key={category}
                         className={cn(
-                          "rounded-md px-1.5 py-0.5 text-[0.68rem] text-muted-foreground",
+                          "rounded-md px-1.5 py-0.5 text-2xs text-muted-foreground",
                           raised,
                         )}
                       >
@@ -675,9 +690,15 @@ export function ServerDiscovery({
                         <dt className="shrink-0 text-xs text-muted-foreground">
                           {row.label}
                         </dt>
-                        <dd className="ml-auto min-w-0 truncate font-mono text-xs tabular-nums text-foreground">
-                          {row.value}
-                        </dd>
+                        <Hint
+                          content={row.value ?? undefined}
+                          variant="text"
+                          truncatedOnly
+                        >
+                          <dd className="ml-auto min-w-0 truncate font-mono text-xs tabular-nums text-foreground">
+                            {row.value}
+                          </dd>
+                        </Hint>
                       </div>
                     ))}
                 </dl>
@@ -695,11 +716,7 @@ export function ServerDiscovery({
 }
 
 function formatCount(value: number, language: string): string {
-  try {
-    return new Intl.NumberFormat(language).format(value);
-  } catch {
-    return String(value);
-  }
+  return formatNumber(value, language);
 }
 
 function ServerArt({
@@ -768,19 +785,31 @@ function ServerContentCard({
       </span>
 
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-xs font-medium text-foreground">
-          {content.kind === "modpack"
-            ? content.title || t("servers.discover.packOf")
-            : t("servers.discover.vanilla")}
-        </span>
-        <span className="flex min-w-0 items-center gap-1.5 text-[0.68rem] text-faint">
+        <Hint
+          content={
+            content.kind === "modpack"
+              ? content.title || t("servers.discover.packOf")
+              : t("servers.discover.vanilla")
+          }
+          variant="text"
+          truncatedOnly
+        >
+          <span className="truncate text-xs font-medium text-foreground">
+            {content.kind === "modpack"
+              ? content.title || t("servers.discover.packOf")
+              : t("servers.discover.vanilla")}
+          </span>
+        </Hint>
+        <span className="flex min-w-0 items-center gap-1.5 text-2xs text-faint">
           {content.kind === "modpack" && content.loaders[0] && (
             <LoaderLabel loader={content.loaders[0]} />
           )}
           {versions && (
-            <span className="min-w-0 truncate font-mono tabular-nums">
-              {versions}
-            </span>
+            <Hint content={versions} variant="text" truncatedOnly>
+              <span className="min-w-0 truncate font-mono tabular-nums">
+                {versions}
+              </span>
+            </Hint>
           )}
         </span>
       </span>

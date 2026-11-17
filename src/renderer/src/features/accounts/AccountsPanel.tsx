@@ -215,7 +215,17 @@ export function AccountsPanel() {
             )}
 
             <div className="max-h-[13.5rem] overflow-x-hidden overflow-y-auto">
-              <div className="flex flex-col gap-0.5" role="listbox">
+              <div
+                className="flex flex-col gap-0.5"
+                role="listbox"
+                onKeyDown={(event) => {
+                  if (event.key !== "Delete" || event.repeat) return;
+                  if (!focusedAccount) return;
+                  if (running.has(accountIdentity(focusedAccount))) return;
+                  event.preventDefault();
+                  setPendingRemoval(focusedAccount);
+                }}
+              >
                 {visible.length === 0 && (
                   <p className="px-2 py-6 text-center text-xs text-faint">
                     {t("common.notFound")}
@@ -237,7 +247,6 @@ export function AccountsPanel() {
                           type="button"
                           role="option"
                           aria-selected={isFocused}
-                          aria-current={isFocused}
                           onClick={() => {
                             setFocused(identity);
                             setForm(null);
@@ -245,7 +254,7 @@ export function AccountsPanel() {
                           onDoubleClick={() =>
                             void controller.useAccount(account)
                           }
-                          className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-accent/40 aria-[current=true]:bg-primary-soft"
+                          className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-row-hover aria-selected:bg-row-selected"
                         >
                           <AccountHead account={account} size={34} />
 
@@ -265,17 +274,31 @@ export function AccountsPanel() {
                               )}
                             </span>
 
-                            <span className="flex min-w-0 items-center gap-1 text-[0.7rem] text-faint">
+                            <span className="flex min-w-0 items-center gap-1 text-2xs text-faint">
                               <ProviderIcon type={account.type} size={10} />
-                              <span className="truncate">
-                                {providerName(account.type, t)}
-                              </span>
+                              <Hint
+                                content={providerName(account.type, t)}
+                                variant="text"
+                                truncatedOnly
+                              >
+                                <span className="truncate">
+                                  {providerName(account.type, t)}
+                                </span>
+                              </Hint>
                               {session.state !== "offline" && (
                                 <>
                                   <span aria-hidden>·</span>
-                                  <span className="truncate">
-                                    {t(`accounts.session.${session.state}`)}
-                                  </span>
+                                  <Hint
+                                    content={t(
+                                      `accounts.session.${session.state}`,
+                                    )}
+                                    variant="text"
+                                    truncatedOnly
+                                  >
+                                    <span className="truncate">
+                                      {t(`accounts.session.${session.state}`)}
+                                    </span>
+                                  </Hint>
                                 </>
                               )}
                             </span>
@@ -302,7 +325,7 @@ export function AccountsPanel() {
             </div>
 
             {accounts.length > 1 && (
-              <p className="px-1.5 pb-0.5 text-[0.65rem] text-faint">
+              <p className="px-1.5 pb-0.5 text-3xs text-faint">
                 {t("accounts.switchShortcut", { mod: MOD_KEY })}
               </p>
             )}
@@ -322,39 +345,43 @@ export function AccountsPanel() {
             const available = isProviderAvailable(provider, connectivity);
             const opensForm = provider === "plain" || provider === "littleskin";
 
+            const pitch = available
+              ? t(`accounts.providerPitch.${provider}`)
+              : t(
+                  isInternetOnline
+                    ? "app.backendUnavailable"
+                    : "app.internetUnavailable",
+                );
+
             return (
-              <Hint
+              <button
                 key={provider}
-                content={
-                  available
-                    ? undefined
-                    : t(
-                        isInternetOnline
-                          ? "app.backendUnavailable"
-                          : "app.internetUnavailable",
-                      )
-                }
+                type="button"
+                data-selected={form?.kind === provider}
+                disabled={!available || (!opensForm && progress !== null)}
+                onClick={() => pickProvider(provider)}
+                className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-row-hover disabled:cursor-not-allowed disabled:opacity-45 data-[selected=true]:bg-row-selected"
               >
-                <button
-                  type="button"
-                  aria-current={form?.kind === provider}
-                  disabled={!available || (!opensForm && progress !== null)}
-                  onClick={() => pickProvider(provider)}
-                  className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-accent/40 disabled:cursor-not-allowed disabled:opacity-45 aria-[current=true]:bg-primary-soft"
-                >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-surface-3 text-foreground">
-                    <ProviderIcon type={provider} size={15} />
-                  </span>
-                  <span className="flex min-w-0 flex-1 flex-col">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-surface-3 text-foreground">
+                  <ProviderIcon type={provider} size={15} />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <Hint
+                    content={providerName(provider, t)}
+                    variant="text"
+                    truncatedOnly
+                  >
                     <span className="truncate text-sm">
                       {providerName(provider, t)}
                     </span>
-                    <span className="truncate text-[0.7rem] text-faint">
-                      {t(`accounts.providerPitch.${provider}`)}
+                  </Hint>
+                  <Hint content={pitch} variant="text" truncatedOnly>
+                    <span className="truncate text-2xs text-faint">
+                      {pitch}
                     </span>
-                  </span>
-                </button>
-              </Hint>
+                  </Hint>
+                </span>
+              </button>
             );
           })}
         </div>
@@ -416,13 +443,11 @@ export function AccountsPanel() {
 
       {pendingRemoval && (
         <Confirmation
-          title={t("accounts.remove")}
+          title={t("accounts.removeQuestion", {
+            nickname: pendingRemoval.nickname,
+          })}
           content={[
-            {
-              text: t("accounts.confirmation", {
-                nickname: pendingRemoval.nickname,
-              }),
-            },
+            { text: t("accounts.removeLoss") },
             ...(risk !== null
               ? [
                   {

@@ -9,6 +9,7 @@ import {
   saveIntoSets,
   toSetItems,
 } from "./modSets";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -30,7 +31,7 @@ export function loadModSets(): Promise<IModSet[]> {
   loading ??= (async () => {
     const target = setsPath();
     const raw = (await api.fs.pathExists(target))
-      ? await api.fs.readJSON(target).catch(() => null)
+      ? ((await api.fs.readJSON(target).catch(ignoreFailure)) ?? null)
       : null;
     const sets = parseSetsFile(raw);
     store.set(modSetsAtom, sets);
@@ -43,9 +44,10 @@ export function loadModSets(): Promise<IModSet[]> {
 }
 
 async function persist(sets: IModSet[]): Promise<boolean> {
-  const saved = await api.fs
-    .writeJSON(setsPath(), { version: 1, sets })
-    .catch(() => false);
+  const saved =
+    (await api.fs
+      .writeJSON(setsPath(), { version: 1, sets })
+      .catch(ignoreFailure)) === true;
   if (saved) getDefaultStore().set(modSetsAtom, sets);
   return saved;
 }
@@ -66,6 +68,18 @@ export async function saveModSet(
 
 export async function deleteModSet(id: string): Promise<boolean> {
   return await persist(removeSet(await loadModSets(), id));
+}
+
+export async function restoreModSet(
+  set: IModSet,
+  index: number,
+): Promise<boolean> {
+  const sets = await loadModSets();
+  if (sets.some((item) => item.id === set.id)) return true;
+
+  const next = [...sets];
+  next.splice(Math.min(index, next.length), 0, set);
+  return await persist(next);
 }
 
 export function useModSets(): IModSet[] | null {

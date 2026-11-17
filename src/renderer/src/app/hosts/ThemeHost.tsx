@@ -5,6 +5,7 @@ import { settingsAtom } from "@renderer/stores/atoms";
 import { useActiveTheme } from "@renderer/features/theme/themesStore";
 import { applyThemeVariables } from "@renderer/features/theme/applyTheme";
 import { titleBarColors } from "@/shared/themes";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 export function ThemeHost() {
   const settings = useAtomValue(settingsAtom);
@@ -17,7 +18,7 @@ export function ThemeHost() {
 
   const { color, symbolColor } = titleBarColors(theme);
   useEffect(() => {
-    if (isLoaded) void window.api.other.setTitleBarColors(color, symbolColor).catch(() => undefined);
+    if (isLoaded) void window.api.other.setTitleBarColors(color, symbolColor).catch(ignoreFailure);
   }, [isLoaded, color, symbolColor]);
 
   return null;

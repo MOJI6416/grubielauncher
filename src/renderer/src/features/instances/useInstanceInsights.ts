@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { IVersionSession } from "@/types/VersionStatistics";
 import { sortScreenshots } from "./instanceOverview";
 import { useInstanceDataRevision } from "./instanceRevision";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -34,9 +35,9 @@ export function useInstanceDiskUsage(versionPath: string | undefined): {
     setIsUnknown(false);
 
     void (async () => {
-      const total = await api.file
-        .getTotalSizes([versionPath])
-        .catch(() => null);
+      const total =
+        (await api.file.getTotalSizes([versionPath]).catch(ignoreFailure)) ??
+        null;
       if (cancelled) return;
       sizeCache.set(versionPath, { revision, size: total });
       setSize(total);

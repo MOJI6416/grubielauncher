@@ -1,12 +1,13 @@
 import { useTranslation } from "react-i18next";
 import {
   Copy,
-  Gamepad2,
   Loader2,
+  MonitorDown,
   PackageCheck,
   PackageMinus,
   PackageSearch,
   Pencil,
+  Play,
   RefreshCw,
   Trash,
   TriangleAlert,
@@ -18,13 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
 import { FactRow, FactRows } from "@renderer/components/FactRows";
 import { cn } from "@/lib/utils";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
 import { MotdText, ServerFavicon } from "./ServerVisuals";
 import { parseMotd, stripMotd } from "./motd";
 import { ServerCompatibility, checkServerCompatibility } from "./compat";
 import { describePingError } from "./ping";
 import type { ServerPingState } from "./types";
-import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
-import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const TEXTURE_ICON = {
@@ -38,12 +38,13 @@ function texturesKind(value: number | null | undefined) {
   return value ? ("on" as const) : ("off" as const);
 }
 
-function texturesIndex(value: number | null | undefined) {
-  if (value === null || value === undefined) return 0;
-  return value ? 1 : 2;
-}
+const TEXTURE_KINDS = ["ask", "on", "off"] as const;
 
-const TEXTURE_OPTIONS: (number | null)[] = [null, 1, 0];
+const TEXTURE_VALUE: Record<(typeof TEXTURE_KINDS)[number], number | null> = {
+  ask: null,
+  on: 1,
+  off: 0,
+};
 
 export function ServerDetails({
   server,
@@ -57,6 +58,7 @@ export function ServerDetails({
   onEdit,
   onDelete,
   onCopy,
+  onShortcut,
   onRecheck,
   onChangeTextures,
   onToggleQuickConnect,
@@ -72,13 +74,13 @@ export function ServerDetails({
   onEdit: () => void;
   onDelete: () => void;
   onCopy: () => void;
+  onShortcut?: () => void;
   onRecheck: () => void;
   onChangeTextures: (value: number | null) => void;
   onToggleQuickConnect: () => void;
 }) {
   const { t } = useTranslation();
   const redact = useRedact();
-  const texturesIndicator = useSlidingIndicator<HTMLDivElement>();
 
   const result = status?.result;
   const spans = parseMotd(result?.descriptionRaw);
@@ -126,12 +128,12 @@ export function ServerDetails({
             {(result?.modded || result?.secureChat === false) && (
               <span className="mt-0.5 mb-0.5 flex flex-wrap gap-1">
                 {result.modded && (
-                  <span className="rounded bg-surface-3 px-1.5 py-0.5 text-[0.65rem] text-muted-foreground">
+                  <span className="rounded bg-surface-3 px-1.5 py-0.5 text-3xs text-muted-foreground">
                     {t("servers.modded")}
                   </span>
                 )}
                 {result.secureChat === false && (
-                  <span className="rounded bg-surface-3 px-1.5 py-0.5 text-[0.65rem] text-muted-foreground">
+                  <span className="rounded bg-surface-3 px-1.5 py-0.5 text-3xs text-muted-foreground">
                     {t("servers.unsignedChat")}
                   </span>
                 )}
@@ -183,9 +185,11 @@ export function ServerDetails({
               key={row.label}
               label={row.label}
               value={
-                <span className="min-w-0 truncate font-mono tabular-nums">
-                  {row.value}
-                </span>
+                <Hint content={row.value} variant="text" truncatedOnly>
+                  <span className="min-w-0 truncate font-mono tabular-nums">
+                    {row.value}
+                  </span>
+                </Hint>
               }
             />
           ))}
@@ -207,42 +211,21 @@ export function ServerDetails({
           <span className="text-xs text-muted-foreground">
             {t("servers.resources")}
           </span>
-          <div
-            ref={texturesIndicator.containerRef}
-            className="relative grid grid-cols-3 gap-1 rounded-lg bg-surface-1 p-1"
-          >
-            <SlidingIndicator
-              indicator={texturesIndicator}
-              variant="fill"
-              className="rounded-md bg-surface-3"
-            />
-            {TEXTURE_OPTIONS.map((option, index) => {
-              const Icon = TEXTURE_ICON[texturesKind(option)];
-              const active = texturesIndex(server.acceptTextures) === index;
-
-              return (
-                <button
-                  key={String(option)}
-                  type="button"
-                  disabled={readOnly}
-                  aria-pressed={active}
-                  data-indicator-active={active}
-                  onClick={() => onChangeTextures(option)}
-                  className={cn(
-                    "relative flex h-7 items-center justify-center gap-1 rounded-md text-[0.7rem] transition-colors disabled:pointer-events-none disabled:opacity-50",
-                    active
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:bg-surface-2",
-                  )}
-                >
-                  <Icon className="size-3" />
-                  <span className="truncate">
-                    {t(`servers.resourceSets.${index}`)}
-                  </span>
-                </button>
-              );
+          <SegmentedControl
+            value={texturesKind(server.acceptTextures)}
+            stretch
+            disabled={readOnly}
+            ariaLabel={t("servers.resources")}
+            options={TEXTURE_KINDS.map((kind, index) => {
+              const Icon = TEXTURE_ICON[kind];
+              return {
+                value: kind,
+                label: t(`servers.resourceSets.${index}`),
+                icon: <Icon className="size-3" />,
+              };
             })}
-          </div>
+            onChange={(kind) => onChangeTextures(TEXTURE_VALUE[kind])}
+          />
         </div>
 
         {result?.players?.sample?.length ? (
@@ -253,19 +236,23 @@ export function ServerDetails({
             </span>
             <div className="flex flex-wrap gap-1">
               {result.players.sample.slice(0, 12).map((player) => (
-                <span
+                <Hint
                   key={player.name}
-                  className="max-w-full truncate rounded-md bg-surface-3 px-1.5 py-0.5 font-mono text-[0.7rem]"
+                  content={stripMotd(player.name)}
+                  variant="text"
+                  truncatedOnly
                 >
-                  {stripMotd(player.name)}
-                </span>
+                  <span className="max-w-full truncate rounded-md bg-surface-3 px-1.5 py-0.5 font-mono text-2xs">
+                    {stripMotd(player.name)}
+                  </span>
+                </Hint>
               ))}
             </div>
           </div>
         ) : null}
 
         {checkedAt && (
-          <p className="text-[0.65rem] text-faint">
+          <p className="text-3xs text-faint">
             {t("servers.checkedAt", { time: checkedAt })}
           </p>
         )}
@@ -280,19 +267,24 @@ export function ServerDetails({
               "flex items-center justify-between gap-3 rounded-lg border px-2.5 py-2 text-left text-xs transition-colors disabled:pointer-events-none disabled:opacity-50",
               isQuickConnect
                 ? "border-warning/40 bg-warning/10 text-warning"
-                : "hover:bg-accent/40",
+                : "hover:bg-row-hover",
             )}
           >
             <span className="flex min-w-0 items-center gap-2">
               <Zap className="size-3.5 shrink-0" />
-              <span className="truncate">{t("servers.quickConnect")}</span>
+              <Hint content={t("servers.quickConnect")} variant="text" truncatedOnly>
+                <span className="truncate">{t("servers.quickConnect")}</span>
+              </Hint>
             </span>
-            <span className="shrink-0 text-[0.7rem] text-faint">
+            <span className="shrink-0 text-2xs text-faint">
               {isQuickConnect
                 ? t("servers.quickConnectOn")
                 : t("servers.quickConnectOff")}
             </span>
           </button>
+        )}
+        {readOnly && (
+          <p className="text-2xs text-faint">{t("servers.readOnlyHint")}</p>
         )}
       </div>
 
@@ -304,10 +296,23 @@ export function ServerDetails({
           disabled={!canPlay}
           onClick={onPlay}
         >
-          <Gamepad2 className="size-4" />
+          <Play className="size-4" />
           {t("servers.join")}
         </Button>
-        <Hint content={t("common.edit")}>
+        {onShortcut && (
+          <Hint content={t("servers.createShortcut")}>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              className="size-9"
+              aria-label={t("servers.createShortcut")}
+              onClick={onShortcut}
+            >
+              <MonitorDown className="size-3.5" />
+            </Button>
+          </Hint>
+        )}
+        <Hint content={readOnly ? undefined : t("common.edit")}>
           <Button
             variant="outline"
             size="icon-sm"
@@ -319,7 +324,7 @@ export function ServerDetails({
             <Pencil className="size-3.5" />
           </Button>
         </Hint>
-        <Hint content={t("common.delete")}>
+        <Hint content={readOnly ? undefined : t("common.delete")}>
           <Button
             variant="ghost"
             size="icon-sm"

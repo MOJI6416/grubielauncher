@@ -67,6 +67,13 @@ import {
   openConnectivityCheck,
   taskCenterViewAtom,
 } from "./installUi";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 
 const STAGE_LOG_VISIBLE = 5;
 const STAGE_ROW_HEIGHT = 28;
@@ -80,7 +87,7 @@ const OUTCOME_TONE: Record<TaskOutcome, string> = {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <p className="px-3.5 pb-1.5 text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+    <p className="px-3.5 pb-1.5 text-3xs font-semibold tracking-[0.09em] text-faint uppercase">
       {children}
     </p>
   );
@@ -89,10 +96,14 @@ function SectionLabel({ children }: { children: string }) {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-lg bg-surface-2 px-2 py-1.5">
-      <p className="truncate text-[10px] text-faint">{label}</p>
-      <p className="truncate font-mono text-xs tabular-nums text-foreground">
-        {value}
-      </p>
+      <Hint content={label} variant="text" truncatedOnly>
+        <p className="truncate text-3xs text-faint">{label}</p>
+      </Hint>
+      <Hint content={value} variant="text" truncatedOnly>
+        <p className="truncate font-mono text-xs tabular-nums text-foreground">
+          {value}
+        </p>
+      </Hint>
     </div>
   );
 }
@@ -106,7 +117,7 @@ function MirrorChip() {
   return (
     <Hint content={t(`mirror.modes.${mode}.hint`)}>
       <span
-        className={`flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] ${
+        className={`flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-3xs ${
           mode === "mirror-cooldown"
             ? "border-warning/40 text-warning"
             : "border-border text-muted-foreground"
@@ -191,11 +202,11 @@ function ActiveTask() {
           </span>
         </Hint>
         {progress.operation !== "install" && (
-          <span className="shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+          <span className="shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-3xs text-muted-foreground">
             <OperationTitle operation={progress.operation} />
           </span>
         )}
-        <span className="shrink-0 text-[10px] text-faint">
+        <span className="shrink-0 text-3xs text-faint">
           {t("installationProgress.overallLabel")}
         </span>
         <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
@@ -223,15 +234,17 @@ function ActiveTask() {
         ) : (
           <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
         )}
-        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-          {isPaused
-            ? pauseState === "pending"
-              ? t("installationProgress.pausing")
-              : t("installationProgress.paused")
-            : t(stageLabelKey(currentStage, progress.operation))}
-        </span>
+        <Hint content={isPaused ? pauseState === "pending" ? t("installationProgress.pausing") : t("installationProgress.paused") : t(stageLabelKey(currentStage, progress.operation))} variant="text" truncatedOnly>
+          <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+            {isPaused
+              ? pauseState === "pending"
+                ? t("installationProgress.pausing")
+                : t("installationProgress.paused")
+              : t(stageLabelKey(currentStage, progress.operation))}
+          </span>
+        </Hint>
         {eta !== null && eta > 0 && !isPaused && (
-          <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint">
+          <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
             {t("taskCenter.remaining")} {format.seconds(eta)}
           </span>
         )}
@@ -239,13 +252,13 @@ function ActiveTask() {
 
       <p className="mt-1 flex h-4 min-w-0 items-center gap-1.5">
         {fileName && groupLabel && (
-          <span className="shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+          <span className="shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-3xs text-muted-foreground">
             {groupLabel}
           </span>
         )}
         <Hint content={fileName || details} variant="text" truncatedOnly>
           <span
-            className={`min-w-0 flex-1 truncate text-[11px] text-faint ${fileName ? "font-mono" : ""}`}
+            className={`min-w-0 flex-1 truncate text-2xs text-faint ${fileName ? "font-mono" : ""}`}
           >
             {fileName || details || ""}
           </span>
@@ -256,10 +269,12 @@ function ActiveTask() {
         {sub && (
           <div className="mt-2.5 rounded-lg bg-surface-2 px-2 py-1.5">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
-                {subTitle}
-              </span>
-              <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint">
+              <Hint content={subTitle} variant="text" truncatedOnly>
+                <span className="min-w-0 flex-1 truncate text-2xs text-muted-foreground">
+                  {subTitle}
+                </span>
+              </Hint>
+              <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
                 {clampPercent(sub.progressPercent)}%
               </span>
             </div>
@@ -353,9 +368,11 @@ function QueueList() {
             <span
               className={`size-1.5 shrink-0 rounded-full ${getLoaderInfo(task.loaderName).dot}`}
             />
-            <span className="min-w-0 flex-1 truncate text-muted-foreground">
-              {task.label}
-            </span>
+            <Hint content={task.label} variant="text" truncatedOnly>
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                {task.label}
+              </span>
+            </Hint>
             <Hint content={t("common.cancel")}>
               <button
                 type="button"
@@ -409,7 +426,7 @@ function StageLog() {
                 className="flex shrink-0 items-center gap-2 text-xs"
               >
                 {row.state === "running" ? (
-                  <Loader2 className="size-3 shrink-0 animate-spin text-primary" />
+                  <Loader2 className="size-3 shrink-0 animate-spin text-info" />
                 ) : row.state === "done" ? (
                   <Check className="size-3 shrink-0 text-success" />
                 ) : (
@@ -417,18 +434,20 @@ function StageLog() {
                     <span className="size-1.5 rounded-full bg-muted-foreground/35" />
                   </span>
                 )}
-                <span
-                  className={`min-w-0 flex-1 truncate ${
-                    row.state === "running"
-                      ? "text-foreground"
-                      : row.state === "done"
-                        ? "text-muted-foreground"
-                        : "text-faint"
-                  }`}
-                >
-                  {t(stageLabelKey(row.stage, progress.operation))}
-                </span>
-                <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint">
+                <Hint content={t(stageLabelKey(row.stage, progress.operation))} variant="text" truncatedOnly>
+                  <span
+                    className={`min-w-0 flex-1 truncate ${
+                      row.state === "running"
+                        ? "text-foreground"
+                        : row.state === "done"
+                          ? "text-muted-foreground"
+                          : "text-faint"
+                    }`}
+                  >
+                    {t(stageLabelKey(row.stage, progress.operation))}
+                  </span>
+                </Hint>
+                <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
                   {row.event
                     ? format.elapsed(stageElapsed(row.event, now))
                     : ""}
@@ -489,7 +508,7 @@ function HistoryRow({ record }: { record: TaskRecord }) {
       {record.outcome === "partial" && record.failures ? (
         <button
           type="button"
-          className="shrink-0 text-[11px] text-warning underline-offset-2 hover:underline"
+          className="shrink-0 text-2xs text-warning underline-offset-2 hover:underline"
           onClick={() => {
             setFailures(record.failures ?? null);
             setView("failures");
@@ -498,7 +517,7 @@ function HistoryRow({ record }: { record: TaskRecord }) {
           {t("taskCenter.showFailures")}
         </button>
       ) : (
-        <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint">
+        <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
           {record.bytes > 0 ? `${format.bytes(record.bytes)} · ` : ""}
           {format.elapsed(taskDuration(record))}
         </span>
@@ -525,15 +544,21 @@ function HistoryList() {
   );
 }
 
-function EmptyState() {
+function TasksEmpty() {
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
-      <HardDriveDownload className="size-6 text-faint" />
-      <p className="text-sm text-muted-foreground">{t("taskCenter.empty")}</p>
-      <p className="text-xs text-faint">{t("taskCenter.emptyHint")}</p>
-    </div>
+    <Empty className="px-6 py-10">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <HardDriveDownload />
+        </EmptyMedia>
+        <EmptyTitle>{t("taskCenter.empty")}</EmptyTitle>
+        <EmptyDescription className="text-xs text-faint">
+          {t("taskCenter.emptyHint")}
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }
 
@@ -566,7 +591,7 @@ export function TaskCenterPanel() {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {isEmpty ? (
-          <EmptyState />
+          <TasksEmpty />
         ) : (
           <>
             <StageLog />

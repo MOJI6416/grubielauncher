@@ -31,12 +31,10 @@ import { NewsBodySkeleton } from "@renderer/features/news/NewsFeedSkeleton";
 import { useNewsFeed } from "@renderer/features/news/useNewsFeed";
 import { showMilestoneInFeed } from "@renderer/features/whatsNew/milestone";
 import { useCurrentRelease } from "@renderer/features/whatsNew/useCurrentRelease";
-import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
-import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
 
 export function NewsScreen() {
   const { t } = useTranslation();
-  const sourceIndicator = useSlidingIndicator<HTMLDivElement>();
   const {
     isNetwork,
     cards,
@@ -114,7 +112,7 @@ export function NewsScreen() {
           {hasError ? t("news.loadFailed") : t("news.empty")}
         </EmptyTitle>
         <EmptyDescription>
-          {hasError ? t("news.loadFailedHint") : t("news.emptyHint")}
+          {hasError ? t("news.loadFailedSource") : t("news.emptyHint")}
         </EmptyDescription>
       </EmptyHeader>
       {hasError && (
@@ -177,9 +175,15 @@ export function NewsScreen() {
           ) : (
             <>
               <CircleAlert className="size-3.5 shrink-0 text-warning" />
-              <span className="min-w-0 truncate">
-                {t("news.loadMoreFailed")}
-              </span>
+              <Hint
+                content={t("news.loadMoreFailed")}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 truncate">
+                  {t("news.loadMoreFailed")}
+                </span>
+              </Hint>
               <Button
                 size="sm"
                 variant="ghost"
@@ -200,41 +204,29 @@ export function NewsScreen() {
     <section className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
       <header className="flex h-8 shrink-0 items-center gap-2">
         {unread > 0 && (
-          <span className="flex h-6 shrink-0 items-center rounded-md bg-success/15 px-2 text-[0.7rem] font-medium text-success">
+          <span className="flex h-6 shrink-0 items-center rounded-md bg-info/15 px-2 text-2xs font-medium text-info">
             {t("news.unread", { count: unread })}
           </span>
         )}
 
         {showSource && (
-          <div
-            ref={sourceIndicator.containerRef}
-            className="relative flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5"
-          >
-            <SlidingIndicator
-              indicator={sourceIndicator}
-              variant="fill"
-              className="rounded-md bg-surface-3"
-            />
-            {(["all", ...sources] as const).map((value) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={source === value}
-                data-indicator-active={source === value}
-                onClick={() => setSource(value)}
-                className="relative h-7 rounded-md px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground aria-pressed:text-foreground"
-              >
-                {value === "all"
+          <SegmentedControl
+            value={source}
+            ariaLabel={t("news.sourceFilter")}
+            options={(["all", ...sources] as const).map((value) => ({
+              value,
+              label:
+                value === "all"
                   ? t("news.sources.all")
-                  : t(`news.sources.${value}`)}
-              </button>
-            ))}
-          </div>
+                  : t(`news.sources.${value}`),
+            }))}
+            onChange={setSource}
+          />
         )}
 
         {partialError ? (
-          <Hint content={t("news.loadFailedHint")}>
-            <span className="flex h-6 min-w-0 items-center gap-1 rounded-md bg-warning/15 px-2 text-[0.7rem] font-medium text-warning">
+          <Hint content={t("news.loadFailedSource")}>
+            <span className="flex h-6 min-w-0 items-center gap-1 rounded-md bg-warning/15 px-2 text-2xs font-medium text-warning">
               <CircleAlert className="size-3 shrink-0" />
               <span className="min-w-0 truncate">
                 {t("news.partialFailed")}
@@ -243,11 +235,19 @@ export function NewsScreen() {
           </Hint>
         ) : (
           updatedAt > 0 && (
-            <span className="min-w-0 truncate text-[0.7rem] text-faint">
-              {t("news.updated", {
+            <Hint
+              content={t("news.updated", {
                 value: formatRelative(new Date(updatedAt)),
               })}
-            </span>
+              variant="text"
+              truncatedOnly
+            >
+              <span className="min-w-0 truncate text-2xs text-faint">
+                {t("news.updated", {
+                  value: formatRelative(new Date(updatedAt)),
+                })}
+              </span>
+            </Hint>
           )
         )}
 

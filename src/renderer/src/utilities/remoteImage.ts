@@ -1,3 +1,4 @@
+import { ignoreFailure } from "./ignoreFailure";
 import { toast } from "sonner";
 import i18n from "@renderer/i18n";
 import { captureCopyAnchor, flashCopied } from "./copyFeedback";
@@ -24,14 +25,14 @@ async function toPng(bytes: Uint8Array, type: string): Promise<Uint8Array | null
 
 export async function copyRemoteImage(url: string): Promise<boolean> {
   const anchor = captureCopyAnchor();
-  const image = await api.media.fetchImage(url).catch(() => null);
+  const image = await api.media.fetchImage(url).catch(ignoreFailure);
   const data = image
     ? CLIPBOARD_TYPES.has(image.type)
       ? image.bytes
       : await toPng(image.bytes, image.type)
     : null;
   const copied = data
-    ? await api.clipboard.writeImageData(data).catch(() => false)
+    ? (await api.clipboard.writeImageData(data).catch(ignoreFailure)) === true
     : false;
 
   if (copied) flashCopied(anchor);

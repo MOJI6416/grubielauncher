@@ -9,6 +9,7 @@ import {
   isEmptyDiff,
 } from "@/shared/modpackDiff";
 import { useLoadOnScroll } from "@renderer/utilities/useLoadOnScroll";
+import { Hint } from "@renderer/components/Hint";
 
 const PREVIEW_LIMIT = 6;
 const PAGE_SIZE = 40;
@@ -32,7 +33,7 @@ function Bucket({
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wide uppercase">
+      <div className="flex items-center gap-1.5 text-2xs font-medium tracking-wide uppercase">
         <Icon className={`size-3 ${tone}`} />
         <span className={tone}>{label}</span>
         <span className="font-mono text-faint">{entries.length}</span>
@@ -44,9 +45,11 @@ function Bucket({
             key={entry.key}
             className="flex min-w-0 items-baseline gap-2 text-xs"
           >
-            <span className="truncate text-foreground">{entry.title}</span>
+            <Hint content={entry.title} variant="text" truncatedOnly>
+              <span className="truncate text-foreground">{entry.title}</span>
+            </Hint>
             {entry.fromVersion && entry.toVersion && (
-              <span className="shrink-0 font-mono text-[0.65rem] text-faint">
+              <span className="shrink-0 font-mono text-3xs text-faint">
                 {entry.fromVersion} → {entry.toVersion}
               </span>
             )}
@@ -131,7 +134,7 @@ export function ModpackDiffPanel({
       </ScrollArea>
 
       <div className="mt-2 flex shrink-0 items-center gap-2">
-        <span className="text-[0.7rem] text-faint">
+        <span className="text-2xs text-faint">
           {t("modpackDiff.unchanged", { count: diff.unchanged })}
         </span>
       </div>

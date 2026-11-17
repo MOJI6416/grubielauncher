@@ -10,6 +10,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -60,6 +66,8 @@ export function GroupHeader({
   const [isOver, setIsOver] = useState(false);
 
   return (
+    <ContextMenu>
+    <ContextMenuTrigger asChild disabled={isUngrouped}>
     <div
       data-drop-target={canDrop || undefined}
       data-drop-over={(canDrop && isOver) || undefined}
@@ -98,7 +106,7 @@ export function GroupHeader({
             : t(collapsed ? "modGroups.expand" : "modGroups.collapse")
         }
         onClick={() => actions.onToggleCollapsed(groupId)}
-        className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 text-left transition-colors enabled:hover:bg-surface-2"
+        className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 text-left transition-colors enabled:hover:bg-row-hover"
       >
         <ChevronRight
           className={cn(
@@ -107,15 +115,17 @@ export function GroupHeader({
             isUngrouped && "invisible",
           )}
         />
-        <span
-          className={cn(
-            "min-w-0 truncate text-[0.7rem] font-semibold tracking-[0.06em] uppercase",
-            allDisabled ? "text-faint line-through" : "text-muted-foreground",
-          )}
-        >
-          {title}
-        </span>
-        <span className="shrink-0 font-mono text-[0.65rem] text-faint tabular-nums">
+        <Hint content={title} variant="text" truncatedOnly>
+          <span
+            className={cn(
+              "min-w-0 truncate text-2xs font-semibold tracking-[0.06em] uppercase",
+              allDisabled ? "text-faint line-through" : "text-muted-foreground",
+            )}
+          >
+            {title}
+          </span>
+        </Hint>
+        <span className="shrink-0 font-mono text-3xs text-faint tabular-nums">
           {count}
         </span>
       </button>
@@ -173,5 +183,20 @@ export function GroupHeader({
         </DropdownMenu>
       )}
     </div>
+    </ContextMenuTrigger>
+    <ContextMenuContent>
+      <ContextMenuItem onSelect={() => actions.onRename(groupId, name)}>
+        <FolderPen />
+        {t("modGroups.rename")}
+      </ContextMenuItem>
+      <ContextMenuItem
+        variant="destructive"
+        onSelect={() => actions.onDelete(groupId, name)}
+      >
+        <Trash2 />
+        {t("modGroups.delete")}
+      </ContextMenuItem>
+    </ContextMenuContent>
+    </ContextMenu>
   );
 }

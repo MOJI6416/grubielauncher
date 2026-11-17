@@ -8,6 +8,8 @@ import {
   VirtualizedSelectOption,
 } from "@/components/ui/virtualized-select";
 import { Hint } from "@renderer/components/Hint";
+import { showFailureToast } from "@renderer/utilities/failures";
+import { formatCompactNumber } from "@renderer/utilities/numbers";
 import {
   agentModelAtom,
   agentModelsAtom,
@@ -18,9 +20,8 @@ const api = window.api;
 
 function formatContext(length?: number): string | undefined {
   if (!length || length <= 0) return undefined;
-  if (length >= 1000) return `${Math.round(length / 1000)}k`;
 
-  return String(length);
+  return formatCompactNumber(length) ?? undefined;
 }
 
 export function AgentModelPicker({
@@ -74,39 +75,49 @@ export function AgentModelPicker({
 
   const selected = available?.find((entry) => entry.id === model);
   const toolless = selected ? !selected.supportsTools : false;
+  const selectedLabel = options.find((option) => option.value === model)?.label;
 
   return (
     <span
       id="agent-model-picker"
       className="flex shrink-0 items-center gap-1.5"
     >
-      <VirtualizedSelect
-        value={model ?? ""}
-        size="sm"
-        disabled={disabled}
-        className="w-44 border-0 bg-surface-2 px-2 text-xs font-normal"
-        onValueChange={(value) => {
-          setModel(value);
-          void api.agent.providers
-            .save({
-              id: provider.id,
-              label: provider.label,
-              baseUrl: provider.baseUrl,
-              model: value,
-            })
-            .then((next) => {
-              if (next?.providers.length) setProviders(next);
-            });
-        }}
-        options={options}
-        placeholder={t("agent.providers.modelPlaceholder")}
-        searchPlaceholder={t("agent.providers.modelSearch")}
-        emptyText={t("agent.providers.modelEmpty")}
-        aria-label={t("agent.providers.model")}
-      />
+      <Hint content={selectedLabel} variant="text" truncatedOnly>
+        <span className="flex min-w-0">
+          <VirtualizedSelect
+            value={model ?? ""}
+            size="sm"
+            disabled={disabled}
+            className="w-44 border-0 bg-surface-2 px-2 text-xs font-normal"
+            onValueChange={(value) => {
+              setModel(value);
+              void api.agent.providers
+                .save({
+                  id: provider.id,
+                  label: provider.label,
+                  baseUrl: provider.baseUrl,
+                  model: value,
+                })
+                .then((next) => {
+                  if (next?.providers.length) setProviders(next);
+                })
+                .catch((error) =>
+                  showFailureToast(t("agent.providers.saveFailed"), error, {
+                    channels: ["agent:"],
+                  }),
+                );
+            }}
+            options={options}
+            placeholder={t("agent.providers.modelPlaceholder")}
+            searchPlaceholder={t("agent.providers.modelSearch")}
+            emptyText={t("agent.providers.modelEmpty")}
+            aria-label={t("agent.providers.model")}
+          />
+        </span>
+      </Hint>
       {toolless && (
         <Hint content={t("agent.providers.noToolsWarning")}>
-          <span className="flex shrink-0 items-center gap-1 text-[0.65rem] text-destructive">
+          <span className="flex shrink-0 items-center gap-1 text-3xs text-destructive">
             <TriangleAlert className="size-3" />
             {t("agent.providers.noTools")}
           </span>

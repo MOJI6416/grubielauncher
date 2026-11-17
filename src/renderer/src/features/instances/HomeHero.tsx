@@ -51,12 +51,12 @@ import { instanceStatsAtom, runningSessionsAtom } from "./instanceStats";
 import { instanceTagsAtom } from "./instancesStore";
 import { instanceUpdatesAtom } from "./updateCheck";
 import { modpackUpdatesAtom } from "@renderer/features/modpack/modpackCatalog";
-import { formatPlaytime, formatSessionClock } from "./playtime";
 import { resolveInstanceStatuses } from "./instanceStatus";
 import { openInstanceScreen } from "./openInstanceScreen";
 import { instanceKey } from "./selectors";
 import { isSlotHidden, slotId } from "@renderer/features/layout/layout";
 import { useLayout } from "@renderer/features/layout/useLayout";
+import { formatClock, formatDuration } from "@renderer/utilities/duration";
 
 const HERO_BUTTONS = new Set(["overview", "folder"]);
 
@@ -124,6 +124,7 @@ export function HomeHero({
   const image = resolveLocalImage(instance.version.image);
   const modsCount = countMods(instance.version.loader.mods);
   const instanceTags = tags[key] ?? [];
+  const tagLine = instanceTags.map((tag) => `#${tag}`).join(" ");
   const canPlay = !!account && !isLaunching;
   const isRunningInstance = !!session && !isLaunching;
   const launchHere =
@@ -164,14 +165,12 @@ export function HomeHero({
   const openInstance = (tab?: InstanceTab) =>
     openInstanceScreen(instance, account, { tab, morphFrom: "hero" });
 
-  const timeLabels = { h: t("time.h"), m: t("time.m") };
   const lastLaunchedAt = instanceLastLaunch(
     instance.version.lastLaunch,
     statistics,
   );
 
-  const formatHours = (value: number) =>
-    formatPlaytime(Math.round(value), timeLabels);
+  const formatHours = (value: number) => formatDuration(Math.round(value));
 
   const cells: HeroCell[] = [
     {
@@ -179,7 +178,7 @@ export function HomeHero({
       label: t("versionStatistics.playTime"),
       value: statistics?.playTime
         ? { count: statistics.playTime, format: formatHours }
-        : formatPlaytime(undefined, timeLabels),
+        : formatDuration(undefined),
     },
     {
       id: "launches",
@@ -263,7 +262,7 @@ export function HomeHero({
 
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="flex min-w-0 items-center gap-2">
-              <h2 className="min-w-0 truncate text-[1.35rem] leading-tight font-bold tracking-tight">
+              <h2 className="min-w-0 text-[1.35rem] leading-tight font-bold tracking-tight">
                 <Hint
                   content={instance.version.name}
                   variant="text"
@@ -293,7 +292,7 @@ export function HomeHero({
                     kind={kind}
                     detail={
                       kind === "running" && session
-                        ? formatSessionClock(now - session.startTime)
+                        ? formatClock(now - session.startTime)
                         : undefined
                     }
                   />
@@ -315,9 +314,9 @@ export function HomeHero({
                 </span>
               )}
               {instanceTags.length > 0 && (
-                <span className="truncate text-faint">
-                  {instanceTags.map((tag) => `#${tag}`).join(" ")}
-                </span>
+                <Hint content={tagLine} variant="text" truncatedOnly>
+                  <span className="truncate text-faint">{tagLine}</span>
+                </Hint>
               )}
             </div>
           </div>
@@ -330,21 +329,32 @@ export function HomeHero({
         ) : !showStats ? null : (
           <div className="flex min-w-0 gap-6">
             {cells.map((cell) => (
-              <div key={cell.id} className="flex min-w-0 flex-col gap-0.5">
-                <span className="truncate text-[0.65rem] tracking-[0.06em] text-faint uppercase">
-                  {cell.label}
-                </span>
-                <span className="truncate text-sm font-semibold tabular-nums">
-                  {typeof cell.value === "string" ? (
-                    cell.value
-                  ) : (
-                    <CountUpValue
-                      count={cell.value.count}
-                      format={cell.value.format}
-                    />
-                  )}
-                </span>
-              </div>
+              <Hint
+                key={cell.id}
+                variant="text"
+                truncatedOnly
+                content={`${cell.label}: ${
+                  typeof cell.value === "string"
+                    ? cell.value
+                    : cell.value.format(cell.value.count)
+                }`}
+              >
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <span className="truncate text-3xs tracking-[0.06em] text-faint uppercase">
+                    {cell.label}
+                  </span>
+                  <span className="truncate text-sm font-semibold tabular-nums">
+                    {typeof cell.value === "string" ? (
+                      cell.value
+                    ) : (
+                      <CountUpValue
+                        count={cell.value.count}
+                        format={cell.value.format}
+                      />
+                    )}
+                  </span>
+                </div>
+              </Hint>
             ))}
           </div>
         )}
@@ -352,7 +362,9 @@ export function HomeHero({
         <div className="flex min-w-0 items-center gap-2">
           <Hint
             content={
-              isRunningInstance ? t("versions.playAnotherInstance") : undefined
+              isRunningInstance && canPlay
+                ? t("versions.playAnotherInstance")
+                : undefined
             }
           >
             <Button

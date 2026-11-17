@@ -1,18 +1,19 @@
-import { DragEvent, useEffect, useMemo, useRef, useState } from "react";
+import { DragEvent, Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import { showFailureToast } from "@renderer/utilities/failures";
 import {
   ArrowDown,
-  ArrowDownUp,
   ArrowUp,
   ChevronRight,
   CloudDownload,
   Ellipsis,
+  FolderInput,
   FolderPen,
   FolderPlus,
   FolderSearch,
   LayoutGrid,
+  Layers3,
   List,
   ListFilter,
   Rows4,
@@ -20,7 +21,9 @@ import {
   Search,
   SearchX,
   Tag,
+  Trash2,
   TriangleAlert,
+  UserPlus,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -43,14 +46,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   Empty,
+  EmptyContent,
+  EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
@@ -61,7 +64,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Version } from "@renderer/classes/Version";
 import { Hint } from "@renderer/components/Hint";
-import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { LoaderLabel, getLoaderInfo } from "@renderer/components/Loaders";
 import {
   accountAtom,
@@ -78,6 +80,7 @@ import {
   pathsAtom,
 } from "@renderer/stores/atoms";
 import {
+  type InstanceGroup,
   assignToGroup,
   removeGroup,
   reorderGroups,
@@ -144,8 +147,14 @@ import {
   sortLibrary,
   toggleFilter,
 } from "./library";
-import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
-import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { SortMenu } from "@renderer/components/SortMenu";
+import {
+  RemovalItem,
+  RemovalList,
+} from "@renderer/components/RemovalCollapse";
+import { showUndoToast } from "@renderer/utilities/undoToast";
+import { openAddAccount } from "@renderer/features/accounts/addAccountRequest";
 
 const api = window.api;
 
@@ -154,6 +163,20 @@ const VIEW_LABELS: Record<InstancesView, string> = {
   compact: "versions.viewCompact",
   grid: "versions.viewGrid",
 };
+
+const VIEW_MODES: InstancesView[] = ["list", "compact", "grid"];
+
+type RemovedGroup = {
+  group: InstanceGroup;
+  index: number;
+  ungroupedCollapsed: boolean;
+};
+
+function ViewIcon({ mode }: { mode: InstancesView }) {
+  if (mode === "list") return <List className="size-4" />;
+  if (mode === "compact") return <Rows4 className="size-4" />;
+  return <LayoutGrid className="size-4" />;
+}
 
 export function InstanceLibrary({
   runGame,
@@ -189,14 +212,9 @@ export function InstanceLibrary({
   const sessions = useAtomValue(runningSessionsAtom);
   const flags = useAtomValue(instanceFlagsAtom);
   const { t } = useTranslation();
-  const viewIndicator = useSlidingIndicator<HTMLDivElement>();
 
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_LIBRARY_FILTERS);
-  const [pendingGroup, setPendingGroup] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
   const [renamingGroup, setRenamingGroup] = useState<{
     id: string;
     name: string;
@@ -272,6 +290,10 @@ export function InstanceLibrary({
   );
 
   const loaders = useMemo(() => availableLoaders(versions), [versions]);
+  const instanceKeys = useMemo(
+    () => new Set(versions.map(instanceKey)),
+    [versions],
+  );
   const allTags = useMemo(
     () => listTags(tags, versions.map(instanceKey)),
     [tags, versions],
@@ -344,6 +366,85 @@ export function InstanceLibrary({
 
     updateInstancesFile((file) => reorderGroups(file, from, from + delta));
   };
+
+  const deleteGroup = (groupId: string, name: string) => {
+    let removed: RemovedGroup | null = null;
+
+    updateInstancesFile((file) => {
+      const index = file.groups.findIndex((group) => group.id === groupId);
+      if (index === -1) return file;
+
+      const group = file.groups[index];
+      removed = {
+        group,
+        index,
+        ungroupedCollapsed: file.ungroupedCollapsed === true,
+      };
+      const next = removeGroup(file, groupId);
+
+      return group.keys.length > 0 && next.ungroupedCollapsed
+        ? toggleUngrouped(next)
+        : next;
+    });
+
+    const snapshot = removed as RemovedGroup | null;
+    if (!snapshot) return;
+
+    showUndoToast(t("versions.groups.removed", { name }), () =>
+      updateInstancesFile((file) => {
+        if (file.groups.some((group) => group.id === snapshot.group.id)) {
+          return file;
+        }
+
+        const claimed = new Set(file.groups.flatMap((group) => group.keys));
+        const groups = [...file.groups];
+        groups.splice(Math.min(snapshot.index, groups.length), 0, {
+          ...snapshot.group,
+          keys: snapshot.group.keys.filter((key) => !claimed.has(key)),
+        });
+        const next = { ...file, groups };
+
+        return snapshot.ungroupedCollapsed !== (next.ungroupedCollapsed === true)
+          ? toggleUngrouped(next)
+          : next;
+      }),
+    );
+  };
+
+  const groupActions = (groupId: string, name: string) => [
+    {
+      id: "rename",
+      icon: FolderPen,
+      label: t("versions.groups.rename"),
+      disabled: false,
+      destructive: false,
+      onSelect: () => setRenamingGroup({ id: groupId, name }),
+    },
+    {
+      id: "up",
+      icon: ArrowUp,
+      label: t("versions.groups.moveUp"),
+      disabled: groupIndex(groupId) <= 0,
+      destructive: false,
+      onSelect: () => moveGroup(groupId, -1),
+    },
+    {
+      id: "down",
+      icon: ArrowDown,
+      label: t("versions.groups.moveDown"),
+      disabled: groupIndex(groupId) >= groups.length - 1,
+      destructive: false,
+      onSelect: () => moveGroup(groupId, 1),
+    },
+    {
+      id: "delete",
+      icon: Trash2,
+      label: t("versions.groups.remove"),
+      disabled: false,
+      destructive: true,
+      onSelect: () => deleteGroup(groupId, name),
+    },
+  ];
 
   const dropIntoGroup = (groupId: string | null) => {
     const key = dragKeyRef.current;
@@ -482,7 +583,7 @@ export function InstanceLibrary({
                   <ListFilter />
                   {t("versions.filters.title")}
                   {filterCount > 0 && (
-                    <span className="ml-0.5 flex size-4 items-center justify-center rounded-full bg-primary-soft font-mono text-[0.6rem] text-foreground">
+                    <span className="ml-0.5 flex size-4 items-center justify-center rounded-full bg-info/15 font-mono text-3xs text-info">
                       {filterCount}
                     </span>
                   )}
@@ -579,82 +680,46 @@ export function InstanceLibrary({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="secondary" size="sm" className="h-9 shrink-0">
-                  <ArrowDownUp />
-                  {t(`versions.sort.${sort}`)}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuRadioGroup
-                  value={sort}
-                  onValueChange={(value) =>
-                    void patchSettings({
-                      instancesSort: value as (typeof LIBRARY_SORTS)[number],
-                    }).catch((error) =>
-                      showFailureToast(t("settings.saveFailed"), error, {
-                        channels: ["fs:writeJSON"],
-                      }),
-                    )
-                  }
-                >
-                  {LIBRARY_SORTS.map((option) => (
-                    <DropdownMenuRadioItem key={option} value={option}>
-                      {t(`versions.sort.${option}`)}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={onCreateGroup}>
-                  <FolderPlus />
-                  <span>{t("versions.groups.create")}</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <div
-              ref={viewIndicator.containerRef}
-              className="relative flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5"
+            <SortMenu
+              value={sort}
+              options={LIBRARY_SORTS.map((option) => ({
+                value: option,
+                label: t(`versions.sort.${option}`),
+              }))}
+              onChange={(value) =>
+                void patchSettings({ instancesSort: value }).catch((error) =>
+                  showFailureToast(t("settings.saveFailed"), error, {
+                    channels: ["fs:writeJSON"],
+                  }),
+                )
+              }
+              className="size-9"
             >
-              <SlidingIndicator
-                indicator={viewIndicator}
-                variant="fill"
-                className="rounded-md bg-secondary"
-              />
-              {(["list", "compact", "grid"] as InstancesView[]).map((mode) => (
-                <Hint key={mode} content={t(VIEW_LABELS[mode])}>
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    data-indicator-active={view === mode}
-                    className={cn(
-                      "relative",
-                      view === mode
-                        ? "text-foreground hover:bg-transparent"
-                        : "text-muted-foreground",
-                    )}
-                    aria-label={t(VIEW_LABELS[mode])}
-                    onClick={() =>
-                      void patchSettings({ instancesView: mode }).catch(
-                        (error) =>
-                          showFailureToast(t("settings.saveFailed"), error, {
-                            channels: ["fs:writeJSON"],
-                          }),
-                      )
-                    }
-                  >
-                    {mode === "list" ? (
-                      <List className="size-4" />
-                    ) : mode === "compact" ? (
-                      <Rows4 className="size-4" />
-                    ) : (
-                      <LayoutGrid className="size-4" />
-                    )}
-                  </Button>
-                </Hint>
-              ))}
-            </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={onCreateGroup}>
+                <FolderPlus />
+                <span>{t("versions.groups.create")}</span>
+              </DropdownMenuItem>
+            </SortMenu>
+
+            <SegmentedControl
+              iconOnly
+              value={view}
+              ariaLabel={t("versions.viewLabel")}
+              options={VIEW_MODES.map((mode) => ({
+                value: mode,
+                label: t(VIEW_LABELS[mode]),
+                icon: <ViewIcon mode={mode} />,
+              }))}
+              onChange={(mode) =>
+                void patchSettings({ instancesView: mode }).catch((error) =>
+                  showFailureToast(t("settings.saveFailed"), error, {
+                    channels: ["fs:writeJSON"],
+                  }),
+                )
+              }
+              className="h-9 p-1"
+            />
 
             <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
               {activeFilters.slice(0, 3).map(({ facet, value }) => (
@@ -663,21 +728,29 @@ export function InstanceLibrary({
                   variant="secondary"
                   className="shrink-0 gap-1 pr-1"
                 >
-                  <span className="max-w-28 truncate">
-                    {facetLabel(facet, value)}
-                  </span>
-                  <button
-                    type="button"
-                    className="rounded-full p-0.5 hover:bg-foreground/10"
-                    aria-label={t("versions.clearFilters")}
-                    onClick={() => flip(facet, value)}
+                  <Hint
+                    content={facetLabel(facet, value)}
+                    variant="text"
+                    truncatedOnly
                   >
-                    <X className="size-3" />
-                  </button>
+                    <span className="max-w-28 truncate">
+                      {facetLabel(facet, value)}
+                    </span>
+                  </Hint>
+                  <Hint content={t("versions.clearFilters")}>
+                    <button
+                      type="button"
+                      className="rounded-full p-0.5 hover:bg-foreground/10"
+                      aria-label={t("versions.clearFilters")}
+                      onClick={() => flip(facet, value)}
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </Hint>
                 </Badge>
               ))}
               {activeFilters.length > 3 && (
-                <span className="shrink-0 font-mono text-[0.7rem] text-faint">
+                <span className="shrink-0 font-mono text-2xs text-faint">
                   +{activeFilters.length - 3}
                 </span>
               )}
@@ -686,7 +759,7 @@ export function InstanceLibrary({
                   <button
                     type="button"
                     onClick={reset}
-                    className="shrink-0 rounded text-[0.7rem] text-faint transition-colors hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    className="shrink-0 rounded text-2xs text-faint transition-colors hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
                     {t("home.hiddenByFilter", { count: hiddenCount })}
                   </button>
@@ -766,33 +839,50 @@ export function InstanceLibrary({
               <PackagePlus />
             </EmptyMedia>
             <EmptyTitle>{t("versions.noVersions")}</EmptyTitle>
+            <EmptyDescription className="max-w-sm">
+              {account
+                ? t("shell.emptyInstancesHint")
+                : t("versions.emptyNoAccount")}
+            </EmptyDescription>
           </EmptyHeader>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            {t("shell.emptyInstancesHint")}
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <Button
-              data-focus-key="new-instance"
-              disabled={!account}
-              onClick={() => openNewInstance()}
-            >
-              <PackagePlus />
-              {t("versions.create")}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={!account}
-              onClick={async () => {
-                const filePaths = await api.other.openFileDialog(false, [
-                  { name: "Modpack", extensions: ["zip", "mrpack"] },
-                ]);
-                if (!filePaths.length) return;
-                openNewInstance({ importFilePath: filePaths[0] });
-              }}
-            >
-              {t("addVersion.tabs.fromFile")}
-            </Button>
-          </div>
+          <EmptyContent className="max-w-none flex-row justify-center">
+            {account ? (
+              <>
+                <Button
+                  data-focus-key="new-instance"
+                  onClick={() => openNewInstance()}
+                >
+                  <PackagePlus />
+                  {t("versions.create")}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => openNewInstance({ source: "catalog" })}
+                >
+                  <Layers3 />
+                  {t("newInstance.sources.catalog")}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    const filePaths = await api.other.openFileDialog(false, [
+                      { name: "Modpack", extensions: ["zip", "mrpack"] },
+                    ]);
+                    if (!filePaths.length) return;
+                    openNewInstance({ importFilePath: filePaths[0] });
+                  }}
+                >
+                  <FolderInput />
+                  {t("addVersion.tabs.fromFile")}
+                </Button>
+              </>
+            ) : (
+              <Button onClick={openAddAccount}>
+                <UserPlus />
+                {t("accounts.addAccount")}
+              </Button>
+            )}
+          </EmptyContent>
         </Empty>
       ) : visible.length === 0 ? (
         <Empty className="min-h-0 flex-1 border border-dashed border-border bg-card">
@@ -823,7 +913,7 @@ export function InstanceLibrary({
             {sectionLibraryEntries(entries).map((section) => {
               const renderEntry = (entry: (typeof entries)[number]) => {
                 if (entry.kind === "header") {
-                  return (
+                  const header = (
                     <div
                       key={entry.key}
                       onDragOver={(event) => {
@@ -841,10 +931,12 @@ export function InstanceLibrary({
                     >
                       {isFiltering ? (
                         <span className="flex min-w-0 flex-1 items-center gap-1.5 pl-5">
-                          <span className="truncate text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
-                            {entry.name}
-                          </span>
-                          <span className="shrink-0 font-mono text-[0.65rem] text-faint">
+                          <Hint content={entry.name} variant="text" truncatedOnly>
+                            <span className="truncate text-3xs font-semibold tracking-[0.09em] text-faint uppercase">
+                              {entry.name}
+                            </span>
+                          </Hint>
+                          <span className="shrink-0 font-mono text-3xs text-faint">
                             {entry.count}
                           </span>
                         </span>
@@ -866,10 +958,12 @@ export function InstanceLibrary({
                               !entry.collapsed && "rotate-90",
                             )}
                           />
-                          <span className="truncate text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
-                            {entry.name}
-                          </span>
-                          <span className="shrink-0 font-mono text-[0.65rem] text-faint">
+                          <Hint content={entry.name} variant="text" truncatedOnly>
+                            <span className="truncate text-3xs font-semibold tracking-[0.09em] text-faint uppercase">
+                              {entry.name}
+                            </span>
+                          </Hint>
+                          <span className="shrink-0 font-mono text-3xs text-faint">
                             {entry.count}
                           </span>
                         </button>
@@ -890,50 +984,46 @@ export function InstanceLibrary({
                             </DropdownMenuTrigger>
                           </Hint>
                           <DropdownMenuContent align="end" className="w-52">
-                            <DropdownMenuItem
-                              onSelect={() =>
-                                setRenamingGroup({
-                                  id: entry.id as string,
-                                  name: entry.name,
-                                })
-                              }
-                            >
-                              <FolderPen />
-                              <span>{t("versions.groups.rename")}</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              disabled={groupIndex(entry.id) <= 0}
-                              onSelect={() => moveGroup(entry.id, -1)}
-                            >
-                              <ArrowUp />
-                              <span>{t("versions.groups.moveUp")}</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              disabled={
-                                groupIndex(entry.id) >= groups.length - 1
-                              }
-                              onSelect={() => moveGroup(entry.id, 1)}
-                            >
-                              <ArrowDown />
-                              <span>{t("versions.groups.moveDown")}</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onSelect={() =>
-                                setPendingGroup({
-                                  id: entry.id as string,
-                                  name: entry.name,
-                                })
-                              }
-                            >
-                              <X />
-                              <span>{t("versions.groups.remove")}</span>
-                            </DropdownMenuItem>
+                            {groupActions(entry.id, entry.name).map((action) => (
+                              <Fragment key={action.id}>
+                                {action.destructive && <DropdownMenuSeparator />}
+                                <DropdownMenuItem
+                                  variant={action.destructive ? "destructive" : "default"}
+                                  disabled={action.disabled}
+                                  onSelect={action.onSelect}
+                                >
+                                  <action.icon />
+                                  <span>{action.label}</span>
+                                </DropdownMenuItem>
+                              </Fragment>
+                            ))}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
                     </div>
+                  );
+
+                  if (!entry.id) return header;
+
+                  return (
+                    <ContextMenu key={entry.key}>
+                      <ContextMenuTrigger asChild>{header}</ContextMenuTrigger>
+                      <ContextMenuContent className="w-52">
+                        {groupActions(entry.id, entry.name).map((action) => (
+                          <Fragment key={action.id}>
+                            {action.destructive && <ContextMenuSeparator />}
+                            <ContextMenuItem
+                              variant={action.destructive ? "destructive" : "default"}
+                              disabled={action.disabled}
+                              onSelect={action.onSelect}
+                            >
+                              <action.icon />
+                              <span>{action.label}</span>
+                            </ContextMenuItem>
+                          </Fragment>
+                        ))}
+                      </ContextMenuContent>
+                    </ContextMenu>
                   );
                 }
 
@@ -1039,54 +1129,56 @@ export function InstanceLibrary({
                 };
 
                 return (
-                  <ContextMenu key={itemKey}>
-                    <ContextMenuTrigger className="contents">
-                      {view === "grid" ? (
-                        <InstanceTile {...cardProps} />
-                      ) : (
-                        <InstanceRow
-                          {...cardProps}
-                          compact={view === "compact"}
-                        />
-                      )}
-                    </ContextMenuTrigger>
-                    <ContextMenuContent className="w-56">
-                      {actions.map((group, index) => (
-                        <div key={group[0]?.id ?? index}>
-                          {index > 0 && <ContextMenuSeparator />}
-                          {group.map((action) => (
-                            <ContextMenuItem
-                              key={action.id}
-                              variant={
-                                action.destructive ? "destructive" : "default"
-                              }
-                              disabled={action.disabled}
-                              onSelect={action.onSelect}
-                            >
-                              <action.icon />
-                              <span>{action.label}</span>
-                              {action.shortcut && (
-                                <ContextMenuShortcut>
-                                  {action.shortcut}
-                                </ContextMenuShortcut>
-                              )}
-                            </ContextMenuItem>
-                          ))}
-                          {index === 2 && (
-                            <ContextMenuSub>
-                              <ContextMenuSubTrigger>
-                                <FolderPlus />
-                                <span>{t("versions.groups.addTo")}</span>
-                              </ContextMenuSubTrigger>
-                              <ContextMenuSubContent>
-                                {groupItems(itemKey)}
-                              </ContextMenuSubContent>
-                            </ContextMenuSub>
-                          )}
-                        </div>
-                      ))}
-                    </ContextMenuContent>
-                  </ContextMenu>
+                  <RemovalItem key={itemKey} itemKey={itemKey}>
+                    <ContextMenu>
+                      <ContextMenuTrigger className="contents">
+                        {view === "grid" ? (
+                          <InstanceTile {...cardProps} />
+                        ) : (
+                          <InstanceRow
+                            {...cardProps}
+                            compact={view === "compact"}
+                          />
+                        )}
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="w-56">
+                        {actions.map((group, index) => (
+                          <div key={group[0]?.id ?? index}>
+                            {index > 0 && <ContextMenuSeparator />}
+                            {group.map((action) => (
+                              <ContextMenuItem
+                                key={action.id}
+                                variant={
+                                  action.destructive ? "destructive" : "default"
+                                }
+                                disabled={action.disabled}
+                                onSelect={action.onSelect}
+                              >
+                                <action.icon />
+                                <span>{action.label}</span>
+                                {action.shortcut && (
+                                  <ContextMenuShortcut>
+                                    {action.shortcut}
+                                  </ContextMenuShortcut>
+                                )}
+                              </ContextMenuItem>
+                            ))}
+                            {index === 2 && (
+                              <ContextMenuSub>
+                                <ContextMenuSubTrigger>
+                                  <FolderPlus />
+                                  <span>{t("versions.groups.addTo")}</span>
+                                </ContextMenuSubTrigger>
+                                <ContextMenuSubContent>
+                                  {groupItems(itemKey)}
+                                </ContextMenuSubContent>
+                              </ContextMenuSub>
+                            )}
+                          </div>
+                        ))}
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  </RemovalItem>
                 );
               };
 
@@ -1108,10 +1200,16 @@ export function InstanceLibrary({
                   {view === "grid"
                     ? section.items.length > 0 && (
                         <div className="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3">
-                          {section.items.map(renderEntry)}
+                          <RemovalList sourceKeys={instanceKeys}>
+                            {section.items.map(renderEntry)}
+                          </RemovalList>
                         </div>
                       )
-                    : section.items.map(renderEntry)}
+                    : (
+                        <RemovalList sourceKeys={instanceKeys}>
+                          {section.items.map(renderEntry)}
+                        </RemovalList>
+                      )}
                 </div>
               );
             })}
@@ -1134,46 +1232,6 @@ export function InstanceLibrary({
         />
       )}
 
-      {pendingGroup && (
-        <Confirmation
-          title={t("versions.groups.remove")}
-          onClose={() => setPendingGroup(null)}
-          reversible={false}
-          content={[
-            {
-              text: t("versions.groups.removeConfirm", {
-                name: pendingGroup.name,
-              }),
-            },
-            { text: t("versions.groups.removeKeep") },
-          ]}
-          buttons={[
-            {
-              text: t("common.cancel"),
-              color: "secondary",
-              onClick: () => setPendingGroup(null),
-            },
-            {
-              text: t("common.delete"),
-              color: "danger",
-              onClick: () => {
-                updateInstancesFile((file) => {
-                  const hadMembers = file.groups.some(
-                    (group) =>
-                      group.id === pendingGroup.id && group.keys.length > 0,
-                  );
-                  const next = removeGroup(file, pendingGroup.id);
-
-                  return hadMembers && next.ungroupedCollapsed
-                    ? toggleUngrouped(next)
-                    : next;
-                });
-                setPendingGroup(null);
-              },
-            },
-          ]}
-        />
-      )}
     </section>
   );
 }

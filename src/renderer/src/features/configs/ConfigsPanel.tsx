@@ -46,6 +46,9 @@ import type { ILocalProject } from "@/types/ModManager";
 import { Hint } from "@renderer/components/Hint";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { showUndoToast } from "@renderer/utilities/undoToast";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
 import { registerNavigationBlocker } from "@renderer/navigation/guards";
 import { formatDate } from "@renderer/utilities/date";
 import { formatBytes } from "@renderer/utilities/file";
@@ -212,9 +215,9 @@ export function ConfigsPanel({
   const [notice, setNotice] = useState<{ text: string; at: number } | null>(
     null,
   );
-  const [pendingConfirm, setPendingConfirm] = useState<
-    "reset" | "saveWithIssue" | null
-  >(null);
+  const [pendingConfirm, setPendingConfirm] = useState<"saveWithIssue" | null>(
+    null,
+  );
 
   const editorRef = useRef<ConfigTextEditorHandle>(null);
   const pendingRevealRef = useRef<{
@@ -474,7 +477,7 @@ export function ConfigsPanel({
           backups,
           key,
           previous,
-        ).catch(() => null);
+        ).catch(ignoreFailure);
 
         if (!next) {
           showFailureToast(t("configs.saveFailed"), undefined, {
@@ -604,7 +607,7 @@ export function ConfigsPanel({
         backups,
         key,
         read.text,
-      ).catch(() => null);
+      ).catch(ignoreFailure);
 
       if (!next) {
         showFailureToast(t("configs.resetFailed"), undefined, {
@@ -630,8 +633,42 @@ export function ConfigsPanel({
     setOriginals((prev) => withoutKey(prev, key));
     setDrafts((prev) => withoutKey(prev, key));
     setView(null);
-    if (read.state === "missing") setSelected(null);
-    showNotice(t("configs.resetDone"));
+    if (read.state === "missing") {
+      setSelected(null);
+      showNotice(t("configs.resetDone"));
+      return;
+    }
+
+    const entry = selected;
+    const previousText = read.text;
+    showUndoToast(
+      t("configs.resetDone"),
+      async () => {
+        try {
+          await api.fs.ensure(entryDirectory(entry));
+          if (!(await api.fs.writeFile(filePath, previousText, "utf-8"))) {
+            showFailureToast(t("configs.saveFailed"), undefined, {
+              channels: ["fs:writeFile"],
+              fallbackDescription: t("configs.saveFailedHint"),
+            });
+            return;
+          }
+        } catch (error) {
+          showFailureToast(t("configs.saveFailed"), error, {
+            channels: ["fs:writeFile", "fs:ensure"],
+          });
+          return;
+        }
+
+        setOriginals((prev) => ({ ...prev, [key]: previousText }));
+        setEntries((prev) =>
+          prev && !prev.some((item) => item.relative === key)
+            ? sortConfigEntries([...prev, entry])
+            : prev,
+        );
+      },
+      { description: t("configs.reset.undoHint") },
+    );
   };
 
   const shortcutRef = useRef<(event: KeyboardEvent) => void>(() => {});
@@ -703,12 +740,41 @@ export function ConfigsPanel({
     );
   }
 
+  const issueText =
+    issue && issuePosition
+      ? t("configs.syntax.issue", {
+          line: issuePosition.line + 1,
+          column: issuePosition.column + 1,
+          message: t(`configs.syntax.${issue.code}`, {
+            detail: issue.detail ?? "",
+          }),
+        })
+      : "";
+
+  const translationBanner =
+    translation.isTranslating && translation.progress
+      ? t("configs.translate.progress", { ...translation.progress })
+      : bodies.length === 0
+        ? t("configs.translate.noComments")
+        : translation.hasFailed
+          ? t(
+              translation.translations.size
+                ? "configs.translate.partial"
+                : "configs.translate.failed",
+            )
+          : t("configs.translate.banner");
+
   const renderBody = () => {
     if (!selected) {
       return (
-        <div className="flex h-full items-center justify-center px-6 text-center text-sm text-muted-foreground">
-          {t("configs.pickFile")}
-        </div>
+        <Empty className="h-full border-0 bg-transparent">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FileCog />
+            </EmptyMedia>
+            <EmptyDescription>{t("configs.pickFile")}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       );
     }
 
@@ -760,19 +826,17 @@ export function ConfigsPanel({
 
     if (isMissing) {
       return (
-        <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
-            <FileX className="size-5" />
-          </span>
-          <div className="grid max-w-sm gap-1">
-            <p className="text-sm font-medium">{t("configs.missing.title")}</p>
-            <p className="text-xs leading-5 text-muted-foreground">
-              {t("configs.missing.hint")}
-            </p>
-          </div>
+        <Empty className="h-full border-0 bg-transparent">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FileX />
+            </EmptyMedia>
+            <EmptyTitle>{t("configs.missing.title")}</EmptyTitle>
+            <EmptyDescription>{t("configs.missing.hint")}</EmptyDescription>
+          </EmptyHeader>
           {snapshots[0] && (
             <Button
-              variant="secondary"
+              variant="outline"
               size="sm"
               disabled={disabled}
               onClick={() => void previewSnapshot(snapshots[0])}
@@ -781,7 +845,7 @@ export function ConfigsPanel({
               {t("configs.missing.restore")}
             </Button>
           )}
-        </div>
+        </Empty>
       );
     }
 
@@ -794,7 +858,7 @@ export function ConfigsPanel({
               onClick={() =>
                 revealLine(issuePosition.line, issuePosition.column, 1)
               }
-              className="flex shrink-0 items-center gap-2 border-b border-warning/30 bg-warning/8 px-3 py-1.5 text-left text-[0.7rem] text-warning"
+              className="flex shrink-0 items-center gap-2 border-b border-warning/30 bg-warning/8 px-3 py-1.5 text-left text-2xs text-warning"
             >
               <TriangleAlert className="size-3.5 shrink-0" />
               <span className="min-w-0 flex-1">
@@ -819,30 +883,22 @@ export function ConfigsPanel({
     return (
       <>
         {isTranslatedView && (
-          <div className="flex shrink-0 items-center gap-2 border-b border-border bg-surface-1 px-3 py-1.5 text-[0.7rem] text-muted-foreground">
+          <div className="flex shrink-0 items-center gap-2 border-b border-border bg-surface-1 px-3 py-1.5 text-2xs text-muted-foreground">
             {translation.isTranslating ? (
               <Loader2 className="size-3.5 shrink-0 animate-spin text-faint" />
             ) : (
               <Languages className="size-3.5 shrink-0 text-faint" />
             )}
-            <span className="min-w-0 flex-1 truncate">
-              {translation.isTranslating && translation.progress
-                ? t("configs.translate.progress", { ...translation.progress })
-                : bodies.length === 0
-                  ? t("configs.translate.noComments")
-                  : translation.hasFailed
-                    ? t(
-                        translation.translations.size
-                          ? "configs.translate.partial"
-                          : "configs.translate.failed",
-                      )
-                    : t("configs.translate.banner")}
-            </span>
+            <Hint content={translationBanner} variant="text" truncatedOnly>
+              <span className="min-w-0 flex-1 truncate">
+                {translationBanner}
+              </span>
+            </Hint>
             {translation.hasFailed && !translation.isTranslating && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 px-2 text-[0.7rem]"
+                className="h-6 px-2 text-2xs"
                 onClick={translation.retry}
               >
                 {t("common.retry")}
@@ -851,7 +907,7 @@ export function ConfigsPanel({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-2 text-[0.7rem]"
+              className="h-6 px-2 text-2xs"
               onClick={() => setIsTranslationOn(false)}
             >
               {t("configs.translate.showOriginal")}
@@ -915,29 +971,21 @@ export function ConfigsPanel({
             </Hint>
 
             {canUseForm && !isMissing && (
-              <div
-                role="tablist"
-                aria-label={t("configs.modeLabel")}
-                className="flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5"
-              >
-                {(["text", "form"] as const).map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeMode === item}
-                    onClick={() => changeMode(item)}
-                    className="flex h-6 items-center gap-1 rounded-md px-2 text-[0.7rem] text-muted-foreground transition-colors not-aria-selected:hover:text-foreground aria-selected:bg-surface-3 aria-selected:text-foreground"
-                  >
-                    {item === "text" ? (
+              <SegmentedControl
+                value={activeMode}
+                ariaLabel={t("configs.modeLabel")}
+                options={(["text", "form"] as const).map((item) => ({
+                  value: item,
+                  label: t(`configs.mode.${item}`),
+                  icon:
+                    item === "text" ? (
                       <AlignLeft className="size-3" />
                     ) : (
                       <ListChecks className="size-3" />
-                    )}
-                    {t(`configs.mode.${item}`)}
-                  </button>
-                ))}
-              </div>
+                    ),
+                }))}
+                onChange={changeMode}
+              />
             )}
 
             {translation.canTranslate &&
@@ -990,18 +1038,18 @@ export function ConfigsPanel({
             )}
 
             <Popover open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-              <Hint content={t("configs.history")}>
+              <Hint content={isSaving ? undefined : t("configs.fileCopies")}>
                 <PopoverTrigger asChild>
                   <Button
                     size="sm"
                     variant="ghost"
                     className="h-7 gap-1 bg-transparent px-2 text-faint"
                     disabled={isSaving}
-                    aria-label={t("configs.history")}
+                    aria-label={t("configs.fileCopies")}
                   >
                     <History className="size-3.5" />
                     {snapshots.length > 0 && (
-                      <span className="font-mono text-[0.65rem] tabular-nums">
+                      <span className="font-mono text-3xs tabular-nums">
                         {snapshots.length}
                       </span>
                     )}
@@ -1011,12 +1059,12 @@ export function ConfigsPanel({
               <PopoverContent align="end" className="w-72 p-1.5">
                 {snapshots.length === 0 ? (
                   <p className="px-2 py-3 text-center text-xs text-muted-foreground">
-                    {t("configs.noBackups")}
+                    {t("configs.noCopies")}
                   </p>
                 ) : (
                   <>
-                    <p className="px-2 pt-1 pb-1.5 text-[0.65rem] tracking-wide text-faint uppercase">
-                      {t("configs.backupsTitle")}
+                    <p className="px-2 pt-1 pb-1.5 text-3xs tracking-wide text-faint uppercase">
+                      {t("configs.fileCopies")}
                     </p>
                     <ScrollArea className="max-h-64">
                       <div className="flex flex-col gap-0.5 pr-1.5">
@@ -1025,26 +1073,42 @@ export function ConfigsPanel({
                             key={snapshot.id}
                             type="button"
                             onClick={() => void previewSnapshot(snapshot)}
-                            className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-surface-3"
+                            className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-row-hover"
                           >
                             <span className="grid min-w-0 flex-1">
-                              <span className="truncate text-xs">
-                                {snapshot.kind === "baseline"
-                                  ? t("configs.backupBaseline")
-                                  : t("configs.backupPrevious")}
-                              </span>
-                              <span className="truncate font-mono text-[0.65rem] text-faint">
-                                {formatDate(new Date(snapshot.time))}
-                              </span>
+                              <Hint
+                                content={
+                                  snapshot.kind === "baseline"
+                                    ? t("configs.backupBaseline")
+                                    : t("configs.backupPrevious")
+                                }
+                                variant="text"
+                                truncatedOnly
+                              >
+                                <span className="truncate text-xs">
+                                  {snapshot.kind === "baseline"
+                                    ? t("configs.backupBaseline")
+                                    : t("configs.backupPrevious")}
+                                </span>
+                              </Hint>
+                              <Hint
+                                content={formatDate(new Date(snapshot.time))}
+                                variant="text"
+                                truncatedOnly
+                              >
+                                <span className="truncate font-mono text-3xs text-faint">
+                                  {formatDate(new Date(snapshot.time))}
+                                </span>
+                              </Hint>
                             </span>
-                            <span className="shrink-0 font-mono text-[0.65rem] tabular-nums text-faint">
+                            <span className="shrink-0 font-mono text-3xs tabular-nums text-faint">
                               {formatBytes(snapshot.size, sizeLabels, 1)}
                             </span>
                           </button>
                         ))}
                       </div>
                     </ScrollArea>
-                    <p className="px-2 pt-1.5 pb-1 text-[0.65rem] leading-4 text-faint">
+                    <p className="px-2 pt-1.5 pb-1 text-3xs leading-4 text-faint">
                       {t("configs.backupsHint")}
                     </p>
                   </>
@@ -1086,7 +1150,7 @@ export function ConfigsPanel({
                 <DropdownMenuItem
                   variant="destructive"
                   disabled={isMissing || disabled}
-                  onSelect={() => setPendingConfirm("reset")}
+                  onSelect={() => void resetToDefault()}
                 >
                   <RotateCcw />
                   <span>{t("configs.reset.action")}</span>
@@ -1131,7 +1195,7 @@ export function ConfigsPanel({
         {selected && !isReading && !isMissing && (
           <footer
             role="status"
-            className="flex h-7 shrink-0 items-center gap-3 border-t border-border px-3 text-[0.68rem] text-faint"
+            className="flex h-7 shrink-0 items-center gap-3 border-t border-border px-3 text-2xs text-faint"
           >
             {issue && issuePosition ? (
               <button
@@ -1142,20 +1206,20 @@ export function ConfigsPanel({
                 className="flex min-w-0 items-center gap-1.5 text-left text-destructive hover:underline"
               >
                 <TriangleAlert className="size-3 shrink-0" />
-                <span className="min-w-0 truncate">
-                  {t("configs.syntax.issue", {
-                    line: issuePosition.line + 1,
-                    column: issuePosition.column + 1,
-                    message: t(`configs.syntax.${issue.code}`, {
-                      detail: issue.detail ?? "",
-                    }),
-                  })}
-                </span>
+                <Hint content={issueText} variant="text" truncatedOnly>
+                  <span className="min-w-0 truncate">{issueText}</span>
+                </Hint>
               </button>
             ) : configDocument ? (
               <span className="flex min-w-0 items-center gap-1.5">
                 <CircleCheck className="size-3 shrink-0 text-success" />
-                <span className="truncate">{t("configs.syntax.ok")}</span>
+                <Hint
+                  content={t("configs.syntax.ok")}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <span className="truncate">{t("configs.syntax.ok")}</span>
+                </Hint>
               </span>
             ) : null}
 
@@ -1181,9 +1245,11 @@ export function ConfigsPanel({
                   {t("configs.saved")}
                 </span>
               ) : isNoticeShown && notice ? (
-                <span className="max-w-72 truncate text-foreground">
-                  {notice.text}
-                </span>
+                <Hint content={notice.text} variant="text" truncatedOnly>
+                  <span className="max-w-72 truncate text-foreground">
+                    {notice.text}
+                  </span>
+                </Hint>
               ) : null}
 
               {activeMode === "text" && !isTranslatedView && (
@@ -1206,35 +1272,12 @@ export function ConfigsPanel({
         {selected && isMissing && isNoticeShown && notice && (
           <footer
             role="status"
-            className="flex h-7 shrink-0 items-center border-t border-border px-3 text-[0.68rem] text-foreground"
+            className="flex h-7 shrink-0 items-center border-t border-border px-3 text-2xs text-foreground"
           >
             {notice.text}
           </footer>
         )}
       </div>
-
-      {pendingConfirm === "reset" && selected && (
-        <Confirmation
-          title={t("configs.reset.title", { name: selected.name })}
-          content={[{ text: t("configs.reset.hint") }]}
-          reversible
-          onClose={() => setPendingConfirm(null)}
-          buttons={[
-            {
-              text: t("common.cancel"),
-              onClick: () => setPendingConfirm(null),
-            },
-            {
-              text: t("configs.reset.confirm"),
-              color: "danger",
-              onClick: async () => {
-                setPendingConfirm(null);
-                await resetToDefault();
-              },
-            },
-          ]}
-        />
-      )}
 
       {pendingConfirm === "saveWithIssue" && issue && issuePosition && (
         <Confirmation

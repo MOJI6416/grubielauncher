@@ -16,6 +16,7 @@ import {
 } from "./comments";
 import { ConfigEntry, MAX_CONFIG_BYTES } from "./configFiles";
 import { ModIdentity, modIdentities } from "./modGroups";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -23,7 +24,7 @@ const commentTranslationsAtom = atom<ReadonlyMap<string, string>>(new Map());
 const failedTranslationsAtom = atom<ReadonlySet<string>>(new Set<string>());
 const dependencyIndexes = new Map<
   string,
-  Promise<LocalModDependencyIndex | null>
+  Promise<LocalModDependencyIndex | null | undefined>
 >();
 
 const READ_CONCURRENCY = 8;
@@ -85,8 +86,8 @@ export function useCommentTranslation(bodies: string[], isActive: boolean) {
         const batch = batches[index];
         const reply = await api.backend
           .aiComplete(token, translationPrompt(batch, language))
-          .catch(() => null);
-        const parsed = parseTranslationReply(reply, batch.length);
+          .catch(ignoreFailure);
+        const parsed = parseTranslationReply(reply ?? null, batch.length);
 
         if (parsed) {
           store.set(commentTranslationsAtom, (previous) => {
@@ -181,7 +182,7 @@ export function useConfigTexts(entries: ConfigEntry[], enabled: boolean) {
         const entry = entries[next++];
         const text = await api.fs
           .readFile(entryPath(entry), "utf-8")
-          .catch(() => "");
+          .catch(ignoreFailure);
         if (text && text.length <= MAX_CONFIG_BYTES) {
           texts.set(entry.relative, text);
         }
@@ -231,12 +232,12 @@ export function useModIdentities(
 
     let task = dependencyIndexes.get(cacheId);
     if (!task) {
-      task = api.modManager.localDependencies(versionPath).catch(() => null);
+      task = api.modManager.localDependencies(versionPath).catch(ignoreFailure);
       dependencyIndexes.set(cacheId, task);
     }
 
     void task.then((index) => {
-      if (!cancelled) setLoaded({ id: cacheId, index });
+      if (!cancelled) setLoaded({ id: cacheId, index: index ?? null });
     });
 
     return () => {

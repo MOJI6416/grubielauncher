@@ -24,14 +24,14 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Hint } from "@renderer/components/Hint";
+import { showUndoToast } from "@renderer/utilities/undoToast";
 import { navigate } from "@renderer/navigation/navigate";
 import { PLATFORM } from "@renderer/utilities/platform";
 import {
@@ -95,7 +95,6 @@ export function SettingsScreen({
 
   const [query, setQuery] = useState("");
   const [onlyChanged, setOnlyChanged] = useState(false);
-  const [isResetOpen, setResetOpen] = useState(false);
   const [storageTotal, setStorageTotal] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -174,6 +173,17 @@ export function SettingsScreen({
     void commit(defaultsPatch(settings, [id]));
   };
 
+  const resetAll = () => {
+    const patch = defaultsPatch(settings, changedIds);
+    const previous = Object.fromEntries(
+      Object.keys(patch).map((key) => [key, settings[key as keyof typeof settings]]),
+    ) as Partial<typeof settings>;
+    void commit(patch);
+    showUndoToast(t("settings.resetAllDone"), () => void commit(previous), {
+      id: "settings-reset-all",
+    });
+  };
+
   const sectionProps = {
     settings,
     commit: (patch: Parameters<typeof commit>[0]) => void commit(patch),
@@ -205,14 +215,16 @@ export function SettingsScreen({
             className="h-8 pr-7 pl-8 text-sm"
           />
           {query && (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              aria-label={t("common.cancel")}
-              className="absolute top-1/2 right-2 flex size-4 -translate-y-1/2 items-center justify-center rounded text-faint hover:text-foreground"
-            >
-              <X className="size-3.5" />
-            </button>
+            <Hint content={t("settings.search.clear")}>
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label={t("settings.search.clear")}
+                className="absolute top-1/2 right-2 flex size-4 -translate-y-1/2 items-center justify-center rounded text-faint hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            </Hint>
           )}
         </div>
 
@@ -228,7 +240,7 @@ export function SettingsScreen({
               : "border-border bg-surface-2 text-muted-foreground hover:text-foreground",
           )}
         >
-          <span className="size-1.5 rounded-full bg-primary" />
+          <span className="size-1.5 rounded-full bg-info" />
           {t("settings.onlyChanged")}
           <span className="font-mono tabular-nums text-faint">
             {changedIds.length}
@@ -248,7 +260,7 @@ export function SettingsScreen({
             size="sm"
             className="text-muted-foreground"
             disabled={changedIds.length === 0}
-            onClick={() => setResetOpen(true)}
+            onClick={resetAll}
           >
             <RotateCcw className="size-3.5" />
             {t("settings.resetAll")}
@@ -264,7 +276,7 @@ export function SettingsScreen({
           <SlidingIndicator
             indicator={sectionIndicator}
             variant="fill"
-            className="rounded-lg bg-primary-soft"
+            className="rounded-lg bg-row-selected"
           />
           {SETTINGS_SECTIONS.map((id) => {
             const Icon = SECTION_ICON[id];
@@ -279,7 +291,7 @@ export function SettingsScreen({
               <button
                 key={id}
                 type="button"
-                aria-current={active === id}
+                aria-current={active === id ? "page" : undefined}
                 data-indicator-active={active === id}
                 onClick={() =>
                   navigate({ name: "settings", section: id }, { replace: true })
@@ -288,19 +300,26 @@ export function SettingsScreen({
                   "relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors",
                   active === id
                     ? "text-foreground"
-                    : "text-muted-foreground hover:bg-surface-3 hover:text-foreground",
+                    : "text-muted-foreground hover:bg-row-hover hover:text-foreground",
                   isDimmed && "opacity-35",
                 )}
               >
                 <Icon className="size-4 shrink-0 text-faint" />
-                <span className="min-w-0 flex-1 truncate text-left">
-                  {t(`settings.sections.${id}`)}
-                </span>
+                <Hint
+                  content={t(`settings.sections.${id}`)}
+                  variant="text"
+                  side="right"
+                  truncatedOnly
+                >
+                  <span className="min-w-0 flex-1 truncate text-left">
+                    {t(`settings.sections.${id}`)}
+                  </span>
+                </Hint>
                 {count > 0 && (
                   <span
                     className={cn(
-                      "shrink-0 font-mono text-[0.65rem] tabular-nums",
-                      isFiltering ? "text-faint" : "text-primary",
+                      "shrink-0 font-mono text-3xs tabular-nums",
+                      isFiltering ? "text-faint" : "text-info",
                     )}
                   >
                     {count}
@@ -310,7 +329,7 @@ export function SettingsScreen({
             );
           })}
 
-          <p className="mt-auto border-t border-border px-1.5 pt-2.5 text-[0.7rem] leading-snug text-faint">
+          <p className="mt-auto border-t border-border px-1.5 pt-2.5 text-2xs leading-snug text-faint">
             {t("settings.autosaveHint")}
           </p>
         </nav>
@@ -363,32 +382,6 @@ export function SettingsScreen({
           )}
         </div>
       </div>
-
-      <AlertDialog open={isResetOpen} onOpenChange={setResetOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("settings.resetAllConfirmTitle")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("settings.resetAllConfirmBody", { count: changedIds.length })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setResetOpen(false);
-                void commit(defaultsPatch(settings, changedIds));
-              }}
-            >
-              <RotateCcw className="size-4" />
-              {t("settings.resetAll")}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
@@ -429,14 +422,20 @@ function EmptySearch({
   const { t } = useTranslation();
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-      <Search className="size-6 text-faint" />
-      <p className="text-sm text-muted-foreground">
-        {t("settings.search.empty", { query: query.trim() })}
-      </p>
-      <Button variant="outline" size="sm" onClick={onClear}>
-        {t("settings.search.clear")}
-      </Button>
-    </div>
+    <Empty className="h-full">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <Search />
+        </EmptyMedia>
+        <EmptyTitle>
+          {t("settings.search.empty", { query: query.trim() })}
+        </EmptyTitle>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button variant="outline" size="sm" onClick={onClear}>
+          {t("settings.search.clear")}
+        </Button>
+      </EmptyContent>
+    </Empty>
   );
 }

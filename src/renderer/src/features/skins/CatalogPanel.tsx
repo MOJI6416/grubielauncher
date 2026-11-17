@@ -11,7 +11,6 @@ import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { toast } from "sonner";
 import {
-  ArrowDownWideNarrow,
   Download,
   ExternalLink,
   ImageOff,
@@ -27,13 +26,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapse } from "@/components/ui/collapse";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Empty,
   EmptyDescription,
   EmptyHeader,
@@ -45,6 +37,8 @@ import { VirtualizedSelect } from "@/components/ui/virtualized-select";
 import { cn } from "@/lib/utils";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { Hint } from "@renderer/components/Hint";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { SortMenu } from "@renderer/components/SortMenu";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { formatDay } from "@renderer/utilities/date";
 import { SkinHead } from "./SkinHead";
@@ -75,6 +69,7 @@ import {
 } from "./catalogQuery";
 import { useEntranceWave } from "@renderer/utilities/useEntranceWave";
 import { TileSkeleton } from "@renderer/components/ListSkeleton";
+import { formatCompactNumber, formatNumber } from "@renderer/utilities/numbers";
 
 const api = window.api;
 const PAGE_SIZE = 60;
@@ -124,7 +119,7 @@ function CatalogAttribution({ item }: { item: ICatalogSkin }) {
   if (!site && !added) return null;
 
   return (
-    <div className="flex min-w-0 items-center gap-1.5 text-[11px] text-faint">
+    <div className="flex min-w-0 items-center gap-1.5 text-2xs text-faint">
       {site ? (
         href ? (
           <Hint content={href}>
@@ -134,15 +129,27 @@ function CatalogAttribution({ item }: { item: ICatalogSkin }) {
               className="inline-flex min-w-0 items-center gap-1 rounded transition-colors hover:text-foreground"
             >
               <ExternalLink className="size-3 shrink-0" />
-              <span className="truncate">
-                {t("manageSkins.catalogSource", { site })}
-              </span>
+              <Hint
+                content={t("manageSkins.catalogSource", { site })}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="truncate">
+                  {t("manageSkins.catalogSource", { site })}
+                </span>
+              </Hint>
             </button>
           </Hint>
         ) : (
-          <span className="min-w-0 truncate">
-            {t("manageSkins.catalogSource", { site })}
-          </span>
+          <Hint
+            content={t("manageSkins.catalogSource", { site })}
+            variant="text"
+            truncatedOnly
+          >
+            <span className="min-w-0 truncate">
+              {t("manageSkins.catalogSource", { site })}
+            </span>
+          </Hint>
         )
       ) : null}
 
@@ -181,12 +188,13 @@ function CatalogTile({
     >
       <button
         type="button"
-        aria-pressed={isSelected}
+        role="option"
+        aria-selected={isSelected}
         onClick={() => onSelect(item)}
         className={cn(
           "relative flex h-full flex-col items-center gap-1 overflow-hidden rounded-xl border border-border bg-surface-2 p-1.5 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
           isSelected
-            ? "border-primary/60 bg-primary-soft"
+            ? "border-primary/60 bg-row-selected"
             : "hover:bg-surface-3",
         )}
       >
@@ -196,20 +204,20 @@ function CatalogTile({
         >
           <CatalogPreview item={item} size={previewHeight} />
 
-          <span className="absolute bottom-0 left-0 inline-flex items-center gap-0.5 rounded-md bg-background/75 px-1 text-[10px] text-faint tabular-nums backdrop-blur">
+          <span className="absolute bottom-0 left-0 inline-flex items-center gap-0.5 rounded-md bg-background/75 px-1 text-3xs text-faint tabular-nums backdrop-blur">
             <Download className="size-2.5" />
-            {item.downloads ?? 0}
+            {formatCompactNumber(item.downloads ?? 0)}
           </span>
         </span>
 
-        <span className="w-full truncate text-center text-[11px] leading-4 text-muted-foreground">
+        <span className="w-full truncate text-center text-2xs leading-4 text-muted-foreground">
           {catalogDisplayName(item.name)}
         </span>
 
         {isMine ? (
           <Badge
             variant={statusMeta(item.status).variant}
-            className="absolute top-1 right-1 px-1 text-[9px]"
+            className="absolute top-1 right-1 px-1 text-4xs"
           >
             {t(statusMeta(item.status).key)}
           </Badge>
@@ -510,43 +518,27 @@ export function CatalogPanel({
       <div className="flex shrink-0 items-center gap-2">
         {modeSwitch}
 
-        <div className="inline-flex shrink-0 rounded-lg border border-border bg-surface-2 p-0.5">
-          {sources.map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => patch({ source: value })}
-              className={cn(
-                "h-7 rounded-md px-2.5 text-xs font-medium transition-colors",
-                state.source === value
-                  ? "bg-surface-3 text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {t(`manageSkins.source_${value}`)}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          value={state.source}
+          ariaLabel={t("manageSkins.sourceFilter")}
+          options={sources.map((value) => ({
+            value,
+            label: t(`manageSkins.source_${value}`),
+          }))}
+          onChange={(value) => patch({ source: value })}
+        />
 
         {!isMine ? (
           <>
-            <div className="inline-flex shrink-0 rounded-lg border border-border bg-surface-2 p-0.5">
-              {types.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => patch({ type: value })}
-                  className={cn(
-                    "h-7 rounded-md px-2.5 text-xs font-medium transition-colors",
-                    state.type === value
-                      ? "bg-surface-3 text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {t(`manageSkins.type_${value}`)}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              value={state.type}
+              ariaLabel={t("manageSkins.typeFilter")}
+              options={types.map((value) => ({
+                value,
+                label: t(`manageSkins.type_${value}`),
+              }))}
+              onChange={(value) => patch({ type: value })}
+            />
 
             <div className="relative ml-auto min-w-0 flex-1">
               <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -582,28 +574,14 @@ export function CatalogPanel({
               />
             </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <ArrowDownWideNarrow />
-                  {t(`manageSkins.sort_${state.sort}`)}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuRadioGroup
-                  value={state.sort}
-                  onValueChange={(value) =>
-                    patch({ sort: value as CatalogState["sort"] })
-                  }
-                >
-                  {CATALOG_SORTS.map((value) => (
-                    <DropdownMenuRadioItem key={value} value={value}>
-                      {t(`manageSkins.sort_${value}`)}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <SortMenu
+              value={state.sort}
+              options={CATALOG_SORTS.map((value) => ({
+                value,
+                label: t(`manageSkins.sort_${value}`),
+              }))}
+              onChange={(value) => patch({ sort: value })}
+            />
           </>
         ) : null}
       </div>
@@ -674,6 +652,8 @@ export function CatalogPanel({
                 className="min-h-0 flex-1 overflow-y-auto p-2.5"
               >
                 <div
+                  role="listbox"
+                  aria-label={t("manageSkins.tabCatalog")}
                   className={cn(
                     "relative w-full",
                     isResultWave && "result-wave",
@@ -763,18 +743,32 @@ export function CatalogPanel({
                     </p>
                   </Hint>
                   <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
-                    <span className="min-w-0 truncate">
-                      {selected.model === "slim"
-                        ? t("manageSkins.slim")
-                        : t("manageSkins.classic")}
-                      {!isMine && selected.authorName
-                        ? ` · ${selected.authorName}`
-                        : ""}
-                    </span>
+                    <Hint
+                      content={`${
+                        selected.model === "slim"
+                          ? t("manageSkins.slim")
+                          : t("manageSkins.classic")
+                      }${
+                        !isMine && selected.authorName
+                          ? ` · ${selected.authorName}`
+                          : ""
+                      }`}
+                      variant="text"
+                      truncatedOnly
+                    >
+                      <span className="min-w-0 truncate">
+                        {selected.model === "slim"
+                          ? t("manageSkins.slim")
+                          : t("manageSkins.classic")}
+                        {!isMine && selected.authorName
+                          ? ` · ${selected.authorName}`
+                          : ""}
+                      </span>
+                    </Hint>
                     <span className="shrink-0">·</span>
                     <span className="inline-flex shrink-0 items-center gap-0.5 tabular-nums">
                       <Download className="size-3" />
-                      {selected.downloads ?? 0}
+                      {formatNumber(selected.downloads ?? 0)}
                     </span>
                   </p>
                 </div>
@@ -789,7 +783,7 @@ export function CatalogPanel({
                         type="button"
                         disabled={isMine}
                         onClick={() => patch({ tag: tagName })}
-                        className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground transition-colors enabled:hover:bg-surface-3 disabled:opacity-70"
+                        className="rounded-full border border-border px-2 py-0.5 text-3xs text-muted-foreground transition-colors enabled:hover:bg-surface-3 disabled:opacity-70"
                       >
                         #{tagName}
                       </button>
@@ -802,7 +796,7 @@ export function CatalogPanel({
                     {selected.status === "rejected" &&
                     selected.rejectionReason ? (
                       <div className="rounded-lg border border-destructive/40 bg-surface-1 p-2">
-                        <p className="text-[10px] font-medium text-muted-foreground">
+                        <p className="text-3xs font-medium text-muted-foreground">
                           {t("manageSkins.rejectionReason")}
                         </p>
                         <p className="text-xs text-foreground">
@@ -856,7 +850,9 @@ export function CatalogPanel({
 
       {confirmDelete ? (
         <Confirmation
-          title={t("manageSkins.removeFromGallery")}
+          title={t("manageSkins.removeFromGalleryQuestion", {
+            name: catalogDisplayName(confirmDelete.name),
+          })}
           reversible={false}
           content={[
             {

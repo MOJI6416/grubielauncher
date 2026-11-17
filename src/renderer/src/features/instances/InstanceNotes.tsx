@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Hint } from "@renderer/components/Hint";
 
 const api = window.api;
 
@@ -154,9 +155,11 @@ export function InstanceNotes({ versionPath }: { versionPath: string }) {
         <div className="absolute inset-0 flex flex-col items-start gap-1.5 px-3 py-2.5">
           <span className="flex min-w-0 items-center gap-1.5 text-xs text-destructive">
             <TriangleAlert className="size-3.5 shrink-0" />
-            <span className="min-w-0 truncate">
-              {t("versions.notes.loadFailed")}
-            </span>
+            <Hint content={t("versions.notes.loadFailed")} variant="text" truncatedOnly>
+              <span className="min-w-0 truncate">
+                {t("versions.notes.loadFailed")}
+              </span>
+            </Hint>
           </span>
           <Button
             type="button"
@@ -174,8 +177,8 @@ export function InstanceNotes({ versionPath }: { versionPath: string }) {
         <span
           className={
             status === "failed"
-              ? "pointer-events-none absolute right-2 bottom-1.5 text-[0.65rem] text-destructive"
-              : "pointer-events-none absolute right-2 bottom-1.5 text-[0.65rem] text-faint"
+              ? "pointer-events-none absolute right-2 bottom-1.5 text-3xs text-destructive"
+              : "pointer-events-none absolute right-2 bottom-1.5 text-3xs text-faint"
           }
         >
           {t(

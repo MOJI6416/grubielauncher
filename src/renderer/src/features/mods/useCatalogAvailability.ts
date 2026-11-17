@@ -11,6 +11,7 @@ import {
   probeKey,
   probeLoaders,
 } from "./catalogAvailability";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -42,7 +43,8 @@ function probeTotal(
       { offset: 0, limit: 1 },
     )
     .then((data) => (data && !data.error ? data.total : null))
-    .catch(() => null);
+    .catch(ignoreFailure)
+    .then((total) => total ?? null);
 
   probes.set(key, { at: Date.now(), task });
   void task.then((total) => {

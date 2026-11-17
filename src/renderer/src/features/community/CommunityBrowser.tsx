@@ -1,4 +1,4 @@
-import { useEffect, useState, type UIEvent } from "react";
+import { useEffect, useState, type CSSProperties, type UIEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useAtomValue, useSetAtom } from "jotai";
 import {
@@ -11,6 +11,14 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -45,6 +53,10 @@ import {
 } from "./installedPacks";
 import { usePackInstall } from "./usePackInstall";
 import { ListSkeleton } from "@renderer/components/ListSkeleton";
+import { Hint } from "@renderer/components/Hint";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { SortMenu } from "@renderer/components/SortMenu";
+import { useEntranceWave } from "@renderer/utilities/useEntranceWave";
 
 const LOAD_MORE_THRESHOLD = 180;
 const api = window.api;
@@ -72,6 +84,7 @@ export function CommunityBrowser({
 
   const installed = useInstalledShareCodes();
   const catalog = useExploreCatalog(filters, !offlineProblem);
+  const isResultWave = useEntranceWave(catalog.isLoading);
   const { busyId, install } = usePackInstall(onPick);
 
   useEffect(() => {
@@ -102,7 +115,8 @@ export function CommunityBrowser({
 
   const recheckConnection = async () => {
     setIsRechecking(true);
-    const isHealthy = await api.backend.checkHealth().catch(() => false);
+    const isHealthy =
+      (await api.backend.checkHealth().catch(ignoreFailure)) === true;
     setIsInternetOnline(window.navigator.onLine);
     setIsBackendOnline(isHealthy);
     setIsRechecking(false);
@@ -151,9 +165,11 @@ export function CommunityBrowser({
             {versionOptions.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 <span className="flex min-w-0 flex-1 items-center gap-2">
-                  <span className="min-w-0 truncate font-mono">
-                    {option.value}
-                  </span>
+                  <Hint content={option.value} variant="text" truncatedOnly>
+                    <span className="min-w-0 truncate font-mono">
+                      {option.value}
+                    </span>
+                  </Hint>
                   {hasVersionCounts && (
                     <span className="ml-auto shrink-0 font-mono text-faint tabular-nums">
                       {option.count}
@@ -195,27 +211,20 @@ export function CommunityBrowser({
           </SelectContent>
         </Select>
 
-        <Select
+        <SortMenu
           value={filters.sort}
           disabled={isPending}
-          onValueChange={(value) =>
+          options={EXPLORE_SORTS.map((value) => ({
+            value,
+            label: t(`community.sorts.${value}`),
+          }))}
+          onChange={(value) =>
             setFilters((previous) => ({
               ...previous,
               sort: value as ExploreFilters["sort"],
             }))
           }
-        >
-          <SelectTrigger size="sm" className="w-44 shrink-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {EXPLORE_SORTS.map((value) => (
-              <SelectItem key={value} value={value}>
-                {t(`community.sorts.${value}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
       </div>
 
       <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface-1">
@@ -228,21 +237,21 @@ export function CommunityBrowser({
           !offlineProblem ? (
             <ListSkeleton rows={9} />
           ) : catalog.items.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
-              <span className="flex size-11 items-center justify-center rounded-xl bg-surface-2">
-                {emptyState.action === "none" ||
-                emptyState.action === "resetFilters" ? (
-                  <Users className="size-5 text-faint" />
-                ) : (
-                  <CircleAlert className="size-5 text-destructive" />
-                )}
-              </span>
-              <p className="text-sm font-medium text-foreground">
-                {t(emptyState.titleKey)}
-              </p>
-              <p className="max-w-72 text-xs text-muted-foreground">
-                {t(emptyState.hintKey)}
-              </p>
+            <Empty className="h-full px-8">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  {emptyState.action === "none" ||
+                  emptyState.action === "resetFilters" ? (
+                    <Users />
+                  ) : (
+                    <CircleAlert className="text-destructive" />
+                  )}
+                </EmptyMedia>
+                <EmptyTitle>{t(emptyState.titleKey)}</EmptyTitle>
+                <EmptyDescription className="max-w-72 text-xs">
+                  {t(emptyState.hintKey)}
+                </EmptyDescription>
+              </EmptyHeader>
               {emptyState.action === "retryConnection" && (
                 <Button
                   size="sm"
@@ -270,51 +279,56 @@ export function CommunityBrowser({
                   {t("community.resetFilters")}
                 </Button>
               )}
-            </div>
+            </Empty>
           ) : (
-            <div className="grid gap-1.5">
-              {catalog.items.map((pack) => {
+            <div className={cn("grid gap-1.5", isResultWave && "result-wave")}>
+              {catalog.items.map((pack, index) => {
                 const instanceKey = findInstalledInstanceKey(installed, pack);
 
                 return (
-                  <CommunityPackCard
+                  <div
                     key={pack.id}
-                    pack={pack}
-                    language={language}
-                    isInstalled={Boolean(instanceKey)}
-                    action={
-                      instanceKey ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onOpenInstalled(instanceKey)}
-                        >
-                          {t("versions.openInstance")}
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={isPending}
-                          onClick={() => void install(pack.id)}
-                        >
-                          {busyId === pack.id ? (
-                            <Loader2 className="animate-spin" />
-                          ) : (
-                            <HardDriveDownload />
-                          )}
-                          {t("common.install")}
-                        </Button>
-                      )
-                    }
-                  />
+                    data-wave-row
+                    style={{ "--wave-index": index } as CSSProperties}
+                  >
+                    <CommunityPackCard
+                      pack={pack}
+                      language={language}
+                      isInstalled={Boolean(instanceKey)}
+                      action={
+                        instanceKey ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onOpenInstalled(instanceKey)}
+                          >
+                            {t("versions.openInstance")}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isPending}
+                            onClick={() => void install(pack.id)}
+                          >
+                            {busyId === pack.id ? (
+                              <Loader2 className="animate-spin" />
+                            ) : (
+                              <HardDriveDownload />
+                            )}
+                            {t("common.install")}
+                          </Button>
+                        )
+                      }
+                    />
+                  </div>
                 );
               })}
             </div>
           )}
         </div>
 
-        <footer className="flex h-7 shrink-0 items-center gap-2 border-t border-border px-2.5 text-[0.7rem] text-faint">
+        <footer className="flex h-7 shrink-0 items-center gap-2 border-t border-border px-2.5 text-2xs text-faint">
           {catalog.isLoadingMore ? (
             <>
               <Loader2 className="size-3 animate-spin" />
@@ -323,9 +337,15 @@ export function CommunityBrowser({
           ) : catalog.loadMoreError ? (
             <>
               <CircleAlert className="size-3 shrink-0 text-warning" />
-              <span className="min-w-0 truncate text-warning">
-                {t("community.loadMoreFailed")}
-              </span>
+              <Hint
+                content={t("community.loadMoreFailed")}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 truncate text-warning">
+                  {t("community.loadMoreFailed")}
+                </span>
+              </Hint>
               <button
                 type="button"
                 onClick={catalog.retryLoadMore}
@@ -334,14 +354,23 @@ export function CommunityBrowser({
                 {t("common.retry")}
               </button>
             </>
-          ) : (
+          ) : catalog.items.length === 0 ? null : (
             <>
-              <span className="min-w-0 truncate">
-                {t("community.shown", {
+              <Hint
+                content={t("community.shown", {
                   shown: catalog.items.length,
                   total: catalog.total,
                 })}
-              </span>
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 truncate">
+                  {t("community.shown", {
+                    shown: catalog.items.length,
+                    total: catalog.total,
+                  })}
+                </span>
+              </Hint>
               {areFiltersActive && catalog.items.length > 0 && (
                 <button
                   type="button"

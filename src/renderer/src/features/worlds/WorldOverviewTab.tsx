@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import {
   Archive,
+  BarChart3,
   CalendarClock,
   Clock,
   Copy,
@@ -18,11 +19,7 @@ import { Version } from "@renderer/classes/Version";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
-import {
-  formatDate,
-  formatRelative,
-  formatTime,
-} from "@renderer/utilities/date";
+import { formatDate, formatRelative } from "@renderer/utilities/date";
 import { formatBytes } from "@renderer/utilities/file";
 import { shortenPath } from "@renderer/features/instances/instanceOverview";
 import { worldDisplayStats } from "@renderer/utilities/worldStats";
@@ -33,6 +30,8 @@ import {
 } from "./worldFacts";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { formatDuration } from "@renderer/utilities/duration";
+import { formatNumber } from "@renderer/utilities/numbers";
 
 const api = window.api;
 
@@ -52,7 +51,7 @@ export function WorldOverviewTab({
   const { t } = useTranslation();
   const redact = useRedact();
   const stats = worldDisplayStats(world.statistics);
-  const nf = (value: number) => new Intl.NumberFormat(locale).format(value);
+  const nf = (value: number) => formatNumber(value, locale);
 
   const sizeLabels = [
     t("sizes.0"),
@@ -96,19 +95,15 @@ export function WorldOverviewTab({
               : undefined
           }
         />
-        <Fact
-          icon={Clock}
-          label={t("worlds.playTime")}
-          value={
-            stats.hasData
-              ? formatTime(Math.floor(stats.playTimeTicks / 20), {
-                  h: t("time.h"),
-                  m: t("time.m"),
-                  s: t("time.s"),
-                })
-              : "—"
-          }
-        />
+        {stats.hasData && (
+          <Fact
+            icon={Clock}
+            label={t("worlds.playTime")}
+            value={formatDuration(Math.floor(stats.playTimeTicks / 20), {
+              withSeconds: true,
+            })}
+          />
+        )}
         <Fact
           icon={HardDrive}
           label={t("worlds.size")}
@@ -116,36 +111,31 @@ export function WorldOverviewTab({
             sizeBytes === null ? "…" : formatBytes(sizeBytes, sizeLabels, 1)
           }
         />
-        <Fact
-          icon={Sprout}
-          label={t("worlds.worldDays")}
-          value={days === null ? "—" : nf(days)}
-        />
-        <Fact
-          icon={Skull}
-          label={t("versionStatistics.deaths")}
-          value={stats.hasData ? nf(stats.deaths) : "—"}
-        />
-        <Fact
-          icon={Swords}
-          label={t("versionStatistics.mobKills")}
-          value={stats.hasData ? nf(stats.mobKills) : "—"}
-        />
-        <Fact
-          icon={Footprints}
-          label={t("versionStatistics.distance")}
-          value={
-            stats.hasData
-              ? `${nf(Math.round(stats.distanceCm / 1000) / 100)} ${t("versionStatistics.km")}`
-              : "—"
-          }
-        />
-        <Fact
-          icon={MapPin}
-          label={t("worlds.spawn")}
-          value={spawn ?? "—"}
-          mono={Boolean(spawn)}
-        />
+        {days !== null && (
+          <Fact icon={Sprout} label={t("worlds.worldDays")} value={nf(days)} />
+        )}
+        {stats.hasData && (
+          <>
+            <Fact
+              icon={Skull}
+              label={t("versionStatistics.deaths")}
+              value={nf(stats.deaths)}
+            />
+            <Fact
+              icon={Swords}
+              label={t("versionStatistics.mobKills")}
+              value={nf(stats.mobKills)}
+            />
+            <Fact
+              icon={Footprints}
+              label={t("versionStatistics.distance")}
+              value={`${nf(Math.round(stats.distanceCm / 1000) / 100)} ${t("versionStatistics.km")}`}
+            />
+          </>
+        )}
+        {spawn && (
+          <Fact icon={MapPin} label={t("worlds.spawn")} value={spawn} mono />
+        )}
         <Fact
           icon={Archive}
           label={t("worldBackups.title")}
@@ -153,8 +143,17 @@ export function WorldOverviewTab({
         />
       </div>
 
+      {!stats.hasData && (
+        <div className="flex shrink-0 items-center gap-2.5 rounded-xl border bg-surface-1 px-3 py-2.5">
+          <BarChart3 className="size-4 shrink-0 text-faint" />
+          <p className="min-w-0 text-xs text-muted-foreground">
+            {t("worlds.statsLater")}
+          </p>
+        </div>
+      )}
+
       <div className="flex items-center gap-3 rounded-xl border bg-surface-1 py-1.5 pr-1.5 pl-3">
-        <span className="shrink-0 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
+        <span className="shrink-0 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
           {t("worlds.seed")}
         </span>
 
@@ -189,7 +188,7 @@ export function WorldOverviewTab({
       </div>
 
       <div className="flex items-center gap-2 rounded-xl border bg-surface-1 py-1.5 pr-1.5 pl-3">
-        <span className="shrink-0 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
+        <span className="shrink-0 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
           {t("worlds.folder")}
         </span>
 
@@ -229,11 +228,15 @@ function Fact({
   mono?: boolean;
 }) {
   return (
-    <Hint content={hint} variant="text">
+    <Hint
+      content={hint ?? `${label}: ${value}`}
+      variant="text"
+      truncatedOnly={!hint}
+    >
       <div className="flex min-w-0 items-center gap-2.5 rounded-xl border bg-surface-1 px-3">
         <Icon className="size-4 shrink-0 text-faint" />
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="truncate text-[0.65rem] leading-none text-faint">
+          <span className="truncate text-3xs leading-none text-faint">
             {label}
           </span>
           <span

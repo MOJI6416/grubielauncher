@@ -27,6 +27,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Hint } from "@renderer/components/Hint";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+} from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 import type { ShareVisibility } from "@/types/Share";
 import type { GameInviteResult } from "@/types/GameInvite";
@@ -102,11 +109,11 @@ function Section({
     <section className={cn("flex min-h-0 flex-col gap-1.5", className)}>
       <div className="flex h-5 shrink-0 items-center gap-2">
         <span className="shrink-0 text-faint">{icon}</span>
-        <span className="text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+        <span className="text-3xs font-semibold tracking-[0.09em] text-faint uppercase">
           {title}
         </span>
         {typeof count === "number" && (
-          <span className="font-mono text-[0.65rem] tabular-nums text-faint">
+          <span className="font-mono text-3xs tabular-nums text-faint">
             {count}
           </span>
         )}
@@ -557,17 +564,21 @@ export function LanShareModal({
       >
         <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-2.5">
           <Radio className="size-4 shrink-0 text-faint" />
-          <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
-            {t("share.title")}
-          </DialogTitle>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label={t("share.panel.close")}
-            onClick={onClose}
-          >
-            <X />
-          </Button>
+          <Hint content={t("share.title")} variant="text" truncatedOnly>
+            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+              {t("share.title")}
+            </DialogTitle>
+          </Hint>
+          <Hint content={t("share.panel.close")}>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label={t("share.panel.close")}
+              onClick={onClose}
+            >
+              <X />
+            </Button>
+          </Hint>
         </DialogHeader>
 
         <div className="flex min-h-0 flex-col">
@@ -592,7 +603,7 @@ export function LanShareModal({
                   </span>
                 </Hint>
                 {typeof targetPort === "number" && (
-                  <span className="shrink-0 font-mono text-[0.7rem] tabular-nums text-faint">
+                  <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
                     :{targetPort}
                   </span>
                 )}
@@ -626,34 +637,28 @@ export function LanShareModal({
               icon={<Shield className="size-3.5" />}
               title={t("share.panel.access.title")}
             >
-              <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-surface-2 p-1">
-                {(["friends", "public"] as ShareVisibility[]).map((value) => {
-                  const isActive = draftVisibility === value;
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      disabled={isVisibilityLocked}
-                      onClick={() => void handleVisibility(value)}
-                      className={cn(
-                        "flex h-7 items-center justify-center gap-1.5 rounded-md text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                        isActive
-                          ? "bg-surface-3 text-foreground"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {value === "friends" ? (
+              <SegmentedControl
+                value={draftVisibility}
+                stretch
+                disabled={isVisibilityLocked}
+                ariaLabel={t("share.panel.access.title")}
+                options={(["friends", "public"] as ShareVisibility[]).map(
+                  (value) => ({
+                    value,
+                    label:
+                      value === "friends"
+                        ? t("share.panel.access.friends")
+                        : t("share.panel.access.public"),
+                    icon:
+                      value === "friends" ? (
                         <Shield className="size-3.5" />
                       ) : (
                         <Globe className="size-3.5" />
-                      )}
-                      {value === "friends"
-                        ? t("share.panel.access.friends")
-                        : t("share.panel.access.public")}
-                    </button>
-                  );
-                })}
-              </div>
+                      ),
+                  }),
+                )}
+                onChange={(value) => void handleVisibility(value)}
+              />
               <p
                 className={cn(
                   "text-xs leading-4",
@@ -720,11 +725,21 @@ export function LanShareModal({
                 }
               >
                 {visibility.effective === "public" && address ? (
-                  <p className="truncate rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 font-mono text-xs text-muted-foreground">
-                    {isAddressRevealed && !redact.active
-                      ? address.raw
-                      : address.masked}
-                  </p>
+                  <Hint
+                    content={
+                      isAddressRevealed && !redact.active
+                        ? address.raw
+                        : address.masked
+                    }
+                    variant="text"
+                    truncatedOnly
+                  >
+                    <p className="truncate rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 font-mono text-xs text-muted-foreground">
+                      {isAddressRevealed && !redact.active
+                        ? address.raw
+                        : address.masked}
+                    </p>
+                  </Hint>
                 ) : (
                   <p className="text-xs leading-4 text-muted-foreground">
                     {t("share.panel.address.friends")}
@@ -800,11 +815,18 @@ export function LanShareModal({
               )}
 
               {inviteCandidates.length === 0 ? (
-                <p className="px-1 py-2 text-xs leading-4 text-faint">
-                  {friends.length === 0
-                    ? t("share.panel.invite.empty")
-                    : t("share.panel.invite.notFound")}
-                </p>
+                <Empty className="gap-2 border-0 bg-transparent p-3">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Users />
+                    </EmptyMedia>
+                    <EmptyDescription>
+                      {friends.length === 0
+                        ? t("share.panel.invite.empty")
+                        : t("share.panel.invite.notFound")}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               ) : (
                 <ScrollArea className="min-h-0 flex-1">
                   <ShareInviteList

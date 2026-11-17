@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -52,12 +53,13 @@ import {
 } from "@/components/ui/select";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { Hint } from "@renderer/components/Hint";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { formatNumber } from "@renderer/utilities/numbers";
 import { settingsAtom } from "@renderer/stores/atoms";
 import { registerNavigationBlocker } from "@renderer/navigation/guards";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { formatBytes } from "@renderer/utilities/file";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { WorldIcon } from "../WorldIcon";
 import { ChunkMap, ChunkPoint, ChunkTool, ClickModifiers } from "./ChunkMap";
 import { ChunkInspector, DetailsStatus } from "./ChunkInspector";
@@ -195,7 +197,7 @@ export function ChunkEditorDialog({
     t("sizes.3"),
     t("sizes.4"),
   ];
-  const nf = (value: number) => new Intl.NumberFormat(locale).format(value);
+  const nf = (value: number) => formatNumber(value, locale);
 
   const fitToWorld = useCallback(
     (size = mapSize) => {
@@ -523,6 +525,13 @@ export function ChunkEditorDialog({
   };
 
   const scanning = progress.running && progress.total > 0;
+  const headerSummary = currentDimension
+    ? `${world.name} · ${t("worldChunks.summary", {
+        regions: nf(totals.regions),
+        chunks: nf(totals.chunks),
+        size: formatBytes(totals.sizeBytes, sizeLabels, 1),
+      })}`
+    : world.name;
   const hoveredBlock = hovered
     ? `${hovered.x * BLOCKS_PER_CHUNK}, ${hovered.z * BLOCKS_PER_CHUNK}`
     : null;
@@ -560,19 +569,20 @@ export function ChunkEditorDialog({
                 iconClassName="size-4"
               />
               <div className="flex min-w-0 flex-col gap-0.5">
-                <DialogTitle className="truncate text-sm">
-                  {t("worldChunks.title")}
-                </DialogTitle>
-                <DialogDescription className="truncate text-xs">
-                  {world.name}
-                  {currentDimension
-                    ? ` · ${t("worldChunks.summary", {
-                        regions: nf(totals.regions),
-                        chunks: nf(totals.chunks),
-                        size: formatBytes(totals.sizeBytes, sizeLabels, 1),
-                      })}`
-                    : ""}
-                </DialogDescription>
+                <Hint
+                  content={t("worldChunks.title")}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <DialogTitle className="truncate text-sm">
+                    {t("worldChunks.title")}
+                  </DialogTitle>
+                </Hint>
+                <Hint content={headerSummary} variant="text" truncatedOnly>
+                  <DialogDescription className="truncate text-xs">
+                    {headerSummary}
+                  </DialogDescription>
+                </Hint>
               </div>
 
               <div className="ml-auto flex items-center gap-2">
@@ -598,7 +608,7 @@ export function ChunkEditorDialog({
                       >
                         <span className="flex items-center gap-2">
                           <span>{dimensionLabel(entry.id)}</span>
-                          <span className="font-mono text-[0.65rem] text-faint">
+                          <span className="font-mono text-3xs text-faint">
                             {nf(entry.chunkCount)}
                           </span>
                         </span>
@@ -634,22 +644,24 @@ export function ChunkEditorDialog({
           </DialogHeader>
 
           <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b px-3 py-1.5">
-            <div className="flex items-center rounded-lg bg-surface-3 p-0.5">
-              <ToolButton
-                active={tool === "select"}
-                label={`${t("worldChunks.tools.select")} · V`}
-                onClick={() => setTool("select")}
-              >
-                <MousePointer2 className="size-3.5" />
-              </ToolButton>
-              <ToolButton
-                active={tool === "pan"}
-                label={`${t("worldChunks.tools.pan")} · H`}
-                onClick={() => setTool("pan")}
-              >
-                <Hand className="size-3.5" />
-              </ToolButton>
-            </div>
+            <SegmentedControl
+              value={tool}
+              iconOnly
+              ariaLabel={t("worldChunks.tools.label")}
+              options={[
+                {
+                  value: "select",
+                  label: `${t("worldChunks.tools.select")} · V`,
+                  icon: <MousePointer2 className="size-3.5" />,
+                },
+                {
+                  value: "pan",
+                  label: `${t("worldChunks.tools.pan")} · H`,
+                  icon: <Hand className="size-3.5" />,
+                },
+              ]}
+              onChange={setTool}
+            />
 
             <Divider />
 
@@ -767,7 +779,7 @@ export function ChunkEditorDialog({
                     value={(progress.done / Math.max(1, progress.total)) * 100}
                     className="h-1.5"
                   />
-                  <span className="shrink-0 font-mono text-[0.65rem] text-faint">
+                  <span className="shrink-0 font-mono text-3xs text-faint">
                     {progress.done}/{progress.total}
                   </span>
                 </div>
@@ -792,7 +804,7 @@ export function ChunkEditorDialog({
           </div>
 
           {locked && lockReason && (
-            <div className="flex shrink-0 items-center gap-2 border-b bg-warning/10 px-3 py-1.5 text-[0.7rem] text-warning">
+            <div className="flex shrink-0 items-center gap-2 border-b bg-warning/10 px-3 py-1.5 text-2xs text-warning">
               <TriangleAlert className="size-3.5 shrink-0" />
               {t("worldChunks.readOnly", { reason: lockReason })}
             </div>
@@ -837,9 +849,10 @@ export function ChunkEditorDialog({
               )}
 
               {regionsStatus === "loading" && (
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                </div>
+                <Skeleton
+                  aria-busy
+                  className="pointer-events-none absolute inset-3 rounded-xl"
+                />
               )}
             </div>
 
@@ -862,7 +875,7 @@ export function ChunkEditorDialog({
             </aside>
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-t px-3 py-1.5 text-[0.65rem] text-faint">
+          <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-t px-3 py-1.5 text-3xs text-faint">
             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
               {legend.map((entry) => (
                 <span key={entry.key} className="flex items-center gap-1">
@@ -903,7 +916,7 @@ export function ChunkEditorDialog({
 
       {pending && (
         <Confirmation
-          title={t(`worldChunks.confirm.${pending}Title`)}
+          title={t(`worldChunks.confirm.${pending}Question`)}
           reversible={backupWanted}
           content={[
             {
@@ -954,7 +967,7 @@ export function ChunkEditorDialog({
             />
             <span className="flex flex-col gap-0.5">
               <span>{t("worldChunks.confirm.backup")}</span>
-              <span className="text-[0.65rem] leading-4 text-muted-foreground">
+              <span className="text-3xs leading-4 text-muted-foreground">
                 {t("worldChunks.confirm.backupHint")}
               </span>
             </span>
@@ -962,35 +975,6 @@ export function ChunkEditorDialog({
         </Confirmation>
       )}
     </>
-  );
-}
-
-function ToolButton({
-  active,
-  label,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <Hint content={label}>
-      <button
-        type="button"
-        aria-pressed={active}
-        aria-label={label}
-        onClick={onClick}
-        className={cn(
-          "flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground",
-          active && "bg-primary-soft-raised text-foreground",
-        )}
-      >
-        {children}
-      </button>
-    </Hint>
   );
 }
 

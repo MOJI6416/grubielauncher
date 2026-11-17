@@ -52,7 +52,7 @@ function spriteStyle(sprite: EmojiSprite, index: number): CSSProperties {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <p className="px-1 pt-2 pb-1 text-[10px] font-medium tracking-wide text-faint uppercase first:pt-0">
+    <p className="px-1 pt-2 pb-1 text-3xs font-medium tracking-wide text-faint uppercase first:pt-0">
       {children}
     </p>
   );
@@ -267,8 +267,14 @@ export function ExpressionPicker({
                 {t("friends.chatStickersOffline")}
               </p>
             )}
-            <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-1.5 text-[10px] text-faint">
-              <span className="min-w-0 truncate">{t("friends.stickerCredit")}</span>
+            <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-1.5 text-3xs text-faint">
+              <Hint
+                content={t("friends.stickerCredit")}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 truncate">{t("friends.stickerCredit")}</span>
+              </Hint>
               <button
                 type="button"
                 className="shrink-0 underline underline-offset-2 hover:text-foreground"

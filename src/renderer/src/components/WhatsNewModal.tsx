@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExternalLink, MessageCircle, Sparkles, Wrench } from "lucide-react";
+import { ExternalLink, Gift, MessageCircle, Wrench } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Hint } from "@renderer/components/Hint";
+import { showFailureToast } from "@renderer/utilities/failures";
 import { cn } from "@/lib/utils";
 import { formatDay } from "@renderer/utilities/date";
 import { MilestoneBeam } from "./MilestoneBeam";
@@ -85,21 +88,23 @@ export function WhatsNewModal({
           )}
 
           <div className="relative grid gap-1.5">
-            <span className="flex min-w-0 items-center gap-2 text-[0.7rem] text-faint">
-              <Sparkles className="size-3.5 shrink-0 text-primary" />
+            <span className="flex min-w-0 items-center gap-2 text-2xs text-faint">
+              <Gift className="size-3.5 shrink-0 text-info" />
               <span className="font-mono tracking-[0.09em] tabular-nums">
                 v{version}
               </span>
               {publishedLabel && (
                 <>
                   <span aria-hidden>·</span>
-                  <span className="truncate tabular-nums">
-                    {publishedLabel}
-                  </span>
+                  <Hint content={publishedLabel} variant="text" truncatedOnly>
+                    <span className="truncate tabular-nums">
+                      {publishedLabel}
+                    </span>
+                  </Hint>
                 </>
               )}
               {isMilestone && (
-                <span className="flex h-4.5 shrink-0 items-center rounded border border-primary/40 bg-primary-soft-raised px-1.5 text-[0.6rem] font-medium tracking-wide text-foreground uppercase">
+                <span className="flex h-4.5 shrink-0 items-center rounded border border-primary/40 bg-primary-soft-raised px-1.5 text-3xs font-medium tracking-wide text-foreground uppercase">
                   {t("whatsNew.milestone")}
                 </span>
               )}
@@ -122,7 +127,7 @@ export function WhatsNewModal({
             <div className="grid gap-4 px-5 py-4 pb-6">
               {highlights.length > 0 && (
                 <section className="grid gap-1.5">
-                  <h3 className="text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+                  <h3 className="text-3xs font-semibold tracking-[0.09em] text-faint uppercase">
                     {t("whatsNew.highlights")}
                   </h3>
                   <ul className="grid gap-1 select-text">
@@ -131,7 +136,7 @@ export function WhatsNewModal({
                         key={`${item}-${index}`}
                         className="flex gap-2.5 rounded-lg bg-surface-2 px-3 py-2 text-sm leading-5"
                       >
-                        <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+                        <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-info" />
                         <span className="min-w-0 break-words">{item}</span>
                       </li>
                     ))}
@@ -141,7 +146,7 @@ export function WhatsNewModal({
 
               {fixes.length > 0 && (
                 <section className="grid gap-1.5">
-                  <h3 className="flex items-center gap-1.5 text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+                  <h3 className="flex items-center gap-1.5 text-3xs font-semibold tracking-[0.09em] text-faint uppercase">
                     <Wrench className="size-3" />
                     {t("whatsNew.fixes")}
                   </h3>
@@ -167,21 +172,23 @@ export function WhatsNewModal({
           <span className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-popover to-transparent" />
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-border bg-surface-2 px-5 py-3">
+        <DialogFooter className="m-0 items-center border-border px-5 py-3">
           <Button
             variant="ghost"
-            onClick={async () => {
-              try {
-                await api.shell.openExternal(discordUrl);
-              } catch {}
-            }}
+            onClick={() =>
+              void api.shell.openExternal(discordUrl).catch((error) =>
+                showFailureToast(t("settings.about.openLinkFailed"), error, {
+                  channels: ["shell:openExternal"],
+                }),
+              )
+            }
           >
             <MessageCircle />
             {release?.discordCta || t("whatsNew.discordCta")}
             <ExternalLink className="size-3" />
           </Button>
           <Button onClick={onClose}>{t("common.ok")}</Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

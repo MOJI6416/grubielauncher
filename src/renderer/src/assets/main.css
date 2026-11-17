@@ -29,6 +29,9 @@
 
 @theme {
   --ease-swift: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --text-2xs: 0.6875rem;
+  --text-3xs: 0.625rem;
+  --text-4xs: 0.5625rem;
 }
 
 @theme inline {
@@ -42,7 +45,11 @@
   --color-primary-soft: var(--primary-soft);
   --color-primary-soft-raised: var(--primary-soft-raised);
   --color-primary-veil: var(--primary-veil);
+  --color-scrim: var(--scrim);
+  --color-row-hover: var(--row-hover);
+  --color-row-selected: var(--row-selected);
   --color-success-foreground: var(--success-foreground);
+  --color-info-foreground: var(--info-foreground);
   --color-warning-foreground: var(--warning-foreground);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-loader-forge: var(--loader-forge);
@@ -71,6 +78,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
+  --color-info: var(--info);
   --color-warning: var(--warning);
   --color-border: var(--border);
   --color-input: var(--input);
@@ -134,6 +142,8 @@
   --destructive-foreground: oklch(0.99 0 0);
   --success: oklch(0.72 0.16 158);
   --success-foreground: oklch(0.16 0.002 265);
+  --info: oklch(0.74 0.12 245);
+  --info-foreground: oklch(0.16 0.002 265);
   --warning: oklch(0.8 0.15 78);
   --warning-foreground: oklch(0.16 0.002 265);
 
@@ -183,6 +193,9 @@
   --lit-edge: oklch(1 0 0 / 6%);
   --lit-shadow-near: oklch(0 0 0 / 35%);
   --lit-shadow-far: oklch(0 0 0 / 55%);
+  --scrim: oklch(0 0 0 / 45%);
+  --row-hover: color-mix(in oklab, var(--foreground) 6%, transparent);
+  --row-selected: var(--primary-soft);
   --spot-light: oklch(1 0 0 / 9%);
   --sheen-light: oklch(1 0 0 / 22%);
   --grain-opacity: 0.035;
@@ -199,13 +212,6 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    scrollbar-width: thin;
-    scrollbar-color: color-mix(
-        in oklab,
-        var(--muted-foreground) 38%,
-        transparent
-      )
-      transparent;
   }
 
   body {
@@ -519,7 +525,7 @@ body {
   position: absolute;
   inset: 0;
   width: 40%;
-  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  background: linear-gradient(90deg, transparent, var(--info), transparent);
   animation: stage-sweep-slide 1.4s ease-in-out infinite;
 }
 

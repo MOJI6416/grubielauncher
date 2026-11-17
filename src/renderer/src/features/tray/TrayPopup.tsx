@@ -17,17 +17,18 @@ import type { Loader } from "@/types/Loader";
 import type { TrayCommand, TrayModel } from "@/types/Tray";
 import { cn } from "@/lib/utils";
 import { changeAppLanguage } from "@renderer/i18n";
-import { applyAccent } from "@renderer/app/theme/accent";
+import { applyWindowAppearance } from "@renderer/features/theme/windowAppearance";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { BrandMark } from "@renderer/shell/BrandMark";
 import { InstanceArt } from "@renderer/features/instances/InstanceArt";
 import { getLoaderInfo, LoaderIcon } from "@renderer/components/Loaders";
-import { formatVoiceDuration } from "@renderer/features/voice/roomModel";
 import { Hint } from "@renderer/components/Hint";
+import { formatClock } from "@renderer/utilities/duration";
 
 const api = window.api;
 
 function run(command: TrayCommand) {
-  void api.trayPopup.run(command);
+  void api.trayPopup.run(command).catch(ignoreFailure);
 }
 
 function useNow(active: boolean): number {
@@ -105,7 +106,7 @@ export function TrayPopup() {
     const first = requestAnimationFrame(() => {
       second = requestAnimationFrame(() => {
         pendingReveal.current = false;
-        void api.trayPopup.reveal();
+        void api.trayPopup.reveal().catch(ignoreFailure);
       });
     });
 
@@ -120,13 +121,17 @@ export function TrayPopup() {
     document.body.style.background = "transparent";
 
     let cancelled = false;
-    void api.trayPopup.getModel().then((next) => {
-      if (!cancelled && next) setModel(next);
-    });
+    void api.trayPopup
+      .getModel()
+      .then((next) => {
+        if (!cancelled && next) setModel(next);
+      })
+      .catch(ignoreFailure);
     const stop = api.trayPopup.onModel(setModel);
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") void api.trayPopup.hide();
+      if (event.key === "Escape")
+        void api.trayPopup.hide().catch(ignoreFailure);
     };
     window.addEventListener("keydown", onKeyDown);
 
@@ -138,19 +143,21 @@ export function TrayPopup() {
   }, []);
 
   useEffect(() => {
-    if (!model) return;
-    applyAccent(model.accent);
-    if (model.lang) void changeAppLanguage(model.lang);
-  }, [model?.accent, model?.lang]);
+    void applyWindowAppearance();
+  }, [model?.accent, shownCount]);
+
+  useEffect(() => {
+    if (model?.lang) void changeAppLanguage(model.lang);
+  }, [model?.lang]);
 
   useLayoutEffect(() => {
     const element = rootRef.current;
     if (!element) return;
 
     const report = () =>
-      void api.trayPopup.resize(
-        Math.ceil(element.getBoundingClientRect().height),
-      );
+      void api.trayPopup
+        .resize(Math.ceil(element.getBoundingClientRect().height))
+        .catch(ignoreFailure);
     report();
 
     const observer = new ResizeObserver(report);
@@ -170,7 +177,7 @@ export function TrayPopup() {
             <BrandMark className="size-4 text-foreground" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium">
+            <span className="block text-sm font-medium whitespace-nowrap">
               Grubie Launcher
             </span>
             <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
@@ -180,11 +187,21 @@ export function TrayPopup() {
                   playing ? "bg-success" : "bg-faint",
                 )}
               />
-              <span className="truncate">
-                {playing
-                  ? t("trayPopup.playing", { name: playing })
-                  : t("trayPopup.idle")}
-              </span>
+              <Hint
+                content={
+                  playing
+                    ? t("trayPopup.playing", { name: playing })
+                    : t("trayPopup.idle")
+                }
+                variant="text"
+                truncatedOnly
+              >
+                <span className="truncate">
+                  {playing
+                    ? t("trayPopup.playing", { name: playing })
+                    : t("trayPopup.idle")}
+                </span>
+              </Hint>
             </span>
           </span>
           <Hint content={t("tray.open")}>
@@ -200,18 +217,24 @@ export function TrayPopup() {
         </header>
 
         {model.incomingCall && (
-          <section className="mx-2 mb-2 flex items-center gap-2.5 rounded-lg bg-primary-soft px-2.5 py-2">
-            <span className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
-              <span className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+          <section className="mx-2 mb-2 flex items-center gap-2.5 rounded-lg bg-info/15 px-2.5 py-2">
+            <span className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-info/20 text-info">
+              <span className="absolute inset-0 animate-ping rounded-full bg-info/20" />
               <Phone className="relative size-4" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[0.6875rem] text-muted-foreground">
+              <span className="block text-2xs text-muted-foreground">
                 {t("tray.incoming")}
               </span>
-              <span className="block truncate text-sm font-medium">
-                {model.incomingCall.nickname}
-              </span>
+              <Hint
+                content={model.incomingCall.nickname}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="block truncate text-sm font-medium">
+                  {model.incomingCall.nickname}
+                </span>
+              </Hint>
             </span>
             <RoundButton
               label={t("tray.accept")}
@@ -234,13 +257,13 @@ export function TrayPopup() {
           <section className="mx-2 mb-2 rounded-lg bg-surface-2 px-2.5 py-2">
             <div className="flex items-center gap-2">
               <span className="size-2 shrink-0 rounded-full bg-success" />
-              <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                {model.voice.title}
-              </span>
-              <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
-                {model.voice.since
-                  ? formatVoiceDuration(now - model.voice.since)
-                  : ""}
+              <Hint content={model.voice.title} variant="text" truncatedOnly>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {model.voice.title}
+                </span>
+              </Hint>
+              <span className="shrink-0 font-mono text-xs whitespace-nowrap tabular-nums text-muted-foreground">
+                {model.voice.since ? formatClock(now - model.voice.since) : ""}
               </span>
             </div>
             <div className="mt-2 flex items-center gap-1.5">
@@ -276,7 +299,7 @@ export function TrayPopup() {
         )}
 
         <section className="border-t border-border px-2 py-2">
-          <p className="px-1.5 pb-1 text-[0.6875rem] font-medium tracking-wide text-faint uppercase">
+          <p className="px-1.5 pb-1 text-2xs font-medium tracking-wide text-faint uppercase">
             {t("tray.play")}
           </p>
           {model.instances.length === 0 ? (
@@ -286,6 +309,12 @@ export function TrayPopup() {
           ) : (
             model.instances.map((instance) => {
               const loader = getLoaderInfo(instance.loader);
+              const meta = [
+                instance.minecraft,
+                instance.loader ? loader.name : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
               return (
                 <button
                   key={instance.name}
@@ -294,19 +323,21 @@ export function TrayPopup() {
                   onClick={() =>
                     run({ type: "launch", versionName: instance.name })
                   }
-                  className="group flex h-12 w-full items-center gap-2.5 rounded-lg px-1.5 text-left transition-colors hover:bg-surface-3 disabled:cursor-default disabled:hover:bg-transparent"
+                  className="group flex h-12 w-full items-center gap-2.5 rounded-lg px-1.5 text-left transition-colors hover:bg-row-hover disabled:cursor-default disabled:hover:bg-transparent"
                 >
                   <InstanceArt
                     name={instance.name}
                     image={instance.image}
                     eager
                     className="size-9 rounded-md border border-border bg-surface-1"
-                    textClassName="font-mono text-[0.65rem]"
+                    textClassName="font-mono text-3xs"
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm">
-                      {instance.name}
-                    </span>
+                    <Hint content={instance.name} variant="text" truncatedOnly>
+                      <span className="block truncate text-sm">
+                        {instance.name}
+                      </span>
+                    </Hint>
                     <span className="flex min-w-0 items-center gap-1 text-xs text-faint">
                       {instance.loader && (
                         <LoaderIcon
@@ -314,22 +345,17 @@ export function TrayPopup() {
                           className="size-3 shrink-0"
                         />
                       )}
-                      <span className="truncate">
-                        {[
-                          instance.minecraft,
-                          instance.loader ? loader.name : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
+                      <Hint content={meta} variant="text" truncatedOnly>
+                        <span className="truncate">{meta}</span>
+                      </Hint>
                     </span>
                   </span>
                   {instance.running ? (
-                    <span className="shrink-0 rounded-md bg-success/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-success">
+                    <span className="shrink-0 rounded-md bg-success/15 px-1.5 py-0.5 text-2xs font-medium text-success">
                       {t("trayPopup.running")}
                     </span>
                   ) : (
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground opacity-80 transition-opacity group-hover:opacity-100">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-3 text-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground group-focus-visible:bg-primary group-focus-visible:text-primary-foreground">
                       <Play className="size-3.5 fill-current" />
                     </span>
                   )}
@@ -341,13 +367,21 @@ export function TrayPopup() {
 
         {model.updateVersion && (
           <section className="flex items-center gap-2.5 border-t border-border px-3 py-2.5">
-            <ArrowUpCircle className="size-4 shrink-0 text-primary" />
+            <ArrowUpCircle className="size-4 shrink-0 text-warning" />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs">
-                {t("trayPopup.updateReady", { version: model.updateVersion })}
-              </span>
+              <Hint
+                content={t("trayPopup.updateReady", {
+                  version: model.updateVersion,
+                })}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="block truncate text-xs">
+                  {t("trayPopup.updateReady", { version: model.updateVersion })}
+                </span>
+              </Hint>
               {model.playing.length > 0 && (
-                <span className="mt-0.5 block text-[0.7rem] leading-snug text-muted-foreground">
+                <span className="mt-0.5 block text-2xs leading-snug text-muted-foreground">
                   {t("appUpdate.blocked.game")}
                 </span>
               )}
@@ -356,7 +390,7 @@ export function TrayPopup() {
               type="button"
               disabled={model.playing.length > 0}
               onClick={() => run({ type: "installUpdate" })}
-              className="h-7 shrink-0 rounded-lg bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/85 disabled:opacity-50"
+              className="h-7 shrink-0 rounded-lg bg-secondary px-2.5 text-xs font-medium text-secondary-foreground transition-colors hover:bg-surface-3 disabled:opacity-50"
             >
               {t("appUpdate.install")}
             </button>
@@ -367,7 +401,7 @@ export function TrayPopup() {
           <button
             type="button"
             onClick={() => run({ type: "quit" })}
-            className="flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
+            className="flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-colors hover:bg-row-hover hover:text-foreground"
           >
             <Power className="size-4" />
             {t("tray.quit")}

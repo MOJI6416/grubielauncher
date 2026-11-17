@@ -13,7 +13,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
 import {
   internetAtom,
   networkAtom,
@@ -24,6 +24,7 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { CatalogPanel } from "@renderer/features/skins/CatalogPanel";
 import { WardrobePanel } from "@renderer/features/skins/WardrobePanel";
 import { useSkinsData } from "@renderer/features/skins/useSkinsData";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -127,7 +128,7 @@ export function ManageSkins() {
           return;
         }
 
-        void api.skins.catalog.download(skin.id).catch(() => undefined);
+        void api.skins.catalog.download(skin.id).catch(ignoreFailure);
 
         const refreshed = await reload();
 
@@ -153,25 +154,15 @@ export function ManageSkins() {
   );
 
   const modeSwitch = (
-    <div className="inline-flex shrink-0 rounded-lg border border-border bg-surface-2 p-0.5">
-      {(["wardrobe", "catalog"] as const).map((value) => (
-        <button
-          key={value}
-          type="button"
-          onClick={() => setMode(value)}
-          className={cn(
-            "h-7 rounded-md px-3 text-xs font-medium transition-colors",
-            mode === value
-              ? "bg-surface-3 text-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {value === "wardrobe"
-            ? t("manageSkins.tabMine")
-            : t("manageSkins.tabCatalog")}
-        </button>
-      ))}
-    </div>
+    <SegmentedControl
+      value={mode}
+      ariaLabel={t("manageSkins.title")}
+      options={[
+        { value: "wardrobe", label: t("manageSkins.tabMine") },
+        { value: "catalog", label: t("manageSkins.tabCatalog") },
+      ]}
+      onChange={setMode}
+    />
   );
 
   if (mode === "catalog") {

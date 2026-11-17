@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TagsInput } from "./TagsInput";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
-import { cn } from "@/lib/utils";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
 import { SkinHead } from "./SkinHead";
 import { isGeneratedSkinName } from "./skinLibrary";
 
@@ -104,24 +104,17 @@ export function PublishSkinDialog({
             <Label className="text-xs text-muted-foreground">
               {t("manageSkins.publishWhat")}
             </Label>
-            <div className="flex gap-1.5">
-              {(["skin", "pack", "cape"] as const).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setType(value)}
-                  disabled={busy}
-                  className={cn(
-                    "flex-1 rounded-lg border border-border px-2 py-1.5 text-xs font-medium transition-colors",
-                    type === value
-                      ? "border-primary bg-primary-soft-raised text-foreground"
-                      : "text-muted-foreground hover:bg-surface-3",
-                  )}
-                >
-                  {t(`manageSkins.publishType_${value}`)}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              value={type}
+              ariaLabel={t("manageSkins.publishWhat")}
+              disabled={busy}
+              stretch
+              options={(["skin", "pack", "cape"] as const).map((value) => ({
+                value,
+                label: t(`manageSkins.publishType_${value}`),
+              }))}
+              onChange={setType}
+            />
           </div>
         ) : null}
 

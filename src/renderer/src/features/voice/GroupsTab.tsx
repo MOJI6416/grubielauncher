@@ -1,16 +1,19 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   BellOff,
+  BellRing,
   Headphones,
   KeyRound,
   Loader2,
-  LogIn,
   MessageSquare,
+  PhoneOff,
   Plus,
   Search,
+  SearchX,
+  Send,
   Settings2,
   TriangleAlert,
   Users,
@@ -21,14 +24,32 @@ import { useFaceLookup } from "@renderer/features/accounts/faceDirectory";
 import { Hint } from "@renderer/components/Hint";
 import { Button } from "@/components/ui/button";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ListSkeleton } from "@renderer/components/ListSkeleton";
+import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 import { cn } from "@/lib/utils";
 import type { IGroup } from "@/types/Voice";
 import {
@@ -53,7 +74,11 @@ import {
   groupInitials,
   type GroupListEntry,
 } from "@renderer/features/voice/groupList";
-import { loadGroups } from "@renderer/features/friends/groups";
+import {
+  groupsSettledForAtom,
+  loadGroups,
+} from "@renderer/features/friends/groups";
+import { accountIdentity } from "@renderer/features/accounts/identity";
 import { splitOverflow } from "@renderer/features/voice/participants";
 import { voiceJoinErrorKey } from "@renderer/features/voice/errors";
 import { groupPanelIdAtom } from "@renderer/features/voice/state";
@@ -64,6 +89,7 @@ import { parseGroupJoinCode } from "@renderer/utilities/packShare";
 import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { GroupPanel } from "./GroupPanel";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 const SEARCH_THRESHOLD = 5;
@@ -72,18 +98,24 @@ const MAX_ROW_AVATARS = 4;
 function GroupRow({
   entry,
   isBusy,
+  canInviteToGame,
   onOpenChat,
   onOpenPanel,
   onJoinVoice,
   onLeaveVoice,
+  onToggleMute,
+  onInviteToGame,
   t,
 }: {
   entry: GroupListEntry;
   isBusy: boolean;
+  canInviteToGame: boolean;
   onOpenChat: () => void;
   onOpenPanel: () => void;
   onJoinVoice: () => void;
   onLeaveVoice: () => void;
+  onToggleMute: () => void;
+  onInviteToGame: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
   const { group, voiceCount, voiceIdentities, isActiveRoom, isMuted, unread } =
@@ -99,128 +131,176 @@ function GroupRow({
   );
 
   return (
-    <div
-      className={cn(
-        "group/row flex min-w-0 flex-col rounded-lg border transition-colors",
-        isActiveRoom
-          ? "border-primary/40 bg-primary-soft"
-          : "border-transparent bg-surface-2 hover:border-border",
-      )}
-    >
-      <div className="flex h-13 min-w-0 items-center gap-2 pr-1.5 pl-2">
-        <button
-          type="button"
-          onClick={onOpenChat}
-          className="flex h-full min-w-0 flex-1 items-center gap-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <span className="relative shrink-0">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-surface-3 text-[11px] font-semibold text-muted-foreground">
-              {groupInitials(group.name)}
-            </span>
-            {unread > 0 && (
-              <span
-                className={cn(
-                  "absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono text-[9px] leading-none tabular-nums",
-                  isMuted
-                    ? "bg-surface-3 text-muted-foreground"
-                    : "bg-primary-soft-raised text-primary",
-                )}
-                aria-label={t("friends.newMessage")}
-              >
-                {unread > 99 ? "99+" : unread}
-              </span>
-            )}
-          </span>
-
-          <span className="min-w-0 flex-1">
-            <span className="flex min-w-0 items-center gap-1.5">
-              <Hint content={group.name} variant="text" truncatedOnly>
-                <span className="min-w-0 truncate text-[13px] font-medium">
-                  {group.name}
-                </span>
-              </Hint>
-              {isMuted && (
-                <Hint content={t("groups.muteNotifications")}>
-                  <BellOff className="size-3 shrink-0 text-faint" />
-                </Hint>
-              )}
-            </span>
-            <span className="flex min-w-0 items-center gap-1 text-[11px] leading-4 text-muted-foreground">
-              <Users className="size-3 shrink-0 text-faint" />
-              <span className="font-mono tabular-nums">
-                {group.members.length}
-              </span>
-              {voiceCount > 0 && (
-                <>
-                  <span className="text-faint">·</span>
-                  <span className="truncate text-success">
-                    {t("voice.inVoiceCount", { count: voiceCount })}
-                  </span>
-                </>
-              )}
-            </span>
-          </span>
-        </button>
-
-        <span className="flex shrink-0 items-center gap-0.5">
-          {voiceCount > 0 && (
-            <span className="mr-0.5 flex -space-x-1.5">
-              {avatars.visible.map(
-                (member) =>
-                  member && (
-                    <AccountHead
-                      key={member._id}
-                      account={faceOf(member)}
-                      size={20}
-                      className="ring-2 ring-card"
-                    />
-                  ),
-              )}
-              {avatars.hidden > 0 && (
-                <span className="flex size-5 items-center justify-center rounded-md bg-surface-3 font-mono text-[8px] tabular-nums text-muted-foreground ring-2 ring-card">
-                  +{avatars.hidden}
-                </span>
-              )}
-            </span>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          className={cn(
+            "group/row flex min-w-0 flex-col rounded-lg border transition-colors",
+            isActiveRoom
+              ? "border-success/40 bg-success/10"
+              : "border-transparent bg-surface-2 hover:border-border data-[state=open]:border-border",
           )}
-
-          <Hint
-            content={isActiveRoom ? t("voice.disconnect") : t("groups.join")}
-          >
-            <Button
-              size="icon-sm"
-              variant={isActiveRoom ? "ghost" : "secondary"}
-              className={cn("size-7", isActiveRoom && "text-destructive")}
-              disabled={isBusy}
-              onClick={isActiveRoom ? onLeaveVoice : onJoinVoice}
-              aria-label={
-                isActiveRoom ? t("voice.disconnect") : t("groups.join")
-              }
+        >
+          <div className="flex h-13 min-w-0 items-center gap-2 pr-1.5 pl-2">
+            <button
+              type="button"
+              onClick={onOpenChat}
+              className="flex h-full min-w-0 flex-1 items-center gap-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {isBusy ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : isActiveRoom ? (
-                <Headphones className="size-3.5" />
-              ) : (
-                <LogIn className="size-3.5" />
+              <span className="relative shrink-0">
+                <span className="flex size-8 items-center justify-center rounded-lg bg-surface-3 text-2xs font-semibold text-muted-foreground">
+                  {groupInitials(group.name)}
+                </span>
+                {unread > 0 && (
+                  <span
+                    className={cn(
+                      "absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono text-4xs leading-none tabular-nums",
+                      isMuted
+                        ? "bg-surface-3 text-muted-foreground"
+                        : "bg-info/15 text-info",
+                    )}
+                    aria-label={t("friends.newMessage")}
+                  >
+                    {unread > 99 ? "99+" : unread}
+                  </span>
+                )}
+              </span>
+
+              <span className="min-w-0 flex-1">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <Hint content={group.name} variant="text" truncatedOnly>
+                    <span className="min-w-0 truncate text-[13px] font-medium">
+                      {group.name}
+                    </span>
+                  </Hint>
+                  {isMuted && (
+                    <Hint content={t("groups.muteNotifications")}>
+                      <BellOff className="size-3 shrink-0 text-faint" />
+                    </Hint>
+                  )}
+                </span>
+                <span className="flex min-w-0 items-center gap-1 text-2xs leading-4 text-muted-foreground">
+                  <Users className="size-3 shrink-0 text-faint" />
+                  <span className="font-mono tabular-nums">
+                    {group.members.length}
+                  </span>
+                  {voiceCount > 0 && (
+                    <>
+                      <span className="text-faint">·</span>
+                      <Hint
+                        content={t("voice.inVoiceCount", { count: voiceCount })}
+                        variant="text"
+                        truncatedOnly
+                      >
+                        <span className="truncate text-success">
+                          {t("voice.inVoiceCount", { count: voiceCount })}
+                        </span>
+                      </Hint>
+                    </>
+                  )}
+                </span>
+              </span>
+            </button>
+
+            <span className="flex shrink-0 items-center gap-0.5">
+              {voiceCount > 0 && (
+                <span className="mr-0.5 flex -space-x-1.5">
+                  {avatars.visible.map(
+                    (member) =>
+                      member && (
+                        <AccountHead
+                          key={member._id}
+                          account={faceOf(member)}
+                          size={20}
+                          className="ring-2 ring-card"
+                        />
+                      ),
+                  )}
+                  {avatars.hidden > 0 && (
+                    <span className="flex size-5 items-center justify-center rounded-md bg-surface-3 font-mono text-4xs tabular-nums text-muted-foreground ring-2 ring-card">
+                      +{avatars.hidden}
+                    </span>
+                  )}
+                </span>
               )}
-            </Button>
-          </Hint>
 
-          <Hint content={t("groups.manage")}>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              className="size-7 text-faint transition-colors hover:text-foreground"
-              onClick={onOpenPanel}
-              aria-label={t("groups.manage")}
-            >
-              <Settings2 className="size-3.5" />
-            </Button>
-          </Hint>
-        </span>
-      </div>
-    </div>
+              <Hint
+                content={
+                  isBusy
+                    ? undefined
+                    : isActiveRoom
+                      ? t("voice.disconnect")
+                      : t("groups.join")
+                }
+              >
+                <Button
+                  size="icon-sm"
+                  variant={isActiveRoom ? "ghost" : "secondary"}
+                  className={cn("size-7", isActiveRoom && "text-destructive")}
+                  disabled={isBusy}
+                  onClick={isActiveRoom ? onLeaveVoice : onJoinVoice}
+                  aria-label={
+                    isActiveRoom ? t("voice.disconnect") : t("groups.join")
+                  }
+                >
+                  {isBusy ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : isActiveRoom ? (
+                    <PhoneOff className="size-3.5" />
+                  ) : (
+                    <Headphones className="size-3.5" />
+                  )}
+                </Button>
+              </Hint>
+
+              <Hint content={t("groups.manage")}>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="size-7 text-faint transition-colors hover:text-foreground"
+                  onClick={onOpenPanel}
+                  aria-label={t("groups.manage")}
+                >
+                  <Settings2 className="size-3.5" />
+                </Button>
+              </Hint>
+            </span>
+          </div>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-56">
+        <ContextMenuItem onSelect={onOpenChat}>
+          <MessageSquare />
+          {t("groups.chat")}
+        </ContextMenuItem>
+        {isActiveRoom ? (
+          <ContextMenuItem onSelect={onLeaveVoice}>
+            <PhoneOff />
+            {t("voice.disconnect")}
+          </ContextMenuItem>
+        ) : (
+          <ContextMenuItem disabled={isBusy} onSelect={onJoinVoice}>
+            <Headphones />
+            {t("groups.join")}
+          </ContextMenuItem>
+        )}
+        <ContextMenuItem onSelect={onToggleMute}>
+          {isMuted ? <BellRing /> : <BellOff />}
+          {isMuted
+            ? t("groups.unmuteNotifications")
+            : t("groups.muteNotifications")}
+        </ContextMenuItem>
+        <ContextMenuItem disabled={!canInviteToGame} onSelect={onInviteToGame}>
+          <Send />
+          {t("groups.inviteToGame")}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onSelect={onOpenPanel}>
+          <Settings2 />
+          {t("groups.manage")}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 
@@ -246,6 +326,7 @@ export function GroupsTab({
   const ownPresence = useAtomValue(ownPresenceAtom);
   const shareState = useAtomValue(shareStateAtom);
   const shareOwnerAccountKey = useAtomValue(shareOwnerAccountKeyAtom);
+  const groupsSettledFor = useAtomValue(groupsSettledForAtom);
   const [mutedGroups, setMutedGroups] = useAtom(mutedGroupsAtom);
   const [panelGroupId, setPanelGroupId] = useAtom(groupPanelIdAtom);
   const setChatGroupId = useSetAtom(openGroupChatIdAtom);
@@ -267,6 +348,16 @@ export function GroupsTab({
   const setJoinOpen = onJoinOpenChange ?? setLocalJoinOpen;
 
   const accessToken = account?.accessToken || "";
+  const accountKey = account ? accountIdentity(account) : null;
+  const isInitialLoading =
+    Boolean(accessToken && accountKey) &&
+    groups.length === 0 &&
+    groupsSettledFor !== accountKey;
+
+  useEffect(() => {
+    if (!accessToken || !accountKey || groupsSettledFor === accountKey) return;
+    void loadGroups().catch(ignoreFailure);
+  }, [accessToken, accountKey, groupsSettledFor]);
 
   const canManageCurrentShare = canCurrentAccountManageShare(
     shareOwnerAccountKey,
@@ -304,6 +395,11 @@ export function GroupsTab({
   const visible = useMemo(
     () => filterGroupList(entries, query),
     [entries, query],
+  );
+
+  const groupKeys = useMemo(
+    () => new Set(entries.map((entry) => entry.group._id)),
+    [entries],
   );
 
   const panelEntry = panelGroupId
@@ -446,9 +542,11 @@ export function GroupsTab({
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-sm">
           <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
             <Plus className="size-4 shrink-0 text-faint" />
-            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
-              {t("groups.create")}
-            </DialogTitle>
+            <Hint content={t("groups.create")} variant="text" truncatedOnly>
+              <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+                {t("groups.create")}
+              </DialogTitle>
+            </Hint>
           </DialogHeader>
 
           <div className="grid gap-2 px-4 py-3">
@@ -467,7 +565,7 @@ export function GroupsTab({
             />
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-border bg-surface-2 px-4 py-3">
+          <DialogFooter className="m-0 px-4 py-3">
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>
               {t("common.cancel")}
             </Button>
@@ -478,7 +576,7 @@ export function GroupsTab({
               {isSubmitting && <Loader2 className="size-4 animate-spin" />}
               {t("groups.create")}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -492,9 +590,11 @@ export function GroupsTab({
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-sm">
           <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
             <KeyRound className="size-4 shrink-0 text-faint" />
-            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
-              {t("groups.joinByCode")}
-            </DialogTitle>
+            <Hint content={t("groups.joinByCode")} variant="text" truncatedOnly>
+              <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+                {t("groups.joinByCode")}
+              </DialogTitle>
+            </Hint>
           </DialogHeader>
 
           <div className="grid gap-2 px-4 py-3">
@@ -518,7 +618,7 @@ export function GroupsTab({
             />
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-border bg-surface-2 px-4 py-3">
+          <DialogFooter className="m-0 px-4 py-3">
             <Button variant="secondary" onClick={() => setJoinOpen(false)}>
               {t("common.cancel")}
             </Button>
@@ -529,7 +629,7 @@ export function GroupsTab({
               {isSubmitting && <Loader2 className="size-4 animate-spin" />}
               {t("groups.joinByCode")}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
@@ -576,59 +676,94 @@ export function GroupsTab({
             }}
           />
           {query && (
-            <button
-              type="button"
-              aria-label={t("common.close")}
-              className="absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded text-faint hover:text-foreground"
-              onClick={() => setQuery("")}
-            >
-              <X className="size-3" />
-            </button>
+            <Hint content={t("common.clearSearch")}>
+              <button
+                type="button"
+                aria-label={t("common.clearSearch")}
+                className="absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded text-faint hover:text-foreground"
+                onClick={() => setQuery("")}
+              >
+                <X className="size-3" />
+              </button>
+            </Hint>
           )}
         </div>
       )}
 
-      {entries.length === 0 ? (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-muted">
-            <MessageSquare className="size-5 text-muted-foreground" />
-          </span>
-          <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium">
+      {isInitialLoading && !hasLoadFailed ? (
+        <ListSkeleton
+          rows={5}
+          rowClassName="h-13"
+          iconClassName="size-8 rounded-lg"
+          className="min-h-0 flex-1 gap-1.5"
+        />
+      ) : entries.length === 0 ? (
+        <Empty className="min-h-0 px-4">
+          <EmptyHeader>
+            <EmptyMedia
+              variant="icon"
+              className={cn(accessToken && hasLoadFailed && "text-warning")}
+            >
+              {accessToken && hasLoadFailed ? (
+                <TriangleAlert />
+              ) : (
+                <MessageSquare />
+              )}
+            </EmptyMedia>
+            <EmptyTitle>
               {!accessToken
                 ? t("friends.sessionLost")
                 : hasLoadFailed
                   ? t("groups.loadFailed")
                   : t("groups.noGroupsTitle")}
-            </p>
-            <p className="text-xs leading-5 text-muted-foreground">
+            </EmptyTitle>
+            <EmptyDescription className="text-xs leading-5">
               {!accessToken
                 ? t("friends.sessionLostHint")
                 : hasLoadFailed
                   ? t("groups.loadFailedHint")
                   : t("groups.noGroupsHint")}
-            </p>
-          </div>
-          {accessToken && hasLoadFailed && (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isReloading}
-              onClick={() => void reloadGroups()}
-            >
-              {isReloading && <Loader2 className="size-3.5 animate-spin" />}
-              {t("common.retry")}
-            </Button>
+            </EmptyDescription>
+          </EmptyHeader>
+          {accessToken && (
+            <EmptyContent>
+              {hasLoadFailed ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isReloading}
+                  onClick={() => void reloadGroups()}
+                >
+                  {isReloading && <Loader2 className="size-3.5 animate-spin" />}
+                  {t("common.retry")}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCreateOpen(true)}
+                >
+                  <Plus className="size-3.5" />
+                  {t("groups.createShort")}
+                </Button>
+              )}
+            </EmptyContent>
           )}
-        </div>
+        </Empty>
       ) : (
         <>
           {hasLoadFailed && (
             <div className="flex shrink-0 items-center gap-2 rounded-lg border border-warning/40 bg-surface-2 px-2.5 py-1.5">
               <TriangleAlert className="size-3.5 shrink-0 text-warning" />
-              <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
-                {t("groups.loadFailed")}
-              </span>
+              <Hint
+                content={t("groups.loadFailed")}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 flex-1 truncate text-2xs text-muted-foreground">
+                  {t("groups.loadFailed")}
+                </span>
+              </Hint>
               <Button
                 size="xs"
                 variant="ghost"
@@ -642,27 +777,46 @@ export function GroupsTab({
             </div>
           )}
           {visible.length === 0 ? (
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 px-4 text-center">
-              <p className="text-sm font-medium">{t("groups.nothingFound")}</p>
-              <p className="text-xs leading-5 text-muted-foreground">
-                {t("groups.nothingFoundHint")}
-              </p>
-            </div>
+            <Empty className="min-h-0 gap-3 px-4">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <SearchX />
+                </EmptyMedia>
+                <EmptyTitle>{t("groups.nothingFound")}</EmptyTitle>
+                <EmptyDescription className="text-xs leading-5">
+                  {t("groups.nothingFoundHint")}
+                </EmptyDescription>
+              </EmptyHeader>
+              <Button size="sm" variant="outline" onClick={() => setQuery("")}>
+                {t("common.clearSearch")}
+              </Button>
+            </Empty>
           ) : (
             <ScrollArea className="-mx-1 min-h-0 flex-1 px-1">
               <div className="flex flex-col gap-1.5 pb-1">
-                {visible.map((entry) => (
-                  <GroupRow
-                    key={entry.group._id}
-                    entry={entry}
-                    isBusy={busyGroupId === entry.group._id}
-                    onOpenChat={() => setChatGroupId(entry.group._id)}
-                    onOpenPanel={() => openGroup(entry.group._id)}
-                    onJoinVoice={() => void handleJoinVoice(entry.group)}
-                    onLeaveVoice={() => void voiceDisconnect()}
-                    t={t}
-                  />
-                ))}
+                <RemovalList sourceKeys={groupKeys}>
+                  {visible.map((entry) => (
+                    <RemovalItem
+                      key={entry.group._id}
+                      itemKey={entry.group._id}
+                    >
+                      <GroupRow
+                        entry={entry}
+                        isBusy={busyGroupId === entry.group._id}
+                        canInviteToGame={Boolean(
+                          gameInviteTarget && friendSocket,
+                        )}
+                        onOpenChat={() => setChatGroupId(entry.group._id)}
+                        onOpenPanel={() => openGroup(entry.group._id)}
+                        onJoinVoice={() => void handleJoinVoice(entry.group)}
+                        onLeaveVoice={() => void voiceDisconnect()}
+                        onToggleMute={() => toggleMute(entry.group)}
+                        onInviteToGame={() => inviteToGame(entry.group)}
+                        t={t}
+                      />
+                    </RemovalItem>
+                  ))}
+                </RemovalList>
               </div>
             </ScrollArea>
           )}
@@ -670,28 +824,41 @@ export function GroupsTab({
       )}
 
       <div className="flex shrink-0 flex-col gap-1.5 border-t border-border pt-2">
-        <p className="px-0.5 text-[11px] leading-4 text-faint">
+        <p className="px-0.5 text-2xs leading-4 text-faint">
           {t("groups.footerHint")}
         </p>
         <div className="flex items-center gap-1.5">
           <Button
             size="sm"
+            variant="outline"
             className="h-8 min-w-0 flex-1"
             disabled={!accessToken}
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="size-3.5" />
-            <span className="truncate">{t("groups.createShort")}</span>
+            <Hint
+              content={t("groups.createShort")}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="truncate">{t("groups.createShort")}</span>
+            </Hint>
           </Button>
           <Button
             size="sm"
-            variant="secondary"
+            variant="outline"
             className="h-8 min-w-0 flex-1"
             disabled={!accessToken}
             onClick={() => setJoinOpen(true)}
           >
             <KeyRound className="size-3.5" />
-            <span className="truncate">{t("groups.joinByCodeShort")}</span>
+            <Hint
+              content={t("groups.joinByCodeShort")}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="truncate">{t("groups.joinByCodeShort")}</span>
+            </Hint>
           </Button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import i18n from "@renderer/i18n";
 import { accountAtom } from "@renderer/stores/atoms";
 import { patchSettings } from "@renderer/utilities/persistSettings";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import type { ThemeDefinition } from "@/shared/themes";
 import {
   GALLERY_BACKDROP,
@@ -97,7 +98,7 @@ export async function publishTheme(theme: ThemeDefinition): Promise<boolean> {
 
   try {
     const images = theme.backdrop
-      ? await prepareGalleryImages(theme.backdrop.path).catch(() => null)
+      ? ((await prepareGalleryImages(theme.backdrop.path).catch(ignoreFailure)) ?? null)
       : null;
     if (theme.backdrop && !images) {
       toast.error(i18n.t("theme.gallery.errors.bad_picture"));
@@ -137,7 +138,14 @@ export async function installGalleryTheme(item: GalleryTheme): Promise<boolean> 
     .get(userThemesAtom)
     .find((theme) => theme.galleryId === item.id);
   if (installed) {
-    await patchSettings({ themeId: installed.id }).catch(() => undefined);
+    try {
+      await patchSettings({ themeId: installed.id });
+    } catch (error) {
+      showFailureToast(i18n.t("settings.saveFailed"), error, {
+        channels: ["fs:writeJSON"],
+      });
+      return false;
+    }
     return true;
   }
 

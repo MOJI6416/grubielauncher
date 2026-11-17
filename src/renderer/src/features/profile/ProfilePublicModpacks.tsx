@@ -12,6 +12,16 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+} from "@/components/ui/empty";
+import { Hint } from "@renderer/components/Hint";
+import { ListSkeleton } from "@renderer/components/ListSkeleton";
+import { formatNumber } from "@renderer/utilities/numbers";
 import type { IModpack, IModpackCard } from "@/types/Backend";
 import { networkAtom, settingsAtom } from "@renderer/stores/atoms";
 import { navigate } from "@renderer/navigation/navigate";
@@ -38,7 +48,7 @@ export function ProfilePublicModpacks({
   isHidden?: boolean;
   onRetry?: () => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const settings = useAtomValue(settingsAtom);
   const isBackendOnline = useAtomValue(networkAtom);
   const installed = useInstalledShareCodes();
@@ -54,8 +64,6 @@ export function ProfilePublicModpacks({
     (sum, pack) => sum + (pack.downloads || 0),
     0,
   );
-  const formatNumber = (value: number) =>
-    new Intl.NumberFormat(i18n.resolvedLanguage || i18n.language).format(value);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -65,27 +73,44 @@ export function ProfilePublicModpacks({
             <Boxes className="size-4" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">
-              {t("profile.publicModpacks", { nickname })}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {t("ownModpacks.totalDownloads", {
+            <Hint
+              content={t("profile.publicModpacks", { nickname })}
+              variant="text"
+              truncatedOnly
+            >
+              <p className="truncate text-sm font-medium">
+                {t("profile.publicModpacks", { nickname })}
+              </p>
+            </Hint>
+            <Hint
+              content={t("ownModpacks.totalDownloads", {
                 value:
                   isError || isHidden ? "—" : formatNumber(totalDownloads),
               })}
-            </p>
+              variant="text"
+              truncatedOnly
+            >
+              <p className="truncate text-xs text-muted-foreground">
+                {t("ownModpacks.totalDownloads", {
+                  value:
+                    isError || isHidden ? "—" : formatNumber(totalDownloads),
+                })}
+              </p>
+            </Hint>
           </div>
         </header>
 
         <div className="-mr-1 min-h-0 flex-1 overflow-y-auto pr-1">
           {isLoading ? (
-            <div className="flex h-40 items-center justify-center">
-              <Loader2 className="size-5 animate-spin text-muted-foreground" />
-            </div>
+            <ListSkeleton
+              rows={4}
+              rowClassName="h-16"
+              iconClassName="size-12 rounded-lg"
+            />
           ) : isHidden ? (
-            <EmptyState icon={EyeOff} text={t("profile.publicProfileHidden")} />
+            <PacksEmpty icon={EyeOff} text={t("profile.publicProfileHidden")} />
           ) : !isBackendOnline || isError ? (
-            <EmptyState
+            <PacksEmpty
               icon={AlertTriangle}
               text={
                 isBackendOnline
@@ -94,14 +119,14 @@ export function ProfilePublicModpacks({
               }
               action={
                 isBackendOnline && onRetry ? (
-                  <Button variant="secondary" size="sm" onClick={onRetry}>
+                  <Button variant="outline" size="sm" onClick={onRetry}>
                     {t("common.retry")}
                   </Button>
                 ) : undefined
               }
             />
           ) : packs.length === 0 ? (
-            <EmptyState icon={Boxes} text={t("profile.publicModpacksEmpty")} />
+            <PacksEmpty icon={Boxes} text={t("profile.publicModpacksEmpty")} />
           ) : (
             <div className="grid content-start gap-1.5">
               {packs.map((pack) => {
@@ -170,7 +195,7 @@ function InstallHints() {
             className="flex min-w-0 items-start gap-2 rounded-lg bg-surface-1 p-2"
           >
             <step.icon className="mt-0.5 size-3.5 shrink-0 text-faint" />
-            <p className="min-w-0 text-[11px] leading-snug text-muted-foreground">
+            <p className="min-w-0 text-2xs leading-snug text-muted-foreground">
               {step.text}
             </p>
           </div>
@@ -180,7 +205,7 @@ function InstallHints() {
   );
 }
 
-function EmptyState({
+function PacksEmpty({
   icon: Icon,
   text,
   action,
@@ -190,10 +215,14 @@ function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex h-44 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border px-8 text-center">
-      <Icon className="size-6 text-faint" />
-      <p className="text-sm text-muted-foreground">{text}</p>
-      {action}
-    </div>
+    <Empty className="h-44 flex-none rounded-xl border border-border px-8">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <Icon />
+        </EmptyMedia>
+        <EmptyDescription>{text}</EmptyDescription>
+      </EmptyHeader>
+      {action && <EmptyContent>{action}</EmptyContent>}
+    </Empty>
   );
 }

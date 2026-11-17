@@ -7,9 +7,11 @@ import { Loader2 } from "lucide-react";
 
 import icon from "./assets/icon.png";
 import { changeAppLanguage } from "./i18n";
-import { LANGUAGES, normalizeSettings, TSettings } from "@/types/Settings";
 import { Progress } from "@/components/ui/progress";
 import { installMotionPreference } from "@/lib/motionPreference";
+import { Hint, HintProvider } from "./components/Hint";
+import { applyWindowAppearance } from "./features/theme/windowAppearance";
+import { formatBytes } from "./utilities/file";
 
 const api = window.api;
 
@@ -46,7 +48,7 @@ const App = () => {
   const [progress, setProgress] = useState<UpdaterProgress>(emptyProgress);
   const realEventRef = useRef(false);
 
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   useEffect(() => {
     document.documentElement.style.background = "transparent";
@@ -59,35 +61,10 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    async function getLocale() {
-      const systemLocate: string = await api.other.getLocale();
-      const lang = LANGUAGES.find((item) => systemLocate.includes(item.code));
-
-      let data: Partial<TSettings> = {};
-
-      const { launcher: launcherPath } = await api.other.getPaths();
-      if (!launcherPath) return;
-
-      const settingsConfPath = await api.path.join(
-        launcherPath,
-        "settings.json",
-      );
-
-      if (await api.fs.pathExists(settingsConfPath)) {
-        try {
-          data = (await api.fs.readJSON(settingsConfPath, "utf-8")) ?? {};
-        } catch {
-          data = {};
-        }
-      }
-
-      await changeAppLanguage(
-        normalizeSettings(data, lang?.code || i18n.language).lang,
-      );
-    }
-
-    void getLocale();
-  }, [i18n]);
+    void applyWindowAppearance().then((lang) =>
+      lang ? changeAppLanguage(lang) : undefined,
+    );
+  }, []);
 
   useEffect(() => {
     const unsubscribeStatus = api.events.updater.onStatus((payload) => {
@@ -143,6 +120,27 @@ const App = () => {
   }, []);
 
   const percent = Math.max(0, Math.min(100, progress.percent));
+  const sizes = [0, 1, 2, 3, 4].map((index) => t(`sizes.${index}`));
+  const bytes = (value: number) => formatBytes(value, sizes, 1);
+
+  const detail = (() => {
+    if (status === "error") return errorMessage;
+    if (status === "checking") return t("updater.preparing");
+    const percentText = t("updater.percent", { percent: percent.toFixed(0) });
+    if (status !== "downloading" || progress.total <= 0) return percentText;
+    return [
+      t("updater.progressBytes", {
+        done: bytes(progress.transferred),
+        total: bytes(progress.total),
+      }),
+      progress.bytesPerSecond > 0
+        ? t("updater.speed", { speed: bytes(progress.bytesPerSecond) })
+        : null,
+      percentText,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  })();
 
   const title = (() => {
     switch (status) {
@@ -179,7 +177,11 @@ const App = () => {
           {status === "checking" && (
             <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
           )}
-          <p className="line-clamp-2 text-sm font-medium leading-5">{title}</p>
+          <Hint content={title} variant="text" truncatedOnly>
+            <p className="line-clamp-2 text-sm font-medium leading-5">
+              {title}
+            </p>
+          </Hint>
         </div>
 
         <div className="mt-4 space-y-2">
@@ -187,13 +189,11 @@ const App = () => {
             value={status === "checking" ? 12 : percent}
             className={status === "checking" ? "animate-pulse" : undefined}
           />
-          <p className="line-clamp-2 text-xs text-muted-foreground">
-            {status === "error"
-              ? errorMessage
-              : status === "checking"
-                ? t("updater.preparing")
-                : t("updater.percent", { percent: percent.toFixed(0) })}
-          </p>
+          <Hint content={detail} variant="text" truncatedOnly>
+            <p className="line-clamp-2 text-xs text-muted-foreground tabular-nums">
+              {detail}
+            </p>
+          </Hint>
         </div>
       </div>
     </div>
@@ -204,6 +204,8 @@ installMotionPreference();
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <HintProvider>
+      <App />
+    </HintProvider>
   </React.StrictMode>,
 );

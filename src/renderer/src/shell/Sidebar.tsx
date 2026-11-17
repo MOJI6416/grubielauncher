@@ -84,6 +84,7 @@ import {
   useLayoutEditing,
 } from "@renderer/features/layout/useLayout";
 import { SlotToggle } from "@renderer/features/layout/SlotToggle";
+import { showUndoToast } from "@renderer/utilities/undoToast";
 
 const loadLanShareModal = () =>
   import("@renderer/features/share/SharePanel").then((module) => ({
@@ -93,7 +94,7 @@ const loadLanShareModal = () =>
 const LazyLanShareModal = lazyWithPreload(loadLanShareModal);
 
 const NAV_CLASS =
-  "relative flex h-8.5 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground not-aria-[current=true]:hover:bg-sidebar-accent aria-[current=true]:text-foreground aria-disabled:cursor-not-allowed aria-disabled:opacity-50 disabled:cursor-not-allowed disabled:opacity-50";
+  "relative flex h-8.5 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground not-aria-[current=page]:hover:bg-row-hover aria-[current=page]:text-foreground aria-disabled:cursor-not-allowed aria-disabled:opacity-50 disabled:cursor-not-allowed disabled:opacity-50";
 
 type NavConfig = {
   icon: ReactNode;
@@ -143,7 +144,9 @@ function NavRow({
       >
         <GripVertical className="-ml-1 size-3.5 shrink-0 text-faint" />
         <span className="relative shrink-0 text-faint">{icon}</span>
-        <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+        <Hint content={label} variant="text" side="right" truncatedOnly>
+          <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+        </Hint>
         {fixed ? (
           <Hint content={t("layout.alwaysVisible")} side="right">
             <span className="flex size-6 shrink-0 items-center justify-center text-faint">
@@ -161,10 +164,18 @@ function NavRow({
     );
   }
 
+  const hide = () => {
+    const id = slotId.nav(slot);
+    toggleSlot(id, true);
+    showUndoToast(t("layout.hiddenDone", { name: label }), () =>
+      toggleSlot(id, false),
+    );
+  };
+
   const row = (
     <button
       type="button"
-      aria-current={current}
+      aria-current={current ? "page" : undefined}
       aria-disabled={disabled}
       data-indicator-active={current}
       onMouseEnter={onPreload}
@@ -192,12 +203,16 @@ function NavRow({
 
   return (
     <ContextMenu>
-      <Hint content={tooltip} side="right">
+      <Hint
+        content={tooltip ?? label}
+        side="right"
+        truncatedOnly={tooltip === undefined}
+      >
         <ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
       </Hint>
       <ContextMenuContent className="w-56">
         {!fixed && (
-          <ContextMenuItem onSelect={() => toggleSlot(slotId.nav(slot), true)}>
+          <ContextMenuItem onSelect={hide}>
             <EyeOff />
             <span>{t("layout.hideFromSidebar")}</span>
           </ContextMenuItem>
@@ -315,7 +330,7 @@ export function Sidebar({
       hint: friendsHint,
       badge:
         playingFriends > 0 ? (
-          <span className="shrink-0 rounded-md bg-success/15 px-1.5 font-mono text-[0.65rem] tabular-nums text-success">
+          <span className="shrink-0 rounded-md bg-success/15 px-1.5 font-mono text-3xs tabular-nums text-success">
             {playingFriends}
           </span>
         ) : undefined,
@@ -332,7 +347,7 @@ export function Sidebar({
       label: t("settings.title"),
       current: isRoute(route, "settings"),
       disabled: isRunning,
-      hint: t("versions.running"),
+      hint: t("shell.nav.settingsLocked"),
       onPreload: () => preload(LazySettingsScreen.preload),
       onSelect: () => navigate({ name: "settings" }),
     },
@@ -374,7 +389,7 @@ export function Sidebar({
             <SlidingIndicator
               indicator={navIndicator}
               variant="fill"
-              className="rounded-lg bg-primary-soft"
+              className="rounded-lg bg-row-selected"
             />
             {navSlots.map((slot) => (
               <NavRow

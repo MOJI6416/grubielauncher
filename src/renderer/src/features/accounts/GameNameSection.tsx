@@ -180,9 +180,15 @@ function CustomNameControls({
   return (
     <section className="grid gap-2 rounded-xl border border-border bg-surface-2 p-3">
       <div className="flex min-w-0 items-center gap-2">
-        <p className="min-w-0 flex-1 truncate text-sm font-medium">
-          {t("accounts.gameName.title")}
-        </p>
+        <Hint
+          content={t("accounts.gameName.title")}
+          variant="text"
+          truncatedOnly
+        >
+          <p className="min-w-0 flex-1 truncate text-sm font-medium">
+            {t("accounts.gameName.title")}
+          </p>
+        </Hint>
         {status && (
           <span className="shrink-0 rounded-full bg-surface-3 px-2 py-0.5 text-xs text-muted-foreground">
             {status.custom
@@ -200,9 +206,15 @@ function CustomNameControls({
         <div className="grid gap-1 text-xs">
           {status?.custom && (
             <div className="flex min-w-0 items-baseline gap-2">
-              <span className="min-w-0 flex-1 truncate text-faint">
-                {t("accounts.gameName.providerNickname", { provider })}
-              </span>
+              <Hint
+                content={t("accounts.gameName.providerNickname", { provider })}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 flex-1 truncate text-faint">
+                  {t("accounts.gameName.providerNickname", { provider })}
+                </span>
+              </Hint>
               <span className="shrink-0 font-mono text-muted-foreground">
                 {status.providerNickname}
               </span>
@@ -210,9 +222,15 @@ function CustomNameControls({
           )}
           {nextChangeAt && (
             <div className="flex min-w-0 items-baseline gap-2">
-              <span className="min-w-0 flex-1 truncate text-faint">
-                {t("accounts.gameName.nextChange")}
-              </span>
+              <Hint
+                content={t("accounts.gameName.nextChange")}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 flex-1 truncate text-faint">
+                  {t("accounts.gameName.nextChange")}
+                </span>
+              </Hint>
               <span className="shrink-0 font-mono tabular-nums text-muted-foreground">
                 {formatDate(nextChangeAt)}
               </span>
@@ -221,31 +239,31 @@ function CustomNameControls({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 pt-0.5">
-        <Hint content={blockedHint}>
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={!reachable || locked || !token || !accountId}
-            onClick={() => setDialogOpen(true)}
-          >
-            <PenLine className="size-3.5" />
-            {t("accounts.gameName.change")}
-          </Button>
-        </Hint>
+      <div className="flex flex-wrap items-center gap-2 pt-0.5">
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={!reachable || locked || !token || !accountId}
+          onClick={() => setDialogOpen(true)}
+        >
+          <PenLine className="size-3.5" />
+          {t("accounts.gameName.change")}
+        </Button>
 
         {status?.custom && (
-          <Hint content={blockedHint}>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={!reachable || locked}
-              onClick={() => setResetOpen(true)}
-            >
-              <RotateCcw className="size-3.5" />
-              {t("accounts.gameName.reset", { provider })}
-            </Button>
-          </Hint>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={!reachable || locked}
+            onClick={() => setResetOpen(true)}
+          >
+            <RotateCcw className="size-3.5" />
+            {t("accounts.gameName.reset", { provider })}
+          </Button>
+        )}
+
+        {blockedHint && (
+          <span className="text-2xs text-faint">{blockedHint}</span>
         )}
       </div>
 
@@ -268,7 +286,7 @@ function CustomNameControls({
 
       {resetOpen && status && (
         <Confirmation
-          title={t("accounts.gameName.reset", { provider })}
+          title={t("accounts.gameName.resetQuestion", { provider })}
           content={[
             {
               text: t("accounts.gameName.resetConfirm", {

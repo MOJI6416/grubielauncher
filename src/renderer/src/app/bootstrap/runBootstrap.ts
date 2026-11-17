@@ -32,6 +32,8 @@ import {
   resolveBootstrapLanguage,
 } from "./bootstrapPlan";
 import { migrateInstanceConfs } from "./migrateInstanceConfs";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { sweepParked } from "@renderer/utilities/removeWithUndo";
 
 const api = window.api;
 
@@ -81,7 +83,7 @@ export async function runBootstrap(
     const versionsRead = versionsEnsured.then(() =>
       readVerions(paths.launcher, null),
     );
-    versionsRead.catch(() => {});
+    versionsRead.catch(ignoreFailure);
 
     const [settingsData] = await Promise.all([
       loadSettings(paths.launcher),
@@ -96,7 +98,7 @@ export async function runBootstrap(
       readLegacyViewPrefs(),
     );
     if (legacyViewPatch) {
-      await patchSettings(legacyViewPatch).catch(() => {});
+      await patchSettings(legacyViewPatch).catch(ignoreFailure);
     }
     forgetLegacyViewPrefs();
 
@@ -109,6 +111,7 @@ export async function runBootstrap(
       if (!isCancelled()) {
         store.set(versionsUnreadableAtom, null);
         store.set(versionsAtom, instances);
+        void sweepParked(instances.map((instance) => instance.versionPath));
 
         const lastPlayed = pickLastPlayedInstance(instances);
         if (lastPlayed && !store.get(selectedVersionAtom)) {

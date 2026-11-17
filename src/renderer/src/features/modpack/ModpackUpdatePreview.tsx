@@ -21,6 +21,8 @@ import { modpackMergeDiff } from "@/shared/modpackMerge";
 import { ModpackDiffPanel } from "@renderer/features/instances/ModpackDiffPanel";
 import type { PreparedModpackUpdate } from "./modpackUpdate";
 import { modpackVersionLabel } from "./modpackVersions";
+import { Hint } from "@renderer/components/Hint";
+import { Empty, EmptyDescription } from "@/components/ui/empty";
 
 function Note({
   icon: Icon,
@@ -79,9 +81,13 @@ export function ModpackUpdatePreview({
       <div className="surface-lit flex shrink-0 items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-3">
         <div className="min-w-0 flex-1">
           <p className="flex min-w-0 items-center gap-2 font-mono text-sm font-medium">
-            <span className="truncate text-muted-foreground">{currentLabel}</span>
+            <Hint content={currentLabel} variant="text" truncatedOnly>
+              <span className="truncate text-muted-foreground">{currentLabel}</span>
+            </Hint>
             <ArrowRight className="size-3.5 shrink-0 text-faint" />
-            <span className="truncate">{targetLabel}</span>
+            <Hint content={targetLabel} variant="text" truncatedOnly>
+              <span className="truncate">{targetLabel}</span>
+            </Hint>
           </p>
           <p className="mt-0.5 text-xs text-faint">
             {t(isOlder ? "modpack.preview.olderTitle" : "modpack.preview.title")}
@@ -177,9 +183,11 @@ export function ModpackUpdatePreview({
       </ul>
 
       {isEmptyDiff(diff) ? (
-        <div className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-border bg-card px-6 text-center text-xs text-muted-foreground">
-          {t("modpack.preview.sameMods")}
-        </div>
+        <Empty className="min-h-0 flex-1 border border-border bg-card px-6">
+          <EmptyDescription className="text-xs">
+            {t("modpack.preview.sameMods")}
+          </EmptyDescription>
+        </Empty>
       ) : (
         <div className="min-h-0 flex-1">
           <ModpackDiffPanel fill diff={diff} />

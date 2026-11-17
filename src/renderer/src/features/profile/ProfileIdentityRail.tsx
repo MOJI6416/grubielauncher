@@ -19,7 +19,10 @@ import {
   UsersRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Empty, EmptyDescription } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Hint } from "@renderer/components/Hint";
+import { formatNumber } from "@renderer/utilities/numbers";
 import { IUser } from "@/types/IUser";
 import {
   authDataAtom,
@@ -90,7 +93,7 @@ function StatTile({
         <span className="w-full truncate text-center font-mono text-sm tabular-nums text-foreground">
           {value}
         </span>
-        <span className="w-full truncate text-center text-[10px] text-faint">
+        <span className="w-full truncate text-center text-3xs text-faint">
           {label}
         </span>
       </div>
@@ -121,16 +124,13 @@ export function ProfileIdentityRail({
   canShowSkin: boolean;
   accessToken?: string;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const redact = useRedact();
   const friends = useAtomValue(friendsAtom);
   const requests = useAtomValue(friendRequestsAtom);
   const authData = useAtomValue(authDataAtom);
   const isFriendsConnected = useAtomValue(isFriendsConnectedAtom);
   const setPendingFriendRequest = useSetAtom(pendingFriendRequestAtom);
-
-  const formatNumber = (value: number) =>
-    new Intl.NumberFormat(i18n.resolvedLanguage || i18n.language).format(value);
 
   const points =
     pointsOverride ??
@@ -266,12 +266,18 @@ export function ProfileIdentityRail({
           <span className="shrink-0 text-sm font-medium">
             {t("achievements.level")} {level.level}
           </span>
-          <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-            {t(`achievements.tiers.${tier.key}`)}
-          </span>
+          <Hint
+            content={t(`achievements.tiers.${tier.key}`)}
+            variant="text"
+            truncatedOnly
+          >
+            <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+              {t(`achievements.tiers.${tier.key}`)}
+            </span>
+          </Hint>
           {typeof rank === "number" ? (
             <Hint content={t("profile.globalRank")}>
-              <span className="flex shrink-0 items-center gap-1 rounded-md bg-surface-3 px-1.5 py-0.5 font-mono text-[0.7rem] tabular-nums text-muted-foreground">
+              <span className="flex shrink-0 items-center gap-1 rounded-md bg-surface-3 px-1.5 py-0.5 font-mono text-2xs tabular-nums text-muted-foreground">
                 <Trophy className="size-3 text-faint" />#{formatNumber(rank)}
               </span>
             </Hint>
@@ -283,16 +289,25 @@ export function ProfileIdentityRail({
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
           <div
-            className="h-full rounded-full bg-primary transition-[width] duration-500"
+            className="h-full rounded-full bg-info transition-[width] duration-500"
             style={{ width: `${Math.round(level.ratio * 100)}%` }}
           />
         </div>
-        <p className="truncate text-[11px] text-faint">
-          {t("profile.pointsToNext", {
+        <Hint
+          content={t("profile.pointsToNext", {
             points: formatNumber(toNext),
             level: level.nextLevel,
           })}
-        </p>
+          variant="text"
+          truncatedOnly
+        >
+          <p className="truncate text-2xs text-faint">
+            {t("profile.pointsToNext", {
+              points: formatNumber(toNext),
+              level: level.nextLevel,
+            })}
+          </p>
+        </Hint>
       </div>
 
       <div
@@ -349,7 +364,9 @@ export function ProfileIdentityRail({
               onClick={() => navigate({ name: "people", section: "friends" })}
             >
               <UserPlus />
-              <span className="truncate">{t("friends.addFriend")}</span>
+              <Hint content={t("friends.addFriend")} variant="text" truncatedOnly>
+                <span className="truncate">{t("friends.addFriend")}</span>
+              </Hint>
             </Button>
           ) : undefined
         }
@@ -420,7 +437,9 @@ export function ProfileIdentityRail({
             onClick={onShowSkin}
           >
             {isSkinBusy ? <Loader2 className="animate-spin" /> : <Shirt />}
-            <span className="truncate">{t("skinView.title")}</span>
+            <Hint content={t("skinView.title")} variant="text" truncatedOnly>
+              <span className="truncate">{t("skinView.title")}</span>
+            </Hint>
           </Button>
           {isOwner && <ProfilePrivacy user={user} />}
         </div>
@@ -466,7 +485,7 @@ function PresenceRow({
         <span className="min-w-0 flex-1 truncate text-xs">{primary}</span>
       </Hint>
       {secondary && (
-        <span className="shrink-0 text-[11px] text-faint">{secondary}</span>
+        <span className="shrink-0 text-2xs text-faint">{secondary}</span>
       )}
     </div>
   );
@@ -491,23 +510,33 @@ function PeopleBlock({
     <section className="flex min-h-0 flex-1 flex-col gap-1.5">
       <header className="flex h-5 shrink-0 items-center gap-2">
         <UsersRound className="size-3.5 shrink-0 text-faint" />
-        <h3 className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
-          {title}
-        </h3>
-        <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint">
+        <Hint content={title} variant="text" truncatedOnly>
+          <h3 className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
+            {title}
+          </h3>
+        </Hint>
+        <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
           {isLoading ? "…" : entries.length}
         </span>
       </header>
 
       {isLoading ? (
-        <div className="flex min-h-9 flex-1 items-center justify-center rounded-lg border border-dashed border-border">
-          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+        <div aria-busy className="grid min-h-0 flex-1 content-start gap-1 overflow-hidden">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div
+              key={index}
+              className="flex h-8 shrink-0 items-center gap-2 rounded-lg bg-surface-1 px-1.5"
+            >
+              <Skeleton className="size-5 shrink-0 rounded" />
+              <Skeleton className="h-2.5 w-24 rounded" />
+            </div>
+          ))}
         </div>
       ) : entries.length === 0 ? (
-        <div className="flex min-h-9 flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 py-1.5 text-center">
-          <p className="text-[11px] text-muted-foreground">{empty}</p>
+        <Empty className="min-h-9 gap-2 rounded-lg border border-border px-3 py-1.5">
+          <EmptyDescription className="text-2xs">{empty}</EmptyDescription>
           {emptyAction}
-        </div>
+        </Empty>
       ) : (
         <div className="-mr-1 grid min-h-0 flex-1 content-start gap-1 overflow-y-auto pr-1">
           {entries.map((entry) => (
@@ -518,9 +547,11 @@ function PeopleBlock({
               className="flex h-8 min-w-0 shrink-0 items-center gap-2 rounded-lg bg-surface-1 px-1.5 text-left transition-colors hover:bg-surface-3"
             >
               <PlayerHead user={entry} size={20} />
-              <span className="min-w-0 flex-1 truncate text-xs">
-                {entry.nickname}
-              </span>
+              <Hint content={entry.nickname} variant="text" truncatedOnly>
+                <span className="min-w-0 flex-1 truncate text-xs">
+                  {entry.nickname}
+                </span>
+              </Hint>
               {onlineIds.has(entry.id) && (
                 <span className="size-1.5 shrink-0 rounded-full bg-success" />
               )}
@@ -556,7 +587,9 @@ function RelationAction({
         }
       >
         <MessageSquare />
-        <span className="truncate">{t("friends.chat")}</span>
+        <Hint content={t("friends.chat")} variant="text" truncatedOnly>
+          <span className="truncate">{t("friends.chat")}</span>
+        </Hint>
       </Button>
     );
   }
@@ -570,7 +603,9 @@ function RelationAction({
         onClick={() => navigate({ name: "people", section: "requests" })}
       >
         <UserRoundCheck />
-        <span className="truncate">{t("friends.requestSent")}</span>
+        <Hint content={t("friends.requestSent")} variant="text" truncatedOnly>
+          <span className="truncate">{t("friends.requestSent")}</span>
+        </Hint>
       </Button>
     );
   }
@@ -584,13 +619,15 @@ function RelationAction({
         onClick={() => navigate({ name: "people", section: "requests" })}
       >
         <UserPlus />
-        <span className="truncate">{t("friends.requests")}</span>
+        <Hint content={t("friends.requests")} variant="text" truncatedOnly>
+          <span className="truncate">{t("friends.requests")}</span>
+        </Hint>
       </Button>
     );
   }
 
   return (
-    <Hint content={isConnected ? undefined : t("app.backendUnavailable")}>
+    <>
       <Button
         variant="secondary"
         size="lg"
@@ -599,8 +636,15 @@ function RelationAction({
         onClick={() => onRequest(userId)}
       >
         <UserPlus />
-        <span className="truncate">{t("friends.addFriend")}</span>
+        <Hint content={t("friends.addFriend")} variant="text" truncatedOnly>
+          <span className="truncate">{t("friends.addFriend")}</span>
+        </Hint>
       </Button>
-    </Hint>
+      {!isConnected && (
+        <p className="text-center text-2xs text-faint">
+          {t("app.backendUnavailable")}
+        </p>
+      )}
+    </>
   );
 }

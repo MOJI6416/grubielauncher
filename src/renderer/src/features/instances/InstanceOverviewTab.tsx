@@ -37,7 +37,6 @@ import { InstanceIdentityCard, IdentityStat } from "./InstanceIdentityCard";
 import { InstanceNotes } from "./InstanceNotes";
 import { instanceLastLaunch } from "./contentCounts";
 import { isFreshInstance } from "./instanceOverview";
-import { formatPlaytime } from "./playtime";
 import {
   useInstanceContents,
   useInstanceDiskUsage,
@@ -46,6 +45,8 @@ import {
 } from "./useInstanceInsights";
 import { isSlotHidden, slotId } from "@renderer/features/layout/layout";
 import { useLayout } from "@renderer/features/layout/useLayout";
+import { formatDuration } from "@renderer/utilities/duration";
+import { formatNumber } from "@renderer/utilities/numbers";
 
 export interface OverviewAction {
   id: string;
@@ -54,14 +55,21 @@ export interface OverviewAction {
   disabled?: boolean;
   busy?: boolean;
   hint?: string;
+  blockedReason?: string;
   onSelect: () => void;
 }
 
 function ActionTile({ action }: { action: OverviewAction }) {
   const Icon = action.icon;
+  const reason =
+    action.disabled && !action.busy ? action.blockedReason : undefined;
 
   return (
-    <Hint content={action.hint} variant="text">
+    <Hint
+      content={action.disabled ? undefined : (action.hint ?? action.label)}
+      variant="text"
+      truncatedOnly={!action.hint}
+    >
       <button
         type="button"
         disabled={action.disabled}
@@ -73,8 +81,13 @@ function ActionTile({ action }: { action: OverviewAction }) {
         ) : (
           <Icon className="size-4 shrink-0 text-muted-foreground" />
         )}
-        <span className="min-w-0 truncate text-xs font-medium">
-          {action.label}
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate text-xs font-medium">{action.label}</span>
+          {reason && (
+            <span className="line-clamp-2 text-3xs leading-tight text-faint">
+              {reason}
+            </span>
+          )}
         </span>
       </button>
     </Hint>
@@ -149,7 +162,6 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
   const sessions = useInstanceSessions(instance.versionPath);
   const contents = useInstanceContents(instance.versionPath);
 
-  const timeLabels = { h: t("time.h"), m: t("time.m") };
   const sizeUnits = [
     t("sizes.0"),
     t("sizes.1"),
@@ -157,12 +169,20 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
     t("sizes.3"),
     t("sizes.4"),
   ];
-  const format = (seconds: number) => formatPlaytime(seconds, timeLabels);
+  const format = (seconds: number) => formatDuration(seconds);
   const lastLaunchedAt = instanceLastLaunch(
     instance.version.lastLaunch,
     statistics,
   );
   const hasScreenshots = screenshots === null || screenshots.length > 0;
+  const javaProblem = instance.java?.problem;
+  const javaProblemHint = !javaProblem
+    ? undefined
+    : javaProblem === "not_installed"
+      ? t("versions.facts.javaNotInstalled", {
+          major: instance.java?.major ?? instance.javaMajorVersion,
+        })
+      : t(`java.launch.${javaProblem}`);
   const isFresh = isFreshInstance({
     screenshots: screenshots === null ? null : screenshots.length,
     contentCount: props.contentCount,
@@ -180,7 +200,7 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
     {
       id: "launches",
       label: t("home.stats.launches"),
-      value: statistics ? String(statistics.launches || 0) : "—",
+      value: statistics ? formatNumber(statistics.launches || 0) : "—",
       onSelect: () => props.onOpenTab("statistics"),
     },
     {
@@ -388,7 +408,9 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
                     <span
                       className={cn(
                         "truncate font-mono",
-                        instance.java?.problem && "text-destructive",
+                        instance.java?.problem === "not_installed"
+                          ? "text-warning"
+                          : instance.java?.problem && "text-destructive",
                       )}
                     >
                       {instance.java
@@ -399,6 +421,7 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
                     </span>
                   </span>
                 }
+                hint={javaProblemHint}
                 onSelect={() => props.onOpenTab("settings")}
               />
               <FactRow
@@ -406,7 +429,7 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
                 label={t("settings.memory")}
                 value={
                   <span className="font-mono tabular-nums">
-                    {props.memoryMb} {t("settings.mb")}
+                    {formatNumber(props.memoryMb)} {t("settings.mb")}
                   </span>
                 }
                 onSelect={() => props.onOpenTab("settings")}
@@ -436,11 +459,7 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
             </SectionCard>
           )}
           {rightBottom === "sessions" && (
-            <SessionsCard
-              className="min-h-[72px] flex-1"
-              sessions={sessions}
-              timeLabels={timeLabels}
-            />
+            <SessionsCard className="min-h-[72px] flex-1" sessions={sessions} />
           )}
         </div>
       </div>

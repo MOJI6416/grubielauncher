@@ -15,6 +15,7 @@ import {
   hasUpdateDetails,
   summaryCounts,
 } from "./updateSummary";
+import { Hint } from "@renderer/components/Hint";
 
 export function hasInstanceBanner(input: {
   versionDiffence: VersionDiffence;
@@ -58,16 +59,32 @@ export function InstanceBanner({
       <div className="flex shrink-0 items-center gap-3 rounded-xl border border-warning/40 bg-surface-2 px-3.5 py-2.5">
         <CloudDownload className="size-4 shrink-0 text-warning" />
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-medium text-foreground">
-            {isDownloaded
-              ? t("versions.hostChanged")
-              : t("versions.update.publishedAhead")}
-          </span>
-          <span className="flex min-w-0 items-center gap-2 truncate text-xs text-muted-foreground">
+          <Hint
+            content={
+              isDownloaded
+                ? t("versions.hostChanged")
+                : t("versions.update.publishedAhead")
+            }
+            variant="text"
+            truncatedOnly
+          >
+            <span className="truncate text-sm font-medium text-foreground">
+              {isDownloaded
+                ? t("versions.hostChanged")
+                : t("versions.update.publishedAhead")}
+            </span>
+          </Hint>
+          <span className="flex min-w-0 items-center gap-2 overflow-hidden text-xs text-muted-foreground">
             {!isDownloaded ? (
-              <span className="min-w-0 truncate">
-                {t("versions.updateAheadHint")}
-              </span>
+              <Hint
+                content={t("versions.updateAheadHint")}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 truncate">
+                  {t("versions.updateAheadHint")}
+                </span>
+              </Hint>
             ) : counts && counts.total > 0 ? (
               <>
                 {counts.added > 0 && (
@@ -97,9 +114,15 @@ export function InstanceBanner({
           {isDownloaded && (
             <span className="flex min-w-0 items-center gap-1.5 text-xs text-warning">
               <TriangleAlert className="size-3 shrink-0" />
-              <span className="min-w-0 truncate">
-                {t("versions.syncReplacesFiles")}
-              </span>
+              <Hint
+                content={t("versions.syncReplacesFiles")}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 truncate">
+                  {t("versions.syncReplacesFiles")}
+                </span>
+              </Hint>
             </span>
           )}
         </div>
@@ -151,12 +174,20 @@ export function InstanceBanner({
       <div className="flex shrink-0 items-center gap-3 rounded-xl border border-destructive/40 bg-surface-2 px-3.5 py-2.5">
         <TriangleAlert className="size-4 shrink-0 text-destructive" />
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-medium">
-            {t("versions.state.notInstalled")}
-          </span>
-          <span className="truncate text-xs text-muted-foreground">
-            {t("versions.repairHint")}
-          </span>
+          <Hint
+            content={t("versions.state.notInstalled")}
+            variant="text"
+            truncatedOnly
+          >
+            <span className="truncate text-sm font-medium">
+              {t("versions.state.notInstalled")}
+            </span>
+          </Hint>
+          <Hint content={t("versions.repairHint")} variant="text" truncatedOnly>
+            <span className="truncate text-xs text-muted-foreground">
+              {t("versions.repairHint")}
+            </span>
+          </Hint>
         </div>
         <Button
           type="button"

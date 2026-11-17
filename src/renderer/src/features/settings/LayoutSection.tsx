@@ -23,6 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { SortMenu } from "@renderer/components/SortMenu";
 import {
   DEFAULT_INTERFACE_LAYOUT,
   DOCK_LIMITS,
@@ -56,8 +58,9 @@ import {
   useLayout,
 } from "@renderer/features/layout/useLayout";
 import { LayoutChip } from "@renderer/features/layout/LayoutChip";
+import { SlotToggle } from "@renderer/features/layout/SlotToggle";
 import { PresetCards } from "@renderer/features/layout/PresetCards";
-import { SettingRow, SettingsGroup, Segmented } from "./SettingsPrimitives";
+import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
 
 const SORTS: InstancesSort[] = ["activity", "playtime", "name", "manual"];
@@ -104,40 +107,56 @@ function NavOrderList({ layout }: { layout: InterfaceLayout }) {
             className="flex h-9 items-center gap-2.5 bg-surface-2 px-2.5"
           >
             <span className="shrink-0 text-faint">{NAV_ICONS[slot]}</span>
-            <span
-              className={`min-w-0 flex-1 truncate text-sm ${hidden ? "text-faint" : "text-foreground"}`}
+            <Hint content={label} variant="text" truncatedOnly>
+              <span
+                className={`min-w-0 flex-1 truncate text-sm ${hidden ? "text-faint" : "text-foreground"}`}
+              >
+                {label}
+              </span>
+            </Hint>
+            <Hint
+              content={
+                index === 0 ? undefined : t("layout.moveUp", { name: label })
+              }
             >
-              {label}
-            </span>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              disabled={index === 0}
-              aria-label={t("layout.moveUp", { name: label })}
-              onClick={() => updateLayout((current) => moveNav(current, slot, -1))}
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                disabled={index === 0}
+                aria-label={t("layout.moveUp", { name: label })}
+                onClick={() => updateLayout((current) => moveNav(current, slot, -1))}
+              >
+                <ArrowUp />
+              </Button>
+            </Hint>
+            <Hint
+              content={
+                index === order.length - 1
+                  ? undefined
+                  : t("layout.moveDown", { name: label })
+              }
             >
-              <ArrowUp />
-            </Button>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              disabled={index === order.length - 1}
-              aria-label={t("layout.moveDown", { name: label })}
-              onClick={() => updateLayout((current) => moveNav(current, slot, 1))}
-            >
-              <ArrowDown />
-            </Button>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                disabled={index === order.length - 1}
+                aria-label={t("layout.moveDown", { name: label })}
+                onClick={() => updateLayout((current) => moveNav(current, slot, 1))}
+              >
+                <ArrowDown />
+              </Button>
+            </Hint>
             {fixed ? (
               <Hint content={t("layout.alwaysVisible")}>
-                <span className="flex w-8 justify-center text-faint">
+                <span className="flex size-6 shrink-0 items-center justify-center text-faint">
                   <Lock className="size-3.5" />
                 </span>
               </Hint>
             ) : (
-              <Switch
-                checked={!hidden}
-                aria-label={label}
-                onCheckedChange={(value) => toggleSlot(slotId.nav(slot), !value)}
+              <SlotToggle
+                hidden={hidden}
+                label={label}
+                onToggle={() => toggleSlot(slotId.nav(slot), !hidden)}
               />
             )}
           </div>
@@ -271,7 +290,7 @@ export function LayoutSection({
               }))
             }
             control={
-              <Segmented<string>
+              <SegmentedControl<string>
                 ariaLabel={t("layout.dock.title")}
                 value={String(layout.dockLimit)}
                 onChange={(value) =>
@@ -320,24 +339,15 @@ export function LayoutSection({
             onReset={() => reset("instancesView")}
             control={
               <div className="flex items-center gap-2">
-                <Select
+                <SortMenu<InstancesSort>
                   value={settings.instancesSort}
-                  onValueChange={(value) =>
-                    value && commit({ instancesSort: value as InstancesSort })
-                  }
-                >
-                  <SelectTrigger size="sm" className="w-44">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SORTS.map((sort) => (
-                      <SelectItem key={sort} value={sort}>
-                        {t(`settings.interface.sorts.${sort}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Segmented<InstancesView>
+                  options={SORTS.map((sort) => ({
+                    value: sort,
+                    label: t(`settings.interface.sorts.${sort}`),
+                  }))}
+                  onChange={(value) => commit({ instancesSort: value })}
+                />
+                <SegmentedControl<InstancesView>
                   ariaLabel={t("settings.interface.instancesView")}
                   value={settings.instancesView}
                   onChange={(value) => commit({ instancesView: value })}

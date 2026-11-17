@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { AgentBuiltinStatus, AiProviderProfile } from "@/types/Agent";
 import { Hint } from "@renderer/components/Hint";
+import { showFailureToast } from "@renderer/utilities/failures";
 import { abortAgentRun, agentChatAtom, MAX_STEPS } from "@renderer/agent/store";
 import { cn } from "@/lib/utils";
 import { hasOpenOverlay } from "./overlayLayer";
@@ -38,7 +39,7 @@ function BuiltinQuota({ status }: { status: AgentBuiltinStatus | null }) {
     >
       <span
         className={cn(
-          "shrink-0 font-mono text-[0.65rem] tabular-nums",
+          "shrink-0 font-mono text-3xs tabular-nums",
           status.remaining === 0 ? "text-warning" : "text-faint",
         )}
       >
@@ -103,22 +104,24 @@ export function AgentComposer({
     <div className="shrink-0 border-t border-border px-4 py-2.5">
       {running && (
         <div className="mb-2 flex items-center gap-2 rounded-lg bg-surface-2 px-2.5 py-1.5">
-          <Loader2 className="size-3.5 shrink-0 animate-spin text-primary" />
-          <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-            {status}
-          </span>
-          <span className="shrink-0 font-mono text-[0.65rem] tabular-nums text-faint">
+          <Loader2 className="size-3.5 shrink-0 animate-spin text-info" />
+          <Hint content={status} variant="text" truncatedOnly>
+            <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+              {status}
+            </span>
+          </Hint>
+          <span className="shrink-0 font-mono text-3xs whitespace-nowrap tabular-nums text-faint">
             {chat.steps}/{MAX_STEPS}
           </span>
-          <span className="shrink-0 text-[0.65rem] text-faint">
+          <span className="shrink-0 text-3xs text-faint">
             {t("agent.stopHint")}
           </span>
         </div>
       )}
 
       {locked && (
-        <div className="mb-2 flex items-center gap-2 rounded-lg border border-primary/40 bg-primary-soft px-2.5 py-1.5">
-          <Heart className="size-3.5 shrink-0 text-primary" />
+        <div className="mb-2 flex items-center gap-2 rounded-lg border border-info/40 bg-info/10 px-2.5 py-1.5">
+          <Heart className="size-3.5 shrink-0 text-info" />
           <span className="min-w-0 flex-1 text-xs text-foreground">
             {t("agent.builtin.locked")}
           </span>
@@ -134,7 +137,11 @@ export function AgentComposer({
                 .openExternal(
                   `https://grubielauncher.com/${i18n.resolvedLanguage ?? "en"}/donate`,
                 )
-                .catch(() => undefined)
+                .catch((error) =>
+                  showFailureToast(t("settings.about.openLinkFailed"), error, {
+                    channels: ["shell:openExternal"],
+                  }),
+                )
             }
           >
             <Heart />
@@ -147,7 +154,7 @@ export function AgentComposer({
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-warning/40 bg-surface-2 px-2.5 py-1.5">
           <KeyRound className="size-3.5 shrink-0 text-warning" />
           <span className="min-w-0 flex-1 text-xs text-warning">
-            {t("agent.noProvider")}
+            {t("agent.noProviderShort")}
           </span>
           <Button variant="outline" size="xs" onClick={onOpenProviders}>
             {t("agent.providers.settingsRowOpen")}
@@ -176,26 +183,30 @@ export function AgentComposer({
         />
 
         {running ? (
-          <Button
-            variant="secondary"
-            size="icon-lg"
-            className="shrink-0"
-            aria-label={t("agent.stop")}
-            onClick={() => void abortAgentRun()}
-          >
-            <Square />
-          </Button>
+          <Hint content={t("agent.stop")}>
+            <Button
+              variant="secondary"
+              size="icon-lg"
+              className="shrink-0"
+              aria-label={t("agent.stop")}
+              onClick={() => void abortAgentRun()}
+            >
+              <Square />
+            </Button>
+          </Hint>
         ) : (
-          <Button
-            size="icon-lg"
-            variant={blocked ? "secondary" : "default"}
-            className="shrink-0"
-            disabled={!canSend}
-            aria-label={t("agent.send")}
-            onClick={onSubmit}
-          >
-            <Send />
-          </Button>
+          <Hint content={canSend ? t("agent.send") : undefined}>
+            <Button
+              size="icon-lg"
+              variant={blocked ? "secondary" : "default"}
+              className="shrink-0"
+              disabled={!canSend}
+              aria-label={t("agent.send")}
+              onClick={onSubmit}
+            >
+              <Send />
+            </Button>
+          </Hint>
         )}
       </div>
 
@@ -204,15 +215,17 @@ export function AgentComposer({
           <AgentModelPicker provider={provider} disabled={running} />
         )}
         <Hint content={t("agent.toolsReady", { count: toolCount })}>
-          <span className="flex shrink-0 items-center gap-1 text-[0.65rem] text-faint">
+          <span className="flex shrink-0 items-center gap-1 text-3xs text-faint">
             <Wrench className="size-3" />
             <span className="font-mono tabular-nums">{toolCount}</span>
           </span>
         </Hint>
         {provider?.builtin && <BuiltinQuota status={builtinStatus} />}
-        <span className="ml-auto min-w-0 truncate text-[0.65rem] text-faint">
-          {t("agent.sendHint")}
-        </span>
+        <Hint content={t("agent.sendHint")} variant="text" truncatedOnly>
+          <span className="ml-auto min-w-0 truncate text-3xs text-faint">
+            {t("agent.sendHint")}
+          </span>
+        </Hint>
       </div>
     </div>
   );

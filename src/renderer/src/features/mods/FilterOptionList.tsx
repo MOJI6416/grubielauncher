@@ -6,10 +6,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { Loader2 } from "lucide-react";
+import { Empty, EmptyDescription } from "@/components/ui/empty";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { Hint } from "@renderer/components/Hint";
+import { ListSkeleton } from "@renderer/components/ListSkeleton";
 
 export interface FilterOption {
   key: string;
@@ -135,13 +137,15 @@ export function FilterOptionList({
         className="max-h-[min(30rem,calc(100vh-14rem))] overflow-y-auto p-1.5"
       >
         {isLoading ? (
-          <div className="flex h-20 items-center justify-center">
-            <Loader2 className="size-4 animate-spin text-faint" />
-          </div>
+          <ListSkeleton
+            rows={5}
+            rowClassName="h-8"
+            iconClassName="size-4 rounded"
+          />
         ) : visible.length === 0 ? (
-          <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-            {emptyText}
-          </p>
+          <Empty className="gap-2 px-2 py-6">
+            <EmptyDescription className="text-xs">{emptyText}</EmptyDescription>
+          </Empty>
         ) : (
           visible.map((section) => (
             <div
@@ -152,7 +156,7 @@ export function FilterOptionList({
               )}
             >
               {section.title && (
-                <p className="flex items-center gap-1.5 px-2 py-1 text-[0.6875rem] font-medium text-faint uppercase">
+                <p className="flex items-center gap-1.5 px-2 py-1 text-2xs font-medium text-faint uppercase">
                   {section.title}
                 </p>
               )}
@@ -168,15 +172,17 @@ export function FilterOptionList({
                     setHighlighted(option.key);
                   }}
                   onPointerMove={() => setHighlighted(option.key)}
-                  className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors disabled:opacity-40 data-[highlighted]:bg-surface-3"
+                  className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors disabled:opacity-40 data-[highlighted]:bg-row-hover"
                 >
                   <Checkbox
                     checked={option.checked}
                     className="pointer-events-none"
                   />
-                  <span className="min-w-0 flex-1 truncate">
-                    {option.label}
-                  </span>
+                  <Hint content={option.label} variant="text" truncatedOnly>
+                    <span className="min-w-0 flex-1 truncate">
+                      {option.label}
+                    </span>
+                  </Hint>
                   {option.count !== undefined && (
                     <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
                       {option.count}

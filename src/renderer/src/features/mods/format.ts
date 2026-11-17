@@ -1,19 +1,3 @@
-export function formatCompactNumber(
-  value: number | undefined | null,
-  lang: string,
-): string | null {
-  if (value == null || !Number.isFinite(value) || value < 0) return null;
-
-  try {
-    return new Intl.NumberFormat(lang || "en", {
-      notation: "compact",
-      maximumFractionDigits: 1,
-    }).format(value);
-  } catch {
-    return String(value);
-  }
-}
-
 export function formatDate(
   value: string | undefined | null,
   lang: string,

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { CloudDownload, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Hint } from "@renderer/components/Hint";
 import { InstanceStatusKind } from "./instanceStatus";
 
 const TONE: Record<InstanceStatusKind, string> = {
@@ -30,10 +31,10 @@ export function InstanceStatusChip({
           ? t("versions.state.needsUpdate")
           : t("versions.downloadedLabel");
 
-  return (
+  const chip = (
     <span
       className={cn(
-        "flex h-5 shrink-0 items-center gap-1.5 rounded-md border px-1.5 text-[0.65rem] font-medium whitespace-nowrap",
+        "flex h-5 shrink-0 items-center gap-1.5 rounded-md border px-1.5 text-3xs font-medium whitespace-nowrap",
         TONE[kind],
         className,
       )}
@@ -49,5 +50,15 @@ export function InstanceStatusChip({
         <span className="font-mono tabular-nums opacity-80">{detail}</span>
       )}
     </span>
+  );
+
+  return (
+    <Hint
+      variant="text"
+      truncatedOnly={kind !== "downloaded"}
+      content={kind === "downloaded" ? t("modpack.blocked.downloaded") : label}
+    >
+      {chip}
+    </Hint>
   );
 }

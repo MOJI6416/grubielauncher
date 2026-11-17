@@ -6,6 +6,7 @@ import {
   type IVersion as IProjectVersion,
 } from "@/types/ModManager";
 import type { IModpackSource } from "@/types/ModpackSource";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -30,14 +31,16 @@ async function fetchCatalog(
   const [project, versions] = await Promise.all([
     api.modManager
       .getProject(source.provider, source.projectId)
-      .catch(() => null),
+      .catch(ignoreFailure)
+      .then((project) => project ?? null),
     api.modManager
       .getVersions(source.provider, source.projectId, {
         projectType: ProjectType.MODPACK,
         loader,
         modUrl: source.url,
       })
-      .catch(() => [] as IProjectVersion[]),
+      .catch(ignoreFailure)
+      .then((list): IProjectVersion[] => list ?? []),
   ]);
 
   return { project, versions, failed: !project && versions.length === 0 };

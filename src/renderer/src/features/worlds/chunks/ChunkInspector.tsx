@@ -17,6 +17,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatNumber } from "@renderer/utilities/numbers";
 import { Hint } from "@renderer/components/Hint";
 import { formatDate } from "@renderer/utilities/date";
 import { formatBytes } from "@renderer/utilities/file";
@@ -61,7 +62,7 @@ export function ChunkInspector({
   onSelectRegion: (chunk: ChunkPoint) => void;
 }) {
   const { t } = useTranslation();
-  const nf = (value: number) => new Intl.NumberFormat(locale).format(value);
+  const nf = (value: number) => formatNumber(value, locale);
   const sizeLabels = [
     t("sizes.0"),
     t("sizes.1"),
@@ -80,17 +81,17 @@ export function ChunkInspector({
           <h3 className="text-xs font-semibold">
             {t("worldChunks.selection.title")}
           </h3>
-          <span className="font-mono text-[0.65rem] text-faint">
+          <span className="font-mono text-3xs text-faint">
             {t("worldChunks.selection.count", { count: stats.count })}
           </span>
         </div>
 
         {stats.count === 0 ? (
-          <p className="text-[0.7rem] leading-4 text-muted-foreground">
+          <p className="text-2xs leading-4 text-muted-foreground">
             {t("worldChunks.selection.empty")}
           </p>
         ) : (
-          <dl className="grid grid-cols-2 gap-x-2 gap-y-1 text-[0.7rem]">
+          <dl className="grid grid-cols-2 gap-x-2 gap-y-1 text-2xs">
             <Row
               label={t("worldChunks.selection.regions")}
               value={nf(stats.regions)}
@@ -116,26 +117,24 @@ export function ChunkInspector({
         )}
 
         {stats.unscanned > 0 && (
-          <p className="text-[0.65rem] leading-4 text-warning">
+          <p className="text-3xs leading-4 text-warning">
             {t("worldChunks.selection.unscanned", { count: stats.unscanned })}
           </p>
         )}
 
         <div className="flex flex-col gap-1.5">
-          <Hint content={locked ? lockReason : undefined}>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="h-8 w-full"
-              disabled={!canAct}
-              onClick={onDelete}
-            >
-              {busy ? <Loader2 className="animate-spin" /> : <Trash />}
-              {t("worldChunks.actions.delete")}
-            </Button>
-          </Hint>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-8 w-full"
+            disabled={!canAct}
+            onClick={onDelete}
+          >
+            {busy ? <Loader2 className="animate-spin" /> : <Trash />}
+            {t("worldChunks.actions.delete")}
+          </Button>
           <Hint
-            content={locked ? lockReason : t("worldChunks.actions.resetHint")}
+            content={canAct ? t("worldChunks.actions.resetHint") : undefined}
           >
             <Button
               variant="outline"
@@ -148,6 +147,9 @@ export function ChunkInspector({
               {t("worldChunks.actions.reset")}
             </Button>
           </Hint>
+          {locked && lockReason && (
+            <p className="text-3xs leading-4 text-faint">{lockReason}</p>
+          )}
         </div>
       </section>
 
@@ -157,19 +159,19 @@ export function ChunkInspector({
             {t("worldChunks.chunk.title")}
           </h3>
           {focused && (
-            <span className="font-mono text-[0.65rem] text-faint">
+            <span className="font-mono text-3xs text-faint">
               {focused.x} {focused.z}
             </span>
           )}
         </div>
 
         {!focused ? (
-          <p className="flex items-start gap-1.5 text-[0.7rem] leading-4 text-muted-foreground">
+          <p className="flex items-start gap-1.5 text-2xs leading-4 text-muted-foreground">
             <MousePointer2 className="mt-0.5 size-3 shrink-0" />
             {t("worldChunks.chunk.pick")}
           </p>
         ) : lookup && !lookup.present ? (
-          <p className="text-[0.7rem] leading-4 text-muted-foreground">
+          <p className="text-2xs leading-4 text-muted-foreground">
             {t("worldChunks.chunk.absent")}
           </p>
         ) : (
@@ -223,7 +225,7 @@ function ChunkFacts({
 
   return (
     <div className="flex flex-col gap-2">
-      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 text-[0.7rem]">
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 text-2xs">
         <Row
           label={t("worldChunks.chunk.blocks")}
           value={`${blockX}…${blockX + 15}, ${blockZ}…${blockZ + 15}`}
@@ -301,7 +303,7 @@ function ChunkFacts({
           className="py-2"
         >
           <TriangleAlert />
-          <AlertDescription className="text-[0.65rem] leading-4">
+          <AlertDescription className="text-3xs leading-4">
             {t(`worldChunks.problems.${problem}`)}
           </AlertDescription>
         </Alert>
@@ -316,13 +318,13 @@ function ChunkFacts({
       )}
 
       {detailsStatus === "error" && (
-        <p className="text-[0.65rem] text-destructive">
+        <p className="text-3xs text-destructive">
           {t("worldChunks.chunk.detailsError")}
         </p>
       )}
 
       {details && detailsStatus === "ready" && (
-        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 text-[0.7rem]">
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 text-2xs">
           {details.sectionCount !== null && (
             <Row
               label={t("worldChunks.chunk.sections")}
@@ -434,16 +436,16 @@ function IdList({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
-        <span className="text-[0.65rem] font-medium text-muted-foreground">
+        <span className="text-3xs font-medium text-muted-foreground">
           {title}
         </span>
-        <span className="font-mono text-[0.65rem] text-faint">{nf(total)}</span>
+        <span className="font-mono text-3xs text-faint">{nf(total)}</span>
       </div>
       <ul className="flex flex-col gap-0.5">
         {shown.map((entry) => (
           <li
             key={entry.id}
-            className="flex items-center justify-between gap-2 text-[0.65rem]"
+            className="flex items-center justify-between gap-2 text-3xs"
           >
             <Hint content={entry.id} variant="text" truncatedOnly>
               <span className="truncate font-mono">
@@ -457,7 +459,7 @@ function IdList({
         ))}
       </ul>
       {hidden > 0 && (
-        <span className="text-[0.6rem] text-faint">
+        <span className="text-3xs text-faint">
           {t("worldChunks.chunk.moreRows", { count: hidden })}
         </span>
       )}
@@ -478,7 +480,9 @@ function Row({
 }) {
   return (
     <>
-      <dt className="truncate text-faint">{label}</dt>
+      <Hint content={label} variant="text" truncatedOnly>
+        <dt className="truncate text-faint">{label}</dt>
+      </Hint>
       <Hint content={value} variant="text" truncatedOnly>
         <dd
           className={cn(

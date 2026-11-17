@@ -8,6 +8,8 @@ import { useOwnSkin } from "@renderer/features/skins/useOwnSkin";
 import { lazyWithPreload } from "@renderer/utilities/lazyPreload";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
 import { usePageVisible } from "@renderer/utilities/usePageVisible";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { Hint } from "@renderer/components/Hint";
 
 const LazySkinCanvas = lazyWithPreload(
   () => import("@renderer/features/skins/SkinCanvas"),
@@ -44,7 +46,7 @@ function useRunnerReady(skinUrl?: string, capeUrl?: string): boolean {
       preloadTexture(skinUrl),
       capeUrl ? preloadTexture(capeUrl) : null,
     ])
-      .catch(() => {})
+      .catch(ignoreFailure)
       .then(() => {
         if (!cancelled) setReady(true);
       });
@@ -141,9 +143,11 @@ export function LaunchCompanion({
       )}
 
       {caption && (
-        <p className="absolute inset-x-3 bottom-2 truncate text-center text-[0.65rem] text-muted-foreground">
-          {caption}
-        </p>
+        <Hint content={caption} variant="text" truncatedOnly>
+          <p className="absolute inset-x-3 bottom-2 truncate text-center text-3xs text-muted-foreground">
+            {caption}
+          </p>
+        </Hint>
       )}
     </div>
   );

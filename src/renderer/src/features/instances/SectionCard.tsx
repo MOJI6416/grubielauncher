@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Hint } from "@renderer/components/Hint";
 
 export function SectionCard({
   title,
@@ -26,9 +27,11 @@ export function SectionCard({
     >
       <header className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-3">
         <Icon className="size-3.5 shrink-0 text-faint" />
-        <span className="min-w-0 flex-1 truncate text-[0.68rem] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-          {title}
-        </span>
+        <Hint content={title} variant="text" truncatedOnly>
+          <span className="min-w-0 flex-1 truncate text-2xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
+            {title}
+          </span>
+        </Hint>
         {action}
       </header>
       <div className={cn("min-h-0 flex-1", bodyClassName)}>{children}</div>

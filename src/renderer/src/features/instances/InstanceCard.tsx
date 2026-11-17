@@ -18,7 +18,7 @@ import { InstanceArt, loaderTint } from "./InstanceArt";
 import { InstanceStatusChip } from "./InstanceStatusChip";
 import { InstanceUpdateBadge } from "./InstanceUpdateBadge";
 import { InstanceStatusKind } from "./instanceStatus";
-import { formatPlaytime } from "./playtime";
+import { formatDuration } from "@renderer/utilities/duration";
 
 export interface InstanceCardProps {
   instance: Version;
@@ -62,7 +62,7 @@ function OwnerMark({
         className={cn("size-4 bg-surface-3 ring-2 ring-surface-2", className)}
       >
         {image && <AvatarImage src={image} alt={nickname} />}
-        <AvatarFallback className="text-[0.5rem]">
+        <AvatarFallback className="text-4xs">
           {nickname.slice(0, 2).toUpperCase()}
         </AvatarFallback>
       </Avatar>
@@ -113,7 +113,7 @@ function WaitSweep({ name }: { name: string }) {
   return (
     <span
       aria-hidden
-      className="stage-sweep pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-primary/15"
+      className="stage-sweep pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-info/15"
     />
   );
 }
@@ -134,7 +134,7 @@ function Meta({
   return (
     <span
       className={cn(
-        "flex min-w-0 items-center gap-2 text-[0.7rem] text-faint",
+        "flex min-w-0 items-center gap-2 text-2xs text-faint",
         className,
       )}
     >
@@ -193,7 +193,7 @@ export function InstanceRow({
       className={cn(
         "spotlight group relative flex cursor-pointer items-center overflow-hidden px-2.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         compact ? "h-9 gap-2.5 rounded-lg" : "h-14 gap-3 rounded-xl",
-        props.active ? "bg-primary-soft" : "bg-surface-2 hover:bg-surface-3",
+        props.active ? "bg-row-selected" : "bg-surface-2 hover:bg-surface-3",
       )}
       {...props.dragProps}
     >
@@ -213,7 +213,7 @@ export function InstanceRow({
           image={props.instance.version.image}
           className={
             compact
-              ? "size-6 rounded-md text-[0.55rem]"
+              ? "size-6 rounded-md text-4xs"
               : "size-10 rounded-lg text-xs"
           }
         />
@@ -259,11 +259,11 @@ export function InstanceRow({
           ),
         )}
 
-      <span className="hidden w-20 shrink-0 text-right font-mono text-[0.7rem] text-muted-foreground tabular-nums xl:block">
-        {formatPlaytime(props.playtime, { h: t("time.h"), m: t("time.m") }, "")}
+      <span className="hidden min-w-20 shrink-0 text-right font-mono text-2xs whitespace-nowrap text-muted-foreground tabular-nums xl:block">
+        {formatDuration(props.playtime, { empty: "" })}
       </span>
 
-      <span className="w-24 shrink-0 text-right font-mono text-[0.7rem] text-faint">
+      <span className="min-w-24 shrink-0 text-right font-mono text-2xs whitespace-nowrap text-faint tabular-nums">
         {props.lastLaunchedAt
           ? formatRelative(props.lastLaunchedAt)
           : t("versions.never")}
@@ -324,7 +324,7 @@ export function InstanceTile(props: InstanceCardProps) {
       }}
       className={cn(
         "spotlight surface-lit group relative flex h-38 cursor-pointer flex-col overflow-hidden rounded-xl bg-surface-2 text-left transition-colors hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset focus-visible:outline-none",
-        props.active && "bg-primary-soft",
+        props.active && "bg-row-selected",
       )}
       {...props.dragProps}
     >

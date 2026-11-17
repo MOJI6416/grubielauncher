@@ -33,11 +33,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { Hint } from "@renderer/components/Hint";
 import { settingsAtom } from "@renderer/stores/atoms";
-import {
-  formatDate,
-  formatRelative,
-  formatTime,
-} from "@renderer/utilities/date";
+import { formatDate, formatRelative } from "@renderer/utilities/date";
 import { formatBytes } from "@renderer/utilities/file";
 import { holdBusy } from "@renderer/utilities/busy";
 import { progressPercent } from "@renderer/utilities/archiveProgress";
@@ -45,11 +41,12 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { toast } from "sonner";
 import { backupFreshness } from "./worldFacts";
 import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
+import { formatDuration } from "@renderer/utilities/duration";
 
 const api = window.api;
 
 const TRIGGER_TONE: Record<WorldBackupTrigger, string> = {
-  manual: "bg-primary-soft-raised text-foreground",
+  manual: "bg-surface-3 text-foreground",
   auto: "bg-surface-3 text-muted-foreground",
   preRestore: "bg-warning/15 text-warning",
   preEdit: "bg-warning/15 text-warning",
@@ -73,6 +70,10 @@ export function WorldBackupsTab({
     [backups],
   );
   const [preserved, setPreserved] = useState<IWorldPreservedCopy[]>([]);
+  const preservedPaths = useMemo(
+    () => new Set(preserved.map((copy) => copy.path)),
+    [preserved],
+  );
   const [skipReason, setSkipReason] = useState<WorldBackupErrorCode | null>(
     null,
   );
@@ -118,8 +119,6 @@ export function WorldBackupsTab({
     t("sizes.3"),
     t("sizes.4"),
   ];
-
-  const timeLabels = { h: t("time.h"), m: t("time.m"), s: t("time.s") };
 
   const load = useCallback(async () => {
     try {
@@ -274,7 +273,9 @@ export function WorldBackupsTab({
 
     return {
       text: t("worldBackups.behindWorld", {
-        time: formatTime(Math.floor(freshness.deltaMs / 1000), timeLabels),
+        time: formatDuration(Math.floor(freshness.deltaMs / 1000), {
+          withSeconds: true,
+        }),
       }),
       tone: "text-warning",
     };
@@ -284,38 +285,41 @@ export function WorldBackupsTab({
     ? progressPercent(progress.processedBytes, progress.totalBytes)
     : 0;
 
+  const createButton = (
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-7 shrink-0 text-xs"
+      disabled={isBusy || isVersionRunning}
+      onClick={() => void handleCreate()}
+    >
+      {isCreating ? (
+        <Loader2 className="animate-spin" />
+      ) : (
+        <Plus className="size-3.5" />
+      )}
+      {t("worldBackups.create")}
+    </Button>
+  );
+
   return (
     <>
       <div className="flex h-full min-h-0 flex-col gap-3">
         <div className="flex shrink-0 items-center justify-between gap-3 rounded-xl border bg-surface-1 px-3 py-2">
-          <p className="min-w-0 text-xs text-muted-foreground">
-            {settings.autoWorldBackup
-              ? t("worldBackups.autoOn", { keep })
-              : t("worldBackups.autoOff")}
-          </p>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <p className="min-w-0 text-xs text-muted-foreground">
+              {settings.autoWorldBackup
+                ? t("worldBackups.autoOn", { keep })
+                : t("worldBackups.autoOff")}
+            </p>
+            {isVersionRunning && (
+              <p className="min-w-0 text-2xs text-warning">
+                {t("worldBackups.errors.versionRunning")}
+              </p>
+            )}
+          </div>
 
-          <Hint
-            content={
-              isVersionRunning
-                ? t("worldBackups.errors.versionRunning")
-                : undefined
-            }
-          >
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 shrink-0 text-xs"
-              disabled={isBusy || isVersionRunning}
-              onClick={() => void handleCreate()}
-            >
-              {isCreating ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <Plus className="size-3.5" />
-              )}
-              {t("worldBackups.create")}
-            </Button>
-          </Hint>
+          {createButton}
         </div>
 
         {skipReason && settings.autoWorldBackup && (
@@ -337,11 +341,17 @@ export function WorldBackupsTab({
           <div className="flex shrink-0 flex-col gap-1.5 rounded-xl border bg-surface-1 px-3 py-2">
             <div className="flex min-w-0 items-center gap-2 text-xs">
               <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                {t(`worldBackups.progress.${progress.phase}`)}
-              </span>
+              <Hint
+                content={t(`worldBackups.progress.${progress.phase}`)}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                  {t(`worldBackups.progress.${progress.phase}`)}
+                </span>
+              </Hint>
               {progress.totalBytes > 0 && (
-                <span className="shrink-0 font-mono text-[0.7rem] tabular-nums text-faint">
+                <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
                   {formatBytes(progress.processedBytes, sizeLabels, 1)} /{" "}
                   {formatBytes(progress.totalBytes, sizeLabels, 1)} ·{" "}
                   {progressValue}%
@@ -391,10 +401,11 @@ export function WorldBackupsTab({
               <EmptyTitle>{t("worldBackups.empty")}</EmptyTitle>
               <EmptyDescription>{t("worldBackups.emptyHint")}</EmptyDescription>
             </EmptyHeader>
+            {createButton}
           </Empty>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col rounded-xl border bg-surface-1">
-            <div className="flex shrink-0 items-center justify-between border-b px-3 py-2 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
+            <div className="flex shrink-0 items-center justify-between border-b px-3 py-2 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
               <span>{t("worldBackups.stored")}</span>
               <span className="font-mono text-faint">
                 {formatBytes(
@@ -412,7 +423,16 @@ export function WorldBackupsTab({
 
                   return (
                     <RemovalItem key={backup.id} itemKey={backup.id}>
-                      <div className="flex min-w-0 items-center gap-3 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-accent/30">
+                      <div
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          if (event.key !== "Delete" || isBusy) return;
+                          if (event.target !== event.currentTarget) return;
+                          event.preventDefault();
+                          setPendingDelete(backup);
+                        }}
+                        className="flex min-w-0 items-center gap-3 rounded-lg px-1.5 py-1.5 transition-colors outline-none hover:bg-row-hover focus-visible:ring-2 focus-visible:ring-ring/50"
+                      >
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <div className="flex min-w-0 items-center gap-2">
                             <Hint
@@ -431,59 +451,61 @@ export function WorldBackupsTab({
                             </Hint>
 
                             <span
-                              className={`shrink-0 rounded px-1.5 py-0.5 text-[0.65rem] ${TRIGGER_TONE[backup.trigger]}`}
+                              className={`shrink-0 rounded px-1.5 py-0.5 text-3xs ${TRIGGER_TONE[backup.trigger]}`}
                             >
                               {t(`worldBackups.triggers.${backup.trigger}`)}
                             </span>
 
-                            <span className="shrink-0 font-mono text-[0.65rem] text-faint">
+                            <span className="shrink-0 font-mono text-3xs text-faint">
                               {formatBytes(backup.size, sizeLabels, 1)}
                             </span>
                           </div>
 
                           {freshness && (
-                            <span
-                              className={`truncate text-[0.65rem] ${freshness.tone}`}
+                            <Hint
+                              content={freshness.text}
+                              variant="text"
+                              truncatedOnly
                             >
-                              {freshness.text}
-                            </span>
+                              <span
+                                className={`truncate text-3xs ${freshness.tone}`}
+                              >
+                                {freshness.text}
+                              </span>
+                            </Hint>
                           )}
                         </div>
 
                         <div className="flex shrink-0 items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            disabled={isBusy || isVersionRunning}
+                            onClick={() => setPendingRestore(backup)}
+                          >
+                            {busyId === backup.id ? (
+                              <Loader2 className="animate-spin" />
+                            ) : (
+                              <HardDriveDownload className="size-3.5" />
+                            )}
+                            {t("worldBackups.restore")}
+                          </Button>
+
                           <Hint
-                            content={
-                              isVersionRunning
-                                ? t("worldBackups.errors.versionRunning")
-                                : undefined
-                            }
+                            content={isBusy ? undefined : t("common.delete")}
                           >
                             <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs"
-                              disabled={isBusy || isVersionRunning}
-                              onClick={() => setPendingRestore(backup)}
+                              variant="ghost"
+                              size="icon-sm"
+                              className="size-7 text-muted-foreground hover:text-destructive"
+                              disabled={isBusy}
+                              aria-label={t("common.delete")}
+                              onClick={() => setPendingDelete(backup)}
                             >
-                              {busyId === backup.id ? (
-                                <Loader2 className="animate-spin" />
-                              ) : (
-                                <HardDriveDownload className="size-3.5" />
-                              )}
-                              {t("worldBackups.restore")}
+                              <Trash className="size-3.5" />
                             </Button>
                           </Hint>
-
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            className="size-7 text-muted-foreground hover:text-destructive"
-                            disabled={isBusy}
-                            aria-label={t("common.delete")}
-                            onClick={() => setPendingDelete(backup)}
-                          >
-                            <Trash className="size-3.5" />
-                          </Button>
                         </div>
                       </div>
                     </RemovalItem>
@@ -497,56 +519,80 @@ export function WorldBackupsTab({
                     <p className="text-xs font-medium">
                       {t("worldBackups.preservedTitle")}
                     </p>
-                    <p className="text-[0.65rem] text-muted-foreground">
+                    <p className="text-3xs text-muted-foreground">
                       {t("worldBackups.preservedHint")}
                     </p>
                   </div>
 
-                  {preserved.map((copy) => (
-                    <div
-                      key={copy.path}
-                      className="flex min-w-0 items-center gap-3 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-accent/30"
-                    >
-                      <div className="flex min-w-0 flex-1 items-center gap-2">
-                        <span className="truncate text-xs">
-                          {copy.createdAt
-                            ? formatDate(new Date(copy.createdAt))
-                            : t("worldBackups.unknownDate")}
-                        </span>
-                        <span className="shrink-0 font-mono text-[0.65rem] text-faint">
-                          {formatBytes(copy.size, sizeLabels, 1)}
-                        </span>
-                      </div>
-
-                      <div className="flex shrink-0 items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          disabled={isBusy}
-                          onClick={() => void api.shell.openPath(copy.path)}
+                  <RemovalList sourceKeys={preservedPaths}>
+                    {preserved.map((copy) => (
+                      <RemovalItem key={copy.path} itemKey={copy.path}>
+                        <div
+                          tabIndex={0}
+                          onKeyDown={(event) => {
+                            if (event.key !== "Delete" || isBusy) return;
+                            if (event.target !== event.currentTarget) return;
+                            event.preventDefault();
+                            setPendingPreserved(copy);
+                          }}
+                          className="flex min-w-0 items-center gap-3 rounded-lg px-1.5 py-1.5 transition-colors outline-none hover:bg-row-hover focus-visible:ring-2 focus-visible:ring-ring/50"
                         >
-                          <FolderOpen className="size-3.5" />
-                          {t("worlds.openFolder")}
-                        </Button>
+                          <div className="flex min-w-0 flex-1 items-center gap-2">
+                            <Hint
+                              content={
+                                copy.createdAt
+                                  ? formatDate(new Date(copy.createdAt))
+                                  : t("worldBackups.unknownDate")
+                              }
+                              variant="text"
+                              truncatedOnly
+                            >
+                              <span className="truncate text-xs">
+                                {copy.createdAt
+                                  ? formatDate(new Date(copy.createdAt))
+                                  : t("worldBackups.unknownDate")}
+                              </span>
+                            </Hint>
+                            <span className="shrink-0 font-mono text-3xs text-faint">
+                              {formatBytes(copy.size, sizeLabels, 1)}
+                            </span>
+                          </div>
 
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          className="size-7 text-muted-foreground hover:text-destructive"
-                          disabled={isBusy}
-                          aria-label={t("common.delete")}
-                          onClick={() => setPendingPreserved(copy)}
-                        >
-                          {busyId === copy.path ? (
-                            <Loader2 className="animate-spin" />
-                          ) : (
-                            <Trash className="size-3.5" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                          <div className="flex shrink-0 items-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              disabled={isBusy}
+                              onClick={() => void api.shell.openPath(copy.path)}
+                            >
+                              <FolderOpen className="size-3.5" />
+                              {t("worlds.openFolder")}
+                            </Button>
+
+                            <Hint
+                              content={isBusy ? undefined : t("common.delete")}
+                            >
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                className="size-7 text-muted-foreground hover:text-destructive"
+                                disabled={isBusy}
+                                aria-label={t("common.delete")}
+                                onClick={() => setPendingPreserved(copy)}
+                              >
+                                {busyId === copy.path ? (
+                                  <Loader2 className="animate-spin" />
+                                ) : (
+                                  <Trash className="size-3.5" />
+                                )}
+                              </Button>
+                            </Hint>
+                          </div>
+                        </div>
+                      </RemovalItem>
+                    ))}
+                  </RemovalList>
                 </div>
               )}
             </div>
@@ -556,8 +602,7 @@ export function WorldBackupsTab({
 
       {pendingRestore && (
         <Confirmation
-          title={t("worldBackups.restoreTitle")}
-          reversible
+          title={t("worldBackups.restoreQuestion")}
           content={[
             {
               text: t("worldBackups.restoreConfirmDated", {
@@ -599,7 +644,7 @@ export function WorldBackupsTab({
 
       {pendingDelete && (
         <Confirmation
-          title={t("worldBackups.deleteTitle")}
+          title={t("worldBackups.deleteQuestion")}
           reversible={false}
           content={[
             {
@@ -632,7 +677,7 @@ export function WorldBackupsTab({
 
       {pendingPreserved && (
         <Confirmation
-          title={t("worldBackups.preservedDeleteTitle")}
+          title={t("worldBackups.preservedDeleteQuestion")}
           reversible={false}
           content={[{ text: t("worldBackups.preservedDeleteConfirm") }]}
           buttons={[

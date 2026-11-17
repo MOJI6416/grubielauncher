@@ -109,9 +109,11 @@ export function ModSetPicker({
     <div className="border-t border-border/60">
       <div className="flex items-center gap-2 px-2.5 py-1.5">
         <Layers className="size-3.5 shrink-0 text-faint" />
-        <span className="min-w-0 shrink-0 truncate text-xs text-muted-foreground">
-          {t("modSets.field")}
-        </span>
+        <Hint content={t("modSets.field")} variant="text" truncatedOnly>
+          <span className="min-w-0 shrink-0 truncate text-xs text-muted-foreground">
+            {t("modSets.field")}
+          </span>
+        </Hint>
         <Select
           value={setId || NO_SET}
           disabled={!hasSets}
@@ -139,7 +141,7 @@ export function ModSetPicker({
       </div>
 
       {status && (
-        <p className="px-2.5 pb-2 text-[0.7rem] leading-snug text-muted-foreground">
+        <p className="px-2.5 pb-2 text-2xs leading-snug text-muted-foreground">
           {status}
         </p>
       )}

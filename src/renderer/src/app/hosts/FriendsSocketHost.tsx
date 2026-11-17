@@ -30,6 +30,7 @@ import {
   isJwtExpiringSoon,
 } from "@renderer/utilities/accountSession";
 import { useApiBase } from "../useApiBase";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const SHARE_WATCH_MS = 90_000;
 
@@ -81,7 +82,7 @@ export function FriendsSocketHost() {
         selectedAccount: acc,
         setAccounts: (next) => store.set(accountsAtom, next),
         setSelectedAccount: (next) => store.set(accountAtom, next),
-      }).catch(() => {});
+      }).catch(ignoreFailure);
     };
 
     if (isJwtExpiringSoon(ad)) refreshSession();

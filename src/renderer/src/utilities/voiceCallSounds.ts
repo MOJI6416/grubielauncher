@@ -4,6 +4,7 @@ import { DEFAULT_SOUND_VOLUME } from "@/types/Settings";
 import { applySavedAudioOutput } from "./voiceDevices";
 import incomingUrl from "../assets/sounds/call-incoming.ogg";
 import outgoingUrl from "../assets/sounds/call-outgoing.ogg";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const CALL_SOUND_VOLUME = 0.35;
 
@@ -23,7 +24,7 @@ export function startCallSound(kind: "incoming" | "outgoing") {
   );
   applySavedAudioOutput(audio);
   activeAudio = audio;
-  void audio.play().catch(() => {});
+  void audio.play().catch(ignoreFailure);
 }
 
 export function stopCallSound() {

@@ -1,7 +1,23 @@
 import { useMemo } from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
-import { Bug, Gauge, HardDrive, RefreshCw, Scale } from "lucide-react";
+import {
+  Bug,
+  Gauge,
+  HardDrive,
+  RefreshCw,
+  Scale,
+  Sparkles,
+} from "lucide-react";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Hint } from "@renderer/components/Hint";
 import {
   consolesAtom,
   selectedVersionAtom,
@@ -58,15 +74,18 @@ export function AgentEmptyState({
   }, [consoles, versions, updates, selected, instanceCount]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-8 text-center">
-      <p className="text-base font-medium text-foreground">
-        {t("agent.emptyTitle")}
-      </p>
-      <p className="max-w-md text-xs leading-5 text-muted-foreground">
-        {t("agent.emptyHint")}
-      </p>
+    <Empty className="min-h-0 gap-3 px-8">
+      <EmptyHeader className="max-w-md">
+        <EmptyMedia variant="icon">
+          <Sparkles />
+        </EmptyMedia>
+        <EmptyTitle className="text-base">{t("agent.emptyTitle")}</EmptyTitle>
+        <EmptyDescription className="text-xs leading-5">
+          {t("agent.emptyHint")}
+        </EmptyDescription>
+      </EmptyHeader>
 
-      <div className="grid w-full max-w-md grid-cols-1 gap-1.5 pt-3">
+      <EmptyContent className="grid max-w-md grid-cols-1 gap-1.5">
         {suggestions.map((suggestion) => {
           const Icon = SUGGESTION_ICON[suggestion.id];
           const text = t(`agent.suggestions.${suggestion.id}`, {
@@ -82,20 +101,22 @@ export function AgentEmptyState({
               className="flex h-11 items-center gap-2.5 rounded-lg border border-border bg-surface-2 px-3 text-left text-xs text-muted-foreground transition-colors hover:border-input hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
             >
               <Icon className="size-4 shrink-0 text-faint" />
-              <span className="min-w-0 flex-1 truncate">
-                {redact.text(text)}
-              </span>
+              <Hint content={redact.text(text)} variant="text" truncatedOnly>
+                <span className="min-w-0 flex-1 truncate">
+                  {redact.text(text)}
+                </span>
+              </Hint>
             </button>
           );
         })}
-      </div>
+      </EmptyContent>
 
-      <p className="pt-2 text-[0.65rem] text-faint">
+      <p className="text-3xs text-faint">
         {t("agent.emptyContext", {
           instances: t("agent.emptyContextInstances", { count: instanceCount }),
           tools: t("agent.emptyContextTools", { count: toolCount }),
         })}
       </p>
-    </div>
+    </Empty>
   );
 }

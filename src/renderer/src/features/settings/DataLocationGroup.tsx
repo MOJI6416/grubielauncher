@@ -4,16 +4,10 @@ import { useAtomValue } from "jotai";
 import { FolderInput, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { isRunningAtom } from "@renderer/stores/atoms";
+import { showFailureToast } from "@renderer/utilities/failures";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { formatBytes } from "@renderer/utilities/file";
 import type { DataLocationInfo, DataLocationPlan } from "@/types/DataLocation";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
@@ -43,7 +37,7 @@ export function DataLocationGroup({ query }: { query: string }) {
   const bytes = (value: number) => formatBytes(value, sizes, 1);
 
   useEffect(() => {
-    void api.dataLocation.get().then(setInfo);
+    void api.dataLocation.get().then(setInfo).catch(ignoreFailure);
   }, []);
 
   const choose = async (source: "pick" | "default") => {
@@ -66,8 +60,10 @@ export function DataLocationGroup({ query }: { query: string }) {
       }
 
       setPlan(next);
-    } catch {
-      toast.error(t("dataLocation.problems.failed"));
+    } catch (error) {
+      showFailureToast(t("dataLocation.problems.failed"), error, {
+        channels: ["dataLocation:pick", "dataLocation:planDefault"],
+      });
     } finally {
       setChecking(null);
     }
@@ -81,8 +77,10 @@ export function DataLocationGroup({ query }: { query: string }) {
       const result = await api.dataLocation.apply(plan.kind);
       if (result.ok) return;
       toast.error(t(`dataLocation.problems.${result.problem}`));
-    } catch {
-      toast.error(t("dataLocation.problems.failed"));
+    } catch (error) {
+      showFailureToast(t("dataLocation.problems.failed"), error, {
+        channels: ["dataLocation:apply"],
+      });
     }
 
     setApplying(false);
@@ -122,7 +120,7 @@ export function DataLocationGroup({ query }: { query: string }) {
               className="flex-1 text-xs text-faint"
             />
             {info?.isDefault ? (
-              <span className="shrink-0 text-[0.7rem] text-faint">
+              <span className="shrink-0 text-2xs text-faint">
                 {t("settings.dataLocation.default")}
               </span>
             ) : (
@@ -142,84 +140,82 @@ export function DataLocationGroup({ query }: { query: string }) {
             )}
           </div>
           {isRunning && (
-            <p className="mt-1.5 text-[0.7rem] leading-snug text-warning">
+            <p className="mt-1.5 text-2xs leading-snug text-warning">
               {t("dataLocation.problems.busy")}
             </p>
           )}
         </SettingRow>
       </SettingsGroup>
 
-      <AlertDialog
-        open={plan !== null}
-        onOpenChange={(open) => !open && !applying && setPlan(null)}
-      >
-        <AlertDialogContent>
-          {plan && info && (
-            <>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {plan.kind === "move"
-                    ? t("settings.dataLocation.moveTitle")
-                    : t("settings.dataLocation.adoptTitle")}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {plan.kind === "move"
-                    ? t("settings.dataLocation.moveDescription")
-                    : t("settings.dataLocation.adoptDescription")}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
+      {plan && info && (
+        <Confirmation
+          title={
+            plan.kind === "move"
+              ? t("settings.dataLocation.moveTitle")
+              : t("settings.dataLocation.adoptQuestion")
+          }
+          onClose={() => !applying && setPlan(null)}
+          content={
+            plan.kind === "move"
+              ? [{ text: t("settings.dataLocation.moveDescription") }]
+              : [
+                  { text: t("settings.dataLocation.adoptTitle") },
+                  { text: t("settings.dataLocation.adoptDescription") },
+                ]
+          }
+          buttons={[
+            {
+              text: t("common.cancel"),
+              color: "secondary",
+              onClick: () => setPlan(null),
+            },
+            {
+              text: applying
+                ? t("settings.dataLocation.restarting")
+                : plan.kind === "move"
+                  ? t("settings.dataLocation.moveConfirm")
+                  : t("settings.dataLocation.adoptConfirm"),
+              color: "primary",
+              loading: applying,
+              onClick: apply,
+            },
+          ]}
+        >
+          <PathRows
+            rows={[
+              {
+                label:
+                  plan.kind === "move"
+                    ? t("dataLocation.from")
+                    : t("dataLocation.current"),
+                path: redact.path(info.root),
+              },
+              {
+                label:
+                  plan.kind === "move"
+                    ? t("dataLocation.to")
+                    : t("dataLocation.next"),
+                path: redact.path(plan.target),
+              },
+            ]}
+          />
 
-              <PathRows
-                rows={[
-                  {
-                    label:
-                      plan.kind === "move"
-                        ? t("dataLocation.from")
-                        : t("dataLocation.current"),
-                    path: redact.path(info.root),
-                  },
-                  {
-                    label:
-                      plan.kind === "move"
-                        ? t("dataLocation.to")
-                        : t("dataLocation.next"),
-                    path: redact.path(plan.target),
-                  },
-                ]}
-              />
-
-              {plan.kind === "move" && (
-                <p className="text-xs text-muted-foreground">
-                  {plan.sameVolume
-                    ? t("settings.dataLocation.moveSameVolume")
-                    : plan.freeBytes === null
-                      ? t("settings.dataLocation.moveSizeUnknown", {
-                          size: bytes(plan.bytes),
-                        })
-                      : t("settings.dataLocation.moveSize", {
-                          size: bytes(plan.bytes),
-                          free: bytes(plan.freeBytes),
-                        })}
-                </p>
-              )}
-
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={applying}>
-                  {t("common.cancel")}
-                </AlertDialogCancel>
-                <Button disabled={applying} onClick={() => void apply()}>
-                  {applying && <Loader2 className="animate-spin" />}
-                  {applying
-                    ? t("settings.dataLocation.restarting")
-                    : plan.kind === "move"
-                      ? t("settings.dataLocation.moveConfirm")
-                      : t("settings.dataLocation.adoptConfirm")}
-                </Button>
-              </AlertDialogFooter>
-            </>
+          {plan.kind === "move" && (
+            <p className="text-xs text-muted-foreground">
+              {plan.sameVolume
+                ? t("settings.dataLocation.moveSameVolume")
+                : plan.freeBytes === null
+                  ? t("settings.dataLocation.moveSizeUnknown", {
+                      size: bytes(plan.bytes),
+                    })
+                  : t("settings.dataLocation.moveSize", {
+                      size: bytes(plan.bytes),
+                      free: bytes(plan.freeBytes),
+                    })}
+            </p>
           )}
-        </AlertDialogContent>
-      </AlertDialog>
+        </Confirmation>
+      )}
     </>
   );
 }

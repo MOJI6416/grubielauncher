@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { IVoiceSessionState } from "@/types/Voice";
 import {
-  formatVoiceDuration,
   isVoiceLive,
   micButtonState,
   qualityRank,
@@ -54,24 +53,6 @@ describe("voiceStatusKey", () => {
     expect(voiceStatusKey("connecting")).toBe("voice.connecting");
     expect(voiceStatusKey("reconnecting")).toBe("voice.reconnecting");
     expect(voiceStatusKey("disconnected")).toBe("voice.disconnected");
-  });
-});
-
-describe("formatVoiceDuration", () => {
-  it("formats under an hour without hours", () => {
-    expect(formatVoiceDuration(0)).toBe("0:00");
-    expect(formatVoiceDuration(9_000)).toBe("0:09");
-    expect(formatVoiceDuration(65_000)).toBe("1:05");
-    expect(formatVoiceDuration(3_599_000)).toBe("59:59");
-  });
-
-  it("adds hours past the hour mark", () => {
-    expect(formatVoiceDuration(3_600_000)).toBe("1:00:00");
-    expect(formatVoiceDuration(3_723_000)).toBe("1:02:03");
-  });
-
-  it("clamps negative input", () => {
-    expect(formatVoiceDuration(-5_000)).toBe("0:00");
   });
 });
 

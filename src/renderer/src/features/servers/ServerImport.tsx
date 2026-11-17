@@ -8,7 +8,7 @@ import {
   readSelectionGesture,
 } from "@renderer/utilities/rangeSelection";
 import { useAtomValue } from "jotai";
-import { Download } from "lucide-react";
+import { Download, Server as ServerIcon } from "lucide-react";
 import { IServer } from "@/types/ServersList";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,6 +21,14 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Hint } from "@renderer/components/Hint";
 import { selectedVersionAtom, versionsAtom } from "@renderer/stores/atoms";
 import { ServerFavicon } from "./ServerVisuals";
 import { findDuplicateAddress, normalizeAddress } from "./serverList";
@@ -140,9 +148,15 @@ export function ServerImport({
             ))}
           </div>
         ) : !candidates.length ? (
-          <p className="px-5 py-10 text-center text-sm text-muted-foreground">
-            {t("servers.importEmpty")}
-          </p>
+          <Empty className="border-0 bg-transparent py-8">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <ServerIcon />
+              </EmptyMedia>
+              <EmptyTitle>{t("servers.importNothing")}</EmptyTitle>
+              <EmptyDescription>{t("servers.importEmpty")}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           <ScrollArea className="max-h-72">
             <div className="flex flex-col gap-1 px-3 py-2">
@@ -154,28 +168,47 @@ export function ServerImport({
                     event.preventDefault();
                     pick(entry.key, readSelectionGesture(event, true));
                   }}
-                  className="flex min-w-0 cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent/40"
+                  className="flex min-w-0 cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-row-hover"
                 >
                   <Checkbox checked={picked[entry.key] === true} />
                   <ServerFavicon icon={entry.server.icon} size={28} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm">
-                      {entry.server.name}
-                    </span>
-                    <span className="block truncate font-mono text-[0.7rem] text-faint">
-                      {redact.value(entry.server.ip)}
-                    </span>
+                    <Hint
+                      content={redact.text(entry.server.name)}
+                      variant="text"
+                      truncatedOnly
+                    >
+                      <span className="block truncate text-sm">
+                        {redact.text(entry.server.name)}
+                      </span>
+                    </Hint>
+                    <Hint
+                      content={redact.value(entry.server.ip)}
+                      variant="text"
+                      truncatedOnly
+                    >
+                      <span className="block truncate font-mono text-2xs text-faint">
+                        {redact.value(entry.server.ip)}
+                      </span>
+                    </Hint>
                   </span>
-                  <span className="max-w-28 shrink-0 truncate text-[0.7rem] text-muted-foreground">
-                    {entry.instance}
-                  </span>
+                  <Hint content={entry.instance} variant="text" truncatedOnly>
+                    <span className="max-w-28 shrink-0 truncate text-2xs text-muted-foreground">
+                      {entry.instance}
+                    </span>
+                  </Hint>
                 </label>
               ))}
             </div>
           </ScrollArea>
         )}
 
-        <DialogFooter className="m-0 border-t bg-surface-1 px-5 py-3">
+        <DialogFooter className="m-0 items-center border-t bg-surface-1 px-5 py-3">
+          {candidates?.length && !chosen.length ? (
+            <p className="mr-auto text-2xs text-faint">
+              {t("servers.importPick")}
+            </p>
+          ) : null}
           <Button variant="ghost" size="sm" onClick={onClose}>
             {t("common.cancel")}
           </Button>

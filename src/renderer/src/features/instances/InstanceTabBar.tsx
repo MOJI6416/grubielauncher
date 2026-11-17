@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
 import type { InstanceTabItem } from "./instanceTabs";
 import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { Hint } from "@renderer/components/Hint";
 
 export function InstanceTabBar({
   items,
@@ -75,9 +76,15 @@ export function InstanceTabBar({
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <span className="truncate">{t(`shell.tabs.${item.id}`)}</span>
+            <Hint
+              content={t(`shell.tabs.${item.id}`)}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="truncate">{t(`shell.tabs.${item.id}`)}</span>
+            </Hint>
             {item.count !== undefined && item.count > 0 && (
-              <span className="font-mono text-[0.7rem] text-faint tabular-nums">
+              <span className="font-mono text-2xs text-faint tabular-nums">
                 {item.count}
               </span>
             )}

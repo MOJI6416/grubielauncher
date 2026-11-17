@@ -1,8 +1,13 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
-  ArrowDownWideNarrow,
   Archive,
   Earth,
   FolderOpen,
@@ -19,11 +24,14 @@ import { Hint } from "@renderer/components/Hint";
 import { PanelFallback } from "@renderer/components/PanelFallback";
 import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { SortMenu } from "@renderer/components/SortMenu";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { useEntranceWave } from "@renderer/utilities/useEntranceWave";
+import { cn } from "@/lib/utils";
 import {
   Empty,
   EmptyDescription,
@@ -58,6 +66,7 @@ import { useDatapackOptions, useWorldsData } from "./useWorldsData";
 import { WorldDetail } from "./WorldDetail";
 import { WorldIcon } from "./WorldIcon";
 import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
+import { useWorldActions, WorldMenuItems } from "./worldActions";
 
 const api = window.api;
 
@@ -80,8 +89,10 @@ export function Worlds({
   const [sort, setSort] = useState<WorldSort>("recent");
   const [selected, setSelected] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [renameRequest, setRenameRequest] = useState<string | null>(null);
 
   const listRef = useRef<HTMLDivElement>(null);
+  const keepFocusRef = useRef(false);
 
   const {
     worlds,
@@ -155,13 +166,52 @@ export function Worlds({
 
   const onWorldRemoved = useCallback(
     (world: IWorld) => {
-      setWorlds(worlds.filter((entry) => entry.path !== world.path));
+      setWorlds((previous) =>
+        previous.filter((entry) => entry.path !== world.path),
+      );
       setSelected(null);
       void reloadCounters();
       bumpInstanceDataRevision();
     },
-    [reloadCounters, setWorlds, worlds],
+    [reloadCounters, setWorlds],
   );
+
+  const actions = useWorldActions({
+    version,
+    isOwner,
+    isVersionRunning,
+    takenNames: worlds.map((entry) => entry.name),
+    onRemoved: onWorldRemoved,
+    onRestored: (world) => {
+      revealWorld(world.folderName);
+      bumpInstanceDataRevision();
+    },
+    onDuplicated: (folderName) => {
+      revealWorld(folderName);
+      bumpInstanceDataRevision();
+    },
+    onPatched: (world, patch) =>
+      setWorlds((previous) =>
+        previous.map((entry) =>
+          entry.path === world.path ? { ...entry, ...patch } : entry,
+        ),
+      ),
+  });
+
+  const requestRename = useCallback((world: IWorld) => {
+    keepFocusRef.current = true;
+    setSelected(world.folderName);
+    setRenameRequest(world.path);
+  }, []);
+  const onRenameHandled = useCallback(() => setRenameRequest(null), []);
+
+  const isResultWave = useEntranceWave(status === "loading");
+
+  const importBlockedReason = isVersionRunning
+    ? t("worlds.disabledWhileRunning")
+    : !isOwner
+      ? t("worlds.notOwnerHint")
+      : undefined;
 
   const handleImport = useCallback(async () => {
     if (!version) return;
@@ -197,6 +247,13 @@ export function Worlds({
 
   const handleKeyNav = useCallback(
     (event: React.KeyboardEvent) => {
+      if (event.key === "Delete") {
+        if (!selectedWorld || actions.isLocked(selectedWorld)) return;
+        event.preventDefault();
+        void actions.remove(selectedWorld);
+        return;
+      }
+
       if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
 
       event.preventDefault();
@@ -208,8 +265,22 @@ export function Worlds({
 
       if (target) setSelected(target.world.folderName);
     },
-    [items, selectedFolder],
+    [actions, items, selectedFolder, selectedWorld],
   );
+
+  const openSaves = async () => {
+    if (!version) return;
+
+    try {
+      const savesPath = api.path.join(version.versionPath, "saves");
+      await api.fs.ensure(savesPath);
+      await api.shell.openPath(savesPath);
+    } catch (error) {
+      showFailureToast(t("worlds.openSavesError"), error, {
+        channels: ["fs:ensure", "shell:openPath"],
+      });
+    }
+  };
 
   if (!version) return null;
 
@@ -249,7 +320,7 @@ export function Worlds({
           <Button
             variant="outline"
             size="sm"
-            disabled={isImporting || !isOwner || isVersionRunning}
+            disabled={isImporting || Boolean(importBlockedReason)}
             onClick={() => void handleImport()}
           >
             {isImporting ? (
@@ -264,19 +335,16 @@ export function Worlds({
             variant="ghost"
             size="sm"
             className="text-muted-foreground"
-            onClick={async () => {
-              const savesPath = await api.path.join(
-                version.versionPath,
-                "saves",
-              );
-              await api.fs.ensure(savesPath);
-              await api.shell.openPath(savesPath);
-            }}
+            onClick={() => void openSaves()}
           >
             <FolderOpen className="size-3.5" />
             {t("worlds.openSaves")}
           </Button>
         </div>
+
+        {importBlockedReason && (
+          <p className="text-2xs text-faint">{importBlockedReason}</p>
+        )}
       </Empty>
     );
   }
@@ -295,56 +363,28 @@ export function Worlds({
             />
           </div>
 
-          <DropdownMenu>
-            <Hint content={t("worlds.sort")}>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  className="size-8 shrink-0"
-                  aria-label={t("worlds.sort")}
-                >
-                  <ArrowDownWideNarrow className="size-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-            </Hint>
-            <DropdownMenuContent align="end">
-              {WORLD_SORTS.map((option) => (
-                <DropdownMenuItem
-                  key={option}
-                  aria-current={sort === option}
-                  onSelect={() => setSort(option)}
-                >
-                  <span
-                    className={
-                      sort === option ? "font-medium text-foreground" : ""
-                    }
-                  >
-                    {t(`worlds.sortBy.${option}`)}
-                  </span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <SortMenu
+            value={sort}
+            options={WORLD_SORTS.map((option) => ({
+              value: option,
+              label: t(`worlds.sortBy.${option}`),
+            }))}
+            onChange={setSort}
+          />
         </div>
 
         {filters.length > 1 && (
-          <div className="flex flex-wrap gap-1">
-            {filters.map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-current={filter === option}
-                onClick={() => setFilter(option)}
-                className="rounded-md bg-surface-3 px-1.5 py-0.5 text-[0.65rem] text-muted-foreground transition-colors hover:text-foreground aria-[current=true]:bg-primary-soft-raised aria-[current=true]:text-foreground"
-              >
-                {t(`worlds.filters.${option}`)}
-                <span className="ml-1 font-mono text-faint">
-                  {filterCounts[option]}
-                </span>
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            value={filter}
+            ariaLabel={t("worlds.filterLabel")}
+            className="flex-wrap"
+            options={filters.map((option) => ({
+              value: option,
+              label: t(`worlds.filters.${option}`),
+              count: filterCounts[option],
+            }))}
+            onChange={setFilter}
+          />
         )}
 
         <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
@@ -354,17 +394,22 @@ export function Worlds({
             role="listbox"
             aria-label={t("worlds.title")}
             onKeyDown={handleKeyNav}
-            className="flex flex-col gap-0.5 pr-1 outline-none"
+            className={cn(
+              "flex flex-col gap-0.5 pr-1 outline-none",
+              isResultWave && "result-wave",
+            )}
           >
             {items.length === 0 && (
-              <div className="px-2 py-6 text-center">
-                <p className="text-xs text-muted-foreground">
-                  {t("worlds.notFound")}
-                </p>
+              <Empty className="gap-3 p-4">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Search />
+                  </EmptyMedia>
+                  <EmptyTitle>{t("worlds.notFound")}</EmptyTitle>
+                </EmptyHeader>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="mt-1 h-7 text-xs text-muted-foreground"
                   onClick={() => {
                     setQuery("");
                     setFilter("all");
@@ -372,85 +417,119 @@ export function Worlds({
                 >
                   {t("worlds.resetFilters")}
                 </Button>
-              </div>
+              </Empty>
             )}
 
             <RemovalList sourceKeys={worldPaths}>
-              {items.map((item) => {
+              {items.map((item, index) => {
                 const world = item.world;
                 const isActive = world.folderName === selectedFolder;
 
                 return (
                   <RemovalItem key={world.path} itemKey={world.path}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={isActive}
-                      aria-current={isActive}
-                      onClick={() => setSelected(world.folderName)}
-                      className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-accent/40 aria-[current=true]:bg-primary-soft"
-                    >
-                      <WorldIcon
-                        icon={world.icon}
-                        size={36}
-                        className="size-9 rounded-md"
-                        iconClassName="size-4"
-                      />
+                    <ContextMenu>
+                      <ContextMenuTrigger asChild>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={isActive}
+                          data-wave-row
+                          style={{ "--wave-index": index } as CSSProperties}
+                          onClick={() => setSelected(world.folderName)}
+                          onContextMenu={() => setSelected(world.folderName)}
+                          className="flex w-full min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-row-hover aria-selected:bg-row-selected"
+                        >
+                          <WorldIcon
+                            icon={world.icon}
+                            size={36}
+                            className="size-9 rounded-md"
+                            iconClassName="size-4"
+                          />
 
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="flex min-w-0 items-center gap-1">
-                          {world.hardcore && (
-                            <Skull className="size-3 shrink-0 text-destructive" />
-                          )}
-                          <Hint
-                            content={world.name}
-                            variant="text"
-                            truncatedOnly
-                          >
-                            <span className="truncate text-xs font-medium">
-                              {world.name}
-                            </span>
-                          </Hint>
-                          {ambiguousNames.has(world.name) &&
-                            world.name !== world.folderName && (
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span className="flex min-w-0 items-center gap-1">
+                              {world.hardcore && (
+                                <Skull className="size-3 shrink-0 text-destructive" />
+                              )}
                               <Hint
-                                content={world.folderName}
+                                content={world.name}
                                 variant="text"
                                 truncatedOnly
                               >
-                                <span className="max-w-20 shrink-0 truncate font-mono text-[0.6rem] text-faint">
-                                  {world.folderName}
+                                <span className="truncate text-xs font-medium">
+                                  {world.name}
                                 </span>
                               </Hint>
-                            )}
-                        </span>
+                              {ambiguousNames.has(world.name) &&
+                                world.name !== world.folderName && (
+                                  <Hint
+                                    content={world.folderName}
+                                    variant="text"
+                                    truncatedOnly
+                                  >
+                                    <span className="max-w-20 shrink-0 truncate font-mono text-3xs text-faint">
+                                      {world.folderName}
+                                    </span>
+                                  </Hint>
+                                )}
+                            </span>
 
-                        <span className="flex min-w-0 items-center gap-1 font-mono text-[0.65rem] text-faint">
-                          <span className="truncate">
-                            {world.lastPlayed
-                              ? formatRelative(new Date(world.lastPlayed))
-                              : t("worlds.neverPlayed")}
+                            <span className="flex min-w-0 items-center gap-1 font-mono text-3xs text-faint">
+                              <Hint
+                                content={
+                                  world.lastPlayed
+                                    ? formatRelative(new Date(world.lastPlayed))
+                                    : t("worlds.neverPlayed")
+                                }
+                                variant="text"
+                                truncatedOnly
+                              >
+                                <span className="min-w-0 truncate">
+                                  {world.lastPlayed
+                                    ? formatRelative(new Date(world.lastPlayed))
+                                    : t("worlds.neverPlayed")}
+                                </span>
+                              </Hint>
+                              {item.sizeBytes !== null && (
+                                <>
+                                  <span aria-hidden>·</span>
+                                  <span className="shrink-0">
+                                    {formatBytes(item.sizeBytes, sizeLabels, 1)}
+                                  </span>
+                                </>
+                              )}
+                            </span>
                           </span>
-                          {item.sizeBytes !== null && (
-                            <>
-                              <span aria-hidden>·</span>
-                              <span className="shrink-0">
-                                {formatBytes(item.sizeBytes, sizeLabels, 1)}
+
+                          {item.backups > 0 && (
+                            <Hint content={t("worldBackups.title")}>
+                              <span className="flex shrink-0 items-center gap-0.5 font-mono text-3xs text-faint">
+                                <Archive className="size-3" />
+                                {item.backups}
                               </span>
-                            </>
+                            </Hint>
                           )}
-                        </span>
-                      </span>
-
-                      {item.backups > 0 && (
-                        <Hint content={t("worldBackups.title")}>
-                          <span className="flex shrink-0 items-center gap-0.5 font-mono text-[0.65rem] text-faint">
-                            <Archive className="size-3" />
-                            {item.backups}
-                          </span>
-                        </Hint>
-                      )}
-                    </button>
+                        </button>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent
+                        className="w-56"
+                        onCloseAutoFocus={(event) => {
+                          if (!keepFocusRef.current) return;
+                          keepFocusRef.current = false;
+                          event.preventDefault();
+                        }}
+                      >
+                        <WorldMenuItems
+                          menu="context"
+                          world={world}
+                          version={version}
+                          isOwner={isOwner}
+                          isVersionRunning={isVersionRunning}
+                          actions={actions}
+                          onRename={() => requestRename(world)}
+                        />
+                      </ContextMenuContent>
+                    </ContextMenu>
                   </RemovalItem>
                 );
               })}
@@ -458,28 +537,31 @@ export function Worlds({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1 border-t pt-1.5">
-          <Hint
-            wrapperClassName="min-w-0 flex-1"
-            content={
-              isVersionRunning ? t("worlds.disabledWhileRunning") : undefined
-            }
-          >
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 min-w-0 flex-1 justify-start px-1.5 text-xs text-muted-foreground bg-transparent"
-              disabled={isImporting || !isOwner || isVersionRunning}
-              onClick={() => void handleImport()}
-            >
-              {isImporting ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <Import className="size-3.5" />
-              )}
-              <span className="truncate">{t("worlds.import")}</span>
-            </Button>
+        {importBlockedReason && (
+          <Hint content={importBlockedReason} variant="text" truncatedOnly>
+            <p className="shrink-0 truncate px-1.5 text-3xs text-faint">
+              {importBlockedReason}
+            </p>
           </Hint>
+        )}
+
+        <div className="flex shrink-0 items-center gap-1 border-t pt-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 min-w-0 flex-1 justify-start bg-transparent px-1.5 text-xs text-muted-foreground"
+            disabled={isImporting || Boolean(importBlockedReason)}
+            onClick={() => void handleImport()}
+          >
+            {isImporting ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Import className="size-3.5" />
+            )}
+            <Hint content={t("worlds.import")} variant="text" truncatedOnly>
+              <span className="truncate">{t("worlds.import")}</span>
+            </Hint>
+          </Button>
 
           <Hint content={t("worlds.openSaves")}>
             <Button
@@ -487,13 +569,7 @@ export function Worlds({
               size="icon-sm"
               className="size-7 shrink-0 text-muted-foreground"
               aria-label={t("worlds.openSaves")}
-              onClick={async () => {
-                const savesPath = await api.path.join(
-                  version.versionPath,
-                  "saves",
-                );
-                await api.shell.openPath(savesPath);
-              }}
+              onClick={() => void openSaves()}
             >
               <FolderOpen className="size-3.5" />
             </Button>
@@ -517,6 +593,9 @@ export function Worlds({
           takenNames={worlds.map((entry) => entry.name)}
           datapackOptions={datapackOptions}
           locale={i18n.resolvedLanguage || i18n.language}
+          actions={actions}
+          renameRequested={renameRequest === selectedWorld.path}
+          onRenameHandled={onRenameHandled}
           onPlay={() => {
             void runGame({
               version,
@@ -524,7 +603,6 @@ export function Worlds({
             });
             onClose(true);
           }}
-          onRemoved={() => onWorldRemoved(selectedWorld)}
           onRenamed={(nextPath) => {
             revealWorld(api.path.basename(nextPath));
             bumpInstanceDataRevision();
@@ -534,13 +612,9 @@ export function Worlds({
             void reloadCounters();
             bumpInstanceDataRevision();
           }}
-          onDuplicated={(folderName) => {
-            revealWorld(folderName);
-            bumpInstanceDataRevision();
-          }}
           onWorldPatched={(patch) =>
-            setWorlds(
-              worlds.map((entry) =>
+            setWorlds((previous) =>
+              previous.map((entry) =>
                 entry.path === selectedWorld.path
                   ? { ...entry, ...patch }
                   : entry,

@@ -19,6 +19,23 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+} from "@/components/ui/empty";
+import { ListSkeleton } from "@renderer/components/ListSkeleton";
+import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
+import { formatNumber } from "@renderer/utilities/numbers";
 import { IModpack } from "@/types/Backend";
 import { IUser } from "@/types/IUser";
 import { accountAtom, networkAtom, versionsAtom } from "@renderer/stores/atoms";
@@ -51,7 +68,7 @@ const LOADER_TEXT: Record<string, string> = {
 };
 
 export function ProfileModpacks({ user }: { user: IUser }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const account = useAtomValue(accountAtom);
   const isBackendOnline = useAtomValue(networkAtom);
 
@@ -66,9 +83,6 @@ export function ProfileModpacks({ user }: { user: IUser }) {
     ? t("ownModpacks.publishBannedSince", { date: bannedDay })
     : "";
 
-  const formatNumber = (value: number) =>
-    new Intl.NumberFormat(i18n.resolvedLanguage || i18n.language).format(value);
-
   const list = useMemo(() => {
     const items = modpacks.data ?? [];
     return [...items].sort(
@@ -80,6 +94,11 @@ export function ProfileModpacks({ user }: { user: IUser }) {
 
   const isLoading = modpacks.isPending && modpacks.fetchStatus !== "idle";
   const isListKnown = modpacks.isSuccess;
+
+  const listKeys = useMemo(
+    () => new Set(list.map((modpack) => modpack._id)),
+    [list],
+  );
 
   const totalDownloads = useMemo(
     () => list.reduce((sum, modpack) => sum + (modpack.downloads || 0), 0),
@@ -145,16 +164,32 @@ export function ProfileModpacks({ user }: { user: IUser }) {
               <Boxes className="size-4" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">
-                {t("ownModpacks.published", {
+              <Hint
+                content={t("ownModpacks.published", {
                   value: isListKnown ? formatNumber(list.length) : "—",
                 })}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {t("ownModpacks.totalDownloads", {
+                variant="text"
+                truncatedOnly
+              >
+                <p className="truncate text-sm font-medium">
+                  {t("ownModpacks.published", {
+                    value: isListKnown ? formatNumber(list.length) : "—",
+                  })}
+                </p>
+              </Hint>
+              <Hint
+                content={t("ownModpacks.totalDownloads", {
                   value: isListKnown ? formatNumber(totalDownloads) : "—",
                 })}
-              </p>
+                variant="text"
+                truncatedOnly
+              >
+                <p className="truncate text-xs text-muted-foreground">
+                  {t("ownModpacks.totalDownloads", {
+                    value: isListKnown ? formatNumber(totalDownloads) : "—",
+                  })}
+                </p>
+              </Hint>
             </div>
             <Hint content={t("common.refresh")}>
               <Button
@@ -173,21 +208,23 @@ export function ProfileModpacks({ user }: { user: IUser }) {
 
           <div className="-mr-1 min-h-0 overflow-y-auto pr-1">
             {isLoading ? (
-              <div className="flex h-40 items-center justify-center">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
-              </div>
+              <ListSkeleton
+                rows={3}
+                rowClassName="h-14"
+                iconClassName="size-10 rounded-lg"
+              />
             ) : !isBackendOnline ? (
-              <EmptyState
+              <PacksEmpty
                 icon={AlertTriangle}
                 text={t("app.backendUnavailable")}
               />
             ) : modpacks.isError ? (
-              <EmptyState
+              <PacksEmpty
                 icon={AlertTriangle}
                 text={t("ownModpacks.loadError")}
                 action={
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
                     onClick={() => void modpacks.refetch()}
                   >
@@ -196,18 +233,20 @@ export function ProfileModpacks({ user }: { user: IUser }) {
                 }
               />
             ) : list.length === 0 ? (
-              <EmptyState icon={Boxes} text={t("ownModpacks.noModpacks")} />
+              <PacksEmpty icon={Boxes} text={t("ownModpacks.noModpacks")} />
             ) : (
               <div className="grid gap-1.5">
-                {list.map((modpack) => (
-                  <ModpackRow
-                    key={modpack._id}
-                    modpack={modpack}
-                    formatNumber={formatNumber}
-                    isBusy={isDeleting && pending?._id === modpack._id}
-                    onDelete={() => setPending(modpack)}
-                  />
-                ))}
+                <RemovalList sourceKeys={listKeys}>
+                  {list.map((modpack) => (
+                    <RemovalItem key={modpack._id} itemKey={modpack._id}>
+                      <ModpackRow
+                        modpack={modpack}
+                        isBusy={isDeleting && pending?._id === modpack._id}
+                        onDelete={() => setPending(modpack)}
+                      />
+                    </RemovalItem>
+                  ))}
+                </RemovalList>
               </div>
             )}
           </div>
@@ -220,7 +259,9 @@ export function ProfileModpacks({ user }: { user: IUser }) {
 
       {pending && (
         <Confirmation
-          title={t("ownModpacks.deleteTitle")}
+          title={t("ownModpacks.deleteQuestion", {
+            name: pending.conf.name,
+          })}
           reversible={false}
           content={[
             {
@@ -262,9 +303,6 @@ function UnpublishedPanel({
   const versions = useAtomValue(versionsAtom);
 
   const candidates = useMemo(() => {
-    // Matched on the share code the instance stored when it was published;
-    // comparing it with the row id never matched, so every published build
-    // also sat in the "not published" list.
     const shared = publishedShareCodes(published);
 
     return versions
@@ -297,18 +335,24 @@ function UnpublishedPanel({
     <section className="flex min-h-0 flex-auto flex-col gap-2 rounded-xl border border-border bg-card p-3">
       <header className="flex h-5 shrink-0 items-center gap-2">
         <Boxes className="size-4 shrink-0 text-faint" />
-        <h3 className="min-w-0 truncate text-sm font-medium">
-          {t("ownModpacks.notPublished")}
-        </h3>
+        <Hint
+          content={t("ownModpacks.notPublished")}
+          variant="text"
+          truncatedOnly
+        >
+          <h3 className="min-w-0 truncate text-sm font-medium">
+            {t("ownModpacks.notPublished")}
+          </h3>
+        </Hint>
         <span className="ml-auto shrink-0 font-mono text-xs tabular-nums text-faint">
           {isKnown ? candidates.length : "—"}
         </span>
       </header>
 
       {!isKnown || candidates.length === 0 ? (
-        <p className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border px-4 text-center text-xs text-muted-foreground">
-          {emptyText}
-        </p>
+        <Empty className="min-h-0 rounded-lg border border-border px-4 py-2">
+          <EmptyDescription className="text-xs">{emptyText}</EmptyDescription>
+        </Empty>
       ) : (
         <div className="-mr-1 grid min-h-0 flex-1 content-start gap-1 overflow-y-auto pr-1">
           {candidates.map((candidate) => (
@@ -320,17 +364,19 @@ function UnpublishedPanel({
                 }
                 className="flex h-9 min-w-0 shrink-0 items-center gap-2.5 rounded-lg bg-surface-1 px-2.5 text-left transition-colors hover:bg-surface-3"
               >
-                <span className="min-w-0 flex-1 truncate text-xs font-medium">
-                  {candidate.name}
-                </span>
+                <Hint content={candidate.name} variant="text" truncatedOnly>
+                  <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                    {candidate.name}
+                  </span>
+                </Hint>
                 <span
-                  className={`shrink-0 text-[11px] capitalize ${
+                  className={`shrink-0 text-2xs capitalize ${
                     LOADER_TEXT[candidate.loader] ?? "text-faint"
                   }`}
                 >
                   {candidate.loader}
                 </span>
-                <span className="shrink-0 font-mono text-[11px] text-faint">
+                <span className="shrink-0 font-mono text-2xs text-faint">
                   {candidate.mc}
                 </span>
                 <ChevronRight className="size-3.5 shrink-0 text-faint" />
@@ -361,7 +407,7 @@ function PublishingHints() {
             className="flex min-w-0 items-start gap-2 rounded-lg bg-surface-1 p-2"
           >
             <step.icon className="mt-0.5 size-3.5 shrink-0 text-faint" />
-            <p className="min-w-0 text-[11px] leading-snug text-muted-foreground">
+            <p className="min-w-0 text-2xs leading-snug text-muted-foreground">
               {step.text}
             </p>
           </div>
@@ -371,7 +417,7 @@ function PublishingHints() {
   );
 }
 
-function EmptyState({
+function PacksEmpty({
   icon: Icon,
   text,
   action,
@@ -381,122 +427,151 @@ function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex h-44 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border px-8 text-center">
-      <Icon className="size-6 text-faint" />
-      <p className="text-sm text-muted-foreground">{text}</p>
-      {action}
-    </div>
+    <Empty className="h-44 flex-none rounded-xl border border-border px-8">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <Icon />
+        </EmptyMedia>
+        <EmptyDescription>{text}</EmptyDescription>
+      </EmptyHeader>
+      {action && <EmptyContent>{action}</EmptyContent>}
+    </Empty>
   );
 }
 
 function ModpackRow({
   modpack,
-  formatNumber,
   isBusy,
   onDelete,
 }: {
   modpack: IModpack;
-  formatNumber: (value: number) => string;
   isBusy: boolean;
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
   const isPublic = modpack.isPublic !== false;
   const loader = modpack.conf.loader?.name ?? "vanilla";
+  const copyLink = () =>
+    void copyWithFeedback(buildPackShareUrl(packShareCode(modpack)));
 
   return (
-    <div className="flex h-14 min-w-0 items-center gap-3 rounded-lg bg-surface-1 px-2.5">
-      <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-3">
-        {modpack.conf.image ? (
-          <img
-            src={modpack.conf.image}
-            width={40}
-            height={40}
-            loading="lazy"
-            className="size-full object-cover"
-            alt=""
-          />
-        ) : (
-          <ImageOff className="size-4 text-faint" />
-        )}
-      </div>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div className="flex h-14 min-w-0 items-center gap-3 rounded-lg bg-surface-1 px-2.5 data-[state=open]:bg-surface-3">
+          <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-3">
+            {modpack.conf.image ? (
+              <img
+                src={modpack.conf.image}
+                width={40}
+                height={40}
+                loading="lazy"
+                className="size-full object-cover"
+                alt=""
+              />
+            ) : (
+              <ImageOff className="size-4 text-faint" />
+            )}
+          </div>
 
-      <div className="grid min-w-0 flex-1 gap-0.5">
-        <Hint content={modpack.conf.name} variant="text" truncatedOnly>
-          <p className="truncate text-sm font-medium">{modpack.conf.name}</p>
-        </Hint>
-        <div className="flex min-w-0 items-center gap-2 text-[11px] text-faint">
-          <span
-            className={`shrink-0 capitalize ${LOADER_TEXT[loader] ?? "text-faint"}`}
-          >
-            {loader}
-          </span>
-          <span className="shrink-0 font-mono">{modpack.conf.version?.id}</span>
-          <Hint
-            content={formatDay(new Date(modpack.lastUpdate))}
-            variant="text"
-          >
-            <span className="min-w-0 truncate">
-              {t("ownModpacks.updated", {
-                when: formatRelative(new Date(modpack.lastUpdate)),
-              })}
-            </span>
-          </Hint>
+          <div className="grid min-w-0 flex-1 gap-0.5">
+            <Hint content={modpack.conf.name} variant="text" truncatedOnly>
+              <p className="truncate text-sm font-medium">
+                {modpack.conf.name}
+              </p>
+            </Hint>
+            <div className="flex min-w-0 items-center gap-2 text-2xs text-faint">
+              <span
+                className={`shrink-0 capitalize ${LOADER_TEXT[loader] ?? "text-faint"}`}
+              >
+                {loader}
+              </span>
+              <span className="shrink-0 font-mono">
+                {modpack.conf.version?.id}
+              </span>
+              <Hint
+                content={formatDay(new Date(modpack.lastUpdate))}
+                variant="text"
+              >
+                <span className="min-w-0 truncate">
+                  {t("ownModpacks.updated", {
+                    when: formatRelative(new Date(modpack.lastUpdate)),
+                  })}
+                </span>
+              </Hint>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            {!isPublic && (
+              <Hint content={t("ownModpacks.notListedHint")}>
+                <span className="flex items-center gap-1 rounded-md bg-surface-3 px-1.5 py-0.5 text-3xs text-muted-foreground">
+                  <EyeOff className="size-3" />
+                  {t("ownModpacks.notListed")}
+                </span>
+              </Hint>
+            )}
+            <Hint content={t("ownModpacks.downloads")}>
+              <span className="flex items-center gap-1 font-mono text-xs tabular-nums text-muted-foreground">
+                <Download className="size-3.5" />
+                {formatNumber(modpack.downloads ?? 0)}
+              </span>
+            </Hint>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1">
+            <Hint content={t("ownModpacks.copyLink")}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("ownModpacks.copyLink")}
+                onClick={copyLink}
+              >
+                <Link2 />
+              </Button>
+            </Hint>
+            <Hint content={t("ownModpacks.addToLauncher")}>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label={t("ownModpacks.addToLauncher")}
+                onClick={() => openNewInstance({ modpack })}
+              >
+                <PackagePlus />
+              </Button>
+            </Hint>
+            <Hint content={isBusy ? undefined : t("common.delete")}>
+              <Button
+                variant="destructive"
+                size="icon-sm"
+                disabled={isBusy}
+                aria-label={t("common.delete")}
+                onClick={onDelete}
+              >
+                {isBusy ? <Loader2 className="animate-spin" /> : <Trash2 />}
+              </Button>
+            </Hint>
+          </div>
         </div>
-      </div>
-
-      <div className="flex shrink-0 items-center gap-2">
-        {!isPublic && (
-          <Hint content={t("ownModpacks.notListedHint")}>
-            <span className="flex items-center gap-1 rounded-md bg-surface-3 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-              <EyeOff className="size-3" />
-              {t("ownModpacks.notListed")}
-            </span>
-          </Hint>
-        )}
-        <Hint content={t("ownModpacks.downloads")}>
-          <span className="flex items-center gap-1 font-mono text-xs tabular-nums text-muted-foreground">
-            <Download className="size-3.5" />
-            {formatNumber(modpack.downloads ?? 0)}
-          </span>
-        </Hint>
-      </div>
-
-      <div className="flex shrink-0 items-center gap-1">
-        <Hint content={t("ownModpacks.copyId")}>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("ownModpacks.copyId")}
-            onClick={async () => {
-              await copyWithFeedback(buildPackShareUrl(packShareCode(modpack)));
-            }}
-          >
-            <Link2 />
-          </Button>
-        </Hint>
-        <Hint content={t("ownModpacks.addToLauncher")}>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label={t("ownModpacks.addToLauncher")}
-            onClick={() => openNewInstance({ modpack })}
-          >
-            <PackagePlus />
-          </Button>
-        </Hint>
-        <Hint content={t("common.delete")}>
-          <Button
-            variant="destructive"
-            size="icon-sm"
-            disabled={isBusy}
-            aria-label={t("common.delete")}
-            onClick={onDelete}
-          >
-            {isBusy ? <Loader2 className="animate-spin" /> : <Trash2 />}
-          </Button>
-        </Hint>
-      </div>
-    </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onSelect={copyLink}>
+          <Link2 />
+          {t("ownModpacks.copyLink")}
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={() => openNewInstance({ modpack })}>
+          <PackagePlus />
+          {t("ownModpacks.addToLauncher")}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          variant="destructive"
+          disabled={isBusy}
+          onSelect={onDelete}
+        >
+          <Trash2 />
+          {t("common.delete")}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }

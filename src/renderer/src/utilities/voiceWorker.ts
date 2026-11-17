@@ -7,6 +7,7 @@ import type {
   VoiceWorkerMessage,
   VoiceWorkerRequest,
 } from "./voiceProcessing";
+import { ignoreFailure } from "./ignoreFailure";
 
 const RNNOISE_SAMPLE_RATE = 48000;
 const RNNOISE_SCALE = 32767;
@@ -233,7 +234,7 @@ async function start(
   } catch (error) {
     post({ type: "failed", reason: describe(error) });
   } finally {
-    await writer.close().catch(() => undefined);
+    await writer.close().catch(ignoreFailure);
     denoiser?.destroy();
     denoiser = null;
   }
@@ -258,5 +259,5 @@ self.addEventListener("message", (event: MessageEvent<VoiceWorkerRequest>) => {
     return;
   }
 
-  void reader?.cancel().catch(() => undefined);
+  void reader?.cancel().catch(ignoreFailure);
 });

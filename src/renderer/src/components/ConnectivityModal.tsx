@@ -35,6 +35,7 @@ import {
   mergeConnectivityResult,
 } from "@renderer/features/install/connectivityModel";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { showFailureToast } from "@renderer/utilities/failures";
 
 const api = window.api;
 
@@ -97,6 +98,11 @@ export function ConnectivityModal({
   const verdict = getDownloadVerdict(results, settings.downloadSource);
   const groups = groupConnectivity(results, plan);
   const okCount = results.filter((result) => result.ok).length;
+  const verdictText = isTesting
+    ? t("settings.connectivity.running")
+    : results.length === 0
+      ? t("settings.connectivity.noResults")
+      : t(`settings.connectivity.downloads.${verdict.messageKey}`);
   const total = plan.length || results.length;
 
   const copyReport = async () => {
@@ -116,7 +122,7 @@ export function ConnectivityModal({
         <DialogHeader className="shrink-0 border-b border-border px-5 py-4 text-left">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Wifi className="size-4" />
-            {t("settings.connectivity.title")}
+            {t("settings.connectivity.heading")}
           </DialogTitle>
           <DialogDescription>
             {t("settings.connectivity.description")}
@@ -125,29 +131,35 @@ export function ConnectivityModal({
 
         <div className="flex shrink-0 items-center gap-3 border-b border-border bg-surface-2 px-5 py-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs text-faint">
-              {t("settings.downloadSource")}:{" "}
-              <span className="text-muted-foreground">
-                {t(`settings.downloadSourceOptions.${settings.downloadSource}`)}
-              </span>
-            </p>
-            <p
-              className={`truncate text-sm ${
-                isTesting
-                  ? "text-muted-foreground"
-                  : results.length === 0
-                    ? "text-warning"
-                    : verdict.downloadsOk
-                      ? "text-success"
-                      : "text-destructive"
-              }`}
+            <Hint
+              content={`${t("settings.downloadSource")}: ${t(`settings.downloadSourceOptions.${settings.downloadSource}`)}`}
+              variant="text"
+              truncatedOnly
             >
-              {isTesting
-                ? t("settings.connectivity.running")
-                : results.length === 0
-                  ? t("settings.connectivity.noResults")
-                  : t(`settings.connectivity.downloads.${verdict.messageKey}`)}
-            </p>
+              <p className="truncate text-xs text-faint">
+                {t("settings.downloadSource")}:{" "}
+                <span className="text-muted-foreground">
+                  {t(
+                    `settings.downloadSourceOptions.${settings.downloadSource}`,
+                  )}
+                </span>
+              </p>
+            </Hint>
+            <Hint content={verdictText} variant="text" truncatedOnly>
+              <p
+                className={`truncate text-sm ${
+                  isTesting
+                    ? "text-muted-foreground"
+                    : results.length === 0
+                      ? "text-warning"
+                      : verdict.downloadsOk
+                        ? "text-success"
+                        : "text-destructive"
+                }`}
+              >
+                {verdictText}
+              </p>
+            </Hint>
           </div>
           {total > 0 && (
             <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
@@ -157,6 +169,21 @@ export function ConnectivityModal({
           {isTesting && (
             <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
+            onClick={() =>
+              void api.shell.openExternal(STATUS_URL).catch((error) =>
+                showFailureToast(t("settings.about.openLinkFailed"), error, {
+                  channels: ["shell:openExternal"],
+                }),
+              )
+            }
+          >
+            <ExternalLink className="size-3.5" />
+            {t("settings.connectivity.statusPage")}
+          </Button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
@@ -164,11 +191,17 @@ export function ConnectivityModal({
             {groups.map((view) => (
               <section key={view.group} className="rounded-lg bg-surface-2 p-2">
                 <div className="flex items-center gap-2 px-1 pb-1">
-                  <p className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
-                    {t(`settings.connectivity.groups.${view.group}`)}
-                  </p>
+                  <Hint
+                    content={t(`settings.connectivity.groups.${view.group}`)}
+                    variant="text"
+                    truncatedOnly
+                  >
+                    <p className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
+                      {t(`settings.connectivity.groups.${view.group}`)}
+                    </p>
+                  </Hint>
                   <span
-                    className={`shrink-0 font-mono text-[11px] tabular-nums ${
+                    className={`shrink-0 font-mono text-2xs tabular-nums ${
                       isTesting
                         ? "text-faint"
                         : view.okCount === view.total
@@ -208,7 +241,7 @@ export function ConnectivityModal({
                         {name}
                       </span>
                       <span
-                        className={`shrink-0 font-mono text-[11px] tabular-nums ${
+                        className={`shrink-0 font-mono text-2xs tabular-nums ${
                           !result
                             ? "text-faint"
                             : result.ok
@@ -238,16 +271,7 @@ export function ConnectivityModal({
           </div>
         </div>
 
-        <DialogFooter className="m-0 shrink-0 flex-row items-center justify-between gap-1 border-t border-border px-2 py-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => void api.shell.openExternal(STATUS_URL)}
-          >
-            <ExternalLink className="size-3.5" />
-            {t("settings.connectivity.statusPage")}
-          </Button>
-
+        <DialogFooter className="m-0 shrink-0 flex-row items-center justify-end gap-1 border-t border-border px-2 py-2">
           <span className="flex items-center gap-1">
             <Button
               variant="ghost"

@@ -34,25 +34,43 @@ export function InstanceLoaderCard({
   const status = isChanging ? (
     <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
       <Loader2 className="size-3 shrink-0 animate-spin" />
-      <span className="truncate">{t("loaderUpdate.changing")}</span>
+      <Hint content={t("loaderUpdate.changing")} variant="text" truncatedOnly>
+        <span className="truncate">{t("loaderUpdate.changing")}</span>
+      </Hint>
     </span>
   ) : update ? (
     <span className="flex min-w-0 items-center gap-1.5 text-warning">
       <ArrowUp className="size-3 shrink-0" />
-      <span className="truncate">
-        {t("loaderUpdate.available", { version: update })}
-      </span>
+      <Hint
+        content={t("loaderUpdate.available", { version: update })}
+        variant="text"
+        truncatedOnly
+      >
+        <span className="truncate">
+          {t("loaderUpdate.available", { version: update })}
+        </span>
+      </Hint>
     </span>
   ) : isChecking ? (
-    <span className="truncate text-faint">{t("loaderUpdate.checking")}</span>
+    <Hint content={t("loaderUpdate.checking")} variant="text" truncatedOnly>
+      <span className="truncate text-faint">{t("loaderUpdate.checking")}</span>
+    </Hint>
   ) : catalogFailed ? (
-    <span className="truncate text-faint">
-      {t("loaderUpdate.catalogUnavailable")}
-    </span>
+    <Hint
+      content={t("loaderUpdate.catalogUnavailable")}
+      variant="text"
+      truncatedOnly
+    >
+      <span className="truncate text-faint">
+        {t("loaderUpdate.catalogUnavailable")}
+      </span>
+    </Hint>
   ) : (
     <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
       <CircleCheck className="size-3 shrink-0 text-success" />
-      <span className="truncate">{t("loaderUpdate.upToDate")}</span>
+      <Hint content={t("loaderUpdate.upToDate")} variant="text" truncatedOnly>
+        <span className="truncate">{t("loaderUpdate.upToDate")}</span>
+      </Hint>
     </span>
   );
 
@@ -76,11 +94,11 @@ export function InstanceLoaderCard({
                 {currentId ?? "—"}
               </span>
             </Hint>
-            <span className="shrink-0 font-mono text-[0.7rem] text-faint">
+            <span className="shrink-0 font-mono text-2xs text-faint">
               · {minecraftVersion}
             </span>
           </span>
-          <span className="text-[0.7rem]">{status}</span>
+          <span className="text-2xs">{status}</span>
         </div>
 
         <Button

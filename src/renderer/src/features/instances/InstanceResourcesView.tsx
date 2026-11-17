@@ -22,6 +22,8 @@ import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
 import { formatDay } from "@renderer/utilities/date";
 import { toTotalMemoryMb } from "@renderer/features/settings/memory";
+import { formatNumber } from "@renderer/utilities/numbers";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { Fact, Panel } from "./statisticsParts";
 import {
   delta,
@@ -36,11 +38,11 @@ const CHART_SLOTS = 24;
 const NOTICEABLE_SEC = 2;
 
 function useFormatters() {
-  const { t, i18n } = useTranslation();
-  const number = useMemo(
-    () => new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }),
-    [i18n.language],
-  );
+  const { t } = useTranslation();
+  const number = {
+    format: (value: number) =>
+      formatNumber(value, undefined, { maximumFractionDigits: 1 }),
+  };
   const units = {
     mb: t("versionStatistics.resources.units.mb"),
     gb: t("versionStatistics.resources.units.gb"),
@@ -153,7 +155,7 @@ export function InstanceResourcesView({ sessions }: { sessions: IVersionSession[
       .then((total) => {
         if (!cancelled) setTotalMb(toTotalMemoryMb(total));
       })
-      .catch(() => {});
+      .catch(ignoreFailure);
     return () => {
       cancelled = true;
     };
@@ -208,22 +210,19 @@ export function InstanceResourcesView({ sessions }: { sessions: IVersionSession[
   return (
     <>
       <div className="grid shrink-0 grid-cols-6 gap-2">
-        <Hint variant="text" content={t("versionStatistics.resources.heapHint")}>
-          <div>
-            <Fact
-              icon={MemoryStick}
-              label={t("versionStatistics.resources.heap")}
-              value={memory(current.heapTypicalMb)}
-              note={
-                <DeltaNote
-                  value={delta(current.heapTypicalMb, previous?.resources.heapTypicalMb)}
-                  format={memoryDelta}
-                  minimum={NOTICEABLE_MB}
-                />
-              }
+        <Fact
+          icon={MemoryStick}
+          label={t("versionStatistics.resources.heap")}
+          value={memory(current.heapTypicalMb)}
+          hint={t("versionStatistics.resources.heapHint")}
+          note={
+            <DeltaNote
+              value={delta(current.heapTypicalMb, previous?.resources.heapTypicalMb)}
+              format={memoryDelta}
+              minimum={NOTICEABLE_MB}
             />
-          </div>
-        </Hint>
+          }
+        />
         <Fact
           icon={Gauge}
           label={t("versionStatistics.resources.heapPeak")}
@@ -236,70 +235,61 @@ export function InstanceResourcesView({ sessions }: { sessions: IVersionSession[
             ) : undefined
           }
         />
-        <Hint variant="text" content={t("versionStatistics.resources.processHint")}>
-          <div>
-            <Fact
-              icon={Cpu}
-              label={t("versionStatistics.resources.process")}
-              value={memory(current.processPeakMb)}
-              note={
-                <DeltaNote
-                  value={delta(current.processPeakMb, previous?.resources.processPeakMb)}
-                  format={memoryDelta}
-                  minimum={NOTICEABLE_MB}
-                />
-              }
+        <Fact
+          icon={Cpu}
+          label={t("versionStatistics.resources.process")}
+          value={memory(current.processPeakMb)}
+          hint={t("versionStatistics.resources.processHint")}
+          note={
+            <DeltaNote
+              value={delta(current.processPeakMb, previous?.resources.processPeakMb)}
+              format={memoryDelta}
+              minimum={NOTICEABLE_MB}
             />
-          </div>
-        </Hint>
-        <Hint variant="text" content={t("versionStatistics.resources.loadHint")}>
-          <div>
-            <Fact
-              icon={Timer}
-              label={t("versionStatistics.resources.load")}
-              value={seconds(current.loadSec)}
-              note={
-                <DeltaNote
-                  value={delta(current.loadSec, previous?.resources.loadSec)}
-                  format={secondsDelta}
-                  minimum={NOTICEABLE_SEC}
-                />
-              }
+          }
+        />
+        <Fact
+          icon={Timer}
+          label={t("versionStatistics.resources.load")}
+          value={seconds(current.loadSec)}
+          hint={t("versionStatistics.resources.loadHint")}
+          note={
+            <DeltaNote
+              value={delta(current.loadSec, previous?.resources.loadSec)}
+              format={secondsDelta}
+              minimum={NOTICEABLE_SEC}
             />
-          </div>
-        </Hint>
-        <Hint variant="text" content={t("versionStatistics.resources.pausesHint")}>
-          <div>
-            <Fact
-              icon={Zap}
-              label={t("versionStatistics.resources.pauses")}
-              value={
-                !pauses
-                  ? "—"
-                  : pauses.long === 0
-                    ? t("versionStatistics.resources.pausesNone")
-                    : String(pauses.long)
-              }
-              note={
-                pauses && pauses.long > 0 ? (
-                  <span className="text-faint">
-                    {t("versionStatistics.resources.pausesLongest", {
-                      value: `${pauses.longestMs} ${units.ms}`,
-                    })}
-                  </span>
-                ) : undefined
-              }
-            />
-          </div>
-        </Hint>
+          }
+        />
+        <Fact
+          icon={Zap}
+          label={t("versionStatistics.resources.pauses")}
+          value={
+            !pauses
+              ? "—"
+              : pauses.long === 0
+                ? t("versionStatistics.resources.pausesNone")
+                : formatNumber(pauses.long)
+          }
+          hint={t("versionStatistics.resources.pausesHint")}
+          note={
+            pauses && pauses.long > 0 ? (
+              <span className="text-faint">
+                {t("versionStatistics.resources.pausesLongest", {
+                  value: `${formatNumber(pauses.longestMs)} ${units.ms}`,
+                })}
+              </span>
+            ) : undefined
+          }
+        />
         <Fact
           icon={Package}
           label={t("versionStatistics.resources.mods")}
-          value={latest.config ? String(latest.config.mods) : "—"}
+          value={latest.config ? formatNumber(latest.config.mods) : "—"}
           note={
             <DeltaNote
               value={delta(latest.config?.mods, previous?.config?.mods)}
-              format={(value) => signed(value, String(Math.abs(value)))}
+              format={(value) => signed(value, formatNumber(Math.abs(value)))}
             />
           }
         />
@@ -312,11 +302,11 @@ export function InstanceResourcesView({ sessions }: { sessions: IVersionSession[
           hint={
             <span className="flex items-center gap-2.5 font-sans">
               <span className="flex items-center gap-1">
-                <span className="size-2 rounded-sm bg-primary/75" />
+                <span className="size-2 rounded-sm bg-chart-2/75" />
                 {t("versionStatistics.resources.legendTypical")}
               </span>
               <span className="flex items-center gap-1">
-                <span className="size-2 rounded-sm bg-primary/30" />
+                <span className="size-2 rounded-sm bg-chart-2/30" />
                 {t("versionStatistics.resources.legendPeak")}
               </span>
               <span className="flex items-center gap-1">
@@ -335,11 +325,11 @@ export function InstanceResourcesView({ sessions }: { sessions: IVersionSession[
                     style={{ height: percent(session.config?.xmxMb ?? session.resources.heapCapacityMb, scale) }}
                   />
                   <span
-                    className="absolute inset-x-0 bottom-0 rounded-sm bg-primary/30"
+                    className="absolute inset-x-0 bottom-0 rounded-sm bg-chart-2/30"
                     style={{ height: percent(session.resources.heapPeakMb, scale) }}
                   />
                   <span
-                    className="absolute inset-x-0 bottom-0 rounded-sm bg-primary/75"
+                    className="absolute inset-x-0 bottom-0 rounded-sm bg-chart-2/75"
                     style={{ height: percent(session.resources.heapTypicalMb, scale) }}
                   />
                   {session.changes.length > 0 && (
@@ -372,11 +362,11 @@ export function InstanceResourcesView({ sessions }: { sessions: IVersionSession[
                   })}
           </p>
           {advice && (
-            <p className="text-[0.7rem] text-faint">
+            <p className="text-2xs text-faint">
               {t("versionStatistics.resources.basedOn", { count: advice.sessions })}
             </p>
           )}
-          <p className="mt-auto text-[0.7rem] leading-snug text-faint">
+          <p className="mt-auto text-2xs leading-snug text-faint">
             {t("versionStatistics.resources.about")}
           </p>
         </Panel>
@@ -389,9 +379,11 @@ export function InstanceResourcesView({ sessions }: { sessions: IVersionSession[
           bodyClassName="overflow-y-auto py-1"
         >
           {changed.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-faint">
-              {t("versionStatistics.resources.changesEmpty")}
-            </p>
+            <Empty className="h-full gap-1 p-3">
+              <EmptyDescription className="text-xs text-faint">
+                {t("versionStatistics.resources.changesEmpty")}
+              </EmptyDescription>
+            </Empty>
           ) : (
             changed.map(({ session, before }) => {
               const rawHeap = delta(session.resources.heapTypicalMb, before?.resources.heapTypicalMb);
@@ -400,7 +392,7 @@ export function InstanceResourcesView({ sessions }: { sessions: IVersionSession[
               const load = rawLoad !== null && Math.abs(rawLoad) >= NOTICEABLE_SEC ? rawLoad : null;
               return (
                 <div key={session.id} className="flex gap-3 px-3 py-1.5 text-xs">
-                  <span className="w-[4.5rem] shrink-0 font-mono text-[0.68rem] text-faint tabular-nums">
+                  <span className="min-w-18 shrink-0 font-mono text-2xs whitespace-nowrap text-faint tabular-nums">
                     {formatDay(new Date(session.endedAt))}
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -410,7 +402,7 @@ export function InstanceResourcesView({ sessions }: { sessions: IVersionSession[
                       </Hint>
                     ))}
                     {(heap !== null || load !== null) && (
-                      <span className="flex flex-wrap gap-x-2 text-[0.68rem] text-muted-foreground tabular-nums">
+                      <span className="flex flex-wrap gap-x-2 text-2xs text-muted-foreground tabular-nums">
                         {heap !== null && (
                           <span className={cn(heap > 0 ? "text-warning" : heap < 0 && "text-success")}>
                             {t("versionStatistics.resources.effectHeap", { value: memoryDelta(heap) })}
@@ -444,7 +436,7 @@ export function InstanceResourcesView({ sessions }: { sessions: IVersionSession[
                 <span
                   className={cn(
                     "min-h-[3px] min-w-0 flex-1 rounded-sm",
-                    session.resources.loadSec ? "bg-primary/75" : "bg-surface-3",
+                    session.resources.loadSec ? "bg-chart-2/75" : "bg-surface-3",
                   )}
                   style={{ height: percent(session.resources.loadSec ?? loadPeak * 0.03, loadPeak) }}
                 />

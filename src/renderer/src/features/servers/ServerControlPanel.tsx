@@ -25,7 +25,6 @@ import type { IServerSettings, ServerRunState } from "@/types/Server";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import {
   accountAtom,
   installActiveAtom,
@@ -34,22 +33,22 @@ import {
   settingsAtom,
 } from "@renderer/stores/atoms";
 import { ServerGame } from "@renderer/classes/ServerGame";
-import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { Hint } from "@renderer/components/Hint";
 import { ImageCropper } from "@renderer/components/ImageCropper";
 import { LogoPicker } from "@renderer/features/logoPicker/LogoPicker";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { formatClock } from "@renderer/utilities/duration";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { removeWithUndo } from "@renderer/utilities/removeWithUndo";
 import { getServerRuntime } from "./serverRuntime";
 import { ServerConsole } from "./ServerConsole";
 import { ServerSettingsPanel } from "./ServerSettingsPanel";
 import { MotdText, ServerFavicon, StatusDot } from "./ServerVisuals";
 import { parseMotd, stripMotd } from "./motd";
-import { DIFFICULTIES, GAME_MODES, formatUptime } from "./serverProperties";
+import { DIFFICULTIES, GAME_MODES } from "./serverProperties";
 import type { ServerPingState } from "./types";
 import { toPingState } from "./types";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
-import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
-import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { effectiveJava, javaLabel } from "@renderer/features/java/javaChoices";
 import { useJavaRuntimes } from "@renderer/features/java/useJavaRuntimes";
@@ -94,7 +93,6 @@ function toBase64(buffer: ArrayBuffer) {
 export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
   const { t } = useTranslation();
   const redact = useRedact();
-  const viewIndicator = useSlidingIndicator<HTMLDivElement>();
   const [server, setServer] = useAtom(serverAtom);
   const version = useAtomValue(selectedVersionAtom);
   const account = useAtomValue(accountAtom);
@@ -113,7 +111,6 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
   const [isCropping, setIsCropping] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [port, setPort] = useState(25565);
   const [settings, setSettings] = useState<IServerSettings | null>(null);
   const [lanAddress, setLanAddress] = useState<string | null>(null);
@@ -348,25 +345,25 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
   );
 
   const remove = useCallback(async () => {
+    if (!serverPath || !version?.versionPath) return;
+
+    const previous = server;
     setIsDeleting(true);
 
     try {
-      if (!(await api.shell.trashItem(serverPath))) {
-        throw new Error("server folder was not moved to the trash");
-      }
-
-      toast.success(t("serverManager.deleted"));
-      onDelete();
-    } catch (error) {
-      showFailureToast(t("serverManager.deleteError"), error, {
-        channels: ["shell:trashItem"],
-        fallbackDescription: t("serverManager.deleteErrorHint"),
+      await removeWithUndo({
+        target: serverPath,
+        parkDir: version.versionPath,
+        title: t("serverManager.deleted"),
+        failTitle: t("serverManager.deleteError"),
+        failDescription: t("serverManager.deleteErrorHint"),
+        onRemoved: onDelete,
+        onRestored: () => setServer(previous),
       });
     } finally {
       setIsDeleting(false);
-      setConfirmDelete(false);
     }
-  }, [serverPath, onDelete, t]);
+  }, [serverPath, version?.versionPath, server, onDelete, setServer, t]);
 
   const writeLogo = useCallback(
     async (blob: Blob) => {
@@ -539,10 +536,14 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                       : "pending"
                 }
               />
-              <span className="truncate text-sm font-medium">{stateLabel}</span>
+              <Hint content={stateLabel} variant="text" truncatedOnly>
+                <span className="truncate text-sm font-medium">
+                  {stateLabel}
+                </span>
+              </Hint>
               {isRunning && startedAt !== null && (
-                <span className="font-mono text-xs text-faint tabular-nums">
-                  {formatUptime(uptime)}
+                <span className="font-mono text-xs whitespace-nowrap text-faint tabular-nums">
+                  {formatClock(uptime)}
                 </span>
               )}
               {live?.result?.players && (
@@ -552,13 +553,18 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                 </span>
               )}
             </div>
-            <div className="flex min-w-0 items-center gap-2 text-[0.7rem] text-faint">
+            <div className="flex min-w-0 items-center gap-2 text-2xs text-faint">
               {identity.map((fact) => {
                 const Icon = fact.icon;
                 return (
-                  <span key={fact.value} className="flex items-center gap-1">
-                    <Icon className="size-3" />
-                    <span className="truncate">{fact.value}</span>
+                  <span
+                    key={fact.value}
+                    className="flex min-w-0 items-center gap-1"
+                  >
+                    <Icon className="size-3 shrink-0" />
+                    <Hint content={fact.value} variant="text" truncatedOnly>
+                      <span className="truncate">{fact.value}</span>
+                    </Hint>
                   </span>
                 );
               })}
@@ -566,33 +572,15 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            <div
-              ref={viewIndicator.containerRef}
-              className="relative flex items-center gap-0.5 rounded-lg bg-surface-1 p-0.5"
-            >
-              <SlidingIndicator
-                indicator={viewIndicator}
-                variant="fill"
-                className="rounded-md bg-surface-3"
-              />
-              {(["console", "settings"] as const).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={view === value}
-                  data-indicator-active={view === value}
-                  onClick={() => setView(value)}
-                  className={cn(
-                    "relative rounded-md px-2.5 py-1.5 text-xs transition-colors",
-                    view === value
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {t(`serverManager.view.${value}`)}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              value={view}
+              ariaLabel={t("serverManager.viewLabel")}
+              options={(["console", "settings"] as const).map((value) => ({
+                value,
+                label: t(`serverManager.view.${value}`),
+              }))}
+              onChange={setView}
+            />
 
             {runtime && runState === "stopping" && (
               <Hint content={t("serverManager.forceStopHint")}>
@@ -610,30 +598,22 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
             )}
 
             {runtime && (
-              <Hint
-                content={
-                  isForeign ? t("serverManager.runErrorNotManaged") : undefined
-                }
+              <Button
+                size="sm"
+                className="h-9 min-w-36"
+                variant="secondary"
+                disabled={isBusy || runState === "stopping" || isForeign}
+                onClick={() => void control(isRunning ? "stop" : "start")}
               >
-                <Button
-                  size="sm"
-                  className="h-9 min-w-36"
-                  variant="secondary"
-                  disabled={isBusy || runState === "stopping" || isForeign}
-                  onClick={() => void control(isRunning ? "stop" : "start")}
-                >
-                  {isBusy ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : isRunning ? (
-                    <Square className="size-4" />
-                  ) : (
-                    <Play className="size-4" />
-                  )}
-                  {isRunning
-                    ? t("serverManager.stop")
-                    : t("serverManager.start")}
-                </Button>
-              </Hint>
+                {isBusy ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : isRunning ? (
+                  <Square className="size-4" />
+                ) : (
+                  <Play className="size-4" />
+                )}
+                {isRunning ? t("serverManager.stop") : t("serverManager.start")}
+              </Button>
             )}
           </div>
         </header>
@@ -672,22 +652,32 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                       key={entry.label}
                       type="button"
                       onClick={() => void copy(entry.value)}
-                      className="group flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1 text-left transition-colors hover:bg-accent/40"
+                      className="group flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1 text-left transition-colors hover:bg-row-hover"
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block text-[0.65rem] text-faint">
+                        <span className="block text-3xs text-faint">
                           {entry.label}
                         </span>
-                        <span className="block truncate font-mono text-xs">
-                          {entry.private
-                            ? redact.value(entry.value)
-                            : entry.value}
-                        </span>
+                        <Hint
+                          content={
+                            entry.private
+                              ? redact.value(entry.value)
+                              : entry.value
+                          }
+                          variant="text"
+                          truncatedOnly
+                        >
+                          <span className="block truncate font-mono text-xs">
+                            {entry.private
+                              ? redact.value(entry.value)
+                              : entry.value}
+                          </span>
+                        </Hint>
                       </span>
                       <Copy className="size-3 shrink-0 text-faint opacity-0 transition-opacity group-hover:opacity-100" />
                     </button>
                   ))}
-                  <p className="text-[0.65rem] text-faint">
+                  <p className="text-3xs text-faint">
                     {t("serverManager.shareHint")}
                   </p>
                 </div>
@@ -716,7 +706,7 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 justify-self-start px-2 text-[0.7rem]"
+                      className="h-7 justify-self-start px-2 text-2xs"
                       onClick={() => void readSettings()}
                     >
                       <RefreshCw className="size-3" />
@@ -736,12 +726,24 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                           key={fact.label}
                           className="flex items-center justify-between gap-2 bg-card px-2.5 py-1"
                         >
-                          <span className="truncate text-[0.7rem] text-muted-foreground">
-                            {fact.label}
-                          </span>
-                          <span className="min-w-0 truncate text-[0.7rem]">
-                            {fact.value}
-                          </span>
+                          <Hint
+                            content={fact.label}
+                            variant="text"
+                            truncatedOnly
+                          >
+                            <span className="truncate text-2xs text-muted-foreground">
+                              {fact.label}
+                            </span>
+                          </Hint>
+                          <Hint
+                            content={fact.value}
+                            variant="text"
+                            truncatedOnly
+                          >
+                            <span className="min-w-0 truncate text-2xs">
+                              {fact.value}
+                            </span>
+                          </Hint>
                         </div>
                       ))}
                     </div>
@@ -755,12 +757,16 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                     </span>
                     <div className="flex flex-wrap gap-1">
                       {live.result.players.sample.slice(0, 10).map((player) => (
-                        <span
+                        <Hint
                           key={player.name}
-                          className="max-w-full truncate rounded-md bg-surface-3 px-1.5 py-0.5 font-mono text-[0.7rem]"
+                          content={stripMotd(player.name)}
+                          variant="text"
+                          truncatedOnly
                         >
-                          {stripMotd(player.name)}
-                        </span>
+                          <span className="max-w-full truncate rounded-md bg-surface-3 px-1.5 py-0.5 font-mono text-2xs">
+                            {stripMotd(player.name)}
+                          </span>
+                        </Hint>
                       ))}
                     </div>
                   </div>
@@ -772,13 +778,13 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                       <TriangleAlert className="size-3.5 shrink-0" />
                       {t("serverManager.repairTitle")}
                     </span>
-                    <p className="text-[0.7rem] leading-snug text-muted-foreground">
+                    <p className="text-2xs leading-snug text-muted-foreground">
                       {t("serverManager.repairHint")}
                     </p>
                     <Button
                       variant="secondary"
                       size="sm"
-                      className="h-7 justify-self-start px-2 text-[0.7rem]"
+                      className="h-7 justify-self-start px-2 text-2xs"
                       disabled={
                         isRepairing || isRunning || isInstallActive || !account
                       }
@@ -800,13 +806,13 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                       <TriangleAlert className="size-3.5 shrink-0" />
                       {t("serverManager.foreignTitle")}
                     </span>
-                    <p className="text-[0.7rem] leading-snug text-muted-foreground">
+                    <p className="text-2xs leading-snug text-muted-foreground">
                       {t("serverManager.foreignHint")}
                     </p>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 justify-self-start px-2 text-[0.7rem]"
+                      className="h-7 justify-self-start px-2 text-2xs"
                       onClick={() => setStatusToken((value) => value + 1)}
                     >
                       <RefreshCw className="size-3" />
@@ -816,7 +822,7 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                 )}
 
                 {!runtime && (
-                  <p className="rounded-lg border border-warning/40 bg-surface-2 px-2.5 py-2 text-[0.7rem] text-warning">
+                  <p className="rounded-lg border border-warning/40 bg-surface-2 px-2.5 py-2 text-2xs text-warning">
                     {t("serverManager.runtimeMissing")}
                   </p>
                 )}
@@ -832,16 +838,24 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                   <FolderOpen className="size-3.5" />
                   {t("common.openFolder")}
                 </Button>
-                <Hint content={t("common.delete")}>
+                <Hint
+                  content={
+                    isRunning || isDeleting ? undefined : t("common.delete")
+                  }
+                >
                   <Button
                     variant="ghost"
                     size="icon-sm"
                     className="size-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     disabled={isRunning || isDeleting}
                     aria-label={t("common.delete")}
-                    onClick={() => setConfirmDelete(true)}
+                    onClick={() => void remove()}
                   >
-                    <Trash className="size-3.5" />
+                    {isDeleting ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Trash className="size-3.5" />
+                    )}
                   </Button>
                 </Hint>
               </div>
@@ -857,28 +871,6 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
           onClose={() => setIsCropping(false)}
           size={{ height: 64, width: 64 }}
           changeImageBlob={changeLogo}
-        />
-      )}
-
-      {confirmDelete && (
-        <Confirmation
-          title={t("serverManager.deleteTitle")}
-          reversible
-          content={[{ text: t("serverManager.confirmation") }]}
-          buttons={[
-            {
-              text: t("common.delete"),
-              color: "danger",
-              loading: isDeleting,
-              onClick: () => void remove(),
-            },
-            {
-              text: t("common.cancel"),
-              color: "secondary",
-              onClick: () => setConfirmDelete(false),
-            },
-          ]}
-          onClose={() => setConfirmDelete(false)}
         />
       )}
     </>

@@ -11,14 +11,14 @@ import {
   Crown,
   DoorOpen,
   EllipsisVertical,
-  Gamepad2,
   Headphones,
   Link2,
   Loader2,
-  LogIn,
   MessageSquare,
   Pencil,
+  PhoneOff,
   RotateCcw,
+  Send,
   Trash2,
   UserPlus,
   UserX,
@@ -33,12 +33,25 @@ import { useFaceLookup } from "@renderer/features/accounts/faceDirectory";
 import { Hint } from "@renderer/components/Hint";
 import { Button } from "@/components/ui/button";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+} from "@/components/ui/empty";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,8 +84,9 @@ import {
   type GroupConfirmKind,
 } from "@renderer/features/voice/groupConfirmations";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
+import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 import { showFailureToast } from "@renderer/utilities/failures";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
@@ -89,11 +103,11 @@ function SectionLabel({
 }) {
   return (
     <div className="flex h-6 shrink-0 items-center gap-1.5 px-1">
-      <span className="text-[10px] font-medium tracking-wide text-faint uppercase">
+      <span className="text-3xs font-medium tracking-wide text-faint uppercase">
         {children}
       </span>
       {count !== undefined && (
-        <span className="font-mono text-[10px] tabular-nums text-faint">
+        <span className="font-mono text-3xs tabular-nums text-faint">
           {count}
         </span>
       )}
@@ -127,8 +141,8 @@ function MemberRow({
   onBan: () => void;
   t: (key: string) => string;
 }) {
-  return (
-    <div className="group flex h-11 min-w-0 items-center gap-2 rounded-lg px-2 transition-colors hover:bg-surface-3">
+  const row = (
+    <div className="group flex h-11 min-w-0 items-center gap-2 rounded-lg px-2 transition-colors hover:bg-row-hover has-[[data-state=open]]:bg-row-hover">
       <AccountHead
         account={face}
         size={28}
@@ -149,24 +163,32 @@ function MemberRow({
           {isOwner && <Crown className="size-3 shrink-0 text-warning" />}
         </span>
         {(isSelf || isInVoice) && (
-          <span className="block truncate text-[11px] leading-4 text-muted-foreground">
-            {isInVoice ? t("voice.inVoiceNow") : t("voice.you")}
-          </span>
+          <Hint
+            content={isInVoice ? t("voice.inVoiceNow") : t("voice.you")}
+            variant="text"
+            truncatedOnly
+          >
+            <span className="block truncate text-2xs leading-4 text-muted-foreground">
+              {isInVoice ? t("voice.inVoiceNow") : t("voice.you")}
+            </span>
+          </Hint>
         )}
       </span>
 
       {actions.length > 0 && (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              className="size-7 shrink-0 text-muted-foreground opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
-              aria-label={t("groups.memberActions")}
-            >
-              <EllipsisVertical className="size-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
+          <Hint content={t("groups.memberActions")}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                className="size-7 shrink-0 text-muted-foreground opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+                aria-label={t("groups.memberActions")}
+              >
+                <EllipsisVertical className="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+          </Hint>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={onTransfer}>
               <Crown />
@@ -184,6 +206,28 @@ function MemberRow({
         </DropdownMenu>
       )}
     </div>
+  );
+
+  if (actions.length === 0) return row;
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onSelect={onTransfer}>
+          <Crown />
+          {t("groups.transferOwner")}
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={onKick}>
+          <UserX />
+          {t("groups.kick")}
+        </ContextMenuItem>
+        <ContextMenuItem variant="destructive" onSelect={onBan}>
+          <Ban />
+          {t("groups.ban")}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 
@@ -349,6 +393,15 @@ export function GroupPanel({
     [friends, group.members],
   );
 
+  const memberKeys = useMemo(
+    () => new Set(group.members.map((member) => member._id)),
+    [group.members],
+  );
+  const bannedKeys = useMemo(
+    () => new Set(group.banned.map((banned) => banned._id)),
+    [group.banned],
+  );
+
   const voiceMembers = voiceIdentities
     .map((identity) => group.members.find((member) => member._id === identity))
     .filter((member): member is IGroupUser => Boolean(member));
@@ -376,10 +429,7 @@ export function GroupPanel({
     return true;
   };
 
-  const handleCopy = async (value: string, successKey: string) => {
-    if (!(await copyToClipboard(value))) return;
-    toast.success(t(successKey));
-  };
+  const handleCopy = (value: string) => void copyWithFeedback(value);
 
   const handleRename = async () => {
     if (isRenaming) return;
@@ -473,17 +523,19 @@ export function GroupPanel({
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
       <div className="flex shrink-0 items-center gap-2">
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          className="size-7 shrink-0"
-          onClick={onBack}
-          aria-label={t("shell.back")}
-        >
-          <ArrowLeft className="size-4" />
-        </Button>
+        <Hint content={t("shell.back")}>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            className="size-7 shrink-0"
+            onClick={onBack}
+            aria-label={t("shell.back")}
+          >
+            <ArrowLeft className="size-4" />
+          </Button>
+        </Hint>
 
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-[11px] font-semibold text-muted-foreground">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-2xs font-semibold text-muted-foreground">
           {groupInitials(group.name)}
         </span>
 
@@ -496,32 +548,46 @@ export function GroupPanel({
             </Hint>
             {isMuted && <BellOff className="size-3 shrink-0 text-faint" />}
           </span>
-          <span className="block truncate text-[11px] leading-4 text-muted-foreground">
-            {group.isOwner ? t("groups.youAreOwner") : t("groups.youAreMember")}
-          </span>
+          <Hint
+            content={
+              group.isOwner ? t("groups.youAreOwner") : t("groups.youAreMember")
+            }
+            variant="text"
+            truncatedOnly
+          >
+            <span className="block truncate text-2xs leading-4 text-muted-foreground">
+              {group.isOwner
+                ? t("groups.youAreOwner")
+                : t("groups.youAreMember")}
+            </span>
+          </Hint>
         </span>
 
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          className="size-7 shrink-0"
-          onClick={() => setChatGroupId(group._id)}
-          aria-label={t("groups.chat")}
-        >
-          <MessageSquare className="size-4" />
-        </Button>
+        <Hint content={t("groups.chat")}>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            className="size-7 shrink-0"
+            onClick={() => setChatGroupId(group._id)}
+            aria-label={t("groups.chat")}
+          >
+            <MessageSquare className="size-4" />
+          </Button>
+        </Hint>
 
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              className="size-7 shrink-0"
-              aria-label={t("groups.groupActions")}
-            >
-              <EllipsisVertical className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
+          <Hint content={t("groups.groupActions")}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                className="size-7 shrink-0"
+                aria-label={t("groups.groupActions")}
+              >
+                <EllipsisVertical className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+          </Hint>
           <DropdownMenuContent align="end" className="w-52">
             {permissions.canRename && (
               <DropdownMenuItem onSelect={() => setRenameValue(group.name)}>
@@ -539,7 +605,7 @@ export function GroupPanel({
               disabled={!canInviteToGame}
               onSelect={onInviteToGame}
             >
-              <Gamepad2 />
+              <Send />
               {t("groups.inviteToGame")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -568,7 +634,7 @@ export function GroupPanel({
         className={cn(
           "flex shrink-0 flex-col gap-2 rounded-lg border p-2",
           isActiveRoom
-            ? "border-primary/40 bg-primary-soft"
+            ? "border-success/40 bg-success/10"
             : "border-border bg-surface-2",
         )}
       >
@@ -579,11 +645,21 @@ export function GroupPanel({
               voiceCount > 0 ? "text-success" : "text-faint",
             )}
           />
-          <span className="min-w-0 flex-1 truncate text-[13px]">
-            {voiceCount > 0
-              ? t("voice.inVoiceCount", { count: voiceCount })
-              : t("voice.nobodyInVoice")}
-          </span>
+          <Hint
+            content={
+              voiceCount > 0
+                ? t("voice.inVoiceCount", { count: voiceCount })
+                : t("voice.nobodyInVoice")
+            }
+            variant="text"
+            truncatedOnly
+          >
+            <span className="min-w-0 flex-1 truncate text-[13px]">
+              {voiceCount > 0
+                ? t("voice.inVoiceCount", { count: voiceCount })
+                : t("voice.nobodyInVoice")}
+            </span>
+          </Hint>
 
           {isActiveRoom ? (
             <Button
@@ -592,6 +668,7 @@ export function GroupPanel({
               className="h-7 shrink-0 text-destructive"
               onClick={onLeaveVoice}
             >
+              <PhoneOff className="size-3.5" />
               {t("voice.leaveShort")}
             </Button>
           ) : (
@@ -605,7 +682,7 @@ export function GroupPanel({
               {isBusy ? (
                 <Loader2 className="size-3.5 animate-spin" />
               ) : (
-                <LogIn className="size-3.5" />
+                <Headphones className="size-3.5" />
               )}
               {t("groups.joinShort")}
             </Button>
@@ -621,14 +698,14 @@ export function GroupPanel({
               >
                 <AccountHead account={faceOf(member)} size={16} />
                 <Hint content={member.nickname} variant="text" truncatedOnly>
-                  <span className="min-w-0 truncate text-[11px]">
+                  <span className="min-w-0 truncate text-2xs">
                     {member.nickname}
                   </span>
                 </Hint>
               </span>
             ))}
             {voiceUnnamed > 0 && (
-              <span className="flex shrink-0 items-center rounded-md bg-surface-3 px-1.5 py-0.5 text-[11px] text-muted-foreground">
+              <span className="flex shrink-0 items-center rounded-md bg-surface-3 px-1.5 py-0.5 text-2xs text-muted-foreground">
                 {t("voice.moreParticipants", { count: voiceUnnamed })}
               </span>
             )}
@@ -639,15 +716,17 @@ export function GroupPanel({
       <div className="shrink-0">
         <SectionLabel>{t("groups.inviteCode")}</SectionLabel>
         <div className="flex items-center gap-1 rounded-lg border border-border bg-surface-2 py-1 pr-1 pl-2.5">
-          <span className="min-w-0 flex-1 truncate font-mono text-[13px] tracking-[0.14em] select-all">
-            {redact.value(group.code)}
-          </span>
+          <Hint content={redact.value(group.code)} variant="text" truncatedOnly>
+            <span className="min-w-0 flex-1 truncate font-mono text-[13px] tracking-[0.14em] select-all">
+              {redact.value(group.code)}
+            </span>
+          </Hint>
           <Hint content={t("groups.copyCode")}>
             <Button
               size="icon-sm"
               variant="ghost"
               className="size-7 shrink-0"
-              onClick={() => void handleCopy(group.code, "groups.codeCopied")}
+              onClick={() => handleCopy(group.code)}
               aria-label={t("groups.copyCode")}
             >
               <Copy className="size-3.5" />
@@ -659,10 +738,7 @@ export function GroupPanel({
               variant="ghost"
               className="size-7 shrink-0"
               onClick={() =>
-                void handleCopy(
-                  `grubielauncher://group/join/${group.code}`,
-                  "groups.linkCopied",
-                )
+                handleCopy(`grubielauncher://group/join/${group.code}`)
               }
               aria-label={t("groups.copyLink")}
             >
@@ -691,60 +767,70 @@ export function GroupPanel({
 
       <ScrollArea className="-mx-1 min-h-0 flex-1 px-1">
         <div className="flex flex-col">
-          {members.map((member) => (
-            <MemberRow
-              key={member._id}
-              member={member}
-              face={faceOf(member)}
-              isOwner={member._id === group.owner._id}
-              isSelf={member._id === selfId}
-              isOnline={onlineIds.has(member._id) || member._id === selfId}
-              isInVoice={voiceIdentities.includes(member._id)}
-              actions={memberActions(group, member._id, selfId)}
-              onTransfer={() => setConfirm({ kind: "transfer", member })}
-              onKick={() => setConfirm({ kind: "kick", member })}
-              onBan={() => setConfirm({ kind: "ban", member })}
-              t={t}
-            />
-          ))}
+          <RemovalList sourceKeys={memberKeys}>
+            {members.map((member) => (
+              <RemovalItem key={member._id} itemKey={member._id}>
+                <MemberRow
+                  member={member}
+                  face={faceOf(member)}
+                  isOwner={member._id === group.owner._id}
+                  isSelf={member._id === selfId}
+                  isOnline={onlineIds.has(member._id) || member._id === selfId}
+                  isInVoice={voiceIdentities.includes(member._id)}
+                  actions={memberActions(group, member._id, selfId)}
+                  onTransfer={() => setConfirm({ kind: "transfer", member })}
+                  onKick={() => setConfirm({ kind: "kick", member })}
+                  onBan={() => setConfirm({ kind: "ban", member })}
+                  t={t}
+                />
+              </RemovalItem>
+            ))}
+          </RemovalList>
 
           {permissions.canModerate && group.banned.length > 0 && (
             <>
               <SectionLabel count={group.banned.length}>
                 {t("groups.bannedSection")}
               </SectionLabel>
-              {group.banned.map((banned) => (
-                <div
-                  key={banned._id}
-                  className="flex h-11 min-w-0 items-center gap-2 rounded-lg px-2"
-                >
-                  <AccountHead
-                    account={faceOf(banned)}
-                    size={28}
-                    className="opacity-60"
-                  />
-                  <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">
-                    {banned.nickname}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 shrink-0 text-[11px]"
-                    onClick={() =>
-                      void runAction(
-                        api.backend.groupUnbanMember(
-                          accessToken,
-                          group._id,
-                          banned._id,
-                        ),
-                        "backend:groupUnbanMember",
-                      )
-                    }
-                  >
-                    {t("groups.unban")}
-                  </Button>
-                </div>
-              ))}
+              <RemovalList sourceKeys={bannedKeys}>
+                {group.banned.map((banned) => (
+                  <RemovalItem key={banned._id} itemKey={banned._id}>
+                    <div className="flex h-11 min-w-0 items-center gap-2 rounded-lg px-2">
+                      <AccountHead
+                        account={faceOf(banned)}
+                        size={28}
+                        className="opacity-60"
+                      />
+                      <Hint
+                        content={banned.nickname}
+                        variant="text"
+                        truncatedOnly
+                      >
+                        <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">
+                          {banned.nickname}
+                        </span>
+                      </Hint>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 shrink-0 text-2xs"
+                        onClick={() =>
+                          void runAction(
+                            api.backend.groupUnbanMember(
+                              accessToken,
+                              group._id,
+                              banned._id,
+                            ),
+                            "backend:groupUnbanMember",
+                          )
+                        }
+                      >
+                        {t("groups.unban")}
+                      </Button>
+                    </div>
+                  </RemovalItem>
+                ))}
+              </RemovalList>
             </>
           )}
         </div>
@@ -770,9 +856,15 @@ export function GroupPanel({
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-sm">
           <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
             <Pencil className="size-4 shrink-0 text-faint" />
-            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
-              {t("groups.renameTitle")}
-            </DialogTitle>
+            <Hint
+              content={t("groups.renameTitle")}
+              variant="text"
+              truncatedOnly
+            >
+              <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+                {t("groups.renameTitle")}
+              </DialogTitle>
+            </Hint>
           </DialogHeader>
 
           <div className="grid gap-2 px-4 py-3">
@@ -791,7 +883,7 @@ export function GroupPanel({
             />
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-border bg-surface-2 px-4 py-3">
+          <DialogFooter className="m-0 px-4 py-3">
             <Button
               variant="secondary"
               disabled={isRenaming}
@@ -806,7 +898,7 @@ export function GroupPanel({
               {isRenaming && <Loader2 className="size-3.5 animate-spin" />}
               {t("common.save")}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -814,9 +906,15 @@ export function GroupPanel({
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-sm">
           <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
             <UserPlus className="size-4 shrink-0 text-faint" />
-            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
-              {t("groups.inviteTitle", { group: group.name })}
-            </DialogTitle>
+            <Hint
+              content={t("groups.inviteTitle", { group: group.name })}
+              variant="text"
+              truncatedOnly
+            >
+              <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+                {t("groups.inviteTitle", { group: group.name })}
+              </DialogTitle>
+            </Hint>
           </DialogHeader>
 
           <div className="grid gap-2 px-4 py-3">
@@ -825,9 +923,16 @@ export function GroupPanel({
             </DialogDescription>
 
             {invitableFriends.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
-                {t("groups.noInvitableFriends")}
-              </p>
+              <Empty className="flex-none gap-2 p-4">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <UserPlus />
+                  </EmptyMedia>
+                  <EmptyDescription className="text-xs leading-5">
+                    {t("groups.noInvitableFriends")}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : (
               <ScrollArea className="-mx-1 max-h-72 px-1">
                 <div className="flex flex-col gap-0.5">
@@ -837,7 +942,7 @@ export function GroupPanel({
                     return (
                       <div
                         key={friend.user._id}
-                        className="flex h-11 min-w-0 items-center gap-2 rounded-lg px-1.5 hover:bg-surface-3"
+                        className="flex h-11 min-w-0 items-center gap-2 rounded-lg px-1.5 hover:bg-row-hover"
                       >
                         <PlayerHead
                           user={friend.user}
@@ -863,7 +968,7 @@ export function GroupPanel({
                         <Button
                           size="sm"
                           variant={inviteState ? "ghost" : "secondary"}
-                          className="h-7 shrink-0 text-[11px]"
+                          className="h-7 shrink-0 text-2xs"
                           disabled={Boolean(inviteState) || !socket?.connected}
                           onClick={() =>
                             startInvite(friend.user._id, friend.user.nickname)
@@ -890,7 +995,7 @@ export function GroupPanel({
 
       {confirm && copy && (
         <Confirmation
-          title={t(copy.titleKey)}
+          title={t(copy.titleKey, copyValues)}
           reversible={copy.reversible}
           content={copy.lineKeys.map((key) => ({ text: t(key, copyValues) }))}
           buttons={[

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
-import { Activity, Globe, Loader2 } from "lucide-react";
+import { Globe, Loader2, Wifi } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -11,6 +11,8 @@ import {
 } from "@renderer/features/install/installUi";
 import { resolveMirrorMode, type MirrorMode } from "@/shared/mirrorMode";
 import type { DownloadSource, TSettings } from "@/types/Settings";
+import { Hint } from "@renderer/components/Hint";
+import { onRadioKeyDown, radioFocusIndex } from "@renderer/utilities/radioKeys";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
 
@@ -79,6 +81,9 @@ export function DownloadsSection({
   }, [settings.downloadSource]);
 
   const usesMirror = mode === "mirror";
+  const sourceFocus = radioFocusIndex(SOURCES, settings.downloadSource);
+  const selectSource = (source: DownloadSource) =>
+    commit({ downloadSource: source });
 
   return (
     <div className="flex flex-col gap-4">
@@ -116,8 +121,8 @@ export function DownloadsSection({
             className="shrink-0"
             onClick={openConnectivityCheck}
           >
-            <Activity className="size-3.5" />
-            {t("settings.connectivity.run")}
+            <Wifi className="size-3.5" />
+            {t("taskCenter.checkConnection")}
           </Button>
         </div>
       )}
@@ -131,15 +136,29 @@ export function DownloadsSection({
             changed={isChanged("downloadSource")}
             onReset={() => reset("downloadSource")}
           >
-            <div className="grid grid-cols-3 gap-2">
-              {SOURCES.map((source) => (
+            <div
+              role="radiogroup"
+              aria-label={t("settings.downloadSource")}
+              onKeyDown={(event) =>
+                onRadioKeyDown(
+                  event,
+                  SOURCES,
+                  settings.downloadSource,
+                  selectSource,
+                )
+              }
+              className="grid grid-cols-3 gap-2"
+            >
+              {SOURCES.map((source, index) => (
                 <button
                   key={source}
                   type="button"
-                  onClick={() => commit({ downloadSource: source })}
-                  aria-pressed={settings.downloadSource === source}
+                  role="radio"
+                  aria-checked={settings.downloadSource === source}
+                  tabIndex={index === sourceFocus ? 0 : -1}
+                  onClick={() => selectSource(source)}
                   className={cn(
-                    "flex h-16 flex-col rounded-lg border px-2.5 py-2 text-left transition-colors",
+                    "flex h-16 flex-col rounded-lg border px-2.5 py-2 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                     settings.downloadSource === source
                       ? "border-primary/50 bg-primary-soft"
                       : "border-border bg-surface-2 hover:bg-surface-3",
@@ -148,7 +167,7 @@ export function DownloadsSection({
                   <span className="block text-xs font-medium text-foreground">
                     {t(`settings.downloadSourceOptions.${source}`)}
                   </span>
-                  <span className="mt-0.5 block text-[0.7rem] leading-snug text-faint">
+                  <span className="mt-0.5 block text-2xs leading-snug text-faint">
                     {t(`settings.downloads.sourceHints.${source}`)}
                   </span>
                 </button>
@@ -183,7 +202,7 @@ export function DownloadsSection({
               }}
               aria-label={t("settings.downloadLimit")}
             />
-            <div className="mt-1.5 flex justify-between font-mono text-[0.65rem] tabular-nums text-faint">
+            <div className="mt-1.5 flex justify-between font-mono text-3xs tabular-nums text-faint">
               <span>1</span>
               <span>16</span>
             </div>
@@ -204,12 +223,20 @@ export function DownloadsSection({
                 className="flex items-center gap-3 px-3.5 py-1.5"
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-foreground">
-                    {t(`settings.downloads.routes.${route.id}`)}
-                  </span>
-                  <span className="block truncate font-mono text-[0.65rem] text-faint">
-                    {route.host}
-                  </span>
+                  <Hint
+                    content={t(`settings.downloads.routes.${route.id}`)}
+                    variant="text"
+                    truncatedOnly
+                  >
+                    <span className="block truncate text-sm text-foreground">
+                      {t(`settings.downloads.routes.${route.id}`)}
+                    </span>
+                  </Hint>
+                  <Hint content={route.host} variant="text" truncatedOnly>
+                    <span className="block truncate font-mono text-3xs text-faint">
+                      {route.host}
+                    </span>
+                  </Hint>
                 </span>
                 <span
                   className={cn(

@@ -23,7 +23,6 @@ import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
 import { groupsAtom, voiceSessionAtom } from "@renderer/stores/atoms";
 import {
-  formatVoiceDuration,
   isVoiceLive,
   micButtonState,
   voiceRoomKind,
@@ -45,6 +44,7 @@ import {
 import { currentRouteAtom } from "@renderer/navigation/store";
 import { navigate } from "@renderer/navigation/navigate";
 import { useSidebarCollapsed } from "./sidebarCollapse";
+import { formatClock } from "@renderer/utilities/duration";
 
 export function VoicePanel() {
   const session = useAtomValue(voiceSessionAtom);
@@ -212,6 +212,13 @@ function VoiceMiniPanel({ session }: { session: IVoiceSessionState }) {
     );
   }
 
+  const footerText =
+    speaking > 0
+      ? t("voice.speakingCount", { count: speaking })
+      : session.pttEnabled
+        ? `PTT · ${session.pttBindLabel || t("settings.voicePttKeyNone")}`
+        : "";
+
   return (
     <section
       aria-label={t("voice.title")}
@@ -227,18 +234,20 @@ function VoiceMiniPanel({ session }: { session: IVoiceSessionState }) {
             tone === "live" ? "bg-success" : "animate-pulse bg-warning",
           )}
         />
-        <span
-          className={cn(
-            "min-w-0 flex-1 truncate text-[0.68rem] font-semibold tracking-[0.06em] uppercase",
-            tone === "live" ? "text-success" : "text-warning",
-          )}
-        >
-          {statusText}
-        </span>
+        <Hint content={statusText} variant="text" side="right" truncatedOnly>
+          <span
+            className={cn(
+              "min-w-0 flex-1 truncate text-2xs font-semibold tracking-[0.06em] uppercase",
+              tone === "live" ? "text-success" : "text-warning",
+            )}
+          >
+            {statusText}
+          </span>
+        </Hint>
 
         {isLive && session.connectedAt > 0 && (
-          <span className="shrink-0 font-mono text-[0.65rem] tabular-nums text-faint">
-            {formatVoiceDuration(now - session.connectedAt)}
+          <span className="shrink-0 font-mono text-3xs whitespace-nowrap tabular-nums text-faint">
+            {formatClock(now - session.connectedAt)}
           </span>
         )}
       </div>
@@ -259,21 +268,28 @@ function VoiceMiniPanel({ session }: { session: IVoiceSessionState }) {
 
         {session.participants.length > 1 && (
           <Popover>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                aria-label={t("voice.inVoiceCount", {
-                  count: session.participants.length,
-                })}
-                className="flex h-5 shrink-0 items-center gap-1 rounded-md px-1 text-faint transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-              >
-                <Users className="size-3" />
-                <span className="font-mono text-[0.65rem] tabular-nums">
-                  {session.participants.length}
-                </span>
-                <ChevronsUpDown className="size-2.5" />
-              </button>
-            </PopoverTrigger>
+            <Hint
+              content={t("voice.inVoiceCount", {
+                count: session.participants.length,
+              })}
+              side="right"
+            >
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t("voice.inVoiceCount", {
+                    count: session.participants.length,
+                  })}
+                  className="flex h-5 shrink-0 items-center gap-1 rounded-md px-1 text-faint transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                  <Users className="size-3" />
+                  <span className="font-mono text-3xs tabular-nums">
+                    {session.participants.length}
+                  </span>
+                  <ChevronsUpDown className="size-2.5" />
+                </button>
+              </PopoverTrigger>
+            </Hint>
             <PopoverContent align="start" side="top" className="w-52 p-1.5">
               <div className="flex flex-col gap-0.5">
                 {session.participants.map((participant) => (
@@ -283,7 +299,7 @@ function VoiceMiniPanel({ session }: { session: IVoiceSessionState }) {
                   >
                     <span
                       className={cn(
-                        "flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-medium",
+                        "flex size-5 shrink-0 items-center justify-center rounded-full text-4xs font-medium",
                         participant.isSpeaking && !participant.isMuted
                           ? "bg-success/20 text-success"
                           : "bg-surface-3 text-faint",
@@ -291,9 +307,15 @@ function VoiceMiniPanel({ session }: { session: IVoiceSessionState }) {
                     >
                       {participantInitials(participant.name)}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-xs">
-                      {participant.name}
-                    </span>
+                    <Hint
+                      content={participant.name}
+                      variant="text"
+                      truncatedOnly
+                    >
+                      <span className="min-w-0 flex-1 truncate text-xs">
+                        {participant.name}
+                      </span>
+                    </Hint>
                     {participant.isMuted && (
                       <MicOff className="size-3 shrink-0 text-faint" />
                     )}
@@ -310,13 +332,11 @@ function VoiceMiniPanel({ session }: { session: IVoiceSessionState }) {
 
         {deafenButton}
 
-        <span className="min-w-0 flex-1 truncate px-0.5 text-[0.65rem] text-faint">
-          {speaking > 0
-            ? t("voice.speakingCount", { count: speaking })
-            : session.pttEnabled
-              ? `PTT · ${session.pttBindLabel || t("settings.voicePttKeyNone")}`
-              : ""}
-        </span>
+        <Hint content={footerText} variant="text" side="right" truncatedOnly>
+          <span className="min-w-0 flex-1 truncate px-0.5 text-3xs text-faint">
+            {footerText}
+          </span>
+        </Hint>
 
         {disconnectButton}
       </div>

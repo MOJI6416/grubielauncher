@@ -38,9 +38,11 @@ function FeatureCell({
 
   if (column === "skins" && caps.skins === "external") {
     return (
-      <span className="truncate text-center text-xs text-muted-foreground">
-        {SKIN_SITES[provider]}
-      </span>
+      <Hint content={SKIN_SITES[provider]} variant="text" truncatedOnly>
+        <span className="truncate text-center text-xs text-muted-foreground">
+          {SKIN_SITES[provider]}
+        </span>
+      </Hint>
     );
   }
 
@@ -81,48 +83,44 @@ export function AccountsWelcome({
   const row = (provider: AccountType) => {
     const available = isProviderAvailable(provider, connectivity);
     const name = providerName(provider, t);
-    const pitch = t(`accounts.providerPitch.${provider}`);
+    const pitch = available
+      ? t(`accounts.providerPitch.${provider}`)
+      : t(
+          connectivity.isInternetOnline
+            ? "app.backendUnavailable"
+            : "app.internetUnavailable",
+        );
 
     return (
-      <Hint
+      <button
         key={provider}
-        content={
-          available
-            ? undefined
-            : t(
-                connectivity.isInternetOnline
-                  ? "app.backendUnavailable"
-                  : "app.internetUnavailable",
-              )
-        }
+        type="button"
+        disabled={!available}
+        onClick={() => onPick(provider)}
+        className={`group ${ROW_GRID} w-full rounded-xl px-3 py-2.5 text-left transition-colors duration-[var(--dur-fast)] hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent`}
       >
-        <button
-          type="button"
-          disabled={!available}
-          onClick={() => onPick(provider)}
-          className={`group ${ROW_GRID} w-full rounded-xl px-3 py-2.5 text-left transition-colors duration-[var(--dur-fast)] hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent`}
-        >
-          <span className="flex min-w-0 items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-3 text-foreground transition-colors duration-[var(--dur-fast)] group-hover:bg-surface-2">
-              <ProviderIcon type={provider} size={22} />
-            </span>
-            <span className="flex min-w-0 flex-col">
-              <span className="truncate text-sm font-medium">{name}</span>
-              <Hint content={pitch} variant="text" truncatedOnly>
-                <span className="truncate text-xs text-muted-foreground">
-                  {pitch}
-                </span>
-              </Hint>
-            </span>
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-3 text-foreground transition-colors duration-[var(--dur-fast)] group-hover:bg-surface-2">
+            <ProviderIcon type={provider} size={22} />
           </span>
+          <span className="flex min-w-0 flex-col">
+            <Hint content={name} variant="text" truncatedOnly>
+              <span className="truncate text-sm font-medium">{name}</span>
+            </Hint>
+            <Hint content={pitch} variant="text" truncatedOnly>
+              <span className="truncate text-xs text-muted-foreground">
+                {pitch}
+              </span>
+            </Hint>
+          </span>
+        </span>
 
-          {COLUMNS.map((column) => (
-            <FeatureCell key={column} provider={provider} column={column} />
-          ))}
+        {COLUMNS.map((column) => (
+          <FeatureCell key={column} provider={provider} column={column} />
+        ))}
 
-          <ChevronRight className="size-4 text-faint transition-[color,transform] duration-[var(--dur-fast)] group-hover:translate-x-0.5 group-hover:text-foreground group-disabled:translate-x-0" />
-        </button>
-      </Hint>
+        <ChevronRight className="size-4 text-faint transition-[color,transform] duration-[var(--dur-fast)] group-hover:translate-x-0.5 group-hover:text-foreground group-disabled:translate-x-0" />
+      </button>
     );
   };
 
@@ -140,7 +138,7 @@ export function AccountsWelcome({
 
         <div className="grid gap-1 rounded-2xl border border-border bg-surface-2 p-1.5">
           <div
-            className={`${ROW_GRID} px-3 pt-1.5 pb-1 text-[0.7rem] leading-tight text-faint`}
+            className={`${ROW_GRID} px-3 pt-1.5 pb-1 text-2xs leading-tight text-faint`}
             aria-hidden
           >
             <span />

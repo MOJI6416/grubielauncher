@@ -5,6 +5,7 @@ import type {
 } from "livekit-client";
 import rnnoiseWasmUrl from "@sapphi-red/web-noise-suppressor/rnnoise.wasm?url";
 import VoiceWorker from "./voiceWorker?worker";
+import { ignoreFailure } from "./ignoreFailure";
 
 export interface VoiceProcessingConfig {
   denoise: boolean;
@@ -104,7 +105,7 @@ export class VoiceTrackProcessor
       throw new Error("MediaStreamTrackProcessor is unavailable");
     }
 
-    const wasm = await getWasmBinary().catch(() => null);
+    const wasm = (await getWasmBinary().catch(ignoreFailure)) ?? null;
     const worker = new VoiceWorker();
     worker.addEventListener(
       "message",

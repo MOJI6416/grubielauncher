@@ -6,6 +6,7 @@ import {
   authDataAtom,
   rpcSkinVersionAtom,
 } from "@renderer/stores/atoms";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 const skinCache = new Map<string, ISkinData | null>();
@@ -43,7 +44,7 @@ export function useOwnSkin(enabled: boolean): ISkinData | null {
         skinCache.set(cacheKey, data);
         if (!cancelled) setSkin(data);
       })
-      .catch(() => {});
+      .catch(ignoreFailure);
 
     return () => {
       cancelled = true;

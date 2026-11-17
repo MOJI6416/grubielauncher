@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
-import { Check, Download, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Check, Download, Loader2, Palette, RefreshCw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 import type { ThemeDefinition, ThemeMode } from "@/shared/themes";
 import {
@@ -18,7 +25,9 @@ import { Hint } from "@renderer/components/Hint";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { accountAtom } from "@renderer/stores/atoms";
 import { showFailureToast } from "@renderer/utilities/failures";
-import { Segmented } from "@renderer/features/settings/SettingsPrimitives";
+import { formatCompactNumber } from "@renderer/utilities/numbers";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { SortMenu } from "@renderer/components/SortMenu";
 import { ThemeTraits } from "./ThemeCard";
 import { ThemeMiniature } from "./ThemeMiniature";
 import {
@@ -56,16 +65,17 @@ function GalleryCard({
   accent,
   state,
   busy,
+  installing,
   onInstall,
 }: {
   item: GalleryTheme;
   accent: string;
   state: "new" | "installed" | "active";
   busy: boolean;
+  installing: boolean;
   onInstall: () => void;
 }) {
   const { t } = useTranslation();
-  const formatter = new Intl.NumberFormat(undefined, { notation: "compact" });
 
   return (
     <div
@@ -81,18 +91,18 @@ function GalleryCard({
         className={cn("rounded-md ring-1", state === "active" ? "ring-primary/60" : "ring-border")}
       />
       <div className="min-w-0 px-1">
-        <Hint content={item.name} truncatedOnly>
+        <Hint content={item.name} variant="text" truncatedOnly>
           <div className="truncate text-sm font-medium text-foreground">
             {item.name || t("theme.gallery.untitled")}
           </div>
         </Hint>
         <div className="flex items-center gap-1.5 text-xs text-faint">
-          <Hint content={item.authorName ?? ""} truncatedOnly>
+          <Hint content={item.authorName ?? ""} variant="text" truncatedOnly>
             <span className="truncate">{item.authorName ?? t("theme.gallery.unknownAuthor")}</span>
           </Hint>
           <span className="inline-flex shrink-0 items-center gap-0.5 font-mono tabular-nums">
             <Download className="size-3" />
-            {formatter.format(item.downloads)}
+            {formatCompactNumber(item.downloads) ?? "0"}
           </span>
           <ThemeTraits theme={item} />
         </div>
@@ -103,7 +113,12 @@ function GalleryCard({
         disabled={busy || state === "active"}
         onClick={onInstall}
       >
-        {state === "active" ? (
+        {installing ? (
+          <>
+            <Loader2 className="animate-spin" />
+            {t("theme.gallery.install")}
+          </>
+        ) : state === "active" ? (
           <>
             <Check />
             {t("theme.gallery.active")}
@@ -134,13 +149,17 @@ function MyPublications({ token }: { token: string }) {
       .then((result) => {
         if (!cancelled) setItems(result ?? []);
       })
-      .catch(() => {
-        if (!cancelled) setItems([]);
+      .catch((error) => {
+        if (cancelled) return;
+        setItems([]);
+        showFailureToast(t("theme.gallery.errors.mineFailed"), error, {
+          channels: ["theme:mine"],
+        });
       });
     return () => {
       cancelled = true;
     };
-  }, [token, version]);
+  }, [token, version, t]);
 
   const remove = async (item: PublishedTheme) => {
     setPendingRemove(null);
@@ -165,7 +184,9 @@ function MyPublications({ token }: { token: string }) {
           key={item.id}
           className="flex min-h-10 items-center gap-3 rounded-lg bg-surface-2 px-3 py-1.5"
         >
-          <span className="min-w-0 flex-1 truncate text-sm text-foreground">{item.name}</span>
+          <Hint content={item.name} variant="text" truncatedOnly>
+            <span className="min-w-0 flex-1 truncate text-sm text-foreground">{item.name}</span>
+          </Hint>
           <span
             className={cn(
               "shrink-0 text-xs",
@@ -177,24 +198,26 @@ function MyPublications({ token }: { token: string }) {
             {t(`theme.gallery.status.${item.status}`)}
           </span>
           {item.status === "rejected" && item.rejectionReason && (
-            <Hint content={item.rejectionReason} truncatedOnly>
+            <Hint content={item.rejectionReason} variant="text" truncatedOnly>
               <span className="max-w-60 truncate text-xs text-faint">{item.rejectionReason}</span>
             </Hint>
           )}
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`${t("theme.gallery.unpublish")} — ${item.name}`}
-            onClick={() => setPendingRemove(item)}
-          >
-            <Trash2 />
-          </Button>
+          <Hint content={`${t("theme.gallery.unpublish")} — ${item.name}`}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`${t("theme.gallery.unpublish")} — ${item.name}`}
+              onClick={() => setPendingRemove(item)}
+            >
+              <Trash2 />
+            </Button>
+          </Hint>
         </div>
       ))}
 
       {pendingRemove && (
         <Confirmation
-          title={t("theme.gallery.unpublish")}
+          title={t("theme.gallery.unpublishQuestion", { name: pendingRemove.name })}
           onClose={() => setPendingRemove(null)}
           reversible={false}
           content={[{ text: t("theme.gallery.unpublishConfirm", { name: pendingRemove.name }) }]}
@@ -356,6 +379,10 @@ export function ThemeGallery({
 
   return (
     <div className="flex flex-col gap-3">
+      {account?.accessToken ? (
+        <MyPublications token={account.accessToken} />
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-48 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-faint" />
@@ -367,7 +394,7 @@ export function ThemeGallery({
             className="h-8 pl-8 text-sm"
           />
         </div>
-        <Segmented
+        <SegmentedControl<ModeFilter>
           value={mode}
           ariaLabel={t("theme.gallery.modeLabel")}
           onChange={setMode}
@@ -377,9 +404,8 @@ export function ThemeGallery({
             { value: "light", label: t("theme.gallery.mode.light") },
           ]}
         />
-        <Segmented
+        <SortMenu<GallerySort>
           value={sort}
-          ariaLabel={t("theme.gallery.sortLabel")}
           onChange={setSort}
           options={[
             { value: "new", label: t("theme.gallery.sort.new") },
@@ -390,7 +416,7 @@ export function ThemeGallery({
 
       {status === "error" && items.length === 0 ? (
         <div className="flex flex-col items-start gap-2 rounded-lg bg-surface-2 px-4 py-3.5">
-          <div className="text-sm text-foreground">{t("theme.gallery.errors.load")}</div>
+          <div className="text-sm text-foreground">{t("theme.gallery.errors.loadFailed")}</div>
           <Button variant="secondary" size="sm" onClick={() => void load(1)}>
             <RefreshCw />
             {t("common.retry")}
@@ -403,14 +429,21 @@ export function ThemeGallery({
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="rounded-lg bg-surface-2 px-4 py-3.5">
-          <div className="text-sm text-foreground">
-            {filtered ? t("theme.gallery.emptyFiltered") : t("theme.gallery.empty")}
-          </div>
-          {!filtered && (
-            <div className="mt-1 text-xs text-muted-foreground">{t("theme.gallery.emptyHint")}</div>
-          )}
-        </div>
+        <Empty className="rounded-lg bg-surface-2 p-5">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              {filtered ? <Search /> : <Palette />}
+            </EmptyMedia>
+            <EmptyTitle>
+              {filtered ? t("theme.gallery.emptyFiltered") : t("theme.gallery.empty")}
+            </EmptyTitle>
+            {!filtered && (
+              <EmptyDescription className="text-xs">
+                {t("theme.gallery.emptyHint")}
+              </EmptyDescription>
+            )}
+          </EmptyHeader>
+        </Empty>
       ) : (
         <>
           <div className="grid grid-cols-4 gap-2">
@@ -421,6 +454,7 @@ export function ThemeGallery({
                 accent={accent}
                 state={stateOf(item)}
                 busy={installing !== null}
+                installing={installing === item.id}
                 onInstall={() => void install(item)}
               />
             ))}
@@ -438,10 +472,6 @@ export function ThemeGallery({
           )}
         </>
       )}
-
-      {account?.accessToken ? (
-        <MyPublications token={account.accessToken} />
-      ) : null}
 
       {focus && (
         <FocusedTheme id={focus} accent={accent} onClose={() => setFocus(null)} />

@@ -39,7 +39,7 @@ export function UnsavedCloseHost() {
   if (reason.servers) {
     return (
       <Confirmation
-        title={t("serverManager.closeTitle")}
+        title={t("serverManager.closeQuestion")}
         content={[
           { text: t("serverManager.closeHint"), color: "warning" },
           ...(reason.install
@@ -72,7 +72,7 @@ export function UnsavedCloseHost() {
   if (reason.install) {
     return (
       <Confirmation
-        title={t("taskCenter.closeTitle")}
+        title={t("taskCenter.closeQuestion")}
         reversible={false}
         content={[
           { text: installHint, color: "warning" },
@@ -103,7 +103,7 @@ export function UnsavedCloseHost() {
     <Confirmation
       content={[{ text: t("versions.notSavedHint"), color: "warning" }]}
       onClose={() => setReason(null)}
-      title={t("versions.notSavedTitle")}
+      title={t("versions.closeUnsavedQuestion")}
       reversible={false}
       buttons={[
         {

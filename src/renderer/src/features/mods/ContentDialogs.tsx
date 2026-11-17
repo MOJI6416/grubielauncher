@@ -4,7 +4,6 @@ import {
   IAddedLocalProject,
   ILocalIdentifyMatch,
   ILocalProject,
-  LocalModDependencyIndex,
   IModpack,
   IProject,
   IVersion as ModVersion,
@@ -15,7 +14,7 @@ import {
   BlockedMods,
   IBlockedMod,
 } from "@renderer/components/Modals/BlockedMods";
-import { ContentEntry, entryKey, isSameLocalProject } from "./entries";
+import { entryKey, isSameLocalProject } from "./entries";
 import { toLocalProject } from "./updates";
 import { TrashEntry } from "./trash";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
@@ -26,18 +25,10 @@ import { type DetailState } from "./contentManagerParts";
 import type { RefObject } from "react";
 import type { TFunction } from "i18next";
 
-import type { DeletionPlan } from "@renderer/utilities/mod";
-
 const api = window.api;
 
 export interface ContentDialogsProps {
-  applyDeletion: (
-    targets: ContentEntry[],
-    mode: "selected" | "dependencies" | "dependents",
-    dependencyIndex?: LocalModDependencyIndex | undefined,
-  ) => void;
   blockedMods: IBlockedMod[];
-  cascadeDeletionPlan: DeletionPlan;
   clearTrash: () => Promise<void>;
   detail: DetailState | null;
   detailSelectedVersion: ModVersion | null;
@@ -53,9 +44,6 @@ export interface ContentDialogsProps {
   mods: ILocalProject[];
   onClose: (modpack?: IModpack) => void;
   paths: { launcher: string; minecraft: string; java: string };
-  pendingDeletion: ContentEntry[] | null;
-  pendingDeletionPlan: DeletionPlan;
-  pendingDeletionTargets: ILocalProject[];
   projectType: ProjectType;
   restorableTrash: TrashEntry[];
   setBlockedMods: Dispatch<SetStateAction<IBlockedMod[]>>;
@@ -69,16 +57,13 @@ export interface ContentDialogsProps {
   setModpack: (modpack: IModpack) => void;
   setModpackStage: Dispatch<SetStateAction<"download" | "extract" | null>>;
   setMods: (mods: ILocalProject[]) => void;
-  setPendingDeletion: Dispatch<SetStateAction<ContentEntry[] | null>>;
   setPendingRemoved: Dispatch<SetStateAction<ILocalProject[]>>;
   sizeUnits: string[];
   t: TFunction<"translation", undefined>;
 }
 
 export function ContentDialogs({
-  applyDeletion,
   blockedMods,
-  cascadeDeletionPlan,
   clearTrash,
   detail,
   detailSelectedVersion,
@@ -94,9 +79,6 @@ export function ContentDialogs({
   mods,
   onClose,
   paths,
-  pendingDeletion,
-  pendingDeletionPlan,
-  pendingDeletionTargets,
   projectType,
   restorableTrash,
   setBlockedMods,
@@ -110,7 +92,6 @@ export function ContentDialogs({
   setModpack,
   setModpackStage,
   setMods,
-  setPendingDeletion,
   setPendingRemoved,
   sizeUnits,
   t,
@@ -182,66 +163,6 @@ export function ContentDialogs({
             );
           }}
         />
-      )}
-
-      {pendingDeletion && (
-        <Confirmation
-          title={t("modManager.deleteTitle")}
-          wide
-          reversible
-          content={[
-            {
-              text: t("modManager.deleteSelected", {
-                names: pendingDeletionTargets
-                  .map((item) => item.title)
-                  .join(", "),
-              }),
-            },
-            ...(pendingDeletionPlan.blockers.length > 0
-              ? [
-                  {
-                    text: t("modManager.deleteDependencyWarning"),
-                    color: "warning" as const,
-                  },
-                ]
-              : []),
-            { text: t("modManager.deleteSaveHint") },
-          ]}
-          buttons={[
-            {
-              text: t("common.cancel"),
-              color: "secondary",
-              onClick: () => setPendingDeletion(null),
-            },
-            {
-              text: t(
-                pendingDeletionPlan.blockers.length > 0
-                  ? "modManager.deleteWithDependents"
-                  : "modManager.deleteWithDependencies",
-                { count: cascadeDeletionPlan.remove.length },
-              ),
-              color: "danger",
-              onClick: () => applyDeletion(pendingDeletion, "dependents"),
-            },
-            {
-              text: t("modManager.deleteOnlySelected"),
-              color: "warning",
-              onClick: () => applyDeletion(pendingDeletion, "selected"),
-            },
-          ]}
-          onClose={() => setPendingDeletion(null)}
-        >
-          <div className="min-w-0 rounded-lg border border-border p-3 text-sm">
-            <p className="mb-2 text-muted-foreground">
-              {t("modManager.deleteList")}
-            </p>
-            <ul className="max-h-52 list-outside list-disc space-y-1 overflow-y-auto pl-5 [overflow-wrap:anywhere]">
-              {cascadeDeletionPlan.remove.map((item) => (
-                <li key={entryKey(item.provider, item.id)}>{item.title}</li>
-              ))}
-            </ul>
-          </div>
-        </Confirmation>
       )}
 
       {isClearTrashOpen && (

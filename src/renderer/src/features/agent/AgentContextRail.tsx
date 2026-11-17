@@ -12,7 +12,11 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
+import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
+import { formatNumber } from "@renderer/utilities/numbers";
+import { showUndoToast } from "@renderer/utilities/undoToast";
 import {
+  grantAlways,
   listGrants,
   parseGrantKey,
   revokeAlways,
@@ -58,14 +62,26 @@ export function AgentContextRail({
     setGrants(listGrants());
   }, [chat.timeline]);
 
+  const grantKeys = useMemo(() => new Set(grants), [grants]);
+
+  const revoke = (key: string, label: string) => {
+    const grant = parseGrantKey(key);
+    revokeAlways(key);
+    setGrants(listGrants());
+    showUndoToast(t("agent.rail.revoked", { name: label }), () => {
+      grantAlways(grant.name, grant.scope);
+      setGrants(listGrants());
+    });
+  };
+
   return (
     <aside className="flex h-full min-h-0 w-60 shrink-0 flex-col gap-2.5 overflow-y-auto rounded-xl border border-border bg-surface-1 p-2.5">
       <div>
         <div className="flex items-baseline gap-2 px-1 pb-1.5">
-          <span className="text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+          <span className="text-3xs font-semibold tracking-[0.09em] text-faint uppercase">
             {t("agent.rail.tools")}
           </span>
-          <span className="ml-auto font-mono text-[0.65rem] tabular-nums text-faint">
+          <span className="ml-auto font-mono text-3xs tabular-nums text-faint">
             {totals.available}/{totals.total}
           </span>
         </div>
@@ -88,16 +104,23 @@ export function AgentContextRail({
                     "flex h-7 w-full items-center gap-2 rounded-md px-1.5 text-left text-xs transition-colors",
                     isOpen
                       ? "bg-surface-2 text-foreground"
-                      : "text-muted-foreground hover:bg-surface-2",
+                      : "text-muted-foreground hover:bg-row-hover",
                   )}
                 >
-                  <span className="min-w-0 flex-1 truncate">
-                    {t(`agent.rail.groups.${group.id}`)}
-                  </span>
+                  <Hint
+                    content={t(`agent.rail.groups.${group.id}`)}
+                    variant="text"
+                    side="left"
+                    truncatedOnly
+                  >
+                    <span className="min-w-0 flex-1 truncate">
+                      {t(`agent.rail.groups.${group.id}`)}
+                    </span>
+                  </Hint>
                   {blocked > 0 && (
                     <TriangleAlert className="size-3 shrink-0 text-faint" />
                   )}
-                  <span className="shrink-0 font-mono text-[0.65rem] tabular-nums text-faint">
+                  <span className="shrink-0 font-mono text-3xs whitespace-nowrap tabular-nums text-faint">
                     {group.availableCount}
                   </span>
                 </button>
@@ -125,7 +148,7 @@ export function AgentContextRail({
                         >
                           <li
                             className={cn(
-                              "flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[0.7rem]",
+                              "flex items-center gap-1.5 rounded px-1.5 py-0.5 text-2xs",
                               entry.available
                                 ? "text-muted-foreground"
                                 : "text-faint line-through",
@@ -158,74 +181,73 @@ export function AgentContextRail({
 
       <div>
         <div className="flex items-baseline gap-2 px-1 pb-1.5">
-          <span className="text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+          <span className="text-3xs font-semibold tracking-[0.09em] text-faint uppercase">
             {t("agent.rail.permissions")}
           </span>
         </div>
 
         {grants.length === 0 ? (
-          <p className="flex items-start gap-1.5 px-1 text-[0.7rem] leading-4 text-faint">
+          <p className="flex items-start gap-1.5 px-1 text-2xs leading-4 text-faint">
             <ShieldCheck className="mt-0.5 size-3.5 shrink-0" />
             {t("agent.rail.permissionsEmpty")}
           </p>
         ) : (
-          <ul className="space-y-0.5">
-            {grants.map((key) => {
-              const grant = parseGrantKey(key);
-              const label = t(`agent.toolNames.${grant.name}`, {
-                defaultValue: grant.name,
-              });
-              const where =
-                grant.scope ?? t("agent.rail.grantEverywhere");
+          <div className="flex flex-col gap-0.5">
+            <RemovalList sourceKeys={grantKeys}>
+              {grants.map((key) => {
+                const grant = parseGrantKey(key);
+                const label = t(`agent.toolNames.${grant.name}`, {
+                  defaultValue: grant.name,
+                });
+                const where =
+                  grant.scope ?? t("agent.rail.grantEverywhere");
 
-              return (
-                <li
-                  key={key}
-                  className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[0.7rem] text-muted-foreground"
-                >
-                  <Pencil className="mt-0.5 size-3 shrink-0 self-start text-warning" />
-                  <Hint
-                    content={`${label} · ${where}`}
-                    variant="text"
-                    side="left"
-                  >
-                    <span className="grid min-w-0 flex-1 gap-px">
-                      <span className="truncate">{label}</span>
-                      <span className="truncate text-faint">{where}</span>
-                    </span>
-                  </Hint>
-                  <Hint content={t("agent.rail.revoke")}>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-label={t("agent.rail.revoke")}
-                      onClick={() => {
-                        revokeAlways(key);
-                        setGrants(listGrants());
-                      }}
-                    >
-                      <Trash2 />
-                    </Button>
-                  </Hint>
-                </li>
-              );
-            })}
-          </ul>
+                return (
+                  <RemovalItem key={key} itemKey={key}>
+                    <div className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-2xs text-muted-foreground">
+                      <Pencil className="mt-0.5 size-3 shrink-0 self-start text-warning" />
+                      <Hint
+                        content={`${label} · ${where}`}
+                        variant="text"
+                        side="left"
+                        truncatedOnly
+                      >
+                        <span className="grid min-w-0 flex-1 gap-px">
+                          <span className="truncate">{label}</span>
+                          <span className="truncate text-faint">{where}</span>
+                        </span>
+                      </Hint>
+                      <Hint content={t("agent.rail.revoke")}>
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={t("agent.rail.revoke")}
+                          onClick={() => revoke(key, label)}
+                        >
+                          <Trash2 />
+                        </Button>
+                      </Hint>
+                    </div>
+                  </RemovalItem>
+                );
+              })}
+            </RemovalList>
+          </div>
         )}
       </div>
 
       {(chat.usage?.totalTokens || chat.steps > 0) && (
         <div className="mt-auto rounded-lg bg-surface-2 p-2">
-          <div className="flex items-center gap-1.5 pb-1 text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+          <div className="flex items-center gap-1.5 pb-1 text-3xs font-semibold tracking-[0.09em] text-faint uppercase">
             <Coins className="size-3" />
             {t("agent.rail.usage")}
           </div>
-          <dl className="space-y-0.5 text-[0.7rem]">
+          <dl className="space-y-0.5 text-2xs">
             {chat.usage?.totalTokens ? (
               <div className="flex items-center justify-between gap-2">
                 <dt className="text-faint">{t("agent.rail.tokens")}</dt>
                 <dd className="font-mono tabular-nums text-muted-foreground">
-                  {chat.usage.totalTokens}
+                  {formatNumber(chat.usage.totalTokens)}
                 </dd>
               </div>
             ) : null}

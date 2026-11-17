@@ -5,6 +5,8 @@ import { isEmptyDiff } from "@/shared/modpackDiff";
 import { getLoaderInfo } from "@renderer/components/Loaders";
 import { ModpackDiffPanel } from "./ModpackDiffPanel";
 import { UpdateSummary, invertUpdateSummary } from "./updateSummary";
+import { Hint } from "@renderer/components/Hint";
+import { Empty, EmptyDescription, EmptyMedia } from "@/components/ui/empty";
 
 export function InstanceUpdateDetails({
   summary: incoming,
@@ -22,18 +24,28 @@ export function InstanceUpdateDetails({
     <div className="flex h-full min-h-0 flex-col gap-2">
       <div className="flex h-7 shrink-0 items-center gap-2">
         <CloudDownload className="size-3.5 shrink-0 text-warning" />
-        <span className="min-w-0 flex-1 truncate text-[0.68rem] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-          {t(
+        <Hint
+          content={t(
             isDownloaded
               ? "versions.update.sectionTitle"
               : "versions.update.publishSectionTitle",
           )}
-        </span>
+          variant="text"
+          truncatedOnly
+        >
+          <span className="min-w-0 flex-1 truncate text-2xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
+            {t(
+              isDownloaded
+                ? "versions.update.sectionTitle"
+                : "versions.update.publishSectionTitle",
+            )}
+          </span>
+        </Hint>
         <Button
           type="button"
           size="sm"
           variant="ghost"
-          className="h-6 px-2 text-[0.7rem] text-faint"
+          className="h-6 px-2 text-2xs text-faint"
           onClick={onClose}
         >
           <X />
@@ -74,12 +86,14 @@ export function InstanceUpdateDetails({
       )}
 
       {isEmptyDiff(summary.diff) ? (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-6 text-center">
-          <PackageCheck className="size-5 text-faint" />
-          <p className="text-xs font-medium text-muted-foreground">
+        <Empty className="min-h-0 flex-1 gap-1.5 border border-border bg-card px-6">
+          <EmptyMedia variant="icon">
+            <PackageCheck />
+          </EmptyMedia>
+          <EmptyDescription className="text-xs font-medium">
             {t("modpackDiff.unchanged", { count: summary.diff.unchanged })}
-          </p>
-        </div>
+          </EmptyDescription>
+        </Empty>
       ) : (
         <ModpackDiffPanel fill diff={summary.diff} />
       )}

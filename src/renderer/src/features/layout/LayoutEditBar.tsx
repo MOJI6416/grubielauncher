@@ -36,7 +36,7 @@ export function LayoutEditBar() {
       aria-label={t("layout.customize")}
       className="absolute bottom-3 left-1/2 z-40 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-3 rounded-xl border border-border bg-popover py-2 pr-2 pl-3.5 shadow-lg"
     >
-      <LayoutTemplate className="size-4 shrink-0 text-primary" />
+      <LayoutTemplate className="size-4 shrink-0 text-muted-foreground" />
       <p className="w-72 min-w-0 shrink text-xs leading-snug text-muted-foreground">
         {t("layout.editHint")}
       </p>

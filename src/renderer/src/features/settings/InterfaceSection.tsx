@@ -18,7 +18,9 @@ import {
   type TSettings,
 } from "@/types/Settings";
 import { formatUiScale, UI_SCALES, type UiScaleOption } from "@/shared/uiScale";
-import { SettingRow, SettingsGroup, Segmented } from "./SettingsPrimitives";
+import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { Hint } from "@renderer/components/Hint";
 import type { SettingsEntryId } from "./catalog";
 import { SHORTCUT_GROUPS, shortcutKey } from "./shortcuts";
 import {
@@ -67,7 +69,7 @@ function Keys({ combos }: { combos: string[][] }) {
           {combo.map((key) => (
             <kbd
               key={key}
-              className="min-w-6 rounded-md border border-border bg-surface-3 px-1.5 py-0.5 text-center font-mono text-[0.65rem] leading-4 text-muted-foreground"
+              className="min-w-6 rounded-md border border-border bg-surface-3 px-1.5 py-0.5 text-center font-mono text-3xs leading-4 text-muted-foreground"
             >
               {key}
             </kbd>
@@ -163,7 +165,13 @@ export function InterfaceSection({
                     {selected && (
                       <span className="flex min-w-0 items-center gap-2">
                         <ReactCountryFlag svg countryCode={selected.country} />
-                        <span className="truncate">{selected.label}</span>
+                        <Hint
+                          content={selected.label}
+                          variant="text"
+                          truncatedOnly
+                        >
+                          <span className="truncate">{selected.label}</span>
+                        </Hint>
                       </span>
                     )}
                   </SelectValue>
@@ -191,7 +199,7 @@ export function InterfaceSection({
             changed={isChanged("uiScale")}
             onReset={() => reset("uiScale")}
             control={
-              <Segmented<string>
+              <SegmentedControl<string>
                 ariaLabel={t("settings.interface.uiScale")}
                 value={String(shownScale)}
                 onChange={(value) => commit({ uiScale: Number(value) })}
@@ -241,7 +249,7 @@ export function InterfaceSection({
             changed={isChanged("motion")}
             onReset={() => reset("motion")}
             control={
-              <Segmented<MotionSetting>
+              <SegmentedControl<MotionSetting>
                 ariaLabel={t("settings.interface.motion")}
                 value={settings.motion}
                 onChange={(value) => commit({ motion: value })}
@@ -347,7 +355,7 @@ export function InterfaceSection({
             changed={isChanged("logFontSize")}
             onReset={() => reset("logFontSize")}
             control={
-              <Segmented<string>
+              <SegmentedControl<string>
                 ariaLabel={t("settings.interface.logFontSize")}
                 value={String(settings.logFontSize)}
                 onChange={(value) => commit({ logFontSize: Number(value) })}
@@ -378,11 +386,19 @@ export function InterfaceSection({
                   key={shortcut.id}
                   className="flex items-center gap-3 px-3.5 py-1.5"
                 >
-                  <span className="min-w-0 flex-1 truncate text-sm text-foreground">
-                    {t(
+                  <Hint
+                    content={t(
                       `settings.interface.shortcuts.${shortcutKey(group.id, shortcut.id)}`,
                     )}
-                  </span>
+                    variant="text"
+                    truncatedOnly
+                  >
+                    <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                      {t(
+                        `settings.interface.shortcuts.${shortcutKey(group.id, shortcut.id)}`,
+                      )}
+                    </span>
+                  </Hint>
                   <Keys combos={shortcut.combos} />
                 </div>
               ))}

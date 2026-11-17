@@ -1,3 +1,4 @@
+import { ignoreFailure } from "./ignoreFailure";
 import { getDefaultStore } from "jotai";
 import { settingsAtom } from "@renderer/stores/atoms";
 import { applySavedAudioOutput } from "./voiceDevices";
@@ -37,13 +38,13 @@ export function playSound(kind: SoundKind) {
 
   const audio = new Audio(SOUND_URLS[kind]);
   audio.volume = soundVolume();
-  void audio.play().catch(() => {});
+  void audio.play().catch(ignoreFailure);
 }
 
 export function previewSound(volume: number) {
   const audio = new Audio(SOUND_URLS.notify);
   audio.volume = Math.min(1, Math.max(0, volume / 100));
-  void audio.play().catch(() => {});
+  void audio.play().catch(ignoreFailure);
 }
 
 export type VoiceSoundKind =
@@ -87,7 +88,7 @@ export function playVoiceSound(
   const audio = new Audio(VOICE_SOUND_URLS[kind]);
   audio.volume = soundVolume();
   applySavedAudioOutput(audio);
-  void audio.play().catch(() => {});
+  void audio.play().catch(ignoreFailure);
 }
 
 let achievementLastPlayedAt = 0;
@@ -102,5 +103,5 @@ export function playAchievementSound() {
 
   const audio = new Audio(achievementUrl);
   audio.volume = soundVolume();
-  void audio.play().catch(() => {});
+  void audio.play().catch(ignoreFailure);
 }

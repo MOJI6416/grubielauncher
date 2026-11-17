@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useSetAtom } from "jotai";
 import { appUpdateAtom } from "@renderer/features/appUpdate/appUpdate";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -14,7 +15,7 @@ export function AppUpdateHost() {
       .then((state) => {
         if (!cancelled) setState(state);
       })
-      .catch(() => undefined);
+      .catch(ignoreFailure);
 
     const stop = api.appUpdate.onState(setState);
     return () => {

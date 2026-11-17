@@ -3,21 +3,22 @@ import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
 import {
   ChevronRight,
-  Gamepad2,
+  Globe,
   Layers,
-  Loader2,
-  Sparkles,
+  Star,
   Target,
   TriangleAlert,
   Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Empty, EmptyContent, EmptyDescription } from "@/components/ui/empty";
 import { Hint } from "@renderer/components/Hint";
+import { formatNumber } from "@renderer/utilities/numbers";
 import { IAchievementStats } from "@/types/Achievements";
 import { versionsAtom } from "@renderer/stores/atoms";
 import { instanceStatsAtom } from "@renderer/features/instances/instanceStats";
 import { instanceKey } from "@renderer/features/instances/selectors";
-import { formatTime } from "@renderer/utilities/date";
 import {
   CATEGORY_ICON,
   CATEGORY_ORDER,
@@ -42,6 +43,7 @@ import {
   hasWorldData,
   reachPercentParts,
 } from "./profileMetrics";
+import { formatDuration } from "@renderer/utilities/duration";
 
 const SHOWCASE_SLOTS = 6;
 const GUEST_SHOWCASE_SLOTS = 12;
@@ -66,7 +68,9 @@ function Panel({
     >
       <header className="flex h-5 shrink-0 items-center gap-2">
         <Icon className="size-4 shrink-0 text-faint" />
-        <h3 className="min-w-0 truncate text-sm font-medium">{title}</h3>
+        <Hint content={title} variant="text" truncatedOnly>
+          <h3 className="min-w-0 truncate text-sm font-medium">{title}</h3>
+        </Hint>
         {action && <div className="ml-auto shrink-0">{action}</div>}
       </header>
       {children}
@@ -106,9 +110,7 @@ export function ProfileOverview({
   onRetryWorldStats?: () => void;
   onOpenAchievements: () => void;
 }) {
-  const { t, i18n } = useTranslation();
-  const formatNumber = (value: number) =>
-    new Intl.NumberFormat(i18n.resolvedLanguage || i18n.language).format(value);
+  const { t } = useTranslation();
 
   const showcase = useMemo(
     () => pickShowcase(rows, isOwner ? SHOWCASE_SLOTS : GUEST_SHOWCASE_SLOTS),
@@ -246,11 +248,11 @@ function ShowcaseTile({
         >
           <Icon className="size-5" />
         </span>
-        <span className="w-full truncate text-center text-[11px] leading-tight text-muted-foreground">
+        <span className="w-full truncate text-center text-2xs leading-tight text-muted-foreground">
           {t(`achievements.items.${row.id}.name`)}
         </span>
         <span
-          className={`truncate font-mono text-[10px] tabular-nums ${RARITY_TEXT[row.rarity]}`}
+          className={`truncate font-mono text-3xs tabular-nums ${RARITY_TEXT[row.rarity]}`}
         >
           {parts
             ? `${parts.belowFloor ? "<" : ""}${formatNumber(parts.value)}%`
@@ -308,10 +310,16 @@ function ChasePanel({
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-baseline gap-2">
-                    <p className="min-w-0 flex-1 truncate text-xs font-medium">
-                      {t(`achievements.items.${row.id}.name`)}
-                    </p>
-                    <span className="shrink-0 font-mono text-[10px] tabular-nums text-faint">
+                    <Hint
+                      content={t(`achievements.items.${row.id}.name`)}
+                      variant="text"
+                      truncatedOnly
+                    >
+                      <p className="min-w-0 flex-1 truncate text-xs font-medium">
+                        {t(`achievements.items.${row.id}.name`)}
+                      </p>
+                    </Hint>
+                    <span className="shrink-0 font-mono text-3xs tabular-nums text-faint">
                       {Math.round(row.ratio * 100)}%
                     </span>
                   </div>
@@ -321,12 +329,21 @@ function ChasePanel({
                       style={{ width: `${Math.round(row.ratio * 100)}%` }}
                     />
                   </div>
-                  <p className="mt-0.5 truncate text-[10px] text-faint">
-                    {t("profile.remaining", {
+                  <Hint
+                    content={t("profile.remaining", {
                       value: formatNumber(remainingToGoal(row)),
                       unit: unitLabel(row, t),
                     })}
-                  </p>
+                    variant="text"
+                    truncatedOnly
+                  >
+                    <p className="mt-0.5 truncate text-3xs text-faint">
+                      {t("profile.remaining", {
+                        value: formatNumber(remainingToGoal(row)),
+                        unit: unitLabel(row, t),
+                      })}
+                    </p>
+                  </Hint>
                 </div>
               </div>
             );
@@ -381,7 +398,7 @@ function WorldStatsPanel({
   return (
     <Panel
       title={t("profile.worldStats")}
-      icon={Gamepad2}
+      icon={Globe}
       className="shrink-0"
       action={
         isPartial && !isLoading && !hasFailed ? (
@@ -389,7 +406,7 @@ function WorldStatsPanel({
             <button
               type="button"
               onClick={onRetry}
-              className="flex items-center gap-1 rounded-md text-[11px] text-warning transition-colors hover:text-foreground"
+              className="flex items-center gap-1 rounded-md text-2xs text-warning transition-colors hover:text-foreground"
             >
               <TriangleAlert className="size-3.5" />
               {t("profile.worldStatsPartialShort")}
@@ -399,24 +416,33 @@ function WorldStatsPanel({
       }
     >
       {isLoading ? (
-        <div className="flex h-28 items-center justify-center">
-          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        <div aria-busy className="grid h-28 gap-2">
+          <div className="grid grid-cols-4 gap-1.5">
+            {Array.from({ length: 4 }, (_, index) => (
+              <Skeleton key={index} className="h-12 rounded-lg" />
+            ))}
+          </div>
+          <Skeleton className="h-11 rounded-lg" />
         </div>
       ) : hasFailed ? (
-        <div className="flex h-28 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 text-center">
-          <p className="text-xs text-muted-foreground">
+        <Empty className="h-28 flex-none gap-2 rounded-lg border border-border px-4 py-2">
+          <EmptyDescription className="text-xs">
             {t("profile.worldStatsFailed")}
-          </p>
+          </EmptyDescription>
           {onRetry && (
-            <Button variant="secondary" size="sm" onClick={onRetry}>
-              {t("common.retry")}
-            </Button>
+            <EmptyContent>
+              <Button variant="outline" size="sm" onClick={onRetry}>
+                {t("common.retry")}
+              </Button>
+            </EmptyContent>
           )}
-        </div>
+        </Empty>
       ) : !stats || !hasWorldData(stats) ? (
-        <p className="flex h-28 items-center justify-center rounded-lg border border-dashed border-border px-4 text-center text-xs text-muted-foreground">
-          {t("profile.worldStatsEmpty")}
-        </p>
+        <Empty className="h-28 flex-none rounded-lg border border-border px-4 py-2">
+          <EmptyDescription className="text-xs">
+            {t("profile.worldStatsEmpty")}
+          </EmptyDescription>
+        </Empty>
       ) : (
         <div className="grid gap-2">
           <div className="grid grid-cols-4 gap-1.5">
@@ -425,14 +451,30 @@ function WorldStatsPanel({
                 key={metric.key}
                 className="flex h-12 flex-col items-center justify-center rounded-lg bg-surface-1 px-1"
               >
-                <span className="w-full truncate text-center font-mono text-sm tabular-nums">
-                  {formatNumber(metric.value)}
-                  {metric.unit === "km" ? ` ${t("achievements.unit.km")}` : ""}
-                  {metric.unit === "hours" ? ` ${t("time.h")}` : ""}
-                </span>
-                <span className="w-full truncate text-center text-[10px] text-faint">
-                  {t(`profile.metrics.${metric.key}`)}
-                </span>
+                <Hint
+                  content={`${formatNumber(metric.value)}${
+                    metric.unit === "km" ? ` ${t("achievements.unit.km")}` : ""
+                  }${metric.unit === "hours" ? ` ${t("time.h")}` : ""}`}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <span className="w-full truncate text-center font-mono text-sm tabular-nums">
+                    {formatNumber(metric.value)}
+                    {metric.unit === "km"
+                      ? ` ${t("achievements.unit.km")}`
+                      : ""}
+                    {metric.unit === "hours" ? ` ${t("time.h")}` : ""}
+                  </span>
+                </Hint>
+                <Hint
+                  content={t(`profile.metrics.${metric.key}`)}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <span className="w-full truncate text-center text-3xs text-faint">
+                    {t(`profile.metrics.${metric.key}`)}
+                  </span>
+                </Hint>
               </div>
             ))}
           </div>
@@ -440,12 +482,18 @@ function WorldStatsPanel({
           {favourite && (
             <div className="flex h-11 min-w-0 items-center gap-2 rounded-lg bg-surface-1 px-2">
               <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-muted-foreground">
-                <Sparkles className="size-3.5" />
+                <Star className="size-3.5" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[10px] text-faint">
-                  {t("profile.favouriteInstance")}
-                </p>
+                <Hint
+                  content={t("profile.favouriteInstance")}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <p className="truncate text-3xs text-faint">
+                    {t("profile.favouriteInstance")}
+                  </p>
+                </Hint>
                 <Hint content={favourite.name} variant="text" truncatedOnly>
                   <p className="truncate text-xs font-medium">
                     {favourite.name}
@@ -453,11 +501,7 @@ function WorldStatsPanel({
                 </Hint>
               </div>
               <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
-                {formatTime(favourite.playTime, {
-                  h: t("time.h"),
-                  m: t("time.m"),
-                  s: t("time.s"),
-                })}
+                {formatDuration(favourite.playTime, { withSeconds: true })}
               </span>
             </div>
           )}
@@ -499,10 +543,16 @@ function CategoryPanel({
                 style={{ width: `${Math.round(ratio * 100)}%` }}
               />
               <Icon className="relative size-3 shrink-0 text-faint" />
-              <span className="relative min-w-0 flex-1 truncate text-[11px]">
-                {t(`achievements.categories.${entry.category}`)}
-              </span>
-              <span className="relative shrink-0 font-mono text-[10px] tabular-nums text-faint">
+              <Hint
+                content={t(`achievements.categories.${entry.category}`)}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="relative min-w-0 flex-1 truncate text-2xs">
+                  {t(`achievements.categories.${entry.category}`)}
+                </span>
+              </Hint>
+              <span className="relative shrink-0 font-mono text-3xs tabular-nums text-faint">
                 {entry.unlocked}/{entry.total}
               </span>
             </div>
@@ -544,9 +594,15 @@ function CollectionPanel({
             >
               {formatNumber(counts.get(rarity) ?? 0)}
             </span>
-            <span className="w-full truncate text-center text-[10px] text-faint">
-              {t(`achievements.rarity.${rarity}`)}
-            </span>
+            <Hint
+              content={t(`achievements.rarity.${rarity}`)}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="w-full truncate text-center text-3xs text-faint">
+                {t(`achievements.rarity.${rarity}`)}
+              </span>
+            </Hint>
           </div>
         ))}
       </div>
@@ -556,17 +612,22 @@ function CollectionPanel({
 
 function PanelLoader() {
   return (
-    <div className="flex min-h-0 flex-1 items-center justify-center">
-      <Loader2 className="size-5 animate-spin text-muted-foreground" />
+    <div
+      aria-busy
+      className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden"
+    >
+      {Array.from({ length: 4 }, (_, index) => (
+        <Skeleton key={index} className="h-14 shrink-0 rounded-lg" />
+      ))}
     </div>
   );
 }
 
 function PanelEmpty({ text }: { text: string }) {
   return (
-    <p className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border px-4 text-center text-xs text-muted-foreground">
-      {text}
-    </p>
+    <Empty className="min-h-0 rounded-lg border border-border px-4 py-2">
+      <EmptyDescription className="text-xs">{text}</EmptyDescription>
+    </Empty>
   );
 }
 

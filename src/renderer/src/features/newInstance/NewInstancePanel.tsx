@@ -10,7 +10,6 @@ import {
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { SiModrinth } from "react-icons/si";
 import {
   FolderInput,
   HardDriveDownload,
@@ -132,6 +131,9 @@ import { versionKind } from "./versionCatalog";
 import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
 import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { Hint } from "@renderer/components/Hint";
 
 const api = window.api;
 
@@ -325,7 +327,7 @@ export function NewInstancePanel({
   const discardTempPack = useCallback(async (target?: string) => {
     if (!target) return;
 
-    await api.fs.rimraf(target).catch(() => undefined);
+    await api.fs.rimraf(target).catch(ignoreFailure);
   }, []);
 
   const cleanupTemp = useCallback(async () => {
@@ -333,7 +335,7 @@ export function NewInstancePanel({
       state.pack?.importData?.path ?? state.pack?.importModpack?.folderPath;
     if (!target) return;
 
-    await api.fs.rimraf(target).catch(() => undefined);
+    await api.fs.rimraf(target).catch(ignoreFailure);
   }, [state.pack]);
 
   const applyImportedPack = useCallback(
@@ -678,7 +680,7 @@ export function NewInstancePanel({
       try {
         const pack = await api.servers
           .discoverPack(server.content.projectId, server.content.versionId)
-          .catch(() => null);
+          .catch(ignoreFailure);
 
         if (requestId !== packRequestRef.current) return;
 
@@ -1067,6 +1069,14 @@ export function NewInstancePanel({
     ? t(`newInstance.blockers.${blockers[0]}`)
     : "";
 
+  const footerHint = isPicking
+    ? t(
+        state.source === "server" && serverMode === "modrinth"
+          ? "newInstance.pickHint.serverCatalog"
+          : `newInstance.pickHint.${state.source}`,
+      )
+    : blockerLabel || t("newInstance.readyHint");
+
   const serverSwitch = (
     <DiscoverSwitch
       value={serverMode}
@@ -1077,7 +1087,12 @@ export function NewInstancePanel({
         {
           id: "modrinth",
           label: "Modrinth",
-          icon: <SiModrinth className="size-4" />,
+          icon: (
+            <ContentProviderIcon
+              provider={Provider.MODRINTH}
+              className="size-4"
+            />
+          ),
         },
         {
           id: "address",
@@ -1101,9 +1116,9 @@ export function NewInstancePanel({
           <SlidingIndicator
             indicator={sourceIndicator}
             variant="fill"
-            className="rounded-lg bg-primary-soft"
+            className="rounded-lg bg-row-selected"
           />
-          <span className="px-2.5 pt-1 pb-2 text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+          <span className="px-2.5 pt-1 pb-2 text-3xs font-semibold tracking-[0.09em] text-faint uppercase">
             {t("addVersion.sourceTitle")}
           </span>
 
@@ -1117,22 +1132,28 @@ export function NewInstancePanel({
                 disabled={
                   isInstalling || (!!modpack && source !== state.source)
                 }
-                aria-current={state.source === source}
+                aria-current={state.source === source ? "page" : undefined}
                 data-indicator-active={state.source === source}
                 onClick={() => changeSource(source)}
-                className="relative flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm text-muted-foreground transition-colors not-aria-[current=true]:hover:bg-surface-3 hover:text-foreground aria-[current=true]:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                className="relative flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm text-muted-foreground transition-colors not-aria-[current=page]:hover:bg-row-hover hover:text-foreground aria-[current=page]:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 <Icon className="size-4 shrink-0 text-faint" />
-                <span className="min-w-0 truncate">
-                  {t(`newInstance.sources.${source}`)}
-                </span>
+                <Hint
+                  content={t(`newInstance.sources.${source}`)}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <span className="min-w-0 truncate">
+                    {t(`newInstance.sources.${source}`)}
+                  </span>
+                </Hint>
               </button>
             );
           })}
 
           <div className="mt-auto flex items-start gap-2 rounded-lg border border-dashed border-border p-2.5">
             <FolderInput className="mt-0.5 size-3.5 shrink-0 text-faint" />
-            <span className="min-w-0 text-[0.68rem] leading-snug text-faint">
+            <span className="min-w-0 text-2xs leading-snug text-faint">
               {t("addVersion.dropDescription")}
             </span>
           </div>
@@ -1226,9 +1247,15 @@ export function NewInstancePanel({
                         ) : (
                           <HardDriveDownload />
                         )}
-                        <span className="min-w-0 truncate">
-                          {t("servers.discover.pick")}
-                        </span>
+                        <Hint
+                          content={t("servers.discover.pick")}
+                          variant="text"
+                          truncatedOnly
+                        >
+                          <span className="min-w-0 truncate">
+                            {t("servers.discover.pick")}
+                          </span>
+                        </Hint>
                       </Button>
                     )
                   }
@@ -1288,23 +1315,33 @@ export function NewInstancePanel({
                 {state.serverTarget && (
                   <div className="flex h-9 shrink-0 items-center gap-2.5 rounded-lg border border-border bg-surface-1 pr-1 pl-3">
                     <Signal className="size-4 shrink-0 text-success" />
-                    <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-                      {t("newInstance.server.applied", {
+                    <Hint
+                      content={t("newInstance.server.applied", {
                         address: redact.value(state.serverTarget.address),
                       })}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={t("common.delete")}
-                      onClick={() => {
-                        setPinnedServer(undefined);
-                        if (state.pack) dropPack();
-                        else dispatch({ type: "clearServer" });
-                      }}
+                      variant="text"
+                      truncatedOnly
                     >
-                      <X />
-                    </Button>
+                      <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                        {t("newInstance.server.applied", {
+                          address: redact.value(state.serverTarget.address),
+                        })}
+                      </span>
+                    </Hint>
+                    <Hint content={t("newInstance.server.clear")}>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={t("newInstance.server.clear")}
+                        onClick={() => {
+                          setPinnedServer(undefined);
+                          if (state.pack) dropPack();
+                          else dispatch({ type: "clearServer" });
+                        }}
+                      >
+                        <X />
+                      </Button>
+                    </Hint>
                   </div>
                 )}
 
@@ -1354,9 +1391,15 @@ export function NewInstancePanel({
           <footer className="flex h-14 shrink-0 items-center gap-2 border-t border-border px-4">
             {isInstalling ? (
               <>
-                <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-                  {t("newInstance.installHint")}
-                </span>
+                <Hint
+                  content={t("newInstance.installHint")}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                    {t("newInstance.installHint")}
+                  </span>
+                </Hint>
                 <Button
                   variant="secondary"
                   onClick={() => {
@@ -1369,22 +1412,18 @@ export function NewInstancePanel({
               </>
             ) : (
               <>
-                <span
-                  className={cn(
-                    "min-w-0 flex-1 truncate text-xs",
-                    blockerLabel && !isPicking
-                      ? "text-muted-foreground"
-                      : "text-faint",
-                  )}
-                >
-                  {isPicking
-                    ? t(
-                        state.source === "server" && serverMode === "modrinth"
-                          ? "newInstance.pickHint.serverCatalog"
-                          : `newInstance.pickHint.${state.source}`,
-                      )
-                    : blockerLabel || t("newInstance.readyHint")}
-                </span>
+                <Hint content={footerHint} variant="text" truncatedOnly>
+                  <span
+                    className={cn(
+                      "min-w-0 flex-1 truncate text-xs",
+                      blockerLabel && !isPicking
+                        ? "text-muted-foreground"
+                        : "text-faint",
+                    )}
+                  >
+                    {footerHint}
+                  </span>
+                </Hint>
 
                 <Button variant="ghost" onClick={closeModal}>
                   {t("common.cancel")}

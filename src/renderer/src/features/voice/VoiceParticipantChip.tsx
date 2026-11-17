@@ -78,7 +78,7 @@ export function VoiceParticipantChip({
           <span
             className={cn(
               "block truncate",
-              compact ? "text-[11px] leading-4" : "text-[12px] leading-4",
+              compact ? "text-2xs leading-4" : "text-xs leading-4",
               isSpeaking ? "text-foreground" : "text-muted-foreground",
             )}
           >
@@ -86,9 +86,11 @@ export function VoiceParticipantChip({
           </span>
         </Hint>
         {!compact && (
-          <span className="block truncate text-[10px] leading-3.5 text-faint">
-            {status}
-          </span>
+          <Hint content={status} variant="text" truncatedOnly>
+            <span className="block truncate text-3xs leading-3.5 text-faint">
+              {status}
+            </span>
+          </Hint>
         )}
       </span>
     </>
@@ -122,9 +124,11 @@ export function VoiceParticipantChip({
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" side="top" className="w-60 p-2">
-        <p className="mb-2 truncate px-1 text-sm font-medium">
-          {participant.name}
-        </p>
+        <Hint content={participant.name} variant="text" truncatedOnly>
+          <p className="mb-2 truncate px-1 text-sm font-medium">
+            {participant.name}
+          </p>
+        </Hint>
 
         <div className="rounded-lg bg-surface-2 p-2">
           <div className="mb-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">

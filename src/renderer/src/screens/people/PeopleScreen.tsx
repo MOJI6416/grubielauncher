@@ -9,8 +9,16 @@ import {
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Inbox, Loader2, MessagesSquare, Users } from "lucide-react";
+import { Inbox, MessagesSquare, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -70,6 +78,7 @@ import {
   schedulePreload,
 } from "@renderer/utilities/lazyPreload";
 import { LazyDialogFallback } from "@renderer/components/LazyDialogFallback";
+import { ListSkeleton } from "@renderer/components/ListSkeleton";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { VoiceCallBar } from "@renderer/features/voice/VoiceCallBar";
 import { GroupsTab } from "@renderer/features/voice/GroupsTab";
@@ -103,8 +112,6 @@ import { useFriendCode } from "@renderer/features/friends/useFriendCode";
 import { useFriendsRealtime } from "@renderer/features/friends/useFriendsRealtime";
 import { useGameInvite } from "@renderer/features/friends/useGameInvite";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
-import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
-import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
@@ -130,7 +137,6 @@ export function PeopleScreen({
 }) {
   const { t } = useTranslation();
   const redact = useRedact();
-  const sectionIndicator = useSlidingIndicator<HTMLDivElement>();
 
   const route = useAtomValue(currentRouteAtom);
   const account = useAtomValue(accountAtom);
@@ -654,42 +660,37 @@ export function PeopleScreen({
   return (
     <>
       <div className="flex h-full min-h-0 flex-col gap-3">
-        <div className="flex h-9 shrink-0 items-center gap-2">
-          <div
-            ref={sectionIndicator.containerRef}
-            className="relative flex h-9 items-center gap-0.5 rounded-lg bg-surface-1 p-0.5"
+        <div className="flex h-9 shrink-0 items-stretch gap-2 border-b border-border">
+          <Tabs
+            value={section}
+            onValueChange={(value) => goToSection(value as PeopleSection)}
+            className="gap-0"
           >
-            <SlidingIndicator
-              indicator={sectionIndicator}
-              variant="fill"
-              className="rounded-md bg-surface-3"
-            />
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                aria-current={section === tab.id}
-                data-indicator-active={section === tab.id}
-                className={cn(
-                  "relative flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
-                  section === tab.id
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                onClick={() => goToSection(tab.id)}
-              >
-                {tab.id === "friends" && <Users className="size-3.5" />}
-                {tab.id === "groups" && <MessagesSquare className="size-3.5" />}
-                {tab.id === "requests" && <Inbox className="size-3.5" />}
-                {tab.label}
-                {tab.badge ? (
-                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-soft-raised px-1 font-mono text-[10px] leading-none tabular-nums text-primary">
-                    {tab.badge > 99 ? "99+" : tab.badge}
-                  </span>
-                ) : null}
-              </button>
-            ))}
-          </div>
+            <TabsList
+              variant="line"
+              aria-label={t("shell.nav.people")}
+              className="gap-0 p-0"
+            >
+              {tabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.id}
+                  value={tab.id}
+                >
+                  {tab.id === "friends" && <Users className="size-3.5" />}
+                  {tab.id === "groups" && (
+                    <MessagesSquare className="size-3.5" />
+                  )}
+                  {tab.id === "requests" && <Inbox className="size-3.5" />}
+                  {tab.label}
+                  {tab.badge ? (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-info/15 px-1 font-mono text-3xs leading-none text-info tabular-nums">
+                      {tab.badge > 99 ? "99+" : tab.badge}
+                    </span>
+                  ) : null}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
 
           <div className="ml-auto flex items-center gap-2 text-xs">
             <span
@@ -749,8 +750,12 @@ export function PeopleScreen({
               {chatGroup ? (
                 <Suspense
                   fallback={
-                    <div className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-border bg-card">
-                      <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card p-3">
+                      <ListSkeleton
+                        rows={6}
+                        rowClassName="h-14"
+                        iconClassName="size-8 rounded-md"
+                      />
                     </div>
                   }
                 >
@@ -761,17 +766,17 @@ export function PeopleScreen({
                   />
                 </Suspense>
               ) : (
-                <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card px-8 text-center">
-                  <span className="flex size-9 items-center justify-center rounded-lg bg-muted">
-                    <Users className="size-4 text-muted-foreground" />
-                  </span>
-                  <p className="text-sm font-medium">
-                    {t("friends.pickGroup")}
-                  </p>
-                  <p className="max-w-sm text-xs leading-5 text-muted-foreground">
-                    {t("friends.pickGroupHint")}
-                  </p>
-                </div>
+                <Empty className="min-h-0 rounded-xl border border-solid border-border bg-card px-8">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Users />
+                    </EmptyMedia>
+                    <EmptyTitle>{t("friends.pickGroup")}</EmptyTitle>
+                    <EmptyDescription className="text-xs leading-5">
+                      {t("friends.pickGroupHint")}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               )}
             </>
           ) : (
@@ -901,7 +906,9 @@ export function PeopleScreen({
 
       {removeTarget && (
         <Confirmation
-          title={t("friends.deleteTitle")}
+          title={t("friends.deleteQuestion", {
+            nickname: removeTarget.friend.user.nickname,
+          })}
           content={[
             {
               text: t("friends.deleteAlert", {
@@ -974,9 +981,11 @@ export function PeopleScreen({
               </DialogDescription>
             </div>
             <DialogFooter>
+              <Button variant="secondary" onClick={gameInvite.closeGuide}>
+                {t("common.close")}
+              </Button>
               {gameInvite.inviteGuide.canOpenShare && (
                 <Button
-                  variant="secondary"
                   onClick={() => {
                     gameInvite.closeGuide();
                     setIsShareModalOpen(true);
@@ -985,9 +994,6 @@ export function PeopleScreen({
                   {t("friends.openSharePanel")}
                 </Button>
               )}
-              <Button variant="secondary" onClick={gameInvite.closeGuide}>
-                {t("common.close")}
-              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

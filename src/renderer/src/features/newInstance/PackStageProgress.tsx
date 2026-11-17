@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import type { ModpackDownloadStage } from "./downloadModpack";
+import { Hint } from "@renderer/components/Hint";
 
 export function PackStageProgress({
   stage,
@@ -24,7 +25,9 @@ export function PackStageProgress({
     <div className="grid gap-1.5">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Loader2 className="size-3.5 animate-spin" />
-        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <Hint content={label} variant="text" truncatedOnly>
+          <span className="min-w-0 flex-1 truncate">{label}</span>
+        </Hint>
         {percent !== null && (
           <span className="font-mono tabular-nums text-faint">{percent}%</span>
         )}

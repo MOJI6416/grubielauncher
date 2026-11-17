@@ -50,6 +50,7 @@ import {
   IVoiceTokenResponse,
   VoiceQuality,
 } from "@/types/Voice";
+import { ignoreFailure } from "./ignoreFailure";
 
 const VOLUMES_STORAGE_KEY = "voice.volumes";
 const LOCAL_MUTES_STORAGE_KEY = "voice.localMutes";
@@ -223,9 +224,7 @@ async function handleProcessingFailure(reason: string) {
   voiceProcessor = null;
   setSession({ isNoiseSuppressionActive: false });
   if (hadProcessor) {
-    await microphoneTrack()
-      ?.stopProcessor()
-      .catch(() => undefined);
+    await microphoneTrack()?.stopProcessor().catch(ignoreFailure);
   }
   await applyMicState();
 
@@ -292,12 +291,12 @@ async function syncPtt() {
   if (pttEnabled && bind) {
     const hookReady = await api.voice
       .setPtt({ type: bind.type, code: bind.code })
-      .catch(() => false);
+      .catch(ignoreFailure);
 
     if (!hookReady) {
       pttEnabled = false;
       pttPressed = false;
-      await api.voice.setPtt(null).catch(() => undefined);
+      await api.voice.setPtt(null).catch(ignoreFailure);
 
       if (!pttHookFailureReported) {
         pttHookFailureReported = true;
@@ -308,7 +307,7 @@ async function syncPtt() {
     }
   } else {
     pttPressed = false;
-    await api.voice.setPtt(null).catch(() => undefined);
+    await api.voice.setPtt(null).catch(ignoreFailure);
   }
 
   setSession({
@@ -602,7 +601,7 @@ function stopLevelSampling() {
 async function sampleCallQuality(target: Room) {
   for (const [identity, tracks] of [...audioTracks]) {
     for (const track of tracks) {
-      const report = await track.receiver?.getStats().catch(() => null);
+      const report = await track.receiver?.getStats().catch(ignoreFailure);
       if (room !== target) return;
 
       const next = report ? readInboundAudio(report) : null;
@@ -665,7 +664,7 @@ function closePlaybackContext() {
   const context = playbackContext;
   playbackContext = null;
   if (context && context.state !== "closed") {
-    void context.close().catch(() => undefined);
+    void context.close().catch(ignoreFailure);
   }
 }
 
@@ -696,8 +695,8 @@ function cleanup() {
   releaseRoomResources();
   room = null;
   watchDevices(false);
-  void api.voice.setPtt(null).catch(() => undefined);
-  void api.voice.setSessionActive(false).catch(() => undefined);
+  void api.voice.setPtt(null).catch(ignoreFailure);
+  void api.voice.setSessionActive(false).catch(ignoreFailure);
   store.set(voiceSessionAtom, INITIAL_VOICE_SESSION);
 }
 
@@ -706,7 +705,7 @@ async function applySavedOutputDevice(targetRoom: Room) {
   if (outputId) {
     await targetRoom
       .switchActiveDevice("audiooutput", outputId)
-      .catch(() => undefined);
+      .catch(ignoreFailure);
   }
 }
 
@@ -849,8 +848,8 @@ export async function voiceConnect(
   try {
     await nextRoom.connect(grant.url, grant.token);
   } catch (error) {
-    await nextRoom.disconnect().catch(() => undefined);
-    void nextPlayback.close().catch(() => undefined);
+    await nextRoom.disconnect().catch(ignoreFailure);
+    void nextPlayback.close().catch(ignoreFailure);
 
     if (previousRoom) {
       store.set(voiceSessionAtom, previousSession);
@@ -866,7 +865,7 @@ export async function voiceConnect(
   if (previousRoom) releaseRoomResources();
   playbackContext = nextPlayback;
   appliedProcessing = processing;
-  if (previousRoom) await previousRoom.disconnect().catch(() => undefined);
+  if (previousRoom) await previousRoom.disconnect().catch(ignoreFailure);
 
   let micIssue: IVoiceSessionState["micIssue"] = "none";
   try {
@@ -885,7 +884,7 @@ export async function voiceConnect(
     isMicMuted: micIssue !== "none",
   });
   playVoiceSound("join");
-  void api.voice.setSessionActive(true).catch(() => undefined);
+  void api.voice.setSessionActive(true).catch(ignoreFailure);
   startLevelSampling();
   startQualityTracking(nextRoom);
   watchDevices(true);
@@ -912,7 +911,7 @@ export async function voiceConnect(
 export async function voiceDisconnect() {
   const current = room;
   cleanup();
-  if (current) await current.disconnect().catch(() => undefined);
+  if (current) await current.disconnect().catch(ignoreFailure);
 }
 
 export async function voiceRetryMic() {
@@ -1047,7 +1046,7 @@ async function handleDeviceChange() {
     if (devices.some((device) => device.deviceId === savedId)) continue;
 
     voiceSaveDevice(kind, "");
-    await room.switchActiveDevice(kind, "default").catch(() => undefined);
+    await room.switchActiveDevice(kind, "default").catch(ignoreFailure);
     toast.warning(
       i18n.t(
         kind === "audioinput"

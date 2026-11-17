@@ -285,7 +285,7 @@ export const TOKEN_CLASS: Record<TokenKind, string> = {
   comment: "text-faint italic",
   string: "text-success",
   number: "text-warning",
-  keyword: "text-primary",
+  keyword: "text-info",
   key: "text-foreground",
   punctuation: "text-muted-foreground",
   text: "text-muted-foreground",

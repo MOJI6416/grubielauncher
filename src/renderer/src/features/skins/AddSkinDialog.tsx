@@ -24,6 +24,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { Skeleton } from "@/components/ui/skeleton";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { SkinStage } from "./SkinStage";
 import { decodeToPixels, fetchTextureBytes } from "./skinPixels";
@@ -43,6 +45,7 @@ import {
 } from "./addSkin";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { MOD_KEY } from "@renderer/utilities/platform";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -150,7 +153,7 @@ export function AddSkinDialog({
     setPreview({ state: "loading" });
 
     void (async () => {
-      const bytes = await fetchTextureBytes(target).catch(() => null);
+      const bytes = (await fetchTextureBytes(target).catch(ignoreFailure)) ?? null;
       if (cancelled) return;
 
       if (!bytes && source === "link") {
@@ -327,63 +330,58 @@ export function AddSkinDialog({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between gap-3 pr-8">
-            <span className="truncate">
-              {type === "cape"
-                ? t("manageSkins.addCape")
-                : t("manageSkins.addSkin")}
-            </span>
+            <Hint
+              content={
+                type === "cape"
+                  ? t("manageSkins.addCape")
+                  : t("manageSkins.addSkin")
+              }
+              variant="text"
+              truncatedOnly
+            >
+              <span className="truncate">
+                {type === "cape"
+                  ? t("manageSkins.addCape")
+                  : t("manageSkins.addSkin")}
+              </span>
+            </Hint>
             {allowCape ? (
-              <div className="inline-flex shrink-0 rounded-lg border border-border bg-surface-2 p-0.5">
-                {(["skin", "cape"] as const).map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    disabled={busy}
-                    onClick={() => switchType(item)}
-                    className={cn(
-                      "h-7 rounded-md px-3 text-xs font-medium transition-colors",
-                      type === item
-                        ? "bg-surface-3 text-foreground"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {t(`manageSkins.${item}`)}
-                  </button>
-                ))}
-              </div>
+              <SegmentedControl
+                value={type}
+                ariaLabel={t("manageSkins.typeFilter")}
+                disabled={busy}
+                options={(["skin", "cape"] as const).map((item) => ({
+                  value: item,
+                  label: t(`manageSkins.${item}`),
+                }))}
+                onChange={switchType}
+              />
             ) : null}
           </DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_232px]">
           <div className="flex min-w-0 flex-col gap-2.5">
-            <div className="inline-flex w-fit rounded-lg border border-border bg-surface-2 p-0.5">
-              {sources.map((item) => {
+            <SegmentedControl
+              value={source}
+              ariaLabel={t("manageSkins.addFrom")}
+              disabled={busy}
+              className="w-fit"
+              options={sources.map((item) => {
                 const Icon = SOURCE_ICON[item];
 
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    disabled={busy}
-                    onClick={() => switchSource(item)}
-                    className={cn(
-                      "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors",
-                      source === item
-                        ? "bg-surface-3 text-foreground"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    <Icon className="size-3.5" />
-                    {t(
-                      item === "nick"
-                        ? "manageSkins.nickname"
-                        : `manageSkins.${item}`,
-                    )}
-                  </button>
-                );
+                return {
+                  value: item,
+                  icon: <Icon />,
+                  label: t(
+                    item === "nick"
+                      ? "manageSkins.nickname"
+                      : `manageSkins.${item}`,
+                  ),
+                };
               })}
-            </div>
+              onChange={switchSource}
+            />
 
             {source === "file" ? (
               picked ? (
@@ -402,7 +400,7 @@ export function AddSkinDialog({
                       variant="text"
                       truncatedOnly
                     >
-                      <p className="truncate font-mono text-[10px] text-faint">
+                      <p className="truncate font-mono text-3xs text-faint">
                         {redact.path(picked.path)}
                       </p>
                     </Hint>
@@ -522,9 +520,7 @@ export function AddSkinDialog({
               }
               overlay={
                 preview.state === "loading" ? (
-                  <span className="absolute inset-0 flex items-center justify-center bg-surface-1/70">
-                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                  </span>
+                  <Skeleton className="absolute inset-0 rounded-none opacity-70" />
                 ) : null
               }
             />

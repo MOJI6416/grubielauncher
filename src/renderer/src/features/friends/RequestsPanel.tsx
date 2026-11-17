@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { TFunction } from "i18next";
 import { toast } from "sonner";
 import {
+  Award,
   Check,
   Copy,
   Inbox,
@@ -9,7 +10,7 @@ import {
   Loader2,
   RefreshCw,
   SendHorizontal,
-  Sparkles,
+  UserPlus,
   Users,
   X,
 } from "lucide-react";
@@ -18,8 +19,18 @@ import { Hint } from "@renderer/components/Hint";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
+import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 import type { IFriendRequest } from "@/types/IFriend";
 import type { IGroupInvite } from "@/types/Voice";
 import {
@@ -62,22 +73,22 @@ interface RequestsPanelProps {
 
 function Section({
   label,
-  count,
+  keys,
   children,
 }: {
   label: string;
-  count: number;
+  keys: ReadonlySet<string>;
   children: React.ReactNode;
 }) {
-  if (count === 0) return null;
+  if (keys.size === 0) return null;
 
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="flex items-center gap-1.5 px-0.5 text-[10px] font-medium tracking-wide text-faint uppercase">
+      <p className="flex items-center gap-1.5 px-0.5 text-3xs font-medium tracking-wide text-faint uppercase">
         {label}
-        <span className="font-mono tabular-nums">{count}</span>
+        <span className="font-mono tabular-nums">{keys.size}</span>
       </p>
-      {children}
+      <RemovalList sourceKeys={keys}>{children}</RemovalList>
     </div>
   );
 }
@@ -109,7 +120,7 @@ function RequestRow({
   );
 
   return (
-    <div className="flex h-14 w-full min-w-0 items-center gap-2.5 rounded-lg px-2 transition-colors hover:bg-surface-3">
+    <div className="flex h-14 w-full min-w-0 items-center gap-2.5 rounded-lg px-2 transition-colors hover:bg-row-hover">
       <button
         type="button"
         className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -119,24 +130,36 @@ function RequestRow({
 
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="flex min-w-0 items-center gap-1.5">
-            <span className="min-w-0 truncate text-sm font-medium">
-              {request.user.nickname}
-            </span>
+            <Hint content={request.user.nickname} variant="text" truncatedOnly>
+              <span className="min-w-0 truncate text-sm font-medium">
+                {request.user.nickname}
+              </span>
+            </Hint>
             <span className="shrink-0 text-faint">
               <PlatformIcon platform={request.user.platform} />
             </span>
             {level >= 2 && (
-              <span className="inline-flex shrink-0 items-center gap-0.5 rounded border border-primary/30 px-1 text-[10px] leading-4 font-medium text-primary">
-                <Sparkles className="size-2.5" />
+              <span className="inline-flex shrink-0 items-center gap-0.5 rounded border border-primary/30 px-1 text-3xs leading-4 font-medium text-primary">
+                <Award className="size-2.5" />
                 {level}
               </span>
             )}
           </span>
-          <span className="truncate text-[11px] leading-4 text-muted-foreground">
-            {isIncoming
-              ? t("friends.wantsToBeFriend")
-              : t("friends.requestSent")}
-          </span>
+          <Hint
+            content={
+              isIncoming
+                ? t("friends.wantsToBeFriend")
+                : t("friends.requestSent")
+            }
+            variant="text"
+            truncatedOnly
+          >
+            <span className="truncate text-2xs leading-4 text-muted-foreground">
+              {isIncoming
+                ? t("friends.wantsToBeFriend")
+                : t("friends.requestSent")}
+            </span>
+          </Hint>
         </span>
       </button>
 
@@ -225,19 +248,25 @@ export function RequestsPanel({
   const [declinedInvites, setDeclinedInvites] = useState<string[]>([]);
   const [rejectedRequestIds, setRejectedRequestIds] = useState<string[]>([]);
   const [isResetConfirm, setIsResetConfirm] = useState(false);
-  const answered = useMemo(
-    () => new Set(answeredInvites),
-    [answeredInvites],
-  );
-  const declined = useMemo(
-    () => new Set(declinedInvites),
-    [declinedInvites],
-  );
+  const answered = useMemo(() => new Set(answeredInvites), [answeredInvites]);
+  const declined = useMemo(() => new Set(declinedInvites), [declinedInvites]);
   const rejected = useMemo(
     () => new Set(rejectedRequestIds),
     [rejectedRequestIds],
   );
   const total = groupInvites.length + incoming.length + outgoing.length;
+  const inviteKeys = useMemo(
+    () => new Set(groupInvites.map((invite) => invite._id)),
+    [groupInvites],
+  );
+  const incomingKeys = useMemo(
+    () => new Set(incoming.map((request) => request.requestId)),
+    [incoming],
+  );
+  const outgoingKeys = useMemo(
+    () => new Set(outgoing.map((request) => request.requestId)),
+    [outgoing],
+  );
 
   useEffect(() => {
     if (answeredInvites.length === 0 && declinedInvites.length === 0) return;
@@ -276,125 +305,165 @@ export function RequestsPanel({
     <div className="flex min-h-0 flex-1 gap-3">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card p-2">
         {total === 0 ? (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-8 text-center">
-            <span className="flex size-12 items-center justify-center rounded-xl bg-surface-3">
-              <Inbox className="size-5 text-muted-foreground" />
-            </span>
-            <p className="mt-3 text-sm font-medium">
-              {t("friends.noRequests")}
-            </p>
-            <p className="mt-1 max-w-xs text-xs leading-5 text-balance text-muted-foreground">
-              {t("friends.noRequestsHint")}
-            </p>
-          </div>
+          <Empty className="min-h-0 px-8">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Inbox />
+              </EmptyMedia>
+              <EmptyTitle>{t("friends.noRequests")}</EmptyTitle>
+              <EmptyDescription className="text-xs leading-5">
+                {t("friends.noRequestsHint")}
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => (inputRef ?? fallbackRef).current?.focus()}
+              >
+                <UserPlus className="size-4" />
+                {t("friends.addFriend")}
+              </Button>
+            </EmptyContent>
+          </Empty>
         ) : (
           <ScrollArea className="min-h-0 flex-1">
             <div className="flex flex-col gap-4 pr-2">
-              <Section label={t("groups.invites")} count={groupInvites.length}>
+              <Section label={t("groups.invites")} keys={inviteKeys}>
                 {groupInvites.map((invite) => (
-                  <div
-                    key={invite._id}
-                    className="flex h-14 w-full min-w-0 items-center gap-2.5 rounded-lg px-2 transition-colors hover:bg-surface-3"
-                  >
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-soft">
-                      <Users className="size-4 text-primary" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">
-                        {invite.group.name}
-                      </p>
-                      <p className="truncate text-[11px] leading-4 text-muted-foreground">
-                        {t("groups.invitedBy", {
-                          nickname: invite.inviter.nickname,
-                        })}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <Hint content={t("groups.accept")}>
-                        <Button
-                          size="icon-sm"
-                          variant="secondary"
-                          disabled={answered.has(invite._id)}
-                          aria-label={t("groups.accept")}
-                          onClick={() => {
-                            if (!onAcceptGroupInvite(invite._id)) return;
-                            setAnsweredInvites((prev) => [...prev, invite._id]);
-                          }}
+                  <RemovalItem key={invite._id} itemKey={invite._id}>
+                    <div className="flex h-14 w-full min-w-0 items-center gap-2.5 rounded-lg px-2 transition-colors hover:bg-row-hover">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-info/15">
+                        <Users className="size-4 text-info" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <Hint
+                          content={invite.group.name}
+                          variant="text"
+                          truncatedOnly
                         >
-                          {answered.has(invite._id) &&
-                          !declined.has(invite._id) ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : (
-                            <Check size={18} />
-                          )}
-                        </Button>
-                      </Hint>
-                      <Hint content={t("groups.decline")}>
-                        <Button
-                          size="icon-sm"
-                          variant="ghost"
-                          className="text-muted-foreground hover:text-destructive"
-                          disabled={answered.has(invite._id)}
-                          aria-label={t("groups.decline")}
-                          onClick={() => {
-                            if (!onDeclineGroupInvite(invite._id)) return;
-                            setAnsweredInvites((prev) => [...prev, invite._id]);
-                            setDeclinedInvites((prev) => [...prev, invite._id]);
-                          }}
+                          <p className="truncate text-sm font-medium">
+                            {invite.group.name}
+                          </p>
+                        </Hint>
+                        <Hint
+                          content={t("groups.invitedBy", {
+                            nickname: invite.inviter.nickname,
+                          })}
+                          variant="text"
+                          truncatedOnly
                         >
-                          {declined.has(invite._id) ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : (
-                            <X size={18} />
-                          )}
-                        </Button>
-                      </Hint>
+                          <p className="truncate text-2xs leading-4 text-muted-foreground">
+                            {t("groups.invitedBy", {
+                              nickname: invite.inviter.nickname,
+                            })}
+                          </p>
+                        </Hint>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Hint content={t("groups.accept")}>
+                          <Button
+                            size="icon-sm"
+                            variant="secondary"
+                            disabled={answered.has(invite._id)}
+                            aria-label={t("groups.accept")}
+                            onClick={() => {
+                              if (!onAcceptGroupInvite(invite._id)) return;
+                              setAnsweredInvites((prev) => [
+                                ...prev,
+                                invite._id,
+                              ]);
+                            }}
+                          >
+                            {answered.has(invite._id) &&
+                            !declined.has(invite._id) ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <Check size={18} />
+                            )}
+                          </Button>
+                        </Hint>
+                        <Hint content={t("groups.decline")}>
+                          <Button
+                            size="icon-sm"
+                            variant="ghost"
+                            className="text-muted-foreground hover:text-destructive"
+                            disabled={answered.has(invite._id)}
+                            aria-label={t("groups.decline")}
+                            onClick={() => {
+                              if (!onDeclineGroupInvite(invite._id)) return;
+                              setAnsweredInvites((prev) => [
+                                ...prev,
+                                invite._id,
+                              ]);
+                              setDeclinedInvites((prev) => [
+                                ...prev,
+                                invite._id,
+                              ]);
+                            }}
+                          >
+                            {declined.has(invite._id) ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <X size={18} />
+                            )}
+                          </Button>
+                        </Hint>
+                      </div>
                     </div>
-                  </div>
+                  </RemovalItem>
                 ))}
               </Section>
 
               <Section
                 label={t("friends.incomingRequests")}
-                count={incoming.length}
+                keys={incomingKeys}
               >
                 {incoming.map((request) => (
-                  <RequestRow
+                  <RemovalItem
                     key={request.requestId}
-                    request={request}
-                    isIncoming
-                    isPending={pending.has(request.requestId)}
-                    isRejecting={rejected.has(request.requestId)}
-                    onAccept={() => onAccept(request.requestId)}
-                    onReject={() => {
-                      setRejectedRequestIds((prev) => [
-                        ...prev,
-                        request.requestId,
-                      ]);
-                      onReject(request.requestId);
-                    }}
-                    onViewProfile={() => onViewProfile(request.user._id)}
-                    t={t}
-                  />
+                    itemKey={request.requestId}
+                  >
+                    <RequestRow
+                      request={request}
+                      isIncoming
+                      isPending={pending.has(request.requestId)}
+                      isRejecting={rejected.has(request.requestId)}
+                      onAccept={() => onAccept(request.requestId)}
+                      onReject={() => {
+                        setRejectedRequestIds((prev) => [
+                          ...prev,
+                          request.requestId,
+                        ]);
+                        onReject(request.requestId);
+                      }}
+                      onViewProfile={() => onViewProfile(request.user._id)}
+                      t={t}
+                    />
+                  </RemovalItem>
                 ))}
               </Section>
 
               <Section
                 label={t("friends.outgoingRequests")}
-                count={outgoing.length}
+                keys={outgoingKeys}
               >
                 {outgoing.map((request) => (
-                  <RequestRow
+                  <RemovalItem
                     key={request.requestId}
-                    request={request}
-                    isIncoming={false}
-                    isPending={pending.has(request.requestId)}
-                    isRejecting={rejected.has(request.requestId)}
-                    onAccept={() => onAccept(request.requestId)}
-                    onReject={() => onReject(request.requestId)}
-                    onViewProfile={() => onViewProfile(request.user._id)}
-                    t={t}
-                  />
+                    itemKey={request.requestId}
+                  >
+                    <RequestRow
+                      request={request}
+                      isIncoming={false}
+                      isPending={pending.has(request.requestId)}
+                      isRejecting={rejected.has(request.requestId)}
+                      onAccept={() => onAccept(request.requestId)}
+                      onReject={() => onReject(request.requestId)}
+                      onViewProfile={() => onViewProfile(request.user._id)}
+                      t={t}
+                    />
+                  </RemovalItem>
                 ))}
               </Section>
             </div>
@@ -422,13 +491,13 @@ export function RequestsPanel({
           />
 
           {isSignedOut ? (
-            <p className="text-[11px] leading-4 text-warning">
+            <p className="text-2xs leading-4 text-warning">
               {t("friends.sessionLostHint")}
             </p>
           ) : (
             lookupProblem &&
             lookupProblem !== "empty" && (
-              <p className="text-[11px] leading-4 text-warning">
+              <p className="text-2xs leading-4 text-warning">
                 {t(`friends.lookupErrors.${lookupProblem}`)}
               </p>
             )
@@ -456,9 +525,9 @@ export function RequestsPanel({
                 {redact.value(ownFriendCode)}
               </p>
             ) : isLoadingCode ? (
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+              <Skeleton className="h-5 w-32 rounded" />
             ) : (
-              <p className="text-[11px] leading-4 text-muted-foreground">
+              <p className="text-2xs leading-4 text-muted-foreground">
                 {t("friends.friendCodeUnavailable")}
               </p>
             )}
@@ -494,7 +563,7 @@ export function RequestsPanel({
               <p className="text-xs font-medium">
                 {t("friends.friendRequestsEnabledTitle")}
               </p>
-              <p className="text-[11px] leading-4 text-muted-foreground">
+              <p className="text-2xs leading-4 text-muted-foreground">
                 {t("friends.friendRequestsEnabledDescription")}
               </p>
             </div>
@@ -514,10 +583,10 @@ export function RequestsPanel({
           <ol className="flex flex-col gap-1.5">
             {[1, 2, 3].map((step) => (
               <li key={step} className="flex items-start gap-2.5">
-                <span className="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-surface-3 font-mono text-[10px] font-semibold text-muted-foreground">
+                <span className="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-surface-3 font-mono text-3xs font-semibold text-muted-foreground">
                   {step}
                 </span>
-                <span className="text-[11px] leading-4 text-muted-foreground">
+                <span className="text-2xs leading-4 text-muted-foreground">
                   {t(`friends.howItWorksStep${step}`)}
                 </span>
               </li>
@@ -528,7 +597,7 @@ export function RequestsPanel({
 
       {isResetConfirm && (
         <Confirmation
-          title={t("friends.resetFriendCode")}
+          title={t("friends.resetFriendCodeTitle")}
           content={[{ text: t("friends.resetFriendCodeConfirm") }]}
           buttons={[
             {

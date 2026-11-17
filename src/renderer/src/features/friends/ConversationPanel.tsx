@@ -36,6 +36,7 @@ import { canJoinFriend, presenceDotColor } from "./presence";
 import { isDmRoomWith } from "./voiceRoom";
 import { PlatformIcon } from "./PlatformIcon";
 import type { FriendEntry } from "./friendsList";
+import { Empty, EmptyDescription } from "@/components/ui/empty";
 
 const PACK_CODE_PATTERN = /^[a-fA-F0-9]{24}$/;
 
@@ -157,21 +158,29 @@ export function ConversationPanel({
 
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex min-w-0 items-center gap-1.5">
-            <p className="min-w-0 truncate text-sm font-medium">
-              {friend.user.nickname}
-            </p>
+            <Hint content={friend.user.nickname} variant="text" truncatedOnly>
+              <p className="min-w-0 truncate text-sm font-medium">
+                {friend.user.nickname}
+              </p>
+            </Hint>
             <span className="shrink-0 text-faint">
               <PlatformIcon platform={friend.user.platform} />
             </span>
           </div>
-          <p
-            className={cn(
-              "min-w-0 truncate text-[11px] leading-4",
-              isPeerTyping ? "text-foreground" : "text-muted-foreground",
-            )}
+          <Hint
+            content={isPeerTyping ? t("friends.chatTyping") : presenceText}
+            variant="text"
+            truncatedOnly
           >
-            {isPeerTyping ? t("friends.chatTyping") : presenceText}
-          </p>
+            <p
+              className={cn(
+                "min-w-0 truncate text-2xs leading-4",
+                isPeerTyping ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {isPeerTyping ? t("friends.chatTyping") : presenceText}
+            </p>
+          </Hint>
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
@@ -182,7 +191,12 @@ export function ConversationPanel({
             </Button>
           )}
           {canInvite && (
-            <Button size="sm" variant="outline" className="h-8" onClick={onInvite}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8"
+              onClick={onInvite}
+            >
               <Send className="size-3.5" />
               {t("friends.invite")}
             </Button>
@@ -211,14 +225,16 @@ export function ConversationPanel({
             </Button>
           </Hint>
 
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label={t("common.close")}
-            onClick={onClose}
-          >
-            <X className="size-4" />
-          </Button>
+          <Hint content={t("common.close")}>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label={t("common.close")}
+              onClick={onClose}
+            >
+              <X className="size-4" />
+            </Button>
+          </Hint>
         </div>
       </div>
     ),
@@ -295,9 +311,15 @@ export function ConversationPanel({
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-sm">
           <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
             <Boxes className="size-4 shrink-0 text-faint" />
-            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
-              {t("friends.shareBuildTitle")}
-            </DialogTitle>
+            <Hint
+              content={t("friends.shareBuildTitle")}
+              variant="text"
+              truncatedOnly
+            >
+              <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+                {t("friends.shareBuildTitle")}
+              </DialogTitle>
+            </Hint>
           </DialogHeader>
 
           <div className="grid gap-2 px-4 py-3">
@@ -306,9 +328,11 @@ export function ConversationPanel({
             </DialogDescription>
 
             {shareableVersions.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
-                {t("friends.noPublishedBuilds")}
-              </p>
+              <Empty className="flex-none rounded-lg border border-border px-3 py-4">
+                <EmptyDescription className="text-xs">
+                  {t("friends.noPublishedBuilds")}
+                </EmptyDescription>
+              </Empty>
             ) : (
               <ScrollArea className="-mx-1 max-h-72 px-1">
                 <div className="flex flex-col gap-0.5">
@@ -316,7 +340,7 @@ export function ConversationPanel({
                     <button
                       key={version.version.shareCode}
                       type="button"
-                      className="flex h-12 min-w-0 items-center gap-2.5 rounded-lg px-2 text-left transition-colors hover:bg-surface-3"
+                      className="flex h-12 min-w-0 items-center gap-2.5 rounded-lg px-2 text-left transition-colors hover:bg-row-hover"
                       onClick={() => {
                         const code = version.version.shareCode;
                         if (code) {
@@ -334,14 +358,20 @@ export function ConversationPanel({
                           height={32}
                         />
                       )}
-                      <span className="min-w-0 flex-1 truncate text-[13px]">
-                        {version.version.name}
-                      </span>
+                      <Hint
+                        content={version.version.name}
+                        variant="text"
+                        truncatedOnly
+                      >
+                        <span className="min-w-0 flex-1 truncate text-[13px]">
+                          {version.version.name}
+                        </span>
+                      </Hint>
                       <LoaderLabel
                         loader={version.version.loader.name}
-                        className="shrink-0 text-[11px] text-muted-foreground"
+                        className="shrink-0 text-2xs text-muted-foreground"
                       />
-                      <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint">
+                      <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
                         {version.version.version.id}
                       </span>
                     </button>
@@ -360,9 +390,15 @@ export function ConversationPanel({
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-sm">
           <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
             <Users className="size-4 shrink-0 text-faint" />
-            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
-              {t("friends.chatGroupInvite")}
-            </DialogTitle>
+            <Hint
+              content={t("friends.chatGroupInvite")}
+              variant="text"
+              truncatedOnly
+            >
+              <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+                {t("friends.chatGroupInvite")}
+              </DialogTitle>
+            </Hint>
           </DialogHeader>
 
           <div className="grid gap-2 px-4 py-3">
@@ -376,7 +412,7 @@ export function ConversationPanel({
                   <button
                     key={group._id}
                     type="button"
-                    className="flex h-11 min-w-0 items-center gap-2 rounded-lg px-2 text-left transition-colors hover:bg-surface-3"
+                    className="flex h-11 min-w-0 items-center gap-2 rounded-lg px-2 text-left transition-colors hover:bg-row-hover"
                     onClick={() => {
                       chat.sendBody({
                         _type: "groupInvite",
@@ -388,13 +424,15 @@ export function ConversationPanel({
                       setIsGroupPicker(false);
                     }}
                   >
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-[10px] font-semibold text-muted-foreground">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-3xs font-semibold text-muted-foreground">
                       {groupInitials(group.name)}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-[13px]">
-                      {group.name}
-                    </span>
-                    <span className="flex shrink-0 items-center gap-1 text-[11px] text-faint">
+                    <Hint content={group.name} variant="text" truncatedOnly>
+                      <span className="min-w-0 flex-1 truncate text-[13px]">
+                        {group.name}
+                      </span>
+                    </Hint>
+                    <span className="flex shrink-0 items-center gap-1 text-2xs text-faint">
                       <Users className="size-3" />
                       <span className="font-mono tabular-nums">
                         {group.members.length}

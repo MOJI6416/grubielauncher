@@ -56,7 +56,7 @@ export function VoiceCallToast() {
       () => (
         <div className="flex w-full items-center gap-3">
           <span className="relative flex shrink-0 items-center justify-center">
-            <span className="absolute size-12 animate-ping rounded-lg bg-primary/25" />
+            <span className="absolute size-12 animate-ping rounded-lg bg-info/25" />
             <PlayerHead
               user={{
                 _id: peer._id,
@@ -65,24 +65,46 @@ export function VoiceCallToast() {
                 uuid: friend?.user.uuid ?? null,
               }}
               size={44}
-              className="relative ring-2 ring-primary/60"
+              className="relative ring-2 ring-info/60"
             />
           </span>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{peer.nickname}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {isIncoming ? t("voiceCall.incoming") : t("voiceCall.outgoing")}
-            </p>
-            {leavingRoom ? (
-              <p className="truncate text-[11px] leading-4 text-warning">
-                {t("voiceCall.willLeaveRoom", { room: leavingRoom })}
+            <Hint content={peer.nickname} variant="text" truncatedOnly>
+              <p className="truncate text-sm font-medium">{peer.nickname}</p>
+            </Hint>
+            <Hint
+              content={
+                isIncoming ? t("voiceCall.incoming") : t("voiceCall.outgoing")
+              }
+              variant="text"
+              truncatedOnly
+            >
+              <p className="truncate text-xs text-muted-foreground">
+                {isIncoming ? t("voiceCall.incoming") : t("voiceCall.outgoing")}
               </p>
+            </Hint>
+            {leavingRoom ? (
+              <Hint
+                content={t("voiceCall.willLeaveRoom", { room: leavingRoom })}
+                variant="text"
+                truncatedOnly
+              >
+                <p className="truncate text-2xs leading-4 text-warning">
+                  {t("voiceCall.willLeaveRoom", { room: leavingRoom })}
+                </p>
+              </Hint>
             ) : (
               activity && (
-                <p className="truncate text-[11px] leading-4 text-faint">
-                  {t("voiceCall.peerPlaying", { version: activity })}
-                </p>
+                <Hint
+                  content={t("voiceCall.peerPlaying", { version: activity })}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <p className="truncate text-2xs leading-4 text-faint">
+                    {t("voiceCall.peerPlaying", { version: activity })}
+                  </p>
+                </Hint>
               )
             )}
           </div>

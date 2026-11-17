@@ -13,6 +13,7 @@ import {
   installedModpackVersion,
   modpackVersionLabel,
 } from "./modpackVersions";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -27,7 +28,7 @@ async function hasModpackBase(versionPath: string): Promise<boolean> {
     "modpack",
     "base.json",
   );
-  return await api.fs.pathExists(target).catch(() => false);
+  return (await api.fs.pathExists(target).catch(ignoreFailure)) === true;
 }
 
 export function useModpackSource(instance: Version | undefined, isOnline: boolean) {
@@ -50,7 +51,10 @@ export function useModpackSource(instance: Version | undefined, isOnline: boolea
     void (async () => {
       const [base, info] = await Promise.all([
         hasModpackBase(versionPath),
-        api.modpack.rollbackInfo(versionPath).catch(() => null),
+        api.modpack
+          .rollbackInfo(versionPath)
+          .catch(ignoreFailure)
+          .then((info) => info ?? null),
       ]);
       if (cancelled) return;
       setHasBase(base);

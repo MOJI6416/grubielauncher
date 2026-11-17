@@ -11,7 +11,6 @@ import {
   isSameAccount,
 } from "./identity";
 import {
-  formatCountdown,
   countBrokenSessions,
   readAccountSession,
   SESSION_RENEW_MARGIN_MS,
@@ -366,12 +365,6 @@ describe("session state", () => {
     ];
 
     expect(countBrokenSessions(accounts, NOW)).toBe(1);
-  });
-
-  it("formats a countdown as minutes and seconds", () => {
-    expect(formatCountdown(600_000)).toBe("10:00");
-    expect(formatCountdown(65_000)).toBe("1:05");
-    expect(formatCountdown(-5)).toBe("0:00");
   });
 });
 

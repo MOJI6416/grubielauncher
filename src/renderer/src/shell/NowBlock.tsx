@@ -4,9 +4,9 @@ import { useTranslation } from "react-i18next";
 import {
   Bell,
   HardDriveDownload,
+  Radio,
   Sparkles,
   SquareChevronRight,
-  Wifi,
 } from "lucide-react";
 import { Collapse } from "@/components/ui/collapse";
 import { Hint } from "@renderer/components/Hint";
@@ -64,13 +64,13 @@ function NowRow({
           type="button"
           onClick={onClick}
           aria-label={label}
-          className="flex h-9 w-full flex-col items-center justify-center gap-1 rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+          className="flex h-9 w-full flex-col items-center justify-center gap-1 rounded-lg text-muted-foreground transition-colors hover:bg-row-hover hover:text-foreground"
         >
           <span className={tone}>{icon}</span>
           {progress !== undefined && (
             <span className="block h-0.5 w-6 overflow-hidden rounded-full bg-surface-3">
               <span
-                className={`block h-full rounded-full bg-primary transition-[width] duration-300 ease-swift ${
+                className={`block h-full rounded-full bg-info transition-[width] duration-300 ease-swift ${
                   progress === null ? "w-1/3 animate-pulse" : ""
                 }`}
                 style={
@@ -88,7 +88,7 @@ function NowRow({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full flex-col justify-center gap-1 rounded-lg px-2.5 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+      className="flex w-full flex-col justify-center gap-1 rounded-lg px-2.5 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-row-hover hover:text-foreground"
     >
       <span className="flex w-full items-center gap-2.5">
         <span className={`shrink-0 ${tone}`}>{icon}</span>
@@ -96,7 +96,7 @@ function NowRow({
           <span className="min-w-0 flex-1 truncate text-[0.8rem]">{label}</span>
         </Hint>
         {detail && (
-          <span className="shrink-0 font-mono text-[0.65rem] tabular-nums text-faint">
+          <span className="shrink-0 font-mono text-3xs whitespace-nowrap tabular-nums text-faint">
             {detail}
           </span>
         )}
@@ -105,7 +105,7 @@ function NowRow({
       {progress !== undefined && (
         <span className="block h-0.5 w-full overflow-hidden rounded-full bg-surface-3">
           <span
-            className={`block h-full rounded-full bg-primary transition-[width] duration-300 ease-swift ${
+            className={`block h-full rounded-full bg-info transition-[width] duration-300 ease-swift ${
               progress === null ? "w-1/3 animate-pulse" : ""
             }`}
             style={progress === null ? undefined : { width: `${progress}%` }}
@@ -175,7 +175,7 @@ export function NowBlock({ onOpenErrors }: { onOpenErrors: () => void }) {
     rows.push(
       <NowRow
         key="install"
-        tone="text-primary"
+        tone="text-info"
         icon={<HardDriveDownload className="size-4" />}
         label={progress.versionName}
         detail={
@@ -199,7 +199,7 @@ export function NowBlock({ onOpenErrors }: { onOpenErrors: () => void }) {
     rows.push(
       <NowRow
         key="agent"
-        tone="text-primary"
+        tone="text-info"
         icon={<Sparkles className="size-4" />}
         label={
           activeTool
@@ -220,7 +220,7 @@ export function NowBlock({ onOpenErrors }: { onOpenErrors: () => void }) {
       <NowRow
         key="share"
         tone={shareState.phase === "online" ? "text-success" : "text-warning"}
-        icon={<Wifi className="size-4" />}
+        icon={<Radio className="size-4" />}
         label={t("share.title")}
         onClick={() => setIsShareOpen(true)}
       />,
@@ -249,7 +249,7 @@ export function NowBlock({ onOpenErrors }: { onOpenErrors: () => void }) {
         <div className="flex items-center gap-1.5 pr-1 pl-2.5">
           <span
             className={cn(
-              "text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase",
+              "text-3xs font-semibold tracking-[0.09em] text-faint uppercase",
               isSectionHidden && "opacity-45",
             )}
           >
@@ -268,7 +268,7 @@ export function NowBlock({ onOpenErrors }: { onOpenErrors: () => void }) {
           (rows.length > 0 ? (
             <div className="flex flex-col gap-0.5">{rows}</div>
           ) : (
-            <p className="px-2.5 pt-0.5 text-[0.7rem] leading-snug text-faint">
+            <p className="px-2.5 pt-0.5 text-2xs leading-snug text-faint">
               {t("layout.nowHint")}
             </p>
           ))}
@@ -281,7 +281,7 @@ export function NowBlock({ onOpenErrors }: { onOpenErrors: () => void }) {
       {rows.length > 0 ? (
         <div className="mt-3 border-t border-border pt-2.5">
           {!collapsed && (
-            <span className="block px-2.5 pb-1 text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+            <span className="block px-2.5 pb-1 text-3xs font-semibold tracking-[0.09em] text-faint uppercase">
               {t("shell.now")}
             </span>
           )}

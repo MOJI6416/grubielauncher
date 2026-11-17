@@ -1,7 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
-import { ArrowUpRight, Loader2, Sparkles } from "lucide-react";
+import { ArrowUpRight, Gift, Loader2 } from "lucide-react";
 import type { ILauncherReleaseNote } from "@/types/LauncherRelease";
+import { Hint } from "@renderer/components/Hint";
 import { MilestoneBeam } from "@renderer/components/MilestoneBeam";
 import {
   openWhatsNew,
@@ -25,26 +26,34 @@ export function MilestoneNewsCard({
     >
       <MilestoneBeam />
 
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-        <Sparkles className="size-4" />
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-info/15 text-info">
+        <Gift className="size-4" />
       </span>
 
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className="flex h-4.5 shrink-0 items-center rounded border border-primary/40 bg-primary-soft px-1.5 text-[0.6rem] font-medium tracking-wide text-foreground uppercase">
+          <span className="flex h-4.5 shrink-0 items-center rounded border border-primary/40 bg-primary-soft px-1.5 text-3xs font-medium tracking-wide text-foreground uppercase">
             {t("whatsNew.milestone")}
           </span>
-          <span className="shrink-0 font-mono text-[0.65rem] tabular-nums text-faint">
+          <span className="shrink-0 font-mono text-3xs tabular-nums text-faint">
             v{release.version}
           </span>
-          <span className="truncate text-sm leading-5 font-medium">
-            {release.title}
-          </span>
+          <Hint content={release.title} variant="text" truncatedOnly>
+            <span className="truncate text-sm leading-5 font-medium">
+              {release.title}
+            </span>
+          </Hint>
         </span>
 
-        <span className="truncate text-xs leading-4 text-muted-foreground">
-          {release.subtitle || t("news.milestoneHint")}
-        </span>
+        <Hint
+          content={release.subtitle || t("news.milestoneHint")}
+          variant="text"
+          truncatedOnly
+        >
+          <span className="truncate text-xs leading-4 text-muted-foreground">
+            {release.subtitle || t("news.milestoneHint")}
+          </span>
+        </Hint>
       </span>
 
       {isLoading ? (

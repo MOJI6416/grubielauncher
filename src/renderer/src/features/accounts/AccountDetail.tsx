@@ -39,7 +39,9 @@ function ExpiryRow({ label, value }: { label: string; value: number }) {
 
   return (
     <div className="flex min-w-0 items-baseline gap-2 text-xs">
-      <span className="min-w-0 flex-1 truncate text-faint">{label}</span>
+      <Hint content={label} variant="text" truncatedOnly>
+        <span className="min-w-0 flex-1 truncate text-faint">{label}</span>
+      </Hint>
       <span
         className={`shrink-0 font-mono tabular-nums ${
           expired ? "text-destructive" : "text-muted-foreground"
@@ -108,7 +110,7 @@ export function AccountDetail({
               </span>
             ) : (
               isActive && (
-                <span className="shrink-0 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-foreground">
+                <span className="shrink-0 rounded-full bg-row-selected px-2 py-0.5 text-xs font-medium text-foreground">
                   {t("accounts.inUse")}
                 </span>
               )
@@ -117,7 +119,13 @@ export function AccountDetail({
 
           <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
             <ProviderIcon type={account.type} size={13} />
-            <span className="truncate">{providerName(account.type, t)}</span>
+            <Hint
+              content={providerName(account.type, t)}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="truncate">{providerName(account.type, t)}</span>
+            </Hint>
           </span>
         </div>
       </div>
@@ -152,36 +160,32 @@ export function AccountDetail({
 
         {account.type !== "plain" && (
           <>
-            <Hint content={!isActive ? t("accounts.needsActive") : undefined}>
+            <Button
+              variant="secondary"
+              disabled={!isActive}
+              onClick={() =>
+                navigate({ name: "profile", userId: OWN_PROFILE_ID })
+              }
+            >
+              <UserRound className="size-4" />
+              {t("accounts.openProfile")}
+            </Button>
+
+            {caps.skins === "managed" && (
               <Button
                 variant="secondary"
                 disabled={!isActive}
                 onClick={() =>
-                  navigate({ name: "profile", userId: OWN_PROFILE_ID })
+                  navigate({
+                    name: "profile",
+                    userId: OWN_PROFILE_ID,
+                    tab: "skins",
+                  })
                 }
               >
-                <UserRound className="size-4" />
-                {t("accounts.openProfile")}
+                <Shirt className="size-4" />
+                {t("manageSkins.title")}
               </Button>
-            </Hint>
-
-            {caps.skins === "managed" && (
-              <Hint content={!isActive ? t("accounts.needsActive") : undefined}>
-                <Button
-                  variant="secondary"
-                  disabled={!isActive}
-                  onClick={() =>
-                    navigate({
-                      name: "profile",
-                      userId: OWN_PROFILE_ID,
-                      tab: "skins",
-                    })
-                  }
-                >
-                  <Shirt className="size-4" />
-                  {t("manageSkins.title")}
-                </Button>
-              </Hint>
             )}
 
             {caps.skins === "external" && (
@@ -200,9 +204,10 @@ export function AccountDetail({
       </div>
 
       {account.type !== "plain" && (
-        <p className="text-xs leading-relaxed text-faint">
-          {t("accounts.identityInProfile")}
-        </p>
+        <div className="grid gap-0.5 text-xs leading-relaxed text-faint">
+          {!isActive && <p>{t("accounts.needsActive")}</p>}
+          <p>{t("accounts.identityInProfile")}</p>
+        </div>
       )}
 
       {account.type !== "plain" && (
@@ -218,9 +223,15 @@ export function AccountDetail({
       <section className="grid gap-2 rounded-xl border border-border bg-surface-2 p-3">
         <div className="flex min-w-0 items-center gap-2">
           <SessionIcon state={session.state} busy={busy} />
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">
-            {sessionLabel(session.state, t)}
-          </span>
+          <Hint
+            content={sessionLabel(session.state, t)}
+            variant="text"
+            truncatedOnly
+          >
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">
+              {sessionLabel(session.state, t)}
+            </span>
+          </Hint>
         </div>
 
         <p className="text-xs leading-relaxed text-muted-foreground">
@@ -248,34 +259,36 @@ export function AccountDetail({
         )}
 
         {account.type !== "plain" && (
-          <div className="flex flex-wrap gap-2 pt-0.5">
+          <div className="flex flex-wrap items-center gap-2 pt-0.5">
             {session.canRenew && session.state !== "active" && (
-              <Hint content={providerReachable ? undefined : offlineHint}>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy || !providerReachable}
-                  onClick={() => void controller.renewSession(account)}
-                >
-                  <RefreshCw className="size-3.5" />
-                  {t("accounts.renew")}
-                </Button>
-              </Hint>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy || !providerReachable}
+                onClick={() => void controller.renewSession(account)}
+              >
+                <RefreshCw className="size-3.5" />
+                {t("accounts.renew")}
+              </Button>
             )}
 
             {session.state === "expired" && (
-              <Hint content={providerReachable ? undefined : offlineHint}>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={!providerReachable}
-                  onClick={onSignInAgain}
-                >
-                  <LogIn className="size-3.5" />
-                  {t("accounts.signInAgain")}
-                </Button>
-              </Hint>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={!providerReachable}
+                onClick={onSignInAgain}
+              >
+                <LogIn className="size-3.5" />
+                {t("accounts.signInAgain")}
+              </Button>
             )}
+
+            {!providerReachable &&
+              ((session.canRenew && session.state !== "active") ||
+                session.state === "expired") && (
+                <span className="text-2xs text-warning">{offlineHint}</span>
+              )}
           </div>
         )}
       </section>
@@ -297,9 +310,15 @@ export function AccountDetail({
               ) : (
                 <Minus className="size-3.5 shrink-0" />
               )}
-              <span className="truncate">
-                {t(`accounts.feature.${feature.key}`)}
-              </span>
+              <Hint
+                content={t(`accounts.feature.${feature.key}`)}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="truncate">
+                  {t(`accounts.feature.${feature.key}`)}
+                </span>
+              </Hint>
             </span>
           ))}
         </div>
@@ -317,20 +336,21 @@ export function AccountDetail({
       )}
 
       <div className="mt-auto flex items-center justify-end gap-2 border-t border-border pt-3">
-        <Hint
-          content={isRunning ? t("accounts.removeWhileRunning") : undefined}
+        {isRunning && (
+          <span className="min-w-0 text-2xs text-faint">
+            {t("accounts.removeWhileRunning")}
+          </span>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+          disabled={isRunning}
+          onClick={onRemove}
         >
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            disabled={isRunning}
-            onClick={onRemove}
-          >
-            <Trash2 className="size-3.5" />
-            {t("accounts.remove")}
-          </Button>
-        </Hint>
+          <Trash2 className="size-3.5" />
+          {t("accounts.remove")}
+        </Button>
       </div>
     </div>
   );

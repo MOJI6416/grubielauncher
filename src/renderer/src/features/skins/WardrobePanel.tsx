@@ -15,13 +15,15 @@ import {
   Download,
   Ellipsis,
   ExternalLink,
+  Flag,
   Globe,
   Loader2,
   Pencil,
   Plus,
+  RefreshCw,
+  RotateCcw,
   Search,
   Shirt,
-  Sparkles,
   Star,
   Trash2,
   Wand2,
@@ -31,6 +33,13 @@ import { ICape, ISkinEntry, SkinsData } from "@/types/SkinManager";
 import type { IAuth, ILocalAccount } from "@/types/Account";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +61,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { Hint } from "@renderer/components/Hint";
+import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { SortMenu } from "@renderer/components/SortMenu";
 import { FactRow, FactRows } from "@renderer/components/FactRows";
 import { pathsAtom, rpcSkinVersionAtom } from "@renderer/stores/atoms";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
@@ -84,6 +96,7 @@ import {
 import { readFavorites, writeFavorites } from "./favorites";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { LITTLESKIN_CLOSET_URL } from "@/shared/config";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 const ELYBY_SKINS_URL = "https://ely.by/skins";
@@ -115,8 +128,12 @@ function SkinTile({
   isFavorite,
   hasCape,
   disabled,
+  canApply,
+  canDelete,
   onSelect,
   onApply,
+  onToggleFavorite,
+  onDelete,
 }: {
   skin: ISkinEntry;
   isSelected: boolean;
@@ -124,65 +141,99 @@ function SkinTile({
   isFavorite: boolean;
   hasCape: boolean;
   disabled: boolean;
+  canApply: boolean;
+  canDelete: boolean;
   onSelect: (id: string) => void;
   onApply: (id: string) => void;
+  onToggleFavorite: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const generated = isGeneratedSkinName(skin.name);
 
   return (
-    <Hint content={skin.name} variant="text">
-      <button
-        type="button"
-        disabled={disabled}
-        aria-pressed={isSelected}
-        onClick={() => onSelect(skin.id)}
-        onDoubleClick={() => onApply(skin.id)}
-        className={cn(
-          "relative flex flex-col items-center gap-1 rounded-xl border border-border bg-surface-2 p-2 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60",
-          isSelected
-            ? "border-primary/60 bg-primary-soft"
-            : "hover:border-border hover:bg-surface-3",
-        )}
-      >
-        {skin.character ? (
-          <img
-            src={resolveLocalImage(skin.character)}
-            width={48}
-            height={96}
-            loading="lazy"
-            alt=""
-            className="h-24 w-12 object-contain [image-rendering:pixelated]"
-          />
-        ) : (
-          <span className="flex h-24 items-center">
-            <SkinHead url={skin.url} size={48} />
-          </span>
-        )}
+    <ContextMenu>
+      <Hint content={skin.name} variant="text">
+        <ContextMenuTrigger asChild disabled={disabled}>
+          <button
+            type="button"
+            role="option"
+            disabled={disabled}
+            aria-selected={isSelected}
+            onClick={() => onSelect(skin.id)}
+            onDoubleClick={() => onApply(skin.id)}
+            className={cn(
+              "relative flex flex-col items-center gap-1 rounded-xl border border-border bg-surface-2 p-2 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60",
+              isSelected
+                ? "border-primary/60 bg-row-selected"
+                : "hover:border-border hover:bg-surface-3",
+            )}
+          >
+            {skin.character ? (
+              <img
+                src={resolveLocalImage(skin.character)}
+                width={48}
+                height={96}
+                loading="lazy"
+                alt=""
+                className="h-24 w-12 object-contain [image-rendering:pixelated]"
+              />
+            ) : (
+              <span className="flex h-24 items-center">
+                <SkinHead url={skin.url} size={48} />
+              </span>
+            )}
 
-        <span
-          className={cn(
-            "w-full truncate text-center text-[11px] leading-4",
-            generated ? "font-mono text-faint" : "text-muted-foreground",
-          )}
+            <span
+              className={cn(
+                "w-full truncate text-center text-2xs leading-4",
+                generated ? "font-mono text-faint" : "text-muted-foreground",
+              )}
+            >
+              {shortSkinLabel(skin.name)}
+            </span>
+
+            {isActive ? (
+              <span
+                className="absolute top-1.5 right-1.5 size-2 rounded-full bg-success ring-2 ring-surface-2"
+                aria-hidden="true"
+              />
+            ) : null}
+
+            <span className="absolute top-1.5 left-1.5 flex flex-col gap-1">
+              {isFavorite ? (
+                <Star className="size-3 fill-warning text-warning" />
+              ) : null}
+              {hasCape ? <Flag className="size-3 text-faint" /> : null}
+            </span>
+          </button>
+        </ContextMenuTrigger>
+      </Hint>
+      <ContextMenuContent>
+        <ContextMenuItem
+          disabled={!canApply || isActive}
+          onSelect={() => onApply(skin.id)}
         >
-          {shortSkinLabel(skin.name)}
-        </span>
-
-        {isActive ? (
-          <span
-            className="absolute top-1.5 right-1.5 size-2 rounded-full bg-success ring-2 ring-surface-2"
-            aria-hidden="true"
-          />
-        ) : null}
-
-        <span className="absolute top-1.5 left-1.5 flex flex-col gap-1">
-          {isFavorite ? (
-            <Star className="size-3 fill-warning text-warning" />
-          ) : null}
-          {hasCape ? <Shirt className="size-3 text-faint" /> : null}
-        </span>
-      </button>
-    </Hint>
+          <Check />
+          {t("manageSkins.apply")}
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={() => onToggleFavorite(skin.id)}>
+          <Star />
+          {isFavorite
+            ? t("manageSkins.favoriteOff")
+            : t("manageSkins.favoriteOn")}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          variant="destructive"
+          disabled={!canDelete}
+          onSelect={() => onDelete(skin.id)}
+        >
+          <Trash2 />
+          {t("manageSkins.deleteSkin")}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 
@@ -268,6 +319,10 @@ export function WardrobePanel({
     () => countSkinFilters(skins, favorites),
     [skins, favorites],
   );
+  const skinKeys = useMemo(
+    () => new Set(skins.map((skin) => skin.id)),
+    [skins],
+  );
 
   const changes = useMemo(
     () =>
@@ -321,7 +376,7 @@ export function WardrobePanel({
         return true;
       } catch (error) {
         showFailureToast(errorTitle, error, failureOptions);
-        await reload().catch(() => undefined);
+        await reload().catch(ignoreFailure);
 
         return false;
       } finally {
@@ -648,7 +703,7 @@ export function WardrobePanel({
       toast.success(t("manageSkins.exportDone"), {
         action: {
           label: t("manageSkins.openFolder"),
-          onClick: () => void api.shell.openPath(folder).catch(() => undefined),
+          onClick: () => void api.shell.openPath(folder).catch(ignoreFailure),
         },
       });
     } catch (error) {
@@ -685,14 +740,16 @@ export function WardrobePanel({
             className="h-8 pr-8 pl-8"
           />
           {query ? (
-            <button
-              type="button"
-              aria-label={t("manageSkins.resetFilters")}
-              onClick={() => setQuery("")}
-              className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <X className="size-4" />
-            </button>
+            <Hint content={t("common.clearSearch")}>
+              <button
+                type="button"
+                aria-label={t("common.clearSearch")}
+                onClick={() => setQuery("")}
+                className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </Hint>
           ) : null}
         </div>
 
@@ -717,22 +774,20 @@ export function WardrobePanel({
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuRadioGroup
-              value={sort}
-              onValueChange={(value) => setSort(value as SkinSort)}
-            >
-              {SKIN_SORTS.map((value) => (
-                <DropdownMenuRadioItem key={value} value={value}>
-                  {t(`manageSkins.sortOwn_${value}`)}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
 
+        <SortMenu
+          value={sort}
+          options={SKIN_SORTS.map((value) => ({
+            value,
+            label: t(`manageSkins.sortOwn_${value}`),
+          }))}
+          onChange={setSort}
+        />
+
         <Button
-          variant="secondary"
+          variant="outline"
           size="sm"
           disabled={isBusy}
           onClick={() => setIsAddOpen(true)}
@@ -769,20 +824,40 @@ export function WardrobePanel({
           </Empty>
         ) : (
           <ScrollArea className="min-h-0 rounded-xl border border-border bg-surface-1">
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-2 p-2.5">
-              {list.map((skin) => (
-                <SkinTile
-                  key={skin.id}
-                  skin={skin}
-                  isSelected={skin.id === selectedId}
-                  isActive={skin.id === data.activeSkin}
-                  isFavorite={favorites.includes(skin.id)}
-                  hasCape={Boolean(skin.capeId)}
-                  disabled={isBusy}
-                  onSelect={(id) => void handleSelect(id)}
-                  onApply={(id) => void handleApply(id)}
-                />
-              ))}
+            <div
+              role="listbox"
+              aria-label={t("manageSkins.tabMine")}
+              className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-2 p-2.5"
+              onKeyDown={(event) => {
+                if (event.key !== "Delete" || event.repeat || isBusy) return;
+                if (!canDeleteSkin(selected, { activeSkin: data.activeSkin }))
+                  return;
+                event.preventDefault();
+                if (selected) setDeleteId(selected.id);
+              }}
+            >
+              <RemovalList sourceKeys={skinKeys}>
+                {list.map((skin) => (
+                  <RemovalItem key={skin.id} itemKey={skin.id}>
+                    <SkinTile
+                      skin={skin}
+                      isSelected={skin.id === selectedId}
+                      isActive={skin.id === data.activeSkin}
+                      isFavorite={favorites.includes(skin.id)}
+                      hasCape={Boolean(skin.capeId)}
+                      disabled={isBusy}
+                      canApply={canUseSkinService && !isElyby && !isLittleSkin}
+                      canDelete={canDeleteSkin(skin, {
+                        activeSkin: data.activeSkin,
+                      })}
+                      onSelect={(id) => void handleSelect(id)}
+                      onApply={(id) => void handleApply(id)}
+                      onToggleFavorite={handleToggleFavorite}
+                      onDelete={setDeleteId}
+                    />
+                  </RemovalItem>
+                ))}
+              </RemovalList>
             </div>
           </ScrollArea>
         )}
@@ -889,25 +964,19 @@ export function WardrobePanel({
             <span className="text-xs text-muted-foreground">
               {t("manageSkins.model")}
             </span>
-            <div className="flex gap-1.5">
-              {(["classic", "slim"] as const).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  disabled={!selected || isBusy}
-                  onClick={() => void handleModel(value)}
-                  className={cn(
-                    "h-8 flex-1 rounded-lg border border-border text-xs font-medium transition-colors disabled:opacity-50",
-                    selected?.model === value
-                      ? "border-primary/60 bg-primary-soft text-foreground"
-                      : "text-muted-foreground hover:bg-surface-3",
-                  )}
-                >
-                  {value === "classic"
-                    ? t("manageSkins.classic")
-                    : t("manageSkins.slim")}
-                </button>
-              ))}
+            <div className="flex items-center gap-1.5">
+              <SegmentedControl
+                value={selected?.model === "slim" ? "slim" : "classic"}
+                ariaLabel={t("manageSkins.model")}
+                disabled={!selected || isBusy}
+                stretch
+                className="min-w-0 flex-1"
+                options={[
+                  { value: "classic", label: t("manageSkins.classic") },
+                  { value: "slim", label: t("manageSkins.slim") },
+                ]}
+                onChange={(value) => void handleModel(value)}
+              />
               <Hint content={t("manageSkins.detectModel")}>
                 <Button
                   size="icon"
@@ -969,7 +1038,7 @@ export function WardrobePanel({
               <span className="text-xs text-muted-foreground">
                 {t("manageSkins.cape")}
               </span>
-              <span className="text-[11px] text-faint tabular-nums">
+              <span className="text-2xs text-faint tabular-nums">
                 {data.capes.length}
               </span>
             </div>
@@ -984,7 +1053,7 @@ export function WardrobePanel({
                     "flex h-16 w-full items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors disabled:opacity-50",
                     selectedCape
                       ? "hover:bg-surface-3"
-                      : "border-primary/60 bg-primary-soft text-foreground",
+                      : "border-primary/60 bg-row-selected text-foreground",
                   )}
                 >
                   <X className="size-4" />
@@ -1004,7 +1073,7 @@ export function WardrobePanel({
                     className={cn(
                       "h-16 w-full overflow-hidden rounded-lg border border-border p-0.5 transition-colors disabled:opacity-50",
                       cape.id === selectedCape?.id
-                        ? "border-primary/60 bg-primary-soft"
+                        ? "border-primary/60 bg-row-selected"
                         : "hover:bg-surface-3",
                     )}
                   >
@@ -1025,11 +1094,19 @@ export function WardrobePanel({
               <SkinHead url={activeSkin.url} size={28} />
               <ArrowRight className="size-3.5 shrink-0 text-faint" />
               <SkinHead url={selected.url} size={28} />
-              <span className="min-w-0 flex-1 truncate text-[11px] leading-4 text-muted-foreground">
-                {changes
+              <Hint
+                content={changes
                   .map((change) => t(`manageSkins.change_${change}`))
                   .join(" · ")}
-              </span>
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 flex-1 truncate text-2xs leading-4 text-muted-foreground">
+                  {changes
+                    .map((change) => t(`manageSkins.change_${change}`))
+                    .join(" · ")}
+                </span>
+              </Hint>
             </div>
           ) : null}
 
@@ -1051,7 +1128,7 @@ export function WardrobePanel({
                       .openExternal(
                         isLittleSkin ? LITTLESKIN_CLOSET_URL : ELYBY_SKINS_URL,
                       )
-                      .catch(() => undefined)
+                      .catch(ignoreFailure)
                   }
                 >
                   <ExternalLink />
@@ -1079,7 +1156,7 @@ export function WardrobePanel({
                   {t("manageSkins.apply")}
                 </Button>
                 {canUseSkinService ? null : (
-                  <p className="text-[11px] leading-4 text-warning">
+                  <p className="text-2xs leading-4 text-warning">
                     {t("manageSkins.applyUnavailable")}
                   </p>
                 )}
@@ -1138,7 +1215,7 @@ export function WardrobePanel({
                       disabled={!canUseSkinService}
                       onSelect={() => void handleReset()}
                     >
-                      <Sparkles />
+                      <RotateCcw />
                       {t("manageSkins.reset")}
                     </DropdownMenuItem>
                   ) : null}
@@ -1147,7 +1224,7 @@ export function WardrobePanel({
                       disabled={!canUseSkinService}
                       onSelect={() => void handleRegenerate()}
                     >
-                      <Sparkles />
+                      <RefreshCw />
                       {t("manageSkins.regenerate")}
                     </DropdownMenuItem>
                   ) : null}
@@ -1202,7 +1279,9 @@ export function WardrobePanel({
 
       {deleteCapeTarget ? (
         <Confirmation
-          title={t("manageSkins.deleteCape")}
+          title={t("manageSkins.deleteCapeQuestion", {
+            name: capeLabel(deleteCapeTarget, t("manageSkins.cape")),
+          })}
           reversible={false}
           content={[
             {
@@ -1229,13 +1308,11 @@ export function WardrobePanel({
 
       {deleteTarget ? (
         <Confirmation
-          title={t("manageSkins.deleteSkin")}
+          title={t("manageSkins.deleteSkinQuestion", {
+            name: deleteTarget.name,
+          })}
           reversible={false}
-          content={[
-            {
-              text: t("manageSkins.deleteConfirm", { name: deleteTarget.name }),
-            },
-          ]}
+          content={[{ text: t("manageSkins.deleteSkinLoss") }]}
           onClose={() => setDeleteId(null)}
           buttons={[
             {

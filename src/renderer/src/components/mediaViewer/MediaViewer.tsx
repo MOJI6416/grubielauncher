@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ImageOff,
-  Loader2,
   Minus,
   Plus,
   RotateCw,
@@ -21,6 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+} from "@/components/ui/empty";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import {
   FIT_VIEW,
@@ -368,14 +374,18 @@ export function MediaViewer({
           {current?.leading}
           <div className="flex min-w-0 flex-1 flex-col">
             {current?.title && (
-              <span className="min-w-0 truncate text-sm leading-5 text-foreground">
-                {current.title}
-              </span>
+              <Hint content={current.title} variant="text" truncatedOnly>
+                <span className="min-w-0 truncate text-sm leading-5 text-foreground">
+                  {current.title}
+                </span>
+              </Hint>
             )}
             {current?.subtitle && (
-              <span className="min-w-0 truncate text-[11px] leading-4 text-muted-foreground">
-                {current.subtitle}
-              </span>
+              <Hint content={current.subtitle} variant="text" truncatedOnly>
+                <span className="min-w-0 truncate text-2xs leading-4 text-muted-foreground">
+                  {current.subtitle}
+                </span>
+              </Hint>
             )}
           </div>
 
@@ -398,7 +408,7 @@ export function MediaViewer({
                 type="button"
                 disabled={!isLoaded}
                 aria-label={t("mediaViewer.fit")}
-                className="h-8 min-w-12 rounded-md px-1 font-mono text-[11px] tabular-nums text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+                className="h-8 min-w-12 rounded-md px-1 font-mono text-2xs tabular-nums text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
                 onClick={resetView}
               >
                 {isLoaded ? `${percent}%` : "—"}
@@ -476,23 +486,22 @@ export function MediaViewer({
             </div>
 
             {current && !isLoaded && !isFailed && (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-10">
+                <Skeleton aria-busy className="aspect-video w-full max-w-2xl rounded-xl" />
               </div>
             )}
 
             {isFailed && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
-                <span className="flex size-10 items-center justify-center rounded-lg bg-surface-2">
-                  <ImageOff className="size-5 text-faint" />
-                </span>
-                <p className="text-xs text-muted-foreground">
-                  {t("mediaViewer.loadError")}
-                </p>
+              <Empty className="absolute inset-0 border-0 bg-transparent">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <ImageOff />
+                  </EmptyMedia>
+                  <EmptyDescription>{t("mediaViewer.loadError")}</EmptyDescription>
+                </EmptyHeader>
                 <Button
                   size="sm"
-                  variant="secondary"
-                  className="h-7 gap-1.5 text-xs"
+                  variant="outline"
                   onClick={() => {
                     setFailedKey(null);
                     setAttempt((value) => value + 1);
@@ -501,32 +510,36 @@ export function MediaViewer({
                   <RotateCw className="size-3.5" />
                   {t("common.retry")}
                 </Button>
-              </div>
+              </Empty>
             )}
           </div>
 
           {count > 1 && (
             <>
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                onClick={() => go(-1)}
-                className="absolute top-1/2 left-5 -translate-y-1/2 rounded-full shadow-lg"
-                aria-label={t("common.previous")}
-              >
-                <ChevronLeft className="size-5" />
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                onClick={() => go(1)}
-                className="absolute top-1/2 right-5 -translate-y-1/2 rounded-full shadow-lg"
-                aria-label={t("common.next")}
-              >
-                <ChevronRight className="size-5" />
-              </Button>
+              <Hint content={t("common.previous")} side="right">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  onClick={() => go(-1)}
+                  className="absolute top-1/2 left-5 -translate-y-1/2 rounded-full shadow-lg"
+                  aria-label={t("common.previous")}
+                >
+                  <ChevronLeft className="size-5" />
+                </Button>
+              </Hint>
+              <Hint content={t("common.next")} side="left">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  onClick={() => go(1)}
+                  className="absolute top-1/2 right-5 -translate-y-1/2 rounded-full shadow-lg"
+                  aria-label={t("common.next")}
+                >
+                  <ChevronRight className="size-5" />
+                </Button>
+              </Hint>
             </>
           )}
         </div>
@@ -534,6 +547,8 @@ export function MediaViewer({
         {count > 1 && (
           <div
             ref={setStripNode}
+            role="radiogroup"
+            aria-label={title}
             className="z-10 mx-auto mb-3 flex max-w-[calc(100%-2rem)] shrink-0 gap-1.5 overflow-x-auto rounded-xl border border-border bg-surface-1/95 p-1.5 shadow-lg [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {items.map((item, position) => (
@@ -541,8 +556,9 @@ export function MediaViewer({
                 key={item.key}
                 type="button"
                 data-index={position}
+                role="radio"
                 aria-label={`${position + 1} / ${count}`}
-                aria-current={position === index}
+                aria-checked={position === index}
                 onClick={() => onIndexChange(position)}
                 className={cn(
                   "h-12 w-16 shrink-0 overflow-hidden rounded-md border-2 bg-surface-2 transition-opacity focus-visible:outline-none",

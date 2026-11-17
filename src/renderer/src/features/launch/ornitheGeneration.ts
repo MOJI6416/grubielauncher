@@ -13,6 +13,7 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { uiJournal } from "@renderer/utilities/journal";
 import { localizeLoaderChangeError } from "@renderer/utilities/version";
 import { bumpInstanceDataRevision } from "@renderer/features/instances/instanceRevision";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const LISTED_MODS = 4;
 
@@ -43,7 +44,7 @@ export async function checkOrnitheGeneration(
   const currentId = version.version.loader.version?.id;
   const check = await window.api.version
     .checkOrnitheMods(version.versionPath, version.version.version.id)
-    .catch(() => null);
+    .catch(ignoreFailure);
   if (!currentId || !check?.target) return true;
 
   uiJournal.warn("launch", "mods built for another Ornithe generation", {

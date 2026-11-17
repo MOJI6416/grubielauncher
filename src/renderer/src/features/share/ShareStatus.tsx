@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
+import { Hint } from "@renderer/components/Hint";
 import { cn } from "@/lib/utils";
 import type { ShareStep, ShareStepId, ShareTone } from "./shareModel";
 
@@ -80,14 +81,16 @@ export function ShareSteps({ steps }: { steps: ShareStep[] }) {
               )}
             />
           </div>
-          <span
-            className={cn(
-              "min-w-0 truncate text-[0.65rem] leading-none",
-              step.status === "pending" ? "text-faint" : "text-muted-foreground",
-            )}
-          >
-            {stepLabel(step.id, t)}
-          </span>
+          <Hint content={stepLabel(step.id, t)} variant="text" truncatedOnly>
+            <span
+              className={cn(
+                "min-w-0 truncate text-3xs leading-none",
+                step.status === "pending" ? "text-faint" : "text-muted-foreground",
+              )}
+            >
+              {stepLabel(step.id, t)}
+            </span>
+          </Hint>
         </div>
       ))}
     </div>
@@ -117,9 +120,11 @@ export function ShareStatus({
         ) : (
           <span className={cn("size-2 shrink-0 rounded-full", TONE_DOT[tone])} />
         )}
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-          {title}
-        </span>
+        <Hint content={title} variant="text" truncatedOnly>
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+            {title}
+          </span>
+        </Hint>
         {meta && (
           <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
             {meta}

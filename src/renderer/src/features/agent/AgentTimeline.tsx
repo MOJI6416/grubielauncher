@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Hint } from "@renderer/components/Hint";
 import { Markdown } from "@renderer/utilities/markdown";
 import { answerUser } from "@renderer/agent/pending";
 import { splitReplies } from "@renderer/agent/replies";
@@ -60,7 +61,7 @@ function ArgumentRows({ input }: { input?: string }) {
 
   if (summary.raw) {
     return (
-      <pre className="overflow-x-auto rounded-md bg-surface-1 p-2 text-[0.65rem] whitespace-pre-wrap text-muted-foreground">
+      <pre className="overflow-x-auto rounded-md bg-surface-1 p-2 text-3xs whitespace-pre-wrap text-muted-foreground">
         {redact.text(summary.raw)}
       </pre>
     );
@@ -69,12 +70,18 @@ function ArgumentRows({ input }: { input?: string }) {
   if (summary.rows.length === 0) return null;
 
   return (
-    <dl className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-x-3 gap-y-1 text-[0.7rem]">
+    <dl className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-x-3 gap-y-1 text-2xs">
       {summary.rows.map((row) => (
         <div key={row.key} className="contents">
-          <dt className="truncate text-faint">
-            {t(`agent.args.${row.key}`, { defaultValue: row.key })}
-          </dt>
+          <Hint
+            content={t(`agent.args.${row.key}`, { defaultValue: row.key })}
+            variant="text"
+            truncatedOnly
+          >
+            <dt className="truncate text-faint">
+              {t(`agent.args.${row.key}`, { defaultValue: row.key })}
+            </dt>
+          </Hint>
           <dd className="min-w-0 break-words text-muted-foreground">
             {row.value.kind === "text" && redact.text(row.value.text)}
             {row.value.kind === "list" &&
@@ -116,7 +123,7 @@ function UndoControl({
 
   if (item.undoState === "done") {
     return (
-      <span className="flex shrink-0 items-center gap-1 pr-2.5 text-[0.65rem] text-faint">
+      <span className="flex shrink-0 items-center gap-1 pr-2.5 text-3xs text-faint">
         <Undo2 className="size-3" />
         {t("agent.undo.done")}
       </span>
@@ -125,7 +132,7 @@ function UndoControl({
 
   if (item.undoState === "running") {
     return (
-      <span className="flex shrink-0 items-center gap-1 pr-2.5 text-[0.65rem] text-muted-foreground">
+      <span className="flex shrink-0 items-center gap-1 pr-2.5 text-3xs text-muted-foreground">
         <Loader2 className="size-3 animate-spin" />
         {t("agent.undo.running")}
       </span>
@@ -136,7 +143,7 @@ function UndoControl({
     <Button
       variant="ghost"
       size="sm"
-      className="mr-1 h-6 shrink-0 px-2 text-[0.7rem]"
+      className="mr-1 h-6 shrink-0 px-2 text-2xs"
       disabled={running}
       onClick={() => void undoToolCall(item.id)}
     >
@@ -158,30 +165,40 @@ function ToolRow({ item, running }: { item: ToolItem; running: boolean }) {
 
   return (
     <div>
-      <div className="flex items-center transition-colors hover:bg-surface-3/60">
+      <div className="flex items-center transition-colors hover:bg-row-hover">
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
           className="flex h-8 min-w-0 flex-1 items-center gap-2 px-2.5 text-left"
         >
           <StatusGlyph status={item.status} />
-          <span
-            className={cn(
-              "min-w-0 flex-1 truncate text-xs text-muted-foreground",
-              item.undoState === "done" && "line-through decoration-faint",
-            )}
-          >
-            {label}
-          </span>
-          {item.status === "error" && item.error && (
-            <span className="max-w-[45%] shrink-0 truncate text-[0.65rem] text-destructive">
-              {redact.text(item.error)}
+          <Hint content={label} variant="text" truncatedOnly>
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-xs text-muted-foreground",
+                item.undoState === "done" && "line-through decoration-faint",
+              )}
+            >
+              {label}
             </span>
+          </Hint>
+          {item.status === "error" && item.error && (
+            <Hint content={redact.text(item.error)} variant="text" truncatedOnly>
+              <span className="max-w-[45%] shrink-0 truncate text-3xs text-destructive">
+                {redact.text(item.error)}
+              </span>
+            </Hint>
           )}
           {item.undoState === "failed" && item.undoError && (
-            <span className="max-w-[40%] shrink-0 truncate text-[0.65rem] text-destructive">
-              {redact.text(item.undoError)}
-            </span>
+            <Hint
+              content={redact.text(item.undoError)}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="max-w-[40%] shrink-0 truncate text-3xs text-destructive">
+                {redact.text(item.undoError)}
+              </span>
+            </Hint>
           )}
           <ChevronRight
             className={cn(
@@ -195,22 +212,22 @@ function ToolRow({ item, running }: { item: ToolItem; running: boolean }) {
 
       {expanded && (
         <div className="space-y-2 border-t border-border px-2.5 py-2">
-          <code className="block font-mono text-[0.65rem] text-faint">
+          <code className="block font-mono text-3xs text-faint">
             {item.name}
           </code>
           <ArgumentRows input={item.input} />
           {item.error && (
-            <p className="text-[0.7rem] text-destructive">
+            <p className="text-2xs text-destructive">
               {redact.text(item.error)}
             </p>
           )}
           {item.undoError && (
-            <p className="text-[0.7rem] text-destructive">
+            <p className="text-2xs text-destructive">
               {redact.text(item.undoError)}
             </p>
           )}
           {item.output && (
-            <pre className="max-h-48 overflow-auto rounded-md bg-surface-1 p-2 text-[0.65rem] whitespace-pre-wrap text-muted-foreground">
+            <pre className="max-h-48 overflow-auto rounded-md bg-surface-1 p-2 text-3xs whitespace-pre-wrap text-muted-foreground">
               {redact.text(item.output)}
             </pre>
           )}
@@ -260,7 +277,7 @@ function ReasoningCard({
         onClick={() => setExpanded((value) => !value)}
       >
         <Brain className="size-3.5 shrink-0 text-faint" />
-        <span className="min-w-0 flex-1 truncate text-xs text-faint">
+        <span className="min-w-0 flex-1 text-xs whitespace-nowrap text-faint">
           {item.streaming ? t("agent.thinking") : t("agent.thoughts")}
         </span>
         <ChevronRight
@@ -271,7 +288,7 @@ function ReasoningCard({
         />
       </button>
       {expanded && (
-        <p className="border-t border-border px-2.5 py-2 text-[0.7rem] whitespace-pre-wrap text-muted-foreground select-text">
+        <p className="border-t border-border px-2.5 py-2 text-2xs whitespace-pre-wrap text-muted-foreground select-text">
           {redact.text(item.text)}
         </p>
       )}
@@ -285,14 +302,24 @@ function PreviewRows({ preview }: { preview: ToolPreview }) {
 
   return (
     <div className="rounded-md bg-surface-1 px-2.5 py-2">
-      <dl className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-x-3 gap-y-1 text-[0.7rem]">
+      <dl className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-x-3 gap-y-1 text-2xs">
         {preview.rows.map((row) => (
           <div key={row.key} className="contents">
-            <dt className="truncate text-faint">
-              {row.label !== undefined
-                ? redact.text(row.label)
-                : t(`agent.preview.${row.key}`, { defaultValue: row.key })}
-            </dt>
+            <Hint
+              content={
+                row.label !== undefined
+                  ? redact.text(row.label)
+                  : t(`agent.preview.${row.key}`, { defaultValue: row.key })
+              }
+              variant="text"
+              truncatedOnly
+            >
+              <dt className="truncate text-faint">
+                {row.label !== undefined
+                  ? redact.text(row.label)
+                  : t(`agent.preview.${row.key}`, { defaultValue: row.key })}
+              </dt>
+            </Hint>
             <dd className="min-w-0 break-words text-foreground">
               {row.from !== undefined && (
                 <>
@@ -308,7 +335,7 @@ function PreviewRows({ preview }: { preview: ToolPreview }) {
         ))}
       </dl>
       {preview.loss && (
-        <p className="mt-1.5 text-[0.7rem] leading-snug text-destructive">
+        <p className="mt-1.5 text-2xs leading-snug text-destructive">
           {preview.loss}
         </p>
       )}
@@ -357,7 +384,9 @@ function PermissionCard({
         ) : (
           <Check className="size-3.5 shrink-0 text-success" />
         )}
-        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <Hint content={label} variant="text" truncatedOnly>
+          <span className="min-w-0 flex-1 truncate">{label}</span>
+        </Hint>
         <span className="shrink-0">
           {t(`agent.permission.decided.${item.decision}`)}
         </span>
@@ -373,20 +402,20 @@ function PermissionCard({
         "rounded-lg border px-3 py-2.5",
         destructive
           ? "border-destructive/50 bg-surface-2"
-          : "border-primary/45 bg-primary-soft",
+          : "border-warning/45 bg-warning/10",
       )}
     >
       <div className="flex items-start gap-2.5">
         <ShieldAlert
           className={cn(
             "mt-0.5 size-4 shrink-0",
-            destructive ? "text-destructive" : "text-primary",
+            destructive ? "text-destructive" : "text-warning",
           )}
         />
         <div className="min-w-0 flex-1 space-y-1.5">
           <p className="text-sm font-medium text-foreground">{askTitle}</p>
           {!item.preview?.loss && (
-            <p className="text-[0.7rem] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               {destructive
                 ? t("agent.permission.destructiveHint")
                 : t("agent.permission.hint")}
@@ -463,7 +492,7 @@ function QuestionCard({
   };
 
   return (
-    <div className="rounded-lg border border-primary/45 bg-primary-soft px-3 py-2.5">
+    <div className="rounded-lg border border-info/45 bg-info/10 px-3 py-2.5">
       <p className="text-sm font-medium text-foreground">{item.question}</p>
 
       {item.options.length > 0 && (
@@ -531,10 +560,10 @@ function PlanCard({ item }: { item: Extract<TimelineItem, { kind: "plan" }> }) {
   return (
     <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
       <div className="mb-1.5 flex items-center gap-2">
-        <span className="text-[0.7rem] font-medium text-muted-foreground">
+        <span className="text-2xs font-medium text-muted-foreground">
           {t("agent.plan.title")}
         </span>
-        <span className="font-mono text-[0.65rem] tabular-nums text-faint">
+        <span className="font-mono text-3xs tabular-nums text-faint">
           {progress.done}/{progress.total}
         </span>
       </div>
@@ -544,7 +573,7 @@ function PlanCard({ item }: { item: Extract<TimelineItem, { kind: "plan" }> }) {
             {step.status === "done" ? (
               <Check className="mt-0.5 size-3.5 shrink-0 text-success" />
             ) : step.status === "active" ? (
-              <Loader2 className="mt-0.5 size-3.5 shrink-0 animate-spin text-primary" />
+              <Loader2 className="mt-0.5 size-3.5 shrink-0 animate-spin text-info" />
             ) : (
               <CircleDot className="mt-0.5 size-3.5 shrink-0 text-faint" />
             )}
@@ -590,9 +619,15 @@ function CompactedRow({
         ) : (
           <Archive className="size-3.5 shrink-0 text-faint" />
         )}
-        <span className="min-w-0 flex-1 truncate text-xs text-faint">
-          {t(`agent.compaction.${item.status}`)}
-        </span>
+        <Hint
+          content={t(`agent.compaction.${item.status}`)}
+          variant="text"
+          truncatedOnly
+        >
+          <span className="min-w-0 flex-1 truncate text-xs text-faint">
+            {t(`agent.compaction.${item.status}`)}
+          </span>
+        </Hint>
         {canExpand && (
           <ChevronRight
             className={cn(
@@ -603,7 +638,7 @@ function CompactedRow({
         )}
       </button>
       {expanded && (
-        <p className="border-t border-border px-2.5 py-2 text-[0.7rem] whitespace-pre-wrap text-muted-foreground select-text">
+        <p className="border-t border-border px-2.5 py-2 text-2xs whitespace-pre-wrap text-muted-foreground select-text">
           {redact.text(item.summary)}
         </p>
       )}
@@ -617,7 +652,9 @@ function StoppedRow() {
   return (
     <div className="flex h-8 items-center gap-2 rounded-lg border border-border px-2.5 text-xs text-faint">
       <CircleSlash className="size-3.5 shrink-0" />
-      <span className="min-w-0 flex-1 truncate">{t("agent.stopped")}</span>
+      <Hint content={t("agent.stopped")} variant="text" truncatedOnly>
+        <span className="min-w-0 flex-1 truncate">{t("agent.stopped")}</span>
+      </Hint>
     </div>
   );
 }
@@ -653,11 +690,11 @@ function ErrorCard({
           <p className="text-sm font-medium text-foreground">
             {t(report.titleKey)}
           </p>
-          <p className="mt-0.5 text-[0.7rem] text-muted-foreground">
+          <p className="mt-0.5 text-2xs text-muted-foreground">
             {t(report.hintKey)}
           </p>
           {report.detail && (
-            <p className="mt-1.5 rounded-md bg-surface-1 px-2 py-1 font-mono text-[0.65rem] break-words text-faint">
+            <p className="mt-1.5 rounded-md bg-surface-1 px-2 py-1 font-mono text-3xs break-words text-faint">
               {redact.text(report.detail)}
             </p>
           )}
@@ -666,7 +703,7 @@ function ErrorCard({
 
       <div className="mt-2 flex items-center justify-end gap-2">
         {report.code && (
-          <span className="mr-auto font-mono text-[0.65rem] text-faint">
+          <span className="mr-auto font-mono text-3xs text-faint">
             {report.code}
           </span>
         )}
@@ -768,7 +805,9 @@ function ReplyChips({
           onClick={() => onReply(reply)}
         >
           <CornerDownRight className="size-3.5 text-faint" />
-          <span className="truncate">{redact.text(reply)}</span>
+          <Hint content={redact.text(reply)} variant="text" truncatedOnly>
+            <span className="truncate">{redact.text(reply)}</span>
+          </Hint>
         </Button>
       ))}
     </div>

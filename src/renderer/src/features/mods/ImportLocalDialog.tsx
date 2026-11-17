@@ -178,17 +178,19 @@ export function ImportLocalDialog({
             )}
           </Button>
           {selectedDisabledCount > 0 && (
-            <label className="flex h-7 min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground">
+            <label className="flex h-7 min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-row-hover hover:text-foreground">
               <Checkbox
                 checked={enableDisabled}
                 disabled={isLoading}
                 onCheckedChange={(value) => setEnableDisabled(value === true)}
               />
-              <span className="truncate">
-                {t("modManager.importEnableDisabled", {
-                  count: selectedDisabledCount,
-                })}
-              </span>
+              <Hint content={t("modManager.importEnableDisabled", { count: selectedDisabledCount })} variant="text" truncatedOnly>
+                <span className="truncate">
+                  {t("modManager.importEnableDisabled", {
+                    count: selectedDisabledCount,
+                  })}
+                </span>
+              </Hint>
             </label>
           )}
           <span className="ml-auto font-mono text-xs tabular-nums text-faint">
@@ -263,21 +265,21 @@ export function ImportLocalDialog({
                   </div>
 
                   {isValid && item.disabled && !enableDisabled && (
-                    <span className="flex shrink-0 items-center gap-1 rounded-sm bg-surface-3 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-muted-foreground">
+                    <span className="flex shrink-0 items-center gap-1 rounded-sm bg-surface-3 px-1.5 py-0.5 text-3xs leading-3 font-medium text-muted-foreground">
                       <PowerOff className="size-2.5" />
                       {t("modManager.importWillBeDisabled")}
                     </span>
                   )}
 
                   {isDuplicate && (
-                    <span className="flex shrink-0 items-center gap-1 rounded-sm bg-warning/15 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-warning">
+                    <span className="flex shrink-0 items-center gap-1 rounded-sm bg-warning/15 px-1.5 py-0.5 text-3xs leading-3 font-medium text-warning">
                       <PackageCheck className="size-2.5" />
                       {t("modManager.installed")}
                     </span>
                   )}
 
                   {!isValid && !isDuplicate && (
-                    <span className="flex shrink-0 items-center gap-1 rounded-sm bg-destructive/15 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-destructive">
+                    <span className="flex shrink-0 items-center gap-1 rounded-sm bg-destructive/15 px-1.5 py-0.5 text-3xs leading-3 font-medium text-destructive">
                       <CircleAlert className="size-2.5" />
                       {t("modManager.broken")}
                     </span>

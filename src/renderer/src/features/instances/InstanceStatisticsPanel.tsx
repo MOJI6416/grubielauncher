@@ -39,13 +39,13 @@ import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
 import { FactRow, FactRows } from "@renderer/components/FactRows";
 import { formatDay } from "@renderer/utilities/date";
-import { Segmented } from "@renderer/features/settings/SettingsPrimitives";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { formatNumber } from "@renderer/utilities/numbers";
 import { readInstanceStatistics } from "./stats";
 import { Fact, Panel } from "./statisticsParts";
 import { InstanceResourcesView } from "./InstanceResourcesView";
 import { dailyPlaytime, recentSessions } from "./instanceOverview";
 import { useInstanceDataRevision } from "./instanceRevision";
-import { formatPlaytime } from "./playtime";
 import { useInstanceContents } from "./useInstanceInsights";
 import {
   currentStreakDays,
@@ -55,6 +55,7 @@ import {
   playtimeByServer,
   type Bucket,
 } from "./statistics";
+import { formatDuration } from "@renderer/utilities/duration";
 
 const api = window.api;
 
@@ -62,7 +63,13 @@ function JournalRow({ label, value }: { label: string; value: string }) {
   return (
     <FactRow
       label={label}
-      value={<span className="min-w-0 truncate tabular-nums">{value}</span>}
+      value={
+        <Hint content={value} variant="text" truncatedOnly>
+          <span className="min-w-0 truncate tabular-nums">
+            {value}
+          </span>
+        </Hint>
+      }
     />
   );
 }
@@ -79,7 +86,13 @@ function BucketList({
   emptyLabel: string;
 }) {
   if (!buckets.length) {
-    return <p className="px-3 py-3 text-xs text-faint">{emptyLabel}</p>;
+    return (
+      <Empty className="gap-1 p-3">
+        <EmptyDescription className="text-xs text-faint">
+          {emptyLabel}
+        </EmptyDescription>
+      </Empty>
+    );
   }
 
   return (
@@ -93,13 +106,13 @@ function BucketList({
           </Hint>
           <span className="h-1.5 w-10 shrink-0 overflow-hidden rounded-full bg-surface-3">
             <span
-              className="block h-full rounded-full bg-primary/80"
+              className="block h-full rounded-full bg-chart-2/80"
               style={{
                 width: `${total > 0 ? Math.max(4, (bucket.seconds / total) * 100) : 0}%`,
               }}
             />
           </span>
-          <span className="shrink-0 text-right font-mono text-[0.7rem] whitespace-nowrap text-muted-foreground">
+          <span className="shrink-0 text-right font-mono text-2xs whitespace-nowrap text-muted-foreground tabular-nums">
             {format(bucket.seconds)}
           </span>
         </div>
@@ -164,8 +177,7 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
     };
   }, [instance, account, revision, attempt]);
 
-  const timeLabels = { h: t("time.h"), m: t("time.m") };
-  const format = (seconds: number) => formatPlaytime(seconds, timeLabels);
+  const format = (seconds: number) => formatDuration(seconds);
 
   const days = useMemo(() => dailyPlaytime(sessions, 30), [sessions]);
   const latest = useMemo(() => recentSessions(sessions, 12), [sessions]);
@@ -252,7 +264,7 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
     {
       icon: Rocket,
       label: t("home.stats.launches"),
-      value: String(launches),
+      value: formatNumber(launches),
     },
     {
       icon: Activity,
@@ -285,32 +297,32 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
           ? "…"
           : contents.savesUnknown
             ? "?"
-            : String(contents.worlds),
+            : formatNumber(contents.worlds),
       },
       {
         icon: Skull,
         label: t("versionStatistics.deaths"),
-        value: String(worldStats.deaths),
+        value: formatNumber(worldStats.deaths),
       },
       {
         icon: Swords,
         label: t("versionStatistics.mobKills"),
-        value: String(worldStats.mobKills),
+        value: formatNumber(worldStats.mobKills),
       },
       {
         icon: Gem,
         label: t("versionStatistics.blocksMined"),
-        value: String(worldStats.blocksMined),
+        value: formatNumber(worldStats.blocksMined),
       },
       {
         icon: Footprints,
         label: t("versionStatistics.distance"),
-        value: `${Math.round(worldStats.distanceCm / 100000)} ${t("versionStatistics.km")}`,
+        value: `${formatNumber(Math.round(worldStats.distanceCm / 100000))} ${t("versionStatistics.km")}`,
       },
       {
         icon: ArrowUp,
         label: t("versionStatistics.jumps"),
-        value: String(worldStats.jumps),
+        value: formatNumber(worldStats.jumps),
       },
     );
   }
@@ -318,7 +330,7 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex shrink-0 items-center gap-2">
-        <Segmented
+        <SegmentedControl
           value={view}
           onChange={setView}
           ariaLabel={t("versionStatistics.resources.viewLabel")}
@@ -370,7 +382,7 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
               />
               <JournalRow
                 label={t("home.stats.launches")}
-                value={String(launches)}
+                value={formatNumber(launches)}
               />
               <JournalRow
                 label={t("versionStatistics.playTime")}
@@ -378,20 +390,24 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
               />
               <JournalRow
                 label={t("versionStatistics.crashes")}
-                value={String(crashes)}
+                value={formatNumber(crashes)}
               />
             </FactRows>
 
             {isSessionsLoaded ? (
-              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1.5 p-4 text-center">
-                <CalendarDays className="size-5 text-faint" />
-                <p className="text-xs font-medium">
-                  {t("versionStatistics.noSessions")}
-                </p>
-                <p className="max-w-xs text-[0.7rem] leading-snug text-faint">
-                  {t("versionStatistics.noSessionsHint")}
-                </p>
-              </div>
+              <Empty className="min-h-0 gap-1.5 p-4">
+                <EmptyHeader className="gap-1">
+                  <EmptyMedia variant="icon" className="mb-1">
+                    <CalendarDays />
+                  </EmptyMedia>
+                  <EmptyTitle className="text-xs">
+                    {t("versionStatistics.noSessions")}
+                  </EmptyTitle>
+                  <EmptyDescription className="max-w-xs text-2xs leading-snug text-faint">
+                    {t("versionStatistics.noSessionsHint")}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : (
               <Skeleton className="m-3 min-h-0 flex-1 rounded-lg" />
             )}
@@ -416,7 +432,7 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
               </div>
             ))}
 
-            <p className="mt-auto text-[0.7rem] leading-snug text-faint">
+            <p className="mt-auto text-2xs leading-snug text-faint">
               {t("versionStatistics.about.local")}
             </p>
           </Panel>
@@ -438,7 +454,7 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
                     <span
                       className={cn(
                         "min-h-[3px] min-w-0 flex-1 rounded-sm",
-                        day.seconds > 0 ? "bg-primary/75" : "bg-surface-3",
+                        day.seconds > 0 ? "bg-chart-2/75" : "bg-surface-3",
                       )}
                       style={{
                         height: `${Math.max(3, (day.seconds / daysPeak) * 100)}%`,
@@ -464,7 +480,7 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
                     <span
                       className={cn(
                         "min-h-[3px] min-w-0 flex-1 rounded-sm",
-                        value > 0 ? "bg-primary/75" : "bg-surface-3",
+                        value > 0 ? "bg-chart-2/75" : "bg-surface-3",
                       )}
                       style={{
                         height: `${Math.max(3, hoursPeak > 0 ? (value / hoursPeak) * 100 : 0)}%`,
@@ -502,11 +518,11 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
                 />
                 <JournalRow
                   label={t("home.stats.launches")}
-                  value={String(launches)}
+                  value={formatNumber(launches)}
                 />
                 <JournalRow
                   label={t("versionStatistics.crashes")}
-                  value={String(crashes)}
+                  value={formatNumber(crashes)}
                 />
                 <JournalRow
                   label={t("home.stats.longestSession")}
@@ -553,9 +569,12 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
                 <Hint
                   key={session.id}
                   variant="text"
-                  content={formatDay(new Date(session.startedAt))}
+                  content={`${
+                    session.server?.trim() ||
+                    t("versionStatistics.singleplayer")
+                  } · ${formatDay(new Date(session.startedAt))}`}
                 >
-                  <div className="flex items-center gap-2 px-3 py-1 text-[0.7rem]">
+                  <div className="flex items-center gap-2 px-3 py-1 text-2xs">
                     <span
                       className={cn(
                         "size-1.5 shrink-0 rounded-full",
@@ -566,7 +585,7 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
                       {session.server?.trim() ||
                         t("versionStatistics.singleplayer")}
                     </span>
-                    <span className="w-16 shrink-0 text-right font-mono whitespace-nowrap tabular-nums">
+                    <span className="min-w-16 shrink-0 text-right font-mono whitespace-nowrap tabular-nums">
                       {format(session.durationSec || 0)}
                     </span>
                   </div>

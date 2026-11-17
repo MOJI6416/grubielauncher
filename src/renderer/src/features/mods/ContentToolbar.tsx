@@ -1,11 +1,12 @@
 import { Dispatch, SetStateAction } from "react";
-import { SiCurseforge, SiModrinth } from "react-icons/si";
 import {
   FilePlus2,
+  HardDrive,
   Layers,
   Library,
   Loader2,
   Package,
+  Plus,
   RotateCw,
   ScanSearch,
   Search,
@@ -28,6 +29,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -51,20 +53,18 @@ import {
   humanizeFilterName,
   toggleValue,
 } from "./filters";
-import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { SortMenu } from "@renderer/components/SortMenu";
 import { FilterOptionList, type FilterSection } from "./FilterOptionList";
-import {
-  PROJECT_TYPE_ICONS,
-  type Scope,
-  ScopeButton,
-} from "./contentManagerParts";
+import { PROJECT_TYPE_ICONS, type Scope } from "./contentManagerParts";
 
 import type { RefObject } from "react";
 import type { TFunction } from "i18next";
 import type { CategoryCount, LibraryFacetCounts } from "./filters";
 import type { IFilterGroup } from "@/types/ModManager";
 import type { UpdateCheckResult } from "./useUpdateCheck";
-import type { IndicatorBox } from "@renderer/utilities/useSlidingIndicator";
+import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
+import { formatNumber } from "@renderer/utilities/numbers";
 
 export interface ContentToolbarProps {
   browseLoader: Loader | undefined;
@@ -101,12 +101,6 @@ export interface ContentToolbarProps {
   providers: readonly Provider[];
   rawQuery: string;
   scope: Scope;
-  scopeIndicator: {
-    containerRef: RefObject<HTMLDivElement | null>;
-    box: IndicatorBox | null;
-    visible: boolean;
-    transition: string;
-  };
   searchRef: RefObject<HTMLInputElement | null>;
   setCatalogFilters: Dispatch<SetStateAction<string[]>>;
   setCatalogLoader: Dispatch<SetStateAction<Loader | null>>;
@@ -124,14 +118,16 @@ export interface ContentToolbarProps {
   t: TFunction<"translation", undefined>;
   translateCategory: (key: string, fallback: string) => string;
   typeCounts: Map<ProjectType, number>;
-  typeIndicator: {
-    containerRef: RefObject<HTMLDivElement | null>;
-    box: IndicatorBox | null;
-    visible: boolean;
-    transition: string;
-  };
   updateCheck: UpdateCheckResult;
   version: IVersion | undefined;
+}
+
+function providerName(provider: Provider): string {
+  return provider === Provider.CURSEFORGE ? "CurseForge" : "Modrinth";
+}
+
+function withCount(label: string, count: number | undefined): string {
+  return count === undefined ? label : `${label} · ${formatNumber(count)}`;
 }
 
 export function ContentToolbar({
@@ -169,7 +165,6 @@ export function ContentToolbar({
   providers,
   rawQuery,
   scope,
-  scopeIndicator,
   searchRef,
   setCatalogFilters,
   setCatalogLoader,
@@ -187,7 +182,6 @@ export function ContentToolbar({
   t,
   translateCategory,
   typeCounts,
-  typeIndicator,
   updateCheck,
   version,
 }: ContentToolbarProps) {
@@ -285,85 +279,64 @@ export function ContentToolbar({
   return (
     <>
       <div className="@container flex shrink-0 flex-wrap items-center gap-2 pb-2.5">
-        <div
-          ref={scopeIndicator.containerRef}
-          className="relative flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5"
-        >
-          <SlidingIndicator
-            indicator={scopeIndicator}
-            variant="fill"
-            className="rounded-md bg-surface-3"
-          />
-          {!isModpacks && (
-            <ScopeButton
-              active={scope === "library"}
-              label={t("modManager.library")}
-              compact
-              count={
-                projectTypes.length > 1 ? undefined : libraryEntries.length
-              }
-              onClick={() => setScope("library")}
-            >
-              <Library className="size-4" />
-            </ScopeButton>
-          )}
-
-          {providers.includes(Provider.CURSEFORGE) && (
-            <ScopeButton
-              active={scope === Provider.CURSEFORGE}
-              label="CurseForge"
-              compact
-              disabled={!canBrowse}
-              onClick={() => setScope(Provider.CURSEFORGE)}
-            >
-              <SiCurseforge className="size-4" />
-            </ScopeButton>
-          )}
-
-          {providers.includes(Provider.MODRINTH) && (
-            <ScopeButton
-              active={scope === Provider.MODRINTH}
-              label="Modrinth"
-              compact
-              disabled={!canBrowse}
-              onClick={() => setScope(Provider.MODRINTH)}
-            >
-              <SiModrinth className="size-4" />
-            </ScopeButton>
-          )}
-        </div>
+        <SegmentedControl
+          iconOnly
+          value={scope}
+          ariaLabel={t("modManager.source")}
+          options={[
+            ...(!isModpacks
+              ? [
+                  {
+                    value: "library" as Scope,
+                    label: t("modManager.library"),
+                    icon: <Library className="size-4" />,
+                    hint: withCount(
+                      t("modManager.library"),
+                      projectTypes.length > 1
+                        ? undefined
+                        : libraryEntries.length,
+                    ),
+                  },
+                ]
+              : []),
+            ...providers
+              .filter(
+                (provider) =>
+                  provider === Provider.CURSEFORGE ||
+                  provider === Provider.MODRINTH,
+              )
+              .map((provider) => ({
+                value: provider as Scope,
+                label: providerName(provider),
+                icon: (
+                  <ContentProviderIcon provider={provider} className="size-4" />
+                ),
+                disabled: !canBrowse,
+              })),
+          ]}
+          onChange={setScope}
+        />
 
         {!isModpacks && projectTypes.length > 1 && (
-          <div
-            ref={typeIndicator.containerRef}
-            role="tablist"
-            aria-label={t("modManager.contentType")}
-            className="relative flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5"
-          >
-            <SlidingIndicator
-              indicator={typeIndicator}
-              variant="fill"
-              className="rounded-md bg-surface-3"
-            />
-            {projectTypes.map((type) => {
+          <SegmentedControl
+            iconOnly="inactive"
+            value={projectType}
+            ariaLabel={t("modManager.contentType")}
+            options={projectTypes.map((type) => {
               const Icon = PROJECT_TYPE_ICONS[type] ?? Package;
-              return (
-                <ScopeButton
-                  key={type}
-                  active={projectType === type}
-                  label={t(`modManager.projectTypes.${type}`)}
-                  count={
-                    scope === "library"
-                      ? (typeCounts.get(type) ?? 0)
-                      : undefined
-                  }
-                  onClick={() => setProjectType(type)}
-                >
-                  <Icon className="size-4" />
-                </ScopeButton>
-              );
+              const label = t(`modManager.projectTypes.${type}`);
+              return {
+                value: type,
+                label,
+                icon: <Icon className="size-4" />,
+                hint: withCount(
+                  label,
+                  scope === "library" ? (typeCounts.get(type) ?? 0) : undefined,
+                ),
+              };
             })}
-          </div>
+            onChange={setProjectType}
+          />
         )}
 
         {isModpacks && (
@@ -432,34 +405,24 @@ export function ContentToolbar({
         </div>
 
         {scope === "library" ? (
-          <Select
+          <SortMenu
             value={librarySort}
-            onValueChange={(value: LibrarySort) => setLibrarySort(value)}
-          >
-            <SelectTrigger size="sm" className="w-44 shrink-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {LIBRARY_SORTS.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {t(`modManager.librarySorts.${value}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={LIBRARY_SORTS.map((value) => ({
+              value,
+              label: t(`modManager.librarySorts.${value}`),
+            }))}
+            onChange={(value: LibrarySort) => setLibrarySort(value)}
+          />
         ) : (
-          <Select value={catalogSort} onValueChange={setCatalogSort}>
-            <SelectTrigger size="sm" className="w-40 shrink-0">
-              <SelectValue placeholder={t("modManager.sort")} />
-            </SelectTrigger>
-            <SelectContent>
-              {meta.sorts.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {t(`modManager.sorts.${value}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SortMenu
+            value={catalogSort}
+            disabled={meta.sorts.length === 0}
+            options={meta.sorts.map((value) => ({
+              value,
+              label: t(`modManager.sorts.${value}`),
+            }))}
+            onChange={setCatalogSort}
+          />
         )}
 
         {scope !== "library" && loaderOptions.length > 0 && (
@@ -509,7 +472,7 @@ export function ContentToolbar({
               {(scope === "library"
                 ? libraryFilterCount
                 : catalogFilters.length) > 0 && (
-                <span className="ml-0.5 rounded-sm bg-primary-soft px-1 font-mono text-[0.625rem] tabular-nums">
+                <span className="ml-0.5 rounded-sm bg-info/15 px-1 font-mono text-3xs text-info tabular-nums">
                   {scope === "library"
                     ? libraryFilterCount
                     : catalogFilters.length}
@@ -528,21 +491,6 @@ export function ContentToolbar({
             />
           </PopoverContent>
         </Popover>
-
-        {canEdit && !isModpacks && (
-          <Hint content={t("modManager.selectLocals")} side="bottom">
-            <Button
-              size="icon-sm"
-              variant="outline"
-              className="size-8 shrink-0"
-              disabled={isBusy}
-              aria-label={t("modManager.selectLocals")}
-              onClick={pickLocalFiles}
-            >
-              <FilePlus2 className="size-4" />
-            </Button>
-          </Hint>
-        )}
 
         {scope === "library" &&
           canEdit &&
@@ -622,6 +570,45 @@ export function ContentToolbar({
               )}
             </Button>
           </Hint>
+        )}
+
+        {canEdit && !isModpacks && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 shrink-0"
+                disabled={isBusy}
+              >
+                <Plus />
+                {t("common.add")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-48">
+              {providers
+                .filter(
+                  (provider) =>
+                    provider === Provider.CURSEFORGE ||
+                    provider === Provider.MODRINTH,
+                )
+                .map((provider) => (
+                  <DropdownMenuItem
+                    key={provider}
+                    disabled={!canBrowse}
+                    onSelect={() => setScope(provider as Scope)}
+                  >
+                    <ContentProviderIcon provider={provider} />
+                    {providerName(provider)}
+                  </DropdownMenuItem>
+                ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => void pickLocalFiles()}>
+                <HardDrive />
+                {t("modManager.addFromDisk")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
 
         {!isModpacks && (

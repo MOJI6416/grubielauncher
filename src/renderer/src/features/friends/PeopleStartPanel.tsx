@@ -15,6 +15,14 @@ import { HeadDot, PlayerHead } from "@renderer/features/accounts/AccountHead";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { formatRelative } from "@renderer/utilities/date";
 import { canJoinFriend, presenceDotColor } from "./presence";
 import { PlatformIcon } from "./PlatformIcon";
@@ -84,20 +92,22 @@ function FriendCard({
 
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="flex min-w-0 items-center gap-1.5">
-            <span className="min-w-0 truncate text-sm font-medium">
-              {friend.user.nickname}
-            </span>
+            <Hint content={friend.user.nickname} variant="text" truncatedOnly>
+              <span className="min-w-0 truncate text-sm font-medium">
+                {friend.user.nickname}
+              </span>
+            </Hint>
             <span className="shrink-0 text-faint">
               <PlatformIcon platform={friend.user.platform} />
             </span>
             {meta && (
-              <span className="ml-auto shrink-0 text-[10px] text-faint">
+              <span className="ml-auto shrink-0 text-3xs text-faint">
                 {meta}
               </span>
             )}
           </span>
           <Hint content={detail} variant="text" truncatedOnly>
-            <span className="min-w-0 truncate text-[11px] leading-4 text-muted-foreground">
+            <span className="min-w-0 truncate text-2xs leading-4 text-muted-foreground">
               {detail}
             </span>
           </Hint>
@@ -106,7 +116,7 @@ function FriendCard({
 
       <div className="flex shrink-0 items-center gap-1">
         {unread > 0 && (
-          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-soft-raised px-1 font-mono text-[10px] leading-none tabular-nums text-primary">
+          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-info/15 px-1 font-mono text-3xs leading-none tabular-nums text-info">
             {unread > 99 ? "99+" : unread}
           </span>
         )}
@@ -114,7 +124,7 @@ function FriendCard({
           <Button
             size="sm"
             variant="outline"
-            className="h-7 px-2 text-[11px]"
+            className="h-7 px-2 text-2xs"
             onClick={() => onJoin(id)}
           >
             <Play className="size-3" />
@@ -122,15 +132,17 @@ function FriendCard({
           </Button>
         )}
         {canInvite && (
-          <Button
-            size="icon-sm"
-            variant="outline"
-            className="size-7"
-            aria-label={t("friends.invite")}
-            onClick={() => onInvite(id)}
-          >
-            <Send className="size-3" />
-          </Button>
+          <Hint content={t("friends.invite")}>
+            <Button
+              size="icon-sm"
+              variant="outline"
+              className="size-7"
+              aria-label={t("friends.invite")}
+              onClick={() => onInvite(id)}
+            >
+              <Send className="size-3" />
+            </Button>
+          </Hint>
         )}
       </div>
     </div>
@@ -172,20 +184,20 @@ export function PeopleStartPanel({
 
   if (isSignedOut && !hasContent) {
     return (
-      <section className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border border-border bg-card px-8 text-center">
-        <span className="flex size-10 items-center justify-center rounded-xl bg-surface-3">
-          <PlugZap className="size-5 text-warning" />
-        </span>
-
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium">{t("friends.sessionLost")}</p>
-          <p className="max-w-sm text-xs leading-5 text-muted-foreground">
+      <Empty className="min-h-0 overflow-hidden rounded-xl border border-solid border-border bg-card px-8">
+        <EmptyHeader>
+          <EmptyMedia variant="icon" className="text-warning">
+            <PlugZap />
+          </EmptyMedia>
+          <EmptyTitle>{t("friends.sessionLost")}</EmptyTitle>
+          <EmptyDescription className="text-xs leading-5">
             {t("friends.sessionLostHint")}
-          </p>
-        </div>
-
-        <Button onClick={onSignIn}>{t("accounts.signIn")}</Button>
-      </section>
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button onClick={onSignIn}>{t("accounts.signIn")}</Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 
@@ -193,23 +205,23 @@ export function PeopleStartPanel({
     const reason = reasonOf(listError);
 
     return (
-      <section className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border border-border bg-card px-8 text-center">
-        <span className="flex size-10 items-center justify-center rounded-xl bg-surface-3">
-          <CircleAlert className="size-5 text-warning" />
-        </span>
-
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium">{t("friends.listLoadError")}</p>
-          <p className="max-w-sm text-xs leading-5 text-muted-foreground">
+      <Empty className="min-h-0 overflow-hidden rounded-xl border border-solid border-border bg-card px-8">
+        <EmptyHeader>
+          <EmptyMedia variant="icon" className="text-warning">
+            <CircleAlert />
+          </EmptyMedia>
+          <EmptyTitle>{t("friends.listLoadError")}</EmptyTitle>
+          <EmptyDescription className="text-xs leading-5">
             {reason}
-          </p>
-        </div>
-
-        <Button onClick={onReloadFriends}>
-          <RotateCw className="size-4" />
-          {t("common.retry")}
-        </Button>
-      </section>
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button variant="outline" onClick={onReloadFriends}>
+            <RotateCw className="size-4" />
+            {t("common.retry")}
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 
@@ -283,17 +295,17 @@ export function PeopleStartPanel({
               </div>
             </div>
           ) : (
-            <div className="flex shrink-0 items-center gap-2.5 rounded-lg border border-dashed border-border px-3 py-2.5">
+            <Empty className="flex-none flex-row justify-start gap-2.5 rounded-lg border border-border px-3 py-2.5 text-left">
               <Users className="size-4 shrink-0 text-faint" />
-              <p className="min-w-0 text-xs leading-4 text-muted-foreground">
+              <EmptyDescription className="min-w-0 text-xs leading-4">
                 {t("friends.nobodyPlayingHint")}
-              </p>
-            </div>
+              </EmptyDescription>
+            </Empty>
           )}
 
           {chats.length > 0 ? (
             <div className="flex min-h-0 flex-col gap-1.5">
-              <p className="shrink-0 px-0.5 text-[10px] font-medium tracking-wide text-faint uppercase">
+              <p className="shrink-0 px-0.5 text-3xs font-medium tracking-wide text-faint uppercase">
                 {t("friends.recentTitle")}
               </p>
               <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
@@ -316,7 +328,7 @@ export function PeopleStartPanel({
             </div>
           ) : isSummaryPending ? (
             <div className="flex min-h-0 flex-col gap-1.5">
-              <p className="shrink-0 px-0.5 text-[10px] font-medium tracking-wide text-faint uppercase">
+              <p className="shrink-0 px-0.5 text-3xs font-medium tracking-wide text-faint uppercase">
                 {t("friends.recentTitle")}
               </p>
               <div aria-busy className="grid shrink-0 grid-cols-2 gap-2">
@@ -354,15 +366,15 @@ export function PeopleStartPanel({
               </Button>
             </div>
           ) : (
-            <div className="flex shrink-0 items-center gap-2.5 rounded-lg border border-dashed border-border px-3 py-2.5">
+            <Empty className="flex-none flex-row justify-start gap-2.5 rounded-lg border border-border px-3 py-2.5 text-left">
               <MessagesSquare className="size-4 shrink-0 text-faint" />
-              <p className="min-w-0 text-xs leading-4 text-muted-foreground">
+              <EmptyDescription className="min-w-0 text-xs leading-4">
                 <span className="font-medium text-foreground">
                   {t("friends.noChatsTitle")}
                 </span>{" "}
                 {t("friends.noChatsHint")}
-              </p>
-            </div>
+              </EmptyDescription>
+            </Empty>
           )}
 
           <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-border bg-surface-2 px-6 py-3 text-center">
@@ -373,15 +385,17 @@ export function PeopleStartPanel({
                 <span className="font-mono text-lg font-semibold tracking-[0.14em] select-all">
                   {redact.value(ownFriendCode)}
                 </span>
-                <Button
-                  size="icon-xs"
-                  variant="ghost"
-                  className="size-6"
-                  aria-label={t("common.copy")}
-                  onClick={onCopyCode}
-                >
-                  <Copy className="size-3.5" />
-                </Button>
+                <Hint content={t("common.copy")}>
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
+                    className="size-6"
+                    aria-label={t("common.copy")}
+                    onClick={onCopyCode}
+                  >
+                    <Copy className="size-3.5" />
+                  </Button>
+                </Hint>
               </div>
             )}
 
@@ -407,47 +421,49 @@ export function PeopleStartPanel({
           </div>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-surface-3">
-            <Users className="size-5 text-muted-foreground" />
-          </span>
-
-          <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium">{t("friends.noFriends")}</p>
-            <p className="max-w-sm text-xs leading-5 text-muted-foreground">
+        <Empty className="min-h-0 px-8">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Users />
+            </EmptyMedia>
+            <EmptyTitle>{t("friends.noFriends")}</EmptyTitle>
+            <EmptyDescription className="text-xs leading-5">
               {t("friends.noFriendsHint")}
-            </p>
-          </div>
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button onClick={onAddFriend}>
+              <UserPlus className="size-4" />
+              {t("friends.addFriend")}
+            </Button>
 
-          <Button onClick={onAddFriend}>
-            <UserPlus className="size-4" />
-            {t("friends.addFriend")}
-          </Button>
+            {ownFriendCode && (
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-3 py-1.5">
+                <span className="font-mono text-sm tracking-[0.15em] select-all">
+                  {redact.value(ownFriendCode)}
+                </span>
+                <Hint content={t("common.copy")}>
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
+                    className="size-6"
+                    aria-label={t("common.copy")}
+                    onClick={onCopyCode}
+                  >
+                    <Copy className="size-3.5" />
+                  </Button>
+                </Hint>
+              </div>
+            )}
 
-          {ownFriendCode && (
-            <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-3 py-1.5">
-              <span className="font-mono text-sm tracking-[0.15em] select-all">
-                {redact.value(ownFriendCode)}
-              </span>
-              <Button
-                size="icon-xs"
-                variant="ghost"
-                className="size-6"
-                aria-label={t("common.copy")}
-                onClick={onCopyCode}
-              >
-                <Copy className="size-3.5" />
-              </Button>
-            </div>
-          )}
-
-          {ownFriendCode && !friendRequestsEnabled && (
-            <p className="max-w-sm text-xs leading-5 text-warning">
-              <CircleAlert className="mr-1 inline size-3.5 -translate-y-px" />
-              {t("friends.friendCodeDisabledHint")}
-            </p>
-          )}
-        </div>
+            {ownFriendCode && !friendRequestsEnabled && (
+              <p className="max-w-sm text-xs leading-5 text-warning">
+                <CircleAlert className="mr-1 inline size-3.5 -translate-y-px" />
+                {t("friends.friendCodeDisabledHint")}
+              </p>
+            )}
+          </EmptyContent>
+        </Empty>
       )}
     </section>
   );

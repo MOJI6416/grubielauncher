@@ -82,11 +82,11 @@ import {
   consumeRecentFailure,
   showFailureToast,
 } from "@renderer/utilities/failures";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
-import { announceShareCode } from "./publishPresence";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { announceShareCode } from "./publishPresence";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { withoutOverrides } from "@/shared/instanceSettings";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 const api = window.api;
 
 interface SharePublishProgress {
@@ -256,8 +256,8 @@ export function Share({
 
       const count = await api.worlds
         .count(selectedVersion.versionPath)
-        .catch(() => null);
-      if (!cancelled) setWorldCount(count);
+        .catch(ignoreFailure);
+      if (!cancelled) setWorldCount(count ?? null);
     };
 
     countWorlds();
@@ -980,7 +980,7 @@ export function Share({
       })) {
         await api.backend
           .deleteFile(account.accessToken!, uploaded)
-          .catch(() => undefined);
+          .catch(ignoreFailure);
       }
       if (!silentMode) {
         showFailureToast(getPublishErrorToast(errorCode), error, {
@@ -1133,7 +1133,7 @@ export function Share({
       setSelectedVersion(selectedVersion);
       announceShareCode(selectedVersion.version.name, shareCode);
       onPublished?.(shareCode);
-      void copyToClipboard(buildPackShareUrl(shareCode));
+      void copyWithFeedback(buildPackShareUrl(shareCode));
 
       toast.success(t("versions.published"));
       isPublished = true;
@@ -1141,7 +1141,7 @@ export function Share({
       if (createdShareCode && publishCommittedRef.current) {
         await api.backend
           .deleteModpack(account.accessToken!, createdShareCode)
-          .catch(() => undefined);
+          .catch(ignoreFailure);
       }
       const errorCode =
         publishErrorRef.current || resolvePublishErrorCode(error);
@@ -1197,23 +1197,35 @@ export function Share({
       >
         <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
           {view === "files" ? (
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              className="-ml-1"
-              aria-label={t("common.cancel")}
-              onClick={() => setView("plan")}
-            >
-              <ChevronLeft />
-            </Button>
+            <Hint content={t("shell.back")}>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                className="-ml-1"
+                aria-label={t("shell.back")}
+                onClick={() => setView("plan")}
+              >
+                <ChevronLeft />
+              </Button>
+            </Hint>
           ) : (
             <Share2 className="size-4 shrink-0 text-faint" />
           )}
-          <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
-            {view === "files"
-              ? t("share.publish.filesTitle")
-              : t("versions.shareOptions")}
-          </DialogTitle>
+          <Hint
+            content={
+              view === "files"
+                ? t("share.publish.filesTitle")
+                : t("versions.shareOptions")
+            }
+            variant="text"
+            truncatedOnly
+          >
+            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+              {view === "files"
+                ? t("share.publish.filesTitle")
+                : t("versions.shareOptions")}
+            </DialogTitle>
+          </Hint>
         </DialogHeader>
 
         {view === "files" && selectedVersion ? (
@@ -1245,7 +1257,7 @@ export function Share({
                         className={cn(
                           "flex h-9 items-center gap-2.5 rounded-md px-2 text-sm transition-colors",
                           field.available || field.id === "other"
-                            ? "hover:bg-surface-3"
+                            ? "hover:bg-row-hover"
                             : "opacity-45",
                         )}
                       >
@@ -1257,12 +1269,18 @@ export function Share({
                             toggleField(field.id, checked === true)
                           }
                         />
-                        <label
-                          htmlFor={`publish-${field.id}`}
-                          className="min-w-0 flex-1 truncate"
+                        <Hint
+                          content={fieldLabel(field.id)}
+                          variant="text"
+                          truncatedOnly
                         >
-                          {fieldLabel(field.id)}
-                        </label>
+                          <label
+                            htmlFor={`publish-${field.id}`}
+                            className="min-w-0 flex-1 truncate"
+                          >
+                            {fieldLabel(field.id)}
+                          </label>
+                        </Hint>
 
                         {field.available && meta && (
                           <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
@@ -1331,12 +1349,18 @@ export function Share({
                 <div className="grid gap-2.5 rounded-xl border border-border bg-surface-2 px-3 py-2.5">
                   <div className="grid gap-1.5">
                     <div className="flex items-baseline gap-2">
-                      <label
-                        htmlFor="publish-description"
-                        className="min-w-0 flex-1 truncate text-sm"
+                      <Hint
+                        content={t("share.description.label")}
+                        variant="text"
+                        truncatedOnly
                       >
-                        {t("share.description.label")}
-                      </label>
+                        <label
+                          htmlFor="publish-description"
+                          className="min-w-0 flex-1 truncate text-sm"
+                        >
+                          {t("share.description.label")}
+                        </label>
+                      </Hint>
                       <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
                         {nextDescription.length}/{MODPACK_DESCRIPTION_MAX_CHARS}
                       </span>
@@ -1383,9 +1407,15 @@ export function Share({
                 {shareUrl && (
                   <div className="flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5">
                     <Link2 className="size-3.5 shrink-0 text-faint" />
-                    <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
-                      {redact.value(shareUrl)}
-                    </span>
+                    <Hint
+                      content={redact.value(shareUrl)}
+                      variant="text"
+                      truncatedOnly
+                    >
+                      <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
+                        {redact.value(shareUrl)}
+                      </span>
+                    </Hint>
                     <Hint content={t("common.copy")}>
                       <Button
                         size="icon-xs"

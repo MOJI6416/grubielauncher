@@ -9,6 +9,8 @@ import {
   type LayoutPresetId,
 } from "./presets";
 import { applyPreset } from "./useLayout";
+import { Hint } from "@renderer/components/Hint";
+import { onRadioKeyDown, radioFocusIndex } from "@renderer/utilities/radioKeys";
 
 function PresetSketch({ id }: { id: LayoutPresetId }) {
   const values = presetValues(id);
@@ -56,15 +58,19 @@ function PresetSketch({ id }: { id: LayoutPresetId }) {
 export function PresetCards({ settings }: { settings: TSettings }) {
   const { t } = useTranslation();
   const active = matchPreset(settings);
+  const focusIndex = radioFocusIndex(LAYOUT_PRESETS, active);
 
   return (
     <div className="mt-2.5">
       <div
         role="radiogroup"
         aria-label={t("layout.presets.title")}
+        onKeyDown={(event) =>
+          onRadioKeyDown(event, LAYOUT_PRESETS, active, applyPreset)
+        }
         className="grid grid-cols-3 gap-2"
       >
-        {LAYOUT_PRESETS.map((id) => {
+        {LAYOUT_PRESETS.map((id, index) => {
           const isActive = active === id;
           return (
             <button
@@ -72,6 +78,7 @@ export function PresetCards({ settings }: { settings: TSettings }) {
               type="button"
               role="radio"
               aria-checked={isActive}
+              tabIndex={index === focusIndex ? 0 : -1}
               onClick={() => applyPreset(id)}
               className={cn(
                 "relative flex items-center gap-3 rounded-lg border p-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
@@ -82,9 +89,15 @@ export function PresetCards({ settings }: { settings: TSettings }) {
             >
               <PresetSketch id={id} />
               <span className="grid min-w-0 gap-0.5">
-                <span className="truncate text-sm font-medium text-foreground">
-                  {t(`layout.presets.${id}.title`)}
-                </span>
+                <Hint
+                  content={t(`layout.presets.${id}.title`)}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <span className="truncate text-sm font-medium text-foreground">
+                    {t(`layout.presets.${id}.title`)}
+                  </span>
+                </Hint>
                 <span className="text-xs leading-snug text-muted-foreground">
                   {t(`layout.presets.${id}.description`)}
                 </span>

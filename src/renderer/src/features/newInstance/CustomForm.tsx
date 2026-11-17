@@ -14,6 +14,7 @@ import type { Loader } from "@/types/Loader";
 import { instanceJavaMajor } from "@/shared/javaVersions";
 import { LoaderIcon, LoaderPicker } from "@renderer/components/Loaders";
 import { Hint } from "@renderer/components/Hint";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
 import { shortenPath } from "@renderer/features/instances/instanceOverview";
 import { PickerList } from "./PickerList";
 import { SummaryCard } from "./CreationSummary";
@@ -222,37 +223,27 @@ export function CustomForm({
           filters={
             hasNoReleases ? undefined : (
               <>
-                <button
-                  type="button"
-                  aria-pressed={!state.showSnapshots}
-                  data-indicator-active={!state.showSnapshots}
-                  onClick={() =>
-                    dispatch({ type: "setSnapshots", value: false })
+                <SegmentedControl
+                  value={state.showSnapshots ? "all" : "release"}
+                  ariaLabel={t("newInstance.minecraftVersion")}
+                  options={[
+                    {
+                      value: "release",
+                      label: t("newInstance.versionKind.release"),
+                      count: counts.release,
+                    },
+                    {
+                      value: "all",
+                      label: t("newInstance.allVersions"),
+                      count: state.showSnapshots
+                        ? counts.release + counts.snapshot + counts.old
+                        : undefined,
+                    },
+                  ]}
+                  onChange={(kind) =>
+                    dispatch({ type: "setSnapshots", value: kind === "all" })
                   }
-                  className="relative flex h-6 items-center gap-1.5 rounded-md px-2 text-[0.7rem] text-muted-foreground transition-colors not-aria-pressed:hover:bg-surface-3 aria-pressed:text-foreground"
-                >
-                  {t("newInstance.versionKind.release")}
-                  <span className="font-mono text-[0.65rem] tabular-nums text-faint">
-                    {counts.release}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  aria-pressed={state.showSnapshots}
-                  data-indicator-active={state.showSnapshots}
-                  onClick={() =>
-                    dispatch({ type: "setSnapshots", value: true })
-                  }
-                  className="relative flex h-6 items-center gap-1.5 rounded-md px-2 text-[0.7rem] text-muted-foreground transition-colors not-aria-pressed:hover:bg-surface-3 aria-pressed:text-foreground"
-                >
-                  {t("newInstance.allVersions")}
-                  {state.showSnapshots && (
-                    <span className="font-mono text-[0.65rem] tabular-nums text-faint">
-                      {counts.release + counts.snapshot + counts.old}
-                    </span>
-                  )}
-                </button>
+                />
 
                 {state.showSnapshots && (
                   <div className="ml-auto flex items-center gap-1">
@@ -272,7 +263,7 @@ export function CustomForm({
                             )
                           }
                           className={cn(
-                            "flex h-6 items-center rounded-md px-1.5 text-[0.65rem] transition-colors",
+                            "flex h-6 items-center rounded-md px-1.5 text-3xs transition-colors",
                             activeKinds.includes(kind)
                               ? "bg-surface-3 text-foreground"
                               : "text-faint hover:text-muted-foreground",
@@ -341,13 +332,13 @@ export function CustomForm({
 
             {!isModded && (
               <>
-                <p className="border-t border-border/60 p-2.5 text-[0.7rem] leading-snug text-muted-foreground">
+                <p className="border-t border-border/60 p-2.5 text-2xs leading-snug text-muted-foreground">
                   {t("newInstance.vanillaNote")}
                 </p>
 
                 {similar.length > 0 && (
                   <div className="border-t border-border/60 p-2.5">
-                    <p className="pb-1.5 text-[0.65rem] font-semibold tracking-[0.08em] text-faint uppercase">
+                    <p className="pb-1.5 text-3xs font-semibold tracking-[0.08em] text-faint uppercase">
                       {t("newInstance.similar")}
                     </p>
                     <ul className="grid gap-1">
@@ -370,7 +361,7 @@ export function CustomForm({
                             </span>
                           </Hint>
                           {instance.loaderVersion && (
-                            <span className="shrink-0 font-mono text-[0.65rem] text-faint">
+                            <span className="shrink-0 font-mono text-3xs text-faint">
                               {instance.loaderVersion}
                             </span>
                           )}

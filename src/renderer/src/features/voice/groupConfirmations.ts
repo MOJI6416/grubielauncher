@@ -18,42 +18,41 @@ export interface GroupConfirmCopy {
 
 const COPY: Record<GroupConfirmKind, GroupConfirmCopy> = {
   delete: {
-    titleKey: "groups.delete",
+    titleKey: "groups.deleteQuestion",
     actionKey: "groups.delete",
     lineKeys: ["groups.deleteConfirm", "groups.deleteLoss"],
     actionColor: "danger",
     reversible: false,
   },
   leave: {
-    titleKey: "groups.leave",
+    titleKey: "groups.leaveQuestion",
     actionKey: "groups.leave",
     lineKeys: ["groups.leaveConfirm", "groups.leaveLoss"],
     actionColor: "danger",
   },
   resetCode: {
-    titleKey: "groups.resetCode",
+    titleKey: "groups.resetCodeQuestion",
     actionKey: "groups.resetCode",
     lineKeys: ["groups.resetCodeConfirm", "groups.resetCodeLoss"],
     actionColor: "warning",
   },
   transfer: {
-    titleKey: "groups.transferOwner",
+    titleKey: "groups.transferQuestion",
     actionKey: "groups.transferOwner",
     lineKeys: ["groups.transferConfirm", "groups.transferLoss"],
     actionColor: "warning",
   },
   kick: {
-    titleKey: "groups.kick",
+    titleKey: "groups.kickQuestion",
     actionKey: "groups.kick",
     lineKeys: ["groups.kickConfirm", "groups.kickLoss"],
     actionColor: "danger",
   },
   ban: {
-    titleKey: "groups.ban",
+    titleKey: "groups.banQuestion",
     actionKey: "groups.ban",
     lineKeys: ["groups.banConfirm", "groups.banLoss"],
     actionColor: "danger",
-    reversible: true,
   },
 };
 

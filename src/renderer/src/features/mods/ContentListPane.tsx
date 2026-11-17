@@ -21,7 +21,7 @@ import {
   Package,
   PackageOpen,
   Search,
-  Sparkles,
+  SunMoon,
   Trash2,
   Undo2,
   X,
@@ -58,11 +58,15 @@ import { ContentDetails, DetailProgress } from "./ContentDetails";
 import { ImportMode } from "./ImportLocalDialog";
 import { isImportableFileName } from "./localImport";
 import { ListSkeleton } from "@renderer/components/ListSkeleton";
+import { type DetailState, type Scope } from "./contentManagerParts";
 import {
-  type DetailState,
-  EmptyState,
-  type Scope,
-} from "./contentManagerParts";
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import type { RefObject } from "react";
 import type { TFunction } from "i18next";
 import type { UpdateCheckResult } from "./useUpdateCheck";
@@ -76,6 +80,10 @@ import type { SelectionGesture } from "@renderer/utilities/rangeSelection";
 import type { ReactVirtualizer, VirtualItem } from "@tanstack/react-virtual";
 
 const api = window.api;
+
+function catalogSourceName(scope: Scope): string {
+  return scope === Provider.CURSEFORGE ? "CurseForge" : "Modrinth";
+}
 
 export interface ContentListPaneProps {
   account: ILocalAccount | undefined;
@@ -177,7 +185,6 @@ export interface ContentListPaneProps {
   setListElement: Dispatch<SetStateAction<HTMLDivElement | null>>;
   setPinnedFor: (targets: ContentEntry[], pinned: boolean) => void;
   setScope: (scope: Scope) => void;
-  showAddRow: boolean;
   showTrashBar: boolean;
   sizeUnits: string[];
   splitRef: RefObject<HTMLDivElement | null>;
@@ -259,7 +266,6 @@ export function ContentListPane({
   setPinnedFor,
   setScope,
   browseScope,
-  showAddRow,
   showTrashBar,
   sizeUnits,
   splitRef,
@@ -287,6 +293,7 @@ export function ContentListPane({
         className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-border bg-card"
       >
         <div
+          data-file-drop-zone={canEdit && !isModpacks ? "" : undefined}
           className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
           onDragEnter={(event) => {
             if (!canEdit || isModpacks || !isFileDrag(event)) return;
@@ -322,7 +329,7 @@ export function ContentListPane({
         >
           {shaderSupport && shaderSupport.state !== "ready" && (
             <div className="flex min-h-10 shrink-0 items-center gap-2.5 border-b border-border px-3 py-1.5 text-xs">
-              <Sparkles className="size-3.5 shrink-0 text-warning" />
+              <SunMoon className="size-3.5 shrink-0 text-warning" />
               <span className="min-w-0 flex-1 leading-snug text-muted-foreground">
                 {shaderSupport.state === "missing"
                   ? t("modManager.shaderLoader.missing", { loader: shaderSupport.title })
@@ -353,7 +360,7 @@ export function ContentListPane({
               <div
                 className={cn("relative w-full", isResultWave && "result-wave")}
                 style={{
-                  height: `${rowVirtualizer.getTotalSize() + (showAddRow ? 56 : 0)}px`,
+                  height: `${rowVirtualizer.getTotalSize()}px`,
                 }}
               >
                 {virtualItems.map((virtualRow) => {
@@ -474,40 +481,43 @@ export function ContentListPane({
                   );
                 })}
 
-                {showAddRow && (
-                  <button
-                    type="button"
-                    className="absolute left-0 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-                    style={{
-                      top: `${rowVirtualizer.getTotalSize() + 6}px`,
-                    }}
-                    onClick={() => setScope(browseScope)}
-                  >
-                    <PackageOpen className="size-4" />
-                    {t("modManager.browseCatalog")}
-                  </button>
-                )}
               </div>
             ) : listBusy ? (
               <ListSkeleton rows={10} />
             ) : catalog.error && scope !== "library" ? (
-              <EmptyState
-                icon={<CircleAlert className="size-6 text-destructive" />}
-                title={t("modManager.searchFailedTitle")}
-                description={t("modManager.searchFailed")}
-                action={
+              <Empty className="h-full">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <CircleAlert className="text-destructive" />
+                  </EmptyMedia>
+                  <EmptyTitle>
+                    {t("modManager.searchFailedSource", {
+                      source: catalogSourceName(scope),
+                    })}
+                  </EmptyTitle>
+                  <EmptyDescription className="max-w-80 text-xs">
+                    {t("modManager.searchFailedSourceHint")}
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
                   <Button size="sm" variant="outline" onClick={catalog.reload}>
                     {t("common.retry")}
                   </Button>
-                }
-              />
+                </EmptyContent>
+              </Empty>
             ) : isEmptyLibrary ? (
-              <EmptyState
-                icon={<Package className="size-6 text-faint" />}
-                title={t("modManager.emptyInstalled")}
-                description={t("modManager.emptyInstalledHint")}
-                action={
-                  canBrowse ? (
+              <Empty className="h-full">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Package />
+                  </EmptyMedia>
+                  <EmptyTitle>{t("modManager.emptyInstalled")}</EmptyTitle>
+                  <EmptyDescription className="max-w-80 text-xs">
+                    {t("modManager.emptyInstalledHint")}
+                  </EmptyDescription>
+                </EmptyHeader>
+                {canBrowse && (
+                  <EmptyContent>
                     <Button
                       size="sm"
                       variant="secondary"
@@ -516,23 +526,29 @@ export function ContentListPane({
                       <PackageOpen className="size-4" />
                       {t("modManager.browseCatalog")}
                     </Button>
-                  ) : undefined
-                }
-              />
+                  </EmptyContent>
+                )}
+              </Empty>
             ) : (
-              <EmptyState
-                icon={<Search className="size-6 text-faint" />}
-                title={t("common.notFound")}
-                description={t("modManager.notFoundHint")}
-                action={
-                  hasActiveFilters ? (
+              <Empty className="h-full">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Search />
+                  </EmptyMedia>
+                  <EmptyTitle>{t("common.notFound")}</EmptyTitle>
+                  <EmptyDescription className="max-w-80 text-xs">
+                    {t("modManager.notFoundHint")}
+                  </EmptyDescription>
+                </EmptyHeader>
+                {hasActiveFilters && (
+                  <EmptyContent>
                     <Button size="sm" variant="outline" onClick={resetFilters}>
                       <ListRestart className="size-4" />
                       {t("modManager.resetFilters")}
                     </Button>
-                  ) : undefined
-                }
-              />
+                  </EmptyContent>
+                )}
+              </Empty>
             )}
           </div>
 
@@ -549,9 +565,19 @@ export function ContentListPane({
             rows.length > 0 && (
               <div className="flex h-8 shrink-0 items-center justify-center gap-2 border-t border-border px-3 text-xs text-muted-foreground">
                 <CircleAlert className="size-3.5 shrink-0 text-destructive" />
-                <span className="min-w-0 truncate">
-                  {t("modManager.searchFailedTitle")}
-                </span>
+                <Hint
+                  content={t("modManager.searchFailedSource", {
+                    source: catalogSourceName(scope),
+                  })}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <span className="min-w-0 truncate">
+                    {t("modManager.searchFailedSource", {
+                      source: catalogSourceName(scope),
+                    })}
+                  </span>
+                </Hint>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -571,9 +597,15 @@ export function ContentListPane({
                   count: restorableTrash.length,
                 })}
               </span>
-              <span className="min-w-0 truncate text-xs text-faint">
-                {t("modManager.trashHint", { days: TRASH_MAX_AGE_DAYS })}
-              </span>
+              <Hint
+                content={t("modManager.trashHint", { days: TRASH_MAX_AGE_DAYS })}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 truncate text-xs text-faint">
+                  {t("modManager.trashHint", { days: TRASH_MAX_AGE_DAYS })}
+                </span>
+              </Hint>
               <div className="ml-auto flex shrink-0 items-center gap-0.5">
                 <Button
                   size="sm"
@@ -785,7 +817,9 @@ function GroupDropZone({
       className="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-primary/50 px-3 text-xs font-medium text-muted-foreground transition-colors data-[over]:border-primary data-[over]:bg-primary-soft data-[over]:text-foreground [&>svg]:shrink-0"
     >
       {icon}
-      <span className="min-w-0 truncate">{label}</span>
+      <Hint content={label} variant="text" truncatedOnly>
+        <span className="min-w-0 truncate">{label}</span>
+      </Hint>
     </div>
   );
 }

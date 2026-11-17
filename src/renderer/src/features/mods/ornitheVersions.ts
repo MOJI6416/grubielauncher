@@ -1,4 +1,5 @@
 import type { ILocalFile, IVersion as ModVersion } from "@/types/ModManager";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const SEARCH_DEPTH = 40;
 
@@ -70,7 +71,7 @@ export function createOrnitheVersionGuard({
     if (!cached) {
       cached = probe(file.url, file.sha1 || undefined, minecraftVersion)
         .then((result) => (result ? result.generation : undefined))
-        .catch(() => undefined);
+        .catch(ignoreFailure);
       cache.set(file.url, cached);
     }
     return cached;

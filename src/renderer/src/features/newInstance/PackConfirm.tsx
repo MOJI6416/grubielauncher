@@ -1,12 +1,10 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { SiCurseforge, SiModrinth } from "react-icons/si";
 import {
   Boxes,
   Download,
   FolderTree,
-  HardDrive,
   Package,
   Repeat,
   RotateCw,
@@ -20,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { VirtualizedSelect } from "@/components/ui/virtualized-select";
 import { Hint } from "@renderer/components/Hint";
 import { PlayerHead } from "@renderer/features/accounts/AccountHead";
-import { Provider } from "@/types/ModManager";
 import { formatBytes } from "@renderer/utilities/file";
 import { shortenPath } from "@renderer/features/instances/instanceOverview";
 import { getLoaderInfo, LoaderIcon } from "@renderer/components/Loaders";
@@ -29,19 +26,10 @@ import { SummaryCard, type SummaryRowData } from "./CreationSummary";
 import { summarizePackContent } from "./packSummary";
 import type { NewInstanceState } from "./state";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
+import { Empty, EmptyDescription } from "@/components/ui/empty";
 
 const ROW_HEIGHT = 34;
-
-function ProviderMark({ provider }: { provider: Provider }) {
-  if (provider === Provider.CURSEFORGE) {
-    return <SiCurseforge className="size-3 text-[#f16436]" />;
-  }
-  if (provider === Provider.MODRINTH) {
-    return <SiModrinth className="size-3 text-[#1bd96a]" />;
-  }
-
-  return <HardDrive className="size-3 text-faint" />;
-}
 
 export function PackConfirm({
   state,
@@ -233,7 +221,12 @@ export function PackConfirm({
                   <span className="shrink-0 text-faint">·</span>
                 </>
               )}
-              {pack?.provider && <ProviderMark provider={pack.provider} />}
+              {pack?.provider && (
+                <ContentProviderIcon
+                  provider={pack.provider}
+                  className="size-3"
+                />
+              )}
               <Hint
                 content={t(`newInstance.packKind.${pack?.kind ?? "file"}`)}
                 variant="text"
@@ -256,7 +249,7 @@ export function PackConfirm({
 
         {pack?.description && (
           <section className="grid shrink-0 gap-1 rounded-xl border border-border bg-surface-1 p-2.5">
-            <span className="text-[0.7rem] font-semibold tracking-[0.08em] text-faint uppercase">
+            <span className="text-2xs font-semibold tracking-[0.08em] text-faint uppercase">
               {t("addVersion.preview.authorNote")}
             </span>
             <p className="max-h-20 overflow-y-auto pr-1 text-xs leading-4 whitespace-pre-line text-muted-foreground select-text">
@@ -328,10 +321,10 @@ export function PackConfirm({
 
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface-1">
           <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border pr-1.5 pl-2.5">
-            <span className="shrink-0 text-[0.7rem] font-semibold tracking-[0.08em] text-faint uppercase">
+            <span className="shrink-0 text-2xs font-semibold tracking-[0.08em] text-faint uppercase">
               {t("addVersion.preview.content")}
             </span>
-            <span className="shrink-0 font-mono text-[0.7rem] tabular-nums text-faint">
+            <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
               {summary.total}
             </span>
 
@@ -339,7 +332,7 @@ export function PackConfirm({
               {summary.groups.map((group) => (
                 <span
                   key={group.type}
-                  className="shrink-0 rounded-md bg-surface-2 px-1.5 py-0.5 text-[0.65rem] text-muted-foreground"
+                  className="shrink-0 rounded-md bg-surface-2 px-1.5 py-0.5 text-3xs text-muted-foreground"
                 >
                   {t(`modManager.projectTypes.${group.type}`)}
                   <span className="ml-1 font-mono tabular-nums text-faint">
@@ -355,9 +348,11 @@ export function PackConfirm({
             className="min-h-0 flex-1 overflow-y-auto p-1"
           >
             {state.mods.length === 0 ? (
-              <p className="flex h-full items-center justify-center px-4 text-center text-xs text-muted-foreground">
-                {t("newInstance.emptyContent")}
-              </p>
+              <Empty className="h-full px-4">
+                <EmptyDescription className="text-xs">
+                  {t("newInstance.emptyContent")}
+                </EmptyDescription>
+              </Empty>
             ) : (
               <div
                 className="relative w-full"
@@ -395,7 +390,10 @@ export function PackConfirm({
                         </span>
                       </Hint>
 
-                      <ProviderMark provider={mod.provider} />
+                      <ContentProviderIcon
+                        provider={mod.provider}
+                        className="size-3"
+                      />
                     </div>
                   );
                 })}
@@ -409,7 +407,7 @@ export function PackConfirm({
               variant="text"
               truncatedOnly
             >
-              <span className="min-w-0 truncate text-[0.7rem] text-faint">
+              <span className="min-w-0 truncate text-2xs text-faint">
                 {t("newInstance.afterInstallHint")}
               </span>
             </Hint>

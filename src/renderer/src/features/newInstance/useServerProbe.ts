@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { serverIconDataUrl } from "@renderer/features/servers/serverIcon";
 import { pingServer } from "@renderer/features/servers/useServerStatuses";
 import { minecraftVersionFromPing, parseServerAddress } from "./serverTarget";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 export interface ServerProbe {
   status: "idle" | "probing" | "online" | "offline";
@@ -48,7 +49,8 @@ export function useServerProbe() {
       host: target.host,
     });
 
-    const result = (await pingServer(target.address).catch(() => null))?.result;
+    const result = (await pingServer(target.address).catch(ignoreFailure))
+      ?.result;
     if (requestId !== requestRef.current) return;
 
     if (!result?.online) {

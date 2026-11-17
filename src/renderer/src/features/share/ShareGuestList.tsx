@@ -42,7 +42,7 @@ export function ShareGuestList({
             className="flex h-9 items-center gap-2.5 rounded-lg px-1"
           >
             <Avatar className="size-6 shrink-0">
-              <AvatarFallback className="text-[0.6rem]">
+              <AvatarFallback className="text-3xs">
                 {row.isKnown ? (
                   name.slice(0, 2).toUpperCase()
                 ) : (

@@ -96,7 +96,7 @@ export function IdentityFields({
                       className="flex size-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border bg-surface-1 text-faint transition-colors hover:border-input hover:bg-surface-2 hover:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-expanded:border-input aria-expanded:bg-surface-2"
                     >
                       <ImagePlus className="size-5" />
-                      <span className="text-[0.6rem]">{t("common.logo")}</span>
+                      <span className="text-3xs">{t("common.logo")}</span>
                     </button>
                   </PopoverTrigger>
                 </Hint>
@@ -128,7 +128,7 @@ export function IdentityFields({
           </Label>
           <span
             className={cn(
-              "ml-auto font-mono text-[0.65rem] tabular-nums",
+              "ml-auto font-mono text-3xs tabular-nums",
               name.trim().length > INSTANCE_NAME_MAX
                 ? "text-destructive"
                 : "text-faint",

@@ -175,7 +175,7 @@ export function AccountSwitcher({
       {avatar}
 
       <span className="grid min-w-0 flex-1">
-        <span className="truncate text-[0.7rem] leading-4 text-faint">
+        <span className="truncate text-2xs leading-4 text-faint">
           {t("accounts.playingAs")}
         </span>
         <span className="truncate text-sm leading-4 font-medium">
@@ -212,16 +212,16 @@ export function AccountSwitcher({
           >
             <button
               type="button"
-              aria-current={canOpenProfile && isOwnProfile}
+              aria-current={canOpenProfile && isOwnProfile ? "page" : undefined}
               aria-label={selectedAccount.nickname}
               onClick={() =>
                 canOpenProfile &&
                 navigate({ name: "profile", userId: OWN_PROFILE_ID })
               }
               className={cn(
-                "flex size-11 items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-[current=true]:bg-primary-soft",
+                "flex size-11 items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-[current=page]:bg-row-selected",
                 canOpenProfile
-                  ? "not-aria-[current=true]:hover:bg-sidebar-accent"
+                  ? "not-aria-[current=page]:hover:bg-sidebar-accent"
                   : "cursor-default",
               )}
             >
@@ -232,14 +232,17 @@ export function AccountSwitcher({
         </div>
       ) : canOpenProfile ? (
         <div className="flex h-11 w-full items-center gap-0.5">
-          <Hint content={t("shell.nav.profile")} side="top">
+          <Hint
+            content={`${t("shell.nav.profile")} · ${selectedAccount.nickname}`}
+            side="top"
+          >
             <button
               type="button"
-              aria-current={isOwnProfile}
+              aria-current={isOwnProfile ? "page" : undefined}
               onClick={() =>
                 navigate({ name: "profile", userId: OWN_PROFILE_ID })
               }
-              className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1.5 text-left transition-colors not-aria-[current=true]:hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-[current=true]:bg-primary-soft"
+              className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1.5 text-left transition-colors not-aria-[current=page]:hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-[current=page]:bg-row-selected"
             >
               {identity}
             </button>
@@ -248,16 +251,23 @@ export function AccountSwitcher({
           {accountsTrigger}
         </div>
       ) : (
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            aria-label={t("accounts.accounts")}
-            className="flex h-11 w-full items-center gap-2.5 rounded-lg px-1.5 text-left transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            {identity}
-            <ChevronsUpDown className="size-3.5 shrink-0 text-faint" />
-          </button>
-        </DropdownMenuTrigger>
+        <Hint
+          content={selectedAccount.nickname}
+          variant="text"
+          side="top"
+          truncatedOnly
+        >
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label={t("accounts.accounts")}
+              className="flex h-11 w-full items-center gap-2.5 rounded-lg px-1.5 text-left transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+              {identity}
+              <ChevronsUpDown className="size-3.5 shrink-0 text-faint" />
+            </button>
+          </DropdownMenuTrigger>
+        </Hint>
       )}
 
       <DropdownMenuContent
@@ -285,9 +295,11 @@ export function AccountSwitcher({
               <AccountHead account={account} size={20} />
 
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate leading-4">{account.nickname}</span>
+                <Hint content={account.nickname} variant="text" truncatedOnly>
+                  <span className="truncate leading-4">{account.nickname}</span>
+                </Hint>
                 {isAmbiguousNickname(account, duplicates) && (
-                  <span className="flex items-center gap-1 text-[0.65rem] leading-3 text-faint">
+                  <span className="flex items-center gap-1 text-3xs leading-3 text-faint">
                     <ProviderIcon type={account.type} size={9} />
                     {providerName(account.type, t)}
                   </span>
@@ -297,7 +309,7 @@ export function AccountSwitcher({
               <SessionDot state={session.state} className="ring-popover" />
 
               {shortcutIndex >= 0 && shortcutIndex < 9 && (
-                <kbd className="shrink-0 font-mono text-[0.6rem] text-faint">
+                <kbd className="shrink-0 font-mono text-3xs text-faint">
                   {MOD_KEY} {shortcutIndex + 1}
                 </kbd>
               )}
@@ -310,13 +322,13 @@ export function AccountSwitcher({
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
-          aria-current={route.name === "accounts"}
+          aria-current={route.name === "accounts" ? "page" : undefined}
           onSelect={() => openAccounts()}
         >
           <Settings2 />
           {t("accounts.manage")}
           {broken > 0 && (
-            <span className="ml-auto font-mono text-[0.65rem] text-destructive">
+            <span className="ml-auto font-mono text-3xs text-destructive">
               {broken}
             </span>
           )}

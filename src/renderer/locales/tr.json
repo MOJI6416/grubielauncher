@@ -14,7 +14,6 @@
     "copyFailedHint": "Pano meşgul ya da metin çok büyük. Tekrar deneyin veya dosyadan kopyalayın.",
     "openFolder": "Konum",
     "edit": "Düzenle",
-    "confirmation": "Onay",
     "reversible": "Bu işlem geri alınabilir",
     "irreversible": "Bu işlem geri alınamaz",
     "yes": "Evet",
@@ -44,7 +43,11 @@
     "next": "Sonraki",
     "reset": "Sıfırla",
     "loading": "Yükleniyor",
-    "refresh": "Yenile"
+    "refresh": "Yenile",
+    "undo": "Geri al",
+    "sort": "Sıralama",
+    "sortBy": "Sıralama: {{value}}",
+    "clearSearch": "Aramayı temizle"
   },
   "accounts": {
     "added": "Hesap eklendi",
@@ -55,7 +58,6 @@
     "elyby": "Ely.by",
     "nickname": "Kullanıcı adı",
     "sessionExpired": "Hesap oturumunuzun süresi doldu. Yeniden giriş yapın.",
-    "confirmation": "{{nickname}} hesabını silmek istediğinizden emin misiniz?",
     "sessionExpiredHint": "Hesap oturumu yenilenemedi. Yeniden giriş yapın.",
     "oauthTimeLeft": "Giriş için kalan süre: {{time}}",
     "discord": "Discord",
@@ -213,7 +215,8 @@
         "rate_limited": "Çok fazla deneme. Lütfen biraz bekleyin.",
         "failed": "Kullanıcı adı değiştirilemedi. Lütfen tekrar deneyin.",
         "providerTaken": "{{provider}} kullanıcı adı şu anda başka bir oyuncuda — farklı bir ad seçin."
-      }
+      },
+      "resetQuestion": "{{provider}} kullanıcı adı geri yüklensin mi?"
     },
     "littleskin": "LittleSkin",
     "littleskinForm": {
@@ -235,7 +238,9 @@
       "capes": "Pelerinler",
       "friends": "Arkadaşlar ve ses",
       "worksOffline": "İnternetsiz"
-    }
+    },
+    "removeQuestion": "{{nickname}} hesabı kaldırılsın mı?",
+    "removeLoss": "Başlatıcı bu girişi unutacak. Hesabı geri almak için ona yeniden giriş yapın."
   },
   "serverManager": {
     "logoEdited": "Logo düzenlendi",
@@ -243,8 +248,6 @@
     "deleted": "Sunucu silindi",
     "configNotFound": "Sunucu yapılandırma dosyası bulunamadı",
     "deleteError": "Sunucu silme hatası",
-    "confirmation": "Sunucu silinsin mi? Sunucu dünyasını içeren klasörü geri dönüşüm kutusuna taşınır.",
-    "deleteTitle": "Kurulum sunucusu siliniyor",
     "deleteErrorHint": "Sunucu klasörü silinemedi. Sunucuyu durdurup tekrar deneyin.",
     "start": "Sunucuyu başlat",
     "stop": "Sunucuyu durdur",
@@ -299,11 +302,12 @@
     "partRecord": "sunucu kaydı",
     "settingsUnreadable": "server.properties okunamadı",
     "settingsUnreadableHint": "Başlatıcı sunucu ayarları dosyasını okuyamıyor. Dosya başka bir program tarafından kilitlenmiş ya da sunucu klasörü erişilemez olabilir.",
-    "closeTitle": "Sunucu hâlâ çalışıyor",
     "closeHint": "Başlatıcı stop komutunu gönderip dünyanın kaydedilmesini bekleyecek. Oyuncuların bağlantısı kesilecek.",
     "closeStopAndQuit": "Durdur ve kapat",
     "applyAfterRestart": "sunucu yeniden başlayınca geçerli olur",
-    "runErrorChosenJava": "Bu sunucu için seçilen Java kullanılamıyor — sunucu ayarlarından başka bir Java seçin."
+    "runErrorChosenJava": "Bu sunucu için seçilen Java kullanılamıyor — sunucu ayarlarından başka bir Java seçin.",
+    "viewLabel": "Sunucu bölümü",
+    "closeQuestion": "Sunucu durdurulup başlatıcı kapatılsın mı?"
   },
   "serverSettings": {
     "description": "Açıklama",
@@ -422,7 +426,7 @@
     "deleteAlert": "{{nickname}} arkadaş listenizden, siz de onun listesinden kaldırılırsınız.",
     "noFriends": "Arkadaş yok",
     "requestSent": "İstek gönderildi",
-    "requestQueued": "Bağlantı yok — bağlantı geri gelince isteği göndereceğiz",
+    "requestQueued": "Grubie sunucusuyla bağlantı yok — bağlantı geri gelince isteği göndereceğiz",
     "noRequests": "İstek yok",
     "friendId": "Arkadaş kodu",
     "send": "Gönder",
@@ -449,7 +453,7 @@
       "user_not_found": "Kullanıcı bulunamadı.",
       "not_friend": "Önce bu kullanıcıyı arkadaş olarak ekleyin.",
       "not_member": "Artık bu grubun üyesi değilsiniz.",
-      "offline": "Bağlantı yok — bağlantı geri gelince tekrar deneyin.",
+      "offline": "Grubie sunucusuyla bağlantı yok — bağlantı geri gelince tekrar deneyin.",
       "timeout": "Sunucu yanıt vermedi. Tekrar deneyin.",
       "rate_limited": "Bunu çok hızlı yapıyorsunuz. Lütfen biraz yavaşlayın.",
       "unknown": "İşlem tamamlanamadı.",
@@ -482,7 +486,6 @@
     "chatAttachModpack": "Mod paketi",
     "chatGroupInvite": "Grup daveti",
     "chatGroupInviteJoin": "Katıl",
-    "chatExternalLinkTitle": "Harici bağlantı",
     "chatExternalLinkWarning": "Harici bir bağlantıyı açmak üzeresiniz. Yalnızca güvendiğiniz bağlantıları açın.",
     "chatExternalLinkOpen": "Aç",
     "incomingRequests": "Gelen",
@@ -577,7 +580,6 @@
     "filterAll": "Tümü",
     "filterOnline": "Çevrim içi",
     "filterUnread": "Okunmamış",
-    "sortLabel": "Sıralama",
     "sortActivity": "Etkinliğe göre",
     "sortName": "Ada göre",
     "lastSeen": "Çevrim dışı · {{value}}",
@@ -610,7 +612,7 @@
     "chatFailed": "Gönderilmedi",
     "chatRetry": "Yeniden dene",
     "chatDiscard": "Vazgeç",
-    "chatOffline": "Bağlantı yok — bağlantı geri gelince göndereceğiz",
+    "chatOffline": "Grubie sunucusuyla bağlantı yok — bağlantı geri gelince göndereceğiz",
     "chatRead": "Okundu",
     "chatTyping": "Yazıyor…",
     "chatDeleteConfirm": "Mesaj ikiniz için de silinir.",
@@ -621,7 +623,6 @@
     "howItWorksStep3": "Arkadaşınızın ne oynadığını görür ve tek düğmeyle ona katılırsınız.",
     "pickGroup": "Bir grup seçin",
     "pickGroupHint": "Her grubun kendi sohbeti ve ses odası vardır — soldan birini açın.",
-    "deleteTitle": "Arkadaşlardan çıkar",
     "deleteLoss": "Birinizden biri yeni bir arkadaşlık isteği gönderene kadar birbirinizin dünyalarına katılma, aramalar ve davetler çalışmaz.",
     "deleteAction": "Arkadaşlardan çıkar",
     "acceptRequest": "İsteği kabul et",
@@ -650,7 +651,13 @@
     "stickerPacks": {
       "noto": "Hareketli emoji"
     },
-    "stickerCredit": "Noto Emoji Animation © Google"
+    "stickerCredit": "Noto Emoji Animation © Google",
+    "filterLabel": "Arkadaş filtresi",
+    "resetFilters": "Aramayı ve filtreyi sıfırla",
+    "resetFriendCodeTitle": "Arkadaş kodu sıfırlansın mı?",
+    "chatExternalLinkQuestion": "Harici bağlantı açılsın mı?",
+    "chatDeleteMessageQuestion": "Mesaj silinsin mi?",
+    "deleteQuestion": "{{nickname}} arkadaşlardan çıkarılsın mı?"
   },
   "modManager": {
     "title": "Mod yöneticisi",
@@ -691,13 +698,6 @@
     "deleted": "Mod silindi",
     "requiredBy": "Gerektiren",
     "deleteTitle": "Modları kaldır",
-    "deleteSelected": "Seçilenler: {{names}}",
-    "deleteDependencyWarning": "Diğer modlar seçiminize bağlı. Tüm zinciri veya yalnızca seçili modları kaldırın. Zorunlu bağımlılığı olmayan bir modu tutmak oyunun başlamasını engelleyebilir.",
-    "deleteSaveHint": "Değişikliklerinizi Kaydet ile uygulayın. Kaldırılan dosyalar çöp kutusundan geri yüklenebilir.",
-    "deleteOnlySelected": "Yalnızca seçili modlar",
-    "deleteWithDependents": "Tüm zinciri kaldır ({{count}})",
-    "deleteWithDependencies": "Kullanılmayan bağımlılıklarla ({{count}})",
-    "deleteList": "Zinciri kaldırmak şunları da kaldıracak:",
     "alsoRemoves": "Kullanılmayan bağımlılıkları da kaldırır",
     "updated": "Mod güncellendi",
     "dependencyTypes": [
@@ -708,8 +708,6 @@
       "Uyumsuz"
     ],
     "notFoundMod": "Mod bulunamadı",
-    "searchFailed": "Arama başarısız. Bağlantınızı kontrol edip tekrar deneyin",
-    "searchFailedTitle": "Arama kullanılamıyor",
     "noDependencies": "Bağımlılık yok",
     "dependenciesFailed": "Bağımlılıklar yüklenemedi",
     "dependenciesUnresolved": "Kaynak bu modun bağımlılıkları hakkında yanıt vermedi. Onları elle kontrol edin veya daha sonra tekrar deneyin.",
@@ -774,7 +772,6 @@
     "installing": "Kuruluyor…",
     "invalidMod": "Geçersiz mod dosyası",
     "alreadyInstalled": "Mod zaten kurulu",
-    "selectLocals": "Yerel modları seç",
     "notModpack": "Mod paketi tanınamadı",
     "extracting": "Açılıyor...",
     "addingProjects": "Modlar ekleniyor",
@@ -817,7 +814,7 @@
     },
     "resetFilters": "Filtreleri sıfırla",
     "authorFilter": "Yazar: {{name}}",
-    "authorProjects": "{{name}} tarafından yapılan tüm projeler",
+    "authorProjects": "{{name}} tarafından yapılan her şey",
     "hideLibraries": "Kütüphaneleri gizle",
     "emptyInstalled": "Henüz hiçbir şey kurulmadı",
     "emptyInstalledHint": "Kurduğunuz içerik burada görünür ve kurulumla birlikte taşınır.",
@@ -948,8 +945,14 @@
       "missing": "Gölgelendiriciler yalnızca {{loader}} ile çalışır. Bu kurulumda yok, o olmadan açılmazlar.",
       "unsupported": "Bu kurulumda gölgelendiricilerin çalışacağı bir temel yok: Iris ile Fabric, Quilt veya NeoForge (ya da Oculus ile Forge) gerekir.",
       "install": "{{loader}} kur",
-      "notFound": "Modun sayfası açılamadı. İnternetinizi kontrol edip tekrar deneyin."
-    }
+      "notFoundSource": "Modrinth yanıt vermiyor — mod sayfası açılmadı"
+    },
+    "source": "Kaynak",
+    "addFromDisk": "Diskten dosyalar…",
+    "searchFailedSource": "{{source}} yanıt vermiyor",
+    "searchFailedSourceHint": "Katalog araması şu an kullanılamıyor — bir dakika sonra yeniden deneyin.",
+    "deletedWithDependencies": "Kullanılmayan bağımlılıklar da kaldırıldı: {{names}}",
+    "deletedBreaksDependents": "Kaldırılana bağlı olanlar: {{names}}. Oyun açılmayabilir."
   },
   "nav": {
     "play": "Oyna"
@@ -1020,9 +1023,6 @@
     "adding": "Yeni sunucu",
     "editing": "Sunucu düzenleniyor",
     "copyAddress": "Adresi kopyala",
-    "confirmation": "{{name}} sunucusu silinsin mi?",
-    "deleteTitle": "Sunucu siliniyor",
-    "deleteHint": "Adres bu kurulumun listesinden kalkar. Sunucunun kendisindeki dünyaya dokunulmaz.",
     "resourceSets": [
       "Sor",
       "Açık",
@@ -1036,7 +1036,6 @@
     "checking": "Sunucu kontrol ediliyor",
     "recheck": "Yeniden kontrol et",
     "checkedAt": "Kontrol: {{time}}",
-    "addAnother": "Sunucu ekle",
     "pingError": {
       "timeout": "Sunucu zamanında yanıt vermedi — kapalı olabilir veya port kapalı olabilir.",
       "refused": "Bağlantı reddedildi: bu portu dinleyen bir şey yok.",
@@ -1103,7 +1102,6 @@
       "compatibleEmptyHint": "Şu anda {{version}} için uygun sunucu yok. Tüm sunuculara göz atın: herhangi biri için kurulum oluşturabilirsiniz.",
       "showAll": "Tüm sunucuları göster",
       "failedTitle": "Modrinth yanıt vermedi",
-      "failedHint": "Bağlantınızı kontrol edip tekrar deneyin.",
       "pickHint": "Ayrıntılarını görmek için bir sunucu seçin.",
       "modpack": "Mod paketi",
       "vanilla": "Modsuz",
@@ -1192,9 +1190,15 @@
         "smp": "SMP",
         "social": "Sosyal",
         "technical": "Teknik"
-      }
+      },
+      "sourceLabel": "Sunucular nerede aransın",
+      "failedHintSource": "Modrinth sunucu kataloğu şu anda yanıt vermiyor — bir dakika sonra yeniden deneyin."
     },
-    "createShortcut": "Masaüstü kısayolu"
+    "createShortcut": "Masaüstü kısayolu",
+    "statusNotFound": "Bulunamadı",
+    "readOnlyHint": "Yalnızca görüntüleme: bu kurulumun sunucu listesini yazarı yönetir.",
+    "importNothing": "İçe aktarılacak bir şey yok",
+    "importPick": "Eklemek istediğiniz sunucuları işaretleyin"
   },
   "voice": {
     "title": "Sesli sohbet",
@@ -1273,7 +1277,6 @@
     "joinByCode": "Kodla katıl",
     "join": "Sese katıl",
     "copyCode": "Kodu kopyala",
-    "codeCopied": "Kod kopyalandı",
     "rename": "Yeniden adlandır",
     "renameTitle": "Grubu yeniden adlandır",
     "resetCode": "Kodu sıfırla",
@@ -1305,7 +1308,6 @@
     "actionError": "İşlem başarısız",
     "chat": "Grup sohbeti",
     "copyLink": "Davet bağlantısını kopyala",
-    "linkCopied": "Bağlantı kopyalandı",
     "members": "Üyeler",
     "ban": "Yasakla",
     "bannedSection": "Yasaklılar",
@@ -1366,7 +1368,13 @@
     "alreadyJoined": "Zaten “{{group}}” grubundasınız",
     "noGameInviteRecipients": "Davet edilecek kimse yok: bu grupta arkadaşınız yok",
     "inviteSending": "Gönderiliyor…",
-    "voicePinging": "Çağrılıyor…"
+    "voicePinging": "Çağrılıyor…",
+    "deleteQuestion": "“{{name}}” grubu silinsin mi?",
+    "leaveQuestion": "“{{name}}” grubundan ayrılınsın mı?",
+    "resetCodeQuestion": "Davet kodu sıfırlansın mı?",
+    "transferQuestion": "Grup sahipliği {{nickname}} kullanıcısına devredilsin mi?",
+    "kickQuestion": "{{nickname}} gruptan çıkarılsın mı?",
+    "banQuestion": "{{nickname}} grupta yasaklansın mı?"
   },
   "voiceCall": {
     "start": "Ara",
@@ -1416,7 +1424,6 @@
       "mirror": "Ayna"
     },
     "connectivity": {
-      "title": "Bağlantı testi",
       "description": "Başlatıcı sunucularına ve resmî kaynaklara erişimi test eder",
       "run": "Testi çalıştır",
       "running": "Test ediliyor…",
@@ -1438,7 +1445,8 @@
         "officialDown": "Resmî kaynağa ulaşılamıyor. “Otomatik” veya “Ayna” seçeneğine geçin.",
         "mirrorDown": "Aynaya ulaşılamıyor. “Otomatik” veya “Resmî” seçeneğine geçin.",
         "fail": "İndirmeler kullanılamıyor: ne resmî sunucular ne de ayna yanıt veriyor. DNS’i değiştirin (1.1.1.1) veya VPN kullanın."
-      }
+      },
+      "heading": "Bağlantı kontrolü"
     },
     "crashTelemetry": "Anonim çökme istatistikleri",
     "crashTelemetryDescription": "Yalnızca teşhis kodunu gönderir — ipuçlarını iyileştirmeye yardımcı olur",
@@ -1568,7 +1576,8 @@
       },
       "reclaimBanner": "Kurulumlara, dünyalara veya hesaplara dokunmadan yaklaşık {{size}} boşaltılabilir.",
       "scanning": "Klasör ölçülüyor…",
-      "rootHint": "başlatıcının indirdiği her şey"
+      "rootHint": "başlatıcının indirdiği her şey",
+      "restMore": "Diğer kurulumlar: {{value}}"
     },
     "devModeDescription": "Çalıştırma komutunu kopyalama ve ek hata ayıklama araçları",
     "voiceMicTestErrorHint": "Mikrofona erişim yok. {{os}} izinlerini ve seçili cihazı kontrol edin.",
@@ -1580,14 +1589,14 @@
       "title": "İzin verdiğiniz klasörler ve dosyalar",
       "description": "Başlatıcı kendi klasörleri dışında burada okuma ve yazma yapabilir. Erişim son kullanımdan 30 gün sonra sona erer.",
       "revoke": "İptal et",
-      "empty": "Başlatıcı klasörleri dışında hiçbir şeye erişim izni vermediniz."
+      "empty": "Başlatıcı klasörleri dışında hiçbir şeye erişim izni vermediniz.",
+      "revokeFailed": "Erişim iptal edilemedi"
     },
     "saving": "Kaydediliyor…",
     "changed": "Varsayılandan değiştirildi",
     "onlyChanged": "Değiştirilenler",
     "resetOne": "Varsayılana sıfırla",
     "resetAll": "Tümünü sıfırla",
-    "resetAllConfirmTitle": "Değiştirilen tüm ayarlar sıfırlansın mı?",
     "autosaveHint": "Değişiklikler hemen uygulanır — kaydedilecek bir şey yok.",
     "search": {
       "placeholder": "Ayarlarda ara",
@@ -1779,7 +1788,8 @@
       "historyHint": "Önceki sürümlerde neler değişti",
       "historyCurrent": "Kurulu",
       "historyNoDetails": "Bu sürüm için değişiklik listesi yok.",
-      "historyUnavailable": "Sürüm listesi şu anda kullanılamıyor — bağlantı geri gelince yüklenecek."
+      "historyUnavailable": "Sürüm listesi şu anda kullanılamıyor — bağlantı geri gelince yüklenecek.",
+      "openLinkFailed": "Bağlantı açılamadı"
     },
     "index": {
       "memory": {
@@ -2108,8 +2118,6 @@
         "keywords": "linux hook başlatmadan önce çıkıştan sonra betik komut"
       }
     },
-    "resetAllConfirmBody_one": "{{count}} ayar varsayılanına döner. Kurulumlar, hesaplar ve dünyalar etkilenmez.",
-    "resetAllConfirmBody_other": "{{count}} ayar varsayılanına döner. Kurulumlar, hesaplar ve dünyalar etkilenmez.",
     "voicePttCaptureTimeout": "Hiçbir tuşa basılmadı — kısayol değişmedi.",
     "voicePttCaptureUnavailable": "Başlatıcı genel tuşları okuyamıyor. Antivirüsünüzün buna izin verdiğini kontrol edip başlatıcıyı yeniden başlatın.",
     "agentChatSync": "Asistan sohbetlerini eşitle",
@@ -2154,7 +2162,8 @@
       "adoptTitle": "Bu klasörde zaten başlatıcı verileri var",
       "adoptDescription": "Başlatıcı yeniden başlayacak ve onunla çalışmaya devam edecek. Mevcut klasör olduğu yerde kalır; onu elle silebilirsiniz.",
       "adoptConfirm": "Geç ve yeniden başlat",
-      "restarting": "Yeniden başlatılıyor…"
+      "restarting": "Yeniden başlatılıyor…",
+      "adoptQuestion": "Bu klasördeki verilere geçilsin mi?"
     },
     "supportSection": {
       "reportTitle": "Destek için rapor",
@@ -2169,7 +2178,8 @@
       "folderDescription": "Dosyalar: {{files}} · bu bilgisayarda {{size}}",
       "folderDescriptionEmpty": "Bu bilgisayarda saklanır",
       "historyTitle": "Gönderilen raporlar"
-    }
+    },
+    "resetAllDone": "Ayarlar varsayılana sıfırlandı"
   },
   "skinView": {
     "title": "Skin önizlemesi",
@@ -2229,15 +2239,11 @@
     "deletedHint": "Sistem çöp kutusu klasörü kabul etmedi, bu yüzden kalıcı olarak silindi.",
     "trashed": "Kurulum çöp kutusuna taşındı",
     "trashedHint": "Klasör, siz boşaltana kadar sistem çöp kutusunda kalır.",
-    "updateAvailable": "Paketin daha yeni bir sürümü var",
     "updateAheadHint": "Muhtemelen başka bir cihazdan yayımlandı: buradan yayımlamak sunucudaki kopyayı bu kurulumla değiştirir.",
     "hostChanged": "Sahibi kurulumu değiştirdi",
     "runWithoutUpdating": "Güncellemeden başlat",
-    "updateCheckFailed": "Kurulum güncellemesi denetlenemedi",
     "updateCheckFailedHint": "Başlatıcı sunucudan yanıt alamadı, bu yüzden sahibinin bu kurulumu güncelleyip güncellemediği bilinmiyor. Tekrar deneyin veya elinizdeki sürümü başlatın.",
     "publicUpdate": "Bu kurulumu paylaştınız, herkes için güncellemek istiyor musunuz?",
-    "publicUpdateTitle": "Yayın güncelleniyor",
-    "notSavedTitle": "Kaydedilmemiş değişiklikler",
     "notSavedHint": "Kurulumdaki değişiklikler kaydedilmedi. Kapatırsanız kaybolurlar.",
     "updateError": "Kurulum güncellenemedi",
     "integrityOk": "Kurulum bütünlüğü doğrulandı",
@@ -2272,9 +2278,9 @@
     "syncInterrupted": "Eşitleme tamamlanmadı",
     "syncInterruptedHint": "Bazı kurulum dosyaları zaten değiştirildi. Kurulumu yapısıyla yeniden uyumlu hâle getirmek için «Onar»ı çalıştırın.",
     "syncServers": {
-      "title": "Eşitleme sunucu listesini değiştirecek",
       "hint": "Kurulumun sunucu listesi, sahibinin listesiyle değiştirilecek. Bu kayıtlar sizin — eşitlemeden sonra kaybolacaklar:",
-      "unknownHint": "Kurulumun sunucu listesi okunamadı. Eşitleme servers.dat dosyasını sahibinin listesiyle değiştirir — kendi kayıtlarınız kaybolur."
+      "unknownHint": "Kurulumun sunucu listesi okunamadı. Eşitleme servers.dat dosyasını sahibinin listesiyle değiştirir — kendi kayıtlarınız kaybolur.",
+      "ask": "Eşitlenip sunucu listesi değiştirilsin mi?"
     },
     "synchronize": "Eşitle",
     "shareMods": "İçeriği paylaş",
@@ -2351,8 +2357,7 @@
       "rename": "Grubu yeniden adlandır",
       "moveUp": "Yukarı taşı",
       "moveDown": "Aşağı taşı",
-      "removeConfirm": "“{{name}}” grubu silinsin mi?",
-      "removeKeep": "Kurulumlar olduğu yerde kalır — yalnızca gruplama kaybolur."
+      "removed": "“{{name}}” grubu silindi"
     },
     "deleteInstance": "Kurulumu sil",
     "serverInstall": "Sunucu kur",
@@ -2400,7 +2405,8 @@
       "modpack": "Mod paketi",
       "java": "Java",
       "diskUsage": "Diskte",
-      "launchProfile": "Başlatma profili"
+      "launchProfile": "Başlatma profili",
+      "javaNotInstalled": "Java {{major}} henüz indirilmedi — başlatıcı onu açılışta indirir."
     },
     "screenshots": {
       "title": "Ekran görüntüleri",
@@ -2411,10 +2417,10 @@
       "openExternal": "Sistem görüntüleyicisinde aç",
       "useAsCover": "Kurulum kapağı yap",
       "delete": "Sil",
-      "deleteTitle": "Bu ekran görüntüsü silinsin mi?",
-      "deleteBody": "Dosya Geri Dönüşüm Kutusu’na gider, oradan geri yükleyebilirsiniz.",
       "deleted": "Ekran görüntüsü silindi",
-      "deleteFailed": "Ekran görüntüsü silinemedi"
+      "deleteFailed": "Ekran görüntüsü silinemedi",
+      "deletedHint": "Dosya sistem çöp kutusuna gider.",
+      "loadFailed": "Ekran görüntüleri açılamadı"
     },
     "tabsLabel": "Kurulum bölümleri",
     "offlineHint": "Bağlantı olmadan bütünlük denetimi, yayımlama ve eşitleme kullanılamaz.",
@@ -2462,14 +2468,14 @@
       "notOwnerUnknown": "Bu yayını yalnızca kurulumu yayımlayan oyuncu kaldırabilir. Kurulum yalnızca bu bilgisayardan silinecek."
     },
     "deleteCopy": {
-      "title": "Kopyanızı silin",
       "info": "Bu kurulum başka bir oyuncuya ait. Dünyalarıyla birlikte kopyanız sistem çöp kutusuna gider — yayın yerinde kalır.",
       "confirm": "Kopyayı sil",
       "menu": "Kopyamı sil",
       "trashed": "Kopyanız çöp kutusuna taşındı",
       "trashedHint": "Klasör, siz boşaltana kadar sistem çöp kutusunda kalır. Kurulum hâlâ yayında.",
       "deleted": "Kopyanız silindi",
-      "deletedHint": "Sistem çöp kutusu klasörü kabul etmedi, bu yüzden kalıcı olarak silindi. Kurulum hâlâ yayında."
+      "deletedHint": "Sistem çöp kutusu klasörü kabul etmedi, bu yüzden kalıcı olarak silindi. Kurulum hâlâ yayında.",
+      "ask": "“{{name}}” kopyanız silinsin mi?"
     },
     "playBlocked": {
       "noAccount": "Oynamak için bir hesap seçin."
@@ -2497,7 +2503,16 @@
     "updateLoader": "Yükleyici sürümünü güncelle",
     "legacyLoaders": "Eski sürümler için",
     "launchProfileDropped": "Başlatmada iletilmeyecek",
-    "savedInline": "Değişiklikler kaydedildi"
+    "savedInline": "Değişiklikler kaydedildi",
+    "viewLabel": "Görünüm",
+    "emptyNoAccount": "Kurulum oluşturmak için önce bir hesap ekleyin.",
+    "deleteAsk": "“{{name}}” kurulumu silinsin mi?",
+    "publicUpdateAsk": "Yayın herkes için güncellensin mi?",
+    "notSavedAsk": "Kaydetmeden çıkılsın mı?",
+    "configNotSavedAsk": "Dosya kaydedilmeden çıkılsın mı?",
+    "closeUnsavedQuestion": "Başlatıcı kaydetmeden kapatılsın mı?",
+    "updateBeforeLaunchQuestion": "Kurulum başlatmadan önce güncellensin mi?",
+    "updateCheckFailedQuestion": "Kurulum güncellemesi denetlenemedi. Yeniden denensin mi?"
   },
   "port": {
     "title": "“{{name}}” kurulumunu taşı",
@@ -2537,19 +2552,19 @@
     "saveAll": "Kurulumun modlarını set olarak kaydet",
     "toSet": "Sete ekle",
     "saveTitle": "Set olarak kaydet",
-    "saveDescription": "Set, dosyaları değil Modrinth ve CurseForge projelerine bağlantıları saklar; yerel dosyalar alınmaz. Seti herhangi bir kuruluma ekleyebilirsiniz — sürümler o kurulumun Minecraft'ına ve yükleyicisine göre seçilir.",
+    "saveDescription": "Set, dosyaları değil Modrinth ve CurseForge modlarına bağlantıları saklar; yerel dosyalar alınmaz. Seti herhangi bir kuruluma ekleyebilirsiniz — sürümler o kurulumun Minecraft'ına ve yükleyicisine göre seçilir.",
     "name": "Set adı",
     "namePlaceholder": "Örneğin, “Performans”",
-    "saveCount": "Setteki proje sayısı: {{count}}",
-    "mergeHint": "“{{name}}” seti zaten var — projeler ona eklenecek ({{count}}).",
-    "nothingToSave": "Burada kaydedilecek Modrinth veya CurseForge projesi yok.",
+    "saveCount": "Setteki mod sayısı: {{count}}",
+    "mergeHint": "“{{name}}” seti zaten var — modlar ona eklenecek ({{count}}).",
+    "nothingToSave": "Burada kaydedilecek Modrinth veya CurseForge modu yok.",
     "save": "Kaydet",
     "saved": "“{{name}}” seti kaydedildi",
     "saveFailed": "Setler kaydedilemedi",
     "applyTitle": "Set ekle",
-    "applyDescription": "Başlatıcı setteki projelerin {{target}} sürümlerini seçer ve bağımlılıklarıyla birlikte kuruluma ekler.",
+    "applyDescription": "Başlatıcı setteki modların {{target}} sürümlerini seçer ve bağımlılıklarıyla birlikte kuruluma ekler.",
     "empty": "Henüz set yok. Kütüphanede modları seçip “Sete ekle”ye basın.",
-    "items": "Proje: {{count}}",
+    "items": "Mod: {{count}}",
     "delete": "Seti sil",
     "deleted": "“{{name}}” seti silindi",
     "add": "Ekle ({{count}})",
@@ -2559,7 +2574,7 @@
     "none": "Set yok",
     "noSetsHint": "Burada seçebilmek için herhangi bir kurulumun modlarını set olarak kaydedin.",
     "resolving": "Sürümler seçiliyor…",
-    "resolved": "{{total}} projeden {{count}} tanesi eklenecek.",
+    "resolved": "{{total}} moddan {{count}} tanesi eklenecek.",
     "resolvedDependencies": "Ayrıca bağımlılıklar: {{count}}.",
     "missingNames": "Sürüm yok: {{names}}",
     "groups": {
@@ -2640,7 +2655,8 @@
     "damageDealt": "Verilen hasar",
     "damageTaken": "Alınan hasar",
     "topMined": "En çok kazılan bloklar",
-    "topKilled": "En çok yenilen canlılar"
+    "topKilled": "En çok yenilen canlılar",
+    "topEmpty": "Henüz boş — önce bu dünyada oynayın"
   },
   "versionStatistics": {
     "title": "İstatistikler",
@@ -2873,7 +2889,6 @@
     "clearSearch": "Aramayı temizle",
     "selectAll": "Tümünü seç",
     "clearAll": "Tümünü temizle",
-    "loadingFolders": "Klasörler yükleniyor...",
     "emptyFolder": "Bu klasör boş",
     "emptyFolderHint": "Burada pakete eklenecek bir şey yok.",
     "allHidden": "Burada yalnızca kişisel ve hizmet dosyaları var",
@@ -3322,7 +3337,14 @@
     "catalogLinkError": "Bu skin artık katalogda değil",
     "littleskinReadOnly": "LittleSkin hesabının skinleri ve pelerinleri littleskin.cn sitesinde değiştirilir, bu yüzden uygulama, sıfırlama ve oluşturma burada kullanılamaz. Başlatıcı orada ayarlanan skini gösterir.",
     "littleskinOpenSite": "littleskin.cn sitesini aç",
-    "deepLinkLittleskin": "LittleSkin skinleri kendi sitesinde yönetir, bu yüzden katalog skinleri LittleSkin hesabına uygulanamaz"
+    "deepLinkLittleskin": "LittleSkin skinleri kendi sitesinde yönetir, bu yüzden katalog skinleri LittleSkin hesabına uygulanamaz",
+    "sourceFilter": "Skin kaynağı",
+    "typeFilter": "Tür",
+    "addFrom": "Şuradan ekle",
+    "removeFromGalleryQuestion": "“{{name}}” galeriden kaldırılsın mı?",
+    "deleteCapeQuestion": "“{{name}}” pelerini silinsin mi?",
+    "deleteSkinQuestion": "“{{name}}” skini silinsin mi?",
+    "deleteSkinLoss": "Doku, dosyasıyla birlikte başlatıcıdan kaldırılacak."
   },
   "blockedMods": {
     "title": "Engellenmiş modlar bulundu",
@@ -3380,7 +3402,9 @@
     "readyTitle": "Başlatıcı güncel",
     "errorTitle": "Güncelleme denetimi başarısız",
     "preparing": "Hazırlanıyor",
-    "percent": "%{{percent}}"
+    "percent": "%{{percent}}",
+    "progressBytes": "{{done}} / {{total}}",
+    "speed": "{{speed}}/sn"
   },
   "time": {
     "s": "sn",
@@ -3397,7 +3421,6 @@
     "notFound": "Eşleşen bir şey yok",
     "resetFilters": "Filtreyi sıfırla",
     "selectWorld": "Soldan bir dünya seçin",
-    "sort": "Sıralama",
     "sortBy": {
       "recent": "Son oynanan",
       "name": "Ad",
@@ -3464,9 +3487,6 @@
     "deleted": "Dünya silindi",
     "deletedError": "Dünya silme hatası",
     "deletedErrorHint": "Dünya klasörü geri dönüşüm kutusuna taşınamadı. Oyunu kapatıp tekrar deneyin.",
-    "confirmation": "{{name}} dünyası silinsin mi? Klasörü geri dönüşüm kutusuna gider.",
-    "confirmationFolder": "Klasör: {{folder}}",
-    "deleteTitle": "Dünya siliniyor",
     "datapacksInWorld": "Dünyaya bağlı",
     "noDatapacks": "Kurulu veri paketi yok",
     "noDatapacksHint": "Kuruluma içerik olarak eklenen veri paketleri bu dünyaya bağlanabilir.",
@@ -3499,7 +3519,11 @@
     "datapackPendingHint": "Dosya dünya klasöründe. Minecraft onu dünya bir sonraki yüklenişinde bağlayacak.",
     "nameEmpty": "Bir dünya adı girin",
     "nameTaken": "Bu kurulumda o adda bir dünya zaten var",
-    "createShortcut": "Masaüstü kısayolu"
+    "createShortcut": "Masaüstü kısayolu",
+    "filterLabel": "Dünya filtresi",
+    "openSavesError": "saves klasörü açılamadı",
+    "statsLater": "Oyun süresi, ölümler, öldürmeler ve kat edilen mesafe bu dünyada oynadıktan sonra görünür.",
+    "datapackRemoved": "Veri paketi kaldırıldı"
   },
   "worldChunks": {
     "title": "Yığın düzenleyici",
@@ -3561,7 +3585,8 @@
       "fit": "Tüm dünyayı sığdır",
       "zoomIn": "Yakınlaştır",
       "zoomOut": "Uzaklaştır",
-      "rescan": "Dünyayı yeniden tara"
+      "rescan": "Dünyayı yeniden tara",
+      "label": "Araç"
     },
     "hover": "yığın {{x}} {{z}} · blok {{block}}",
     "rendering_one": "{{count}} bölge çiziliyor…",
@@ -3680,7 +3705,9 @@
       "resetTitle": "Yakında geçen süre sıfırlanıyor",
       "reset": "{{regions}} bölgedeki {{count}} yığında geçirilen süre sıfırlanacak.",
       "backup": "Önce yedek oluştur",
-      "backupHint": "Herhangi bir şey değişmeden önce tüm dünya arşivlenir. Büyük dünyalar biraz zaman alır."
+      "backupHint": "Herhangi bir şey değişmeden önce tüm dünya arşivlenir. Büyük dünyalar biraz zaman alır.",
+      "deleteQuestion": "Seçili yığınlar silinsin mi?",
+      "resetQuestion": "Seçili yığınlarda yakında geçen süre sıfırlansın mı?"
     },
     "done": {
       "delete_one": "{{count}} yığın silindi",
@@ -3717,9 +3744,6 @@
     "restoredNoSafetyHint": "Önceki dosyalar arşivlenemedi, bu yüzden silinmek yerine .grubie-restore klasöründe tutuldu.",
     "restoreError": "Dünya geri yüklenemedi",
     "restoreConfirmSafety": "Başlatıcı, geri yüklemeden önce mevcut durumu ayrı bir yedek olarak kaydeder.",
-    "restoreTitle": "Yedekten geri yükleme",
-    "deleteTitle": "Yedek siliniyor",
-    "preservedDeleteTitle": "Saklanan dünya dosyaları siliniyor",
     "deleted": "Yedek silindi",
     "deleteError": "Yedek silinemedi",
     "empty": "Henüz yedek yok",
@@ -3758,7 +3782,10 @@
     "restoreConfirmDated": "Dünya, {{date}} tarihli yedekle değiştirilecek.",
     "coversLastSession": "Son oturumunuzdan daha yeni — hiçbir şey kaybolmaz",
     "behindWorld": "Geri yükleme dünyayı {{time}} geriye götürür",
-    "deleteConfirmDated": "{{date}} tarihli yedek diskten kaldırılacak."
+    "deleteConfirmDated": "{{date}} tarihli yedek diskten kaldırılacak.",
+    "restoreQuestion": "Dünya bu yedekten geri yüklensin mi?",
+    "deleteQuestion": "Bu yedek silinsin mi?",
+    "preservedDeleteQuestion": "Saklanan dünya dosyaları silinsin mi?"
   },
   "achievements": {
     "title": "Başarımlar",
@@ -4062,7 +4089,9 @@
       "name": "Ada göre"
     },
     "filtered": "{{total}} başarımdan {{shown}} tanesi gösteriliyor",
-    "resetFilters": "Filtreleri sıfırla"
+    "resetFilters": "Filtreleri sıfırla",
+    "statusFilter": "Başarım durumu",
+    "categoryFilter": "Başarım kategorisi"
   },
   "leaderboard": {
     "you": "(siz)",
@@ -4185,7 +4214,6 @@
     "deleted": "Mod paketi silindi",
     "deleteError": "Mod paketi silme hatası",
     "confirmation": "“{{name}}” mod paketi sunucudan kaldırılır.",
-    "copyId": "Kimliği kopyala",
     "addToLauncher": "Başlatıcıya ekle",
     "loadError": "Mod paketleriniz yüklenemedi",
     "published": "Yayımlanma: {{value}}",
@@ -4206,18 +4234,20 @@
     "notPublishedNoInstances": "Henüz kurulum yok — bir tane oluşturun, sonra yayımlayabilirsiniz",
     "notPublishedUnknown": "Liste, yayımlanan mod paketleriniz yüklenince görünür",
     "openInstance": "Kurulumu aç",
-    "deleteTitle": "Mod paketini yayından kaldır",
     "deleteLoss": "Bağlantısı ve kodu herkes için çalışmayı bırakır; kurulumun yerel kopyası bu bilgisayarda kalır.",
-    "deleteAction": "Yayından kaldır"
+    "deleteAction": "Yayından kaldır",
+    "copyLink": "Bağlantıyı kopyala",
+    "deleteQuestion": "“{{name}}” yayından kaldırılsın mı?"
   },
   "errorLog": {
     "title": "Hata günlüğü",
     "empty": "Hata yok",
     "clear": "Temizle",
-    "clearConfirm": "Tüm hata geçmişi temizlensin mi? Geri yüklenemez.",
     "description": "Başlatıcının kendisinin başaramadığı işlemler. Oyun çökmeleri kurulumun Günlükler sekmesinde yer alır.",
     "copyAll": "Tümünü kopyala",
-    "details": "Ayrıntılar"
+    "details": "Ayrıntılar",
+    "cleared": "Hata günlüğü temizlendi",
+    "openLogs": "Kurulum günlükleri"
   },
   "crash": {
     "title": "Oyun çöktü: {{version}}",
@@ -4301,7 +4331,6 @@
     "new": "Yeni",
     "noDate": "Tarih yok",
     "emptyHint": "Akış şu anda boş — daha sonra tekrar bakın.",
-    "loadFailedHint": "Haber hizmeti yanıt vermedi. Bağlantıyı kontrol edip tekrar deneyin.",
     "partialFailed": "Minecraft haberleri yüklenmedi",
     "offlineTitle": "Haberler çevrim dışıyken kullanılamaz",
     "offlineHint": "İnternete bağlanın — akış kendiliğinden yüklenecek.",
@@ -4325,7 +4354,9 @@
     "unread_one": "{{count}} yeni",
     "unread_other": "{{count}} yeni",
     "updated": "Güncellendi: {{value}}",
-    "milestoneHint": "Değişiklik listesini aç"
+    "milestoneHint": "Değişiklik listesini aç",
+    "sourceFilter": "Haber kaynağı",
+    "loadFailedSource": "Grubie sunucusu haberleri göndermedi. Bir dakika sonra tekrar deneyin."
   },
   "errors": {
     "code": "Kod",
@@ -4428,7 +4459,6 @@
     "emptyTitle": "Neye bakayım?",
     "emptyHint": "Sade bir dille sorun — örneğin: hangi kurulumlarım var, mod paketim neden çöktü veya 1.20.1 Fabric için optimizasyon modları bul.",
     "emptyContext": "Bu başlatıcının {{instances}} ve {{tools}} görebiliyor",
-    "noProvider": "Önce bir yapay zekâ sağlayıcısı ve anahtar ekleyin — yukarıdaki dişli simgesi.",
     "blocked": {
       "noAccountShort": "giriş gerekli",
       "offlineAccountShort": "çevrim dışı hesaplar için değil",
@@ -4557,7 +4587,7 @@
       "listInstances": "Kurulum listesi okunuyor",
       "getInstance": "“{{name}}” kurulumu açılıyor",
       "searchMods": "Mod aranıyor: {{query}}",
-      "getProject": "Proje sayfası okunuyor",
+      "getProject": "Mod sayfası okunuyor",
       "getProjectVersions": "Mevcut sürümler denetleniyor",
       "getDependencies": "Bağımlılıklar çözümleniyor",
       "listMinecraftVersions": "{{loader}} için Minecraft sürümleri alınıyor",
@@ -4571,15 +4601,15 @@
       "readGameLog": "“{{name}}” günlüğü okunuyor",
       "getLastCrash": "“{{name}}” son çökmesi okunuyor",
       "listServers": "“{{name}}” sunucu listesi okunuyor",
-      "addMods": "“{{name}}” kurulumuna kuruluyor: {{count}} proje",
-      "removeMods": "“{{name}}” kurulumundan kaldırılıyor: {{count}} proje",
+      "addMods": "“{{name}}” kurulumuna kuruluyor: {{count}} mod",
+      "removeMods": "“{{name}}” kurulumundan kaldırılıyor: {{count}} mod",
       "setRunArguments": "“{{name}}” argümanları değiştiriliyor",
       "setMemory": "Oyun belleği {{value}} MB olarak ayarlanıyor",
       "setMemoryInstance": "“{{name}}” belleği {{value}} MB olarak ayarlanıyor",
       "launchInstance": "“{{name}}” başlatılıyor",
       "deleteInstance": "“{{name}}” kurulumu siliniyor",
-      "enableMods": "“{{name}}” kurulumunda etkinleştiriliyor: {{count}} proje",
-      "disableMods": "“{{name}}” kurulumunda devre dışı bırakılıyor: {{count}} proje",
+      "enableMods": "“{{name}}” kurulumunda etkinleştiriliyor: {{count}} mod",
+      "disableMods": "“{{name}}” kurulumunda devre dışı bırakılıyor: {{count}} mod",
       "updateMods": "“{{name}}” için güncellemeler denetleniyor",
       "checkIntegrity": "“{{name}}” dosyaları doğrulanıyor",
       "createWorldBackup": "“{{name}}” dünyası yedekleniyor",
@@ -4651,7 +4681,8 @@
       "loadFailedHint": "Başlatıcı ai-providers.json dosyasını okuyamadı. Sağlayıcılarınız hâlâ yerinde — yeniden deneyin ve dosyanın okunabilir olduğunu kontrol edin.",
       "deleteFailed": "Sağlayıcı silinmedi",
       "selectFailed": "Sağlayıcı değiştirilmedi",
-      "builtinHint": "Başlatıcıya yerleşik · anahtarsız · destekleyenler için"
+      "builtinHint": "Başlatıcıya yerleşik · anahtarsız · destekleyenler için",
+      "deleteHint": "Anahtar bu bilgisayardan silinir. Sağlayıcıyı geri getirmek için anahtarı yeniden girmeniz gerekir."
     },
     "searchChats": "Sohbet ara",
     "syncFailed": "Sohbetler eşitlenmedi — yeniden deneyin",
@@ -4702,7 +4733,8 @@
       "needs": {
         "internet": "İnternet bağlantısı gerekir",
         "account": "Giriş yapılmış bir hesap gerekir"
-      }
+      },
+      "revoked": "İzin geri alındı: {{name}}"
     },
     "suggestions": {
       "crash": "Kurulumum neden çöktü?",
@@ -4770,7 +4802,7 @@
       "set_run_arguments": "Başlatma argümanlarını değiştir",
       "delete_instance": "Kurulum sil",
       "search_mods": "Mod ara",
-      "get_project": "Proje sayfasını oku",
+      "get_project": "Mod sayfasını oku",
       "get_project_versions": "Mod sürümlerini denetle",
       "get_dependencies": "Bağımlılıkları çözümle",
       "list_minecraft_versions": "Minecraft sürümlerini listele",
@@ -4813,7 +4845,7 @@
     "preview": {
       "instance": "Kurulum",
       "minecraft": "Minecraft",
-      "projects": "Projeler",
+      "projects": "Modlar",
       "worlds": "Dünyalar",
       "size": "Diskte",
       "world": "Dünya",
@@ -4877,7 +4909,12 @@
       "locked": "Grubie, projeyi destekleyenlere açıktır. Kendi yapay zekâ anahtarınızı bağlayın veya Grubie Launcher’ı destekleyin.",
       "ownKey": "Kendi anahtarım",
       "support": "Destekle"
-    }
+    },
+    "chatDeleteQuestion": "“{{name}}” sohbeti silinsin mi?",
+    "chatDeleteHint": "Sohbet bu bilgisayardan ve Grubie profilinizden silinir. Geri getirilemez.",
+    "chatDeleteFailed": "Sohbet silinmedi",
+    "chatRenameFailed": "Sohbet yeniden adlandırılmadı",
+    "noProviderShort": "Önce bir yapay zekâ sağlayıcısı ve anahtar ekleyin."
   },
   "shell": {
     "back": "Geri",
@@ -4889,7 +4926,8 @@
       "newInstance": "Yeni kurulum",
       "instance": "Kurulum",
       "people": "Kişiler",
-      "profile": "Profil"
+      "profile": "Profil",
+      "settingsLocked": "Oyun çalışırken kullanılamaz"
     },
     "palette": {
       "label": "Arama ve komutlar",
@@ -4909,7 +4947,8 @@
         "accounts": "Hesaplar",
         "settings": "Ayarlar",
         "agent": "Asistan"
-      }
+      },
+      "blockedRunning": "oyun çalışırken"
     },
     "tabs": {
       "overview": "Genel bakış",
@@ -4963,12 +5002,9 @@
     "tooLarge": "Dosya burada düzenlemek için çok büyük",
     "saveFile": "Dosyayı kaydet",
     "unsaved": "Kaydedilmemiş değişiklikler",
-    "unsavedTitle": "Dosya kaydedilmedi",
     "unsavedHint": "Yapılandırma dosyasındaki düzenlemeler kaydedilmedi. Ayrılırsanız kaybolacaklar.",
-    "backupsTitle": "Kayıtlı sürümler",
     "backupBaseline": "Orijinal dosya",
     "backupPrevious": "Önceki sürüm",
-    "noBackups": "Henüz kayıtlı sürüm yok — ilki bu dosyayı kaydettikten sonra belirir.",
     "backupRestored": "Sürüm düzenleyiciye yüklendi — uygulamak için kaydedin",
     "backupMissing": "Kayıtlı sürüm dosyası yok",
     "completion": {
@@ -4985,7 +5021,6 @@
     "findPrevious": "Önceki (Shift+Enter)",
     "findNext": "Sonraki (Enter)",
     "findHint": "Dosyada bul ({{mod}}+F)",
-    "history": "Sürüm geçmişi",
     "backupsHint": "Geri yüklemeden önce mevcut dosyayla karşılaştırmak için bir sürüme tıklayın.",
     "showInFolder": "Klasörde göster",
     "discard": "At",
@@ -5012,12 +5047,12 @@
     "contentSearch": {
       "placeholder": "Tüm dosyalarda ara",
       "hint": "En az 2 karakter yazın, örneğin bir seçenek adı",
-      "reading": "Dosyalar okunuyor… {{done}}/{{total}}",
       "none": "Hiçbir şey bulunamadı",
       "more_one": "ve {{count}} tane daha",
       "more_few": "ve {{count}} tane daha",
       "more_many": "ve {{count}} tane daha",
-      "more_other": "ve {{count}} tane daha"
+      "more_other": "ve {{count}} tane daha",
+      "searching": "Dosyalarda aranıyor… {{done}}/{{total}}"
     },
     "translate": {
       "on": "Yorumları çevir",
@@ -5034,9 +5069,7 @@
     "translatePartial": "Bazı yorumlar çevrilemedi",
     "reset": {
       "action": "Varsayılana sıfırla",
-      "title": "“{{name}}” varsayılana sıfırlansın mı?",
-      "hint": "Dosya sürüm geçmişine gider ve mod, oyun bir sonraki açılışında onu yeniden oluşturur.",
-      "confirm": "Sıfırla"
+      "undoHint": "Dosyanın bir kopyası saklandı. Mod onu oyunun bir sonraki başlatılışında yeniden oluşturur."
     },
     "resetDone": "Dosya kaldırıldı — mod onu başlatmada yeniden oluşturacak",
     "resetFailed": "Dosya sıfırlanamadı",
@@ -5104,7 +5137,10 @@
       "default": "varsayılan: {{value}}",
       "resetField": "Varsayılan değeri geri yükle",
       "partial": "Dosyada sözdizimi hatası var, bu yüzden form bazı seçenekleri kaçırabilir. Hataya gitmek için tıklayın."
-    }
+    },
+    "searchModeLabel": "Şurada ara",
+    "fileCopies": "Dosya kopyaları",
+    "noCopies": "Henüz kopya yok — ilki bu dosyayı kaydettikten sonra belirir."
   },
   "modpackDiff": {
     "updated": "Güncellenecek",
@@ -5145,7 +5181,7 @@
     "otherProject": "Bu dosya başka bir mod paketine ait: {{title}}",
     "loaderMissing": "Bu mod paketi sürümünün ihtiyaç duyduğu yükleyici sürümü bulunamadı.",
     "openSite": "{{site}} sitesinde aç",
-    "copyIds": "Proje ve sürüm kimliklerini kopyala",
+    "copyIds": "Modpaket ve sürüm kimliklerini kopyala",
     "fromFile": "Dosyadan",
     "fromFileHint": "Kendiniz indirdiğiniz bir .mrpack veya .zip dosyasından güncelleyin",
     "stats": {
@@ -5240,10 +5276,10 @@
     "notifyDoneBody": "{{name}} oynamaya hazır",
     "notifyPartialTitle": "Hatalarla kuruldu",
     "notifyPartialBody": "{{name}}: {{count}} dosya indirilmedi",
-    "closeTitle": "Bir kurulum hâlâ sürüyor",
     "closeHint": "Başlatıcıyı kapatmak kurulumu yarıda keser — indirilen dosyalar tamamlanmamış kalır ve kurulumun yeniden yapılması gerekir.",
     "closeHintNamed": "Başlatıcıyı kapatmak «{{name}}» kurulumunu yarıda keser — indirilen dosyalar tamamlanmamış kalır ve kurulumun yeniden yapılması gerekir.",
-    "closeStopAndQuit": "Yarıda kes ve kapat"
+    "closeStopAndQuit": "Yarıda kes ve kapat",
+    "closeQuestion": "Kurulum durdurulup başlatıcı kapatılsın mı?"
   },
   "skinStage": {
     "animation": "Animasyon",
@@ -5306,7 +5342,6 @@
     "shownLines_other": "{{count}} satır",
     "expand_one": "{{count}} satır daha",
     "expand_other": "{{count}} satır daha",
-    "loading": "Günlük okunuyor…",
     "nothingMatches": "Filtreyle eşleşen satır yok",
     "jumpToError": "Hataya git",
     "jumpToErrorHint": "Sonraki hata satırına atla",
@@ -5321,7 +5356,6 @@
     "more": "Günlük işlemleri",
     "copyLog": "Günlüğü kopyala",
     "copyReport": "Destek için kopyala",
-    "reportCopied": "Rapor panonuzda — yardım istediğiniz yere yapıştırın",
     "readFailedTitle": "{{name}} okunamadı",
     "readFailedHint": "Dosya diskte, ancak başlatıcı onu okuyamadı: başka bir program tarafından kilitlenmiş veya hasarlı olabilir.",
     "emptyTitle": "Henüz günlük yok",
@@ -5383,7 +5417,8 @@
       "warn": "Uyarılar",
       "info": "Bilgi",
       "debug": "Debug"
-    }
+    },
+    "stopFailed": "Oyun durdurulamadı"
   },
   "profile": {
     "pointsToNext": "{{level}}. seviyeye {{points}} puan",
@@ -5516,7 +5551,8 @@
       "unknownVersion": "Sunucu sürümünü bildirmedi — kendiniz seçin.",
       "applied": "Hızlı katılma: {{address}}",
       "versionMissing": "Bu sürüm listede yok — yakın bir sürüm seçin.",
-      "known": "Kurulumlarınızdaki sunucular"
+      "known": "Kurulumlarınızdaki sunucular",
+      "clear": "Sunucuyu kaldır"
     },
     "minecraftVersion": "Minecraft sürümü",
     "allVersions": "Tümü",
@@ -5567,7 +5603,8 @@
     "contentFailedHint": "Diskteki boş alanı kontrol edip tekrar deneyin.",
     "extraFilesFailed": "Kurulum oluşturuldu, ancak her dosya indirilmedi",
     "extraFilesFailedHint": "Kurulum dosyalarının bir kısmı gelmedi. Ayrıntılar hata günlüğünde.",
-    "afterInstallHint": "İçerik, sunucular ve başlatma argümanları kurulumdan sonra değiştirilebilir"
+    "afterInstallHint": "İçerik, sunucular ve başlatma argümanları kurulumdan sonra değiştirilebilir",
+    "modpacksNoneForFilters": "Seçilen sürüm ve yükleyici için mod paketi yok — filtreleri değiştirin."
   },
   "community": {
     "search": "Paket adına göre ara",
@@ -5812,11 +5849,12 @@
     "failed": {
       "prepare": "Rapor toplanamadı. Tekrar deneyin; tekrarlarsa Ayarlar → Destek’ten kayıt klasörünü açın.",
       "expired": "Toplanan rapor eskimiş. Yeniden toplayın.",
-      "network": "Sunucuya ulaşılamadı. Bağlantınızı kontrol edin veya raporu bir dosyaya kaydedin.",
+      "network": "Grubie sunucusu yanıt vermiyor. Bağlantınızı kontrol edin veya raporu bir dosyaya kaydedin.",
       "rateLimited": "Kısa sürede çok fazla rapor. Birkaç dakika bekleyip tekrar deneyin.",
       "tooLarge": "Rapor sunucu için çok büyük. Bunun yerine bir dosyaya kaydedin.",
       "rejected": "Sunucu raporu kabul etmedi. Bir dosyaya kaydedip desteğe gönderin."
-    }
+    },
+    "saveFailed": "Rapor dosyaya kaydedilemedi"
   },
   "launchStage": {
     "stages": {
@@ -6171,7 +6209,9 @@
         "title": "Sade",
         "description": "Tek başına oynamak için: Kişiler, Haberler ve efektler yok"
       }
-    }
+    },
+    "resetDone": "Düzen sıfırlandı",
+    "hiddenDone": "Gizlendi: “{{name}}”"
   },
   "theme": {
     "title": "Arayüz teması",
@@ -6182,7 +6222,6 @@
     "edit": "Düzenle",
     "duplicate": "Kopyasını oluştur",
     "delete": "Temayı sil",
-    "deleteConfirm": "“{{name}}” teması kalıcı olarak silinecek. Arka plan resmi temalar klasöründe kalır.",
     "saved": "“{{name}}” teması kaydedildi",
     "limit": "En fazla {{count}} tema saklayabilirsiniz",
     "accentByTheme": "Vurgu rengini “{{name}}” teması belirliyor. Burada renk seçmek için tema düzenleyicisinde “Kendi vurgu rengim” seçeneğini kapatın",
@@ -6270,7 +6309,6 @@
       "badFile": "Bu bir Grubie tema dosyası değil veya bozuk",
       "badCode": "Tema kodu tanınmadı",
       "unreadable": "Tema okunabilirlik kontrolünden geçemedi: bu renklerle metin okunamaz",
-      "codeCopied": "Tema kodu kopyalandı",
       "codeNoPicture": "Arka plan resmi koda dahil değil. Paylaşmak için temayı dosyaya kaydedin"
     },
     "gallery": {
@@ -6327,14 +6365,19 @@
         "unreadable": "Tema okunabilirlik kontrolünden geçemedi: bu renklerle metin okunamaz",
         "pending_limit": "Kontrolde zaten 5 temanız var. Onlarla ilgili kararı bekleyin",
         "name_required": "Temanın bir adı olmalı",
-        "offline": "Sunucuya bağlanılamıyor. İnternetinizi kontrol edip tekrar deneyin",
+        "offline": "Grubie sunucusu yanıt vermiyor. İnternetinizi kontrol edip tekrar deneyin",
         "failed": "Tema yayınlanamadı. Daha sonra tekrar deneyin",
         "install": "Tema galeriden kurulamadı",
         "unpublish": "Tema galeriden kaldırılamadı",
         "load": "Galeri yüklenmedi. Bağlantınızı kontrol edin",
-        "notFound": "Tema bulunamadı: yazar onu kaldırmış olabilir"
-      }
-    }
+        "notFound": "Tema bulunamadı: yazar onu kaldırmış olabilir",
+        "mineFailed": "Grubie sunucusu yayınlarınızı döndürmedi",
+        "loadFailed": "Grubie sunucusu yanıt vermiyor — tema galerisi yüklenmedi"
+      },
+      "unpublishQuestion": "“{{name}}” galeriden kaldırılsın mı?"
+    },
+    "deleted": "“{{name}}” teması silindi",
+    "unsavedHint": "“{{name}}” teması kaydedilmedi. Çıkarsanız değişiklikler kaybolur."
   },
   "launchSettings": {
     "gpu": {

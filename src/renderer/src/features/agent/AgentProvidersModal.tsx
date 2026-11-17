@@ -13,6 +13,14 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -36,8 +44,10 @@ import {
   AiProvidersState,
 } from "@/types/Agent";
 import { Hint } from "@renderer/components/Hint";
+import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { classifyAgentError } from "./providerErrors";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { onRadioKeyDown, radioFocusIndex } from "@renderer/utilities/radioKeys";
 
 const api = window.api;
 
@@ -85,40 +95,19 @@ function hostOf(baseUrl: string): string {
 function ProviderRow({
   provider,
   isActive,
-  isPendingDelete,
+  tabIndex,
   onSelect,
   onEdit,
   onAskDelete,
-  onCancelDelete,
-  onConfirmDelete,
 }: {
   provider: AiProviderProfile;
   isActive: boolean;
-  isPendingDelete: boolean;
+  tabIndex: number;
   onSelect: () => void;
   onEdit: () => void;
   onAskDelete: () => void;
-  onCancelDelete: () => void;
-  onConfirmDelete: () => void;
 }) {
   const { t } = useTranslation();
-
-  if (isPendingDelete) {
-    return (
-      <div className="flex h-14 min-w-0 items-center gap-2 rounded-lg border border-destructive/40 bg-surface-2 px-3">
-        <TriangleAlert className="size-4 shrink-0 text-destructive" />
-        <span className="min-w-0 flex-1 text-xs text-muted-foreground">
-          {t("agent.providers.deleteConfirm", { name: provider.label })}
-        </span>
-        <Button variant="secondary" size="sm" onClick={onCancelDelete}>
-          {t("common.cancel")}
-        </Button>
-        <Button variant="destructive" size="sm" onClick={onConfirmDelete}>
-          {t("common.delete")}
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -131,7 +120,9 @@ function ProviderRow({
     >
       <button
         type="button"
-        aria-pressed={isActive}
+        role="radio"
+        aria-checked={isActive}
+        tabIndex={tabIndex}
         className="flex min-w-0 flex-1 items-center gap-2.5 text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         onClick={onSelect}
       >
@@ -154,18 +145,24 @@ function ProviderRow({
               </span>
             </Hint>
             {isActive && (
-              <span className="shrink-0 rounded bg-primary/20 px-1.5 text-[0.6rem] leading-4 font-medium text-foreground">
+              <span className="shrink-0 rounded bg-primary/20 px-1.5 text-3xs leading-4 font-medium text-foreground">
                 {t("agent.providers.active")}
               </span>
             )}
           </span>
 
           {provider.builtin ? (
-            <span className="min-w-0 truncate text-[0.7rem] text-faint">
-              {t("agent.providers.builtinHint")}
-            </span>
+            <Hint
+              content={t("agent.providers.builtinHint")}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="min-w-0 truncate text-2xs text-faint">
+                {t("agent.providers.builtinHint")}
+              </span>
+            </Hint>
           ) : (
-            <span className="flex min-w-0 items-center gap-2 text-[0.7rem] text-faint">
+            <span className="flex min-w-0 items-center gap-2 text-2xs text-faint">
               <Hint content={provider.model} variant="text" truncatedOnly>
                 <span className="min-w-0 truncate font-mono">
                   {provider.model}
@@ -227,7 +224,9 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);
   const [testOk, setTestOk] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<AiProviderProfile | null>(
+    null,
+  );
   const [loadFailed, setLoadFailed] = useState(false);
 
   const load = useCallback(async () => {
@@ -309,6 +308,10 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
       }
 
       setTestError(result.message);
+    } catch (error) {
+      showFailureToast(t("agent.providers.testFailed"), error, {
+        channels: ["agent:"],
+      });
     } finally {
       setTesting(false);
     }
@@ -336,17 +339,26 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
 
       setState(next);
       closeForm();
+    } catch (error) {
+      showFailureToast(t("agent.providers.saveFailed"), error, {
+        channels: ["agent:"],
+      });
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    setPendingDelete(null);
-    const next = await api.agent.providers.remove(id);
+    let next: AiProvidersState | null = null;
+    let failure: unknown;
+    try {
+      next = await api.agent.providers.remove(id);
+    } catch (error) {
+      failure = error;
+    }
 
     if (!next) {
-      showFailureToast(t("agent.providers.deleteFailed"), undefined, {
+      showFailureToast(t("agent.providers.deleteFailed"), failure, {
         channels: ["agent:providers:delete"],
       });
       return;
@@ -356,10 +368,16 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
   }
 
   async function handleSelect(id: string) {
-    const next = await api.agent.providers.select(id);
+    let next: AiProvidersState | null = null;
+    let failure: unknown;
+    try {
+      next = await api.agent.providers.select(id);
+    } catch (error) {
+      failure = error;
+    }
 
     if (!next) {
-      showFailureToast(t("agent.providers.selectFailed"), undefined, {
+      showFailureToast(t("agent.providers.selectFailed"), failure, {
         channels: ["agent:providers:select"],
       });
       return;
@@ -367,6 +385,9 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
 
     setState(next);
   }
+
+  const providerIds = state?.providers.map((provider) => provider.id) ?? [];
+  const providerFocus = radioFocusIndex(providerIds, state?.selectedId);
 
   const canSave =
     Boolean(form?.label.trim()) &&
@@ -394,7 +415,7 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
         onOpenAutoFocus={(event) => event.preventDefault()}
       >
         <DialogHeader className="shrink-0 flex-row items-start gap-3 px-4 pt-4 pb-3 text-left">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft-raised text-primary">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-muted-foreground">
             <PlugZap className="size-4" />
           </span>
           <div className="grid min-w-0 gap-1">
@@ -471,7 +492,7 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
                     setForm({ ...form, baseUrl: event.target.value })
                   }
                 />
-                <p className="text-[0.7rem] leading-4 text-faint">
+                <p className="text-2xs leading-4 text-faint">
                   {t("agent.providers.baseUrlHint")}
                 </p>
               </div>
@@ -498,7 +519,7 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
                     setForm({ ...form, apiKey: event.target.value })
                   }
                 />
-                <p className="flex items-start gap-1.5 rounded-lg bg-surface-2 px-2.5 py-2 text-[0.7rem] leading-4 text-muted-foreground">
+                <p className="flex items-start gap-1.5 rounded-lg bg-surface-2 px-2.5 py-2 text-2xs leading-4 text-muted-foreground">
                   <ShieldCheck className="mt-px size-3.5 shrink-0 text-success" />
                   {t("agent.providers.keyPrivacy", {
                     host: hostOf(form.baseUrl),
@@ -526,15 +547,25 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
                   {testOk && (
                     <span className="flex min-w-0 items-center gap-1 text-xs text-success">
                       <Check className="size-3.5 shrink-0" />
-                      <span className="truncate">
-                        {t("agent.providers.testOk", { count: models.length })}
-                      </span>
+                      <Hint
+                        content={t("agent.providers.testOk", {
+                          count: models.length,
+                        })}
+                        variant="text"
+                        truncatedOnly
+                      >
+                        <span className="truncate">
+                          {t("agent.providers.testOk", {
+                            count: models.length,
+                          })}
+                        </span>
+                      </Hint>
                     </span>
                   )}
                 </div>
 
                 {!testOk && !report && (
-                  <p className="text-[0.7rem] leading-4 text-faint">
+                  <p className="text-2xs leading-4 text-faint">
                     {t("agent.providers.testHint")}
                   </p>
                 )}
@@ -546,13 +577,15 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
                     <TriangleAlert className="size-3.5 shrink-0" />
                     {t(report.titleKey)}
                   </span>
-                  <span className="text-[0.7rem] leading-4 text-muted-foreground">
+                  <span className="text-2xs leading-4 text-muted-foreground">
                     {t(report.hintKey)}
                   </span>
                   {report.detail && (
-                    <span className="line-clamp-2 font-mono text-[0.65rem] leading-4 break-all text-faint">
-                      {report.detail}
-                    </span>
+                    <Hint content={report.detail} variant="text" truncatedOnly>
+                      <span className="line-clamp-2 font-mono text-3xs leading-4 break-all text-faint">
+                        {report.detail}
+                      </span>
+                    </Hint>
                   )}
                 </div>
               )}
@@ -587,13 +620,13 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
                 )}
 
                 <div className="flex items-baseline gap-2">
-                  <p className="min-w-0 flex-1 text-[0.7rem] leading-4 text-faint">
+                  <p className="min-w-0 flex-1 text-2xs leading-4 text-faint">
                     {t("agent.providers.defaultModelHint")}
                   </p>
                   {modelOptions.length > 0 && (
                     <button
                       type="button"
-                      className="shrink-0 rounded text-[0.7rem] text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      className="shrink-0 rounded text-2xs text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                       onClick={() => setManualModel((value) => !value)}
                     >
                       {manualModel
@@ -604,7 +637,7 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
                 </div>
 
                 {selectedModelInfo && !selectedModelInfo.supportsTools && (
-                  <p className="flex items-start gap-1.5 rounded-lg border border-warning/40 bg-surface-2 px-2.5 py-2 text-[0.7rem] leading-4 text-warning">
+                  <p className="flex items-start gap-1.5 rounded-lg border border-warning/40 bg-surface-2 px-2.5 py-2 text-2xs leading-4 text-warning">
                     <TriangleAlert className="mt-px size-3.5 shrink-0" />
                     {t("agent.providers.noToolsWarning")}
                   </p>
@@ -612,39 +645,57 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           ) : state.providers.length === 0 ? (
-            <div className="grid justify-items-center gap-2 rounded-xl border border-dashed border-input px-4 py-8 text-center">
-              <span className="flex size-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
-                <KeyRound className="size-5" />
-              </span>
-              <span className="text-sm font-medium text-foreground">
-                {t("agent.providers.empty")}
-              </span>
-              <span className="max-w-xs text-xs leading-4.5 text-muted-foreground">
-                {t("agent.providers.emptyHint")}
-              </span>
-            </div>
+            <Empty className="rounded-xl bg-surface-2 px-4 py-6">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <KeyRound />
+                </EmptyMedia>
+                <EmptyTitle>{t("agent.providers.empty")}</EmptyTitle>
+                <EmptyDescription className="text-xs">
+                  {t("agent.providers.emptyHint")}
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button variant="outline" size="sm" onClick={() => openForm()}>
+                  <Plus />
+                  {t("agent.providers.add")}
+                </Button>
+              </EmptyContent>
+            </Empty>
           ) : (
             <div className="grid min-w-0 gap-2">
-              <p className="flex items-start gap-1.5 rounded-lg bg-surface-2 px-2.5 py-2 text-[0.7rem] leading-4 text-muted-foreground">
+              <p className="flex items-start gap-1.5 rounded-lg bg-surface-2 px-2.5 py-2 text-2xs leading-4 text-muted-foreground">
                 <ShieldCheck className="mt-px size-3.5 shrink-0 text-success" />
                 {t("agent.providers.description")}
               </p>
 
-              {state.providers.map((provider) => (
-                <ProviderRow
-                  key={provider.id}
-                  provider={provider}
-                  isActive={provider.id === state.selectedId}
-                  isPendingDelete={pendingDelete === provider.id}
-                  onSelect={() => void handleSelect(provider.id)}
-                  onEdit={() => openForm(provider)}
-                  onAskDelete={() => setPendingDelete(provider.id)}
-                  onCancelDelete={() => setPendingDelete(null)}
-                  onConfirmDelete={() => void handleDelete(provider.id)}
-                />
-              ))}
+              <div
+                role="radiogroup"
+                aria-label={t("agent.providers.title")}
+                className="grid min-w-0 gap-2"
+                onKeyDown={(event) =>
+                  onRadioKeyDown(
+                    event,
+                    providerIds,
+                    state.selectedId,
+                    (id) => void handleSelect(id),
+                  )
+                }
+              >
+                {state.providers.map((provider, index) => (
+                  <ProviderRow
+                    key={provider.id}
+                    provider={provider}
+                    isActive={provider.id === state.selectedId}
+                    tabIndex={index === providerFocus ? 0 : -1}
+                    onSelect={() => void handleSelect(provider.id)}
+                    onEdit={() => openForm(provider)}
+                    onAskDelete={() => setPendingDelete(provider)}
+                  />
+                ))}
+              </div>
 
-              <p className="text-[0.7rem] leading-4 text-faint">
+              <p className="text-2xs leading-4 text-faint">
                 {t("agent.providers.selectHint")}
               </p>
             </div>
@@ -658,16 +709,22 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
                 <ArrowLeft />
                 {t("agent.providers.cancel")}
               </Button>
-              <Hint content={saveBlockedReason}>
+              <div className="flex min-w-0 items-center gap-2">
+                {saveBlockedReason && (
+                  <span className="min-w-0 text-2xs leading-4 text-faint">
+                    {saveBlockedReason}
+                  </span>
+                )}
                 <Button
                   size="sm"
+                  className="shrink-0"
                   disabled={!canSave || saving}
                   onClick={handleSave}
                 >
                   {saving && <Loader2 className="animate-spin" />}
                   {t("agent.providers.save")}
                 </Button>
-              </Hint>
+              </div>
             </>
           ) : (
             <>
@@ -682,6 +739,33 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
           )}
         </DialogFooter>
       </DialogContent>
+
+      {pendingDelete && (
+        <Confirmation
+          title={t("agent.providers.deleteConfirm", {
+            name: pendingDelete.label,
+          })}
+          onClose={() => setPendingDelete(null)}
+          reversible={false}
+          content={[{ text: t("agent.providers.deleteHint") }]}
+          buttons={[
+            {
+              text: t("common.cancel"),
+              color: "secondary",
+              onClick: () => setPendingDelete(null),
+            },
+            {
+              text: t("common.delete"),
+              color: "danger",
+              onClick: async () => {
+                const id = pendingDelete.id;
+                setPendingDelete(null);
+                await handleDelete(id);
+              },
+            },
+          ]}
+        />
+      )}
     </Dialog>
   );
 }

@@ -331,7 +331,13 @@ export function CreateServer({
           id: "instance",
           label: t("versions.name"),
           value: (
-            <span className="truncate">{selectedVersion.version.name}</span>
+            <Hint
+              content={selectedVersion.version.name}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="truncate">{selectedVersion.version.name}</span>
+            </Hint>
           ),
         },
         {
@@ -366,9 +372,15 @@ export function CreateServer({
                 id: "core",
                 label: t("versions.serverCore"),
                 value: (
-                  <span className="truncate font-mono">
-                    {selectedServerCore?.core ?? "—"}
-                  </span>
+                  <Hint
+                    content={selectedServerCore?.core}
+                    variant="text"
+                    truncatedOnly
+                  >
+                    <span className="truncate font-mono">
+                      {selectedServerCore?.core ?? "—"}
+                    </span>
+                  </Hint>
                 ),
               },
               {
@@ -437,7 +449,13 @@ export function CreateServer({
         <DialogHeader className="min-w-0 gap-1.5">
           <DialogTitle className="flex min-w-0 items-center gap-2">
             <ServerCog className="size-5 shrink-0" />
-            <span className="truncate">{t("versions.createingServer")}</span>
+            <Hint
+              content={t("versions.createingServer")}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="truncate">{t("versions.createingServer")}</span>
+            </Hint>
           </DialogTitle>
           <DialogDescription className="text-xs leading-snug">
             {step === "confirm"
@@ -461,7 +479,7 @@ export function CreateServer({
                   <span className="text-xs leading-snug">{effect.text}</span>
                   {effect.detail && (
                     <Hint content={effect.detail} variant="text" truncatedOnly>
-                      <span className="truncate font-mono text-[0.68rem] text-faint">
+                      <span className="truncate font-mono text-2xs text-faint">
                         {effect.detail}
                       </span>
                     </Hint>
@@ -491,7 +509,7 @@ export function CreateServer({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-[0.7rem] leading-snug text-faint">
+            <p className="text-2xs leading-snug text-faint">
               {t("versions.serverSetup.coreHint")}
             </p>
           </div>
@@ -521,7 +539,7 @@ export function CreateServer({
                   if (typeof value === "number") setMemory(value);
                 }}
               />
-              <p className="text-[0.7rem] leading-snug text-faint">
+              <p className="text-2xs leading-snug text-faint">
                 {totalMemory
                   ? t("versions.serverSetup.memoryHint", {
                       recommended,
@@ -569,13 +587,21 @@ export function CreateServer({
               </span>
             </p>
             <div className="flex items-center justify-between gap-2 pl-6">
-              <span className="min-w-0 truncate text-[0.68rem] text-faint">
-                {error.cleaned ? t("versions.serverSetup.cleanedUp") : ""}
-              </span>
+              <Hint
+                content={
+                  error.cleaned ? t("versions.serverSetup.cleanedUp") : undefined
+                }
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 truncate text-2xs text-faint">
+                  {error.cleaned ? t("versions.serverSetup.cleanedUp") : ""}
+                </span>
+              </Hint>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 shrink-0 px-2 text-[0.7rem]"
+                className="h-6 shrink-0 px-2 text-2xs"
                 onClick={async () => {
                   await copyWithFeedback(
                     [error.text, error.technical].filter(Boolean).join("\n"),
@@ -588,13 +614,19 @@ export function CreateServer({
             </div>
           </div>
         ) : step === "confirm" ? (
-          <p className="flex items-center gap-1.5 text-[0.7rem] text-faint">
+          <p className="flex items-center gap-1.5 text-2xs text-faint">
             <RotateCcw className="size-3 shrink-0" />
             {t("versions.serverSetup.reversible")}
           </p>
         ) : (
-          <p className="text-[0.7rem] leading-snug text-faint">
+          <p className="text-2xs leading-snug text-faint">
             {t("versions.serverSetup.afterInstall")}
+          </p>
+        )}
+
+        {blockedReason && !isLoading && (
+          <p className="text-right text-2xs leading-snug text-warning">
+            {blockedReason}
           </p>
         )}
 
@@ -609,19 +641,17 @@ export function CreateServer({
                 <ArrowLeft />
                 {t("shell.back")}
               </Button>
-              <Hint content={blockedReason}>
-                <Button
-                  disabled={!canInstall || !!blockedReason}
-                  onClick={handleInstall}
-                >
-                  {isLoading ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    <HardDriveDownload />
-                  )}
-                  {t("versions.serverSetup.confirmAction")}
-                </Button>
-              </Hint>
+              <Button
+                disabled={!canInstall || !!blockedReason}
+                onClick={handleInstall}
+              >
+                {isLoading ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <HardDriveDownload />
+                )}
+                {t("versions.serverSetup.confirmAction")}
+              </Button>
             </>
           ) : (
             <>
@@ -632,14 +662,12 @@ export function CreateServer({
               >
                 {t("common.cancel")}
               </Button>
-              <Hint content={blockedReason}>
-                <Button
-                  disabled={!canInstall || !!blockedReason}
-                  onClick={() => setStep("confirm")}
-                >
-                  {t("versions.serverSetup.continue")}
-                </Button>
-              </Hint>
+              <Button
+                disabled={!canInstall || !!blockedReason}
+                onClick={() => setStep("confirm")}
+              >
+                {t("versions.serverSetup.continue")}
+              </Button>
             </>
           )}
         </DialogFooter>

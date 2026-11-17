@@ -1,6 +1,5 @@
 import { PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { SiCurseforge, SiModrinth } from "react-icons/si";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   Ban,
@@ -34,17 +33,20 @@ import {
 } from "@/types/ModManager";
 import { Button } from "@/components/ui/button";
 import { Collapse } from "@/components/ui/collapse";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Hint } from "@renderer/components/Hint";
 import { ContentEntry } from "./entries";
-import { formatCompactNumber, formatDate } from "./format";
+import { formatDate } from "./format";
+import { formatCompactNumber } from "@renderer/utilities/numbers";
 import { ProjectBody } from "./ProjectBody";
 import { ProjectGallery } from "./ProjectGallery";
 import { ProjectIcon } from "./ProjectIcon";
 import { TranslateToggle } from "./TranslateToggle";
 import { useTranslatableText, useVersionChangelog } from "./changelog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
 
 const api = window.api;
 
@@ -263,14 +265,16 @@ export function ContentDetails({
       </Hint>
       <header className="flex h-11 shrink-0 items-center gap-1 border-b border-border px-2">
         {canGoBack && (
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label={t("shell.back")}
-            onClick={onBack}
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
+          <Hint content={t("shell.back")}>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label={t("shell.back")}
+              onClick={onBack}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+          </Hint>
         )}
         <Hint content={title} variant="text" truncatedOnly>
           <span className="min-w-0 flex-1 truncate px-1 text-sm font-medium select-text">
@@ -306,14 +310,16 @@ export function ContentDetails({
             </Button>
           </Hint>
         )}
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          aria-label={t("common.close")}
-          onClick={onClose}
-        >
-          <X className="size-4" />
-        </Button>
+        <Hint content={t("common.close")}>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label={t("common.close")}
+            onClick={onClose}
+          >
+            <X className="size-4" />
+          </Button>
+        </Hint>
       </header>
 
       {isLoading ? (
@@ -332,18 +338,20 @@ export function ContentDetails({
           <Skeleton className="h-3 w-2/3 rounded" />
         </div>
       ) : error ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-          <CircleAlert className="size-6 text-destructive" />
-          <p className="text-sm text-foreground">
-            {t("modManager.notFoundMod")}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {t("modManager.notFoundModHint")}
-          </p>
+        <Empty className="flex-1 gap-3 px-6">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <CircleAlert className="text-destructive" />
+            </EmptyMedia>
+            <EmptyTitle>{t("modManager.notFoundMod")}</EmptyTitle>
+            <EmptyDescription className="text-xs">
+              {t("modManager.notFoundModHint")}
+            </EmptyDescription>
+          </EmptyHeader>
           <Button size="sm" variant="outline" onClick={onRetry}>
             {t("common.retry")}
           </Button>
-        </div>
+        </Empty>
       ) : (
         <>
           <div className="shrink-0 border-b border-border p-3">
@@ -357,19 +365,15 @@ export function ContentDetails({
               </div>
 
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <p className="line-clamp-2 text-xs leading-4 text-muted-foreground select-text [overflow-wrap:anywhere]">
-                  {description}
-                </p>
+                <Hint content={description} variant="text" truncatedOnly>
+                  <p className="line-clamp-2 text-xs leading-4 text-muted-foreground select-text [overflow-wrap:anywhere]">
+                    {description}
+                  </p>
+                </Hint>
 
-                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[0.6875rem] leading-4 text-faint">
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs leading-4 text-faint">
                   <span className="flex items-center gap-1">
-                    {entry.provider === Provider.CURSEFORGE ? (
-                      <SiCurseforge className="size-3" />
-                    ) : entry.provider === Provider.MODRINTH ? (
-                      <SiModrinth className="size-3" />
-                    ) : (
-                      <Package className="size-3" />
-                    )}
+                    <ContentProviderIcon provider={entry.provider} className="size-3" />
                   </span>
                   {author &&
                     (onAuthor ? (
@@ -391,7 +395,9 @@ export function ContentDetails({
                     ) : (
                       <span className="flex max-w-40 min-w-0 items-center gap-1">
                         <UserRound className="size-3 shrink-0" />
-                        <span className="truncate">{author.name}</span>
+                        <Hint content={author.name} variant="text" truncatedOnly>
+                          <span className="truncate">{author.name}</span>
+                        </Hint>
                       </span>
                     ))}
                   {downloads && (
@@ -461,7 +467,7 @@ export function ContentDetails({
                       aria-pressed={isPinned}
                       className={
                         isPinned
-                          ? "size-9 border-primary/50 text-primary hover:text-primary"
+                          ? "size-9 border-info/50 text-info hover:text-info"
                           : "size-9"
                       }
                       disabled={isBusy}
@@ -513,7 +519,9 @@ export function ContentDetails({
               {progress ? (
                 <div className="mt-3">
                   <div className="mb-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                    <span className="truncate">{progress.label}</span>
+                    <Hint content={progress.label} variant="text" truncatedOnly>
+                      <span className="truncate">{progress.label}</span>
+                    </Hint>
                     {progress.percent != null && (
                       <span className="shrink-0 font-mono tabular-nums">
                         {progress.percent}%
@@ -532,26 +540,25 @@ export function ContentDetails({
             className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
           >
             <TabsList
-              className={`mx-3 mt-2.5 grid h-7 w-auto shrink-0 ${
-                isModpacks ? "grid-cols-2" : "grid-cols-3"
-              }`}
+              variant="line"
+              className="h-9 w-full shrink-0 justify-start gap-0 border-b border-border p-0 px-1"
             >
-              <TabsTrigger value="about" className="px-2 text-xs">
+              <TabsTrigger value="about">
                 {t("common.description")}
               </TabsTrigger>
-              <TabsTrigger value="versions" className="px-2 text-xs">
+              <TabsTrigger value="versions">
                 {t("modManager.versionsTab")}
                 {versions.length > 0 && (
-                  <span className="ml-1 font-mono text-[0.625rem] text-faint">
+                  <span className="ml-1 font-mono text-3xs text-faint">
                     {versions.length}
                   </span>
                 )}
               </TabsTrigger>
               {!isModpacks && (
-                <TabsTrigger value="deps" className="px-2 text-xs">
+                <TabsTrigger value="deps">
                   {t("modManager.dependencies")}
                   {dependencies.length > 0 && (
-                    <span className="ml-1 font-mono text-[0.625rem] text-faint">
+                    <span className="ml-1 font-mono text-3xs text-faint">
                       {dependencies.length}
                     </span>
                   )}
@@ -573,10 +580,12 @@ export function ContentDetails({
                 changelog.status === "loading") && (
                 <div className="mb-3 rounded-lg border border-border bg-surface-2 p-2.5">
                   <div className="mb-1 flex min-h-6 items-center gap-1">
-                    <p className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-                      {t("modManager.changelog")}
-                      {selectedVersion?.name ? ` · ${selectedVersion.name}` : ""}
-                    </p>
+                    <Hint content={`${t("modManager.changelog")}${selectedVersion?.name ? ` · ${selectedVersion.name}` : ""}`} variant="text" truncatedOnly>
+                      <p className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+                        {t("modManager.changelog")}
+                        {selectedVersion?.name ? ` · ${selectedVersion.name}` : ""}
+                      </p>
+                    </Hint>
                     {changelogText.canTranslate && (
                       <TranslateToggle
                         isTranslated={changelogText.isTranslated}
@@ -587,8 +596,10 @@ export function ContentDetails({
                   </div>
                   <div className="max-h-40 overflow-y-auto">
                     {changelog.status === "loading" ? (
-                      <div className="flex h-10 items-center justify-center">
-                        <Loader2 className="size-4 animate-spin text-faint" />
+                      <div aria-hidden className="flex flex-col gap-1.5 py-1">
+                        <Skeleton className="h-2.5 w-11/12 rounded" />
+                        <Skeleton className="h-2.5 w-3/4 rounded" />
+                        <Skeleton className="h-2.5 w-5/6 rounded" />
                       </div>
                     ) : (
                       <ProjectBody
@@ -610,9 +621,11 @@ export function ContentDetails({
                   onLink={onOpenLink}
                 />
               ) : (
-                <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
-                  {t("common.notFound")}
-                </p>
+                <Empty className="gap-2 rounded-lg border border-dashed border-border px-3 py-6">
+                  <EmptyDescription className="text-xs">
+                    {t("common.notFound")}
+                  </EmptyDescription>
+                </Empty>
               )}
             </TabsContent>
 
@@ -621,9 +634,11 @@ export function ContentDetails({
               className="min-h-0 flex-1 overflow-hidden"
             >
               {versions.length === 0 ? (
-                <p className="m-3 rounded-lg border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
-                  {t("modManager.notFoundMod")}
-                </p>
+                <Empty className="m-3 w-auto gap-2 rounded-lg border border-dashed border-border px-3 py-6">
+                  <EmptyDescription className="text-xs">
+                    {t("modManager.notFoundMod")}
+                  </EmptyDescription>
+                </Empty>
               ) : (
                 <VersionList
                   versions={versions}
@@ -640,22 +655,26 @@ export function ContentDetails({
               className="min-h-0 flex-1 overflow-y-auto px-3 pt-3 pb-3"
             >
               {depsError && (
-                <div className="mb-2 flex flex-col items-center gap-2 rounded-lg border border-dashed border-border px-3 py-5 text-center">
-                  <CircleAlert className="size-5 text-destructive" />
-                  <p className="text-xs text-muted-foreground">
+                <Empty className="mb-2 gap-2 rounded-lg border border-dashed border-border px-3 py-5">
+                  <EmptyMedia variant="icon" className="mb-0">
+                    <CircleAlert className="text-destructive" />
+                  </EmptyMedia>
+                  <EmptyDescription className="text-xs">
                     {t("modManager.dependenciesFailed")}
-                  </p>
+                  </EmptyDescription>
                   <Button size="sm" variant="outline" onClick={onRetry}>
                     {t("common.retry")}
                   </Button>
-                </div>
+                </Empty>
               )}
 
               {resolvedDependencies.length === 0 ? (
                 depsError ? null : (
-                  <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
-                    {t("modManager.noDependencies")}
-                  </p>
+                  <Empty className="gap-2 rounded-lg border border-dashed border-border px-3 py-6">
+                    <EmptyDescription className="text-xs">
+                      {t("modManager.noDependencies")}
+                    </EmptyDescription>
+                  </Empty>
                 )
               ) : (
                 <div className="flex flex-col gap-1.5">
@@ -686,7 +705,7 @@ export function ContentDetails({
                               {depProject.title}
                             </span>
                           </Hint>
-                          <span className="flex items-center gap-1.5 text-[0.6875rem] leading-4">
+                          <span className="flex items-center gap-1.5 text-2xs leading-4">
                             <span
                               className={`flex items-center gap-1 rounded-sm px-1 py-px ${dependencyClass(dependency.relationType)}`}
                             >
@@ -713,16 +732,18 @@ export function ContentDetails({
                         </div>
 
                         {canOpen && (
-                          <Button
-                            size="icon-sm"
-                            variant="ghost"
-                            className="shrink-0"
-                            disabled={isBusy}
-                            aria-label={depProject.title}
-                            onClick={() => onOpenDependency(depProject)}
-                          >
-                            <ChevronLeft className="size-4 rotate-180" />
-                          </Button>
+                          <Hint content={isBusy ? undefined : depProject.title}>
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              className="shrink-0"
+                              disabled={isBusy}
+                              aria-label={depProject.title}
+                              onClick={() => onOpenDependency(depProject)}
+                            >
+                              <ChevronLeft className="size-4 rotate-180" />
+                            </Button>
+                          </Hint>
                         )}
                       </div>
                     );
@@ -768,6 +789,8 @@ function VersionList({
       className="h-full min-h-0 overflow-y-auto px-2 py-2"
     >
       <div
+        role="listbox"
+        aria-label={t("modManager.versionsTab")}
         className="relative w-full"
         style={{ height: `${virtualizer.getTotalSize()}px` }}
       >
@@ -787,9 +810,10 @@ function VersionList({
             >
               <button
                 type="button"
-                aria-pressed={isSelected}
+                role="option"
+                aria-selected={isSelected}
                 onClick={() => onSelect(version)}
-                className="flex h-12 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left transition-colors hover:bg-surface-2 aria-pressed:bg-surface-3"
+                className="flex h-12 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left transition-colors hover:bg-row-hover aria-selected:bg-row-selected"
               >
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <Hint content={version.name} variant="text" truncatedOnly>
@@ -797,7 +821,7 @@ function VersionList({
                       {version.name}
                     </span>
                   </Hint>
-                  <span className="flex items-center gap-1.5 text-[0.6875rem] leading-4 text-faint">
+                  <span className="flex items-center gap-1.5 text-2xs leading-4 text-faint">
                     <span
                       className={`rounded-sm px-1 py-px ${releaseTypeClass(version.releaseType)}`}
                     >

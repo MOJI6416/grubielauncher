@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+} from "@/components/ui/empty";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { settingsAtom } from "@renderer/stores/atoms";
@@ -16,7 +22,7 @@ const LEVEL_CLASS: { pattern: RegExp; className: string }[] = [
     className: "text-destructive",
   },
   { pattern: /\bWARN(ING)?\b/, className: "text-warning" },
-  { pattern: /^>/, className: "text-primary" },
+  { pattern: /^>/, className: "text-foreground" },
   { pattern: /^\[launcher\]/, className: "text-faint" },
 ];
 
@@ -65,13 +71,15 @@ export function ServerConsole({
     <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card">
       <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
         <Terminal className="size-3.5 text-faint" />
-        <p className="min-w-0 flex-1 truncate text-sm font-medium">
-          {t("serverManager.console")}
-        </p>
-        <span className="font-mono text-[0.7rem] text-faint tabular-nums">
+        <Hint content={t("serverManager.console")} variant="text" truncatedOnly>
+          <p className="min-w-0 flex-1 truncate text-sm font-medium">
+            {t("serverManager.console")}
+          </p>
+        </Hint>
+        <span className="font-mono text-2xs text-faint tabular-nums">
           {lines.length}
         </span>
-        <Hint content={t("serverManager.copyLog")}>
+        <Hint content={lines.length ? t("serverManager.copyLog") : undefined}>
           <Button
             variant="ghost"
             size="icon-sm"
@@ -104,9 +112,16 @@ export function ServerConsole({
             <div ref={endRef} />
           </div>
         ) : (
-          <p className="flex h-full items-center justify-center px-6 text-center text-xs text-muted-foreground">
-            {t("serverManager.consoleEmpty")}
-          </p>
+          <Empty className="h-full border-0 bg-transparent p-4">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Terminal />
+              </EmptyMedia>
+              <EmptyDescription>
+                {t("serverManager.consoleEmpty")}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
       </div>
 

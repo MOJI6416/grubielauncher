@@ -71,7 +71,7 @@ export function OrphanFolders({ folders }: { folders: string[] }) {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex h-7 shrink-0 items-center gap-1.5 self-start rounded-lg px-1.5 text-[0.7rem] text-faint transition-colors hover:bg-surface-2 hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="flex h-7 shrink-0 items-center gap-1.5 self-start rounded-lg px-1.5 text-2xs text-faint transition-colors hover:bg-surface-2 hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <FolderSearch className="size-3.5" />
           {t("home.orphans.title", { count: folders.length })}
@@ -89,7 +89,7 @@ export function OrphanFolders({ folders }: { folders: string[] }) {
               <button
                 type="button"
                 onClick={() => void openFolder(folder)}
-                className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-xs text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-xs text-muted-foreground transition-colors hover:bg-row-hover hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <FolderSearch className="size-3.5 shrink-0 text-faint" />
                 <Hint content={folder} variant="text" truncatedOnly>

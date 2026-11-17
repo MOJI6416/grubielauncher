@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import { FolderOpen, Loader2, Package, PackagePlus, Trash } from "lucide-react";
@@ -25,6 +25,9 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { toast } from "sonner";
 import { DatapackOption } from "./useWorldsData";
 import { splitDatapacks } from "./worldFacts";
+import { removeWithUndo } from "@renderer/utilities/removeWithUndo";
+import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
+import { bumpInstanceDataRevision } from "@renderer/features/instances/instanceRevision";
 
 const api = window.api;
 
@@ -58,6 +61,8 @@ export function WorldDatapacksTab({
     () => new Set(world.datapacks),
     [world.datapacks],
   );
+  const latestDatapacks = useRef(world.datapacks);
+  latestDatapacks.current = world.datapacks;
 
   const selected = options.find((option) => option.filename === picked);
 
@@ -131,24 +136,37 @@ export function WorldDatapacksTab({
     setBusy(filename);
 
     try {
-      const removed = await api.shell.trashItem(
-        api.path.join(world.path, "datapacks", filename),
-      );
-
-      if (!removed) {
-        showFailureToast(t("worlds.datapackRemoveError"), undefined, {
-          channels: ["shell:trashItem"],
-        });
-        return;
-      }
-
-      onChange(world.datapacks.filter((entry) => entry !== filename));
-    } catch (error) {
-      showFailureToast(t("worlds.datapackRemoveError"), error, {
-        channels: ["fs:"],
+      await removeWithUndo({
+        target: api.path.join(world.path, "datapacks", filename),
+        parkDir: api.path.join(world.path, "..", ".."),
+        title: t("worlds.datapackRemoved"),
+        description: titleOf(filename) ?? filename,
+        failTitle: t("worlds.datapackRemoveError"),
+        onRemoved: () =>
+          onChange(
+            latestDatapacks.current.filter((entry) => entry !== filename),
+          ),
+        onRestored: () => {
+          if (!latestDatapacks.current.includes(filename)) {
+            onChange([...latestDatapacks.current, filename]);
+          }
+          bumpInstanceDataRevision();
+        },
       });
     } finally {
       setBusy(null);
+    }
+  };
+
+  const openFolder = async () => {
+    try {
+      const folder = api.path.join(world.path, "datapacks");
+      await api.fs.ensure(folder);
+      await api.shell.openPath(folder);
+    } catch (error) {
+      showFailureToast(t("worlds.openDatapacksFolderError"), error, {
+        channels: ["fs:", "shell:"],
+      });
     }
   };
 
@@ -188,7 +206,9 @@ export function WorldDatapacksTab({
                       <Package className="size-3" />
                     )}
                   </span>
-                  <span className="min-w-0 truncate">{option.mod.title}</span>
+                  <Hint content={option.mod.title} variant="text" truncatedOnly>
+                    <span className="min-w-0 truncate">{option.mod.title}</span>
+                  </Hint>
                 </span>
               </SelectItem>
             ))}
@@ -216,17 +236,7 @@ export function WorldDatapacksTab({
             size="icon-sm"
             className="size-8 shrink-0 text-muted-foreground"
             aria-label={t("worlds.openDatapacksFolder")}
-            onClick={async () => {
-              try {
-                const folder = api.path.join(world.path, "datapacks");
-                await api.fs.ensure(folder);
-                await api.shell.openPath(folder);
-              } catch (error) {
-                showFailureToast(t("worlds.openDatapacksFolderError"), error, {
-                  channels: ["fs:", "shell:"],
-                });
-              }
-            }}
+            onClick={() => void openFolder()}
           >
             <FolderOpen className="size-3.5" />
           </Button>
@@ -242,83 +252,115 @@ export function WorldDatapacksTab({
             <EmptyTitle>{t("worlds.noDatapacks")}</EmptyTitle>
             <EmptyDescription>{t("worlds.noDatapacksHint")}</EmptyDescription>
           </EmptyHeader>
+          <Button variant="outline" size="sm" onClick={() => void openFolder()}>
+            <FolderOpen className="size-3.5" />
+            {t("worlds.openDatapacksFolder")}
+          </Button>
         </Empty>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col rounded-xl border bg-surface-1">
-          <div className="flex shrink-0 items-center justify-between border-b px-3 py-2 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
+          <div className="flex shrink-0 items-center justify-between border-b px-3 py-2 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
             <span>{t("worlds.datapacksInWorld")}</span>
             <span className="font-mono text-faint">{installed.length}</span>
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-2">
-            {installed.map((entry) => {
-              const title = titleOf(entry.name);
+            <RemovalList sourceKeys={installedSet}>
+              {installed.map((entry) => {
+                const title = titleOf(entry.name);
 
-              return (
-                <div
-                  key={entry.name}
-                  className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-accent/30"
-                >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-surface-3 text-faint">
-                    <Package className="size-3.5" />
-                  </span>
-
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <Hint
-                      content={title ?? entry.name}
-                      variant="text"
-                      truncatedOnly
+                return (
+                  <RemovalItem key={entry.name} itemKey={entry.name}>
+                    <div
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (
+                          event.key !== "Delete" ||
+                          disabled ||
+                          busy !== null
+                        ) {
+                          return;
+                        }
+                        if (event.target !== event.currentTarget) return;
+                        event.preventDefault();
+                        void remove(entry.name);
+                      }}
+                      className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors outline-none hover:bg-row-hover focus-visible:ring-2 focus-visible:ring-ring/50"
                     >
-                      <span className="truncate text-xs font-medium">
-                        {title ?? entry.name}
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-surface-3 text-faint">
+                        <Package className="size-3.5" />
                       </span>
-                    </Hint>
-                    {title && (
-                      <Hint content={entry.name} variant="text" truncatedOnly>
-                        <span className="truncate font-mono text-[0.65rem] text-faint">
-                          {entry.name}
+
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <Hint
+                          content={title ?? entry.name}
+                          variant="text"
+                          truncatedOnly
+                        >
+                          <span className="truncate text-xs font-medium">
+                            {title ?? entry.name}
+                          </span>
+                        </Hint>
+                        {title && (
+                          <Hint
+                            content={entry.name}
+                            variant="text"
+                            truncatedOnly
+                          >
+                            <span className="truncate font-mono text-3xs text-faint">
+                              {entry.name}
+                            </span>
+                          </Hint>
+                        )}
+                      </div>
+
+                      <Hint
+                        content={
+                          entry.state === "unknown"
+                            ? t("worlds.datapackPendingHint")
+                            : undefined
+                        }
+                      >
+                        <span
+                          className={`shrink-0 rounded px-1.5 py-0.5 text-3xs ${
+                            entry.state === "enabled"
+                              ? "bg-success/15 text-success"
+                              : entry.state === "unknown"
+                                ? "bg-warning/15 text-warning"
+                                : "bg-surface-3 text-muted-foreground"
+                          }`}
+                        >
+                          {t(`worlds.datapackState.${entry.state}`)}
                         </span>
                       </Hint>
-                    )}
-                  </div>
 
-                  <Hint
-                    content={
-                      entry.state === "unknown"
-                        ? t("worlds.datapackPendingHint")
-                        : undefined
-                    }
-                  >
-                    <span
-                      className={`shrink-0 rounded px-1.5 py-0.5 text-[0.65rem] ${
-                        entry.state === "enabled"
-                          ? "bg-success/15 text-success"
-                          : entry.state === "unknown"
-                            ? "bg-warning/15 text-warning"
-                            : "bg-surface-3 text-muted-foreground"
-                      }`}
-                    >
-                      {t(`worlds.datapackState.${entry.state}`)}
-                    </span>
-                  </Hint>
-
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
-                    disabled={disabled || busy !== null}
-                    aria-label={t("common.delete")}
-                    onClick={() => void remove(entry.name)}
-                  >
-                    {busy === entry.name ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <Trash className="size-3.5" />
-                    )}
-                  </Button>
-                </div>
-              );
-            })}
+                      <Hint
+                        content={
+                          disabled || busy !== null
+                            ? undefined
+                            : t("common.delete")
+                        }
+                      >
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
+                          disabled={disabled || busy !== null}
+                          aria-label={t("common.delete")}
+                          onClick={() => void remove(entry.name)}
+                        >
+                          {busy === entry.name ? (
+                            <Loader2 className="animate-spin" />
+                          ) : (
+                            <Trash className="size-3.5" />
+                          )}
+                        </Button>
+                      </Hint>
+                    </div>
+                  </RemovalItem>
+                );
+              })}
+            </RemovalList>
           </div>
         </div>
       )}

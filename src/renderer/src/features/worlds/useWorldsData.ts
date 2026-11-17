@@ -5,6 +5,7 @@ import { ILocalProject, ProjectType } from "@/types/ModManager";
 import { Version } from "@renderer/classes/Version";
 import { accountAtom } from "@renderer/stores/atoms";
 import { useInstanceDataRevision } from "@renderer/features/instances/instanceRevision";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -40,8 +41,8 @@ export function useWorldsData(version: Version | undefined) {
     if (!version) return;
 
     const [nextSizes, nextBackups] = await Promise.all([
-      api.worlds.folderSizes(version.versionPath).catch(() => ({})),
-      api.worlds.countBackups(version.versionPath).catch(() => ({})),
+      api.worlds.folderSizes(version.versionPath).catch(ignoreFailure),
+      api.worlds.countBackups(version.versionPath).catch(ignoreFailure),
     ]);
 
     if (!mounted.current) return;

@@ -18,6 +18,8 @@ import { FormErrorMessage } from "@/components/ui/form-error-message";
 import { ProviderIcon } from "./ProviderMark";
 import { describeAuthFailure } from "./authErrors";
 import type { LittleSkinSignInStep } from "./useAccountsController";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { Hint } from "@renderer/components/Hint";
 
 const api = window.api;
 
@@ -132,7 +134,9 @@ export function LittleSkinAccountForm({
                 ) : (
                   <UserRound className="size-4 shrink-0 text-faint" />
                 )}
-                <span className="truncate font-medium">{profile.name}</span>
+                <Hint content={profile.name} variant="text" truncatedOnly>
+                  <span className="truncate font-medium">{profile.name}</span>
+                </Hint>
               </button>
             ))}
           </div>
@@ -223,7 +227,7 @@ export function LittleSkinAccountForm({
           onClick={() =>
             void api.shell
               .openExternal(LITTLESKIN_REGISTER_URL)
-              .catch(() => undefined)
+              .catch(ignoreFailure)
           }
         >
           <ExternalLink className="size-3.5" />

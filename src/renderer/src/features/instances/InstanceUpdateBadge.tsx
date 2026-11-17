@@ -99,7 +99,7 @@ export function UpdateSummaryHint({
       )}
 
       {hasUpdateDetails(summary) && (
-        <span className="pt-0.5 text-[0.65rem] opacity-60">
+        <span className="pt-0.5 text-3xs opacity-60">
           {t("versions.update.openHint")}
         </span>
       )}

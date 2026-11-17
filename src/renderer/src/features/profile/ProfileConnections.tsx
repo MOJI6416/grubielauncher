@@ -45,6 +45,8 @@ import {
   type NotificationEvent,
 } from "./notificationPrefs";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { formatClock } from "@renderer/utilities/duration";
 
 const api = window.api;
 
@@ -64,13 +66,6 @@ interface PendingLink {
 interface RowError {
   key: ProviderKey;
   text: string;
-}
-
-function formatCountdown(ms: number) {
-  const total = Math.max(0, Math.round(ms / 1000));
-  const minutes = Math.floor(total / 60);
-  const seconds = total % 60;
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 export function ProfileConnections({
@@ -128,7 +123,7 @@ export function ProfileConnections({
   }, [pending]);
 
   const openExternal = useCallback((url: string) => {
-    void api.shell.openExternal(url).catch(() => undefined);
+    void api.shell.openExternal(url).catch(ignoreFailure);
   }, []);
 
   const isCurrent = (attempt: number) =>
@@ -155,7 +150,7 @@ export function ProfileConnections({
   const cancelPending = useCallback(() => {
     attemptRef.current += 1;
     setPending(null);
-    void api.auth.stopServer().catch(() => undefined);
+    void api.auth.stopServer().catch(ignoreFailure);
   }, []);
 
   const runDiscordLink = async () => {
@@ -325,7 +320,7 @@ export function ProfileConnections({
 
     const fresh = await api.backend
       .getUser(accessToken, user._id)
-      .catch(() => null);
+      .catch(ignoreFailure);
     if (!isMountedRef.current || savingRef.current) return;
     if (fresh?.notifications) setPrefs(fresh.notifications);
   };
@@ -386,9 +381,15 @@ export function ProfileConnections({
         className="flex h-9 w-full min-w-0 items-center gap-2 rounded-lg bg-surface-1 px-2.5 text-xs text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
       >
         <FaDiscord className="size-3.5 shrink-0" />
-        <span className="min-w-0 flex-1 truncate text-left">
-          {discordUsername || "Discord"}
-        </span>
+        <Hint
+          content={discordUsername || "Discord"}
+          variant="text"
+          truncatedOnly
+        >
+          <span className="min-w-0 flex-1 truncate text-left">
+            {discordUsername || "Discord"}
+          </span>
+        </Hint>
         <ExternalLink className="size-3.5 shrink-0 text-faint" />
       </button>
     );
@@ -433,7 +434,9 @@ export function ProfileConnections({
         ) : (
           <Plug className="size-3.5 shrink-0" />
         )}
-        <span className="min-w-0 flex-1 truncate text-left">{summary}</span>
+        <Hint content={summary} variant="text" truncatedOnly>
+          <span className="min-w-0 flex-1 truncate text-left">{summary}</span>
+        </Hint>
         <Settings2 className="size-3.5 shrink-0 text-faint" />
       </button>
 
@@ -450,9 +453,11 @@ export function ProfileConnections({
         >
           <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
             <Plug className="size-4 shrink-0 text-faint" />
-            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
-              {t("connections.title")}
-            </DialogTitle>
+            <Hint content={t("connections.title")} variant="text" truncatedOnly>
+              <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+                {t("connections.title")}
+              </DialogTitle>
+            </Hint>
           </DialogHeader>
 
           <div className="grid max-h-[70vh] gap-2.5 overflow-y-auto px-4 py-3">
@@ -466,7 +471,7 @@ export function ProfileConnections({
                 return (
                   <div
                     key={row.key}
-                    className="grid gap-1.5 rounded-md p-1.5 transition-colors hover:bg-surface-3"
+                    className="grid gap-1.5 rounded-md p-1.5 transition-colors hover:bg-row-hover"
                   >
                     <div className="flex min-w-0 items-center gap-2.5">
                       <span
@@ -482,12 +487,20 @@ export function ProfileConnections({
                       </span>
 
                       <span className="grid min-w-0 flex-1 gap-0.5">
-                        <span className="truncate text-sm leading-tight">
-                          {row.name}
-                        </span>
-                        <span className="truncate text-xs leading-tight text-muted-foreground">
-                          {row.benefit}
-                        </span>
+                        <Hint content={row.name} variant="text" truncatedOnly>
+                          <span className="truncate text-sm leading-tight">
+                            {row.name}
+                          </span>
+                        </Hint>
+                        <Hint
+                          content={row.benefit}
+                          variant="text"
+                          truncatedOnly
+                        >
+                          <span className="truncate text-xs leading-tight text-muted-foreground">
+                            {row.benefit}
+                          </span>
+                        </Hint>
                       </span>
 
                       {isPending ? (
@@ -500,7 +513,7 @@ export function ProfileConnections({
                         </Button>
                       ) : row.isSignIn && isLinked ? (
                         <Hint content={t("connections.signInProviderHint")}>
-                          <span className="flex shrink-0 items-center gap-1 rounded-md bg-surface-1 px-2 py-1 text-[11px] text-muted-foreground">
+                          <span className="flex shrink-0 items-center gap-1 rounded-md bg-surface-1 px-2 py-1 text-2xs text-muted-foreground">
                             <Lock className="size-3 shrink-0" />
                             {t("connections.signInProvider")}
                           </span>
@@ -537,22 +550,34 @@ export function ProfileConnections({
                       <span className="flex min-w-0 items-center gap-1 pl-[42px] text-xs leading-tight text-success">
                         <BadgeCheck className="size-3 shrink-0" />
                         {row.url ? (
-                          <button
-                            type="button"
-                            className="min-w-0 truncate hover:underline"
-                            onClick={() => openExternal(row.url!)}
+                          <Hint
+                            content={row.handle}
+                            variant="text"
+                            truncatedOnly
                           >
-                            {row.handle}
-                          </button>
+                            <button
+                              type="button"
+                              className="min-w-0 truncate hover:underline"
+                              onClick={() => openExternal(row.url!)}
+                            >
+                              {row.handle}
+                            </button>
+                          </Hint>
                         ) : (
-                          <span className="truncate">{row.handle}</span>
+                          <Hint
+                            content={row.handle}
+                            variant="text"
+                            truncatedOnly
+                          >
+                            <span className="truncate">{row.handle}</span>
+                          </Hint>
                         )}
                       </span>
                     )}
 
                     {isPending && (
                       <div className="grid gap-1.5 rounded-md bg-surface-1 px-2 py-1.5">
-                        <p className="flex items-start gap-1.5 text-[11px] leading-4 text-muted-foreground">
+                        <p className="flex items-start gap-1.5 text-2xs leading-4 text-muted-foreground">
                           <Loader2 className="mt-px size-3 shrink-0 animate-spin" />
                           <span className="min-w-0">
                             {row.key === "telegram"
@@ -574,8 +599,8 @@ export function ProfileConnections({
                           </Button>
                           {pending?.deadline ? (
                             <Hint content={t("connections.timeLeft")}>
-                              <span className="ml-auto shrink-0 px-1 font-mono text-[11px] tabular-nums text-faint">
-                                {formatCountdown(pending.deadline - now)}
+                              <span className="ml-auto shrink-0 px-1 font-mono text-2xs tabular-nums text-faint">
+                                {formatClock(pending.deadline - now)}
                               </span>
                             </Hint>
                           ) : null}
@@ -584,7 +609,7 @@ export function ProfileConnections({
                     )}
 
                     {rowError && (
-                      <p className="flex items-start gap-1.5 rounded-md border border-destructive/40 bg-surface-1 px-2 py-1.5 text-[11px] leading-4 text-destructive">
+                      <p className="flex items-start gap-1.5 rounded-md border border-destructive/40 bg-surface-1 px-2 py-1.5 text-2xs leading-4 text-destructive">
                         <TriangleAlert className="mt-px size-3 shrink-0 text-destructive" />
                         <span className="min-w-0">{rowError}</span>
                       </p>
@@ -598,12 +623,24 @@ export function ProfileConnections({
               <div className="grid gap-1 rounded-xl border border-border bg-surface-2 p-1.5">
                 <div className="flex min-w-0 items-center gap-2.5 rounded-md px-1.5 py-1.5">
                   <span className="grid min-w-0 flex-1 gap-0.5">
-                    <span className="truncate text-sm leading-tight">
-                      {t("connections.notificationsTitle")}
-                    </span>
-                    <span className="truncate text-xs leading-tight text-muted-foreground">
-                      {t("connections.notificationsWhen")}
-                    </span>
+                    <Hint
+                      content={t("connections.notificationsTitle")}
+                      variant="text"
+                      truncatedOnly
+                    >
+                      <span className="truncate text-sm leading-tight">
+                        {t("connections.notificationsTitle")}
+                      </span>
+                    </Hint>
+                    <Hint
+                      content={t("connections.notificationsWhen")}
+                      variant="text"
+                      truncatedOnly
+                    >
+                      <span className="truncate text-xs leading-tight text-muted-foreground">
+                        {t("connections.notificationsWhen")}
+                      </span>
+                    </Hint>
                   </span>
                   <Switch
                     checked={prefs.enabled}
@@ -618,11 +655,17 @@ export function ProfileConnections({
                 {NOTIFICATION_EVENTS.map((event: NotificationEvent) => (
                   <div
                     key={event}
-                    className="flex min-w-0 items-center gap-2.5 rounded-md px-1.5 py-1 transition-colors hover:bg-surface-3"
+                    className="flex min-w-0 items-center gap-2.5 rounded-md px-1.5 py-1 transition-colors hover:bg-row-hover"
                   >
-                    <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-                      {t(`connections.event.${event}`)}
-                    </span>
+                    <Hint
+                      content={t(`connections.event.${event}`)}
+                      variant="text"
+                      truncatedOnly
+                    >
+                      <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                        {t(`connections.event.${event}`)}
+                      </span>
+                    </Hint>
                     <Switch
                       checked={prefs[event]}
                       disabled={
@@ -636,7 +679,7 @@ export function ProfileConnections({
                   </div>
                 ))}
 
-                <p className="px-1.5 pt-0.5 pb-1 text-[11px] leading-4 text-faint">
+                <p className="px-1.5 pt-0.5 pb-1 text-2xs leading-4 text-faint">
                   {t("connections.notificationsStopHint")}
                 </p>
               </div>

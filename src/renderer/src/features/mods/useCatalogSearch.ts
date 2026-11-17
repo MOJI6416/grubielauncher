@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { IFilterGroup, IProject, ProjectType, Provider } from "@/types/ModManager";
 import { hasMorePages, mergeCatalogPages } from "./entries";
 import { CATALOG_PAGE_SIZE, CatalogRequest, requestSignature } from "./catalog";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -63,7 +64,7 @@ export function useCatalogSearch(
           },
           { offset, limit: CATALOG_PAGE_SIZE },
         )
-        .catch(() => null);
+        .catch(ignoreFailure);
 
       if (requestId !== requestIdRef.current) return;
 

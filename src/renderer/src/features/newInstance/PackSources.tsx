@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { SiCurseforge, SiModrinth } from "react-icons/si";
 import {
   ExternalLink,
   FolderInput,
@@ -25,6 +24,7 @@ import { ServerFavicon } from "@renderer/features/servers/ServerVisuals";
 import type { ServerProbe } from "./useServerProbe";
 import type { KnownServer, OwnModpacksState } from "./useSuggestions";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
 
 const api = window.api;
 
@@ -59,7 +59,7 @@ function SourceShell({
           {hints.map((hint) => (
             <p key={hint} className="flex items-start gap-2">
               <span className="mt-1.5 size-1 shrink-0 rounded-full bg-faint" />
-              <span className="min-w-0 text-[0.7rem] leading-snug text-muted-foreground">
+              <span className="min-w-0 text-2xs leading-snug text-muted-foreground">
                 {hint}
               </span>
             </p>
@@ -84,12 +84,12 @@ function LauncherTile({
       <span className="mx-auto flex size-7 items-center justify-center">
         {children}
       </span>
-      <span className="truncate text-[0.68rem] leading-4 font-medium text-foreground">
-        {name}
-      </span>
-      <span className="text-[0.6rem] leading-3 text-faint uppercase">
-        {format}
-      </span>
+      <Hint content={name} variant="text" truncatedOnly>
+        <span className="truncate text-2xs leading-4 font-medium text-foreground">
+          {name}
+        </span>
+      </Hint>
+      <span className="text-3xs leading-3 text-faint uppercase">{format}</span>
     </div>
   );
 }
@@ -117,10 +117,10 @@ export function FileSource({
           <img src={grubieIcon} alt="" className="size-5 object-contain" />
         </LauncherTile>
         <LauncherTile name="CurseForge" format="zip">
-          <SiCurseforge className="size-5 text-[#f16436]" />
+          <ContentProviderIcon provider="curseforge" className="size-5" />
         </LauncherTile>
         <LauncherTile name="Modrinth" format="mrpack">
-          <SiModrinth className="size-5 text-[#1bd96a]" />
+          <ContentProviderIcon provider="modrinth" className="size-5" />
         </LauncherTile>
         <LauncherTile name="Prism" format="zip">
           <img src={prismIcon} alt="" className="size-5 object-contain" />
@@ -144,9 +144,15 @@ export function FileSource({
       {isBusy && progressPercent !== null && (
         <div className="grid w-full gap-1.5">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="min-w-0 flex-1 truncate">
-              {t("modManager.extracting")}
-            </span>
+            <Hint
+              content={t("modManager.extracting")}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="min-w-0 flex-1 truncate">
+                {t("modManager.extracting")}
+              </span>
+            </Hint>
             <span className="font-mono tabular-nums text-faint">
               {progressPercent}%
             </span>
@@ -241,7 +247,7 @@ export function CodeSource({
       {(own.items.length > 0 || own.isLoading) && (
         <section className="flex max-h-56 w-full flex-col overflow-hidden rounded-xl border border-border bg-surface-1">
           <header className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-2.5">
-            <span className="text-[0.65rem] font-semibold tracking-[0.08em] text-faint uppercase">
+            <span className="text-3xs font-semibold tracking-[0.08em] text-faint uppercase">
               {t("newInstance.ownPacks")}
             </span>
             {own.isLoading && (
@@ -274,9 +280,9 @@ export function CodeSource({
                           ? onOpenInstalled(installedKey)
                           : onPickOwn(pack)
                       }
-                      className="flex h-10 w-full items-center gap-2 rounded-lg px-1.5 text-left transition-colors hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+                      className="flex h-10 w-full items-center gap-2 rounded-lg px-1.5 text-left transition-colors hover:bg-row-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
                     >
-                      <span className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-surface-2 text-[0.6rem] font-semibold text-faint">
+                      <span className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-surface-2 text-3xs font-semibold text-faint">
                         {pack.conf.image ? (
                           <img
                             src={pack.conf.image}
@@ -293,12 +299,12 @@ export function CodeSource({
                         {pack.conf.name}
                       </span>
 
-                      <span className="shrink-0 font-mono text-[0.65rem] text-faint">
+                      <span className="shrink-0 font-mono text-3xs text-faint">
                         {pack.conf.version.id}
                       </span>
 
                       {installedKey && (
-                        <span className="shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-[0.6rem] text-muted-foreground">
+                        <span className="shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-3xs text-muted-foreground">
                           {t("newInstance.alreadyInstalled")}
                         </span>
                       )}
@@ -391,11 +397,17 @@ export function ServerSource({
                 ) : (
                   <span className="size-2 shrink-0 rounded-full bg-success" />
                 )}
-                <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                  {probe.motd || redact.value(probe.address)}
-                </span>
+                <Hint
+                  content={probe.motd || redact.value(probe.address)}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                    {probe.motd || redact.value(probe.address)}
+                  </span>
+                </Hint>
                 {typeof probe.latencyMs === "number" && (
-                  <span className="flex shrink-0 items-center gap-1 font-mono text-[0.7rem] tabular-nums text-faint">
+                  <span className="flex shrink-0 items-center gap-1 font-mono text-2xs tabular-nums text-faint">
                     <Signal className="size-3" />
                     {probe.latencyMs} {t("servers.ms")}
                   </span>
@@ -404,12 +416,12 @@ export function ServerSource({
 
               <div className="flex flex-wrap items-center gap-1.5">
                 {probe.versionName && (
-                  <span className="rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[0.7rem] text-muted-foreground">
+                  <span className="rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-2xs text-muted-foreground">
                     {probe.versionName}
                   </span>
                 )}
                 {probe.players && (
-                  <span className="flex items-center gap-1 rounded-md bg-surface-2 px-1.5 py-0.5 text-[0.7rem] text-muted-foreground">
+                  <span className="flex items-center gap-1 rounded-md bg-surface-2 px-1.5 py-0.5 text-2xs text-muted-foreground">
                     <Users className="size-3" />
                     <span className="font-mono tabular-nums">
                       {probe.players.online}/{probe.players.max}
@@ -417,7 +429,7 @@ export function ServerSource({
                   </span>
                 )}
                 {probe.modded && (
-                  <span className="rounded-md bg-warning/15 px-1.5 py-0.5 text-[0.7rem] text-warning">
+                  <span className="rounded-md bg-warning/15 px-1.5 py-0.5 text-2xs text-warning">
                     {t("newInstance.server.modded")}
                   </span>
                 )}
@@ -435,7 +447,7 @@ export function ServerSource({
                   })}
                 </Button>
               ) : (
-                <p className="text-[0.7rem] text-muted-foreground">
+                <p className="text-2xs text-muted-foreground">
                   {t("newInstance.server.unknownVersion")}
                 </p>
               )}
@@ -447,7 +459,7 @@ export function ServerSource({
       {known.length > 0 && probe.status === "idle" && (
         <section className="flex max-h-44 w-full flex-col overflow-hidden rounded-xl border border-border bg-surface-1">
           <header className="flex h-8 shrink-0 items-center border-b border-border px-2.5">
-            <span className="text-[0.65rem] font-semibold tracking-[0.08em] text-faint uppercase">
+            <span className="text-3xs font-semibold tracking-[0.08em] text-faint uppercase">
               {t("newInstance.server.known")}
             </span>
           </header>
@@ -459,15 +471,27 @@ export function ServerSource({
                   type="button"
                   disabled={isBusy}
                   onClick={() => onChange(server.ip)}
-                  className="flex h-8 w-full items-center gap-2 rounded-lg px-1.5 text-left transition-colors hover:bg-surface-3 disabled:cursor-not-allowed"
+                  className="flex h-8 w-full items-center gap-2 rounded-lg px-1.5 text-left transition-colors hover:bg-row-hover disabled:cursor-not-allowed"
                 >
                   <Server className="size-3 shrink-0 text-faint" />
-                  <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                    {redact.text(server.name)}
-                  </span>
-                  <span className="min-w-0 shrink-0 truncate font-mono text-[0.65rem] text-faint">
-                    {redact.value(server.ip)}
-                  </span>
+                  <Hint
+                    content={redact.text(server.name)}
+                    variant="text"
+                    truncatedOnly
+                  >
+                    <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                      {redact.text(server.name)}
+                    </span>
+                  </Hint>
+                  <Hint
+                    content={redact.value(server.ip)}
+                    variant="text"
+                    truncatedOnly
+                  >
+                    <span className="min-w-0 shrink-0 truncate font-mono text-3xs text-faint">
+                      {redact.value(server.ip)}
+                    </span>
+                  </Hint>
                 </button>
               </li>
             ))}

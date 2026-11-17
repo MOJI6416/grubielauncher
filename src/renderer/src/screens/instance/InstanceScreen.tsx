@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowRightLeft,
   CircleCheck,
+  CircleUserRound,
   Copy,
   CopySlash,
   Ellipsis,
@@ -30,7 +31,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { resolveInstanceSettings } from "@/shared/instanceSettings";
 import { parseArgs } from "@renderer/utilities/jvmArguments";
 import { revokePreviousBlobUrl } from "@renderer/utilities/file";
@@ -40,8 +40,13 @@ import { PanelFallback } from "@renderer/components/PanelFallback";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { BlockedMods } from "@renderer/components/Modals/BlockedMods";
 import { CreateServer } from "@renderer/features/servers/CreateServer";
-import { isRunningAtom, pathsAtom, versionsAtom } from "@renderer/stores/atoms";
+import {
+  isRunningAtom,
+  pathsAtom,
+  versionsAtom,
+} from "@renderer/stores/atoms";
 import { navigate } from "@renderer/navigation/navigate";
+import { openAccounts } from "@renderer/features/accounts/addAccountRequest";
 import { getBlockingIds } from "@renderer/navigation/guards";
 import { currentRouteAtom } from "@renderer/navigation/store";
 import type { InstanceTab } from "@renderer/navigation/routes";
@@ -310,6 +315,10 @@ export function InstanceScreen({
       ? t("versions.installBusy")
       : undefined;
 
+  const unsavedKinds = changes.changeKinds
+    .map((kind) => t(`versions.unsaved.kind.${kind}`))
+    .join(" · ");
+
   const readOnlyHint = t(
     flags.canRenameVersion
       ? "versions.readOnlyHint"
@@ -335,7 +344,7 @@ export function InstanceScreen({
 
       {isForeignInstance && (
         <Hint content={readOnlyHint}>
-          <span className="flex h-5 shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface-3 px-1.5 text-[0.65rem] font-medium whitespace-nowrap text-muted-foreground">
+          <span className="flex h-5 shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface-3 px-1.5 text-3xs font-medium whitespace-nowrap text-muted-foreground">
             <Lock className="size-3 shrink-0" />
             {t("versions.chip.readOnly")}
           </span>
@@ -358,11 +367,12 @@ export function InstanceScreen({
           icon: ScanLine,
           busy: isLoading && loadingType === "check",
           disabled: isLoading || !isInternetOnline || isVersionRunning,
-          hint: !isInternetOnline
+          hint: t("versions.integrityHint"),
+          blockedReason: !isInternetOnline
             ? t("versions.integrityBlocked.offline")
             : isVersionRunning
               ? t("versions.integrityBlocked.running")
-              : t("versions.integrityHint"),
+              : undefined,
           onSelect: () => void editor.runIntegrityCheck(),
         },
         {
@@ -458,7 +468,7 @@ export function InstanceScreen({
             <CollapseInline show={isInstallActive}>
               {isInstallActive ? (
                 <Hint content={t("versions.installBusy")}>
-                  <span className="mr-2 flex h-5 shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface-3 px-1.5 text-[0.65rem] font-medium whitespace-nowrap text-muted-foreground">
+                  <span className="mr-2 flex h-5 shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface-3 px-1.5 text-3xs font-medium whitespace-nowrap text-muted-foreground">
                     <Loader2 className="size-3 shrink-0 animate-spin" />
                     {t("versions.chip.installing")}
                   </span>
@@ -469,7 +479,7 @@ export function InstanceScreen({
             <CollapseInline show={!isInternetOnline}>
               {!isInternetOnline ? (
                 <Hint content={t("versions.offlineHint")}>
-                  <span className="mr-2 flex h-5 shrink-0 items-center gap-1.5 rounded-md border border-warning/30 bg-warning/12 px-1.5 text-[0.65rem] font-medium whitespace-nowrap text-warning">
+                  <span className="mr-2 flex h-5 shrink-0 items-center gap-1.5 rounded-md border border-warning/30 bg-warning/12 px-1.5 text-3xs font-medium whitespace-nowrap text-warning">
                     <WifiOff className="size-3 shrink-0" />
                     {t("versions.chip.offline")}
                   </span>
@@ -485,12 +495,26 @@ export function InstanceScreen({
               </CollapseInline>
             ))}
 
+            <CollapseInline show={!account}>
+              {!account ? (
+                <Hint content={playBlockedReason}>
+                  <button
+                    type="button"
+                    onClick={openAccounts}
+                    className="mr-2 flex h-5 shrink-0 items-center gap-1.5 rounded-md border border-warning/30 bg-warning/12 px-1.5 text-3xs font-medium whitespace-nowrap text-warning transition-colors hover:bg-warning/20 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  >
+                    <CircleUserRound className="size-3 shrink-0" />
+                    {t("accounts.signIn")}
+                  </button>
+                </Hint>
+              ) : null}
+            </CollapseInline>
+
             <Hint
               content={
-                playBlockedReason ??
-                (isVersionRunning && !isLaunching
+                isVersionRunning && !isLaunching && !playBlockedReason
                   ? t("versions.playAnotherInstance")
-                  : undefined)
+                  : undefined
               }
             >
               <Button
@@ -509,16 +533,18 @@ export function InstanceScreen({
             </Hint>
 
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
-                  aria-label={t("common.more")}
-                >
-                  <Ellipsis />
-                </Button>
-              </DropdownMenuTrigger>
+              <Hint content={t("common.more")}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label={t("common.more")}
+                  >
+                    <Ellipsis />
+                  </Button>
+                </DropdownMenuTrigger>
+              </Hint>
               <DropdownMenuContent align="end" className="w-60">
                 <DropdownMenuItem
                   disabled={isLoading || !account}
@@ -876,20 +902,15 @@ export function InstanceScreen({
           ) : changes.hasChanges ? (
             <footer className="mt-3 flex h-14 items-center gap-3 border-t border-border pt-3">
               <span className="flex min-w-0 flex-1 items-center gap-2 text-xs">
-                <span
-                  className={cn(
-                    "size-1.5 shrink-0 rounded-full",
-                    canSave ? "bg-primary" : "bg-warning",
-                  )}
-                />
+                <span className="size-1.5 shrink-0 rounded-full bg-warning" />
                 <span className="shrink-0 font-medium">
                   {t("versions.unsaved.title")}
                 </span>
-                <span className="min-w-0 truncate text-muted-foreground">
-                  {changes.changeKinds
-                    .map((kind) => t(`versions.unsaved.kind.${kind}`))
-                    .join(" · ")}
-                </span>
+                <Hint content={unsavedKinds} variant="text" truncatedOnly>
+                  <span className="min-w-0 truncate text-muted-foreground">
+                    {unsavedKinds}
+                  </span>
+                </Hint>
                 {!canSave && saveBlockedReason && (
                   <span className="shrink-0 text-warning">
                     {saveBlockedReason}
@@ -908,21 +929,19 @@ export function InstanceScreen({
                 {t("common.reset")}
               </Button>
 
-              <Hint content={saveBlockedReason}>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={!canSave}
-                  onClick={() => void editor.commitSave()}
-                >
-                  {isLoading && loadingType === "save" ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    <Save />
-                  )}
-                  {t("common.save")}
-                </Button>
-              </Hint>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!canSave}
+                onClick={() => void editor.commitSave()}
+              >
+                {isLoading && loadingType === "save" ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Save />
+                )}
+                {t("common.save")}
+              </Button>
             </footer>
           ) : null}
         </Collapse>
@@ -981,7 +1000,7 @@ export function InstanceScreen({
 
       {share.isOpenShareModal && (
         <Confirmation
-          title={t("versions.publicUpdateTitle")}
+          title={t("versions.publicUpdateAsk")}
           content={[{ text: t("versions.publicUpdate") }]}
           onClose={() => share.setIsOpenModalShare(false)}
           buttons={[
@@ -1067,8 +1086,8 @@ export function InstanceScreen({
           onClose={() => editor.closeNotSaved()}
           title={
             getBlockingIds().includes("instance-configs")
-              ? t("configs.unsavedTitle")
-              : t("versions.notSavedTitle")
+              ? t("versions.configNotSavedAsk")
+              : t("versions.notSavedAsk")
           }
           reversible={false}
           buttons={[

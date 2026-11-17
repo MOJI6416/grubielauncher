@@ -1,5 +1,4 @@
 import { atom, getDefaultStore, useAtomValue } from "jotai";
-import { toast } from "sonner";
 import i18n from "@renderer/i18n";
 import {
   DEFAULT_INTERFACE_LAYOUT,
@@ -9,6 +8,7 @@ import { setDockHidden, setInstancePinned } from "@/shared/instancesFile";
 import { settingsAtom } from "@renderer/stores/atoms";
 import { patchSettings } from "@renderer/utilities/persistSettings";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { showUndoToast } from "@renderer/utilities/undoToast";
 import { updateInstancesFile } from "@renderer/features/instances/instancesStore";
 import { setSlotHidden } from "./layout";
 import {
@@ -48,7 +48,11 @@ export function toggleSlot(id: string, hidden: boolean): void {
 }
 
 export function resetLayout(): void {
+  const previous = getDefaultStore().get(settingsAtom).interface;
   saveLayout(DEFAULT_INTERFACE_LAYOUT);
+  showUndoToast(i18n.t("layout.resetDone"), () => saveLayout(previous), {
+    id: "layout-reset",
+  });
 }
 
 export function startLayoutEditing(): void {
@@ -96,17 +100,12 @@ export function applyPreset(id: LayoutPresetId): void {
   void savePreset(presetValues(id)).then(
     (saved) =>
       saved &&
-      toast(
+      showUndoToast(
         i18n.t("layout.presets.applied", {
           name: i18n.t(`layout.presets.${id}.title`),
         }),
-        {
-          id: "layout-preset",
-          action: {
-            label: i18n.t("layout.presets.undo"),
-            onClick: () => void savePreset(previous),
-          },
-        },
+        () => void savePreset(previous),
+        { id: "layout-preset" },
       ),
   );
 }

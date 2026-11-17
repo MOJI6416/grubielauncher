@@ -1,8 +1,9 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Feather,
   Layers,
-  Play,
+  PersonStanding,
   RotateCcw,
   RotateCw,
   Shirt,
@@ -117,7 +118,7 @@ export function SkinStage({
         ) : null}
 
         {failedTexture === "cape" && skinUrl ? (
-          <span className="pointer-events-none absolute right-2 bottom-2 inline-flex items-center gap-1 rounded-md bg-destructive/15 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
+          <span className="pointer-events-none absolute right-2 bottom-2 inline-flex items-center gap-1 rounded-md bg-destructive/15 px-1.5 py-0.5 text-3xs font-medium text-destructive">
             <TriangleAlert className="size-3" />
             {t("skinStage.textureError_cape")}
           </span>
@@ -135,7 +136,7 @@ export function SkinStage({
                 variant="ghost"
                 aria-label={t("skinStage.animation")}
               >
-                <Play />
+                <PersonStanding />
               </Button>
             </DropdownMenuTrigger>
           </Hint>
@@ -159,7 +160,7 @@ export function SkinStage({
             variant="ghost"
             aria-pressed={autoRotate}
             aria-label={t("skinStage.autoRotate")}
-            className={cn(autoRotate && "bg-primary-soft text-foreground")}
+            className={cn(autoRotate && "bg-surface-3 text-foreground")}
             onClick={() => setAutoRotate((prev) => !prev)}
           >
             <RotateCw />
@@ -172,7 +173,7 @@ export function SkinStage({
             variant="ghost"
             aria-pressed={showOuterLayer}
             aria-label={t("skinStage.outerLayer")}
-            className={cn(showOuterLayer && "bg-primary-soft text-foreground")}
+            className={cn(showOuterLayer && "bg-surface-3 text-foreground")}
             onClick={() => setShowOuterLayer((prev) => !prev)}
           >
             <Layers />
@@ -187,13 +188,13 @@ export function SkinStage({
             aria-pressed={backEquipment === "elytra"}
             aria-label={t("skinStage.elytra")}
             className={cn(
-              backEquipment === "elytra" && "bg-primary-soft text-foreground",
+              backEquipment === "elytra" && "bg-surface-3 text-foreground",
             )}
             onClick={() =>
               setBackEquipment((prev) => (prev === "cape" ? "elytra" : "cape"))
             }
           >
-            <Shirt />
+            <Feather />
           </Button>
         </Hint>
 
@@ -204,7 +205,7 @@ export function SkinStage({
               variant="ghost"
               aria-pressed={showNameTag}
               aria-label={t("skinStage.nameTag")}
-              className={cn(showNameTag && "bg-primary-soft text-foreground")}
+              className={cn(showNameTag && "bg-surface-3 text-foreground")}
               onClick={() => setShowNameTag((prev) => !prev)}
             >
               <Tag />

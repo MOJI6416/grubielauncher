@@ -61,7 +61,7 @@ function OptionContent({
       {option.badge && (
         <span
           className={cn(
-            "shrink-0 rounded px-1.5 py-0.5 text-[0.65rem] leading-none font-medium",
+            "shrink-0 rounded px-1.5 py-0.5 text-3xs leading-none font-medium",
             option.badge.className,
           )}
         >

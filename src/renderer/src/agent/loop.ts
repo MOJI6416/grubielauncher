@@ -1,3 +1,4 @@
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import {
   AgentChatMessage,
   AgentStreamEvent,
@@ -283,7 +284,7 @@ async function runToolCall(
   if (needsPermission(tool.name, tool.risk, scope)) {
     const permissionId = nextId("permission");
     const preview = tool.preview
-      ? await tool.preview(parsed.value).catch(() => null)
+      ? ((await tool.preview(parsed.value).catch(ignoreFailure)) ?? null)
       : null;
 
     pushTimeline({
@@ -499,7 +500,7 @@ async function maybeCompact(
   const summary = await completeText(providerId, model, [
     { role: "system", content: COMPACTION_PROMPT },
     { role: "user", content: transcript },
-  ]).catch(() => null);
+  ]).catch(ignoreFailure);
 
   patchTimelineItem(itemId, (item) =>
     item.kind === "compacted"

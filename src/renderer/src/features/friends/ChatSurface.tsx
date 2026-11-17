@@ -24,13 +24,13 @@ import {
   Copy,
   Download,
   Expand,
-  Gamepad2,
   Image as ImageIcon,
   ImagePlus,
   Loader2,
   MessageSquareDashed,
   Package,
   Paperclip,
+  Play,
   Reply,
   RotateCw,
   SendHorizontal,
@@ -63,6 +63,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { Hint } from "@renderer/components/Hint";
+import { ListSkeleton } from "@renderer/components/ListSkeleton";
 import type { MediaViewerItem } from "@renderer/components/mediaViewer/MediaViewer";
 import { cn } from "@/lib/utils";
 import { formatClock } from "@renderer/utilities/date";
@@ -995,7 +996,12 @@ function ChatSurfaceComponent({
                   </p>
                 </>
               ) : (
-                <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                <ListSkeleton
+                  rows={5}
+                  rowClassName="h-14"
+                  iconClassName="size-8 rounded-md"
+                  className="w-full flex-1 justify-end"
+                />
               )}
             </div>
           ) : historyError && entries.length === 0 ? (
@@ -1039,9 +1045,15 @@ function ChatSurfaceComponent({
                   ) : historyError ? (
                     <div className="flex max-w-full items-center gap-1.5 rounded-lg border border-border bg-surface-3 px-2 py-1">
                       <CircleAlert className="size-3.5 shrink-0 text-warning" />
-                      <span className="min-w-0 truncate text-[11px] leading-4 text-muted-foreground">
-                        {historyErrorText}
-                      </span>
+                      <Hint
+                        content={historyErrorText}
+                        variant="text"
+                        truncatedOnly
+                      >
+                        <span className="min-w-0 truncate text-2xs leading-4 text-muted-foreground">
+                          {historyErrorText}
+                        </span>
+                      </Hint>
                       {onReloadHistory && (
                         <Button
                           size="sm"
@@ -1061,7 +1073,7 @@ function ChatSurfaceComponent({
                       )}
                     </span>
                   ) : (
-                    <p className="text-[10px] tracking-wide text-faint uppercase">
+                    <p className="text-3xs tracking-wide text-faint uppercase">
                       {t("friends.chatHistoryStart")}
                     </p>
                   )}
@@ -1075,7 +1087,7 @@ function ChatSurfaceComponent({
                         className="mt-5 flex items-center gap-3 first:mt-0"
                       >
                         <span className="h-px flex-1 bg-border" />
-                        <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                        <span className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                           {formatDayLabel(row.time)}
                         </span>
                         <span className="h-px flex-1 bg-border" />
@@ -1086,11 +1098,11 @@ function ChatSurfaceComponent({
                   if (row.kind === "unread") {
                     return (
                       <div key={row.key} className="mt-4 flex items-center gap-3">
-                        <span className="h-px flex-1 bg-primary/50" />
-                        <span className="text-[10px] font-medium tracking-wide text-primary uppercase">
+                        <span className="h-px flex-1 bg-info/50" />
+                        <span className="text-3xs font-medium tracking-wide text-info uppercase">
                           {t("friends.chatUnreadDivider")}
                         </span>
-                        <span className="h-px flex-1 bg-primary/50" />
+                        <span className="h-px flex-1 bg-info/50" />
                       </div>
                     );
                   }
@@ -1106,7 +1118,7 @@ function ChatSurfaceComponent({
                     return (
                       <p
                         key={row.key}
-                        className="my-1.5 text-center text-[10px] leading-4 text-muted-foreground"
+                        className="my-1.5 text-center text-3xs leading-4 text-muted-foreground"
                       >
                         {t(`friends.chatSystem.${system.kind}`, {
                           nickname: system.nickname,
@@ -1157,7 +1169,7 @@ function ChatSurfaceComponent({
                       }}
                     >
                       {row.grouped ? (
-                        <span className="w-8 shrink-0 pt-1 text-center font-mono text-[10px] leading-4 text-faint opacity-0 transition-opacity group-hover/row:opacity-100">
+                        <span className="w-8 shrink-0 pt-1 text-center font-mono text-3xs leading-4 text-faint opacity-0 transition-opacity group-hover/row:opacity-100">
                           {formatClock(new Date(message.time))}
                         </span>
                       ) : (
@@ -1167,10 +1179,18 @@ function ChatSurfaceComponent({
                       <div className="flex min-w-0 max-w-[82%] flex-col">
                         {!row.grouped && (
                           <p className="mb-0.5 flex min-w-0 items-baseline gap-2 px-1 leading-4">
-                            <span className="truncate text-[11px] font-medium">
-                              {isOwn ? t("friends.you") : sender.nickname}
-                            </span>
-                            <span className="shrink-0 font-mono text-[10px] text-faint">
+                            <Hint
+                              content={
+                                isOwn ? t("friends.you") : sender.nickname
+                              }
+                              variant="text"
+                              truncatedOnly
+                            >
+                              <span className="truncate text-2xs font-medium">
+                                {isOwn ? t("friends.you") : sender.nickname}
+                              </span>
+                            </Hint>
+                            <span className="shrink-0 font-mono text-3xs text-faint">
                               {formatClock(new Date(message.time))}
                             </span>
                           </p>
@@ -1179,7 +1199,7 @@ function ChatSurfaceComponent({
                         {message.replyTo && (
                           <button
                             type="button"
-                            className="mb-1 flex w-fit max-w-full items-baseline gap-1.5 rounded-md border-l-2 border-primary/50 bg-muted/35 px-2 py-1 text-left text-[10px] leading-4 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                            className="mb-1 flex w-fit max-w-full items-baseline gap-1.5 rounded-md border-l-2 border-primary/50 bg-muted/35 px-2 py-1 text-left text-3xs leading-4 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
                             onClick={() => jumpToMessage(message.replyTo!.id)}
                           >
                             <Reply className="size-2.5 shrink-0" />
@@ -1192,9 +1212,15 @@ function ChatSurfaceComponent({
                             {message.replyTo.type === "image" && (
                               <ImageIcon className="size-2.5 shrink-0 self-center" />
                             )}
-                            <span className="min-w-0 truncate">
-                              {previewOf(message.replyTo)}
-                            </span>
+                            <Hint
+                              content={previewOf(message.replyTo)}
+                              variant="text"
+                              truncatedOnly
+                            >
+                              <span className="min-w-0 truncate">
+                                {previewOf(message.replyTo)}
+                              </span>
+                            </Hint>
                           </button>
                         )}
 
@@ -1249,9 +1275,15 @@ function ChatSurfaceComponent({
                             brokenImages.has(message.message.value) ? (
                               <div className="flex w-fit max-w-full items-center gap-2 rounded-lg border border-border bg-surface-3 px-3 py-2 text-xs">
                                 <CircleAlert className="size-4 shrink-0 text-warning" />
-                                <p className="min-w-0 truncate text-muted-foreground">
-                                  {t("friends.chatAttachmentLoadError")}
-                                </p>
+                                <Hint
+                                  content={t("friends.chatAttachmentLoadError")}
+                                  variant="text"
+                                  truncatedOnly
+                                >
+                                  <p className="min-w-0 truncate text-muted-foreground">
+                                    {t("friends.chatAttachmentLoadError")}
+                                  </p>
+                                </Hint>
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -1286,7 +1318,7 @@ function ChatSurfaceComponent({
                             )
                           ) : (
                             <div className="w-fit max-w-full rounded-lg border border-border bg-surface-3 px-3 py-2 text-xs leading-5">
-                              <p className="mb-1 flex items-center gap-1.5 text-[10px] text-warning">
+                              <p className="mb-1 flex items-center gap-1.5 text-3xs text-warning">
                                 <CircleAlert className="size-3 shrink-0" />
                                 {t("friends.chatImageBlocked")}
                               </p>
@@ -1304,36 +1336,62 @@ function ChatSurfaceComponent({
 
                             return (
                               <div className="flex w-fit max-w-full items-center gap-2 rounded-lg border border-border bg-surface-3 px-2 py-2 text-xs">
-                                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary-soft-raised">
-                                  <Users className="size-4 text-primary" />
+                                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-info/15">
+                                  <Users className="size-4 text-info" />
                                 </span>
                                 <div className="min-w-0 flex-1">
-                                  <p className="truncate">
-                                    {invite?.name || t("friends.chatGroupInvite")}
-                                  </p>
-                                  <p className="truncate text-[10px] text-muted-foreground">
-                                    {invite?.name
-                                      ? t("friends.chatGroupInvite")
-                                      : redact.value(invite?.code ?? "")}
-                                  </p>
+                                  <Hint
+                                    content={
+                                      invite?.name || t("friends.chatGroupInvite")
+                                    }
+                                    variant="text"
+                                    truncatedOnly
+                                  >
+                                    <p className="truncate">
+                                      {invite?.name || t("friends.chatGroupInvite")}
+                                    </p>
+                                  </Hint>
+                                  <Hint
+                                    content={
+                                      invite?.name
+                                        ? t("friends.chatGroupInvite")
+                                        : redact.value(invite?.code ?? "")
+                                    }
+                                    variant="text"
+                                    truncatedOnly
+                                  >
+                                    <p className="truncate text-3xs text-muted-foreground">
+                                      {invite?.name
+                                        ? t("friends.chatGroupInvite")
+                                        : redact.value(invite?.code ?? "")}
+                                    </p>
+                                  </Hint>
                                 </div>
                                 {invite && onAcceptGroupInvite && (
-                                  <Button
-                                    size="icon-sm"
-                                    variant="outline"
-                                    className="shrink-0"
-                                    disabled={joiningInvite !== null}
-                                    aria-label={t("friends.chatGroupInviteJoin")}
-                                    onClick={() =>
-                                      void acceptGroupInvite(invite.code)
+                                  <Hint
+                                    content={
+                                      joiningInvite !== null
+                                        ? undefined
+                                        : t("friends.chatGroupInviteJoin")
                                     }
                                   >
-                                    {joiningInvite === invite.code ? (
-                                      <Loader2 className="size-4 animate-spin" />
-                                    ) : (
-                                      <UserPlus size={18} />
-                                    )}
-                                  </Button>
+                                    <Button
+                                      size="icon-sm"
+                                      variant="outline"
+                                      className="shrink-0"
+                                      disabled={joiningInvite !== null}
+                                      aria-label={t("friends.chatGroupInviteJoin")}
+                                      onClick={() =>
+                                        void acceptGroupInvite(invite.code)
+                                      }
+                                    >
+                                      {joiningInvite === invite.code ? (
+                                        <Loader2 className="size-4 animate-spin" />
+                                      ) : (
+                                        <UserPlus size={18} />
+                                      )}
+                                    </Button>
+                                  </Hint>
                                 )}
                               </div>
                             );
@@ -1350,32 +1408,64 @@ function ChatSurfaceComponent({
                                   loading="lazy"
                                 />
                               )}
-                              <p className="min-w-0 flex-1 truncate">
-                                {modpack.conf.name}
-                              </p>
-                              <Button
-                                size="icon-sm"
-                                variant="outline"
-                                className="shrink-0"
-                                aria-label={t("friends.chatAttachModpack")}
-                                onClick={() => onPlayModpack(modpack, modpackVersion)}
+                              <Hint
+                                content={modpack.conf.name}
+                                variant="text"
+                                truncatedOnly
                               >
-                                <Gamepad2 size={18} />
-                              </Button>
+                                <p className="min-w-0 flex-1 truncate">
+                                  {modpack.conf.name}
+                                </p>
+                              </Hint>
+                              <Hint
+                                content={
+                                  modpackVersion
+                                    ? t("friends.joinFlow.playAction")
+                                    : t("common.install")
+                                }
+                              >
+                                <Button
+                                  size="icon-sm"
+                                  variant="outline"
+                                  className="shrink-0"
+                                  aria-label={
+                                    modpackVersion
+                                      ? t("friends.joinFlow.playAction")
+                                      : t("common.install")
+                                  }
+                                  onClick={() =>
+                                    onPlayModpack(modpack, modpackVersion)
+                                  }
+                                >
+                                  <Play size={18} />
+                                </Button>
+                              </Hint>
                             </div>
                           ) : goneModpacks?.has(modpackId) ? (
                             <div className="flex w-fit max-w-full items-center gap-2 rounded-lg border border-border bg-surface-3 px-3 py-2 text-xs">
                               <CircleAlert className="size-4 shrink-0 text-faint" />
-                              <p className="min-w-0 truncate text-muted-foreground">
-                                {t("friends.chatModpackGone")}
-                              </p>
+                              <Hint
+                                content={t("friends.chatModpackGone")}
+                                variant="text"
+                                truncatedOnly
+                              >
+                                <p className="min-w-0 truncate text-muted-foreground">
+                                  {t("friends.chatModpackGone")}
+                                </p>
+                              </Hint>
                             </div>
                           ) : failedModpacks.has(modpackId) ? (
                             <div className="flex w-fit max-w-full items-center gap-2 rounded-lg border border-border bg-surface-3 px-3 py-2 text-xs">
                               <CircleAlert className="size-4 shrink-0 text-warning" />
-                              <p className="min-w-0 truncate text-muted-foreground">
-                                {t("friends.chatAttachmentLoadError")}
-                              </p>
+                              <Hint
+                                content={t("friends.chatAttachmentLoadError")}
+                                variant="text"
+                                truncatedOnly
+                              >
+                                <p className="min-w-0 truncate text-muted-foreground">
+                                  {t("friends.chatAttachmentLoadError")}
+                                </p>
+                              </Hint>
                               {onRetryModpack && (
                                 <Button
                                   size="sm"
@@ -1411,7 +1501,7 @@ function ChatSurfaceComponent({
                                     type="button"
                                     disabled={!message.id}
                                     className={cn(
-                                      "flex h-6 items-center gap-1 rounded-md border px-1.5 text-[11px] leading-none transition-colors",
+                                      "flex h-6 items-center gap-1 rounded-md border px-1.5 text-2xs leading-none transition-colors",
                                       isSelected
                                         ? "border-primary/50 bg-primary-soft text-foreground"
                                         : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
@@ -1437,14 +1527,14 @@ function ChatSurfaceComponent({
 
                         {entry.status === "sent" &&
                           readReceiptKey === entry.key && (
-                            <p className="mt-1 flex items-center gap-1 text-[10px] leading-4 text-faint">
+                            <p className="mt-1 flex items-center gap-1 text-3xs leading-4 text-faint">
                               <CheckCheck className="size-3" />
                               {t("friends.chatRead")}
                             </p>
                           )}
 
                         {entry.status !== "sent" && (
-                          <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
+                          <div className="mt-1 flex items-center gap-2 text-3xs text-muted-foreground">
                             {entry.status === "pending" ? (
                               <>
                                 <Clock3 className="size-3" />
@@ -1641,7 +1731,7 @@ function ChatSurfaceComponent({
                   style={{ width: `${imageUploadProgress}%` }}
                 />
               </div>
-              <div className="flex items-center gap-1.5 text-[11px] leading-4 text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-2xs leading-4 text-muted-foreground">
                 <Loader2 className="size-3 shrink-0 animate-spin" />
                 {t("friends.chatAttachmentLoading")}
                 <span className="font-mono tabular-nums">
@@ -1661,7 +1751,7 @@ function ChatSurfaceComponent({
           )}
 
           {isOffline && (
-            <p className="flex items-center gap-1.5 text-[11px] text-warning">
+            <p className="flex items-center gap-1.5 text-2xs text-warning">
               <CircleAlert className="size-3 shrink-0" />
               {t("friends.chatOffline")}
             </p>
@@ -1670,21 +1760,29 @@ function ChatSurfaceComponent({
           {replyMessage && (
             <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-1 px-3 py-1.5 text-xs">
               <Reply className="size-3.5 shrink-0 text-muted-foreground" />
-              <p className="min-w-0 flex-1 truncate text-muted-foreground">
-                <span className="font-medium text-foreground/80">
-                  {replySender}:
-                </span>{" "}
-                {previewOf(replyMessage)}
-              </p>
-              <Button
-                size="icon-xs"
-                variant="ghost"
-                className="size-6"
-                aria-label={t("common.close")}
-                onClick={onCancelReply}
+              <Hint
+                content={`${replySender}: ${previewOf(replyMessage)}`}
+                variant="text"
+                truncatedOnly
               >
-                <X className="size-3" />
-              </Button>
+                <p className="min-w-0 flex-1 truncate text-muted-foreground">
+                  <span className="font-medium text-foreground/80">
+                    {replySender}:
+                  </span>{" "}
+                  {previewOf(replyMessage)}
+                </p>
+              </Hint>
+              <Hint content={t("common.close")}>
+                <Button
+                  size="icon-xs"
+                  variant="ghost"
+                  className="size-6"
+                  aria-label={t("common.close")}
+                  onClick={onCancelReply}
+                >
+                  <X className="size-3" />
+                </Button>
+              </Hint>
             </div>
           )}
 
@@ -1693,7 +1791,6 @@ function ChatSurfaceComponent({
               items={pendingImages}
               uploadingId={uploadingId}
               onRemove={removePendingImage}
-              onAdd={() => fileInputRef.current?.click()}
             />
           )}
 
@@ -1712,17 +1809,25 @@ function ChatSurfaceComponent({
             />
 
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="size-9 shrink-0"
-                  disabled={!canAttachImage && !canAttachModpack}
-                  aria-label={t("friends.chatAttach")}
-                >
-                  <Paperclip size={18} />
-                </Button>
-              </DropdownMenuTrigger>
+              <Hint
+                content={
+                  !canAttachImage && !canAttachModpack
+                    ? undefined
+                    : t("friends.chatAttach")
+                }
+              >
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="size-9 shrink-0"
+                    disabled={!canAttachImage && !canAttachModpack}
+                    aria-label={t("friends.chatAttach")}
+                  >
+                    <Paperclip size={18} />
+                  </Button>
+                </DropdownMenuTrigger>
+              </Hint>
               <DropdownMenuContent align="start" side="top">
                 <DropdownMenuItem
                   disabled={!canAttachModpack}
@@ -1768,7 +1873,7 @@ function ChatSurfaceComponent({
               {messageText.length >= COUNTER_FROM && (
                 <span
                   className={cn(
-                    "pointer-events-none absolute right-2 bottom-1 font-mono text-[10px] tabular-nums",
+                    "pointer-events-none absolute right-2 bottom-1 font-mono text-3xs tabular-nums",
                     messageText.length >= MESSAGE_LIMIT
                       ? "text-warning"
                       : "text-faint",
@@ -1786,27 +1891,29 @@ function ChatSurfaceComponent({
               onClosed={() => textareaRef.current?.focus()}
             />
 
-            <Button
-              size="icon"
-              variant="secondary"
-              className="size-9 shrink-0"
-              disabled={!canSend}
-              aria-label={t("friends.send")}
-              onClick={() => void submit()}
-            >
-              {isSending || uploadingId !== null ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <SendHorizontal size={18} />
-              )}
-            </Button>
+            <Hint content={canSend ? t("friends.send") : undefined}>
+              <Button
+                size="icon"
+                variant="secondary"
+                className="size-9 shrink-0"
+                disabled={!canSend}
+                aria-label={t("friends.send")}
+                onClick={() => void submit()}
+              >
+                {isSending || uploadingId !== null ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <SendHorizontal size={18} />
+                )}
+              </Button>
+            </Hint>
           </div>
         </div>
       </div>
 
       {pendingLink && (
         <Confirmation
-          title={t("friends.chatExternalLinkTitle")}
+          title={t("friends.chatExternalLinkQuestion")}
           onClose={() => setPendingLink(null)}
           content={[
             { text: t("friends.chatExternalLinkWarning"), color: "warning" },
@@ -1827,7 +1934,7 @@ function ChatSurfaceComponent({
             },
           ]}
         >
-          <p className="rounded-lg border border-border bg-surface-1 px-2.5 py-2 font-mono text-[11px] leading-4 wrap-anywhere text-foreground">
+          <p className="rounded-lg border border-border bg-surface-1 px-2.5 py-2 font-mono text-2xs leading-4 wrap-anywhere text-foreground">
             {pendingLink}
           </p>
         </Confirmation>
@@ -1835,7 +1942,7 @@ function ChatSurfaceComponent({
 
       {pendingDelete && (
         <Confirmation
-          title={t("friends.chatDeleteMessage")}
+          title={t("friends.chatDeleteMessageQuestion")}
           reversible={false}
           content={[{ text: t("friends.chatDeleteConfirm") }]}
           buttons={[

@@ -104,18 +104,26 @@ export function FailuresView({ info }: { info: DownloaderFailuresInfo }) {
   return (
     <div className="flex max-h-[35rem] flex-col">
       <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-2 pr-3.5">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t("shell.back")}
-          onClick={() => setView("tasks")}
+        <Hint content={t("shell.back")}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("shell.back")}
+            onClick={() => setView("tasks")}
+          >
+            <ArrowLeft />
+          </Button>
+        </Hint>
+        <Hint
+          content={t("downloadFailures.title")}
+          variant="text"
+          truncatedOnly
         >
-          <ArrowLeft />
-        </Button>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-          {t("downloadFailures.title")}
-        </span>
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+            {t("downloadFailures.title")}
+          </span>
+        </Hint>
         <span className="shrink-0 font-mono text-xs tabular-nums text-destructive">
           {info.failedItems}
         </span>
@@ -132,12 +140,21 @@ export function FailuresView({ info }: { info: DownloaderFailuresInfo }) {
             <span aria-hidden>·</span>
           </>
         )}
-        <span className="min-w-0 truncate">
-          {t("downloadFailures.summary", {
+        <Hint
+          content={t("downloadFailures.summary", {
             completed: info.completedItems,
             count: info.totalItems,
           })}
-        </span>
+          variant="text"
+          truncatedOnly
+        >
+          <span className="min-w-0 truncate">
+            {t("downloadFailures.summary", {
+              completed: info.completedItems,
+              count: info.totalItems,
+            })}
+          </span>
+        </Hint>
       </p>
 
       <div
@@ -158,7 +175,7 @@ export function FailuresView({ info }: { info: DownloaderFailuresInfo }) {
               >
                 <div className="flex min-w-0 items-start gap-2">
                   <span
-                    className={`mt-px shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] ${
+                    className={`mt-px shrink-0 rounded px-1.5 py-0.5 font-mono text-3xs ${
                       group.retryable
                         ? "bg-surface-3 text-muted-foreground"
                         : "bg-destructive/15 text-destructive"
@@ -169,13 +186,13 @@ export function FailuresView({ info }: { info: DownloaderFailuresInfo }) {
                   <span className="min-w-0 flex-1 text-xs leading-4 text-foreground">
                     {described.reason}
                   </span>
-                  <span className="mt-0.5 shrink-0 font-mono text-[11px] tabular-nums text-faint">
+                  <span className="mt-0.5 shrink-0 font-mono text-2xs tabular-nums text-faint">
                     ×{group.items.length}
                   </span>
                 </div>
 
                 {described.hint && (
-                  <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                  <p className="mt-1 text-2xs leading-4 text-muted-foreground">
                     {described.hint}
                   </p>
                 )}
@@ -188,7 +205,7 @@ export function FailuresView({ info }: { info: DownloaderFailuresInfo }) {
                       variant="text"
                       truncatedOnly
                     >
-                      <li className="truncate font-mono text-[11px] text-faint">
+                      <li className="truncate font-mono text-2xs text-faint">
                         {item.fileName}
                       </li>
                     </Hint>

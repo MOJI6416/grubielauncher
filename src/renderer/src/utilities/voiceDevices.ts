@@ -1,3 +1,5 @@
+import { ignoreFailure } from "./ignoreFailure";
+
 const INPUT_DEVICE_STORAGE_KEY = "voice.inputDeviceId";
 const OUTPUT_DEVICE_STORAGE_KEY = "voice.outputDeviceId";
 
@@ -31,6 +33,6 @@ export function applySavedAudioOutput(audio: HTMLAudioElement) {
     setSinkId?: (id: string) => Promise<void>;
   };
   if (outputId && typeof sinkAudio.setSinkId === "function") {
-    void sinkAudio.setSinkId(outputId).catch(() => undefined);
+    void sinkAudio.setSinkId(outputId).catch(ignoreFailure);
   }
 }

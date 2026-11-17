@@ -13,6 +13,7 @@ import {
   chunkUpdateItems,
   readUpdateVerdicts,
 } from "./updateQuery";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -133,7 +134,7 @@ export function useUpdateCheck({
             loader: groupLoader,
             items: chunk,
           })
-          .catch(() => null);
+          .catch(ignoreFailure);
 
         if (runId !== runIdRef.current) return;
 

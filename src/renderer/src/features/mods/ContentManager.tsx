@@ -48,6 +48,7 @@ import {
   sharesFile,
 } from "@renderer/utilities/mod";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { showUndoToast } from "@renderer/utilities/undoToast";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import { parseProjectLink } from "./projectLinks";
 import { startContentDrag } from "./contentDrag";
@@ -156,7 +157,6 @@ import {
   findForeignFiles,
   mapWithConcurrency,
 } from "./localImport";
-import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
 import { useEntranceWave } from "@renderer/utilities/useEntranceWave";
 import { type DetailState, type Scope } from "./contentManagerParts";
 import { ContentToolbar } from "./ContentToolbar";
@@ -164,8 +164,16 @@ import { ContentStatusBar } from "./ContentStatusBar";
 import { ContentDialogs } from "./ContentDialogs";
 import { ContentListPane } from "./ContentListPane";
 import { shaderSupport } from "./shaderSupport";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
+
+const LISTED_TITLES = 3;
+
+function listTitles(projects: ILocalProject[]): string {
+  const titles = projects.slice(0, LISTED_TITLES).map((item) => item.title);
+  return projects.length > LISTED_TITLES ? `${titles.join(", ")}…` : titles.join(", ");
+}
 
 const RUNNING_ALLOWED_TYPES = [ProjectType.RESOURCEPACK, ProjectType.SHADER];
 
@@ -231,8 +239,6 @@ export function ContentManager({
   canEdit?: boolean;
 }) {
   const { t } = useTranslation();
-  const scopeIndicator = useSlidingIndicator<HTMLDivElement>();
-  const typeIndicator = useSlidingIndicator<HTMLDivElement>();
   const translateCategory = useCallback(
     (key: string, fallback: string) => t(key, { defaultValue: fallback }),
     [t],
@@ -371,9 +377,6 @@ export function ContentManager({
   const [detailStack, setDetailStack] = useState<ContentEntry[]>([]);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
-  const [pendingDeletion, setPendingDeletion] = useState<ContentEntry[] | null>(
-    null,
-  );
   const [localDependencyScan, setLocalDependencyScan] = useState<{
     path: string;
     index: LocalModDependencyIndex;
@@ -479,7 +482,7 @@ export function ContentManager({
       .then((list) => {
         if (!cancelled) setGameVersions(list ?? []);
       })
-      .catch(() => {});
+      .catch(ignoreFailure);
 
     return () => {
       cancelled = true;
@@ -668,9 +671,9 @@ export function ContentManager({
     let cancelled = false;
     void api.modManager
       .fileTimes(instancePath, projectType)
-      .catch(() => ({}))
+      .catch(ignoreFailure)
       .then((times) => {
-        if (!cancelled) setFileTimes(times);
+        if (!cancelled) setFileTimes(times ?? {});
       });
 
     return () => {
@@ -860,8 +863,12 @@ export function ContentManager({
             projectType: entry.projectType,
             modUrl: entry.url,
           })
-          .catch(() => [] as ModVersion[]),
-        api.modManager.getProject(entry.provider, entry.id).catch(() => null),
+          .catch(ignoreFailure)
+          .then((list) => list ?? []),
+        api.modManager
+          .getProject(entry.provider, entry.id)
+          .catch(ignoreFailure)
+          .then((project) => project ?? null),
       ]);
 
       if (requestId !== detailRequestRef.current) return;
@@ -908,7 +915,8 @@ export function ContentManager({
 
         const dependencies = await api.modManager
           .getDependencies(entry.provider, entry.id, selected.dependencies)
-          .catch(() => null);
+          .catch(ignoreFailure)
+          .then((value) => value ?? null);
 
         if (requestId !== detailRequestRef.current) return;
 
@@ -959,7 +967,8 @@ export function ContentManager({
           current.entry.id,
           next.dependencies,
         )
-        .catch(() => null);
+        .catch(ignoreFailure)
+        .then((value) => value ?? null);
 
       if (requestId !== detailRequestRef.current) return;
 
@@ -1002,6 +1011,30 @@ export function ContentManager({
     [setPendingRemoved],
   );
 
+  const latestModsRef = useLatestRef(mods);
+
+  const showRemovedToast = useCallback(
+    (removed: ILocalProject[], description?: string) => {
+      showUndoToast(
+        removed.length > 1
+          ? t("modManager.deletedMultiple", { count: removed.length })
+          : t("modManager.deleted"),
+        () => {
+          const current = latestModsRef.current;
+          const missing = removed.filter(
+            (item) =>
+              !current.some((present) => isSameLocalProject(present, item)),
+          );
+          if (missing.length === 0) return;
+          setMods([...current, ...missing]);
+          for (const item of missing) forgetRemoved(item);
+        },
+        { description },
+      );
+    },
+    [forgetRemoved, latestModsRef, setMods, t],
+  );
+
   const unresolvedDepsRef = useRef(false);
   const skippedDepsRef = useRef(false);
 
@@ -1017,7 +1050,8 @@ export function ContentManager({
               projectType: project.projectType,
               modUrl: project.url,
             })
-            .catch(() => [] as ModVersion[]);
+            .catch(ignoreFailure)
+            .then((list) => list ?? []);
 
         const primary =
           project.projectType === ProjectType.PLUGIN && server
@@ -1033,7 +1067,8 @@ export function ContentManager({
       ) => {
         const resolved = await api.modManager
           .getDependencies(project.provider, project.id, deps)
-          .catch(() => null);
+          .catch(ignoreFailure)
+          .then((value) => value ?? null);
 
         if (!resolved) {
           unresolvedDepsRef.current = true;
@@ -1236,8 +1271,9 @@ export function ContentManager({
   const applyDeletion = useCallback(
     (
       targets: ContentEntry[],
-      mode: "selected" | "dependencies" | "dependents",
+      mode: "selected" | "dependencies",
       dependencyIndex = localDependencies,
+      dependents: ILocalProject[] = [],
     ) => {
       if (
         !canEdit ||
@@ -1253,7 +1289,6 @@ export function ContentManager({
         targetKeys.has(entryKey(item.provider, item.id)),
       );
       const plan = planDeletion(mods, installed, {
-        includeDependents: mode === "dependents",
         removeDependencies: mode !== "selected",
         localDependencies: dependencyIndex,
       });
@@ -1266,11 +1301,19 @@ export function ContentManager({
         mods.filter((item) => !keys.has(entryKey(item.provider, item.id))),
       );
       for (const item of plan.remove) rememberRemoved(item);
-      setPendingDeletion(null);
-      toast.success(
-        plan.remove.length > 1
-          ? t("modManager.deletedMultiple", { count: plan.remove.length })
-          : t("modManager.deleted"),
+
+      const extras = plan.remove.filter((item) => !targetKeys.has(entryKey(item.provider, item.id)));
+      showRemovedToast(
+        plan.remove,
+        dependents.length > 0
+          ? t("modManager.deletedBreaksDependents", {
+              names: listTitles(dependents),
+            })
+          : extras.length > 0
+            ? t("modManager.deletedWithDependencies", {
+                names: listTitles(extras),
+              })
+            : undefined,
       );
     },
     [
@@ -1281,6 +1324,7 @@ export function ContentManager({
       rememberRemoved,
       running,
       setMods,
+      showRemovedToast,
       t,
     ],
   );
@@ -1316,8 +1360,8 @@ export function ContentManager({
         const plan = planDeletion(mods, installed, {
           localDependencies: index,
         });
-        if (plan.blockers.length > 0 || plan.remove.length > installed.length) {
-          setPendingDeletion(targets);
+        if (plan.blockers.length > 0) {
+          applyDeletion(targets, "selected", index, plan.blockers);
           return;
         }
         applyDeletion(targets, "dependencies", index);
@@ -1333,33 +1377,6 @@ export function ContentManager({
     [applyDeletion, canEdit, instancePath, isBusy, mods, running, t],
   );
 
-  const pendingDeletionTargets = useMemo(
-    () =>
-      mods.filter((item) =>
-        pendingDeletion?.some(
-          (entry) => entry.key === entryKey(item.provider, item.id),
-        ),
-      ),
-    [mods, pendingDeletion],
-  );
-  const pendingDeletionPlan = useMemo(
-    () =>
-      pendingDeletion
-        ? planDeletion(mods, pendingDeletionTargets, { localDependencies })
-        : { remove: [], blockers: [] },
-    [localDependencies, mods, pendingDeletion, pendingDeletionTargets],
-  );
-  const cascadeDeletionPlan = useMemo(
-    () =>
-      pendingDeletion
-        ? planDeletion(mods, pendingDeletionTargets, {
-            includeDependents: true,
-            localDependencies,
-          })
-        : { remove: [], blockers: [] },
-    [localDependencies, mods, pendingDeletion, pendingDeletionTargets],
-  );
-
   const removeDuplicateRecords = useCallback(
     (targets: ContentEntry[]) => {
       const keys = new Set(targets.map((entry) => entry.key));
@@ -1372,13 +1389,9 @@ export function ContentManager({
         mods.filter((item) => !keys.has(entryKey(item.provider, item.id))),
       );
       for (const item of removed) rememberRemoved(item);
-      toast.success(
-        removed.length > 1
-          ? t("modManager.deletedMultiple", { count: removed.length })
-          : t("modManager.deleted"),
-      );
+      showRemovedToast(removed);
     },
-    [mods, rememberRemoved, setMods, t],
+    [mods, rememberRemoved, setMods, showRemovedToast],
   );
 
   const setPinnedFor = useCallback(
@@ -1539,7 +1552,10 @@ export function ContentManager({
           filePaths,
           LOCAL_IMPORT_CONCURRENCY,
           (filePath) =>
-            api.modManager.checkLocalMod(filePath).catch(() => null),
+            api.modManager
+              .checkLocalMod(filePath)
+              .catch(ignoreFailure)
+              .then((info) => info ?? null),
           (done) =>
             setImportProgress(
               Math.max(1, Math.round((done / filePaths.length) * 100)),
@@ -1619,7 +1635,10 @@ export function ContentManager({
 
     void Promise.all([
       listModFiles(instancePath, projectType),
-      api.modManager.managedFiles(instancePath).catch(() => null),
+      api.modManager
+        .managedFiles(instancePath)
+        .catch(ignoreFailure)
+        .then((managed) => managed ?? null),
     ]).then(([listing, managed]) => {
       if (!cancelled) setFolderState({ projectType, listing, managed });
     });
@@ -1859,7 +1878,7 @@ export function ContentManager({
     try {
       const files = await trashPaths(instancePath, restorableTrash);
       const results = await Promise.all(
-        files.map((file) => api.fs.rimraf(file.path).catch(() => false)),
+        files.map((file) => api.fs.rimraf(file.path).catch(ignoreFailure)),
       );
       const cleared = results.filter(Boolean).length;
 
@@ -2228,12 +2247,43 @@ export function ContentManager({
       message?: string,
     ) => {
       if (!(await updateGroups(change))) {
-        toast.error(t("modGroups.saveFailed"));
-      } else if (message) {
-        toast.success(message);
+        showFailureToast(t("modGroups.saveFailed"), undefined, {
+          channels: ["fs:ensure", "fs:writeJSON"],
+        });
+        return false;
       }
+      if (message) toast.success(message);
+      return true;
     },
     [t, updateGroups],
+  );
+
+  const deleteModGroup = useCallback(
+    async (id: string, name: string) => {
+      const snapshot = modGroups.groups;
+      const index = snapshot.groups.findIndex((group) => group.id === id);
+      if (index === -1) return;
+      const group = snapshot.groups[index];
+      const members = Object.entries(snapshot.members).filter(
+        ([, groupId]) => groupId === id,
+      );
+
+      if (!(await saveGroups((file) => removeGroup(file, id)))) return;
+
+      showUndoToast(t("modGroups.deleted", { name }), () =>
+        void saveGroups((file) => {
+          if (file.groups.some((item) => item.id === id)) return file;
+          const groups = [...file.groups];
+          groups.splice(Math.min(index, groups.length), 0, group);
+          const restored = { ...file.members };
+          for (const [key, groupId] of members) {
+            if (!(key in restored)) restored[key] = groupId;
+          }
+          return { ...file, groups, members: restored };
+        }),
+      );
+    },
+    [modGroups.groups, saveGroups, t],
   );
 
   const moveToGroup = useCallback(
@@ -2299,14 +2349,10 @@ export function ContentManager({
       },
       onSetEnabled: (entries, enabled) => void setEnabledFor(entries, enabled),
       onRename: (id, name) => setGroupDialog({ kind: "rename", id, name }),
-      onDelete: (id, name) =>
-        void saveGroups(
-          (file) => removeGroup(file, id),
-          t("modGroups.deleted", { name }),
-        ),
+      onDelete: (id, name) => void deleteModGroup(id, name),
       onDrop: dropDragged,
     }),
-    [dropDragged, saveGroups, setEnabledFor, t],
+    [deleteModGroup, dropDragged, saveGroups, setEnabledFor],
   );
 
   const createGroupFor = useCallback((entries: ContentEntry[]) => {
@@ -2353,9 +2399,11 @@ export function ContentManager({
       if (!isOnline) return;
       const project = await api.modManager
         .resolveLink(Provider.MODRINTH, slug, ProjectType.MOD)
-        .catch(() => null);
+        .catch(ignoreFailure);
       if (!project) {
-        toast.error(t("modManager.shaderLoader.notFound"));
+        showFailureToast(t("modManager.shaderLoader.notFoundSource"), undefined, {
+          channels: ["modManager:resolveLink"],
+        });
         return;
       }
       setDetailStack([]);
@@ -2670,9 +2718,6 @@ export function ContentManager({
   const listBusy =
     scope === "library" ? false : catalog.isLoading || !isCatalogReady;
   const isResultWave = useEntranceWave(listBusy, scope !== "library");
-  const showAddRow =
-    scope === "library" && canEdit && canBrowse && !isModpacks && !query;
-
   return (
     <>
       <div
@@ -2716,7 +2761,6 @@ export function ContentManager({
           providers={visibleProviders}
           rawQuery={rawQuery}
           scope={scope}
-          scopeIndicator={scopeIndicator}
           searchRef={searchRef}
           setCatalogFilters={setCatalogFilters}
           setCatalogLoader={setCatalogLoader}
@@ -2732,7 +2776,6 @@ export function ContentManager({
           t={t}
           translateCategory={translateCategory}
           typeCounts={typeCounts}
-          typeIndicator={typeIndicator}
           updateCheck={updateCheck}
           version={version}
         />
@@ -2846,7 +2889,6 @@ export function ContentManager({
           setPinnedFor={setPinnedFor}
           setScope={changeScope}
           browseScope={browseScope}
-          showAddRow={showAddRow}
           showTrashBar={showTrashBar}
           sizeUnits={sizeUnits}
           splitRef={splitRef}
@@ -2879,9 +2921,7 @@ export function ContentManager({
       )}
 
       <ContentDialogs
-        applyDeletion={applyDeletion}
         blockedMods={blockedMods}
-        cascadeDeletionPlan={cascadeDeletionPlan}
         clearTrash={clearTrash}
         detail={detail}
         detailSelectedVersion={detailSelectedVersion}
@@ -2897,9 +2937,6 @@ export function ContentManager({
         mods={mods}
         onClose={onClose}
         paths={paths}
-        pendingDeletion={pendingDeletion}
-        pendingDeletionPlan={pendingDeletionPlan}
-        pendingDeletionTargets={pendingDeletionTargets}
         projectType={projectType}
         restorableTrash={restorableTrash}
         setBlockedMods={setBlockedMods}
@@ -2913,7 +2950,6 @@ export function ContentManager({
         setModpack={setModpack}
         setModpackStage={setModpackStage}
         setMods={setMods}
-        setPendingDeletion={setPendingDeletion}
         setPendingRemoved={setPendingRemoved}
         sizeUnits={sizeUnits}
         t={t}

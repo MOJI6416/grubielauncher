@@ -12,6 +12,7 @@ import {
   renameResourcePacks,
   renamedFiles,
 } from "./portPlan";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -64,8 +65,10 @@ async function renamePacksInOptions(
   const optionsPath = api.path.join(versionPath, "options.txt");
   if (!(await api.fs.pathExists(optionsPath))) return true;
 
-  const options = await api.fs.readFile(optionsPath, "utf-8").catch(() => null);
-  if (options === null) return false;
+  const options = await api.fs
+    .readFile(optionsPath, "utf-8")
+    .catch(ignoreFailure);
+  if (options === undefined || options === null) return false;
 
   const renamed = renameResourcePacks(options, renames);
   if (renamed === options) return true;
@@ -79,7 +82,9 @@ export async function runPort(
   items: PortItem[],
   options: PortOptions,
 ): Promise<PortResult> {
-  const catalog = await api.versions.getList(target.loader, true).catch(() => null);
+  const catalog = await api.versions
+    .getList(target.loader, true)
+    .catch(ignoreFailure);
   const minecraftVersion = catalog?.find(
     (version) => version.id === target.minecraftVersion,
   );
@@ -88,7 +93,7 @@ export async function runPort(
       ? pickLoaderVersion(
           (await api.versions
             .getLoaderVersions(target.loader, minecraftVersion.id)
-            .catch(() => null)) ?? [],
+            .catch(ignoreFailure)) ?? [],
           target.loader,
         )
       : undefined;

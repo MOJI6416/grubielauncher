@@ -3,6 +3,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Hint } from "@renderer/components/Hint";
+import { ListSkeleton } from "@renderer/components/ListSkeleton";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import {
   ArrowUp,
   ChevronRight,
@@ -330,10 +338,10 @@ export function SelectPathsPanel({
     const timer = setTimeout(() => {
       api.file
         .getTotalSizes(paths.map(toAbsolute))
-        .catch(() => null)
+        .catch(ignoreFailure)
         .then((total) => {
           if (cancelled) return;
-          setIsSelectedSizeUnknown(total === null);
+          setIsSelectedSizeUnknown(total == null);
           setSelectedSize(total ?? 0);
         });
     }, 200);
@@ -489,7 +497,7 @@ export function SelectPathsPanel({
     if (size === undefined) return null;
 
     return (
-      <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint">
+      <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
         {size === null ? "?" : formatBytes(size, sizeLabels, size < 1024 ? 0 : 1)}
       </span>
     );
@@ -517,7 +525,7 @@ export function SelectPathsPanel({
           >
             <BlockedIcon className="size-3.5 shrink-0 text-faint" />
             <span className="min-w-0 flex-1 truncate">{entry.path}</span>
-            <span className="shrink-0 text-[11px] text-faint">
+            <span className="shrink-0 text-2xs text-faint">
               {t(blockedTagKeys[entry.blocked])}
             </span>
           </div>
@@ -552,8 +560,8 @@ export function SelectPathsPanel({
         }}
         className={cn(
           "flex h-8 cursor-pointer items-center gap-2.5 rounded-md px-2 text-sm outline-none transition-colors",
-          "hover:bg-surface-3 focus-visible:bg-surface-3 focus-visible:ring-2 focus-visible:ring-ring/50",
-          isSelected && "bg-surface-3/60",
+          "hover:bg-row-hover focus-visible:bg-row-hover focus-visible:ring-2 focus-visible:ring-ring/50",
+          isSelected && "bg-row-selected",
         )}
       >
         <span
@@ -578,10 +586,12 @@ export function SelectPathsPanel({
             isSelected ? "text-foreground" : "text-faint",
           )}
         />
-        <span className="min-w-0 flex-1 truncate">{entry.path}</span>
+        <Hint content={entry.path} variant="text" truncatedOnly>
+          <span className="min-w-0 flex-1 truncate">{entry.path}</span>
+        </Hint>
 
         {insideCount > 0 && (
-          <span className="shrink-0 text-[11px] text-muted-foreground">
+          <span className="shrink-0 text-2xs text-muted-foreground">
             {t("selectPaths.insideSelected", { count: insideCount })}
           </span>
         )}
@@ -632,8 +642,10 @@ export function SelectPathsPanel({
 
   return (
     <div className="grid min-h-0 grid-rows-[auto_auto_minmax(0,1fr)_auto]">
-      <div className="flex h-7 items-center gap-1.5 border-b border-border px-4 text-[11px] text-faint">
-        <span className="min-w-0 truncate">{t("selectPaths.purpose")}</span>
+      <div className="flex h-7 items-center gap-1.5 border-b border-border px-4 text-2xs text-faint">
+        <Hint content={t("selectPaths.purpose")} variant="text" truncatedOnly>
+          <span className="min-w-0 truncate">{t("selectPaths.purpose")}</span>
+        </Hint>
         <Hint content={t("selectPaths.purposeHint")}>
           <Info className="size-3 shrink-0" />
         </Hint>
@@ -661,9 +673,11 @@ export function SelectPathsPanel({
           >
             <Home className="size-3.5 shrink-0" />
             {currentSegments.length === 0 && rootLabel && (
-              <span className="min-w-0 max-w-40 truncate text-foreground">
-                {rootLabel}
-              </span>
+              <Hint content={rootLabel} variant="text" truncatedOnly>
+                <span className="min-w-0 max-w-40 truncate text-foreground">
+                  {rootLabel}
+                </span>
+              </Hint>
             )}
           </button>
 
@@ -683,18 +697,20 @@ export function SelectPathsPanel({
           {trail.items.map((item, index) => (
             <span key={item.path} className="flex min-w-0 items-center">
               <ChevronRight className="size-3 shrink-0 text-faint" />
-              <button
-                type="button"
-                className={cn(
-                  "min-w-0 truncate rounded px-1 py-0.5 transition-colors hover:text-foreground",
-                  index === trail.items.length - 1
-                    ? "text-foreground"
-                    : "text-faint",
-                )}
-                onClick={() => openFolder(item.path)}
-              >
-                {item.label}
-              </button>
+              <Hint content={item.label} variant="text" truncatedOnly>
+                <button
+                  type="button"
+                  className={cn(
+                    "min-w-0 truncate rounded px-1 py-0.5 transition-colors hover:text-foreground",
+                    index === trail.items.length - 1
+                      ? "text-foreground"
+                      : "text-faint",
+                  )}
+                  onClick={() => openFolder(item.path)}
+                >
+                  {item.label}
+                </button>
+              </Hint>
             </span>
           ))}
         </nav>
@@ -711,14 +727,16 @@ export function SelectPathsPanel({
             className="h-7 w-32 rounded-md pr-6 pl-6 text-xs shadow-none"
           />
           {query && (
-            <button
-              type="button"
-              aria-label={t("selectPaths.clearSearch")}
-              className="absolute top-1/2 right-1 flex size-4 -translate-y-1/2 items-center justify-center rounded text-faint transition-colors hover:text-foreground"
-              onClick={() => setQuery("")}
-            >
-              <X className="size-3" />
-            </button>
+            <Hint content={t("selectPaths.clearSearch")}>
+              <button
+                type="button"
+                aria-label={t("selectPaths.clearSearch")}
+                className="absolute top-1/2 right-1 flex size-4 -translate-y-1/2 items-center justify-center rounded text-faint transition-colors hover:text-foreground"
+                onClick={() => setQuery("")}
+              >
+                <X className="size-3" />
+              </button>
+            </Hint>
           )}
         </div>
 
@@ -741,10 +759,11 @@ export function SelectPathsPanel({
                 )}
               >
                 {!listing ? (
-                  <div className="flex h-40 items-center justify-center gap-2 text-xs text-muted-foreground">
-                    <Loader2 className="size-4 animate-spin" />
-                    {t("selectPaths.loadingFolders")}
-                  </div>
+                  <ListSkeleton
+                    rows={6}
+                    rowClassName="h-8"
+                    iconClassName="size-4 rounded"
+                  />
                 ) : (
                   <div
                     ref={listRef}
@@ -758,12 +777,22 @@ export function SelectPathsPanel({
                     {openEntries.map((entry, index) => renderRow(entry, index))}
 
                     {rows.length === 0 && (
-                      <div className="flex h-40 flex-col items-center justify-center gap-1 px-6 text-center">
-                        <p className="text-xs text-muted-foreground">
-                          {emptyTitle}
-                        </p>
-                        <p className="text-[11px] text-faint">{emptyHint}</p>
-                      </div>
+                      <Empty className="h-40 gap-2 border-0 bg-transparent p-4">
+                        <EmptyHeader>
+                          <EmptyTitle>{emptyTitle}</EmptyTitle>
+                          <EmptyDescription>{emptyHint}</EmptyDescription>
+                        </EmptyHeader>
+                        {query && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setQuery("")}
+                          >
+                            {t("selectPaths.clearSearch")}
+                          </Button>
+                        )}
+                      </Empty>
                     )}
 
                     {showBlocked && blockedEntries.length > 0 && (
@@ -786,10 +815,16 @@ export function SelectPathsPanel({
           </ScrollArea>
 
           {blockedEntries.length > 0 && (
-            <div className="flex h-9 shrink-0 items-center gap-2 border-t border-border px-3 text-[11px] text-faint">
-              <span className="min-w-0 truncate">
-                {t("selectPaths.hidden", { count: blockedEntries.length })}
-              </span>
+            <div className="flex h-9 shrink-0 items-center gap-2 border-t border-border px-3 text-2xs text-faint">
+              <Hint
+                content={t("selectPaths.hidden", { count: blockedEntries.length })}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 truncate">
+                  {t("selectPaths.hidden", { count: blockedEntries.length })}
+                </span>
+              </Hint>
               <Button
                 type="button"
                 variant="ghost"
@@ -806,10 +841,12 @@ export function SelectPathsPanel({
         </div>
 
         <div className="rounded-xl border border-border bg-surface-2 p-1">
-          <div className="flex h-6 items-center gap-2 px-2 text-[11px] text-faint">
-            <span className="min-w-0 truncate">
-              {t("selectPaths.pickedTitle")}
-            </span>
+          <div className="flex h-6 items-center gap-2 px-2 text-2xs text-faint">
+            <Hint content={t("selectPaths.pickedTitle")} variant="text" truncatedOnly>
+              <span className="min-w-0 truncate">
+                {t("selectPaths.pickedTitle")}
+              </span>
+            </Hint>
             {paths.length > 0 && (
               <Button
                 type="button"
@@ -824,7 +861,7 @@ export function SelectPathsPanel({
           </div>
 
           {paths.length === 0 ? (
-            <p className="flex h-7 items-center px-2 text-[11px] text-faint">
+            <p className="flex h-7 items-center px-2 text-2xs text-faint">
               {t("selectPaths.nothingSelectedHint")}
             </p>
           ) : (
@@ -837,40 +874,44 @@ export function SelectPathsPanel({
                   return (
                     <div
                       key={item}
-                      className="flex h-7 items-center gap-1 rounded-md px-2 text-xs transition-colors hover:bg-surface-3"
+                      className="flex h-7 items-center gap-1 rounded-md px-2 text-xs transition-colors hover:bg-row-hover"
                     >
-                      <button
-                        type="button"
-                        className="flex min-w-0 flex-1 items-center text-left"
-                        onClick={() => openFolder(getShareParentPath(item))}
-                      >
-                        {folder && (
-                          <span className="min-w-0 truncate text-faint">
-                            {folder}
-                          </span>
-                        )}
-                        <span className="shrink-0 truncate">{name}</span>
-                      </button>
+                      <Hint content={item} variant="text" truncatedOnly>
+                        <button
+                          type="button"
+                          className="flex min-w-0 flex-1 items-center text-left"
+                          onClick={() => openFolder(getShareParentPath(item))}
+                        >
+                          {folder && (
+                            <span className="min-w-0 truncate text-faint">
+                              {folder}
+                            </span>
+                          )}
+                          <span className="shrink-0 truncate">{name}</span>
+                        </button>
+                      </Hint>
                       {cachedSize !== undefined && (
-                        <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint">
+                        <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
                           {cachedSize === null
                             ? "?"
                             : formatBytes(cachedSize, sizeLabels, 1)}
                         </span>
                       )}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        aria-label={t("selectPaths.remove")}
-                        onClick={() =>
-                          setPaths((prev) =>
-                            unselectShareFolderPath(prev, item),
-                          )
-                        }
-                      >
-                        <X />
-                      </Button>
+                      <Hint content={t("selectPaths.remove")}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={t("selectPaths.remove")}
+                          onClick={() =>
+                            setPaths((prev) =>
+                              unselectShareFolderPath(prev, item),
+                            )
+                          }
+                        >
+                          <X />
+                        </Button>
+                      </Hint>
                     </div>
                   );
                 })}
@@ -882,9 +923,11 @@ export function SelectPathsPanel({
 
       <div className="flex h-14 items-center justify-between gap-3 border-t border-border bg-surface-2 px-4">
         {paths.length === 0 ? (
-          <span className="truncate text-xs text-faint">
-            {t("selectPaths.nothingSelected")}
-          </span>
+          <Hint content={t("selectPaths.nothingSelected")} variant="text" truncatedOnly>
+            <span className="truncate text-xs text-faint">
+              {t("selectPaths.nothingSelected")}
+            </span>
+          </Hint>
         ) : (
           <span
             className={cn(
@@ -906,7 +949,9 @@ export function SelectPathsPanel({
               </span>
             )}
             {isOverLimit && (
-              <span className="truncate">· {t("selectPaths.overLimit")}</span>
+              <Hint content={t("selectPaths.overLimit")} variant="text" truncatedOnly>
+                <span className="truncate">· {t("selectPaths.overLimit")}</span>
+              </Hint>
             )}
           </span>
         )}

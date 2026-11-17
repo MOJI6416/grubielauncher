@@ -17,6 +17,14 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { ProjectIcon } from "@renderer/features/mods/ProjectIcon";
 import type { ConfigEntry } from "./configFiles";
 import type { ConfigGroup } from "./modGroups";
@@ -57,7 +65,7 @@ function EntryButton({
         aria-current={isSelected}
         onClick={onOpen}
         className={cn(
-          "flex w-full min-w-0 flex-col rounded-lg py-1.5 pr-2 text-left transition-colors hover:bg-accent/40 aria-[current=true]:bg-accent/60",
+          "flex w-full min-w-0 flex-col rounded-lg py-1.5 pr-2 text-left transition-colors hover:bg-row-hover aria-[current=true]:bg-row-selected",
           indent ? "pl-7" : "pl-2",
         )}
       >
@@ -73,7 +81,7 @@ function EntryButton({
           {isDirty && (
             <span
               aria-label={t("configs.unsaved")}
-              className="size-1.5 shrink-0 rounded-full bg-primary"
+              className="size-1.5 shrink-0 rounded-full bg-warning"
             />
           )}
           {isMissing ? (
@@ -88,7 +96,7 @@ function EntryButton({
           )}
         </span>
         {entry.folder && (
-          <span className="w-full truncate font-mono text-[0.65rem] text-faint">
+          <span className="w-full truncate font-mono text-3xs text-faint">
             {entry.folder}
           </span>
         )}
@@ -106,11 +114,15 @@ function MatchPreview({ match }: { match: LineMatch }) {
   const after = match.preview.slice(match.previewColumn + match.length);
 
   return (
-    <span className="min-w-0 flex-1 truncate font-mono text-[0.65rem] text-muted-foreground">
-      {before}
-      <mark className="rounded-[2px] bg-warning/30 text-foreground">{hit}</mark>
-      {after}
-    </span>
+    <Hint content={match.preview} variant="text" truncatedOnly>
+      <span className="min-w-0 flex-1 truncate font-mono text-3xs text-muted-foreground">
+        {before}
+        <mark className="rounded-[2px] bg-warning/30 text-foreground">
+          {hit}
+        </mark>
+        {after}
+      </span>
+    </Hint>
   );
 }
 
@@ -172,19 +184,19 @@ export function ConfigFileList({
   );
 
   const emptyState = (text: string) => (
-    <div className="px-2 py-6 text-center">
-      <p className="text-xs text-muted-foreground">{text}</p>
+    <Empty className="gap-3 p-4">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <Search />
+        </EmptyMedia>
+        <EmptyTitle>{text}</EmptyTitle>
+      </EmptyHeader>
       {query && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-1 h-7 text-xs text-muted-foreground"
-          onClick={() => onQueryChange("")}
-        >
+        <Button variant="outline" size="sm" onClick={() => onQueryChange("")}>
           {t("configs.clearSearch")}
         </Button>
       )}
-    </div>
+    </Empty>
   );
 
   const renderFiles = () => {
@@ -231,7 +243,7 @@ export function ConfigFileList({
                 type="button"
                 aria-current={entry.relative === selectedKey}
                 onClick={() => onOpen(entry)}
-                className="flex w-full min-w-0 items-center gap-1.5 rounded-lg py-1 pr-2 pl-6 text-left transition-colors hover:bg-accent/40 aria-[current=true]:bg-accent/60"
+                className="flex w-full min-w-0 items-center gap-1.5 rounded-lg py-1 pr-2 pl-6 text-left transition-colors hover:bg-row-hover aria-[current=true]:bg-row-selected"
               >
                 {groupIcon}
                 <span className="flex min-w-0 flex-1 flex-col">
@@ -248,11 +260,11 @@ export function ConfigFileList({
                     {dirtyKeys.has(entry.relative) && (
                       <span
                         aria-label={t("configs.unsaved")}
-                        className="size-1.5 shrink-0 rounded-full bg-primary"
+                        className="size-1.5 shrink-0 rounded-full bg-warning"
                       />
                     )}
                   </span>
-                  <span className="truncate font-mono text-[0.65rem] text-faint">
+                  <span className="truncate font-mono text-3xs text-faint">
                     {entry.relative}
                   </span>
                 </span>
@@ -284,7 +296,7 @@ export function ConfigFileList({
                   return next;
                 })
               }
-              className="flex h-8 w-full min-w-0 items-center gap-1.5 rounded-lg px-1.5 text-left transition-colors hover:bg-accent/40"
+              className="flex h-8 w-full min-w-0 items-center gap-1.5 rounded-lg px-1.5 text-left transition-colors hover:bg-row-hover"
             >
               <ChevronRight
                 className={cn(
@@ -298,7 +310,7 @@ export function ConfigFileList({
                   {group.title}
                 </span>
               </Hint>
-              <span className="shrink-0 font-mono text-[0.65rem] tabular-nums text-faint">
+              <span className="shrink-0 font-mono text-3xs tabular-nums text-faint">
                 {group.entries.length}
               </span>
             </button>
@@ -316,9 +328,16 @@ export function ConfigFileList({
   const renderContent = () => {
     if (query.trim().length < MIN_CONTENT_QUERY) {
       return (
-        <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-          {t("configs.contentSearch.hint")}
-        </p>
+        <Empty className="gap-3 p-4">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <TextSearch />
+            </EmptyMedia>
+            <EmptyDescription>
+              {t("configs.contentSearch.hint")}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       );
     }
 
@@ -326,7 +345,7 @@ export function ConfigFileList({
       return (
         <p className="flex items-center justify-center gap-2 px-2 py-6 text-xs text-muted-foreground">
           <Loader2 className="size-3.5 animate-spin" />
-          {t("configs.contentSearch.reading", {
+          {t("configs.contentSearch.searching", {
             done: content.done,
             total: content.total,
           })}
@@ -348,12 +367,14 @@ export function ConfigFileList({
           <button
             type="button"
             onClick={() => onOpen(entry)}
-            className="flex min-w-0 items-center gap-1.5 rounded-lg px-2 pt-1.5 pb-0.5 text-left hover:bg-accent/40"
+            className="flex min-w-0 items-center gap-1.5 rounded-lg px-2 pt-1.5 pb-0.5 text-left hover:bg-row-hover"
           >
-            <span className="min-w-0 flex-1 truncate text-xs font-medium">
-              {entry.name}
-            </span>
-            <span className="shrink-0 font-mono text-[0.65rem] tabular-nums text-faint">
+            <Hint content={entry.relative} variant="text" truncatedOnly>
+              <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                {entry.name}
+              </span>
+            </Hint>
+            <span className="shrink-0 font-mono text-3xs tabular-nums text-faint">
               {result.total}
             </span>
           </button>
@@ -362,16 +383,16 @@ export function ConfigFileList({
               key={match.line}
               type="button"
               onClick={() => onOpenMatch(entry, match)}
-              className="flex min-w-0 items-center gap-2 rounded-md py-0.5 pr-2 pl-3 text-left hover:bg-accent/40"
+              className="flex min-w-0 items-center gap-2 rounded-md py-0.5 pr-2 pl-3 text-left hover:bg-row-hover"
             >
-              <span className="w-7 shrink-0 text-right font-mono text-[0.6rem] tabular-nums text-faint">
+              <span className="w-7 shrink-0 text-right font-mono text-3xs tabular-nums text-faint">
                 {match.line + 1}
               </span>
               <MatchPreview match={match} />
             </button>
           ))}
           {result.total > result.matches.length && (
-            <span className="pl-12 text-[0.6rem] text-faint">
+            <span className="pl-12 text-3xs text-faint">
               {t("configs.contentSearch.more", {
                 count: result.total - result.matches.length,
               })}
@@ -407,26 +428,23 @@ export function ConfigFileList({
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        <div className="flex min-w-0 flex-1 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5">
-          {(["files", "content"] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              aria-pressed={searchMode === mode}
-              onClick={() => onSearchModeChange(mode)}
-              className="flex h-6 min-w-0 flex-1 items-center justify-center gap-1 rounded-md px-1.5 text-[0.68rem] text-muted-foreground transition-colors not-aria-pressed:hover:text-foreground aria-pressed:bg-surface-3 aria-pressed:text-foreground"
-            >
-              {mode === "files" ? (
-                <FileSearch className="size-3 shrink-0" />
+        <SegmentedControl
+          value={searchMode}
+          stretch
+          className="min-w-0 flex-1"
+          ariaLabel={t("configs.searchModeLabel")}
+          options={(["files", "content"] as const).map((mode) => ({
+            value: mode,
+            label: t(`configs.searchMode.${mode}`),
+            icon:
+              mode === "files" ? (
+                <FileSearch className="size-3" />
               ) : (
-                <TextSearch className="size-3 shrink-0" />
-              )}
-              <span className="truncate">
-                {t(`configs.searchMode.${mode}`)}
-              </span>
-            </button>
-          ))}
-        </div>
+                <TextSearch className="size-3" />
+              ),
+          }))}
+          onChange={onSearchModeChange}
+        />
 
         {canGroup && searchMode === "files" && (
           <Hint content={t(isGrouped ? "configs.groupOff" : "configs.groupOn")}>

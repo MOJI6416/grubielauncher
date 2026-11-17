@@ -10,8 +10,9 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Hint } from "@renderer/components/Hint";
-import { formatTime } from "@renderer/utilities/date";
 import { worldDisplayStats } from "@renderer/utilities/worldStats";
+import { formatDuration } from "@renderer/utilities/duration";
+import { formatNumber } from "@renderer/utilities/numbers";
 
 export function WorldStatsTab({
   world,
@@ -40,7 +41,7 @@ export function WorldStatsTab({
     );
   }
 
-  const nf = (value: number) => new Intl.NumberFormat(locale).format(value);
+  const nf = (value: number) => formatNumber(value, locale);
   const km = Math.round(stats.distanceCm / 1000) / 100;
 
   return (
@@ -48,10 +49,8 @@ export function WorldStatsTab({
       <div className="grid grid-cols-3 gap-2 lg:grid-cols-4">
         <Tile
           label={t("versionStatistics.inGameTime")}
-          value={formatTime(Math.floor(stats.playTimeTicks / 20), {
-            h: t("time.h"),
-            m: t("time.m"),
-            s: t("time.s"),
+          value={formatDuration(Math.floor(stats.playTimeTicks / 20), {
+            withSeconds: true,
           })}
         />
         <Tile label={t("versionStatistics.deaths")} value={nf(stats.deaths)} />
@@ -107,11 +106,13 @@ function Tile({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-lg border bg-surface-1 px-2.5 py-2">
       <Hint content={label} variant="text" truncatedOnly>
-        <div className="truncate text-[0.65rem] text-faint">{label}</div>
+        <div className="truncate text-3xs text-faint">{label}</div>
       </Hint>
-      <div className="mt-0.5 truncate text-sm font-semibold tabular-nums">
-        {value}
-      </div>
+      <Hint content={value} variant="text" truncatedOnly>
+        <div className="mt-0.5 truncate text-sm font-semibold tabular-nums">
+          {value}
+        </div>
+      </Hint>
     </div>
   );
 }
@@ -125,17 +126,20 @@ function TopList({
   entries: { name: string; count: number }[];
   format: (value: number) => string;
 }) {
+  const { t } = useTranslation();
   const max = entries[0]?.count ?? 0;
 
   return (
     <div className="min-w-0 rounded-xl border bg-surface-1">
-      <div className="border-b px-3 py-2 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
+      <div className="border-b px-3 py-2 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
         {title}
       </div>
 
       <div className="flex flex-col gap-1.5 p-3">
         {entries.length === 0 ? (
-          <p className="text-xs text-muted-foreground">—</p>
+          <p className="text-xs text-muted-foreground">
+            {t("worldStats.topEmpty")}
+          </p>
         ) : (
           entries.map((entry) => (
             <div key={entry.name} className="flex min-w-0 items-center gap-2">
@@ -146,13 +150,13 @@ function TopList({
               </Hint>
               <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-surface-3">
                 <span
-                  className="block h-full rounded-full bg-primary/70"
+                  className="block h-full rounded-full bg-muted-foreground/60"
                   style={{
                     width: `${max > 0 ? Math.max(6, (entry.count / max) * 100) : 0}%`,
                   }}
                 />
               </span>
-              <span className="w-14 shrink-0 text-right font-mono text-[0.65rem] text-muted-foreground tabular-nums">
+              <span className="min-w-10 shrink-0 text-right font-mono text-3xs whitespace-nowrap text-muted-foreground tabular-nums">
                 {format(entry.count)}
               </span>
             </div>

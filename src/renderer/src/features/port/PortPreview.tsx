@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { getLoaderInfo } from "@renderer/components/Loaders";
 import { type PortItem, type PortStatus, countPort } from "./portPlan";
+import { Hint } from "@renderer/components/Hint";
 
 const GROUPS: { status: PortStatus; icon: LucideIcon; tone: string }[] = [
   { status: "missing", icon: CircleAlert, tone: "text-destructive" },
@@ -53,9 +54,15 @@ export function PortPreview({
           <section key={status} className="flex min-w-0 flex-col gap-1.5">
             <p className="flex items-center gap-1.5 text-xs font-medium text-foreground">
               <Icon className={`size-3.5 shrink-0 ${tone}`} />
-              <span className="min-w-0 truncate">
-                {t(`${groupsKey}.${status}`, { target })}
-              </span>
+              <Hint
+                content={t(`${groupsKey}.${status}`, { target })}
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 truncate">
+                  {t(`${groupsKey}.${status}`, { target })}
+                </span>
+              </Hint>
               <span className="ml-auto shrink-0 font-mono text-faint tabular-nums">
                 {counts[status]}
               </span>
@@ -64,18 +71,22 @@ export function PortPreview({
               {items
                 .filter((item) => item.status === status)
                 .map((item) => (
-                  <li
+                  <Hint
                     key={item.key}
-                    className="max-w-full truncate rounded-md bg-surface-2 px-1.5 py-0.5 text-[0.6875rem] text-muted-foreground"
+                    content={item.title}
+                    variant="text"
+                    truncatedOnly
                   >
-                    {item.title}
-                    {item.viaLoader && (
-                      <span className="text-faint">
-                        {" · "}
-                        {getLoaderInfo(item.viaLoader).name}
-                      </span>
-                    )}
-                  </li>
+                    <li className="max-w-full truncate rounded-md bg-surface-2 px-1.5 py-0.5 text-2xs text-muted-foreground">
+                      {item.title}
+                      {item.viaLoader && (
+                        <span className="text-faint">
+                          {" · "}
+                          {getLoaderInfo(item.viaLoader).name}
+                        </span>
+                      )}
+                    </li>
+                  </Hint>
                 ))}
             </ul>
           </section>

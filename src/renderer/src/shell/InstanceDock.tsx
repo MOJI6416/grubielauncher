@@ -55,6 +55,7 @@ import {
   useLayoutEditing,
 } from "@renderer/features/layout/useLayout";
 import { SlotToggle } from "@renderer/features/layout/SlotToggle";
+import { showUndoToast } from "@renderer/utilities/undoToast";
 
 export function InstanceDock({
   runGame,
@@ -107,7 +108,14 @@ export function InstanceDock({
 
   const activeId = route.name === "instance" ? route.id : null;
 
-  const dockActions = (key: string): InstanceAction[] => {
+  const hideWithUndo = (key: string, name: string) => {
+    hideFromDock(key, true);
+    showUndoToast(t("layout.hiddenDone", { name }), () =>
+      hideFromDock(key, false),
+    );
+  };
+
+  const dockActions = (key: string, name: string): InstanceAction[] => {
     const isPinned = pinned.includes(key);
     return [
       {
@@ -120,7 +128,7 @@ export function InstanceDock({
         id: "dock-hide",
         label: t("layout.hideFromSidebar"),
         icon: EyeOff,
-        onSelect: () => hideFromDock(key, true),
+        onSelect: () => hideWithUndo(key, name),
       },
     ];
   };
@@ -142,7 +150,11 @@ export function InstanceDock({
       account,
       isBusy: isRunning || isInstallActive,
     });
-    return [...groups.slice(0, 3), dockActions(key), ...groups.slice(3)];
+    return [
+      ...groups.slice(0, 3),
+      dockActions(key, instance.version.name),
+      ...groups.slice(3),
+    ];
   };
 
   return (
@@ -154,12 +166,12 @@ export function InstanceDock({
         )}
       >
         {!collapsed && (
-          <span className="text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+          <span className="text-3xs font-semibold tracking-[0.09em] text-faint uppercase">
             {t("shell.nav.instances")}
           </span>
         )}
         {!collapsed && versions.length > 0 && (
-          <span className="font-mono text-[0.65rem] tabular-nums text-faint">
+          <span className="font-mono text-3xs tabular-nums text-faint">
             {versions.length}
           </span>
         )}
@@ -172,7 +184,7 @@ export function InstanceDock({
           />
         )}
         <Hint
-          content={t("shell.nav.newInstance")}
+          content={isRunning ? undefined : t("shell.nav.newInstance")}
           wrapperClassName={collapsed ? "mx-auto" : "ml-auto"}
         >
           <button
@@ -199,7 +211,7 @@ export function InstanceDock({
           <SlidingIndicator
             indicator={dockIndicator}
             variant="fill"
-            className="rounded-lg bg-primary-soft"
+            className="rounded-lg bg-row-selected"
           />
           {ordered.map((instance) => {
             const key = instanceKey(instance);
@@ -221,11 +233,18 @@ export function InstanceDock({
                     name={instance.version.name}
                     image={instance.version.image}
                     className="size-6 rounded-md"
-                    textClassName="font-mono text-[0.6rem]"
+                    textClassName="font-mono text-3xs"
                   />
-                  <span className="min-w-0 flex-1 truncate text-[0.8rem] text-foreground">
-                    {instance.version.name}
-                  </span>
+                  <Hint
+                    content={instance.version.name}
+                    variant="text"
+                    side="right"
+                    truncatedOnly
+                  >
+                    <span className="min-w-0 flex-1 truncate text-[0.8rem] text-foreground">
+                      {instance.version.name}
+                    </span>
+                  </Hint>
                   <Hint
                     content={isPinned ? t("layout.unpin") : t("layout.pin")}
                     side="right"
@@ -257,12 +276,12 @@ export function InstanceDock({
                 <ContextMenuTrigger asChild>
                   <button
                     type="button"
-                    aria-current={isActive}
+                    aria-current={isActive ? "page" : undefined}
                     aria-label={collapsed ? instance.version.name : undefined}
                     data-indicator-active={isActive}
                     onClick={() => navigate({ name: "instance", id: key })}
                     className={cn(
-                      "relative flex h-10 w-full items-center rounded-lg text-left transition-colors not-aria-[current=true]:hover:bg-sidebar-accent",
+                      "relative flex h-10 w-full items-center rounded-lg text-left transition-colors not-aria-[current=page]:hover:bg-row-hover",
                       collapsed ? "justify-center" : "gap-2.5 px-2.5",
                     )}
                   >
@@ -273,7 +292,7 @@ export function InstanceDock({
                             name={instance.version.name}
                             image={instance.version.image}
                             className="size-7 rounded-md"
-                            textClassName="font-mono text-[0.6rem]"
+                            textClassName="font-mono text-3xs"
                           />
                           {running.has(instance.version.name) && (
                             <span className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full bg-success ring-2 ring-sidebar" />
@@ -285,7 +304,7 @@ export function InstanceDock({
                         name={instance.version.name}
                         image={instance.version.image}
                         className="size-6 rounded-md"
-                        textClassName="font-mono text-[0.6rem]"
+                        textClassName="font-mono text-3xs"
                       />
                     )}
 
@@ -305,9 +324,16 @@ export function InstanceDock({
                           <span
                             className={`size-1.5 shrink-0 rounded-full ${loader.dot}`}
                           />
-                          <span className="truncate font-mono text-[0.65rem] leading-4 text-faint">
-                            {instance.version.version.id}
-                          </span>
+                          <Hint
+                            content={instance.version.version.id}
+                            variant="text"
+                            side="right"
+                            truncatedOnly
+                          >
+                            <span className="truncate font-mono text-3xs leading-4 text-faint">
+                              {instance.version.version.id}
+                            </span>
+                          </Hint>
                         </span>
                       </span>
                     )}
@@ -354,7 +380,7 @@ export function InstanceDock({
                 onClick={() => navigate({ name: "home" })}
                 aria-label={t("layout.dockMore", { count: missing })}
                 className={cn(
-                  "flex h-7 w-full items-center gap-1.5 rounded-lg text-[0.7rem] text-faint transition-colors hover:bg-sidebar-accent hover:text-foreground",
+                  "flex h-7 w-full items-center gap-1.5 rounded-lg text-2xs text-faint transition-colors hover:bg-row-hover hover:text-foreground",
                   collapsed ? "justify-center" : "px-2.5",
                 )}
               >

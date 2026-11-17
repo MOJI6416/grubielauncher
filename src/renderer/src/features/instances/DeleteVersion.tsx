@@ -33,6 +33,8 @@ import { toast } from "sonner";
 
 import { showFailureToast } from "@renderer/utilities/failures";
 import { formatBytes } from "@renderer/utilities/file";
+import { formatNumber } from "@renderer/utilities/numbers";
+import { Hint } from "@renderer/components/Hint";
 import {
   useInstanceContents,
   useInstanceDiskUsage,
@@ -215,7 +217,7 @@ export function DeleteVersion({
         }}
       >
         <DialogHeader>
-          <DialogTitle>{t(copy.titleKey)}</DialogTitle>
+          <DialogTitle>{t(copy.titleKey, { name: versionName })}</DialogTitle>
           <DialogDescription>{t(copy.descriptionKey)}</DialogDescription>
         </DialogHeader>
 
@@ -224,9 +226,11 @@ export function DeleteVersion({
             <p className="text-xs text-muted-foreground">
               {t("versions.version")}
             </p>
-            <p className="truncate text-sm font-medium">{versionName}</p>
+            <Hint content={versionName} variant="text" truncatedOnly>
+              <p className="truncate text-sm font-medium">{versionName}</p>
+            </Hint>
 
-            <div className="mt-2 flex items-center gap-4 border-t pt-2 text-[0.7rem] text-faint">
+            <div className="mt-2 flex items-center gap-4 border-t pt-2 text-2xs text-faint">
               <span className="flex items-center gap-1.5">
                 <HardDrive className="size-3 shrink-0" />
                 <span className="font-mono tabular-nums">
@@ -256,7 +260,7 @@ export function DeleteVersion({
                       ? "…"
                       : contents.savesUnknown
                         ? "?"
-                        : contents.worlds}
+                        : formatNumber(contents.worlds)}
                   </span>
                 </span>
               </span>
@@ -273,7 +277,7 @@ export function DeleteVersion({
           )}
 
           <div className="space-y-2">
-            <label className="flex cursor-pointer items-start gap-3 rounded-md border bg-card px-3 py-2.5 text-sm transition-colors hover:bg-accent/40 has-disabled:cursor-not-allowed has-disabled:opacity-60">
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border bg-card px-3 py-2.5 text-sm transition-colors hover:bg-row-hover has-disabled:cursor-not-allowed has-disabled:opacity-60">
               <Checkbox
                 className="mt-0.5"
                 disabled={isLoading}
@@ -293,7 +297,7 @@ export function DeleteVersion({
             {canOfferRemoteDelete && (
               <label
                 className={cn(
-                  "flex cursor-pointer items-start gap-3 rounded-md border bg-card px-3 py-2.5 text-sm transition-colors hover:bg-accent/40 has-disabled:cursor-not-allowed has-disabled:opacity-60",
+                  "flex cursor-pointer items-start gap-3 rounded-md border bg-card px-3 py-2.5 text-sm transition-colors hover:bg-row-hover has-disabled:cursor-not-allowed has-disabled:opacity-60",
                   !canRequestRemoteDelete && "cursor-not-allowed opacity-60",
                 )}
               >

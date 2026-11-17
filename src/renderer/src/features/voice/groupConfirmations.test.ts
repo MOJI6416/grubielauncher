@@ -53,9 +53,9 @@ describe("groupConfirmCopy", () => {
     );
   });
 
-  it("marks deleting a group as final and a ban as undoable", () => {
+  it("marks deleting a group as final and does not call a ban undoable", () => {
     expect(groupConfirmCopy("delete").reversible).toBe(false);
-    expect(groupConfirmCopy("ban").reversible).toBe(true);
+    expect(groupConfirmCopy("ban").reversible).toBeUndefined();
   });
 
   it("keeps ownership transfer and code reset out of the destructive tone", () => {

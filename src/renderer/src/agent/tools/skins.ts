@@ -1,3 +1,4 @@
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { getDefaultStore } from "jotai";
 import { SkinsData } from "@/types/SkinManager";
 import { accountAtom, authDataAtom, pathsAtom } from "@renderer/stores/atoms";
@@ -127,7 +128,7 @@ export const selectSkin: AgentTool = {
     const skinId = String(input?.skinId ?? "").trim();
     if (skinId === "") return { ok: false, error: "skinId is required" };
 
-    const previous = (await loadSkins(context).catch(() => null))
+    const previous = (await loadSkins(context).catch(ignoreFailure))
       ?.selectedSkin;
 
     const data = await api.skins.selectSkin(

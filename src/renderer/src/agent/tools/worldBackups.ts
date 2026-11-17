@@ -1,3 +1,4 @@
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { getDefaultStore } from "jotai";
 import i18n from "@renderer/i18n";
 import { IWorldBackup } from "@/types/WorldBackup";
@@ -85,7 +86,7 @@ function describe(code: string): string {
 async function worldDisplayName(path: string, folder: string): Promise<string> {
   const account = getDefaultStore().get(accountAtom);
   const world = account
-    ? await api.worlds.readWorld(path, account).catch(() => null)
+    ? await api.worlds.readWorld(path, account).catch(ignoreFailure)
     : null;
 
   return world?.name || folder;

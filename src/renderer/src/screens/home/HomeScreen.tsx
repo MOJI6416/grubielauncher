@@ -10,6 +10,7 @@ import {
 import { useReducedMotionPreference } from "@/lib/motionPreference";
 import { LayoutGrid } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Hint } from "@renderer/components/Hint";
 import { motionTransition } from "@/lib/motion";
 import {
   selectedVersionAtom,
@@ -41,12 +42,16 @@ function HeroPlaceholder() {
         <LayoutGrid className="size-5" />
       </span>
       <div className="flex min-w-0 flex-col gap-1 text-center">
-        <p className="truncate text-base font-semibold text-foreground">
-          {t("home.noSelection.title")}
-        </p>
-        <p className="truncate text-sm text-muted-foreground">
-          {t("home.noSelection.hint")}
-        </p>
+        <Hint content={t("home.noSelection.title")} variant="text" truncatedOnly>
+          <p className="truncate text-base font-semibold text-foreground">
+            {t("home.noSelection.title")}
+          </p>
+        </Hint>
+        <Hint content={t("home.noSelection.hint")} variant="text" truncatedOnly>
+          <p className="truncate text-sm text-muted-foreground">
+            {t("home.noSelection.hint")}
+          </p>
+        </Hint>
       </div>
     </section>
   );

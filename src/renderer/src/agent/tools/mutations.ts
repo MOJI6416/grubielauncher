@@ -1,3 +1,4 @@
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { getDefaultStore } from "jotai";
 import { Loader } from "@/types/Loader";
 import { ILocalProject, Provider } from "@/types/ModManager";
@@ -902,7 +903,7 @@ export const setInstanceJava: AgentTool = {
       return { ok: false, error: saveError };
     }
 
-    await version.init().catch(() => {});
+    await version.init().catch(ignoreFailure);
     refreshVersions();
 
     const recommended = instanceRequiredJava(version);
@@ -1052,7 +1053,7 @@ export const deleteInstance: AgentTool = {
     const instancePath = version.versionPath;
     const key = instanceKey(version);
     const projectCount = version.version.loader.mods.length;
-    const result = await version.delete(account, false).catch(() => null);
+    const result = await version.delete(account, false).catch(ignoreFailure);
 
     if (!result) {
       return {

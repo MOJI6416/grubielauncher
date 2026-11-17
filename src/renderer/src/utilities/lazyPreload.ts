@@ -1,3 +1,4 @@
+import { ignoreFailure } from "./ignoreFailure";
 import { createElement, type ComponentProps, type ComponentType } from "react";
 
 type PreloadTask = () => Promise<unknown>;
@@ -12,7 +13,7 @@ type IdleWindow = Window &
   };
 
 export function preload(task: PreloadTask) {
-  void task().catch(() => {});
+  void task().catch(ignoreFailure);
 }
 
 export function preloadAll(tasks: PreloadTask[]) {

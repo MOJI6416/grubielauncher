@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { versionsAtom } from "@renderer/stores/atoms";
 import { allTags as listTags, instanceKey as keyOf } from "./selectors";
 import { instanceTagsAtom, updateInstancesFile } from "./instancesStore";
+import { Hint } from "@renderer/components/Hint";
 
 export function TagsDialog({
   instanceKey,
@@ -73,9 +74,15 @@ export function TagsDialog({
         <DialogHeader className="min-w-0">
           <DialogTitle className="flex min-w-0 items-center gap-2">
             <Tag className="size-5 shrink-0" />
-            <span className="truncate">
-              {t("versions.tags.title", { name })}
-            </span>
+            <Hint
+              content={t("versions.tags.title", { name })}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="truncate">
+                {t("versions.tags.title", { name })}
+              </span>
+            </Hint>
           </DialogTitle>
         </DialogHeader>
 
@@ -88,14 +95,16 @@ export function TagsDialog({
             current.map((tag) => (
               <Badge key={tag} variant="secondary" className="gap-1 pr-1">
                 {tag}
-                <button
-                  type="button"
-                  className="rounded-full p-0.5 hover:bg-foreground/10"
-                  aria-label={t("versions.tags.remove")}
-                  onClick={() => removeTag(tag)}
-                >
-                  <X className="size-3" />
-                </button>
+                <Hint content={t("versions.tags.remove")}>
+                  <button
+                    type="button"
+                    className="rounded-full p-0.5 hover:bg-foreground/10"
+                    aria-label={t("versions.tags.remove")}
+                    onClick={() => removeTag(tag)}
+                  >
+                    <X className="size-3" />
+                  </button>
+                </Hint>
               </Badge>
             ))
           )}

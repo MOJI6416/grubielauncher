@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { changeAppLanguage } from "@renderer/i18n";
 import { formatBytes } from "@renderer/utilities/file";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { Hint } from "@renderer/components/Hint";
+import { applyWindowAppearance } from "@renderer/features/theme/windowAppearance";
 import { PathRows } from "./PathRows";
 import type {
   DataLocationWindowAction,
@@ -56,10 +59,14 @@ export function DataLocationWindow() {
   useEffect(() => {
     document.documentElement.style.background = "transparent";
     document.body.style.background = "transparent";
+    void applyWindowAppearance();
 
-    void api.dataLocationWindow.getState().then((initial) => {
-      if (initial) setState((current) => current ?? initial);
-    });
+    void api.dataLocationWindow
+      .getState()
+      .then((initial) => {
+        if (initial) setState((current) => current ?? initial);
+      })
+      .catch(ignoreFailure);
     return api.dataLocationWindow.onState(setState);
   }, []);
 
@@ -88,6 +95,16 @@ export function DataLocationWindow() {
         ? Math.min(100, (state.copiedBytes / state.totalBytes) * 100)
         : 0;
     const counting = state.phase === "scan";
+    const stageText = state.cancelling
+      ? t("dataLocation.window.cancelling")
+      : counting
+        ? t("dataLocation.window.counting")
+        : state.phase === "finish"
+          ? t("dataLocation.window.finishing")
+          : t("dataLocation.window.copied", {
+              copied: bytes(state.copiedBytes),
+              total: bytes(state.totalBytes),
+            });
 
     body = (
       <>
@@ -116,20 +133,13 @@ export function DataLocationWindow() {
             className={counting ? "animate-pulse" : undefined}
           />
           <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-            <span className="flex min-w-0 items-center gap-1.5 truncate">
+            <span className="flex min-w-0 items-center gap-1.5">
               {(counting || state.phase === "finish" || state.cancelling) && (
                 <Loader2 className="size-3 shrink-0 animate-spin" />
               )}
-              {state.cancelling
-                ? t("dataLocation.window.cancelling")
-                : counting
-                  ? t("dataLocation.window.counting")
-                  : state.phase === "finish"
-                    ? t("dataLocation.window.finishing")
-                    : t("dataLocation.window.copied", {
-                        copied: bytes(state.copiedBytes),
-                        total: bytes(state.totalBytes),
-                      })}
+              <Hint content={stageText} variant="text" truncatedOnly>
+                <span className="truncate">{stageText}</span>
+              </Hint>
             </span>
             {!counting && (
               <span className="shrink-0 font-mono tabular-nums">
@@ -168,9 +178,11 @@ export function DataLocationWindow() {
             {t(`dataLocation.failures.${state.reason}`)}
           </p>
           {state.detail && (
-            <p className="line-clamp-3 font-mono text-[0.7rem] break-all text-faint select-text">
-              {state.detail}
-            </p>
+            <Hint content={state.detail} variant="text" truncatedOnly>
+              <p className="line-clamp-3 font-mono text-2xs break-all text-faint select-text">
+                {state.detail}
+              </p>
+            </Hint>
           )}
         </div>
         <PathRows

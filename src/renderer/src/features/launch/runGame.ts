@@ -63,6 +63,7 @@ import { checkOrnitheGeneration } from "./ornitheGeneration";
 import { checkJarUrlName } from "./jarUrlName";
 import { prepareJavaForLaunch } from "@renderer/features/java/javaLaunch";
 import type { RunGameParams } from "./types";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -333,7 +334,7 @@ export async function runGame(params: RunGameParams): Promise<void> {
       const shortfall = memoryShortfall({
         allocatedMb: launchSettings.xmx,
         availableBytes:
-          await api.os.availableMemory().catch(() => null),
+          (await api.os.availableMemory().catch(ignoreFailure)) ?? null,
       });
       if (shortfall) {
         uiJournal.warn("launch", "free memory is below the allocation", {

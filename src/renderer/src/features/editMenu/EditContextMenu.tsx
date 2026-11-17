@@ -14,6 +14,7 @@ import {
   buildEditMenu,
   describeEditTarget,
 } from "./editTarget";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 
 const MENU_MARGIN = 8;
 
@@ -64,7 +65,7 @@ export function EditContextMenu() {
       close();
 
       if (item.kind === "copyLink") {
-        void window.api.clipboard.writeText(item.url);
+        void copyWithFeedback(item.url);
         return;
       }
       if (item.kind === "command") void window.api.edit.run(item.command);
@@ -205,9 +206,9 @@ export function EditContextMenu() {
             className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-sm outline-hidden select-none disabled:pointer-events-none disabled:opacity-40 data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
           >
             <Icon className="size-4 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 flex-1 truncate">{label}</span>
+            <span className="flex-1 whitespace-nowrap">{label}</span>
             {item.kind === "command" && (
-              <span className="shrink-0 pl-4 font-mono text-[0.6875rem] text-faint">
+              <span className="shrink-0 pl-4 font-mono text-2xs text-faint">
                 {MODIFIER}
                 {COMMAND_KEYS[item.command]}
               </span>

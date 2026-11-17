@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import { formatSessionClock } from "@renderer/features/instances/playtime";
+import { formatClock } from "@renderer/utilities/duration";
 import { usePageVisible } from "@renderer/utilities/usePageVisible";
 import type { LaunchProgress, LaunchStage } from "./launchProgress";
+import { Hint } from "@renderer/components/Hint";
 
 export function StageSegments({
   total,
@@ -20,9 +21,9 @@ export function StageSegments({
           className={cn(
             "relative h-full min-w-0 flex-1 rounded-full",
             index < current
-              ? "bg-primary/70"
+              ? "bg-info/70"
               : index === current
-                ? "stage-sweep bg-primary/20"
+                ? "stage-sweep bg-info/20"
                 : "bg-foreground/10",
           )}
         />
@@ -56,21 +57,23 @@ export function LaunchStageStrip({ progress }: { progress: LaunchProgress }) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5" role="status" aria-live="polite">
       <div className="flex min-w-0 items-baseline gap-2">
-        <span className="min-w-0 truncate text-sm font-semibold text-foreground">
-          {t(stageLabelKey(progress))}
-          {progress.stage === "loader" && progress.mods !== null && (
-            <span className="font-normal text-muted-foreground">
-              {" · "}
-              {t("modManager.modsCount", { count: progress.mods })}
-            </span>
-          )}
-        </span>
-        <span className="ml-auto flex shrink-0 items-baseline gap-2 font-mono text-[0.7rem] text-faint tabular-nums">
+        <Hint content={t(stageLabelKey(progress))} variant="text" truncatedOnly>
+          <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+            {t(stageLabelKey(progress))}
+            {progress.stage === "loader" && progress.mods !== null && (
+              <span className="font-normal text-muted-foreground">
+                {" · "}
+                {t("modManager.modsCount", { count: progress.mods })}
+              </span>
+            )}
+          </span>
+        </Hint>
+        <span className="ml-auto flex shrink-0 items-baseline gap-2 font-mono text-2xs text-faint tabular-nums">
           <span>
             {index + 1}/{progress.plan.length}
           </span>
           <span className="text-muted-foreground">
-            {formatSessionClock(now - progress.startedAt)}
+            {formatClock(now - progress.startedAt)}
           </span>
         </span>
       </div>

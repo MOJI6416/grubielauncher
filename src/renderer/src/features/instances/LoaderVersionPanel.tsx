@@ -24,6 +24,8 @@ import { cn } from "@/lib/utils";
 import { Version } from "@renderer/classes/Version";
 import { FactRow, FactRows } from "@renderer/components/FactRows";
 import { Hint } from "@renderer/components/Hint";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { Empty, EmptyDescription } from "@/components/ui/empty";
 import { LoaderIcon, getLoaderInfo } from "@renderer/components/Loaders";
 import {
   PickerItem,
@@ -35,6 +37,7 @@ import {
   pickSuggestedLoaderVersion,
   resolveLoaderChangeBlock,
 } from "./loaderUpdate";
+import { ListSkeleton } from "@renderer/components/ListSkeleton";
 
 type LoaderBlockInput = Omit<
   Parameters<typeof resolveLoaderChangeBlock>[0],
@@ -45,7 +48,7 @@ const DIRECTION_TONE: Record<LoaderDirection, string> = {
   upgrade: "border-success/30 bg-success/12 text-success",
   downgrade: "border-warning/30 bg-warning/12 text-warning",
   current: "border-border bg-surface-3 text-muted-foreground",
-  switch: "border-primary/30 bg-primary/12 text-primary",
+  switch: "border-info/30 bg-info/12 text-info",
 };
 
 function Note({
@@ -299,14 +302,16 @@ export function LoaderVersionPanel({
     <div className="flex h-full min-h-0 flex-col gap-2">
       <div className="flex h-7 shrink-0 items-center gap-2">
         <Layers className="size-3.5 shrink-0 text-faint" />
-        <span className="min-w-0 flex-1 truncate text-[0.68rem] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-          {t("versions.loaderVersion")}
-        </span>
+        <Hint content={t("versions.loaderVersion")} variant="text" truncatedOnly>
+          <span className="min-w-0 flex-1 truncate text-2xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
+            {t("versions.loaderVersion")}
+          </span>
+        </Hint>
         <Button
           type="button"
           size="sm"
           variant="ghost"
-          className="h-6 px-2 text-[0.7rem] text-faint"
+          className="h-6 px-2 text-2xs text-faint"
           onClick={onClose}
         >
           <X />
@@ -338,34 +343,24 @@ export function LoaderVersionPanel({
             ) : undefined
           }
           filters={
-            hiddenBetaCount > 0
-              ? (["stable", "all"] as const).map((filter) => {
-                  const isActive = filter === "all" ? showAll : !showAll;
-
-                  return (
-                    <button
-                      key={filter}
-                      type="button"
-                      aria-pressed={isActive}
-                      data-indicator-active={isActive}
-                      onClick={() => setShowAll(filter === "all")}
-                      className={cn(
-                        "relative flex h-6 items-center gap-1 rounded-md px-1.5 text-[0.65rem] transition-colors",
-                        isActive
-                          ? "text-foreground"
-                          : "text-faint hover:text-muted-foreground",
-                      )}
-                    >
-                      {t(`loaderUpdate.filters.${filter}`)}
-                      {filter === "all" && (
-                        <span className="font-mono tabular-nums text-faint">
-                          +{hiddenBetaCount}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })
-              : undefined
+            hiddenBetaCount > 0 ? (
+              <SegmentedControl
+                value={showAll ? "all" : "stable"}
+                ariaLabel={t("versions.loaderVersion")}
+                options={[
+                  {
+                    value: "stable",
+                    label: t("loaderUpdate.filters.stable"),
+                  },
+                  {
+                    value: "all",
+                    label: t("loaderUpdate.filters.all"),
+                    count: hiddenBetaCount,
+                  },
+                ]}
+                onChange={(filter) => setShowAll(filter === "all")}
+              />
+            ) : undefined
           }
           onSelect={(id) => {
             pickedByUser.current = true;
@@ -381,9 +376,11 @@ export function LoaderVersionPanel({
               </span>
 
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="truncate text-xs text-muted-foreground">
-                  {info.name} · Minecraft {conf.version.id}
-                </span>
+                <Hint content={`${info.name} · Minecraft ${conf.version.id}`} variant="text" truncatedOnly>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {info.name} · Minecraft {conf.version.id}
+                  </span>
+                </Hint>
                 <span className="flex min-w-0 items-center gap-2 font-mono text-lg leading-tight font-semibold tabular-nums">
                   <span
                     className={cn(
@@ -409,7 +406,7 @@ export function LoaderVersionPanel({
               {selected && (
                 <span
                   className={cn(
-                    "flex h-5 shrink-0 items-center rounded-md border px-1.5 text-[0.65rem] font-medium whitespace-nowrap",
+                    "flex h-5 shrink-0 items-center rounded-md border px-1.5 text-3xs font-medium whitespace-nowrap",
                     DIRECTION_TONE[selected.direction],
                   )}
                 >
@@ -449,9 +446,9 @@ export function LoaderVersionPanel({
             {(["stage", "verify", "swap"] as const).map((step, index) => (
               <li
                 key={step}
-                className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5 py-2 text-[0.7rem] text-muted-foreground"
+                className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5 py-2 text-2xs text-muted-foreground"
               >
-                <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-surface-3 font-mono text-[0.6rem] text-foreground tabular-nums">
+                <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-surface-3 font-mono text-3xs text-foreground tabular-nums">
                   {index + 1}
                 </span>
                 <Hint
@@ -470,11 +467,13 @@ export function LoaderVersionPanel({
           <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
             <header className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-3">
               <ListChecks className="size-3.5 shrink-0 text-faint" />
-              <span className="min-w-0 flex-1 truncate text-[0.68rem] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                {t("loaderUpdate.requirements.title")}
-              </span>
+              <Hint content={t("loaderUpdate.requirements.title")} variant="text" truncatedOnly>
+                <span className="min-w-0 flex-1 truncate text-2xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                  {t("loaderUpdate.requirements.title")}
+                </span>
+              </Hint>
               {requirementRows.length > 0 && (
-                <span className="shrink-0 font-mono text-[0.7rem] tabular-nums text-faint">
+                <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
                   {requirementRows.length}
                 </span>
               )}
@@ -488,20 +487,23 @@ export function LoaderVersionPanel({
 
             <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
               {isScanning && !scan ? (
-                <p className="flex h-full items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                  <Loader2 className="size-3.5 animate-spin" />
-                  {t("loaderUpdate.mods.checking")}
-                </p>
+                <ListSkeleton
+                  rows={6}
+                  rowClassName="h-7"
+                  iconClassName="size-3.5 rounded"
+                />
               ) : requirementRows.length === 0 ? (
-                <p className="flex h-full items-center justify-center px-4 text-center text-xs text-faint">
-                  {t("loaderUpdate.requirements.empty")}
-                </p>
+                <Empty className="h-full gap-2 px-4">
+                  <EmptyDescription className="text-xs text-faint">
+                    {t("loaderUpdate.requirements.empty")}
+                  </EmptyDescription>
+                </Empty>
               ) : (
                 <ul className="grid gap-px">
                   {requirementRows.map(({ requirement, title, isBlocked }) => (
                     <li
                       key={`${requirement.file}|${requirement.ranges.join("|")}`}
-                      className="flex h-7 min-w-0 items-center gap-2 rounded-md px-2 text-xs transition-colors hover:bg-surface-2"
+                      className="flex h-7 min-w-0 items-center gap-2 rounded-md px-2 text-xs transition-colors hover:bg-row-hover"
                     >
                       {isBlocked ? (
                         <TriangleAlert className="size-3 shrink-0 text-warning" />
@@ -522,7 +524,7 @@ export function LoaderVersionPanel({
                       </Hint>
                       <span
                         className={cn(
-                          "shrink-0 font-mono text-[0.7rem]",
+                          "shrink-0 font-mono text-2xs",
                           isBlocked ? "text-warning" : "text-faint",
                         )}
                       >
@@ -536,9 +538,11 @@ export function LoaderVersionPanel({
           </section>
 
           <div className="flex h-9 shrink-0 items-center gap-2">
-            <span className="min-w-0 flex-1 truncate text-xs text-warning">
-              {footerMessage}
-            </span>
+            <Hint content={footerMessage} variant="text" truncatedOnly>
+              <span className="min-w-0 flex-1 truncate text-xs text-warning">
+                {footerMessage}
+              </span>
+            </Hint>
 
             {rollbackId && (
               <Hint

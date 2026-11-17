@@ -25,6 +25,7 @@ import {
   voiceSetDeafened,
   voiceSetMicMuted,
 } from "@renderer/utilities/voiceClient";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -157,7 +158,7 @@ export function TrayHost() {
     const serialized = JSON.stringify(model);
     if (serialized === lastPushed.current) return;
     lastPushed.current = serialized;
-    void api.tray.update(model).catch(() => undefined);
+    void api.tray.update(model).catch(ignoreFailure);
   }, [isLoaded, model]);
 
   useEffect(

@@ -41,6 +41,7 @@ import {
   withoutOverrides,
 } from "@/shared/instanceSettings";
 import { downloadImage } from "@renderer/utilities/imageDownload";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -363,7 +364,7 @@ export async function createInstance(
       const serversPath = await api.path.join(versionPath, "servers.dat");
       const packServers =
         importModpack && (await api.fs.pathExists(serversPath))
-          ? await api.servers.read(serversPath).catch(() => [])
+          ? ((await api.servers.read(serversPath).catch(ignoreFailure)) ?? [])
           : [];
 
       assertWritten(
@@ -429,20 +430,20 @@ export async function createInstance(
     if (pack?.shareCode && isDownloadedVersion && store.get(networkAtom)) {
       await api.backend
         .modpackDownloaded(account.accessToken || "", pack.shareCode)
-        .catch(() => undefined);
+        .catch(ignoreFailure);
     }
 
     const importRoot = importData?.path ?? importModpack?.folderPath;
-    if (importRoot) await api.fs.rimraf(importRoot).catch(() => undefined);
+    if (importRoot) await api.fs.rimraf(importRoot).catch(ignoreFailure);
 
     store.set(versionsAtom, [...store.get(versionsAtom), instance]);
 
     return { instance, extraFilesFailed };
   } catch (error) {
     if (instance) {
-      await instance.delete(account, false).catch(() => undefined);
+      await instance.delete(account, false).catch(ignoreFailure);
     } else {
-      await api.fs.rimraf(versionPath).catch(() => undefined);
+      await api.fs.rimraf(versionPath).catch(ignoreFailure);
     }
 
     throw error;

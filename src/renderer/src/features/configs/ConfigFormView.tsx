@@ -13,6 +13,12 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Hint } from "@renderer/components/Hint";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+} from "@/components/ui/empty";
+import {
   ConfigDocument,
   ConfigField,
   descriptionLines,
@@ -171,9 +177,9 @@ function FieldControl({
       <Hint
         content={items ? items.join("\n") : field.raw}
         variant="text"
-        className="max-w-96 font-mono text-[0.7rem] whitespace-pre-wrap"
+        className="max-w-96 font-mono text-2xs whitespace-pre-wrap"
       >
-        <span className="min-w-0 truncate rounded-md bg-surface-2 px-2 py-1 font-mono text-[0.7rem] text-muted-foreground">
+        <span className="min-w-0 truncate rounded-md bg-surface-2 px-2 py-1 font-mono text-2xs text-muted-foreground">
           {items
             ? items.length
               ? t("configs.form.items", { count: items.length })
@@ -307,7 +313,7 @@ export function ConfigFormView({
             }}
           />
         </div>
-        <span className="shrink-0 font-mono text-[0.65rem] tabular-nums text-faint">
+        <span className="shrink-0 font-mono text-3xs tabular-nums text-faint">
           {needle
             ? `${visible.length}/${views.length}`
             : t("configs.form.count", { count: views.length })}
@@ -316,20 +322,27 @@ export function ConfigFormView({
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {visible.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-            <SearchX className="size-5 text-faint" />
-            <p className="text-xs text-muted-foreground">
-              {t("configs.form.notFound")}
-            </p>
-          </div>
+          <Empty className="h-full border-0 bg-transparent">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <SearchX />
+              </EmptyMedia>
+              <EmptyDescription>{t("configs.form.notFound")}</EmptyDescription>
+            </EmptyHeader>
+            <Button variant="outline" size="sm" onClick={() => setQuery("")}>
+              {t("configs.clearSearch")}
+            </Button>
+          </Empty>
         ) : (
           sections.map((section) => (
             <section key={section.key} className="flex flex-col">
               {section.title && (
                 <header className="sticky top-0 z-10 flex h-8 shrink-0 items-center border-b border-border/60 bg-card px-3">
-                  <span className="truncate font-mono text-[0.68rem] font-semibold tracking-wide text-faint">
-                    {section.title}
-                  </span>
+                  <Hint content={section.title} variant="text" truncatedOnly>
+                    <span className="truncate font-mono text-2xs font-semibold tracking-wide text-faint">
+                      {section.title}
+                    </span>
+                  </Hint>
                 </header>
               )}
 
@@ -345,16 +358,18 @@ export function ConfigFormView({
                   >
                     <div className="flex min-w-0 flex-col gap-0.5">
                       <span className="flex min-w-0 items-baseline gap-2">
-                        <span className="min-w-0 truncate text-xs font-medium text-foreground">
-                          {view.label}
-                        </span>
+                        <Hint content={view.label} variant="text" truncatedOnly>
+                          <span className="min-w-0 truncate text-xs font-medium text-foreground">
+                            {view.label}
+                          </span>
+                        </Hint>
                         {view.label !== view.field.key && (
                           <Hint
                             content={view.field.key}
                             variant="text"
                             truncatedOnly
                           >
-                            <span className="min-w-0 truncate font-mono text-[0.65rem] text-faint">
+                            <span className="min-w-0 truncate font-mono text-3xs text-faint">
                               {view.field.key}
                             </span>
                           </Hint>
@@ -364,7 +379,7 @@ export function ConfigFormView({
                       {view.description.map((line, index) => (
                         <p
                           key={index}
-                          className="text-[0.7rem] leading-4 [overflow-wrap:anywhere] text-muted-foreground"
+                          className="text-2xs leading-4 [overflow-wrap:anywhere] text-muted-foreground"
                         >
                           {line}
                         </p>
@@ -373,7 +388,7 @@ export function ConfigFormView({
                       {(view.min !== undefined ||
                         view.max !== undefined ||
                         view.defaultLabel !== undefined) && (
-                        <p className="flex flex-wrap gap-x-3 font-mono text-[0.65rem] text-faint">
+                        <p className="flex flex-wrap gap-x-3 font-mono text-3xs text-faint">
                           {(view.min !== undefined ||
                             view.max !== undefined) && (
                             <span>
@@ -396,7 +411,11 @@ export function ConfigFormView({
 
                     <div className="flex items-center gap-1 pt-0.5">
                       {!isDefault && view.defaultValue !== null && (
-                        <Hint content={t("configs.form.resetField")}>
+                        <Hint
+                          content={
+                            disabled ? undefined : t("configs.form.resetField")
+                          }
+                        >
                           <Button
                             size="icon-sm"
                             variant="ghost"

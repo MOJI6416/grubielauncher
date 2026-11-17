@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Copy, ExternalLink, FolderOpen, ImageUp, Trash2 } from "lucide-react";
-import { toast } from "sonner";
-import { Confirmation } from "@renderer/components/Modals/Confirmation";
+import { showFailureToast } from "@renderer/utilities/failures";
+import { removeWithUndo } from "@renderer/utilities/removeWithUndo";
 import {
   MediaViewer,
   MediaViewerAction,
@@ -16,6 +16,7 @@ import type { InstanceScreenshot } from "./useInstanceInsights";
 import { captureCopyAnchor, flashCopied } from "@renderer/utilities/copyFeedback";
 
 const api = window.api;
+
 
 function shotSource(file: string) {
   return resolveLocalImage(toFileUrl(file));
@@ -35,14 +36,18 @@ export function ScreenshotViewer({
   const { t } = useTranslation();
   const [shots, setShots] = useState<InstanceScreenshot[] | null>(null);
   const [index, setIndex] = useState(0);
-  const [isDeleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     void (async () => {
       const names = sortScreenshots(
-        await api.fs.readdir(folder).catch(() => [] as string[]),
+        await api.fs.readdir(folder).catch((error) => {
+          showFailureToast(t("versions.screenshots.loadFailed"), error, {
+            channels: ["fs:readdir"],
+          });
+          return [] as string[];
+        }),
       );
       const list = await Promise.all(
         names.map(async (name) => ({
@@ -63,7 +68,7 @@ export function ScreenshotViewer({
     return () => {
       cancelled = true;
     };
-  }, [folder, initialPath]);
+  }, [folder, initialPath, t]);
 
   const current = shots?.[index];
 
@@ -82,22 +87,46 @@ export function ScreenshotViewer({
   const copy = useCallback(async () => {
     if (!current) return;
     const anchor = captureCopyAnchor();
-    const ok = await api.clipboard.writeImage(current.path).catch(() => false);
-    if (ok) flashCopied(anchor);
-    else toast.error(t("common.copyFailed"));
+    const fail = (error?: unknown) =>
+      showFailureToast(t("common.copyFailed"), error, {
+        channels: ["clipboard:writeImage"],
+        fallbackDescription: t("common.copyFailedHint"),
+      });
+
+    try {
+      if (await api.clipboard.writeImage(current.path)) flashCopied(anchor);
+      else fail();
+    } catch (error) {
+      fail(error);
+    }
   }, [current, t]);
 
   const remove = useCallback(async () => {
-    if (!current) return;
-    const ok = await api.shell.trashItem(current.path).catch(() => false);
-    if (!ok) {
-      toast.error(t("versions.screenshots.deleteFailed"));
-      return;
-    }
+    if (!current || !shots) return;
+    const removed = current;
+    const position = shots.findIndex((shot) => shot.path === removed.path);
+    const removedOk = await removeWithUndo({
+      target: removed.path,
+      parkDir: api.path.join(removed.path, "..", ".."),
+      title: t("versions.screenshots.deleted"),
+      description: t("versions.screenshots.deletedHint"),
+      failTitle: t("versions.screenshots.deleteFailed"),
+      onRemoved: bumpInstanceDataRevision,
+      onRestored: () => {
+        bumpInstanceDataRevision();
+        setShots((list) => {
+          if (!list || list.some((shot) => shot.path === removed.path)) {
+            return list;
+          }
+          const restored = [...list];
+          restored.splice(Math.min(position, restored.length), 0, removed);
+          return restored;
+        });
+      },
+    });
+    if (!removedOk) return;
 
-    bumpInstanceDataRevision();
-    toast.success(t("versions.screenshots.deleted"));
-    const next = (shots ?? []).filter((shot) => shot.path !== current.path);
+    const next = shots.filter((shot) => shot.path !== removed.path);
     if (next.length === 0) {
       onClose();
       return;
@@ -109,7 +138,7 @@ export function ScreenshotViewer({
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (event.key === "Delete") {
-        setDeleteOpen(true);
+        void remove();
         return true;
       }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c") {
@@ -118,7 +147,7 @@ export function ScreenshotViewer({
       }
       return false;
     },
-    [copy],
+    [copy, remove],
   );
 
   if (!shots) return null;
@@ -131,7 +160,6 @@ export function ScreenshotViewer({
         index={index}
         onIndexChange={setIndex}
         onClose={onClose}
-        keysDisabled={isDeleteOpen}
         onKeyDown={handleKeyDown}
         actions={() =>
           current && (
@@ -167,7 +195,7 @@ export function ScreenshotViewer({
               )}
               <MediaViewerAction
                 label={t("versions.screenshots.delete")}
-                onClick={() => setDeleteOpen(true)}
+                onClick={() => void remove()}
                 danger
               >
                 <Trash2 />
@@ -176,30 +204,6 @@ export function ScreenshotViewer({
           )
         }
       />
-
-      {isDeleteOpen && current && (
-        <Confirmation
-          title={t("versions.screenshots.deleteTitle")}
-          reversible
-          content={[{ text: t("versions.screenshots.deleteBody") }]}
-          buttons={[
-            {
-              text: t("common.cancel"),
-              color: "secondary",
-              onClick: () => setDeleteOpen(false),
-            },
-            {
-              text: t("versions.screenshots.delete"),
-              color: "danger",
-              onClick: async () => {
-                setDeleteOpen(false);
-                await remove();
-              },
-            },
-          ]}
-          onClose={() => setDeleteOpen(false)}
-        />
-      )}
     </>
   );
 }

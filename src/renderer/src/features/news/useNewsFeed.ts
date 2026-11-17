@@ -35,6 +35,7 @@ import {
   splitFeed,
   unreadCount,
 } from "./feed";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -138,7 +139,7 @@ export function useNewsFeed() {
 
       const items = page.items.length
         ? page.items
-        : await api.backend.getNews().catch(() => []);
+        : ((await api.backend.getNews().catch(ignoreFailure)) ?? []);
       if (reqIdRef.current !== reqId) return;
 
       const outcome = resolveFeedOutcome({
@@ -186,7 +187,7 @@ export function useNewsFeed() {
         setLoadMoreFailed(true);
         showFailureToast(t("news.loadFailed"), undefined, {
           channels: ["backend:getNewsPage"],
-          fallbackDescription: t("news.loadFailedHint"),
+          fallbackDescription: t("news.loadFailedSource"),
         });
         return;
       }
@@ -206,7 +207,7 @@ export function useNewsFeed() {
       setLoadMoreFailed(true);
       showFailureToast(t("news.loadFailed"), error, {
         channels: ["backend:getNewsPage"],
-        fallbackDescription: t("news.loadFailedHint"),
+        fallbackDescription: t("news.loadFailedSource"),
       });
     } finally {
       if (reqIdRef.current === reqId) {

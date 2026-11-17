@@ -16,7 +16,7 @@ import {
 import { settingsAtom } from "@renderer/stores/atoms";
 import { patchSettings } from "@renderer/utilities/persistSettings";
 import { showFailureToast } from "@renderer/utilities/failures";
-import { copyToClipboard } from "@renderer/utilities/clipboard";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { newThemeId, saveUserThemes, userThemesAtom } from "./themesStore";
 
 const api = window.api;
@@ -45,7 +45,11 @@ export async function addTheme(theme: ThemeDefinition): Promise<boolean> {
     return false;
   }
 
-  await patchSettings({ themeId: theme.id }).catch(() => undefined);
+  await patchSettings({ themeId: theme.id }).catch((error) =>
+    showFailureToast(i18n.t("settings.saveFailed"), error, {
+      channels: ["fs:writeJSON"],
+    }),
+  );
   toast.success(i18n.t("theme.transfer.imported", { name: theme.name }));
   return true;
 }
@@ -96,8 +100,6 @@ export async function exportThemeToFile(theme: ThemeDefinition): Promise<void> {
 }
 
 export async function copyThemeCode(theme: ThemeDefinition): Promise<void> {
-  if (!(await copyToClipboard(encodeThemeCode(theme)))) return;
-  toast.success(i18n.t("theme.transfer.codeCopied"), {
-    description: theme.backdrop ? i18n.t("theme.transfer.codeNoPicture") : undefined,
-  });
+  if (!(await copyWithFeedback(encodeThemeCode(theme)))) return;
+  if (theme.backdrop) toast.info(i18n.t("theme.transfer.codeNoPicture"));
 }

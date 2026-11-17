@@ -38,7 +38,7 @@ export function InstanceLaunchProfileCard({
           type="button"
           size="sm"
           variant="ghost"
-          className="h-6 px-2 text-[0.7rem] text-faint"
+          className="h-6 px-2 text-2xs text-faint"
           disabled={!canCopy}
           onClick={onCopy}
         >
@@ -55,7 +55,7 @@ export function InstanceLaunchProfileCard({
         {buildMemoryArguments(memoryMb, optimizedJvm).map((flag, index) => (
           <span
             key={`inherited-${index}`}
-            className="rounded border border-border/60 bg-surface-2 px-1.5 py-0.5 font-mono text-[0.65rem] text-faint"
+            className="rounded border border-border/60 bg-surface-2 px-1.5 py-0.5 font-mono text-3xs text-faint"
           >
             {flag}
           </span>
@@ -68,7 +68,7 @@ export function InstanceLaunchProfileCard({
             allowed[index] ? (
               <span
                 key={`${kind}-${index}`}
-                className="rounded border border-primary/35 bg-primary-soft px-1.5 py-0.5 font-mono text-[0.65rem]"
+                className="rounded border border-border bg-surface-2 px-1.5 py-0.5 font-mono text-3xs"
               >
                 {redact.text(flag)}
               </span>
@@ -77,7 +77,7 @@ export function InstanceLaunchProfileCard({
                 key={`${kind}-${index}`}
                 content={t("versions.launchProfileDropped")}
               >
-                <span className="rounded border border-destructive/40 bg-destructive/10 px-1.5 py-0.5 font-mono text-[0.65rem] text-destructive line-through">
+                <span className="rounded border border-destructive/40 bg-destructive/10 px-1.5 py-0.5 font-mono text-3xs text-destructive line-through">
                   {redact.text(flag)}
                 </span>
               </Hint>
@@ -86,7 +86,7 @@ export function InstanceLaunchProfileCard({
         })}
       </div>
 
-      <div className="flex shrink-0 items-center gap-3 text-[0.7rem] text-faint">
+      <div className="flex shrink-0 items-center gap-3 text-2xs text-faint">
         <span>
           {t("versions.facts.java")}:{" "}
           <span className="font-mono">{java}</span>

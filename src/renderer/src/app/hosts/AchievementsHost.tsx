@@ -84,7 +84,7 @@ export function AchievementsHost() {
           t("achievements.unlockedToast", {
             name: t(`achievements.items.${id}.name`),
           }),
-          { icon: <Trophy className="size-4 text-primary" /> },
+          { icon: <Trophy className="size-4 text-info" /> },
         );
       }
       if (newlyEarned.length > 0) playAchievementSound();

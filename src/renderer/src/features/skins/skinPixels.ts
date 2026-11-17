@@ -8,6 +8,7 @@ import {
   SkinTextureInfo,
   SkinTextureProblem,
 } from "./skinTexture";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -79,7 +80,7 @@ export async function decodeToPixels(
 export async function loadSkinTexture(
   url: string,
 ): Promise<LoadedTextureResult> {
-  const bytes = await fetchTextureBytes(url).catch(() => null);
+  const bytes = (await fetchTextureBytes(url).catch(ignoreFailure)) ?? null;
   const check = inspectSkinTexture(bytes);
   if (!check.ok) return { ok: false, problem: check.problem };
 

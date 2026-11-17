@@ -5,6 +5,7 @@ import { Provider, type IVersion } from "@/types/ModManager";
 import { AI_PROMPT_MAX_CHARS } from "@/shared/config";
 import { accountAtom } from "@renderer/stores/atoms";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -38,7 +39,8 @@ function fetchRemoteChangelog(
 
   const task = api.modManager
     .getChangelog(provider, projectId, versionId)
-    .catch(() => null);
+    .catch(ignoreFailure)
+    .then((text) => text ?? null);
   remoteChangelogs.set(key, task);
   void task.then((text) => {
     if (text === null && remoteChangelogs.get(key) === task) {

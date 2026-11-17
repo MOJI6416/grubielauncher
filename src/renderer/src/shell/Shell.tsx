@@ -19,6 +19,7 @@ import { goBack, goForward } from "@renderer/navigation/navigate";
 import { isAgentShortcut, isSidebarShortcut } from "./shortcuts";
 import { toggleSidebar } from "./sidebarCollapse";
 import { LayoutEditBar } from "@renderer/features/layout/LayoutEditBar";
+import { describeEditTarget } from "@renderer/features/editMenu/editTarget";
 
 export function Shell({
   runGame,
@@ -74,6 +75,7 @@ export function Shell({
       }
 
       if (!event.altKey) return;
+      if (describeEditTarget(event.target, "").isEditable) return;
 
       if (event.key === "ArrowLeft") {
         event.preventDefault();

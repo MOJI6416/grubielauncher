@@ -1,3 +1,4 @@
+import { ignoreFailure } from "./ignoreFailure";
 import { ILocalAccount } from "@/types/Account";
 import { IModpack } from "@/types/Backend";
 import { IServerConf } from "@/types/Server";
@@ -179,7 +180,7 @@ export async function syncShare(
     applyJarModSet(version.version, remoteJar);
     const synced = await api.version
       .syncJarMods(version.versionPath, remoteJar)
-      .catch(() => false);
+      .catch(ignoreFailure);
     if (!synced) {
       applyJarModSet(version.version, previousJar);
       throw new ShareSyncInterruptedError(

@@ -38,11 +38,21 @@ export function InstanceJarCard({
         <Hint content={title} variant="text" truncatedOnly>
           <span className="min-w-0 truncate text-sm font-medium">{title}</span>
         </Hint>
-        <span className="truncate text-[0.7rem] text-muted-foreground">
-          {total > 0
-            ? t("jarMods.card.count", { active, total })
-            : t("jarMods.card.none")}
-        </span>
+        <Hint
+          content={
+            total > 0
+              ? t("jarMods.card.count", { active, total })
+              : t("jarMods.card.none")
+          }
+          variant="text"
+          truncatedOnly
+        >
+          <span className="truncate text-2xs text-muted-foreground">
+            {total > 0
+              ? t("jarMods.card.count", { active, total })
+              : t("jarMods.card.none")}
+          </span>
+        </Hint>
       </div>
 
       <Button
@@ -85,7 +95,7 @@ export function JarModsRow({
       )}
       <span className="shrink-0 text-xs font-medium">{t("jarMods.title")}</span>
       <Hint content={summary} variant="text" truncatedOnly>
-        <span className="min-w-0 flex-1 truncate text-[0.7rem] text-muted-foreground">
+        <span className="min-w-0 flex-1 truncate text-2xs text-muted-foreground">
           {summary}
         </span>
       </Hint>

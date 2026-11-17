@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -32,6 +33,8 @@ import {
 import { formatBytes } from "@renderer/utilities/file";
 import { useInstanceDiskUsage } from "@renderer/features/instances/useInstanceInsights";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { Hint } from "@renderer/components/Hint";
+import { formatNumber } from "@renderer/utilities/numbers";
 
 const api = window.api;
 
@@ -301,9 +304,11 @@ export function Export({
       >
         <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
           <FolderArchive className="size-4 shrink-0 text-faint" />
-          <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
-            {t("export.title")}
-          </DialogTitle>
+          <Hint content={t("export.title")} variant="text" truncatedOnly>
+            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+              {t("export.title")}
+            </DialogTitle>
+          </Hint>
         </DialogHeader>
 
         <div className="grid gap-3 px-4 py-3">
@@ -313,7 +318,7 @@ export function Export({
 
           <div className="grid grid-cols-2 gap-2">
             <div className="grid gap-1 rounded-lg border border-border bg-surface-2 px-2.5 py-2">
-              <span className="flex items-center gap-1.5 text-[0.65rem] tracking-[0.09em] text-faint uppercase">
+              <span className="flex items-center gap-1.5 text-3xs tracking-[0.09em] text-faint uppercase">
                 <HardDrive className="size-3" />
                 {t("versions.facts.diskUsage")}
               </span>
@@ -327,12 +332,12 @@ export function Export({
             </div>
 
             <div className="grid gap-1 rounded-lg border border-border bg-surface-2 px-2.5 py-2">
-              <span className="flex items-center gap-1.5 text-[0.65rem] tracking-[0.09em] text-faint uppercase">
+              <span className="flex items-center gap-1.5 text-3xs tracking-[0.09em] text-faint uppercase">
                 <Boxes className="size-3" />
                 {t("modManager.projectTypes.mod")}
               </span>
               <span className="font-mono text-sm tabular-nums">
-                {modsCount}
+                {formatNumber(modsCount)}
               </span>
             </div>
           </div>
@@ -351,21 +356,39 @@ export function Export({
               )}
             </span>
 
-            <span className="grid min-w-0 flex-1">
-              <span className="truncate text-sm">
-                {redact.path(folderPath) || t("export.selectFolder")}
+            <Hint
+              variant="text"
+              truncatedOnly
+              content={
+                <span className="flex flex-col gap-0.5">
+                  <span>
+                    {redact.path(folderPath) || t("export.selectFolder")}
+                  </span>
+                  {folderPath && archiveName && (
+                    <span className="font-mono">{archiveName}</span>
+                  )}
+                  {folderPath && isNameTaken && (
+                    <span>{t("export.nameTaken")}</span>
+                  )}
+                </span>
+              }
+            >
+              <span className="grid min-w-0 flex-1">
+                <span className="truncate text-sm">
+                  {redact.path(folderPath) || t("export.selectFolder")}
+                </span>
+                {folderPath && archiveName && (
+                  <span className="truncate font-mono text-2xs text-faint">
+                    {archiveName}
+                  </span>
+                )}
+                {folderPath && isNameTaken && (
+                  <span className="truncate text-2xs text-warning">
+                    {t("export.nameTaken")}
+                  </span>
+                )}
               </span>
-              {folderPath && archiveName && (
-                <span className="truncate font-mono text-[0.7rem] text-faint">
-                  {archiveName}
-                </span>
-              )}
-              {folderPath && isNameTaken && (
-                <span className="truncate text-[0.7rem] text-warning">
-                  {t("export.nameTaken")}
-                </span>
-              )}
-            </span>
+            </Hint>
 
             <span className="shrink-0 text-xs text-muted-foreground">
               {t("common.choose")}
@@ -373,7 +396,12 @@ export function Export({
           </button>
         </div>
 
-        <div className="grid gap-2 border-t border-border bg-surface-2 px-4 py-3">
+        <DialogFooter className="m-0 gap-2 rounded-b-none px-4 py-3 sm:flex-col sm:items-stretch sm:justify-start">
+          {!stage && !folderPath && (
+            <p className="text-xs text-muted-foreground">
+              {t("export.selectFolder")}
+            </p>
+          )}
           {stage && (
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="size-3.5 animate-spin" />
@@ -389,19 +417,24 @@ export function Export({
                 : t("export.stageArchiving")}
             </p>
           )}
-          <Button
-            className="h-10 w-full"
-            disabled={!folderPath || isLoading}
-            onClick={() => void handleExport()}
-          >
-            {isLoading ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <FolderArchive />
-            )}
-            {t("export.btn")}
-          </Button>
-        </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" disabled={isLoading} onClick={onClose}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={!folderPath || isLoading}
+              onClick={() => void handleExport()}
+            >
+              {isLoading ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <FolderArchive />
+              )}
+              {t("export.btn")}
+            </Button>
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

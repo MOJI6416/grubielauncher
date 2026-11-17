@@ -217,7 +217,7 @@ export function TagsInput({
         </PopoverContent>
       </Popover>
 
-      <div className="flex items-center justify-between gap-2 text-[0.7rem]">
+      <div className="flex items-center justify-between gap-2 text-2xs">
         <span className={cn(canAdd ? "text-faint" : "text-warning")}>
           {canAdd ? t("tagsInput.hint") : t("tagsInput.limitReached")}
         </span>

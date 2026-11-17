@@ -7,7 +7,6 @@ import {
   preventShiftTextSelection,
   readSelectionGesture,
 } from "@renderer/utilities/rangeSelection";
-import { SiCurseforge, SiModrinth } from "react-icons/si";
 import { ArrowRight, CircleAlert, FileBox } from "lucide-react";
 import { ILocalIdentifyMatch, Provider } from "@/types/ModManager";
 import {
@@ -22,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Hint } from "@renderer/components/Hint";
 import { ProjectIcon } from "./ProjectIcon";
+import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
 
 export interface IdentifyReport {
   matches: ILocalIdentifyMatch[];
@@ -136,19 +136,17 @@ export function IdentifyLocalDialog({
 
                   <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
                     <div className="flex min-w-0 items-center gap-1.5">
-                      {match.provider === Provider.CURSEFORGE ? (
-                        <SiCurseforge className="size-3 shrink-0 text-faint" />
-                      ) : (
-                        <SiModrinth className="size-3 shrink-0 text-faint" />
-                      )}
+                      <ContentProviderIcon provider={match.provider} className="size-3 text-faint" />
                       <Hint content={match.project.title} variant="text" truncatedOnly>
                         <span className="truncate text-sm leading-4 text-foreground">
                           {match.project.title}
                         </span>
                       </Hint>
-                      <span className="shrink-0 truncate font-mono text-[0.6875rem] text-faint">
-                        {match.version.versionNumber || match.version.name}
-                      </span>
+                      <Hint content={match.version.versionNumber || match.version.name} variant="text" truncatedOnly>
+                        <span className="shrink-0 truncate font-mono text-2xs text-faint">
+                          {match.version.versionNumber || match.version.name}
+                        </span>
+                      </Hint>
                     </div>
                     <Hint content={fileName} variant="text" truncatedOnly>
                       <span className="flex min-w-0 items-center gap-1 text-xs leading-4 text-faint">

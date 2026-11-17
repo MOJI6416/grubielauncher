@@ -2,8 +2,17 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
 import { toast } from "sonner";
-import { ExternalLink, Loader2 } from "lucide-react";
+import { CloudOff, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+} from "@/components/ui/empty";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ListSkeleton } from "@renderer/components/ListSkeleton";
 import { IUser } from "@/types/IUser";
 import { LITTLESKIN_CLOSET_URL } from "@/shared/config";
 import { ISkinData } from "@/types/Skin";
@@ -50,8 +59,6 @@ import {
   ProfileSection,
   resolveProfileSection,
 } from "@renderer/features/profile/sections";
-import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
-import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 
 const api = window.api;
 
@@ -94,7 +101,6 @@ export default function AccountInfo({
   onUserSynced?: (user: IUser) => void;
 }) {
   const { t } = useTranslation();
-  const sectionIndicator = useSlidingIndicator<HTMLElement>();
 
   const localAccount = useAtomValue(accountAtom);
   const authData = useAtomValue(authDataAtom);
@@ -280,28 +286,30 @@ export default function AccountInfo({
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
           {tabs.length > 1 && (
-            <nav
-              ref={sectionIndicator.containerRef}
-              className="relative flex h-9 shrink-0 items-center gap-0.5 self-start rounded-lg bg-surface-1 p-1"
+            <Tabs
+              value={visibleSection ?? "overview"}
+              onValueChange={(value) =>
+                openSection(
+                  value === "overview" ? null : (value as ProfileSection),
+                )
+              }
+              className="shrink-0 gap-0 border-b border-border"
             >
-              <SlidingIndicator
-                indicator={sectionIndicator}
-                variant="fill"
-                className="rounded-md bg-surface-3"
-              />
-              {tabs.map((tab) => (
-                <button
-                  key={tab ?? "overview"}
-                  type="button"
-                  aria-pressed={visibleSection === tab}
-                  data-indicator-active={visibleSection === tab}
-                  onClick={() => openSection(tab)}
-                  className="relative rounded-md px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground aria-pressed:text-foreground"
-                >
-                  {t(TAB_LABEL[tab ?? "overview"])}
-                </button>
-              ))}
-            </nav>
+              <TabsList
+                variant="line"
+                aria-label={t("shell.nav.profile")}
+                className="h-9 gap-0 p-0"
+              >
+                {tabs.map((tab) => (
+                  <TabsTrigger
+                    key={tab ?? "overview"}
+                    value={tab ?? "overview"}
+                  >
+                    {t(TAB_LABEL[tab ?? "overview"])}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
           )}
 
           <div className="min-h-0 flex-1">
@@ -398,9 +406,12 @@ export default function AccountInfo({
 
 function SectionLoader() {
   return (
-    <div className="flex h-full items-center justify-center">
-      <Loader2 className="size-5 animate-spin text-muted-foreground" />
-    </div>
+    <ListSkeleton
+      rows={6}
+      rowClassName="h-16"
+      iconClassName="size-12 rounded-lg"
+      className="h-full"
+    />
   );
 }
 
@@ -412,9 +423,14 @@ function SectionNotice({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border px-8 text-center">
-      <p className="text-sm text-muted-foreground">{text}</p>
-      {action}
-    </div>
+    <Empty className="h-full rounded-xl border border-border px-8">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <CloudOff />
+        </EmptyMedia>
+        <EmptyDescription>{text}</EmptyDescription>
+      </EmptyHeader>
+      {action && <EmptyContent>{action}</EmptyContent>}
+    </Empty>
   );
 }

@@ -40,7 +40,7 @@ function SourceChip({ source }: { source: JavaRuntimeInfo["source"] }) {
   return (
     <span
       className={cn(
-        "shrink-0 rounded-md border px-1.5 py-px text-[0.65rem] leading-4",
+        "shrink-0 rounded-md border px-1.5 py-px text-3xs leading-4",
         source === "custom"
           ? "border-border bg-surface-3 text-foreground"
           : "border-border/70 text-faint",
@@ -69,13 +69,15 @@ function RuntimeRow({
       <span className="w-14 shrink-0 font-mono text-xs tabular-nums text-foreground">
         Java {runtime.major}
       </span>
-      <span className="w-40 shrink-0 truncate text-xs text-muted-foreground">
-        {runtimeName(runtime)}
-      </span>
+      <Hint content={runtimeName(runtime)} variant="text" truncatedOnly>
+        <span className="w-40 shrink-0 truncate text-xs text-muted-foreground">
+          {runtimeName(runtime)}
+        </span>
+      </Hint>
       <Hint content={shownPath} variant="text" truncatedOnly>
         <span
           className={cn(
-            "min-w-0 flex-1 truncate font-mono text-[0.65rem] text-faint",
+            "min-w-0 flex-1 truncate font-mono text-3xs text-faint",
             redact.active && "streamer-mask",
           )}
         >
@@ -83,11 +85,11 @@ function RuntimeRow({
         </span>
       </Hint>
       {runtime.missing ? (
-        <span className="shrink-0 text-[0.7rem] text-warning">
+        <span className="shrink-0 text-2xs text-warning">
           {t("java.missing")}
         </span>
       ) : chosenFor !== null ? (
-        <span className="shrink-0 text-[0.7rem] text-success">
+        <span className="shrink-0 text-2xs text-success">
           {t("java.chosenFor", { major: chosenFor })}
         </span>
       ) : null}

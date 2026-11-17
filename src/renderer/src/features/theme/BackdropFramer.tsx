@@ -130,7 +130,7 @@ export function BackdropFramer({
         <BackdropPicture url={url} frame={backdrop} blur={backdrop.blur} unit="cqw" />
       </div>
       {canPan && (
-        <div className="flex min-w-0 items-center gap-2 text-[0.65rem] leading-tight text-faint">
+        <div className="flex min-w-0 items-center gap-2 text-3xs leading-tight text-faint">
           <span className="min-w-0 flex-1">{t("theme.editor.framingHint")}</span>
           {!isCentered && (
             <button

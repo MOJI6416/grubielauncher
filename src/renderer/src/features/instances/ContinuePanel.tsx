@@ -9,6 +9,7 @@ import {
   Server,
   Skull,
 } from "lucide-react";
+import { Empty, EmptyDescription } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Version } from "@renderer/classes/Version";
@@ -135,11 +136,11 @@ export function ContinuePanel({
   return (
     <div className="flex h-full min-h-0 flex-col gap-1.5 border-l border-border bg-surface-1/70 px-3 py-3 backdrop-blur-sm">
       <div className="flex h-5 shrink-0 items-center gap-2">
-        <span className="text-[0.65rem] font-semibold tracking-[0.09em] text-faint uppercase">
+        <span className="text-3xs font-semibold tracking-[0.09em] text-faint uppercase">
           {t("home.continue.title")}
         </span>
         {total > targets.length && (
-          <span className="font-mono text-[0.65rem] text-faint">
+          <span className="font-mono text-3xs text-faint">
             +{total - targets.length}
           </span>
         )}
@@ -147,7 +148,7 @@ export function ContinuePanel({
           <button
             type="button"
             onClick={() => openTab(allTab)}
-            className="ml-auto flex shrink-0 items-center gap-0.5 rounded text-[0.7rem] text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="ml-auto flex shrink-0 items-center gap-0.5 rounded text-2xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             {t("home.continue.all")}
             <ChevronRight className="size-3" />
@@ -161,9 +162,11 @@ export function ContinuePanel({
           <Skeleton className="h-11 w-full rounded-lg" />
         </div>
       ) : targets.length === 0 ? (
-        <p className="px-1.5 text-[0.7rem] leading-snug text-faint">
-          {t("home.continue.empty")}
-        </p>
+        <Empty className="gap-1 p-1.5">
+          <EmptyDescription className="text-2xs leading-snug text-faint">
+            {t("home.continue.empty")}
+          </EmptyDescription>
+        </Empty>
       ) : (
         <ul className="flex min-h-0 flex-col gap-1.5">
           {targets.map((target) => {
@@ -189,12 +192,20 @@ export function ContinuePanel({
                 <Hint
                   variant="text"
                   side="left"
+                  truncatedOnly={quick}
                   content={
-                    quick
-                      ? undefined
-                      : target.kind === "world"
-                        ? t("home.continue.quickUnsupported")
-                        : t("home.continue.quickUnsupportedServer")
+                    quick ? (
+                      `${target.name} · ${subtitle}`
+                    ) : (
+                      <span className="flex flex-col gap-0.5">
+                        <span className="font-medium">{target.name}</span>
+                        <span>
+                          {target.kind === "world"
+                            ? t("home.continue.quickUnsupported")
+                            : t("home.continue.quickUnsupportedServer")}
+                        </span>
+                      </span>
+                    )
                   }
                 >
                   <button
@@ -204,7 +215,7 @@ export function ContinuePanel({
                     className={cn(
                       "group flex h-11 w-full items-center gap-2.5 rounded-lg px-1.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                       destination
-                        ? "hover:bg-surface-3"
+                        ? "hover:bg-row-hover"
                         : "cursor-default opacity-60",
                     )}
                   >
@@ -238,7 +249,7 @@ export function ContinuePanel({
                           {target.name}
                         </span>
                       </span>
-                      <span className="flex min-w-0 items-center gap-1.5 text-[0.65rem] text-faint">
+                      <span className="flex min-w-0 items-center gap-1.5 text-3xs text-faint">
                         {target.kind === "server" && (
                           <StatusDot state={ping?.state ?? "pending"} />
                         )}
@@ -281,7 +292,7 @@ export function ContinuePanel({
               )}
             >
               <shortcut.icon className="size-3.5 shrink-0" />
-              <span className="font-mono text-[0.7rem] tabular-nums">
+              <span className="font-mono text-2xs tabular-nums">
                 {shortcut.pending ? "…" : shortcut.count}
               </span>
             </button>

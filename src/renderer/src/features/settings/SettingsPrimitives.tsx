@@ -45,10 +45,14 @@ export function SettingsGroup({
     <section className={cn("min-w-0", className)}>
       {title && (
         <div className="mb-1.5 flex items-baseline gap-2 px-0.5">
-          <h3 className="text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
+          <h3 className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
             {title}
           </h3>
-          {hint && <span className="truncate text-xs text-faint">{hint}</span>}
+          {hint && (
+            <Hint content={hint} variant="text" truncatedOnly>
+              <span className="truncate text-xs text-faint">{hint}</span>
+            </Hint>
+          )}
         </div>
       )}
       <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
@@ -95,7 +99,7 @@ export function SettingRow({
               <Hint content={t("settings.changed")}>
                 <span
                   aria-label={t("settings.changed")}
-                  className="size-1.5 shrink-0 rounded-full bg-primary"
+                  className="size-1.5 shrink-0 rounded-full bg-info"
                 />
               </Hint>
             )}
@@ -133,46 +137,6 @@ export function SettingRow({
   );
 }
 
-export function Segmented<T extends string>({
-  value,
-  options,
-  onChange,
-  ariaLabel,
-}: {
-  value: T;
-  options: { value: T; label: string; icon?: ReactNode; disabled?: boolean }[];
-  onChange: (value: T) => void;
-  ariaLabel?: string;
-}) {
-  return (
-    <div
-      role="radiogroup"
-      aria-label={ariaLabel}
-      className="flex items-center gap-0.5 rounded-lg border border-border bg-surface-2 p-0.5"
-    >
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          role="radio"
-          aria-checked={value === option.value}
-          disabled={option.disabled}
-          onClick={() => onChange(option.value)}
-          className={cn(
-            "flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs transition-colors disabled:pointer-events-none disabled:opacity-35",
-            value === option.value
-              ? "bg-surface-3 text-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {option.icon}
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export function PathRow({
   label,
   path,
@@ -192,7 +156,7 @@ export function PathRow({
         type="button"
         onClick={onOpen}
         disabled={!path}
-        className="flex w-full items-center gap-3 px-3.5 py-2 text-left transition-colors hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex w-full items-center gap-3 px-3.5 py-2 text-left transition-colors hover:bg-row-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
         <span className="w-24 shrink-0 text-sm text-foreground">{label}</span>
         <span className="min-w-0 flex-1 truncate font-mono text-xs text-faint">

@@ -1,21 +1,16 @@
 import { useMemo, useState } from "react";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
   BellOff,
   ChevronRight,
   ClipboardList,
   Copy,
-  LifeBuoy,
-  Sparkles,
+  ScrollText,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import {
-  aiCrashOpenKeyAtom,
-  aiCrashesAtom,
-  errorLogAtom,
-} from "@renderer/stores/atoms";
+import { aiCrashesAtom, errorLogAtom } from "@renderer/stores/atoms";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,15 +24,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Empty,
   EmptyHeader,
   EmptyMedia,
@@ -49,19 +35,26 @@ import {
   groupErrorLog,
 } from "@renderer/features/logs/errorLog";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
-import { openSupportReport } from "@renderer/features/support/supportReport";
+import { showUndoToast } from "@renderer/utilities/undoToast";
+import { navigate } from "@renderer/navigation/navigate";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 export function ErrorLog({ onClose }: { onClose: () => void }) {
   const [errorLog, setErrorLog] = useAtom(errorLogAtom);
   const aiCrashes = useAtomValue(aiCrashesAtom);
-  const setAiCrashOpenKey = useSetAtom(aiCrashOpenKeyAtom);
-  const [confirmClear, setConfirmClear] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const { t, i18n } = useTranslation();
   const redact = useRedact();
 
   const groups = useMemo(() => groupErrorLog(errorLog), [errorLog]);
+
+  const clear = () => {
+    const previous = errorLog;
+    setErrorLog([]);
+    showUndoToast(t("errorLog.cleared"), () =>
+      setErrorLog((current) => [...current, ...previous]),
+    );
+  };
 
   const absolute = (time: number) =>
     new Date(time).toLocaleString(i18n.language, {
@@ -145,7 +138,7 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
                       {group.count > 1 && (
                         <Badge
                           variant="secondary"
-                          className="shrink-0 font-mono text-[0.65rem] tabular-nums"
+                          className="shrink-0 font-mono text-3xs tabular-nums"
                         >
                           ×{group.count}
                         </Badge>
@@ -157,15 +150,18 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
                           variant="secondary"
                           className="shrink-0"
                           onClick={() => {
-                            const key = group.crashKey as string;
                             onClose();
-                            setTimeout(() => setAiCrashOpenKey(key), 0);
+                            navigate({
+                              name: "instance",
+                              id:
+                                crash.crash.versionPath ||
+                                crash.crash.versionName,
+                              tab: "logs",
+                            });
                           }}
                         >
-                          <Sparkles className="size-3.5" />
-                          {crash.analysis
-                            ? t("aiCrash.showResult")
-                            : t("aiCrash.analyzeAction")}
+                          <ScrollText className="size-3.5" />
+                          {t("errorLog.openLogs")}
                         </Button>
                       )}
 
@@ -189,7 +185,7 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
                     </div>
 
                     {expanded && group.details && (
-                      <pre className="mx-2.5 mb-2.5 max-h-56 overflow-auto rounded-lg bg-surface-1 p-2.5 font-mono text-[0.7rem] leading-relaxed whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]">
+                      <pre className="mx-2.5 mb-2.5 max-h-56 overflow-auto rounded-lg bg-surface-1 p-2.5 font-mono text-2xs leading-relaxed whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]">
                         {redact.text(group.details)}
                       </pre>
                     )}
@@ -200,64 +196,27 @@ export function ErrorLog({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <DialogFooter className="m-0 gap-2 border-t border-border bg-surface-2 px-5 py-3.5 sm:justify-between">
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              disabled={groups.length === 0}
-              onClick={async () => {
-                await copyWithFeedback(errorLogToText(groups));
-              }}
-            >
-              <ClipboardList className="size-4" />
-              {t("errorLog.copyAll")}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                onClose();
-                openSupportReport("failure");
-              }}
-            >
-              <LifeBuoy className="size-4" />
-              {t("supportReport.openAction")}
-            </Button>
-          </div>
-
+        <DialogFooter className="m-0 gap-2 border-t border-border bg-surface-2 px-5 py-3.5">
           <Button
             variant="outline"
             disabled={groups.length === 0}
-            onClick={() => setConfirmClear(true)}
+            onClick={clear}
           >
             <Trash2 className="size-4" />
             {t("errorLog.clear")}
           </Button>
+          <Button
+            variant="secondary"
+            disabled={groups.length === 0}
+            onClick={async () => {
+              await copyWithFeedback(errorLogToText(groups));
+            }}
+          >
+            <ClipboardList className="size-4" />
+            {t("errorLog.copyAll")}
+          </Button>
         </DialogFooter>
       </DialogContent>
-
-      <AlertDialog open={confirmClear} onOpenChange={setConfirmClear}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("errorLog.clear")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("errorLog.clearConfirm")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setErrorLog([]);
-                setConfirmClear(false);
-              }}
-            >
-              <Trash2 className="size-4" />
-              {t("errorLog.clear")}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Dialog>
   );
 }

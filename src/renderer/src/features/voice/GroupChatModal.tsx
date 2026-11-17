@@ -6,7 +6,7 @@ import {
   Boxes,
   Headphones,
   Loader2,
-  LogIn,
+  PhoneOff,
   Settings2,
   Users,
   X,
@@ -229,19 +229,32 @@ export function GroupChatModal({
         <Hint content={group.name} variant="text" truncatedOnly>
           <p className="min-w-0 truncate text-sm font-medium">{group.name}</p>
         </Hint>
-        <p className="flex min-w-0 items-center gap-1 truncate text-[11px] leading-4 text-muted-foreground">
-          <span>
-            {t("groups.membersCount", { count: group.members.length })}
-          </span>
-          {voiceCount > 0 && (
-            <>
-              <span className="text-faint">·</span>
-              <span className="text-success">
-                {t("voice.inVoiceCount", { count: voiceCount })}
-              </span>
-            </>
-          )}
-        </p>
+        <Hint
+          content={[
+            t("groups.membersCount", { count: group.members.length }),
+            voiceCount > 0
+              ? t("voice.inVoiceCount", { count: voiceCount })
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          variant="text"
+          truncatedOnly
+        >
+          <p className="flex min-w-0 items-center gap-1 truncate text-2xs leading-4 text-muted-foreground">
+            <span>
+              {t("groups.membersCount", { count: group.members.length })}
+            </span>
+            {voiceCount > 0 && (
+              <>
+                <span className="text-faint">·</span>
+                <span className="text-success">
+                  {t("voice.inVoiceCount", { count: voiceCount })}
+                </span>
+              </>
+            )}
+          </p>
+        </Hint>
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
@@ -252,7 +265,7 @@ export function GroupChatModal({
             className="h-8 text-destructive"
             onClick={() => void voiceDisconnect()}
           >
-            <Headphones className="size-3.5" />
+            <PhoneOff className="size-3.5" />
             {t("voice.leaveShort")}
           </Button>
         ) : (
@@ -266,7 +279,7 @@ export function GroupChatModal({
             {isJoiningVoice ? (
               <Loader2 className="size-3.5 animate-spin" />
             ) : (
-              <LogIn className="size-3.5" />
+              <Headphones className="size-3.5" />
             )}
             {t("groups.join")}
           </Button>
@@ -283,14 +296,16 @@ export function GroupChatModal({
           </Button>
         </Hint>
 
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          aria-label={t("common.close")}
-          onClick={onClose}
-        >
-          <X className="size-4" />
-        </Button>
+        <Hint content={t("common.close")}>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label={t("common.close")}
+            onClick={onClose}
+          >
+            <X className="size-4" />
+          </Button>
+        </Hint>
       </div>
     </div>
   );
@@ -345,9 +360,15 @@ export function GroupChatModal({
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-sm">
           <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
             <Boxes className="size-4 shrink-0 text-faint" />
-            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
-              {t("friends.shareBuildTitle")}
-            </DialogTitle>
+            <Hint
+              content={t("friends.shareBuildTitle")}
+              variant="text"
+              truncatedOnly
+            >
+              <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+                {t("friends.shareBuildTitle")}
+              </DialogTitle>
+            </Hint>
           </DialogHeader>
 
           <div className="grid gap-2 px-4 py-3">
@@ -361,7 +382,7 @@ export function GroupChatModal({
                   <button
                     key={version.version.name}
                     type="button"
-                    className="flex h-12 min-w-0 items-center gap-2.5 rounded-lg px-2 text-left transition-colors hover:bg-surface-3"
+                    className="flex h-12 min-w-0 items-center gap-2.5 rounded-lg px-2 text-left transition-colors hover:bg-row-hover"
                     onClick={() => {
                       const shareCode = version.version.shareCode;
                       if (!shareCode) return;
@@ -388,14 +409,20 @@ export function GroupChatModal({
                         height={32}
                       />
                     )}
-                    <span className="min-w-0 flex-1 truncate text-[13px]">
-                      {version.version.name}
-                    </span>
+                    <Hint
+                      content={version.version.name}
+                      variant="text"
+                      truncatedOnly
+                    >
+                      <span className="min-w-0 flex-1 truncate text-[13px]">
+                        {version.version.name}
+                      </span>
+                    </Hint>
                     <LoaderLabel
                       loader={version.version.loader.name}
-                      className="shrink-0 text-[11px] text-muted-foreground"
+                      className="shrink-0 text-2xs text-muted-foreground"
                     />
-                    <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint">
+                    <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
                       {version.version.version.id}
                     </span>
                   </button>
@@ -410,9 +437,15 @@ export function GroupChatModal({
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-sm">
           <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
             <Users className="size-4 shrink-0 text-faint" />
-            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
-              {t("friends.chatGroupInvite")}
-            </DialogTitle>
+            <Hint
+              content={t("friends.chatGroupInvite")}
+              variant="text"
+              truncatedOnly
+            >
+              <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+                {t("friends.chatGroupInvite")}
+              </DialogTitle>
+            </Hint>
           </DialogHeader>
 
           <div className="grid gap-2 px-4 py-3">
@@ -426,7 +459,7 @@ export function GroupChatModal({
                   <button
                     key={item._id}
                     type="button"
-                    className="flex h-11 min-w-0 items-center gap-2 rounded-lg px-2 text-left transition-colors hover:bg-surface-3"
+                    className="flex h-11 min-w-0 items-center gap-2 rounded-lg px-2 text-left transition-colors hover:bg-row-hover"
                     onClick={() => {
                       const sent = chat.sendBody({
                         _type: "groupInvite",
@@ -444,13 +477,15 @@ export function GroupChatModal({
                       setGroupPicker(false);
                     }}
                   >
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-[10px] font-semibold text-muted-foreground">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-3xs font-semibold text-muted-foreground">
                       {groupInitials(item.name)}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-[13px]">
-                      {item.name}
-                    </span>
-                    <span className="flex shrink-0 items-center gap-1 text-[11px] text-faint">
+                    <Hint content={item.name} variant="text" truncatedOnly>
+                      <span className="min-w-0 flex-1 truncate text-[13px]">
+                        {item.name}
+                      </span>
+                    </Hint>
+                    <span className="flex shrink-0 items-center gap-1 text-2xs text-faint">
                       <Users className="size-3" />
                       <span className="font-mono tabular-nums">
                         {item.members.length}

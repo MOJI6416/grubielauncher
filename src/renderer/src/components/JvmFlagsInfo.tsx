@@ -8,9 +8,12 @@ import {
 } from "@/components/ui/popover";
 import { TITLEBAR_HEIGHT } from "@/shared/titlebar";
 import { Hint } from "@renderer/components/Hint";
-import { jvmFlagGroups } from "@renderer/utilities/jvmFlagGuide";
+import {
+  AUTOMATIC_JVM_FLAGS,
+  jvmFlagGroups,
+} from "@renderer/utilities/jvmFlagGuide";
 
-const GROUPS = jvmFlagGroups();
+const GROUPS = [...jvmFlagGroups(), AUTOMATIC_JVM_FLAGS];
 
 export function JvmFlagsInfo({
   hint,
@@ -53,13 +56,13 @@ export function JvmFlagsInfo({
 
           {GROUPS.map((group) => (
             <section key={group.id} className="mt-3">
-              <h4 className="text-[0.6875rem] font-medium tracking-wide text-faint uppercase">
+              <h4 className="text-2xs font-medium tracking-wide text-faint uppercase">
                 {t(`jvmFlags.groups.${group.id}`)}
               </h4>
               <dl className="mt-1.5 grid gap-2">
                 {group.flags.map((note) => (
                   <div key={note.id}>
-                    <dt className="font-mono text-[0.7rem] text-foreground">
+                    <dt className="font-mono text-2xs text-foreground">
                       {note.flag}
                     </dt>
                     <dd className="text-xs leading-snug text-muted-foreground">

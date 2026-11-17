@@ -22,7 +22,7 @@ function OverlayHead({ speaker }: { speaker: VoiceOverlaySpeaker }) {
   return (
     <span
       className={cn(
-        "flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-md text-[10px] font-semibold ring-2 ring-success",
+        "flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-md text-3xs font-semibold ring-2 ring-success",
         speaker.isLocal
           ? "bg-primary/80 text-white"
           : "bg-surface-3 text-foreground",

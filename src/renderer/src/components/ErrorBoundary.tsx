@@ -79,7 +79,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
           </div>
 
           {this.state.summary && (
-            <pre className="max-h-40 overflow-auto rounded-lg bg-surface-1 p-3 font-mono text-[0.7rem] leading-relaxed whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]">
+            <pre className="max-h-40 overflow-auto rounded-lg bg-surface-1 p-3 font-mono text-2xs leading-relaxed whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]">
               {this.state.summary}
             </pre>
           )}

@@ -70,7 +70,7 @@ export function getDeleteCopy(gates: {
 }): DeleteCopy {
   if (!gates.foreignPublication) {
     return {
-      titleKey: "common.deletion",
+      titleKey: "versions.deleteAsk",
       descriptionKey: "versions.savesInfo",
       confirmKey: "common.delete",
       menuKey: "versions.deleteInstance",
@@ -83,7 +83,7 @@ export function getDeleteCopy(gates: {
   }
 
   return {
-    titleKey: "versions.deleteCopy.title",
+    titleKey: "versions.deleteCopy.ask",
     descriptionKey: "versions.deleteCopy.info",
     confirmKey: "versions.deleteCopy.confirm",
     menuKey: "versions.deleteCopy.menu",

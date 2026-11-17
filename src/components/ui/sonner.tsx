@@ -22,14 +22,13 @@ function Toaster({
 }: ToasterProps) {
   return (
     <Sonner
-      theme="dark"
       position={position}
       offset={offset}
       className={cn("toaster group", className)}
       icons={{
-        success: <CircleCheckIcon className="size-4 text-[var(--success)]" />,
+        success: <CircleCheckIcon className="size-4 text-success" />,
         info: <InfoIcon className="size-4 text-muted-foreground" />,
-        warning: <TriangleAlertIcon className="size-4 text-[var(--warning)]" />,
+        warning: <TriangleAlertIcon className="size-4 text-warning" />,
         error: <OctagonXIcon className="size-4 text-destructive" />,
         loading: <Loader2Icon className="size-4 animate-spin text-muted-foreground" />,
       }}
@@ -63,16 +62,16 @@ function Toaster({
           ...toastOptions?.classNames,
           toast: cn(
             "border-border bg-popover text-popover-foreground font-sans shadow-lg",
-            "max-w-[calc(100vw-2rem)] rounded-xl px-4 py-3",
+            "max-w-[calc(100vw-2rem)] rounded-xl! px-4! py-3!",
             "[&_[data-content]]:min-w-0 [&_[data-content]]:flex-1",
             toastOptions?.classNames?.toast,
           ),
           title: cn(
-            "font-sans text-sm font-medium leading-5 text-popover-foreground",
+            "font-sans text-sm! font-medium! leading-5! text-popover-foreground!",
             toastOptions?.classNames?.title,
           ),
           description: cn(
-            "font-sans text-xs leading-5 text-muted-foreground break-words whitespace-pre-line",
+            "font-sans text-xs! leading-5! text-muted-foreground! break-words whitespace-pre-line",
             toastOptions?.classNames?.description,
           ),
           icon: cn(
@@ -80,32 +79,32 @@ function Toaster({
             toastOptions?.classNames?.icon,
           ),
           success: cn(
-            "border-l-[3px] border-l-[var(--success)] [&_[data-icon]]:text-[var(--success)]",
+            "border-l-[3px]! border-l-success! [&_[data-icon]]:text-success",
             toastOptions?.classNames?.success,
           ),
           error: cn(
-            "border-l-[3px] border-l-destructive [&_[data-icon]]:text-destructive",
+            "border-l-[3px]! border-l-destructive! [&_[data-icon]]:text-destructive",
             toastOptions?.classNames?.error,
           ),
           warning: cn(
-            "border-l-[3px] border-l-[var(--warning)] [&_[data-icon]]:text-[var(--warning)]",
+            "border-l-[3px]! border-l-warning! [&_[data-icon]]:text-warning",
             toastOptions?.classNames?.warning,
           ),
           info: cn(
-            "border-l-[3px] border-l-muted-foreground/70",
+            "border-l-[3px]! border-l-muted-foreground/70!",
             toastOptions?.classNames?.info,
           ),
           loading: cn(
-            "border-l-[3px] border-l-muted-foreground/70",
+            "border-l-[3px]! border-l-muted-foreground/70!",
             toastOptions?.classNames?.loading,
           ),
           actionButton: cn(
-            "bg-primary text-primary-foreground hover:bg-primary/90",
+            "h-7! rounded-md! px-2.5! text-xs! font-medium! bg-secondary! text-secondary-foreground! hover:bg-accent!",
             "mt-2 w-full justify-center whitespace-normal text-center sm:mt-0 sm:w-auto sm:shrink-0",
             toastOptions?.classNames?.actionButton,
           ),
           cancelButton: cn(
-            "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+            "h-7! rounded-md! px-2.5! text-xs! bg-transparent! text-muted-foreground! hover:text-foreground!",
             toastOptions?.classNames?.cancelButton,
           ),
         },

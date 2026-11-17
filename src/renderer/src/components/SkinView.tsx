@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2 } from "lucide-react";
 import minecraftFontUrl from "skinview3d/assets/minecraft.woff2";
 import { ISkinData } from "@/types/Skin";
 import {
@@ -10,6 +9,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SkinStage } from "@renderer/features/skins/SkinStage";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Hint } from "@renderer/components/Hint";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 let minecraftFontPromise: Promise<void> | null = null;
 
@@ -27,7 +29,7 @@ function ensureMinecraftFont(): Promise<void> {
     minecraftFontPromise = face
       .load()
       .then(() => undefined)
-      .catch(() => undefined);
+      .catch(ignoreFailure);
   }
 
   return minecraftFontPromise;
@@ -74,9 +76,15 @@ export function SkinView({
     >
       <DialogContent aria-describedby={undefined} className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle className="truncate">
-            {nickname ?? t("skinView.title")}
-          </DialogTitle>
+          <Hint
+            content={nickname ?? t("skinView.title")}
+            variant="text"
+            truncatedOnly
+          >
+            <DialogTitle className="truncate">
+              {nickname ?? t("skinView.title")}
+            </DialogTitle>
+          </Hint>
         </DialogHeader>
 
         {isFontReady ? (
@@ -88,9 +96,7 @@ export function SkinView({
             minHeight={360}
           />
         ) : (
-          <div className="flex h-[420px] items-center justify-center">
-            <Loader2 className="size-5 animate-spin text-muted-foreground" />
-          </div>
+          <Skeleton className="h-[420px] rounded-xl" />
         )}
       </DialogContent>
     </Dialog>

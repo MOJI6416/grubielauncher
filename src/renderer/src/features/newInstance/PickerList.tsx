@@ -4,8 +4,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Loader2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
-import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
-import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { ListSkeleton } from "@renderer/components/ListSkeleton";
+import { Empty, EmptyDescription } from "@/components/ui/empty";
 
 export interface PickerItem {
   id: string;
@@ -46,7 +46,6 @@ export function PickerList({
   total?: number;
 }) {
   const { t } = useTranslation();
-  const filterIndicator = useSlidingIndicator<HTMLDivElement>();
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
     null,
   );
@@ -77,11 +76,11 @@ export function PickerList({
       )}
     >
       <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border pr-1.5 pl-2.5">
-        <span className="shrink-0 text-[0.7rem] font-semibold tracking-[0.08em] text-faint uppercase">
+        <span className="shrink-0 text-2xs font-semibold tracking-[0.08em] text-faint uppercase">
           {label}
         </span>
         {typeof total === "number" && total > 0 && (
-          <span className="shrink-0 font-mono text-[0.7rem] tabular-nums text-faint">
+          <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
             {total}
           </span>
         )}
@@ -96,21 +95,13 @@ export function PickerList({
             aria-label={`${label}: ${t("common.search")}`}
             placeholder={t("common.search")}
             onChange={(event) => onQueryChange(event.target.value)}
-            className="h-6 w-full min-w-0 rounded-md bg-surface-2 pr-2 pl-6 font-mono text-[0.7rem] text-foreground placeholder:font-sans placeholder:text-faint focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed"
+            className="h-6 w-full min-w-0 rounded-md bg-surface-2 pr-2 pl-6 font-mono text-2xs text-foreground placeholder:font-sans placeholder:text-faint focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed"
           />
         </div>
       </header>
 
       {filters && (
-        <div
-          ref={filterIndicator.containerRef}
-          className="relative flex shrink-0 items-center gap-1 border-b border-border px-1.5 py-1.5"
-        >
-          <SlidingIndicator
-            indicator={filterIndicator}
-            variant="fill"
-            className="rounded-md bg-surface-3"
-          />
+        <div className="flex shrink-0 items-center gap-1 border-b border-border px-1.5 py-1.5">
           {filters}
         </div>
       )}
@@ -119,13 +110,13 @@ export function PickerList({
         ref={setScrollElement}
         className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-1"
       >
-        {items.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
-            <p className="text-xs text-muted-foreground">
-              {isLoading ? t("common.searching") : emptyText}
-            </p>
-            {!isLoading && emptyAction}
-          </div>
+        {items.length === 0 && isLoading ? (
+          <ListSkeleton rows={10} rowClassName="h-7.5" iconClassName="hidden" />
+        ) : items.length === 0 ? (
+          <Empty className="h-full gap-2 p-4">
+            <EmptyDescription className="text-xs">{emptyText}</EmptyDescription>
+            {emptyAction}
+          </Empty>
         ) : (
           <div
             className="relative w-full"
@@ -149,7 +140,7 @@ export function PickerList({
                     height: `${row.size}px`,
                     transform: `translateY(${row.start}px)`,
                   }}
-                  className="absolute top-0 left-0 flex w-full items-center gap-2 rounded-lg px-2 text-left transition-colors hover:bg-surface-3 aria-selected:bg-primary-soft disabled:cursor-not-allowed"
+                  className="absolute top-0 left-0 flex w-full items-center gap-2 rounded-lg px-2 text-left transition-colors hover:bg-row-hover aria-selected:bg-row-selected disabled:cursor-not-allowed"
                 >
                   <Hint content={item.label} variant="text" truncatedOnly>
                     <span
@@ -167,7 +158,7 @@ export function PickerList({
                   {item.badge && (
                     <span
                       className={cn(
-                        "shrink-0 rounded px-1 py-px text-[0.6rem] leading-4",
+                        "shrink-0 rounded px-1 py-px text-3xs leading-4",
                         item.tone === "warning"
                           ? "bg-warning/15 text-warning"
                           : "bg-surface-3 text-faint",
@@ -180,7 +171,7 @@ export function PickerList({
                   {item.meta && (
                     <span
                       className={cn(
-                        "ml-auto shrink-0 text-[0.65rem] tabular-nums",
+                        "ml-auto shrink-0 text-3xs tabular-nums",
                         item.metaTone === "warning"
                           ? "text-warning"
                           : "text-faint",

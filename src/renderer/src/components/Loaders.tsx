@@ -114,9 +114,11 @@ export function LoaderLabel({
       className={`inline-flex min-w-0 items-center gap-1.5 align-middle ${className}`.trim()}
     >
       <span className={`size-1.5 shrink-0 rounded-full ${info.dot}`} />
-      <span className={`truncate leading-tight ${textClassName}`.trim()}>
-        {info.name}
-      </span>
+      <Hint content={info.name} variant="text" truncatedOnly>
+        <span className={`truncate leading-tight ${textClassName}`.trim()}>
+          {info.name}
+        </span>
+      </Hint>
     </span>
   );
 }
@@ -155,13 +157,15 @@ export function LoaderPicker({
               aria-checked={isSelected}
               disabled={isDisabled}
               onClick={() => onSelect(loader)}
-              className="group/loader flex min-w-0 flex-col gap-1 rounded-xl border border-border bg-surface-2 px-2.5 py-2 text-left transition-colors hover:bg-surface-3 aria-checked:border-primary/70 aria-checked:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface-2"
+              className="group/loader flex min-w-0 flex-col gap-1 rounded-xl border border-border bg-surface-2 px-2.5 py-2 text-left transition-colors hover:bg-surface-3 aria-checked:border-primary/70 aria-checked:bg-row-selected disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface-2"
             >
               <span className="flex min-w-0 items-center gap-1.5">
                 <LoaderIcon loader={loader} className="size-4 shrink-0" />
-                <span className="min-w-0 flex-1 truncate text-[0.8rem] font-medium text-foreground">
-                  {info.name}
-                </span>
+                <Hint content={info.name} variant="text" truncatedOnly>
+                  <span className="min-w-0 flex-1 truncate text-[0.8rem] font-medium text-foreground">
+                    {info.name}
+                  </span>
+                </Hint>
                 {reason ? (
                   <Lock className="size-3 shrink-0 text-faint" />
                 ) : (
@@ -173,7 +177,7 @@ export function LoaderPicker({
                   />
                 )}
               </span>
-              <span className="min-w-0 text-[0.68rem] leading-snug text-muted-foreground">
+              <span className="min-w-0 text-2xs leading-snug text-muted-foreground">
                 {reason || t(`versions.loaderAbout.${loader}`)}
               </span>
             </button>
@@ -182,7 +186,7 @@ export function LoaderPicker({
       </div>
 
       <div className="flex min-w-0 items-center gap-1.5">
-        <span className="shrink-0 pr-1 text-[0.65rem] font-semibold tracking-[0.08em] text-faint uppercase">
+        <span className="shrink-0 pr-1 text-3xs font-semibold tracking-[0.08em] text-faint uppercase">
           {t("versions.legacyLoaders")}
         </span>
         {OLD_VERSION_LOADERS.map((loader) => {
@@ -202,7 +206,7 @@ export function LoaderPicker({
                 aria-checked={isSelected}
                 disabled={isDisabled}
                 onClick={() => onSelect(loader)}
-                className="flex h-7 min-w-0 items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-2.5 text-[0.75rem] font-medium text-foreground transition-colors hover:bg-surface-3 aria-checked:border-primary/70 aria-checked:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface-2"
+                className="flex h-7 min-w-0 items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-surface-3 aria-checked:border-primary/70 aria-checked:bg-row-selected disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface-2"
               >
                 <LoaderIcon loader={loader} className="size-3.5 shrink-0" />
                 <span className="truncate">{info.name}</span>

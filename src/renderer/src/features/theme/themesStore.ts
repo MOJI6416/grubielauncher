@@ -7,6 +7,7 @@ import {
 import { pathsAtom, settingsAtom } from "@renderer/stores/atoms";
 import { toFileUrl } from "@renderer/utilities/exportVersion";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -100,7 +101,7 @@ export async function pickBackdrop(): Promise<string | null> {
   if (!(await api.fs.ensure(dir))) return null;
 
   const data = await api.fs.readFileBuffer(source);
-  const fitted = data ? await fitBackdrop(data).catch(() => null) : null;
+  const fitted = data ? await fitBackdrop(data).catch(ignoreFailure) : null;
   if (fitted) {
     const target = await api.path.join(dir, `${newThemeId()}.webp`);
     return (await api.fs.writeFile(target, fitted)) ? target : null;

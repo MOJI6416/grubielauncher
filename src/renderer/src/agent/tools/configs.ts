@@ -1,3 +1,4 @@
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import {
   MAX_CONFIG_BYTES,
   collectInstanceConfigs,
@@ -53,7 +54,7 @@ function noInstance(name: unknown) {
 
 async function readText(path: string): Promise<string | null> {
   if (!(await api.fs.pathExists(path))) return null;
-  return await api.fs.readFile(path, "utf-8").catch(() => null);
+  return (await api.fs.readFile(path, "utf-8").catch(ignoreFailure)) ?? null;
 }
 
 function optionsPath(version: Version): string {
@@ -574,7 +575,7 @@ export const setModConfigValues: AgentTool = {
     }
 
     const root = backupsRoot(storage, version.versionPath);
-    const snapshotTaken = await captureSnapshot(
+    const snapshotTaken = (await captureSnapshot(
       storage,
       root,
       await loadBackupIndex(storage, root),
@@ -582,7 +583,7 @@ export const setModConfigValues: AgentTool = {
       text,
     )
       .then(() => true)
-      .catch(() => false);
+      .catch(ignoreFailure)) === true;
 
     if (!(await api.fs.writeFile(location.path, plan.text, "utf-8"))) {
       return {

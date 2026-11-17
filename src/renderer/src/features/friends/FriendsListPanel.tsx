@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TFunction } from "i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowDownAZ, Clock, Search, UserPlus, X } from "lucide-react";
+import { SearchX, Search, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Hint } from "@renderer/components/Hint";
-import { cn } from "@/lib/utils";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { SortMenu } from "@renderer/components/SortMenu";
 import { FriendRow, type FriendRowActions } from "./FriendRow";
 import {
   nextFriendIndex,
@@ -93,7 +95,9 @@ export function FriendsListPanel({
   t,
   ...actions
 }: FriendsListPanelProps) {
-  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
+    null,
+  );
   const { rows, freeze, thaw } = useSteadyRows(list.rows);
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
@@ -111,7 +115,9 @@ export function FriendsListPanel({
 
   const activeIndex = useMemo(
     () =>
-      rows.findIndex((row) => row.type === "friend" && row.key === activeFriendId),
+      rows.findIndex(
+        (row) => row.type === "friend" && row.key === activeFriendId,
+      ),
     [rows, activeFriendId],
   );
 
@@ -155,14 +161,16 @@ export function FriendsListPanel({
             onKeyDown={handleSearchKeyDown}
           />
           {query && (
-            <button
-              type="button"
-              aria-label={t("common.close")}
-              className="absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded text-faint hover:text-foreground"
-              onClick={() => onQueryChange("")}
-            >
-              <X className="size-3" />
-            </button>
+            <Hint content={t("common.clearSearch")}>
+              <button
+                type="button"
+                aria-label={t("common.clearSearch")}
+                className="absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded text-faint hover:text-foreground"
+                onClick={() => onQueryChange("")}
+              >
+                <X className="size-3" />
+              </button>
+            </Hint>
           )}
         </div>
 
@@ -179,54 +187,33 @@ export function FriendsListPanel({
         </Hint>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
-        {FILTERS.map((value) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={filter === value}
-            className={cn(
-              "h-6 rounded-md px-2 text-[11px] font-medium transition-colors",
-              filter === value
-                ? "bg-surface-3 text-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => onFilterChange(value)}
-          >
-            {t(FILTER_LABEL[value])}
-          </button>
-        ))}
+      <div className="flex shrink-0 items-center justify-between gap-1">
+        <SegmentedControl
+          value={filter}
+          ariaLabel={t("friends.filterLabel")}
+          options={FILTERS.map((value) => ({
+            value,
+            label: t(FILTER_LABEL[value]),
+          }))}
+          onChange={onFilterChange}
+          className="min-w-0 shrink"
+        />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              className="ml-auto size-6 shrink-0 text-muted-foreground"
-              aria-label={t("friends.sortLabel")}
-            >
-              {sort === "name" ? (
-                <ArrowDownAZ className="size-3.5" />
-              ) : (
-                <Clock className="size-3.5" />
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => onSortChange("activity")}>
-              <Clock />
-              {t("friends.sortActivity")}
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onSortChange("name")}>
-              <ArrowDownAZ />
-              {t("friends.sortName")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <SortMenu
+          value={sort}
+          options={[
+            { value: "activity", label: t("friends.sortActivity") },
+            { value: "name", label: t("friends.sortName") },
+          ]}
+          onChange={onSortChange}
+        />
       </div>
 
       {isLoading ? (
-        <div aria-busy className="flex min-h-0 flex-1 flex-col overflow-hidden px-0.5">
+        <div
+          aria-busy
+          className="flex min-h-0 flex-1 flex-col overflow-hidden px-0.5"
+        >
           {[3, 4].map((count, group) => (
             <div key={group} className="flex shrink-0 flex-col">
               <div className="flex h-6 shrink-0 items-center gap-1.5 px-2">
@@ -249,12 +236,27 @@ export function FriendsListPanel({
           ))}
         </div>
       ) : rows.length === 0 ? (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-4 text-center">
-          <p className="text-sm font-medium">{t("friends.nothingFound")}</p>
-          <p className="text-xs leading-5 text-muted-foreground">
-            {t("friends.nothingFoundHint")}
-          </p>
-        </div>
+        <Empty className="min-h-0 gap-3 px-4">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <SearchX />
+            </EmptyMedia>
+            <EmptyTitle>{t("friends.nothingFound")}</EmptyTitle>
+            <EmptyDescription className="text-xs leading-5">
+              {t("friends.nothingFoundHint")}
+            </EmptyDescription>
+          </EmptyHeader>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              onQueryChange("");
+              onFilterChange("all");
+            }}
+          >
+            {t("friends.resetFilters")}
+          </Button>
+        </Empty>
       ) : (
         <div
           ref={setScrollElement}
@@ -279,9 +281,11 @@ export function FriendsListPanel({
                   style={{ transform: `translateY(${item.start}px)` }}
                 >
                   {row.type === "section" ? (
-                    <p className="flex h-6 items-center gap-1.5 px-2 text-[10px] font-medium tracking-wide text-faint uppercase">
+                    <p className="flex h-6 items-center gap-1.5 px-2 text-3xs font-medium tracking-wide text-faint uppercase">
                       {t(SECTION_LABEL[row.kind])}
-                      <span className="font-mono tabular-nums">{row.count}</span>
+                      <span className="font-mono tabular-nums">
+                        {row.count}
+                      </span>
                     </p>
                   ) : (
                     <FriendRow

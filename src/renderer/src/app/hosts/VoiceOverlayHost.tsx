@@ -19,6 +19,7 @@ import {
   type IVoiceParticipantState,
   type VoiceOverlayState,
 } from "@/types/Voice";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 export function VoiceOverlayHost() {
   const session = useAtomValue(voiceSessionAtom);
@@ -54,7 +55,7 @@ export function VoiceOverlayHost() {
     );
     if (sameOverlayState(sentRef.current, next)) return;
     sentRef.current = next;
-    void window.api.voice.updateOverlay(next).catch(() => undefined);
+    void window.api.voice.updateOverlay(next).catch(ignoreFailure);
   }, [session, isGameRunning, isEnabled, headUrlOf, corner, displayId]);
 
   return null;

@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { Hint } from "@renderer/components/Hint";
 import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DiffLine, diffBlocks, diffLines, diffStats } from "./diff";
@@ -61,7 +62,9 @@ export function ConfigDiffView({
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
         <div className="flex min-w-0 flex-1 items-center gap-2 text-xs">
-          <span className="min-w-0 truncate font-medium">{title}</span>
+          <Hint content={title} variant="text" truncatedOnly>
+            <span className="min-w-0 truncate font-medium">{title}</span>
+          </Hint>
           <span className="shrink-0 font-mono tabular-nums text-success">
             +{stats.added}
           </span>
@@ -108,7 +111,7 @@ export function ConfigDiffView({
                 onClick={() =>
                   setExpanded((previous) => new Set(previous).add(index))
                 }
-                className="my-0.5 flex h-6 w-full items-center gap-2 bg-surface-1 px-3 text-left text-[0.68rem] text-faint transition-colors hover:bg-surface-2 hover:text-muted-foreground"
+                className="my-0.5 flex h-6 w-full items-center gap-2 bg-surface-1 px-3 text-left text-2xs text-faint transition-colors hover:bg-row-hover hover:text-muted-foreground"
               >
                 <ChevronsUpDown className="size-3" />
                 {t("configs.diff.hidden", { count: block.count })}

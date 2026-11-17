@@ -14,12 +14,12 @@ import {
   Info,
   LayoutTemplate,
   ListPlus,
+  MonitorPlay,
   PackageOpen,
   Paintbrush,
   PanelLeftClose,
   PanelLeftOpen,
   Play,
-  Radio,
   RotateCcw,
   ScrollText,
   Search,
@@ -30,6 +30,7 @@ import {
   TreePine,
   UserRound,
   Users,
+  Wifi,
 } from "lucide-react";
 import {
   accountAtom,
@@ -53,8 +54,12 @@ import { navigate } from "@renderer/navigation/navigate";
 import {
   agentBlockReason,
   blockReasonShortKey,
+  routeBlockReason,
 } from "@renderer/navigation/access";
+import { Hint } from "@renderer/components/Hint";
+import { showFailureToast } from "@renderer/utilities/failures";
 import { openNewInstance } from "@renderer/features/instances/newInstance";
+import { openConnectivityCheck } from "@renderer/features/install/installUi";
 import { OWN_PROFILE_ID } from "@renderer/features/profile/loadProfileUser";
 import { instanceKey } from "@renderer/features/instances/selectors";
 import { getLoaderInfo } from "@renderer/components/Loaders";
@@ -144,7 +149,7 @@ const ITEM_CLASS =
   "flex h-9 cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground data-[selected=true]:bg-primary-soft-raised data-[selected=true]:text-foreground aria-disabled:opacity-50";
 
 const GROUP_CLASS =
-  "[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[0.65rem] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:tracking-[0.09em] [&_[cmdk-group-heading]]:text-faint [&_[cmdk-group-heading]]:uppercase";
+  "[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-3xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:tracking-[0.09em] [&_[cmdk-group-heading]]:text-faint [&_[cmdk-group-heading]]:uppercase";
 
 function Highlight({ text, query }: { text: string; query: string }) {
   const ranges = useMemo(() => matchRanges(text, query), [text, query]);
@@ -201,6 +206,12 @@ export function CommandPalette({
   const selectedIdentity = account ? accountIdentity(account) : null;
   const agentBlocked = agentBlockReason(account?.type);
   const isAgentBlocked = agentBlocked !== null;
+  const onlineBlocked = routeBlockReason(
+    { name: "people" },
+    { accountType: account?.type ?? null },
+  );
+  const onlineHint = onlineBlocked ? t(blockReasonShortKey(onlineBlocked)) : undefined;
+  const runningHint = isRunning ? t("shell.palette.blockedRunning") : undefined;
 
   const items = useMemo<PaletteItem[]>(() => {
     if (!open) return [];
@@ -231,6 +242,7 @@ export function CommandPalette({
         section: "navigate",
         title: t("shell.nav.people"),
         keywords: "friends voice groups друзья голос группы друзі",
+        hint: onlineHint,
         icon: <BookUser className="size-4 text-faint" />,
         disabled: !account || account.type === "plain",
         run: () => navigate({ name: "people" }),
@@ -240,6 +252,7 @@ export function CommandPalette({
         section: "navigate",
         title: t("shell.nav.profile"),
         keywords: "skins achievements профиль скины ачивки",
+        hint: onlineHint,
         icon: <UserRound className="size-4 text-faint" />,
         disabled: !account || account.type === "plain",
         run: () => navigate({ name: "profile", userId: OWN_PROFILE_ID }),
@@ -249,6 +262,7 @@ export function CommandPalette({
         section: "navigate",
         title: t("settings.title"),
         keywords: "settings налаштування параметры",
+        hint: runningHint,
         icon: <LSettings className="size-4 text-faint" />,
         disabled: isRunning,
         run: () => navigate({ name: "settings" }),
@@ -266,9 +280,19 @@ export function CommandPalette({
         section: "actions",
         title: t("shell.nav.newInstance"),
         keywords: "create import modpack создать импорт сборка",
+        hint: runningHint,
         icon: <ListPlus className="size-4 text-faint" />,
         disabled: isRunning,
         run: () => openNewInstance(),
+      },
+      {
+        id: "action:connectivity",
+        section: "actions",
+        title: t("taskCenter.checkConnection"),
+        keywords:
+          "connection network internet mirror test соединение сеть интернет зеркало проверка з'єднання мережа",
+        icon: <Wifi className="size-4 text-faint" />,
+        run: () => openConnectivityCheck(),
       },
       {
         id: "action:streamer-mode",
@@ -278,7 +302,7 @@ export function CommandPalette({
           : t("streamer.commandOn"),
         keywords:
           "streamer stream obs twitch privacy стример стрим трансляция приватность стрімер трансляція",
-        icon: <Radio className="size-4 text-faint" />,
+        icon: <MonitorPlay className="size-4 text-faint" />,
         run: () => void setStreamerMode(!streamer.active),
       },
       {
@@ -334,7 +358,12 @@ export function CommandPalette({
         keywords: "theme тема тёмная светлая oled фон оформление dark light",
         icon: <Paintbrush className="size-4 text-faint" />,
         disabled: settings.themeId === theme.id,
-        run: () => void patchSettings({ themeId: theme.id }).catch(() => undefined),
+        run: () =>
+          void patchSettings({ themeId: theme.id }).catch((error) =>
+            showFailureToast(t("settings.saveFailed"), error, {
+              channels: ["fs:writeJSON"],
+            }),
+          ),
       })),
     ];
 
@@ -434,6 +463,7 @@ export function CommandPalette({
         section: "settings",
         title: t(`settings.sections.${section}`),
         keywords: `settings настройки налаштування ${section} ${entryWords}`,
+        hint: runningHint,
         icon: <LSettings className="size-4 text-faint" />,
         disabled: isRunning,
         run: () => navigate({ name: "settings", section }),
@@ -447,6 +477,8 @@ export function CommandPalette({
     agentBlocked,
     isAgentBlocked,
     isRunning,
+    onlineHint,
+    runningHint,
     open,
     runGame,
     selected,
@@ -490,10 +522,16 @@ export function CommandPalette({
           askAgent(query.trim());
         }}
       >
-        <Sparkles className="size-4 text-primary" />
-        <span className="min-w-0 flex-1 truncate">
-          {t("shell.palette.askAgent", { query: query.trim() })}
-        </span>
+        <Sparkles className="size-4 text-faint" />
+        <Hint
+          content={t("shell.palette.askAgent", { query: query.trim() })}
+          variant="text"
+          truncatedOnly
+        >
+          <span className="min-w-0 flex-1 truncate">
+            {t("shell.palette.askAgent", { query: query.trim() })}
+          </span>
+        </Hint>
       </Command.Item>
     ) : null;
 
@@ -505,7 +543,7 @@ export function CommandPalette({
       shouldFilter={false}
       loop
       className="flex max-h-[28rem] flex-col"
-      overlayClassName="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]"
+      overlayClassName="fixed inset-0 z-50 bg-scrim supports-backdrop-filter:backdrop-blur-xs"
       contentClassName="fixed top-20 left-1/2 z-50 w-[38rem] -translate-x-1/2 overflow-hidden rounded-2xl border border-input bg-popover shadow-2xl"
     >
       <DialogTitle className="sr-only">{t("shell.palette.label")}</DialogTitle>
@@ -561,13 +599,21 @@ export function CommandPalette({
                     onSelect={() => pick(item as PaletteItem)}
                   >
                     {(item as PaletteItem).icon}
-                    <span className="min-w-0 flex-1 truncate">
-                      <Highlight text={item.title} query={query} />
-                    </span>
-                    {(item as PaletteItem).hint && (
-                      <span className="shrink-0 truncate font-mono text-[0.7rem] text-faint">
-                        {(item as PaletteItem).hint}
+                    <Hint content={item.title} variant="text" truncatedOnly>
+                      <span className="min-w-0 flex-1 truncate">
+                        <Highlight text={item.title} query={query} />
                       </span>
+                    </Hint>
+                    {(item as PaletteItem).hint && (
+                      <Hint
+                        content={(item as PaletteItem).hint}
+                        variant="text"
+                        truncatedOnly
+                      >
+                        <span className="max-w-48 shrink-0 truncate font-mono text-2xs text-faint">
+                          {(item as PaletteItem).hint}
+                        </span>
+                      </Hint>
                     )}
                   </Command.Item>
                 ))}
@@ -586,7 +632,7 @@ export function CommandPalette({
         )}
       </Command.List>
 
-      <div className="flex h-8 shrink-0 items-center gap-3 border-t border-border px-3 text-[0.65rem] text-faint">
+      <div className="flex h-8 shrink-0 items-center gap-3 border-t border-border px-3 text-3xs text-faint">
         <span className="flex items-center gap-1">
           <CornerDownLeft className="size-3" />
           {t("shell.palette.open")}

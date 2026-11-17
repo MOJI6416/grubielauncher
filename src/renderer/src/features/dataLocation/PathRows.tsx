@@ -38,9 +38,7 @@ export function PathRows({
     >
       {rows.map((row) => (
         <div key={row.label} className="flex min-w-0 items-baseline gap-2">
-          <span className="w-14 shrink-0 text-[0.7rem] text-faint">
-            {row.label}
-          </span>
+          <span className="w-14 shrink-0 text-2xs text-faint">{row.label}</span>
           <PathText path={row.path} className="text-xs text-foreground" />
         </div>
       ))}

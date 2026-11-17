@@ -7,6 +7,7 @@ import {
   ExternalLink,
   FolderOpen,
   LifeBuoy,
+  Wifi,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -17,13 +18,18 @@ import type {
 } from "@/types/Journal";
 import type { TSettings } from "@/types/Settings";
 import { pathsAtom, versionsAtom } from "@renderer/stores/atoms";
-import { mirrorModeAtom } from "@renderer/features/install/installUi";
+import {
+  mirrorModeAtom,
+  openConnectivityCheck,
+} from "@renderer/features/install/installUi";
 import {
   formatReportBytes,
   openSupportReport,
   supportDialogAtom,
 } from "@renderer/features/support/supportReport";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { showFailureToast } from "@renderer/utilities/failures";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { Hint } from "@renderer/components/Hint";
 import { formatRelative } from "@renderer/utilities/date";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
@@ -61,8 +67,8 @@ export function SupportSection({
   const [isToggling, setToggling] = useState(false);
 
   const refresh = useCallback(() => {
-    void api.journal.status().then(setStatus);
-    void api.support.history().then(setHistory);
+    void api.journal.status().then(setStatus).catch(ignoreFailure);
+    void api.support.history().then(setHistory).catch(ignoreFailure);
   }, []);
 
   useEffect(() => {
@@ -73,9 +79,16 @@ export function SupportSection({
 
   const toggleVerbose = async (enabled: boolean) => {
     setToggling(true);
-    await api.journal.setVerbose(enabled ? VERBOSE_MINUTES : null);
-    setToggling(false);
-    refresh();
+    try {
+      await api.journal.setVerbose(enabled ? VERBOSE_MINUTES : null);
+    } catch (error) {
+      showFailureToast(t("settings.saveFailed"), error, {
+        channels: ["journal:setVerbose"],
+      });
+    } finally {
+      setToggling(false);
+      refresh();
+    }
   };
 
   const copy = async (text: string) => {
@@ -190,11 +203,19 @@ export function SupportSection({
               <span className="font-mono text-sm tracking-wider text-foreground tabular-nums">
                 {item.code}
               </span>
-              <span className="min-w-0 flex-1 truncate text-xs text-faint">
-                {[formatRelative(new Date(item.createdAt)), item.versionName]
+              <Hint
+                content={[formatRelative(new Date(item.createdAt)), item.versionName]
                   .filter(Boolean)
                   .join(" · ")}
-              </span>
+                variant="text"
+                truncatedOnly
+              >
+                <span className="min-w-0 flex-1 truncate text-xs text-faint">
+                  {[formatRelative(new Date(item.createdAt)), item.versionName]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              </Hint>
               <Hint content={t("common.copy")}>
                 <Button
                   variant="ghost"
@@ -229,6 +250,21 @@ export function SupportSection({
             }
           />
           <SettingRow
+            title={t("settings.connectivity.heading")}
+            description={t("settings.connectivity.description")}
+            query={query}
+            control={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openConnectivityCheck()}
+              >
+                <Wifi className="size-3.5" />
+                {t("settings.connectivity.run")}
+              </Button>
+            }
+          />
+          <SettingRow
             title={t("settings.connectivity.statusPage")}
             description={t("settings.about.statusDescription")}
             query={query}
@@ -237,7 +273,11 @@ export function SupportSection({
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  void api.shell.openExternal(STATUS_URL).catch(() => undefined)
+                  void api.shell.openExternal(STATUS_URL).catch((error) =>
+                    showFailureToast(t("settings.about.openLinkFailed"), error, {
+                      channels: ["shell:openExternal"],
+                    }),
+                  )
                 }
               >
                 <ExternalLink className="size-3.5" />

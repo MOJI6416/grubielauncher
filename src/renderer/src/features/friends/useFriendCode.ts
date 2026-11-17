@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import type { IAuth } from "@/types/Account";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -34,7 +35,7 @@ export function useFriendCode(
     void (async () => {
       const user = await api.backend
         .getUser(accessToken, authData.sub)
-        .catch(() => null);
+        .catch(ignoreFailure);
       if (cancelled) return;
 
       setIsLoading(false);

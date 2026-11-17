@@ -4,7 +4,6 @@ import {
   ServerDraft,
   changedFields,
   clampNumber,
-  formatUptime,
   isDraftDirty,
   normalizeDraft,
 } from "./serverProperties";
@@ -125,14 +124,5 @@ describe("changedFields", () => {
     });
 
     expect(isDraftDirty(next, draft())).toBe(false);
-  });
-});
-
-describe("formatUptime", () => {
-  it("formats minutes and hours", () => {
-    expect(formatUptime(0)).toBe("00:00");
-    expect(formatUptime(65_000)).toBe("01:05");
-    expect(formatUptime(3_725_000)).toBe("1:02:05");
-    expect(formatUptime(-10)).toBe("00:00");
   });
 });

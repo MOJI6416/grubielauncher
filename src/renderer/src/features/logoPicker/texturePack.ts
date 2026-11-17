@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { specPaths, type TexturePack } from "./gameTextures";
 import { LOGO_PRESETS } from "./logoCatalog";
 import type { Texture } from "./pixelArt";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -38,7 +39,7 @@ async function loadPack(): Promise<TexturePack | null> {
   const names = [
     ...new Set(LOGO_PRESETS.flatMap((preset) => specPaths(preset.spec))),
   ];
-  const result = await api.other.gameTextures(names).catch(() => null);
+  const result = await api.other.gameTextures(names).catch(ignoreFailure);
   if (!result) return null;
 
   const textures = new Map<string, Texture>();

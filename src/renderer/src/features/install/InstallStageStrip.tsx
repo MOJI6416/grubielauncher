@@ -7,6 +7,7 @@ import {
 } from "./installUi";
 import { clampPercent, resolveStagePlan, stageLabelKey } from "./progressModel";
 import { useInstallFormatters } from "./useInstallFormatters";
+import { Hint } from "@renderer/components/Hint";
 
 export function InstallStageStrip() {
   const { t } = useTranslation();
@@ -25,12 +26,14 @@ export function InstallStageStrip() {
   return (
     <div className="flex min-w-0 flex-col gap-1.5" role="status" aria-live="polite">
       <div className="flex min-w-0 items-baseline gap-2">
-        <span className="min-w-0 truncate text-sm font-semibold text-foreground">
-          {isPaused
-            ? t("installationProgress.paused")
-            : t(stageLabelKey(progress.stage, progress.operation))}
-        </span>
-        <span className="ml-auto flex shrink-0 items-baseline gap-2 font-mono text-[0.7rem] text-faint tabular-nums">
+        <Hint content={isPaused ? t("installationProgress.paused") : t(stageLabelKey(progress.stage, progress.operation))} variant="text" truncatedOnly>
+          <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+            {isPaused
+              ? t("installationProgress.paused")
+              : t(stageLabelKey(progress.stage, progress.operation))}
+          </span>
+        </Hint>
+        <span className="ml-auto flex shrink-0 items-baseline gap-2 font-mono text-2xs text-faint tabular-nums">
           {index !== -1 && plan.length > 1 && (
             <span>
               {index + 1}/{plan.length}
@@ -49,7 +52,7 @@ export function InstallStageStrip() {
           <div className="stage-sweep relative size-full" />
         ) : (
           <div
-            className="h-full rounded-full bg-primary/80 transition-[width] duration-300 ease-swift"
+            className="h-full rounded-full bg-info/80 transition-[width] duration-300 ease-swift"
             style={{ width: `${percent}%` }}
           />
         )}

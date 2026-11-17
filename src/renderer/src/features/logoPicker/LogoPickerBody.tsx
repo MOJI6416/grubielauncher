@@ -17,8 +17,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
-import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
-import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 import { trackSpotlight } from "@renderer/utilities/spotlight";
 import type { TexturePack } from "./gameTextures";
 import {
@@ -32,6 +32,7 @@ import {
 import { LOGO_BACKDROPS } from "./logoRender";
 import { useTexturePack } from "./texturePack";
 import { renderLogoBlob, useBackdropSwatch, useLogoThumb } from "./logoImage";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
 
 const COLUMNS = 7;
 const THUMB_SIZE = 88;
@@ -74,8 +75,9 @@ function PresetTile({
       <button
         ref={register}
         type="button"
+        role="radio"
         aria-label={label}
-        aria-pressed={isSelected}
+        aria-checked={isSelected}
         tabIndex={isCursor ? 0 : -1}
         onClick={onPick}
         onPointerEnter={() => onPeek(true)}
@@ -85,7 +87,7 @@ function PresetTile({
           onPeek(true);
         }}
         onBlur={() => onPeek(false)}
-        className="group/tile relative size-11 overflow-hidden rounded-lg bg-surface-2 transition-[background-color,box-shadow,transform] duration-(--dur-fast) hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-95 aria-pressed:ring-2 aria-pressed:ring-primary"
+        className="group/tile relative size-11 overflow-hidden rounded-lg bg-surface-2 transition-[background-color,box-shadow,transform] duration-(--dur-fast) hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-95 aria-checked:ring-2 aria-checked:ring-primary"
       >
         {thumb ? (
           <img
@@ -122,12 +124,13 @@ function BackdropSwatch({
     <Hint content={label}>
       <button
         type="button"
+        role="radio"
         aria-label={label}
-        aria-pressed={isActive}
+        aria-checked={isActive}
         onClick={onPick}
         onPointerEnter={() => onPeek(true)}
         onPointerLeave={() => onPeek(false)}
-        className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-2 text-faint transition-[box-shadow,transform] duration-(--dur-fast) hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:ring-2 aria-pressed:ring-primary"
+        className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-2 text-faint transition-[box-shadow,transform] duration-(--dur-fast) hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-checked:ring-2 aria-checked:ring-primary"
       >
         {isEmpty ? (
           <SquareDashed className="size-4" />
@@ -193,7 +196,7 @@ function Preview({
             className="size-full animate-in object-cover duration-(--dur) fade-in-0 zoom-in-90"
           />
         ) : (
-          <span className="flex size-full items-center justify-center p-2 text-center text-[0.6rem] leading-tight text-faint">
+          <span className="flex size-full items-center justify-center p-2 text-center text-3xs leading-tight text-faint">
             {placeholder}
           </span>
         )}
@@ -217,7 +220,6 @@ export function LogoPickerBody({
 }) {
   const { t } = useTranslation();
   const reducedMotion = useReducedMotionPreference() === true;
-  const categoryIndicator = useSlidingIndicator<HTMLDivElement>();
   const packState = useTexturePack();
   const isReady = packState.status === "ready";
   const pack = packState.status === "ready" ? packState.pack : null;
@@ -352,18 +354,40 @@ export function LogoPickerBody({
         />
 
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="truncate text-sm font-semibold">
-            {shownPreset ? presetName(shownPreset.id) : t("logoPicker.title")}
-          </span>
-          <span className="truncate text-xs text-muted-foreground">
-            {shownPreset
-              ? `${t(`logoPicker.categories.${shownPreset.category}`)} · ${backdropName(shownBackdrop)}`
-              : !isReady
-                ? t("logoPicker.loading")
-                : pack
-                  ? t("logoPicker.source", { version: pack.id })
-                  : t("logoPicker.noGame")}
-          </span>
+          <Hint
+            content={
+              shownPreset ? presetName(shownPreset.id) : t("logoPicker.title")
+            }
+            variant="text"
+            truncatedOnly
+          >
+            <span className="truncate text-sm font-semibold">
+              {shownPreset ? presetName(shownPreset.id) : t("logoPicker.title")}
+            </span>
+          </Hint>
+          <Hint
+            content={
+              shownPreset
+                ? `${t(`logoPicker.categories.${shownPreset.category}`)} · ${backdropName(shownBackdrop)}`
+                : !isReady
+                  ? t("logoPicker.loading")
+                  : pack
+                    ? t("logoPicker.source", { version: pack.id })
+                    : t("logoPicker.noGame")
+            }
+            variant="text"
+            truncatedOnly
+          >
+            <span className="truncate text-xs text-muted-foreground">
+              {shownPreset
+                ? `${t(`logoPicker.categories.${shownPreset.category}`)} · ${backdropName(shownBackdrop)}`
+                : !isReady
+                  ? t("logoPicker.loading")
+                  : pack
+                    ? t("logoPicker.source", { version: pack.id })
+                    : t("logoPicker.noGame")}
+            </span>
+          </Hint>
           <div className="mt-1">
             <Hint content={t("logoPicker.randomHint")}>
               <Button
@@ -382,62 +406,35 @@ export function LogoPickerBody({
       </div>
 
       <div className="flex flex-col gap-2.5 p-3">
-        <div
-          ref={categoryIndicator.containerRef}
-          role="tablist"
-          aria-label={t("logoPicker.title")}
-          className="relative grid grid-cols-3 gap-0.5 rounded-lg bg-surface-3 p-0.5"
-        >
-          <SlidingIndicator
-            indicator={categoryIndicator}
-            variant="fill"
-            className="rounded-md bg-surface-1 shadow-xs"
-          />
-          {LOGO_CATEGORIES.map((entry) => (
-            <button
-              key={entry}
-              type="button"
-              role="tab"
-              aria-selected={entry === category}
-              data-indicator-active={entry === category}
-              onClick={() => switchCategory(entry)}
-              className={cn(
-                "relative flex items-center justify-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors",
-                entry === category
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {t(`logoPicker.categories.${entry}`)}
-              <span className="font-mono text-[0.6rem] text-faint tabular-nums">
-                {isReady ? inCategory(entry).length : "…"}
-              </span>
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          value={category}
+          ariaLabel={t("logoPicker.title")}
+          stretch
+          options={LOGO_CATEGORIES.map((entry) => ({
+            value: entry,
+            label: t(`logoPicker.categories.${entry}`),
+            count: isReady ? inCategory(entry).length : undefined,
+          }))}
+          onChange={switchCategory}
+        />
 
         <div
-          role="group"
+          role="radiogroup"
           aria-label={t(`logoPicker.categories.${category}`)}
           onKeyDown={moveCursor}
           className="-mx-1 grid h-[202px] grid-cols-7 content-start gap-1.5 overflow-y-auto p-1"
         >
           {isReady && !pack && (
-            <p className="col-span-full flex h-[186px] flex-col items-center justify-center gap-1.5 px-6 text-center">
-              <span className="text-sm font-medium">
-                {t("logoPicker.noGame")}
-              </span>
-              <span className="text-xs text-muted-foreground">
+            <Empty className="col-span-full h-[186px] gap-1.5 px-6">
+              <EmptyTitle>{t("logoPicker.noGame")}</EmptyTitle>
+              <EmptyDescription className="text-xs">
                 {t("logoPicker.noGameHint")}
-              </span>
-            </p>
+              </EmptyDescription>
+            </Empty>
           )}
           {!isReady &&
             Array.from({ length: COLUMNS * 4 }, (_, index) => (
-              <span
-                key={index}
-                className="size-11 animate-pulse rounded-lg bg-surface-2"
-              />
+              <Skeleton key={index} className="size-11 rounded-lg" />
             ))}
           {presets.map((preset, index) => (
             <PresetTile
@@ -469,7 +466,7 @@ export function LogoPickerBody({
         <div className="flex items-center gap-2">
           <PaintBucket aria-hidden className="size-4 shrink-0 text-faint" />
           <div
-            role="group"
+            role="radiogroup"
             aria-label={t("logoPicker.backdrop")}
             className="flex min-w-0 flex-1 justify-between"
           >

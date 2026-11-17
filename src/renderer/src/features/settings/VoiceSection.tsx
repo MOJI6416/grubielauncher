@@ -12,6 +12,7 @@ import {
 } from "@renderer/features/voice/VoiceDeviceControls";
 import type { TSettings } from "@/types/Settings";
 import { OverlayPlacementControls } from "@renderer/features/voice/OverlayPlacementControls";
+import { Hint } from "@renderer/components/Hint";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
 
@@ -114,17 +115,27 @@ export function VoiceSection({
             <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-2 px-2.5 py-2">
               <span className="flex min-w-0 items-center gap-2 text-xs">
                 <Keyboard className="size-3.5 shrink-0 text-faint" />
-                <span
-                  className={
+                <Hint
+                  content={
                     settings.voicePttBind
-                      ? "truncate font-mono text-foreground"
-                      : "truncate text-warning"
+                      ? settings.voicePttBind.label
+                      : t("settings.voicePttKeyNone")
                   }
+                  variant="text"
+                  truncatedOnly
                 >
-                  {settings.voicePttBind
-                    ? settings.voicePttBind.label
-                    : t("settings.voicePttKeyNone")}
-                </span>
+                  <span
+                    className={
+                      settings.voicePttBind
+                        ? "truncate font-mono text-foreground"
+                        : "truncate text-warning"
+                    }
+                  >
+                    {settings.voicePttBind
+                      ? settings.voicePttBind.label
+                      : t("settings.voicePttKeyNone")}
+                  </span>
+                </Hint>
               </span>
               <Button
                 variant="outline"

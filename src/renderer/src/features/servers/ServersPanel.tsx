@@ -5,19 +5,20 @@ import {
   Check,
   Copy,
   Download,
-  Gamepad2,
   GripVertical,
   HardDriveDownload,
   Loader2,
+  MonitorDown,
   Pencil,
+  Play,
   Plus,
   RefreshCw,
+  Search,
   Server as ServerIcon,
   Trash,
   TriangleAlert,
   Zap,
 } from "lucide-react";
-import { SiModrinth } from "react-icons/si";
 import { toast } from "sonner";
 import { IServer } from "@/types/ServersList";
 import { Button } from "@/components/ui/button";
@@ -31,13 +32,9 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SortMenu } from "@renderer/components/SortMenu";
+import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
+import { showUndoToast } from "@renderer/utilities/undoToast";
 import {
   Empty,
   EmptyDescription,
@@ -55,14 +52,13 @@ import {
 import type { ModrinthServer } from "@/types/ModrinthServers";
 import { openNewInstance } from "@renderer/features/instances/newInstance";
 import type { RunGameParams } from "@renderer/features/launch/types";
-import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { MotdText, PingBars, ServerFavicon, StatusDot } from "./ServerVisuals";
 import { ServerDetails } from "./ServerDetails";
 import { ServerEditor } from "./ServerEditor";
 import { ServerImport } from "./ServerImport";
 import { parseMotd } from "./motd";
 import { checkServerCompatibility } from "./compat";
-import { runWithConcurrency } from "./ping";
+import { describePingError, runWithConcurrency } from "./ping";
 import {
   ServerSort,
   countOnline,
@@ -81,7 +77,9 @@ import {
 } from "./discover/serverFit";
 import { ServerPingState, toPingState } from "./types";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { createDesktopShortcut } from "@renderer/features/instances/instanceActions";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
 
 const api = window.api;
 
@@ -118,7 +116,6 @@ export function ServersPanel({
   const [sort, setSort] = useState<ServerSort>("manual");
   const [selected, setSelected] = useState(0);
   const [mode, setMode] = useState<"details" | "create" | "edit">("details");
-  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -144,6 +141,16 @@ export function ServersPanel({
     () => servers.map((server) => server.ip).filter(Boolean),
     [servers],
   );
+  const serverKeys = useMemo(() => {
+    const seen = new Map<string, number>();
+    return servers.map((server) => {
+      const base = server.ip || server.name || "server";
+      const occurrence = seen.get(base) ?? 0;
+      seen.set(base, occurrence + 1);
+      return occurrence ? `${base}#${occurrence}` : base;
+    });
+  }, [servers]);
+  const serverKeySet = useMemo(() => new Set(serverKeys), [serverKeys]);
   const addressKey = addresses.join("|");
 
   const ping = useCallback(async (addresses: string[]) => {
@@ -226,6 +233,17 @@ export function ServersPanel({
     [runGame, selectedVersion, onPlayed],
   );
 
+  const createShortcut = useCallback(
+    (server: IServer) => {
+      if (!selectedVersion) return;
+      void createDesktopShortcut(selectedVersion, t, {
+        server: server.ip,
+        label: server.name || server.ip,
+      });
+    },
+    [selectedVersion, t],
+  );
+
   const addDiscovered = useCallback(
     (server: ModrinthServer) => {
       setServers((prev) =>
@@ -245,6 +263,30 @@ export function ServersPanel({
       await copyWithFeedback(server.ip);
     },
     [t],
+  );
+
+  const removeServer = useCallback(
+    (index: number) => {
+      const removed = servers[index];
+      if (!removed) return;
+
+      setServers((prev) => prev.filter((_, i) => i !== index));
+      setSelected((current) => (index < current ? current - 1 : current));
+      setMode("details");
+
+      showUndoToast(
+        t("servers.deleted"),
+        () =>
+          setServers((prev) => {
+            if (prev.includes(removed)) return prev;
+            const next = [...prev];
+            next.splice(Math.min(index, next.length), 0, removed);
+            return next;
+          }),
+        { description: t("servers.pendingSave") },
+      );
+    },
+    [servers, setServers, t],
   );
 
   const move = useCallback(
@@ -285,7 +327,7 @@ export function ServersPanel({
 
     if (event.key === "Delete" && current && !readOnly) {
       event.preventDefault();
-      setDeleteIndex(selected);
+      removeServer(selected);
     }
   };
 
@@ -303,7 +345,7 @@ export function ServersPanel({
         {
           id: "discover",
           label: "Modrinth",
-          icon: <SiModrinth className="size-4" />,
+          icon: <ContentProviderIcon provider="modrinth" className="size-4" />,
         },
       ]}
     />
@@ -357,32 +399,21 @@ export function ServersPanel({
         onChange={(event) => setQuery(event.target.value)}
       />
 
-      <Select
+      <SortMenu
         value={sort}
-        onValueChange={(value) => setSort(value as ServerSort)}
-      >
-        <SelectTrigger size="sm" className="h-8 w-36 shrink-0">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {SORTS.map((value) => (
-            <SelectItem key={value} value={value}>
-              {t(`servers.sort.${value}`)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        options={SORTS.map((value) => ({
+          value,
+          label: t(`servers.sort.${value}`),
+        }))}
+        onChange={setSort}
+      />
 
-      <Hint
-        content={t("servers.onlineOf", {
+      <span className="shrink-0 text-xs whitespace-nowrap text-faint tabular-nums">
+        {t("servers.onlineOf", {
           online: onlineCount,
           total: servers.length,
         })}
-      >
-        <span className="shrink-0 font-mono text-xs text-faint tabular-nums">
-          {onlineCount}/{servers.length}
-        </span>
-      </Hint>
+      </span>
 
       <div className="flex shrink-0 items-center gap-1.5">
         <Hint content={t("common.update")}>
@@ -471,9 +502,17 @@ export function ServersPanel({
           {!servers.length ? (
             emptyState
           ) : !visible.length ? (
-            <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-              {t("common.notFound")}
-            </div>
+            <Empty className="h-full border-0 bg-transparent">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Search />
+                </EmptyMedia>
+                <EmptyTitle>{t("common.notFound")}</EmptyTitle>
+              </EmptyHeader>
+              <Button size="sm" variant="outline" onClick={() => setQuery("")}>
+                {t("common.clearSearch")}
+              </Button>
+            </Empty>
           ) : (
             <ScrollArea className="min-h-0 flex-1">
               <div
@@ -484,9 +523,17 @@ export function ServersPanel({
                 onKeyDown={handleKeyDown}
                 className="flex flex-col gap-0.5 p-1.5 outline-none"
               >
+                <RemovalList sourceKeys={serverKeySet}>
                 {visible.map((server) => {
                   const index = servers.indexOf(server);
+                  const itemKey = serverKeys[index];
                   const status = statuses[server.ip];
+                  const offlineLabel =
+                    status?.state === "offline"
+                      ? describePingError(status.result?.error) === "dns"
+                        ? t("servers.statusNotFound")
+                        : t("servers.statusOffline")
+                      : "";
                   const spans = parseMotd(status?.result?.descriptionRaw);
                   const mismatch =
                     checkServerCompatibility(
@@ -495,7 +542,8 @@ export function ServersPanel({
                     ) === "mismatch";
 
                   return (
-                    <ContextMenu key={`${server.ip}-${index}`}>
+                    <RemovalItem key={itemKey} itemKey={itemKey}>
+                    <ContextMenu>
                       <ContextMenuTrigger asChild>
                         <div
                           role="option"
@@ -522,8 +570,8 @@ export function ServersPanel({
                           className={cn(
                             "group flex h-14 min-w-0 cursor-default items-center gap-2.5 rounded-lg px-2 transition-colors",
                             index === selected
-                              ? "bg-primary-soft"
-                              : "hover:bg-accent/35",
+                              ? "bg-row-selected"
+                              : "hover:bg-row-hover",
                             dragIndex === index && "opacity-40",
                           )}
                         >
@@ -556,10 +604,12 @@ export function ServersPanel({
                                 <Zap className="size-3 shrink-0 text-warning" />
                               )}
                               {mismatch && (
-                                <TriangleAlert
-                                  className="size-3 shrink-0 text-warning"
-                                  aria-label={t("servers.incompatibleShort")}
-                                />
+                                <Hint content={t("servers.incompatibleShort")}>
+                                  <TriangleAlert
+                                    className="size-3 shrink-0 text-warning"
+                                    aria-label={t("servers.incompatibleShort")}
+                                  />
+                                </Hint>
                               )}
                             </div>
 
@@ -572,6 +622,7 @@ export function ServersPanel({
                               <Hint
                                 content={redact.value(server.ip)}
                                 variant="text"
+                                truncatedOnly
                               >
                                 <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                                   <StatusDot
@@ -586,14 +637,12 @@ export function ServersPanel({
                           </div>
 
                           <div className="flex shrink-0 flex-col items-end gap-0.5">
-                            <span className="font-mono text-xs tabular-nums">
+                            <span className="font-mono text-xs whitespace-nowrap tabular-nums">
                               {status?.result?.players
                                 ? `${status.result.players.online}/${status.result.players.max}`
-                                : status?.state === "offline"
-                                  ? t("servers.statusOffline")
-                                  : ""}
+                                : offlineLabel}
                             </span>
-                            <span className="font-mono text-[0.65rem] text-faint tabular-nums">
+                            <span className="font-mono text-3xs text-faint tabular-nums">
                               {status?.state === "online" &&
                               status.latencyMs !== undefined
                                 ? `${status.latencyMs} ${t("servers.ms")}`
@@ -618,7 +667,7 @@ export function ServersPanel({
                           disabled={!runGame}
                           onSelect={() => play(server)}
                         >
-                          <Zap />
+                          <Play />
                           {t("servers.join")}
                         </ContextMenuItem>
                         <ContextMenuItem
@@ -626,6 +675,13 @@ export function ServersPanel({
                         >
                           <Copy />
                           {t("servers.copyAddress")}
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          disabled={!selectedVersion}
+                          onSelect={() => createShortcut(server)}
+                        >
+                          <MonitorDown />
+                          {t("servers.createShortcut")}
                         </ContextMenuItem>
                         <ContextMenuSeparator />
                         <ContextMenuItem
@@ -641,26 +697,17 @@ export function ServersPanel({
                         <ContextMenuItem
                           variant="destructive"
                           disabled={readOnly}
-                          onSelect={() => setDeleteIndex(index)}
+                          onSelect={() => removeServer(index)}
                         >
                           <Trash />
                           {t("common.delete")}
                         </ContextMenuItem>
                       </ContextMenuContent>
                     </ContextMenu>
+                    </RemovalItem>
                   );
                 })}
-
-                {!readOnly && !query.trim() && (
-                  <button
-                    type="button"
-                    onClick={() => setMode("create")}
-                    className="flex h-11 items-center justify-center gap-1.5 rounded-lg border border-dashed text-xs text-faint transition-colors hover:border-border hover:bg-accent/25 hover:text-muted-foreground"
-                  >
-                    <Plus className="size-3.5" />
-                    {t("servers.addAnother")}
-                  </button>
-                )}
+                </RemovalList>
               </div>
             </ScrollArea>
           )}
@@ -702,8 +749,11 @@ export function ServersPanel({
                 isQuickConnect={quickConnectIp === current.ip}
                 onPlay={() => play(current)}
                 onEdit={() => setMode("edit")}
-                onDelete={() => setDeleteIndex(selected)}
+                onDelete={() => removeServer(selected)}
                 onCopy={() => void copyAddress(current)}
+                onShortcut={
+                  selectedVersion ? () => createShortcut(current) : undefined
+                }
                 onRecheck={() => void ping([current.ip])}
                 onChangeTextures={(value) =>
                   setServers((prev) =>
@@ -737,50 +787,18 @@ export function ServersPanel({
           onImport={(imported) => {
             setServers((prev) => [...prev, ...imported]);
             setIsImporting(false);
-            toast.success(t("servers.imported", { count: imported.length }), {
+            toast.success(
+              t("servers.imported", {
+                count: imported.length,
+                total: imported.length,
+              }),
+              {
               description: t("servers.pendingSave"),
             });
           }}
         />
       )}
 
-      {deleteIndex !== null && servers[deleteIndex] && (
-        <Confirmation
-          title={t("servers.deleteTitle")}
-          content={[
-            {
-              text: t("servers.confirmation", {
-                name: servers[deleteIndex].name,
-              }),
-            },
-            { text: t("servers.deleteHint") },
-          ]}
-          buttons={[
-            {
-              text: t("common.delete"),
-              color: "danger",
-              onClick: () => {
-                const index = deleteIndex;
-                setServers((prev) => prev.filter((_, i) => i !== index));
-                setSelected((current) =>
-                  index < current ? current - 1 : current,
-                );
-                setDeleteIndex(null);
-                setMode("details");
-                toast.success(t("servers.deleted"), {
-                  description: t("servers.pendingSave"),
-                });
-              },
-            },
-            {
-              text: t("common.cancel"),
-              color: "secondary",
-              onClick: () => setDeleteIndex(null),
-            },
-          ]}
-          onClose={() => setDeleteIndex(null)}
-        />
-      )}
     </>
   );
 }
@@ -830,7 +848,7 @@ function DiscoverActions({
   return (
     <>
       {note && (
-        <p className="flex items-start gap-1.5 text-[0.7rem] leading-snug text-warning">
+        <p className="flex items-start gap-1.5 text-2xs leading-snug text-warning">
           <TriangleAlert className="mt-px size-3 shrink-0" />
           <span className="min-w-0">{note}</span>
         </p>
@@ -845,8 +863,10 @@ function DiscoverActions({
             disabled={!canPlay}
             onClick={onPlay}
           >
-            <Gamepad2 className="size-4" />
-            <span className="truncate">{t("servers.join")}</span>
+            <Play className="size-4" />
+            <Hint content={t("servers.join")} variant="text" truncatedOnly>
+              <span className="truncate">{t("servers.join")}</span>
+            </Hint>
           </Button>
         ) : (
           <Button
@@ -856,9 +876,15 @@ function DiscoverActions({
             onClick={onCreate}
           >
             <HardDriveDownload className="size-4" />
-            <span className="truncate">
-              {t("servers.discover.createInstance")}
-            </span>
+            <Hint
+              content={t("servers.discover.createInstance")}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="truncate">
+                {t("servers.discover.createInstance")}
+              </span>
+            </Hint>
           </Button>
         )}
 

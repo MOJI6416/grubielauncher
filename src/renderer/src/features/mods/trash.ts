@@ -1,4 +1,5 @@
 import type { TrashReason } from "@/types/ModManager";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 export const TRASH_MAX_AGE_DAYS = 14;
 export const TRASH_MAX_AGE_MS = TRASH_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
@@ -82,7 +83,7 @@ export async function listTrash(versionPath: string): Promise<TrashEntry[]> {
           parsed,
           await api.fs
             .readJSON(await api.path.join(folderPath, REASONS_FILE), "utf-8")
-            .catch(() => null),
+            .catch(ignoreFailure),
         )
       : parsed;
 

@@ -5,7 +5,7 @@ import type { IModpackCard } from "@/types/Backend";
 import { Hint } from "@renderer/components/Hint";
 import { LoaderLabel } from "@renderer/components/Loaders";
 import { PlayerHead } from "@renderer/features/accounts/AccountHead";
-import { formatCompactNumber } from "@renderer/features/mods/format";
+import { formatCompactNumber } from "@renderer/utilities/numbers";
 import { formatDay, formatRelative } from "@renderer/utilities/date";
 import { packContentParts } from "./exploreQuery";
 
@@ -54,13 +54,13 @@ export function CommunityPackCard({
           </Hint>
 
           {isInstalled && (
-            <span className="shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-[0.6rem] text-muted-foreground">
+            <span className="shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-3xs text-muted-foreground">
               {t("newInstance.alreadyInstalled")}
             </span>
           )}
         </div>
 
-        <div className="flex min-w-0 items-center gap-1.5 text-[0.7rem] text-muted-foreground">
+        <div className="flex min-w-0 items-center gap-1.5 text-2xs text-muted-foreground">
           <PlayerHead
             user={{
               nickname: pack.owner.nickname,
@@ -100,7 +100,7 @@ export function CommunityPackCard({
           parts.map((part) => (
             <span
               key={part.key}
-              className="flex h-5 shrink-0 items-center rounded-md bg-surface-3 px-1.5 text-[0.65rem] text-muted-foreground"
+              className="flex h-5 shrink-0 items-center rounded-md bg-surface-3 px-1.5 text-3xs text-muted-foreground"
             >
               {t(`community.content.${part.key}`)}
               <span className="ml-1 font-mono tabular-nums text-faint">
@@ -109,14 +109,14 @@ export function CommunityPackCard({
             </span>
           ))
         ) : (
-          <span className="shrink-0 text-[0.65rem] text-faint">
+          <span className="shrink-0 text-3xs text-faint">
             {t("community.contentEmpty")}
           </span>
         )}
 
         {downloads && (
           <Hint content={t("addVersion.preview.installs")}>
-            <span className="flex w-12 shrink-0 items-center justify-end gap-1 font-mono text-[0.7rem] tabular-nums text-faint">
+            <span className="flex w-12 shrink-0 items-center justify-end gap-1 font-mono text-2xs tabular-nums text-faint">
               <Download className="size-3" />
               {downloads}
             </span>

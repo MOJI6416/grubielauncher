@@ -19,6 +19,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Hint } from "@renderer/components/Hint";
 import { formatBytes } from "@renderer/utilities/file";
+import { formatNumber } from "@renderer/utilities/numbers";
 import { ChunkEditorDialog } from "./chunks/ChunkEditorDialog";
 
 const api = window.api;
@@ -75,7 +76,7 @@ export function WorldChunksTab({
     void load();
   }, [load]);
 
-  const nf = (value: number) => new Intl.NumberFormat(locale).format(value);
+  const nf = (value: number) => formatNumber(value, locale);
   const sizeLabels = [
     t("sizes.0"),
     t("sizes.1"),
@@ -134,12 +135,13 @@ export function WorldChunksTab({
       <div className="flex shrink-0 items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-0.5">
           <p className="text-xs font-medium">{t("worldChunks.tabTitle")}</p>
-          <p className="text-[0.7rem] leading-4 text-muted-foreground">
+          <p className="text-2xs leading-4 text-muted-foreground">
             {t("worldChunks.tabHint")}
           </p>
         </div>
         <Hint content={locked ? t("worldChunks.openReadOnly") : undefined}>
           <Button
+            variant="secondary"
             size="sm"
             className="h-8 shrink-0"
             onClick={() => setOpen(true)}
@@ -164,7 +166,7 @@ export function WorldChunksTab({
         </Empty>
       ) : (
         <div className="flex flex-col gap-2">
-          <p className="text-[0.65rem] text-faint">
+          <p className="text-3xs text-faint">
             {t("worldChunks.summary", {
               regions: nf(totalRegions),
               chunks: nf(totalChunks),
@@ -185,22 +187,32 @@ export function WorldChunksTab({
                       {dimensionLabel(entry.id)}
                     </span>
                   </Hint>
-                  <span className="truncate font-mono text-[0.65rem] text-faint">
-                    {t("worldChunks.dimensionFacts", {
+                  <Hint
+                    content={t("worldChunks.dimensionFacts", {
                       regions: nf(entry.regionCount),
                       chunks: nf(entry.chunkCount),
                       size: formatBytes(entry.sizeBytes, sizeLabels, 1),
                     })}
-                  </span>
+                    variant="text"
+                    truncatedOnly
+                  >
+                    <span className="truncate font-mono text-3xs text-faint">
+                      {t("worldChunks.dimensionFacts", {
+                        regions: nf(entry.regionCount),
+                        chunks: nf(entry.chunkCount),
+                        size: formatBytes(entry.sizeBytes, sizeLabels, 1),
+                      })}
+                    </span>
+                  </Hint>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   {entry.hasEntities && (
-                    <span className="rounded bg-surface-3 px-1.5 py-0.5 text-[0.6rem] text-muted-foreground">
+                    <span className="rounded bg-surface-3 px-1.5 py-0.5 text-3xs text-muted-foreground">
                       {t("worldChunks.chunk.entitiesFile")}
                     </span>
                   )}
                   {entry.hasPoi && (
-                    <span className="rounded bg-surface-3 px-1.5 py-0.5 text-[0.6rem] text-muted-foreground">
+                    <span className="rounded bg-surface-3 px-1.5 py-0.5 text-3xs text-muted-foreground">
                       {t("worldChunks.chunk.poiFile")}
                     </span>
                   )}

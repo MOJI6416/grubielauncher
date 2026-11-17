@@ -155,7 +155,7 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
           </Hint>
         </span>
         {!isSidebarCollapsed && (
-          <span className="truncate text-xs font-medium tracking-wide text-muted-foreground">
+          <span className="text-xs font-medium tracking-wide whitespace-nowrap text-muted-foreground">
             Grubie Launcher
           </span>
         )}
@@ -176,7 +176,10 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
             {isSidebarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
           </Button>
         </Hint>
-        <Hint content={`${t("shell.back")} · ${ALT_KEY} ←`} side="bottom">
+        <Hint
+          content={canBack ? `${t("shell.back")} · ${ALT_KEY} ←` : undefined}
+          side="bottom"
+        >
           <Button
             size="icon-sm"
             variant="ghost"
@@ -187,7 +190,12 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
             <ChevronLeft />
           </Button>
         </Hint>
-        <Hint content={`${t("shell.forward")} · ${ALT_KEY} →`} side="bottom">
+        <Hint
+          content={
+            canForward ? `${t("shell.forward")} · ${ALT_KEY} →` : undefined
+          }
+          side="bottom"
+        >
           <Button
             size="icon-sm"
             variant="ghost"
@@ -202,7 +210,9 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
 
       <div className="ml-1.5 flex min-w-0 flex-1 items-baseline gap-2 text-sm">
         {kind && <span className="shrink-0 text-faint">{kind}</span>}
-        <span className="truncate font-medium text-foreground">{title}</span>
+        <Hint content={title} variant="text" side="bottom" truncatedOnly>
+          <span className="truncate font-medium text-foreground">{title}</span>
+        </Hint>
       </div>
 
       <div className="app-no-drag ml-auto flex shrink-0 items-center pr-2 pl-3">
@@ -246,13 +256,13 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
           <button
             type="button"
             aria-label={t("agent.title")}
-            aria-current={isAgentOpen}
+            aria-current={isAgentOpen ? "page" : undefined}
             aria-disabled={!!agentBlocked}
             onClick={() => {
               if (agentBlocked) return;
               openAgent();
             }}
-            className="mr-1.5 flex size-7 items-center justify-center rounded-lg border border-border bg-surface-2 text-faint transition-colors hover:border-input hover:text-muted-foreground aria-[current=true]:border-transparent aria-[current=true]:bg-primary-soft aria-[current=true]:text-foreground aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:border-border aria-disabled:hover:text-faint"
+            className="mr-1.5 flex size-7 items-center justify-center rounded-lg border border-border bg-surface-2 text-faint transition-colors hover:border-input hover:text-muted-foreground aria-[current=page]:border-transparent aria-[current=page]:bg-row-selected aria-[current=page]:text-foreground aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:border-border aria-disabled:hover:text-faint"
           >
             <Sparkles className="size-3.5" />
           </button>
@@ -265,7 +275,7 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
         >
           <Search className="size-3.5" />
           {t("shell.searchHint")}
-          <kbd className="font-mono text-[0.65rem]">{MOD_KEY} K</kbd>
+          <kbd className="font-mono text-3xs">{MOD_KEY} K</kbd>
         </button>
       </div>
     </header>

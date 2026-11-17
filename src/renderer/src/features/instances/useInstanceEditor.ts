@@ -89,6 +89,7 @@ import { downloadImage } from "@renderer/utilities/imageDownload";
 import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
 import { VERSION_FILE_STAGES, contentPlan } from "@/shared/installPlan";
 import { loaderChangeErrorKey } from "./loaderUpdate";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -389,8 +390,8 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
       } catch (error) {
         if (isRename) {
           version.version.name = oldName;
-          await api.fs.rename(newPath, oldPath).catch(() => {});
-          await version.init().catch(() => {});
+          await api.fs.rename(newPath, oldPath).catch(ignoreFailure);
+          await version.init().catch(ignoreFailure);
         }
 
         showFailureToast(t("versions.renameError"), error, {
@@ -437,8 +438,8 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     } catch (error) {
       if (isRename) {
         version.version.name = await api.path.basename(oldPath);
-        await api.fs.rename(version.versionPath, oldPath).catch(() => {});
-        await version.init().catch(() => {});
+        await api.fs.rename(version.versionPath, oldPath).catch(ignoreFailure);
+        await version.init().catch(ignoreFailure);
 
         version.version.image = previousImage;
         draft.setImage(previousImage);

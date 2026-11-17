@@ -1,4 +1,5 @@
 import { ILocalProject, ProjectType, Provider } from "@/types/ModManager";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 function isModrinthMod(mod: ILocalProject): boolean {
   return (
@@ -49,7 +50,9 @@ export async function repairClientSides(
   const ids = clientSideSuspects(mods);
   if (ids.length === 0) return 0;
 
-  const sides = await window.api.modManager.modrinthClientSides(ids).catch(() => null);
+  const sides = await window.api.modManager
+    .modrinthClientSides(ids)
+    .catch(ignoreFailure);
 
   return sides ? applyClientSides(mods, sides) : 0;
 }

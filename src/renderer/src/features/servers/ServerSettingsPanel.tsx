@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import {
   CircleCheck,
   Coffee,
-  Gamepad2,
+  Joystick,
   Loader2,
   MemoryStick,
   Network,
@@ -50,6 +50,14 @@ import {
 } from "./serverProperties";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { cn } from "@/lib/utils";
+import { Hint } from "@renderer/components/Hint";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { sameJavaOverride } from "@/shared/javaRuntime";
 import {
   JAVA_STATUS_TONE,
@@ -76,7 +84,9 @@ function Section({
       <header className="flex items-center justify-between gap-3 border-b px-3 py-1.5">
         <span className="flex min-w-0 items-center gap-2">
           <span className="text-faint">{icon}</span>
-          <span className="truncate text-xs font-medium">{title}</span>
+          <Hint content={title} variant="text" truncatedOnly>
+            <span className="truncate text-xs font-medium">{title}</span>
+          </Hint>
         </span>
         {action}
       </header>
@@ -88,7 +98,7 @@ function Section({
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="grid min-w-0 gap-1">
-      <span className="text-[0.7rem] text-muted-foreground">{label}</span>
+      <span className="text-2xs text-muted-foreground">{label}</span>
       {children}
     </label>
   );
@@ -104,8 +114,10 @@ function Toggle({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <label className="flex min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1 text-xs transition-colors hover:bg-accent/40">
-      <span className="min-w-0 truncate">{label}</span>
+    <label className="flex min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1 text-xs transition-colors hover:bg-row-hover">
+      <Hint content={label} variant="text" truncatedOnly>
+        <span className="min-w-0 truncate">{label}</span>
+      </Hint>
       <Switch
         className="shrink-0 scale-90"
         checked={checked}
@@ -235,6 +247,16 @@ export function ServerSettingsPanel({
     [draft, baseline],
   );
   const isDirty = changed.length > 0;
+  const statusText = [
+    isDirty
+      ? t("serverManager.pendingChanges", { total: changed.length })
+      : isSavedShown
+        ? t("versions.savedInline")
+        : t("serverManager.noChanges"),
+    runningPort !== undefined ? t("serverManager.applyAfterRestart") : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   useEffect(() => {
     return registerNavigationBlocker("server-settings", () => isDirty);
@@ -392,18 +414,19 @@ export function ServerSettingsPanel({
 
   if (readError) {
     return (
-      <div className="flex h-full min-h-0 flex-col items-center justify-center gap-2 rounded-xl border bg-card p-6 text-center">
-        <TriangleAlert className="size-5 text-warning" />
-        <p className="text-sm font-medium">
-          {t("serverManager.settingsUnreadable")}
-        </p>
-        <p className="max-w-md text-xs text-muted-foreground">
-          {t("serverManager.settingsUnreadableHint")}
-        </p>
+      <Empty className="h-full border bg-card">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <TriangleAlert />
+          </EmptyMedia>
+          <EmptyTitle>{t("serverManager.settingsUnreadable")}</EmptyTitle>
+          <EmptyDescription>
+            {t("serverManager.settingsUnreadableHint")}
+          </EmptyDescription>
+        </EmptyHeader>
         <Button
-          variant="secondary"
+          variant="outline"
           size="sm"
-          className="mt-1"
           onClick={() => {
             setReadError(false);
             setReloadToken((value) => value + 1);
@@ -412,7 +435,7 @@ export function ServerSettingsPanel({
           <RotateCcw className="size-3.5" />
           {t("common.retry")}
         </Button>
-      </div>
+      </Empty>
     );
   }
 
@@ -490,7 +513,7 @@ export function ServerSettingsPanel({
             {javaState && JavaStateIcon ? (
               <p
                 className={cn(
-                  "flex items-start gap-1.5 text-[0.7rem] leading-snug",
+                  "flex items-start gap-1.5 text-2xs leading-snug",
                   JAVA_STATUS_TONE[javaState.tone],
                 )}
               >
@@ -498,7 +521,7 @@ export function ServerSettingsPanel({
                 {javaState.text}
               </p>
             ) : (
-              <p className="text-[0.7rem] text-faint">
+              <p className="text-2xs text-faint">
                 {t("serverSettings.javaHint")}
               </p>
             )}
@@ -542,7 +565,7 @@ export function ServerSettingsPanel({
               </Field>
             </div>
             {portInUse && (
-              <p className="text-[0.7rem] text-warning">
+              <p className="text-2xs text-warning">
                 {t("serverSettings.portInUse", { port: settings.serverPort })}
               </p>
             )}
@@ -560,7 +583,7 @@ export function ServerSettingsPanel({
         <div className="grid content-start gap-3">
           <Section
             title={t("serverSettings.sections.game")}
-            icon={<Gamepad2 className="size-3.5" />}
+            icon={<Joystick className="size-3.5" />}
           >
             <div className="grid grid-cols-2 gap-2">
               <Field label={t("serverSettings.gameMode")}>
@@ -723,9 +746,13 @@ export function ServerSettingsPanel({
       </div>
 
       <div className="flex shrink-0 items-center gap-2 rounded-xl border bg-card px-3 py-2">
+        <Hint content={statusText} variant="text" truncatedOnly>
         <span
           role="status"
-          className="min-w-0 flex-1 truncate text-xs text-muted-foreground"
+          className={cn(
+            "min-w-0 flex-1 truncate text-xs",
+            isDirty ? "text-warning" : "text-muted-foreground",
+          )}
         >
           {isDirty ? (
             t("serverManager.pendingChanges", { total: changed.length })
@@ -744,6 +771,7 @@ export function ServerSettingsPanel({
             </span>
           )}
         </span>
+        </Hint>
 
         <Button
           variant="ghost"

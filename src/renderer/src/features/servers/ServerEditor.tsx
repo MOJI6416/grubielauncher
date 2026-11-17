@@ -1,12 +1,13 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Activity,
   Check,
   Loader2,
   PackageCheck,
   PackageMinus,
   PackageSearch,
-  Radio,
+  Server as ServerIcon,
   X,
 } from "lucide-react";
 import { IServer } from "@/types/ServersList";
@@ -25,8 +26,9 @@ import {
 import { PingBars } from "./ServerVisuals";
 import { stripMotd } from "./motd";
 import { holdBusy } from "@renderer/utilities/busy";
-import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
-import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { Hint } from "@renderer/components/Hint";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { showFailureToast } from "@renderer/utilities/failures";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
@@ -52,7 +54,6 @@ export function ServerEditor({
   const source = editIndex === null ? undefined : servers[editIndex];
   const { t } = useTranslation();
   const redact = useRedact();
-  const texturesIndicator = useSlidingIndicator<HTMLDivElement>();
 
   const [name, setName] = useState(source?.name ?? "");
   const [address, setAddress] = useState(source?.ip ?? "");
@@ -135,12 +136,22 @@ export function ServerEditor({
             .slice(0, MAX_SERVER_NAME),
         );
       }
+    } catch (error) {
+      showFailureToast(t("servers.testFailed"), error, {
+        channels: ["servers:ping"],
+      });
     } finally {
       await holdBusy(startedAt);
       probingRef.current = false;
       setIsProbing(false);
     }
   };
+
+  const probeSummary = probe
+    ? `${stripMotd(probe.versionName) || "—"}${
+        probe.players ? ` · ${probe.players.online}/${probe.players.max}` : ""
+      }`
+    : "";
 
   return (
     <form
@@ -151,13 +162,29 @@ export function ServerEditor({
       }}
     >
       <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2.5">
-        <Radio className="size-3.5 text-faint" />
-        <p className="min-w-0 flex-1 truncate text-sm font-medium">
-          {editIndex === null ? t("servers.adding") : t("servers.editing")}
-        </p>
-        <Button type="button" variant="ghost" size="icon-sm" onClick={onCancel}>
-          <X className="size-4" />
-        </Button>
+        <ServerIcon className="size-3.5 text-faint" />
+        <Hint
+          content={
+            editIndex === null ? t("servers.adding") : t("servers.editing")
+          }
+          variant="text"
+          truncatedOnly
+        >
+          <p className="min-w-0 flex-1 truncate text-sm font-medium">
+            {editIndex === null ? t("servers.adding") : t("servers.editing")}
+          </p>
+        </Hint>
+        <Hint content={t("common.cancel")}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("common.cancel")}
+            onClick={onCancel}
+          >
+            <X className="size-4" />
+          </Button>
+        </Hint>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
@@ -173,11 +200,9 @@ export function ServerEditor({
             onChange={(event) => setName(event.currentTarget.value)}
           />
           {nameProblem && trimmedName ? (
-            <span className="text-[0.7rem] text-destructive">
-              {nameProblem}
-            </span>
+            <span className="text-2xs text-destructive">{nameProblem}</span>
           ) : droppedNameCharacters.length > 0 ? (
-            <span className="text-[0.7rem] text-warning">
+            <span className="text-2xs text-warning">
               {t("servers.nameUnsupported", {
                 characters: droppedNameCharacters.join(" "),
               })}
@@ -202,11 +227,9 @@ export function ServerEditor({
             }}
           />
           {addressMessage ? (
-            <span className="text-[0.7rem] text-destructive">
-              {addressMessage}
-            </span>
+            <span className="text-2xs text-destructive">{addressMessage}</span>
           ) : (
-            <span className="text-[0.7rem] text-faint">
+            <span className="text-2xs text-faint">
               {t("servers.addressHint")}
             </span>
           )}
@@ -216,41 +239,25 @@ export function ServerEditor({
           <span className="text-xs font-medium text-muted-foreground">
             {t("servers.resources")}
           </span>
-          <div
-            ref={texturesIndicator.containerRef}
-            className="relative grid grid-cols-3 gap-1 rounded-lg bg-surface-1 p-1"
-          >
-            <SlidingIndicator
-              indicator={texturesIndicator}
-              variant="fill"
-              className="rounded-md bg-surface-3"
-            />
-            {TEXTURE_OPTIONS.map((option, index) => {
+          <SegmentedControl
+            value={String(acceptTextures)}
+            stretch
+            ariaLabel={t("servers.resources")}
+            options={TEXTURE_OPTIONS.map((option, index) => {
               const Icon = option.icon;
-              const active = acceptTextures === option.value;
-
-              return (
-                <button
-                  key={String(option.value)}
-                  type="button"
-                  aria-pressed={active}
-                  data-indicator-active={active}
-                  onClick={() => setAcceptTextures(option.value)}
-                  className={cn(
-                    "relative flex h-8 items-center justify-center gap-1.5 rounded-md text-xs transition-colors",
-                    active
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:bg-surface-2",
-                  )}
-                >
-                  <Icon className="size-3.5" />
-                  <span className="truncate">
-                    {t(`servers.resourceSets.${index}`)}
-                  </span>
-                </button>
-              );
+              return {
+                value: String(option.value),
+                label: t(`servers.resourceSets.${index}`),
+                icon: <Icon className="size-3.5" />,
+              };
             })}
-          </div>
+            onChange={(value) =>
+              setAcceptTextures(
+                TEXTURE_OPTIONS.find((option) => String(option.value) === value)
+                  ?.value ?? null,
+              )
+            }
+          />
         </div>
 
         <div className="grid gap-1.5">
@@ -264,7 +271,7 @@ export function ServerEditor({
             {isProbing ? (
               <Loader2 className="size-3.5 animate-spin" />
             ) : (
-              <Radio className="size-3.5" />
+              <Activity className="size-3.5" />
             )}
             {t("servers.test")}
           </Button>
@@ -281,12 +288,11 @@ export function ServerEditor({
                     </span>
                   )}
                 </span>
-                <span className="truncate text-muted-foreground">
-                  {stripMotd(probe.versionName) || "—"}
-                  {probe.players
-                    ? ` · ${probe.players.online}/${probe.players.max}`
-                    : ""}
-                </span>
+                <Hint content={probeSummary} variant="text" truncatedOnly>
+                  <span className="truncate text-muted-foreground">
+                    {probeSummary}
+                  </span>
+                </Hint>
               </div>
             ) : (
               <div className="rounded-lg border border-destructive/40 bg-surface-1 px-2.5 py-2 text-xs text-destructive">

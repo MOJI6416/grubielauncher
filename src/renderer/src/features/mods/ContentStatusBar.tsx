@@ -166,7 +166,9 @@ export function ContentStatusBar({
                         onSelect={() => moveToGroup(selectedEntries, group.id)}
                       >
                         <FolderTree />
-                        <span className="min-w-0 truncate">{group.name}</span>
+                        <Hint content={group.name} variant="text" truncatedOnly>
+                          <span className="min-w-0 truncate">{group.name}</span>
+                        </Hint>
                       </DropdownMenuItem>
                     ))}
                     <DropdownMenuItem
@@ -266,15 +268,17 @@ export function ContentStatusBar({
                 {t("common.delete")}
               </Button>
 
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                className="size-7"
-                aria-label={t("common.cancel")}
-                onClick={() => setSelection(new Set())}
-              >
-                <X className="size-3.5" />
-              </Button>
+              <Hint content={t("common.cancel")}>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="size-7"
+                  aria-label={t("common.cancel")}
+                  onClick={() => setSelection(new Set())}
+                >
+                  <X className="size-3.5" />
+                </Button>
+              </Hint>
             </div>
           </div>
         ) : bar === "foreign" ? (
@@ -309,9 +313,17 @@ export function ContentStatusBar({
         ) : bar === "updates" ? (
           <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-warning/40 bg-surface-2 px-2.5">
             <CircleArrowUp className="size-4 shrink-0 text-warning" />
-            <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-              {t("modManager.availableUpdates", { count: updatableCount })}
-            </span>
+            <Hint
+              content={t("modManager.availableUpdates", {
+                count: updatableCount,
+              })}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                {t("modManager.availableUpdates", { count: updatableCount })}
+              </span>
+            </Hint>
             {!libraryFacets.includes("update") && (
               <Button
                 size="sm"
@@ -336,9 +348,17 @@ export function ContentStatusBar({
         ) : bar === "unchecked" ? (
           <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5">
             <CloudOff className="size-4 shrink-0 text-faint" />
-            <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-              {t("modManager.uncheckedUpdates", { count: uncheckedCount })}
-            </span>
+            <Hint
+              content={t("modManager.uncheckedUpdates", {
+                count: uncheckedCount,
+              })}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                {t("modManager.uncheckedUpdates", { count: uncheckedCount })}
+              </span>
+            </Hint>
             <Button
               size="sm"
               variant="ghost"
@@ -352,11 +372,19 @@ export function ContentStatusBar({
         ) : bar === "connector" ? (
           <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5">
             <Plug className="size-4 shrink-0 text-faint" />
-            <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-              {t("modManager.connectorHint", {
+            <Hint
+              content={t("modManager.connectorHint", {
                 loader: getLoaderInfo(loader).name,
               })}
-            </span>
+              variant="text"
+              truncatedOnly
+            >
+              <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                {t("modManager.connectorHint", {
+                  loader: getLoaderInfo(loader).name,
+                })}
+              </span>
+            </Hint>
             <Button
               size="sm"
               variant="secondary"

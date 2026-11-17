@@ -1,3 +1,4 @@
+import { ignoreFailure } from "./ignoreFailure";
 import parse, {
   domToReact,
   DOMNode,
@@ -205,7 +206,7 @@ function MarkdownLink({ href, children }: { href: string; children: ReactNode })
         const forceExternal = event.ctrlKey || event.metaKey || event.shiftKey;
         if (onLink && !forceExternal) {
           setIsPending(true);
-          const handled = await onLink(href).catch(() => false);
+          const handled = await onLink(href).catch(ignoreFailure);
           setIsPending(false);
           if (handled) return;
         }

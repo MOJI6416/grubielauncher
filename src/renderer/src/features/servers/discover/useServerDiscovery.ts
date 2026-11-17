@@ -4,6 +4,7 @@ import type {
   ModrinthServerQuery,
 } from "@/types/ModrinthServers";
 import { MODRINTH_SERVER_PAGE_SIZE } from "@/shared/modrinthServers";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -69,7 +70,7 @@ export function useServerDiscovery(
         offset,
         limit: MODRINTH_SERVER_PAGE_SIZE,
       })
-      .catch(() => null);
+      .catch(ignoreFailure);
 
     if (requestId !== requestIdRef.current) return;
 

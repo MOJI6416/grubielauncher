@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
+import { showFailureToast } from "@renderer/utilities/failures";
 import { Hint } from "./Hint";
 import { getLocalPathFromFileUrl } from "@renderer/utilities/exportVersion";
 
@@ -102,7 +102,13 @@ export function ImageCropper({
           .toBlob(resolve),
       );
       if (!blob) {
-        toast.error(t("imageCropper.cropFailed"));
+        showFailureToast(
+          t("imageCropper.cropFailed"),
+          new Error("empty_crop"),
+          {
+            fallbackDescription: t("imageCropper.cropFailed"),
+          },
+        );
         return;
       }
 
@@ -113,8 +119,8 @@ export function ImageCropper({
       }
 
       onClose();
-    } catch {
-      toast.error(t("imageCropper.cropFailed"));
+    } catch (error) {
+      showFailureToast(t("imageCropper.cropFailed"), error);
     } finally {
       setIsSaving(false);
     }
@@ -152,9 +158,11 @@ export function ImageCropper({
         className="gap-0 overflow-hidden p-0 sm:max-w-md"
       >
         <DialogHeader className="flex-row items-center gap-2 border-b border-border px-4 py-3 pr-12">
-          <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
-            {title}
-          </DialogTitle>
+          <Hint content={title} variant="text" truncatedOnly>
+            <DialogTitle className="min-w-0 flex-1 truncate pr-0 text-sm">
+              {title}
+            </DialogTitle>
+          </Hint>
         </DialogHeader>
 
         <div className="relative bg-background">
@@ -218,7 +226,7 @@ export function ImageCropper({
             cropperRef.current?.cropper.rotate(90),
           )}
 
-          <span className="ml-auto font-mono text-[0.7rem] tabular-nums text-faint">
+          <span className="ml-auto font-mono text-2xs tabular-nums text-faint">
             {size.width}×{size.height}
           </span>
         </div>

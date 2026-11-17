@@ -7,6 +7,7 @@ import type {
 import { pathsAtom, settingsAtom } from "@renderer/stores/atoms";
 import type { IBlockedMod } from "@renderer/utilities/blockedMods";
 import { withExtractProgress } from "@renderer/utilities/archiveProgress";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -92,7 +93,7 @@ export async function downloadModpack(
       onStage,
       onExtractPercent,
     );
-    await api.fs.rimraf(archivePath).catch(() => undefined);
+    await api.fs.rimraf(archivePath).catch(ignoreFailure);
 
     if (!modpack) return { status: "failed" };
 

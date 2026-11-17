@@ -53,9 +53,9 @@ export function UpdatePill() {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="mr-1.5 flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-primary-soft px-2 text-xs font-medium whitespace-nowrap text-foreground transition-colors hover:bg-primary-soft-raised"
+          className="mr-1.5 flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-warning/15 px-2 text-xs font-medium whitespace-nowrap text-foreground transition-colors hover:bg-warning/25"
         >
-          <ArrowUpCircle className="size-3.5 text-primary" />
+          <ArrowUpCircle className="size-3.5 text-warning" />
           {t("appUpdate.pill", { version })}
         </button>
       </PopoverTrigger>

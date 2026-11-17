@@ -3,6 +3,7 @@ import { useAtomValue } from "jotai";
 import type { IModpack } from "@/types/Backend";
 import { accountAtom, versionsAtom } from "@renderer/stores/atoms";
 import { useInstalledShareCodes } from "@renderer/features/community/installedPacks";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -31,7 +32,7 @@ export function useOwnModpacks(enabled: boolean): OwnModpacksState {
       .then((list) => {
         if (!cancelled) setItems(Array.isArray(list) ? list : []);
       })
-      .catch(() => undefined)
+      .catch(ignoreFailure)
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -83,7 +84,7 @@ export function useKnownServers(enabled: boolean): KnownServer[] {
 
         setServers(collected);
       })
-      .catch(() => undefined);
+      .catch(ignoreFailure);
 
     return () => {
       cancelled = true;

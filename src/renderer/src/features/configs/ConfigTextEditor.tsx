@@ -44,7 +44,7 @@ const TEXT_GAP_PX = 12;
 const KIND_MARK: Record<Completion["kind"], string> = {
   literal: "text-warning",
   key: "text-foreground",
-  keyword: "text-primary",
+  keyword: "text-info",
 };
 
 const TONE_CLASS = {
@@ -479,7 +479,7 @@ export function ConfigTextEditor({
           />
           <span
             className={cn(
-              "min-w-14 px-1 text-center font-mono text-[0.65rem] tabular-nums",
+              "min-w-14 px-1 text-center font-mono text-3xs tabular-nums",
               findQuery && !ranges.length ? "text-destructive" : "text-faint",
             )}
           >
@@ -489,7 +489,7 @@ export function ConfigTextEditor({
                 : t("configs.findNone")
               : ""}
           </span>
-          <Hint content={t("configs.findPrevious")}>
+          <Hint content={ranges.length ? t("configs.findPrevious") : undefined}>
             <Button
               size="icon-sm"
               variant="ghost"
@@ -501,7 +501,7 @@ export function ConfigTextEditor({
               <ChevronUp className="size-3.5" />
             </Button>
           </Hint>
-          <Hint content={t("configs.findNext")}>
+          <Hint content={ranges.length ? t("configs.findNext") : undefined}>
             <Button
               size="icon-sm"
               variant="ghost"
@@ -542,16 +542,21 @@ export function ConfigTextEditor({
               }}
               onMouseEnter={() => setActiveItem(index)}
               className={cn(
-                "flex h-6 w-full items-center gap-2 px-2 text-left font-mono text-[0.7rem]",
+                "flex h-6 w-full items-center gap-2 px-2 text-left font-mono text-2xs",
                 index === activeItem && "bg-surface-3",
               )}
             >
-              <span
-                className={cn("min-w-0 flex-1 truncate", KIND_MARK[item.kind])}
-              >
-                {item.label}
-              </span>
-              <span className="shrink-0 text-[0.6rem] text-faint">
+              <Hint content={item.label} variant="text" truncatedOnly>
+                <span
+                  className={cn(
+                    "min-w-0 flex-1 truncate",
+                    KIND_MARK[item.kind],
+                  )}
+                >
+                  {item.label}
+                </span>
+              </Hint>
+              <span className="shrink-0 text-3xs text-faint">
                 {t(`configs.completion.${item.kind}`)}
               </span>
             </button>

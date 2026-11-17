@@ -42,6 +42,7 @@ import {
   describeFailure,
   showFailureToast,
 } from "@renderer/utilities/failures";
+import { Hint } from "@renderer/components/Hint";
 
 const api = window.api;
 
@@ -156,7 +157,7 @@ export function LaunchHost() {
       {checkFailed && (
         <Confirmation
           onClose={() => setCheckFailed(null)}
-          title={t("versions.updateCheckFailed")}
+          title={t("versions.updateCheckFailedQuestion")}
           content={[
             { color: "warning", text: t("versions.updateCheckFailedHint") },
             ...(checkFailure ? [{ text: checkFailure.reason }] : []),
@@ -191,7 +192,7 @@ export function LaunchHost() {
             setIsUpdateOpen(false);
             setIsRunning(false);
           }}
-          title={t("versions.updateAvailable")}
+          title={t("versions.updateBeforeLaunchQuestion")}
           content={[
             { color: "warning", text: t("versions.hostChanged") },
             ...(localServers === null
@@ -293,9 +294,9 @@ export function LaunchHost() {
           {lostServers.length > 0 && (
             <ul className="grid gap-1 rounded-lg border border-border bg-surface-2 px-3 py-2">
               {lostServers.map((name) => (
-                <li key={name} className="truncate text-xs text-foreground">
-                  {name}
-                </li>
+                <Hint key={name} content={name} variant="text" truncatedOnly>
+                  <li className="truncate text-xs text-foreground">{name}</li>
+                </Hint>
               ))}
             </ul>
           )}

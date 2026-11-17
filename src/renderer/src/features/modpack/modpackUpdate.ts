@@ -35,6 +35,7 @@ import { rewriteImportedLocalPaths } from "@renderer/features/newInstance/create
 import { resolvePackVersions } from "@renderer/features/newInstance/resolvePackVersions";
 import { withExtractProgress } from "@renderer/utilities/archiveProgress";
 import { modpackVersionLabel } from "./modpackVersions";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -92,7 +93,7 @@ export async function discardPreparedUpdate(
   update: Pick<PreparedModpackUpdate, "pack"> | null | undefined,
 ): Promise<void> {
   if (!update?.pack.folderPath) return;
-  await api.fs.rimraf(update.pack.folderPath).catch(() => undefined);
+  await api.fs.rimraf(update.pack.folderPath).catch(ignoreFailure);
 }
 
 async function planPreparedUpdate(
@@ -216,7 +217,7 @@ export async function prepareModpackUpdateFromFile(input: {
 
     if (imported.type !== "other" || !imported.other) {
       if (imported.gl?.path) {
-        await api.fs.rimraf(imported.gl.path).catch(() => undefined);
+        await api.fs.rimraf(imported.gl.path).catch(ignoreFailure);
       }
       return { status: "notModpack" };
     }
@@ -278,7 +279,7 @@ async function restoreLoader(
 
   await instance
     .changeLoader(account, settings, previousLoader)
-    .catch(() => undefined);
+    .catch(ignoreFailure);
 }
 
 export async function applyModpackUpdate(input: {
@@ -343,10 +344,10 @@ export async function applyModpackUpdate(input: {
   } catch (error) {
     instance.version.loader.mods = previous.loader.mods;
     instance.version.modpack = previous.modpack;
-    await api.modpack.restoreRollback(versionPath).catch(() => null);
-    await api.modpack.dropRollback(versionPath).catch(() => false);
+    await api.modpack.restoreRollback(versionPath).catch(ignoreFailure);
+    await api.modpack.dropRollback(versionPath).catch(ignoreFailure);
     await restoreLoader(instance, previous, account, settings);
-    await instance.save().catch(() => false);
+    await instance.save().catch(ignoreFailure);
     throw error;
   }
 

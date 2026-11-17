@@ -14,6 +14,7 @@ import {
   ChevronUp,
   ChevronRight,
   Filter,
+  ScrollText,
   Search,
   WrapText,
   X,
@@ -31,8 +32,15 @@ import {
   nextProblem,
   problemPositions,
 } from "./logView";
-import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
-import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { useAtomValue } from "jotai";
 import { streamerActiveAtom } from "@renderer/features/streamer/streamerMode";
 import { settingsAtom } from "@renderer/stores/atoms";
@@ -61,6 +69,8 @@ const LEVEL_BORDER: Record<LogLevel, string> = {
   info: "border-l-transparent",
   debug: "border-l-transparent",
 };
+
+const LOADING_WIDTHS = [72, 58, 84, 46, 66, 90, 52, 78, 61, 70];
 
 export interface LogSource {
   id: string;
@@ -114,7 +124,6 @@ export function LogViewer({
   emptyAction?: ReactNode;
 }) {
   const { t } = useTranslation();
-  const sourceIndicator = useSlidingIndicator<HTMLDivElement>();
   const isStreaming = useAtomValue(streamerActiveAtom);
   const logFontSize = useAtomValue(settingsAtom).logFontSize;
   const entries = useMemo(
@@ -235,37 +244,17 @@ export function LogViewer({
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
       <div className="flex min-w-0 shrink-0 items-center gap-2 border-b border-border px-2 py-1.5">
         {sources.length > 0 && (
-          <div
-            ref={sourceIndicator.containerRef}
-            role="tablist"
-            aria-label={t("logs.sourceLabel")}
-            className="relative flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-3 p-0.5"
-          >
-            <SlidingIndicator
-              indicator={sourceIndicator}
-              variant="fill"
-              className="rounded-md bg-surface-1 shadow-xs"
-            />
-            {sources.map((source) => (
-              <Hint key={source.id} content={source.hint} className="max-w-64">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={source.id === sourceId}
-                  data-indicator-active={source.id === sourceId}
-                  onClick={() => onSourceChange(source.id)}
-                  className={cn(
-                    "relative max-w-44 truncate rounded-md px-2 py-1 text-xs font-medium transition-colors",
-                    source.id === sourceId
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {source.label}
-                </button>
-              </Hint>
-            ))}
-          </div>
+          <SegmentedControl
+            value={sourceId}
+            ariaLabel={t("logs.sourceLabel")}
+            className="max-w-[55%]"
+            options={sources.map((source) => ({
+              value: source.id,
+              label: source.label,
+              hint: source.hint,
+            }))}
+            onChange={onSourceChange}
+          />
         )}
 
         <div className="relative min-w-0 flex-1">
@@ -290,40 +279,46 @@ export function LogViewer({
 
           {search.trim().length > 0 && (
             <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center gap-0.5">
-              <span className="font-mono text-[0.65rem] tabular-nums text-faint">
+              <span className="font-mono text-3xs tabular-nums text-faint">
                 {total === 0
                   ? t("logs.noMatches")
                   : `${cursor + 1 || 1}/${total}`}
               </span>
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                className="size-6"
-                disabled={total === 0}
-                aria-label={t("logs.prevMatch")}
-                onClick={() => jump(-1)}
-              >
-                <ChevronUp className="size-3.5" />
-              </Button>
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                className="size-6"
-                disabled={total === 0}
-                aria-label={t("logs.nextMatch")}
-                onClick={() => jump(1)}
-              >
-                <ChevronDown className="size-3.5" />
-              </Button>
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                className="size-6"
-                aria-label={t("logs.clearSearch")}
-                onClick={() => setSearch("")}
-              >
-                <X className="size-3.5" />
-              </Button>
+              <Hint content={total === 0 ? undefined : t("logs.prevMatch")}>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="size-6"
+                  disabled={total === 0}
+                  aria-label={t("logs.prevMatch")}
+                  onClick={() => jump(-1)}
+                >
+                  <ChevronUp className="size-3.5" />
+                </Button>
+              </Hint>
+              <Hint content={total === 0 ? undefined : t("logs.nextMatch")}>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="size-6"
+                  disabled={total === 0}
+                  aria-label={t("logs.nextMatch")}
+                  onClick={() => jump(1)}
+                >
+                  <ChevronDown className="size-3.5" />
+                </Button>
+              </Hint>
+              <Hint content={t("logs.clearSearch")}>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="size-6"
+                  aria-label={t("logs.clearSearch")}
+                  onClick={() => setSearch("")}
+                >
+                  <X className="size-3.5" />
+                </Button>
+              </Hint>
             </div>
           )}
         </div>
@@ -334,6 +329,7 @@ export function LogViewer({
             variant={onlyMatches ? "secondary" : "ghost"}
             className="size-8 shrink-0"
             aria-pressed={onlyMatches}
+            aria-label={t("logs.onlyMatches")}
             onClick={() => setOnlyMatches((value) => !value)}
           >
             <Filter className="size-3.5" />
@@ -346,6 +342,7 @@ export function LogViewer({
             variant={wrap ? "secondary" : "ghost"}
             className="size-8 shrink-0"
             aria-pressed={wrap}
+            aria-label={t("logs.wrap")}
             onClick={() => setWrap((value) => !value)}
           >
             <WrapText className="size-3.5" />
@@ -359,6 +356,7 @@ export function LogViewer({
               variant={follow ? "secondary" : "ghost"}
               className="size-8 shrink-0"
               aria-pressed={follow}
+              aria-label={t("logs.follow")}
               onClick={() => onFollowChange(!follow)}
             >
               <ArrowDownToLine className="size-3.5" />
@@ -372,9 +370,10 @@ export function LogViewer({
       <div className="flex min-w-0 shrink-0 items-center gap-1 border-b border-border px-2 py-1">
         <button
           type="button"
+          aria-pressed={allLevels}
           onClick={() => setLevels(ALL_LEVELS)}
           className={cn(
-            "rounded-md px-2 py-1 text-[0.7rem] font-medium transition-colors",
+            "rounded-md px-2 py-1 text-2xs font-medium transition-colors",
             allLevels
               ? "bg-surface-3 text-foreground"
               : "text-muted-foreground hover:text-foreground",
@@ -391,9 +390,10 @@ export function LogViewer({
             key={level}
             type="button"
             disabled={counts[level] === 0}
+            aria-pressed={!allLevels && levels.includes(level)}
             onClick={() => toggleLevel(level)}
             className={cn(
-              "flex items-center gap-1.5 rounded-md px-2 py-1 text-[0.7rem] font-medium transition-colors disabled:opacity-40",
+              "flex items-center gap-1.5 rounded-md px-2 py-1 text-2xs font-medium transition-colors disabled:opacity-40",
               !allLevels && levels.includes(level)
                 ? "bg-surface-3 text-foreground"
                 : "text-muted-foreground hover:text-foreground",
@@ -408,7 +408,7 @@ export function LogViewer({
         ))}
 
         <div className="ml-auto flex shrink-0 items-center gap-1">
-          <span className="font-mono text-[0.65rem] tabular-nums text-faint">
+          <span className="font-mono text-3xs tabular-nums text-faint">
             {truncated
               ? t("logs.truncated")
               : t("logs.shownLines", { count: view.entries.length })}
@@ -419,7 +419,7 @@ export function LogViewer({
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-6 gap-1 px-1.5 text-[0.65rem] text-destructive"
+                className="h-6 gap-1 px-1.5 text-3xs text-destructive"
                 onClick={() => {
                   const target = nextProblem(problems, problemCursor, 1);
                   if (target < 0) return;
@@ -441,23 +441,46 @@ export function LogViewer({
         className="min-h-0 flex-1 overflow-auto bg-surface-1"
       >
         {loading ? (
-          <div className="flex h-full items-center justify-center py-10 text-sm text-muted-foreground">
-            {t("logs.loading")}
+          <div aria-busy className="flex flex-col gap-1.5 px-3 py-2">
+            {LOADING_WIDTHS.map((width, index) => (
+              <Skeleton
+                key={index}
+                className="h-3 rounded"
+                style={{ width: `${width}%` }}
+              />
+            ))}
           </div>
         ) : entries.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-1 px-6 py-10 text-center">
-            <p className="text-sm text-foreground">{emptyTitle}</p>
-            {emptyHint && (
-              <p className="max-w-sm text-xs text-muted-foreground">
-                {emptyHint}
-              </p>
-            )}
-            {emptyAction && <div className="mt-2">{emptyAction}</div>}
-          </div>
+          <Empty className="h-full border-0 bg-transparent">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <ScrollText />
+              </EmptyMedia>
+              <EmptyTitle>{emptyTitle}</EmptyTitle>
+              {emptyHint && <EmptyDescription>{emptyHint}</EmptyDescription>}
+            </EmptyHeader>
+            {emptyAction}
+          </Empty>
         ) : view.entries.length === 0 ? (
-          <div className="flex h-full items-center justify-center py-10 text-sm text-muted-foreground">
-            {t("logs.nothingMatches")}
-          </div>
+          <Empty className="h-full border-0 bg-transparent">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Filter />
+              </EmptyMedia>
+              <EmptyTitle>{t("logs.nothingMatches")}</EmptyTitle>
+            </EmptyHeader>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setSearch("");
+                setOnlyMatches(false);
+                setLevels(ALL_LEVELS);
+              }}
+            >
+              {t("modManager.resetFilters")}
+            </Button>
+          </Empty>
         ) : (
           <div
             className="relative w-full"
@@ -480,7 +503,7 @@ export function LogViewer({
                     className={cn(
                       "flex min-w-0 gap-2 border-l-2 px-2 py-0.5 font-mono leading-[1.55]",
                       LEVEL_BORDER[entry.level],
-                      active ? "bg-primary-soft" : "hover:bg-surface-2/60",
+                      active ? "bg-row-selected" : "hover:bg-row-hover",
                     )}
                     style={{ fontSize: logFontSize }}
                   >
@@ -522,7 +545,7 @@ export function LogViewer({
                       <Hint
                         variant="text"
                         truncatedOnly
-                        className="line-clamp-6 max-w-96 font-mono text-[11px] break-all"
+                        className="line-clamp-6 max-w-96 font-mono text-2xs break-all"
                         content={wrap ? undefined : entry.text}
                       >
                         <span
@@ -540,7 +563,7 @@ export function LogViewer({
                             </span>
                           )}
                           {entry.repeat > 1 && (
-                            <span className="mr-1.5 rounded-sm bg-surface-3 px-1 text-[0.6rem] text-muted-foreground tabular-nums">
+                            <span className="mr-1.5 rounded-sm bg-surface-3 px-1 text-3xs text-muted-foreground tabular-nums">
                               ×{entry.repeat}
                             </span>
                           )}
@@ -573,7 +596,7 @@ export function LogViewer({
                                 new Set(current).add(entry.id),
                               )
                             }
-                            className="mt-0.5 text-[0.65rem] text-faint transition-colors hover:text-muted-foreground"
+                            className="mt-0.5 text-3xs text-faint transition-colors hover:text-muted-foreground"
                           >
                             {t("logs.expand", { count: entry.extra.length })}
                           </button>

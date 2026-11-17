@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -177,14 +178,14 @@ export function Onboarding() {
           })}
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-border bg-surface-2 px-5 py-3">
+        <DialogFooter className="m-0 flex-row items-center justify-between gap-2 border-border px-5 py-3 sm:justify-between">
           <p className="min-w-0 text-xs leading-4 text-faint">
             {t("onboarding.skipHint")}
           </p>
           <Button variant="ghost" onClick={finish}>
             {t("onboarding.skip")}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

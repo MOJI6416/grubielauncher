@@ -8,8 +8,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
-import { formatDate, formatTime } from "@renderer/utilities/date";
+import { formatDate } from "@renderer/utilities/date";
 import { LogRun, describeExitCode } from "./runs";
+import { formatDuration } from "@renderer/utilities/duration";
 
 export function RunRail({
   runs,
@@ -23,10 +24,13 @@ export function RunRail({
   onSelect: (key: string) => void;
 }) {
   const { t } = useTranslation();
-  const timeLabels = { h: t("time.h"), m: t("time.m"), s: t("time.s") };
 
   return (
-    <div className="flex min-h-0 flex-col gap-0.5 overflow-y-auto pr-1">
+    <div
+      role="listbox"
+      aria-label={t("logs.runs")}
+      className="flex min-h-0 flex-col gap-0.5 overflow-y-auto pr-1"
+    >
       {runs.map((run) => {
         const active = run.key === selected;
         const live = run.kind === "live" && run.status === "running";
@@ -54,7 +58,7 @@ export function RunRail({
                     ? t("logs.exit.recovered")
                     : t("logs.exit.ok"),
                 run.durationSec
-                  ? formatTime(run.durationSec, timeLabels)
+                  ? formatDuration(run.durationSec, { withSeconds: true })
                   : null,
                 run.account,
               ]
@@ -65,12 +69,12 @@ export function RunRail({
           <button
             key={run.key}
             type="button"
+            role="option"
+            aria-selected={active}
             onClick={() => onSelect(run.key)}
             className={cn(
               "flex min-w-0 items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 text-left transition-colors outline-none focus-visible:border-ring",
-              active
-                ? "border-primary/40 bg-surface-3"
-                : "hover:bg-surface-3/70",
+              active ? "bg-row-selected" : "hover:bg-row-hover",
             )}
           >
             <Icon
@@ -85,11 +89,19 @@ export function RunRail({
             />
 
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-medium text-foreground">
-                {live ? t("logs.now") : formatDate(new Date(run.startedAt))}
-              </p>
+              <Hint
+                content={
+                  live ? t("logs.now") : formatDate(new Date(run.startedAt))
+                }
+                variant="text"
+                truncatedOnly
+              >
+                <p className="truncate text-xs font-medium text-foreground">
+                  {live ? t("logs.now") : formatDate(new Date(run.startedAt))}
+                </p>
+              </Hint>
               <Hint content={detail} variant="text" truncatedOnly>
-                <p className="truncate text-[0.65rem] text-faint">{detail}</p>
+                <p className="truncate text-3xs text-faint">{detail}</p>
               </Hint>
             </div>
 

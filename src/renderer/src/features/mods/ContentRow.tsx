@@ -1,13 +1,11 @@
 import { type DragEvent, memo } from "react";
 import { useTranslation } from "react-i18next";
-import { SiCurseforge, SiModrinth } from "react-icons/si";
 import {
   Ban,
   CircleArrowUp,
   CloudOff,
   Copy,
   Download,
-  FileBox,
   Heart,
   Monitor,
   MonitorCog,
@@ -36,9 +34,10 @@ import {
   readSelectionGesture,
 } from "@renderer/utilities/rangeSelection";
 import { ContentEntry } from "./entries";
-import { formatCompactNumber } from "./format";
+import { formatCompactNumber } from "@renderer/utilities/numbers";
 import { ProjectIcon } from "./ProjectIcon";
 import { displayTitle, installedVersionLabel } from "./titles";
+import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
 
 export const ROW_HEIGHT = 56;
 
@@ -59,14 +58,6 @@ const PROVIDER_NAMES: Partial<Record<Provider, string>> = {
   [Provider.CURSEFORGE]: "CurseForge",
   [Provider.MODRINTH]: "Modrinth",
 };
-
-function ProviderMark({ provider }: { provider: Provider }) {
-  if (provider === Provider.CURSEFORGE)
-    return <SiCurseforge className="size-3 shrink-0" />;
-  if (provider === Provider.MODRINTH)
-    return <SiModrinth className="size-3 shrink-0" />;
-  return <FileBox className="size-3 shrink-0" />;
-}
 
 function SideMark({ side }: { side: ContentEntry["side"] }) {
   if (side === "client") return <Monitor className="size-3 shrink-0" />;
@@ -162,7 +153,7 @@ export const ContentRow = memo(function ContentRow({
         }
         actions.onOpen(entry);
       }}
-      className="group flex h-14 min-w-0 cursor-pointer items-center gap-2.5 rounded-lg px-2 transition-colors hover:bg-surface-2 data-[active]:bg-surface-2 data-[dragged]:opacity-50 data-[open]:bg-surface-3"
+      className="group flex h-14 min-w-0 cursor-pointer items-center gap-2.5 rounded-lg px-2 transition-colors hover:bg-row-hover data-[active]:bg-row-hover data-[dragged]:opacity-50 aria-selected:bg-row-selected data-[open]:bg-row-selected"
     >
       {isSelectable ? (
         <div
@@ -207,9 +198,11 @@ export const ContentRow = memo(function ContentRow({
           </Hint>
 
           {versionLabel && (
-            <span className="max-w-24 min-w-0 truncate font-mono text-[0.6875rem] leading-4 text-faint">
-              {versionLabel}
-            </span>
+            <Hint content={versionLabel} variant="text" truncatedOnly>
+              <span className="max-w-24 min-w-0 truncate font-mono text-2xs leading-4 text-faint">
+                {versionLabel}
+              </span>
+            </Hint>
           )}
 
           {isPinned && (
@@ -221,14 +214,14 @@ export const ContentRow = memo(function ContentRow({
               }
               className="max-w-64"
             >
-              <span className="flex size-4 shrink-0 items-center justify-center text-primary">
+              <span className="flex size-4 shrink-0 items-center justify-center text-info">
                 <Pin className="size-3" />
               </span>
             </Hint>
           )}
 
           {hasUpdate && (
-            <span className="shrink-0 rounded-sm bg-warning/15 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-warning">
+            <span className="shrink-0 rounded-sm bg-warning/15 px-1.5 py-0.5 text-3xs leading-3 font-medium text-warning">
               {t("modManager.availableUpdate")}
             </span>
           )}
@@ -261,7 +254,7 @@ export const ContentRow = memo(function ContentRow({
           {foreignLoader && (
             <LoaderLabel
               loader={foreignLoader}
-              className="shrink-0 rounded-sm bg-surface-3 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-muted-foreground"
+              className="shrink-0 rounded-sm bg-surface-3 px-1.5 py-0.5 text-3xs leading-3 font-medium text-muted-foreground"
             />
           )}
 
@@ -274,7 +267,7 @@ export const ContentRow = memo(function ContentRow({
               )}
               className="max-w-64"
             >
-              <span className="flex shrink-0 items-center gap-1 rounded-sm bg-warning/15 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-warning">
+              <span className="flex shrink-0 items-center gap-1 rounded-sm bg-warning/15 px-1.5 py-0.5 text-3xs leading-3 font-medium text-warning">
                 <Copy className="size-2.5" />
                 {t("modManager.duplicateBadge")}
               </span>
@@ -282,14 +275,14 @@ export const ContentRow = memo(function ContentRow({
           )}
 
           {!isLibrary && installed && (
-            <span className="flex shrink-0 items-center gap-1 rounded-sm bg-success/15 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-success">
+            <span className="flex shrink-0 items-center gap-1 rounded-sm bg-success/15 px-1.5 py-0.5 text-3xs leading-3 font-medium text-success">
               <PackageCheck className="size-2.5" />
               {t("modManager.installed")}
             </span>
           )}
 
           {entry.pendingRemoved && (
-            <span className="shrink-0 rounded-sm bg-destructive/15 px-1.5 py-0.5 text-[0.625rem] leading-3 font-medium text-destructive">
+            <span className="shrink-0 rounded-sm bg-destructive/15 px-1.5 py-0.5 text-3xs leading-3 font-medium text-destructive">
               {t("modManager.deleted")}
             </span>
           )}
@@ -297,7 +290,7 @@ export const ContentRow = memo(function ContentRow({
 
         <div className="flex min-w-0 items-center gap-2 text-xs leading-4 text-faint">
           <span className="flex shrink-0 items-center gap-1">
-            <ProviderMark provider={entry.provider} />
+            <ContentProviderIcon provider={entry.provider} className="size-3" />
           </span>
 
           {isLibrary ? (

@@ -5,13 +5,17 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Hint } from "@renderer/components/Hint";
 import { Input } from "@/components/ui/input";
 import { createGroup, renameGroup } from "@/shared/instancesFile";
 import { updateInstancesFile } from "./instancesStore";
 import { nextGroupId } from "./selectors";
+
+const GROUP_FORM_ID = "instance-group-form";
 
 export function GroupDialog({
   group,
@@ -51,11 +55,14 @@ export function GroupDialog({
         <DialogHeader className="min-w-0">
           <DialogTitle className="flex min-w-0 items-center gap-2">
             <Icon className="size-5 shrink-0" />
-            <span className="truncate">{title}</span>
+            <Hint content={title} variant="text" truncatedOnly>
+              <span className="truncate">{title}</span>
+            </Hint>
           </DialogTitle>
         </DialogHeader>
 
         <form
+          id={GROUP_FORM_ID}
           className="flex flex-col gap-3"
           onSubmit={(event) => {
             event.preventDefault();
@@ -73,10 +80,16 @@ export function GroupDialog({
               {t("versions.groups.hint")}
             </p>
           )}
-          <Button type="submit" disabled={!draft.trim()}>
+        </form>
+
+        <DialogFooter>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+          <Button type="submit" form={GROUP_FORM_ID} disabled={!draft.trim()}>
             {action}
           </Button>
-        </form>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

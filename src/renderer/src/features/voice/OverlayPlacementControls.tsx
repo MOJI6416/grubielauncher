@@ -25,6 +25,7 @@ import {
 } from "@renderer/stores/atoms";
 import { participantInitials } from "./participants";
 import { isVoiceLive } from "./roomModel";
+import { Hint } from "@renderer/components/Hint";
 
 const api = window.api;
 const PREVIEW_MS = 4000;
@@ -118,26 +119,30 @@ export function OverlayPlacementControls({
         {OVERLAY_CORNERS.map((corner) => {
           const isActive = settings.voiceOverlayCorner === corner;
           return (
-            <button
+            <Hint
               key={corner}
-              type="button"
-              role="radio"
-              aria-checked={isActive}
-              aria-label={t(`settings.voiceOverlayCorners.${corner}`)}
-              onClick={() => commit({ voiceOverlayCorner: corner })}
-              className={cn(
-                "flex rounded-sm p-1 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                CORNER_CELL[corner],
-                isActive ? "bg-primary-soft" : "hover:bg-surface-3",
-              )}
+              content={t(`settings.voiceOverlayCorners.${corner}`)}
             >
-              <span
+              <button
+                type="button"
+                role="radio"
+                aria-checked={isActive}
+                aria-label={t(`settings.voiceOverlayCorners.${corner}`)}
+                onClick={() => commit({ voiceOverlayCorner: corner })}
                 className={cn(
-                  "h-1.5 w-3 rounded-full",
-                  isActive ? "bg-primary" : "bg-faint/50",
+                  "flex rounded-sm p-1 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  CORNER_CELL[corner],
+                  isActive ? "bg-row-selected" : "hover:bg-surface-3",
                 )}
-              />
-            </button>
+              >
+                <span
+                  className={cn(
+                    "h-1.5 w-3 rounded-full",
+                    isActive ? "bg-primary" : "bg-faint/50",
+                  )}
+                />
+              </button>
+            </Hint>
           );
         })}
       </div>

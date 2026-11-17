@@ -44,6 +44,7 @@ import {
   mirrorModeAtom,
   openTaskCenter,
 } from "@renderer/features/install/installUi";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -292,7 +293,7 @@ export function InstallHost() {
             store.set(installPauseStateAtom, state);
           }
         })
-        .catch(() => {});
+        .catch(ignoreFailure);
     };
 
     poll();
@@ -314,7 +315,7 @@ export function InstallHost() {
         .then((state) => {
           if (!cancelled) store.set(mirrorModeAtom, resolveMirrorMode(state));
         })
-        .catch(() => {});
+        .catch(ignoreFailure);
     };
 
     poll();

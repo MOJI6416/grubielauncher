@@ -48,6 +48,7 @@ import {
   voiceSwitchDevice,
 } from "@renderer/utilities/voiceClient";
 import { OS_NAME } from "@renderer/utilities/platform";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const METER_SEGMENTS = 18;
 const SILENCE_HINT_MS = 4000;
@@ -158,7 +159,7 @@ export function DeviceSelect({
       </Select>
 
       {isBroken ? (
-        <p className="flex items-center gap-1.5 text-[11px] leading-4 text-warning">
+        <p className="flex items-center gap-1.5 text-2xs leading-4 text-warning">
           <AlertTriangle className="size-3 shrink-0" />
           <Hint
             content={t(micIssueHintKey(issue))}
@@ -179,7 +180,7 @@ export function DeviceSelect({
         </p>
       ) : (
         selection.isMissing && (
-          <p className="flex items-center gap-1.5 text-[11px] leading-4 text-warning">
+          <p className="flex items-center gap-1.5 text-2xs leading-4 text-warning">
             <AlertTriangle className="size-3 shrink-0" />
             {t("voice.deviceGoneHint")}
           </p>
@@ -211,7 +212,7 @@ async function startLoopback(
   const audio = new Audio();
   audio.srcObject = output ? new MediaStream([output]) : null;
   applySavedAudioOutput(audio);
-  void audio.play().catch(() => undefined);
+  void audio.play().catch(ignoreFailure);
 
   return () => {
     audio.pause();
@@ -298,7 +299,7 @@ export function MicLevelTest() {
         source.disconnect();
         streamRef.current = null;
         stream.getTracks().forEach((track) => track.stop());
-        void context.close().catch(() => undefined);
+        void context.close().catch(ignoreFailure);
       };
       setIsActive(true);
     } catch (error) {
@@ -379,7 +380,7 @@ export function MicLevelTest() {
             size="icon-sm"
             className={cn(
               "size-8 shrink-0",
-              hearSelf && "border-primary/50 bg-primary-soft text-foreground",
+              hearSelf && "bg-surface-3 text-foreground",
             )}
             aria-pressed={hearSelf}
             aria-label={t("voice.micTestHearSelf")}
@@ -409,13 +410,13 @@ export function MicLevelTest() {
           {gateDb !== null && (
             <span
               aria-hidden
-              className="pointer-events-none absolute -inset-y-1 w-0.5 -translate-x-1/2 rounded-full bg-primary"
+              className="pointer-events-none absolute -inset-y-1 w-0.5 -translate-x-1/2 rounded-full bg-foreground"
               style={{ left: `${levelFraction(gateDb) * 100}%` }}
             />
           )}
         </div>
 
-        <span className="w-12 shrink-0 text-right font-mono text-[11px] tabular-nums text-faint">
+        <span className="w-12 shrink-0 text-right font-mono text-2xs tabular-nums text-faint">
           {isActive
             ? t("voice.micLevelDb", { value: Math.round(Math.max(-60, levelDb)) })
             : ""}
@@ -423,18 +424,30 @@ export function MicLevelTest() {
       </div>
 
       {isActive && (
-        <p
-          className={cn(
-            "truncate text-[11px] leading-4",
-            isSilent ? "text-warning" : "text-faint",
-          )}
+        <Hint
+          content={
+            isSilent
+              ? t("voice.micTestSilent")
+              : gateDb !== null
+                ? t("voice.micTestGateHint")
+                : t("voice.micTestSpeak")
+          }
+          variant="text"
+          truncatedOnly
         >
-          {isSilent
-            ? t("voice.micTestSilent")
-            : gateDb !== null
-              ? t("voice.micTestGateHint")
-              : t("voice.micTestSpeak")}
-        </p>
+          <p
+            className={cn(
+              "truncate text-2xs leading-4",
+              isSilent ? "text-warning" : "text-faint",
+            )}
+          >
+            {isSilent
+              ? t("voice.micTestSilent")
+              : gateDb !== null
+                ? t("voice.micTestGateHint")
+                : t("voice.micTestSpeak")}
+          </p>
+        </Hint>
       )}
     </div>
   );
@@ -468,7 +481,7 @@ export function GateThresholdSlider({
           if (next !== undefined) onCommit(clampGateDb(next));
         }}
       />
-      <span className="w-24 shrink-0 text-right font-mono text-[11px] tabular-nums text-faint">
+      <span className="w-24 shrink-0 text-right font-mono text-2xs tabular-nums text-faint">
         {t("settings.voiceGateThreshold", { value: draft })}
       </span>
     </div>

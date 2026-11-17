@@ -5,6 +5,8 @@ import { navigate } from "@renderer/navigation/navigate";
 import { instanceKey } from "@renderer/features/instances/selectors";
 import { showErrorToast } from "@renderer/utilities/errorToast";
 import { uiJournal } from "@renderer/utilities/journal";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { showFailureToast } from "@renderer/utilities/failures";
 
 const api = window.api;
 
@@ -13,12 +15,15 @@ async function installRosettaFromToast(): Promise<void> {
   const toastId = toast.loading(t("java.launch.rosettaInstalling"));
   const installed = await api.java
     .installRosetta(t("java.launch.rosettaPrompt"))
-    .catch(() => false);
+    .catch(ignoreFailure);
   toast.dismiss(toastId);
 
   uiJournal.info("launch", "rosetta install finished", { installed });
   if (installed) toast.success(t("java.launch.rosettaInstalled"));
-  else toast.error(t("java.launch.rosettaFailed"));
+  else
+    showFailureToast(t("java.launch.rosettaFailed"), undefined, {
+      channels: ["java:installRosetta"],
+    });
 }
 
 export async function prepareJavaForLaunch(version: Version): Promise<boolean> {

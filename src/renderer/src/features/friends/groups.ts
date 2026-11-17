@@ -1,4 +1,4 @@
-import { getDefaultStore } from "jotai";
+import { atom, getDefaultStore } from "jotai";
 import { accountIdentity } from "@renderer/features/accounts/identity";
 import {
   accountAtom,
@@ -7,6 +7,8 @@ import {
 } from "@renderer/stores/atoms";
 
 const api = window.api;
+
+export const groupsSettledForAtom = atom<string | null>(null);
 
 export async function loadGroups(): Promise<boolean> {
   const store = getDefaultStore();
@@ -27,10 +29,12 @@ export async function loadGroups(): Promise<boolean> {
 
   if (!groups) {
     store.set(groupsLoadFailedAtom, true);
+    store.set(groupsSettledForAtom, identity);
     return false;
   }
 
   store.set(groupsLoadFailedAtom, false);
   store.set(groupsAtom, groups);
+  store.set(groupsSettledForAtom, identity);
   return true;
 }

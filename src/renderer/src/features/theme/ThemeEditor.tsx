@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Check,
@@ -28,7 +29,10 @@ import {
   type ThemeMode,
   type ThemeZone,
 } from "@/shared/themes";
-import { SettingRow, SettingsGroup, Segmented } from "@renderer/features/settings/SettingsPrimitives";
+import { SettingRow, SettingsGroup } from "@renderer/features/settings/SettingsPrimitives";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { Hint } from "@renderer/components/Hint";
+import { useReducedMotionPreference } from "@/lib/motionPreference";
 import { pickBackdrop } from "./themesStore";
 import { BackdropFramer } from "./BackdropFramer";
 
@@ -63,8 +67,10 @@ function ColorField({
         className="size-7 shrink-0 cursor-pointer rounded-md border border-border bg-transparent p-0 disabled:cursor-not-allowed [&::-webkit-color-swatch]:rounded-[5px] [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0"
       />
       <span className="grid min-w-0">
-        <span className="truncate text-xs text-foreground">{label}</span>
-        <span className="font-mono text-[0.65rem] text-faint uppercase">{value}</span>
+        <Hint content={label} variant="text" truncatedOnly>
+          <span className="truncate text-xs text-foreground">{label}</span>
+        </Hint>
+        <span className="font-mono text-3xs text-faint uppercase">{value}</span>
       </span>
     </label>
   );
@@ -123,6 +129,8 @@ export function ThemeEditor({
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const isReducedMotion = useReducedMotionPreference();
   const report = contrastReport(draft, accent);
   const hasFailure = report.some((check) => check.level === "fail");
 
@@ -150,6 +158,13 @@ export function ThemeEditor({
           : ({ ...(draft.backdrop as ThemeBackdrop), ...patch } as ThemeBackdrop),
     });
 
+  useEffect(() => {
+    rootRef.current?.scrollIntoView({
+      block: "start",
+      behavior: isReducedMotion ? "auto" : "smooth",
+    });
+  }, [draft.id, isReducedMotion]);
+
   const choosePicture = async () => {
     const path = await pickBackdrop();
     if (!path) return;
@@ -168,199 +183,210 @@ export function ThemeEditor({
   };
 
   return (
-    <SettingsGroup title={t("theme.editor.title")} hint={t("theme.editor.livePreview")}>
-      <SettingRow
-        title={t("theme.editor.name")}
-        control={
-          <Input
-            value={draft.name}
-            maxLength={MAX_THEME_NAME}
-            aria-label={t("theme.editor.name")}
-            onChange={(event) => onChange({ ...draft, name: event.target.value })}
-            className="h-8 w-56"
-          />
-        }
-      />
-
-      <SettingRow
-        title={t("theme.editor.mode")}
-        description={t("theme.editor.modeDescription")}
-        control={
-          <Segmented<ThemeMode>
-            ariaLabel={t("theme.editor.mode")}
-            value={draft.mode}
-            onChange={(mode) => onChange({ ...draft, mode })}
-            options={(["dark", "light"] as ThemeMode[]).map((mode) => ({
-              value: mode,
-              label: t(`theme.editor.modes.${mode}`),
-            }))}
-          />
-        }
-      />
-
-      <SettingRow title={t("theme.editor.colors")}>
-        <div className="mt-2.5 grid grid-cols-4 gap-2">
-          {COLOR_KEYS.map((key) => (
-            <ColorField
-              key={key}
-              label={t(`theme.editor.${key}`)}
-              value={key === "accent" ? (draft.colors.accent ?? accent) : draft.colors[key]!}
-              disabled={key === "accent" && draft.colors.accent === null}
-              onChange={(value) => setColor(key, value)}
+    <div ref={rootRef} className="scroll-mt-1">
+      <SettingsGroup title={t("theme.editor.title")} hint={t("theme.editor.livePreview")}>
+        <SettingRow
+          title={t("theme.editor.name")}
+          control={
+            <Input
+              value={draft.name}
+              maxLength={MAX_THEME_NAME}
+              aria-label={t("theme.editor.name")}
+              onChange={(event) => onChange({ ...draft, name: event.target.value })}
+              className="h-8 w-56"
             />
-          ))}
-        </div>
-        <label className="mt-2 flex w-fit cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-          <Checkbox
-            checked={draft.colors.accent !== null}
-            onCheckedChange={(checked) => setColor("accent", checked === true ? accent : null)}
-          />
-          {t("theme.editor.ownAccent")}
-        </label>
-      </SettingRow>
+          }
+        />
 
-      <SettingRow title={t("theme.editor.zones")} description={t("theme.editor.zonesDescription")}>
-        <div className="mt-2.5 grid grid-cols-4 gap-2">
-          {THEME_ZONES.map((zone) => (
-            <div key={zone} className="flex flex-col gap-2">
+        <SettingRow
+          title={t("theme.editor.mode")}
+          description={t("theme.editor.modeDescription")}
+          control={
+            <SegmentedControl<ThemeMode>
+              ariaLabel={t("theme.editor.mode")}
+              value={draft.mode}
+              onChange={(mode) => onChange({ ...draft, mode })}
+              options={(["dark", "light"] as ThemeMode[]).map((mode) => ({
+                value: mode,
+                label: t(`theme.editor.modes.${mode}`),
+              }))}
+            />
+          }
+        />
+
+        <SettingRow title={t("theme.editor.colors")}>
+          <div className="mt-2.5 grid grid-cols-4 gap-2">
+            {COLOR_KEYS.map((key) => (
               <ColorField
-                label={t(`theme.editor.zone.${zone}`)}
-                value={draft.colors[zone] ?? zoneDefaults[zone]}
-                disabled={!draft.colors[zone]}
-                onChange={(value) => setZone(zone, value)}
+                key={key}
+                label={t(`theme.editor.${key}`)}
+                value={key === "accent" ? (draft.colors.accent ?? accent) : draft.colors[key]!}
+                disabled={key === "accent" && draft.colors.accent === null}
+                onChange={(value) => setColor(key, value)}
               />
-              <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-                <Checkbox
-                  checked={!!draft.colors[zone]}
-                  onCheckedChange={(checked) =>
-                    setZone(zone, checked === true ? zoneDefaults[zone] : null)
-                  }
-                />
-                {t("theme.editor.zoneOwn")}
-              </label>
-            </div>
-          ))}
-        </div>
-      </SettingRow>
-
-      <SettingRow
-        title={t("theme.editor.picture")}
-        description={t("theme.editor.pictureDescription")}
-        control={
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => void choosePicture()}>
-              <ImagePlus />
-              {draft.backdrop ? t("theme.editor.change") : t("theme.editor.pick")}
-            </Button>
-            {draft.backdrop && (
-              <Button variant="ghost" size="sm" onClick={() => setBackdrop(null)}>
-                <ImageOff />
-                {t("theme.editor.remove")}
-              </Button>
-            )}
+            ))}
           </div>
-        }
-      >
-        {draft.backdrop && (
-          <div className="mt-2.5 flex items-start gap-4">
-            <BackdropFramer backdrop={draft.backdrop} onChange={(frame) => setBackdrop(frame)} />
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <div className="flex items-center gap-3">
-                <span className="w-40 shrink-0 text-xs text-muted-foreground">
-                  {t("theme.editor.fit")}
-                </span>
-                <Segmented<BackdropFit>
-                  ariaLabel={t("theme.editor.fit")}
-                  value={draft.backdrop.fit}
-                  onChange={(fit) => setBackdrop({ fit })}
-                  options={BACKDROP_FITS.map((fit) => ({
-                    value: fit,
-                    label: t(`theme.editor.fits.${fit}`),
-                  }))}
+          <label className="mt-2 flex w-fit cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+            <Checkbox
+              checked={draft.colors.accent !== null}
+              onCheckedChange={(checked) => setColor("accent", checked === true ? accent : null)}
+            />
+            {t("theme.editor.ownAccent")}
+          </label>
+        </SettingRow>
+
+        <SettingRow title={t("theme.editor.zones")} description={t("theme.editor.zonesDescription")}>
+          <div className="mt-2.5 grid grid-cols-4 gap-2">
+            {THEME_ZONES.map((zone) => (
+              <div key={zone} className="flex flex-col gap-2">
+                <ColorField
+                  label={t(`theme.editor.zone.${zone}`)}
+                  value={draft.colors[zone] ?? zoneDefaults[zone]}
+                  disabled={!draft.colors[zone]}
+                  onChange={(value) => setZone(zone, value)}
+                />
+                <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                  <Checkbox
+                    checked={!!draft.colors[zone]}
+                    onCheckedChange={(checked) =>
+                      setZone(zone, checked === true ? zoneDefaults[zone] : null)
+                    }
+                  />
+                  {t("theme.editor.zoneOwn")}
+                </label>
+              </div>
+            ))}
+          </div>
+        </SettingRow>
+
+        <SettingRow
+          title={t("theme.editor.picture")}
+          description={t("theme.editor.pictureDescription")}
+          control={
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={() => void choosePicture()}>
+                <ImagePlus />
+                {draft.backdrop ? t("theme.editor.change") : t("theme.editor.pick")}
+              </Button>
+              {draft.backdrop && (
+                <Button variant="ghost" size="sm" onClick={() => setBackdrop(null)}>
+                  <ImageOff />
+                  {t("theme.editor.remove")}
+                </Button>
+              )}
+            </div>
+          }
+        >
+          {draft.backdrop && (
+            <div className="mt-2.5 flex items-start gap-4">
+              <BackdropFramer backdrop={draft.backdrop} onChange={(frame) => setBackdrop(frame)} />
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <span className="w-40 shrink-0 text-xs text-muted-foreground">
+                    {t("theme.editor.fit")}
+                  </span>
+                  <SegmentedControl<BackdropFit>
+                    ariaLabel={t("theme.editor.fit")}
+                    value={draft.backdrop.fit}
+                    onChange={(fit) => setBackdrop({ fit })}
+                    options={BACKDROP_FITS.map((fit) => ({
+                      value: fit,
+                      label: t(`theme.editor.fits.${fit}`),
+                    }))}
+                  />
+                </div>
+                <p className="pl-43 text-2xs leading-snug text-faint">
+                  {t(`theme.editor.fitHints.${draft.backdrop.fit}`)}
+                </p>
+                <BackdropSlider
+                  label={t("theme.editor.dim")}
+                  value={draft.backdrop.dim}
+                  min={BACKDROP_LIMITS.dim.min}
+                  max={BACKDROP_LIMITS.dim.max}
+                  suffix="%"
+                  onChange={(dim) => setBackdrop({ dim })}
+                />
+                <BackdropSlider
+                  label={t("theme.editor.blur")}
+                  value={draft.backdrop.blur}
+                  min={BACKDROP_LIMITS.blur.min}
+                  max={BACKDROP_LIMITS.blur.max}
+                  suffix=" px"
+                  onChange={(blur) => setBackdrop({ blur })}
+                />
+                <BackdropSlider
+                  label={t("theme.editor.panelOpacity")}
+                  value={draft.backdrop.panelOpacity}
+                  min={BACKDROP_LIMITS.panelOpacity.min}
+                  max={BACKDROP_LIMITS.panelOpacity.max}
+                  suffix="%"
+                  onChange={(panelOpacity) => setBackdrop({ panelOpacity })}
                 />
               </div>
-              <p className="pl-43 text-[0.7rem] leading-snug text-faint">
-                {t(`theme.editor.fitHints.${draft.backdrop.fit}`)}
-              </p>
-              <BackdropSlider
-                label={t("theme.editor.dim")}
-                value={draft.backdrop.dim}
-                min={BACKDROP_LIMITS.dim.min}
-                max={BACKDROP_LIMITS.dim.max}
-                suffix="%"
-                onChange={(dim) => setBackdrop({ dim })}
-              />
-              <BackdropSlider
-                label={t("theme.editor.blur")}
-                value={draft.backdrop.blur}
-                min={BACKDROP_LIMITS.blur.min}
-                max={BACKDROP_LIMITS.blur.max}
-                suffix=" px"
-                onChange={(blur) => setBackdrop({ blur })}
-              />
-              <BackdropSlider
-                label={t("theme.editor.panelOpacity")}
-                value={draft.backdrop.panelOpacity}
-                min={BACKDROP_LIMITS.panelOpacity.min}
-                max={BACKDROP_LIMITS.panelOpacity.max}
-                suffix="%"
-                onChange={(panelOpacity) => setBackdrop({ panelOpacity })}
-              />
             </div>
-          </div>
-        )}
-      </SettingRow>
+          )}
+        </SettingRow>
 
-      <SettingRow title={t("theme.editor.readability")} description={t("theme.editor.readabilityDescription")}>
-        <ul className="mt-2.5 grid grid-cols-2 gap-x-6 gap-y-1.5">
-          {report.map((check) => (
-            <li key={check.id} className="flex items-center gap-2 text-xs">
-              {check.level === "ok" ? (
-                <Check className="size-3.5 shrink-0 text-success" />
-              ) : check.level === "warn" ? (
-                <TriangleAlert className="size-3.5 shrink-0 text-warning" />
-              ) : (
-                <X className="size-3.5 shrink-0 text-destructive" />
-              )}
-              <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                {t(`theme.checks.${check.id}`)}
-              </span>
-              <span
-                className={cn(
-                  "shrink-0 font-mono tabular-nums",
-                  check.level === "fail" ? "text-destructive" : "text-faint",
+        <SettingRow title={t("theme.editor.readability")} description={t("theme.editor.readabilityDescription")}>
+          <ul className="mt-2.5 grid grid-cols-2 gap-x-6 gap-y-1.5">
+            {report.map((check) => (
+              <li key={check.id} className="flex items-center gap-2 text-xs">
+                {check.level === "ok" ? (
+                  <Check className="size-3.5 shrink-0 text-success" />
+                ) : check.level === "warn" ? (
+                  <TriangleAlert className="size-3.5 shrink-0 text-warning" />
+                ) : (
+                  <X className="size-3.5 shrink-0 text-destructive" />
                 )}
-              >
-                {check.ratio.toFixed(1)}:1
-              </span>
-            </li>
-          ))}
-        </ul>
-      </SettingRow>
+                <Hint content={t(`theme.checks.${check.id}`)} variant="text" truncatedOnly>
+                  <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                    {t(`theme.checks.${check.id}`)}
+                  </span>
+                </Hint>
+                <span
+                  className={cn(
+                    "shrink-0 font-mono tabular-nums",
+                    check.level === "fail" ? "text-destructive" : "text-faint",
+                  )}
+                >
+                  {check.ratio.toFixed(1)}:1
+                </span>
+              </li>
+            ))}
+          </ul>
+        </SettingRow>
 
-      <div className="flex items-center gap-2 px-3.5 py-2.5">
-        {!isNew && (
-          <Button variant="ghost" size="sm" className="text-destructive" onClick={onDelete}>
-            <Trash2 />
-            {t("theme.delete")}
-          </Button>
-        )}
-        {hasFailure && (
-          <span className="flex min-w-0 items-center gap-1.5 text-xs text-destructive">
-            <TriangleAlert className="size-3.5 shrink-0" />
-            <span className="truncate">{t("theme.editor.blocked")}</span>
-          </span>
-        )}
-        <div className="ml-auto flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            {t("common.cancel")}
-          </Button>
-          <Button size="sm" disabled={hasFailure || !draft.name.trim()} onClick={onSave}>
-            <Save />
-            {t("theme.editor.save")}
-          </Button>
+        <div className="flex items-center gap-2 px-3.5 py-2.5">
+          {!isNew && (
+            <Button variant="ghost" size="sm" className="text-destructive" onClick={onDelete}>
+              <Trash2 />
+              {t("theme.delete")}
+            </Button>
+          )}
+          {hasFailure && (
+            <span className="flex min-w-0 items-center gap-1.5 text-xs text-destructive">
+              <TriangleAlert className="size-3.5 shrink-0" />
+              <Hint content={t("theme.editor.blocked")} variant="text" truncatedOnly>
+                <span className="truncate">{t("theme.editor.blocked")}</span>
+              </Hint>
+            </span>
+          )}
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={onCancel}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={hasFailure || !draft.name.trim()}
+              onClick={onSave}
+            >
+              <Save />
+              {t("theme.editor.save")}
+            </Button>
+          </div>
         </div>
-      </div>
-    </SettingsGroup>
+      </SettingsGroup>
+    </div>
   );
 }

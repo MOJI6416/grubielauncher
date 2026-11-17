@@ -3,6 +3,7 @@ import { atom, getDefaultStore, useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { JavaRuntimeInfo, JavaRuntimeList } from "@/shared/javaRuntime";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -25,7 +26,8 @@ export function loadJavaRuntimes(
       store.set(javaRuntimesAtom, list);
       return list;
     })
-    .catch(() => null)
+    .catch(ignoreFailure)
+    .then((list) => list ?? null)
     .finally(() => {
       if (inFlight === request) {
         inFlight = null;

@@ -61,9 +61,16 @@ export function CrashCard({
           </p>
 
           {hint && (
-            <p className="line-clamp-2 text-xs leading-snug text-muted-foreground [overflow-wrap:anywhere]">
-              {redact.text(hint)}
-            </p>
+            <Hint
+              content={redact.text(hint)}
+              variant="text"
+              truncatedOnly
+              className="max-w-96 [overflow-wrap:anywhere]"
+            >
+              <p className="line-clamp-2 text-xs leading-snug text-muted-foreground [overflow-wrap:anywhere]">
+                {redact.text(hint)}
+              </p>
+            </Hint>
           )}
         </div>
       </div>
@@ -74,7 +81,7 @@ export function CrashCard({
             <Hint content={`${t("logs.exitCode")} ${exit.code}`}>
               <Badge
                 variant="outline"
-                className="shrink-0 gap-1 whitespace-nowrap text-[0.65rem] font-normal text-muted-foreground"
+                className="shrink-0 gap-1 whitespace-nowrap text-3xs font-normal text-muted-foreground"
               >
                 {t(`logs.exit.${exit.info.verdict}`)}
                 <span className="font-mono text-faint">
@@ -93,7 +100,7 @@ export function CrashCard({
                 <Badge
                   key={culprit}
                   variant="outline"
-                  className="max-w-full min-w-0 border-destructive/40 font-mono text-[0.65rem] font-normal"
+                  className="max-w-full min-w-0 border-destructive/40 font-mono text-3xs font-normal"
                 >
                   <Hint content={culprit} variant="text" truncatedOnly>
                     <span className="min-w-0 truncate">{culprit}</span>

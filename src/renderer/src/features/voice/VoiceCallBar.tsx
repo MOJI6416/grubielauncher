@@ -33,7 +33,6 @@ import {
 } from "@renderer/stores/atoms";
 import { voiceLocalLevelAtom } from "@renderer/features/voice/state";
 import {
-  formatVoiceDuration,
   isVoiceLive,
   micButtonState,
   qualityRank,
@@ -64,6 +63,7 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { VoiceAudioPanel } from "./VoiceAudioPanel";
 import { VoiceParticipantChip } from "./VoiceParticipantChip";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { formatClock } from "@renderer/utilities/duration";
 
 const api = window.api;
 const PING_COOLDOWN_MS = 60_000;
@@ -243,7 +243,7 @@ export function VoiceCallBar({ inline = false }: { inline?: boolean } = {}) {
               return (
                 <div
                   key={member._id}
-                  className="flex h-9 min-w-0 items-center gap-2 rounded-md px-1.5 hover:bg-surface-2"
+                  className="flex h-9 min-w-0 items-center gap-2 rounded-md px-1.5 hover:bg-row-hover"
                 >
                   <AccountHead
                     account={faceOf({
@@ -252,9 +252,11 @@ export function VoiceCallBar({ inline = false }: { inline?: boolean } = {}) {
                     })}
                     size={24}
                   />
-                  <span className="min-w-0 flex-1 truncate text-[12px]">
-                    {member.nickname}
-                  </span>
+                  <Hint content={member.nickname} variant="text" truncatedOnly>
+                    <span className="min-w-0 flex-1 truncate text-xs">
+                      {member.nickname}
+                    </span>
+                  </Hint>
                   <Button
                     size="xs"
                     variant={cooling || isSending ? "ghost" : "secondary"}
@@ -299,13 +301,19 @@ export function VoiceCallBar({ inline = false }: { inline?: boolean } = {}) {
           </Hint>
         </div>
 
-        <div className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
-          <span className="truncate">{t(voiceStatusKey(session.state))}</span>
+        <div className="flex min-w-0 items-center gap-1.5 text-2xs text-muted-foreground">
+          <Hint
+            content={t(voiceStatusKey(session.state))}
+            variant="text"
+            truncatedOnly
+          >
+            <span className="truncate">{t(voiceStatusKey(session.state))}</span>
+          </Hint>
           {isLive && session.connectedAt > 0 && (
             <>
               <span className="text-faint">·</span>
               <span className="shrink-0 font-mono tabular-nums text-faint">
-                {formatVoiceDuration(now - session.connectedAt)}
+                {formatClock(now - session.connectedAt)}
               </span>
             </>
           )}
@@ -318,7 +326,7 @@ export function VoiceCallBar({ inline = false }: { inline?: boolean } = {}) {
           <div className="flex min-w-0 items-center gap-1.5">
             <span
               className={cn(
-                "flex h-4 shrink-0 items-center rounded px-1 font-mono text-[9px] tracking-wide",
+                "flex h-4 shrink-0 items-center rounded px-1 font-mono text-4xs tracking-wide",
                 session.pttPressed
                   ? "bg-success/20 text-success"
                   : "bg-surface-3 text-faint",
@@ -326,9 +334,15 @@ export function VoiceCallBar({ inline = false }: { inline?: boolean } = {}) {
             >
               PTT
             </span>
-            <span className="min-w-0 truncate text-[10px] text-faint">
-              {session.pttBindLabel || t("settings.voicePttKeyNone")}
-            </span>
+            <Hint
+              content={session.pttBindLabel || t("settings.voicePttKeyNone")}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="min-w-0 truncate text-3xs text-faint">
+                {session.pttBindLabel || t("settings.voicePttKeyNone")}
+              </span>
+            </Hint>
           </div>
         )}
       </div>
@@ -340,12 +354,20 @@ export function VoiceCallBar({ inline = false }: { inline?: boolean } = {}) {
           <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-warning/40 bg-surface-1 px-2.5 py-2">
             <AlertTriangle className="size-4 shrink-0 text-warning" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-medium">
-                {t(micIssueTitle)}
-              </p>
-              <p className="line-clamp-2 text-[11px] leading-4 text-muted-foreground">
-                {t(micIssueHintKey(session.micIssue))}
-              </p>
+              <Hint content={t(micIssueTitle)} variant="text" truncatedOnly>
+                <p className="truncate text-xs font-medium">
+                  {t(micIssueTitle)}
+                </p>
+              </Hint>
+              <Hint
+                content={t(micIssueHintKey(session.micIssue))}
+                variant="text"
+                truncatedOnly
+              >
+                <p className="line-clamp-2 text-2xs leading-4 text-muted-foreground">
+                  {t(micIssueHintKey(session.micIssue))}
+                </p>
+              </Hint>
             </div>
             {session.micIssue === "denied" && hasMicSettings && (
               <Button
@@ -378,14 +400,30 @@ export function VoiceCallBar({ inline = false }: { inline?: boolean } = {}) {
               />
             ))}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] text-muted-foreground">
-                {t("voice.aloneTitle")}
-              </p>
-              <p className="line-clamp-2 text-[11px] leading-4 text-faint">
-                {roomKind === "direct"
-                  ? t("voice.aloneDirectHint")
-                  : t("voice.aloneHint")}
-              </p>
+              <Hint
+                content={t("voice.aloneTitle")}
+                variant="text"
+                truncatedOnly
+              >
+                <p className="truncate text-xs text-muted-foreground">
+                  {t("voice.aloneTitle")}
+                </p>
+              </Hint>
+              <Hint
+                content={
+                  roomKind === "direct"
+                    ? t("voice.aloneDirectHint")
+                    : t("voice.aloneHint")
+                }
+                variant="text"
+                truncatedOnly
+              >
+                <p className="line-clamp-2 text-2xs leading-4 text-faint">
+                  {roomKind === "direct"
+                    ? t("voice.aloneDirectHint")
+                    : t("voice.aloneHint")}
+                </p>
+              </Hint>
             </div>
             {currentGroup && (
               <Hint content={t("groups.copyLink")}>
@@ -428,7 +466,7 @@ export function VoiceCallBar({ inline = false }: { inline?: boolean } = {}) {
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-8 shrink-0 items-center rounded-lg border border-transparent bg-surface-2 px-2.5 font-mono text-[11px] tabular-nums text-muted-foreground transition-colors outline-none hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-8 shrink-0 items-center rounded-lg border border-transparent bg-surface-2 px-2.5 font-mono text-2xs tabular-nums text-muted-foreground transition-colors outline-none hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={t("voice.moreParticipants", {
                       count: roster.hidden,
                     })}
@@ -558,7 +596,11 @@ export function VoiceCallBar({ inline = false }: { inline?: boolean } = {}) {
 
       {kickTarget && (
         <Confirmation
-          title={t(kickCopy.titleKey)}
+          title={t(kickCopy.titleKey, {
+            nickname: kickTarget.name,
+            group: roomTitle,
+            name: roomTitle,
+          })}
           reversible={kickCopy.reversible}
           content={kickCopy.lineKeys.map((key) => ({
             text: t(key, {

@@ -22,6 +22,7 @@ import { FormErrorMessage } from "@/components/ui/form-error-message";
 import { formatDate } from "@renderer/utilities/date";
 import { NICKNAME_MAX, validateOfflineNickname } from "./nickname";
 import { nicknameAccountId } from "./gameName";
+import { Hint } from "@renderer/components/Hint";
 
 const CHECK_DELAY_MS = 400;
 
@@ -167,9 +168,15 @@ export function ChangeNicknameDialog({
         <DialogHeader className="min-w-0">
           <DialogTitle className="flex min-w-0 items-center gap-2">
             <PenLine className="size-5 shrink-0" />
-            <span className="truncate">
-              {t("accounts.gameName.dialogTitle")}
-            </span>
+            <Hint
+              content={t("accounts.gameName.dialogTitle")}
+              variant="text"
+              truncatedOnly
+            >
+              <span className="truncate">
+                {t("accounts.gameName.dialogTitle")}
+              </span>
+            </Hint>
           </DialogTitle>
           <DialogDescription className="leading-relaxed">
             {t("accounts.gameName.dialogHint")}

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { CatalogRequest, requestSignature } from "./catalog";
-import { formatCompactNumber, formatDate, relativeDays } from "./format";
+import { formatDate, relativeDays } from "./format";
+import { formatCompactNumber } from "@renderer/utilities/numbers";
 import { ProjectType, Provider } from "@/types/ModManager";
 
 function request(overrides: Partial<CatalogRequest> = {}): CatalogRequest {

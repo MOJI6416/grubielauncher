@@ -39,7 +39,7 @@ export interface IdentityStat {
 function StatCell({ stat }: { stat: IdentityStat }) {
   const content = (
     <>
-      <span className="truncate text-[0.62rem] leading-tight text-faint">
+      <span className="truncate text-3xs leading-tight text-faint">
         {stat.label}
       </span>
       <span className="truncate text-[0.82rem] leading-tight font-semibold tabular-nums">
@@ -47,23 +47,28 @@ function StatCell({ stat }: { stat: IdentityStat }) {
       </span>
     </>
   );
+  const full = `${stat.label}: ${stat.value}`;
 
   if (!stat.onSelect) {
     return (
-      <div className="flex min-w-0 flex-col gap-0.5 rounded-lg px-2 py-1">
-        {content}
-      </div>
+      <Hint content={full} variant="text" truncatedOnly>
+        <div className="flex min-w-0 flex-col gap-0.5 rounded-lg px-2 py-1">
+          {content}
+        </div>
+      </Hint>
     );
   }
 
   return (
-    <button
-      type="button"
-      onClick={stat.onSelect}
-      className="flex min-w-0 flex-col gap-0.5 rounded-lg px-2 py-1 text-left transition-colors hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-    >
-      {content}
-    </button>
+    <Hint content={full} variant="text" truncatedOnly>
+      <button
+        type="button"
+        onClick={stat.onSelect}
+        className="flex min-w-0 flex-col gap-0.5 rounded-lg px-2 py-1 text-left transition-colors hover:bg-row-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      >
+        {content}
+      </button>
+    </Hint>
   );
 }
 
@@ -198,25 +203,29 @@ export function InstanceIdentityCard({
                   if (event.key === "Escape") onCancelRename();
                 }}
               />
-              <Button
-                type="button"
-                size="icon"
-                variant="secondary"
-                disabled={!isNameValid}
-                aria-label={t("common.ok")}
-                onClick={onCommitRename}
-              >
-                <Check />
-              </Button>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                aria-label={t("common.cancel")}
-                onClick={onCancelRename}
-              >
-                <X />
-              </Button>
+              <Hint content={isNameValid ? t("common.ok") : undefined}>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="secondary"
+                  disabled={!isNameValid}
+                  aria-label={t("common.ok")}
+                  onClick={onCommitRename}
+                >
+                  <Check />
+                </Button>
+              </Hint>
+              <Hint content={t("common.cancel")}>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label={t("common.cancel")}
+                  onClick={onCancelRename}
+                >
+                  <X />
+                </Button>
+              </Hint>
             </div>
             <div className="flex h-5 min-w-0 items-center gap-2">
               {!isNameValid && (
@@ -287,18 +296,30 @@ export function InstanceIdentityCard({
             )}
         </div>
 
-        <div className="flex min-w-0 flex-wrap items-center gap-2 text-[0.7rem] text-faint">
-          <button
-            type="button"
-            dir="rtl"
-            aria-label={instance.versionPath}
-            className="max-w-72 truncate rounded font-mono transition-colors hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-            onClick={async () => {
-              await copyWithFeedback(instance.versionPath);
-            }}
+        <div className="flex min-w-0 flex-wrap items-center gap-2 text-2xs text-faint">
+          <Hint
+            variant="text"
+            content={
+              <span className="grid gap-0.5 text-left">
+                <span className="font-mono">
+                  {redact.path(instance.versionPath)}
+                </span>
+                <span className="text-3xs opacity-65">{t("common.copy")}</span>
+              </span>
+            }
           >
-            <bdi>{shortenPath(redact.path(instance.versionPath))}</bdi>
-          </button>
+            <button
+              type="button"
+              dir="rtl"
+              aria-label={instance.versionPath}
+              className="max-w-72 truncate rounded font-mono transition-colors hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              onClick={async () => {
+                await copyWithFeedback(instance.versionPath);
+              }}
+            >
+              <bdi>{shortenPath(redact.path(instance.versionPath))}</bdi>
+            </button>
+          </Hint>
 
           {shareCode && (
             <Hint
@@ -310,7 +331,7 @@ export function InstanceIdentityCard({
                       ? redact.value(shareCode)
                       : buildPackShareUrl(shareCode)}
                   </span>
-                  <span className="text-[0.65rem] opacity-65">
+                  <span className="text-3xs opacity-65">
                     {t("versions.copyShareLink")}
                   </span>
                 </span>

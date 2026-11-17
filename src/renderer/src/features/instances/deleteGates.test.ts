@@ -165,7 +165,7 @@ describe("getDeleteCopy", () => {
       publicationOwner: null,
     });
 
-    expect(copy.titleKey).toBe("common.deletion");
+    expect(copy.titleKey).toBe("versions.deleteAsk");
     expect(copy.confirmKey).toBe("common.delete");
     expect(copy.ownerNoteKey).toBeNull();
   });
@@ -176,7 +176,7 @@ describe("getDeleteCopy", () => {
       publicationOwner: { nickname: "AliceBuilds" },
     });
 
-    expect(copy.titleKey).toBe("versions.deleteCopy.title");
+    expect(copy.titleKey).toBe("versions.deleteCopy.ask");
     expect(copy.confirmKey).toBe("versions.deleteCopy.confirm");
     expect(copy.menuKey).toBe("versions.deleteCopy.menu");
     expect(copy.trashedKey).toBe("versions.deleteCopy.trashed");

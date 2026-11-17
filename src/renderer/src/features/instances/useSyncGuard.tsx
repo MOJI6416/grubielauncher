@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { readInstanceServers } from "./instanceServers";
 import { UpdateSummary, serversLostBySync } from "./updateSummary";
+import { Hint } from "@renderer/components/Hint";
 
 export function useSyncGuard({
   versionPath,
@@ -48,7 +49,7 @@ export function useSyncGuard({
     confirmation:
       lost.length > 0 || isUnknown ? (
         <Confirmation
-          title={t("versions.syncServers.title")}
+          title={t("versions.syncServers.ask")}
           reversible={false}
           content={[
             {
@@ -77,9 +78,9 @@ export function useSyncGuard({
           {lost.length > 0 ? (
             <ul className="grid gap-1 rounded-lg border border-border bg-surface-2 px-3 py-2">
               {lost.map((name) => (
-                <li key={name} className="truncate text-xs text-foreground">
-                  {name}
-                </li>
+                <Hint key={name} content={name} variant="text" truncatedOnly>
+                  <li className="truncate text-xs text-foreground">{name}</li>
+                </Hint>
               ))}
             </ul>
           ) : null}

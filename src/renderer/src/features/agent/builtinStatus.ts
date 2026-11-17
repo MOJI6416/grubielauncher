@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { atom, useAtom, useAtomValue } from "jotai";
 import { AgentBuiltinStatus } from "@/types/Agent";
 import { accountAtom } from "@renderer/stores/atoms";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 export const agentBuiltinStatusAtom = atom<AgentBuiltinStatus | null>(null);
 
@@ -18,9 +19,9 @@ export function useBuiltinStatus(
     let cancelled = false;
     void window.api.agent.builtin
       .status(accessToken)
-      .catch(() => null)
+      .catch(ignoreFailure)
       .then((next) => {
-        if (!cancelled) setStatus(next);
+        if (!cancelled) setStatus(next ?? null);
       });
 
     return () => {

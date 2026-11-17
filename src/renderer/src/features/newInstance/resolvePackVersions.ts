@@ -3,6 +3,7 @@ import type { IModpack as IImportedModpack } from "@/types/ModManager";
 import type { LoaderVersion } from "@/types/VersionsService";
 import { resolveImportedLoaderVersion } from "@/shared/loaderVersions";
 import type { LoaderVersionIssue } from "./state";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -28,7 +29,9 @@ export async function resolvePackVersions(
   const loader = pack.loader;
   if (!loader || !pack.version) return empty;
 
-  const catalog = await api.versions.getList(loader, true).catch(() => null);
+  const catalog = await api.versions
+    .getList(loader, true)
+    .catch(ignoreFailure);
   if (!catalog || catalog.length === 0) {
     return { ...empty, catalogFailed: true };
   }
@@ -40,7 +43,7 @@ export async function resolvePackVersions(
 
   const loaderVersions = await api.versions
     .getLoaderVersions(loader, minecraftVersion.id)
-    .catch(() => null);
+    .catch(ignoreFailure);
 
   if (!loaderVersions) return { ...empty, minecraftVersion, catalogFailed: true };
 

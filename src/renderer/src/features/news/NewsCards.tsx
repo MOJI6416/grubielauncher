@@ -9,6 +9,7 @@ import { BrandMark } from "@renderer/shell/BrandMark";
 import { openReleaseNote } from "@renderer/features/whatsNew/whatsNewStore";
 import { formatDate, formatRelative } from "@renderer/utilities/date";
 import { NewsCard, NewsSource } from "./feed";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -27,7 +28,7 @@ export type NewsCardProps = {
 };
 
 function openLink(url: string) {
-  void api.shell.openExternal(url).catch(() => {});
+  void api.shell.openExternal(url).catch(ignoreFailure);
 }
 
 function openCard(card: NewsCard) {
@@ -43,7 +44,7 @@ function MilestoneChip() {
   const { t } = useTranslation();
 
   return (
-    <span className="flex h-4.5 shrink-0 items-center rounded border border-primary/40 bg-primary-soft-raised px-1.5 text-[0.6rem] font-medium tracking-wide text-foreground uppercase">
+    <span className="flex h-4.5 shrink-0 items-center rounded border border-primary/40 bg-primary-soft-raised px-1.5 text-3xs font-medium tracking-wide text-foreground uppercase">
       {t("whatsNew.milestone")}
     </span>
   );
@@ -59,7 +60,7 @@ function SourceChip({ card }: { card: NewsCard }) {
   return (
     <span
       className={cn(
-        "flex h-4.5 shrink-0 items-center rounded border px-1.5 text-[0.6rem] font-medium tracking-wide uppercase",
+        "flex h-4.5 shrink-0 items-center rounded border px-1.5 text-3xs font-medium tracking-wide uppercase",
         SOURCE_CLASS[card.source],
       )}
     >
@@ -73,8 +74,10 @@ function KindChip({ card }: { card: NewsCard }) {
   if (card.kind === "article") return null;
 
   return (
-    <span className="flex h-4.5 min-w-0 items-center gap-1 rounded border border-border bg-surface-2 px-1.5 text-[0.6rem] font-medium text-muted-foreground">
-      <span className="truncate">{t(`news.kinds.${card.kind}`)}</span>
+    <span className="flex h-4.5 min-w-0 items-center gap-1 rounded border border-border bg-surface-2 px-1.5 text-3xs font-medium text-muted-foreground">
+      <Hint content={t(`news.kinds.${card.kind}`)} variant="text" truncatedOnly>
+        <span className="truncate">{t(`news.kinds.${card.kind}`)}</span>
+      </Hint>
       {card.version && (
         <span className="shrink-0 font-mono tabular-nums text-faint">
           {card.version}
@@ -118,13 +121,15 @@ function Meta({
   return (
     <span
       className={cn(
-        "flex min-w-0 items-center gap-1.5 text-[0.65rem] text-faint",
+        "flex min-w-0 items-center gap-1.5 text-3xs text-faint",
         className,
       )}
     >
       {card.item.author && (
         <>
-          <span className="shrink-0 truncate">{card.item.author}</span>
+          <Hint content={card.item.author} variant="text" truncatedOnly>
+            <span className="shrink-0 truncate">{card.item.author}</span>
+          </Hint>
           <span aria-hidden>·</span>
         </>
       )}
@@ -151,7 +156,7 @@ function NewBadge() {
   const { t } = useTranslation();
 
   return (
-    <span className="flex h-4.5 shrink-0 items-center rounded bg-success/15 px-1.5 text-[0.6rem] font-medium tracking-wide text-success uppercase">
+    <span className="flex h-4.5 shrink-0 items-center rounded bg-info/15 px-1.5 text-3xs font-medium tracking-wide text-info uppercase">
       {t("news.new")}
     </span>
   );
@@ -166,7 +171,7 @@ const MARK_SIZE: Record<CoverSize, string> = {
 };
 
 const VERSION_SIZE: Record<CoverSize, string> = {
-  sm: "text-[0.65rem]",
+  sm: "text-3xs",
   md: "text-xs",
   lg: "text-sm",
 };
@@ -277,14 +282,18 @@ export function HeroCard({
       <span className="relative flex min-w-0 flex-col gap-1.5 p-3.5">
         <Chips card={card} isNew={isNew} showSource={showSource} />
 
-        <span className="line-clamp-2 text-lg leading-6 font-semibold text-foreground">
-          {card.item.title}
-        </span>
+        <Hint content={card.item.title} variant="text" truncatedOnly>
+          <span className="line-clamp-2 text-lg leading-6 font-semibold text-foreground">
+            {card.item.title}
+          </span>
+        </Hint>
 
         {card.summary && (
-          <span className="line-clamp-2 text-xs leading-4 text-muted-foreground">
-            {card.summary}
-          </span>
+          <Hint content={card.summary} variant="text" truncatedOnly>
+            <span className="line-clamp-2 text-xs leading-4 text-muted-foreground">
+              {card.summary}
+            </span>
+          </Hint>
         )}
 
         <Meta card={card} />
@@ -317,9 +326,11 @@ export function ListCard({
 
       <span className="flex min-w-0 flex-1 flex-col justify-center gap-1 pr-1">
         <Chips card={card} isNew={isNew} showSource={showSource} />
-        <span className="line-clamp-2 text-xs leading-4 font-medium">
-          {card.item.title}
-        </span>
+        <Hint content={card.item.title} variant="text" truncatedOnly>
+          <span className="line-clamp-2 text-xs leading-4 font-medium">
+            {card.item.title}
+          </span>
+        </Hint>
         <Meta card={card} withSummary />
       </span>
     </button>
@@ -355,13 +366,17 @@ export function GridCard({
       </span>
 
       <span className="flex min-w-0 flex-1 flex-col gap-1 p-2.5">
-        <span className="line-clamp-2 min-h-8 text-xs leading-4 font-medium">
-          {card.item.title}
-        </span>
-        {card.summary && (
-          <span className="line-clamp-2 text-[0.7rem] leading-4 text-muted-foreground">
-            {card.summary}
+        <Hint content={card.item.title} variant="text" truncatedOnly>
+          <span className="line-clamp-2 min-h-8 text-xs leading-4 font-medium">
+            {card.item.title}
           </span>
+        </Hint>
+        {card.summary && (
+          <Hint content={card.summary} variant="text" truncatedOnly>
+            <span className="line-clamp-2 text-2xs leading-4 text-muted-foreground">
+              {card.summary}
+            </span>
+          </Hint>
         )}
         <Meta card={card} className="mt-auto pt-0.5" />
       </span>
@@ -387,7 +402,7 @@ export function SponsoredCard({
       <button
         type="button"
         onClick={() => {
-          void api.backend.recordSponsoredAdClick(ad.id).catch(() => {});
+          void api.backend.recordSponsoredAdClick(ad.id).catch(ignoreFailure);
           openLink(ad.targetUrl);
         }}
         className="flex min-w-0 flex-1 items-stretch gap-2.5 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
@@ -408,14 +423,18 @@ export function SponsoredCard({
         )}
 
         <span className="flex min-w-0 flex-1 flex-col justify-center gap-1 pr-7">
-          <span className="flex h-4.5 w-fit shrink-0 items-center rounded border border-border bg-surface-3 px-1.5 text-[0.6rem] font-medium tracking-wide text-faint uppercase">
+          <span className="flex h-4.5 w-fit shrink-0 items-center rounded border border-border bg-surface-3 px-1.5 text-3xs font-medium tracking-wide text-faint uppercase">
             {t("app.sponsored")}
           </span>
-          <span className="line-clamp-2 text-xs leading-4 font-medium">
-            {ad.title}
-          </span>
-          <span className="flex min-w-0 items-center gap-1 text-[0.65rem] text-faint">
-            <span className="min-w-0 truncate">{ad.cta}</span>
+          <Hint content={ad.title} variant="text" truncatedOnly>
+            <span className="line-clamp-2 text-xs leading-4 font-medium">
+              {ad.title}
+            </span>
+          </Hint>
+          <span className="flex min-w-0 items-center gap-1 text-3xs text-faint">
+            <Hint content={ad.cta} variant="text" truncatedOnly>
+              <span className="min-w-0 truncate">{ad.cta}</span>
+            </Hint>
             <ArrowUpRight className="size-3 shrink-0" />
           </span>
         </span>

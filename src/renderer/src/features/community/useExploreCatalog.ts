@@ -9,6 +9,7 @@ import {
   mergeExplorePages,
   normalizeFacets,
 } from "./exploreQuery";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -69,7 +70,7 @@ export function useExploreCatalog(
 
     const page = await api.backend
       .exploreModpacks(exploreRequest(filtersRef.current, offset))
-      .catch(() => null);
+      .catch(ignoreFailure);
 
     if (requestId !== requestIdRef.current) return;
 

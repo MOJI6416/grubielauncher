@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { SiCurseforge, SiModrinth } from "react-icons/si";
 import {
   ArrowUp,
   Copy,
@@ -18,6 +17,15 @@ import {
   WifiOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
+import { segmentKeyTarget } from "@renderer/components/SegmentedControl";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { ILocalAccount } from "@/types/Account";
@@ -32,7 +40,8 @@ import { Version } from "@renderer/classes/Version";
 import { Hint } from "@renderer/components/Hint";
 import { BlockedMods, type IBlockedMod } from "@renderer/components/Modals/BlockedMods";
 import { openNewInstance } from "@renderer/features/instances/newInstance";
-import { formatCompactNumber, formatDate } from "@renderer/features/mods/format";
+import { formatDate } from "@renderer/features/mods/format";
+import { formatCompactNumber, formatNumber } from "@renderer/utilities/numbers";
 import {
   useTranslatableText,
   useVersionChangelog,
@@ -60,6 +69,10 @@ import {
 } from "./modpackVersions";
 import { ModpackUpdatePreview } from "./ModpackUpdatePreview";
 import { canFollowModpack, type ModpackSourceState } from "./useModpackSource";
+import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
+import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { ListSkeleton } from "@renderer/components/ListSkeleton";
 
 const api = window.api;
 
@@ -67,14 +80,6 @@ type Phase = "idle" | "preparing" | "preview" | "applying" | "rollingBack";
 
 function siteName(provider: Provider): string {
   return provider === Provider.CURSEFORGE ? "CurseForge" : "Modrinth";
-}
-
-function SiteIcon({ provider, className }: { provider: Provider; className?: string }) {
-  return provider === Provider.CURSEFORGE ? (
-    <SiCurseforge className={className} />
-  ) : (
-    <SiModrinth className={className} />
-  );
 }
 
 function Chip({
@@ -87,7 +92,7 @@ function Chip({
   return (
     <span
       className={cn(
-        "flex h-5 shrink-0 items-center rounded-md border px-1.5 text-[0.65rem] font-medium whitespace-nowrap",
+        "flex h-5 shrink-0 items-center rounded-md border px-1.5 text-3xs font-medium whitespace-nowrap",
         tone === "success" && "border-success/30 bg-success/12 text-success",
         tone === "warning" && "border-warning/30 bg-warning/12 text-warning",
         tone === "muted" && "border-border bg-surface-3 text-muted-foreground",
@@ -100,12 +105,14 @@ function Chip({
 
 function Stat({ label, value }: { label: string; value: string | null }) {
   return (
-    <div className="min-w-0 rounded-lg bg-surface-2 px-2.5 py-1.5">
-      <p className="truncate font-mono text-xs font-medium tabular-nums">
-        {value ?? "—"}
-      </p>
-      <p className="truncate text-[0.65rem] text-faint">{label}</p>
-    </div>
+    <Hint content={`${label}: ${value ?? "—"}`} variant="text" truncatedOnly>
+      <div className="min-w-0 rounded-lg bg-surface-2 px-2.5 py-1.5">
+        <p className="truncate font-mono text-xs font-medium tabular-nums">
+          {value ?? "—"}
+        </p>
+        <p className="truncate text-3xs text-faint">{label}</p>
+      </div>
+    </Hint>
   );
 }
 
@@ -180,7 +187,7 @@ export function ModpackPanel(props: ModpackPanelProps) {
   useEffect(() => {
     if (!preparedRoot) return;
     return () => {
-      void api.fs.rimraf(preparedRoot).catch(() => undefined);
+      void api.fs.rimraf(preparedRoot).catch(ignoreFailure);
     };
   }, [preparedRoot]);
 
@@ -389,7 +396,9 @@ export function ModpackPanel(props: ModpackPanelProps) {
       if (done) {
         toast.success(t("modpack.rollback.done", { version: previous }));
       } else {
-        toast.error(t("modpack.rollback.failed"));
+        showFailureToast(t("modpack.rollback.failed"), undefined, {
+          channels: ["modpack:restoreRollback", "mods:check"],
+        });
       }
     } catch (error) {
       showFailureToast(t("modpack.rollback.failed"), error, {
@@ -415,10 +424,7 @@ export function ModpackPanel(props: ModpackPanelProps) {
   };
 
   const copyIds = async () => {
-    const ok = await api.clipboard.writeText(
-      `${source.projectId} ${source.versionId}`,
-    );
-    if (ok) toast.success(t("common.copied"));
+    await copyWithFeedback(`${source.projectId} ${source.versionId}`);
   };
 
   const rollbackSummary = state.rollback
@@ -452,7 +458,10 @@ export function ModpackPanel(props: ModpackPanelProps) {
 
     if (!selected.sameGame) {
       return (
-        <Hint content={t("modpack.otherGameHint")} variant="text">
+        <Hint
+          content={project ? t("modpack.otherGameHint") : undefined}
+          variant="text"
+        >
           <Button
             type="button"
             size="sm"
@@ -474,29 +483,27 @@ export function ModpackPanel(props: ModpackPanelProps) {
     }
 
     return (
-      <Hint content={actionBlocked} variant="text">
-        <Button
-          type="button"
-          size="sm"
-          variant={selected.relation === "newer" ? "secondary" : "outline"}
-          disabled={!!actionBlocked || !project || !props.account}
-          onClick={() => void startPrepare(selected.version)}
-        >
-          {phase === "preparing" ? (
-            <Loader2 className="animate-spin" />
-          ) : selected.relation === "newer" ? (
-            <ArrowUp />
-          ) : (
-            <History />
-          )}
-          {t(
-            selected.relation === "newer"
-              ? "modpack.updateTo"
-              : "modpack.switchTo",
-            { version: label },
-          )}
-        </Button>
-      </Hint>
+      <Button
+        type="button"
+        size="sm"
+        variant={selected.relation === "newer" ? "secondary" : "outline"}
+        disabled={!!actionBlocked || !project || !props.account}
+        onClick={() => void startPrepare(selected.version)}
+      >
+        {phase === "preparing" ? (
+          <Loader2 className="animate-spin" />
+        ) : selected.relation === "newer" ? (
+          <ArrowUp />
+        ) : (
+          <History />
+        )}
+        {t(
+          selected.relation === "newer"
+            ? "modpack.updateTo"
+            : "modpack.switchTo",
+          { version: label },
+        )}
+      </Button>
     );
   })();
 
@@ -581,8 +588,8 @@ export function ModpackPanel(props: ModpackPanelProps) {
               <Loader2 className="size-3.5 animate-spin" />
               {stageText}
             </p>
-          ) : followBlocked ? (
-            <p className="mt-2 text-xs text-faint">{followBlocked}</p>
+          ) : actionBlocked ? (
+            <p className="mt-2 text-xs text-faint">{actionBlocked}</p>
           ) : selected?.relation === "current" &&
             !state.update &&
             !state.isLoading ? (
@@ -606,14 +613,18 @@ export function ModpackPanel(props: ModpackPanelProps) {
           bodyClassName="overflow-y-auto px-3.5 py-3"
         >
           {state.failed && !selectedVersion ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-              <WifiOff className="size-5 text-faint" />
-              <p className="text-xs font-medium text-muted-foreground">
-                {t("modpack.loadFailed", { site })}
-              </p>
-              <p className="max-w-72 text-xs text-faint">
-                {t("modpack.loadFailedHint")}
-              </p>
+            <Empty className="h-full gap-2 p-0">
+              <EmptyHeader className="gap-1">
+                <EmptyMedia variant="icon" className="mb-1">
+                  <WifiOff />
+                </EmptyMedia>
+                <EmptyTitle className="text-xs">
+                  {t("modpack.loadFailed", { site })}
+                </EmptyTitle>
+                <EmptyDescription className="max-w-72 text-xs text-faint">
+                  {t("modpack.loadFailedHint")}
+                </EmptyDescription>
+              </EmptyHeader>
               <Button
                 type="button"
                 size="sm"
@@ -623,7 +634,7 @@ export function ModpackPanel(props: ModpackPanelProps) {
                 <RotateCcw />
                 {t("common.retry")}
               </Button>
-            </div>
+            </Empty>
           ) : changelog.status === "ready" ? (
             <Markdown
               key={`${changelog.key}-${changelogText.isTranslated}`}
@@ -631,17 +642,24 @@ export function ModpackPanel(props: ModpackPanelProps) {
               baseUrl={projectUrl}
             />
           ) : changelog.status === "loading" || state.isLoading ? (
-            <div className="flex h-full items-center justify-center">
-              <Loader2 className="size-4 animate-spin text-faint" />
+            <div aria-hidden className="flex flex-col gap-2 py-1">
+              <Skeleton className="h-3 w-2/5 rounded" />
+              <Skeleton className="h-2.5 w-11/12 rounded" />
+              <Skeleton className="h-2.5 w-3/4 rounded" />
+              <Skeleton className="h-2.5 w-5/6 rounded" />
             </div>
           ) : changelog.status === "failed" ? (
-            <p className="py-6 text-center text-xs text-faint">
-              {t("modpack.changelogFailed", { site })}
-            </p>
+            <Empty className="gap-2 py-6">
+              <EmptyDescription className="text-xs text-faint">
+                {t("modpack.changelogFailed", { site })}
+              </EmptyDescription>
+            </Empty>
           ) : (
-            <p className="py-6 text-center text-xs text-faint">
-              {t("modpack.noChangelog")}
-            </p>
+            <Empty className="gap-2 py-6">
+              <EmptyDescription className="text-xs text-faint">
+                {t("modpack.noChangelog")}
+              </EmptyDescription>
+            </Empty>
           )}
         </SectionCard>
 
@@ -662,24 +680,22 @@ export function ModpackPanel(props: ModpackPanelProps) {
               <FolderOpen />
               {t("modpack.rollback.backups")}
             </Button>
-            <Hint content={actionBlocked} variant="text">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={!!actionBlocked || !props.account}
-                onClick={() => void rollback()}
-              >
-                {phase === "rollingBack" ? (
-                  <Loader2 className="animate-spin" />
-                ) : (
-                  <RotateCcw />
-                )}
-                {t("modpack.rollback.action", {
-                  version: state.rollback.fromVersion,
-                })}
-              </Button>
-            </Hint>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!!actionBlocked || !props.account}
+              onClick={() => void rollback()}
+            >
+              {phase === "rollingBack" ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <RotateCcw />
+              )}
+              {t("modpack.rollback.action", {
+                version: state.rollback.fromVersion,
+              })}
+            </Button>
           </div>
         )}
       </>
@@ -701,7 +717,7 @@ export function ModpackPanel(props: ModpackPanelProps) {
                 />
               ) : (
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-surface-3">
-                  <SiteIcon provider={provider} className="size-5 text-faint" />
+                  <ContentProviderIcon provider={provider} className="size-5 text-faint" />
                 </span>
               )}
               <div className="min-w-0 flex-1">
@@ -709,7 +725,7 @@ export function ModpackPanel(props: ModpackPanelProps) {
                   <p className="truncate text-sm font-medium">{title}</p>
                 </Hint>
                 <p className="flex items-center gap-1.5 text-xs text-faint">
-                  <SiteIcon provider={provider} className="size-3" />
+                  <ContentProviderIcon provider={provider} className="size-3" />
                   {site}
                 </p>
               </div>
@@ -728,9 +744,11 @@ export function ModpackPanel(props: ModpackPanelProps) {
             </div>
 
             {project?.description && (
-              <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-                {project.description}
-              </p>
+              <Hint content={project.description} variant="text" truncatedOnly>
+                <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+                  {project.description}
+                </p>
+              </Hint>
             )}
 
             <div className="mt-2.5 grid grid-cols-2 gap-1.5">
@@ -740,7 +758,11 @@ export function ModpackPanel(props: ModpackPanelProps) {
               />
               <Stat
                 label={t("modpack.stats.versions")}
-                value={state.versions.length ? String(state.versions.length) : null}
+                value={
+                  state.versions.length
+                    ? formatNumber(state.versions.length)
+                    : null
+                }
               />
               <Stat
                 label={t("modpack.stats.updated")}
@@ -757,7 +779,7 @@ export function ModpackPanel(props: ModpackPanelProps) {
                 <button
                   type="button"
                   onClick={() => void copyIds()}
-                  className="flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 font-mono text-[0.68rem] text-faint transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  className="flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 font-mono text-2xs text-faint transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
                   <Copy className="size-3 shrink-0" />
                   <span className="truncate">
@@ -765,7 +787,14 @@ export function ModpackPanel(props: ModpackPanelProps) {
                   </span>
                 </button>
               </Hint>
-              <Hint content={actionBlocked ?? t("modpack.fromFileHint")} variant="text">
+              <Hint
+                content={
+                  actionBlocked || !project || !props.account
+                    ? undefined
+                    : t("modpack.fromFileHint")
+                }
+                variant="text"
+              >
                 <Button
                   type="button"
                   size="sm"
@@ -787,7 +816,7 @@ export function ModpackPanel(props: ModpackPanelProps) {
             className="min-h-0 flex-1"
             bodyClassName="overflow-y-auto py-1"
             action={
-              <label className="flex shrink-0 items-center gap-1.5 text-[0.68rem] text-faint">
+              <label className="flex shrink-0 items-center gap-1.5 text-2xs text-faint">
                 <span className="font-mono">{gameVersion}</span>
                 <Switch
                   size="sm"
@@ -799,17 +828,38 @@ export function ModpackPanel(props: ModpackPanelProps) {
             }
           >
             {state.isLoading && state.versions.length === 0 ? (
-              <div className="flex h-full items-center justify-center">
-                <Loader2 className="size-4 animate-spin text-faint" />
-              </div>
+              <ListSkeleton
+                rows={8}
+                rowClassName="h-10 px-3"
+                iconClassName="hidden"
+              />
             ) : visibleRows.length === 0 ? (
-              <p className="px-3 py-6 text-center text-xs text-faint">
-                {state.failed
-                  ? t("modpack.loadFailed", { site })
-                  : t("modpack.noVersions")}
-              </p>
+              <Empty className="h-full gap-2 px-3 py-6">
+                <EmptyDescription className="text-xs text-faint">
+                  {state.failed
+                    ? t("modpack.loadFailed", { site })
+                    : t("modpack.noVersions")}
+                </EmptyDescription>
+              </Empty>
             ) : (
-              <ul role="listbox" aria-label={t("modpack.versions")}>
+              <ul
+                role="listbox"
+                aria-label={t("modpack.versions")}
+                onKeyDown={(event) => {
+                  const current = visibleRows.findIndex(
+                    (row) => row.version.id === selected?.version.id,
+                  );
+                  const target = segmentKeyTarget(
+                    event.key,
+                    current,
+                    visibleRows.map(() => phase === "idle"),
+                  );
+                  if (target === null) return;
+                  event.preventDefault();
+                  setSelectedId(visibleRows[target].version.id);
+                  event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="option"]').item(target)?.focus();
+                }}
+              >
                 {visibleRows.map((row) => {
                   const isSelected = row.version.id === selected?.version.id;
 
@@ -823,21 +873,27 @@ export function ModpackPanel(props: ModpackPanelProps) {
                         onClick={() => setSelectedId(row.version.id)}
                         className={cn(
                           "flex h-10 w-full items-center gap-2 px-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset disabled:cursor-default",
-                          isSelected ? "bg-surface-3" : "hover:bg-surface-2",
+                          isSelected ? "bg-row-selected" : "hover:bg-row-hover",
                         )}
                       >
-                        <span
-                          className={cn(
-                            "min-w-0 flex-1 truncate font-mono text-xs",
-                            !row.sameGame && "text-faint",
-                          )}
+                        <Hint
+                          content={modpackVersionLabel(row.version)}
+                          variant="text"
+                          truncatedOnly
                         >
-                          {modpackVersionLabel(row.version)}
-                        </span>
+                          <span
+                            className={cn(
+                              "min-w-0 flex-1 truncate font-mono text-xs",
+                              !row.sameGame && "text-faint",
+                            )}
+                          >
+                            {modpackVersionLabel(row.version)}
+                          </span>
+                        </Hint>
                         {relationChip(row)}
                         {typeChip(row.version)}
                         {!row.sameGame && (
-                          <span className="shrink-0 font-mono text-[0.65rem] text-faint">
+                          <span className="shrink-0 font-mono text-3xs text-faint">
                             {row.version.gameVersions?.[0]}
                           </span>
                         )}

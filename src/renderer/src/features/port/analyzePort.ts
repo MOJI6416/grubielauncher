@@ -29,6 +29,7 @@ import {
   planPort,
   portedProjects,
 } from "./portPlan";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
@@ -52,7 +53,7 @@ async function queryUpdates(
         loader,
         items: chunk,
       })
-      .catch(() => null);
+      .catch(ignoreFailure);
 
     for (const [key, state] of readUpdateVerdicts(chunk, response?.items)) {
       states.set(key, state);
@@ -146,7 +147,8 @@ async function addDependencies(
 
     const resolved: IVersionDependency[] | null = await api.modManager
       .getDependencies(project.provider, project.id, dependencies)
-      .catch(() => null);
+      .catch(ignoreFailure)
+      .then((value) => value ?? null);
 
     for (const dependency of resolved ?? []) {
       if (!dependency.project) continue;
@@ -162,7 +164,9 @@ async function addDependencies(
           ],
           minecraftVersion: target.minecraftVersion,
           resolveLoader: () => loader,
-        }).catch(() => null);
+        })
+          .catch(ignoreFailure)
+          .then((plan) => plan ?? null);
       const usable = (plan: Awaited<ReturnType<typeof resolveWith>>) =>
         !!plan && !plan.rootMissingVersion && !plan.dependenciesUnavailable;
 
@@ -271,7 +275,8 @@ export async function analyzePort(
                 .filter((mod) => mod.provider === Provider.CURSEFORGE)
                 .map((mod) => mod.id),
             )
-            .catch(() => ({}))
+            .catch(ignoreFailure)
+            .then((value) => value ?? {})
         : {},
     ),
   );

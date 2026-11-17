@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FactRow, FactRows } from "@renderer/components/FactRows";
+import { Hint } from "@renderer/components/Hint";
 
 export interface SummaryRowData {
   key: string;
@@ -32,9 +33,11 @@ export function SummaryCard({
       )}
     >
       <header className="flex h-8 shrink-0 items-center border-b border-border px-2.5">
-        <span className="truncate text-[0.7rem] font-semibold tracking-[0.08em] text-faint uppercase">
-          {title}
-        </span>
+        <Hint content={title} variant="text" truncatedOnly>
+          <span className="truncate text-2xs font-semibold tracking-[0.08em] text-faint uppercase">
+            {title}
+          </span>
+        </Hint>
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -57,7 +60,7 @@ export function SummaryCard({
             {warnings.map((warning) => (
               <p
                 key={warning}
-                className="flex items-start gap-1.5 text-[0.7rem] leading-snug text-muted-foreground"
+                className="flex items-start gap-1.5 text-2xs leading-snug text-muted-foreground"
               >
                 <TriangleAlert className="mt-px size-3 shrink-0 text-warning" />
                 <span className="min-w-0">{warning}</span>

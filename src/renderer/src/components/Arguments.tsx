@@ -8,9 +8,9 @@ import {
   Plus,
   Save,
   ShieldAlert,
-  Sparkles,
   TriangleAlert,
   X,
+  Zap,
 } from "lucide-react";
 import { IArguments } from "@/types/IArguments";
 import { useAtom } from "jotai";
@@ -237,7 +237,7 @@ function ArgEditor({
             <JvmFlagsInfo hint={t("arguments.optimizedHint")}>
               <Badge asChild variant="secondary" className="gap-1">
                 <button type="button">
-                  <Sparkles className="size-3" />
+                  <Zap className="size-3" />
                   {t("arguments.optimizedOn", {
                     count: OPTIMIZED_GC_FLAGS.length,
                   })}
@@ -293,7 +293,7 @@ function ArgEditor({
                 <span className="text-xs text-muted-foreground">
                   {t("arguments.empty")}
                 </span>
-                <span className="text-[0.7rem] text-faint">
+                <span className="text-2xs text-faint">
                   {t("arguments.readOnly")}
                 </span>
               </span>
@@ -305,7 +305,9 @@ function ArgEditor({
               );
               const chip = (
                 <span className={chipClass(diagnostic?.severity)}>
-                  <span className="max-w-56 truncate">{token}</span>
+                  <Hint content={token} variant="text" truncatedOnly>
+                    <span className="max-w-56 truncate">{token}</span>
+                  </Hint>
                   {canEdit && (
                     <button
                       type="button"
@@ -367,7 +369,7 @@ function ArgEditor({
 
             {canEdit && tokens.length === 0 && (
               <div className="mt-1 flex w-full min-w-0 basis-full flex-col gap-1">
-                <span className="text-[0.68rem] text-faint">
+                <span className="text-2xs text-faint">
                   {t("arguments.catalogTitle")}
                 </span>
                 <div className="grid min-w-0 gap-0.5">
@@ -377,7 +379,7 @@ function ArgEditor({
                       <button
                         key={entry.id}
                         type="button"
-                        className="flex min-w-0 items-baseline gap-3 rounded px-1 py-0.5 text-left transition-colors hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                        className="flex min-w-0 items-baseline gap-3 rounded px-1 py-0.5 text-left transition-colors hover:bg-row-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                         onClick={(event) => {
                           event.stopPropagation();
                           selectSuggestion(entry);
@@ -388,11 +390,11 @@ function ArgEditor({
                           variant="text"
                           truncatedOnly
                         >
-                          <span className="w-60 shrink-0 truncate font-mono text-[0.7rem] text-muted-foreground">
+                          <span className="w-60 shrink-0 truncate font-mono text-2xs text-muted-foreground">
                             {entry.value}
                           </span>
                         </Hint>
-                        <span className="min-w-0 flex-1 text-[0.7rem] leading-4 text-faint">
+                        <span className="min-w-0 flex-1 text-2xs leading-4 text-faint">
                           {t(`arguments.catalog.${entry.id}`)}
                         </span>
                       </button>
@@ -421,7 +423,9 @@ function ArgEditor({
                   type="button"
                   className={cn(
                     "flex w-full min-w-0 flex-col gap-0.5 rounded-md px-2 py-1.5 text-left",
-                    index === highlight ? "bg-accent" : "hover:bg-accent/60",
+                    index === highlight
+                      ? "bg-row-selected"
+                      : "hover:bg-row-hover",
                   )}
                   onMouseDown={(event) => event.preventDefault()}
                   onMouseEnter={() => setHighlight(index)}
@@ -430,7 +434,7 @@ function ArgEditor({
                   <span className="font-mono text-xs leading-4 break-all text-foreground">
                     {entry.value}
                   </span>
-                  <span className="text-[0.7rem] leading-4 text-muted-foreground">
+                  <span className="text-2xs leading-4 text-muted-foreground">
                     {t(`arguments.catalog.${entry.id}`)}
                   </span>
                 </button>
@@ -501,10 +505,10 @@ function ArgEditor({
           </button>
           {showPreview && (
             <div className="border-t px-3 py-2">
-              <code className="block max-h-20 overflow-y-auto break-all font-mono text-[11px] leading-relaxed text-muted-foreground">
+              <code className="block max-h-20 overflow-y-auto break-all font-mono text-2xs leading-relaxed text-muted-foreground">
                 {previewCommand}
               </code>
-              <p className="mt-1.5 text-[11px] text-muted-foreground/70">
+              <p className="mt-1.5 text-2xs text-muted-foreground/70">
                 {t(
                   kind === "jvm"
                     ? "arguments.previewNoteJvm"
@@ -612,7 +616,7 @@ export function Arguments({
       onEscape={() => [...escapeHandlers].some((handler) => handler())}
       headerAction={
         canEdit ? (
-          <Label className="flex shrink-0 items-center gap-2 text-[0.7rem] text-faint">
+          <Label className="flex shrink-0 items-center gap-2 text-2xs text-faint">
             {t("arguments.rawMode")}
             <Switch size="sm" checked={rawMode} onCheckedChange={setRawMode} />
           </Label>
@@ -654,13 +658,22 @@ export function Arguments({
                   ),
                 })}
               </span>
-              <span className="truncate font-mono text-[0.68rem] text-muted-foreground">
-                {dropped
+              <Hint
+                content={dropped
                   .flatMap((entry) => entry.tokens)
                   .slice(0, 6)
                   .join(" ")}
-              </span>
-              <span className="text-[0.68rem] text-muted-foreground">
+                variant="text"
+                truncatedOnly
+              >
+                <span className="truncate font-mono text-2xs text-muted-foreground">
+                  {dropped
+                    .flatMap((entry) => entry.tokens)
+                    .slice(0, 6)
+                    .join(" ")}
+                </span>
+              </Hint>
+              <span className="text-2xs text-muted-foreground">
                 {t("arguments.dropped.hint")}
               </span>
             </div>
@@ -672,7 +685,10 @@ export function Arguments({
           onValueChange={(value) => setActiveTab(value as ArgKind)}
           className="flex min-h-0 flex-1 flex-col gap-2.5"
         >
-          <TabsList className="shrink-0">
+          <TabsList
+            variant="line"
+            className="h-9 w-full shrink-0 justify-start gap-0 border-b border-border p-0"
+          >
             <TabsTrigger value="jvm">
               {t("arguments.jvm")}
               <Badge variant="secondary" className="px-1.5">
@@ -739,7 +755,7 @@ export function Arguments({
 
       {isDiscardOpen && (
         <Confirmation
-          title={t("versions.notSavedTitle")}
+          title={t("versions.notSavedAsk")}
           content={[{ text: t("arguments.notSavedHint") }]}
           buttons={[
             {

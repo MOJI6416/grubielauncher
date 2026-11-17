@@ -14,7 +14,6 @@
     "copyFailedHint": "A área de transferência está ocupada ou o texto é grande demais. Tente de novo ou copie do arquivo.",
     "openFolder": "Local",
     "edit": "Editar",
-    "confirmation": "Confirmação",
     "reversible": "Isso pode ser desfeito",
     "irreversible": "Isso não pode ser desfeito",
     "yes": "Sim",
@@ -44,7 +43,11 @@
     "next": "Próximo",
     "reset": "Redefinir",
     "loading": "Carregando",
-    "refresh": "Atualizar"
+    "refresh": "Atualizar",
+    "undo": "Desfazer",
+    "sort": "Ordenar",
+    "sortBy": "Ordenar: {{value}}",
+    "clearSearch": "Limpar busca"
   },
   "accounts": {
     "added": "Conta adicionada",
@@ -55,7 +58,6 @@
     "elyby": "Ely.by",
     "nickname": "Apelido",
     "sessionExpired": "A sessão da sua conta expirou. Entre de novo.",
-    "confirmation": "Tem certeza de que quer excluir a conta {{nickname}}?",
     "sessionExpiredHint": "Não foi possível renovar a sessão da conta. Entre de novo.",
     "oauthTimeLeft": "Tempo restante para entrar: {{time}}",
     "discord": "Discord",
@@ -213,7 +215,8 @@
         "rate_limited": "Tentativas demais. Aguarde um pouco.",
         "failed": "Não foi possível mudar o apelido. Tente de novo.",
         "providerTaken": "Outro jogador está usando o apelido do {{provider}} agora — escolha outro."
-      }
+      },
+      "resetQuestion": "Voltar ao apelido do {{provider}}?"
     },
     "littleskin": "LittleSkin",
     "littleskinForm": {
@@ -235,7 +238,9 @@
       "capes": "Capas",
       "friends": "Amigos e voz",
       "worksOffline": "Sem internet"
-    }
+    },
+    "removeQuestion": "Remover a conta {{nickname}}?",
+    "removeLoss": "O launcher vai esquecer este login. Para recuperar a conta, entre nela de novo."
   },
   "serverManager": {
     "logoEdited": "Logo editado",
@@ -243,8 +248,6 @@
     "deleted": "Servidor excluído",
     "configNotFound": "Arquivo de configuração do servidor não encontrado",
     "deleteError": "Erro ao excluir o servidor",
-    "confirmation": "Excluir o servidor? A pasta dele, com o mundo do servidor, vai para a lixeira.",
-    "deleteTitle": "Excluindo o servidor da instância",
     "deleteErrorHint": "Não foi possível excluir a pasta do servidor. Pare o servidor e tente de novo.",
     "start": "Iniciar servidor",
     "stop": "Parar servidor",
@@ -299,11 +302,12 @@
     "partRecord": "registro do servidor",
     "settingsUnreadable": "Não foi possível ler o server.properties",
     "settingsUnreadableHint": "O launcher não consegue ler o arquivo de configurações do servidor. Ele pode estar bloqueado por outro programa, ou a pasta do servidor pode estar indisponível.",
-    "closeTitle": "O servidor ainda está rodando",
     "closeHint": "O launcher vai enviar stop e esperar o mundo ser salvo. Os jogadores serão desconectados.",
     "closeStopAndQuit": "Parar e fechar",
     "applyAfterRestart": "vale depois que o servidor reiniciar",
-    "runErrorChosenJava": "O Java escolhido para este servidor está indisponível — escolha outro nas configurações do servidor."
+    "runErrorChosenJava": "O Java escolhido para este servidor está indisponível — escolha outro nas configurações do servidor.",
+    "viewLabel": "Seção do servidor",
+    "closeQuestion": "Parar o servidor e fechar o launcher?"
   },
   "serverSettings": {
     "description": "Descrição",
@@ -422,7 +426,7 @@
     "deleteAlert": "{{nickname}} sai da sua lista de amigos, e você da lista dele.",
     "noFriends": "Sem amigos",
     "requestSent": "Pedido enviado",
-    "requestQueued": "Sem conexão — vamos enviar o pedido quando a conexão voltar",
+    "requestQueued": "Sem conexão com o servidor do Grubie — vamos enviar o pedido quando a conexão voltar",
     "noRequests": "Sem pedidos",
     "friendId": "Código de amigo",
     "send": "Enviar",
@@ -449,7 +453,7 @@
       "user_not_found": "Usuário não encontrado.",
       "not_friend": "Adicione este usuário como amigo primeiro.",
       "not_member": "Você não é mais membro deste grupo.",
-      "offline": "Sem conexão — tente de novo quando a conexão voltar.",
+      "offline": "Sem conexão com o servidor do Grubie — tente de novo quando a conexão voltar.",
       "timeout": "O servidor não respondeu. Tente de novo.",
       "rate_limited": "Você está fazendo isso rápido demais. Vá com calma.",
       "unknown": "Falha ao concluir a ação.",
@@ -483,7 +487,6 @@
     "chatAttachModpack": "Modpack",
     "chatGroupInvite": "Convite para grupo",
     "chatGroupInviteJoin": "Entrar",
-    "chatExternalLinkTitle": "Link externo",
     "chatExternalLinkWarning": "Você está prestes a abrir um link externo. Só abra links em que você confia.",
     "chatExternalLinkOpen": "Abrir",
     "incomingRequests": "Recebidos",
@@ -578,7 +581,6 @@
     "filterAll": "Todos",
     "filterOnline": "On-line",
     "filterUnread": "Não lidas",
-    "sortLabel": "Ordenação",
     "sortActivity": "Por atividade",
     "sortName": "Por nome",
     "lastSeen": "Offline · {{value}}",
@@ -611,7 +613,7 @@
     "chatFailed": "Não enviada",
     "chatRetry": "Tentar de novo",
     "chatDiscard": "Descartar",
-    "chatOffline": "Sem conexão — vamos enviar quando a conexão voltar",
+    "chatOffline": "Sem conexão com o servidor do Grubie — vamos enviar quando a conexão voltar",
     "chatRead": "Lida",
     "chatTyping": "Digitando…",
     "chatDeleteConfirm": "A mensagem some para vocês dois.",
@@ -622,7 +624,6 @@
     "howItWorksStep3": "Você vai ver o que seu amigo está jogando e entrar com um botão.",
     "pickGroup": "Escolha um grupo",
     "pickGroupHint": "Cada grupo tem seu próprio chat e sala de voz — abra um à esquerda.",
-    "deleteTitle": "Remover dos amigos",
     "deleteLoss": "Entrar no mundo um do outro, chamadas e convites deixam de funcionar até que um de vocês envie um novo pedido de amizade.",
     "deleteAction": "Remover dos amigos",
     "acceptRequest": "Aceitar pedido",
@@ -651,7 +652,13 @@
     "stickerPacks": {
       "noto": "Emojis animados"
     },
-    "stickerCredit": "Noto Emoji Animation © Google"
+    "stickerCredit": "Noto Emoji Animation © Google",
+    "filterLabel": "Filtro de amigos",
+    "resetFilters": "Limpar busca e filtro",
+    "resetFriendCodeTitle": "Redefinir o código de amigo?",
+    "chatExternalLinkQuestion": "Abrir o link externo?",
+    "chatDeleteMessageQuestion": "Excluir a mensagem?",
+    "deleteQuestion": "Remover {{nickname}} dos amigos?"
   },
   "modManager": {
     "title": "Gerenciador de mods",
@@ -693,13 +700,6 @@
     "deleted": "Mod excluído",
     "requiredBy": "Exigido por",
     "deleteTitle": "Remover mods",
-    "deleteSelected": "Selecionados: {{names}}",
-    "deleteDependencyWarning": "Outros mods dependem da sua seleção. Remova a cadeia inteira ou só os mods selecionados. Manter um mod sem uma dependência obrigatória pode impedir o jogo de iniciar.",
-    "deleteSaveHint": "Aplique as alterações com Salvar. Os arquivos removidos podem ser restaurados da lixeira.",
-    "deleteOnlySelected": "Só os mods selecionados",
-    "deleteWithDependents": "Remover a cadeia inteira ({{count}})",
-    "deleteWithDependencies": "Com dependências sem uso ({{count}})",
-    "deleteList": "Remover a cadeia vai remover:",
     "alsoRemoves": "Também remove dependências sem uso",
     "updated": "Mod atualizado",
     "dependencyTypes": [
@@ -710,8 +710,6 @@
       "Incompatível"
     ],
     "notFoundMod": "Mod não encontrado",
-    "searchFailed": "A busca falhou. Verifique a conexão e tente de novo",
-    "searchFailedTitle": "Busca indisponível",
     "noDependencies": "Sem dependências",
     "dependenciesFailed": "Não foi possível carregar as dependências",
     "dependenciesUnresolved": "A fonte não respondeu sobre as dependências deste mod. Confira-as manualmente ou tente de novo mais tarde.",
@@ -776,7 +774,6 @@
     "installing": "Instalando…",
     "invalidMod": "Arquivo de mod inválido",
     "alreadyInstalled": "Mod já instalado",
-    "selectLocals": "Selecionar mods locais",
     "notModpack": "Falha ao reconhecer o modpack",
     "extracting": "Descompactando...",
     "addingProjects": "Adicionando mods",
@@ -826,7 +823,7 @@
     },
     "resetFilters": "Limpar filtros",
     "authorFilter": "Autor: {{name}}",
-    "authorProjects": "Todos os projetos de {{name}}",
+    "authorProjects": "Tudo de {{name}}",
     "hideLibraries": "Ocultar bibliotecas",
     "emptyInstalled": "Nada instalado ainda",
     "emptyInstalledHint": "O conteúdo que você instalar aparece aqui e vai junto com a instância.",
@@ -959,8 +956,14 @@
       "missing": "Os shaders só funcionam com o {{loader}}. Ele não está nesta instância, então sem ele os shaders não ligam.",
       "unsupported": "Nesta instância os shaders não têm onde rodar: precisam de Fabric, Quilt ou NeoForge com Iris (ou Forge com Oculus).",
       "install": "Instalar {{loader}}",
-      "notFound": "Não foi possível abrir a página do mod. Verifique a internet e tente de novo."
-    }
+      "notFoundSource": "O Modrinth não está respondendo — a página do mod não abriu"
+    },
+    "source": "Origem",
+    "addFromDisk": "Arquivos do disco…",
+    "searchFailedSource": "{{source}} não está respondendo",
+    "searchFailedSourceHint": "A busca no catálogo está indisponível agora — tente de novo em um minuto.",
+    "deletedWithDependencies": "Dependências sem uso também foram removidas: {{names}}",
+    "deletedBreaksDependents": "Dependem do que foi removido: {{names}}. O jogo pode não iniciar."
   },
   "nav": {
     "play": "Jogar"
@@ -1031,9 +1034,6 @@
     "adding": "Novo servidor",
     "editing": "Editando servidor",
     "copyAddress": "Copiar endereço",
-    "confirmation": "Excluir o servidor {{name}}?",
-    "deleteTitle": "Excluindo um servidor",
-    "deleteHint": "O endereço some da lista desta instância. O mundo no próprio servidor não é tocado.",
     "resourceSets": [
       "Perguntar",
       "Sim",
@@ -1047,7 +1047,6 @@
     "checking": "Verificando o servidor",
     "recheck": "Verificar de novo",
     "checkedAt": "Verificado às {{time}}",
-    "addAnother": "Adicionar servidor",
     "pingError": {
       "timeout": "O servidor não respondeu a tempo — ele pode estar fora do ar ou a porta pode estar fechada.",
       "refused": "A conexão foi recusada: nada está escutando nesta porta.",
@@ -1114,7 +1113,6 @@
       "compatibleEmptyHint": "Nenhum servidor serve para {{version}} agora. Veja todos os servidores: você pode criar uma instância para qualquer um deles.",
       "showAll": "Mostrar todos os servidores",
       "failedTitle": "O Modrinth não respondeu",
-      "failedHint": "Verifique a conexão e tente de novo.",
       "pickHint": "Escolha um servidor para ver os detalhes.",
       "modpack": "Modpack",
       "vanilla": "Sem mods",
@@ -1203,9 +1201,15 @@
         "smp": "SMP",
         "social": "Social",
         "technical": "Técnico"
-      }
+      },
+      "sourceLabel": "Onde procurar servidores",
+      "failedHintSource": "O catálogo de servidores do Modrinth não está respondendo agora — tente de novo em um minuto."
     },
-    "createShortcut": "Atalho na área de trabalho"
+    "createShortcut": "Atalho na área de trabalho",
+    "statusNotFound": "Não encontrado",
+    "readOnlyHint": "Somente leitura: a lista de servidores desta instância é mantida pelo autor.",
+    "importNothing": "Nada para importar",
+    "importPick": "Marque os servidores que você quer adicionar"
   },
   "voice": {
     "title": "Chat de voz",
@@ -1287,7 +1291,6 @@
     "joinByCode": "Entrar por código",
     "join": "Entrar na voz",
     "copyCode": "Copiar código",
-    "codeCopied": "Código copiado",
     "rename": "Renomear",
     "renameTitle": "Renomear grupo",
     "resetCode": "Redefinir código",
@@ -1319,7 +1322,6 @@
     "actionError": "A ação falhou",
     "chat": "Chat do grupo",
     "copyLink": "Copiar link de convite",
-    "linkCopied": "Link copiado",
     "members": "Membros",
     "ban": "Banir",
     "bannedSection": "Banidos",
@@ -1381,7 +1383,13 @@
     "alreadyJoined": "Você já está em “{{group}}”",
     "noGameInviteRecipients": "Ninguém para convidar: nenhum amigo seu está neste grupo",
     "inviteSending": "Enviando…",
-    "voicePinging": "Chamando…"
+    "voicePinging": "Chamando…",
+    "deleteQuestion": "Excluir o grupo “{{name}}”?",
+    "leaveQuestion": "Sair do grupo “{{name}}”?",
+    "resetCodeQuestion": "Redefinir o código de convite?",
+    "transferQuestion": "Transferir a posse do grupo para {{nickname}}?",
+    "kickQuestion": "Remover {{nickname}} do grupo?",
+    "banQuestion": "Banir {{nickname}} do grupo?"
   },
   "voiceCall": {
     "start": "Ligar",
@@ -1431,7 +1439,6 @@
       "mirror": "Espelho"
     },
     "connectivity": {
-      "title": "Teste de conexão",
       "description": "Testa o acesso aos servidores do launcher e aos recursos oficiais",
       "run": "Executar teste",
       "running": "Testando…",
@@ -1453,7 +1460,8 @@
         "officialDown": "A fonte oficial está inacessível. Mude para “Automático” ou “Espelho”.",
         "mirrorDown": "O espelho está inacessível. Mude para “Automático” ou “Oficial”.",
         "fail": "Os downloads estão indisponíveis: nem os servidores oficiais nem o espelho respondem. Troque o DNS (1.1.1.1) ou use uma VPN."
-      }
+      },
+      "heading": "Verificação de conexão"
     },
     "crashTelemetry": "Estatísticas anônimas de crashes",
     "crashTelemetryDescription": "Envia só o código do diagnóstico — ajuda a melhorar as dicas",
@@ -1583,7 +1591,8 @@
       },
       "reclaimBanner": "Cerca de {{size}} podem ser liberados sem tocar em instâncias, mundos ou contas.",
       "scanning": "Medindo a pasta…",
-      "rootHint": "tudo o que o launcher baixou"
+      "rootHint": "tudo o que o launcher baixou",
+      "restMore": "Mais instâncias: {{value}}"
     },
     "devModeDescription": "Cópia do comando de execução e ferramentas extras de depuração",
     "voiceMicTestErrorHint": "Sem acesso ao microfone. Confira as permissões do {{os}} e o dispositivo escolhido.",
@@ -1595,14 +1604,14 @@
       "title": "Pastas e arquivos que você permitiu",
       "description": "O launcher pode ler e gravar aqui, fora das pastas dele. O acesso expira 30 dias após o último uso.",
       "revoke": "Revogar",
-      "empty": "Você não deu acesso a nada fora das pastas do launcher."
+      "empty": "Você não deu acesso a nada fora das pastas do launcher.",
+      "revokeFailed": "Não foi possível revogar o acesso"
     },
     "saving": "Salvando…",
     "changed": "Alterado em relação ao padrão",
     "onlyChanged": "Alterados",
     "resetOne": "Restaurar o padrão",
     "resetAll": "Redefinir tudo",
-    "resetAllConfirmTitle": "Redefinir todas as configurações alteradas?",
     "autosaveHint": "As alterações valem na hora — não há nada para salvar.",
     "search": {
       "placeholder": "Buscar configurações",
@@ -1794,7 +1803,8 @@
       "historyHint": "O que mudou nas versões anteriores",
       "historyCurrent": "Instalada",
       "historyNoDetails": "Não há lista de mudanças para esta versão.",
-      "historyUnavailable": "A lista de versões está indisponível agora — ela carrega quando a conexão voltar."
+      "historyUnavailable": "A lista de versões está indisponível agora — ela carrega quando a conexão voltar.",
+      "openLinkFailed": "Não foi possível abrir o link"
     },
     "index": {
       "memory": {
@@ -2123,9 +2133,6 @@
         "keywords": "linux hook antes de iniciar depois de sair script comando"
       }
     },
-    "resetAllConfirmBody_one": "{{count}} configuração volta ao padrão. Instâncias, contas e mundos não são tocados.",
-    "resetAllConfirmBody_many": "{{count}} configurações voltam ao padrão. Instâncias, contas e mundos não são tocados.",
-    "resetAllConfirmBody_other": "{{count}} configurações voltam ao padrão. Instâncias, contas e mundos não são tocados.",
     "voicePttCaptureTimeout": "Nenhuma tecla foi pressionada — o atalho não mudou.",
     "voicePttCaptureUnavailable": "O launcher não consegue ler teclas globais. Confira se o antivírus permite isso e reinicie o launcher.",
     "agentChatSync": "Sincronizar chats do assistente",
@@ -2170,7 +2177,8 @@
       "adoptTitle": "Esta pasta já tem dados do launcher",
       "adoptDescription": "O launcher vai reiniciar e continuar trabalhando com ela. A pasta atual fica onde está; você pode excluí-la manualmente.",
       "adoptConfirm": "Trocar e reiniciar",
-      "restarting": "Reiniciando…"
+      "restarting": "Reiniciando…",
+      "adoptQuestion": "Trocar para os dados desta pasta?"
     },
     "supportSection": {
       "reportTitle": "Relatório para o suporte",
@@ -2185,7 +2193,8 @@
       "folderDescription": "Arquivos: {{files}} · {{size}} neste computador",
       "folderDescriptionEmpty": "Guardado neste computador",
       "historyTitle": "Relatórios enviados"
-    }
+    },
+    "resetAllDone": "Configurações redefinidas para o padrão"
   },
   "skinView": {
     "title": "Prévia da skin",
@@ -2246,15 +2255,11 @@
     "deletedHint": "A lixeira do sistema recusou a pasta, então ela foi apagada de vez.",
     "trashed": "Instância movida para a lixeira",
     "trashedHint": "A pasta fica na lixeira do sistema até você esvaziá-la.",
-    "updateAvailable": "Há uma versão mais nova do pacote",
     "updateAheadHint": "Provavelmente publicada de outro dispositivo: publicar daqui substitui a cópia do servidor por esta instância.",
     "hostChanged": "O anfitrião alterou a instância",
     "runWithoutUpdating": "Iniciar sem atualizar",
-    "updateCheckFailed": "Não foi possível verificar se há atualização da instância",
     "updateCheckFailedHint": "O launcher não recebeu resposta do servidor, então não se sabe se o anfitrião atualizou esta instância. Tente de novo ou inicie a versão que você já tem.",
     "publicUpdate": "Você compartilhou esta instância. Quer atualizá-la para todos?",
-    "publicUpdateTitle": "Atualizando a publicação",
-    "notSavedTitle": "Alterações não salvas",
     "notSavedHint": "As alterações da instância não foram salvas. Fechar as descarta.",
     "updateError": "Falha ao atualizar a instância",
     "integrityOk": "Integridade da instância verificada",
@@ -2289,9 +2294,9 @@
     "syncInterrupted": "A sincronização não terminou",
     "syncInterruptedHint": "Alguns arquivos da instância já foram substituídos. Use “Reparar” para deixar a instância de acordo com o pacote dela.",
     "syncServers": {
-      "title": "A sincronização vai substituir a lista de servidores",
       "hint": "A lista de servidores da instância será substituída pela do anfitrião. Estas entradas são suas — depois da sincronização, elas somem:",
-      "unknownHint": "Não foi possível ler a lista de servidores da instância. A sincronização substitui o servers.dat pela lista do anfitrião — qualquer entrada sua vai sumir."
+      "unknownHint": "Não foi possível ler a lista de servidores da instância. A sincronização substitui o servers.dat pela lista do anfitrião — qualquer entrada sua vai sumir.",
+      "ask": "Sincronizar e substituir a lista de servidores?"
     },
     "synchronize": "Sincronizar",
     "shareMods": "Compartilhar conteúdo",
@@ -2368,8 +2373,7 @@
       "rename": "Renomear grupo",
       "moveUp": "Mover para cima",
       "moveDown": "Mover para baixo",
-      "removeConfirm": "Excluir o grupo “{{name}}”?",
-      "removeKeep": "As instâncias ficam onde estão — só o agrupamento some."
+      "removed": "Grupo “{{name}}” excluído"
     },
     "deleteInstance": "Excluir instância",
     "serverInstall": "Instalar um servidor",
@@ -2417,7 +2421,8 @@
       "modpack": "Modpack",
       "java": "Java",
       "diskUsage": "No disco",
-      "launchProfile": "Perfil de inicialização"
+      "launchProfile": "Perfil de inicialização",
+      "javaNotInstalled": "O Java {{major}} ainda não foi baixado — o launcher baixa ao iniciar."
     },
     "screenshots": {
       "title": "Capturas de tela",
@@ -2428,10 +2433,10 @@
       "openExternal": "Abrir no visualizador do sistema",
       "useAsCover": "Usar como capa da instância",
       "delete": "Excluir",
-      "deleteTitle": "Excluir esta captura de tela?",
-      "deleteBody": "O arquivo vai para a Lixeira; você pode restaurá-lo de lá.",
       "deleted": "Captura de tela excluída",
-      "deleteFailed": "Não foi possível excluir a captura de tela"
+      "deleteFailed": "Não foi possível excluir a captura de tela",
+      "deletedHint": "O arquivo vai para a lixeira do sistema.",
+      "loadFailed": "Não foi possível abrir as capturas de tela"
     },
     "tabsLabel": "Seções da instância",
     "offlineHint": "Sem conexão, a verificação de integridade, a publicação e a sincronização ficam indisponíveis.",
@@ -2479,14 +2484,14 @@
       "notOwnerUnknown": "Só o jogador que publicou esta instância pode tirá-la do ar. A instância será excluída só deste computador."
     },
     "deleteCopy": {
-      "title": "Excluir sua cópia",
       "info": "Esta instância pertence a outro jogador. Sua cópia, com os mundos, vai para a lixeira do sistema — a publicação continua no ar.",
       "confirm": "Excluir a cópia",
       "menu": "Excluir minha cópia",
       "trashed": "Sua cópia foi movida para a lixeira",
       "trashedHint": "A pasta fica na lixeira do sistema até você esvaziá-la. A instância continua publicada.",
       "deleted": "Sua cópia foi excluída",
-      "deletedHint": "A lixeira do sistema recusou a pasta, então ela foi apagada de vez. A instância continua publicada."
+      "deletedHint": "A lixeira do sistema recusou a pasta, então ela foi apagada de vez. A instância continua publicada.",
+      "ask": "Excluir sua cópia de “{{name}}”?"
     },
     "playBlocked": {
       "noAccount": "Escolha uma conta para jogar."
@@ -2514,7 +2519,16 @@
     "updateLoader": "Atualizar versão do loader",
     "legacyLoaders": "Para versões antigas",
     "launchProfileDropped": "Não será passado na inicialização",
-    "savedInline": "Alterações salvas"
+    "savedInline": "Alterações salvas",
+    "viewLabel": "Visualização",
+    "emptyNoAccount": "Adicione uma conta primeiro para criar uma instância.",
+    "deleteAsk": "Excluir a instância “{{name}}”?",
+    "publicUpdateAsk": "Atualizar a publicação para todos?",
+    "notSavedAsk": "Sair sem salvar?",
+    "configNotSavedAsk": "Sair sem salvar o arquivo?",
+    "closeUnsavedQuestion": "Fechar o launcher sem salvar?",
+    "updateBeforeLaunchQuestion": "Atualizar a instância antes de iniciar?",
+    "updateCheckFailedQuestion": "A atualização da instância não foi verificada. Tentar de novo?"
   },
   "port": {
     "title": "Passar “{{name}}” para outra versão",
@@ -2554,19 +2568,19 @@
     "saveAll": "Salvar os mods da instância como conjunto",
     "toSet": "Para um conjunto",
     "saveTitle": "Salvar como conjunto",
-    "saveDescription": "Um conjunto guarda links para projetos do Modrinth e do CurseForge, não arquivos; arquivos locais ficam de fora. Você pode adicioná-lo a qualquer instância — as versões são escolhidas para o Minecraft e o loader dela.",
+    "saveDescription": "Um conjunto guarda links para mods do Modrinth e do CurseForge, não arquivos; arquivos locais ficam de fora. Você pode adicioná-lo a qualquer instância — as versões são escolhidas para o Minecraft e o loader dela.",
     "name": "Nome do conjunto",
     "namePlaceholder": "Por exemplo, “Desempenho”",
-    "saveCount": "Projetos no conjunto: {{count}}",
-    "mergeHint": "O conjunto “{{name}}” já existe — os projetos serão adicionados a ele ({{count}}).",
-    "nothingToSave": "Não há projetos do Modrinth ou do CurseForge aqui para salvar.",
+    "saveCount": "Mods no conjunto: {{count}}",
+    "mergeHint": "O conjunto “{{name}}” já existe — os mods serão adicionados a ele ({{count}}).",
+    "nothingToSave": "Não há mods do Modrinth ou do CurseForge aqui para salvar.",
     "save": "Salvar",
     "saved": "Conjunto “{{name}}” salvo",
     "saveFailed": "Não foi possível salvar os conjuntos",
     "applyTitle": "Adicionar um conjunto",
-    "applyDescription": "O launcher escolhe as versões dos projetos do conjunto para {{target}} e as adiciona à instância junto com as dependências.",
+    "applyDescription": "O launcher escolhe as versões dos mods do conjunto para {{target}} e as adiciona à instância junto com as dependências.",
     "empty": "Ainda não há conjuntos. Selecione mods na biblioteca e clique em “Para um conjunto”.",
-    "items": "Projetos: {{count}}",
+    "items": "Mods: {{count}}",
     "delete": "Excluir o conjunto",
     "deleted": "Conjunto “{{name}}” excluído",
     "add": "Adicionar ({{count}})",
@@ -2657,7 +2671,8 @@
     "damageDealt": "Dano causado",
     "damageTaken": "Dano sofrido",
     "topMined": "Blocos mais minerados",
-    "topKilled": "Criaturas mais derrotadas"
+    "topKilled": "Criaturas mais derrotadas",
+    "topEmpty": "Ainda vazio — jogue neste mundo primeiro"
   },
   "versionStatistics": {
     "title": "Estatísticas",
@@ -2897,7 +2912,6 @@
     "clearSearch": "Limpar busca",
     "selectAll": "Selecionar tudo",
     "clearAll": "Limpar tudo",
-    "loadingFolders": "Carregando pastas...",
     "emptyFolder": "Esta pasta está vazia",
     "emptyFolderHint": "Não há nada aqui para adicionar ao pacote.",
     "allHidden": "Aqui só há arquivos pessoais e de serviço",
@@ -3346,7 +3360,14 @@
     "catalogLinkError": "Esta skin não está mais no catálogo",
     "littleskinReadOnly": "Skins e capas de uma conta LittleSkin são trocadas no littleskin.cn, então aplicar, redefinir e gerar ficam indisponíveis aqui. O launcher mostra a skin definida lá.",
     "littleskinOpenSite": "Abrir o littleskin.cn",
-    "deepLinkLittleskin": "O LittleSkin gerencia as skins no próprio site, então skins do catálogo não podem ser aplicadas a uma conta LittleSkin"
+    "deepLinkLittleskin": "O LittleSkin gerencia as skins no próprio site, então skins do catálogo não podem ser aplicadas a uma conta LittleSkin",
+    "sourceFilter": "Origem das skins",
+    "typeFilter": "Tipo",
+    "addFrom": "Adicionar de",
+    "removeFromGalleryQuestion": "Remover “{{name}}” da galeria?",
+    "deleteCapeQuestion": "Excluir a capa “{{name}}”?",
+    "deleteSkinQuestion": "Excluir a skin “{{name}}”?",
+    "deleteSkinLoss": "A textura será removida do launcher junto com o arquivo."
   },
   "blockedMods": {
     "title": "Mods bloqueados encontrados",
@@ -3404,7 +3425,9 @@
     "readyTitle": "O launcher está atualizado",
     "errorTitle": "Falha ao buscar atualizações",
     "preparing": "Preparando",
-    "percent": "{{percent}}%"
+    "percent": "{{percent}}%",
+    "progressBytes": "{{done}} de {{total}}",
+    "speed": "{{speed}}/s"
   },
   "time": {
     "s": "s",
@@ -3421,7 +3444,6 @@
     "notFound": "Nada corresponde",
     "resetFilters": "Limpar o filtro",
     "selectWorld": "Escolha um mundo à esquerda",
-    "sort": "Ordenação",
     "sortBy": {
       "recent": "Jogado por último",
       "name": "Nome",
@@ -3488,9 +3510,6 @@
     "deleted": "Mundo excluído",
     "deletedError": "Erro ao excluir o mundo",
     "deletedErrorHint": "Não foi possível mover a pasta do mundo para a lixeira. Feche o jogo e tente de novo.",
-    "confirmation": "Excluir o mundo {{name}}? A pasta dele vai para a lixeira.",
-    "confirmationFolder": "Pasta: {{folder}}",
-    "deleteTitle": "Excluindo um mundo",
     "datapacksInWorld": "Ligados ao mundo",
     "noDatapacks": "Nenhum pacote de dados instalado",
     "noDatapacksHint": "Os pacotes de dados adicionados à instância como conteúdo podem ser ligados a este mundo.",
@@ -3523,7 +3542,11 @@
     "datapackPendingHint": "O arquivo está na pasta do mundo. O Minecraft vai ligá-lo na próxima vez que o mundo carregar.",
     "nameEmpty": "Digite um nome para o mundo",
     "nameTaken": "Esta instância já tem um mundo com esse nome",
-    "createShortcut": "Atalho na área de trabalho"
+    "createShortcut": "Atalho na área de trabalho",
+    "filterLabel": "Filtro de mundos",
+    "openSavesError": "Não foi possível abrir a pasta saves",
+    "statsLater": "O tempo de jogo, as mortes, os abates e a distância aparecem depois que você jogar neste mundo.",
+    "datapackRemoved": "Pacote de dados removido"
   },
   "worldChunks": {
     "title": "Editor de chunks",
@@ -3585,7 +3608,8 @@
       "fit": "Enquadrar o mundo inteiro",
       "zoomIn": "Aproximar",
       "zoomOut": "Afastar",
-      "rescan": "Verificar o mundo de novo"
+      "rescan": "Verificar o mundo de novo",
+      "label": "Ferramenta"
     },
     "hover": "chunk {{x}} {{z}} · bloco {{block}}",
     "rendering_one": "Desenhando {{count}} região…",
@@ -3711,7 +3735,9 @@
       "resetTitle": "Zerando o tempo por perto",
       "reset": "O tempo habitado de {{count}} chunks em {{regions}} regiões será zerado.",
       "backup": "Criar um backup antes",
-      "backupHint": "O mundo inteiro é compactado antes de qualquer alteração. Mundos grandes demoram um pouco."
+      "backupHint": "O mundo inteiro é compactado antes de qualquer alteração. Mundos grandes demoram um pouco.",
+      "deleteQuestion": "Excluir os chunks selecionados?",
+      "resetQuestion": "Zerar o tempo por perto dos chunks selecionados?"
     },
     "done": {
       "delete_one": "{{count}} chunk excluído",
@@ -3747,13 +3773,10 @@
     "restore": "Restaurar",
     "restored": "Mundo restaurado",
     "restoredSafety": "O estado anterior foi salvo como um backup separado — você pode voltar para ele.",
-    "restoredNoSafety": "Mundo restaurado, mas sem cópia de segurança",
+    "restoredNoSafety": "Mundo restaurado, mas sem backup",
     "restoredNoSafetyHint": "Não foi possível compactar os arquivos anteriores, então eles foram mantidos na pasta .grubie-restore em vez de serem excluídos.",
     "restoreError": "Não foi possível restaurar o mundo",
     "restoreConfirmSafety": "Antes de restaurar, o launcher salva o estado atual como um backup separado.",
-    "restoreTitle": "Restaurando de um backup",
-    "deleteTitle": "Excluindo um backup",
-    "preservedDeleteTitle": "Excluindo arquivos de mundo guardados",
     "deleted": "Backup excluído",
     "deleteError": "Não foi possível excluir o backup",
     "empty": "Ainda não há backups",
@@ -3786,13 +3809,16 @@
     "longOperation": "Mundos grandes levam alguns minutos para compactar — mantenha esta janela aberta.",
     "unknownDate": "Data desconhecida",
     "preservedTitle": "Arquivos de mundo guardados",
-    "preservedHint": "Mantidos depois de uma restauração que não conseguiu fazer uma cópia de segurança. Exclua-os quando tiver certeza de que não são mais necessários.",
+    "preservedHint": "Mantidos depois de uma restauração que não conseguiu fazer um backup. Exclua-os quando tiver certeza de que não são mais necessários.",
     "preservedDeleteConfirm": "Estes arquivos de mundo serão excluídos. Se tiverem progresso de que você ainda precisa, abra a pasta e copie-o antes.",
     "preservedDeleted": "Arquivos guardados excluídos",
     "restoreConfirmDated": "O mundo será substituído pelo backup de {{date}}.",
     "coversLastSession": "Mais novo que a sua última sessão — nada se perde",
     "behindWorld": "Restaurar volta o mundo em {{time}}",
-    "deleteConfirmDated": "O backup de {{date}} será removido do disco."
+    "deleteConfirmDated": "O backup de {{date}} será removido do disco.",
+    "restoreQuestion": "Restaurar o mundo deste backup?",
+    "deleteQuestion": "Excluir este backup?",
+    "preservedDeleteQuestion": "Excluir os arquivos guardados do mundo?"
   },
   "achievements": {
     "title": "Conquistas",
@@ -4096,7 +4122,9 @@
       "name": "Por nome"
     },
     "filtered": "Mostrando {{shown}} de {{total}}",
-    "resetFilters": "Limpar filtros"
+    "resetFilters": "Limpar filtros",
+    "statusFilter": "Status das conquistas",
+    "categoryFilter": "Categoria de conquistas"
   },
   "leaderboard": {
     "you": "(você)",
@@ -4220,7 +4248,6 @@
     "deleted": "Modpack excluído",
     "deleteError": "Erro ao excluir o modpack",
     "confirmation": "O modpack “{{name}}” será removido do servidor.",
-    "copyId": "Copiar ID",
     "addToLauncher": "Adicionar ao launcher",
     "loadError": "Não foi possível carregar seus modpacks",
     "published": "Publicado: {{value}}",
@@ -4241,18 +4268,20 @@
     "notPublishedNoInstances": "Ainda não há instâncias — crie uma e você poderá publicá-la",
     "notPublishedUnknown": "A lista aparece quando seus modpacks publicados carregarem",
     "openInstance": "Abrir instância",
-    "deleteTitle": "Despublicar o modpack",
     "deleteLoss": "O link e o código param de funcionar para todos; sua cópia local da instância fica neste computador.",
-    "deleteAction": "Despublicar"
+    "deleteAction": "Despublicar",
+    "copyLink": "Copiar link",
+    "deleteQuestion": "Despublicar “{{name}}”?"
   },
   "errorLog": {
     "title": "Registro de erros",
     "empty": "Sem erros",
     "clear": "Limpar",
-    "clearConfirm": "Limpar todo o histórico de erros? Ele não pode ser restaurado.",
     "description": "No que o próprio launcher falhou. Os crashes do jogo ficam na aba Logs da instância.",
     "copyAll": "Copiar tudo",
-    "details": "Detalhes"
+    "details": "Detalhes",
+    "cleared": "Registro de erros limpo",
+    "openLogs": "Logs da instância"
   },
   "crash": {
     "title": "O jogo crashou: {{version}}",
@@ -4336,7 +4365,6 @@
     "new": "Nova",
     "noDate": "Sem data",
     "emptyHint": "O feed está vazio agora — volte mais tarde.",
-    "loadFailedHint": "O serviço de notícias não respondeu. Verifique a conexão e tente de novo.",
     "partialFailed": "As notícias do Minecraft não carregaram",
     "offlineTitle": "As notícias ficam indisponíveis offline",
     "offlineHint": "Conecte-se à internet — o feed carrega sozinho.",
@@ -4361,7 +4389,9 @@
     "unread_many": "{{count}} novas",
     "unread_other": "{{count}} novas",
     "updated": "Atualizado {{value}}",
-    "milestoneHint": "Abrir a lista de mudanças"
+    "milestoneHint": "Abrir a lista de mudanças",
+    "sourceFilter": "Fonte das notícias",
+    "loadFailedSource": "O servidor do Grubie não retornou as notícias. Tente de novo em um minuto."
   },
   "errors": {
     "code": "Código",
@@ -4464,7 +4494,6 @@
     "emptyTitle": "O que devo olhar?",
     "emptyHint": "Pergunte com palavras simples — por exemplo: quais instâncias eu tenho, por que meu modpack crashou, ou encontre mods de otimização para 1.20.1 Fabric.",
     "emptyContext": "Vê {{instances}} e {{tools}} deste launcher",
-    "noProvider": "Adicione primeiro um provedor de IA e uma chave — o ícone de engrenagem acima.",
     "blocked": {
       "noAccountShort": "é preciso entrar",
       "offlineAccountShort": "não para contas offline",
@@ -4593,7 +4622,7 @@
       "listInstances": "Lendo a lista de instâncias",
       "getInstance": "Abrindo a instância “{{name}}”",
       "searchMods": "Buscando mods: {{query}}",
-      "getProject": "Lendo a página do projeto",
+      "getProject": "Lendo a página do mod",
       "getProjectVersions": "Verificando as versões disponíveis",
       "getDependencies": "Resolvendo dependências",
       "listMinecraftVersions": "Buscando versões do Minecraft para {{loader}}",
@@ -4607,15 +4636,15 @@
       "readGameLog": "Lendo o log de “{{name}}”",
       "getLastCrash": "Lendo o último crash de “{{name}}”",
       "listServers": "Lendo a lista de servidores de “{{name}}”",
-      "addMods": "Instalando em “{{name}}”: {{count}} projeto(s)",
-      "removeMods": "Removendo de “{{name}}”: {{count}} projeto(s)",
+      "addMods": "Instalando em “{{name}}”: {{count}} mod(s)",
+      "removeMods": "Removendo de “{{name}}”: {{count}} mod(s)",
       "setRunArguments": "Mudando os argumentos de “{{name}}”",
       "setMemory": "Definindo a memória do jogo como {{value}} MB",
       "setMemoryInstance": "Definindo a memória de “{{name}}” como {{value}} MB",
       "launchInstance": "Iniciando “{{name}}”",
       "deleteInstance": "Excluindo a instância “{{name}}”",
-      "enableMods": "Ativando em “{{name}}”: {{count}} projeto(s)",
-      "disableMods": "Desativando em “{{name}}”: {{count}} projeto(s)",
+      "enableMods": "Ativando em “{{name}}”: {{count}} mod(s)",
+      "disableMods": "Desativando em “{{name}}”: {{count}} mod(s)",
       "updateMods": "Procurando atualizações para “{{name}}”",
       "checkIntegrity": "Verificando os arquivos de “{{name}}”",
       "createWorldBackup": "Fazendo backup do mundo “{{name}}”",
@@ -4687,7 +4716,8 @@
       "loadFailedHint": "O launcher não conseguiu ler o ai-providers.json. Seus provedores continuam lá — tente de novo e confira se o arquivo pode ser lido.",
       "deleteFailed": "O provedor não foi excluído",
       "selectFailed": "O provedor não foi trocado",
-      "builtinHint": "Embutido no launcher · sem chave · para apoiadores"
+      "builtinHint": "Embutido no launcher · sem chave · para apoiadores",
+      "deleteHint": "A chave será apagada deste computador. Para trazer o provedor de volta, será preciso digitar a chave novamente."
     },
     "searchChats": "Buscar chats",
     "syncFailed": "Os chats não estão sincronizados — tente de novo",
@@ -4738,7 +4768,8 @@
       "needs": {
         "internet": "Precisa de conexão com a internet",
         "account": "Precisa de uma conta conectada"
-      }
+      },
+      "revoked": "Permissão revogada: {{name}}"
     },
     "suggestions": {
       "crash": "Por que minha instância crashou?",
@@ -4806,7 +4837,7 @@
       "set_run_arguments": "Mudar argumentos de inicialização",
       "delete_instance": "Excluir uma instância",
       "search_mods": "Buscar mods",
-      "get_project": "Ler a página de um projeto",
+      "get_project": "Ler a página de um mod",
       "get_project_versions": "Verificar versões de mods",
       "get_dependencies": "Resolver dependências",
       "list_minecraft_versions": "Listar versões do Minecraft",
@@ -4851,7 +4882,7 @@
     "preview": {
       "instance": "Instância",
       "minecraft": "Minecraft",
-      "projects": "Projetos",
+      "projects": "Mods",
       "worlds": "Mundos",
       "size": "No disco",
       "world": "Mundo",
@@ -4860,7 +4891,7 @@
       "instanceLossWorlds_one": "{{count}} mundo vai junto. A pasta vai para a lixeira do sistema; o launcher esquece a instância de qualquer forma.",
       "instanceLossWorlds_many": "{{count}} mundos vão junto. A pasta vai para a lixeira do sistema; o launcher esquece a instância de qualquer forma.",
       "instanceLossWorlds_other": "{{count}} mundos vão junto. A pasta vai para a lixeira do sistema; o launcher esquece a instância de qualquer forma.",
-      "restoreLoss": "Tudo o que foi jogado desde {{date}} é substituído. Antes, o launcher guarda uma cópia de segurança do mundo atual.",
+      "restoreLoss": "Tudo o que foi jogado desde {{date}} é substituído. Antes, o launcher faz um backup do mundo atual.",
       "backupLoss": "Este ponto de restauração some de vez. O próprio mundo não é tocado.",
       "install": "Instalar",
       "dependencies": "Dependências",
@@ -4917,7 +4948,12 @@
       "locked": "O Grubie está disponível para quem apoiou o projeto. Conecte sua própria chave de IA ou apoie o Grubie Launcher.",
       "ownKey": "Minha chave",
       "support": "Apoiar"
-    }
+    },
+    "chatDeleteQuestion": "Excluir o chat “{{name}}”?",
+    "chatDeleteHint": "A conversa será excluída neste computador e do seu perfil Grubie. Não será possível restaurá-la.",
+    "chatDeleteFailed": "O chat não foi excluído",
+    "chatRenameFailed": "O chat não foi renomeado",
+    "noProviderShort": "Primeiro adicione um provedor de IA e uma chave."
   },
   "shell": {
     "back": "Voltar",
@@ -4929,7 +4965,8 @@
       "newInstance": "Nova instância",
       "instance": "Instância",
       "people": "Pessoas",
-      "profile": "Perfil"
+      "profile": "Perfil",
+      "settingsLocked": "Indisponível enquanto o jogo está aberto"
     },
     "palette": {
       "label": "Busca e comandos",
@@ -4949,7 +4986,8 @@
         "accounts": "Contas",
         "settings": "Configurações",
         "agent": "Assistente"
-      }
+      },
+      "blockedRunning": "enquanto o jogo está aberto"
     },
     "tabs": {
       "overview": "Visão geral",
@@ -5003,12 +5041,9 @@
     "tooLarge": "O arquivo é grande demais para editar aqui",
     "saveFile": "Salvar arquivo",
     "unsaved": "Alterações não salvas",
-    "unsavedTitle": "Arquivo não salvo",
     "unsavedHint": "As edições no arquivo de configuração não foram salvas. Elas vão se perder se você sair.",
-    "backupsTitle": "Versões salvas",
     "backupBaseline": "Arquivo original",
     "backupPrevious": "Versão anterior",
-    "noBackups": "Ainda não há versões salvas — a primeira aparece depois que você salvar este arquivo.",
     "backupRestored": "Versão carregada no editor — salve para aplicá-la",
     "backupMissing": "O arquivo da versão salva sumiu",
     "completion": {
@@ -5025,7 +5060,6 @@
     "findPrevious": "Anterior (Shift+Enter)",
     "findNext": "Próximo (Enter)",
     "findHint": "Buscar no arquivo ({{mod}}+F)",
-    "history": "Histórico de versões",
     "backupsHint": "Clique em uma versão para compará-la com o arquivo atual antes de restaurar.",
     "showInFolder": "Mostrar na pasta",
     "discard": "Descartar",
@@ -5052,11 +5086,11 @@
     "contentSearch": {
       "placeholder": "Buscar em todos os arquivos",
       "hint": "Digite pelo menos 2 caracteres, por exemplo o nome de uma opção",
-      "reading": "Lendo arquivos… {{done}}/{{total}}",
       "none": "Nada encontrado",
       "more_one": "e mais {{count}}",
       "more_many": "e mais {{count}}",
-      "more_other": "e mais {{count}}"
+      "more_other": "e mais {{count}}",
+      "searching": "Procurando nos arquivos… {{done}}/{{total}}"
     },
     "translate": {
       "on": "Traduzir comentários",
@@ -5073,9 +5107,7 @@
     "translatePartial": "Alguns comentários não puderam ser traduzidos",
     "reset": {
       "action": "Restaurar o padrão",
-      "title": "Restaurar “{{name}}” para o padrão?",
-      "hint": "O arquivo vai para o histórico de versões, e o mod o cria de novo na próxima vez que o jogo iniciar.",
-      "confirm": "Restaurar"
+      "undoHint": "Uma cópia do arquivo foi guardada. O mod vai criá-lo de novo na próxima vez que o jogo iniciar."
     },
     "resetDone": "Arquivo removido — o mod vai criá-lo de novo ao iniciar",
     "resetFailed": "Não foi possível restaurar o arquivo",
@@ -5140,7 +5172,10 @@
       "default": "padrão: {{value}}",
       "resetField": "Restaurar o valor padrão",
       "partial": "O arquivo tem um erro de sintaxe, então o formulário pode deixar de mostrar algumas opções. Clique para ir até o erro."
-    }
+    },
+    "searchModeLabel": "Procurar em",
+    "fileCopies": "Cópias do arquivo",
+    "noCopies": "Ainda não há cópias — a primeira aparece depois que você salvar este arquivo."
   },
   "modpackDiff": {
     "updated": "Será atualizado",
@@ -5184,7 +5219,7 @@
     "otherProject": "Este arquivo pertence a outro modpack: {{title}}",
     "loaderMissing": "A versão do loader de que esta versão do modpack precisa não foi encontrada.",
     "openSite": "Abrir no {{site}}",
-    "copyIds": "Copiar os IDs do projeto e da versão",
+    "copyIds": "Copiar os IDs do modpack e da versão",
     "fromFile": "De arquivo",
     "fromFileHint": "Atualizar a partir de um .mrpack ou .zip que você mesmo baixou",
     "stats": {
@@ -5280,10 +5315,10 @@
     "notifyDoneBody": "{{name}} está pronta para jogar",
     "notifyPartialTitle": "Instalada com erros",
     "notifyPartialBody": "{{name}}: {{count}} arquivos não foram baixados",
-    "closeTitle": "Uma instalação ainda está em andamento",
     "closeHint": "Fechar o launcher vai interromper a instalação — os arquivos já baixados ficam incompletos e a instância vai precisar ser instalada de novo.",
     "closeHintNamed": "Fechar o launcher vai interromper a instalação de “{{name}}” — os arquivos já baixados ficam incompletos e a instância vai precisar ser instalada de novo.",
-    "closeStopAndQuit": "Interromper e fechar"
+    "closeStopAndQuit": "Interromper e fechar",
+    "closeQuestion": "Interromper a instalação e fechar o launcher?"
   },
   "skinStage": {
     "animation": "Animação",
@@ -5350,7 +5385,6 @@
     "expand_one": "mais {{count}} linha",
     "expand_many": "mais {{count}} linhas",
     "expand_other": "mais {{count}} linhas",
-    "loading": "Lendo o log…",
     "nothingMatches": "Nenhuma linha corresponde ao filtro",
     "jumpToError": "Ir ao erro",
     "jumpToErrorHint": "Pular para a próxima linha de erro",
@@ -5365,7 +5399,6 @@
     "more": "Ações do log",
     "copyLog": "Copiar o log",
     "copyReport": "Copiar para o suporte",
-    "reportCopied": "O relatório está na área de transferência — cole onde você for pedir ajuda",
     "readFailedTitle": "Não foi possível ler {{name}}",
     "readFailedHint": "O arquivo está no disco, mas o launcher não conseguiu lê-lo: ele pode estar bloqueado por outro programa ou danificado.",
     "emptyTitle": "Ainda não há logs",
@@ -5427,7 +5460,8 @@
       "warn": "Avisos",
       "info": "Info",
       "debug": "Depuração"
-    }
+    },
+    "stopFailed": "Não foi possível parar o jogo"
   },
   "profile": {
     "pointsToNext": "{{points}} pontos para o nível {{level}}",
@@ -5560,7 +5594,8 @@
       "unknownVersion": "O servidor não informou a versão — escolha uma você mesmo.",
       "applied": "Entrada rápida: {{address}}",
       "versionMissing": "Esta versão não está na lista — escolha uma próxima.",
-      "known": "Servidores das suas instâncias"
+      "known": "Servidores das suas instâncias",
+      "clear": "Remover o servidor"
     },
     "minecraftVersion": "Versão do Minecraft",
     "allVersions": "Todas",
@@ -5611,7 +5646,8 @@
     "contentFailedHint": "Confira o espaço livre no disco e tente de novo.",
     "extraFilesFailed": "Instância criada, mas nem todos os arquivos foram baixados",
     "extraFilesFailedHint": "Alguns arquivos da instância não chegaram. Os detalhes estão no registro de erros.",
-    "afterInstallHint": "O conteúdo, os servidores e os argumentos de inicialização podem ser mudados depois da instalação"
+    "afterInstallHint": "O conteúdo, os servidores e os argumentos de inicialização podem ser mudados depois da instalação",
+    "modpacksNoneForFilters": "Não há modpacks para a versão e o loader escolhidos — mude os filtros."
   },
   "community": {
     "search": "Buscar pelo nome do pacote",
@@ -5860,11 +5896,12 @@
     "failed": {
       "prepare": "Não foi possível reunir o relatório. Tente de novo; se repetir, abra a pasta do diário em Configurações → Suporte.",
       "expired": "O relatório reunido está desatualizado. Reúna-o de novo.",
-      "network": "Não foi possível acessar o servidor. Verifique a conexão ou salve o relatório em um arquivo.",
+      "network": "O servidor do Grubie não responde. Verifique a conexão ou salve o relatório em um arquivo.",
       "rateLimited": "Relatórios demais em pouco tempo. Espere alguns minutos e tente de novo.",
       "tooLarge": "O relatório é grande demais para o servidor. Salve-o em um arquivo.",
       "rejected": "O servidor não aceitou o relatório. Salve-o em um arquivo e envie ao suporte."
-    }
+    },
+    "saveFailed": "Não foi possível salvar o relatório em arquivo"
   },
   "launchStage": {
     "stages": {
@@ -6219,7 +6256,9 @@
         "title": "Mínimo",
         "description": "Para jogar sozinho: sem Pessoas, Notícias e efeitos"
       }
-    }
+    },
+    "resetDone": "Layout redefinido",
+    "hiddenDone": "Oculto: “{{name}}”"
   },
   "theme": {
     "title": "Tema da interface",
@@ -6230,7 +6269,6 @@
     "edit": "Editar",
     "duplicate": "Fazer uma cópia",
     "delete": "Excluir tema",
-    "deleteConfirm": "O tema “{{name}}” será excluído de vez. A imagem de fundo fica na pasta de temas.",
     "saved": "Tema “{{name}}” salvo",
     "limit": "Você pode guardar até {{count}} temas",
     "accentByTheme": "O tema “{{name}}” define o destaque. Para escolher uma cor aqui, desative “Cor de destaque própria” no editor do tema",
@@ -6318,7 +6356,6 @@
       "badFile": "Não é um arquivo de tema do Grubie ou está danificado",
       "badCode": "Código de tema não reconhecido",
       "unreadable": "O tema não passou na verificação de legibilidade: com essas cores o texto fica ilegível",
-      "codeCopied": "Código do tema copiado",
       "codeNoPicture": "A imagem de fundo não entra no código. Salve o tema em arquivo para compartilhá-la"
     },
     "gallery": {
@@ -6375,14 +6412,19 @@
         "unreadable": "O tema não passou na verificação de legibilidade: com essas cores o texto fica ilegível",
         "pending_limit": "Você já tem 5 temas em verificação. Aguarde a decisão",
         "name_required": "O tema precisa de um nome",
-        "offline": "Sem conexão com o servidor. Verifique a internet e tente de novo",
+        "offline": "O servidor do Grubie não responde. Verifique a internet e tente de novo",
         "failed": "Não foi possível publicar o tema. Tente mais tarde",
         "install": "Não foi possível instalar o tema da galeria",
         "unpublish": "Não foi possível retirar o tema da galeria",
         "load": "A galeria não carregou. Verifique a conexão",
-        "notFound": "Tema não encontrado: talvez o autor o tenha removido"
-      }
-    }
+        "notFound": "Tema não encontrado: talvez o autor o tenha removido",
+        "mineFailed": "O servidor do Grubie não retornou suas publicações",
+        "loadFailed": "O servidor do Grubie não responde — a galeria de temas não carregou"
+      },
+      "unpublishQuestion": "Remover “{{name}}” da galeria?"
+    },
+    "deleted": "Tema “{{name}}” excluído",
+    "unsavedHint": "O tema “{{name}}” não foi salvo. Se sair, as alterações serão perdidas."
   },
   "launchSettings": {
     "gpu": {

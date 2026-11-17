@@ -1,10 +1,11 @@
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
-import { Heart, Loader2, Sparkles } from "lucide-react";
+import { Gift, Heart, Loader2 } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { pathsAtom } from "@renderer/stores/atoms";
+import { showFailureToast } from "@renderer/utilities/failures";
 import { MilestoneBeam } from "@renderer/components/MilestoneBeam";
 import { isMilestoneRelease } from "@renderer/features/whatsNew/milestone";
 import { useCurrentRelease } from "@renderer/features/whatsNew/useCurrentRelease";
@@ -37,7 +38,11 @@ export function AboutSection({
   const isWhatsNewLoading = useAtomValue(whatsNewLoadingAtom);
 
   const open = (url: string) => {
-    void api.shell.openExternal(url).catch(() => undefined);
+    void api.shell.openExternal(url).catch((error) =>
+      showFailureToast(t("settings.about.openLinkFailed"), error, {
+        channels: ["shell:openExternal"],
+      }),
+    );
   };
 
   return (
@@ -52,7 +57,7 @@ export function AboutSection({
               <span className="relative flex h-5 shrink-0 items-center gap-1.5 rounded-md bg-primary-soft px-2 text-foreground">
                 <MilestoneBeam />
                 <span className="font-mono tabular-nums">{appVersion}</span>
-                <span className="text-[0.6rem] font-medium tracking-wide uppercase">
+                <span className="text-3xs font-medium tracking-wide uppercase">
                   {t("whatsNew.milestone")}
                 </span>
               </span>
@@ -81,7 +86,7 @@ export function AboutSection({
           {isWhatsNewLoading ? (
             <Loader2 className="size-3.5 animate-spin" />
           ) : (
-            <Sparkles className="size-3.5" />
+            <Gift className="size-3.5" />
           )}
           {t("settings.about.whatsNew")}
         </Button>

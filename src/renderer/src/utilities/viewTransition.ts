@@ -1,3 +1,4 @@
+import { ignoreFailure } from "./ignoreFailure";
 import { flushSync } from "react-dom";
 import { isMotionReduced } from "@/lib/motionPreference";
 
@@ -57,9 +58,9 @@ export function morphTransition({
     if (to) to.style.viewTransitionName = MORPH_NAME;
   });
 
-  void transition.ready.catch(() => {});
+  void transition.ready.catch(ignoreFailure);
   void transition.finished
-    .catch(() => {})
+    .catch(ignoreFailure)
     .finally(() => {
       from.style.viewTransitionName = "";
       if (to) to.style.viewTransitionName = "";

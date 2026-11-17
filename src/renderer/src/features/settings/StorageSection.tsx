@@ -5,6 +5,7 @@ import {
   AppWindow,
   Archive,
   Boxes,
+  CircleCheck,
   Coffee,
   FolderOpen,
   Image as ImageIcon,
@@ -15,7 +16,6 @@ import {
   Package,
   PackageX,
   RefreshCw,
-  Sparkles,
   Trash2,
   TriangleAlert,
   type LucideIcon,
@@ -25,15 +25,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { isRunningAtom, pathsAtom } from "@renderer/stores/atoms";
 import { formatBytes } from "@renderer/utilities/file";
 import { showFailureToast } from "@renderer/utilities/failures";
@@ -249,7 +241,7 @@ export function StorageSection({
               <p className="font-mono text-2xl leading-tight font-semibold tabular-nums text-foreground">
                 {isLoading ? "…" : isFailed ? "—" : bytes(data?.total ?? 0)}
               </p>
-              <p className="mt-0.5 flex items-center gap-1.5 text-[0.7rem] text-faint">
+              <p className="mt-0.5 flex items-center gap-1.5 text-2xs text-faint">
                 {isScanning && <Loader2 className="size-3 animate-spin" />}
                 {isScanning
                   ? t("settings.storage.scanning")
@@ -266,7 +258,13 @@ export function StorageSection({
                 <FolderOpen className="size-3.5" />
                 {t("settings.storage.openFolder")}
               </Button>
-              <Hint content={t("settings.storage.refresh")}>
+              <Hint
+                content={
+                  isScanning || busy !== null
+                    ? undefined
+                    : t("settings.storage.refresh")
+                }
+              >
                 <Button
                   variant="outline"
                   size="icon-sm"
@@ -315,15 +313,6 @@ export function StorageSection({
 
       {visible("dataLocation") && <DataLocationGroup query={query} />}
 
-      {showCleanup && !isLoading && reclaimable > 0 && (
-        <div className="flex items-center gap-3 rounded-xl border border-warning/40 bg-surface-2 px-3.5 py-2">
-          <Sparkles className="size-4 shrink-0 text-warning" />
-          <p className="min-w-0 flex-1 text-xs leading-snug text-muted-foreground">
-            {t("settings.storage.reclaimBanner", { size: bytes(reclaimable) })}
-          </p>
-        </div>
-      )}
-
       <div
         className={cn(
           "grid items-start gap-4",
@@ -365,18 +354,32 @@ export function StorageSection({
                     />
                     <Icon className="size-3.5 shrink-0 text-faint" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-foreground">
-                        {t(`settings.storage.categories.${slice.id}`)}
-                      </p>
-                      <p className="truncate text-[0.7rem] text-faint">
-                        {t(`settings.storage.categoriesDesc.${slice.id}`)}
-                      </p>
+                      <Hint
+                        content={t(`settings.storage.categories.${slice.id}`)}
+                        variant="text"
+                        truncatedOnly
+                      >
+                        <p className="truncate text-sm text-foreground">
+                          {t(`settings.storage.categories.${slice.id}`)}
+                        </p>
+                      </Hint>
+                      <Hint
+                        content={t(
+                          `settings.storage.categoriesDesc.${slice.id}`,
+                        )}
+                        variant="text"
+                        truncatedOnly
+                      >
+                        <p className="truncate text-2xs text-faint">
+                          {t(`settings.storage.categoriesDesc.${slice.id}`)}
+                        </p>
+                      </Hint>
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="font-mono text-xs tabular-nums text-foreground">
                         {bytes(slice.size)}
                       </p>
-                      <p className="font-mono text-[0.65rem] tabular-nums text-faint">
+                      <p className="font-mono text-3xs tabular-nums text-faint">
                         {slice.percent}%
                       </p>
                     </div>
@@ -405,13 +408,13 @@ export function StorageSection({
                 </div>
               ) : offers.length === 0 ? (
                 <p className="flex items-center gap-2 px-3.5 py-3 text-xs text-faint">
-                  <Sparkles className="size-3.5" />
+                  <CircleCheck className="size-3.5" />
                   {t("settings.storage.nothingToClean")}
                 </p>
               ) : (
                 <>
                   {locked && (
-                    <p className="px-3.5 py-2 text-[0.7rem] leading-snug text-warning">
+                    <p className="px-3.5 py-2 text-2xs leading-snug text-warning">
                       {t("settings.storage.busy")}
                     </p>
                   )}
@@ -423,7 +426,7 @@ export function StorageSection({
                         type="button"
                         disabled={busy !== null || locked}
                         onClick={() => setPending(offer.action)}
-                        className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left transition-colors hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left transition-colors hover:bg-row-hover disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {busy === offer.action ? (
                           <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
@@ -436,11 +439,19 @@ export function StorageSection({
                           />
                         )}
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm text-foreground">
-                            {t(`settings.storage.offers.${offer.action}`)}
-                          </span>
+                          <Hint
+                            content={t(
+                              `settings.storage.offers.${offer.action}`,
+                            )}
+                            variant="text"
+                            truncatedOnly
+                          >
+                            <span className="block truncate text-sm text-foreground">
+                              {t(`settings.storage.offers.${offer.action}`)}
+                            </span>
+                          </Hint>
                           {offer.count > 0 && (
-                            <span className="block truncate text-[0.7rem] text-faint">
+                            <span className="block text-2xs whitespace-nowrap text-faint">
                               {t("settings.storage.offerCount", {
                                 value: offer.count,
                               })}
@@ -475,10 +486,12 @@ export function StorageSection({
                 <div key={version.name} className="px-3.5 py-1.5">
                   <div className="flex items-center gap-2">
                     <Package className="size-3 shrink-0 text-faint" />
-                    <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                      {version.name}
-                    </span>
-                    <span className="shrink-0 font-mono text-[0.7rem] tabular-nums text-muted-foreground">
+                    <Hint content={version.name} variant="text" truncatedOnly>
+                      <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                        {version.name}
+                      </span>
+                    </Hint>
+                    <span className="shrink-0 font-mono text-2xs tabular-nums text-muted-foreground">
                       {bytes(version.size)}
                     </span>
                   </div>
@@ -491,8 +504,8 @@ export function StorageSection({
                 </div>
               ))}
               {versions.rest > 0 && (
-                <p className="px-3.5 py-1.5 text-[0.7rem] text-faint">
-                  {t("settings.storage.restCount", { value: versions.rest })}
+                <p className="px-3.5 py-1.5 text-2xs text-faint">
+                  {t("settings.storage.restMore", { value: versions.rest })}
                 </p>
               )}
             </SettingsGroup>
@@ -500,41 +513,28 @@ export function StorageSection({
         </div>
       </div>
 
-      <AlertDialog
-        open={pending !== null}
-        onOpenChange={(open) => !open && setPending(null)}
-      >
-        <AlertDialogContent>
-          {pending && (
-            <>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {confirmCopy(pending).title}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {confirmCopy(pending).body}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                <Button
-                  variant={pending === "dedupe" ? "default" : "destructive"}
-                  onClick={() => void run(pending)}
-                >
-                  {pending === "dedupe" ? (
-                    <Link2 className="size-4" />
-                  ) : (
-                    <Trash2 className="size-4" />
-                  )}
-                  {pending === "dedupe"
-                    ? t("settings.storage.dedupeConfirm")
-                    : t(`settings.storage.offers.${pending}`)}
-                </Button>
-              </AlertDialogFooter>
-            </>
-          )}
-        </AlertDialogContent>
-      </AlertDialog>
+      {pending && (
+        <Confirmation
+          title={confirmCopy(pending).title}
+          onClose={() => setPending(null)}
+          content={[{ text: confirmCopy(pending).body }]}
+          buttons={[
+            {
+              text: t("common.cancel"),
+              color: "secondary",
+              onClick: () => setPending(null),
+            },
+            {
+              text:
+                pending === "dedupe"
+                  ? t("settings.storage.dedupeConfirm")
+                  : t(`settings.storage.offers.${pending}`),
+              color: pending === "dedupe" ? "primary" : "danger",
+              onClick: () => void run(pending),
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }

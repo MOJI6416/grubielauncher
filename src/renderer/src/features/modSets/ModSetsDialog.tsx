@@ -2,6 +2,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { CircleAlert, Layers, Loader2, Plus, Trash2 } from "lucide-react";
+import { Empty, EmptyDescription } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Hint } from "@renderer/components/Hint";
+import {
+  RemovalItem,
+  RemovalList,
+} from "@renderer/components/RemovalCollapse";
+import { segmentKeyTarget } from "@renderer/components/SegmentedControl";
+import { showFailureToast } from "@renderer/utilities/failures";
+import { showUndoToast } from "@renderer/utilities/undoToast";
 import type { ILocalProject } from "@/types/ModManager";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +30,12 @@ import type { PortTarget } from "@renderer/features/port/analyzePort";
 import { PortPreview } from "@renderer/features/port/PortPreview";
 import { type PortItem, portedProjects } from "@renderer/features/port/portPlan";
 import { findSetByName, normalizeSetName, toSetItems } from "./modSets";
-import { deleteModSet, saveModSet, useModSets } from "./modSetsStore";
+import {
+  deleteModSet,
+  restoreModSet,
+  saveModSet,
+  useModSets,
+} from "./modSetsStore";
 import { resolveModSet } from "./resolveModSet";
 
 export type ModSetsDialogMode =
@@ -51,7 +66,9 @@ function SaveSetView({
     setIsSaving(false);
 
     if (!set) {
-      toast.error(t("modSets.saveFailed"));
+      showFailureToast(t("modSets.saveFailed"), undefined, {
+        channels: ["fs:writeJSON"],
+      });
       return;
     }
     toast.success(t("modSets.saved", { name: set.name }));
@@ -63,7 +80,9 @@ function SaveSetView({
       <DialogHeader className="min-w-0">
         <DialogTitle className="flex min-w-0 items-center gap-2">
           <Layers className="size-5 shrink-0" />
-          <span className="truncate">{t("modSets.saveTitle")}</span>
+          <Hint content={t("modSets.saveTitle")} variant="text" truncatedOnly>
+            <span className="truncate">{t("modSets.saveTitle")}</span>
+          </Hint>
         </DialogTitle>
         <DialogDescription>{t("modSets.saveDescription")}</DialogDescription>
       </DialogHeader>
@@ -120,7 +139,6 @@ function ApplySetView({
   const { t } = useTranslation();
   const sets = useModSets();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [items, setItems] = useState<PortItem[] | null>(null);
   const [isResolving, setIsResolving] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -153,19 +171,39 @@ function ApplySetView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id, selected?.updatedAt]);
 
-  const remove = async (id: string, name: string) => {
-    setConfirmDelete(null);
+  const saveFailed = () =>
+    showFailureToast(t("modSets.saveFailed"), undefined, {
+      channels: ["fs:writeJSON"],
+    });
+
+  const remove = async (id: string) => {
+    const index = sets?.findIndex((set) => set.id === id) ?? -1;
+    const removed = index >= 0 ? sets?.[index] : undefined;
+    if (!removed) return;
     if (selectedId === id) setSelectedId(null);
-    if (await deleteModSet(id)) toast.success(t("modSets.deleted", { name }));
-    else toast.error(t("modSets.saveFailed"));
+    if (!(await deleteModSet(id))) {
+      saveFailed();
+      return;
+    }
+
+    showUndoToast(t("modSets.deleted", { name: removed.name }), async () => {
+      if (!(await restoreModSet(removed, index))) saveFailed();
+    });
   };
+
+  const setIds = useMemo(
+    () => new Set((sets ?? []).map((set) => set.id)),
+    [sets],
+  );
 
   return (
     <>
       <DialogHeader className="min-w-0">
         <DialogTitle className="flex min-w-0 items-center gap-2">
           <Layers className="size-5 shrink-0" />
-          <span className="truncate">{t("modSets.applyTitle")}</span>
+          <Hint content={t("modSets.applyTitle")} variant="text" truncatedOnly>
+            <span className="truncate">{t("modSets.applyTitle")}</span>
+          </Hint>
         </DialogTitle>
         <DialogDescription>
           {t("modSets.applyDescription", { target: targetLabel })}
@@ -174,59 +212,81 @@ function ApplySetView({
 
       <div className="flex min-w-0 flex-col gap-3">
         {!sets ? (
-          <div className="flex h-16 items-center justify-center">
-            <Loader2 className="size-4 animate-spin text-faint" />
+          <div className="flex flex-col gap-1">
+            <Skeleton className="h-9 w-full rounded-lg" />
+            <Skeleton className="h-9 w-full rounded-lg" />
           </div>
         ) : sets.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
-            {t("modSets.empty")}
-          </p>
+          <Empty className="gap-2 rounded-lg border border-dashed border-border p-4">
+            <EmptyDescription className="text-xs">
+              {t("modSets.empty")}
+            </EmptyDescription>
+          </Empty>
         ) : (
-          <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto">
-            {sets.map((set) => (
-              <li key={set.id} className="flex min-w-0 items-center gap-1">
-                <button
-                  type="button"
-                  aria-pressed={set.id === selectedId}
-                  onClick={() => setSelectedId(set.id)}
-                  className={cn(
-                    "flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg border px-2.5 text-left transition-colors",
-                    set.id === selectedId
-                      ? "border-primary/50 bg-primary-soft"
-                      : "border-border hover:bg-surface-2",
-                  )}
-                >
-                  <Layers className="size-4 shrink-0 text-faint" />
-                  <span className="min-w-0 flex-1 truncate text-sm">
-                    {set.name}
-                  </span>
-                  <span className="shrink-0 font-mono text-xs text-faint tabular-nums">
-                    {t("modSets.items", { count: set.items.length })}
-                  </span>
-                </button>
-                {confirmDelete === set.id ? (
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="h-9"
-                    onClick={() => void remove(set.id, set.name)}
-                  >
-                    {t("common.delete")}
-                  </Button>
-                ) : (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="size-9 text-faint hover:bg-destructive/15 hover:text-destructive"
-                    aria-label={t("modSets.delete")}
-                    onClick={() => setConfirmDelete(set.id)}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div
+            role="listbox"
+            aria-label={t("modSets.title")}
+            className="flex max-h-40 flex-col gap-1 overflow-y-auto"
+            onKeyDown={(event) => {
+              const current = sets.findIndex((set) => set.id === selectedId);
+              const target = segmentKeyTarget(
+                event.key,
+                current,
+                sets.map(() => true),
+              );
+              if (target === null) return;
+              event.preventDefault();
+              setSelectedId(sets[target].id);
+              event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="option"]').item(target)?.focus();
+            }}
+          >
+            <RemovalList sourceKeys={setIds}>
+              {sets.map((set) => (
+                <RemovalItem key={set.id} itemKey={set.id}>
+                  <div className="flex min-w-0 items-center gap-1">
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={set.id === selectedId}
+                      onClick={() => setSelectedId(set.id)}
+                      onKeyDown={(event) => {
+                        if (event.key !== "Delete") return;
+                        event.preventDefault();
+                        void remove(set.id);
+                      }}
+                      className={cn(
+                        "flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg px-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                        set.id === selectedId
+                          ? "bg-row-selected"
+                          : "hover:bg-row-hover",
+                      )}
+                    >
+                      <Layers className="size-4 shrink-0 text-faint" />
+                      <Hint content={set.name} variant="text" truncatedOnly>
+                        <span className="min-w-0 flex-1 truncate text-sm">
+                          {set.name}
+                        </span>
+                      </Hint>
+                      <span className="shrink-0 font-mono text-xs whitespace-nowrap text-faint tabular-nums">
+                        {t("modSets.items", { count: set.items.length })}
+                      </span>
+                    </button>
+                    <Hint content={t("modSets.delete")}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-9 text-faint hover:bg-destructive/15 hover:text-destructive"
+                        aria-label={t("modSets.delete")}
+                        onClick={() => void remove(set.id)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </Hint>
+                  </div>
+                </RemovalItem>
+              ))}
+            </RemovalList>
+          </div>
         )}
 
         {isResolving ? (
