@@ -112,4 +112,42 @@ describe("Downloader with local file sources", () => {
     expect(failures?.failedItems ?? 0).toBe(0);
     expect(await fs.readFile(destination, "utf-8")).toBe(content);
   });
+
+  it("counts only the files it still has to fetch in the total size", async () => {
+    const present = "already-here-and-large";
+    const presentPath = path.join(modsPath, "present.jar");
+    await fs.writeFile(presentPath, present);
+
+    const missing = "new";
+    const source = path.join(hoisted.root, "picked", "missing.jar");
+    await fs.outputFile(source, missing);
+    blessUserSelectedPath(source, "file", "read");
+
+    const downloader = new Downloader(2);
+    const totals: number[] = [];
+    downloader.onInfo = (info) => {
+      if (info) totals.push(info.totalBytes);
+    };
+
+    await downloader.downloadFiles([
+      {
+        url: pathToFileURL(source).href,
+        destination: presentPath,
+        group: "mods",
+        sha1: sha1(present),
+        size: present.length,
+      },
+      {
+        url: pathToFileURL(source).href,
+        destination: path.join(modsPath, "missing.jar"),
+        group: "mods",
+        sha1: sha1(missing),
+        size: missing.length,
+      },
+    ]);
+
+    expect(totals.length).toBeGreaterThan(0);
+    expect(new Set(totals)).toEqual(new Set([missing.length]));
+    expect(await fs.readFile(presentPath, "utf-8")).toBe(present);
+  });
 });

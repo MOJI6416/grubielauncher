@@ -91,6 +91,13 @@ export async function waitWhileDownloadsPaused(
   await awaitWhilePaused(isAborted);
 }
 
+function expectedChecksumOf(
+  item: DownloadItem,
+): [string, "sha1" | "sha256"] {
+  if (item.checksum) return [item.checksum, item.checksumType ?? "sha256"];
+  return [item.sha1 || "", "sha1"];
+}
+
 function getExtractMarkerPath(destination: string): string {
   return `${destination}.extracting`;
 }
@@ -216,7 +223,7 @@ export class Downloader {
     this.downloadedBytes = 0;
     this.speedSamples = [];
     this.fileCompletionTimes = [];
-    this.totalBytes = items.reduce((sum, item) => sum + (item.size || 0), 0);
+    this.totalBytes = 0;
 
     const totalItems = items.length;
     let completedItems = 0;
@@ -225,6 +232,13 @@ export class Downloader {
     const failures: DownloadFailure[] = [];
 
     try {
+      const present = await this.findPresentItems(items, throwIfAborted);
+      this.totalBytes = items.reduce(
+        (sum, item) => (present.has(item) ? sum : sum + (item.size || 0)),
+        0,
+      );
+      this.lastSpeedUpdate = Date.now();
+
       const groups = this.sortByGroup(items);
 
       for (const group of groups) {
@@ -232,14 +246,12 @@ export class Downloader {
         const groupName = group[0].group;
 
         const promises = group.map((item) => {
-          const { destination, sha1, checksum, checksumType, size = 0 } = item;
+          const { destination } = item;
           const fileName = `[${groupName}] ${path.basename(
             destination || item.url || groupName,
           )}`;
-          const expectedChecksum = checksum || sha1 || "";
-          const expectedChecksumType = checksum
-            ? (checksumType ?? "sha256")
-            : ("sha1" as const);
+          const [expectedChecksum, expectedChecksumType] =
+            expectedChecksumOf(item);
 
           return this.limit(async () => {
             await awaitWhilePaused(
@@ -279,16 +291,10 @@ export class Downloader {
                 ? await fs.pathExists(extractMarkerPath)
                 : false;
 
-              const fileMatches = await this.fileExistsAndMatches(
-                destination,
-                expectedChecksum,
-                expectedChecksumType,
-                size,
-              );
+              const fileMatches = present.has(item);
               if (fileMatches && !isExtractPending) {
                 throwIfAborted();
                 completedItems++;
-                this.downloadedBytes += size;
 
                 this.sendInfo(
                   this.createInfo(
@@ -302,8 +308,6 @@ export class Downloader {
                 this.updateTaskbarProgress(completedItems, totalItems);
                 return;
               }
-
-              if (fileMatches) this.downloadedBytes += size;
 
               if (!fileMatches) {
                 const sourceError = await this.validateSource(item);
@@ -1086,6 +1090,37 @@ export class Downloader {
     }
 
     throw candidateError ?? new Error(`Failed to download ${originalUrl}`);
+  };
+
+  private findPresentItems = async (
+    items: DownloadItem[],
+    throwIfAborted: () => void,
+  ): Promise<Set<DownloadItem>> => {
+    const limit = pLimit(16);
+    const present = new Set<DownloadItem>();
+
+    await Promise.all(
+      items.map((item) =>
+        limit(async () => {
+          throwIfAborted();
+          if (!this.validateTarget(item)) return;
+
+          const [checksum, checksumType] = expectedChecksumOf(item);
+          if (
+            await this.fileExistsAndMatches(
+              item.destination,
+              checksum,
+              checksumType,
+              item.size || 0,
+            )
+          ) {
+            present.add(item);
+          }
+        }),
+      ),
+    );
+
+    return present;
   };
 
   private sortByGroup = (items: DownloadItem[]): DownloadItem[][] => {
