@@ -5,6 +5,7 @@ import {
   IGameLogFile,
 } from "@/types/GameLog";
 import { analyzeCrashSource } from "../utilities/crashAnalyzer";
+import { readableCrashText } from "../utilities/crashMappings";
 import { extractCrashSignature } from "../utilities/crashRules";
 import { listGameLogs, readGameLog } from "../utilities/gameLogs";
 import { check, handleSafe } from "../utilities/ipc";
@@ -45,7 +46,10 @@ export function registerLogsIpc() {
       const content = await readGameLog(versionPath, name, kind);
       if (!content) return null;
 
-      const text = content.text.slice(-MAX_ANALYZED_CHARS);
+      const text = await readableCrashText(
+        versionPath,
+        content.text.slice(-MAX_ANALYZED_CHARS),
+      );
       return {
         analysis: await analyzeCrashSource(text, exitCode ?? undefined),
         signature: extractCrashSignature(text, exitCode ?? undefined),

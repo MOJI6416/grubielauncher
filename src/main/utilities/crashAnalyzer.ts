@@ -16,6 +16,7 @@ import {
   UNSUPPORTED_JAVA_RULE_ID,
 } from "./crashRules";
 import { runCrashRegexJobs } from "./crashRegexWorker";
+import { readableCrashText } from "./crashMappings";
 import { app } from "electron";
 import axios from "axios";
 import fs from "fs-extra";
@@ -230,6 +231,8 @@ export async function analyzeGameCrash(
   if (!text) {
     text = await readCrashSource(path.join(versionPath, "logs", "latest.log"));
   }
+
+  if (text) text = await readableCrashText(versionPath, text);
 
   const rules = await getCrashRules();
   const { match, complete } = await matchCrashRulesOffThread(
