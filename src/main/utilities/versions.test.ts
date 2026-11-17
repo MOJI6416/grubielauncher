@@ -1,6 +1,6 @@
 import os from "os";
 import path from "path";
-import AdmZip from "adm-zip";
+import { TestZip } from "./testZip";
 import fs from "fs-extra";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { importVersion, sanitizeImportedVersionConf } from "./versions";
@@ -136,7 +136,7 @@ describe("import version helpers", () => {
     const zipPath = path.join(tempRoot, "broken-pack.zip");
     const importTempPath = path.join(tempRoot, "import");
     const expectedVersionPath = path.join(importTempPath, "broken-pack");
-    const archive = new AdmZip();
+    const archive = new TestZip();
     archive.addFile("../evil.txt", Buffer.from("unsafe"));
     archive.writeZip(zipPath);
 
@@ -148,7 +148,7 @@ describe("import version helpers", () => {
     const tempRoot = await makeTempRoot();
     const zipPath = path.join(tempRoot, "prism-pack.zip");
     const importTempPath = path.join(tempRoot, "import");
-    const archive = new AdmZip();
+    const archive = new TestZip();
 
     archive.addFile(
       "mmc-pack.json",
@@ -185,7 +185,7 @@ describe("import version helpers", () => {
     const tempRoot = await makeTempRoot();
     const zipPath = path.join(tempRoot, "fresh.mrpack");
     const importTempPath = path.join(tempRoot, "import");
-    const archive = new AdmZip();
+    const archive = new TestZip();
 
     archive.addFile(
       "modrinth.index.json",
@@ -222,7 +222,7 @@ describe("import version helpers", () => {
     const tempRoot = await makeTempRoot();
     const zipPath = path.join(tempRoot, "custom.mrpack");
     const importTempPath = path.join(tempRoot, "import");
-    const archive = new AdmZip();
+    const archive = new TestZip();
 
     archive.addFile(
       "modrinth.index.json",

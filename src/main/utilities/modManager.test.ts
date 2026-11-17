@@ -1,7 +1,7 @@
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
-import AdmZip from "adm-zip";
+import { TestZip } from "./testZip";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HashAlgo } from "@/types/CurseForge";
 import { ProjectType, Provider } from "@/types/ModManager";
@@ -95,7 +95,7 @@ async function makeTempRoot() {
 }
 
 function writeJar(dir: string, name: string, entries: Record<string, string>) {
-  const archive = new AdmZip();
+  const archive = new TestZip();
   for (const [entryName, content] of Object.entries(entries)) {
     archive.addFile(entryName, Buffer.from(content));
   }
@@ -557,7 +557,7 @@ describe("checkModpack Prism/MultiMC imports", () => {
       path.join(instanceRoot, "patches", "org.multimc.jarmod.updater.json"),
       { jarMods: [{ "MMC-filename": "updater.jar", name: "org.multimc.jarmods:updater:1" }] },
     );
-    const installer = new AdmZip();
+    const installer = new TestZip();
     installer.addFile("b100/installer/Main.class", Buffer.from("x"));
     await fs.ensureDir(path.join(instanceRoot, "jarmods"));
     installer.writeZip(path.join(instanceRoot, "jarmods", "updater.jar"));

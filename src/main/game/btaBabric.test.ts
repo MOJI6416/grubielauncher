@@ -1,7 +1,7 @@
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
-import AdmZip from "adm-zip";
+import { TestZip } from "../utilities/testZip";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { IVersionManifest } from "@/types/IVersionManifest";
 import {
@@ -19,7 +19,7 @@ function writeInstance(
   files: Record<string, unknown>,
   prefix = "",
 ) {
-  const zip = new AdmZip();
+  const zip = new TestZip();
   for (const [name, content] of Object.entries(files)) {
     zip.addFile(
       prefix + name,

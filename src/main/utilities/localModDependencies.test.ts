@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import fs from "fs-extra";
 import os from "os";
 import path from "path";
-import Zip from "adm-zip";
+import { TestZip } from "./testZip";
 import {
   fabricDependencies,
   forgeDependencies,
@@ -64,14 +64,14 @@ describe("local mod dependencies", () => {
     );
     directories.push(dir);
     await fs.ensureDir(path.join(dir, "mods"));
-    const bundled = new Zip();
+    const bundled = new TestZip();
     bundled.addFile(
       "fabric.mod.json",
       Buffer.from(
         JSON.stringify({ id: "bundled", depends: { external: "*" } }),
       ),
     );
-    const jar = new Zip();
+    const jar = new TestZip();
     jar.addFile(
       "fabric.mod.json",
       Buffer.from(
@@ -84,7 +84,7 @@ describe("local mod dependencies", () => {
     );
     jar.addFile("nested.jar", bundled.toBuffer());
     jar.writeZip(path.join(dir, "mods", "addon.jar.disabled"));
-    const forge = new Zip();
+    const forge = new TestZip();
     forge.addFile(
       "META-INF/mods.toml",
       Buffer.from('[[mods]]\nmodId="external"\n'),
@@ -101,7 +101,7 @@ describe("local mod dependencies", () => {
       requires: [],
     });
     expect(index["broken.jar"]).toBeUndefined();
-    const replacement = new Zip();
+    const replacement = new TestZip();
     replacement.addFile(
       "fabric.mod.json",
       Buffer.from(JSON.stringify({ id: "changed_mod_id" })),

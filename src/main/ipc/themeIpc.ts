@@ -1,5 +1,4 @@
 import { app, BrowserWindow, dialog } from "electron";
-import AdmZip from "adm-zip";
 import axios from "axios";
 import fs from "fs-extra";
 import path from "path";
@@ -7,6 +6,7 @@ import { randomUUID } from "crypto";
 import { check, handleSafe } from "../utilities/ipc";
 import { assertReadablePath } from "../utilities/safePath";
 import { getDataRoot } from "../utilities/dataRoot";
+import type { ArchiveExtraEntry } from "../utilities/archiver";
 import { attachApiHostFallback } from "../utilities/apiHost";
 import {
   BACKDROP_ENTRY,
@@ -134,15 +134,14 @@ export function registerThemeIpc() {
       const json = Buffer.from(JSON.stringify(manifest, null, 2), "utf-8");
       if (json.length > MAX_MANIFEST_BYTES) return "failed";
 
-      const zip = new AdmZip();
-      zip.addFile("theme.json", json);
+      const entries: ArchiveExtraEntry[] = [{ name: "theme.json", data: json }];
 
       const entry = manifest.backdrop?.file;
       if (backdropPath && typeof entry === "string" && BACKDROP_ENTRY.test(entry)) {
         assertReadablePath(backdropPath, "theme:export");
         const data = await fs.readFile(backdropPath);
         if (data.length > MAX_IMAGE_BYTES || !imageKind(data)) return "failed";
-        zip.addFile(entry, data);
+        entries.push({ name: entry, data });
       }
 
       const window = BrowserWindow.fromWebContents(event.sender);
@@ -158,7 +157,8 @@ export function registerThemeIpc() {
         : await dialog.showSaveDialog(options);
       if (result.canceled || !result.filePath) return "cancelled";
 
-      await fs.writeFile(result.filePath, zip.toBuffer());
+      const { createZipArchive } = await import("../utilities/archiver");
+      await createZipArchive([], result.filePath, undefined, 9, undefined, entries);
       return "saved";
     },
   );
@@ -314,24 +314,32 @@ export function registerThemeIpc() {
     const stat = await fs.stat(file);
     if (!stat.isFile() || stat.size > MAX_ARCHIVE_BYTES) return null;
 
-    const zip = new AdmZip(file);
-    const manifestEntry = zip.getEntry("theme.json");
-    if (!manifestEntry || manifestEntry.header.size > MAX_MANIFEST_BYTES) return null;
+    const { readEntryData, withArchive } = await import("../utilities/archiver");
+    return withArchive(
+      file,
+      async (zip) => {
+        const manifestEntry = zip.getEntry("theme.json");
+        if (!manifestEntry || manifestEntry.size > MAX_MANIFEST_BYTES) return null;
 
-    const manifest: unknown = JSON.parse(manifestEntry.getData().toString("utf-8"));
-    if (!isManifest(manifest)) return null;
+        const manifest: unknown = JSON.parse(
+          (await readEntryData(manifestEntry)).toString("utf-8"),
+        );
+        if (!isManifest(manifest)) return null;
 
-    let backdropPath: string | null = null;
-    const entryName = manifest.backdrop?.file;
-    if (typeof entryName === "string" && BACKDROP_ENTRY.test(entryName)) {
-      const entry = zip.getEntry(entryName);
-      if (entry && entry.header.size <= MAX_IMAGE_BYTES) {
-        const data = entry.getData();
-        const kind = data.length <= MAX_IMAGE_BYTES ? imageKind(data) : null;
-        if (kind) backdropPath = await saveBackdrop(data, kind);
-      }
-    }
+        let backdropPath: string | null = null;
+        const entryName = manifest.backdrop?.file;
+        if (typeof entryName === "string" && BACKDROP_ENTRY.test(entryName)) {
+          const entry = zip.getEntry(entryName);
+          if (entry && entry.size <= MAX_IMAGE_BYTES) {
+            const data = await readEntryData(entry);
+            const kind = data.length <= MAX_IMAGE_BYTES ? imageKind(data) : null;
+            if (kind) backdropPath = await saveBackdrop(data, kind);
+          }
+        }
 
-    return { manifest, backdropPath };
+        return { manifest, backdropPath };
+      },
+      { maxArchiveBytes: MAX_ARCHIVE_BYTES },
+    );
   });
 }

@@ -63,8 +63,8 @@ vi.mock("../utilities/downloader", () => ({
           item.url,
         );
         if (turnip) {
-          const { default: AdmZip } = await import("adm-zip");
-          const zip = new AdmZip();
+          const { TestZip } = await import("../utilities/testZip");
+          const zip = new TestZip();
           const loader = turnip[1] === "8.0.1" ? "0.18.4-bta.11" : "0.18.4-bta.10";
           zip.addFile(
             "mmc-pack.json",

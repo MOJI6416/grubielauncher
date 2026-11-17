@@ -1,7 +1,7 @@
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
-import AdmZip from "adm-zip";
+import { TestZip } from "./testZip";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", () => ({
@@ -23,7 +23,7 @@ import { readInstanceLoaderRequirements } from "./loaderRequirements";
 let root = "";
 
 function writeMod(name: string, files: Record<string, string>) {
-  const zip = new AdmZip();
+  const zip = new TestZip();
   for (const [entry, content] of Object.entries(files)) {
     zip.addFile(entry, Buffer.from(content, "utf-8"));
   }

@@ -3,7 +3,7 @@ import fs from "fs-extra";
 import { randomUUID } from "crypto";
 import type { IJarMod, ILaunchOverride } from "@/types/IVersion";
 import { hasBtaLauncherManifest } from "@/shared/btaLoader";
-import { openArchive } from "./archiver";
+import { withArchive } from "./archiver";
 
 export interface PrismComponent {
   uid?: string;
@@ -95,8 +95,9 @@ function launchOverrideOf(patch: PrismPatch | null): ILaunchOverride | undefined
 }
 
 async function isBtaInstaller(source: string): Promise<boolean> {
-  const archive = await openArchive(source).catch(() => null);
-  return !!archive?.getEntry(BTA_INSTALLER_CLASS);
+  return withArchive(source, (archive) => !!archive.getEntry(BTA_INSTALLER_CLASS)).catch(
+    () => false,
+  );
 }
 
 async function copyIntoOverrides(

@@ -1,13 +1,17 @@
 import fs from "fs-extra";
 import path from "path";
-import Zip from "adm-zip";
 import toml from "toml";
 import pLimit from "p-limit";
 import type {
   LocalModDependencies,
   LocalModDependencyIndex,
 } from "@/types/ModManager";
-import { openArchive, readEntryData } from "./archiver";
+import {
+  openArchiveBuffer,
+  readEntryData,
+  withArchive,
+  type ZipArchive,
+} from "./archiver";
 
 const cache = new Map<string, LocalModDependencies>();
 const MAX_DESCRIPTOR_BYTES = 1024 * 1024;
@@ -74,7 +78,7 @@ export function forgeDependencies(data: any): LocalModDependencies {
 }
 
 async function readDescriptors(
-  archive: Zip,
+  archive: ZipArchive,
   depth = 0,
   budget = { remaining: MAX_NESTED_BYTES },
 ): Promise<LocalModDependencies> {
@@ -88,7 +92,7 @@ async function readDescriptors(
     "META-INF/mods.toml",
   ]) {
     const entry = archive.getEntry(name);
-    if (!entry || entry.header.size > MAX_DESCRIPTOR_BYTES) continue;
+    if (!entry || entry.size > MAX_DESCRIPTOR_BYTES) continue;
     try {
       const content = (await readEntryData(entry)).toString("utf-8");
       const data = name.endsWith(".toml")
@@ -111,7 +115,7 @@ async function readDescriptors(
     }
   }
   const jarJar = archive.getEntry("META-INF/jarjar/metadata.json");
-  if (jarJar && jarJar.header.size <= MAX_DESCRIPTOR_BYTES) {
+  if (jarJar && jarJar.size <= MAX_DESCRIPTOR_BYTES) {
     try {
       const data = JSON.parse((await readEntryData(jarJar)).toString("utf-8"));
       for (const jar of data?.jars ?? [])
@@ -121,16 +125,17 @@ async function readDescriptors(
   if (depth < 2)
     for (const name of nested) {
       const entry = archive.getEntry(name);
-      if (!entry || entry.header.size > budget.remaining) continue;
-      budget.remaining -= entry.header.size;
+      if (!entry || entry.size > budget.remaining) continue;
+      budget.remaining -= entry.size;
       try {
-        const info = await readDescriptors(
-          new Zip(await readEntryData(entry)),
-          depth + 1,
-          budget,
-        );
-        info.provides.forEach((id) => provides.add(id));
-        info.requires.forEach((id) => requires.add(id));
+        const nestedArchive = await openArchiveBuffer(await readEntryData(entry));
+        try {
+          const info = await readDescriptors(nestedArchive, depth + 1, budget);
+          info.provides.forEach((id) => provides.add(id));
+          info.requires.forEach((id) => requires.add(id));
+        } finally {
+          nestedArchive.close();
+        }
       } catch {}
     }
   return {
@@ -146,7 +151,7 @@ export async function readLocalModDependencies(
   const key = `${path.resolve(modPath)}|${stats.size}|${stats.mtimeMs}`;
   const cached = cache.get(key);
   if (cached) return cached;
-  const info = await readDescriptors(await openArchive(modPath));
+  const info = await withArchive(modPath, (archive) => readDescriptors(archive));
   if (cache.size >= 1024) cache.delete(cache.keys().next().value!);
   cache.set(key, info);
   return info;

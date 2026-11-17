@@ -1,7 +1,7 @@
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
-import AdmZip from "adm-zip";
+import { readTestZip, TestZip } from "../utilities/testZip";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { IVersionConf } from "@/types/IVersion";
 import { classifyError } from "@/shared/errors";
@@ -22,7 +22,7 @@ import { BTA_VANILLA_JAR } from "@/shared/btaLoader";
 let root: string;
 
 function writeZip(target: string, entries: Record<string, string>) {
-  const zip = new AdmZip();
+  const zip = new TestZip();
   for (const [name, content] of Object.entries(entries)) {
     zip.addFile(name, Buffer.from(content));
   }
@@ -30,13 +30,9 @@ function writeZip(target: string, entries: Record<string, string>) {
   zip.writeZip(target);
 }
 
-function readZip(target: string): Record<string, string> {
-  const zip = new AdmZip(target);
+async function readZip(target: string): Promise<Record<string, string>> {
   return Object.fromEntries(
-    zip
-      .getEntries()
-      .filter((entry) => !entry.isDirectory)
-      .map((entry) => [entry.entryName, entry.getData().toString()]),
+    [...(await readTestZip(target))].map(([name, data]) => [name, data.toString()]),
   );
 }
 
@@ -134,7 +130,7 @@ describe("prepareGameJar", () => {
     );
 
     expect(relative.startsWith(PATCHED_JAR_FOLDER)).toBe(true);
-    expect(readZip(path.join(root, relative))).toEqual({
+    expect(await readZip(path.join(root, relative))).toEqual({
       "a.class": "first-a",
       "b.class": "vanilla-b",
       "c.class": "second-c",
@@ -155,7 +151,7 @@ describe("prepareGameJar", () => {
       conf({ jarMods: [...mods].reverse() }),
     );
     expect(swapped).not.toBe(first);
-    expect(readZip(path.join(root, swapped))["c.class"]).toBe("first-c");
+    expect((await readZip(path.join(root, swapped)))["c.class"]).toBe("first-c");
     expect(await fs.readdir(path.join(root, PATCHED_JAR_FOLDER))).toEqual([
       path.basename(swapped),
     ]);
@@ -174,7 +170,7 @@ describe("prepareGameJar", () => {
       }),
     );
 
-    expect(readZip(path.join(root, relative))).toEqual({
+    expect(await readZip(path.join(root, relative))).toEqual({
       "a.class": "custom-a",
       "c.class": "second-c",
       "META-INF/services/x": "service",
@@ -228,7 +224,7 @@ describe("Better than Adventure", () => {
       bta({ jarMods: [{ file: "first.zip", name: "first", enabled: true }] }),
     );
 
-    expect(readZip(path.join(root, relative))).toEqual({
+    expect(await readZip(path.join(root, relative))).toEqual({
       "a.class": "first-a",
       "c.class": "first-c",
       "paulscode/sound/Library.class": "vanilla-sound",

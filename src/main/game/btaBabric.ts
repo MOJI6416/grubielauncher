@@ -1,6 +1,6 @@
 import type { IVersionManifest } from "@/types/IVersionManifest";
 import type { IFabricManifest } from "@/types/IFabricManifest";
-import { openArchive, readEntryData } from "../utilities/archiver";
+import { readEntryData, withArchive, type ZipArchive } from "../utilities/archiver";
 import { normalizeLoaderLibraryUrl } from "../utilities/trustedHosts";
 import { mavenJarPath, toManifestLibrary } from "./profileLoaderManifest";
 
@@ -103,7 +103,10 @@ function convertLibrary(
 }
 
 export async function readTurnipInstance(zipPath: string): Promise<BabricLayer> {
-  const archive = await openArchive(zipPath);
+  return withArchive(zipPath, readTurnipArchive);
+}
+
+async function readTurnipArchive(archive: ZipArchive): Promise<BabricLayer> {
   const entries = new Map(
     archive
       .getEntries()

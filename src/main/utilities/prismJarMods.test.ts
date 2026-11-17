@@ -1,7 +1,7 @@
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
-import AdmZip from "adm-zip";
+import { TestZip } from "./testZip";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readPrismJarMods } from "./prismJarMods";
 
@@ -127,7 +127,7 @@ describe("readPrismJarMods", () => {
   });
 
   it("recognises the BTA updater instead of importing it as a jar mod", async () => {
-    const installer = new AdmZip();
+    const installer = new TestZip();
     installer.addFile("b100/installer/Main.class", Buffer.from("x"));
     await fs.ensureDir(path.join(root, "jarmods"));
     installer.writeZip(path.join(root, "jarmods", "updater.jar"));

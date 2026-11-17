@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import AdmZip from "adm-zip";
+import { TestZip } from "./testZip";
 import fs from "fs-extra";
 import path from "path";
 
@@ -30,7 +30,7 @@ afterAll(async () => {
 });
 
 function writeArchive(entries: Record<string, string>) {
-  const zip = new AdmZip();
+  const zip = new TestZip();
   for (const [name, content] of Object.entries(entries)) {
     zip.addFile(name, Buffer.from(content));
   }

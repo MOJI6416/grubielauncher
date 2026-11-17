@@ -1,4 +1,4 @@
-import AdmZip from "adm-zip";
+import { TestZip } from "./testZip";
 import { createHash } from "crypto";
 import fs from "fs-extra";
 import os from "os";
@@ -53,7 +53,7 @@ async function instance(loader: string, version = "1.20.1", mappings: object | n
 }
 
 async function intermediaryJar(version = "1.20.1") {
-  const zip = new AdmZip();
+  const zip = new TestZip();
   zip.addFile("mappings/mappings.tiny", Buffer.from(TINY));
   const jar = path.join(paths.librariesPath, "net", "fabricmc", "intermediary", version, `intermediary-${version}.jar`);
   await fs.ensureDir(path.dirname(jar));

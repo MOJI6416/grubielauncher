@@ -905,7 +905,7 @@ export class Version {
           await this.installCheckpoint();
 
           if (!forgeInstalled || !installedForgeManifestPath) {
-            const { openArchive, readEntryData, readJSONFromArchive } =
+            const { readArchiveEntry, readJSONFromArchive } =
               await import("../utilities/archiver");
             const installProfile = await readJSONFromArchive<IInstallProfile>(
               installerPath,
@@ -924,7 +924,8 @@ export class Version {
             const librariesPath = path.join(this.minecraftPath, "libraries");
             const embeddedName = installProfile.install?.path;
             const embeddedEntry = installProfile.install?.filePath
-              ? (await openArchive(installerPath)).getEntry(
+              ? await readArchiveEntry(
+                  installerPath,
                   installProfile.install.filePath,
                 )
               : null;
@@ -940,10 +941,7 @@ export class Version {
                 ? embeddedPath
                 : null;
             if (embedded && embeddedEntry && embeddedTarget) {
-              await fs.outputFile(
-                embeddedTarget,
-                await readEntryData(embeddedEntry),
-              );
+              await fs.outputFile(embeddedTarget, embeddedEntry);
             }
 
             const loaderLibraries: IVersionManifest["libraries"] = [];

@@ -1,13 +1,18 @@
 import path from "path";
 import fs from "fs-extra";
 import { createHash, randomUUID } from "crypto";
-import AdmZip from "adm-zip";
 import type { IJarMod, IVersionConf } from "@/types/IVersion";
 import type { IVersionManifest } from "@/types/IVersionManifest";
 import type { DownloadItem } from "@/types/Downloader";
 import { isTrustedDownloadUrl } from "../utilities/trustedHosts";
 import { assertSafeFileSegment } from "./serverScriptSafety";
-import { openArchive, readEntryData } from "../utilities/archiver";
+import {
+  createZipArchive,
+  openArchive,
+  readEntryData,
+  withArchive,
+  type ArchiveExtraEntry,
+} from "../utilities/archiver";
 import { JAR_MOD_EXTENSIONS } from "@/shared/jarMods";
 import { BTA_VANILLA_JAR, shipsOwnClientJar } from "@/shared/btaLoader";
 
@@ -87,8 +92,9 @@ export function withJarModAsm(
 }
 
 export async function bundlesModLoader(jarPath: string): Promise<boolean> {
-  const archive = await openArchive(jarPath).catch(() => null);
-  return !!archive?.getEntry(MODLOADER_ENTRY);
+  return withArchive(jarPath, (archive) => !!archive.getEntry(MODLOADER_ENTRY)).catch(
+    () => false,
+  );
 }
 
 export function gameJarInputs(conf: IVersionConf): {
@@ -142,7 +148,7 @@ async function describeInputs(
 }
 
 async function appendArchive(
-  output: AdmZip,
+  output: ArchiveExtraEntry[],
   source: string,
   added: Set<string>,
   skip: (name: string) => boolean,
@@ -151,15 +157,16 @@ async function appendArchive(
     throw invalidJarModError(path.basename(source));
   });
 
-  for (const entry of archive.getEntries()) {
-    const name = normalizeEntryName(entry.entryName);
-    if (!name || added.has(name) || skip(name)) continue;
+  try {
+    for (const entry of archive.getEntries()) {
+      const name = normalizeEntryName(entry.entryName);
+      if (!name || added.has(name) || skip(name)) continue;
 
-    added.add(name);
-    output.addFile(
-      name,
-      entry.isDirectory ? Buffer.alloc(0) : await readEntryData(entry),
-    );
+      added.add(name);
+      output.push({ name, data: await readEntryData(entry) });
+    }
+  } finally {
+    archive.close();
   }
 }
 
@@ -168,7 +175,7 @@ export async function buildPatchedJar(
   mods: string[],
   target: string,
 ): Promise<void> {
-  const output = new AdmZip();
+  const output: ArchiveExtraEntry[] = [];
   const added = new Set<string>();
 
   for (const mod of [...mods].reverse()) {
@@ -179,7 +186,7 @@ export async function buildPatchedJar(
   const temporary = `${target}.${randomUUID()}.tmp`;
   await fs.ensureDir(path.dirname(target));
   try {
-    await output.writeZipPromise(temporary, { overwrite: true });
+    await createZipArchive([], temporary, undefined, 9, undefined, output);
     await fs.move(temporary, target, { overwrite: true });
   } finally {
     await fs.remove(temporary).catch(() => {});
@@ -239,7 +246,7 @@ export async function importJarMods(
       throw invalidJarModError(path.basename(source));
     }
 
-    await openArchive(source).catch(() => {
+    await withArchive(source, () => {}).catch(() => {
       throw invalidJarModError(path.basename(source));
     });
 

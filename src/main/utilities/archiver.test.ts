@@ -1,7 +1,6 @@
 import fs from "fs-extra";
 import os from "os";
 import path from "path";
-import zip from "adm-zip";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createZipArchive,
@@ -9,8 +8,11 @@ import {
   extractZipEntries,
   getArchiveEntryName,
   listZipEntries,
+  openArchive,
   readEntryData,
+  type ZipArchiveEntry,
 } from "./archiver";
+import { readTestZip, TestZip } from "./testZip";
 import { isExcludedInstancePath } from "@/shared/instancePrivacy";
 
 describe("archiver helpers", () => {
@@ -30,28 +32,38 @@ describe("archiver helpers", () => {
     expect(getArchiveEntryName(filePath, basePath)).toBe("secret.txt");
   });
 
-  it("rejects entries with a suspicious compression ratio before extraction", () => {
-    const entry = {
+  it("rejects entries with a suspicious compression ratio before extraction", async () => {
+    const entry: ZipArchiveEntry = {
       entryName: "bomb.txt",
       isDirectory: false,
-      header: { size: 64 * 1024 * 1024, compressedSize: 1024 },
-    } as any;
+      size: 64 * 1024 * 1024,
+      compressedSize: 1024,
+    };
 
-    expect(() => readEntryData(entry)).toThrow(
+    await expect(readEntryData(entry)).rejects.toThrow(
       'Suspicious zip compression ratio: "bomb.txt"',
     );
   });
 
   it("accepts a header-only region file, which Minecraft writes as zeroes", async () => {
-    const data = Buffer.alloc(8192);
-    const entry = {
-      entryName: "world/entities/r.0.0.mca",
-      isDirectory: false,
-      header: { size: 8192, compressedSize: 25 },
-      getDataAsync: (callback: (value: Buffer) => void) => callback(data),
-    } as any;
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "grubie-region-"));
+    try {
+      const zipPath = path.join(dir, "world.zip");
+      const archive = new TestZip();
+      archive.addFile("world/entities/r.0.0.mca", Buffer.alloc(8192));
+      archive.writeZip(zipPath);
 
-    await expect(readEntryData(entry)).resolves.toHaveLength(8192);
+      const opened = await openArchive(zipPath);
+      try {
+        const entry = opened.getEntry("world/entities/r.0.0.mca");
+        expect(entry?.compressedSize).toBeLessThan(100);
+        await expect(readEntryData(entry!)).resolves.toHaveLength(8192);
+      } finally {
+        opened.close();
+      }
+    } finally {
+      await fs.remove(dir);
+    }
   });
 });
 
@@ -72,7 +84,7 @@ describe("streamed zip reading", () => {
   });
 
   const writeZip = (entries: Record<string, string>) => {
-    const archive = new zip();
+    const archive = new TestZip();
     for (const [name, content] of Object.entries(entries)) {
       archive.addFile(name, Buffer.from(content));
     }
@@ -275,10 +287,7 @@ describe("createZipArchive with an entry filter", () => {
       isExcludedInstancePath,
     );
 
-    return new zip(await fs.readFile(zipPath))
-      .getEntries()
-      .filter((entry) => !entry.isDirectory)
-      .map((entry) => entry.entryName);
+    return [...(await readTestZip(zipPath)).keys()];
   };
 
   it("keeps private instance files out of the archive", async () => {

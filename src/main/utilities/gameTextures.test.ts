@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
-import AdmZip from "adm-zip";
+import { TestZip } from "./testZip";
 
 const hoisted = vi.hoisted(() => ({ appData: "" }));
 
@@ -28,7 +28,7 @@ async function addVersion(
   const target = path.join(versionsDir, folder);
   await fs.ensureDir(target);
   await fs.writeJSON(path.join(target, `${id}.json`), { id });
-  const jar = new AdmZip();
+  const jar = new TestZip();
   for (const [name, data] of Object.entries(entries)) {
     jar.addFile(name, Buffer.from(data));
   }

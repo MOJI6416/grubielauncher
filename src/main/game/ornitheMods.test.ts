@@ -1,7 +1,7 @@
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
-import AdmZip from "adm-zip";
+import { TestZip } from "../utilities/testZip";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../services/Versions", () => ({ VersionsService: {} }));
@@ -35,7 +35,7 @@ let librariesPath: string;
 let modsPath: string;
 
 function zipBuffer(entries: Record<string, string | Buffer>): Buffer {
-  const zip = new AdmZip();
+  const zip = new TestZip();
   for (const [name, content] of Object.entries(entries)) {
     zip.addFile(
       name,

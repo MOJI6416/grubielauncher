@@ -58,5 +58,6 @@ When a change makes a screen legitimately heavier, update its budget in the same
 
 - `node perf/trace-startup.mjs [--cold]` — the IPC waterfall up to the ready home screen, plus a CPU profile of the main process.
 - `node perf/profile.mjs --step <id> [--cold]` — a CPU profile of one tour step. Use `--step reload` for a renderer profile of a page reload.
+- `node perf/archive-scan.mjs --instance <folder with mods/> --label after` — reads every jar in an instance the way the content manager does (`deps` is the dependency index, `meta` is `checkLocalMod`) inside a real Electron main process, and saves the time and main-process memory to `perf/results/scan-<label>.json`. Use real mods, not the Mega Pack stubs.
 
 Build with `npx electron-vite build --sourcemap` to map profiles back to source files.

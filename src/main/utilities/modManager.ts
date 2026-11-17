@@ -44,6 +44,7 @@ import { createHash, randomUUID } from "crypto";
 import { pathToFileURL } from "url";
 import { parseCurseForgeLoaderId } from "@/shared/loaderVersions";
 import type { LoaderRequirementSyntax } from "@/shared/loaderCompat";
+import type { ZipArchive, ZipArchiveEntry } from "./archiver";
 import {
   isForgeCdnUrl,
   resolveDownloadCandidates,
@@ -663,6 +664,20 @@ async function readLocalModInfo(
       ? { ...fallback, kind: ProjectType.WORLD }
       : null;
   }
+
+  try {
+    return await describeLocalArchive(archive, readEntryData, fallback);
+  } finally {
+    archive.close();
+  }
+}
+
+async function describeLocalArchive(
+  archive: ZipArchive,
+  readEntryData: (entry: ZipArchiveEntry) => Promise<Buffer>,
+  fallback: ILocalFileInfo,
+): Promise<ILocalFileInfo> {
+  const { filename: fileName, size: fileSize, path: modPath, sha1 } = fallback;
 
   const readEntry = async (entryName: string): Promise<Buffer | null> => {
     try {

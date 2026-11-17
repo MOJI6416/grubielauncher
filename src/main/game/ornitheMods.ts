@@ -2,11 +2,11 @@ import os from "os";
 import path from "path";
 import { randomUUID } from "crypto";
 import fs from "fs-extra";
-import type AdmZip from "adm-zip";
 import {
-  openArchive,
   openArchiveBuffer,
   readEntryData,
+  withArchive,
+  type ZipArchive,
 } from "../utilities/archiver";
 import { Downloader } from "../utilities/downloader";
 import { VersionsService } from "../services/Versions";
@@ -41,15 +41,16 @@ function collectClasses(text: string, into: Set<string>, limit = Infinity) {
 }
 
 async function loadMappingClasses(jarPath: string): Promise<Set<string>> {
-  const archive = await openArchive(jarPath);
-  const classes = new Set<string>();
+  return withArchive(jarPath, async (archive) => {
+    const classes = new Set<string>();
 
-  for (const entry of archive.getEntries()) {
-    if (entry.isDirectory || !entry.entryName.endsWith(".tiny")) continue;
-    collectClasses((await readEntryData(entry)).toString("latin1"), classes);
-  }
+    for (const entry of archive.getEntries()) {
+      if (entry.isDirectory || !entry.entryName.endsWith(".tiny")) continue;
+      collectClasses((await readEntryData(entry)).toString("latin1"), classes);
+    }
 
-  return classes;
+    return classes;
+  });
 }
 
 export function readMappingClasses(jarPath: string): Promise<Set<string>> {
@@ -73,7 +74,7 @@ function modDisplayName(raw: Buffer, fallback: string): string {
 }
 
 async function collectArchiveClasses(
-  archive: AdmZip,
+  archive: ZipArchive,
   classes: Set<string>,
   depth: number,
 ) {
@@ -87,7 +88,13 @@ async function collectArchiveClasses(
       const nested = await readEntryData(entry)
         .then((data) => openArchiveBuffer(data))
         .catch(() => null);
-      if (nested) await collectArchiveClasses(nested, classes, depth + 1);
+      if (nested) {
+        try {
+          await collectArchiveClasses(nested, classes, depth + 1);
+        } finally {
+          nested.close();
+        }
+      }
       continue;
     }
 
@@ -102,16 +109,17 @@ async function collectArchiveClasses(
 }
 
 export async function sampleModClasses(jarPath: string): Promise<ModSample> {
-  const archive = await openArchive(jarPath);
-  const metadata = archive.getEntry("fabric.mod.json");
-  const fallback = path.basename(jarPath).replace(/\.jar$/i, "");
-  const name = metadata
-    ? modDisplayName(await readEntryData(metadata), fallback)
-    : fallback;
+  return withArchive(jarPath, async (archive) => {
+    const metadata = archive.getEntry("fabric.mod.json");
+    const fallback = path.basename(jarPath).replace(/\.jar$/i, "");
+    const name = metadata
+      ? modDisplayName(await readEntryData(metadata), fallback)
+      : fallback;
 
-  const classes = new Set<string>();
-  await collectArchiveClasses(archive, classes, 0);
-  return { name, classes };
+    const classes = new Set<string>();
+    await collectArchiveClasses(archive, classes, 0);
+    return { name, classes };
+  });
 }
 
 function share(classes: Set<string>, mapping: Set<string>): number {

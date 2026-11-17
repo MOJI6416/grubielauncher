@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { deserialize } from "@xmcl/nbt";
-import AdmZip from "adm-zip";
+import { readTestZip } from "./testZip";
 import fs from "fs-extra";
 import os from "os";
 import path from "path";
@@ -183,17 +183,13 @@ afterAll(async () => {
 });
 
 async function readLevelDatFromZip(zipPath: string, entryName: string) {
-  const entry = new AdmZip(zipPath).getEntry(entryName);
-  if (!entry) throw new Error("missing archive entry " + entryName);
-  const raw = entry.getData();
+  const raw = (await readTestZip(zipPath)).get(entryName);
+  if (!raw) throw new Error("missing archive entry " + entryName);
   return (await deserialize(new Uint8Array(zlib.gunzipSync(raw)))) as any;
 }
 
-function entryNames(zipPath: string): string[] {
-  return new AdmZip(zipPath)
-    .getEntries()
-    .filter((entry) => !entry.isDirectory)
-    .map((entry) => entry.entryName);
+async function entryNames(zipPath: string): Promise<string[]> {
+  return [...(await readTestZip(zipPath)).keys()];
 }
 
 async function archiveForPublish(zipPath: string, files: string[]) {
@@ -226,7 +222,7 @@ describe("publishing a world", () => {
       path.join(instancePath, "config"),
     ]);
 
-    const names = entryNames(zipPath);
+    const names = await entryNames(zipPath);
 
     expect(names).toContain("saves/" + WORLD_FOLDER + "/region/r.0.0.mca");
     expect(names).toContain("saves/" + WORLD_FOLDER + "/level.dat");
@@ -258,7 +254,7 @@ describe("publishing a world", () => {
       path.join(instancePath, "config"),
     ]);
 
-    const names = entryNames(zipPath);
+    const names = await entryNames(zipPath);
 
     expect(names).toContain(
       "saves/" + WORLD_FOLDER + "/playerdata/" + PLAYER_UUID + ".dat",

@@ -1,15 +1,12 @@
 import { describe, expect, it } from "vitest";
-import AdmZip from "adm-zip";
+import { readTestZip } from "./testZip";
 import fs from "fs-extra";
 import os from "os";
 import path from "path";
 import { createZipArchive, extractZip } from "./archiver";
 
-function entryNames(zipPath: string): string[] {
-  return new AdmZip(zipPath)
-    .getEntries()
-    .map((entry) => String(entry.entryName).replace(/\\/g, "/"))
-    .filter((name) => !name.endsWith("/"));
+async function entryNames(zipPath: string): Promise<string[]> {
+  return [...(await readTestZip(zipPath)).keys()];
 }
 
 describe("world export and import", () => {
@@ -24,7 +21,7 @@ describe("world export and import", () => {
     const zipPath = path.join(root, "Тестовый мир.zip");
     await createZipArchive([world], zipPath, path.dirname(world), 6);
 
-    const names = entryNames(zipPath);
+    const names = await entryNames(zipPath);
 
     expect(names.sort()).toEqual([
       "Тестовый мир/level.dat",
