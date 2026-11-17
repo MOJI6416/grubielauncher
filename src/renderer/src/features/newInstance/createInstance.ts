@@ -37,7 +37,10 @@ import {
 import { parseInlineImage } from "./inlineImage";
 import type { AppliedPack } from "./state";
 import { stripJavaOverride } from "@/shared/javaRuntime";
-import { withoutOverrides } from "@/shared/instanceSettings";
+import {
+  withoutLaunchCommands,
+  withoutOverrides,
+} from "@/shared/instanceSettings";
 
 const api = window.api;
 
@@ -277,7 +280,7 @@ export async function createInstance(
     const base: Partial<IVersionConf> = pack?.shareVersion
       ? withoutOverrides(pack.shareVersion)
       : importData
-        ? stripJavaOverride({ ...importData.conf })
+        ? withoutLaunchCommands(stripJavaOverride({ ...importData.conf }))
         : {};
 
     const existing = store.get(versionsAtom);

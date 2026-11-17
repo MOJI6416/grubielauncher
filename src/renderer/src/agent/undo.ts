@@ -21,7 +21,7 @@ import { AgentUndo, ToolResult } from "./types";
 
 const api = window.api;
 
-type OverrideKey = "xmx" | "optimizedJvm" | "java";
+type OverrideKey = "xmx" | "optimizedJvm" | "java" | "graphicsBackend";
 
 function missingInstance(name: string): ToolResult {
   return { ok: false, error: `No instance named "${name}"` };

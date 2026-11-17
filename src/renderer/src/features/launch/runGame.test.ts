@@ -15,6 +15,7 @@ const readyJava = {
 };
 const javaPrepare = vi.fn(async (): Promise<any> => ({ ok: true, java: readyJava }));
 const getModpack = vi.fn(async (): Promise<any> => ({ status: "success", data: null }));
+const availableMemory = vi.fn(async (): Promise<number | null> => null);
 
 beforeAll(() => {
   (globalThis as any).localStorage = {
@@ -36,6 +37,7 @@ beforeAll(() => {
       backend: { getModpack },
       events: { onConsoleMessage: () => () => {} },
       java: { prepare: javaPrepare },
+      os: { availableMemory },
     },
   };
 });
@@ -139,6 +141,66 @@ describe("runGame", () => {
     javaPrepare.mockImplementation(async () => ({ ok: true, java: readyJava }));
     getModpack.mockReset();
     getModpack.mockImplementation(async () => ({ status: "success", data: null }));
+    availableMemory.mockReset();
+    availableMemory.mockImplementation(async () => null);
+  });
+
+  it("asks before starting when less memory is free than the game gets", async () => {
+    const { runGame, atoms, launchAtoms, store } = await load();
+    store.set(launchAtoms.launchMemoryWarningAtom, null);
+    availableMemory.mockImplementation(async () => 1024 * 1024 * 1024);
+    const instance = fakeInstance();
+
+    await runGame({ version: instance as any });
+
+    expect(instance.run).not.toHaveBeenCalled();
+    expect(store.get(atoms.isRunningAtom)).toBe(false);
+    expect(store.get(launchAtoms.launchMemoryWarningAtom)).toMatchObject({
+      shortfall: {
+        allocatedMb: store.get(atoms.settingsAtom)!.xmx,
+        availableMb: 1024,
+      },
+      params: { version: instance, instance: 0, skipUpdate: true },
+    });
+
+    await runGame({ version: instance as any, skipMemoryCheck: true });
+    expect(instance.run).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts with another account without switching the selected one", async () => {
+    const { runGame, atoms, store } = await load();
+    const other = { type: "plain", nickname: "guest" } as any;
+    store.set(atoms.accountsAtom, [account, other]);
+    const instance = fakeInstance();
+
+    await runGame({ version: instance as any, account: other });
+
+    expect(instance.run.mock.calls[0][0]).toMatchObject({ nickname: "guest" });
+    expect(store.get(atoms.accountAtom)).toBe(account);
+    expect((accountsSave.mock.calls[0] as unknown[])[1]).toContain("moji6416");
+  });
+
+  it("stops when the pre-launch command fails", async () => {
+    const { runGame, atoms, store } = await load();
+    const instance = fakeInstance({
+      run: vi.fn(async () => ({
+        refused: "preLaunchHook",
+        exitCode: 3,
+        output: "mount failed",
+        timedOut: false,
+      })),
+    });
+
+    await runGame({ version: instance as any });
+
+    expect(store.get(atoms.isRunningAtom)).toBe(false);
+    expect(store.get(atoms.consolesAtom).consoles[0].status).toBe("error");
+    const { showErrorToast } = await import("@renderer/utilities/errorToast");
+    expect(showErrorToast).toHaveBeenCalledWith(
+      "launchHooks.preLaunchFailed",
+      expect.stringContaining("mount failed"),
+      "common.copy",
+    );
   });
 
   it("never raises the running flag when an install holds the lock", async () => {

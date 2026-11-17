@@ -7,6 +7,8 @@ export type LauncherDeepLink =
       type: "launch";
       versionName: string;
       instance: number;
+      world?: string;
+      server?: string;
     }
   | {
       type: "groupJoin";

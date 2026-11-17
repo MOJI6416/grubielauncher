@@ -1197,7 +1197,8 @@
         "social": "Sosyal",
         "technical": "Teknik"
       }
-    }
+    },
+    "createShortcut": "Masaüstü kısayolu"
   },
   "voice": {
     "title": "Sesli sohbet",
@@ -2079,6 +2080,31 @@
         "title": "Java",
         "description": "Oyunları hangi Java çalıştırıyor: kendinizinki mi, başlatıcınınki mi",
         "keywords": "java jdk jre yol javaw zulu graalvm temurin corretto liberica sürüm ortam"
+      },
+      "gpuPreference": {
+        "title": "Ekran kartı",
+        "description": "Oyunu harici veya dahili ekran kartında başlatma",
+        "keywords": "ekran kartı gpu dizüstü nvidia amd harici dahili prime fps"
+      },
+      "linuxTools": {
+        "title": "GameMode ve MangoHud",
+        "description": "Linux'ta performans modu ve FPS katmanı",
+        "keywords": "linux gamemode mangohud katman fps performans"
+      },
+      "wrapperCommand": {
+        "title": "Sarmalayıcı komut",
+        "description": "Oyunu Linux'ta başka bir program üzerinden başlatma",
+        "keywords": "linux sarmalayıcı wrapper prime-run gamescope komut"
+      },
+      "launchEnv": {
+        "title": "Ortam değişkenleri",
+        "description": "Linux'ta oyun süreci için ek değişkenler",
+        "keywords": "linux ortam değişkenleri env"
+      },
+      "launchHooks": {
+        "title": "Oyundan önce ve sonra komutlar",
+        "description": "Linux'ta başlatmadan önce ve çıkıştan sonra kabuk komutları",
+        "keywords": "linux hook başlatmadan önce çıkıştan sonra betik komut"
       }
     },
     "resetAllConfirmBody_one": "{{count}} ayar varsayılanına döner. Kurulumlar, hesaplar ve dünyalar etkilenmez.",
@@ -2810,7 +2836,8 @@
       "collector": "G1 çöp toplayıcı",
       "young": "Yeni nesneler",
       "old": "Uzun ömürlü veriler",
-      "service": "Yardımcı bayraklar"
+      "service": "Yardımcı bayraklar",
+      "auto": "Kendiliğinden eklenir"
     },
     "flags": {
       "heap": "Başlangıç belleği en büyük değere eşittir: Java ayrılan belleğin tamamını hemen alır ve büyütmek için duraklamaz.",
@@ -2831,7 +2858,9 @@
       "G1HeapRegionSize": "Belleği 8 MB'lık bölgelere ayırır; böylece chunk verileri gibi büyük nesneler daha seyrek \"devasa\" sayılıp yavaş yoldan işlenir.",
       "G1RSetUpdatingPauseTimePercent": "Bir duraklamanın en fazla %5'ini referans kayıtlarına harcar, gerisi arka planda yapılır.",
       "UnlockExperimentalVMOptions": "Deneysel bayraklara izin verir: o olmadan yeni nesne alanının iki boyut bayrağı çalışmazdı.",
-      "PerfDisableSharedMem": "Java'nın performans istatistiklerini diskteki bir dosyaya yazmasını engeller; yavaş bir diskte bu, nadir donmalara yol açar."
+      "PerfDisableSharedMem": "Java'nın performans istatistiklerini diskteki bir dosyaya yazmasını engeller; yavaş bir diskte bu, nadir donmalara yol açar.",
+      "UseCompactObjectHeaders": "Java 25 ve sonrası: kompakt nesne başlıkları, aynı oyun daha az bellek kullanır. Kurulum argümanları bunu belirlemiyorsa kendiliğinden eklenir.",
+      "lwjglUnsafeAgent": "Java 25'te Minecraft 26.1–26.2: LWJGL 3.4.0–3.4.1 için bellek erişiminde kaybedilen FPS'i geri getiren küçük bir yama. Kendiliğinden indirilir ve etkinleştirilir."
     }
   },
   "selectPaths": {
@@ -3468,7 +3497,8 @@
     },
     "datapackPendingHint": "Dosya dünya klasöründe. Minecraft onu dünya bir sonraki yüklenişinde bağlayacak.",
     "nameEmpty": "Bir dünya adı girin",
-    "nameTaken": "Bu kurulumda o adda bir dünya zaten var"
+    "nameTaken": "Bu kurulumda o adda bir dünya zaten var",
+    "createShortcut": "Masaüstü kısayolu"
   },
   "worldChunks": {
     "title": "Yığın düzenleyici",
@@ -6056,7 +6086,12 @@
     "disabledMod": "“{{name}}” kapatıldı",
     "memory": "Bellek {{from}} → {{to}}",
     "memoryDone": "Bellek: {{to}}",
-    "failed": "Düzeltme uygulanamadı"
+    "failed": "Düzeltme uygulanamadı",
+    "openGl": "OpenGL'e geç",
+    "openGlDone": "Kurulum OpenGL ile açılacak",
+    "nestedIn": "“{{id}}”, {{hosts}} içine gömülü",
+    "copies": "“{{id}}” birden fazla kez kurulu",
+    "standalone": "ayrıca: {{files}}"
   },
   "layout": {
     "show": "“{{name}}” göster",
@@ -6299,5 +6334,67 @@
         "notFound": "Tema bulunamadı: yazar onu kaldırmış olabilir"
       }
     }
+  },
+  "launchSettings": {
+    "gpu": {
+      "title": "Ekran kartı",
+      "description": "İki ekran kartlı dizüstü bilgisayarda oyun seçtiğiniz kartta açılır. “Otomatik” seçimi sisteme bırakır.",
+      "auto": "Otomatik",
+      "discrete": "Harici",
+      "integrated": "Dahili"
+    },
+    "backend": {
+      "title": "Grafik API'si",
+      "game": "Oyundaki gibi",
+      "opengl": "OpenGL",
+      "vulkan": "Vulkan",
+      "gameHint": "Oyun kendi grafik ayarlarına göre karar verir",
+      "forcedHint": "Bu seçim oyundaki ayardan önce gelir",
+      "shaders": "Iris ya da başka bir gölgelendirici yükleyici kurulu, bu yüzden oyun OpenGL ile çalışır"
+    },
+    "linux": {
+      "title": "Linux'ta başlatma",
+      "hint": "Tüm kurulumlar için; bir kurulum kendi ayarlarında farklısını belirleyebilir.",
+      "gameMode": "GameMode",
+      "gameModeDescription": "Feral GameMode, oyun sürerken işlemciyi ve ekran kartını performans moduna alır.",
+      "mangoHud": "MangoHud",
+      "mangoHudDescription": "Oyunun üstünde FPS, yük ve sıcaklıkları gösteren bir katman.",
+      "missing": "Sistemde bulunamadı — {{name}} paketini kurun. O olmadan oyun her zamanki gibi açılır.",
+      "wrapper": "Sarmalayıcı komut",
+      "wrapperDescription": "Oyun bu program üzerinden açılır, örneğin prime-run veya gamescope -f --.",
+      "wrapperBroken": "Bir tırnak kapanmamış, bu yüzden sarmalayıcı atlanır.",
+      "env": "Ortam değişkenleri",
+      "envDescription": "Her satıra bir tane: AD=değer.",
+      "envInvalid": "“{{line}}” satırı atlandı: AD=değer biçimini kullanın.",
+      "preLaunch": "Başlatmadan önce",
+      "preLaunchDescription": "Bir kabuk komutu. Hata verirse oyun açılmaz. $INST_NAME, $INST_DIR, $INST_MC_DIR ve $INST_JAVA kullanılabilir.",
+      "postExit": "Oyun kapandıktan sonra",
+      "postExitDescription": "Oyun kapandığında çalışır; çıkış kodu $INST_EXIT_CODE içindedir.",
+      "configure": "Ayarla",
+      "inheritedHint": "Şu anda başlatıcının genel ayarları geçerli. Bu kurulum için kendi ayarlarınızı belirlemek üzere “Başlatıcıdan devralındı” düğmesine tıklayın.",
+      "summaryWrapper": "sarmalayıcı",
+      "summaryEnv": "değişkenler",
+      "summaryHooks": "komutlar",
+      "summaryNone": "ek bir şey yok"
+    }
+  },
+  "launchHooks": {
+    "preLaunchFailed": "Başlatma öncesi komut oyunun açılmasını engelledi",
+    "preLaunchExitCode": "{{code}} koduyla sonlandı. Linux başlatma ayarlarından düzeltin.",
+    "preLaunchTimedOut": "2 dakika içinde bitmedi."
+  },
+  "launchMemory": {
+    "title": "Boş bellek az. Yine de başlatılsın mı?",
+    "text": "{{free}} GB boş, ancak oyuna {{allocated}} GB ayrıldı. Gerisi sayfa dosyasına gider ve oyun donar.",
+    "hint": "Tarayıcıyı ve diğer programları kapatın ya da kurulum ayarlarından belleği azaltın.",
+    "playAnyway": "Başlat"
+  },
+  "playAs": {
+    "menu": "Hesapla başlat…",
+    "hint": "Başka bir hesapla tek seferlik başlatma; seçili hesap değişmez",
+    "title": "Hesapla başlat",
+    "description": "“{{name}}” kurulumu. Başlatıcıda seçili hesap değişmez.",
+    "current": "{{provider}} · şu an seçili",
+    "sessionBroken": "Yeniden giriş yapın"
   }
 }

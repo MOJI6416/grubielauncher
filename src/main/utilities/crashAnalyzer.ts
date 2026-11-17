@@ -14,7 +14,13 @@ import {
   selectCrashRule,
   UNSUPPORTED_JAVA_OVERRIDE_MESSAGES,
   UNSUPPORTED_JAVA_RULE_ID,
+  VULKAN_STARTUP_MESSAGES,
+  VULKAN_STARTUP_RULE_ID,
+  isVulkanStartupCrash,
+  vulkanStartupOutranks,
 } from "./crashRules";
+import { instanceGraphicsBackend } from "@/shared/instanceSettings";
+import { supportsGraphicsBackend } from "@/shared/graphicsBackend";
 import { runCrashRegexJobs } from "./crashRegexWorker";
 import { readableCrashText } from "./crashMappings";
 import { app } from "electron";
@@ -235,11 +241,20 @@ export async function analyzeGameCrash(
   if (text) text = await readableCrashText(versionPath, text);
 
   const rules = await getCrashRules();
-  const { match, complete } = await matchCrashRulesOffThread(
+  const { match: matched, complete } = await matchCrashRulesOffThread(
     text || "",
     rules,
     exitCode,
   );
+  const match =
+    vulkanStartupOutranks(matched?.ruleId ?? null) &&
+    (await crashedStartingVulkan(versionPath, text))
+      ? {
+          ruleId: VULKAN_STARTUP_RULE_ID,
+          messages: VULKAN_STARTUP_MESSAGES,
+          culprits: [],
+        }
+      : matched;
 
   if (!complete) {
     void reportCrashRuleHit(RULES_INCOMPLETE_RULE_ID, versionPath).catch(
@@ -264,6 +279,27 @@ export async function analyzeGameCrash(
     culprits: match.culprits,
     reportPath,
   };
+}
+
+async function crashedStartingVulkan(
+  versionPath: string,
+  crashText: string | null,
+): Promise<boolean> {
+  const conf = (await fs
+    .readJSON(path.join(versionPath, "version.json"))
+    .catch(() => null)) as IVersionConf | null;
+  if (!supportsGraphicsBackend(conf?.version?.id)) return false;
+
+  const [optionsText, logText] = await Promise.all([
+    fs.readFile(path.join(versionPath, "options.txt"), "utf-8").catch(() => null),
+    readCrashSource(path.join(versionPath, "logs", "latest.log")),
+  ]);
+
+  return isVulkanStartupCrash({
+    optionsText,
+    logText: logText ?? crashText,
+    forcedBackend: instanceGraphicsBackend(conf?.overrides),
+  });
 }
 
 async function hasJavaOverride(versionPath: string): Promise<boolean> {

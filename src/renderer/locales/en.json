@@ -1197,7 +1197,8 @@
         "social": "Social",
         "technical": "Technical"
       }
-    }
+    },
+    "createShortcut": "Desktop shortcut"
   },
   "voice": {
     "title": "Voice chat",
@@ -2079,6 +2080,31 @@
         "title": "Java",
         "description": "Which Java runs the games: your own or the launcher's",
         "keywords": "java jdk jre path javaw zulu graalvm temurin corretto liberica version runtime"
+      },
+      "gpuPreference": {
+        "title": "Graphics card",
+        "description": "Start the game on the dedicated or integrated GPU",
+        "keywords": "gpu video card laptop nvidia amd dedicated integrated prime fps"
+      },
+      "linuxTools": {
+        "title": "GameMode and MangoHud",
+        "description": "Performance mode and the FPS overlay on Linux",
+        "keywords": "linux gamemode mangohud overlay fps performance"
+      },
+      "wrapperCommand": {
+        "title": "Wrapper command",
+        "description": "Start the game through another program on Linux",
+        "keywords": "linux wrapper prime-run gamescope command"
+      },
+      "launchEnv": {
+        "title": "Environment variables",
+        "description": "Extra variables for the game process on Linux",
+        "keywords": "linux environment variables env"
+      },
+      "launchHooks": {
+        "title": "Commands before and after the game",
+        "description": "Shell commands run before launch and after exit on Linux",
+        "keywords": "linux hook pre-launch post-exit script command"
       }
     },
     "resetAllConfirmBody_one": "{{count}} setting goes back to its default. Instances, accounts and worlds are untouched.",
@@ -2810,7 +2836,8 @@
       "collector": "G1 garbage collector",
       "young": "New objects",
       "old": "Long-lived data",
-      "service": "Service flags"
+      "service": "Service flags",
+      "auto": "Added automatically"
     },
     "flags": {
       "heap": "The starting heap equals the maximum: Java takes all the allocated memory right away and never pauses to grow it.",
@@ -2831,7 +2858,9 @@
       "G1HeapRegionSize": "Splits memory into 8 MB regions, so big objects like chunk data are less often treated as \"huge\" and handled the slow way.",
       "G1RSetUpdatingPauseTimePercent": "Spends at most 5% of a pause on bookkeeping of references; the rest happens in the background.",
       "UnlockExperimentalVMOptions": "Allows experimental flags: without it, the two size flags for new objects would not work.",
-      "PerfDisableSharedMem": "Stops Java from writing performance stats to a file on disk, which causes rare freezes on a slow drive."
+      "PerfDisableSharedMem": "Stops Java from writing performance stats to a file on disk, which causes rare freezes on a slow drive.",
+      "UseCompactObjectHeaders": "Java 25 and newer: compact object headers, so the same game takes less memory. Added by itself unless the instance arguments set it.",
+      "lwjglUnsafeAgent": "Minecraft 26.1–26.2 on Java 25: a small patch for LWJGL 3.4.0–3.4.1 that brings back the FPS lost in its memory access. Downloaded and added by itself."
     }
   },
   "selectPaths": {
@@ -3468,7 +3497,8 @@
     },
     "datapackPendingHint": "The file is in the world folder. Minecraft will attach it the next time the world loads.",
     "nameEmpty": "Enter a world name",
-    "nameTaken": "This instance already has a world with that name"
+    "nameTaken": "This instance already has a world with that name",
+    "createShortcut": "Desktop shortcut"
   },
   "worldChunks": {
     "title": "Chunk editor",
@@ -6056,7 +6086,12 @@
     "disabledMod": "“{{name}}” is off",
     "memory": "Memory {{from}} → {{to}}",
     "memoryDone": "Memory set to {{to}}",
-    "failed": "The fix did not apply"
+    "failed": "The fix did not apply",
+    "openGl": "Switch to OpenGL",
+    "openGlDone": "The instance will start on OpenGL",
+    "nestedIn": "“{{id}}” is built into {{hosts}}",
+    "copies": "“{{id}}” is installed more than once",
+    "standalone": "separate copy: {{files}}"
   },
   "layout": {
     "show": "Show “{{name}}”",
@@ -6299,5 +6334,67 @@
         "notFound": "Theme not found: the author may have removed it"
       }
     }
+  },
+  "launchSettings": {
+    "gpu": {
+      "title": "Graphics card",
+      "description": "On a laptop with two graphics cards the game starts on the one you pick. Auto leaves the choice to the system.",
+      "auto": "Auto",
+      "discrete": "Dedicated",
+      "integrated": "Integrated"
+    },
+    "backend": {
+      "title": "Graphics API",
+      "game": "As in game",
+      "opengl": "OpenGL",
+      "vulkan": "Vulkan",
+      "gameHint": "The game decides, as set in its own video settings",
+      "forcedHint": "This choice wins over the setting inside the game",
+      "shaders": "Iris or another shader loader is installed, so the game runs on OpenGL"
+    },
+    "linux": {
+      "title": "Launching on Linux",
+      "hint": "For every instance; an instance can set its own in its settings.",
+      "gameMode": "GameMode",
+      "gameModeDescription": "Feral GameMode switches the CPU and GPU to performance mode while you play.",
+      "mangoHud": "MangoHud",
+      "mangoHudDescription": "An overlay with FPS, load and temperatures on top of the game.",
+      "missing": "Not found on this system — install the {{name}} package. Without it the game starts as usual.",
+      "wrapper": "Wrapper command",
+      "wrapperDescription": "The game starts through this program, for example prime-run or gamescope -f --.",
+      "wrapperBroken": "A quote is not closed, so the wrapper is skipped.",
+      "env": "Environment variables",
+      "envDescription": "One per line: NAME=value.",
+      "envInvalid": "The line “{{line}}” is skipped: use NAME=value.",
+      "preLaunch": "Before launch",
+      "preLaunchDescription": "A shell command. If it fails, the game does not start. $INST_NAME, $INST_DIR, $INST_MC_DIR and $INST_JAVA are available.",
+      "postExit": "After the game closes",
+      "postExitDescription": "Runs once the game has closed; the exit code is in $INST_EXIT_CODE.",
+      "configure": "Set up",
+      "inheritedHint": "The launcher-wide settings apply now. Click “Inherited from launcher” to set this instance's own.",
+      "summaryWrapper": "wrapper",
+      "summaryEnv": "variables",
+      "summaryHooks": "commands",
+      "summaryNone": "nothing extra"
+    }
+  },
+  "launchHooks": {
+    "preLaunchFailed": "The pre-launch command stopped the game from starting",
+    "preLaunchExitCode": "It exited with code {{code}}. Fix it in the Linux launch settings.",
+    "preLaunchTimedOut": "It did not finish within 2 minutes."
+  },
+  "launchMemory": {
+    "title": "Not enough free memory. Launch anyway?",
+    "text": "{{free}} GB is free, but the game is given {{allocated}} GB. The rest goes to the page file, and the game will freeze.",
+    "hint": "Close the browser and other programs, or lower the memory in the instance settings.",
+    "playAnyway": "Launch"
+  },
+  "playAs": {
+    "menu": "Launch with account…",
+    "hint": "One launch with another account; the selected account stays the same",
+    "title": "Launch with account",
+    "description": "Instance “{{name}}”. The launcher's selected account does not change.",
+    "current": "{{provider}} · selected now",
+    "sessionBroken": "Sign in again"
   }
 }

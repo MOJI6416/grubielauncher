@@ -8,7 +8,13 @@ export interface DeepLinkContext {
 }
 
 export type DeepLinkIntent =
-  | { kind: "launch"; versionName: string; instance: number }
+  | {
+      kind: "launch";
+      versionName: string;
+      instance: number;
+      world?: string;
+      server?: string;
+    }
   | { kind: "groupJoin"; code: string }
   | { kind: "skin"; skinId: string }
   | { kind: "theme"; themeId: string }
@@ -27,6 +33,8 @@ export function resolveDeepLink(
         kind: "launch",
         versionName: payload.versionName,
         instance: payload.instance,
+        ...(payload.world ? { world: payload.world } : {}),
+        ...(payload.server ? { server: payload.server } : {}),
       };
 
     case "groupJoin":

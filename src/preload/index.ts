@@ -189,6 +189,8 @@ import { NotificationClickAction } from "@/types/Notification";
 import { LauncherDeepLink } from "@/types/DeepLink";
 import type { FailureInfo } from "@/shared/errors";
 import type { UiScaleState } from "@/shared/uiScale";
+import type { LaunchOutcome, LinuxLaunchTools } from "@/shared/launchCommand";
+import type { LaunchShortcutTarget } from "@/shared/launchLink";
 import type { ThemeFileManifest } from "@/shared/themeFile";
 import type {
   GalleryPage,
@@ -328,6 +330,8 @@ export interface IElectronAPI {
   platform: string;
   os: {
     totalmem: () => Promise<number>;
+    availableMemory: () => Promise<number | null>;
+    launchTools: () => Promise<LinuxLaunchTools | null>;
     openPrivacySettings: (
       pane: "microphone" | "accessibility",
     ) => Promise<boolean>;
@@ -515,7 +519,7 @@ export interface IElectronAPI {
       authData: IAuth | null,
       instance: number,
       quick: { single?: string; multiplayer?: string },
-    ) => Promise<boolean>;
+    ) => Promise<LaunchOutcome>;
     delete: (
       account: ILocalAccount,
       versionConf: IVersionConf,
@@ -959,6 +963,7 @@ export interface IElectronAPI {
       versionName: string,
       instance?: number,
       imageSource?: string,
+      target?: LaunchShortcutTarget,
     ) => Promise<{ success: boolean; error?: string }>;
   };
   image: {
@@ -1506,6 +1511,8 @@ export const api: IElectronAPI = {
   platform: process.platform,
   os: {
     totalmem: () => invoke("os:totalmem"),
+    availableMemory: () => invoke("os:availableMemory"),
+    launchTools: () => invoke("os:launchTools"),
     openPrivacySettings: (pane: "microphone" | "accessibility") =>
       invoke("os:openPrivacySettings", pane),
   },
@@ -2139,8 +2146,12 @@ export const api: IElectronAPI = {
     getState: () => invoke("mirror:getState"),
   },
   shortcut: {
-    create: (versionName: string, instance?: number, imageSource?: string) =>
-      invoke("shortcut:create", versionName, instance, imageSource),
+    create: (
+      versionName: string,
+      instance?: number,
+      imageSource?: string,
+      target?: LaunchShortcutTarget,
+    ) => invoke("shortcut:create", versionName, instance, imageSource, target),
   },
   image: {
     bytes: (source: string) => invoke("image:bytes", source),

@@ -1,11 +1,19 @@
 import { normalizeId } from "@renderer/features/configs/modGroups";
+import type { LocalModDependencyIndex } from "@/types/ModManager";
 
 export type CrashFix =
   | { kind: "disableMod"; title: string }
   | { kind: "memory"; fromMb: number; toMb: number }
-  | { kind: "integrity" };
+  | { kind: "integrity" }
+  | { kind: "openGl" };
 
 export type CrashFixIdentity = { title: string; ids: string[] };
+
+export type DuplicatePlacement = {
+  id: string;
+  standalone: string[];
+  nestedIn: string[];
+};
 
 export type CrashFixInput = {
   ruleId: string | null;
@@ -13,6 +21,9 @@ export type CrashFixInput = {
   identities: CrashFixIdentity[];
   memoryMb: number;
   totalMemoryMb: number;
+  canSwitchToOpenGl?: boolean;
+  duplicates?: DuplicatePlacement[];
+  fileTitles?: Record<string, string>;
 };
 
 const DISABLE_RULES = new Set([
@@ -21,6 +32,9 @@ const DISABLE_RULES = new Set([
   "mixin_error",
   "mod_resolution",
 ]);
+
+export const VULKAN_RULE_ID = "vulkan_startup";
+export const DUPLICATE_RULE_ID = "duplicate_mods";
 
 const MEMORY_STEP_MB = 2048;
 const OS_RESERVE_MB = 2048;
@@ -47,8 +61,71 @@ export function matchCulprits(
   return titles;
 }
 
+export function locateDuplicates(
+  culprits: string[],
+  index: LocalModDependencyIndex,
+): DuplicatePlacement[] {
+  const placements: DuplicatePlacement[] = [];
+  const files = Object.keys(index).sort();
+
+  for (const culprit of culprits) {
+    const id = culprit.trim().toLowerCase();
+    if (!id || placements.some((entry) => entry.id === id)) continue;
+
+    const standalone: string[] = [];
+    const nestedIn: string[] = [];
+    for (const file of files) {
+      const info = index[file];
+      const embedded = (info.embedded ?? []).map((item) => item.toLowerCase());
+      const provides = info.provides.map((item) => item.toLowerCase());
+      if (embedded.includes(id)) nestedIn.push(file);
+      else if (provides.includes(id)) standalone.push(file);
+    }
+
+    if (standalone.length + nestedIn.length > 0) {
+      placements.push({ id, standalone, nestedIn });
+    }
+  }
+
+  return placements;
+}
+
+function duplicateFixes(
+  duplicates: DuplicatePlacement[],
+  fileTitles: Record<string, string>,
+): CrashFix[] {
+  const titles: string[] = [];
+
+  for (const placement of duplicates) {
+    const candidates =
+      placement.nestedIn.length > 0
+        ? placement.standalone
+        : placement.standalone.length > 1
+          ? placement.standalone
+          : [];
+
+    const owners = candidates.map((file) => fileTitles[file]);
+    const distinct = new Set(owners.filter(Boolean));
+    if (owners.some((title) => !title) || distinct.size !== owners.length) {
+      continue;
+    }
+
+    for (const title of owners) {
+      if (!titles.includes(title)) titles.push(title);
+    }
+  }
+
+  return titles
+    .slice(0, MAX_DISABLE_FIXES)
+    .map((title) => ({ kind: "disableMod", title }));
+}
+
 export function planCrashFixes(input: CrashFixInput): CrashFix[] {
   const fixes: CrashFix[] = [];
+
+  if (input.ruleId === VULKAN_RULE_ID && input.canSwitchToOpenGl) {
+    fixes.push({ kind: "openGl" });
+  }
 
   if (input.ruleId === "out_of_memory" && input.totalMemoryMb > 0) {
     const ceiling =
@@ -60,6 +137,12 @@ export function planCrashFixes(input: CrashFixInput): CrashFix[] {
   }
 
   if (input.ruleId === "corrupted_files") fixes.push({ kind: "integrity" });
+
+  if (input.ruleId === DUPLICATE_RULE_ID) {
+    fixes.push(
+      ...duplicateFixes(input.duplicates ?? [], input.fileTitles ?? {}),
+    );
+  }
 
   if (input.ruleId === null || DISABLE_RULES.has(input.ruleId)) {
     for (const title of matchCulprits(input.culprits, input.identities).slice(

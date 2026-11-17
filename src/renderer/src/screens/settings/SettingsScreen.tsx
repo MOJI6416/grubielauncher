@@ -33,6 +33,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { navigate } from "@renderer/navigation/navigate";
+import { PLATFORM } from "@renderer/utilities/platform";
 import {
   SETTINGS_ENTRIES,
   SETTINGS_SECTIONS,
@@ -40,6 +41,7 @@ import {
   changedEntryIds,
   defaultsPatch,
   entrySection,
+  isEntryAvailable,
   isSettingsSection,
   sectionEntryIds,
   type SettingsEntryId,
@@ -116,7 +118,9 @@ export function SettingsScreen({
 
   const searchEntries = useMemo<SettingsSearchEntry[]>(
     () =>
-      SETTINGS_ENTRIES.map((entry) => ({
+      SETTINGS_ENTRIES.filter((entry) =>
+        isEntryAvailable(entry, PLATFORM),
+      ).map((entry) => ({
         id: entry.id,
         section: entry.section,
         title: t(`settings.index.${entry.id}.title`),

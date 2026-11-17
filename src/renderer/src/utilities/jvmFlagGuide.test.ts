@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { OPTIMIZED_GC_FLAGS } from "@/shared/jvmDefaults";
 import en from "../../locales/en.json";
-import { jvmFlagGroups, jvmFlagId, undescribedJvmFlags } from "./jvmFlagGuide";
+import {
+  AUTOMATIC_JVM_FLAGS,
+  jvmFlagGroups,
+  jvmFlagId,
+  undescribedJvmFlags,
+} from "./jvmFlagGuide";
 
 const GUIDE = (en as { jvmFlags: { groups: object; flags: object } }).jvmFlags;
 
@@ -25,7 +30,7 @@ describe("jvm flag guide", () => {
   });
 
   it("has an English text for every group and flag", () => {
-    for (const group of jvmFlagGroups()) {
+    for (const group of [...jvmFlagGroups(), AUTOMATIC_JVM_FLAGS]) {
       expect(GUIDE.groups).toHaveProperty(group.id);
       for (const note of group.flags) {
         expect(GUIDE.flags).toHaveProperty(note.id);

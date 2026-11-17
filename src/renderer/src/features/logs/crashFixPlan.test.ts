@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { matchCulprits, planCrashFixes } from "./crashFixPlan";
+import {
+  locateDuplicates,
+  matchCulprits,
+  planCrashFixes,
+} from "./crashFixPlan";
 
 const identities = [
   { title: "Sodium", ids: ["sodium"] },
@@ -82,5 +86,78 @@ describe("planCrashFixes", () => {
       { kind: "disableMod", title: "Create" },
       { kind: "disableMod", title: "Sodium" },
     ]);
+  });
+});
+
+describe("vulkan crash fix", () => {
+  it("offers OpenGL when the instance can switch", () => {
+    expect(
+      planCrashFixes({
+        ...base,
+        ruleId: "vulkan_startup",
+        canSwitchToOpenGl: true,
+      }),
+    ).toEqual([{ kind: "openGl" }]);
+  });
+
+  it("stays silent when the instance is already on OpenGL or too old", () => {
+    expect(
+      planCrashFixes({
+        ...base,
+        ruleId: "vulkan_startup",
+        canSwitchToOpenGl: false,
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe("duplicate mods", () => {
+  const index = {
+    "embeddium-1.0.jar": {
+      provides: ["embeddium", "sodium"],
+      requires: [],
+      embedded: ["sodium"],
+    },
+    "sodium-0.6.jar": { provides: ["sodium"], requires: [] },
+    "jei-a.jar": { provides: ["jei"], requires: [] },
+    "jei-b.jar": { provides: ["jei"], requires: [] },
+  };
+
+  it("shows where each copy sits, nested ones included", () => {
+    expect(locateDuplicates(["sodium", "jei", "ghost"], index)).toEqual([
+      {
+        id: "sodium",
+        standalone: ["sodium-0.6.jar"],
+        nestedIn: ["embeddium-1.0.jar"],
+      },
+      { id: "jei", standalone: ["jei-a.jar", "jei-b.jar"], nestedIn: [] },
+    ]);
+  });
+
+  it("offers to turn off the separate copy of a nested mod", () => {
+    expect(
+      planCrashFixes({
+        ...base,
+        ruleId: "duplicate_mods",
+        culprits: ["sodium"],
+        duplicates: locateDuplicates(["sodium"], index),
+        fileTitles: {
+          "sodium-0.6.jar": "Sodium",
+          "embeddium-1.0.jar": "Embeddium",
+        },
+      }),
+    ).toEqual([{ kind: "disableMod", title: "Sodium" }]);
+  });
+
+  it("does not guess when both copies belong to one mod entry", () => {
+    expect(
+      planCrashFixes({
+        ...base,
+        ruleId: "duplicate_mods",
+        culprits: ["jei"],
+        duplicates: locateDuplicates(["jei"], index),
+        fileTitles: { "jei-a.jar": "JEI", "jei-b.jar": "JEI" },
+      }),
+    ).toEqual([]);
   });
 });

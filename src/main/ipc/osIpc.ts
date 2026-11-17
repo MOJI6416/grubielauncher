@@ -1,6 +1,11 @@
 import os from 'os'
 import { shell } from 'electron'
 import { check, handleSafe } from '../utilities/ipc'
+import { availableMemoryBytes } from '../utilities/systemMemory'
+import {
+  detectLinuxLaunchTools,
+  type LinuxLaunchTools
+} from '../utilities/linuxLaunchTools'
 
 type PrivacyPane = 'microphone' | 'accessibility'
 
@@ -20,6 +25,14 @@ export function registerOsIpc() {
   handleSafe<number>('os:totalmem', 0, () => {
     return os.totalmem()
   })
+
+  handleSafe<number | null>('os:availableMemory', null, () =>
+    availableMemoryBytes()
+  )
+
+  handleSafe<LinuxLaunchTools | null>('os:launchTools', null, () =>
+    detectLinuxLaunchTools()
+  )
 
   handleSafe<boolean, [PrivacyPane]>(
     'os:openPrivacySettings',

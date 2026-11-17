@@ -15,7 +15,10 @@ export type AgentUndo =
       op: "overrides";
       instance: string;
       values: Partial<
-        Record<"xmx" | "optimizedJvm" | "java", unknown | null>
+        Record<
+          "xmx" | "optimizedJvm" | "java" | "graphicsBackend",
+          unknown | null
+        >
       >;
     }
   | { op: "settings"; values: { xmx?: number; optimizedJvm?: boolean } }

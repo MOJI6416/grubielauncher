@@ -3,6 +3,7 @@ import {
   ArrowRightLeft,
   Boxes,
   ChartArea,
+  CircleUserRound,
   Copy,
   CopyPlus,
   Folder,
@@ -18,10 +19,14 @@ import {
   Trash,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getDefaultStore } from "jotai";
 import type { TFunction } from "i18next";
 import type { ILocalAccount } from "@/types/Account";
+import type { LaunchShortcutTarget } from "@/shared/launchLink";
 import { Version } from "@renderer/classes/Version";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { accountsAtom } from "@renderer/stores/atoms";
+import { playAsVersionAtom } from "@renderer/features/launch/atoms";
 import { navigate } from "@renderer/navigation/navigate";
 import type { InstanceTab } from "@renderer/navigation/routes";
 import { getDeleteCopy, isForeignPublication } from "./deleteGates";
@@ -61,12 +66,14 @@ export interface InstanceActionContext {
 export async function createDesktopShortcut(
   instance: Version,
   t: TFunction,
+  target?: LaunchShortcutTarget,
 ): Promise<void> {
   try {
     const result = await api.shortcut.create(
       instance.version.name,
       0,
       instance.version.image || undefined,
+      target,
     );
 
     if (result?.success) {
@@ -107,6 +114,17 @@ export function buildInstanceActions(
           onSelect: context.onPlay,
         },
   ];
+
+  const store = getDefaultStore();
+  if (store.get(accountsAtom).length > 1) {
+    launch.push({
+      id: "play-as",
+      label: t("playAs.menu"),
+      icon: CircleUserRound,
+      disabled: !context.canPlay,
+      onSelect: () => store.set(playAsVersionAtom, instance),
+    });
+  }
 
   const sections: InstanceAction[] = [
     {

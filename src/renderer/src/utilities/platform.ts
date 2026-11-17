@@ -12,6 +12,8 @@ const platform =
   typeof window === "undefined" ? "" : (window.api?.platform ?? "");
 const isMac = platform === "darwin";
 
+export const PLATFORM = platform;
+
 export const OS_NAME = platformName(platform);
 export const MOD_KEY = isMac ? "⌘" : "Ctrl";
 export const ALT_KEY = isMac ? "⌥" : "Alt";

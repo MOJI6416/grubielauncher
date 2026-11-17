@@ -59,6 +59,7 @@ import {
 import { BlessedPathInfo } from '@/types/AllowedPath'
 import { isSafeRemoteFetchUrl } from '../utilities/safeUrl'
 import { createInstanceShortcut, getImageBase64 } from '../utilities/shortcut'
+import type { LaunchShortcutTarget } from '@/shared/launchLink'
 import { installAppMenu } from '../windows/macApp'
 import { assertSafeVersionName } from '@/shared/versionName'
 
@@ -529,17 +530,33 @@ export function registerOtherIpc() {
     })
   )
 
-  handleSafe<{ success: boolean; error?: string }, [string, number?, string?]>(
+  handleSafe<
+    { success: boolean; error?: string },
+    [string, number?, string?, LaunchShortcutTarget?]
+  >(
     'shortcut:create',
     { success: false },
-    async (_, versionName: string, instance = 0, imageSource?: string) => {
+    async (
+      _,
+      versionName: string,
+      instance = 0,
+      imageSource?: string,
+      target?: LaunchShortcutTarget
+    ) => {
       assertSafeVersionName(versionName)
       const safeInstance = Number.isFinite(instance) ? Math.max(0, Math.trunc(instance)) : 0
 
       return await createInstanceShortcut(
         versionName.trim(),
         safeInstance,
-        typeof imageSource === 'string' ? imageSource : undefined
+        typeof imageSource === 'string' ? imageSource : undefined,
+        target && typeof target === 'object'
+          ? {
+              world: typeof target.world === 'string' ? target.world : undefined,
+              server: typeof target.server === 'string' ? target.server : undefined,
+              label: typeof target.label === 'string' ? target.label : undefined
+            }
+          : undefined
       )
     }
   )

@@ -87,6 +87,7 @@ export interface ILocalDependency {
 export interface LocalModDependencies {
   provides: string[];
   requires: string[];
+  embedded?: string[];
 }
 
 export type LocalModDependencyIndex = Record<string, LocalModDependencies>;

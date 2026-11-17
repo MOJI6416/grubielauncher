@@ -67,7 +67,33 @@ import { assertSafeVersionName } from "@/shared/versionName";
 import { resolveLaunchPath } from "./launchAlias";
 import { assertSafeFileSegment } from "./serverScriptSafety";
 import { Backend } from "../services/Backend";
-import { buildMemoryArguments } from "@/shared/jvmDefaults";
+import {
+  buildMemoryArguments,
+  lwjglVersionOf,
+  needsLwjglUnsafeAgent,
+  runtimeJvmFlags,
+} from "@/shared/jvmDefaults";
+import {
+  graphicsBackendArguments,
+  resolveGraphicsBackend,
+  type GraphicsBackendLaunch,
+} from "@/shared/graphicsBackend";
+import { hasShaderLoader } from "@/shared/shaderLoaders";
+import { instanceGraphicsBackend } from "@/shared/instanceSettings";
+import {
+  linuxLaunchPrefix,
+  parseLaunchEnv,
+  type LaunchOutcome,
+} from "@/shared/launchCommand";
+import {
+  hasLwjglAgent,
+  lwjglAgentArgument,
+  lwjglAgentDownload,
+} from "../utilities/lwjglAgent";
+import { prepareGpuPreference } from "../utilities/gpuPreference";
+import { detectLinuxLaunchTools } from "../utilities/linuxLaunchTools";
+import { runLaunchHook, type LaunchHookContext } from "../utilities/launchHooks";
+import { childProcessEnv } from "../utilities/childEnv";
 import { sessionNickname } from "@/shared/sessionNickname";
 import { instanceJavaMajor, mcVersionToJavaMajor } from "@/shared/javaVersions";
 import { filterRunArguments } from "@/shared/runArguments";
@@ -1744,7 +1770,12 @@ export class Version {
       }),
     );
 
+    if (!this.customGameArguments().includes("--graphicsBackend")) {
+      game.push(...graphicsBackendArguments(this.graphicsLaunch()));
+    }
+
     jvm.push(...buildMemoryArguments(settings.xmx, settings.optimizedJvm));
+    jvm.push(...(await this.runtimeJvmArguments()));
 
     if (process.platform === "win32") {
       jvm.push(
@@ -1921,6 +1952,55 @@ export class Version {
     return { jvm, game };
   }
 
+  private customGameArguments(): string[] {
+    return parseCustomRunArguments(this.version.runArguments?.game ?? "");
+  }
+
+  public graphicsLaunch(): GraphicsBackendLaunch | null {
+    return resolveGraphicsBackend({
+      mcVersion: this.version.version.id,
+      choice: instanceGraphicsBackend(this.version.overrides),
+      shaderLoader: hasShaderLoader({
+        mods: this.version.loader.mods ?? [],
+        jarMods: this.version.jarMods,
+      }),
+    });
+  }
+
+  private needsLwjglAgent(): boolean {
+    return needsLwjglUnsafeAgent({
+      javaMajor: this.java?.major ?? null,
+      lwjglVersion: lwjglVersionOf(this.manifest?.libraries),
+    });
+  }
+
+  private async runtimeJvmArguments(): Promise<string[]> {
+    const flags = runtimeJvmFlags({
+      javaMajor: this.java?.major ?? null,
+      javaVendor: this.java?.vendor,
+      customJvm: parseCustomRunArguments(this.version.runArguments?.jvm ?? ""),
+    });
+
+    if (this.needsLwjglAgent() && (await hasLwjglAgent(this.minecraftPath))) {
+      flags.push(lwjglAgentArgument(this.minecraftPath));
+    }
+
+    return flags;
+  }
+
+  private async ensureLwjglAgent() {
+    if (!this.needsLwjglAgent()) return;
+    if (await hasLwjglAgent(this.minecraftPath)) return;
+
+    try {
+      await this.downloader.downloadFiles([
+        lwjglAgentDownload(this.minecraftPath),
+      ]);
+    } catch (error) {
+      console.warn("[version:run] could not download lwjgl-unsafe-agent:", error);
+    }
+  }
+
   public async getRunCommand(
     account: ILocalAccount,
     settings: TSettings,
@@ -2052,7 +2132,7 @@ export class Version {
       single?: string;
       multiplayer?: string;
     },
-  ) {
+  ): Promise<LaunchOutcome> {
     const span = journal.span("game", "launch", {
       versionName: this.version.name,
       instance,
@@ -2082,6 +2162,7 @@ export class Version {
       }
 
       await this.ensureJarModAsm();
+      await this.ensureLwjglAgent();
 
       const command = await this.getRunCommand(
         account,
@@ -2110,7 +2191,11 @@ export class Version {
       await assertRosettaFor(this.java?.arch);
 
       const target = this.launchTarget(this.manifest);
+      const graphics = this.graphicsLaunch();
       span.step("command built", {
+        graphicsBackend: graphics?.backend ?? null,
+        graphicsBackendReason: graphics?.reason ?? null,
+        lwjglAgent: this.needsLwjglAgent(),
         javaMajor: this.java?.major ?? this.requiredJavaMajor(),
         javaRequired: this.requiredJavaMajor(),
         javaVia: this.java?.via,
@@ -2141,49 +2226,139 @@ export class Version {
           }).catch(() => null)
         : null;
 
-      runGame(
-        command[0],
-        command.slice(1),
-        this.versionPath,
-        this.version.name,
-        instance,
-        account.accessToken || "",
-        quick.multiplayer || this.version.quickServer,
-        {
-          trackStatistics: true,
-          accountSub: authData?.sub ?? null,
-          accountLabel: account.nickname,
-          gcLogPath,
-          config: {
-            minecraft: this.version.version.id,
-            loader: this.version.loader.name,
-            loaderVersion: this.version.loader.version?.id,
-            xmxMb: settings.xmx,
-            optimizedJvm: settings.optimizedJvm,
-            javaMajor: javaMajor || undefined,
-            mods: (this.version.loader.mods ?? [])
-              .filter(
-                (mod) =>
-                  mod.projectType === ProjectType.MOD &&
-                  !(mod.version?.files ?? []).every((file) => file.disabled),
-              )
-              .map((mod) => ({
-                key: `${mod.provider}:${mod.id}`,
-                title: mod.title,
-              })),
+      const javaPath = command[0];
+      const gpu = await prepareGpuPreference(javaPath, settings.gpuPreference);
+      const linux =
+        process.platform === "linux" ? await this.linuxLaunch(settings) : null;
+      if (linux) {
+        span.step("linux launch", {
+          prefix: linux.prefix,
+          missingTools: linux.missing,
+          invalidWrapper: linux.invalidWrapper || undefined,
+          envNames: Object.keys(linux.env),
+          invalidEnv: linux.invalidEnv.length || undefined,
+          preLaunch: Boolean((settings.preLaunchCommand ?? "").trim()) || undefined,
+          postExit: Boolean((settings.postExitCommand ?? "").trim()) || undefined,
+        });
+      }
+      const launchEnv = {
+        ...(legacyHome?.env ?? {}),
+        ...gpu.env,
+        ...(linux?.env ?? {}),
+      };
+      const hookContext: LaunchHookContext = {
+        instanceName: this.version.name,
+        instanceDir: this.versionPath,
+        gameDir: launchVersionPath,
+        javaPath,
+        env: { ...childProcessEnv(), ...launchEnv },
+      };
+
+      const preLaunch = linux ? (settings.preLaunchCommand ?? "").trim() : "";
+      if (preLaunch) {
+        const result = await runLaunchHook(preLaunch, hookContext);
+        span.step("pre-launch command", {
+          code: result.code,
+          timedOut: result.timedOut || undefined,
+        });
+        if (result.code !== 0) {
+          await gpu.release?.();
+          span.fail(new Error("Pre-launch command failed"), {
+            code: result.code,
+            timedOut: result.timedOut,
+          });
+          return {
+            refused: "preLaunchHook",
+            exitCode: result.code,
+            output: result.output,
+            timedOut: result.timedOut,
+          };
+        }
+      }
+
+      const postExit = linux ? (settings.postExitCommand ?? "").trim() : "";
+      const onExit = (code: number) => {
+        void gpu.release?.();
+        if (!postExit) return;
+        void runLaunchHook(postExit, {
+          ...hookContext,
+          env: { ...hookContext.env, INST_EXIT_CODE: String(code) },
+        }).then((result) =>
+          journal.info("game", "post-exit command", {
+            versionName: this.version.name,
+            code: result.code,
+            timedOut: result.timedOut || undefined,
+          }),
+        );
+      };
+
+      const launchCommand = [...(linux?.prefix ?? []), ...command];
+
+      try {
+        runGame(
+          launchCommand[0],
+          launchCommand.slice(1),
+          this.versionPath,
+          this.version.name,
+          instance,
+          account.accessToken || "",
+          quick.multiplayer || this.version.quickServer,
+          {
+            trackStatistics: true,
+            accountSub: authData?.sub ?? null,
+            accountLabel: account.nickname,
+            gcLogPath,
+            config: {
+              minecraft: this.version.version.id,
+              loader: this.version.loader.name,
+              loaderVersion: this.version.loader.version?.id,
+              xmxMb: settings.xmx,
+              optimizedJvm: settings.optimizedJvm,
+              javaMajor: javaMajor || undefined,
+              mods: (this.version.loader.mods ?? [])
+                .filter(
+                  (mod) =>
+                    mod.projectType === ProjectType.MOD &&
+                    !(mod.version?.files ?? []).every((file) => file.disabled),
+                )
+                .map((mod) => ({
+                  key: `${mod.provider}:${mod.id}`,
+                  title: mod.title,
+                })),
+            },
           },
-        },
-        settings.highPriority,
-        launchVersionPath,
-        span,
-        legacyHome?.env,
-      );
+          settings.highPriority,
+          launchVersionPath,
+          span,
+          launchEnv,
+          onExit,
+        );
+      } catch (error) {
+        await gpu.release?.();
+        throw error;
+      }
 
       return true;
     } catch (error) {
       span.fail(error);
       throw error;
     }
+  }
+
+  private async linuxLaunch(settings: TSettings) {
+    const tools = await detectLinuxLaunchTools();
+    const prefix = linuxLaunchPrefix({
+      wrapperCommand: settings.wrapperCommand,
+      gameMode: settings.gameMode,
+      mangoHud: settings.mangoHud,
+      installed: tools.installed,
+    });
+    const environment = parseLaunchEnv(settings.launchEnv);
+    return {
+      ...prefix,
+      env: environment.env,
+      invalidEnv: environment.invalid,
+    };
   }
 
   private async applyBtaBabricLayer(

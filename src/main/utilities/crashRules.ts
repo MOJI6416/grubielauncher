@@ -15,6 +15,47 @@ export const UNSUPPORTED_JAVA_OVERRIDE_MESSAGES: CrashRuleMessages = {
   tr: "Bu kurulumun ayarlarında elle seçilen Java bu Minecraft sürümüne uygun değil. Kurulum ayarlarını açın ve Java seçimini yeniden otomatik yapın.",
 };
 
+export const VULKAN_STARTUP_RULE_ID = "vulkan_startup";
+
+export const VULKAN_STARTUP_MESSAGES: CrashRuleMessages = {
+  en: "The game crashed while drawing with Vulkan. Switch this instance to OpenGL in its settings, or update your GPU driver.",
+  ru: "Игра упала при отрисовке через Vulkan. Переключите сборку на OpenGL в её настройках или обновите драйвер видеокарты.",
+  uk: "Гра впала під час рендерингу через Vulkan. Перемкніть збірку на OpenGL у її налаштуваннях або оновіть драйвер відеокарти.",
+  de: "Das Spiel ist beim Rendern mit Vulkan abgestürzt. Stellen Sie diese Instanz in ihren Einstellungen auf OpenGL um oder aktualisieren Sie den Grafikkartentreiber.",
+  es: "El juego se cerró al dibujar con Vulkan. Cambie esta instancia a OpenGL en su configuración o actualice el controlador de la tarjeta gráfica.",
+  fr: "Le jeu a planté pendant le rendu avec Vulkan. Passez cette instance à OpenGL dans ses paramètres, ou mettez à jour le pilote de la carte graphique.",
+  pl: "Gra uległa awarii podczas renderowania przez Vulkan. Przełącz tę instancję na OpenGL w jej ustawieniach albo zaktualizuj sterownik karty graficznej.",
+  pt: "O jogo travou ao renderizar com Vulkan. Mude esta instância para OpenGL nas configurações dela ou atualize o driver da placa de vídeo.",
+  tr: "Oyun Vulkan ile çizim yaparken çöktü. Bu kurulumu ayarlarından OpenGL'e geçirin veya ekran kartı sürücüsünü güncelleyin.",
+};
+
+const VULKAN_IN_USE =
+  /Using graphics backend\s+\S*vulkan|Graphics backend forced to VULKAN/i;
+const BACKEND_REPORTED = /Using graphics backend\s|Graphics backend forced to\s/i;
+const STARTED_CLEANLY_FALSE = /^startedCleanly:false\s*$/m;
+const PREFERS_VULKAN = /^preferredGraphicsBackend:"?vulkan"?\s*$/m;
+const OUTRANKED_BY_VULKAN_STARTUP = new Set(["native_crash", "gl_error"]);
+
+export function isVulkanStartupCrash(input: {
+  optionsText: string | null;
+  logText: string | null;
+  forcedBackend: "opengl" | "vulkan" | null;
+}): boolean {
+  if (!input.optionsText || !STARTED_CLEANLY_FALSE.test(input.optionsText)) {
+    return false;
+  }
+
+  const log = input.logText ?? "";
+  if (BACKEND_REPORTED.test(log)) return VULKAN_IN_USE.test(log);
+
+  if (input.forcedBackend) return input.forcedBackend === "vulkan";
+  return PREFERS_VULKAN.test(input.optionsText);
+}
+
+export function vulkanStartupOutranks(ruleId: string | null): boolean {
+  return ruleId === null || OUTRANKED_BY_VULKAN_STARTUP.has(ruleId);
+}
+
 export const BUILT_IN_CRASH_RULES: CrashRule[] = [
   {
     id: "out_of_memory",
@@ -72,8 +113,9 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
   {
     id: "duplicate_mods",
     priority: 90,
-    pattern: "DuplicateModsFoundException|Found duplicate mods",
-    culpritPattern: "Mod ID: '([\\w-]+)'",
+    pattern:
+      "DuplicateModsFoundException|Found duplicate mods|ModResolutionException: duplicate mod",
+    culpritPattern: "(?:Mod ID: '|duplicate mod )([\\w.-]+)",
     messages: {
       en: "The same mod is installed twice. Open the mods folder and delete the duplicate/older copy — keep only one.",
       ru: "Один и тот же мод установлен дважды. Откройте папку mods и удалите дубликат/старую копию — оставьте только одну.",
@@ -239,6 +281,13 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
       pt: "A sessão do jogo expirou. Selecione sua conta de novo no launcher (ou entre novamente) e inicie o jogo outra vez.",
       tr: "Oyun oturumunun süresi doldu. Başlatıcıda hesabınızı yeniden seçin (veya yeniden giriş yapın) ve oyunu tekrar başlatın.",
     },
+  },
+  {
+    id: VULKAN_STARTUP_RULE_ID,
+    priority: 67,
+    pattern: "renderpearl\\.backend\\.vulkan\\.|VK_ERROR_[A-Z_]{3,}",
+    flags: "",
+    messages: VULKAN_STARTUP_MESSAGES,
   },
   {
     id: "gl_error",

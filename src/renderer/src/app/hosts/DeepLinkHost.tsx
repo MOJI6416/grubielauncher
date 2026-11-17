@@ -54,7 +54,11 @@ export function DeepLinkHost() {
     pendingRef.current = null;
 
     if (decision.kind === "launch") {
-      void runGame({ version: decision.version, instance: decision.instance });
+      void runGame({
+        version: decision.version,
+        instance: decision.instance,
+        quick: decision.quick,
+      });
       return;
     }
 
@@ -99,6 +103,8 @@ export function DeepLinkHost() {
         pendingRef.current = {
           versionName: intent.versionName,
           instance: intent.instance,
+          world: intent.world,
+          server: intent.server,
         };
         tryDeepLaunchRef.current();
         return;

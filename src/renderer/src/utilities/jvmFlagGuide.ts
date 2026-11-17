@@ -1,4 +1,7 @@
-import { OPTIMIZED_GC_FLAGS } from "@/shared/jvmDefaults";
+import {
+  COMPACT_OBJECT_HEADERS_FLAG,
+  OPTIMIZED_GC_FLAGS,
+} from "@/shared/jvmDefaults";
 
 export interface JvmFlagNote {
   id: string;
@@ -54,6 +57,14 @@ export function jvmFlagGroups(
     .filter(([, notes]) => notes.length > 0)
     .map(([id, notes]) => ({ id, flags: notes }));
 }
+
+export const AUTOMATIC_JVM_FLAGS: JvmFlagGroup = {
+  id: "auto",
+  flags: [
+    { id: "UseCompactObjectHeaders", flag: COMPACT_OBJECT_HEADERS_FLAG },
+    { id: "lwjglUnsafeAgent", flag: "-javaagent:lwjgl-unsafe-agent-2.0.jar" },
+  ],
+};
 
 export function undescribedJvmFlags(
   flags: readonly string[] = OPTIMIZED_GC_FLAGS,

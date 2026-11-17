@@ -127,3 +127,7 @@ export function tickOffset(mb: number, totalMb: number): number {
   if (max <= MEMORY_MIN_MB) return 0;
   return ((mb - MEMORY_MIN_MB) / (max - MEMORY_MIN_MB)) * 100;
 }
+
+export function formatGigabytes(mb: number): string {
+  return (mb / 1024).toFixed(mb % 1024 === 0 ? 0 : 1);
+}

@@ -17,6 +17,11 @@ export type SettingsEntryId =
   | "memory"
   | "optimizedJvm"
   | "highPriority"
+  | "gpuPreference"
+  | "linuxTools"
+  | "wrapperCommand"
+  | "launchEnv"
+  | "launchHooks"
   | "java"
   | "downloadLimit"
   | "downloadSource"
@@ -82,6 +87,7 @@ export interface SettingsEntryDef {
   section: SettingsSectionId;
   keys: SettingsKey[];
   neutral?: boolean;
+  platforms?: string[];
 }
 
 export const SETTINGS_SECTIONS: SettingsSectionId[] = [
@@ -101,7 +107,42 @@ export const SETTINGS_SECTIONS: SettingsSectionId[] = [
 export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "memory", section: "game", keys: ["xmx"] },
   { id: "optimizedJvm", section: "game", keys: ["optimizedJvm"] },
-  { id: "highPriority", section: "game", keys: ["highPriority"] },
+  {
+    id: "highPriority",
+    section: "game",
+    keys: ["highPriority"],
+    platforms: ["win32"],
+  },
+  {
+    id: "gpuPreference",
+    section: "game",
+    keys: ["gpuPreference"],
+    platforms: ["win32", "linux"],
+  },
+  {
+    id: "linuxTools",
+    section: "game",
+    keys: ["gameMode", "mangoHud"],
+    platforms: ["linux"],
+  },
+  {
+    id: "wrapperCommand",
+    section: "game",
+    keys: ["wrapperCommand"],
+    platforms: ["linux"],
+  },
+  {
+    id: "launchEnv",
+    section: "game",
+    keys: ["launchEnv"],
+    platforms: ["linux"],
+  },
+  {
+    id: "launchHooks",
+    section: "game",
+    keys: ["preLaunchCommand", "postExitCommand"],
+    platforms: ["linux"],
+  },
   { id: "java", section: "game", keys: [] },
   { id: "autoWorldBackup", section: "game", keys: ["autoWorldBackup"] },
   { id: "worldBackupKeep", section: "game", keys: ["worldBackupKeep"] },
@@ -250,6 +291,13 @@ export function defaultsPatch(
   }
 
   return patch;
+}
+
+export function isEntryAvailable(
+  entry: SettingsEntryDef,
+  platform: string,
+): boolean {
+  return !entry.platforms || entry.platforms.includes(platform);
 }
 
 export function sectionEntryIds(

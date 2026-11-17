@@ -7,6 +7,11 @@ import { clampGateDb, DEFAULT_GATE_DB } from "@/shared/voiceGate";
 import { DEFAULT_UI_SCALE, normalizeUiScale } from "@/shared/uiScale";
 import { OVERLAY_CORNERS, type OverlayCorner } from "@/types/Voice";
 import { DEFAULT_THEME_ID } from "@/shared/themes";
+import {
+  DEFAULT_GPU_PREFERENCE,
+  normalizeGpuPreference,
+  type GpuPreference,
+} from "@/shared/gpuPreference";
 
 export const LANGUAGES = [
   { code: "en", label: "English", country: "GB" },
@@ -130,6 +135,12 @@ function booleanOr(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
 }
 
+const MAX_LAUNCH_TEXT = 4000;
+
+function stringOr(value: unknown): string {
+  return typeof value === "string" ? value.slice(0, MAX_LAUNCH_TEXT) : "";
+}
+
 export function normalizeSoundVolume(value: unknown): number {
   const volume = Number(value);
   if (!Number.isFinite(volume)) return DEFAULT_SOUND_VOLUME;
@@ -141,6 +152,13 @@ export type TSettings = {
   xmx: number;
   optimizedJvm: boolean;
   highPriority: boolean;
+  gpuPreference: GpuPreference;
+  gameMode: boolean;
+  mangoHud: boolean;
+  wrapperCommand: string;
+  launchEnv: string;
+  preLaunchCommand: string;
+  postExitCommand: string;
   lang: string;
   devMode: boolean;
   downloadLimit: number;
@@ -199,6 +217,13 @@ export const DEFAULT_SETTINGS: TSettings = {
   xmx: 2048,
   optimizedJvm: false,
   highPriority: false,
+  gpuPreference: DEFAULT_GPU_PREFERENCE,
+  gameMode: false,
+  mangoHud: false,
+  wrapperCommand: "",
+  launchEnv: "",
+  preLaunchCommand: "",
+  postExitCommand: "",
   lang: "en",
   devMode: false,
   downloadLimit: 6,
@@ -343,6 +368,13 @@ export function normalizeSettings(
       typeof value?.highPriority === "boolean"
         ? value.highPriority
         : DEFAULT_SETTINGS.highPriority,
+    gpuPreference: normalizeGpuPreference(value?.gpuPreference),
+    gameMode: booleanOr(value?.gameMode, DEFAULT_SETTINGS.gameMode),
+    mangoHud: booleanOr(value?.mangoHud, DEFAULT_SETTINGS.mangoHud),
+    wrapperCommand: stringOr(value?.wrapperCommand),
+    launchEnv: stringOr(value?.launchEnv),
+    preLaunchCommand: stringOr(value?.preLaunchCommand),
+    postExitCommand: stringOr(value?.postExitCommand),
     lang,
     devMode:
       typeof value?.devMode === "boolean"

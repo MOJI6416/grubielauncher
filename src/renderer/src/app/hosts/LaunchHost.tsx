@@ -11,12 +11,16 @@ import {
   blockedModsOpenAtom,
   blockedModsResumeAtom,
   launchCheckFailedAtom,
+  launchMemoryWarningAtom,
   launchServersAtom,
   launchUpdateDiffAtom,
   launchUpdateOpenAtom,
   launchUpdateRemoteServersAtom,
   pendingLaunchAtom,
+  playAsVersionAtom,
 } from "@renderer/features/launch/atoms";
+import { PlayAsDialog } from "@renderer/features/launch/PlayAsDialog";
+import { formatGigabytes } from "@renderer/features/settings/memory";
 import { readInstanceServers } from "@renderer/features/instances/instanceServers";
 import { serversLostBySync } from "@renderer/features/instances/updateSummary";
 import { LazyBlockedMods } from "@renderer/features/launch/lazyDialogs";
@@ -53,6 +57,8 @@ export function LaunchHost() {
   const setPendingDiff = useSetAtom(launchUpdateDiffAtom);
   const remoteServers = useAtomValue(launchUpdateRemoteServersAtom);
   const [checkFailed, setCheckFailed] = useAtom(launchCheckFailedAtom);
+  const [memoryWarning, setMemoryWarning] = useAtom(launchMemoryWarningAtom);
+  const [playAsVersion, setPlayAsVersion] = useAtom(playAsVersionAtom);
   const [isLoading, setIsLoading] = useState(false);
   const [localServers, setLocalServers] = useState<IServer[] | null>([]);
 
@@ -105,6 +111,48 @@ export function LaunchHost() {
 
   return (
     <>
+      {memoryWarning && (
+        <Confirmation
+          onClose={() => setMemoryWarning(null)}
+          title={t("launchMemory.title")}
+          content={[
+            {
+              color: "warning",
+              text: t("launchMemory.text", {
+                free: formatGigabytes(memoryWarning.shortfall.availableMb),
+                allocated: formatGigabytes(memoryWarning.shortfall.allocatedMb),
+              }),
+            },
+            { text: t("launchMemory.hint") },
+          ]}
+          buttons={[
+            {
+              text: t("common.cancel"),
+              onClick: () => setMemoryWarning(null),
+            },
+            {
+              text: t("launchMemory.playAnyway"),
+              color: "primary",
+              onClick: async () => {
+                setMemoryWarning(null);
+                await runGame({ ...memoryWarning.params, skipMemoryCheck: true });
+              },
+            },
+          ]}
+        />
+      )}
+
+      {playAsVersion && (
+        <PlayAsDialog
+          instanceName={playAsVersion.version.name}
+          onClose={() => setPlayAsVersion(null)}
+          onPick={(account) => {
+            setPlayAsVersion(null);
+            void runGame({ version: playAsVersion, account });
+          }}
+        />
+      )}
+
       {checkFailed && (
         <Confirmation
           onClose={() => setCheckFailed(null)}

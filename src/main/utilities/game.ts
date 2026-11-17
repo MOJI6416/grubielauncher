@@ -487,6 +487,7 @@ export function runGame(
   workingDirectory?: string,
   trace?: JournalSpan,
   extraEnv?: Record<string, string>,
+  onExit?: (code: number) => void,
 ) {
   if (gameRuntime.isInstanceBusy(versionName, instance)) {
     throw new Error(
@@ -544,7 +545,7 @@ export function runGame(
     watch.spawned(javaProcess.pid);
     if (stats?.trackStatistics) metrics.start();
     safeTaskbarProgress("indeterminate");
-    if (highPriority && javaProcess.pid) {
+    if (highPriority && javaProcess.pid && process.platform === "win32") {
       try {
         os.setPriority(
           javaProcess.pid,
@@ -756,6 +757,7 @@ export function runGame(
     void endSession(versionName, instance, 1).finally(() =>
       safeSend("playtimeRecorded"),
     );
+    onExit?.(1);
 
     gameRuntime.unregister(versionName, instance, javaProcess);
     gameRuntime.emitClose({
@@ -802,6 +804,7 @@ export function runGame(
     if (signal == "SIGTERM" || killedByUser) code = 0;
 
     watch.exited(code, signal ?? null, killedByUser);
+    onExit?.(code);
     void outputLog?.close({
       code,
       signal: signal ?? undefined,

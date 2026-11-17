@@ -7,7 +7,12 @@ import { IConsole } from "@/types/Console";
 import { IServer } from "@/types/ServersList";
 import { diffModpackProjects } from "@/shared/modpackDiff";
 import { resolveInstanceSettings } from "@/shared/instanceSettings";
-import { accountIdentity } from "@renderer/features/accounts/identity";
+import { memoryShortfall } from "@/shared/memoryCheck";
+import { isLaunchRefusal } from "@/shared/launchCommand";
+import {
+  accountIdentity,
+  decodeAccountToken,
+} from "@renderer/features/accounts/identity";
 import { adoptCanonicalShareCode } from "@renderer/features/instances/shareIdentity";
 import {
   accountAtom,
@@ -36,6 +41,7 @@ import { uiJournal } from "@renderer/utilities/journal";
 import { checkDiffenceUpdateData, isOwner } from "@renderer/utilities/version";
 import {
   launchCheckFailedAtom,
+  launchMemoryWarningAtom,
   launchServersAtom,
   launchUpdateDiffAtom,
   launchUpdateOpenAtom,
@@ -62,13 +68,30 @@ const api = window.api;
 
 let launchInFlight = false;
 
+function markConsoleFailed(versionName: string, instance: number) {
+  getDefaultStore().set(consolesAtom, (prev) => {
+    const idx = prev.consoles.findIndex(
+      (c) =>
+        c.versionName === versionName &&
+        c.instance === instance &&
+        c.status === "running",
+    );
+    if (idx === -1) return prev;
+
+    const next = [...prev.consoles];
+    next[idx] = { ...next[idx], status: "error" };
+    return { consoles: next };
+  });
+}
+
 export async function runGame(params: RunGameParams): Promise<void> {
   const store = getDefaultStore();
   const { skipUpdate, version, instance, quick } = params;
   const t = i18n.t.bind(i18n);
 
   const launchVersion = version || store.get(selectedVersionAtom);
-  const a0 = store.get(accountAtom);
+  const selectedAccount = store.get(accountAtom);
+  const a0 = params.account ?? selectedAccount;
   const s0 = store.get(settingsAtom);
   const p0 = store.get(pathsAtom);
 
@@ -103,13 +126,16 @@ export async function runGame(params: RunGameParams): Promise<void> {
 
   let account = a0;
   let currentAccounts = store.get(accountsAtom);
-  const ad = store.get(authDataAtom);
+  const ad = params.account
+    ? decodeAccountToken(params.account.accessToken)
+    : store.get(authDataAtom);
   let runtimeAuthData = ad;
 
   const setAccounts = (next: typeof currentAccounts) =>
     store.set(accountsAtom, next);
-  const setSelectedAccount = (next: typeof account) =>
-    store.set(accountAtom, next);
+  const setSelectedAccount = (next: typeof account) => {
+    if (!params.account) store.set(accountAtom, next);
+  };
 
   if (launchInFlight) {
     uiJournal.info("launch", "ignored: another launch is in progress", {
@@ -299,6 +325,35 @@ export async function runGame(params: RunGameParams): Promise<void> {
       return;
     }
 
+    const launchSettings = resolveInstanceSettings(
+      s0,
+      launchVersion.version.overrides,
+    );
+    if (!params.skipMemoryCheck) {
+      const shortfall = memoryShortfall({
+        allocatedMb: launchSettings.xmx,
+        availableBytes:
+          await api.os.availableMemory().catch(() => null),
+      });
+      if (shortfall) {
+        uiJournal.warn("launch", "free memory is below the allocation", {
+          ...shortfall,
+          ms: since(),
+        });
+        store.set(launchMemoryWarningAtom, {
+          params: {
+            ...params,
+            version: launchVersion,
+            instance: _instance,
+            skipUpdate: true,
+          },
+          shortfall,
+        });
+        store.set(isRunningAtom, false);
+        return;
+      }
+    }
+
     launchVersion.version.lastLaunch = new Date();
     const trackStatistics = isOwner(
       launchVersion.version.owner,
@@ -343,11 +398,35 @@ export async function runGame(params: RunGameParams): Promise<void> {
     });
     const started = await launchVersion.run(
       account,
-      resolveInstanceSettings(s0, launchVersion.version.overrides),
+      launchSettings,
       runtimeAuthData,
       _instance,
       quick,
     );
+    if (isLaunchRefusal(started)) {
+      uiJournal.warn("launch", "pre-launch command refused the launch", {
+        exitCode: started.exitCode,
+        timedOut: started.timedOut,
+        ms: since(),
+      });
+      showErrorToast(
+        t("launchHooks.preLaunchFailed"),
+        [
+          started.timedOut
+            ? t("launchHooks.preLaunchTimedOut")
+            : t("launchHooks.preLaunchExitCode", {
+                code: started.exitCode ?? "?",
+              }),
+          started.output,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        t("common.copy"),
+      );
+      markConsoleFailed(launchVersion.version.name, _instance);
+      store.set(isRunningAtom, false);
+      return;
+    }
     uiJournal.info("launch", started ? "game process started" : "game process did not start", {
       ms: since(),
     });
@@ -364,7 +443,12 @@ export async function runGame(params: RunGameParams): Promise<void> {
     store.get(friendSocketAtom)?.emit("friendUpdate", nextPresence);
 
     await launchVersion.save();
-    await api.accounts.save(currentAccounts, accountIdentity(account));
+    await api.accounts.save(
+      currentAccounts,
+      accountIdentity(
+        params.account ? (store.get(accountAtom) ?? account) : account,
+      ),
+    );
   } catch (err) {
     console.error(err);
     uiJournal.failure("launch", "launch failed", err, {
@@ -380,19 +464,7 @@ export async function runGame(params: RunGameParams): Promise<void> {
     } else {
       showFailureToast(t("app.startupError"), err);
     }
-    store.set(consolesAtom, (prev) => {
-      const idx = prev.consoles.findIndex(
-        (c) =>
-          c.versionName === launchVersion.version.name &&
-          c.instance === _instance &&
-          c.status === "running",
-      );
-      if (idx === -1) return prev;
-
-      const next = [...prev.consoles];
-      next[idx] = { ...next[idx], status: "error" };
-      return { consoles: next };
-    });
+    markConsoleFailed(launchVersion.version.name, _instance);
     store.set(isRunningAtom, false);
   } finally {
     launchInFlight = false;

@@ -1,5 +1,7 @@
 import { atom } from "jotai";
 import type { FailureInfo } from "@/shared/errors";
+import type { MemoryShortfall } from "@/shared/memoryCheck";
+import type { Version } from "@renderer/classes/Version";
 import type { ModpackDiff } from "@/shared/modpackDiff";
 import type { IServer } from "@/types/ServersList";
 import type { IBlockedMod } from "@renderer/utilities/blockedMods";
@@ -14,6 +16,11 @@ export const launchCheckFailedAtom = atom<{
   params: RunGameParams;
   failure: FailureInfo | null;
 } | null>(null);
+export const launchMemoryWarningAtom = atom<{
+  params: RunGameParams;
+  shortfall: MemoryShortfall;
+} | null>(null);
+export const playAsVersionAtom = atom<Version | null>(null);
 export const blockedModsAtom = atom<IBlockedMod[]>([]);
 export const blockedModsOpenAtom = atom(false);
 

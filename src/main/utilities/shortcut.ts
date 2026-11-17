@@ -9,6 +9,12 @@ import { isSafeRemoteFetchUrl } from "./safeUrl";
 import { isReadablePath } from "./safePath";
 import { isInsidePath } from "./dataRoot";
 import { assertSafeVersionName } from "@/shared/versionName";
+import {
+  buildLaunchDeepLink,
+  isSafeQuickServer,
+  isSafeQuickWorld,
+  type LaunchShortcutTarget,
+} from "@/shared/launchLink";
 
 const MAX_REMOTE_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAC_SHORTCUT_ID_PREFIX = "com.grubielauncher.shortcut.";
@@ -17,12 +23,6 @@ const MAC_LAUNCHER_ID = "com.grubielauncher.app";
 export interface ShortcutResult {
   success: boolean;
   error?: string;
-}
-
-function buildLaunchDeepLink(versionName: string, instance: number): string {
-  return `grubielauncher://launch/${encodeURIComponent(
-    versionName,
-  )}?instance=${instance}`;
 }
 
 function sanitizeShortcutName(name: string): string {
@@ -154,7 +154,8 @@ async function isOwnMacShortcut(bundle: string): Promise<boolean> {
 
 async function createMacShortcut(
   bundle: string,
-  versionName: string,
+  displayName: string,
+  identityKey: string,
   deepLink: string,
   imageSource: string | undefined,
 ): Promise<ShortcutResult> {
@@ -169,12 +170,12 @@ async function createMacShortcut(
   const png = buffer ? imageToPng256(buffer) : null;
   const identifier =
     MAC_SHORTCUT_ID_PREFIX +
-    createHash("sha1").update(versionName).digest("hex").slice(0, 12);
+    createHash("sha1").update(identityKey).digest("hex").slice(0, 12);
 
   const contents = path.join(bundle, "Contents");
   await fs.outputFile(
     path.join(contents, "Info.plist"),
-    macShortcutPlist(versionName, identifier, !!png),
+    macShortcutPlist(displayName, identifier, !!png),
   );
   await fs.outputFile(
     path.join(contents, "MacOS", "launch"),
@@ -216,20 +217,50 @@ async function buildShortcutIcon(
   }
 }
 
+export function shortcutDisplayName(
+  versionName: string,
+  target?: LaunchShortcutTarget,
+): string {
+  const label = toDesktopEntryValue(target?.label ?? "").slice(0, 80);
+  return label ? `${versionName} — ${label}` : versionName;
+}
+
+function shortcutIdentityKey(
+  versionName: string,
+  target?: LaunchShortcutTarget,
+): string {
+  if (target?.world) return `${versionName}\nworld:${target.world}`;
+  if (target?.server) return `${versionName}\nserver:${target.server}`;
+  return versionName;
+}
+
 export async function createInstanceShortcut(
   rawVersionName: string,
   instance: number,
   imageSource?: string,
+  rawTarget?: LaunchShortcutTarget,
 ): Promise<ShortcutResult> {
   const versionName = assertSafeVersionName(rawVersionName);
-  const deepLink = buildLaunchDeepLink(versionName, instance);
+  const target: LaunchShortcutTarget | undefined =
+    rawTarget?.world && isSafeQuickWorld(rawTarget.world)
+      ? { world: rawTarget.world, label: rawTarget.label }
+      : rawTarget?.server && isSafeQuickServer(rawTarget.server)
+        ? { server: rawTarget.server, label: rawTarget.label }
+        : undefined;
+  if (rawTarget && !target) {
+    return { success: false, error: "invalid shortcut target" };
+  }
+
+  const deepLink = buildLaunchDeepLink(versionName, instance, target);
   const desktop = app.getPath("desktop");
-  const fileBase = sanitizeShortcutName(versionName);
+  const displayName = shortcutDisplayName(versionName, target);
+  const fileBase = sanitizeShortcutName(displayName);
 
   if (process.platform === "darwin") {
     return createMacShortcut(
       path.join(desktop, `${fileBase}.app`),
-      versionName,
+      displayName,
+      shortcutIdentityKey(versionName, target),
       deepLink,
       imageSource,
     );
@@ -242,7 +273,7 @@ export async function createInstanceShortcut(
     const ok = shell.writeShortcutLink(shortcutPath, "create", {
       target: process.execPath,
       args: deepLink,
-      description: `GrubieLauncher — ${versionName}`,
+      description: `GrubieLauncher — ${displayName}`,
       ...(iconPath ? { icon: iconPath, iconIndex: 0 } : {}),
     });
     return ok
@@ -255,7 +286,7 @@ export async function createInstanceShortcut(
     const lines = [
       "[Desktop Entry]",
       "Type=Application",
-      `Name=${toDesktopEntryValue(versionName)}`,
+      `Name=${toDesktopEntryValue(displayName)}`,
       "Comment=GrubieLauncher",
       `Exec="${process.execPath}" "${deepLink}"`,
       "Terminal=false",

@@ -72,6 +72,34 @@ describe("launcher deep links", () => {
     });
   });
 
+  it("carries a quick play world or server from a shortcut", () => {
+    expect(
+      parseLauncherDeepLink(
+        "grubielauncher://launch/Pack?instance=0&world=My%20World",
+      ),
+    ).toEqual({
+      type: "launch",
+      versionName: "Pack",
+      instance: 0,
+      world: "My World",
+    });
+    expect(
+      parseLauncherDeepLink(
+        "grubielauncher://launch/Pack?instance=0&server=mc.example.org%3A25566",
+      ),
+    ).toEqual({
+      type: "launch",
+      versionName: "Pack",
+      instance: 0,
+      server: "mc.example.org:25566",
+    });
+    expect(
+      parseLauncherDeepLink(
+        "grubielauncher://launch/Pack?world=--quickPlayMultiplayer",
+      ),
+    ).toEqual({ type: "launch", versionName: "Pack", instance: 0 });
+  });
+
   it("rejects launch links without a version name", () => {
     expect(parseLauncherDeepLink("grubielauncher://launch/")).toBeNull();
     expect(parseLauncherDeepLink("grubielauncher://launch")).toBeNull();

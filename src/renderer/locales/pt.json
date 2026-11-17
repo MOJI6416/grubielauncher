@@ -1208,7 +1208,8 @@
         "social": "Social",
         "technical": "Técnico"
       }
-    }
+    },
+    "createShortcut": "Atalho na área de trabalho"
   },
   "voice": {
     "title": "Chat de voz",
@@ -2094,6 +2095,31 @@
         "title": "Java",
         "description": "Qual Java roda os jogos: o seu ou o do launcher",
         "keywords": "java jdk jre caminho javaw zulu graalvm temurin corretto liberica versão runtime"
+      },
+      "gpuPreference": {
+        "title": "Placa de vídeo",
+        "description": "Abrir o jogo na placa de vídeo dedicada ou integrada",
+        "keywords": "placa de vídeo gpu notebook nvidia amd dedicada integrada prime fps"
+      },
+      "linuxTools": {
+        "title": "GameMode e MangoHud",
+        "description": "Modo desempenho e sobreposição de FPS no Linux",
+        "keywords": "linux gamemode mangohud sobreposição fps desempenho"
+      },
+      "wrapperCommand": {
+        "title": "Comando de envoltório",
+        "description": "Abrir o jogo por meio de outro programa no Linux",
+        "keywords": "linux envoltório wrapper prime-run gamescope comando"
+      },
+      "launchEnv": {
+        "title": "Variáveis de ambiente",
+        "description": "Variáveis extras para o processo do jogo no Linux",
+        "keywords": "linux variáveis de ambiente env"
+      },
+      "launchHooks": {
+        "title": "Comandos antes e depois do jogo",
+        "description": "Comandos de shell antes de iniciar e depois de sair no Linux",
+        "keywords": "linux hook antes de iniciar depois de sair script comando"
       }
     },
     "resetAllConfirmBody_one": "{{count}} configuração volta ao padrão. Instâncias, contas e mundos não são tocados.",
@@ -2834,7 +2860,8 @@
       "collector": "Coletor de lixo G1",
       "young": "Objetos novos",
       "old": "Dados de longa duração",
-      "service": "Flags de serviço"
+      "service": "Flags de serviço",
+      "auto": "Adicionados sozinhos"
     },
     "flags": {
       "heap": "A memória inicial é igual à máxima: o Java reserva logo toda a memória alocada e não pausa para aumentá-la.",
@@ -2855,7 +2882,9 @@
       "G1HeapRegionSize": "Divide a memória em regiões de 8 MB, para que objetos grandes, como dados de chunks, sejam tratados menos vezes como \"enormes\" e pelo caminho lento.",
       "G1RSetUpdatingPauseTimePercent": "Gasta no máximo 5% de uma pausa com a contabilidade de referências; o resto é feito em segundo plano.",
       "UnlockExperimentalVMOptions": "Permite flags experimentais: sem ela, as duas flags de tamanho da área de objetos novos não funcionariam.",
-      "PerfDisableSharedMem": "Impede o Java de gravar estatísticas de desempenho num arquivo no disco, o que causa travamentos raros em discos lentos."
+      "PerfDisableSharedMem": "Impede o Java de gravar estatísticas de desempenho num arquivo no disco, o que causa travamentos raros em discos lentos.",
+      "UseCompactObjectHeaders": "Java 25 ou mais novo: cabeçalhos de objeto compactos, o mesmo jogo ocupa menos memória. Adicionado sozinho, a não ser que os argumentos da instância o definam.",
+      "lwjglUnsafeAgent": "Minecraft 26.1–26.2 no Java 25: um pequeno patch para o LWJGL 3.4.0–3.4.1 que devolve o FPS perdido no acesso à memória. Baixado e ativado sozinho."
     }
   },
   "selectPaths": {
@@ -3492,7 +3521,8 @@
     },
     "datapackPendingHint": "O arquivo está na pasta do mundo. O Minecraft vai ligá-lo na próxima vez que o mundo carregar.",
     "nameEmpty": "Digite um nome para o mundo",
-    "nameTaken": "Esta instância já tem um mundo com esse nome"
+    "nameTaken": "Esta instância já tem um mundo com esse nome",
+    "createShortcut": "Atalho na área de trabalho"
   },
   "worldChunks": {
     "title": "Editor de chunks",
@@ -6104,7 +6134,12 @@
     "disabledMod": "“{{name}}” desativado",
     "memory": "Memória {{from}} → {{to}}",
     "memoryDone": "Memória: {{to}}",
-    "failed": "A correção não foi aplicada"
+    "failed": "A correção não foi aplicada",
+    "openGl": "Mudar para OpenGL",
+    "openGlDone": "A instância vai abrir com OpenGL",
+    "nestedIn": "“{{id}}” está embutido em {{hosts}}",
+    "copies": "“{{id}}” está instalado mais de uma vez",
+    "standalone": "separado: {{files}}"
   },
   "layout": {
     "show": "Mostrar “{{name}}”",
@@ -6347,5 +6382,67 @@
         "notFound": "Tema não encontrado: talvez o autor o tenha removido"
       }
     }
+  },
+  "launchSettings": {
+    "gpu": {
+      "title": "Placa de vídeo",
+      "description": "Em um notebook com duas placas de vídeo, o jogo abre na que você escolher. “Automática” deixa a escolha para o sistema.",
+      "auto": "Automática",
+      "discrete": "Dedicada",
+      "integrated": "Integrada"
+    },
+    "backend": {
+      "title": "API gráfica",
+      "game": "Como no jogo",
+      "opengl": "OpenGL",
+      "vulkan": "Vulkan",
+      "gameHint": "O jogo decide, pelas próprias configurações gráficas",
+      "forcedHint": "Esta escolha vale mais que a configuração do jogo",
+      "shaders": "Há Iris ou outro carregador de shaders, então o jogo usa OpenGL"
+    },
+    "linux": {
+      "title": "Inicialização no Linux",
+      "hint": "Para todas as instâncias; uma instância pode ter a própria nas configurações dela.",
+      "gameMode": "GameMode",
+      "gameModeDescription": "O Feral GameMode coloca o processador e a placa de vídeo em modo desempenho enquanto você joga.",
+      "mangoHud": "MangoHud",
+      "mangoHudDescription": "Uma sobreposição com FPS, uso e temperaturas por cima do jogo.",
+      "missing": "Não encontrado no sistema — instale o pacote {{name}}. Sem ele, o jogo abre normalmente.",
+      "wrapper": "Comando de envoltório",
+      "wrapperDescription": "O jogo abre por meio deste programa, por exemplo prime-run ou gamescope -f --.",
+      "wrapperBroken": "Há uma aspa sem fechar, então o envoltório é ignorado.",
+      "env": "Variáveis de ambiente",
+      "envDescription": "Uma por linha: NOME=valor.",
+      "envInvalid": "A linha “{{line}}” foi ignorada: use NOME=valor.",
+      "preLaunch": "Antes de iniciar",
+      "preLaunchDescription": "Um comando de shell. Se falhar, o jogo não abre. $INST_NAME, $INST_DIR, $INST_MC_DIR e $INST_JAVA estão disponíveis.",
+      "postExit": "Depois de fechar o jogo",
+      "postExitDescription": "Executa quando o jogo fecha; o código de saída fica em $INST_EXIT_CODE.",
+      "configure": "Configurar",
+      "inheritedHint": "Agora valem as configurações gerais do launcher. Clique em “Herdado do launcher” para definir as desta instância.",
+      "summaryWrapper": "envoltório",
+      "summaryEnv": "variáveis",
+      "summaryHooks": "comandos",
+      "summaryNone": "nada extra"
+    }
+  },
+  "launchHooks": {
+    "preLaunchFailed": "O comando antes de iniciar impediu o jogo de abrir",
+    "preLaunchExitCode": "Ele terminou com o código {{code}}. Corrija-o nas configurações de inicialização no Linux.",
+    "preLaunchTimedOut": "Ele não terminou em 2 minutos."
+  },
+  "launchMemory": {
+    "title": "Pouca memória livre. Iniciar mesmo assim?",
+    "text": "Há {{free}} GB livres, mas o jogo tem {{allocated}} GB alocados. O resto vai para o arquivo de paginação e o jogo vai travar.",
+    "hint": "Feche o navegador e outros programas ou diminua a memória nas configurações da instância.",
+    "playAnyway": "Iniciar"
+  },
+  "playAs": {
+    "menu": "Iniciar com a conta…",
+    "hint": "Uma inicialização com outra conta; a conta selecionada não muda",
+    "title": "Iniciar com a conta",
+    "description": "Instância “{{name}}”. A conta selecionada no launcher não muda.",
+    "current": "{{provider}} · selecionada agora",
+    "sessionBroken": "Entre novamente"
   }
 }
