@@ -1582,6 +1582,11 @@
       "cleanupInstancesKept": "Pozostawiono na miejscu, kosz ich nie przyjął: {{names}}",
       "cleanupBackupsConfirmTitle": "Usunąć osierocone kopie zapasowe?",
       "cleanupBackupsConfirmBody": "Usuwa kopie zapasowe i zapisane pliki światów, których wersja lub świat już nie istnieje — także kopie pozostałe po zmianie nazwy lub usunięciu świata. Kopie istniejących światów pozostają nietknięte.",
+      "dedupeConfirmTitle": "Połączyć identyczne pliki?",
+      "dedupeConfirmBody": "Mody, paczki zasobów i shadery, które powtarzają się w kilku instancjach, będą przechowywane na dysku tylko raz. Instancje działają tak jak wcześniej. Na dyskach FAT i exFAT oraz między różnymi dyskami pliki pozostaną kopiami.",
+      "dedupeConfirm": "Połącz",
+      "dedupeSaved": "Wspólne pliki instancji oszczędzają już {{size}}",
+      "dedupeUnsupported": "Ten dysk nie obsługuje wspólnych plików, więc część plików pozostała kopiami.",
       "categoriesTitle": "Co zajmuje miejsce",
       "reclaimTitle": "Zwolnij miejsce",
       "nothingToClean": "Nie ma czego czyścić — w folderze jest porządek",
@@ -1592,7 +1597,8 @@
         "java": "Usuń nieużywaną Javę",
         "libraries": "Usuń osierocone biblioteki",
         "backups": "Usuń osierocone kopie zapasowe",
-        "instances": "Przenieś uszkodzone instancje do kosza"
+        "instances": "Przenieś uszkodzone instancje do kosza",
+        "dedupe": "Połącz identyczne pliki instancji"
       },
       "reclaimBanner": "Można zwolnić około {{size}} bez naruszania instancji, światów i kont.",
       "scanning": "Mierzenie folderu…",

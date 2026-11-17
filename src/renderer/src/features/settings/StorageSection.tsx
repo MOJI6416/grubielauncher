@@ -9,6 +9,7 @@ import {
   FolderOpen,
   Image as ImageIcon,
   Library,
+  Link2,
   Loader2,
   MoreHorizontal,
   Package,
@@ -80,6 +81,7 @@ const ACTION_ICON: Record<CleanupAction, LucideIcon> = {
   libraries: Library,
   backups: Archive,
   instances: PackageX,
+  dedupe: Link2,
 };
 
 export function StorageSection({
@@ -175,6 +177,10 @@ export function StorageSection({
           t("settings.storage.cleared", { size: bytes(result.freed) }),
         );
 
+        if (result.unsupported) {
+          toast.warning(t("settings.storage.dedupeUnsupported"));
+        }
+
         if (result.kept?.length) {
           toast.warning(
             t("settings.storage.cleanupInstancesKept", {
@@ -222,6 +228,7 @@ export function StorageSection({
       java: "cleanupJava",
       libraries: "cleanupLibraries",
       backups: "cleanupBackups",
+      dedupe: "dedupe",
     } as const;
 
     return {
@@ -448,6 +455,14 @@ export function StorageSection({
                   })}
                 </>
               )}
+              {!isLoading && (data?.dedupe?.saved ?? 0) > 0 && (
+                <p className="flex items-center gap-2 px-3.5 py-2 text-2xs text-faint">
+                  <Link2 className="size-3.5 shrink-0" />
+                  {t("settings.storage.dedupeSaved", {
+                    size: bytes(data?.dedupe?.saved ?? 0),
+                  })}
+                </p>
+              )}
             </SettingsGroup>
           )}
 
@@ -502,9 +517,18 @@ export function StorageSection({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                <Button variant="destructive" onClick={() => void run(pending)}>
-                  <Trash2 className="size-4" />
-                  {t(`settings.storage.offers.${pending}`)}
+                <Button
+                  variant={pending === "dedupe" ? "default" : "destructive"}
+                  onClick={() => void run(pending)}
+                >
+                  {pending === "dedupe" ? (
+                    <Link2 className="size-4" />
+                  ) : (
+                    <Trash2 className="size-4" />
+                  )}
+                  {pending === "dedupe"
+                    ? t("settings.storage.dedupeConfirm")
+                    : t(`settings.storage.offers.${pending}`)}
                 </Button>
               </AlertDialogFooter>
             </>

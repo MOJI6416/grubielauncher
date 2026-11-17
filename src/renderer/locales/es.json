@@ -1567,6 +1567,11 @@
       "cleanupInstancesKept": "Se quedaron en su lugar, la papelera de reciclaje las rechazó: {{names}}",
       "cleanupBackupsConfirmTitle": "¿Eliminar las copias de seguridad huérfanas?",
       "cleanupBackupsConfirmBody": "Se eliminan las copias de seguridad y los archivos de mundos guardados cuya versión o mundo ya no existe, incluidas las copias que quedaron tras renombrar o eliminar un mundo. Las copias de seguridad de los mundos existentes no se tocan.",
+      "dedupeConfirmTitle": "¿Unir archivos idénticos?",
+      "dedupeConfirmBody": "Los mods, paquetes de recursos y shaders que se repiten en varias instancias se guardarán una sola vez en el disco. Las instancias siguen funcionando igual. En unidades FAT y exFAT, y entre unidades distintas, los archivos se quedan como copias.",
+      "dedupeConfirm": "Unir",
+      "dedupeSaved": "Los archivos compartidos de las instancias ya ahorran {{size}}",
+      "dedupeUnsupported": "Esta unidad no admite archivos compartidos, así que algunos archivos se quedaron como copias.",
       "categoriesTitle": "Qué ocupa el espacio",
       "reclaimTitle": "Liberar espacio",
       "nothingToClean": "No hay nada que limpiar: la carpeta está en orden",
@@ -1577,7 +1582,8 @@
         "java": "Eliminar el Java sin usar",
         "libraries": "Eliminar bibliotecas huérfanas",
         "backups": "Eliminar copias huérfanas",
-        "instances": "Mover las instancias dañadas a la papelera"
+        "instances": "Mover las instancias dañadas a la papelera",
+        "dedupe": "Unir archivos idénticos de las instancias"
       },
       "reclaimBanner": "Se pueden liberar unos {{size}} sin tocar instancias, mundos ni cuentas.",
       "scanning": "Midiendo la carpeta…",

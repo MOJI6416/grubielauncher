@@ -116,6 +116,22 @@ describe("cleanupOffers", () => {
     ]);
     expect(totalReclaimable(full)).toBe(1500);
   });
+
+  it("offers merging identical instance files only when something can be saved", () => {
+    const linked = breakdown({
+      dedupe: { saved: 900, potential: 0, duplicates: 0 },
+    });
+    expect(cleanupOffers(linked)).toEqual([]);
+
+    const loose = breakdown({
+      reclaimable: 10,
+      dedupe: { saved: 0, potential: 250, duplicates: 3 },
+    });
+    expect(cleanupOffers(loose)).toEqual([
+      { action: "cache", size: 10, count: 0, destructive: false },
+      { action: "dedupe", size: 250, count: 3, destructive: false },
+    ]);
+  });
 });
 
 describe("topVersions", () => {

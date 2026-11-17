@@ -64,6 +64,16 @@ export function cleanupOffers(
     });
   }
 
+  const dedupe = breakdown.dedupe;
+  if (dedupe && dedupe.potential > 0) {
+    offers.push({
+      action: "dedupe",
+      size: dedupe.potential,
+      count: dedupe.duplicates,
+      destructive: false,
+    });
+  }
+
   if (cleanup.java.count > 0) {
     offers.push({
       action: "java",

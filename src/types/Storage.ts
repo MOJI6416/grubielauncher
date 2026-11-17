@@ -38,7 +38,14 @@ export type StorageCleanupKind =
   | "java"
   | "libraries"
   | "backups"
-  | "instances";
+  | "instances"
+  | "dedupe";
+
+export interface StorageDedupe {
+  saved: number;
+  potential: number;
+  duplicates: number;
+}
 
 export interface StorageBreakdown {
   total: number;
@@ -47,6 +54,7 @@ export interface StorageBreakdown {
   versions: StorageVersionEntry[];
   reclaimable: number;
   cleanup: StorageCleanup;
+  dedupe?: StorageDedupe;
   computedAt: number;
   failed?: boolean;
 }
@@ -56,4 +64,5 @@ export interface StorageClearResult {
   blocked?: boolean;
   failed?: boolean;
   kept?: string[];
+  unsupported?: boolean;
 }

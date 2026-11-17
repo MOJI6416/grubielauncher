@@ -10,6 +10,7 @@ import { isExcludedInstancePath } from '@/shared/instancePrivacy'
 import { redactSecrets } from '@/shared/logSanitizer'
 import { ArchiveExtractProgress } from '@/types/Archive'
 import { sendProgress, throttleProgress } from '../utilities/progressEvents'
+import { detachHardLink } from '../utilities/contentStore'
 
 type DirEntry = { path: string; type: 'folder' | 'file' }
 
@@ -146,12 +147,19 @@ export function registerFsIpc() {
   handleSafe<boolean>('fs:copy', false, [isPath, isPath], async (_, srcPath: string, destPath: string) => {
     assertReadablePath(srcPath, 'fs:copy')
     assertWritablePath(destPath, 'fs:copy')
-    await fs.copy(srcPath, destPath, { overwrite: true })
+    await fs.copy(srcPath, destPath, {
+      overwrite: true,
+      filter: async (_source, target) => {
+        await detachHardLink(target)
+        return true
+      },
+    })
     return true
   })
 
   handleSafe<boolean>('fs:writeFile', false, [isPath, isFileData, isEncoding], async (_, filePath: string, data: any, encoding: BufferEncoding = 'utf-8') => {
     assertWritablePath(filePath, 'fs:writeFile')
+    await detachHardLink(filePath)
     await fs.writeFile(filePath, data, { encoding })
     return true
   })

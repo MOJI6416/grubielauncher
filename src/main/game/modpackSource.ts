@@ -20,6 +20,7 @@ import {
 } from "@/shared/modpackMerge";
 import { getSha1 } from "../utilities/files";
 import { writeJsonAtomic } from "../utilities/atomicJson";
+import { detachHardLink } from "../utilities/contentStore";
 
 const BASE_FILE = "base.json";
 const ROLLBACK_DIR = "rollback";
@@ -278,6 +279,7 @@ export async function applyModpackUpdateFiles(input: {
       else snapshot.created.push(item);
 
       if ("file" in source) {
+        await detachHardLink(target);
         await fs.copy(source.file, target, { overwrite: true });
       } else {
         downloads.push({ url: source.url, destination: target });
@@ -318,6 +320,7 @@ async function undoSnapshot(
     const target = safeJoin(sideRoot(versionPath, item.side), item.path);
     if (!copy || !target || !(await fs.pathExists(copy))) continue;
 
+    await detachHardLink(target);
     await fs.copy(copy, target, { overwrite: true });
   }
 }

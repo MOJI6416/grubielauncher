@@ -12,6 +12,12 @@ import type {
 } from "@/types/Storage";
 import { getLauncherPaths } from "./other";
 import {
+  CONTENT_STORE_DIR,
+  collectStoreGarbage,
+  dedupeContent,
+  getContentStoreStats,
+} from "./contentStore";
+import {
   cleanupOrphanBackups,
   DISPLACED_DIR_NAME,
   getBackupsDir,
@@ -144,10 +150,12 @@ export async function getStorageBreakdown(): Promise<StorageBreakdown> {
   const librariesPath = path.join(dirs.minecraft, "libraries");
   const versionsPath = path.join(dirs.minecraft, "versions");
 
+  const storePath = path.join(dirs.minecraft, CONTENT_STORE_DIR);
   const versionDirs = await listVersionDirs(versionsPath);
   const backupsPath = getBackupsDir();
 
   const [
+    store,
     versions,
     assets,
     libraries,
@@ -158,6 +166,7 @@ export async function getStorageBreakdown(): Promise<StorageBreakdown> {
     other,
     cleanup,
   ] = await Promise.all([
+    getContentStoreStats().catch(() => null),
     Promise.all(
       versionDirs.map(async (name) => ({
         name,
@@ -185,20 +194,25 @@ export async function getStorageBreakdown(): Promise<StorageBreakdown> {
         dirs.java,
         backupsPath,
         dirs.cache,
+        storePath,
       ]),
     ),
     computeCleanup(versionsPath, librariesPath, dirs.java),
   ]);
 
   versions.sort((a, b) => b.size - a.size);
-  const versionsTotal = versions.reduce((sum, entry) => sum + entry.size, 0);
+  const versionsTotal = Math.max(
+    0,
+    versions.reduce((sum, entry) => sum + entry.size, 0) - (store?.saved ?? 0),
+  );
   const backups = backupsDirSize + preservedSize;
 
   const [cacheSize, versionTempsSize] = await Promise.all([
     dirSize(dirs.cache),
     sumSizes(versionDirs.map((n) => path.join(versionsPath, n, "temp"))),
   ]);
-  const appData = userDataCaches + cacheSize + versionTempsSize;
+  const appData =
+    userDataCaches + cacheSize + versionTempsSize + (store?.orphanBytes ?? 0);
   const reclaimable = appData;
 
   const categories: StorageCategory[] = [
@@ -219,6 +233,15 @@ export async function getStorageBreakdown(): Promise<StorageBreakdown> {
     versions,
     reclaimable,
     cleanup,
+    ...(store
+      ? {
+          dedupe: {
+            saved: store.saved,
+            potential: store.potential,
+            duplicates: store.duplicates,
+          },
+        }
+      : {}),
     computedAt: Date.now(),
   };
 }
@@ -254,7 +277,8 @@ export async function clearCaches(): Promise<StorageClearResult> {
   } catch {}
 
   const after = await sumSizes(reclaimPaths);
-  return { freed: Math.max(0, before - after) };
+  const storeFreed = await collectStoreGarbage().catch(() => 0);
+  return { freed: Math.max(0, before - after) + storeFreed };
 }
 
 
@@ -512,6 +536,11 @@ export async function cleanupStorage(
   kind: StorageCleanupKind,
   names?: string[],
 ): Promise<StorageClearResult> {
+  if (kind === "dedupe") {
+    const { freed, unsupported } = await dedupeContent();
+    return { freed, ...(unsupported ? { unsupported } : {}) };
+  }
+
   if (kind === "backups") {
     await assertBackupIndexIsSound();
     const { size } = await cleanupOrphanBackups();

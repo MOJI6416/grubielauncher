@@ -1552,6 +1552,11 @@
       "cleanupInstancesKept": "Kept in place, the recycle bin refused them: {{names}}",
       "cleanupBackupsConfirmTitle": "Delete orphaned backups?",
       "cleanupBackupsConfirmBody": "This removes backups and saved world files whose version or world no longer exists — including copies left behind after a world was renamed or deleted. Backups of existing worlds are untouched.",
+      "dedupeConfirmTitle": "Merge identical files?",
+      "dedupeConfirmBody": "Mods, resource packs and shaders that are the same in several instances will be kept on disk once. Instances keep working as before. On FAT and exFAT drives, and between different drives, files stay as copies.",
+      "dedupeConfirm": "Merge",
+      "dedupeSaved": "Shared instance files already save {{size}}",
+      "dedupeUnsupported": "This drive can't share files between instances, so some files stayed as copies.",
       "categoriesTitle": "What takes the space",
       "reclaimTitle": "Free up space",
       "nothingToClean": "Nothing to clean up — the folder is tidy",
@@ -1562,7 +1567,8 @@
         "java": "Delete unused Java",
         "libraries": "Delete orphaned libraries",
         "backups": "Delete orphaned backups",
-        "instances": "Move broken instances to the recycle bin"
+        "instances": "Move broken instances to the recycle bin",
+        "dedupe": "Merge identical instance files"
       },
       "reclaimBanner": "About {{size}} can be freed without touching instances, worlds or accounts.",
       "scanning": "Measuring the folder…",

@@ -1567,6 +1567,11 @@
       "cleanupInstancesKept": "Mantidas no lugar, a lixeira as recusou: {{names}}",
       "cleanupBackupsConfirmTitle": "Excluir backups órfãos?",
       "cleanupBackupsConfirmBody": "Isso remove backups e arquivos de mundos salvos cuja versão ou mundo não existe mais — inclusive cópias que sobraram depois que um mundo foi renomeado ou excluído. Os backups de mundos existentes não são tocados.",
+      "dedupeConfirmTitle": "Unir arquivos idênticos?",
+      "dedupeConfirmBody": "Mods, pacotes de recursos e shaders iguais em várias instâncias serão guardados uma única vez no disco. As instâncias continuam funcionando como antes. Em unidades FAT e exFAT, e entre unidades diferentes, os arquivos continuam como cópias.",
+      "dedupeConfirm": "Unir",
+      "dedupeSaved": "Os arquivos compartilhados das instâncias já economizam {{size}}",
+      "dedupeUnsupported": "Esta unidade não aceita arquivos compartilhados, por isso alguns arquivos continuaram como cópias.",
       "categoriesTitle": "O que ocupa o espaço",
       "reclaimTitle": "Liberar espaço",
       "nothingToClean": "Nada para limpar — a pasta está em ordem",
@@ -1577,7 +1582,8 @@
         "java": "Excluir Javas sem uso",
         "libraries": "Excluir bibliotecas órfãs",
         "backups": "Excluir backups órfãos",
-        "instances": "Mover instâncias quebradas para a lixeira"
+        "instances": "Mover instâncias quebradas para a lixeira",
+        "dedupe": "Unir arquivos idênticos das instâncias"
       },
       "reclaimBanner": "Cerca de {{size}} podem ser liberados sem tocar em instâncias, mundos ou contas.",
       "scanning": "Medindo a pasta…",

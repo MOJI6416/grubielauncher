@@ -1552,6 +1552,11 @@
       "cleanupInstancesKept": "Yerinde bırakıldı, geri dönüşüm kutusu kabul etmedi: {{names}}",
       "cleanupBackupsConfirmTitle": "Sahipsiz yedekler silinsin mi?",
       "cleanupBackupsConfirmBody": "Bu işlem, sürümü veya dünyası artık var olmayan yedekleri ve kayıtlı dünya dosyalarını kaldırır — bir dünya yeniden adlandırıldıktan veya silindikten sonra kalan kopyalar dahil. Mevcut dünyaların yedekleri etkilenmez.",
+      "dedupeConfirmTitle": "Aynı dosyalar birleştirilsin mi?",
+      "dedupeConfirmBody": "Birden fazla kurulumda aynı olan modlar, kaynak paketleri ve gölgelendiriciler diskte yalnızca bir kez tutulur. Kurulumlar eskisi gibi çalışır. FAT ve exFAT sürücülerde ve farklı sürücüler arasında dosyalar kopya olarak kalır.",
+      "dedupeConfirm": "Birleştir",
+      "dedupeSaved": "Kurulumların ortak dosyaları şimdiden {{size}} tasarruf sağlıyor",
+      "dedupeUnsupported": "Bu sürücü ortak dosyaları desteklemiyor, bu yüzden bazı dosyalar kopya olarak kaldı.",
       "categoriesTitle": "Alanı ne kaplıyor",
       "reclaimTitle": "Yer aç",
       "nothingToClean": "Temizlenecek bir şey yok — klasör düzenli",
@@ -1562,7 +1567,8 @@
         "java": "Kullanılmayan Java’yı sil",
         "libraries": "Sahipsiz kütüphaneleri sil",
         "backups": "Sahipsiz yedekleri sil",
-        "instances": "Bozuk kurulumları geri dönüşüm kutusuna taşı"
+        "instances": "Bozuk kurulumları geri dönüşüm kutusuna taşı",
+        "dedupe": "Kurulumlardaki aynı dosyaları birleştir"
       },
       "reclaimBanner": "Kurulumlara, dünyalara veya hesaplara dokunmadan yaklaşık {{size}} boşaltılabilir.",
       "scanning": "Klasör ölçülüyor…",

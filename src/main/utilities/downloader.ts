@@ -40,6 +40,7 @@ import {
 } from "./mirrorState";
 import { getSafeExtractPath, getSafeLinkExtractPath } from "./archivePaths";
 import { isKeptWorldEntry, listExistingWorldFolders } from "./worldInstall";
+import { adoptIntoStore, detachHardLink, linkFromStore } from "./contentStore";
 import {
   assertExtractablePath,
   assertReadablePath,
@@ -371,6 +372,17 @@ export class Downloader {
                   await fs.move(downloadedPath, destination, {
                     overwrite: true,
                   });
+                }
+
+                if (
+                  downloadedPath &&
+                  expectedChecksum &&
+                  expectedChecksumType === "sha1" &&
+                  !item.options?.extract
+                ) {
+                  await adoptIntoStore(destination, expectedChecksum).catch(
+                    () => 0,
+                  );
                 }
               }
 
@@ -769,6 +781,7 @@ export class Downloader {
       assertWritablePath(destination, "download destination");
       await this.ensureDirectoryExists(destination);
       const stats = await fs.stat(localFilePath);
+      await detachHardLink(destination);
       await fs.copy(localFilePath, destination, { overwrite: true });
       this.downloadedBytes += stats.size;
       if (!item.size) {
@@ -1126,12 +1139,16 @@ export class Downloader {
 
           const [checksum, checksumType] = expectedChecksumOf(item);
           if (
-            await this.fileExistsAndMatches(
+            (await this.fileExistsAndMatches(
               item.destination,
               checksum,
               checksumType,
               item.size || 0,
-            )
+            )) ||
+            (checksumType === "sha1" &&
+              !!checksum &&
+              !item.options?.extract &&
+              (await linkFromStore(item.destination, checksum, item.size || 0)))
           ) {
             present.add(item);
           }

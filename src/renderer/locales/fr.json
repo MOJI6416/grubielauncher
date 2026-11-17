@@ -1567,6 +1567,11 @@
       "cleanupInstancesKept": "Laissés en place, la corbeille les a refusés : {{names}}",
       "cleanupBackupsConfirmTitle": "Supprimer les sauvegardes orphelines ?",
       "cleanupBackupsConfirmBody": "Supprime les sauvegardes et les fichiers de mondes enregistrés dont la version ou le monde n’existe plus — y compris les copies restées après le renommage ou la suppression d’un monde. Les sauvegardes des mondes existants ne sont pas touchées.",
+      "dedupeConfirmTitle": "Fusionner les fichiers identiques ?",
+      "dedupeConfirmBody": "Les mods, packs de ressources et shaders identiques dans plusieurs instances ne seront stockés qu'une fois sur le disque. Les instances fonctionnent comme avant. Sur les disques FAT et exFAT, et entre des disques différents, les fichiers restent des copies.",
+      "dedupeConfirm": "Fusionner",
+      "dedupeSaved": "Les fichiers partagés des instances économisent déjà {{size}}",
+      "dedupeUnsupported": "Ce disque ne prend pas en charge les fichiers partagés, certains fichiers sont donc restés des copies.",
       "categoriesTitle": "Ce qui occupe l’espace",
       "reclaimTitle": "Libérer de l’espace",
       "nothingToClean": "Rien à nettoyer — le dossier est en ordre",
@@ -1577,7 +1582,8 @@
         "java": "Supprimer les Java inutilisés",
         "libraries": "Supprimer les bibliothèques orphelines",
         "backups": "Supprimer les sauvegardes orphelines",
-        "instances": "Mettre les instances cassées à la corbeille"
+        "instances": "Mettre les instances cassées à la corbeille",
+        "dedupe": "Fusionner les fichiers identiques des instances"
       },
       "reclaimBanner": "Environ {{size}} peuvent être libérés sans toucher aux instances, aux mondes ni aux comptes.",
       "scanning": "Mesure du dossier…",

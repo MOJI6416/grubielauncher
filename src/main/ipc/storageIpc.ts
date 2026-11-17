@@ -50,7 +50,7 @@ export function registerStorageIpc() {
     "storage:cleanup",
     { freed: 0, failed: true },
     [
-      check.oneOf("java", "libraries", "backups", "instances"),
+      check.oneOf("java", "libraries", "backups", "instances", "dedupe"),
       check.optional(check.arrayOf(check.nonEmptyString(255), 5000)),
     ],
     (_, kind, names) => {

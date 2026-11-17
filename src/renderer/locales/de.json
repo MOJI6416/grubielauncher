@@ -1552,6 +1552,11 @@
       "cleanupInstancesKept": "Am Ort belassen, der Papierkorb hat sie abgelehnt: {{names}}",
       "cleanupBackupsConfirmTitle": "Verwaiste Backups löschen?",
       "cleanupBackupsConfirmBody": "Entfernt Backups und gespeicherte Weltdateien, deren Version oder Welt nicht mehr existiert – auch Kopien, die nach dem Umbenennen oder Löschen einer Welt zurückgeblieben sind. Backups vorhandener Welten bleiben unberührt.",
+      "dedupeConfirmTitle": "Gleiche Dateien zusammenführen?",
+      "dedupeConfirmBody": "Mods, Ressourcenpakete und Shader, die in mehreren Instanzen gleich sind, werden nur einmal auf dem Laufwerk gespeichert. Die Instanzen funktionieren wie bisher. Auf FAT- und exFAT-Laufwerken sowie zwischen verschiedenen Laufwerken bleiben die Dateien Kopien.",
+      "dedupeConfirm": "Zusammenführen",
+      "dedupeSaved": "Gemeinsame Instanzdateien sparen bereits {{size}}",
+      "dedupeUnsupported": "Dieses Laufwerk unterstützt keine gemeinsamen Dateien, daher sind einige Dateien Kopien geblieben.",
       "categoriesTitle": "Was den Platz belegt",
       "reclaimTitle": "Speicherplatz freigeben",
       "nothingToClean": "Nichts zu bereinigen – der Ordner ist aufgeräumt",
@@ -1562,7 +1567,8 @@
         "java": "Ungenutztes Java löschen",
         "libraries": "Verwaiste Bibliotheken löschen",
         "backups": "Verwaiste Backups löschen",
-        "instances": "Defekte Instanzen in den Papierkorb"
+        "instances": "Defekte Instanzen in den Papierkorb",
+        "dedupe": "Gleiche Instanzdateien zusammenführen"
       },
       "reclaimBanner": "Etwa {{size}} lassen sich freigeben, ohne Instanzen, Welten oder Konten anzutasten.",
       "scanning": "Ordner wird gemessen…",

@@ -5,6 +5,7 @@ import { sanitizeImportedVersionConf } from "./versions";
 import { getDataRoot } from "./dataRoot";
 import type { IVersionConf } from "@/types/IVersion";
 import { PATCHED_JAR_FOLDER } from "../game/jarMods";
+import { copyContentFile, isContentFile } from "./contentStore";
 
 export const DUPLICATE_SOURCE_MISSING = "duplicate_source_missing";
 export const DUPLICATE_NAME_TAKEN = "duplicate_name_taken";
@@ -60,9 +61,23 @@ export async function duplicateVersion(
   }
 
   try {
+    const content: string[] = [];
     await fs.copy(sourcePath, targetPath, {
-      filter: (entryPath) => isCopiedEntry(sourcePath, entryPath),
+      filter: (entryPath) => {
+        if (!isCopiedEntry(sourcePath, entryPath)) return false;
+        const target = path.join(targetPath, path.relative(sourcePath, entryPath));
+        if (!isContentFile(target)) return true;
+        content.push(entryPath);
+        return false;
+      },
     });
+
+    for (const entryPath of content) {
+      await copyContentFile(
+        entryPath,
+        path.join(targetPath, path.relative(sourcePath, entryPath)),
+      );
+    }
 
     const targetConfPath = path.join(targetPath, "version.json");
     const conf = (await fs.readJSON(targetConfPath, "utf-8")) as IVersionConf;

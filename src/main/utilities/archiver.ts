@@ -13,6 +13,7 @@ import type {
 } from "yauzl";
 import { inflateRawSync } from "zlib";
 import { getSafeExtractPath } from "./archivePaths";
+import { detachHardLink } from "./contentStore";
 
 export { getSafeExtractPath };
 
@@ -546,6 +547,7 @@ export async function extractZipEntries(
 
         try {
           const source = await openEntryStream(zipFile, job.entry);
+          await detachHardLink(job.target);
           const destination = fs.createWriteStream(job.target);
 
           if (onProgress) {
