@@ -155,6 +155,8 @@ export function VirtualizedSelect({
   const [contentWidth, setContentWidth] = React.useState<number>();
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const [scrollElement, setScrollElement] =
+    React.useState<HTMLDivElement | null>(null);
   const scrollBoundsRef = React.useRef({ maxScroll: 0, listHeight: 0 });
   const cleanupWheelRef = React.useRef<(() => void) | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -179,8 +181,9 @@ export function VirtualizedSelect({
 
   const virtualizer = useVirtualizer({
     count: filtered.length,
-    getScrollElement: () => scrollRef.current,
+    getScrollElement: () => scrollElement,
     estimateSize: () => ROW_HEIGHT,
+    initialRect: { width: 0, height: listHeight },
     overscan: 4,
   });
 
@@ -201,6 +204,7 @@ export function VirtualizedSelect({
     cleanupWheelRef.current?.();
     cleanupWheelRef.current = null;
     scrollRef.current = node;
+    setScrollElement(node);
     if (!node) return;
 
     let animationFrame: number | null = null;

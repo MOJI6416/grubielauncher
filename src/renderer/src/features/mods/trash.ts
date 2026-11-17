@@ -70,6 +70,7 @@ export async function listTrash(versionPath: string): Promise<TrashEntry[]> {
   try {
     const api = window.api;
     const folderPath = await trashFolder(versionPath);
+    if (!(await api.fs.pathExists(folderPath))) return [];
     const names = await api.fs.readdir(folderPath);
 
     const parsed: TrashEntry[] = [];

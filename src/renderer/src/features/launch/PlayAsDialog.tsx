@@ -50,12 +50,8 @@ export function PlayAsDialog({
       <DialogContent className="gap-3 sm:max-w-sm">
         <DialogHeader className="min-w-0">
           <DialogTitle>{t("playAs.title")}</DialogTitle>
-          <DialogDescription className="min-w-0">
-            <Hint content={instanceName} variant="text" truncatedOnly>
-              <span className="block truncate">
-                {t("playAs.description", { name: redact.text(instanceName) })}
-              </span>
-            </Hint>
+          <DialogDescription className="min-w-0 text-pretty [overflow-wrap:anywhere]">
+            {t("playAs.description", { name: redact.text(instanceName) })}
           </DialogDescription>
         </DialogHeader>
 

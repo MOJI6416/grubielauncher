@@ -765,32 +765,38 @@ export function InstanceScreen({
                     />
                   }
                 />
-
-                <InstanceLaunchProfileCard
-                  runArguments={draft.runArguments}
-                  memoryMb={resolved.xmx}
-                  optimizedJvm={resolved.optimizedJvm}
-                  java={javaLabel(
-                    effectiveJava(
-                      draft.overrides?.java,
-                      instanceRequiredJava(version),
-                      javaRuntimes.list,
-                    ),
-                  )}
-                  canCopy={!isLoading && !!account}
-                  onCopy={() => void editor.copyRunCommand(false)}
-                />
               </div>
 
-              <Suspense fallback={<PanelFallback variant="card" />}>
-                <LazyArguments
-                  embedded
-                  settings={resolved}
-                  runArguments={draft.runArguments}
-                  onClose={() => setActiveTab("overview")}
-                  setArguments={draft.setRunArguments}
-                />
-              </Suspense>
+              <div className="flex min-h-0 flex-col gap-3">
+                <div className="flex min-h-0 flex-[3] flex-col">
+                  <Suspense fallback={<PanelFallback variant="card" />}>
+                    <LazyArguments
+                      embedded
+                      settings={resolved}
+                      runArguments={draft.runArguments}
+                      onClose={() => setActiveTab("overview")}
+                      setArguments={draft.setRunArguments}
+                    />
+                  </Suspense>
+                </div>
+
+                <div className="flex min-h-[132px] flex-[2] flex-col">
+                  <InstanceLaunchProfileCard
+                    runArguments={draft.runArguments}
+                    memoryMb={resolved.xmx}
+                    optimizedJvm={resolved.optimizedJvm}
+                    java={javaLabel(
+                      effectiveJava(
+                        draft.overrides?.java,
+                        instanceRequiredJava(version),
+                        javaRuntimes.list,
+                      ),
+                    )}
+                    canCopy={!isLoading && !!account}
+                    onCopy={() => void editor.copyRunCommand(false)}
+                  />
+                </div>
+              </div>
             </div>
           ) : activeTab === "servers" && version ? (
             draft.isReady ? (
