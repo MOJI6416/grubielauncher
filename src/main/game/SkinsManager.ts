@@ -891,7 +891,7 @@ export class SkinsManager extends BaseService {
   public async importByNickname(nickname: string) {
     try {
       const player = await axios.get<{ id: string }>(
-        `https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(nickname)}`,
+        `https://api.minecraftservices.com/minecraft/profile/lookup/name/${encodeURIComponent(nickname)}`,
         { timeout: 30000 }
       )
 
