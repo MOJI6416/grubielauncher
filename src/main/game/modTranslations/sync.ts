@@ -15,16 +15,22 @@ import { mainWindow } from "../../windows/mainWindow";
 import { isVersionRunning } from "../../utilities/worldBackups";
 import { getLauncherPaths } from "../../utilities/other";
 import { writeJsonAtomic } from "../../utilities/atomicJson";
-import { createZipArchive } from "../../utilities/archiver";
+import {
+  createZipArchive,
+  readJSONFromArchive,
+} from "../../utilities/archiver";
 import { Downloader } from "../../utilities/downloader";
 import { journal } from "../../journal/journal";
 import { NamespaceLang, scanJarLang, scanPackKeys } from "./jarScan";
 import { langFormatFor } from "./langFiles";
 import {
   applyTranslationOptions,
+  gameResourceFormat,
   isManagedPackFile,
+  legacyPackFormat,
   MANAGED_PACK_PREFIX,
   packMcmeta,
+  packSupportsGame,
   readOptionList,
 } from "./optionsTxt";
 import {
@@ -49,6 +55,8 @@ const SUBMIT_BATCH_UNITS = 40;
 const SUBMIT_BATCH_CHARS = 400_000;
 const SCAN_CONCURRENCY = 4;
 const POLL_INTERVAL_MS = 90_000;
+const WATCHED_POLL_INTERVAL_MS = 10_000;
+const WATCH_WINDOW_MS = 30_000;
 const MAX_POLLS = 120;
 const PROGRESS_EMIT_MS = 250;
 
@@ -118,6 +126,7 @@ interface Runtime {
   pollTimer: NodeJS.Timeout | null;
   polls: number;
   lastEmit: number;
+  watchedUntil: number;
 }
 
 const runtimes = new Map<string, Runtime>();
@@ -154,6 +163,7 @@ function runtimeOf(versionPath: string): Runtime {
       pollTimer: null,
       polls: 0,
       lastEmit: 0,
+      watchedUntil: 0,
     };
     runtimes.set(key, runtime);
   }
@@ -655,6 +665,41 @@ async function buildAiPack(
   return { file: fileName, digest: value };
 }
 
+async function readGameResourceFormat(
+  versionPath: string,
+  mcVersion: string,
+): Promise<number | null> {
+  if (legacyPackFormat(mcVersion) !== null) {
+    return gameResourceFormat(null, mcVersion);
+  }
+  const versionJson = await readJSONFromArchive<unknown>(
+    path.join(versionPath, `${mcVersion}.jar`),
+    "version.json",
+  ).catch(() => null);
+  return gameResourceFormat(versionJson, mcVersion);
+}
+
+async function incompatiblePackFiles(
+  versionPath: string,
+  mcVersion: string,
+  packFiles: string[],
+): Promise<string[]> {
+  if (packFiles.length === 0) return [];
+  const gameFormat = await readGameResourceFormat(versionPath, mcVersion);
+  if (gameFormat === null) return [];
+  const incompatible: string[] = [];
+  for (const file of packFiles) {
+    const mcmeta = await readJSONFromArchive<unknown>(
+      path.join(packsDir(versionPath), file),
+      "pack.mcmeta",
+    ).catch(() => null);
+    if (!packSupportsGame(mcmeta, gameFormat, mcVersion)) {
+      incompatible.push(file);
+    }
+  }
+  return incompatible;
+}
+
 async function applyOptions(
   versionPath: string,
   mcVersion: string,
@@ -666,6 +711,11 @@ async function applyOptions(
   const result = applyTranslationOptions(current, {
     mcVersion,
     packFiles,
+    incompatibleFiles: await incompatiblePackFiles(
+      versionPath,
+      mcVersion,
+      packFiles,
+    ),
     locale,
   });
   if (!result.changed) return;
@@ -865,10 +915,14 @@ function schedulePoll(versionPath: string, state: TranslationState): void {
   }
   if (runtime.polls >= MAX_POLLS) return;
   runtime.polls++;
+  const interval =
+    Date.now() < runtime.watchedUntil
+      ? WATCHED_POLL_INTERVAL_MS
+      : POLL_INTERVAL_MS;
   runtime.pollTimer = setTimeout(() => {
     runtime.pollTimer = null;
     void runSync(versionPath, "poll");
-  }, POLL_INTERVAL_MS);
+  }, interval);
   runtime.pollTimer.unref?.();
 }
 
@@ -908,6 +962,15 @@ function remember(versionPath: string, context: TranslationContext): void {
   };
 }
 
+function watch(versionPath: string, state: TranslationState): void {
+  const runtime = runtimeOf(versionPath);
+  const wasWatched = Date.now() < runtime.watchedUntil;
+  runtime.watchedUntil = Date.now() + WATCH_WINDOW_MS;
+  if (wasWatched || runtime.running || !runtime.pollTimer) return;
+  runtime.polls = Math.max(0, runtime.polls - 1);
+  schedulePoll(versionPath, state);
+}
+
 export async function getModTranslationStatus(
   versionPath: string,
   context: TranslationContext,
@@ -915,6 +978,7 @@ export async function getModTranslationStatus(
   remember(versionPath, context);
   const state = await readState(versionPath);
   if (state.locale) await loadCachedHashes(state.locale);
+  watch(versionPath, state);
   return statusFrom(
     versionPath,
     state,

@@ -60,6 +60,7 @@ export function readOptionList(text: string, key: string): string[] | null {
 export interface TranslationOptions {
   mcVersion: string;
   packFiles: string[];
+  incompatibleFiles: string[];
   locale: string | null;
 }
 
@@ -105,9 +106,10 @@ export function applyTranslationOptions(
     : 0;
   const at = firstPlayerPack < 0 ? theirs.length : firstPlayerPack;
   const nextPacks = [...theirs.slice(0, at), ...ours, ...theirs.slice(at)];
+  const incompatibleOurs = new Set(options.incompatibleFiles);
   const nextIncompatible = [
     ...incompatible.filter((entry) => !isManagedEntry(entry)),
-    ...ours,
+    ...ours.filter((entry) => incompatibleOurs.has(entryFileName(entry))),
   ];
 
   const set = (key: string, value: string) => {
@@ -173,6 +175,82 @@ export function legacyPackFormat(mcVersion: string): number | null {
     }
   }
   return format;
+}
+
+type FormatRange = [number, number];
+
+function formatValue(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (Array.isArray(value) && typeof value[0] === "number") {
+    const minor = typeof value[1] === "number" ? value[1] : 0;
+    return value[0] + minor / 1000;
+  }
+  return null;
+}
+
+function supportedRange(value: unknown): FormatRange | null {
+  const single = formatValue(value);
+  if (single !== null && !Array.isArray(value)) return [single, single];
+  if (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    typeof value[0] === "number" &&
+    typeof value[1] === "number"
+  ) {
+    return [value[0], value[1]];
+  }
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const range = value as { min_inclusive?: unknown; max_inclusive?: unknown };
+    if (
+      typeof range.min_inclusive === "number" &&
+      typeof range.max_inclusive === "number"
+    ) {
+      return [range.min_inclusive, range.max_inclusive];
+    }
+  }
+  return null;
+}
+
+export function gameResourceFormat(
+  versionJson: unknown,
+  mcVersion: string,
+): number | null {
+  const legacy = legacyPackFormat(mcVersion);
+  if (legacy !== null) return legacy;
+  const packVersion = (versionJson as { pack_version?: unknown } | null)
+    ?.pack_version;
+  if (typeof packVersion === "number") return packVersion;
+  if (packVersion && typeof packVersion === "object") {
+    const fields = packVersion as Record<string, unknown>;
+    if (typeof fields.resource === "number") return fields.resource;
+    if (typeof fields.resource_major === "number") {
+      const minor =
+        typeof fields.resource_minor === "number" ? fields.resource_minor : 0;
+      return fields.resource_major + minor / 1000;
+    }
+  }
+  return null;
+}
+
+export function packSupportsGame(
+  mcmeta: unknown,
+  gameFormat: number,
+  mcVersion: string,
+): boolean {
+  const pack = (mcmeta as { pack?: Record<string, unknown> } | null)?.pack;
+  if (!pack || typeof pack !== "object") return false;
+  const declared = formatValue(pack.pack_format);
+  if (legacyPackFormat(mcVersion) !== null) return declared === gameFormat;
+
+  const min = formatValue(pack.min_format);
+  const max = formatValue(pack.max_format);
+  const range: FormatRange | null =
+    gameFormat >= 65 && min !== null && max !== null
+      ? [min, max]
+      : (supportedRange(pack.supported_formats) ??
+        (declared !== null ? [declared, declared] : null));
+  if (!range) return false;
+  return gameFormat >= range[0] && gameFormat <= range[1];
 }
 
 export function packMcmeta(mcVersion: string, description: string): string {

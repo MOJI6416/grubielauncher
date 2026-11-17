@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   applyTranslationOptions,
+  gameResourceFormat,
   legacyPackFormat,
+  packSupportsGame,
   packMcmeta,
   readOptionList,
 } from "./optionsTxt";
@@ -22,6 +24,7 @@ describe("applyTranslationOptions", () => {
     const { text, changed } = applyTranslationOptions(source, {
       mcVersion: "1.20.1",
       packFiles: [AI, RTF],
+      incompatibleFiles: [RTF],
       locale: "ru_ru",
     });
 
@@ -35,7 +38,6 @@ describe("applyTranslationOptions", () => {
       "file/MyRussian.zip",
     ]);
     expect(readOptionList(text, "incompatibleResourcePacks")).toEqual([
-      `file/${AI}`,
       `file/${RTF}`,
     ]);
     expect(text.split("\n")[0]).toBe("version:3465");
@@ -48,6 +50,7 @@ describe("applyTranslationOptions", () => {
     const { text } = applyTranslationOptions(source, {
       mcVersion: "1.20.1",
       packFiles: [RTF],
+      incompatibleFiles: [RTF],
       locale: null,
     });
 
@@ -69,6 +72,7 @@ describe("applyTranslationOptions", () => {
     const { text } = applyTranslationOptions(source, {
       mcVersion: "1.20.1",
       packFiles: [],
+      incompatibleFiles: [],
       locale: null,
     });
 
@@ -86,6 +90,7 @@ describe("applyTranslationOptions", () => {
       applyTranslationOptions(source, {
         mcVersion: "1.21.1",
         packFiles: [AI],
+        incompatibleFiles: [AI],
         locale: "ru_ru",
       }),
     ).toEqual({ text: source, changed: false });
@@ -95,6 +100,7 @@ describe("applyTranslationOptions", () => {
     const english = applyTranslationOptions("lang:en_us\n", {
       mcVersion: "1.20.1",
       packFiles: [],
+      incompatibleFiles: [],
       locale: "ru_ru",
     });
     expect(english.text).toBe("lang:ru_ru\n");
@@ -102,6 +108,7 @@ describe("applyTranslationOptions", () => {
     const german = applyTranslationOptions("lang:de_de\n", {
       mcVersion: "1.20.1",
       packFiles: [],
+      incompatibleFiles: [],
       locale: "ru_ru",
     });
     expect(german.changed).toBe(false);
@@ -111,6 +118,7 @@ describe("applyTranslationOptions", () => {
     const { text } = applyTranslationOptions(null, {
       mcVersion: "1.20.1",
       packFiles: [AI],
+      incompatibleFiles: [],
       locale: "uk_ua",
     });
 
@@ -128,6 +136,7 @@ describe("applyTranslationOptions", () => {
     const { text } = applyTranslationOptions(source, {
       mcVersion: "1.7.10",
       packFiles: [AI],
+      incompatibleFiles: [],
       locale: "ru_ru",
     });
 
@@ -141,6 +150,7 @@ describe("applyTranslationOptions", () => {
       applyTranslationOptions(source, {
         mcVersion: "1.20.1",
         packFiles: [AI],
+        incompatibleFiles: [],
         locale: "ru_ru",
       }),
     ).toEqual({ text: source, changed: false });
@@ -149,7 +159,7 @@ describe("applyTranslationOptions", () => {
   it("keeps Windows line endings", () => {
     const { text } = applyTranslationOptions(
       'resourcePacks:["vanilla"]\r\nlang:en_us\r\n',
-      { mcVersion: "1.20.1", packFiles: [AI], locale: "ru_ru" },
+      { mcVersion: "1.20.1", packFiles: [AI], incompatibleFiles: [], locale: "ru_ru" },
     );
     expect(text).toContain("\r\nlang:ru_ru\r\n");
     expect(text.replace(/\r\n/g, "")).not.toContain("\n");
@@ -183,5 +193,57 @@ describe("pack.mcmeta", () => {
       pack_format: 3,
       description: "x",
     });
+  });
+});
+
+describe("pack compatibility", () => {
+  const rtf = {
+    pack: {
+      pack_format: 15,
+      min_format: [15, 0],
+      max_format: [1000, 0],
+      supported_formats: [15, 1000],
+    },
+  };
+  const mploc = {
+    pack: { pack_format: 88 },
+    supported_formats: { min_inclusive: 4, max_inclusive: 88 },
+  };
+  const ai = JSON.parse(packMcmeta("1.21.1", "x"));
+
+  it("reads the game's resource format from its version.json", () => {
+    expect(
+      gameResourceFormat({ pack_version: { resource: 34, data: 48 } }, "1.21.1"),
+    ).toBe(34);
+    expect(
+      gameResourceFormat(
+        { pack_version: { resource_major: 69, resource_minor: 0 } },
+        "1.21.9",
+      ),
+    ).toBe(69);
+    expect(gameResourceFormat(null, "1.20.1")).toBe(15);
+    expect(gameResourceFormat(null, "1.21.1")).toBeNull();
+  });
+
+  it("matches what 1.21.1 itself decided for the Aged instance", () => {
+    expect(packSupportsGame(rtf, 34, "1.21.1")).toBe(true);
+    expect(packSupportsGame(ai, 34, "1.21.1")).toBe(true);
+    expect(packSupportsGame(mploc, 34, "1.21.1")).toBe(false);
+  });
+
+  it("reads only pack_format up to 1.20.1", () => {
+    expect(packSupportsGame(rtf, 15, "1.20.1")).toBe(true);
+    expect(packSupportsGame(rtf, 9, "1.19.2")).toBe(false);
+    expect(
+      packSupportsGame(JSON.parse(packMcmeta("1.19.2", "x")), 9, "1.19.2"),
+    ).toBe(true);
+  });
+
+  it("uses min and max format from 1.21.9 on", () => {
+    expect(packSupportsGame(rtf, 69, "1.21.9")).toBe(true);
+    expect(
+      packSupportsGame({ pack: { min_format: 70, max_format: 80 } }, 69, "1.21.9"),
+    ).toBe(false);
+    expect(packSupportsGame(null, 34, "1.21.1")).toBe(false);
   });
 });

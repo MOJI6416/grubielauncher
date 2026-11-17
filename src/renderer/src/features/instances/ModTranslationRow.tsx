@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { accountAtom, settingsAtom } from "@renderer/stores/atoms";
 import { Hint } from "@renderer/components/Hint";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import {
   modTranslationLocale,
   ModTranslationStatus,
@@ -14,6 +15,16 @@ import {
 } from "@/types/ModTranslations";
 
 const api = window.api;
+
+const STATUS_REFRESH_MS = 10_000;
+
+const ACTIVE_STAGES = new Set<ModTranslationStatus["stage"]>([
+  "scanning",
+  "packs",
+  "translating",
+  "building",
+  "waiting",
+]);
 
 const ERROR_KEYS: Record<string, string> = {
   unavailable: "modTranslations.errorUnavailable",
@@ -73,6 +84,21 @@ export function ModTranslationRow({
       unsubscribe();
     };
   }, [visible, versionPath, settings.lang, token]);
+
+  const inProgress =
+    !!status?.enabled &&
+    (status.pending > 0 || ACTIVE_STAGES.has(status.stage));
+
+  useEffect(() => {
+    if (!visible || !inProgress) return;
+    const timer = window.setInterval(() => {
+      void api.modTranslations
+        .status(versionPath, settings.lang, token)
+        .then(setStatus)
+        .catch(ignoreFailure);
+    }, STATUS_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, [visible, inProgress, versionPath, settings.lang, token]);
 
   if (!visible) return null;
 
