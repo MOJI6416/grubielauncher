@@ -1,8 +1,11 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useAtomValue, useSetAtom } from "jotai";
-import { FaDiscord, FaMicrosoft } from "react-icons/fa";
-import { TbSquareLetterE } from "react-icons/tb";
+import {
+  hasProviderLogo,
+  ProviderIcon as ProviderLogo,
+  providerName,
+} from "@renderer/features/accounts/ProviderMark";
 import {
   Copy,
   Fingerprint,
@@ -68,10 +71,8 @@ function peopleEntry(value: unknown): PeopleEntry | null {
 }
 
 function ProviderIcon({ platform }: { platform: IUser["platform"] }) {
-  if (platform === "microsoft") return <FaMicrosoft className="size-3.5" />;
-  if (platform === "elyby") return <TbSquareLetterE className="size-3.5" />;
-  if (platform === "discord") return <FaDiscord className="size-3.5" />;
-  return null;
+  if (!hasProviderLogo(platform)) return null;
+  return <ProviderLogo type={platform} size={14} />;
 }
 
 function StatTile({
@@ -229,10 +230,10 @@ export function ProfileIdentityRail({
                 </button>
               </Hint>
             ) : (
-              <Hint content={user.platform} className="capitalize">
+              <Hint content={providerName(user.platform, t)}>
                 <span
                   className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-surface-3 text-muted-foreground"
-                  aria-label={user.platform}
+                  aria-label={providerName(user.platform, t)}
                 >
                   <ProviderIcon platform={user.platform} />
                 </span>

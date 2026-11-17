@@ -1,5 +1,7 @@
-import { FaDiscord, FaMicrosoft } from "react-icons/fa";
-import { TbSquareLetterE } from "react-icons/tb";
+import {
+  hasProviderLogo,
+  ProviderIcon,
+} from "@renderer/features/accounts/ProviderMark";
 
 export function PlatformIcon({
   platform,
@@ -8,14 +10,7 @@ export function PlatformIcon({
   platform: string;
   size?: number;
 }) {
-  switch (platform) {
-    case "microsoft":
-      return <FaMicrosoft size={size} />;
-    case "elyby":
-      return <TbSquareLetterE size={size} />;
-    case "discord":
-      return <FaDiscord size={size} />;
-    default:
-      return null;
-  }
+  if (!hasProviderLogo(platform)) return null;
+
+  return <ProviderIcon type={platform} size={size} />;
 }
