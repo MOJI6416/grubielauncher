@@ -90,6 +90,7 @@ import {
   safeVersionId,
   versionLibraryPaths,
 } from "./loaderInstallerSeed";
+import { seedClientJar } from "./clientJarSeed";
 import {
   directLegacyLaunch,
   legacyAssetsDir,
@@ -1036,6 +1037,11 @@ export class Version {
         `${this.version.version.id}.jar`,
       );
 
+      await seedClientJar(
+        path.join(this.minecraftPath, "versions"),
+        clientPath,
+        this.manifest.downloads.client,
+      );
       downloadItems.push({
         url: this.manifest.downloads.client.url,
         destination: clientPath,
@@ -2283,6 +2289,11 @@ export class Version {
         group: "libraries",
       }));
       if (client?.url && isTrustedDownloadUrl(client.url)) {
+        await seedClientJar(
+          path.join(this.minecraftPath, "versions"),
+          clientPath,
+          client,
+        );
         items.push({
           url: client.url,
           destination: clientPath,
