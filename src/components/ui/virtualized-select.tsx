@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Popover as PopoverPrimitive } from "radix-ui";
 import { CheckIcon, ChevronDownIcon, SearchIcon } from "lucide-react";
-import { FixedSizeList, type ListChildComponentProps } from "react-window";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
@@ -86,7 +86,15 @@ interface RowData {
   onActivate: (index: number) => void;
 }
 
-function Row({ index, style, data }: ListChildComponentProps<RowData>) {
+function Row({
+  index,
+  style,
+  data,
+}: {
+  index: number;
+  style: React.CSSProperties;
+  data: RowData;
+}) {
   const option = data.options[index];
   const isSelected = option.value === data.selectedValue;
   const isActive = index === data.activeIndex;
@@ -146,7 +154,7 @@ export function VirtualizedSelect({
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [contentWidth, setContentWidth] = React.useState<number>();
   const triggerRef = React.useRef<HTMLButtonElement>(null);
-  const listRef = React.useRef<FixedSizeList>(null);
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const scrollBoundsRef = React.useRef({ maxScroll: 0, listHeight: 0 });
   const cleanupWheelRef = React.useRef<(() => void) | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -169,6 +177,13 @@ export function VirtualizedSelect({
   const maxScroll = Math.max(0, filtered.length * ROW_HEIGHT - listHeight);
   scrollBoundsRef.current = { maxScroll, listHeight };
 
+  const virtualizer = useVirtualizer({
+    count: filtered.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 4,
+  });
+
   React.useLayoutEffect(() => {
     const trigger = triggerRef.current;
     if (!trigger || options.length === 0) {
@@ -185,6 +200,7 @@ export function VirtualizedSelect({
   const setListOuterRef = React.useCallback((node: HTMLDivElement | null) => {
     cleanupWheelRef.current?.();
     cleanupWheelRef.current = null;
+    scrollRef.current = node;
     if (!node) return;
 
     let animationFrame: number | null = null;
@@ -195,12 +211,12 @@ export function VirtualizedSelect({
       const diff = targetOffset - animatedOffset;
       if (Math.abs(diff) <= 0.5) {
         animatedOffset = targetOffset;
-        listRef.current?.scrollTo(targetOffset);
+        node.scrollTop = targetOffset;
         animationFrame = null;
         return;
       }
       animatedOffset += diff * SCROLL_EASING;
-      listRef.current?.scrollTo(animatedOffset);
+      node.scrollTop = animatedOffset;
       animationFrame = requestAnimationFrame(step);
     };
 
@@ -243,15 +259,15 @@ export function VirtualizedSelect({
 
     const frame = requestAnimationFrame(() => {
       inputRef.current?.focus();
-      listRef.current?.scrollToItem(nextIndex, "center");
+      virtualizer.scrollToIndex(nextIndex, { align: "center" });
     });
     return () => cancelAnimationFrame(frame);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   React.useEffect(() => {
-    if (open) listRef.current?.scrollToItem(activeIndex, "smart");
-  }, [activeIndex, open]);
+    if (open) virtualizer.scrollToIndex(activeIndex, { align: "auto" });
+  }, [activeIndex, open, virtualizer]);
 
   function commit(nextValue: string) {
     onValueChange(nextValue);
@@ -367,18 +383,31 @@ export function VirtualizedSelect({
                 {emptyText}
               </div>
             ) : (
-              <FixedSizeList
-                ref={listRef}
-                outerRef={setListOuterRef}
-                height={listHeight}
-                width="100%"
-                itemCount={filtered.length}
-                itemSize={ROW_HEIGHT}
-                itemData={rowData}
-                overscanCount={4}
+              <div
+                ref={setListOuterRef}
+                className="relative w-full overflow-auto"
+                style={{ height: listHeight }}
               >
-                {Row}
-              </FixedSizeList>
+                <div
+                  className="relative w-full"
+                  style={{ height: virtualizer.getTotalSize() }}
+                >
+                  {virtualizer.getVirtualItems().map((item) => (
+                    <Row
+                      key={item.key}
+                      index={item.index}
+                      data={rowData}
+                      style={{
+                        position: "absolute",
+                        top: item.start,
+                        left: 0,
+                        width: "100%",
+                        height: ROW_HEIGHT,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </PopoverPrimitive.Content>

@@ -116,16 +116,6 @@ export function javaFit(requiredMajor: number, selectedMajor: number): JavaFit {
   return 'newer'
 }
 
-export function javaOverrideMajor(
-  override: JavaOverride | undefined,
-  runtimes: JavaRuntimeInfo[]
-): number | null {
-  if (!override) return null
-  if ('major' in override) return override.major
-
-  return runtimes.find((runtime) => sameJavaHome(runtime.home, override.home))?.major ?? null
-}
-
 export function sameJavaHome(left: string, right: string): boolean {
   const normalize = (value: string) => value.replace(/[\\/]+$/, '').replace(/\\/g, '/')
   const a = normalize(left)

@@ -168,15 +168,6 @@ export interface IModpackExtraFile {
   isServer: boolean;
 }
 
-export interface IModPackFile {
-  url: string;
-  filename: string;
-  size: number;
-  type: ProjectType;
-  isServer: boolean;
-  sha1: string;
-}
-
 export interface ILocalFileInfo {
   kind?: ProjectType | null;
   name: string;

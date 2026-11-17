@@ -10,7 +10,7 @@ import { settingsAtom } from "@renderer/stores/atoms";
 import { patchSettings } from "@renderer/utilities/persistSettings";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { updateInstancesFile } from "@renderer/features/instances/instancesStore";
-import { isSlotHidden, setSlotHidden } from "./layout";
+import { setSlotHidden } from "./layout";
 import {
   currentPresetValues,
   presetValues,
@@ -23,10 +23,6 @@ const layoutSnapshotAtom = atom<InterfaceLayout | null>(null);
 
 export function useLayout(): InterfaceLayout {
   return useAtomValue(settingsAtom).interface;
-}
-
-export function useSlotVisible(id: string): boolean {
-  return !isSlotHidden(useLayout(), id);
 }
 
 export function useLayoutEditing(): boolean {

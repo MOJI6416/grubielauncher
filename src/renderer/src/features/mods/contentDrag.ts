@@ -2,10 +2,6 @@ import type { DragEvent } from "react";
 
 export const CONTENT_DRAG_TYPE = "application/x-grubie-content";
 
-export function isContentDrag(event: DragEvent): boolean {
-  return event.dataTransfer.types.includes(CONTENT_DRAG_TYPE);
-}
-
 export function isFileDrag(event: DragEvent): boolean {
   return event.dataTransfer.types.includes("Files");
 }

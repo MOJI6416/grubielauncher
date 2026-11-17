@@ -15,10 +15,6 @@ const api = window.api;
 
 let isDuplicating = false;
 
-export function isInstanceDuplicating(): boolean {
-  return isDuplicating;
-}
-
 export function buildDuplicateName(
   sourceName: string,
   takenNames: string[],

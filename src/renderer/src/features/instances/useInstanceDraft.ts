@@ -99,5 +99,3 @@ export function useInstanceDraft(version: Version | undefined) {
     reset,
   };
 }
-
-export type InstanceDraft = ReturnType<typeof useInstanceDraft>;

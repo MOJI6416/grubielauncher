@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import axios from "axios";
 import { ILocalProject } from "@/types/ModManager";
 import { IServerOption } from "@/types/Server";
 import { IVersionStatistics } from "@/types/VersionStatistics";
@@ -86,6 +85,7 @@ import {
 import { useInstanceDraft } from "./useInstanceDraft";
 import { useVersionChanges } from "./useVersionChanges";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { downloadImage } from "@renderer/utilities/imageDownload";
 import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
 import { VERSION_FILE_STAGES, contentPlan } from "@/shared/installPlan";
 import { loaderChangeErrorKey } from "./loaderUpdate";
@@ -514,13 +514,7 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
             ? await api.fs.copy(getLocalPathFromFileUrl(draft.image), filePath)
             : await api.fs.writeFile(
                 filePath,
-                api.file.fromBuffer(
-                  (
-                    await axios.get(draft.image, {
-                      responseType: "arraybuffer",
-                    })
-                  ).data,
-                ),
+                api.file.fromBuffer((await downloadImage(draft.image)).data),
                 "binary",
               );
 

@@ -113,13 +113,6 @@ export function versionFacetOptions(
   }));
 }
 
-export function withFacetSelection(
-  filters: ExploreFilters,
-  patch: Partial<ExploreFilters>,
-): ExploreFilters {
-  return { ...filters, ...patch };
-}
-
 export function isFilterActive(filters: ExploreFilters): boolean {
   return (
     filters.query.trim() !== "" || filters.loader !== "" || filters.mc !== ""

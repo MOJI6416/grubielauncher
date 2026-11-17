@@ -153,14 +153,6 @@ export type ChunkEditResult =
       backupError?: WorldBackupErrorCode;
     };
 
-export function chunkLocalIndex(x: number, z: number): number {
-  return ((z & 31) << 5) | (x & 31);
-}
-
-export function regionCoordinate(chunk: number): number {
-  return chunk >> 5;
-}
-
 export function chunkCoordinate(block: number): number {
   return Math.floor(block) >> 4;
 }

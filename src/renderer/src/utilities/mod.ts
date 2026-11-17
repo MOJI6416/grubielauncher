@@ -144,22 +144,6 @@ export function sharesFile(a: ILocalProject, b: ILocalProject): boolean {
   return fileNamesOf(b).some((name) => names.has(name));
 }
 
-export function findTwin(
-  mods: ILocalProject[],
-  target: ILocalProject,
-): ILocalProject | undefined {
-  const key = `${target.provider}:${target.id}`;
-  const title = normalizeProjectTitle(target.title);
-
-  return mods.find(
-    (mod) =>
-      `${mod.provider}:${mod.id}` !== key &&
-      mod.projectType === target.projectType &&
-      ((!!title && normalizeProjectTitle(mod.title) === title) ||
-        sharesFile(mod, target)),
-  );
-}
-
 export function planDeletion(
   mods: ILocalProject[],
   target: ILocalProject | ILocalProject[],

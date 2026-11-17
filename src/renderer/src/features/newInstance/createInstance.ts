@@ -1,4 +1,3 @@
-import axios from "axios";
 import { getDefaultStore } from "jotai";
 import type { IArguments } from "@/types/IArguments";
 import type { Loader } from "@/types/Loader";
@@ -41,6 +40,7 @@ import {
   withoutLaunchCommands,
   withoutOverrides,
 } from "@/shared/instanceSettings";
+import { downloadImage } from "@renderer/utilities/imageDownload";
 
 const api = window.api;
 
@@ -135,15 +135,13 @@ async function persistImage(
       return toFileUrl(target);
     }
 
-    const response = await axios.get(image, {
-      responseType: "arraybuffer",
-      timeout: LOGO_DOWNLOAD_TIMEOUT_MS,
+    const response = await downloadImage(image, {
+      timeoutMs: LOGO_DOWNLOAD_TIMEOUT_MS,
       signal,
     });
-    const header = response.headers["content-type"];
     const target = await api.path.join(
       versionPath,
-      `logo.${imageExtension(image, typeof header === "string" ? header : undefined)}`,
+      `logo.${imageExtension(image, response.contentType ?? undefined)}`,
     );
     await api.fs.writeFile(
       target,

@@ -35,9 +35,9 @@ import {
   IGuestStatsUploadResponse,
   IRemoteWorldStatsResponse,
 } from "@/types/Achievements";
-import FormData from "form-data";
 import axios from "axios";
 import fs from "fs-extra";
+import { openAsBlob } from "fs";
 import path from "path";
 import { reportFailure } from "../utilities/failureBus";
 import { apiBaseOf } from "../utilities/apiHost";
@@ -480,12 +480,11 @@ export class Backend extends BaseService {
 
       const formData = new FormData();
 
-      const stream = fs.createReadStream(filePath);
-
-      formData.append("file", stream, {
-        filename: fileName ?? path.basename(filePath),
-        contentType: "application/octet-stream",
-      });
+      formData.append(
+        "file",
+        await openAsBlob(filePath, { type: "application/octet-stream" }),
+        fileName ?? path.basename(filePath),
+      );
 
       if (folder) formData.append("folder", folder);
 
@@ -493,7 +492,6 @@ export class Backend extends BaseService {
         `${this.baseUrl}/files/upload`,
         formData,
         {
-          headers: formData.getHeaders(),
           maxBodyLength: Infinity,
           maxContentLength: Infinity,
           timeout: 10 * 60 * 1000,

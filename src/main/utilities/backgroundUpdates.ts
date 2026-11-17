@@ -14,11 +14,9 @@ let started = false;
 let checking = false;
 let stopping = false;
 let onInstall: ((pending: boolean) => void) | null = null;
-const listeners = new Set<(next: AppUpdateState) => void>();
 
 function publish(next: AppUpdateState): void {
   state = next;
-  for (const listener of listeners) listener(state);
 
   const contents = mainWindow?.webContents;
   if (!contents || contents.isDestroyed()) return;
@@ -27,13 +25,6 @@ function publish(next: AppUpdateState): void {
 
 export function getAppUpdateState(): AppUpdateState {
   return state;
-}
-
-export function onAppUpdateState(
-  listener: (next: AppUpdateState) => void,
-): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
 }
 
 async function check(): Promise<void> {
