@@ -4,6 +4,7 @@ import { jwtDecode } from 'jwt-decode'
 import {
   refreshDiscordToken,
   refreshElyByToken,
+  refreshLittleSkinToken,
   refreshMicrosoftToken
 } from '../services/Auth'
 import { mutateAccountsConfig, readAccountsConfig } from './accounts'
@@ -119,6 +120,8 @@ async function refreshForSubject(
       refreshResult = await refreshMicrosoftToken(refreshToken, sub)
     } else if (account.type === 'elyby') {
       refreshResult = await refreshElyByToken(refreshToken, sub)
+    } else if (account.type === 'littleskin') {
+      refreshResult = await refreshLittleSkinToken(refreshToken, sub)
     } else if (account.type === 'discord') {
       refreshResult = await refreshDiscordToken(refreshToken, sub)
     } else {

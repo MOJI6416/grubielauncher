@@ -14,7 +14,7 @@ import type { ISkinData } from '@/types/Skin'
 import { check, handleSafe } from '../utilities/ipc'
 import { assertReadablePath, assertWritablePath } from '../utilities/safePath'
 
-const SKIN_PLATFORMS = ['microsoft', 'discord', 'elyby'] as const
+const SKIN_PLATFORMS = ['microsoft', 'discord', 'elyby', 'littleskin'] as const
 type SkinPlatform = (typeof SKIN_PLATFORMS)[number]
 
 const SKINS_PROVIDER_TTL_MS = 5 * 60 * 1000

@@ -1,6 +1,6 @@
 import { ILocalFriend } from './ILocalFriend'
 
-export type AccountType = 'microsoft' | 'plain' | 'elyby' | 'discord'
+export type AccountType = 'microsoft' | 'plain' | 'elyby' | 'discord' | 'littleskin'
 
 export interface IAuth extends DefaultJwtPayload {
   nickname: string

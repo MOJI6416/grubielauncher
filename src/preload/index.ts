@@ -160,7 +160,13 @@ import {
   IRemoteWorldStatsResponse,
 } from "@/types/Achievements";
 import { AuthlibEnsureResult } from "@/types/IAuthlib";
-import { IAuthResponse, IRefreshTokenResponse } from "@/types/Auth";
+import {
+  IAuthResponse,
+  ILittleSkinProfile,
+  ILittleSkinSession,
+  IRefreshTokenResponse,
+  LittleSkinSignInResult,
+} from "@/types/Auth";
 import {
   ActiveFriendShare,
   ResolvedFriendShareConnection,
@@ -552,6 +558,18 @@ export interface IElectronAPI {
     ) => Promise<IRefreshTokenResponse | null>;
     elyby: (code: string) => Promise<IAuthResponse | null>;
     elybyRefresh: (
+      refreshToken: string,
+      id: string,
+    ) => Promise<IRefreshTokenResponse | null>;
+    littleskin: (
+      login: string,
+      password: string,
+    ) => Promise<LittleSkinSignInResult>;
+    littleskinProfile: (
+      session: ILittleSkinSession,
+      profile: ILittleSkinProfile,
+    ) => Promise<IAuthResponse | null>;
+    littleskinRefresh: (
       refreshToken: string,
       id: string,
     ) => Promise<IRefreshTokenResponse | null>;
@@ -983,7 +1001,7 @@ export interface IElectronAPI {
   skins: {
     load: (
       launcherPath: string,
-      platform: "microsoft" | "discord" | "elyby",
+      platform: "microsoft" | "discord" | "elyby" | "littleskin",
       userId: string,
       nickname: string,
       accessToken: string,
@@ -1734,6 +1752,12 @@ export const api: IElectronAPI = {
     elyby: (code: string) => invoke("auth:elyby", code),
     elybyRefresh: (refreshToken: string, id: string) =>
       invoke("auth:elyby:refresh", refreshToken, id),
+    littleskin: (login: string, password: string) =>
+      invoke("auth:littleskin", login, password),
+    littleskinProfile: (session: ILittleSkinSession, profile: ILittleSkinProfile) =>
+      invoke("auth:littleskin:profile", session, profile),
+    littleskinRefresh: (refreshToken: string, id: string) =>
+      invoke("auth:littleskin:refresh", refreshToken, id),
     discord: (code: string) => invoke("auth:discord", code),
     discordRefresh: (refreshToken: string, id: string) =>
       invoke("auth:discord:refresh", refreshToken, id),
@@ -2180,7 +2204,7 @@ export const api: IElectronAPI = {
   skins: {
     load: (
       launcherPath: string,
-      platform: "microsoft" | "discord" | "elyby",
+      platform: "microsoft" | "discord" | "elyby" | "littleskin",
       userId: string,
       nickname: string,
       accessToken: string,

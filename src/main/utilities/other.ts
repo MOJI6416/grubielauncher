@@ -134,7 +134,7 @@ export function getFullLangCode(
 }
 
 export function getJavaAgent(
-  accountType: "elyby" | "discord",
+  accountType: "elyby" | "discord" | "littleskin",
   authinjPath: string,
   isQuotes = false,
   server?: string,
@@ -146,6 +146,9 @@ export function getJavaAgent(
       break;
     case "discord":
       authServer = `grubielauncher.com`;
+      break;
+    case "littleskin":
+      authServer = `littleskin.cn`;
       break;
   }
   if (server) authServer = server;

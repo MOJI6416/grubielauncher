@@ -121,7 +121,8 @@
       "skinsExternal": "Skins on ely.by",
       "capes": "Capes",
       "friends": "Friends and voice",
-      "worksOffline": "Works without the internet"
+      "worksOffline": "Works without the internet",
+      "skinsLittleskin": "Skins on littleskin.cn"
     },
     "auth": {
       "waitingTitle": "Finish signing in to {{provider}}",
@@ -157,11 +158,12 @@
       "discord": "Skins and capes, friends and voice",
       "microsoft": "Official servers and the Mojang skin",
       "elyby": "Skins on ely.by, no Xbox needed",
-      "plain": "No password, singleplayer only"
+      "plain": "No password, singleplayer only",
+      "littleskin": "Skins on littleskin.cn, no Xbox needed"
     },
     "longNicknameOffline": "The nickname is longer than 16 characters or uses unsupported characters — the game will refuse it. Remove this account and create a new one with a shorter nickname.",
     "upgradeTitle": "What is missing",
-    "upgradeHint": "An offline account has no access to official servers and no skins. Add a Discord, Microsoft or Ely.by account on the left to play online.",
+    "upgradeHint": "An offline account has no access to official servers and no skins. Add a Discord, Microsoft, Ely.by or LittleSkin account on the left to play online.",
     "welcomeTitle": "Add an account to play",
     "welcomeHint": "The launcher needs one account to start the game. Pick where you sign in — you can add the rest later and switch between them at any time.",
     "openProfile": "Open profile",
@@ -212,6 +214,27 @@
         "failed": "Could not change the nickname. Please try again.",
         "providerTaken": "Another player has the {{provider}} nickname right now — choose a different one."
       }
+    },
+    "littleskin": "LittleSkin",
+    "littleskinForm": {
+      "title": "Sign in to LittleSkin",
+      "hint": "Enter the email or player name and the password of your LittleSkin account. The password goes only to littleskin.cn — the launcher does not save it.",
+      "login": "Email or player name",
+      "password": "Password",
+      "submit": "Sign in",
+      "register": "No account? Register on littleskin.cn",
+      "chooseTitle": "Choose a player",
+      "chooseHint": "This LittleSkin account has several players. The launcher will play as the one you choose.",
+      "back": "Back",
+      "invalidCredentials": "Wrong email, player name or password.",
+      "noProfiles": "This LittleSkin account has no players yet. Create one on littleskin.cn and sign in again."
+    },
+    "featureShort": {
+      "onlineServers": "Official servers",
+      "skins": "Skins",
+      "capes": "Capes",
+      "friends": "Friends and voice",
+      "worksOffline": "Works offline"
     }
   },
   "serverManager": {
@@ -2957,7 +2980,7 @@
       "stage": {
         "accountUnsupported": {
           "title": "Sign-in required",
-          "description": "An offline nickname cannot host a world. Sign in with Microsoft, Ely.by or Discord."
+          "description": "An offline nickname cannot host a world. Sign in with Microsoft, Ely.by, LittleSkin or Discord."
         },
         "offline": {
           "title": "No connection",
@@ -3266,7 +3289,10 @@
     "removeFromGalleryError": "Could not remove the skin from the gallery",
     "removedFromGallery": "Removed from the gallery",
     "deleteCapeConfirm": "The cape \"{{name}}\" will be deleted from the launcher along with its file.",
-    "catalogLinkError": "This skin is no longer in the catalog"
+    "catalogLinkError": "This skin is no longer in the catalog",
+    "littleskinReadOnly": "Skins and capes of a LittleSkin account are changed on littleskin.cn, so applying, resetting and generating are unavailable here. The launcher shows the skin that is set there.",
+    "littleskinOpenSite": "Open littleskin.cn",
+    "deepLinkLittleskin": "LittleSkin manages skins on its own site, so catalog skins can't be applied to a LittleSkin account"
   },
   "blockedMods": {
     "title": "Blocked mods found",
@@ -4216,7 +4242,7 @@
     "title": "Welcome to Grubie Launcher!",
     "description": "Two steps and you are in the game.",
     "stepAccount": "Add an account",
-    "stepAccountDescription": "Microsoft, Ely.by, Discord or an offline nickname",
+    "stepAccountDescription": "Microsoft, Ely.by, LittleSkin, Discord or an offline nickname",
     "stepVersion": "Install your first instance",
     "stepVersionDescription": "A ready modpack, vanilla Minecraft or a file import",
     "go": "Go",
@@ -4286,7 +4312,8 @@
       "disk": "Your disk",
       "game": "Game",
       "launcher": "Launcher",
-      "unknown": "Service"
+      "unknown": "Service",
+      "littleskin": "LittleSkin"
     },
     "cause": {
       "offline": "{{target}} — no internet connection.",
@@ -4373,7 +4400,7 @@
       "noAccountShort": "sign in required",
       "offlineAccountShort": "not for offline accounts",
       "noAccount": "Sign in to use the assistant.",
-      "offlineAccount": "Not available on an offline account: chat history lives on your Grubie profile. Sign in with Microsoft, Discord or Ely.by."
+      "offlineAccount": "Not available on an offline account: chat history lives on your Grubie profile. Sign in with Microsoft, Discord, Ely.by or LittleSkin."
     },
     "errors": {
       "stepLimit": {

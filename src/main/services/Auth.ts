@@ -2,6 +2,8 @@ import { attachApiHostFallback } from '../utilities/apiHost'
 import {
   IAuthRequest,
   IAuthResponse,
+  ILittleSkinProfile,
+  ILittleSkinSession,
   IRefreshTokenRequest,
   IRefreshTokenResponse
 } from '@/types/Auth'
@@ -62,6 +64,32 @@ export async function refreshElyByToken(
     '/auth/elyby/refresh',
     { refreshToken, id } as IRefreshTokenRequest,
     'ElyBy refresh error'
+  )
+}
+
+export async function authLittleSkin(
+  session: ILittleSkinSession,
+  profile?: ILittleSkinProfile
+): Promise<IAuthResponse | null> {
+  return postAuth<IAuthResponse>(
+    '/auth/littleskin',
+    {
+      accessToken: session.accessToken,
+      clientToken: session.clientToken,
+      ...(profile ? { profileId: profile.id, profileName: profile.name } : {})
+    },
+    'LittleSkin auth error'
+  )
+}
+
+export async function refreshLittleSkinToken(
+  refreshToken: string,
+  id: string
+): Promise<IRefreshTokenResponse | null> {
+  return postAuth<IRefreshTokenResponse>(
+    '/auth/littleskin/refresh',
+    { refreshToken, id } as IRefreshTokenRequest,
+    'LittleSkin refresh error'
   )
 }
 

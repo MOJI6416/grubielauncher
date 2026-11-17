@@ -83,6 +83,7 @@ import {
 } from "./skinLibrary";
 import { readFavorites, writeFavorites } from "./favorites";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { LITTLESKIN_CLOSET_URL } from "@/shared/config";
 
 const api = window.api;
 const ELYBY_SKINS_URL = "https://ely.by/skins";
@@ -232,6 +233,7 @@ export function WardrobePanel({
   const isDiscord = account.type === "discord";
   const isMicrosoft = account.type === "microsoft";
   const isElyby = account.type === "elyby";
+  const isLittleSkin = account.type === "littleskin";
 
   const selectedId = useMemo(
     () => pickSelectedSkinId(skins, data.selectedSkin),
@@ -1032,22 +1034,32 @@ export function WardrobePanel({
           ) : null}
 
           <div className="grid shrink-0 gap-2">
-            {isElyby ? (
+            {isElyby || isLittleSkin ? (
               <div className="grid gap-1.5 rounded-lg border border-border bg-surface-1 p-2.5">
                 <p className="text-xs text-muted-foreground">
-                  {t("manageSkins.elybyReadOnly")}
+                  {t(
+                    isLittleSkin
+                      ? "manageSkins.littleskinReadOnly"
+                      : "manageSkins.elybyReadOnly",
+                  )}
                 </p>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() =>
                     void api.shell
-                      .openExternal(ELYBY_SKINS_URL)
+                      .openExternal(
+                        isLittleSkin ? LITTLESKIN_CLOSET_URL : ELYBY_SKINS_URL,
+                      )
                       .catch(() => undefined)
                   }
                 >
                   <ExternalLink />
-                  {t("manageSkins.elybyOpenSite")}
+                  {t(
+                    isLittleSkin
+                      ? "manageSkins.littleskinOpenSite"
+                      : "manageSkins.elybyOpenSite",
+                  )}
                 </Button>
               </div>
             ) : isApplied ? (

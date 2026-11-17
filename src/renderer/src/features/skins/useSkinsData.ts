@@ -29,7 +29,7 @@ export function useSkinsData() {
 
     return await api.skins.load(
       paths.launcher,
-      account.type as "microsoft" | "discord" | "elyby",
+      account.type as "microsoft" | "discord" | "elyby" | "littleskin",
       authData.uuid || "",
       account.nickname || "",
       accessToken,

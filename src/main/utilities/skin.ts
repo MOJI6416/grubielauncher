@@ -1,4 +1,5 @@
 import { IPlayerSkin, ISkinData, ITexture } from '@/types/Skin'
+import { LITTLESKIN_YGGDRASIL_URL } from '@/shared/config'
 import axios from 'axios'
 import { Backend } from '../services/Backend'
 import fs from 'fs'
@@ -110,6 +111,56 @@ export async function resolveElybySkinUrl(nickname: string): Promise<string> {
   }
 }
 
+function isLittleSkinTextureUrl(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  try {
+    const url = new URL(value)
+    return (
+      (url.protocol === 'https:' || url.protocol === 'http:') &&
+      (url.hostname === 'littleskin.cn' || url.hostname.endsWith('.littleskin.cn'))
+    )
+  } catch {
+    return false
+  }
+}
+
+function toHttps(value: string): string {
+  const url = new URL(value)
+  url.protocol = 'https:'
+  return url.toString()
+}
+
+export async function getLittleSkinTextures(uuid: string): Promise<ISkinData | null> {
+  const cleanUuid = uuid?.replace(/-/g, '')
+  if (!cleanUuid || !/^[0-9a-fA-F]{32}$/.test(cleanUuid)) return null
+
+  try {
+    const response = await axios.get<IPlayerSkin>(
+      `${LITTLESKIN_YGGDRASIL_URL}/sessionserver/session/minecraft/profile/${cleanUuid}`,
+      { timeout: 15000 }
+    )
+
+    const texturesProperty = response.data?.properties?.find(
+      (property) => property.name === 'textures'
+    )
+    if (!texturesProperty) return null
+
+    const json: ITexture = JSON.parse(
+      Buffer.from(texturesProperty.value, 'base64').toString('utf-8')
+    )
+    const skin = json?.textures?.SKIN?.url
+    const cape = json?.textures?.CAPE?.url
+    if (!isLittleSkinTextureUrl(skin)) return null
+
+    return {
+      skin: toHttps(skin),
+      cape: isLittleSkinTextureUrl(cape) ? toHttps(cape) : undefined
+    }
+  } catch {
+    return null
+  }
+}
+
 export async function getSkin(
   type: string,
   uuid: string,
@@ -174,6 +225,8 @@ export async function getSkin(
     return {
       skin: await resolveElybySkinUrl(nickname)
     }
+  } else if (type == 'littleskin') {
+    return await getLittleSkinTextures(uuid)
   } else if (type == 'discord') {
     if (!accessToken) return null
 

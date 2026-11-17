@@ -1,4 +1,4 @@
-export type LeaderPlatform = "microsoft" | "elyby" | "discord";
+export type LeaderPlatform = "microsoft" | "elyby" | "discord" | "littleskin";
 
 export interface LeaderRow {
   key: string;

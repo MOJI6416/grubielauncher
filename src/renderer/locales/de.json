@@ -121,7 +121,8 @@
       "skinsExternal": "Skins auf ely.by",
       "capes": "Umhänge",
       "friends": "Freunde und Sprachchat",
-      "worksOffline": "Funktioniert ohne Internet"
+      "worksOffline": "Funktioniert ohne Internet",
+      "skinsLittleskin": "Skins auf littleskin.cn"
     },
     "auth": {
       "waitingTitle": "Schließen Sie die Anmeldung bei {{provider}} ab",
@@ -157,11 +158,12 @@
       "discord": "Skins und Umhänge, Freunde und Sprachchat",
       "microsoft": "Offizielle Server und der Mojang-Skin",
       "elyby": "Skins auf ely.by, ohne Xbox",
-      "plain": "Ohne Passwort, nur Einzelspieler"
+      "plain": "Ohne Passwort, nur Einzelspieler",
+      "littleskin": "Skins auf littleskin.cn, ohne Xbox"
     },
     "longNicknameOffline": "Der Spielername ist länger als 16 Zeichen oder enthält nicht unterstützte Zeichen – das Spiel lehnt ihn ab. Entfernen Sie dieses Konto und erstellen Sie ein neues mit einem kürzeren Spielernamen.",
     "upgradeTitle": "Was fehlt",
-    "upgradeHint": "Ein Offline-Konto hat keinen Zugang zu offiziellen Servern und keine Skins. Fügen Sie links ein Discord-, Microsoft- oder Ely.by-Konto hinzu, um online zu spielen.",
+    "upgradeHint": "Ein Offline-Konto hat keinen Zugang zu offiziellen Servern und keine Skins. Fügen Sie links ein Discord-, Microsoft-, Ely.by- oder LittleSkin-Konto hinzu, um online zu spielen.",
     "welcomeTitle": "Konto hinzufügen und losspielen",
     "welcomeHint": "Der Launcher braucht ein Konto, um das Spiel zu starten. Wählen Sie, wo Sie sich anmelden – die übrigen können Sie später hinzufügen und jederzeit zwischen ihnen wechseln.",
     "openProfile": "Profil öffnen",
@@ -212,6 +214,27 @@
         "failed": "Spielername konnte nicht geändert werden. Bitte versuchen Sie es erneut.",
         "providerTaken": "Ein anderer Spieler hat gerade den {{provider}}-Spielernamen – wählen Sie einen anderen."
       }
+    },
+    "littleskin": "LittleSkin",
+    "littleskinForm": {
+      "title": "Bei LittleSkin anmelden",
+      "hint": "Geben Sie die E-Mail-Adresse oder den Spielernamen und das Passwort Ihres LittleSkin-Kontos ein. Das Passwort geht nur an littleskin.cn – der Launcher speichert es nicht.",
+      "login": "E-Mail oder Spielername",
+      "password": "Passwort",
+      "submit": "Anmelden",
+      "register": "Kein Konto? Auf littleskin.cn registrieren",
+      "chooseTitle": "Spieler auswählen",
+      "chooseHint": "Dieses LittleSkin-Konto hat mehrere Spieler. Der Launcher spielt mit dem, den Sie auswählen.",
+      "back": "Zurück",
+      "invalidCredentials": "E-Mail, Spielername oder Passwort ist falsch.",
+      "noProfiles": "Dieses LittleSkin-Konto hat noch keine Spieler. Erstellen Sie einen auf littleskin.cn und melden Sie sich erneut an."
+    },
+    "featureShort": {
+      "onlineServers": "Offizielle Server",
+      "skins": "Skins",
+      "capes": "Umhänge",
+      "friends": "Freunde und Sprachchat",
+      "worksOffline": "Ohne Internet"
     }
   },
   "serverManager": {
@@ -2957,7 +2980,7 @@
       "stage": {
         "accountUnsupported": {
           "title": "Anmeldung erforderlich",
-          "description": "Mit einem Offline-Spielernamen kann man keine Welt bereitstellen. Melden Sie sich mit Microsoft, Ely.by oder Discord an."
+          "description": "Mit einem Offline-Spielernamen kann man keine Welt bereitstellen. Melden Sie sich mit Microsoft, Ely.by, LittleSkin oder Discord an."
         },
         "offline": {
           "title": "Keine Verbindung",
@@ -3266,7 +3289,10 @@
     "removeFromGalleryError": "Skin konnte nicht aus der Galerie entfernt werden",
     "removedFromGallery": "Aus der Galerie entfernt",
     "deleteCapeConfirm": "Der Umhang „{{name}}“ wird samt Datei aus dem Launcher gelöscht.",
-    "catalogLinkError": "Dieser Skin ist nicht mehr im Katalog"
+    "catalogLinkError": "Dieser Skin ist nicht mehr im Katalog",
+    "littleskinReadOnly": "Skins und Umhänge eines LittleSkin-Kontos werden auf littleskin.cn geändert, daher sind Anwenden, Zurücksetzen und Erzeugen hier nicht verfügbar. Der Launcher zeigt den dort eingestellten Skin.",
+    "littleskinOpenSite": "littleskin.cn öffnen",
+    "deepLinkLittleskin": "LittleSkin verwaltet Skins auf der eigenen Website, daher lassen sich Katalog-Skins nicht auf ein LittleSkin-Konto anwenden"
   },
   "blockedMods": {
     "title": "Gesperrte Mods gefunden",
@@ -4216,7 +4242,7 @@
     "title": "Willkommen bei Grubie Launcher!",
     "description": "Zwei Schritte, und Sie sind im Spiel.",
     "stepAccount": "Konto hinzufügen",
-    "stepAccountDescription": "Microsoft, Ely.by, Discord oder ein Offline-Spielername",
+    "stepAccountDescription": "Microsoft, Ely.by, LittleSkin, Discord oder ein Offline-Spielername",
     "stepVersion": "Erste Instanz installieren",
     "stepVersionDescription": "Ein fertiges Modpack, Vanilla-Minecraft oder ein Dateiimport",
     "go": "Los",
@@ -4286,7 +4312,8 @@
       "disk": "Ihre Festplatte",
       "game": "Spiel",
       "launcher": "Launcher",
-      "unknown": "Dienst"
+      "unknown": "Dienst",
+      "littleskin": "LittleSkin"
     },
     "cause": {
       "offline": "{{target}} – keine Internetverbindung.",
@@ -4373,7 +4400,7 @@
       "noAccountShort": "Anmeldung nötig",
       "offlineAccountShort": "nicht für Offline-Konten",
       "noAccount": "Melden Sie sich an, um den Assistenten zu nutzen.",
-      "offlineAccount": "Mit einem Offline-Konto nicht verfügbar: Der Chatverlauf liegt in Ihrem Grubie-Profil. Melden Sie sich mit Microsoft, Discord oder Ely.by an."
+      "offlineAccount": "Mit einem Offline-Konto nicht verfügbar: Der Chatverlauf liegt in Ihrem Grubie-Profil. Melden Sie sich mit Microsoft, Discord, Ely.by oder LittleSkin an."
     },
     "errors": {
       "stepLimit": {

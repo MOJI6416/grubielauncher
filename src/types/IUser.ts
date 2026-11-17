@@ -4,7 +4,7 @@ export interface IUser {
   friendCode?: string
   friendRequestsEnabled?: boolean
   nickname: string
-  platform: 'microsoft' | 'elyby' | 'discord'
+  platform: 'microsoft' | 'elyby' | 'discord' | 'littleskin'
   friends: IUser[]
   image: string | null
   headUrl?: string | null

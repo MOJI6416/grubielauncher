@@ -50,6 +50,7 @@ export function providerName(type: AccountType, t: TFunction): string {
   if (type === "microsoft") return t("accounts.microsoft");
   if (type === "elyby") return t("accounts.elyby");
   if (type === "discord") return t("accounts.discord");
+  if (type === "littleskin") return t("accounts.littleskin");
 
   return t("accounts.offline");
 }

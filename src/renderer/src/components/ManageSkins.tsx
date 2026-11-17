@@ -69,6 +69,7 @@ export function ManageSkins() {
   const canUseSkinService = useMemo(
     () =>
       account?.type !== "elyby" &&
+      account?.type !== "littleskin" &&
       canOpenSkinManagerForAccount(account?.type, {
         isInternetOnline,
         isBackendOnline,

@@ -145,6 +145,10 @@ async function refreshAccountToken(
     return await api.auth.discordRefresh(refreshToken, authData.sub);
   }
 
+  if (account.type === "littleskin") {
+    return await api.auth.littleskinRefresh(refreshToken, authData.sub);
+  }
+
   return null;
 }
 

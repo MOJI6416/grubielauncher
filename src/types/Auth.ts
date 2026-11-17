@@ -19,3 +19,17 @@ export interface IRefreshTokenRequest {
   refreshToken: string
   id: string
 }
+
+export interface ILittleSkinProfile {
+  id: string
+  name: string
+}
+
+export interface ILittleSkinSession {
+  accessToken: string
+  clientToken: string
+}
+
+export type LittleSkinSignInResult =
+  | { status: 'signedIn'; auth: IAuthResponse }
+  | { status: 'chooseProfile'; session: ILittleSkinSession; profiles: ILittleSkinProfile[] }

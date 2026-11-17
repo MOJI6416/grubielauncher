@@ -430,7 +430,9 @@ export class RPC {
     if (!account) return undefined
 
     const id =
-      account.type === 'microsoft' || account.type === 'discord'
+      account.type === 'microsoft' ||
+      account.type === 'discord' ||
+      account.type === 'littleskin'
         ? account.uuid
         : account.type === 'elyby'
           ? account.uuid || account.nickname

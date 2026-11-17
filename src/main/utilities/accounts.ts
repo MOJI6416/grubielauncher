@@ -43,7 +43,13 @@ type PersistedAccountConf = {
   lastPlayed: string | null;
 };
 
-const accountTypes: AccountType[] = ["microsoft", "plain", "elyby", "discord"];
+const accountTypes: AccountType[] = [
+  "microsoft",
+  "plain",
+  "elyby",
+  "discord",
+  "littleskin",
+];
 const persistedAccountKeys = new Set([
   "nickname",
   "type",

@@ -2,7 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import type { IAuthResponse } from "@/types/Auth";
+import type {
+  IAuthResponse,
+  ILittleSkinProfile,
+  ILittleSkinSession,
+} from "@/types/Auth";
 import type { AccountType, ILocalAccount } from "@/types/Account";
 import {
   DISCORD_CLIENT_ID,
@@ -34,6 +38,14 @@ import type { OnlineProvider } from "./providers";
 const api = window.api;
 
 export const OAUTH_WINDOW_MS = 10 * 60 * 1000;
+
+export type LittleSkinSignInStep =
+  | { status: "done"; saved: boolean }
+  | {
+      status: "chooseProfile";
+      session: ILittleSkinSession;
+      profiles: ILittleSkinProfile[];
+    };
 
 export interface AuthProgress {
   provider: OnlineProvider;
@@ -121,7 +133,10 @@ export function useAccountsController() {
   }, []);
 
   const upsertAccount = useCallback(
-    async (provider: OnlineProvider, authUser: IAuthResponse) => {
+    async (
+      provider: OnlineProvider | "littleskin",
+      authUser: IAuthResponse,
+    ) => {
       const current = accountsRef.current;
       const subject = accountSubject({ ...authUser, type: provider });
 
@@ -234,6 +249,39 @@ export function useAccountsController() {
     [t, upsertAccount],
   );
 
+  const finishLittleSkin = useCallback(
+    async (authUser: IAuthResponse) => {
+      const { replaced, saved } = await upsertAccount("littleskin", authUser);
+      if (saved) {
+        toast.success(
+          replaced ? t("accountInfo.updated") : t("accounts.added"),
+        );
+      }
+      return saved;
+    },
+    [t, upsertAccount],
+  );
+
+  const signInLittleSkin = useCallback(
+    async (login: string, password: string): Promise<LittleSkinSignInStep> => {
+      const result = await api.auth.littleskin(login, password);
+      if (result.status === "chooseProfile") return result;
+
+      return { status: "done", saved: await finishLittleSkin(result.auth) };
+    },
+    [finishLittleSkin],
+  );
+
+  const chooseLittleSkinProfile = useCallback(
+    async (session: ILittleSkinSession, profile: ILittleSkinProfile) => {
+      const authUser = await api.auth.littleskinProfile(session, profile);
+      if (!authUser) throw new Error("Empty auth response");
+
+      return await finishLittleSkin(authUser);
+    },
+    [finishLittleSkin],
+  );
+
   const addOfflineAccount = useCallback(
     async (nickname: string) => {
       const value = nickname.trim();
@@ -321,7 +369,9 @@ export function useAccountsController() {
             ? await api.auth.microsoftRefresh(account.refreshToken, subject)
             : account.type === "elyby"
               ? await api.auth.elybyRefresh(account.refreshToken, subject)
-              : await api.auth.discordRefresh(account.refreshToken, subject);
+              : account.type === "littleskin"
+                ? await api.auth.littleskinRefresh(account.refreshToken, subject)
+                : await api.auth.discordRefresh(account.refreshToken, subject);
 
         if (!refreshed?.accessToken) throw new Error("Empty refresh response");
 
@@ -391,6 +441,8 @@ export function useAccountsController() {
     busyIdentity,
     signIn,
     cancelAuth,
+    signInLittleSkin,
+    chooseLittleSkinProfile,
     addOfflineAccount,
     useAccount,
     removeAccount,

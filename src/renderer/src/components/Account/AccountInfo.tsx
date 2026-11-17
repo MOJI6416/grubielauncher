@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IUser } from "@/types/IUser";
+import { LITTLESKIN_CLOSET_URL } from "@/shared/config";
 import { ISkinData } from "@/types/Skin";
 import {
   accountAtom,
@@ -312,17 +313,22 @@ export default function AccountInfo({
               ) : (
                 <SectionNotice
                   text={
-                    user.platform === "elyby"
+                    user.platform === "elyby" || user.platform === "littleskin"
                       ? t("app.internetUnavailable")
                       : t("app.backendUnavailable")
                   }
                   action={
-                    user.platform === "elyby" ? (
+                    user.platform === "elyby" ||
+                    user.platform === "littleskin" ? (
                       <Button
                         variant="secondary"
                         size="sm"
                         onClick={() =>
-                          void api.shell.openExternal("https://ely.by/skins")
+                          void api.shell.openExternal(
+                            user.platform === "littleskin"
+                              ? LITTLESKIN_CLOSET_URL
+                              : "https://ely.by/skins",
+                          )
                         }
                       >
                         <ExternalLink />

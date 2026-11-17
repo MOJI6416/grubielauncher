@@ -6,6 +6,7 @@ export const PROVIDER_ORDER: AccountType[] = [
   "discord",
   "microsoft",
   "elyby",
+  "littleskin",
   "plain",
 ];
 
@@ -49,6 +50,15 @@ const CAPABILITIES: Record<AccountType, ProviderCapabilities> = {
     friends: true,
     onlineServers: false,
   },
+  littleskin: {
+    requiresInternet: true,
+    requiresBackend: false,
+    skins: "external",
+    capes: false,
+    resetSkin: false,
+    friends: true,
+    onlineServers: false,
+  },
   plain: {
     requiresInternet: false,
     requiresBackend: false,
@@ -80,7 +90,10 @@ export function providerFeatures(type: AccountType): ProviderFeature[] {
   return [
     { key: "onlineServers", available: caps.onlineServers },
     caps.skins === "external"
-      ? { key: "skinsExternal", available: true }
+      ? {
+          key: type === "littleskin" ? "skinsLittleskin" : "skinsExternal",
+          available: true,
+        }
       : { key: "skinsManaged", available: caps.skins === "managed" },
     { key: "capes", available: caps.capes },
     { key: "friends", available: caps.friends },

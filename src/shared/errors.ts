@@ -7,6 +7,7 @@ export type FailureSide =
   | "mojang"
   | "loader"
   | "elyby"
+  | "littleskin"
   | "microsoft"
   | "discord"
   | "external"
@@ -73,6 +74,7 @@ const SIDE_CODES: Record<FailureSide, string> = {
   mojang: "MJ",
   loader: "LDR",
   elyby: "ELY",
+  littleskin: "LSK",
   microsoft: "MS",
   discord: "DSC",
   external: "EXT",
@@ -136,6 +138,7 @@ const HOST_SIDES: Array<[string, FailureSide]> = [
   ["spigotmc.org", "loader"],
   ["getbukkit.org", "loader"],
   ["ely.by", "elyby"],
+  ["littleskin.cn", "littleskin"],
   ["microsoftonline.com", "microsoft"],
   ["live.com", "microsoft"],
   ["xboxlive.com", "microsoft"],

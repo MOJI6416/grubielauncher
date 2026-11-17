@@ -7,11 +7,11 @@ import { limitList, wrapUntrusted } from "../untrusted";
 const api = window.api;
 
 const MAX_SKINS = 30;
-const SKIN_PLATFORMS = ["microsoft", "discord", "elyby"];
+const SKIN_PLATFORMS = ["microsoft", "discord", "elyby", "littleskin"];
 
 type SkinContext = {
   launcherPath: string;
-  platform: "microsoft" | "discord" | "elyby";
+  platform: "microsoft" | "discord" | "elyby" | "littleskin";
   uuid: string;
   nickname: string;
   accessToken: string;

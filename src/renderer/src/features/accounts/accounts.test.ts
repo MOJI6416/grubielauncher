@@ -156,6 +156,20 @@ describe("identity", () => {
       ),
     ).toBe(`${base}/skins/head/elyby/uuid-ely`);
 
+    expect(
+      headImageUrl(
+        account({
+          type: "littleskin",
+          nickname: "Steve_LS",
+          accessToken: token({ sub: "s", uuid: "uuid-ls", exp: 1 }),
+        }),
+        base,
+      ),
+    ).toBe(`${base}/skins/head/littleskin/uuid-ls`);
+    expect(
+      headImageUrl(account({ type: "littleskin", nickname: "Steve_LS" }), base),
+    ).toBeNull();
+
     expect(headImageUrl(account({ type: "plain" }), base)).toBeNull();
     expect(headImageUrl(account({}), base)).toBeNull();
   });
@@ -567,6 +581,16 @@ describe("provider capabilities", () => {
     expect(providerCapabilities("discord").resetSkin).toBe(false);
   });
 
+  it("treats LittleSkin like ely.by: external skins, friends, no Grubie backend to play", () => {
+    const littleskin = providerCapabilities("littleskin");
+
+    expect(littleskin.skins).toBe("external");
+    expect(littleskin.friends).toBe(true);
+    expect(littleskin.requiresInternet).toBe(true);
+    expect(littleskin.requiresBackend).toBe(false);
+    expect(littleskin.onlineServers).toBe(false);
+  });
+
   it("lets the offline account work without any service", () => {
     const plain = providerCapabilities("plain");
 
@@ -586,6 +610,13 @@ describe("provider capabilities", () => {
       "worksOffline",
     ]);
     expect(keys("elyby")).toContain("skinsExternal");
+    expect(keys("littleskin")).toEqual([
+      "onlineServers",
+      "skinsLittleskin",
+      "capes",
+      "friends",
+      "worksOffline",
+    ]);
 
     const plain = Object.fromEntries(
       providerFeatures("plain").map((f) => [f.key, f.available]),

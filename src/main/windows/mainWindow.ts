@@ -33,6 +33,7 @@ const AUTO_OPEN_HOST_SUFFIXES = [
   "minecraft.net",
   "mojang.com",
   "ely.by",
+  "littleskin.cn",
   "fabricmc.net",
   "neoforged.net",
   "minecraftforge.net",

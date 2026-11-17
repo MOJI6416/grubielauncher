@@ -4,6 +4,7 @@ import { accountSubject } from "./identity";
 const PROVIDER_PROFILE_URL: Partial<Record<AccountType, string>> = {
   microsoft: "https://www.minecraft.net/msaprofile/mygames/editprofile",
   elyby: "https://account.ely.by/",
+  littleskin: "https://littleskin.cn/user/player",
 };
 
 export function canChooseNickname(type: AccountType): boolean {

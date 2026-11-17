@@ -20,6 +20,7 @@ const AUTH_SIDES: Record<AccountType, FailureSide> = {
   microsoft: "microsoft",
   elyby: "elyby",
   discord: "discord",
+  littleskin: "littleskin",
   plain: "launcher",
 };
 

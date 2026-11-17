@@ -121,7 +121,8 @@
       "skinsExternal": "Skins en ely.by",
       "capes": "Capas",
       "friends": "Amigos y voz",
-      "worksOffline": "Funciona sin internet"
+      "worksOffline": "Funciona sin internet",
+      "skinsLittleskin": "Skins en littleskin.cn"
     },
     "auth": {
       "waitingTitle": "Termine de iniciar sesión en {{provider}}",
@@ -157,11 +158,12 @@
       "discord": "Skins y capas, amigos y voz",
       "microsoft": "Servidores oficiales y la skin de Mojang",
       "elyby": "Skins en ely.by, sin Xbox",
-      "plain": "Sin contraseña, solo un jugador"
+      "plain": "Sin contraseña, solo un jugador",
+      "littleskin": "Skins en littleskin.cn, sin Xbox"
     },
     "longNicknameOffline": "El nombre de usuario tiene más de 16 caracteres o usa caracteres no admitidos, y el juego lo rechazará. Elimine esta cuenta y cree una nueva con un nombre más corto.",
     "upgradeTitle": "Qué falta",
-    "upgradeHint": "Una cuenta sin conexión no tiene acceso a los servidores oficiales ni a las skins. Agregue una cuenta de Discord, Microsoft o Ely.by a la izquierda para jugar en línea.",
+    "upgradeHint": "Una cuenta sin conexión no tiene acceso a los servidores oficiales ni a las skins. Agregue una cuenta de Discord, Microsoft, Ely.by o LittleSkin a la izquierda para jugar en línea.",
     "welcomeTitle": "Agregue una cuenta para jugar",
     "welcomeHint": "El launcher necesita una cuenta para iniciar el juego. Elija dónde inicia sesión: puede agregar las demás más tarde y cambiar entre ellas cuando quiera.",
     "openProfile": "Abrir perfil",
@@ -212,6 +214,27 @@
         "failed": "No se pudo cambiar el nombre. Inténtelo de nuevo.",
         "providerTaken": "Otro jugador tiene ahora el nombre de {{provider}}: elija uno diferente."
       }
+    },
+    "littleskin": "LittleSkin",
+    "littleskinForm": {
+      "title": "Iniciar sesión en LittleSkin",
+      "hint": "Ingrese el correo o el nombre de jugador y la contraseña de su cuenta de LittleSkin. La contraseña solo se envía a littleskin.cn; el launcher no la guarda.",
+      "login": "Correo o nombre de jugador",
+      "password": "Contraseña",
+      "submit": "Iniciar sesión",
+      "register": "¿No tiene cuenta? Regístrese en littleskin.cn",
+      "chooseTitle": "Elija un jugador",
+      "chooseHint": "Esta cuenta de LittleSkin tiene varios jugadores. El launcher jugará con el que elija.",
+      "back": "Atrás",
+      "invalidCredentials": "El correo, el nombre de jugador o la contraseña no son correctos.",
+      "noProfiles": "Esta cuenta de LittleSkin todavía no tiene jugadores. Cree uno en littleskin.cn e inicie sesión de nuevo."
+    },
+    "featureShort": {
+      "onlineServers": "Servidores oficiales",
+      "skins": "Skins",
+      "capes": "Capas",
+      "friends": "Amigos y voz",
+      "worksOffline": "Sin internet"
     }
   },
   "serverManager": {
@@ -2981,7 +3004,7 @@
       "stage": {
         "accountUnsupported": {
           "title": "Hay que iniciar sesión",
-          "description": "Con un nombre sin conexión no se puede ser anfitrión de un mundo. Inicie sesión con Microsoft, Ely.by o Discord."
+          "description": "Con un nombre sin conexión no se puede ser anfitrión de un mundo. Inicie sesión con Microsoft, Ely.by, LittleSkin o Discord."
         },
         "offline": {
           "title": "Sin conexión",
@@ -3290,7 +3313,10 @@
     "removeFromGalleryError": "No se pudo quitar la skin de la galería",
     "removedFromGallery": "Quitada de la galería",
     "deleteCapeConfirm": "La capa «{{name}}» se eliminará del launcher junto con su archivo.",
-    "catalogLinkError": "Esta skin ya no está en el catálogo"
+    "catalogLinkError": "Esta skin ya no está en el catálogo",
+    "littleskinReadOnly": "Las skins y capas de una cuenta de LittleSkin se cambian en littleskin.cn, así que aquí no se puede aplicar, restablecer ni generar. El launcher muestra la skin configurada allí.",
+    "littleskinOpenSite": "Abrir littleskin.cn",
+    "deepLinkLittleskin": "LittleSkin administra las skins en su propio sitio, así que las skins del catálogo no se pueden aplicar a una cuenta de LittleSkin"
   },
   "blockedMods": {
     "title": "Se encontraron mods bloqueados",
@@ -4251,7 +4277,7 @@
     "title": "¡Le damos la bienvenida a Grubie Launcher!",
     "description": "Dos pasos y estará en el juego.",
     "stepAccount": "Agregue una cuenta",
-    "stepAccountDescription": "Microsoft, Ely.by, Discord o un nombre sin conexión",
+    "stepAccountDescription": "Microsoft, Ely.by, LittleSkin, Discord o un nombre sin conexión",
     "stepVersion": "Instale su primera instancia",
     "stepVersionDescription": "Un modpack listo, Minecraft vanilla o una importación desde archivo",
     "go": "Ir",
@@ -4322,7 +4348,8 @@
       "disk": "Su disco",
       "game": "Juego",
       "launcher": "Launcher",
-      "unknown": "Servicio"
+      "unknown": "Servicio",
+      "littleskin": "LittleSkin"
     },
     "cause": {
       "offline": "{{target}}: sin conexión a internet.",
@@ -4409,7 +4436,7 @@
       "noAccountShort": "requiere iniciar sesión",
       "offlineAccountShort": "no para cuentas sin conexión",
       "noAccount": "Inicie sesión para usar el asistente.",
-      "offlineAccount": "No está disponible con una cuenta sin conexión: el historial de chats se guarda en su perfil de Grubie. Inicie sesión con Microsoft, Discord o Ely.by."
+      "offlineAccount": "No está disponible con una cuenta sin conexión: el historial de chats se guarda en su perfil de Grubie. Inicie sesión con Microsoft, Discord, Ely.by o LittleSkin."
     },
     "errors": {
       "stepLimit": {

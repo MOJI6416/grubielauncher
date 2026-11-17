@@ -64,7 +64,7 @@ type CapeRegistrationOptions = {
   remoteId?: string
 }
 
-export type SkinsPlatform = 'microsoft' | 'discord' | 'elyby'
+export type SkinsPlatform = 'microsoft' | 'discord' | 'elyby' | 'littleskin'
 
 type StoredSkinEntry = Partial<ISkinEntry> & Pick<ISkinEntry, 'id' | 'model' | 'name' | 'url'>
 type StoredCapeEntry = Partial<ICape> & Pick<ICape, 'id' | 'alias' | 'url'>
@@ -128,7 +128,7 @@ export class SkinsManager extends BaseService {
 
     if (platform === 'discord') {
       this.skinServiceUrl = getApiBaseUrl()
-    } else if (platform === 'elyby') {
+    } else if (platform === 'elyby' || platform === 'littleskin') {
       this.skinServiceUrl = ''
     }
 
@@ -138,7 +138,7 @@ export class SkinsManager extends BaseService {
   }
 
   private hasRemoteSkinService(): boolean {
-    return this.platform !== 'elyby'
+    return this.platform !== 'elyby' && this.platform !== 'littleskin'
   }
 
   private assertRemoteSkinService() {

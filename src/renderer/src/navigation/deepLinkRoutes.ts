@@ -61,6 +61,13 @@ export function resolveDeepLink(
           messageKey: "manageSkins.deepLinkElyby",
         };
       }
+      if (context.accountType === "littleskin") {
+        return {
+          kind: "notice",
+          level: "info",
+          messageKey: "manageSkins.deepLinkLittleskin",
+        };
+      }
       return { kind: "skin", skinId: payload.id };
 
     case "theme":

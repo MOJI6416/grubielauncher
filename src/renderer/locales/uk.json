@@ -121,7 +121,8 @@
       "skinsExternal": "Скіни на ely.by",
       "capes": "Плащі",
       "friends": "Друзі та голос",
-      "worksOffline": "Працює без інтернету"
+      "worksOffline": "Працює без інтернету",
+      "skinsLittleskin": "Скіни на littleskin.cn"
     },
     "auth": {
       "waitingTitle": "Завершіть вхід через {{provider}}",
@@ -157,11 +158,12 @@
       "discord": "Скіни та плащі, друзі та голос",
       "microsoft": "Офіційні сервери та скін Mojang",
       "elyby": "Скіни на ely.by, без Xbox",
-      "plain": "Без пароля, лише одиночна гра"
+      "plain": "Без пароля, лише одиночна гра",
+      "littleskin": "Скіни на littleskin.cn, без Xbox"
     },
     "longNicknameOffline": "Нік довший за 16 символів або містить непідтримувані символи — гра його не прийме. Видаліть цей акаунт і створіть новий із коротким ніком.",
     "upgradeTitle": "Чого бракує",
-    "upgradeHint": "Офлайн-акаунт не пускає на офіційні сервери та не дає скінів. Додайте акаунт Discord, Microsoft або Ely.by ліворуч, щоб грати онлайн.",
+    "upgradeHint": "Офлайн-акаунт не пускає на офіційні сервери та не дає скінів. Додайте акаунт Discord, Microsoft, Ely.by або LittleSkin ліворуч, щоб грати онлайн.",
     "welcomeTitle": "Додайте акаунт, щоб грати",
     "welcomeHint": "Лаунчеру потрібен один акаунт, щоб запустити гру. Виберіть, де входити — решту можна додати пізніше та перемикатися між ними будь-коли.",
     "openProfile": "Відкрити профіль",
@@ -212,6 +214,27 @@
         "failed": "Не вдалося змінити нік. Спробуйте ще раз.",
         "providerTaken": "Нік з {{provider}} зараз зайнятий іншим гравцем — оберіть інший."
       }
+    },
+    "littleskin": "LittleSkin",
+    "littleskinForm": {
+      "title": "Вхід до LittleSkin",
+      "hint": "Введіть пошту або ім’я персонажа та пароль від акаунта LittleSkin. Пароль надсилається лише на littleskin.cn — лаунчер його не зберігає.",
+      "login": "Пошта або ім’я персонажа",
+      "password": "Пароль",
+      "submit": "Увійти",
+      "register": "Немає акаунта? Зареєструйтеся на littleskin.cn",
+      "chooseTitle": "Виберіть персонажа",
+      "chooseHint": "На цьому акаунті LittleSkin кілька персонажів. Лаунчер гратиме за того, якого ви виберете.",
+      "back": "Назад",
+      "invalidCredentials": "Неправильна пошта, ім’я персонажа або пароль.",
+      "noProfiles": "На акаунті LittleSkin ще немає персонажів. Створіть персонажа на littleskin.cn і увійдіть знову."
+    },
+    "featureShort": {
+      "onlineServers": "Офіційні сервери",
+      "skins": "Скіни",
+      "capes": "Плащі",
+      "friends": "Друзі та голос",
+      "worksOffline": "Без інтернету"
     }
   },
   "serverManager": {
@@ -2993,7 +3016,7 @@
       "stage": {
         "accountUnsupported": {
           "title": "Потрібен вхід в акаунт",
-          "description": "З офлайн-ніком світ не роздати. Увійдіть через Microsoft, Ely.by або Discord."
+          "description": "З офлайн-ніком світ не роздати. Увійдіть через Microsoft, Ely.by, LittleSkin або Discord."
         },
         "offline": {
           "title": "Немає зв'язку",
@@ -3302,7 +3325,10 @@
     "removeFromGalleryError": "Не вдалося прибрати скін з галереї",
     "removedFromGallery": "Скін прибрано з галереї",
     "deleteCapeConfirm": "Плащ «{{name}}» буде видалено з лаунчера разом із файлом.",
-    "catalogLinkError": "Цього скіна більше немає в каталозі"
+    "catalogLinkError": "Цього скіна більше немає в каталозі",
+    "littleskinReadOnly": "Скіни та плащі акаунта LittleSkin змінюються на сайті littleskin.cn, тому застосування, скидання та генерація тут недоступні. Лаунчер показує скін, встановлений там.",
+    "littleskinOpenSite": "Відкрити littleskin.cn",
+    "deepLinkLittleskin": "LittleSkin керує скінами на своєму сайті, тому скіни з каталогу не можна застосувати до акаунта LittleSkin"
   },
   "blockedMods": {
     "title": "Знайдено заблоковані моди",
@@ -4273,7 +4299,7 @@
     "title": "Ласкаво просимо до Grubie Launcher!",
     "description": "Два кроки — і можна грати.",
     "stepAccount": "Додайте акаунт",
-    "stepAccountDescription": "Microsoft, Ely.by, Discord або офлайн-нік",
+    "stepAccountDescription": "Microsoft, Ely.by, LittleSkin, Discord або офлайн-нік",
     "stepVersion": "Встановіть першу збірку",
     "stepVersionDescription": "Готовий модпак, чистий Minecraft або імпорт із файлу",
     "go": "Почати",
@@ -4344,7 +4370,8 @@
       "disk": "Ваш диск",
       "game": "Гра",
       "launcher": "Лаунчер",
-      "unknown": "Сервіс"
+      "unknown": "Сервіс",
+      "littleskin": "LittleSkin"
     },
     "cause": {
       "offline": "{{target}} — немає підключення до інтернету.",
@@ -4431,7 +4458,7 @@
       "noAccountShort": "потрібен вхід",
       "offlineAccountShort": "не для офлайн-акаунта",
       "noAccount": "Увійдіть в акаунт, щоб користуватися асистентом.",
-      "offlineAccount": "Недоступно на офлайн-акаунті: історія листування зберігається у профілі Grubie. Увійдіть через Microsoft, Discord або Ely.by."
+      "offlineAccount": "Недоступно на офлайн-акаунті: історія листування зберігається у профілі Grubie. Увійдіть через Microsoft, Discord, Ely.by або LittleSkin."
     },
     "errors": {
       "stepLimit": {

@@ -75,6 +75,19 @@ describe("resolveAuthlibServer", () => {
     expect(server?.url).toBe("https://account.ely.by/api/authlib-injector");
   });
 
+  it("prefetches LittleSkin metadata from its Yggdrasil API root", async () => {
+    axiosGetMock.mockResolvedValue({ data: metadata });
+
+    const server = await resolveAuthlibServer("littleskin");
+
+    expect(axiosGetMock).toHaveBeenCalledWith(
+      "https://littleskin.cn/api/yggdrasil",
+      expect.objectContaining({ timeout: expect.any(Number) }),
+    );
+    expect(server?.url).toBe("https://littleskin.cn/api/yggdrasil");
+    expect(server && decode(server.prefetched)).toEqual(metadata);
+  });
+
   it("returns null when Ely.by is unreachable", async () => {
     axiosGetMock.mockRejectedValue(new Error("ETIMEDOUT"));
     expect(await resolveAuthlibServer("elyby")).toBeNull();

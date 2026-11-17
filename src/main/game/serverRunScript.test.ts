@@ -233,6 +233,7 @@ describe("isLoaderManagedJvmArgument", () => {
       "-javaagent:libraries/com/GitHub/YuShijinhun/Authlib-Injector/1.2.7/Authlib-Injector-1.2.7.JAR=ely.by",
       "-javaagent:LIBRARIES/authlib-injector-1.2.7.Jar=Ely.By",
       "-javaagent:libraries/authlib-injector-1.2.7.jar=GrubieLauncher.COM",
+      "-javaagent:libraries/authlib-injector-1.2.8.jar=littleskin.cn",
     ]) {
       expect(isLoaderManagedJvmArgument(token)).toBe(true);
     }
@@ -244,6 +245,7 @@ describe("isLoaderManagedJvmArgument", () => {
       "-javaagent:libraries/authlib-injector-1.2.7.JAR=ELY.BY.EVIL.COM",
       "-javaagent:libraries/authlib-injector-1.2.7.jar=evil.ely.by",
       "-javaagent:libraries/authlib-injector-1.2.7.jar=grubielauncher.com.evil.com",
+      "-javaagent:libraries/authlib-injector-1.2.8.jar=littleskin.cn.evil.com",
       "-javaagent:libraries/../evil.jar=ely.by",
       "-javaagent:LIBRARIES/../evil.JAR=ELY.BY",
       "-javaagent:mods/evil.jar=ely.by",

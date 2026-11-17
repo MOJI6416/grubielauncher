@@ -56,11 +56,13 @@ export function AccountDetail({
   controller,
   isRunning,
   onRemove,
+  onSignInAgain,
 }: {
   account: ILocalAccount;
   controller: AccountsController;
   isRunning: boolean;
   onRemove: () => void;
+  onSignInAgain: () => void;
 }) {
   const { t } = useTranslation();
   const [now] = useState(() => Date.now());
@@ -267,11 +269,7 @@ export function AccountDetail({
                   size="sm"
                   variant="secondary"
                   disabled={!providerReachable}
-                  onClick={() =>
-                    void controller.signIn(
-                      account.type as "discord" | "microsoft" | "elyby",
-                    )
-                  }
+                  onClick={onSignInAgain}
                 >
                   <LogIn className="size-3.5" />
                   {t("accounts.signInAgain")}

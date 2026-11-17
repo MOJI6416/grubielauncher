@@ -69,7 +69,9 @@ export function canOpenSkinManagerForAccount(
   state: ConnectivityState,
 ): boolean {
   if (!accountType || accountType === "plain") return false;
-  if (accountType === "elyby") return canUseInternetFeature(state);
+  if (accountType === "elyby" || accountType === "littleskin") {
+    return canUseInternetFeature(state);
+  }
 
   return canUseBackendFeature(state);
 }

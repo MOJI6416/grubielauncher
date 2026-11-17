@@ -121,7 +121,8 @@
       "skinsExternal": "Skiny na ely.by",
       "capes": "Peleryny",
       "friends": "Znajomi i głos",
-      "worksOffline": "Działa bez internetu"
+      "worksOffline": "Działa bez internetu",
+      "skinsLittleskin": "Skiny na littleskin.cn"
     },
     "auth": {
       "waitingTitle": "Dokończ logowanie w serwisie {{provider}}",
@@ -157,11 +158,12 @@
       "discord": "Skiny i peleryny, znajomi i głos",
       "microsoft": "Oficjalne serwery i skin Mojang",
       "elyby": "Skiny na ely.by, bez Xboxa",
-      "plain": "Bez hasła, tylko tryb jednoosobowy"
+      "plain": "Bez hasła, tylko tryb jednoosobowy",
+      "littleskin": "Skiny na littleskin.cn, bez Xboxa"
     },
     "longNicknameOffline": "Nick ma ponad 16 znaków lub zawiera niedozwolone znaki — gra go odrzuci. Usuń to konto i utwórz nowe z krótszym nickiem.",
     "upgradeTitle": "Czego brakuje",
-    "upgradeHint": "Konto offline nie ma dostępu do oficjalnych serwerów ani skinów. Dodaj po lewej konto Discord, Microsoft lub Ely.by, aby grać online.",
+    "upgradeHint": "Konto offline nie ma dostępu do oficjalnych serwerów ani skinów. Dodaj po lewej konto Discord, Microsoft, Ely.by lub LittleSkin, aby grać online.",
     "welcomeTitle": "Dodaj konto, aby grać",
     "welcomeHint": "Do uruchomienia gry launcher potrzebuje jednego konta. Wybierz, gdzie się logujesz — pozostałe można dodać później i przełączać się między nimi w dowolnej chwili.",
     "openProfile": "Otwórz profil",
@@ -212,6 +214,27 @@
         "failed": "Nie udało się zmienić nicku. Spróbuj ponownie.",
         "providerTaken": "Nick z serwisu {{provider}} ma teraz inny gracz — wybierz inny."
       }
+    },
+    "littleskin": "LittleSkin",
+    "littleskinForm": {
+      "title": "Logowanie do LittleSkin",
+      "hint": "Wpisz e-mail lub nazwę gracza i hasło do konta LittleSkin. Hasło trafia tylko do littleskin.cn — launcher go nie zapisuje.",
+      "login": "E-mail lub nazwa gracza",
+      "password": "Hasło",
+      "submit": "Zaloguj się",
+      "register": "Nie masz konta? Zarejestruj się na littleskin.cn",
+      "chooseTitle": "Wybierz gracza",
+      "chooseHint": "To konto LittleSkin ma kilku graczy. Launcher będzie grać tym, którego wybierzesz.",
+      "back": "Wstecz",
+      "invalidCredentials": "Nieprawidłowy e-mail, nazwa gracza lub hasło.",
+      "noProfiles": "To konto LittleSkin nie ma jeszcze graczy. Utwórz gracza na littleskin.cn i zaloguj się ponownie."
+    },
+    "featureShort": {
+      "onlineServers": "Oficjalne serwery",
+      "skins": "Skiny",
+      "capes": "Peleryny",
+      "friends": "Znajomi i głos",
+      "worksOffline": "Bez internetu"
     }
   },
   "serverManager": {
@@ -3005,7 +3028,7 @@
       "stage": {
         "accountUnsupported": {
           "title": "Wymagane logowanie",
-          "description": "Nick offline nie może hostować świata. Zaloguj się przez Microsoft, Ely.by lub Discord."
+          "description": "Nick offline nie może hostować świata. Zaloguj się przez Microsoft, Ely.by, LittleSkin lub Discord."
         },
         "offline": {
           "title": "Brak połączenia",
@@ -3314,7 +3337,10 @@
     "removeFromGalleryError": "Nie udało się usunąć skina z galerii",
     "removedFromGallery": "Usunięto z galerii",
     "deleteCapeConfirm": "Peleryna „{{name}}” zostanie usunięta z launchera razem z plikiem.",
-    "catalogLinkError": "Tego skina nie ma już w katalogu"
+    "catalogLinkError": "Tego skina nie ma już w katalogu",
+    "littleskinReadOnly": "Skiny i peleryny konta LittleSkin zmienia się na littleskin.cn, więc stosowanie, resetowanie i generowanie są tu niedostępne. Launcher pokazuje skin ustawiony tam.",
+    "littleskinOpenSite": "Otwórz littleskin.cn",
+    "deepLinkLittleskin": "LittleSkin zarządza skinami na własnej stronie, więc skinów z katalogu nie można zastosować do konta LittleSkin"
   },
   "blockedMods": {
     "title": "Znaleziono zablokowane mody",
@@ -4286,7 +4312,7 @@
     "title": "Witamy w Grubie Launcher!",
     "description": "Dwa kroki i jesteś w grze.",
     "stepAccount": "Dodaj konto",
-    "stepAccountDescription": "Microsoft, Ely.by, Discord lub nick offline",
+    "stepAccountDescription": "Microsoft, Ely.by, LittleSkin, Discord lub nick offline",
     "stepVersion": "Zainstaluj pierwszą instancję",
     "stepVersionDescription": "Gotowy modpack, czysty Minecraft lub import z pliku",
     "go": "Dalej",
@@ -4358,7 +4384,8 @@
       "disk": "Twój dysk",
       "game": "Gra",
       "launcher": "Launcher",
-      "unknown": "Usługa"
+      "unknown": "Usługa",
+      "littleskin": "LittleSkin"
     },
     "cause": {
       "offline": "{{target}} — brak połączenia z internetem.",
@@ -4445,7 +4472,7 @@
       "noAccountShort": "wymagane logowanie",
       "offlineAccountShort": "nie dla kont offline",
       "noAccount": "Zaloguj się, aby korzystać z asystenta.",
-      "offlineAccount": "Niedostępne na koncie offline: historia czatów jest przechowywana w profilu Grubie. Zaloguj się przez Microsoft, Discord lub Ely.by."
+      "offlineAccount": "Niedostępne na koncie offline: historia czatów jest przechowywana w profilu Grubie. Zaloguj się przez Microsoft, Discord, Ely.by lub LittleSkin."
     },
     "errors": {
       "stepLimit": {

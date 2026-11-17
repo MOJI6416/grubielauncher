@@ -25,6 +25,7 @@ import { AccountDetail } from "./AccountDetail";
 import { AccountsWelcome } from "./AccountsWelcome";
 import { AuthProgressView } from "./AuthProgressView";
 import { OfflineAccountForm } from "./OfflineAccountForm";
+import { LittleSkinAccountForm } from "./LittleSkinAccountForm";
 import { ProviderIcon, providerName } from "./ProviderMark";
 import { SessionIcon } from "./SessionMark";
 import { accountIdentity } from "./identity";
@@ -49,6 +50,8 @@ import { MOD_KEY } from "@renderer/utilities/platform";
 
 const SEARCH_THRESHOLD = 6;
 
+type OpenForm = { kind: "plain" } | { kind: "littleskin"; login: string };
+
 export function AccountsPanel() {
   const { t } = useTranslation();
   const controller = useAccountsController();
@@ -60,7 +63,7 @@ export function AccountsPanel() {
 
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState<string | null>(null);
-  const [offlineFormOpen, setOfflineFormOpen] = useState(false);
+  const [form, setForm] = useState<OpenForm | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<ILocalAccount | null>(
     null,
   );
@@ -90,7 +93,7 @@ export function AccountsPanel() {
 
     setAddRequested(false);
     setFocused(null);
-    setOfflineFormOpen(false);
+    setForm(null);
     setHighlightAdd(true);
 
     const timer = window.setTimeout(() => setHighlightAdd(false), 2400);
@@ -112,8 +115,33 @@ export function AccountsPanel() {
   const connectivity = { isInternetOnline, isBackendOnline };
 
   const startSignIn = (provider: OnlineProvider) => {
-    setOfflineFormOpen(false);
+    setForm(null);
     void controller.signIn(provider);
+  };
+
+  const openForm = (next: OpenForm) => {
+    controller.cancelAuth();
+    setForm(next);
+  };
+
+  const pickProvider = (provider: ILocalAccount["type"]) => {
+    if (provider === "plain") {
+      openForm({ kind: "plain" });
+      return;
+    }
+    if (provider === "littleskin") {
+      openForm({ kind: "littleskin", login: "" });
+      return;
+    }
+    startSignIn(provider);
+  };
+
+  const signInAgain = (account: ILocalAccount) => {
+    if (account.type === "littleskin") {
+      openForm({ kind: "littleskin", login: account.nickname });
+      return;
+    }
+    if (account.type !== "plain") startSignIn(account.type);
   };
 
   const risk = pendingRemoval
@@ -154,19 +182,10 @@ export function AccountsPanel() {
     );
   }
 
-  if (accounts.length === 0 && !progress && !offlineFormOpen) {
+  if (accounts.length === 0 && !progress && !form) {
     return (
       <div className="h-full min-h-0 rounded-xl border border-border bg-card">
-        <AccountsWelcome
-          connectivity={connectivity}
-          onPick={(provider) => {
-            if (provider === "plain") {
-              setOfflineFormOpen(true);
-              return;
-            }
-            startSignIn(provider as OnlineProvider);
-          }}
-        />
+        <AccountsWelcome connectivity={connectivity} onPick={pickProvider} />
       </div>
     );
   }
@@ -221,7 +240,7 @@ export function AccountsPanel() {
                           aria-current={isFocused}
                           onClick={() => {
                             setFocused(identity);
-                            setOfflineFormOpen(false);
+                            setForm(null);
                           }}
                           onDoubleClick={() =>
                             void controller.useAccount(account)
@@ -301,7 +320,7 @@ export function AccountsPanel() {
 
           {PROVIDER_ORDER.map((provider) => {
             const available = isProviderAvailable(provider, connectivity);
-            const isOffline = provider === "plain";
+            const opensForm = provider === "plain" || provider === "littleskin";
 
             return (
               <Hint
@@ -318,16 +337,9 @@ export function AccountsPanel() {
               >
                 <button
                   type="button"
-                  aria-current={isOffline && offlineFormOpen}
-                  disabled={!available || (!isOffline && progress !== null)}
-                  onClick={() => {
-                    if (!isOffline) {
-                      startSignIn(provider as OnlineProvider);
-                      return;
-                    }
-                    controller.cancelAuth();
-                    setOfflineFormOpen(true);
-                  }}
+                  aria-current={form?.kind === provider}
+                  disabled={!available || (!opensForm && progress !== null)}
+                  onClick={() => pickProvider(provider)}
                   className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-accent/40 disabled:cursor-not-allowed disabled:opacity-45 aria-[current=true]:bg-primary-soft"
                 >
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-surface-3 text-foreground">
@@ -356,13 +368,25 @@ export function AccountsPanel() {
             onReopen={controller.reopenAuthWindow}
             onRetry={() => startSignIn(progress.provider)}
           />
-        ) : offlineFormOpen ? (
+        ) : form?.kind === "plain" ? (
           <OfflineAccountForm
             accounts={accounts}
-            onCancel={() => setOfflineFormOpen(false)}
+            onCancel={() => setForm(null)}
             onSubmit={async (nickname) => {
               if (!(await controller.addOfflineAccount(nickname))) return;
-              setOfflineFormOpen(false);
+              setForm(null);
+              setFocused(null);
+            }}
+          />
+        ) : form?.kind === "littleskin" ? (
+          <LittleSkinAccountForm
+            key={form.login}
+            initialLogin={form.login}
+            onCancel={() => setForm(null)}
+            onSignIn={controller.signInLittleSkin}
+            onChooseProfile={controller.chooseLittleSkinProfile}
+            onDone={() => {
+              setForm(null);
               setFocused(null);
             }}
           />
@@ -373,6 +397,7 @@ export function AccountsPanel() {
             controller={controller}
             isRunning={running.has(accountIdentity(focusedAccount))}
             onRemove={() => setPendingRemoval(focusedAccount)}
+            onSignInAgain={() => signInAgain(focusedAccount)}
           />
         ) : (
           <Empty className="h-full">

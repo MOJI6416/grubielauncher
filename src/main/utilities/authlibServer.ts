@@ -1,4 +1,5 @@
 import axios from "axios";
+import { LITTLESKIN_YGGDRASIL_URL } from "@/shared/config";
 import { Backend } from "../services/Backend";
 
 export const AUTHLIB_PREFETCHED_PROPERTY =
@@ -31,25 +32,31 @@ async function fetchGrubieServer(): Promise<AuthlibServer | null> {
   return prefetched ? { url: `${result.baseUrl}/yggdrasil`, prefetched } : null;
 }
 
-async function fetchElybyServer(): Promise<AuthlibServer | null> {
+async function fetchPublicServer(url: string): Promise<AuthlibServer | null> {
   try {
-    const response = await axios.get(ELYBY_API_URL, {
+    const response = await axios.get(url, {
       timeout: METADATA_TIMEOUT_MS,
     });
     const prefetched = encodeAuthlibMetadata(response.data);
-    return prefetched ? { url: ELYBY_API_URL, prefetched } : null;
+    return prefetched ? { url, prefetched } : null;
   } catch {
     return null;
   }
 }
 
+export type AuthlibAccountType = "elyby" | "discord" | "littleskin";
+
 export async function resolveAuthlibServer(
-  accountType: "elyby" | "discord",
+  accountType: AuthlibAccountType,
 ): Promise<AuthlibServer | null> {
   const server =
     accountType === "discord"
       ? await fetchGrubieServer()
-      : await fetchElybyServer();
+      : await fetchPublicServer(
+          accountType === "littleskin"
+            ? LITTLESKIN_YGGDRASIL_URL
+            : ELYBY_API_URL,
+        );
 
   if (!server) {
     console.warn(
