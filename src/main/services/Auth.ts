@@ -9,6 +9,7 @@ import {
 } from '@/types/Auth'
 import axios from 'axios'
 import { logAxiosError } from '../utilities/axiosLog'
+import { providerOutageError } from '@/shared/authRefresh'
 
 const api = attachApiHostFallback(
   axios.create({
@@ -22,7 +23,7 @@ async function postAuth<TResponse>(url: string, data: any, errorPrefix: string):
     return response.data
   } catch (error) {
     logAxiosError(errorPrefix, error, 'service:auth')
-    throw error
+    throw providerOutageError(error) ?? error
   }
 }
 

@@ -59,6 +59,11 @@
     "nickname": "Spielername",
     "sessionExpired": "Ihre Kontositzung ist abgelaufen. Melden Sie sich erneut an.",
     "sessionExpiredHint": "Die Kontositzung konnte nicht verlängert werden. Melden Sie sich erneut an.",
+    "staleSession": {
+      "providerDown": "Die Anmeldeserver von {{provider}} antworten nicht",
+      "serviceDown": "Der Anmeldeserver ist nicht erreichbar",
+      "hint": "Das Spiel wurde mit Ihrer gespeicherten Anmeldung gestartet. Einzelspieler funktioniert, aber Server mit Kontoprüfung lassen Sie eventuell erst wieder hinein, wenn die Anmeldung wieder funktioniert."
+    },
     "oauthTimeLeft": "Verbleibende Zeit für die Anmeldung: {{time}}",
     "discord": "Discord",
     "offline": "Offline-Konto",

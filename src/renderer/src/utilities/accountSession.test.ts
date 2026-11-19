@@ -330,6 +330,97 @@ describe("offline launches", () => {
     expect(api.auth.discordRefresh).not.toHaveBeenCalled();
   });
 
+  it("launches with the stored session when Microsoft sign-in is down", async () => {
+    const msAccount = { ...account, type: "microsoft" as const };
+    const api = {
+      auth: {
+        microsoftRefresh: vi
+          .fn()
+          .mockRejectedValue(
+            new Error(
+              "Error invoking remote method 'auth:microsoft:refresh': Error: auth_provider_unavailable: Request failed with status code 503",
+            ),
+          ),
+      },
+      accounts: { load: vi.fn().mockResolvedValue(null), save: vi.fn() },
+    };
+    vi.stubGlobal("navigator", { onLine: true });
+    const setSelectedAccount = vi.fn();
+    const { ensureAccountSession } = await loadAccountSession(api);
+
+    const result = await ensureAccountSession({
+      accounts: [msAccount],
+      authData: expiredAuth,
+      selectedAccount: msAccount,
+      setAccounts: vi.fn(),
+      setSelectedAccount,
+      keepSessionOnOutage: true,
+    });
+
+    expect(result).toMatchObject({
+      account: msAccount,
+      refreshed: false,
+      stale: "providerDown",
+    });
+    expect(api.auth.microsoftRefresh).toHaveBeenCalledOnce();
+    expect(api.accounts.save).not.toHaveBeenCalled();
+    expect(setSelectedAccount).not.toHaveBeenCalled();
+  });
+
+  it("launches with the stored session when the sign-in server is unreachable", async () => {
+    const msAccount = { ...account, type: "microsoft" as const };
+    const api = {
+      auth: { microsoftRefresh: vi.fn() },
+      accounts: { load: vi.fn().mockResolvedValue(null), save: vi.fn() },
+    };
+    vi.stubGlobal("navigator", { onLine: true });
+    const { ensureAccountSession } = await loadAccountSession(api);
+
+    for (const message of [
+      "Request failed with status code 502",
+      "connect ECONNREFUSED 127.0.0.1:443",
+      "timeout of 30000ms exceeded",
+    ]) {
+      api.auth.microsoftRefresh.mockRejectedValue(new Error(message));
+      await expect(
+        ensureAccountSession({
+          accounts: [msAccount],
+          authData: expiredAuth,
+          selectedAccount: msAccount,
+          setAccounts: vi.fn(),
+          setSelectedAccount: vi.fn(),
+          keepSessionOnOutage: true,
+        }),
+      ).resolves.toMatchObject({ refreshed: false, stale: "serviceDown" });
+    }
+  });
+
+  it("still asks to sign in again when the refresh token was refused", async () => {
+    const msAccount = { ...account, type: "microsoft" as const };
+    const api = {
+      auth: {
+        microsoftRefresh: vi
+          .fn()
+          .mockRejectedValue(new Error("Request failed with status code 400")),
+      },
+      accounts: { load: vi.fn().mockResolvedValue(null), save: vi.fn() },
+    };
+    vi.stubGlobal("navigator", { onLine: true });
+    const { ensureAccountSession, AccountSessionRefreshError } =
+      await loadAccountSession(api);
+
+    await expect(
+      ensureAccountSession({
+        accounts: [msAccount],
+        authData: expiredAuth,
+        selectedAccount: msAccount,
+        setAccounts: vi.fn(),
+        setSelectedAccount: vi.fn(),
+        keepSessionOnOutage: true,
+      }),
+    ).rejects.toBeInstanceOf(AccountSessionRefreshError);
+  });
+
   it("still reports a real refresh failure when the network is up", async () => {
     const api = {
       auth: {

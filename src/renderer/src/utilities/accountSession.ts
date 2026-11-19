@@ -2,7 +2,10 @@ import { accountIdentity } from "@renderer/features/accounts/identity";
 import { IAuth, ILocalAccount } from "@/types/Account";
 import { IRefreshTokenResponse } from "@/types/Auth";
 import { jwtDecode } from "jwt-decode";
-import { classifyError } from "@/shared/errors";
+import {
+  classifyRefreshFailure,
+  type RefreshFailureKind,
+} from "@/shared/authRefresh";
 import { withSessionNickname } from "@/shared/sessionNickname";
 
 const api = window.api;
@@ -13,12 +16,19 @@ type EnsureAccountSessionParams = {
   selectedAccount: ILocalAccount;
   setAccounts: (accounts: ILocalAccount[]) => void;
   setSelectedAccount: (account: ILocalAccount) => void;
+  keepSessionOnOutage?: boolean;
 };
+
+export type StaleSessionReason = Exclude<
+  RefreshFailureKind,
+  "expired" | "unknown"
+>;
 
 type EnsureAccountSessionResult = {
   account: ILocalAccount;
   accounts: ILocalAccount[];
   refreshed: boolean;
+  stale?: StaleSessionReason;
 };
 
 export class AccountSessionRefreshError extends Error {
@@ -244,12 +254,19 @@ export async function ensureAccountSession(
     }
 
     if (refreshError) {
-      const failure = classifyError(refreshError);
+      const failure = classifyRefreshFailure(refreshError);
       if (
-        !["badRequest", "unauthorized", "forbidden"].includes(failure.cause)
+        params.keepSessionOnOutage &&
+        (failure === "providerDown" || failure === "serviceDown")
       ) {
-        throw refreshError;
+        return {
+          account: accountForRefresh,
+          accounts: accountsForRefresh,
+          refreshed: false,
+          stale: failure,
+        };
       }
+      if (failure !== "expired") throw refreshError;
     }
     throw new AccountSessionRefreshError(accountForRefresh.type, refreshError);
   }

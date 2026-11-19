@@ -59,6 +59,11 @@
     "nickname": "Apelido",
     "sessionExpired": "A sessão da sua conta expirou. Entre de novo.",
     "sessionExpiredHint": "Não foi possível renovar a sessão da conta. Entre de novo.",
+    "staleSession": {
+      "providerDown": "Os servidores de login de {{provider}} não estão respondendo",
+      "serviceDown": "Não foi possível acessar o servidor de login",
+      "hint": "O jogo foi iniciado com o seu login salvo. O modo Um jogador funciona, mas servidores que verificam contas podem recusar a sua entrada até o login voltar a funcionar."
+    },
     "oauthTimeLeft": "Tempo restante para entrar: {{time}}",
     "discord": "Discord",
     "offline": "Conta offline",

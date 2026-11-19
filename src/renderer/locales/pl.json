@@ -59,6 +59,11 @@
     "nickname": "Nick",
     "sessionExpired": "Sesja konta wygasła. Zaloguj się ponownie.",
     "sessionExpiredHint": "Nie udało się odnowić sesji konta. Zaloguj się ponownie.",
+    "staleSession": {
+      "providerDown": "Serwery logowania w serwisie {{provider}} nie odpowiadają",
+      "serviceDown": "Nie udało się połączyć z serwerem logowania",
+      "hint": "Gra została uruchomiona z zapisanym logowaniem. Tryb jednoosobowy działa, ale serwery sprawdzające konta mogą odmówić wejścia, dopóki logowanie nie zacznie działać."
+    },
     "oauthTimeLeft": "Czas na zalogowanie: {{time}}",
     "discord": "Discord",
     "offline": "Konto offline",

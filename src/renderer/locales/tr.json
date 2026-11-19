@@ -59,6 +59,11 @@
     "nickname": "Kullanıcı adı",
     "sessionExpired": "Hesap oturumunuzun süresi doldu. Yeniden giriş yapın.",
     "sessionExpiredHint": "Hesap oturumu yenilenemedi. Yeniden giriş yapın.",
+    "staleSession": {
+      "providerDown": "{{provider}} giriş sunucuları yanıt vermiyor",
+      "serviceDown": "Giriş sunucusuna ulaşılamadı",
+      "hint": "Oyun kayıtlı girişinizle başlatıldı. Tek oyunculu mod çalışıyor, ancak hesap doğrulayan sunucular giriş yeniden çalışana kadar sizi kabul etmeyebilir."
+    },
     "oauthTimeLeft": "Giriş için kalan süre: {{time}}",
     "discord": "Discord",
     "offline": "Çevrim dışı hesap",

@@ -185,14 +185,30 @@ export async function runGame(params: RunGameParams): Promise<void> {
         selectedAccount: account,
         setAccounts,
         setSelectedAccount,
+        keepSessionOnOutage: true,
       });
 
       account = refreshed.account;
       currentAccounts = refreshed.accounts;
       uiJournal.info("launch", "account session checked", {
         refreshed: refreshed.refreshed,
+        stale: refreshed.stale,
         ms: since(),
       });
+
+      if (refreshed.stale) {
+        toast.warning(
+          refreshed.stale === "providerDown"
+            ? t("accounts.staleSession.providerDown", {
+                provider: t(`accounts.${account.type}`),
+              })
+            : t("accounts.staleSession.serviceDown"),
+          {
+            description: t("accounts.staleSession.hint"),
+            duration: 12000,
+          },
+        );
+      }
 
       if (refreshed.refreshed && account.accessToken) {
         runtimeAuthData = jwtDecode<IAuth>(account.accessToken);

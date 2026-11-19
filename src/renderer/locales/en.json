@@ -59,6 +59,11 @@
     "nickname": "Nickname",
     "sessionExpired": "Your account session has expired. Sign in again.",
     "sessionExpiredHint": "The account session could not be renewed. Sign in again.",
+    "staleSession": {
+      "providerDown": "{{provider}} sign-in servers are not responding",
+      "serviceDown": "Couldn't reach the sign-in server",
+      "hint": "The game was started with your saved sign-in. Singleplayer works, but servers that verify accounts may turn you away until sign-in is back."
+    },
     "oauthTimeLeft": "Time left to sign in: {{time}}",
     "discord": "Discord",
     "offline": "Offline account",

@@ -59,6 +59,11 @@
     "nickname": "Pseudo",
     "sessionExpired": "La session de votre compte a expiré. Reconnectez-vous.",
     "sessionExpiredHint": "Impossible de renouveler la session du compte. Reconnectez-vous.",
+    "staleSession": {
+      "providerDown": "Les serveurs de connexion de {{provider}} ne répondent pas",
+      "serviceDown": "Impossible de joindre le serveur de connexion",
+      "hint": "Le jeu a été lancé avec votre connexion enregistrée. Le mode Solo fonctionne, mais les serveurs qui vérifient les comptes peuvent vous refuser jusqu'au retour de la connexion."
+    },
     "oauthTimeLeft": "Temps restant pour vous connecter : {{time}}",
     "discord": "Discord",
     "offline": "Compte hors ligne",

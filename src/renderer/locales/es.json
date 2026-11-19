@@ -59,6 +59,11 @@
     "nickname": "Nombre de usuario",
     "sessionExpired": "La sesión de su cuenta caducó. Vuelva a iniciar sesión.",
     "sessionExpiredHint": "No se pudo renovar la sesión de la cuenta. Vuelva a iniciar sesión.",
+    "staleSession": {
+      "providerDown": "Los servidores de inicio de sesión de {{provider}} no responden",
+      "serviceDown": "No se pudo conectar con el servidor de inicio de sesión",
+      "hint": "El juego se inició con su sesión guardada. Un jugador funciona, pero los servidores que verifican cuentas pueden no dejarle entrar hasta que el inicio de sesión vuelva a funcionar."
+    },
     "oauthTimeLeft": "Tiempo restante para iniciar sesión: {{time}}",
     "discord": "Discord",
     "offline": "Cuenta sin conexión",
