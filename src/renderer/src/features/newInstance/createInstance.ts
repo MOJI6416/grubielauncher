@@ -480,7 +480,9 @@ export async function createInstance(
     const importRoot = importData?.path ?? importModpack?.folderPath;
     if (importRoot) await api.fs.rimraf(importRoot).catch(ignoreFailure);
 
-    await api.sharedSettings.markNew(versionPath).catch(ignoreFailure);
+    if (!foreign) {
+      await api.sharedSettings.markNew(versionPath).catch(ignoreFailure);
+    }
 
     store.set(versionsAtom, [...store.get(versionsAtom), instance]);
 
