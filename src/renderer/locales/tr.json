@@ -235,7 +235,17 @@
       "chooseHint": "Bu LittleSkin hesabında birden fazla oyuncu var. Başlatıcı seçtiğiniz oyuncuyla oynar.",
       "back": "Geri",
       "invalidCredentials": "E-posta, oyuncu adı veya şifre yanlış.",
-      "noProfiles": "Bu LittleSkin hesabında henüz oyuncu yok. littleskin.cn sitesinde bir oyuncu oluşturun ve yeniden giriş yapın."
+      "noProfiles": "Bu LittleSkin hesabında henüz oyuncu yok. littleskin.cn sitesinde bir oyuncu oluşturun ve yeniden giriş yapın.",
+      "oauthHint": "Giriş LittleSkin sitesinde yapılır: erişimi orada onaylar ve bir oyuncu seçersiniz. Başlatıcı şifrenizi görmez.",
+      "oauthSubmit": "LittleSkin sitesiyle giriş yap",
+      "oauthWaitingTitle": "Girişi LittleSkin'de onaylayın",
+      "oauthWaitingHint": "Sayfa tarayıcıda açık. Site bir kod isterse aşağıdaki kodu girin ve bir oyuncu seçin. Başlatıcı yanıtı bekliyor.",
+      "copyCode": "Kodu kopyala",
+      "usePassword": "Şifreyle giriş yap",
+      "useOAuth": "LittleSkin sitesiyle giriş yap",
+      "oauthDenied": "Giriş LittleSkin'de reddedildi. Yeniden deneyin.",
+      "oauthExpired": "Giriş süresi doldu. Yeniden başlayın.",
+      "oauthUnavailable": "LittleSkin sitesiyle giriş şu anda kullanılamıyor. Şifreyle giriş yapın."
     },
     "featureShort": {
       "onlineServers": "Resmî sunucular",

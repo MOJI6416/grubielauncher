@@ -412,6 +412,9 @@ export function AccountsPanel() {
             onCancel={() => setForm(null)}
             onSignIn={controller.signInLittleSkin}
             onChooseProfile={controller.chooseLittleSkinProfile}
+            onStartOAuth={controller.startLittleSkinOAuth}
+            onFinishOAuth={controller.finishLittleSkinOAuth}
+            onCancelOAuth={controller.cancelLittleSkinOAuth}
             onDone={() => {
               setForm(null);
               setFocused(null);

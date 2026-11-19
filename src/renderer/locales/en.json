@@ -235,7 +235,17 @@
       "chooseHint": "This LittleSkin account has several players. The launcher will play as the one you choose.",
       "back": "Back",
       "invalidCredentials": "Wrong email, player name or password.",
-      "noProfiles": "This LittleSkin account has no players yet. Create one on littleskin.cn and sign in again."
+      "noProfiles": "This LittleSkin account has no players yet. Create one on littleskin.cn and sign in again.",
+      "oauthHint": "You sign in on the LittleSkin website: confirm access and choose a player there. The launcher never sees your password.",
+      "oauthSubmit": "Sign in on the LittleSkin website",
+      "oauthWaitingTitle": "Confirm the sign-in on LittleSkin",
+      "oauthWaitingHint": "The page is open in your browser. If the site asks for a code, enter the one below and choose a player. The launcher is waiting for the answer.",
+      "copyCode": "Copy code",
+      "usePassword": "Sign in with a password",
+      "useOAuth": "Sign in on the LittleSkin website",
+      "oauthDenied": "The sign-in was declined on LittleSkin. Try again.",
+      "oauthExpired": "The time to sign in ran out. Start again.",
+      "oauthUnavailable": "Signing in on the LittleSkin website is unavailable right now. Sign in with a password."
     },
     "featureShort": {
       "onlineServers": "Official servers",

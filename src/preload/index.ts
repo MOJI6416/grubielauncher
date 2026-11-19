@@ -162,6 +162,7 @@ import {
 import { AuthlibEnsureResult } from "@/types/IAuthlib";
 import {
   IAuthResponse,
+  ILittleSkinDeviceCode,
   ILittleSkinProfile,
   ILittleSkinSession,
   IRefreshTokenResponse,
@@ -578,6 +579,9 @@ export interface IElectronAPI {
       refreshToken: string,
       id: string,
     ) => Promise<IRefreshTokenResponse | null>;
+    littleskinOAuthStart: () => Promise<ILittleSkinDeviceCode>;
+    littleskinOAuthFinish: () => Promise<IAuthResponse>;
+    littleskinOAuthCancel: () => Promise<boolean>;
     discord: (code: string) => Promise<IAuthResponse | null>;
     discordRefresh: (
       refreshToken: string,
@@ -1784,6 +1788,9 @@ export const api: IElectronAPI = {
       invoke("auth:littleskin", login, password),
     littleskinProfile: (session: ILittleSkinSession, profile: ILittleSkinProfile) =>
       invoke("auth:littleskin:profile", session, profile),
+    littleskinOAuthStart: () => invoke("auth:littleskin:oauth:start"),
+    littleskinOAuthFinish: () => invoke("auth:littleskin:oauth:finish"),
+    littleskinOAuthCancel: () => invoke("auth:littleskin:oauth:cancel"),
     littleskinRefresh: (refreshToken: string, id: string) =>
       invoke("auth:littleskin:refresh", refreshToken, id),
     discord: (code: string) => invoke("auth:discord", code),

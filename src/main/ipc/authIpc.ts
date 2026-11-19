@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import type {
+  ILittleSkinDeviceCode,
   ILittleSkinProfile,
   ILittleSkinSession,
   LittleSkinSignInResult
@@ -14,7 +15,17 @@ import {
   refreshLittleSkinToken,
   refreshMicrosoftToken
 } from '../services/Auth'
-import { authenticateLittleSkin, LITTLESKIN_NO_PROFILES } from '../services/LittleSkin'
+import {
+  authenticateLittleSkin,
+  exchangeLittleSkinOAuthToken,
+  LITTLESKIN_NO_PROFILES,
+  LITTLESKIN_OAUTH_CANCELLED,
+  littleSkinProfileFromIdToken,
+  requestLittleSkinDeviceCode,
+  waitForLittleSkinAuthorization,
+  type LittleSkinDeviceAuthorization
+} from '../services/LittleSkin'
+import { LITTLESKIN_OAUTH_CLIENT_ID } from '@/shared/config'
 import {
   startOAuthServer,
   stopOAuthServer,
@@ -28,6 +39,15 @@ let oauthServerPromise:
     }>
   | null = null
 let oauthServerState: string | null = null
+let littleSkinDevice: {
+  device: LittleSkinDeviceAuthorization
+  controller: AbortController
+} | null = null
+
+function cancelLittleSkinDevice() {
+  littleSkinDevice?.controller.abort()
+  littleSkinDevice = null
+}
 
 function isBoundedString(value: unknown, max: number): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= max
@@ -118,6 +138,55 @@ export function registerAuthIpc() {
     )
     if (!auth) throw new Error('Empty auth response')
     return auth
+  })
+
+  register('auth:littleskin:oauth:start', async (): Promise<ILittleSkinDeviceCode> => {
+    if (!LITTLESKIN_OAUTH_CLIENT_ID) throw new Error('LittleSkin OAuth is not configured')
+    cancelLittleSkinDevice()
+
+    const device = await requestLittleSkinDeviceCode(LITTLESKIN_OAUTH_CLIENT_ID)
+    littleSkinDevice = { device, controller: new AbortController() }
+
+    return {
+      userCode: device.userCode,
+      verificationUri: device.verificationUri,
+      ...(device.verificationUriComplete
+        ? { verificationUriComplete: device.verificationUriComplete }
+        : {}),
+      expiresIn: device.expiresIn
+    }
+  })
+
+  register('auth:littleskin:oauth:finish', async () => {
+    const pending = littleSkinDevice
+    if (!pending) throw new Error(LITTLESKIN_OAUTH_CANCELLED)
+
+    try {
+      const tokens = await waitForLittleSkinAuthorization(
+        LITTLESKIN_OAUTH_CLIENT_ID,
+        pending.device,
+        pending.controller.signal
+      )
+      const profile = littleSkinProfileFromIdToken(tokens.idToken)
+      if (!profile) throw new Error(LITTLESKIN_NO_PROFILES)
+
+      const result = await exchangeLittleSkinOAuthToken(tokens.accessToken, profile)
+      if (pending.controller.signal.aborted) throw new Error(LITTLESKIN_OAUTH_CANCELLED)
+
+      const auth = await authLittleSkin(
+        result.session,
+        result.selectedProfile ? undefined : profile
+      )
+      if (!auth) throw new Error('Empty auth response')
+      return auth
+    } finally {
+      if (littleSkinDevice === pending) littleSkinDevice = null
+    }
+  })
+
+  register('auth:littleskin:oauth:cancel', () => {
+    cancelLittleSkinDevice()
+    return true
   })
 
   register('auth:littleskin:refresh', async (_, refreshToken: string, id: string) => {

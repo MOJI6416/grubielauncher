@@ -235,7 +235,17 @@
       "chooseHint": "To konto LittleSkin ma kilku graczy. Launcher będzie grać tym, którego wybierzesz.",
       "back": "Wstecz",
       "invalidCredentials": "Nieprawidłowy e-mail, nazwa gracza lub hasło.",
-      "noProfiles": "To konto LittleSkin nie ma jeszcze graczy. Utwórz gracza na littleskin.cn i zaloguj się ponownie."
+      "noProfiles": "To konto LittleSkin nie ma jeszcze graczy. Utwórz gracza na littleskin.cn i zaloguj się ponownie.",
+      "oauthHint": "Logowanie odbywa się na stronie LittleSkin: tam potwierdza się dostęp i wybiera gracza. Launcher nie widzi hasła.",
+      "oauthSubmit": "Zaloguj się na stronie LittleSkin",
+      "oauthWaitingTitle": "Potwierdź logowanie na LittleSkin",
+      "oauthWaitingHint": "Strona jest otwarta w przeglądarce. Jeśli strona poprosi o kod, należy wpisać kod poniżej i wybrać gracza. Launcher czeka na odpowiedź.",
+      "copyCode": "Skopiuj kod",
+      "usePassword": "Zaloguj się hasłem",
+      "useOAuth": "Zaloguj się na stronie LittleSkin",
+      "oauthDenied": "Logowanie zostało odrzucone na LittleSkin. Spróbuj ponownie.",
+      "oauthExpired": "Czas na zalogowanie minął. Zacznij od nowa.",
+      "oauthUnavailable": "Logowanie na stronie LittleSkin jest teraz niedostępne. Zaloguj się hasłem."
     },
     "featureShort": {
       "onlineServers": "Oficjalne serwery",

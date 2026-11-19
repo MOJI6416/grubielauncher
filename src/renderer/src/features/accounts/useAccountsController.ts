@@ -283,6 +283,20 @@ export function useAccountsController() {
     [finishLittleSkin],
   );
 
+  const startLittleSkinOAuth = useCallback(
+    () => api.auth.littleskinOAuthStart(),
+    [],
+  );
+
+  const finishLittleSkinOAuth = useCallback(
+    async () => await finishLittleSkin(await api.auth.littleskinOAuthFinish()),
+    [finishLittleSkin],
+  );
+
+  const cancelLittleSkinOAuth = useCallback(() => {
+    void api.auth.littleskinOAuthCancel().catch(ignoreFailure);
+  }, []);
+
   const addOfflineAccount = useCallback(
     async (nickname: string) => {
       const value = nickname.trim();
@@ -444,6 +458,9 @@ export function useAccountsController() {
     cancelAuth,
     signInLittleSkin,
     chooseLittleSkinProfile,
+    startLittleSkinOAuth,
+    finishLittleSkinOAuth,
+    cancelLittleSkinOAuth,
     addOfflineAccount,
     useAccount,
     removeAccount,

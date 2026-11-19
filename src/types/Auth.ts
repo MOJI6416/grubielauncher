@@ -30,6 +30,13 @@ export interface ILittleSkinSession {
   clientToken: string
 }
 
+export interface ILittleSkinDeviceCode {
+  userCode: string
+  verificationUri: string
+  verificationUriComplete?: string
+  expiresIn: number
+}
+
 export type LittleSkinSignInResult =
   | { status: 'signedIn'; auth: IAuthResponse }
   | { status: 'chooseProfile'; session: ILittleSkinSession; profiles: ILittleSkinProfile[] }
