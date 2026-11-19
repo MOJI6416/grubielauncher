@@ -5,7 +5,7 @@ export interface LaunchShortcutTarget {
 }
 
 const MAX_TARGET_LENGTH = 255;
-const WORLD_FORBIDDEN = /[\\/:*?"<>|\u0000-\u001f]/;
+const WORLD_FORBIDDEN = /[\\/:*?"<>|]/;
 const SERVER_ADDRESS = /^[A-Za-z0-9._\-[\]:]+$/;
 
 export function isSafeQuickWorld(value: unknown): value is string {
@@ -13,7 +13,8 @@ export function isSafeQuickWorld(value: unknown): value is string {
   if (!value || value.length > MAX_TARGET_LENGTH) return false;
   if (value !== value.trim() || value.startsWith("-")) return false;
   if (value === "." || value === "..") return false;
-  return !WORLD_FORBIDDEN.test(value);
+  if (WORLD_FORBIDDEN.test(value)) return false;
+  return ![...value].some((char) => char.charCodeAt(0) < 0x20);
 }
 
 export function isSafeQuickServer(value: unknown): value is string {

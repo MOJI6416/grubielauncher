@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { IModpack } from "@/types/Backend";
+import { ignoreFailure } from "./ignoreFailure";
 
 const api = window.api;
 
@@ -18,7 +19,8 @@ export function resolvePackManifest(code: string): Promise<IModpack | null> {
         if (response?.status !== "error") known.set(code, manifest);
         return manifest;
       })
-      .catch(() => null)
+      .catch(ignoreFailure)
+      .then((manifest) => manifest ?? null)
       .finally(() => pending.delete(code));
     pending.set(code, request);
   }

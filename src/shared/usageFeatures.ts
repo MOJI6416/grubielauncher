@@ -16,6 +16,7 @@ export const USAGE_FEATURES = [
   "instance.server",
   "instance.configs",
   "instance.settings",
+  "instance.arguments",
   "instance.statistics",
   "instance.logs",
   "profile.profile",

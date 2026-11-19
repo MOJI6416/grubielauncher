@@ -37,6 +37,7 @@ describe("launch links", () => {
     expect(isSafeQuickWorld("a/b")).toBe(false);
     expect(isSafeQuickWorld("..")).toBe(false);
     expect(isSafeQuickWorld(" padded")).toBe(false);
+    expect(isSafeQuickWorld("a\u0001b")).toBe(false);
     expect(isSafeQuickWorld("Мой мир (1)")).toBe(true);
     expect(isSafeQuickServer("mc.example.org")).toBe(true);
     expect(isSafeQuickServer("[2001:db8::1]:25565")).toBe(true);

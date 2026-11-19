@@ -1121,7 +1121,7 @@ export function Share({
       const previousShareCode = selectedVersion.version.shareCode;
       const previousShortCode = selectedVersion.version.shortCode;
       const shortCode =
-        (await resolvePackShortCode(shareCode).catch(() => null)) ||
+        (await resolvePackShortCode(shareCode).catch(ignoreFailure)) ||
         undefined;
       selectedVersion.version.shareCode = shareCode;
       selectedVersion.version.shortCode = shortCode;
