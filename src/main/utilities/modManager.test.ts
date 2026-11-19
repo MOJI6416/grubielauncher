@@ -44,6 +44,7 @@ import {
   getModEnvironment,
   modrinthRunsOnClient,
   mrProjectToProject,
+  mrVersionToVersion,
   sortVersionsByDate,
 } from "./modManager";
 
@@ -229,6 +230,44 @@ describe("sortVersionsByDate", () => {
     ]);
 
     expect(sorted.map((v) => v.id)).toEqual(["dated", "undated"]);
+  });
+});
+
+describe("mrVersionToVersion", () => {
+  it("keeps only the primary jar of a Fugue release", () => {
+    const file = (filename: string, primary: boolean) => ({
+      filename,
+      primary,
+      size: 1,
+      url: `https://cdn.modrinth.com/data/vylTACsh/versions/x/${encodeURIComponent(filename)}`,
+      hashes: { sha1: `sha-${filename}` },
+    });
+
+    const version = mrVersionToVersion(
+      {
+        id: "x",
+        version_number: "0.25.5",
+        name: "0.25.5",
+        dependencies: [],
+        downloads: 0,
+        version_type: "release",
+        date_published: "2026-10-16T22:11:56Z",
+        game_versions: ["1.12.2"],
+        loaders: ["forge"],
+        files: [
+          file("+Fugue-0.25.5.jar", true),
+          file("+Fugue-0.25.5-dev.jar", false),
+          file("+Fugue-0.25.5-sources.jar", false),
+        ],
+      } as any,
+      true,
+      ProjectType.MOD,
+    );
+
+    expect(version.files.map((item) => item.filename)).toEqual([
+      "+Fugue-0.25.5.jar",
+    ]);
+    expect(version.files[0].sha1).toBe("sha-+Fugue-0.25.5.jar");
   });
 });
 

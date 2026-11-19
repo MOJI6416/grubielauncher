@@ -33,6 +33,7 @@ import {
   ownerRecordFor,
   sanitizeExtraFileSegments,
 } from "@renderer/utilities/versionPure";
+import { withCleanroomCompanions } from "./cleanroomCompanions";
 import { parseInlineImage } from "./inlineImage";
 import type { AppliedPack } from "./state";
 import { stripJavaOverride } from "@/shared/javaRuntime";
@@ -277,9 +278,12 @@ export async function createInstance(
     throw new Error(INSTANCE_FOLDER_EXISTS);
   }
 
+  const mods = await withCleanroomCompanions(request);
+  throwIfAborted(signal);
+
   await ensureDiskRoom(
     versionPath,
-    importData ? 0 : contentBytes(request.mods, importModpack?.extraFiles),
+    importData ? 0 : contentBytes(mods, importModpack?.extraFiles),
     importData
       ? [importData.path]
       : importModpack
@@ -324,7 +328,7 @@ export async function createInstance(
       image,
       loader: {
         name: request.loader,
-        mods: request.mods,
+        mods,
         version: request.loaderVersion,
         other: base.loader?.other || undefined,
       },
@@ -374,11 +378,7 @@ export async function createInstance(
         versionPath,
         settings.downloadLimit,
       ));
-      rewriteImportedLocalPaths(
-        request.mods,
-        importModpack.folderPath,
-        versionPath,
-      );
+      rewriteImportedLocalPaths(mods, importModpack.folderPath, versionPath);
     }
 
     if (!importData && request.servers.length > 0) {
@@ -405,7 +405,7 @@ export async function createInstance(
       ? undefined
       : [
           ...VERSION_FILE_STAGES,
-          ...contentPlan(request.mods),
+          ...contentPlan(mods),
           ...(conf.loader.other?.url ? (["other"] as const) : []),
         ];
 
@@ -427,10 +427,10 @@ export async function createInstance(
 
     if (!skipContentDownload) {
       const hasBlockedPaths = applyBlockedModFilePaths(
-        request.mods,
+        mods,
         request.blockedMods,
       );
-      if (hasBlockedPaths) instance.version.loader.mods = request.mods;
+      if (hasBlockedPaths) instance.version.loader.mods = mods;
 
       const content = new Mods(settings, conf);
       await content.check({
