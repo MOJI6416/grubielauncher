@@ -11,7 +11,6 @@ import {
 import {
   defaultCloseToTray,
   GAME_WINDOW_MODES,
-  resolveCloseToTray,
   START_SCREENS,
   type GameWindowMode,
   type StartScreen,
@@ -22,6 +21,20 @@ import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
 
 const api = window.api;
+
+type CloseMode = "ask" | "tray" | "quit";
+
+function closeModeOf(value: boolean | null, platform: string): CloseMode {
+  if (value === true) return "tray";
+  if (value === false) return "quit";
+  return defaultCloseToTray(platform) ? "ask" : "quit";
+}
+
+function closeToTrayFor(mode: CloseMode, platform: string): boolean | null {
+  if (mode === "tray") return true;
+  if (mode === "quit") return defaultCloseToTray(platform) ? false : null;
+  return null;
+}
 
 export function SystemSection({
   settings,
@@ -60,7 +73,10 @@ export function SystemSection({
     };
   }, []);
 
-  const closeToTray = resolveCloseToTray(settings.closeToTray, api.platform);
+  const closeMode = closeModeOf(settings.closeToTray, api.platform);
+  const closeModes: CloseMode[] = defaultCloseToTray(api.platform)
+    ? ["ask", "tray", "quit"]
+    : ["quit", "tray"];
 
   const toggleLaunchAtLogin = async (enabled: boolean) => {
     setIsSaving(true);
@@ -81,23 +97,32 @@ export function SystemSection({
     <SettingsGroup title={t("settings.sections.system")}>
       {visible("closeToTray") && (
         <SettingRow
-          htmlFor="settings-close-to-tray"
           title={t("settings.system.closeToTray")}
           description={t("settings.system.closeToTrayDescription")}
           query={query}
           changed={isChanged("closeToTray")}
           onReset={() => reset("closeToTray")}
           control={
-            <Switch
-              id="settings-close-to-tray"
-              checked={closeToTray}
-              onCheckedChange={(value) =>
+            <Select
+              value={closeMode}
+              onValueChange={(value) =>
+                value &&
                 commit({
-                  closeToTray:
-                    value === defaultCloseToTray(api.platform) ? null : value,
+                  closeToTray: closeToTrayFor(value as CloseMode, api.platform),
                 })
               }
-            />
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {closeModes.map((mode) => (
+                  <SelectItem key={mode} value={mode}>
+                    {t(`settings.system.closeModes.${mode}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           }
         />
       )}

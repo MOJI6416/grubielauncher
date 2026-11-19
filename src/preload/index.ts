@@ -915,6 +915,12 @@ export interface IElectronAPI {
     onNotificationClick: (
       callback: (action: NotificationClickAction) => void,
     ) => () => void;
+    closeChoice: (choice: "tray" | "quit") => Promise<void>;
+    onCloseChoiceRequested: (callback: () => void) => () => void;
+  };
+  usage: {
+    record: (feature: string) => void;
+    clear: () => void;
   };
   allowedPaths: {
     list: () => Promise<BlessedPathInfo[]>;
@@ -2082,6 +2088,17 @@ export const api: IElectronAPI = {
       ipcRenderer.on("other:notificationClick", listener);
       return () => ipcRenderer.off("other:notificationClick", listener);
     },
+    closeChoice: (choice: "tray" | "quit") =>
+      invoke("tray:closeChoice", choice),
+    onCloseChoiceRequested: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on("app:closeChoice", listener);
+      return () => ipcRenderer.off("app:closeChoice", listener);
+    },
+  },
+  usage: {
+    record: (feature: string) => ipcRenderer.send("usage:record", feature),
+    clear: () => ipcRenderer.send("usage:clear"),
   },
   allowedPaths: {
     list: () => invoke("safepath:list"),

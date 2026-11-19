@@ -1445,7 +1445,7 @@
     "saveFailed": "Nie udało się zapisać ustawień",
     "language": "Język interfejsu",
     "mb": "MB",
-    "devMode": "Tryb dewelopera",
+    "devMode": "Pokazuj błędy",
     "downloadLimit": "Limit pobierania",
     "downloadSource": "Źródło pobierania",
     "downloadSourceOptions": {
@@ -1478,8 +1478,10 @@
       },
       "heading": "Sprawdzanie połączenia"
     },
-    "crashTelemetry": "Anonimowe statystyki awarii",
-    "crashTelemetryDescription": "Wysyła tylko kod diagnozy — pomaga ulepszać podpowiedzi",
+    "crashTelemetry": "Diagnozy awarii",
+    "crashTelemetryDescription": "Kod diagnozy i wiersz błędu, a gdy zawiedzie sam launcher — treść błędu. Bez nicku i logów",
+    "usageStats": "Liczniki funkcji",
+    "usageStatsDescription": "Ile razy dziennie otwierano ekrany i funkcje. Tylko sumy, bez nicku",
     "aiLogAnalysis": "Analiza logów przez AI",
     "aiLogAnalysisDescription": "Pomija potwierdzenie: analiza zaczyna się od razu po otwarciu okna",
     "sounds": "Dźwięki powiadomień",
@@ -1609,7 +1611,7 @@
       "rootHint": "wszystko, co pobrał launcher",
       "restMore": "Inne instancje: {{value}}"
     },
-    "devModeDescription": "Kopiowanie polecenia uruchomienia i dodatkowe narzędzia debugowania",
+    "devModeDescription": "Komunikat przy każdym błędzie interfejsu, a w menu instancji — polecenie uruchomienia ze ścieżkami względnymi",
     "voiceMicTestErrorHint": "Brak dostępu do mikrofonu. Sprawdź uprawnienia {{os}} i wybrane urządzenie.",
     "autoWorldBackup": "Automatyczne kopie zapasowe światów",
     "autoWorldBackupDescription": "Zapisuje kopię świata po sesji gry, jeśli się zmienił",
@@ -1938,9 +1940,14 @@
         "keywords": "discord rpc rich presence prywatność serwer ukryj"
       },
       "crashTelemetry": {
-        "title": "Anonimowe statystyki awarii",
-        "description": "Wysyłany jest tylko kod diagnozy",
-        "keywords": "telemetria awaria crash analityka prywatność statystyki"
+        "title": "Diagnozy awarii",
+        "description": "Kod diagnozy i wiersz błędu, bez nicku i logów",
+        "keywords": "telemetria awaria crash diagnoza analityka prywatność statystyki"
+      },
+      "usageStats": {
+        "title": "Liczniki funkcji",
+        "description": "Anonimowe liczniki użycia funkcji",
+        "keywords": "statystyki telemetria analityka prywatność funkcje liczniki użycie"
       },
       "aiLogAnalysis": {
         "title": "Analiza logów przez AI",
@@ -1948,9 +1955,9 @@
         "keywords": "ai analiza awaria crash log auto"
       },
       "devMode": {
-        "title": "Tryb dewelopera",
-        "description": "Kopiowanie polecenia uruchomienia i dodatkowe narzędzia debugowania",
-        "keywords": "deweloper debug zaawansowane polecenie"
+        "title": "Pokazuj błędy",
+        "description": "Komunikat przy każdym błędzie interfejsu",
+        "keywords": "błędy debug deweloper tryb dewelopera polecenie uruchomienia"
       },
       "allowedPaths": {
         "title": "Dozwolone foldery i pliki",
@@ -2083,9 +2090,9 @@
         "keywords": "przegląd karty zrzuty notatki sesje ukryj"
       },
       "closeToTray": {
-        "title": "Zamykaj do zasobnika",
-        "description": "Zamknięcie ukrywa okno, rozmowy i gry trwają dalej",
-        "keywords": "zasobnik tray zamknij tło minimalizuj rozmowa"
+        "title": "Przy zamykaniu okna",
+        "description": "Pytaj, minimalizuj do zasobnika lub zakończ",
+        "keywords": "zasobnik tray zamknij tło minimalizuj rozmowa zakończ pytaj"
       },
       "startScreen": {
         "title": "Ekran startowy",
@@ -2153,8 +2160,13 @@
     "agentChatSync": "Synchronizacja czatów asystenta",
     "agentChatSyncDescription": "Przechowuje historię asystenta na koncie Grubie, aby była dostępna na innym komputerze. Zawiera to, co asystent przeczytał: nazwy instancji, fragmenty logów i adresy zapisanych serwerów.",
     "system": {
-      "closeToTray": "Zamykaj do zasobnika",
-      "closeToTrayDescription": "Przycisk zamknięcia ukrywa okno, a launcher działa dalej: rozmowy trwają, znajomi widzą Cię online, gry i pobierania toczą się dalej. Wyjście — z ikony w zasobniku.",
+      "closeToTray": "Przy zamykaniu okna",
+      "closeToTrayDescription": "Co robi przycisk zamknięcia. W zasobniku launcher działa dalej: rozmowy trwają, znajomi widzą Cię online, gry i pobierania toczą się dalej.",
+      "closeModes": {
+        "ask": "Pytaj",
+        "tray": "Do zasobnika",
+        "quit": "Zakończ"
+      },
       "startScreen": "Ekran startowy",
       "startScreenDescription": "Co otwiera się po uruchomieniu launchera",
       "startScreens": {
@@ -4378,6 +4390,20 @@
     "skip": "Pomiń",
     "stepVersionLocked": "Dostępne po dodaniu konta",
     "skipHint": "Można to zrobić później"
+  },
+  "privacyNotice": {
+    "title": "Co launcher do nas wysyła",
+    "description": "Anonimowo: bez nicku, konta i Twoich plików. Pomaga nam naprawiać awarie i widzieć, które funkcje są potrzebne. Wyłączysz to jednym kliknięciem.",
+    "settings": "Ustawienia prywatności",
+    "done": "Rozumiem"
+  },
+  "closeChoice": {
+    "title": "Zminimalizować do zasobnika czy zakończyć?",
+    "description": "W zasobniku launcher działa dalej: rozmowy trwają, znajomi widzą Cię online, pobierania toczą się dalej. Zakończyć możesz w każdej chwili z ikony w zasobniku.",
+    "remember": "Zapamiętaj wybór",
+    "rememberHint": "Możesz to zmienić w „{{path}}”",
+    "tray": "Do zasobnika",
+    "quit": "Zakończ"
   },
   "errorBoundary": {
     "title": "Coś poszło nie tak",

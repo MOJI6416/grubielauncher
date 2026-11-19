@@ -6,6 +6,7 @@ export interface LauncherWhatsNewState {
     updatedAt?: string;
   };
   onboardingDone?: boolean;
+  privacyNoticeSeen?: boolean;
   instanceConfCleanup?: boolean;
   instanceConfRevision?: number;
 }

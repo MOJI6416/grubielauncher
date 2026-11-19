@@ -42,6 +42,7 @@ import { registerAppImageDesktopEntry } from "./utilities/linuxDesktopEntry";
 import { disposePushToTalk } from "./services/PushToTalk";
 import { initWorldBackupService } from "./services/WorldBackupService";
 import { initTray } from "./tray/tray";
+import { initUsageStats } from "./utilities/usageStats";
 import { startBackgroundUpdateChecks } from "./utilities/backgroundUpdates";
 import { recoverWindowsStartup } from "./utilities/windowsStartup";
 import { scheduleUpdateInstall } from "./utilities/updateInstall";
@@ -503,6 +504,7 @@ if (!gotTheLock) {
 
     Object.values(ipcHandlers).forEach((register) => register());
     initTray();
+    initUsageStats();
     registerLegacyLocalStorageIpc();
     initWorldBackupService();
 

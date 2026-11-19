@@ -66,6 +66,7 @@ export type SettingsEntryId =
   | "notifications"
   | "hideServerInRpc"
   | "crashTelemetry"
+  | "usageStats"
   | "aiLogAnalysis"
   | "agentChatSync"
   | "devMode"
@@ -155,8 +156,6 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "accent", section: "themes", keys: ["accent"] },
   { id: "highContrast", section: "interface", keys: ["highContrast"] },
   { id: "motion", section: "interface", keys: ["motion"] },
-  { id: "ambientTint", section: "interface", keys: ["ambientTint"] },
-  { id: "backgroundGrain", section: "interface", keys: ["backgroundGrain"] },
   { id: "seasonalDecor", section: "interface", keys: ["seasonalDecor"] },
   { id: "sounds", section: "interface", keys: ["sounds", "soundVolume"] },
   { id: "logFontSize", section: "interface", keys: ["logFontSize"] },
@@ -165,6 +164,8 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "layoutPresets", section: "layout", keys: [] },
   { id: "layoutCustomize", section: "layout", keys: ["interface"] },
   { id: "sidebarCollapsed", section: "layout", keys: ["sidebarCollapsed"] },
+  { id: "ambientTint", section: "layout", keys: ["ambientTint"] },
+  { id: "backgroundGrain", section: "layout", keys: ["backgroundGrain"] },
   { id: "layoutSidebar", section: "layout", keys: [] },
   { id: "layoutDock", section: "layout", keys: [] },
   {
@@ -212,15 +213,16 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "notifications", section: "privacy", keys: [] },
   { id: "hideServerInRpc", section: "privacy", keys: ["hideServerInRpc"] },
   { id: "crashTelemetry", section: "privacy", keys: ["crashTelemetry"] },
+  { id: "usageStats", section: "privacy", keys: ["usageStats"] },
   { id: "aiLogAnalysis", section: "privacy", keys: ["aiLogAnalysis"] },
   { id: "agentChatSync", section: "privacy", keys: ["agentChatSync"] },
-  { id: "devMode", section: "privacy", keys: ["devMode"] },
   { id: "allowedPaths", section: "privacy", keys: [] },
   { id: "storageUsage", section: "storage", keys: [] },
   { id: "dataLocation", section: "storage", keys: [] },
   { id: "storageCleanup", section: "storage", keys: [] },
   { id: "supportReport", section: "support", keys: [] },
   { id: "verboseJournal", section: "support", keys: [] },
+  { id: "devMode", section: "support", keys: ["devMode"] },
   { id: "systemReport", section: "support", keys: [] },
   { id: "folders", section: "about", keys: [] },
   { id: "links", section: "about", keys: [] },

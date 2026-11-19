@@ -30,6 +30,7 @@ function model(overrides: Partial<TrayModel> = {}): TrayModel {
     lang: "ru",
     accent: "violet",
     closeToTray: true,
+    askOnClose: false,
     instances: [],
     playing: [],
     voice: null,
@@ -160,5 +161,11 @@ describe("sanitizeTrayModel", () => {
     });
     expect(clean?.labels.open).toBe("");
     expect(sanitizeTrayModel(null)).toBeNull();
+  });
+
+  it("keeps the ask-on-close flag only when it is exactly true", () => {
+    expect(sanitizeTrayModel({ askOnClose: true })?.askOnClose).toBe(true);
+    expect(sanitizeTrayModel({ askOnClose: "yes" })?.askOnClose).toBe(false);
+    expect(sanitizeTrayModel({})?.askOnClose).toBe(false);
   });
 });

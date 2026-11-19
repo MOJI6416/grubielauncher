@@ -2,7 +2,11 @@ import { useEffect, useMemo, useRef } from "react";
 import { getDefaultStore, useAtomValue } from "jotai";
 import { selectAtom } from "jotai/utils";
 import { useTranslation } from "react-i18next";
-import { DEFAULT_SETTINGS, resolveCloseToTray } from "@/types/Settings";
+import {
+  DEFAULT_SETTINGS,
+  resolveCloseToTray,
+  shouldAskOnClose,
+} from "@/types/Settings";
 import type { TrayAction, TrayLabels } from "@/types/Tray";
 import { buildTrayModel } from "@renderer/features/tray/trayModel";
 import {
@@ -134,6 +138,7 @@ export function TrayHost() {
         call,
         groupNames: new Map(groups.map((group) => [group._id, group.name])),
         closeToTray: resolveCloseToTray(settings.closeToTray, api.platform),
+        askOnClose: shouldAskOnClose(settings.closeToTray, api.platform),
         updateVersion,
         labels,
       }),

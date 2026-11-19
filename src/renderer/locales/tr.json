@@ -1415,7 +1415,7 @@
     "saveFailed": "Ayarlar kaydedilemedi",
     "language": "Arayüz dili",
     "mb": "MB",
-    "devMode": "Geliştirici modu",
+    "devMode": "Hataları göster",
     "downloadLimit": "İndirme sınırı",
     "downloadSource": "İndirme kaynağı",
     "downloadSourceOptions": {
@@ -1448,8 +1448,10 @@
       },
       "heading": "Bağlantı kontrolü"
     },
-    "crashTelemetry": "Anonim çökme istatistikleri",
-    "crashTelemetryDescription": "Yalnızca teşhis kodunu gönderir — ipuçlarını iyileştirmeye yardımcı olur",
+    "crashTelemetry": "Çökme teşhisleri",
+    "crashTelemetryDescription": "Teşhis kodu ve hata satırı; başlatıcının kendisi çökerse hata metni. Kullanıcı adı ve günlük olmadan",
+    "usageStats": "Özellik sayaçları",
+    "usageStatsDescription": "Ekranların ve özelliklerin günde kaç kez açıldığı. Yalnızca toplamlar, kullanıcı adı olmadan",
     "aiLogAnalysis": "Yapay zekâ ile günlük analizi",
     "aiLogAnalysisDescription": "Onay adımını atlar: analiz, pencere açılır açılmaz başlar",
     "sounds": "Bildirim sesleri",
@@ -1579,7 +1581,7 @@
       "rootHint": "başlatıcının indirdiği her şey",
       "restMore": "Diğer kurulumlar: {{value}}"
     },
-    "devModeDescription": "Çalıştırma komutunu kopyalama ve ek hata ayıklama araçları",
+    "devModeDescription": "Her arayüz hatası için bir bildirim; kurulum menüsünde ayrıca göreli yollu çalıştırma komutu",
     "voiceMicTestErrorHint": "Mikrofona erişim yok. {{os}} izinlerini ve seçili cihazı kontrol edin.",
     "autoWorldBackup": "Otomatik dünya yedekleri",
     "autoWorldBackupDescription": "Dünya değiştiyse oyun oturumundan sonra bir kopyasını kaydeder",
@@ -1908,9 +1910,14 @@
         "keywords": "discord rpc rich presence gizlilik sunucu gizle"
       },
       "crashTelemetry": {
-        "title": "Anonim çökme istatistikleri",
-        "description": "Yalnızca teşhis kodu gönderilir",
-        "keywords": "telemetri çökme analiz gizlilik istatistik"
+        "title": "Çökme teşhisleri",
+        "description": "Teşhis kodu ve hata satırı, kullanıcı adı ve günlük olmadan",
+        "keywords": "telemetri çökme teşhis analiz gizlilik istatistik"
+      },
+      "usageStats": {
+        "title": "Özellik sayaçları",
+        "description": "Özellik kullanımının anonim sayaçları",
+        "keywords": "istatistik telemetri analiz gizlilik özellikler sayaçlar kullanım"
       },
       "aiLogAnalysis": {
         "title": "Yapay zekâ ile günlük analizi",
@@ -1918,9 +1925,9 @@
         "keywords": "yapay zeka ai analiz çökme günlük log otomatik"
       },
       "devMode": {
-        "title": "Geliştirici modu",
-        "description": "Çalıştırma komutunu kopyalama ve ek hata ayıklama araçları",
-        "keywords": "geliştirici hata ayıklama debug gelişmiş komut"
+        "title": "Hataları göster",
+        "description": "Her arayüz hatası için bir bildirim",
+        "keywords": "hatalar hata ayıklama debug geliştirici geliştirici modu komut"
       },
       "allowedPaths": {
         "title": "İzin verdiğiniz klasörler ve dosyalar",
@@ -2053,9 +2060,9 @@
         "keywords": "genel bakış kart ekran görüntüsü not oturum gizle"
       },
       "closeToTray": {
-        "title": "Kapatınca tepsiye küçült",
-        "description": "Kapatmak pencereyi gizler, aramalar ve oyunlar sürer",
-        "keywords": "tepsi kapat arka plan küçült arama"
+        "title": "Pencere kapatılırken",
+        "description": "Sor, tepsiye küçült veya çık",
+        "keywords": "tepsi kapat arka plan küçült arama çıkış sor"
       },
       "startScreen": {
         "title": "Açılış ekranı",
@@ -2123,8 +2130,13 @@
     "agentChatSync": "Asistan sohbetlerini eşitle",
     "agentChatSyncDescription": "Asistan geçmişini Grubie hesabında tutar, böylece başka bir bilgisayarda da sizinle olur. Asistanın okuduklarını içerir: kurulum adları, günlük alıntıları ve kayıtlı sunucularınızın adresleri.",
     "system": {
-      "closeToTray": "Kapatınca tepsiye küçült",
-      "closeToTrayDescription": "Kapat düğmesi pencereyi gizler ve başlatıcı çalışmaya devam eder: aramalar bağlı kalır, arkadaşlar sizi çevrim içi görür, oyunlar ve indirmeler sürer. Tepsi simgesinden çıkış yapın.",
+      "closeToTray": "Pencere kapatılırken",
+      "closeToTrayDescription": "Kapat düğmesinin ne yapacağı. Tepside başlatıcı çalışmaya devam eder: aramalar bağlı kalır, arkadaşlar sizi çevrim içi görür, oyunlar ve indirmeler sürer.",
+      "closeModes": {
+        "ask": "Sor",
+        "tray": "Tepsiye küçült",
+        "quit": "Çıkış yap"
+      },
       "startScreen": "Açılış ekranı",
       "startScreenDescription": "Başlatıcı açıldığında ne gösterilsin",
       "startScreens": {
@@ -4310,6 +4322,20 @@
     "skip": "Atla",
     "stepVersionLocked": "Hesap ekledikten sonra kullanılabilir",
     "skipHint": "Bunu daha sonra yapabilirsiniz"
+  },
+  "privacyNotice": {
+    "title": "Başlatıcının bize gönderdikleri",
+    "description": "Anonim olarak: kullanıcı adınız, hesabınız ve dosyalarınız olmadan. Çökmeleri düzeltmemize ve hangi özelliklerin gerekli olduğunu görmemize yardımcı olur. Tek tıkla kapatılır.",
+    "settings": "Gizlilik ayarları",
+    "done": "Anladım"
+  },
+  "closeChoice": {
+    "title": "Tepsiye küçültülsün mü, çıkılsın mı?",
+    "description": "Tepside başlatıcı çalışmaya devam eder: aramalar bağlı kalır, arkadaşlarınız sizi çevrim içi görür, indirmeler sürer. İstediğiniz zaman tepsi simgesinden çıkabilirsiniz.",
+    "remember": "Seçimimi hatırla",
+    "rememberHint": "Bunu “{{path}}” bölümünden değiştirebilirsiniz",
+    "tray": "Tepsiye küçült",
+    "quit": "Çıkış"
   },
   "errorBoundary": {
     "title": "Bir şeyler ters gitti",

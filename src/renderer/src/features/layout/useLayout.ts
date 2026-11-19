@@ -10,6 +10,7 @@ import { patchSettings } from "@renderer/utilities/persistSettings";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { showUndoToast } from "@renderer/utilities/undoToast";
 import { updateInstancesFile } from "@renderer/features/instances/instancesStore";
+import { countFeature } from "@renderer/features/usage/usage";
 import { setSlotHidden } from "./layout";
 import {
   currentPresetValues,
@@ -60,6 +61,7 @@ export function startLayoutEditing(): void {
   if (store.get(layoutEditingAtom)) return;
   store.set(layoutSnapshotAtom, store.get(settingsAtom).interface);
   store.set(layoutEditingAtom, true);
+  countFeature("feature.layoutEdit");
 }
 
 export function finishLayoutEditing(): void {

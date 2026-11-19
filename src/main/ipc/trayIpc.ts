@@ -5,7 +5,11 @@ import {
   installDownloadedUpdate,
 } from "../utilities/backgroundUpdates";
 import { sanitizeTrayCommand, sanitizeTrayModel } from "../tray/trayMenu";
-import { runTrayCommand, updateTray } from "../tray/tray";
+import {
+  resolveCloseChoice,
+  runTrayCommand,
+  updateTray,
+} from "../tray/tray";
 import {
   getTrayPopupModel,
   hideTrayPopup,
@@ -28,6 +32,13 @@ export function registerTrayIpc() {
       const model = sanitizeTrayModel(value);
       if (model) updateTray(model);
     },
+  );
+
+  handleSafe<void, ["tray" | "quit"]>(
+    "tray:closeChoice",
+    undefined,
+    [check.oneOf("tray", "quit")],
+    async (_, choice) => resolveCloseChoice(choice),
   );
 
   handleSafe<TrayModel | null>("trayPopup:getModel", null, async () =>

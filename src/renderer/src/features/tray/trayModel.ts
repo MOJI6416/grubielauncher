@@ -26,6 +26,7 @@ export function buildTrayModel({
   call,
   groupNames,
   closeToTray,
+  askOnClose = false,
   updateVersion = null,
   labels,
 }: {
@@ -45,6 +46,7 @@ export function buildTrayModel({
   call: IVoiceCallState;
   groupNames: ReadonlyMap<string, string>;
   closeToTray: boolean;
+  askOnClose?: boolean;
   updateVersion?: string | null;
   labels: TrayLabels;
 }): TrayModel {
@@ -84,6 +86,7 @@ export function buildTrayModel({
     lang,
     accent,
     closeToTray,
+    askOnClose,
     instances: recent,
     playing,
     voice,

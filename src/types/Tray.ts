@@ -36,6 +36,7 @@ export interface TrayModel {
   lang: string;
   accent: string;
   closeToTray: boolean;
+  askOnClose: boolean;
   instances: TrayInstance[];
   playing: string[];
   voice: TrayVoice | null;

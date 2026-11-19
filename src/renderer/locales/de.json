@@ -1415,7 +1415,7 @@
     "saveFailed": "Einstellungen konnten nicht gespeichert werden",
     "language": "Sprache der Oberfläche",
     "mb": "MB",
-    "devMode": "Entwicklermodus",
+    "devMode": "Fehler anzeigen",
     "downloadLimit": "Download-Limit",
     "downloadSource": "Download-Quelle",
     "downloadSourceOptions": {
@@ -1448,8 +1448,10 @@
       },
       "heading": "Verbindungsprüfung"
     },
-    "crashTelemetry": "Anonyme Absturzstatistik",
-    "crashTelemetryDescription": "Sendet nur den Diagnosecode – hilft, die Hinweise zu verbessern",
+    "crashTelemetry": "Absturzdiagnosen",
+    "crashTelemetryDescription": "Diagnosecode und Fehlerzeile, bei einem Fehler des Launchers selbst der Fehlertext. Ohne Nickname und Logs",
+    "usageStats": "Funktionszähler",
+    "usageStatsDescription": "Wie oft am Tag Bildschirme und Funktionen geöffnet wurden. Nur Summen, ohne Nickname",
     "aiLogAnalysis": "KI-Loganalyse",
     "aiLogAnalysisDescription": "Bestätigung überspringen: Die Analyse startet, sobald sich das Fenster öffnet",
     "sounds": "Benachrichtigungstöne",
@@ -1579,7 +1581,7 @@
       "rootHint": "alles, was der Launcher heruntergeladen hat",
       "restMore": "Weitere Instanzen: {{value}}"
     },
-    "devModeDescription": "Kopieren des Startbefehls und zusätzliche Debug-Werkzeuge",
+    "devModeDescription": "Eine Meldung bei jedem Oberflächenfehler; im Instanzmenü zusätzlich der Startbefehl mit relativen Pfaden",
     "voiceMicTestErrorHint": "Kein Zugriff auf das Mikrofon. Prüfen Sie die {{os}}-Berechtigungen und das gewählte Gerät.",
     "autoWorldBackup": "Automatische Welt-Backups",
     "autoWorldBackupDescription": "Nach einer Spielsitzung eine Kopie der Welt speichern, wenn sie sich geändert hat",
@@ -1908,9 +1910,14 @@
         "keywords": "discord rpc rich presence datenschutz server verbergen"
       },
       "crashTelemetry": {
-        "title": "Anonyme Absturzstatistik",
-        "description": "Nur der Diagnosecode wird gesendet",
-        "keywords": "telemetrie absturz analyse datenschutz statistik crash"
+        "title": "Absturzdiagnosen",
+        "description": "Diagnosecode und Fehlerzeile ohne Nickname und Logs",
+        "keywords": "telemetrie absturz diagnose analyse datenschutz statistik crash"
+      },
+      "usageStats": {
+        "title": "Funktionszähler",
+        "description": "Anonyme Zähler der Funktionsnutzung",
+        "keywords": "statistik telemetrie analyse datenschutz funktionen zähler nutzung"
       },
       "aiLogAnalysis": {
         "title": "KI-Loganalyse",
@@ -1918,9 +1925,9 @@
         "keywords": "ki ai analyse absturz log automatisch"
       },
       "devMode": {
-        "title": "Entwicklermodus",
-        "description": "Kopieren des Startbefehls und zusätzliche Debug-Werkzeuge",
-        "keywords": "entwickler debug erweitert befehl developer"
+        "title": "Fehler anzeigen",
+        "description": "Eine Meldung bei jedem Oberflächenfehler",
+        "keywords": "fehler debug entwickler entwicklermodus startbefehl developer"
       },
       "allowedPaths": {
         "title": "Von Ihnen erlaubte Ordner und Dateien",
@@ -2053,9 +2060,9 @@
         "keywords": "übersicht karten screenshots notizen sitzungen ausblenden"
       },
       "closeToTray": {
-        "title": "Beim Schließen in den Infobereich",
-        "description": "Schließen verbirgt das Fenster, Anrufe und Spiele laufen weiter",
-        "keywords": "infobereich tray schließen hintergrund minimieren anruf"
+        "title": "Beim Schließen des Fensters",
+        "description": "Fragen, in den Infobereich minimieren oder beenden",
+        "keywords": "infobereich tray schließen hintergrund minimieren anruf beenden fragen"
       },
       "startScreen": {
         "title": "Startbildschirm",
@@ -2123,8 +2130,13 @@
     "agentChatSync": "Assistenten-Chats synchronisieren",
     "agentChatSyncDescription": "Den Verlauf des Assistenten im Grubie-Konto speichern, damit er Ihnen auf einen anderen Computer folgt. Er enthält, was der Assistent gelesen hat: Instanznamen, Log-Auszüge und die Adressen Ihrer gespeicherten Server.",
     "system": {
-      "closeToTray": "Beim Schließen in den Infobereich",
-      "closeToTrayDescription": "Die Schließen-Schaltfläche verbirgt das Fenster, und der Launcher läuft weiter: Anrufe bleiben verbunden, Freunde sehen Sie online, Spiele und Downloads laufen weiter. Beenden über das Symbol im Infobereich.",
+      "closeToTray": "Beim Schließen des Fensters",
+      "closeToTrayDescription": "Was die Schließen-Schaltfläche tut. Im Infobereich läuft der Launcher weiter: Anrufe bleiben verbunden, Freunde sehen Sie online, Spiele und Downloads laufen weiter.",
+      "closeModes": {
+        "ask": "Fragen",
+        "tray": "In den Infobereich",
+        "quit": "Beenden"
+      },
       "startScreen": "Startbildschirm",
       "startScreenDescription": "Was beim Start des Launchers geöffnet wird",
       "startScreens": {
@@ -4310,6 +4322,20 @@
     "skip": "Überspringen",
     "stepVersionLocked": "Verfügbar, nachdem Sie ein Konto hinzugefügt haben",
     "skipHint": "Das können Sie später erledigen"
+  },
+  "privacyNotice": {
+    "title": "Was der Launcher an uns sendet",
+    "description": "Anonym: ohne Nickname, Konto und Ihre Dateien. Das hilft uns, Abstürze zu beheben und zu sehen, welche Funktionen gebraucht werden. Mit einem Klick abschaltbar.",
+    "settings": "Datenschutz-Einstellungen",
+    "done": "Verstanden"
+  },
+  "closeChoice": {
+    "title": "In den Infobereich minimieren oder beenden?",
+    "description": "Im Infobereich läuft der Launcher weiter: Anrufe bleiben verbunden, Freunde sehen Sie online, Downloads laufen weiter. Beenden können Sie jederzeit über das Symbol im Infobereich.",
+    "remember": "Auswahl merken",
+    "rememberHint": "Ändern können Sie das unter „{{path}}“",
+    "tray": "In den Infobereich",
+    "quit": "Beenden"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",

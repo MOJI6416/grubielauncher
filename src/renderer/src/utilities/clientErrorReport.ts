@@ -1,3 +1,5 @@
+import { getDefaultStore } from "jotai";
+import { settingsAtom } from "@renderer/stores/atoms";
 import { ignoreFailure } from "./ignoreFailure";
 import { getApiBase } from "./apiBase";
 
@@ -25,6 +27,7 @@ export function reportLauncherError(
   locale: string,
 ): void {
   if (sent >= MAX_REPORTS_PER_SESSION) return;
+  if (!getDefaultStore().get(settingsAtom).crashTelemetry) return;
   sent += 1;
 
   void (async () => {

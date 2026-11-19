@@ -1430,7 +1430,7 @@
     "saveFailed": "Falha ao salvar as configurações",
     "language": "Idioma da interface",
     "mb": "MB",
-    "devMode": "Modo desenvolvedor",
+    "devMode": "Mostrar erros",
     "downloadLimit": "Limite de downloads",
     "downloadSource": "Fonte de download",
     "downloadSourceOptions": {
@@ -1463,8 +1463,10 @@
       },
       "heading": "Verificação de conexão"
     },
-    "crashTelemetry": "Estatísticas anônimas de crashes",
-    "crashTelemetryDescription": "Envia só o código do diagnóstico — ajuda a melhorar as dicas",
+    "crashTelemetry": "Diagnósticos de crash",
+    "crashTelemetryDescription": "O código do diagnóstico e a linha do erro, ou o texto do erro se o próprio launcher falhar. Sem nick e sem logs",
+    "usageStats": "Contadores de recursos",
+    "usageStatsDescription": "Quantas vezes por dia telas e recursos foram abertos. Só totais, sem nick",
     "aiLogAnalysis": "Análise de logs com IA",
     "aiLogAnalysisDescription": "Pula a etapa de confirmação: a análise começa assim que a janela abre",
     "sounds": "Sons de notificação",
@@ -1594,7 +1596,7 @@
       "rootHint": "tudo o que o launcher baixou",
       "restMore": "Mais instâncias: {{value}}"
     },
-    "devModeDescription": "Cópia do comando de execução e ferramentas extras de depuração",
+    "devModeDescription": "Um aviso para cada erro da interface; o menu da instância também oferece o comando de execução com caminhos relativos",
     "voiceMicTestErrorHint": "Sem acesso ao microfone. Confira as permissões do {{os}} e o dispositivo escolhido.",
     "autoWorldBackup": "Backups automáticos de mundos",
     "autoWorldBackupDescription": "Salva uma cópia do mundo depois de uma sessão de jogo, se ele mudou",
@@ -1923,9 +1925,14 @@
         "keywords": "discord rpc rich presence privacidade servidor ocultar"
       },
       "crashTelemetry": {
-        "title": "Estatísticas anônimas de crashes",
-        "description": "Só o código do diagnóstico é enviado",
-        "keywords": "telemetria crash análise privacidade estatísticas"
+        "title": "Diagnósticos de crash",
+        "description": "Código do diagnóstico e linha do erro, sem nick e sem logs",
+        "keywords": "telemetria crash diagnóstico análise privacidade estatísticas"
+      },
+      "usageStats": {
+        "title": "Contadores de recursos",
+        "description": "Contadores anônimos de uso de recursos",
+        "keywords": "estatísticas telemetria análise privacidade recursos contadores uso"
       },
       "aiLogAnalysis": {
         "title": "Análise de logs com IA",
@@ -1933,9 +1940,9 @@
         "keywords": "ia ai análise crash log automático"
       },
       "devMode": {
-        "title": "Modo desenvolvedor",
-        "description": "Cópia do comando de execução e ferramentas extras de depuração",
-        "keywords": "desenvolvedor debug depuração avançado comando"
+        "title": "Mostrar erros",
+        "description": "Um aviso para cada erro da interface",
+        "keywords": "erros debug depuração desenvolvedor modo desenvolvedor comando"
       },
       "allowedPaths": {
         "title": "Pastas e arquivos que você permitiu",
@@ -2068,9 +2075,9 @@
         "keywords": "visão geral cartões capturas notas sessões ocultar"
       },
       "closeToTray": {
-        "title": "Minimizar para a bandeja ao fechar",
-        "description": "Fechar oculta a janela; chamadas e jogos continuam",
-        "keywords": "bandeja fechar segundo plano minimizar chamada tray"
+        "title": "Ao fechar a janela",
+        "description": "Perguntar, minimizar para a bandeja ou sair",
+        "keywords": "bandeja fechar segundo plano minimizar chamada tray sair perguntar"
       },
       "startScreen": {
         "title": "Tela inicial",
@@ -2138,8 +2145,13 @@
     "agentChatSync": "Sincronizar chats do assistente",
     "agentChatSyncDescription": "Guarda o histórico do assistente na conta Grubie, para que ele siga você em outro computador. Ele inclui o que o assistente leu: nomes de instâncias, trechos de logs e os endereços dos seus servidores salvos.",
     "system": {
-      "closeToTray": "Minimizar para a bandeja ao fechar",
-      "closeToTrayDescription": "O botão de fechar oculta a janela e o launcher continua rodando: as chamadas continuam, os amigos veem você on-line, jogos e downloads seguem. Para sair, use o ícone da bandeja.",
+      "closeToTray": "Ao fechar a janela",
+      "closeToTrayDescription": "O que o botão de fechar faz. Na bandeja o launcher continua rodando: as chamadas continuam, os amigos veem você on-line, jogos e downloads seguem.",
+      "closeModes": {
+        "ask": "Perguntar",
+        "tray": "Minimizar para a bandeja",
+        "quit": "Sair"
+      },
       "startScreen": "Tela inicial",
       "startScreenDescription": "O que abre quando o launcher inicia",
       "startScreens": {
@@ -4344,6 +4356,20 @@
     "skip": "Pular",
     "stepVersionLocked": "Disponível depois que você adicionar uma conta",
     "skipHint": "Você pode fazer isso depois"
+  },
+  "privacyNotice": {
+    "title": "O que o launcher nos envia",
+    "description": "De forma anônima: sem nick, conta ou arquivos seus. Isso nos ajuda a corrigir crashes e a entender quais recursos importam. Dá para desativar com um clique.",
+    "settings": "Configurações de privacidade",
+    "done": "Entendi"
+  },
+  "closeChoice": {
+    "title": "Minimizar para a bandeja ou sair?",
+    "description": "Na bandeja o launcher continua rodando: as chamadas continuam, os amigos veem você on-line e os downloads seguem. Você pode sair a qualquer momento pelo ícone da bandeja.",
+    "remember": "Lembrar minha escolha",
+    "rememberHint": "Você pode mudar isso em “{{path}}”",
+    "tray": "Minimizar para a bandeja",
+    "quit": "Sair"
   },
   "errorBoundary": {
     "title": "Algo deu errado",

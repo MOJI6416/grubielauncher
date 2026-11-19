@@ -1415,7 +1415,7 @@
     "saveFailed": "Failed to save settings",
     "language": "Interface language",
     "mb": "MB",
-    "devMode": "Developer mode",
+    "devMode": "Show errors",
     "downloadLimit": "Download limit",
     "downloadSource": "Download source",
     "downloadSourceOptions": {
@@ -1448,8 +1448,10 @@
       },
       "heading": "Connection check"
     },
-    "crashTelemetry": "Anonymous crash statistics",
-    "crashTelemetryDescription": "Sends only the diagnosis code — helps improve the hints",
+    "crashTelemetry": "Crash diagnoses",
+    "crashTelemetryDescription": "The diagnosis code and the error line, or the error text if the launcher itself fails. No nickname, no logs",
+    "usageStats": "Feature counters",
+    "usageStatsDescription": "How many times a day screens and features were opened. Totals only, no nickname",
     "aiLogAnalysis": "AI log analysis",
     "aiLogAnalysisDescription": "Skip the confirmation step: the analysis starts as soon as the window opens",
     "sounds": "Notification sounds",
@@ -1579,7 +1581,7 @@
       "rootHint": "everything the launcher downloaded",
       "restMore": "More instances: {{value}}"
     },
-    "devModeDescription": "Run-command copying and extra debugging tools",
+    "devModeDescription": "A message for every interface error; the instance menu also gets the run command with relative paths",
     "voiceMicTestErrorHint": "No access to the microphone. Check {{os}} permissions and the selected device.",
     "autoWorldBackup": "Automatic world backups",
     "autoWorldBackupDescription": "Save a copy of the world after a play session if it changed",
@@ -1908,9 +1910,14 @@
         "keywords": "discord rpc rich presence privacy server hide"
       },
       "crashTelemetry": {
-        "title": "Anonymous crash statistics",
-        "description": "Only the diagnosis code is sent",
-        "keywords": "telemetry crash analytics privacy statistics"
+        "title": "Crash diagnoses",
+        "description": "Diagnosis code and error line, no nickname or logs",
+        "keywords": "telemetry crash diagnosis analytics privacy statistics"
+      },
+      "usageStats": {
+        "title": "Feature counters",
+        "description": "Anonymous feature usage counters",
+        "keywords": "statistics telemetry analytics privacy features counters usage"
       },
       "aiLogAnalysis": {
         "title": "AI log analysis",
@@ -1918,9 +1925,9 @@
         "keywords": "ai analysis crash log auto"
       },
       "devMode": {
-        "title": "Developer mode",
-        "description": "Run-command copying and extra debugging tools",
-        "keywords": "developer debug advanced command"
+        "title": "Show errors",
+        "description": "A message for every interface error",
+        "keywords": "errors debug developer mode run command"
       },
       "allowedPaths": {
         "title": "Folders and files you allowed",
@@ -2053,9 +2060,9 @@
         "keywords": "overview cards screenshots notes sessions hide"
       },
       "closeToTray": {
-        "title": "Minimize to tray on close",
-        "description": "Closing hides the window, calls and games keep going",
-        "keywords": "tray close background minimize call"
+        "title": "When closing the window",
+        "description": "Ask, minimize to tray or quit",
+        "keywords": "tray close background minimize call quit exit ask"
       },
       "startScreen": {
         "title": "Start screen",
@@ -2123,8 +2130,13 @@
     "agentChatSync": "Sync assistant chats",
     "agentChatSyncDescription": "Keep the assistant history on the Grubie account so it follows you to another computer. It carries what the assistant read: instance names, log excerpts and the addresses of your saved servers.",
     "system": {
-      "closeToTray": "Minimize to tray on close",
-      "closeToTrayDescription": "The close button hides the window and the launcher keeps running: calls stay connected, friends see you online, games and downloads carry on. Quit from the tray icon.",
+      "closeToTray": "When closing the window",
+      "closeToTrayDescription": "What the close button does. In the tray the launcher keeps running: calls stay connected, friends see you online, games and downloads carry on.",
+      "closeModes": {
+        "ask": "Ask",
+        "tray": "Minimize to tray",
+        "quit": "Quit"
+      },
       "startScreen": "Start screen",
       "startScreenDescription": "What opens when the launcher starts",
       "startScreens": {
@@ -4310,6 +4322,20 @@
     "skip": "Skip",
     "stepVersionLocked": "Available after you add an account",
     "skipHint": "You can do this later"
+  },
+  "privacyNotice": {
+    "title": "What the launcher sends us",
+    "description": "Anonymously: no nickname, account or files of yours. It helps us fix crashes and see which features matter. One click turns it off.",
+    "settings": "Privacy settings",
+    "done": "Got it"
+  },
+  "closeChoice": {
+    "title": "Minimize to tray or quit?",
+    "description": "In the tray the launcher keeps running: calls stay connected, friends see you online, downloads carry on. Quit any time from the tray icon.",
+    "remember": "Remember my choice",
+    "rememberHint": "You can change it in {{path}}",
+    "tray": "Minimize to tray",
+    "quit": "Quit"
   },
   "errorBoundary": {
     "title": "Something went wrong",

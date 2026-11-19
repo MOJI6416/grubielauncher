@@ -251,6 +251,42 @@ export function LayoutSection({
             }
           />
         )}
+
+        {visible("ambientTint") && (
+          <SettingRow
+            htmlFor="settings-ambientTint"
+            title={t("settings.interface.ambientTint")}
+            description={t("settings.interface.ambientTintDescription")}
+            query={query}
+            changed={isChanged("ambientTint")}
+            onReset={() => reset("ambientTint")}
+            control={
+              <Switch
+                id="settings-ambientTint"
+                checked={settings.ambientTint}
+                onCheckedChange={(value) => commit({ ambientTint: value })}
+              />
+            }
+          />
+        )}
+
+        {visible("backgroundGrain") && (
+          <SettingRow
+            htmlFor="settings-backgroundGrain"
+            title={t("settings.interface.backgroundGrain")}
+            description={t("settings.interface.backgroundGrainDescription")}
+            query={query}
+            changed={isChanged("backgroundGrain")}
+            onReset={() => reset("backgroundGrain")}
+            control={
+              <Switch
+                id="settings-backgroundGrain"
+                checked={settings.backgroundGrain}
+                onCheckedChange={(value) => commit({ backgroundGrain: value })}
+              />
+            }
+          />
+        )}
       </SettingsGroup>
 
       <SettingsGroup title={t("layout.groups.sidebar")}>

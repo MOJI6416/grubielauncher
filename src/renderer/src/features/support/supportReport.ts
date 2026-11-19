@@ -12,6 +12,7 @@ import {
 } from "@renderer/stores/atoms";
 import { isOnlineSocketConnected } from "@renderer/utilities/onlineSocket";
 import { uiJournal } from "@renderer/utilities/journal";
+import { countFeature } from "@renderer/features/usage/usage";
 
 export interface SupportDialogRequest {
   trigger: SupportReportTrigger;
@@ -25,6 +26,7 @@ export function openSupportReport(
   versionName?: string,
 ): void {
   uiJournal.info("support", "report dialog opened", { trigger, versionName });
+  countFeature("feature.supportReport");
   getDefaultStore().set(supportDialogAtom, { trigger, versionName });
 }
 

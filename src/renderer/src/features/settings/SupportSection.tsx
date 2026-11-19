@@ -48,6 +48,9 @@ export function SupportSection({
   storageTotal,
   visible,
   query,
+  commit,
+  isChanged,
+  reset,
 }: {
   settings: TSettings;
   appVersion: string;
@@ -55,6 +58,9 @@ export function SupportSection({
   storageTotal: string;
   visible: (id: SettingsEntryId) => boolean;
   query: string;
+  commit: (patch: Partial<TSettings>) => void;
+  isChanged: (id: SettingsEntryId) => boolean;
+  reset: (id: SettingsEntryId) => void;
 }) {
   const { t, i18n } = useTranslation();
   const paths = useAtomValue(pathsAtom);
@@ -127,7 +133,9 @@ export function SupportSection({
 
   return (
     <div className="flex flex-col gap-4">
-      {(visible("supportReport") || visible("verboseJournal")) && (
+      {(visible("supportReport") ||
+        visible("verboseJournal") ||
+        visible("devMode")) && (
         <SettingsGroup
           title={t("settings.supportSection.reportTitle")}
           hint={t("settings.supportSection.reportHint")}
@@ -161,6 +169,23 @@ export function SupportSection({
                   checked={verboseUntil !== null}
                   disabled={isToggling || !status}
                   onCheckedChange={(value) => void toggleVerbose(value)}
+                />
+              }
+            />
+          )}
+          {visible("devMode") && (
+            <SettingRow
+              htmlFor="settings-dev-mode"
+              title={t("settings.devMode")}
+              description={t("settings.devModeDescription")}
+              query={query}
+              changed={isChanged("devMode")}
+              onReset={() => reset("devMode")}
+              control={
+                <Switch
+                  id="settings-dev-mode"
+                  checked={settings.devMode}
+                  onCheckedChange={(value) => commit({ devMode: value })}
                 />
               }
             />

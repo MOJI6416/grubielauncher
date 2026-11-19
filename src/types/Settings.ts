@@ -164,6 +164,7 @@ export type TSettings = {
   downloadLimit: number;
   downloadSource: DownloadSource;
   crashTelemetry: boolean;
+  usageStats: boolean;
   aiLogAnalysis: boolean;
   agentChatSync: boolean;
   sounds: boolean;
@@ -213,6 +214,13 @@ export function resolveCloseToTray(
   return typeof value === "boolean" ? value : defaultCloseToTray(platform);
 }
 
+export function shouldAskOnClose(
+  value: boolean | null | undefined,
+  platform: string,
+): boolean {
+  return typeof value !== "boolean" && defaultCloseToTray(platform);
+}
+
 export const DEFAULT_SETTINGS: TSettings = {
   xmx: 2048,
   optimizedJvm: false,
@@ -229,6 +237,7 @@ export const DEFAULT_SETTINGS: TSettings = {
   downloadLimit: 6,
   downloadSource: "auto",
   crashTelemetry: true,
+  usageStats: true,
   aiLogAnalysis: false,
   agentChatSync: true,
   sounds: true,
@@ -389,6 +398,7 @@ export function normalizeSettings(
       typeof value?.crashTelemetry === "boolean"
         ? value.crashTelemetry
         : DEFAULT_SETTINGS.crashTelemetry,
+    usageStats: booleanOr(value?.usageStats, DEFAULT_SETTINGS.usageStats),
     aiLogAnalysis:
       typeof value?.aiLogAnalysis === "boolean"
         ? value.aiLogAnalysis

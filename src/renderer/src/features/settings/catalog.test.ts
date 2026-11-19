@@ -104,7 +104,8 @@ describe("changedEntryIds", () => {
     );
 
     expect(counts.game).toBe(2);
-    expect(counts.privacy).toBe(1);
+    expect(counts.support).toBe(1);
+    expect(counts.privacy).toBe(0);
     expect(counts.storage).toBe(0);
   });
 });

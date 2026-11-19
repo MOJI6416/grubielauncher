@@ -367,6 +367,9 @@ export function SettingsScreen({
                   storageTotal={storageTotal}
                   visible={visible}
                   query={result.query}
+                  commit={sectionProps.commit}
+                  isChanged={isChanged}
+                  reset={reset}
                 />
               )}
               {active === "about" && (

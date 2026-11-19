@@ -22,6 +22,7 @@ export { registerStatisticsIpc } from "./statisticsIpc";
 export { registerStorageIpc } from "./storageIpc";
 export { registerVoiceIpc } from "./voiceIpc";
 export { registerTrayIpc } from "./trayIpc";
+export { registerUsageIpc } from "./usageIpc";
 export { registerDataLocationIpc } from "./dataLocationIpc";
 export { registerSupportIpc } from "./supportIpc";
 export { registerMediaIpc } from "./mediaIpc";

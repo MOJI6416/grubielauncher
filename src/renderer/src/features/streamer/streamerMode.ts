@@ -4,6 +4,7 @@ import { settingsAtom } from "@renderer/stores/atoms";
 import { patchSettings } from "@renderer/utilities/persistSettings";
 import type { TSettings } from "@/types/Settings";
 import { maskValue, redactPath, redactText } from "./redact";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -61,6 +62,7 @@ export async function setStreamerMode(
 
   if (active) {
     store.set(streamerDismissedAtom, null);
+    countFeature("feature.streamerMode");
     if (!app) await write({ streamerMode: true });
     return;
   }

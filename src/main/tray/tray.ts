@@ -11,7 +11,11 @@ import {
 import icon from "../../../resources/icon.png?asset";
 import trayTemplate from "../../../resources/trayTemplate.png?asset";
 import trayTemplate2x from "../../../resources/trayTemplate@2x.png?asset";
-import { matchLanguage, resolveCloseToTray } from "@/types/Settings";
+import {
+  matchLanguage,
+  resolveCloseToTray,
+  shouldAskOnClose,
+} from "@/types/Settings";
 import { TrayModel } from "@/types/Tray";
 import { getLauncherPaths } from "../utilities/other";
 import { getSystemLocale } from "../utilities/systemLocale";
@@ -58,6 +62,7 @@ const FALLBACK_LABELS: Record<string, { open: string; quit: string }> = {
 let tray: Tray | null = null;
 let model: TrayModel | null = null;
 let closeToTray = false;
+let askOnClose = false;
 let hintShown = false;
 
 function statePath(): string {
@@ -71,8 +76,10 @@ function readInitialState(): void {
       { throws: false },
     );
     closeToTray = resolveCloseToTray(settings?.closeToTray, process.platform);
+    askOnClose = shouldAskOnClose(settings?.closeToTray, process.platform);
   } catch {
     closeToTray = resolveCloseToTray(null, process.platform);
+    askOnClose = shouldAskOnClose(null, process.platform);
   }
 
   try {
@@ -226,14 +233,36 @@ function hideForGame(): boolean {
   return true;
 }
 
-function hideToTray(): boolean {
-  if (!tray || tray.isDestroyed() || !closeToTray) return false;
+function hideWindowToTray(): boolean {
+  if (!tray || tray.isDestroyed()) return false;
   if (!mainWindow || mainWindow.isDestroyed()) return false;
 
   mainWindow.hide();
   applyThrottling();
   showHintOnce();
   return true;
+}
+
+function askCloseChoice(): boolean {
+  const contents = mainWindow?.webContents;
+  if (!model || !contents || contents.isDestroyed() || contents.isCrashed())
+    return false;
+
+  contents.send("app:closeChoice");
+  revealMainWindow();
+  return true;
+}
+
+function hideToTray(): boolean {
+  if (!tray || tray.isDestroyed()) return false;
+  if (askOnClose && askCloseChoice()) return true;
+  if (!closeToTray) return false;
+  return hideWindowToTray();
+}
+
+export function resolveCloseChoice(choice: "tray" | "quit"): void {
+  if (choice === "tray" && hideWindowToTray()) return;
+  requestAppQuit();
 }
 
 export function initTray(): void {
@@ -274,6 +303,7 @@ export function initTray(): void {
 export function updateTray(next: TrayModel): void {
   model = next;
   closeToTray = next.closeToTray;
+  askOnClose = next.askOnClose;
   render();
   applyThrottling();
   sendModelToTrayPopup(next);

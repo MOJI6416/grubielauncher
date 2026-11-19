@@ -4,6 +4,8 @@ import {
   normalizeLogFontSize,
   normalizeSettings,
   normalizeSoundVolume,
+  resolveCloseToTray,
+  shouldAskOnClose,
 } from "./Settings";
 
 describe("normalizeSettings", () => {
@@ -79,5 +81,26 @@ describe("normalizeLogFontSize", () => {
   it("only allows the offered sizes", () => {
     expect(normalizeLogFontSize(14)).toBe(14);
     expect(normalizeLogFontSize(15)).toBe(11);
+  });
+});
+
+describe("close button choice", () => {
+  it("asks on the first close on Windows and macOS until the player decides", () => {
+    expect(shouldAskOnClose(null, "win32")).toBe(true);
+    expect(shouldAskOnClose(undefined, "darwin")).toBe(true);
+    expect(shouldAskOnClose(true, "win32")).toBe(false);
+    expect(shouldAskOnClose(false, "darwin")).toBe(false);
+  });
+
+  it("never asks on Linux, where a tray icon may not exist", () => {
+    expect(shouldAskOnClose(null, "linux")).toBe(false);
+    expect(resolveCloseToTray(null, "linux")).toBe(false);
+  });
+
+  it("turns usage counters and crash diagnoses on by default", () => {
+    expect(DEFAULT_SETTINGS.usageStats).toBe(true);
+    expect(normalizeSettings({}).usageStats).toBe(true);
+    expect(normalizeSettings({ usageStats: false }).usageStats).toBe(false);
+    expect(normalizeSettings({ crashTelemetry: undefined }).crashTelemetry).toBe(true);
   });
 });

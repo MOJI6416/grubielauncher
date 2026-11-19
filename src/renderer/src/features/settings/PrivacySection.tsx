@@ -191,6 +191,24 @@ export function PrivacySection({
           />
         )}
 
+        {visible("usageStats") && (
+          <SettingRow
+            htmlFor="settings-usage-stats"
+            title={t("settings.usageStats")}
+            description={t("settings.usageStatsDescription")}
+            query={query}
+            changed={isChanged("usageStats")}
+            onReset={() => reset("usageStats")}
+            control={
+              <Switch
+                id="settings-usage-stats"
+                checked={settings.usageStats}
+                onCheckedChange={(value) => commit({ usageStats: value })}
+              />
+            }
+          />
+        )}
+
         {visible("aiLogAnalysis") && (
           <SettingRow
             htmlFor="settings-ai-log"
@@ -222,24 +240,6 @@ export function PrivacySection({
                 id="settings-agent-chat-sync"
                 checked={settings.agentChatSync}
                 onCheckedChange={(value) => commit({ agentChatSync: value })}
-              />
-            }
-          />
-        )}
-
-        {visible("devMode") && (
-          <SettingRow
-            htmlFor="settings-dev-mode"
-            title={t("settings.devMode")}
-            description={t("settings.devModeDescription")}
-            query={query}
-            changed={isChanged("devMode")}
-            onReset={() => reset("devMode")}
-            control={
-              <Switch
-                id="settings-dev-mode"
-                checked={settings.devMode}
-                onCheckedChange={(value) => commit({ devMode: value })}
               />
             }
           />

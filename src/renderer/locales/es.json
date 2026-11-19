@@ -1430,7 +1430,7 @@
     "saveFailed": "No se pudo guardar la configuración",
     "language": "Idioma de la interfaz",
     "mb": "MB",
-    "devMode": "Modo desarrollador",
+    "devMode": "Mostrar errores",
     "downloadLimit": "Límite de descargas",
     "downloadSource": "Fuente de descargas",
     "downloadSourceOptions": {
@@ -1463,8 +1463,10 @@
       },
       "heading": "Comprobación de la conexión"
     },
-    "crashTelemetry": "Estadísticas anónimas de fallos",
-    "crashTelemetryDescription": "Envía solo el código del diagnóstico: ayuda a mejorar las sugerencias",
+    "crashTelemetry": "Diagnósticos de fallos",
+    "crashTelemetryDescription": "El código del diagnóstico y la línea del error, o el texto del error si falla el propio launcher. Sin nombre de usuario ni registros",
+    "usageStats": "Contadores de funciones",
+    "usageStatsDescription": "Cuántas veces al día se abrieron pantallas y funciones. Solo totales, sin nombre de usuario",
     "aiLogAnalysis": "Análisis del registro con IA",
     "aiLogAnalysisDescription": "Omite la confirmación: el análisis empieza en cuanto se abre la ventana",
     "sounds": "Sonidos de notificación",
@@ -1594,7 +1596,7 @@
       "rootHint": "todo lo que descargó el launcher",
       "restMore": "Más instancias: {{value}}"
     },
-    "devModeDescription": "Copiar el comando de inicio y herramientas extra de depuración",
+    "devModeDescription": "Un aviso por cada error de la interfaz; el menú de la instancia también ofrece el comando de inicio con rutas relativas",
     "voiceMicTestErrorHint": "Sin acceso al micrófono. Revise los permisos de {{os}} y el dispositivo elegido.",
     "autoWorldBackup": "Copias de seguridad automáticas de mundos",
     "autoWorldBackupDescription": "Guarda una copia del mundo después de una sesión de juego si cambió",
@@ -1923,9 +1925,14 @@
         "keywords": "discord rpc rich presence privacidad servidor ocultar"
       },
       "crashTelemetry": {
-        "title": "Estadísticas anónimas de fallos",
-        "description": "Solo se envía el código del diagnóstico",
-        "keywords": "telemetría fallo crash analítica privacidad estadísticas"
+        "title": "Diagnósticos de fallos",
+        "description": "Código del diagnóstico y línea del error, sin nombre de usuario ni registros",
+        "keywords": "telemetría fallo crash diagnóstico analítica privacidad estadísticas"
+      },
+      "usageStats": {
+        "title": "Contadores de funciones",
+        "description": "Contadores anónimos del uso de funciones",
+        "keywords": "estadísticas telemetría analítica privacidad funciones contadores uso"
       },
       "aiLogAnalysis": {
         "title": "Análisis del registro con IA",
@@ -1933,9 +1940,9 @@
         "keywords": "ia análisis fallo crash registro log automático"
       },
       "devMode": {
-        "title": "Modo desarrollador",
-        "description": "Copiar el comando de inicio y herramientas extra de depuración",
-        "keywords": "desarrollador depuración avanzado comando debug"
+        "title": "Mostrar errores",
+        "description": "Un aviso por cada error de la interfaz",
+        "keywords": "errores depuración desarrollador modo desarrollador comando debug"
       },
       "allowedPaths": {
         "title": "Carpetas y archivos que permitió",
@@ -2068,9 +2075,9 @@
         "keywords": "resumen tarjetas capturas notas sesiones ocultar"
       },
       "closeToTray": {
-        "title": "Minimizar a la bandeja al cerrar",
-        "description": "Cerrar oculta la ventana; las llamadas y los juegos siguen",
-        "keywords": "bandeja cerrar segundo plano minimizar llamada"
+        "title": "Al cerrar la ventana",
+        "description": "Preguntar, minimizar a la bandeja o salir",
+        "keywords": "bandeja cerrar segundo plano minimizar llamada salir preguntar"
       },
       "startScreen": {
         "title": "Pantalla de inicio",
@@ -2138,8 +2145,13 @@
     "agentChatSync": "Sincronizar chats del asistente",
     "agentChatSyncDescription": "Guarda el historial del asistente en la cuenta de Grubie para que lo acompañe en otra computadora. Incluye lo que leyó el asistente: nombres de instancias, fragmentos de registros y las direcciones de sus servidores guardados.",
     "system": {
-      "closeToTray": "Minimizar a la bandeja al cerrar",
-      "closeToTrayDescription": "El botón de cerrar oculta la ventana y el launcher sigue funcionando: las llamadas siguen conectadas, sus amigos lo ven en línea, y los juegos y las descargas continúan. Para salir, use el ícono de la bandeja.",
+      "closeToTray": "Al cerrar la ventana",
+      "closeToTrayDescription": "Qué hace el botón de cerrar. En la bandeja el launcher sigue funcionando: las llamadas siguen conectadas, sus amigos lo ven en línea, y los juegos y las descargas continúan.",
+      "closeModes": {
+        "ask": "Preguntar",
+        "tray": "Minimizar a la bandeja",
+        "quit": "Salir"
+      },
       "startScreen": "Pantalla de inicio",
       "startScreenDescription": "Qué se abre al iniciar el launcher",
       "startScreens": {
@@ -4344,6 +4356,20 @@
     "skip": "Omitir",
     "stepVersionLocked": "Disponible después de agregar una cuenta",
     "skipHint": "Puede hacerlo más tarde"
+  },
+  "privacyNotice": {
+    "title": "Lo que el launcher nos envía",
+    "description": "De forma anónima: sin su nombre de usuario, su cuenta ni sus archivos. Nos ayuda a corregir fallos y a saber qué funciones se usan. Se desactiva con un clic.",
+    "settings": "Configuración de privacidad",
+    "done": "Entendido"
+  },
+  "closeChoice": {
+    "title": "¿Minimizar a la bandeja o salir?",
+    "description": "En la bandeja el launcher sigue funcionando: las llamadas siguen conectadas, sus amigos lo ven en línea y las descargas continúan. Puede salir en cualquier momento desde el ícono de la bandeja.",
+    "remember": "Recordar mi elección",
+    "rememberHint": "Puede cambiarlo en «{{path}}»",
+    "tray": "Minimizar a la bandeja",
+    "quit": "Salir"
   },
   "errorBoundary": {
     "title": "Algo salió mal",

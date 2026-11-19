@@ -95,6 +95,7 @@ import {
 } from "./chunkSelection";
 import { useChunkWorld } from "./useChunkWorld";
 import { useSurfaceTiles } from "./useSurfaceTiles";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -165,6 +166,8 @@ export function ChunkEditorDialog({
       mounted.current = false;
     };
   }, []);
+
+  useEffect(() => countFeature("feature.chunkEditor"), []);
 
   useEffect(
     () => registerNavigationBlocker("chunk-editor", () => busy),

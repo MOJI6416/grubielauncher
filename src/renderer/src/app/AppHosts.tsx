@@ -1,4 +1,5 @@
 import { Onboarding } from "@renderer/components/Onboarding";
+import { PrivacyNotice } from "@renderer/features/privacy/PrivacyNotice";
 import { WebLoginPrompt } from "@renderer/components/Modals/WebLoginPrompt";
 import { AchievementsHost } from "./hosts/AchievementsHost";
 import { BootstrapHost } from "./hosts/BootstrapHost";
@@ -19,6 +20,8 @@ import { RpcHost } from "./hosts/RpcHost";
 import { ShareHost } from "./hosts/ShareHost";
 import { SystemEventsHost } from "./hosts/SystemEventsHost";
 import { UnsavedCloseHost } from "./hosts/UnsavedCloseHost";
+import { CloseChoiceHost } from "./hosts/CloseChoiceHost";
+import { UsageStatsHost } from "./hosts/UsageStatsHost";
 import { VoiceCallHost } from "./hosts/VoiceCallHost";
 import { VoiceOverlayHost } from "./hosts/VoiceOverlayHost";
 import { WhatsNewHost } from "./hosts/WhatsNewHost";
@@ -63,8 +66,11 @@ export function AppHosts() {
       <StartScreenHost />
       <FileDropHost />
       <UnsavedCloseHost />
+      <CloseChoiceHost />
+      <UsageStatsHost />
       <PortHost />
       <InstanceDeleteHost />
+      <PrivacyNotice />
       <Onboarding />
       <WhatsNewHost />
       <WebLoginPrompt />

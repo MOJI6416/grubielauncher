@@ -1430,7 +1430,7 @@
     "saveFailed": "Impossible d’enregistrer les paramètres",
     "language": "Langue de l’interface",
     "mb": "Mo",
-    "devMode": "Mode développeur",
+    "devMode": "Afficher les erreurs",
     "downloadLimit": "Limite de téléchargements",
     "downloadSource": "Source des téléchargements",
     "downloadSourceOptions": {
@@ -1463,8 +1463,10 @@
       },
       "heading": "Vérification de la connexion"
     },
-    "crashTelemetry": "Statistiques anonymes des plantages",
-    "crashTelemetryDescription": "N’envoie que le code du diagnostic — aide à améliorer les conseils",
+    "crashTelemetry": "Diagnostics de plantage",
+    "crashTelemetryDescription": "Le code du diagnostic et la ligne d’erreur, ou le texte de l’erreur si le launcher lui-même plante. Sans pseudo ni journaux",
+    "usageStats": "Compteurs de fonctions",
+    "usageStatsDescription": "Combien de fois par jour les écrans et fonctions ont été ouverts. Totaux uniquement, sans pseudo",
     "aiLogAnalysis": "Analyse du journal par IA",
     "aiLogAnalysisDescription": "Sauter l’étape de confirmation : l’analyse démarre dès l’ouverture de la fenêtre",
     "sounds": "Sons des notifications",
@@ -1594,7 +1596,7 @@
       "rootHint": "tout ce que le launcher a téléchargé",
       "restMore": "Autres instances : {{value}}"
     },
-    "devModeDescription": "Copie de la commande de lancement et outils de débogage supplémentaires",
+    "devModeDescription": "Un message pour chaque erreur de l’interface ; le menu de l’instance propose aussi la commande de lancement avec chemins relatifs",
     "voiceMicTestErrorHint": "Pas d’accès au micro. Vérifiez les autorisations de {{os}} et le périphérique choisi.",
     "autoWorldBackup": "Sauvegardes automatiques des mondes",
     "autoWorldBackupDescription": "Enregistrer une copie du monde après une session de jeu s’il a changé",
@@ -1923,9 +1925,14 @@
         "keywords": "discord rpc rich presence confidentialité serveur masquer"
       },
       "crashTelemetry": {
-        "title": "Statistiques anonymes des plantages",
-        "description": "Seul le code du diagnostic est envoyé",
-        "keywords": "télémétrie plantage crash statistiques confidentialité"
+        "title": "Diagnostics de plantage",
+        "description": "Code du diagnostic et ligne d’erreur, sans pseudo ni journaux",
+        "keywords": "télémétrie plantage crash diagnostic statistiques confidentialité"
+      },
+      "usageStats": {
+        "title": "Compteurs de fonctions",
+        "description": "Compteurs anonymes d’utilisation des fonctions",
+        "keywords": "statistiques télémétrie analyse confidentialité fonctions compteurs utilisation"
       },
       "aiLogAnalysis": {
         "title": "Analyse du journal par IA",
@@ -1933,9 +1940,9 @@
         "keywords": "ia ai analyse plantage crash journal log auto"
       },
       "devMode": {
-        "title": "Mode développeur",
-        "description": "Copie de la commande de lancement et outils de débogage supplémentaires",
-        "keywords": "développeur debug débogage avancé commande"
+        "title": "Afficher les erreurs",
+        "description": "Un message pour chaque erreur de l’interface",
+        "keywords": "erreurs débogage debug développeur mode développeur commande"
       },
       "allowedPaths": {
         "title": "Dossiers et fichiers autorisés",
@@ -2068,9 +2075,9 @@
         "keywords": "aperçu cartes captures notes sessions masquer"
       },
       "closeToTray": {
-        "title": "Réduire dans la zone de notification",
-        "description": "La fermeture masque la fenêtre, les appels et les parties continuent",
-        "keywords": "zone de notification tray fermer arrière-plan réduire appel"
+        "title": "À la fermeture de la fenêtre",
+        "description": "Demander, réduire dans la zone de notification ou quitter",
+        "keywords": "zone de notification tray fermer arrière-plan réduire appel quitter demander"
       },
       "startScreen": {
         "title": "Écran au démarrage",
@@ -2138,8 +2145,13 @@
     "agentChatSync": "Synchroniser les chats de l’assistant",
     "agentChatSyncDescription": "Conserver l’historique de l’assistant sur le compte Grubie pour le retrouver sur un autre ordinateur. Il contient ce que l’assistant a lu : noms des instances, extraits de journaux et adresses de vos serveurs enregistrés.",
     "system": {
-      "closeToTray": "Réduire dans la zone de notification",
-      "closeToTrayDescription": "Le bouton de fermeture masque la fenêtre et le launcher continue de tourner : les appels restent connectés, vos amis vous voient en ligne, les parties et les téléchargements se poursuivent. Quittez depuis l’icône de la zone de notification.",
+      "closeToTray": "À la fermeture de la fenêtre",
+      "closeToTrayDescription": "Ce que fait le bouton de fermeture. Dans la zone de notification, le launcher continue de tourner : les appels restent connectés, vos amis vous voient en ligne, les parties et les téléchargements se poursuivent.",
+      "closeModes": {
+        "ask": "Demander",
+        "tray": "Réduire dans la zone",
+        "quit": "Quitter"
+      },
       "startScreen": "Écran au démarrage",
       "startScreenDescription": "Ce qui s’ouvre au lancement du launcher",
       "startScreens": {
@@ -4344,6 +4356,20 @@
     "skip": "Passer",
     "stepVersionLocked": "Disponible après l’ajout d’un compte",
     "skipHint": "Vous pourrez le faire plus tard"
+  },
+  "privacyNotice": {
+    "title": "Ce que le launcher nous envoie",
+    "description": "Anonymement : sans pseudo, compte ni fichiers personnels. Cela nous aide à corriger les plantages et à voir quelles fonctions servent. Un clic suffit pour désactiver.",
+    "settings": "Paramètres de confidentialité",
+    "done": "Compris"
+  },
+  "closeChoice": {
+    "title": "Réduire dans la zone de notification ou quitter ?",
+    "description": "Dans la zone de notification, le launcher continue de tourner : les appels restent connectés, vos amis vous voient en ligne, les téléchargements se poursuivent. Vous pouvez quitter à tout moment depuis l’icône.",
+    "remember": "Mémoriser mon choix",
+    "rememberHint": "Modifiable dans « {{path}} »",
+    "tray": "Réduire",
+    "quit": "Quitter"
   },
   "errorBoundary": {
     "title": "Une erreur s’est produite",

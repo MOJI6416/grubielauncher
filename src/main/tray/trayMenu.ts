@@ -184,6 +184,7 @@ export function sanitizeTrayModel(value: unknown): TrayModel | null {
     lang: text(raw.lang, 10),
     accent: text(raw.accent, 20),
     closeToTray: raw.closeToTray === true,
+    askOnClose: raw.askOnClose === true,
     instances: (Array.isArray(raw.instances) ? raw.instances : [])
       .filter((instance) => typeof instance?.name === "string" && instance.name)
       .slice(0, TRAY_MAX_INSTANCES)
