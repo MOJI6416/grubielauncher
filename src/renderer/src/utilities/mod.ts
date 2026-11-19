@@ -185,13 +185,20 @@ export function buildDependencyGraph(
       ]),
   );
   const byModId = new Map<string, Set<string>>();
+  const byOwnModId = new Map<string, Set<string>>();
   for (const [key, infos] of nativeInfo)
-    for (const info of infos)
+    for (const info of infos) {
+      const embedded = new Set(info.embedded ?? []);
       for (const id of info.provides) {
         const matches = byModId.get(id) ?? new Set<string>();
         matches.add(key);
         byModId.set(id, matches);
+        if (embedded.has(id)) continue;
+        const own = byOwnModId.get(id) ?? new Set<string>();
+        own.add(key);
+        byOwnModId.set(id, own);
       }
+    }
   for (const mod of mods) {
     for (const filename of fileNamesOf(mod)) {
       const key = `${mod.projectType}:${filename}`;
@@ -238,7 +245,8 @@ export function buildDependencyGraph(
       for (const id of info.requires) {
         const matches = byModId.get(id);
         if (matches?.has(keyOf(mod))) continue;
-        const dependency = matches?.values().next().value;
+        const dependency = (byOwnModId.get(id) ?? matches)?.values().next()
+          .value;
         if (dependency) edges.add(dependency);
       }
     for (const dep of mod.version?.dependencies ?? []) {

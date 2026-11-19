@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildDependencyGraph,
   buildInstalledIndex,
   findInstalledProject,
   normalizeProjectTitle,
@@ -82,6 +83,57 @@ describe("deletion with JAR dependencies", () => {
     localDependencies["mod.jar"].requires = ["first"];
     expect(planDeletion(mods, mods[0], { localDependencies }).blockers).toEqual(
       [],
+    );
+  });
+  it("points a requirement at the mod itself, not at a mod that only bundles a copy", () => {
+    const mods = [
+      withFile("distanthorizons"),
+      withFile("appleskin"),
+      withFile("clothconfig"),
+      withFile("fabricapi"),
+      withFile("farmz"),
+    ];
+    const localDependencies = {
+      "distanthorizons.jar": {
+        provides: ["distanthorizons", "fabric-api"],
+        requires: [],
+        embedded: ["fabric-api"],
+      },
+      "appleskin.jar": {
+        provides: ["appleskin", "cloth-config2"],
+        requires: [],
+        embedded: ["cloth-config2"],
+      },
+      "clothconfig.jar": { provides: ["cloth-config2"], requires: [] },
+      "fabricapi.jar": { provides: ["fabric-api"], requires: [] },
+      "farmz.jar": {
+        provides: ["farmz"],
+        requires: ["fabric-api", "cloth-config2"],
+      },
+    };
+    const graph = buildDependencyGraph(mods, localDependencies);
+    expect([...(graph.dependencies.get(graph.keyOf(mods[4])) ?? [])]).toEqual([
+      graph.keyOf(mods[3]),
+      graph.keyOf(mods[2]),
+    ]);
+    expect(planDeletion(mods, mods[4], { localDependencies }).remove).toEqual([
+      mods[2],
+      mods[3],
+      mods[4],
+    ]);
+  });
+  it("still treats a bundled copy as the dependency when nothing else provides it", () => {
+    const mods = [withFile("distanthorizons"), withFile("farmz")];
+    const localDependencies = {
+      "distanthorizons.jar": {
+        provides: ["distanthorizons", "fabric-api"],
+        requires: [],
+        embedded: ["fabric-api"],
+      },
+      "farmz.jar": { provides: ["farmz"], requires: ["fabric-api"] },
+    };
+    expect(planDeletion(mods, mods[0], { localDependencies }).blockers).toEqual(
+      [mods[1]],
     );
   });
 });
