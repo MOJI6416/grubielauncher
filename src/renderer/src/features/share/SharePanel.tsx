@@ -777,7 +777,7 @@ export function LanShareModal({
             />
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col gap-3.5 px-4 py-3">
+          <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-4 py-3">
             {targetLabel && (
               <div className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5">
                 {isServer ? (
@@ -1032,7 +1032,9 @@ export function LanShareModal({
             )}
 
             <Section
-              className="min-h-0 flex-1"
+              className={
+                inviteCandidates.length === 0 ? "shrink-0" : "min-h-36 flex-1"
+              }
               icon={<Users className="size-3.5" />}
               title={t("share.panel.invite.title")}
               count={invitableCount}
