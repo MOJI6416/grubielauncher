@@ -637,6 +637,11 @@ export interface IElectronAPI {
       groupId: string,
       name: string,
     ) => Promise<IGroup | null>;
+    groupSetPack: (
+      at: string,
+      groupId: string,
+      code: string,
+    ) => Promise<IGroup | null>;
     groupDelete: (at: string, groupId: string) => Promise<boolean>;
     groupJoinVoice: (
       at: string,
@@ -1839,6 +1844,8 @@ export const api: IElectronAPI = {
       invoke("backend:groupCreate", at, name),
     groupRename: (at: string, groupId: string, name: string) =>
       invoke("backend:groupRename", at, groupId, name),
+    groupSetPack: (at: string, groupId: string, code: string) =>
+      invoke("backend:groupSetPack", at, groupId, code),
     groupDelete: (at: string, groupId: string) =>
       invoke("backend:groupDelete", at, groupId),
     groupJoinVoice: (at: string, groupId: string) =>

@@ -19,6 +19,7 @@ export interface IGroup {
   isOwner: boolean;
   participantCount: number;
   voiceParticipants?: string[];
+  packCode?: string | null;
 }
 
 export interface IGroupInvite {

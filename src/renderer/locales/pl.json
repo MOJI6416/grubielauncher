@@ -1419,7 +1419,16 @@
     "resetCodeQuestion": "Zresetować kod zaproszenia?",
     "transferQuestion": "Przekazać własność grupy {{nickname}}?",
     "kickQuestion": "Usunąć {{nickname}} z grupy?",
-    "banQuestion": "Zbanować {{nickname}} w grupie?"
+    "banQuestion": "Zbanować {{nickname}} w grupie?",
+    "pack": {
+      "title": "Modpack grupy",
+      "none": "Nie wybrano modpacka",
+      "installed": "Zainstalowany",
+      "install": "Zainstaluj",
+      "choose": "Wybierz modpack grupy",
+      "noChoices": "Opublikuj modpack, aby powiązać go z grupą",
+      "clear": "Usuń modpack"
+    }
   },
   "voiceCall": {
     "start": "Zadzwoń",

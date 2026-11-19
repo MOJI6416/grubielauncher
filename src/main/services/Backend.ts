@@ -296,6 +296,15 @@ export class Backend extends BaseService {
     return response.data;
   }
 
+  async groupSetPack(groupId: string, code: string) {
+    const response = await this.api.patch<IGroup>(
+      `${this.baseUrl}/groups/${groupId}/pack`,
+      { code: code || null },
+    );
+
+    return response.data;
+  }
+
   async groupDelete(groupId: string) {
     await this.api.delete(`${this.baseUrl}/groups/${groupId}`);
 

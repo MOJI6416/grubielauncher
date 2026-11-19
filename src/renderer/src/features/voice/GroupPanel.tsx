@@ -88,6 +88,7 @@ import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { buildGroupInviteUrl } from "@renderer/utilities/packShare";
+import { GroupPack } from "./GroupPack";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
@@ -759,6 +760,13 @@ export function GroupPanel({
           )}
         </div>
       </div>
+
+      {group.packCode !== undefined && (group.packCode || group.isOwner) && (
+        <div className="shrink-0">
+          <SectionLabel>{t("groups.pack.title")}</SectionLabel>
+          <GroupPack group={group} accessToken={accessToken} />
+        </div>
+      )}
 
       <SectionLabel count={group.members.length}>
         {t("groups.members")}

@@ -1389,7 +1389,16 @@
     "resetCodeQuestion": "Davet kodu sıfırlansın mı?",
     "transferQuestion": "Grup sahipliği {{nickname}} kullanıcısına devredilsin mi?",
     "kickQuestion": "{{nickname}} gruptan çıkarılsın mı?",
-    "banQuestion": "{{nickname}} grupta yasaklansın mı?"
+    "banQuestion": "{{nickname}} grupta yasaklansın mı?",
+    "pack": {
+      "title": "Grubun mod paketi",
+      "none": "Mod paketi seçilmedi",
+      "installed": "Kurulu",
+      "install": "Kur",
+      "choose": "Grubun mod paketini seç",
+      "noChoices": "Gruba bağlamak için bir mod paketi yayımlayın",
+      "clear": "Mod paketini kaldır"
+    }
   },
   "voiceCall": {
     "start": "Ara",

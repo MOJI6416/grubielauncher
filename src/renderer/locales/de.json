@@ -1389,7 +1389,16 @@
     "resetCodeQuestion": "Einladungscode zurücksetzen?",
     "transferQuestion": "Gruppenbesitz an {{nickname}} übertragen?",
     "kickQuestion": "{{nickname}} aus der Gruppe entfernen?",
-    "banQuestion": "{{nickname}} in der Gruppe sperren?"
+    "banQuestion": "{{nickname}} in der Gruppe sperren?",
+    "pack": {
+      "title": "Modpack der Gruppe",
+      "none": "Kein Modpack gewählt",
+      "installed": "Installiert",
+      "install": "Installieren",
+      "choose": "Modpack der Gruppe wählen",
+      "noChoices": "Veröffentlichen Sie ein Modpack, um es mit der Gruppe zu verknüpfen",
+      "clear": "Modpack entfernen"
+    }
   },
   "voiceCall": {
     "start": "Anrufen",

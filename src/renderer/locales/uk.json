@@ -1413,7 +1413,16 @@
     "resetCodeQuestion": "Скинути код запрошення?",
     "transferQuestion": "Передати володіння групою {{nickname}}?",
     "kickQuestion": "Виключити {{nickname}} з групи?",
-    "banQuestion": "Заблокувати {{nickname}} у групі?"
+    "banQuestion": "Заблокувати {{nickname}} у групі?",
+    "pack": {
+      "title": "Збірка групи",
+      "none": "Збірку не вибрано",
+      "installed": "Установлено",
+      "install": "Установити",
+      "choose": "Вибрати збірку групи",
+      "noChoices": "Опублікуйте збірку, щоб прив’язати її до групи",
+      "clear": "Прибрати збірку"
+    }
   },
   "voiceCall": {
     "start": "Зателефонувати",

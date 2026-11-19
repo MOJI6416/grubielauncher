@@ -1404,7 +1404,16 @@
     "resetCodeQuestion": "Redefinir o código de convite?",
     "transferQuestion": "Transferir a posse do grupo para {{nickname}}?",
     "kickQuestion": "Remover {{nickname}} do grupo?",
-    "banQuestion": "Banir {{nickname}} do grupo?"
+    "banQuestion": "Banir {{nickname}} do grupo?",
+    "pack": {
+      "title": "Modpack do grupo",
+      "none": "Nenhum modpack escolhido",
+      "installed": "Instalado",
+      "install": "Instalar",
+      "choose": "Escolher o modpack do grupo",
+      "noChoices": "Publique um modpack para vinculá-lo ao grupo",
+      "clear": "Remover o modpack"
+    }
   },
   "voiceCall": {
     "start": "Ligar",

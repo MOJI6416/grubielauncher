@@ -30,6 +30,7 @@ const isToken = check.string(32768);
 const isId = check.nonEmptyString(256);
 const isCode = check.nonEmptyString(512);
 const isName = check.nonEmptyString(256);
+const isPackCode = check.string(64);
 const isPayload = check.object();
 const isPath = check.nonEmptyString(4096);
 const isLocale = check.string(16);
@@ -185,6 +186,16 @@ export function registerBackendIpc() {
     async (_, at: string, groupId: string, name: string) => {
       const backend = new Backend(at);
       return await backend.groupRename(groupId, name);
+    },
+  );
+
+  handleSafe(
+    "backend:groupSetPack",
+    null,
+    [isToken, isId, isPackCode],
+    async (_, at: string, groupId: string, code: string) => {
+      const backend = new Backend(at);
+      return await backend.groupSetPack(groupId, code);
     },
   );
 

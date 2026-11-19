@@ -1404,7 +1404,16 @@
     "resetCodeQuestion": "Réinitialiser le code d’invitation ?",
     "transferQuestion": "Transférer la propriété du groupe à {{nickname}} ?",
     "kickQuestion": "Retirer {{nickname}} du groupe ?",
-    "banQuestion": "Bannir {{nickname}} du groupe ?"
+    "banQuestion": "Bannir {{nickname}} du groupe ?",
+    "pack": {
+      "title": "Modpack du groupe",
+      "none": "Aucun modpack choisi",
+      "installed": "Installé",
+      "install": "Installer",
+      "choose": "Choisir le modpack du groupe",
+      "noChoices": "Publiez un modpack pour le lier au groupe",
+      "clear": "Retirer le modpack"
+    }
   },
   "voiceCall": {
     "start": "Appeler",
