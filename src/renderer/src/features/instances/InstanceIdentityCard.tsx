@@ -27,6 +27,7 @@ import { LogoPicker } from "@renderer/features/logoPicker/LogoPicker";
 import { InstanceArt } from "./InstanceArt";
 import { shortenPath } from "./instanceOverview";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { usePackShortCode } from "@renderer/utilities/packShortCode";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 export interface IdentityStat {
@@ -112,7 +113,11 @@ export function InstanceIdentityCard({
   const { t } = useTranslation();
   const redact = useRedact();
   const nameErrorId = "instance-name-error";
-  const shareCode = instance.version.shareCode;
+  const shortCode = usePackShortCode(
+    instance.version.shareCode,
+    instance.version.shortCode,
+  );
+  const shareCode = shortCode || instance.version.shareCode;
   const cover = resolveLocalImage(image);
   const isNameValid = nameCheck.ok;
   const nameProblem = instanceNameMessage(nameCheck, t);

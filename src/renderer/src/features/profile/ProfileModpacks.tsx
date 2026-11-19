@@ -453,7 +453,9 @@ function ModpackRow({
   const isPublic = modpack.isPublic !== false;
   const loader = modpack.conf.loader?.name ?? "vanilla";
   const copyLink = () =>
-    void copyWithFeedback(buildPackShareUrl(packShareCode(modpack)));
+    void copyWithFeedback(
+      buildPackShareUrl(modpack.shortCode || packShareCode(modpack)),
+    );
 
   return (
     <ContextMenu>
