@@ -17,7 +17,10 @@ import {
   projetTypeToFolder,
   ServerModNode,
 } from "../utilities/modManager";
-import { syncServerExtraFiles } from "../utilities/serverManager";
+import {
+  isServerRunning,
+  syncServerExtraFiles,
+} from "../utilities/serverManager";
 import {
   getClientsideModMatcher,
   getServerSyncDirs,
@@ -412,8 +415,14 @@ export class Mods {
     }
 
     if (this.isModdedServer()) {
-      this.sendInstallProgress("serverMods", 89, true);
-      await this.syncServerMods(serverModFiles);
+      if (await isServerRunning(this.getServerPath())) {
+        console.warn(
+          `[mods:server] ${this.getServerPath()} is running: its mods stay as they are until the next check after it stops`,
+        );
+      } else {
+        this.sendInstallProgress("serverMods", 89, true);
+        await this.syncServerMods(serverModFiles);
+      }
       await syncServerExtraFiles(
         this.version.versionPath,
         this.getServerPath(),
