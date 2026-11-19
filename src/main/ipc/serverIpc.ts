@@ -5,12 +5,14 @@ import {
   IServerConf,
   IServerSettings,
   ServerRunResult,
+  ServerRunStatePayload,
   ServerRunStatus
 } from '@/types/Server'
 import {
   ServerGame,
   getServerRunStatus,
   hasRunningServers,
+  listRunningServers,
   sendServerCommand,
   startServer,
   stopAllServers,
@@ -286,6 +288,10 @@ export function registerServerIpc() {
       assertReadablePath(serverPath, 'server:runOptions')
       return await readServerRunOptions(serverPath)
     }
+  )
+
+  handleSafe<ServerRunStatePayload[], []>('server:running', [], [], () =>
+    listRunningServers()
   )
 
   handleSafe<boolean, []>('server:stopAll', false, [], async () => {

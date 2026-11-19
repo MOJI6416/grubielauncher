@@ -1023,6 +1023,7 @@ export interface IElectronAPI {
     command: (serverPath: string, command: string) => Promise<ServerRunResult>;
     lanAddress: () => Promise<string | null>;
     runStatus: (serverPath: string) => Promise<ServerRunStatus>;
+    running: () => Promise<ServerRunStatePayload[]>;
     onRunState: (
       callback: (payload: ServerRunStatePayload) => void,
     ) => () => void;
@@ -2287,6 +2288,7 @@ export const api: IElectronAPI = {
       invoke("server:command", serverPath, command),
     lanAddress: () => invoke("server:lanAddress"),
     runStatus: (serverPath: string) => invoke("server:runStatus", serverPath),
+    running: () => invoke("server:running"),
     onRunState: (callback: (payload: ServerRunStatePayload) => void) => {
       const listener = (
         _event: Electron.IpcRendererEvent,

@@ -46,6 +46,7 @@ import { assertRosettaFor } from "../utilities/rosetta";
 import {
   ServerRunResult,
   ServerRunState,
+  ServerRunStatePayload,
   ServerRunStatus,
 } from "@/types/Server";
 
@@ -816,6 +817,15 @@ let serversShutdown: Promise<void> | null = null;
 
 export function hasRunningServers() {
   return runningServers.size > 0;
+}
+
+export function listRunningServers(): ServerRunStatePayload[] {
+  return [...runningServers.entries()].map(([serverPath, entry]) => ({
+    serverPath,
+    state: entry.state,
+    pid: entry.child.pid ?? null,
+    startedAt: entry.startedAt,
+  }));
 }
 
 setRunningServersProbe(hasRunningServers);

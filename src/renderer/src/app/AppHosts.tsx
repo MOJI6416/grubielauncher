@@ -17,6 +17,7 @@ import { PortHost } from "./hosts/PortHost";
 import { InstanceDeleteHost } from "./hosts/InstanceDeleteHost";
 import { PresenceHost } from "./hosts/PresenceHost";
 import { RpcHost } from "./hosts/RpcHost";
+import { ServerRunStateHost } from "./hosts/ServerRunStateHost";
 import { ShareHost } from "./hosts/ShareHost";
 import { SystemEventsHost } from "./hosts/SystemEventsHost";
 import { UnsavedCloseHost } from "./hosts/UnsavedCloseHost";
@@ -51,6 +52,7 @@ export function AppHosts() {
       <InstallHost />
       <ConnectivityHost />
       <RpcHost />
+      <ServerRunStateHost />
       <ShareHost />
       <PresenceHost />
       <FriendsSocketHost />

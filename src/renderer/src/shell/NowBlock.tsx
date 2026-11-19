@@ -5,6 +5,7 @@ import {
   Bell,
   HardDriveDownload,
   Radio,
+  Server as ServerIcon,
   Sparkles,
   SquareChevronRight,
 } from "lucide-react";
@@ -23,6 +24,11 @@ import {
   versionsAtom,
 } from "@renderer/stores/atoms";
 import { instanceKey } from "@renderer/features/instances/selectors";
+import {
+  isServerOfInstance,
+  runningServersAtom,
+  SERVER_STATE_LABEL_KEYS,
+} from "@renderer/features/servers/runningServers";
 import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 import { navigate } from "@renderer/navigation/navigate";
 import { useSidebarCollapsed } from "./sidebarCollapse";
@@ -130,6 +136,7 @@ export function NowBlock({ onOpenErrors }: { onOpenErrors: () => void }) {
   const setIsShareOpen = useAtom(isShareModalOpenAtom)[1];
   const progress = useAtomValue(installProgressAtom);
   const agentChat = useAtomValue(agentChatAtom);
+  const runningServers = useAtomValue(runningServersAtom);
   const { t } = useTranslation();
 
   const running = useMemo(
@@ -167,6 +174,30 @@ export function NowBlock({ onOpenErrors }: { onOpenErrors: () => void }) {
             tab: "logs",
           });
         }}
+      />,
+    );
+  }
+
+  for (const server of runningServers.slice(0, 3)) {
+    const instance = versions.find((version) =>
+      isServerOfInstance(server.serverPath, version.versionPath),
+    );
+    if (!instance) continue;
+
+    rows.push(
+      <NowRow
+        key={`server-${server.serverPath}`}
+        tone={server.state === "running" ? "text-success" : "text-warning"}
+        icon={<ServerIcon className="size-4" />}
+        label={instance.version.name}
+        detail={t(SERVER_STATE_LABEL_KEYS[server.state])}
+        onClick={() =>
+          navigate({
+            name: "instance",
+            id: instanceKey(instance),
+            tab: "server",
+          })
+        }
       />,
     );
   }
