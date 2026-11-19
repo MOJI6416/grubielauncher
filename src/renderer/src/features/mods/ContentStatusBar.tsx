@@ -57,6 +57,7 @@ export interface ContentStatusBarProps {
   filterChips: { key: LibraryFacet; label: string }[] | CatalogFilterChip[];
   foreignFiles: string[];
   isBusy: boolean;
+  lockedHint?: string;
   libraryEntries: ContentEntry[];
   libraryFacets: LibraryFacet[];
   loader: Loader | undefined;
@@ -107,6 +108,7 @@ export function ContentStatusBar({
   filterChips,
   foreignFiles,
   isBusy,
+  lockedHint,
   libraryEntries,
   libraryFacets,
   loader,
@@ -132,6 +134,8 @@ export function ContentStatusBar({
   updateCheck,
   updateChannel,
 }: ContentStatusBarProps) {
+  const locked = Boolean(lockedHint);
+
   return (
     <>
       <Collapse show={filterChips.length > 0}>
@@ -168,18 +172,20 @@ export function ContentStatusBar({
             </span>
 
             <div className="ml-auto flex items-center gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2 text-xs"
-                disabled={isBusy}
-                onClick={() =>
-                  applyUpdateFor(selectedEntries.map((item) => item.key))
-                }
-              >
-                <CircleArrowUp className="size-3.5" />
-                {t("common.update")}
-              </Button>
+              <Hint content={lockedHint}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  disabled={isBusy || locked}
+                  onClick={() =>
+                    applyUpdateFor(selectedEntries.map((item) => item.key))
+                  }
+                >
+                  <CircleArrowUp className="size-3.5" />
+                  {t("common.update")}
+                </Button>
+              </Hint>
 
               {canGroup && (
                 <DropdownMenu>
@@ -269,43 +275,49 @@ export function ContentStatusBar({
 
               {canToggleType(projectType) && (
                 <>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-xs"
-                    disabled={isBusy}
-                    onClick={() => void setEnabledFor(selectedEntries, true)}
-                  >
-                    <CheckCheck className="size-3.5" />
-                    {t("modManager.enable")}
-                  </Button>
+                  <Hint content={lockedHint}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      disabled={isBusy || locked}
+                      onClick={() => void setEnabledFor(selectedEntries, true)}
+                    >
+                      <CheckCheck className="size-3.5" />
+                      {t("modManager.enable")}
+                    </Button>
+                  </Hint>
 
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-xs"
-                    disabled={isBusy}
-                    onClick={() => void setEnabledFor(selectedEntries, false)}
-                  >
-                    <PowerOff className="size-3.5" />
-                    {t("modManager.disable")}
-                  </Button>
+                  <Hint content={lockedHint}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      disabled={isBusy || locked}
+                      onClick={() => void setEnabledFor(selectedEntries, false)}
+                    >
+                      <PowerOff className="size-3.5" />
+                      {t("modManager.disable")}
+                    </Button>
+                  </Hint>
                 </>
               )}
 
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2 text-xs text-destructive hover:bg-destructive/15 hover:text-destructive"
-                disabled={isBusy}
-                onClick={() => {
-                  removeEntries(selectedEntries);
-                  setSelection(new Set());
-                }}
-              >
-                <Trash2 className="size-3.5" />
-                {t("common.delete")}
-              </Button>
+              <Hint content={lockedHint}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs text-destructive hover:bg-destructive/15 hover:text-destructive"
+                  disabled={isBusy || locked}
+                  onClick={() => {
+                    removeEntries(selectedEntries);
+                    setSelection(new Set());
+                  }}
+                >
+                  <Trash2 className="size-3.5" />
+                  {t("common.delete")}
+                </Button>
+              </Hint>
 
               <Hint content={t("common.cancel")}>
                 <Button
@@ -330,24 +342,28 @@ export function ContentStatusBar({
                 })}
               </span>
             </Hint>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 shrink-0 px-2.5 text-xs"
-              disabled={isBusy}
-              onClick={() => void trashForeignFiles()}
-            >
-              {t("modManager.foreignTrash")}
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="h-7 shrink-0 px-2.5 text-xs"
-              disabled={isBusy}
-              onClick={() => void addForeignFiles()}
-            >
-              {t("modManager.foreignAdd")}
-            </Button>
+            <Hint content={lockedHint}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 shrink-0 px-2.5 text-xs"
+                disabled={isBusy || locked}
+                onClick={() => void trashForeignFiles()}
+              >
+                {t("modManager.foreignTrash")}
+              </Button>
+            </Hint>
+            <Hint content={lockedHint}>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-7 shrink-0 px-2.5 text-xs"
+                disabled={isBusy || locked}
+                onClick={() => void addForeignFiles()}
+              >
+                {t("modManager.foreignAdd")}
+              </Button>
+            </Hint>
           </div>
         ) : bar === "updates" ? (
           <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-warning/40 bg-surface-2 px-2.5">
@@ -394,15 +410,17 @@ export function ContentStatusBar({
                 {t("modManager.updatesShow")}
               </Button>
             )}
-            <Button
-              size="sm"
-              variant="secondary"
-              className="h-7 shrink-0 px-2.5 text-xs"
-              disabled={isBusy}
-              onClick={() => applyUpdateFor([...updateCheck.updatable])}
-            >
-              {t("modManager.updateAll")}
-            </Button>
+            <Hint content={lockedHint}>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-7 shrink-0 px-2.5 text-xs"
+                disabled={isBusy || locked}
+                onClick={() => applyUpdateFor([...updateCheck.updatable])}
+              >
+                {t("modManager.updateAll")}
+              </Button>
+            </Hint>
           </div>
         ) : bar === "unchecked" ? (
           <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5">
@@ -478,26 +496,28 @@ export function ContentStatusBar({
               </Button>
             )}
             {duplicates.extra.size > 0 && (
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-7 shrink-0 px-2.5 text-xs"
-                disabled={isBusy}
-                onClick={() => {
-                  removeDuplicateRecords(
-                    libraryEntries.filter((entry) =>
-                      duplicates.extra.has(entry.key),
-                    ),
-                  );
-                  if (duplicates.extra.size === duplicates.all.size) {
-                    setLibraryFacets((prev) =>
-                      prev.filter((facet) => facet !== "duplicate"),
+              <Hint content={lockedHint}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-7 shrink-0 px-2.5 text-xs"
+                  disabled={isBusy || locked}
+                  onClick={() => {
+                    removeDuplicateRecords(
+                      libraryEntries.filter((entry) =>
+                        duplicates.extra.has(entry.key),
+                      ),
                     );
-                  }
-                }}
-              >
-                {t("modManager.duplicatesRemove")}
-              </Button>
+                    if (duplicates.extra.size === duplicates.all.size) {
+                      setLibraryFacets((prev) =>
+                        prev.filter((facet) => facet !== "duplicate"),
+                      );
+                    }
+                  }}
+                >
+                  {t("modManager.duplicatesRemove")}
+                </Button>
+              </Hint>
             )}
           </div>
         ) : null}

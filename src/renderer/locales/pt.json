@@ -1025,6 +1025,7 @@
     "applyCancelled": "Instalação cancelada — a instância não mudou",
     "applyBlockedSkipped": "Mod não instalado: o arquivo precisa ser baixado manualmente",
     "dropReadOnly": "Esta instância não pode ser alterada — os arquivos não foram adicionados",
+    "runningLocked": "Você poderá alterar os mods quando o jogo fechar",
     "categoriesExplain": "As categorias vêm do Modrinth e do CurseForge e servem para filtrar. Elas não podem ser alteradas.",
     "worldsElsewhere": "Aqui estão os mundos instalados pelo catálogo. Todos os mundos da instância e os backups deles ficam na aba “Mundos”.",
     "datapacksElsewhere": "Aqui estão os pacotes de dados baixados para a instância. Você os adiciona a um mundo na aba “Mundos”.",

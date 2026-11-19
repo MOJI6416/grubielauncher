@@ -30,6 +30,7 @@ import {
   expectQuarantine,
   fileNamesOf,
 } from "@renderer/features/mods/expectedQuarantine";
+import { touchesLockedContent } from "@renderer/features/mods/runningLock";
 import {
   createContentApplier,
   type ContentApplierState,
@@ -204,6 +205,11 @@ export function useInstanceContent({
       const { t: translate } = context.current;
       const before = applier.current();
       const startedAt = Date.now();
+
+      if (context.current.isRunning && touchesLockedContent(before, next)) {
+        toast.warning(translate("modManager.runningLocked"));
+        return false;
+      }
 
       try {
         const outcome = await applier.apply(next, options);

@@ -1018,6 +1018,7 @@
     "applyCancelled": "Installation cancelled — the instance is unchanged",
     "applyBlockedSkipped": "Mod not installed: its file has to be downloaded manually",
     "dropReadOnly": "This instance can't be changed — the files were not added",
+    "runningLocked": "You can change mods once the game closes",
     "categoriesExplain": "Categories come from Modrinth and CurseForge and are handy for filtering. They can't be changed.",
     "worldsElsewhere": "These are worlds installed from the catalog. All worlds of the instance and their backups are in the Worlds tab.",
     "datapacksElsewhere": "These are datapacks downloaded into the instance. You add them to a world in the Worlds tab.",

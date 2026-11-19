@@ -178,6 +178,7 @@ import { ContentListPane } from "./ContentListPane";
 import { shaderSupport } from "./shaderSupport";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import type { CommitMods } from "./contentCommit";
+import { isLockedWhileRunning, typesWhileRunning } from "./runningLock";
 
 const api = window.api;
 
@@ -187,8 +188,6 @@ function listTitles(projects: ILocalProject[]): string {
   const titles = projects.slice(0, LISTED_TITLES).map((item) => item.title);
   return projects.length > LISTED_TITLES ? `${titles.join(", ")}…` : titles.join(", ");
 }
-
-const RUNNING_ALLOWED_TYPES = [ProjectType.RESOURCEPACK, ProjectType.SHADER];
 
 type DoneAction =
   | "installed"
@@ -349,11 +348,19 @@ export function ContentManager({
               catalogTarget,
               availability,
             );
-      return running
-        ? types.filter((type) => RUNNING_ALLOWED_TYPES.includes(type))
-        : types;
+      return running ? typesWhileRunning(types, target === "library") : types;
     },
     [availability, catalogTarget, isModpacks, running, typeCounts],
+  );
+
+  const isLocked = useCallback(
+    (type: ProjectType) => running && isLockedWhileRunning(type),
+    [running],
+  );
+  const lockedHintFor = useCallback(
+    (type: ProjectType) =>
+      isLocked(type) ? t("modManager.runningLocked") : undefined,
+    [isLocked, t],
   );
 
   const visibleProviders = useMemo(
@@ -376,6 +383,7 @@ export function ContentManager({
   const [projectType, setProjectType] = useState<ProjectType>(
     () => projectTypes[0] ?? ProjectType.MOD,
   );
+  const lockedHint = lockedHintFor(projectType);
 
   const [catalogAuthor, setCatalogAuthor] = useState<{
     provider: Provider;
@@ -1183,7 +1191,7 @@ export function ContentManager({
 
   const installProject = useCallback(
     async (entry: ContentEntry, explicit?: ModVersion) => {
-      if (!version) return;
+      if (!version || isLocked(entry.projectType)) return;
 
       setBusyKey(entry.key);
       setIsBusy(true);
@@ -1365,6 +1373,7 @@ export function ContentManager({
       fetchers,
       fileStates.disabled,
       forgetRemoved,
+      isLocked,
       mods,
       loader,
       overrideLoader,
@@ -1383,10 +1392,7 @@ export function ContentManager({
       if (
         !canEdit ||
         isBusy ||
-        (running &&
-          targets.some(
-            (entry) => !RUNNING_ALLOWED_TYPES.includes(entry.projectType),
-          ))
+        targets.some((entry) => isLocked(entry.projectType))
       )
         return;
       const targetKeys = new Set(targets.map((entry) => entry.key));
@@ -1431,10 +1437,10 @@ export function ContentManager({
       commitMods,
       doneTitle,
       isBusy,
+      isLocked,
       localDependencies,
       mods,
       rememberRemoved,
-      running,
       t,
     ],
   );
@@ -1445,10 +1451,7 @@ export function ContentManager({
         !canEdit ||
         isBusy ||
         checkingDeletionRef.current ||
-        (running &&
-          targets.some(
-            (entry) => !RUNNING_ALLOWED_TYPES.includes(entry.projectType),
-          ))
+        targets.some((entry) => isLocked(entry.projectType))
       )
         return;
       checkingDeletionRef.current = true;
@@ -1484,7 +1487,7 @@ export function ContentManager({
         setIsBusy(false);
       }
     },
-    [applyDeletion, canEdit, instancePath, isBusy, mods, running, t],
+    [applyDeletion, canEdit, instancePath, isBusy, isLocked, mods, t],
   );
 
   const removeDuplicateRecords = useCallback(
@@ -1631,7 +1634,11 @@ export function ContentManager({
 
   const setEnabledFor = useCallback(
     async (requested: ContentEntry[], enabled: boolean, isUndo = false) => {
-      if (!instancePath) return;
+      if (
+        !instancePath ||
+        requested.some((entry) => isLocked(entry.projectType))
+      )
+        return;
 
       const disabledNow = fileStatesRef.current.disabled;
       const changed = new Set<string>();
@@ -1767,6 +1774,7 @@ export function ContentManager({
       doneTitle,
       fileStatesRef,
       instancePath,
+      isLocked,
       latestModsRef,
       libraryEntriesRef,
       t,
@@ -1797,6 +1805,11 @@ export function ContentManager({
         mode?: ImportMode;
       },
     ) => {
+      if (lockedHint) {
+        toast.warning(lockedHint);
+        return;
+      }
+
       const names = source?.names;
 
       setImportMode(source?.mode ?? "import");
@@ -1860,7 +1873,7 @@ export function ContentManager({
       setImporting(collected);
       setIsImportOpen(true);
     },
-    [mods, projectType, t],
+    [lockedHint, mods, projectType, t],
   );
 
   const canUseTrash =
@@ -2051,7 +2064,7 @@ export function ContentManager({
   }, [foreignFiles, instancePath, projectType, readLocalFiles]);
 
   const trashForeignFiles = useCallback(async () => {
-    if (!instancePath || foreignFiles.length === 0) return;
+    if (!instancePath || foreignFiles.length === 0 || lockedHint) return;
 
     setIsBusy(true);
     try {
@@ -2074,7 +2087,7 @@ export function ContentManager({
       setFileRevision((value) => value + 1);
       setIsBusy(false);
     }
-  }, [foreignFiles, instancePath, projectType, t]);
+  }, [foreignFiles, instancePath, lockedHint, projectType, t]);
 
   const restorableTrash = useMemo(() => {
     if (trashEntries.length === 0) return trashEntries;
@@ -2535,6 +2548,11 @@ export function ContentManager({
       }
 
       const target = project.provider as Scope;
+      const lockedLink = lockedHintFor(project.projectType);
+      if (lockedLink && project.projectType === ProjectType.MOD) {
+        toast.warning(lockedLink);
+        return true;
+      }
       if (!canBrowse || !typesForScope(target).includes(project.projectType)) {
         toast.warning(
           t("modManager.linkWrongType", {
@@ -2562,6 +2580,7 @@ export function ContentManager({
       findInstalled,
       isOnline,
       loadDetail,
+      lockedHintFor,
       openSets,
       projectType,
       scope,
@@ -3122,7 +3141,8 @@ export function ContentManager({
           }
           if (!isFileDrag(event)) return;
           event.preventDefault();
-          event.dataTransfer.dropEffect = canEdit ? "copy" : "none";
+          event.dataTransfer.dropEffect =
+            canEdit && !lockedHint ? "copy" : "none";
         }}
         onDragLeave={(event) => {
           if (event.currentTarget.contains(event.relatedTarget as Node)) return;
@@ -3150,7 +3170,7 @@ export function ContentManager({
           <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary bg-primary-veil text-sm font-medium text-foreground">
             <FilePlus2 className="size-4" />
             {canEdit
-              ? t("modManager.selectLocalsHint")
+              ? (lockedHint ?? t("modManager.selectLocalsHint"))
               : t("modManager.dropReadOnly")}
           </div>
         )}
@@ -3177,6 +3197,7 @@ export function ContentManager({
           isIdentifying={isIdentifying}
           isModpacks={isModpacks}
           isOnline={isOnline}
+          lockedHint={lockedHint}
           libraryEntries={libraryEntries}
           libraryFacets={libraryFacets}
           librarySort={librarySort}
@@ -3221,6 +3242,7 @@ export function ContentManager({
           filterChips={filterChips}
           foreignFiles={foreignFiles}
           isBusy={isBusy}
+          lockedHint={lockedHint}
           libraryEntries={libraryEntries}
           libraryFacets={libraryFacets}
           loader={loader}
@@ -3296,6 +3318,10 @@ export function ContentManager({
           installProject={installProject}
           instancePath={instancePath}
           isBusy={isBusy}
+          lockedHint={lockedHint}
+          detailLockedHint={
+            detailEntry ? lockedHintFor(detailEntry.projectType) : undefined
+          }
           isEmptyLibrary={isEmptyLibrary}
           isModpacks={isModpacks}
           isResultWave={isResultWave}

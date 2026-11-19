@@ -93,6 +93,7 @@ export function ContentDetails({
   installedVersionId,
   isLoading,
   isBusy,
+  lockedHint,
   error,
   depsError,
   canEdit,
@@ -137,6 +138,7 @@ export function ContentDetails({
   installedVersionId: string | null;
   isLoading: boolean;
   isBusy: boolean;
+  lockedHint?: string;
   error: boolean;
   depsError: boolean;
   canEdit: boolean;
@@ -448,33 +450,36 @@ export function ContentDetails({
 
             {canEdit && (
               <div className="mt-3 flex items-center gap-2">
-                <Button
-                  className={
-                    isCurrentInstalled && !isModpacks
-                      ? "h-9 flex-1 border-success/40 text-success"
-                      : "h-9 flex-1"
-                  }
-                  variant={
-                    isCurrentInstalled && !isModpacks ? "outline" : "secondary"
-                  }
-                  disabled={
-                    isBusy ||
-                    !selectedVersion ||
-                    (!isModpacks && isCurrentInstalled)
-                  }
-                  onClick={() => selectedVersion && onInstall(selectedVersion)}
-                >
-                  {isBusy ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : isCurrentInstalled ? (
-                    <PackageCheck className="size-4" />
-                  ) : isInstalled ? (
-                    <CircleArrowUp className="size-4" />
-                  ) : (
-                    <Plus className="size-4" />
-                  )}
-                  {primaryLabel}
-                </Button>
+                <Hint content={lockedHint} wrapperClassName="flex-1">
+                  <Button
+                    className={
+                      isCurrentInstalled && !isModpacks
+                        ? "h-9 flex-1 border-success/40 text-success"
+                        : "h-9 flex-1"
+                    }
+                    variant={
+                      isCurrentInstalled && !isModpacks ? "outline" : "secondary"
+                    }
+                    disabled={
+                      isBusy ||
+                      Boolean(lockedHint) ||
+                      !selectedVersion ||
+                      (!isModpacks && isCurrentInstalled)
+                    }
+                    onClick={() => selectedVersion && onInstall(selectedVersion)}
+                  >
+                    {isBusy ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : isCurrentInstalled ? (
+                      <PackageCheck className="size-4" />
+                    ) : isInstalled ? (
+                      <CircleArrowUp className="size-4" />
+                    ) : (
+                      <Plus className="size-4" />
+                    )}
+                    {primaryLabel}
+                  </Button>
+                </Hint>
 
                 {!isModpacks && onToggleFavorite && (
                   <Hint
@@ -556,7 +561,8 @@ export function ContentDetails({
                 {isInstalled && !isModpacks && (
                   <Hint
                     content={
-                      deletionBlockers.length > 0
+                      lockedHint ??
+                      (deletionBlockers.length > 0
                         ? `${t("modManager.requiredBy")}: ${deletionBlockers
                             .map((item) => item.title)
                             .join(", ")}`
@@ -564,7 +570,7 @@ export function ContentDetails({
                           ? `${t("modManager.alsoRemoves")}: ${alsoRemoves
                               .map((item) => item.title)
                               .join(", ")}`
-                          : t("common.delete")
+                          : t("common.delete"))
                     }
                     className="max-w-56"
                   >
@@ -572,7 +578,7 @@ export function ContentDetails({
                       size="icon"
                       variant="outline"
                       className="size-9 border-destructive/40 text-destructive hover:bg-destructive/15 hover:text-destructive"
-                      disabled={isBusy}
+                      disabled={isBusy || Boolean(lockedHint)}
                       aria-label={t("common.delete")}
                       onClick={onDelete}
                     >

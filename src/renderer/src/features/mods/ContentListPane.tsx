@@ -141,6 +141,8 @@ export interface ContentListPaneProps {
   installProject: (entry: ContentEntry, explicit?: ModVersion) => Promise<void>;
   instancePath: string | undefined;
   isBusy: boolean;
+  lockedHint?: string;
+  detailLockedHint?: string;
   isEmptyLibrary: boolean;
   isModpacks: boolean;
   isResultWave: boolean;
@@ -234,6 +236,8 @@ export function ContentListPane({
   installProject,
   instancePath,
   isBusy,
+  lockedHint,
+  detailLockedHint,
   isEmptyLibrary,
   isModpacks,
   isResultWave,
@@ -417,6 +421,7 @@ export function ContentListPane({
                             )
                           }
                           isBusy={isBusy}
+                          lockedHint={lockedHint}
                           canDrop={dragState !== null}
                           actions={groupActions}
                         />
@@ -496,6 +501,7 @@ export function ContentListPane({
                           needsFileTimes ? changedAt.get(entry.key) : undefined
                         }
                         isBusy={busyKey === entry.key || isBusy}
+                        lockedHint={lockedHint}
                         isWorking={busyKey === entry.key}
                         isDraggable={canDragRows}
                         isDragged={dragState?.keys.has(entry.key) ?? false}
@@ -631,15 +637,17 @@ export function ContentListPane({
                 </span>
               </Hint>
               <div className="ml-auto flex shrink-0 items-center gap-0.5">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 shrink-0 px-2.5 text-xs"
-                  disabled={isBusy}
-                  onClick={() => void restoreTrash()}
-                >
-                  {t("modManager.trashRestore")}
-                </Button>
+                <Hint content={lockedHint}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 shrink-0 px-2.5 text-xs"
+                    disabled={isBusy || Boolean(lockedHint)}
+                    onClick={() => void restoreTrash()}
+                  >
+                    {t("modManager.trashRestore")}
+                  </Button>
+                </Hint>
                 <Hint content={t("modManager.trashOpen")}>
                   <Button
                     size="icon-sm"
@@ -738,6 +746,7 @@ export function ContentListPane({
             installedVersionId={detailEntry.installed?.version?.id ?? null}
             isLoading={detail?.isLoading ?? false}
             isBusy={isBusy}
+            lockedHint={detailLockedHint}
             error={detail?.error ?? false}
             depsError={detail?.depsError ?? false}
             canEdit={canEdit || isModpacks}

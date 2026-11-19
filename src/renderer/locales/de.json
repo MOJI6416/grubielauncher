@@ -1018,6 +1018,7 @@
     "applyCancelled": "Installation abgebrochen – die Instanz ist unverändert",
     "applyBlockedSkipped": "Mod nicht installiert: Die Datei muss manuell heruntergeladen werden",
     "dropReadOnly": "Diese Instanz kann nicht geändert werden – die Dateien wurden nicht hinzugefügt",
+    "runningLocked": "Mods lassen sich ändern, sobald das Spiel geschlossen ist",
     "categoriesExplain": "Kategorien stammen von Modrinth und CurseForge und helfen beim Filtern. Ändern lassen sie sich nicht.",
     "worldsElsewhere": "Hier stehen Welten aus dem Katalog. Alle Welten der Instanz und ihre Backups finden Sie im Tab „Welten“.",
     "datapacksElsewhere": "Hier stehen Datenpakete, die in die Instanz geladen wurden. Zu einer Welt fügen Sie sie im Tab „Welten“ hinzu.",

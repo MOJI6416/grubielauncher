@@ -91,6 +91,7 @@ export const ContentRow = memo(function ContentRow({
   changedAt,
   origin,
   isBusy,
+  lockedHint,
   isWorking = false,
   isDraggable = false,
   isDragged = false,
@@ -118,6 +119,7 @@ export const ContentRow = memo(function ContentRow({
   changedAt?: number;
   origin?: ContentOrigin;
   isBusy: boolean;
+  lockedHint?: string;
   isWorking?: boolean;
   isDraggable?: boolean;
   isDragged?: boolean;
@@ -136,6 +138,7 @@ export const ContentRow = memo(function ContentRow({
       ? formatCompactNumber(entry.stats?.follows, lang)
       : null;
   const author = isLibrary ? undefined : entry.project?.author;
+  const locked = Boolean(lockedHint);
 
   return (
     <div
@@ -383,11 +386,11 @@ export const ContentRow = memo(function ContentRow({
         onClick={(event) => event.stopPropagation()}
       >
         {entry.pendingRemoved ? (
-          <Hint content={t("modManager.restore")}>
+          <Hint content={lockedHint ?? t("modManager.restore")}>
             <Button
               size="icon-sm"
               variant="secondary"
-              disabled={isBusy}
+              disabled={isBusy || locked}
               aria-label={t("modManager.restore")}
               onClick={() => actions.onRestore(entry)}
             >
@@ -397,12 +400,12 @@ export const ContentRow = memo(function ContentRow({
         ) : isLibrary ? (
           <>
             {hasUpdate && canEdit && (
-              <Hint content={t("common.update")}>
+              <Hint content={lockedHint ?? t("common.update")}>
                 <Button
                   size="icon-sm"
                   variant="ghost"
                   className="text-warning hover:bg-warning/15 hover:text-warning"
-                  disabled={isBusy}
+                  disabled={isBusy || locked}
                   aria-label={t("common.update")}
                   onClick={() => actions.onUpdate(entry)}
                 >
@@ -413,9 +416,10 @@ export const ContentRow = memo(function ContentRow({
 
             {canToggle && (
               <Hint
-                content={t(
-                  isEnabled ? "modManager.disable" : "modManager.enable",
-                )}
+                content={
+                  lockedHint ??
+                  t(isEnabled ? "modManager.disable" : "modManager.enable")
+                }
               >
                 <Button
                   size="icon-sm"
@@ -425,7 +429,7 @@ export const ContentRow = memo(function ContentRow({
                       ? "text-faint hover:text-foreground"
                       : "text-warning hover:bg-warning/15 hover:text-warning"
                   }
-                  disabled={isBusy || fileMissing}
+                  disabled={isBusy || fileMissing || locked}
                   aria-label={t(
                     isEnabled ? "modManager.disable" : "modManager.enable",
                   )}
@@ -441,12 +445,12 @@ export const ContentRow = memo(function ContentRow({
             )}
 
             {canEdit && (
-              <Hint content={t("common.delete")}>
+              <Hint content={lockedHint ?? t("common.delete")}>
                 <Button
                   size="icon-sm"
                   variant="ghost"
                   className="text-faint hover:bg-destructive/15 hover:text-destructive"
-                  disabled={isBusy}
+                  disabled={isBusy || locked}
                   aria-label={t("common.delete")}
                   onClick={() => actions.onDelete(entry)}
                 >

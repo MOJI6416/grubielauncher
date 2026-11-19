@@ -45,6 +45,7 @@ export function GroupHeader({
   allDisabled,
   canToggle,
   isBusy,
+  lockedHint,
   canDrop = false,
   actions,
 }: {
@@ -56,6 +57,7 @@ export function GroupHeader({
   allDisabled: boolean;
   canToggle: boolean;
   isBusy: boolean;
+  lockedHint?: string;
   canDrop?: boolean;
   actions: GroupHeaderActions;
 }) {
@@ -131,12 +133,12 @@ export function GroupHeader({
       </button>
 
       {canToggle && (
-        <Hint content={toggleLabel}>
+        <Hint content={lockedHint ?? toggleLabel}>
           <Button
             size="icon-sm"
             variant="ghost"
             aria-label={toggleLabel}
-            disabled={isBusy}
+            disabled={isBusy || Boolean(lockedHint)}
             className={
               allDisabled
                 ? "text-warning hover:bg-warning/15 hover:text-warning"

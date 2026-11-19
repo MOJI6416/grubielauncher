@@ -1032,6 +1032,7 @@
     "applyCancelled": "Instalacja anulowana — instancja bez zmian",
     "applyBlockedSkipped": "Mod nie został zainstalowany: jego plik trzeba pobrać ręcznie",
     "dropReadOnly": "Tej instancji nie można zmieniać — pliki nie zostały dodane",
+    "runningLocked": "Mody można zmienić po zamknięciu gry",
     "categoriesExplain": "Kategorie pochodzą z Modrinth i CurseForge i ułatwiają filtrowanie. Nie da się ich zmienić.",
     "worldsElsewhere": "Tu są światy zainstalowane z katalogu. Wszystkie światy instancji i ich kopie zapasowe znajdziesz w karcie „Światy”.",
     "datapacksElsewhere": "Tu są paczki danych pobrane do instancji. Do świata dodajesz je w karcie „Światy”.",

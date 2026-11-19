@@ -91,6 +91,7 @@ export interface ContentToolbarProps {
   isIdentifying: boolean;
   isModpacks: boolean;
   isOnline: boolean;
+  lockedHint?: string;
   libraryCategories: string[];
   libraryEntries: ContentEntry[];
   libraryFacets: LibraryFacet[];
@@ -160,6 +161,7 @@ export function ContentToolbar({
   isIdentifying,
   isModpacks,
   isOnline,
+  lockedHint,
   libraryCategories,
   libraryEntries,
   libraryFacets,
@@ -519,9 +521,10 @@ export function ContentToolbar({
           identifiable.length > 0 && (
             <Hint
               content={
-                isIdentifying
+                lockedHint ??
+                (isIdentifying
                   ? t("modManager.identifySearching")
-                  : t("modManager.identifyAction")
+                  : t("modManager.identifyAction"))
               }
               side="bottom"
             >
@@ -529,7 +532,7 @@ export function ContentToolbar({
                 size="icon-sm"
                 variant="outline"
                 className="size-8 shrink-0"
-                disabled={isBusy || isIdentifying}
+                disabled={isBusy || isIdentifying || Boolean(lockedHint)}
                 aria-label={t("modManager.identifyAction")}
                 onClick={() => void identifyLocal()}
               >
@@ -562,13 +565,15 @@ export function ContentToolbar({
                 {t("modSets.explain")}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                disabled={!canApplySet}
-                onSelect={() => openSets("apply")}
-              >
-                <Layers />
-                {t("modSets.apply")}
-              </DropdownMenuItem>
+              <Hint content={lockedHint} side="left" wrapperClassName="grid">
+                <DropdownMenuItem
+                  disabled={!canApplySet || Boolean(lockedHint)}
+                  onSelect={() => openSets("apply")}
+                >
+                  <Layers />
+                  {t("modSets.apply")}
+                </DropdownMenuItem>
+              </Hint>
               <DropdownMenuItem onSelect={() => openSets("save")}>
                 <FilePlus2 />
                 {t("modSets.saveAll")}
@@ -610,7 +615,21 @@ export function ContentToolbar({
           </DropdownMenu>
         )}
 
-        {canEdit && !isModpacks && (
+        {canEdit && !isModpacks && lockedHint && (
+          <Hint content={lockedHint} side="bottom">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 shrink-0"
+              disabled
+            >
+              <Plus />
+              {t("common.add")}
+            </Button>
+          </Hint>
+        )}
+
+        {canEdit && !isModpacks && !lockedHint && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

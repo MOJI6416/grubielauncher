@@ -1025,6 +1025,7 @@
     "applyCancelled": "Instalación cancelada: la instancia no cambió",
     "applyBlockedSkipped": "Mod no instalado: su archivo debe descargarse manualmente",
     "dropReadOnly": "Esta instancia no se puede cambiar: los archivos no se añadieron",
+    "runningLocked": "Podrá cambiar los mods cuando cierre el juego",
     "categoriesExplain": "Las categorías vienen de Modrinth y CurseForge y sirven para filtrar. No se pueden cambiar.",
     "worldsElsewhere": "Aquí están los mundos instalados desde el catálogo. Todos los mundos de la instancia y sus copias de seguridad están en la pestaña «Mundos».",
     "datapacksElsewhere": "Aquí están los paquetes de datos descargados en la instancia. Se añaden a un mundo en la pestaña «Mundos».",

@@ -26,6 +26,7 @@ import {
   getServerSyncDirs,
 } from "../utilities/clientsideMods";
 import { extractWorldArchive, getWorldName } from "../utilities/worlds";
+import { isVersionRunning } from "../utilities/worldBackups";
 import { toSafeFileName } from "./serverScriptSafety";
 import {
   VERSION_INSTALL_CANCELLED,
@@ -230,6 +231,17 @@ export class Mods {
   }
 
   async check(options?: ModsRuntimeOptions) {
+    await this.initPromise;
+    if (
+      this.version.versionPath &&
+      isVersionRunning(this.version.versionPath)
+    ) {
+      console.warn(
+        `[mods:check] ${this.version.versionPath} is running: only new resource packs and shaders are added, its mods stay as they are until the next check after the game closes`,
+      );
+      return this.syncLive(options);
+    }
+
     this.downloadReasons = Object.fromEntries(
       Object.entries(options?.downloadReasons ?? {}).filter(([, reason]) =>
         isModrinthDownloadReason(reason),

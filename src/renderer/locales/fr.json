@@ -1025,6 +1025,7 @@
     "applyCancelled": "Installation annulée : l’instance n’a pas changé",
     "applyBlockedSkipped": "Mod non installé : son fichier doit être téléchargé manuellement",
     "dropReadOnly": "Cette instance ne peut pas être modifiée : les fichiers n’ont pas été ajoutés",
+    "runningLocked": "Vous pourrez modifier les mods après la fermeture du jeu",
     "categoriesExplain": "Les catégories viennent de Modrinth et CurseForge et servent à filtrer. Elles ne se modifient pas.",
     "worldsElsewhere": "Voici les mondes installés depuis le catalogue. Tous les mondes de l’instance et leurs sauvegardes sont dans l’onglet « Mondes ».",
     "datapacksElsewhere": "Voici les packs de données téléchargés dans l’instance. On les ajoute à un monde dans l’onglet « Mondes ».",

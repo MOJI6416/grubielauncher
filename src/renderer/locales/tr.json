@@ -1018,6 +1018,7 @@
     "applyCancelled": "Yükleme iptal edildi; kurulum değişmedi",
     "applyBlockedSkipped": "Mod yüklenmedi: dosyasının elle indirilmesi gerekiyor",
     "dropReadOnly": "Bu kurulum değiştirilemez; dosyalar eklenmedi",
+    "runningLocked": "Modları oyun kapandıktan sonra değiştirebilirsiniz",
     "categoriesExplain": "Kategoriler Modrinth ve CurseForge'dan gelir ve filtrelemeye yarar. Değiştirilemezler.",
     "worldsElsewhere": "Burada katalogdan yüklenen dünyalar var. Kurulumun tüm dünyaları ve yedekleri «Dünyalar» sekmesinde.",
     "datapacksElsewhere": "Burada kuruluma indirilen veri paketleri var. Bir dünyaya «Dünyalar» sekmesinde eklenirler.",
