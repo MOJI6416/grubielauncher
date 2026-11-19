@@ -165,6 +165,12 @@ import {
   assertFoxLoaderBuild,
   hasFoxLoaderLayer,
 } from "./foxLoader";
+import {
+  assertCleanroomBuild,
+  hasCleanroomLayer,
+  nativeFileName,
+  readCleanroomInstaller,
+} from "./cleanroom";
 
 type VersionInstallRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
@@ -489,6 +495,9 @@ export class Version {
     if (this.version.loader.name === "foxloader") {
       return hasFoxLoaderLayer(this.manifest, this.version.loader.version.id);
     }
+    if (this.version.loader.name === "cleanroom") {
+      return hasCleanroomLayer(this.manifest, this.version.loader.version.id);
+    }
 
     const markers = LOADER_LIBRARY_MARKERS[this.version.loader.name];
     if (!markers) return true;
@@ -523,20 +532,27 @@ export class Version {
       this.manifest = undefined;
       await fs.remove(manifestPath).catch(() => {});
 
-      const baseManifestUrl = this.baseManifestUrl();
-      assertTrustedDownloadUrl(baseManifestUrl, "version manifest url");
-
       this.sendInstallProgress("manifest", 8, true);
-      await this.downloader.downloadFiles(
-        [
-          {
-            url: baseManifestUrl,
-            destination: manifestPath,
-            group: "manifest",
-          },
-        ],
-        downloadSignal,
-      );
+      if (this.version.loader.name === "cleanroom" && this.version.loader.version) {
+        await this.installCleanroomManifest(
+          this.version.loader.version,
+          downloadSignal,
+        );
+      } else {
+        const baseManifestUrl = this.baseManifestUrl();
+        assertTrustedDownloadUrl(baseManifestUrl, "version manifest url");
+
+        await this.downloader.downloadFiles(
+          [
+            {
+              url: baseManifestUrl,
+              destination: manifestPath,
+              group: "manifest",
+            },
+          ],
+          downloadSignal,
+        );
+      }
     }
 
     await this.installCheckpoint();
@@ -1275,9 +1291,9 @@ export class Version {
         if (!classifiers) continue;
 
         const classifier = classifiers[native];
-        if (!classifier?.path || !classifier?.url) continue;
+        if (!classifier?.url) continue;
 
-        const fileName = classifier.path.split("/").pop();
+        const fileName = nativeFileName(classifier);
         if (!fileName) continue;
 
         const classifierPath = path.join(this.versionPath, "natives", fileName);
@@ -2408,6 +2424,30 @@ export class Version {
     } finally {
       await fs.remove(archivePath).catch(() => {});
     }
+  }
+
+  private async installCleanroomManifest(
+    build: { id: string; url: string },
+    signal?: AbortSignal,
+  ) {
+    assertCleanroomBuild(build);
+
+    const installerPath = path.join(
+      this.versionPath,
+      `cleanroom-${build.id}-installer.jar`,
+    );
+    await this.downloader.downloadFiles(
+      [{ url: build.url, destination: installerPath, group: "cleanroom" }],
+      signal,
+    );
+
+    this.manifest = await readCleanroomInstaller(
+      installerPath,
+      build.id,
+      path.join(this.minecraftPath, "libraries"),
+    );
+    await this.writeManifest();
+    await fs.remove(installerPath).catch(() => {});
   }
 
   private async applyFoxLoader(build: { id: string; url: string }) {

@@ -10,7 +10,8 @@ export const LOADERS = [
   'babric',
   'ornithe',
   'bta-babric',
-  'foxloader'
+  'foxloader',
+  'cleanroom'
 ] as const
 
 export type Loader = (typeof LOADERS)[number]

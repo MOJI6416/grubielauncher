@@ -156,7 +156,7 @@ export function legacyForgeJvmArguments(
   loader: string,
   usesMinecraftArguments: boolean,
 ): string[] {
-  return loader === "forge" && usesMinecraftArguments
+  return (loader === "forge" || loader === "cleanroom") && usesMinecraftArguments
     ? ["-Dfml.ignoreInvalidMinecraftCertificates=true"]
     : [];
 }

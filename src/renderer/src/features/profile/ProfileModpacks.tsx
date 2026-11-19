@@ -65,6 +65,7 @@ const LOADER_TEXT: Record<string, string> = {
   ornithe: "text-loader-ornithe",
   "bta-babric": "text-loader-bta",
   foxloader: "text-loader-foxloader",
+  cleanroom: "text-loader-cleanroom",
 };
 
 export function ProfileModpacks({ user }: { user: IUser }) {

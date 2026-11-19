@@ -1,4 +1,5 @@
 import { btaJavaMajor } from "./btaLoader";
+import { CLEANROOM_JAVA_MAJOR } from "./cleanroom";
 
 // Minecraft version -> required Java major version. Mojang only ships the
 // `javaVersion` field in the version manifest for 1.17+, so older versions
@@ -54,6 +55,7 @@ export function instanceJavaMajor(
 ): number {
   if (loader === "bta-babric" && loaderVersion)
     return btaJavaMajor(loaderVersion);
+  if (loader === "cleanroom") return manifestMajor ?? CLEANROOM_JAVA_MAJOR;
   const major = manifestMajor ?? mcVersionToJavaMajor(mcVersion);
   return loader === "babric" ? Math.max(major, BABRIC_JAVA_MAJOR) : major;
 }

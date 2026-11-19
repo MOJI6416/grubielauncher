@@ -31,6 +31,7 @@ export const LOADER_DEPENDENCY_IDS: Record<ModdedLoader, string> = {
   ornithe: "fabricloader",
   "bta-babric": "bta",
   foxloader: "foxloader",
+  cleanroom: "forge",
 };
 
 export const LOADERS_WITHOUT_CURSEFORGE_MODS: ReadonlySet<string> = new Set([
@@ -40,7 +41,10 @@ export const LOADERS_WITHOUT_CURSEFORGE_MODS: ReadonlySet<string> = new Set([
   "foxloader",
 ]);
 
-const LOADERS_RELEASING_PRERELEASES: ReadonlySet<string> = new Set(["foxloader"]);
+const LOADERS_RELEASING_PRERELEASES: ReadonlySet<string> = new Set([
+  "foxloader",
+  "cleanroom",
+]);
 
 export const LOADER_VERSION_ID_PATTERN =/^[0-9A-Za-z][0-9A-Za-z._+-]{0,127}$/;
 

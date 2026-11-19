@@ -1,4 +1,5 @@
 import { Loader } from '@/types/Loader'
+import { contentLoaderOf } from '@/shared/cleanroom'
 import {
   IProject,
   IResult,
@@ -100,7 +101,7 @@ export class Modrinth {
         projectType !== ProjectType.SHADER &&
         projectType !== ProjectType.DATAPACK
       ) {
-        facets.push([`categories:${loader}`])
+        facets.push([`categories:${contentLoaderOf(loader)}`])
       }
 
       if (category && category.length > 0) {
@@ -216,7 +217,7 @@ export class Modrinth {
         project_type !== ProjectType.SHADER &&
         project_type !== ProjectType.DATAPACK
       )
-        params.append('loaders', JSON.stringify([loader]))
+        params.append('loaders', JSON.stringify([contentLoaderOf(loader)]))
 
       const response = await this.api.get<IVersion[]>(`/project/${project_id}/version`, {
         params

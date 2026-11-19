@@ -37,6 +37,11 @@ import {
   foxLoaderMavenVersion,
   listFoxLoaderVersions
 } from '@/shared/foxLoader'
+import {
+  CLEANROOM_MAVEN_METADATA_URL,
+  CLEANROOM_MINECRAFT_VERSION,
+  listCleanroomVersions
+} from '@/shared/cleanroom'
 
 export interface IVersionsManifest {
   latest: {
@@ -129,6 +134,8 @@ export class VersionsService {
         versions = await VersionsService.getVersionsBta()
       } else if (loader == 'foxloader') {
         versions = await VersionsService.getVersionsFoxLoader()
+      } else if (loader == 'cleanroom') {
+        versions = await VersionsService.getVersionsCleanroom()
       }
 
       return versions
@@ -152,6 +159,8 @@ export class VersionsService {
         versions = await VersionsService.getLoadersBta(versionId)
       } else if (loader == 'foxloader') {
         versions = await VersionsService.getLoadersFoxLoader(versionId)
+      } else if (loader == 'cleanroom') {
+        versions = await VersionsService.getLoadersCleanroom(versionId)
       }
 
       return versions
@@ -454,6 +463,23 @@ export class VersionsService {
     return versionsVanilla
       .filter((version) => version.id === FOXLOADER_MINECRAFT_VERSION)
       .map((version) => ({ ...version, serverManager: false }))
+  }
+
+  private static async getVersionsCleanroom(): Promise<IVersion[]> {
+    const versionsVanilla = await this.getVersionsVanilla()
+
+    return versionsVanilla
+      .filter((version) => version.id === CLEANROOM_MINECRAFT_VERSION)
+      .map((version) => ({ ...version, serverManager: false }))
+  }
+
+  private static async getLoadersCleanroom(version: string): Promise<LoaderVersion[]> {
+    if (version !== CLEANROOM_MINECRAFT_VERSION) return []
+
+    const response = await this.mirroredGet<string>(CLEANROOM_MAVEN_METADATA_URL, {
+      responseType: 'text'
+    })
+    return listCleanroomVersions(response.data)
   }
 
   private static async getLoadersFoxLoader(version: string): Promise<LoaderVersion[]> {

@@ -9,6 +9,7 @@ Loader logo sources used in the renderer UI, retrieved on March 29, 2026.
 - Ornithe: cropped from https://raw.githubusercontent.com/OrnitheMC/ornithe-installer-rs/main/res/icon.png (rounded corners), retrieved on October 4, 2026
 - Better than Adventure: trimmed from https://www.betterthanadventure.net/apple-touch-icon.png, retrieved on October 4, 2026
 - FoxLoader: https://github.com/Fox2Code/FoxLoader/blob/reindev2.9/loader/src/main/resources/assets/foxloader/icon.png, retrieved on October 15, 2026
+- Cleanroom: cleanroom.png from the official installer https://maven.cleanroommc.com/com/cleanroommc/cleanroom/0.7.14-alpha/cleanroom-0.7.14-alpha-installer.jar (trimmed, scaled to 128 px), retrieved on November 19, 2026
 
 Reference licenses:
 
@@ -20,5 +21,7 @@ Reference licenses:
   https://github.com/neoforged/websites/blob/main/LICENSE.txt
 - FoxLoader repository: MIT
   https://github.com/Fox2Code/FoxLoader/blob/reindev2.9/LICENSE
+- Cleanroom repository: LGPL-2.1
+  https://github.com/CleanroomMC/Cleanroom/blob/main/LICENSE
 
 Forge, Legacy Fabric, Ornithe and Better than Adventure branding remains the property of its respective owners.

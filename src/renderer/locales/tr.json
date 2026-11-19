@@ -2248,7 +2248,8 @@
       "babric": "Beta 1.7.3 için Fabric",
       "ornithe": "Alfa, beta ve 1.14.4’e kadar sürümler için Fabric",
       "bta-babric": "Babric modlarıyla Better than Adventure",
-      "foxloader": "FoxLoader modlarıyla ReIndev"
+      "foxloader": "FoxLoader modlarıyla ReIndev",
+      "cleanroom": "Güncel Java'da 1.12.2 için Forge"
     },
     "updated": "Kurulum güncellendi",
     "share": "Paylaş",

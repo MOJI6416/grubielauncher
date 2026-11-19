@@ -69,6 +69,7 @@ import { BTA_MINECRAFT_VERSION } from "@/shared/btaLoader";
 import { FOXLOADER_MINECRAFT_VERSION } from "@/shared/foxLoader";
 import { isExcludedInstancePath } from "@/shared/instancePrivacy";
 import { isOptionalOnClient } from "@/shared/modpackOptional";
+import { isCleanroomComponent } from "@/shared/cleanroom";
 import {
   fabricFamilyFor,
   ornitheIntermediaryGeneration,
@@ -336,7 +337,7 @@ export async function mrModpackToModpack(
 export function loaderToCfLoader(loader: Loader | ServerCore): ModLoaderType {
   if (loader == "fabric" || loader == "legacy-fabric")
     return ModLoaderType.Fabric;
-  if (loader == "forge") return ModLoaderType.Forge;
+  if (loader == "forge" || loader == "cleanroom") return ModLoaderType.Forge;
   if (loader == "neoforge") return ModLoaderType.NeoForge;
   if (loader == "quilt") return ModLoaderType.Quilt;
 
@@ -1372,6 +1373,16 @@ async function readPrismComponentText(
   return texts.join(" ").toLowerCase();
 }
 
+async function readPrismPatchText(
+  instanceRoot: string,
+  uid: string | undefined,
+): Promise<string> {
+  if (!uid || !/^[A-Za-z0-9._-]+$/.test(uid)) return "";
+  return fs
+    .readFile(path.join(instanceRoot, "patches", `${uid}.json`), "utf-8")
+    .catch(() => "");
+}
+
 function detectFabricFamily(componentText: string): Loader | undefined {
   return FABRIC_FAMILY_MARKERS.find(([marker]) =>
     componentText.includes(marker),
@@ -1740,6 +1751,7 @@ async function prismModpackToModpack(
     const uid = component.uid?.toLowerCase() || "";
     return (
       uid.includes("forge") ||
+      uid.includes("cleanroommc") ||
       uid.includes("fabric-loader") ||
       uid.includes("quilt-loader")
     );
@@ -1750,7 +1762,15 @@ async function prismModpackToModpack(
     baseLoader === "fabric"
       ? await readPrismComponentText(instanceRoot, components)
       : "";
-  const loader = detectFabricFamily(componentText) ?? baseLoader;
+  const isCleanroom =
+    !!loaderComponent &&
+    isCleanroomComponent(
+      loaderComponent,
+      await readPrismPatchText(instanceRoot, loaderComponent.uid),
+    );
+  const loader: Loader = isCleanroom
+    ? "cleanroom"
+    : (detectFabricFamily(componentText) ?? baseLoader);
   const loaderVersion =
     loader === "vanilla"
       ? undefined

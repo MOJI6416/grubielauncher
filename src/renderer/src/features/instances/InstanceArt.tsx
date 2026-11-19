@@ -13,6 +13,7 @@ const LOADER_TINT: Record<string, string> = {
   ornithe: "from-loader-ornithe/25",
   "bta-babric": "from-loader-bta/25",
   foxloader: "from-loader-foxloader/25",
+  cleanroom: "from-loader-cleanroom/25",
 };
 
 export function loaderTint(loader?: string): string {

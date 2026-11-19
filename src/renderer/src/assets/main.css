@@ -62,6 +62,7 @@
   --color-loader-ornithe: var(--loader-ornithe);
   --color-loader-bta: var(--loader-bta);
   --color-loader-foxloader: var(--loader-foxloader);
+  --color-loader-cleanroom: var(--loader-cleanroom);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -157,6 +158,7 @@
   --loader-ornithe: oklch(0.78 0.11 205);
   --loader-bta: oklch(0.72 0.13 28);
   --loader-foxloader: oklch(0.75 0.16 55);
+  --loader-cleanroom: oklch(0.74 0.1 230);
 
   --mc-0: oklch(0.42 0.003 265);
   --mc-1: #4a4aff;

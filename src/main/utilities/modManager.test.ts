@@ -1729,3 +1729,48 @@ describe("modpack optional files", () => {
   });
 });
 
+describe("checkModpack Cleanroom from Prism", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedCurseForge.getMods.mockResolvedValue([]);
+    mockedModrinth.getProjects.mockResolvedValue([]);
+  });
+
+  it("imports the official Cleanroom MMC pack as Cleanroom, not Forge", async () => {
+    const instanceRoot = await makeTempRoot();
+    await fs.outputJSON(path.join(instanceRoot, "mmc-pack.json"), {
+      components: [
+        { uid: "net.minecraft", version: "1.12.2", important: true },
+        { uid: "org.lwjgl", version: "3.4.3" },
+        { uid: "net.minecraftforge", version: "0.7.14-alpha" },
+      ],
+    });
+    await fs.outputJSON(path.join(instanceRoot, "patches", "net.minecraftforge.json"), {
+      name: "Cleanroom",
+      mainClass: "top.outlands.foundation.boot.Foundation",
+    });
+    await fs.writeFile(path.join(instanceRoot, "instance.cfg"), "name=Cleanroom 0.7.14-alpha\n");
+
+    const result = await checkModpack(instanceRoot);
+
+    expect(result).toMatchObject({
+      version: "1.12.2",
+      loader: "cleanroom",
+      loaderVersion: "0.7.14-alpha",
+    });
+  });
+
+  it("keeps a real Forge 1.12.2 instance on Forge", async () => {
+    const instanceRoot = await makeTempRoot();
+    await fs.outputJSON(path.join(instanceRoot, "mmc-pack.json"), {
+      components: [
+        { uid: "net.minecraft", version: "1.12.2" },
+        { uid: "net.minecraftforge", version: "14.23.5.2860" },
+      ],
+    });
+
+    const result = await checkModpack(instanceRoot);
+
+    expect(result).toMatchObject({ loader: "forge", loaderVersion: "14.23.5.2860" });
+  });
+});

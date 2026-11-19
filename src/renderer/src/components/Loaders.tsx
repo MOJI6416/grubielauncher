@@ -10,11 +10,13 @@ import legacyFabricIcon from "@renderer/assets/loaders/legacy-fabric.png";
 import ornitheIcon from "@renderer/assets/loaders/ornithe.png";
 import btaIcon from "@renderer/assets/loaders/bta.png";
 import foxLoaderIcon from "@renderer/assets/loaders/foxloader.png";
+import cleanroomIcon from "@renderer/assets/loaders/cleanroom.png";
 import { LEGACY_LOADERS } from "@/shared/profileLoaders";
 import { Hint } from "@renderer/components/Hint";
 
 type LoaderInfo = {
   name: string;
+  short?: string;
   dot: string;
   icon?: string;
 };
@@ -42,13 +44,20 @@ export const loaders = {
   },
   "bta-babric": {
     name: "BTA (Babric)",
+    short: "BTA",
     dot: "bg-loader-bta",
     icon: btaIcon,
   },
   foxloader: {
     name: "ReIndev (FoxLoader)",
+    short: "ReIndev",
     dot: "bg-loader-foxloader",
     icon: foxLoaderIcon,
+  },
+  cleanroom: {
+    name: "Cleanroom",
+    dot: "bg-loader-cleanroom",
+    icon: cleanroomIcon,
   },
 } satisfies Record<Loader, LoaderInfo> as Record<Loader, LoaderInfo>;
 
@@ -56,6 +65,7 @@ const OLD_VERSION_LOADERS: Loader[] = [
   ...LEGACY_LOADERS,
   "bta-babric",
   "foxloader",
+  "cleanroom",
 ];
 
 export const LOADER_ORDER: Loader[] = [
@@ -209,7 +219,7 @@ export function LoaderPicker({
                 className="flex h-7 min-w-0 items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-surface-3 aria-checked:border-primary/70 aria-checked:bg-row-selected disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface-2"
               >
                 <LoaderIcon loader={loader} className="size-3.5 shrink-0" />
-                <span className="truncate">{info.name}</span>
+                <span className="truncate">{info.short ?? info.name}</span>
                 {reason && <Lock className="size-3 shrink-0 text-faint" />}
               </button>
             </Hint>

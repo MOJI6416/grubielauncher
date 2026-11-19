@@ -2248,7 +2248,8 @@
       "babric": "Fabric for Beta 1.7.3",
       "ornithe": "Fabric for alpha, beta and versions up to 1.14.4",
       "bta-babric": "Better than Adventure with Babric mods",
-      "foxloader": "ReIndev with FoxLoader mods"
+      "foxloader": "ReIndev with FoxLoader mods",
+      "cleanroom": "Forge for 1.12.2 on modern Java"
     },
     "updated": "Instance updated",
     "share": "Share",

@@ -308,6 +308,7 @@ const LIGHT_SEMANTIC: Record<string, string> = {
   "--loader-ornithe": "oklch(0.56 0.11 205)",
   "--loader-bta": "oklch(0.55 0.13 28)",
   "--loader-foxloader": "oklch(0.56 0.16 55)",
+  "--loader-cleanroom": "oklch(0.55 0.1 230)",
 };
 
 export function themeVariables(
