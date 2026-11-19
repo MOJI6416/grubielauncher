@@ -681,7 +681,38 @@
     "resetFriendCodeTitle": "¿Restablecer el código de amigo?",
     "chatExternalLinkQuestion": "¿Abrir el enlace externo?",
     "chatDeleteMessageQuestion": "¿Eliminar el mensaje?",
-    "deleteQuestion": "¿Eliminar a {{nickname}} de tus amigos?"
+    "deleteQuestion": "¿Eliminar a {{nickname}} de tus amigos?",
+    "microsoft": {
+      "section": "Amigos de Microsoft",
+      "status": {
+        "singleplayer": "Jugando · un jugador",
+        "server": "Jugando · en un servidor",
+        "realms": "Jugando · Realms",
+        "hosted": "Jugando · mundo abierto",
+        "unknown": "Estado desconocido"
+      },
+      "remove": "Quitar de amigos de Microsoft",
+      "removeQuestion": "¿Quitar a {{nickname}} de tus amigos de Microsoft?",
+      "removeAlert": "{{nickname}} desaparecerá de tus amigos de Minecraft en todos los dispositivos. Podrás volver a enviar una solicitud.",
+      "wantsToBeFriend": "Solicitud de amistad de Minecraft",
+      "requestSent": "Solicitud de Minecraft enviada",
+      "incoming": "Solicitudes de Microsoft",
+      "outgoing": "Enviadas a Microsoft",
+      "addTitle": "Amigo en Minecraft",
+      "addHint": "La solicitud va a través de Microsoft: tu amigo la verá en Minecraft 26.2 o posterior, o en su launcher.",
+      "namePlaceholder": "Nombre en Minecraft",
+      "sent": "Solicitud enviada a {{name}}",
+      "errors": {
+        "not_microsoft": "Los amigos de Microsoft requieren una cuenta de Microsoft",
+        "expired": "El inicio de sesión de Microsoft caducó: vuelve a iniciar sesión en la cuenta",
+        "forbidden": "Microsoft no permite amigos en esta cuenta: revisa la configuración de privacidad de Xbox",
+        "rate_limited": "Microsoft pide esperar: inténtalo de nuevo en un minuto",
+        "unavailable": "El servicio de amigos de Microsoft no responde: inténtalo más tarde",
+        "unknown_profile": "No existe un jugador de Minecraft con ese nombre",
+        "cannot_add_self": "No puedes añadirte a ti mismo",
+        "invalid": "Microsoft no aceptó la solicitud"
+      }
+    }
   },
   "modManager": {
     "title": "Gestor de mods",
@@ -2207,6 +2238,11 @@
         "title": "Ajustes de juego compartidos",
         "description": "Las mismas teclas, gráficos, servidores y paquetes de recursos en todas las instancias",
         "keywords": "options.txt controles teclas gráficos sonido servidores paquetes de recursos barras rápidas comandos perfil plantilla sincronización compartidos"
+      },
+      "directConnect": {
+        "title": "Conexión directa (P2P)",
+        "description": "Jugar con amigos directamente, sin pasar por el servidor de Grubie",
+        "keywords": "p2p conexión directa jugar juntos ping ip webrtc relay"
       }
     },
     "voicePttCaptureTimeout": "No se presionó ninguna tecla: el atajo no cambió.",
@@ -2275,7 +2311,9 @@
       "folderDescriptionEmpty": "Se guardan en esta computadora",
       "historyTitle": "Informes enviados"
     },
-    "resetAllDone": "Ajustes restablecidos a los valores predeterminados"
+    "resetAllDone": "Ajustes restablecidos a los valores predeterminados",
+    "directConnect": "Conexión directa con amigos",
+    "directConnectDescription": "«Jugar juntos» va directo entre tú y tu amigo, sin pasar por el servidor de Grubie, y el ping es menor. Tu amigo conoce tu dirección IP. No se usa en modo streamer ni en mundos abiertos a todos."
   },
   "skinView": {
     "title": "Vista previa de la skin",
@@ -3301,6 +3339,14 @@
       "full": "{{name}} no pudo entrar: no quedan plazas.",
       "not_invited": "{{name}} no está en la lista de invitados y no pudo entrar.",
       "removed": "{{name}} intentó volver, pero lo has quitado."
+    },
+    "transport": {
+      "direct": "P2P",
+      "turn": "TURN",
+      "relay": "Vía servidor",
+      "directHint": "Conexión directa con tu amigo, sin pasar por el servidor de Grubie",
+      "turnHint": "A través del servidor TURN de Grubie: no se pudo conectar directamente",
+      "relayHint": "A través del servidor de Grubie: la conexión directa no está disponible o está desactivada"
     }
   },
   "manageSkins": {

@@ -35,6 +35,12 @@ export default defineConfig(() => {
       },
       build: {
         minify: "esbuild" as const,
+        rollupOptions: {
+          input: {
+            index: resolve(__dirname, "src/preload/index.ts"),
+            rtc: resolve(__dirname, "src/preload/rtc.ts"),
+          },
+        },
       },
     },
     renderer: {
@@ -62,6 +68,7 @@ export default defineConfig(() => {
             tray: resolve(__dirname, "src/renderer/tray.html"),
             datalocation: resolve(__dirname, "src/renderer/datalocation.html"),
             overlay: resolve(__dirname, "src/renderer/overlay.html"),
+            rtc: resolve(__dirname, "src/renderer/rtc.html"),
           },
           output: {
             manualChunks(id) {

@@ -30,6 +30,8 @@ import { canJoinFriend, presenceDotColor } from "./presence";
 import { isDmRoomWith } from "./voiceRoom";
 import { PlatformIcon } from "./PlatformIcon";
 import { maskValue } from "@renderer/features/streamer/redact";
+import type { ShareGuestLink } from "@/types/Share";
+import { TransportBadge } from "@renderer/features/share/TransportBadge";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 export interface FriendRowActions {
@@ -52,6 +54,7 @@ interface FriendRowProps extends FriendRowActions {
   isCallBusy: boolean;
   ownUserId?: string;
   voiceRoomId?: string;
+  guestLink?: ShareGuestLink;
   t: TFunction;
 }
 
@@ -113,6 +116,7 @@ function FriendRowComponent({
   isCallBusy,
   ownUserId,
   voiceRoomId,
+  guestLink,
   t,
   onOpenChat,
   onJoin,
@@ -219,6 +223,13 @@ function FriendRowComponent({
           </button>
 
           <div className="flex shrink-0 items-center gap-1">
+            {guestLink && (
+              <TransportBadge
+                transport={guestLink.transport}
+                rttMs={guestLink.rttMs}
+                t={t}
+              />
+            )}
             {canJoin && (
               <Hint content={t("friends.join")}>
                 <button

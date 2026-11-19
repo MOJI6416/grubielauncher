@@ -37,7 +37,12 @@ import {
   isValidShareSlug,
   isValidTicketShareHost,
   normalizeGatewayUrl,
+  SHARE_RTC_FEATURE,
 } from "./shareProtocol";
+import { rtcEngine } from "./rtcEngine";
+import { DirectHost } from "./directHost";
+import { getDirectPolicy } from "./directPolicy";
+import { advertiseDirect } from "./transportChoice";
 import {
   applyAuthOkState,
   applyTunnelDisconnectedState,
@@ -124,7 +129,17 @@ const HEARTBEAT_MAX_CONSECUTIVE_FAILURES = 3;
 export class LanShareService extends EventEmitter {
   private readonly stateStore = new ShareStateStore();
   private readonly proxyManager = new LocalProxyManager();
-  private readonly tunnelClient = new TunnelClient(this.proxyManager);
+  private readonly tunnelClient = new TunnelClient(this.proxyManager, () =>
+    advertiseDirect(getDirectPolicy()) ? [SHARE_RTC_FEATURE] : [],
+  );
+  private readonly directHost = new DirectHost(rtcEngine, this.proxyManager, {
+    policy: getDirectPolicy,
+    visibility: () => this.stateStore.getState().visibility,
+    isSharing: () => !!this.stateStore.getState().sessionId,
+    sendAnswer: (peerId, sdp) => this.tunnelClient.sendRtcAnswer(peerId, sdp),
+    sendReject: (peerId, reason) =>
+      this.tunnelClient.sendRtcReject(peerId, reason),
+  });
   private readonly candidates = new Map<string, ShareLanCandidate>();
   private readonly hostStore = new HostControlsStore(() =>
     path.join(getDataRoot(), "share-hosts.json"),
@@ -227,6 +242,10 @@ export class LanShareService extends EventEmitter {
     });
     this.tunnelClient.on("streamClosed", (event) => {
       this.recordStreamDiagnostic(event);
+    });
+
+    this.tunnelClient.on("rtcOffer", (message) => {
+      void this.directHost.handleOffer(message);
     });
 
     this.tunnelClient.on("protocolError", (error) => {
@@ -773,6 +792,7 @@ export class LanShareService extends EventEmitter {
     }
 
     await this.tunnelClient.disconnect("app_shutdown", true);
+    this.directHost.closeAll("app_shutdown");
     this.proxyManager.dispose("app_shutdown");
   }
 
@@ -1242,6 +1262,7 @@ export class LanShareService extends EventEmitter {
     this.stopHeartbeat();
     this.clearReconnectTimer();
     await this.tunnelClient.disconnect("share_stopped", true);
+    this.directHost.closeAll("share_stopped");
     this.proxyManager.dispose("share_stopped");
     this.activeGatewayToken = "";
     this.activeGatewayUrl = "";

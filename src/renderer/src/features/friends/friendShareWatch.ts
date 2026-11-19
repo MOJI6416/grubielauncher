@@ -51,6 +51,7 @@ export async function checkFriendShares(): Promise<void> {
                 versionCode,
                 hostNickname: share.hostNickname,
                 slug: share.slug,
+                hostUserId: share.hostUserId,
               });
             },
           }

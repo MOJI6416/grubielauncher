@@ -1,4 +1,9 @@
-import { ShareGuestRef, ShareGuestRefusedEvent, SharePeerInfo } from '@/types/Share'
+import {
+  ShareGuestRef,
+  ShareGuestRefusedEvent,
+  SharePeerInfo,
+  ShareTransport,
+} from '@/types/Share'
 import {
   CloseStreamMessage,
   OpenStreamMessage,
@@ -21,9 +26,17 @@ interface StreamRecord {
   isClosing: boolean
   closeTimer: NodeJS.Timeout | null
   gatewayPaused: boolean
+  remotePaused: boolean
+  ownTransport: LocalProxyTransport | null
+  link: StreamLink
 }
 
-interface LocalProxyTransport {
+export interface StreamLink {
+  transport: ShareTransport
+  rttMs?: number
+}
+
+export interface LocalProxyTransport {
   sendControl: (message: StreamOpenedMessage | CloseStreamMessage) => void
   sendBinary: (streamId: number, payload: Buffer) => void
   isWritable: () => boolean
@@ -46,7 +59,10 @@ export class LocalProxyManager {
   private localPort: number | null = null
   private transport: LocalProxyTransport | null = null
   private streams = new Map<number, StreamRecord>()
-  private refused = new Map<number, NodeJS.Timeout>()
+  private refused = new Map<
+    number,
+    { timer: NodeJS.Timeout; transport: LocalProxyTransport }
+  >()
   private admission: AdmissionDecider | null = null
   private guestRefusedListener?: (event: GuestRefusedEvent) => void
   private peersChangedListener?: (peers: SharePeerInfo[]) => void
@@ -110,9 +126,13 @@ export class LocalProxyManager {
     this.streamClosedListener = listener
   }
 
-  public async openStream(message: OpenStreamMessage): Promise<void> {
-    if (!this.localPort || !this.transport) {
-      this.transport?.sendControl({
+  public async openStream(
+    message: OpenStreamMessage,
+    own?: { transport: LocalProxyTransport; link: StreamLink },
+  ): Promise<void> {
+    const transport = own?.transport ?? this.transport
+    if (!this.localPort || !transport) {
+      transport?.sendControl({
         type: 'CLOSE_STREAM',
         streamId: message.streamId,
         reason: 'local_port_unavailable',
@@ -133,7 +153,7 @@ export class LocalProxyManager {
       this.connectedGuests(),
     )
     if (refusal) {
-      this.refuseStream(message, refusal)
+      this.refuseStream(message, refusal, transport)
       return
     }
 
@@ -155,6 +175,9 @@ export class LocalProxyManager {
       isClosing: false,
       closeTimer: null,
       gatewayPaused: false,
+      remotePaused: false,
+      ownTransport: own?.transport ?? null,
+      link: own?.link ?? { transport: 'relay' },
     }
 
     this.streams.set(message.streamId, record)
@@ -170,7 +193,7 @@ export class LocalProxyManager {
         record.socket.write(initialData)
       }
 
-      this.transport?.sendControl({
+      this.transportOf(record)?.sendControl({
         type: 'STREAM_OPENED',
         streamId: message.streamId,
       })
@@ -179,14 +202,15 @@ export class LocalProxyManager {
     socket.on('data', (chunk: Buffer) => {
       if (this.streams.get(message.streamId) !== record) return
 
-      if (!this.transport?.isWritable()) {
+      const streamTransport = this.transportOf(record)
+      if (!streamTransport?.isWritable()) {
         this.closeStream(message.streamId, 'gateway_unavailable')
         return
       }
 
-      this.transport.sendBinary(message.streamId, chunk)
+      streamTransport.sendBinary(message.streamId, chunk)
 
-      if (this.transport.getBufferedAmount() > WS_HIGH_WATER_MARK && !record.gatewayPaused) {
+      if (streamTransport.getBufferedAmount() > WS_HIGH_WATER_MARK && !record.gatewayPaused) {
         record.gatewayPaused = true
         record.socket.pause()
         this.waitForGatewayDrain(record)
@@ -227,13 +251,32 @@ export class LocalProxyManager {
     }
   }
 
+  public setRemotePaused(streamId: number, paused: boolean): void {
+    const record = this.streams.get(streamId)
+    if (!record || record.isClosing) return
+    record.remotePaused = paused
+    if (paused) {
+      record.socket.pause()
+    } else if (!record.gatewayPaused) {
+      record.socket.resume()
+    }
+  }
+
+  public setStreamLink(streamId: number, link: StreamLink): void {
+    const record = this.streams.get(streamId)
+    if (!record) return
+    if (record.link.transport === link.transport && record.link.rttMs === link.rttMs) return
+    record.link = link
+    this.emitPeersChanged()
+  }
+
   public closeStream(streamId: number, reason: string, notifyGateway = true): void {
-    const refusedTimer = this.refused.get(streamId)
-    if (refusedTimer) {
-      clearTimeout(refusedTimer)
+    const refusedEntry = this.refused.get(streamId)
+    if (refusedEntry) {
+      clearTimeout(refusedEntry.timer)
       this.refused.delete(streamId)
-      if (notifyGateway && this.transport?.isWritable()) {
-        this.transport.sendControl({ type: 'CLOSE_STREAM', streamId, reason })
+      if (notifyGateway && refusedEntry.transport.isWritable()) {
+        refusedEntry.transport.sendControl({ type: 'CLOSE_STREAM', streamId, reason })
       }
       return
     }
@@ -261,8 +304,9 @@ export class LocalProxyManager {
       at: new Date().toISOString(),
     })
 
-    if (notifyGateway && this.transport?.isWritable()) {
-      this.transport.sendControl({
+    const streamTransport = this.transportOf(record)
+    if (notifyGateway && streamTransport?.isWritable()) {
+      streamTransport.sendControl({
         type: 'CLOSE_STREAM',
         streamId,
         reason,
@@ -279,27 +323,41 @@ export class LocalProxyManager {
     }
   }
 
-  private refuseStream(message: OpenStreamMessage, reason: GuestRefusal): void {
-    const transport = this.transport
-    if (!transport) return
+  public disposeRelayed(reason: string): void {
+    for (const [streamId, entry] of [...this.refused.entries()]) {
+      if (entry.transport === this.transport) this.closeStream(streamId, reason)
+    }
+    for (const [streamId, record] of [...this.streams.entries()]) {
+      if (!record.ownTransport) this.closeStream(streamId, reason)
+    }
+  }
 
+  private transportOf(record: StreamRecord): LocalProxyTransport | null {
+    return record.ownTransport ?? this.transport
+  }
+
+  private refuseStream(
+    message: OpenStreamMessage,
+    reason: GuestRefusal,
+    transport: LocalProxyTransport,
+  ): void {
     const { streamId } = message
     transport.sendControl({ type: 'STREAM_OPENED', streamId })
     transport.sendBinary(streamId, encodeLoginDisconnect(reason))
 
-    this.refused.set(
-      streamId,
-      setTimeout(() => {
+    this.refused.set(streamId, {
+      transport,
+      timer: setTimeout(() => {
         this.refused.delete(streamId)
-        if (this.transport?.isWritable()) {
-          this.transport.sendControl({
+        if (transport.isWritable()) {
+          transport.sendControl({
             type: 'CLOSE_STREAM',
             streamId,
             reason: `guest_${reason}`,
           })
         }
       }, REFUSED_CLOSE_DELAY_MS),
-    )
+    })
 
     this.guestRefusedListener?.({
       streamId,
@@ -323,18 +381,21 @@ export class LocalProxyManager {
           connectedAt: record.connectedAt,
           guestUserId: record.guestUserId,
           guestUsername: record.guestUsername,
+          transport: record.link.transport,
+          rttMs: record.link.rttMs,
         })),
     )
   }
 
   private waitForGatewayDrain(record: StreamRecord): void {
     const check = () => {
-      if (!this.transport) return
+      const streamTransport = this.transportOf(record)
+      if (!streamTransport) return
       if (this.streams.get(record.streamId) !== record) return
 
-      if (this.transport.getBufferedAmount() <= WS_HIGH_WATER_MARK / 2) {
+      if (streamTransport.getBufferedAmount() <= WS_HIGH_WATER_MARK / 2) {
         record.gatewayPaused = false
-        record.socket.resume()
+        if (!record.remotePaused) record.socket.resume()
         return
       }
 

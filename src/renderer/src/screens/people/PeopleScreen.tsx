@@ -112,6 +112,10 @@ import { useFriendCode } from "@renderer/features/friends/useFriendCode";
 import { useFriendsRealtime } from "@renderer/features/friends/useFriendsRealtime";
 import { useGameInvite } from "@renderer/features/friends/useGameInvite";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import type { MsFriend, MsFriendsError } from "@/shared/msFriends";
+import { useMsFriends } from "@renderer/features/friends/useMsFriends";
+import { listMsFriends } from "@renderer/features/friends/msFriendsModel";
+import { shareGuestLinksAtom } from "@renderer/features/share/guestLinks";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
@@ -149,6 +153,9 @@ export function PeopleScreen({
   const activeShares = useAtomValue(activeFriendSharesAtom);
   const ownPresence = useAtomValue(ownPresenceAtom);
   const shareState = useAtomValue(shareStateAtom);
+  const guestLinks = useAtomValue(shareGuestLinksAtom);
+  const msFriends = useMsFriends(account);
+  const [msRemoveTarget, setMsRemoveTarget] = useState<MsFriend | null>(null);
   const shareOwnerAccountKey = useAtomValue(shareOwnerAccountKeyAtom);
   const groups = useAtomValue(groupsAtom);
   const groupInvites = useAtomValue(groupInvitesAtom);
@@ -175,6 +182,13 @@ export function PeopleScreen({
   const [query, setQuery] = useState("");
   const [lookupValue, setLookupValue] = useState("");
   const [removeTargetId, setRemoveTargetId] = useState<string | null>(null);
+  const reportMsFailure = useCallback(
+    (error: MsFriendsError | null) => {
+      if (error) toast.error(t(`friends.microsoft.errors.${error}`));
+      return !error;
+    },
+    [t],
+  );
   const [skinView, setSkinView] = useState<{
     nickname: string;
     data: ISkinData;
@@ -440,6 +454,7 @@ export function PeopleScreen({
       void joinFriendWorld({
         versionCode,
         hostNickname: entry.friend.user.nickname,
+        hostUserId: friendId,
         slug: entry.share?.slug,
         address: entry.friend.serverAddress || undefined,
       });
@@ -649,7 +664,19 @@ export function PeopleScreen({
     isConnected,
   });
 
-  const requestsBadge = incoming.length + groupInvites.length;
+  const msVisible = useMemo(
+    () =>
+      listMsFriends(
+        msFriends.snapshot?.friends ?? [],
+        friends,
+        query,
+        prefs.filter,
+      ),
+    [msFriends.snapshot, friends, query, prefs.filter],
+  );
+  const msIncomingCount = msFriends.snapshot?.incoming.length ?? 0;
+  const requestsBadge =
+    incoming.length + groupInvites.length + msIncomingCount;
 
   const tabs: Array<{ id: PeopleSection; label: string; badge?: number }> = [
     { id: "friends", label: t("friends.title") },
@@ -739,6 +766,30 @@ export function PeopleScreen({
               onResetCode={friendCode.reset}
               onToggleRequests={friendCode.setRequestsEnabled}
               onViewProfile={handleViewProfile}
+              ms={
+                msFriends.isAvailable
+                  ? {
+                      incoming: msFriends.snapshot?.incoming ?? [],
+                      outgoing: msFriends.snapshot?.outgoing ?? [],
+                      pending: msFriends.pending,
+                      onAccept: (profileId) =>
+                        void msFriends
+                          .act("accept", { profileId })
+                          .then(reportMsFailure),
+                      onRemove: (profileId) =>
+                        void msFriends
+                          .act("remove", { profileId })
+                          .then(reportMsFailure),
+                      onSend: async (name) => {
+                        const ok = reportMsFailure(
+                          await msFriends.act("add", { name }),
+                        );
+                        if (ok) toast.success(t("friends.microsoft.sent", { name }));
+                        return ok;
+                      },
+                    }
+                  : undefined
+              }
               t={t}
             />
           ) : section === "groups" ? (
@@ -781,7 +832,9 @@ export function PeopleScreen({
             </>
           ) : (
             <>
-              {(friends.length > 0 || realtime.isInitialLoading) && (
+              {(friends.length > 0 ||
+                realtime.isInitialLoading ||
+                msVisible.length > 0) && (
                 <FriendsListPanel
                   list={list}
                   query={query}
@@ -815,6 +868,10 @@ export function PeopleScreen({
                   onToggleMute={(id) => void handleToggleMute(id)}
                   onCopyNickname={handleCopyNickname}
                   onRemove={setRemoveTargetId}
+                  msFriends={msVisible}
+                  guestLinks={guestLinks}
+                  onCopyMsNickname={(name) => void copyWithFeedback(name)}
+                  onRemoveMsFriend={setMsRemoveTarget}
                   t={t}
                 />
               )}
@@ -941,6 +998,43 @@ export function PeopleScreen({
             },
           ]}
           onClose={() => setRemoveTargetId(null)}
+        />
+      )}
+
+      {msRemoveTarget && (
+        <Confirmation
+          title={t("friends.microsoft.removeQuestion", {
+            nickname: msRemoveTarget.name,
+          })}
+          content={[
+            {
+              text: t("friends.microsoft.removeAlert", {
+                nickname: msRemoveTarget.name,
+              }),
+            },
+          ]}
+          buttons={[
+            {
+              text: t("common.cancel"),
+              color: "secondary",
+              onClick: () => setMsRemoveTarget(null),
+            },
+            {
+              text: t("friends.deleteAction"),
+              color: "danger",
+              loading: msFriends.pending.includes(msRemoveTarget.profileId),
+              onClick: () => {
+                const target = msRemoveTarget;
+                void msFriends
+                  .act("remove", { profileId: target.profileId })
+                  .then((error) => {
+                    reportMsFailure(error);
+                    setMsRemoveTarget(null);
+                  });
+              },
+            },
+          ]}
+          onClose={() => setMsRemoveTarget(null)}
         />
       )}
 

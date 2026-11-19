@@ -682,7 +682,38 @@
     "resetFriendCodeTitle": "Zresetować kod znajomego?",
     "chatExternalLinkQuestion": "Otworzyć link zewnętrzny?",
     "chatDeleteMessageQuestion": "Usunąć wiadomość?",
-    "deleteQuestion": "Usunąć {{nickname}} ze znajomych?"
+    "deleteQuestion": "Usunąć {{nickname}} ze znajomych?",
+    "microsoft": {
+      "section": "Znajomi Microsoft",
+      "status": {
+        "singleplayer": "Gra · jeden gracz",
+        "server": "Gra · na serwerze",
+        "realms": "Gra · Realms",
+        "hosted": "Gra · otwarty świat",
+        "unknown": "Status nieznany"
+      },
+      "remove": "Usuń ze znajomych Microsoft",
+      "removeQuestion": "Usunąć {{nickname}} ze znajomych Microsoft?",
+      "removeAlert": "{{nickname}} zniknie z twoich znajomych Minecraft na wszystkich urządzeniach. Zaproszenie można wysłać ponownie.",
+      "wantsToBeFriend": "Zaproszenie do znajomych Minecraft",
+      "requestSent": "Zaproszenie Minecraft wysłane",
+      "incoming": "Zaproszenia Microsoft",
+      "outgoing": "Wysłane do Microsoft",
+      "addTitle": "Znajomy w Minecraft",
+      "addHint": "Zaproszenie pójdzie przez Microsoft: znajomy zobaczy je w Minecraft 26.2 lub nowszym albo w swoim launcherze.",
+      "namePlaceholder": "Nick w Minecraft",
+      "sent": "Wysłano zaproszenie do {{name}}",
+      "errors": {
+        "not_microsoft": "Znajomi Microsoft wymagają konta Microsoft",
+        "expired": "Logowanie Microsoft wygasło — zaloguj się na konto ponownie",
+        "forbidden": "Microsoft nie pozwala na znajomych na tym koncie — sprawdź ustawienia prywatności Xbox",
+        "rate_limited": "Microsoft prosi o chwilę cierpliwości — spróbuj ponownie za minutę",
+        "unavailable": "Usługa znajomych Microsoft nie odpowiada — spróbuj później",
+        "unknown_profile": "Nie ma gracza Minecraft o tym nicku",
+        "cannot_add_self": "Nie możesz dodać samego siebie",
+        "invalid": "Microsoft nie przyjął zaproszenia"
+      }
+    }
   },
   "modManager": {
     "title": "Menedżer modów",
@@ -2225,6 +2256,11 @@
         "title": "Wspólne ustawienia gry",
         "description": "Te same klawisze, grafika, serwery i paczki zasobów w każdej instancji",
         "keywords": "options.txt sterowanie klawisze grafika dźwięk serwery paczki zasobów paski polecenia profil szablon synchronizacja wspólne"
+      },
+      "directConnect": {
+        "title": "Połączenie bezpośrednie (P2P)",
+        "description": "Graj ze znajomymi bezpośrednio, z pominięciem serwera Grubie",
+        "keywords": "p2p połączenie bezpośrednie graj razem ping ip webrtc przekaźnik"
       }
     },
     "voicePttCaptureTimeout": "Nie naciśnięto żadnego klawisza — skrót się nie zmienił.",
@@ -2293,7 +2329,9 @@
       "folderDescriptionEmpty": "Przechowywane na tym komputerze",
       "historyTitle": "Wysłane raporty"
     },
-    "resetAllDone": "Przywrócono ustawienia domyślne"
+    "resetAllDone": "Przywrócono ustawienia domyślne",
+    "directConnect": "Bezpośrednie połączenie ze znajomymi",
+    "directConnectDescription": "„Graj razem” idzie bezpośrednio między tobą a znajomym, z pominięciem serwera Grubie, więc ping jest niższy. Znajomy poznaje twój adres IP. Nie działa w trybie streamera ani w światach otwartych dla wszystkich."
   },
   "skinView": {
     "title": "Podgląd skina",
@@ -3328,6 +3366,14 @@
       "full": "{{name}} nie mógł wejść: wszystkie miejsca są zajęte.",
       "not_invited": "{{name}} nie ma na liście zaproszonych — wejście zablokowane.",
       "removed": "{{name}} próbował wrócić, ale go usunąłeś."
+    },
+    "transport": {
+      "direct": "P2P",
+      "turn": "TURN",
+      "relay": "Przez serwer",
+      "directHint": "Bezpośrednie połączenie ze znajomym, z pominięciem serwera Grubie",
+      "turnHint": "Przez serwer TURN Grubie: nie udało się połączyć bezpośrednio",
+      "relayHint": "Przez serwer Grubie: połączenie bezpośrednie jest niedostępne lub wyłączone"
     }
   },
   "manageSkins": {

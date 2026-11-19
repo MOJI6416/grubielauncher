@@ -11,6 +11,7 @@ import {
 } from "./guests";
 import { canKickGuest, removedGuestName } from "./hostModel";
 import { elapsedSince, formatShareUptime } from "./shareModel";
+import { TransportBadge } from "./TransportBadge";
 
 export function ShareGuestList({
   rows,
@@ -74,6 +75,13 @@ export function ShareGuestList({
                 </span>
               </Hint>
             )}
+
+            <TransportBadge
+              transport={row.transport}
+              rttMs={row.rttMs}
+              t={t}
+              className="text-xs"
+            />
 
             <Hint content={t("share.panel.guests.connectedFor")}>
               <span className="shrink-0 font-mono text-xs whitespace-nowrap tabular-nums text-faint">

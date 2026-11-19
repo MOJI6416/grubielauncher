@@ -18,4 +18,5 @@ export interface JoinFriendWorldParams {
   hostNickname: string;
   slug?: string;
   address?: string;
+  hostUserId?: string;
 }

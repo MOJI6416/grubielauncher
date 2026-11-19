@@ -11,6 +11,7 @@ import {
 } from "@renderer/stores/atoms";
 import { openNewInstance } from "@renderer/features/instances/newInstance";
 import { showErrorToast } from "@renderer/utilities/errorToast";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import {
   showFailureToast,
   reportIpcFailure,
@@ -208,6 +209,14 @@ export async function joinFriendWorld(
       }
 
       address = result.data.connectHost;
+      const link = await api.share
+        .openGuestLink({
+          slug: params.slug,
+          connectHost: address,
+          hostUserId: params.hostUserId,
+        })
+        .catch(ignoreFailure);
+      if (link?.address) address = link.address;
     }
 
     if (!address) {

@@ -15,7 +15,11 @@ import {
 import { Hint } from "@renderer/components/Hint";
 import { SegmentedControl } from "@renderer/components/SegmentedControl";
 import { SortMenu } from "@renderer/components/SortMenu";
+import type { MsFriend } from "@/shared/msFriends";
+import type { ShareGuestLink } from "@/types/Share";
 import { FriendRow, type FriendRowActions } from "./FriendRow";
+import { MsFriendRow } from "./MsFriendRow";
+import { linkForHost } from "@renderer/features/share/guestLinks";
 import {
   nextFriendIndex,
   steadyRows,
@@ -56,8 +60,17 @@ interface FriendsListPanelProps extends FriendRowActions {
   onFilterChange: (value: FriendFilter) => void;
   onSortChange: (value: FriendSort) => void;
   onAddFriend: () => void;
+  msFriends: MsFriend[];
+  guestLinks: ShareGuestLink[];
+  onCopyMsNickname: (name: string) => void;
+  onRemoveMsFriend: (friend: MsFriend) => void;
   t: TFunction;
 }
+
+type PanelRow =
+  | FriendListResult["rows"][number]
+  | { type: "msSection"; key: string; count: number }
+  | { type: "ms"; key: string; friend: MsFriend };
 
 function useSteadyRows(rows: FriendListResult["rows"]) {
   const [isFrozen, setIsFrozen] = useState(false);
@@ -92,6 +105,10 @@ export function FriendsListPanel({
   onFilterChange,
   onSortChange,
   onAddFriend,
+  msFriends,
+  guestLinks,
+  onCopyMsNickname,
+  onRemoveMsFriend,
   t,
   ...actions
 }: FriendsListPanelProps) {
@@ -101,13 +118,32 @@ export function FriendsListPanel({
   const { rows, freeze, thaw } = useSteadyRows(list.rows);
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
+  const panelRows = useMemo<PanelRow[]>(
+    () =>
+      msFriends.length === 0
+        ? rows
+        : [
+            ...rows,
+            { type: "msSection", key: "ms-section", count: msFriends.length },
+            ...msFriends.map((friend) => ({
+              type: "ms" as const,
+              key: `ms:${friend.profileId}`,
+              friend,
+            })),
+          ],
+    [rows, msFriends],
+  );
 
   const virtualizer = useVirtualizer({
-    count: rows.length,
+    count: panelRows.length,
     getScrollElement: () => scrollElement,
-    getItemKey: (index) => rows[index]?.key ?? index,
-    estimateSize: (index) =>
-      rows[index]?.type === "section" ? SECTION_HEIGHT : ROW_HEIGHT,
+    getItemKey: (index) => panelRows[index]?.key ?? index,
+    estimateSize: (index) => {
+      const type = panelRows[index]?.type;
+      return type === "section" || type === "msSection"
+        ? SECTION_HEIGHT
+        : ROW_HEIGHT;
+    },
     overscan: 6,
   });
 
@@ -235,7 +271,7 @@ export function FriendsListPanel({
             </div>
           ))}
         </div>
-      ) : rows.length === 0 ? (
+      ) : panelRows.length === 0 ? (
         <Empty className="min-h-0 gap-3 px-4">
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -269,7 +305,7 @@ export function FriendsListPanel({
             style={{ height: `${virtualizer.getTotalSize()}px` }}
           >
             {virtualItems.map((item) => {
-              const row = rows[item.index];
+              const row = panelRows[item.index];
               if (!row) return null;
 
               return (
@@ -280,13 +316,22 @@ export function FriendsListPanel({
                   className="absolute inset-x-0 top-0"
                   style={{ transform: `translateY(${item.start}px)` }}
                 >
-                  {row.type === "section" ? (
+                  {row.type === "section" || row.type === "msSection" ? (
                     <p className="flex h-6 items-center gap-1.5 px-2 text-3xs font-medium tracking-wide text-faint uppercase">
-                      {t(SECTION_LABEL[row.kind])}
+                      {row.type === "section"
+                        ? t(SECTION_LABEL[row.kind])
+                        : t("friends.microsoft.section")}
                       <span className="font-mono tabular-nums">
                         {row.count}
                       </span>
                     </p>
+                  ) : row.type === "ms" ? (
+                    <MsFriendRow
+                      friend={row.friend}
+                      t={t}
+                      onCopyNickname={onCopyMsNickname}
+                      onRemove={onRemoveMsFriend}
+                    />
                   ) : (
                     <FriendRow
                       entry={row.entry}
@@ -295,6 +340,7 @@ export function FriendsListPanel({
                       isCallBusy={isCallBusy}
                       ownUserId={ownUserId}
                       voiceRoomId={voiceRoomId}
+                      guestLink={linkForHost(guestLinks, row.entry.friend.user._id)}
                       t={t}
                       {...actions}
                     />

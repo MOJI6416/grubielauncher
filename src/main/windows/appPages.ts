@@ -4,6 +4,7 @@ export const APP_PAGE_HOSTS = [
   "overlay",
   "updater",
   "setup",
+  "rtc",
 ] as const;
 
 export type AppPageHost = (typeof APP_PAGE_HOSTS)[number];

@@ -680,7 +680,38 @@
     "resetFriendCodeTitle": "Reset your friend code?",
     "chatExternalLinkQuestion": "Open the external link?",
     "chatDeleteMessageQuestion": "Delete the message?",
-    "deleteQuestion": "Remove {{nickname}} from friends?"
+    "deleteQuestion": "Remove {{nickname}} from friends?",
+    "microsoft": {
+      "section": "Microsoft friends",
+      "status": {
+        "singleplayer": "Playing · singleplayer",
+        "server": "Playing · on a server",
+        "realms": "Playing · Realms",
+        "hosted": "Playing · open world",
+        "unknown": "Status unknown"
+      },
+      "remove": "Remove from Microsoft friends",
+      "removeQuestion": "Remove {{nickname}} from Microsoft friends?",
+      "removeAlert": "{{nickname}} will disappear from your Minecraft friends on every device. You can send a request again later.",
+      "wantsToBeFriend": "Minecraft friend request",
+      "requestSent": "Minecraft request sent",
+      "incoming": "Microsoft requests",
+      "outgoing": "Sent to Microsoft",
+      "addTitle": "Minecraft friend",
+      "addHint": "The request goes through Microsoft: your friend sees it in Minecraft 26.2 or later, or in their own launcher.",
+      "namePlaceholder": "Minecraft name",
+      "sent": "Request sent to {{name}}",
+      "errors": {
+        "not_microsoft": "Microsoft friends need a Microsoft account",
+        "expired": "Your Microsoft sign-in has expired — sign in to the account again",
+        "forbidden": "Microsoft does not allow friends for this account — check the Xbox privacy settings",
+        "rate_limited": "Microsoft asks to wait — try again in a minute",
+        "unavailable": "The Microsoft friends service is not responding — try again later",
+        "unknown_profile": "There is no Minecraft player with that name",
+        "cannot_add_self": "You cannot add yourself",
+        "invalid": "Microsoft did not accept the request"
+      }
+    }
   },
   "modManager": {
     "title": "Mod Manager",
@@ -2189,6 +2220,11 @@
         "title": "Shared game settings",
         "description": "The same keys, graphics, servers and resource packs in every instance",
         "keywords": "options.txt controls keys keybinds graphics sound servers resource packs hotbars commands profile template sync shared"
+      },
+      "directConnect": {
+        "title": "Direct connection (P2P)",
+        "description": "Play with friends directly, bypassing the Grubie server",
+        "keywords": "p2p direct connection play together ping ip webrtc relay"
       }
     },
     "voicePttCaptureTimeout": "No key was pressed — the shortcut is unchanged.",
@@ -2257,7 +2293,9 @@
       "folderDescriptionEmpty": "Stored on this computer",
       "historyTitle": "Sent reports"
     },
-    "resetAllDone": "Settings reset to defaults"
+    "resetAllDone": "Settings reset to defaults",
+    "directConnect": "Direct connection with friends",
+    "directConnectDescription": "Play Together goes straight between you and your friend, bypassing the Grubie server, so the ping is lower. Your friend learns your IP address. Not used in streamer mode or in worlds open to everyone."
   },
   "skinView": {
     "title": "Skin preview",
@@ -3274,6 +3312,14 @@
       "full": "{{name}} could not join: all seats are taken.",
       "not_invited": "{{name}} is not on the invite list and was kept out.",
       "removed": "{{name}} tried to come back, but you removed them."
+    },
+    "transport": {
+      "direct": "P2P",
+      "turn": "TURN",
+      "relay": "Via server",
+      "directHint": "Direct connection to your friend, bypassing the Grubie server",
+      "turnHint": "Through the Grubie TURN server: a direct connection could not be made",
+      "relayHint": "Through the Grubie server: a direct connection is unavailable or turned off"
     }
   },
   "manageSkins": {

@@ -17,6 +17,24 @@ function peer(patch: Partial<SharePeerInfo> & { streamId: number }): SharePeerIn
 }
 
 describe("buildGuestRows", () => {
+  it("shows the best path a guest has and its ping", () => {
+    const rows = buildGuestRows(
+      [
+        peer({ streamId: 1, guestUserId: "u1", transport: "relay" }),
+        peer({ streamId: 2 ** 40, guestUserId: "u1", transport: "direct", rttMs: 18 }),
+      ],
+      new Map(),
+    );
+
+    expect(rows[0]).toMatchObject({ transport: "direct", rttMs: 18 });
+  });
+
+  it("treats a stream from an older launcher as relayed", () => {
+    const rows = buildGuestRows([peer({ streamId: 1, guestUserId: "u1" })], new Map());
+    expect(rows[0].transport).toBe("relay");
+    expect(rows[0].rttMs).toBeUndefined();
+  });
+
   it("collapses several streams of one guest into a single row", () => {
     const rows = buildGuestRows(
       [

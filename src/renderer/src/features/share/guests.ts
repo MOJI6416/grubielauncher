@@ -1,4 +1,4 @@
-import type { SharePeerInfo } from "@/types/Share";
+import type { SharePeerInfo, ShareTransport } from "@/types/Share";
 
 export interface ShareGuestRow {
   key: string;
@@ -8,7 +8,15 @@ export interface ShareGuestRow {
   connections: number;
   connectedAt: string;
   isKnown: boolean;
+  transport: ShareTransport;
+  rttMs?: number;
 }
+
+const TRANSPORT_RANK: Record<ShareTransport, number> = {
+  direct: 0,
+  turn: 1,
+  relay: 2,
+};
 
 function guestKey(peer: SharePeerInfo): string {
   if (peer.guestUserId) return `user:${peer.guestUserId}`;
@@ -43,6 +51,13 @@ export function buildGuestRows(
       existing.accountName = existing.accountName || accountName;
       existing.gameName = existing.gameName || peer.guestUsername;
       existing.isKnown = existing.isKnown || !!accountName;
+      const transport = peer.transport ?? "relay";
+      if (TRANSPORT_RANK[transport] < TRANSPORT_RANK[existing.transport]) {
+        existing.transport = transport;
+        existing.rttMs = peer.rttMs;
+      } else if (transport === existing.transport) {
+        existing.rttMs = existing.rttMs ?? peer.rttMs;
+      }
       continue;
     }
 
@@ -54,6 +69,8 @@ export function buildGuestRows(
       connections: 1,
       connectedAt: peer.connectedAt,
       isKnown: !!accountName,
+      transport: peer.transport ?? "relay",
+      rttMs: peer.rttMs,
     });
   }
 

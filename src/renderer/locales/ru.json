@@ -682,7 +682,38 @@
     "resetFriendCodeTitle": "Сбросить код друга?",
     "chatExternalLinkQuestion": "Открыть внешнюю ссылку?",
     "chatDeleteMessageQuestion": "Удалить сообщение?",
-    "deleteQuestion": "Удалить {{nickname}} из друзей?"
+    "deleteQuestion": "Удалить {{nickname}} из друзей?",
+    "microsoft": {
+      "section": "Друзья Microsoft",
+      "status": {
+        "singleplayer": "Играет · одиночная игра",
+        "server": "Играет · на сервере",
+        "realms": "Играет · Realms",
+        "hosted": "Играет · открытый мир",
+        "unknown": "Статус неизвестен"
+      },
+      "remove": "Удалить из друзей Microsoft",
+      "removeQuestion": "Удалить {{nickname}} из друзей Microsoft?",
+      "removeAlert": "{{nickname}} пропадёт из списка друзей Minecraft на всех устройствах. Заявку можно будет отправить снова.",
+      "wantsToBeFriend": "Заявка в друзья Minecraft",
+      "requestSent": "Заявка в Minecraft отправлена",
+      "incoming": "Заявки Microsoft",
+      "outgoing": "Отправлены в Microsoft",
+      "addTitle": "Друг в Minecraft",
+      "addHint": "Заявка уйдёт через Microsoft: друг увидит её в Minecraft 26.2 и новее или в своём лаунчере.",
+      "namePlaceholder": "Ник в Minecraft",
+      "sent": "Заявка для {{name}} отправлена",
+      "errors": {
+        "not_microsoft": "Друзья Microsoft доступны только с аккаунтом Microsoft",
+        "expired": "Вход Microsoft устарел — войдите в аккаунт заново",
+        "forbidden": "Microsoft не разрешает друзей этому аккаунту — проверьте настройки приватности Xbox",
+        "rate_limited": "Microsoft просит подождать — повторите через минуту",
+        "unavailable": "Сервис друзей Microsoft не отвечает — повторите позже",
+        "unknown_profile": "Такого игрока Minecraft нет",
+        "cannot_add_self": "Себя добавить нельзя",
+        "invalid": "Microsoft не принял заявку"
+      }
+    }
   },
   "modManager": {
     "title": "Мод-менеджер",
@@ -2219,6 +2250,11 @@
         "title": "Общие настройки игры",
         "description": "Одни клавиши, графика, серверы и ресурспаки во всех сборках",
         "keywords": "options.txt управление клавиши графика звук серверы ресурспаки хотбары команды профиль шаблон синхронизация общие"
+      },
+      "directConnect": {
+        "title": "Прямое соединение (P2P)",
+        "description": "Играть с друзьями напрямую, мимо сервера Grubie",
+        "keywords": "p2p прямое соединение играть вместе пинг ip webrtc релей"
       }
     },
     "voicePttCaptureTimeout": "Клавиша не нажата — сочетание осталось прежним.",
@@ -2287,7 +2323,9 @@
       "folderDescriptionEmpty": "Хранятся на этом компьютере",
       "historyTitle": "Отправленные отчёты"
     },
-    "resetAllDone": "Настройки возвращены к значениям по умолчанию"
+    "resetAllDone": "Настройки возвращены к значениям по умолчанию",
+    "directConnect": "Прямое соединение с друзьями",
+    "directConnectDescription": "«Играть вместе» идёт напрямую между вами и другом, мимо сервера Grubie, и пинг ниже. Друг узнаёт ваш IP-адрес. В режиме стримера и в мирах, открытых для всех, не используется."
   },
   "skinView": {
     "title": "Просмотр скина",
@@ -3317,6 +3355,14 @@
       "full": "{{name}} не смог зайти: все места заняты.",
       "not_invited": "{{name}} не в списке приглашённых — вход закрыт.",
       "removed": "{{name}} пытался вернуться, но вы его убрали."
+    },
+    "transport": {
+      "direct": "P2P",
+      "turn": "TURN",
+      "relay": "Через сервер",
+      "directHint": "Прямое соединение с другом, мимо сервера Grubie",
+      "turnHint": "Через TURN-сервер Grubie: напрямую соединиться не удалось",
+      "relayHint": "Через сервер Grubie: прямое соединение недоступно или выключено"
     }
   },
   "manageSkins": {

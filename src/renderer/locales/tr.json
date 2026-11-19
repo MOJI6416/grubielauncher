@@ -680,7 +680,38 @@
     "resetFriendCodeTitle": "Arkadaş kodu sıfırlansın mı?",
     "chatExternalLinkQuestion": "Harici bağlantı açılsın mı?",
     "chatDeleteMessageQuestion": "Mesaj silinsin mi?",
-    "deleteQuestion": "{{nickname}} arkadaşlardan çıkarılsın mı?"
+    "deleteQuestion": "{{nickname}} arkadaşlardan çıkarılsın mı?",
+    "microsoft": {
+      "section": "Microsoft arkadaşları",
+      "status": {
+        "singleplayer": "Oynuyor · tek oyunculu",
+        "server": "Oynuyor · sunucuda",
+        "realms": "Oynuyor · Realms",
+        "hosted": "Oynuyor · açık dünya",
+        "unknown": "Durum bilinmiyor"
+      },
+      "remove": "Microsoft arkadaşlarından çıkar",
+      "removeQuestion": "{{nickname}} Microsoft arkadaşlarından çıkarılsın mı?",
+      "removeAlert": "{{nickname}} tüm cihazlarda Minecraft arkadaşlarından kaybolacak. Daha sonra yeniden istek gönderebilirsin.",
+      "wantsToBeFriend": "Minecraft arkadaşlık isteği",
+      "requestSent": "Minecraft isteği gönderildi",
+      "incoming": "Microsoft istekleri",
+      "outgoing": "Microsoft'a gönderilenler",
+      "addTitle": "Minecraft'ta arkadaş",
+      "addHint": "İstek Microsoft üzerinden gider: arkadaşın onu Minecraft 26.2 veya üstünde ya da kendi başlatıcısında görür.",
+      "namePlaceholder": "Minecraft adı",
+      "sent": "{{name}} kişisine istek gönderildi",
+      "errors": {
+        "not_microsoft": "Microsoft arkadaşları için Microsoft hesabı gerekir",
+        "expired": "Microsoft oturumunun süresi doldu — hesaba yeniden giriş yap",
+        "forbidden": "Microsoft bu hesap için arkadaşlığa izin vermiyor — Xbox gizlilik ayarlarını kontrol et",
+        "rate_limited": "Microsoft beklemeni istiyor — bir dakika sonra yeniden dene",
+        "unavailable": "Microsoft arkadaş hizmeti yanıt vermiyor — daha sonra yeniden dene",
+        "unknown_profile": "Bu adda bir Minecraft oyuncusu yok",
+        "cannot_add_self": "Kendini ekleyemezsin",
+        "invalid": "Microsoft isteği kabul etmedi"
+      }
+    }
   },
   "modManager": {
     "title": "Mod yöneticisi",
@@ -2189,6 +2220,11 @@
         "title": "Ortak oyun ayarları",
         "description": "Her kurulumda aynı tuşlar, grafikler, sunucular ve kaynak paketleri",
         "keywords": "options.txt kontroller tuşlar grafik ses sunucular kaynak paketleri hızlı erişim komutlar profil şablon senkronizasyon ortak"
+      },
+      "directConnect": {
+        "title": "Doğrudan bağlantı (P2P)",
+        "description": "Arkadaşlarla Grubie sunucusunu atlayarak doğrudan oyna",
+        "keywords": "p2p doğrudan bağlantı birlikte oyna ping ip webrtc röle"
       }
     },
     "voicePttCaptureTimeout": "Hiçbir tuşa basılmadı — kısayol değişmedi.",
@@ -2257,7 +2293,9 @@
       "folderDescriptionEmpty": "Bu bilgisayarda saklanır",
       "historyTitle": "Gönderilen raporlar"
     },
-    "resetAllDone": "Ayarlar varsayılana sıfırlandı"
+    "resetAllDone": "Ayarlar varsayılana sıfırlandı",
+    "directConnect": "Arkadaşlarla doğrudan bağlantı",
+    "directConnectDescription": "«Birlikte oyna» sen ve arkadaşın arasında Grubie sunucusunu atlayarak doğrudan gider, ping daha düşük olur. Arkadaşın IP adresini öğrenir. Yayıncı modunda ve herkese açık dünyalarda kullanılmaz."
   },
   "skinView": {
     "title": "Skin önizlemesi",
@@ -3274,6 +3312,14 @@
       "full": "{{name}} katılamadı: tüm yerler dolu.",
       "not_invited": "{{name}} davet listesinde değil, giriş engellendi.",
       "removed": "{{name}} geri dönmeye çalıştı ama onu çıkardınız."
+    },
+    "transport": {
+      "direct": "P2P",
+      "turn": "TURN",
+      "relay": "Sunucu üzerinden",
+      "directHint": "Arkadaşınla doğrudan bağlantı, Grubie sunucusunu atlayarak",
+      "turnHint": "Grubie TURN sunucusu üzerinden: doğrudan bağlantı kurulamadı",
+      "relayHint": "Grubie sunucusu üzerinden: doğrudan bağlantı kullanılamıyor veya kapalı"
     }
   },
   "manageSkins": {

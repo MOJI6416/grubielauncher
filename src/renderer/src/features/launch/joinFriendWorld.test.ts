@@ -9,6 +9,7 @@ const connectToFriendShare = vi.fn(async () => ({
   ok: true,
   data: { connectHost: "share.grubielauncher.com:25565" },
 }));
+const openGuestLink = vi.fn(async (..._args: unknown[]) => null as unknown);
 const serversWrite = vi.fn(async () => true);
 const showFailureToastMock = vi.fn();
 const openNewInstanceMock = vi.fn();
@@ -31,7 +32,7 @@ beforeAll(() => {
     api: {
       path: { join: async (...parts: string[]) => parts.join("/") },
       servers: { read: async () => [], write: serversWrite },
-      share: { connectToFriendShare },
+      share: { connectToFriendShare, openGuestLink },
       backend: {
         getModpack: async () => ({
           status: "ok",
@@ -140,6 +141,62 @@ async function load() {
 
   return { joinFriendWorld, atoms, launchAtoms, store: getDefaultStore() };
 }
+
+describe("joinFriendWorld transport", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    serversWrite.mockResolvedValue(true);
+    readInstanceServersMock.mockResolvedValue([]);
+    checkBlockedModsMock.mockResolvedValue({ blockedMods: [], mods: [] });
+  });
+
+  async function joinUpToDatePack(hostUserId?: string) {
+    const { joinFriendWorld, atoms, store } = await load();
+    const friendPack = fakeInstance("Friend Pack", "SHARE-1");
+    friendPack.version.build = 7;
+    store.set(atoms.versionsAtom, [friendPack] as never);
+    store.set(atoms.accountAtom, { accessToken: "token" } as never);
+    store.set(atoms.consolesAtom, { consoles: [] });
+
+    await joinFriendWorld({
+      versionCode: "SHARE-1",
+      hostNickname: "Kituk",
+      slug: "abc",
+      hostUserId,
+    });
+  }
+
+  it("launches into the direct link when the launcher built one", async () => {
+    openGuestLink.mockResolvedValueOnce({
+      slug: "abc",
+      address: "127.0.0.1:50123",
+      transport: "direct",
+      state: "connected",
+      updatedAt: "",
+    });
+
+    await joinUpToDatePack("64a1b2c3d4e5f60718293a4b");
+
+    expect(openGuestLink).toHaveBeenCalledWith({
+      slug: "abc",
+      connectHost: "share.grubielauncher.com:25565",
+      hostUserId: "64a1b2c3d4e5f60718293a4b",
+    });
+    expect(runGameMock.mock.calls[0]?.[0]).toMatchObject({
+      quick: { multiplayer: "127.0.0.1:50123" },
+    });
+  });
+
+  it("keeps the relay address when the direct link is not available", async () => {
+    openGuestLink.mockRejectedValueOnce(new Error("ipc"));
+
+    await joinUpToDatePack();
+
+    expect(runGameMock.mock.calls[0]?.[0]).toMatchObject({
+      quick: { multiplayer: "share.grubielauncher.com:25565" },
+    });
+  });
+});
 
 describe("joinFriendWorld with blocked mods", () => {
   beforeEach(() => {

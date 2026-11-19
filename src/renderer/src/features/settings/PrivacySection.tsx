@@ -173,6 +173,24 @@ export function PrivacySection({
           />
         )}
 
+        {visible("directConnect") && (
+          <SettingRow
+            htmlFor="settings-direct-connect"
+            title={t("settings.directConnect")}
+            description={t("settings.directConnectDescription")}
+            query={query}
+            changed={isChanged("directConnect")}
+            onReset={() => reset("directConnect")}
+            control={
+              <Switch
+                id="settings-direct-connect"
+                checked={settings.directConnect}
+                onCheckedChange={(value) => commit({ directConnect: value })}
+              />
+            }
+          />
+        )}
+
         {visible("crashTelemetry") && (
           <SettingRow
             htmlFor="settings-crash-telemetry"

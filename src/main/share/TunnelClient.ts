@@ -7,7 +7,12 @@ import {
   OpenStreamMessage,
   PingMessage,
   PongMessage,
+  RtcAnswerMessage,
+  RtcOfferMessage,
+  RtcRejectMessage,
+  StreamFlowMessage,
   StreamOpenedMessage,
+  SHARE_FLOW_FEATURE,
   SHARE_HANDSHAKE_PROTOCOL_VERSION,
   decodeStreamDataFrame,
   encodeStreamDataFrame,
@@ -31,6 +36,7 @@ type TunnelEvents = {
     source: 'gateway'
     at: string
   }) => void
+  rtcOffer: (message: RtcOfferMessage) => void
 }
 
 const LIVENESS_TIMEOUT_MS = 40_000
@@ -46,10 +52,12 @@ export class TunnelClient extends EventEmitter {
   private shouldIgnoreClose = false
   private lastActivityAtMs = 0
   private livenessTimer: NodeJS.Timeout | null = null
+  private readonly extraFeatures: () => string[]
 
-  constructor(proxyManager: LocalProxyManager) {
+  constructor(proxyManager: LocalProxyManager, extraFeatures: () => string[] = () => []) {
     super()
     this.proxyManager = proxyManager
+    this.extraFeatures = extraFeatures
     this.proxyManager.setTransport({
       sendControl: (message) => this.sendControl(message),
       sendBinary: (streamId, payload) => this.sendBinary(streamId, payload),
@@ -116,7 +124,17 @@ export class TunnelClient extends EventEmitter {
       } catch {}
     }
 
-    this.proxyManager.dispose(reason)
+    this.proxyManager.disposeRelayed(reason)
+  }
+
+  public sendRtcAnswer(peerId: string, sdp: string): void {
+    const message: RtcAnswerMessage = { type: 'RTC_ANSWER', peerId, sdp }
+    this.sendControl(message)
+  }
+
+  public sendRtcReject(peerId: string, reason: string): void {
+    const message: RtcRejectMessage = { type: 'RTC_REJECT', peerId, reason }
+    this.sendControl(message)
   }
 
   public isWritable(): boolean {
@@ -151,6 +169,7 @@ export class TunnelClient extends EventEmitter {
       type: 'AUTH',
       token: this.token,
       protocolVersion: SHARE_HANDSHAKE_PROTOCOL_VERSION,
+      features: [SHARE_FLOW_FEATURE, ...this.extraFeatures()],
     }
 
     this.sendControl(authMessage)
@@ -189,7 +208,7 @@ export class TunnelClient extends EventEmitter {
   }
 
   private readonly handleClose = (event: CloseEvent) => {
-    this.proxyManager.dispose('gateway_closed')
+    this.proxyManager.disposeRelayed('gateway_closed')
 
     const reason = event.reason || `code_${event.code}`
     if (this.shouldIgnoreClose) return
@@ -204,7 +223,9 @@ export class TunnelClient extends EventEmitter {
       | OpenStreamMessage
       | StreamOpenedMessage
       | CloseStreamMessage
-      | ErrorMessage,
+      | ErrorMessage
+      | RtcOfferMessage
+      | StreamFlowMessage,
   ): void {
     switch (message.type) {
       case 'AUTH_OK':
@@ -246,13 +267,30 @@ export class TunnelClient extends EventEmitter {
       case 'ERROR':
         this.emit('controlError', message)
         return
+      case 'STREAM_PAUSE':
+        this.proxyManager.setRemotePaused(message.streamId, true)
+        return
+      case 'STREAM_RESUME':
+        this.proxyManager.setRemotePaused(message.streamId, false)
+        return
+      case 'RTC_OFFER':
+        this.emit('rtcOffer', message)
+        return
       case 'PONG':
       case 'STREAM_OPENED':
         return
     }
   }
 
-  private sendControl(message: AuthMessage | PongMessage | StreamOpenedMessage | CloseStreamMessage): void {
+  private sendControl(
+    message:
+      | AuthMessage
+      | PongMessage
+      | StreamOpenedMessage
+      | CloseStreamMessage
+      | RtcAnswerMessage
+      | RtcRejectMessage,
+  ): void {
     if (!this.isWritable() || !this.ws) return
 
     this.ws.send(JSON.stringify(message))

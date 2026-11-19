@@ -169,6 +169,7 @@ export type TSettings = {
   agentChatSync: boolean;
   sounds: boolean;
   hideServerInRpc: boolean;
+  directConnect: boolean;
   streamerMode: boolean;
   streamerModeAuto: boolean;
   voicePtt: boolean;
@@ -242,6 +243,7 @@ export const DEFAULT_SETTINGS: TSettings = {
   agentChatSync: true,
   sounds: true,
   hideServerInRpc: true,
+  directConnect: true,
   streamerMode: false,
   streamerModeAuto: true,
   voicePtt: false,
@@ -415,6 +417,10 @@ export function normalizeSettings(
       typeof value?.hideServerInRpc === "boolean"
         ? value.hideServerInRpc
         : DEFAULT_SETTINGS.hideServerInRpc,
+    directConnect: booleanOr(
+      value?.directConnect,
+      DEFAULT_SETTINGS.directConnect,
+    ),
     streamerMode:
       typeof value?.streamerMode === "boolean"
         ? value.streamerMode

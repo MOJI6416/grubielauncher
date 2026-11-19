@@ -1,12 +1,16 @@
 import {
   ShareCommandResult,
+  ShareGuestLink,
   ShareGuestRef,
   ShareHostPatch,
   ShareMember,
   ShareState,
   ShareVisibility,
 } from '@/types/Share'
-import { lanShareService } from '../share'
+import { directGuest, lanShareService } from '../share'
+import { setDirectPolicy } from '../share/directPolicy'
+import { isValidShareSlug } from '../share/shareProtocol'
+import { registerMsFriendsIpc } from './msFriendsIpc'
 import { check, handleSafe } from '../utilities/ipc'
 import { assertReadablePath } from '../utilities/safePath'
 import { mainWindow } from '../windows/mainWindow'
@@ -41,6 +45,10 @@ function registerShareEvents(): void {
 
   lanShareService.on('guestRefused', (event) => {
     safeSend('share:guestRefused', event)
+  })
+
+  directGuest.on('changed', (links: ShareGuestLink[]) => {
+    safeSend('share:guestLinksChanged', links)
   })
 }
 
@@ -85,6 +93,41 @@ function readGuest(value: Record<string, unknown>): ShareGuestRef & { nickname?:
 
 export function registerShareIpc() {
   registerShareEvents()
+  registerMsFriendsIpc()
+
+  handleSafe<ShareGuestLink | null, [Record<string, unknown>]>(
+    'share:openGuestLink',
+    null,
+    [check.object(8)],
+    async (_, request) => {
+      const slug = typeof request.slug === 'string' ? request.slug : ''
+      const connectHost = typeof request.connectHost === 'string' ? request.connectHost : ''
+      if (!isValidShareSlug(slug) || !connectHost || connectHost.length > 255) return null
+      return await directGuest.open({
+        slug,
+        connectHost,
+        hostUserId:
+          typeof request.hostUserId === 'string' && USER_ID.test(request.hostUserId)
+            ? request.hostUserId
+            : undefined,
+      })
+    },
+  )
+
+  handleSafe<ShareGuestLink[]>('share:getGuestLinks', [], async () => directGuest.list())
+
+  handleSafe<boolean, [Record<string, unknown>]>(
+    'share:setDirectPolicy',
+    false,
+    [check.object(4)],
+    async (_, value) => {
+      setDirectPolicy({
+        directConnect: value.directConnect !== false,
+        streamerMode: value.streamerMode === true,
+      })
+      return true
+    },
+  )
 
   handleSafe<ShareCommandResult<ShareState>, [ShareVisibility]>(
     'share:start',

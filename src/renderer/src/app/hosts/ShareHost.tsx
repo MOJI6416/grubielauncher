@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   accountAtom,
+  settingsAtom,
   isShareModalOpenAtom,
   shareOwnerAccountKeyAtom,
   sharePeersAtom,
@@ -16,6 +17,9 @@ import {
   isShareStateActiveForAccountBinding,
 } from "@renderer/utilities/shareAccount";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { shareGuestLinksAtom } from "@renderer/features/share/guestLinks";
+import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
@@ -29,6 +33,9 @@ export function ShareHost() {
     shareOwnerAccountKeyAtom,
   );
   const selectedAccount = useAtomValue(accountAtom);
+  const setGuestLinks = useSetAtom(shareGuestLinksAtom);
+  const directConnect = useAtomValue(settingsAtom).directConnect;
+  const streamerActive = useRedact().active;
   const previousLanDetectionRef = useRef<{
     phase: string;
     candidateKey: string | null;
@@ -78,6 +85,17 @@ export function ShareHost() {
       unsubscribeRefused();
     };
   }, [setSharePeers, setShareState, tRef]);
+
+  useEffect(() => {
+    void api.share
+      .setDirectPolicy({ directConnect, streamerMode: streamerActive })
+      .catch(ignoreFailure);
+  }, [directConnect, streamerActive]);
+
+  useEffect(() => {
+    void api.share.getGuestLinks().then(setGuestLinks, ignoreFailure);
+    return api.share.onGuestLinksChanged(setGuestLinks);
+  }, [setGuestLinks]);
 
   useEffect(() => {
     const isActive = isShareStateActiveForAccountBinding(shareState);

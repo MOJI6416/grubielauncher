@@ -38,6 +38,8 @@ import {
   resolveAchievementPoints,
 } from "@renderer/utilities/achievements";
 import { PlatformIcon } from "./PlatformIcon";
+import type { MsFriend } from "@/shared/msFriends";
+import { MsAddFriendCard, MsRequestRow } from "./MsRequests";
 import type { FriendLookupProblem } from "./friendLookup";
 import { keepPendingIds } from "./pendingIds";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
@@ -68,6 +70,14 @@ interface RequestsPanelProps {
   onResetCode: () => void;
   onToggleRequests: (enabled: boolean) => void;
   onViewProfile: (userId: string) => void;
+  ms?: {
+    incoming: MsFriend[];
+    outgoing: MsFriend[];
+    pending: string[];
+    onAccept: (profileId: string) => void;
+    onRemove: (profileId: string) => void;
+    onSend: (name: string) => Promise<boolean>;
+  };
   t: TFunction;
 }
 
@@ -236,6 +246,7 @@ export function RequestsPanel({
   onResetCode,
   onToggleRequests,
   onViewProfile,
+  ms,
   t,
 }: RequestsPanelProps) {
   const redact = useRedact();
@@ -254,7 +265,23 @@ export function RequestsPanel({
     () => new Set(rejectedRequestIds),
     [rejectedRequestIds],
   );
-  const total = groupInvites.length + incoming.length + outgoing.length;
+  const msIncoming = ms?.incoming ?? [];
+  const msOutgoing = ms?.outgoing ?? [];
+  const msPending = useMemo(() => new Set(ms?.pending ?? []), [ms?.pending]);
+  const msIncomingKeys = useMemo(
+    () => new Set(msIncoming.map((request) => request.profileId)),
+    [msIncoming],
+  );
+  const msOutgoingKeys = useMemo(
+    () => new Set(msOutgoing.map((request) => request.profileId)),
+    [msOutgoing],
+  );
+  const total =
+    groupInvites.length +
+    incoming.length +
+    outgoing.length +
+    msIncoming.length +
+    msOutgoing.length;
   const inviteKeys = useMemo(
     () => new Set(groupInvites.map((invite) => invite._id)),
     [groupInvites],
@@ -466,6 +493,42 @@ export function RequestsPanel({
                   </RemovalItem>
                 ))}
               </Section>
+
+              <Section
+                label={t("friends.microsoft.incoming")}
+                keys={msIncomingKeys}
+              >
+                {msIncoming.map((request) => (
+                  <RemovalItem key={request.profileId} itemKey={request.profileId}>
+                    <MsRequestRow
+                      request={request}
+                      isIncoming
+                      isPending={msPending.has(request.profileId)}
+                      onAccept={() => ms?.onAccept(request.profileId)}
+                      onReject={() => ms?.onRemove(request.profileId)}
+                      t={t}
+                    />
+                  </RemovalItem>
+                ))}
+              </Section>
+
+              <Section
+                label={t("friends.microsoft.outgoing")}
+                keys={msOutgoingKeys}
+              >
+                {msOutgoing.map((request) => (
+                  <RemovalItem key={request.profileId} itemKey={request.profileId}>
+                    <MsRequestRow
+                      request={request}
+                      isIncoming={false}
+                      isPending={msPending.has(request.profileId)}
+                      onAccept={() => ms?.onAccept(request.profileId)}
+                      onReject={() => ms?.onRemove(request.profileId)}
+                      t={t}
+                    />
+                  </RemovalItem>
+                ))}
+              </Section>
             </div>
           </ScrollArea>
         )}
@@ -512,6 +575,14 @@ export function RequestsPanel({
             {t("friends.sendRequest")}
           </Button>
         </div>
+
+        {ms && (
+          <MsAddFriendCard
+            isSending={ms.pending.some((key) => !/^[0-9a-f]{32}$/.test(key))}
+            onSend={ms.onSend}
+            t={t}
+          />
+        )}
 
         <div className="flex shrink-0 flex-col gap-2 rounded-xl border border-border bg-card p-3">
           <p className="flex items-center gap-1.5 text-sm font-medium">

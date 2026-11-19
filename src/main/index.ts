@@ -8,7 +8,7 @@ import {
   registerLegacyLocalStorageIpc,
 } from "./utilities/localStorageMigration";
 import * as ipcHandlers from "./ipc";
-import { lanShareService } from "./share";
+import { disposeShare } from "./share";
 import {
   createMainWindow,
   mainWindow,
@@ -784,7 +784,7 @@ if (!gotTheLock) {
 
     void Promise.allSettled([
       stopServersForShutdown(),
-      lanShareService.dispose(),
+      disposeShare(),
       rpc.dispose(),
       stopOAuthServer("Application shutdown."),
       ...[...gameRuntime.processes.values()].map((record) =>

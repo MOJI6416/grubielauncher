@@ -230,6 +230,8 @@ export interface ResolvedFriendShareConnection {
   expiresInSec?: number
 }
 
+export type ShareTransport = 'relay' | 'direct' | 'turn'
+
 export interface SharePeerInfo {
   streamId: number
   peerIp: string
@@ -237,4 +239,25 @@ export interface SharePeerInfo {
   connectedAt: string
   guestUserId?: string
   guestUsername?: string
+  transport?: ShareTransport
+  rttMs?: number
+}
+
+export type ShareGuestLinkState = 'connecting' | 'connected' | 'closed'
+
+export interface ShareGuestLink {
+  slug: string
+  hostUserId?: string
+  address: string
+  transport: ShareTransport
+  state: ShareGuestLinkState
+  rttMs?: number
+  fallbackReason?: string
+  updatedAt: string
+}
+
+export interface ShareGuestLinkRequest {
+  slug: string
+  connectHost: string
+  hostUserId?: string
 }

@@ -4,6 +4,14 @@ export const SHARE_STREAM_FRAME_VERSION = 1
 export const SHARE_STREAM_FRAME_TYPE_DATA = 1
 export const SHARE_WS_PATH = '/ws'
 export const SHARE_TUNNEL_URL = 'wss://tunnel.grubielauncher.com/ws'
+export const SHARE_RTC_URL = 'wss://tunnel.grubielauncher.com/rtc'
+export const SHARE_RTC_FEATURE = 'rtc'
+export const SHARE_FLOW_FEATURE = 'flow'
+export const MAX_SDP_LENGTH = 16 * 1024
+const RTC_PEER_ID_PATTERN = /^[a-f0-9]{8,64}$/
+const ICE_URL_PATTERN = /^(stun|turn|turns):[^\s]{1,200}$/
+const MAX_ICE_SERVERS = 8
+const MAX_ICE_URLS = 4
 export const SHARE_HANDSHAKE_PROTOCOL_VERSION = 2
 export const SHARE_GATEWAY_HOST_SUFFIX = 'grubielauncher.com'
 export const MAX_INITIAL_DATA_BASE64_LENGTH = 64 * 1024
@@ -14,6 +22,35 @@ export interface AuthMessage {
   type: 'AUTH'
   token: string
   protocolVersion?: number
+  features?: string[]
+}
+
+export interface IceServerConfig {
+  urls: string[]
+  username?: string
+  credential?: string
+}
+
+export interface RtcOfferMessage {
+  type: 'RTC_OFFER'
+  peerId: string
+  sdp: string
+  guestUserId?: string
+  guestUsername?: string
+  hostNickname?: string
+  iceServers: IceServerConfig[]
+}
+
+export interface RtcAnswerMessage {
+  type: 'RTC_ANSWER'
+  peerId: string
+  sdp: string
+}
+
+export interface RtcRejectMessage {
+  type: 'RTC_REJECT'
+  peerId: string
+  reason: string
 }
 
 export interface AuthOkMessage {
@@ -51,6 +88,11 @@ export interface StreamOpenedMessage {
   streamId: number
 }
 
+export interface StreamFlowMessage {
+  type: 'STREAM_PAUSE' | 'STREAM_RESUME'
+  streamId: number
+}
+
 export interface CloseStreamMessage {
   type: 'CLOSE_STREAM'
   streamId: number
@@ -72,6 +114,8 @@ export type TunnelControlMessage =
   | StreamOpenedMessage
   | CloseStreamMessage
   | ErrorMessage
+  | RtcOfferMessage
+  | StreamFlowMessage
 
 export interface StreamDataFrame {
   version: number
@@ -176,6 +220,50 @@ function readOptionalPattern(
   return value
 }
 
+function readPeerId(source: Record<string, unknown>): string {
+  const value = source.peerId
+  if (typeof value !== 'string' || !RTC_PEER_ID_PATTERN.test(value)) {
+    throw invalidField('peerId')
+  }
+  return value
+}
+
+export function readSdp(source: Record<string, unknown>): string {
+  const value = source.sdp
+  if (typeof value !== 'string' || value.length === 0 || value.length > MAX_SDP_LENGTH) {
+    throw invalidField('sdp')
+  }
+  return value
+}
+
+export function readIceServers(value: unknown): IceServerConfig[] {
+  if (value === undefined || value === null) return []
+  if (!Array.isArray(value) || value.length > MAX_ICE_SERVERS) {
+    throw invalidField('iceServers')
+  }
+  return value.map((entry) => {
+    if (!entry || typeof entry !== 'object') throw invalidField('iceServers')
+    const record = entry as Record<string, unknown>
+    const urls = record.urls
+    if (
+      !Array.isArray(urls) ||
+      urls.length === 0 ||
+      urls.length > MAX_ICE_URLS ||
+      !urls.every((url) => typeof url === 'string' && ICE_URL_PATTERN.test(url))
+    ) {
+      throw invalidField('iceServers.urls')
+    }
+    const server: IceServerConfig = { urls: [...(urls as string[])] }
+    if (typeof record.username === 'string' && record.username.length <= 512) {
+      server.username = record.username
+    }
+    if (typeof record.credential === 'string' && record.credential.length <= 512) {
+      server.credential = record.credential
+    }
+    return server
+  })
+}
+
 export function parseTunnelControlMessage(raw: string): TunnelControlMessage {
   const parsed = JSON.parse(raw) as unknown
 
@@ -243,6 +331,12 @@ export function parseTunnelControlMessage(raw: string): TunnelControlMessage {
         type,
         streamId: readStreamId(source),
       }
+    case 'STREAM_PAUSE':
+    case 'STREAM_RESUME':
+      return {
+        type,
+        streamId: readStreamId(source),
+      }
     case 'CLOSE_STREAM':
       return {
         type,
@@ -254,6 +348,16 @@ export function parseTunnelControlMessage(raw: string): TunnelControlMessage {
         type,
         code: readString(source, 'code'),
         message: readString(source, 'message'),
+      }
+    case 'RTC_OFFER':
+      return {
+        type,
+        peerId: readPeerId(source),
+        sdp: readSdp(source),
+        guestUserId: readOptionalPattern(source, 'guestUserId', GUEST_USER_ID_PATTERN),
+        guestUsername: readOptionalPattern(source, 'guestUsername', GUEST_USERNAME_PATTERN),
+        hostNickname: readOptionalPattern(source, 'hostNickname', GUEST_USERNAME_PATTERN),
+        iceServers: readIceServers(source.iceServers),
       }
     default:
       throw new Error(`Unsupported control message type: ${String(type)}`)

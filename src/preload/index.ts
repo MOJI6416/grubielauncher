@@ -185,10 +185,13 @@ import {
   ShareStateError,
   ShareGuestRef,
   ShareGuestRefusedEvent,
+  ShareGuestLink,
+  ShareGuestLinkRequest,
   ShareHostPatch,
   ShareVisibility,
 } from "@/types/Share";
 import { RpcRendererContext } from "@/types/Rpc";
+import type { MsFriendAction, MsFriendsResult } from "@/shared/msFriends";
 import {
   LoaderChangeResult,
   VersionInstallOptions,
@@ -1504,6 +1507,25 @@ export interface IElectronAPI {
     onGuestRefused: (
       callback: (event: ShareGuestRefusedEvent) => void,
     ) => () => void;
+    openGuestLink: (
+      request: ShareGuestLinkRequest,
+    ) => Promise<ShareGuestLink | null>;
+    getGuestLinks: () => Promise<ShareGuestLink[]>;
+    onGuestLinksChanged: (
+      callback: (links: ShareGuestLink[]) => void,
+    ) => () => void;
+    setDirectPolicy: (policy: {
+      directConnect: boolean;
+      streamerMode: boolean;
+    }) => Promise<boolean>;
+  };
+  msFriends: {
+    get: (accountJwt: string) => Promise<MsFriendsResult>;
+    update: (
+      accountJwt: string,
+      action: MsFriendAction,
+      target: { profileId?: string; name?: string },
+    ) => Promise<MsFriendsResult>;
   };
   events: {
     onConsoleChangeStatus: (
@@ -2810,6 +2832,27 @@ export const api: IElectronAPI = {
       ipcRenderer.on("share:guestRefused", listener);
       return () => ipcRenderer.off("share:guestRefused", listener);
     },
+    openGuestLink: (request: ShareGuestLinkRequest) =>
+      invoke("share:openGuestLink", request),
+    getGuestLinks: () => invoke("share:getGuestLinks"),
+    onGuestLinksChanged: (callback: (links: ShareGuestLink[]) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        links: ShareGuestLink[],
+      ) => callback(links);
+      ipcRenderer.on("share:guestLinksChanged", listener);
+      return () => ipcRenderer.off("share:guestLinksChanged", listener);
+    },
+    setDirectPolicy: (policy: { directConnect: boolean; streamerMode: boolean }) =>
+      invoke("share:setDirectPolicy", policy),
+  },
+  msFriends: {
+    get: (accountJwt: string) => invoke("msFriends:get", accountJwt),
+    update: (
+      accountJwt: string,
+      action: MsFriendAction,
+      target: { profileId?: string; name?: string },
+    ) => invoke("msFriends:update", accountJwt, action, target),
   },
   events: {
     onConsoleChangeStatus: (

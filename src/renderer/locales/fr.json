@@ -681,7 +681,38 @@
     "resetFriendCodeTitle": "Réinitialiser le code ami ?",
     "chatExternalLinkQuestion": "Ouvrir le lien externe ?",
     "chatDeleteMessageQuestion": "Supprimer le message ?",
-    "deleteQuestion": "Retirer {{nickname}} de vos amis ?"
+    "deleteQuestion": "Retirer {{nickname}} de vos amis ?",
+    "microsoft": {
+      "section": "Amis Microsoft",
+      "status": {
+        "singleplayer": "En jeu · solo",
+        "server": "En jeu · sur un serveur",
+        "realms": "En jeu · Realms",
+        "hosted": "En jeu · monde ouvert",
+        "unknown": "Statut inconnu"
+      },
+      "remove": "Retirer des amis Microsoft",
+      "removeQuestion": "Retirer {{nickname}} de vos amis Microsoft ?",
+      "removeAlert": "{{nickname}} disparaîtra de vos amis Minecraft sur tous les appareils. Vous pourrez renvoyer une demande.",
+      "wantsToBeFriend": "Demande d'ami Minecraft",
+      "requestSent": "Demande Minecraft envoyée",
+      "incoming": "Demandes Microsoft",
+      "outgoing": "Envoyées à Microsoft",
+      "addTitle": "Ami dans Minecraft",
+      "addHint": "La demande passe par Microsoft : votre ami la verra dans Minecraft 26.2 ou plus récent, ou dans son launcher.",
+      "namePlaceholder": "Pseudo Minecraft",
+      "sent": "Demande envoyée à {{name}}",
+      "errors": {
+        "not_microsoft": "Les amis Microsoft nécessitent un compte Microsoft",
+        "expired": "La connexion Microsoft a expiré : reconnectez-vous au compte",
+        "forbidden": "Microsoft n'autorise pas les amis pour ce compte : vérifiez les paramètres de confidentialité Xbox",
+        "rate_limited": "Microsoft demande de patienter : réessayez dans une minute",
+        "unavailable": "Le service d'amis Microsoft ne répond pas : réessayez plus tard",
+        "unknown_profile": "Aucun joueur Minecraft ne porte ce nom",
+        "cannot_add_self": "Vous ne pouvez pas vous ajouter vous-même",
+        "invalid": "Microsoft n'a pas accepté la demande"
+      }
+    }
   },
   "modManager": {
     "title": "Gestionnaire de mods",
@@ -2207,6 +2238,11 @@
         "title": "Paramètres de jeu partagés",
         "description": "Les mêmes touches, graphismes, serveurs et packs de ressources dans chaque instance",
         "keywords": "options.txt commandes touches graphismes son serveurs packs de ressources barres d’action commandes profil modèle synchronisation partagés"
+      },
+      "directConnect": {
+        "title": "Connexion directe (P2P)",
+        "description": "Jouer avec vos amis en direct, sans passer par le serveur Grubie",
+        "keywords": "p2p connexion directe jouer ensemble ping ip webrtc relais"
       }
     },
     "voicePttCaptureTimeout": "Aucune touche n’a été pressée — le raccourci reste inchangé.",
@@ -2275,7 +2311,9 @@
       "folderDescriptionEmpty": "Stockés sur cet ordinateur",
       "historyTitle": "Rapports envoyés"
     },
-    "resetAllDone": "Paramètres réinitialisés par défaut"
+    "resetAllDone": "Paramètres réinitialisés par défaut",
+    "directConnect": "Connexion directe avec les amis",
+    "directConnectDescription": "« Jouer ensemble » passe directement entre vous et votre ami, sans le serveur Grubie, et le ping est plus bas. Votre ami connaît votre adresse IP. Non utilisé en mode streamer ni dans les mondes ouverts à tous."
   },
   "skinView": {
     "title": "Aperçu du skin",
@@ -3301,6 +3339,14 @@
       "full": "{{name}} n’a pas pu entrer : toutes les places sont prises.",
       "not_invited": "{{name}} n’est pas sur la liste des invités et n’a pas pu entrer.",
       "removed": "{{name}} a tenté de revenir, mais vous l’avez retiré."
+    },
+    "transport": {
+      "direct": "P2P",
+      "turn": "TURN",
+      "relay": "Via serveur",
+      "directHint": "Connexion directe avec votre ami, sans passer par le serveur Grubie",
+      "turnHint": "Via le serveur TURN de Grubie : la connexion directe n'a pas abouti",
+      "relayHint": "Via le serveur Grubie : la connexion directe est indisponible ou désactivée"
     }
   },
   "manageSkins": {

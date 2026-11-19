@@ -66,6 +66,7 @@ export type SettingsEntryId =
   | "streamerModeAuto"
   | "notifications"
   | "hideServerInRpc"
+  | "directConnect"
   | "crashTelemetry"
   | "usageStats"
   | "aiLogAnalysis"
@@ -214,6 +215,7 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "streamerModeAuto", section: "privacy", keys: ["streamerModeAuto"] },
   { id: "notifications", section: "privacy", keys: [] },
   { id: "hideServerInRpc", section: "privacy", keys: ["hideServerInRpc"] },
+  { id: "directConnect", section: "privacy", keys: ["directConnect"] },
   { id: "crashTelemetry", section: "privacy", keys: ["crashTelemetry"] },
   { id: "usageStats", section: "privacy", keys: ["usageStats"] },
   { id: "aiLogAnalysis", section: "privacy", keys: ["aiLogAnalysis"] },

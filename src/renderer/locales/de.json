@@ -680,7 +680,38 @@
     "resetFriendCodeTitle": "Freundescode zurücksetzen?",
     "chatExternalLinkQuestion": "Externen Link öffnen?",
     "chatDeleteMessageQuestion": "Nachricht löschen?",
-    "deleteQuestion": "{{nickname}} aus den Freunden entfernen?"
+    "deleteQuestion": "{{nickname}} aus den Freunden entfernen?",
+    "microsoft": {
+      "section": "Microsoft-Freunde",
+      "status": {
+        "singleplayer": "Spielt · Einzelspieler",
+        "server": "Spielt · auf einem Server",
+        "realms": "Spielt · Realms",
+        "hosted": "Spielt · offene Welt",
+        "unknown": "Status unbekannt"
+      },
+      "remove": "Aus Microsoft-Freunden entfernen",
+      "removeQuestion": "{{nickname}} aus den Microsoft-Freunden entfernen?",
+      "removeAlert": "{{nickname}} verschwindet auf allen Geräten aus deinen Minecraft-Freunden. Du kannst später wieder eine Anfrage senden.",
+      "wantsToBeFriend": "Minecraft-Freundschaftsanfrage",
+      "requestSent": "Minecraft-Anfrage gesendet",
+      "incoming": "Microsoft-Anfragen",
+      "outgoing": "An Microsoft gesendet",
+      "addTitle": "Freund in Minecraft",
+      "addHint": "Die Anfrage geht über Microsoft: Dein Freund sieht sie in Minecraft 26.2 oder neuer oder in seinem Launcher.",
+      "namePlaceholder": "Minecraft-Name",
+      "sent": "Anfrage an {{name}} gesendet",
+      "errors": {
+        "not_microsoft": "Microsoft-Freunde brauchen ein Microsoft-Konto",
+        "expired": "Die Microsoft-Anmeldung ist abgelaufen – melde dich erneut an",
+        "forbidden": "Microsoft erlaubt für dieses Konto keine Freunde – prüfe die Xbox-Datenschutzeinstellungen",
+        "rate_limited": "Microsoft bittet um Geduld – versuche es in einer Minute erneut",
+        "unavailable": "Der Microsoft-Freundesdienst antwortet nicht – versuche es später erneut",
+        "unknown_profile": "Einen Minecraft-Spieler mit diesem Namen gibt es nicht",
+        "cannot_add_self": "Du kannst dich nicht selbst hinzufügen",
+        "invalid": "Microsoft hat die Anfrage nicht angenommen"
+      }
+    }
   },
   "modManager": {
     "title": "Mod-Manager",
@@ -2189,6 +2220,11 @@
         "title": "Gemeinsame Spieleinstellungen",
         "description": "Dieselben Tasten, Grafik, Server und Ressourcenpakete in jeder Instanz",
         "keywords": "options.txt Steuerung Tasten Grafik Sound Server Ressourcenpakete Schnellzugriffsleiste Befehle Profil Vorlage Synchronisierung gemeinsam"
+      },
+      "directConnect": {
+        "title": "Direkte Verbindung (P2P)",
+        "description": "Direkt mit Freunden spielen, am Grubie-Server vorbei",
+        "keywords": "p2p direkte verbindung gemeinsam spielen ping ip webrtc relay"
       }
     },
     "voicePttCaptureTimeout": "Es wurde keine Taste gedrückt – das Tastenkürzel bleibt unverändert.",
@@ -2257,7 +2293,9 @@
       "folderDescriptionEmpty": "Auf diesem Computer gespeichert",
       "historyTitle": "Gesendete Berichte"
     },
-    "resetAllDone": "Einstellungen auf Standard zurückgesetzt"
+    "resetAllDone": "Einstellungen auf Standard zurückgesetzt",
+    "directConnect": "Direkte Verbindung mit Freunden",
+    "directConnectDescription": "„Gemeinsam spielen“ läuft direkt zwischen dir und deinem Freund, am Grubie-Server vorbei – der Ping ist niedriger. Dein Freund erfährt deine IP-Adresse. Im Streamer-Modus und in Welten, die für alle offen sind, nicht verwendet."
   },
   "skinView": {
     "title": "Skin-Vorschau",
@@ -3274,6 +3312,14 @@
       "full": "{{name}} konnte nicht beitreten: alle Plätze sind belegt.",
       "not_invited": "{{name}} steht nicht auf der Einladungsliste und wurde abgewiesen.",
       "removed": "{{name}} wollte zurück, aber Sie haben ihn entfernt."
+    },
+    "transport": {
+      "direct": "P2P",
+      "turn": "TURN",
+      "relay": "Über Server",
+      "directHint": "Direkte Verbindung zu deinem Freund, am Grubie-Server vorbei",
+      "turnHint": "Über den Grubie-TURN-Server: Eine direkte Verbindung kam nicht zustande",
+      "relayHint": "Über den Grubie-Server: Direkte Verbindung nicht verfügbar oder ausgeschaltet"
     }
   },
   "manageSkins": {
